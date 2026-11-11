@@ -2,9 +2,14 @@
  * Catalog entries are templates. Install creates a page-owned CMS section
  * instance (cms_page_sections + cms_section_blocks) via the admin CMS API.
  */
-(() => {
+(async () => {
   'use strict';
   if (new URLSearchParams(location.search).has('showcase')) return;
+  if (window.__agentsamCmsSourceHostReady) await window.__agentsamCmsSourceHostReady;
+  if (window.__agentsamThemeEditorEntryReady) {
+    const entry = await window.__agentsamThemeEditorEntryReady;
+    if (!entry?.ready) return;
+  }
   const drawer = document.querySelector('[data-drawer-panel="app-embeds"]');
   const inspector = document.querySelector('.theme-editor-panel');
   if (!drawer || !inspector) return;
