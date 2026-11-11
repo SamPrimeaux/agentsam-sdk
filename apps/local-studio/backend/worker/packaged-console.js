@@ -14,6 +14,7 @@ export function resolveConsoleFile(pathname, { allowEmbeddedHome = false } = {})
   // The installed-app iframe may explicitly request the packaged Ecommerce home.
   if (isStudioAdminPath(pathname) && !(allowEmbeddedHome && pathname === '/admin/home')) return null;
   if (pathname === "/admin/host-config.js") return null;
+  if (pathname === "/admin/theme-editor/embed-catalog.json") return "theme-editor/embed-catalog.json";
   const match = adminRouteForPath(pathname);
   if (match?.handler === "admin-html") return (match.asset || "/admin/" + match.page + ".html").replace(/^\/admin\//, "");
   if (match?.handler === "admin-spa") return "_spa/index.html";
