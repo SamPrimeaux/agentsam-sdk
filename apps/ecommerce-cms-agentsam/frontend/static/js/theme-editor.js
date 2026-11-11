@@ -4132,8 +4132,12 @@
       window.cmsActivePageId = null;
     }
     window.cmsActivePageSlug = slug;
-    history.replaceState(null, '', nextUrl.pathname + nextUrl.search + nextUrl.hash);
-    if (host) host.onPageChange?.(slug);
+    if (host) {
+      // The host owns the URL. A srcdoc frame cannot rewrite its history to a path.
+      host.onPageChange?.(slug);
+    } else {
+      history.replaceState(null, '', nextUrl.pathname + nextUrl.search + nextUrl.hash);
+    }
     closePageMenu();
     await loadPage();
   }
