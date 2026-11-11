@@ -48,7 +48,6 @@ export default function ProductStudioPage() {
     // frame. Mirror selected product/deep-link identity to its outer URL.
     syncHostedStudioRoute("/admin" + location.pathname + location.search);
   }, [location.pathname, location.search]);
-  const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [creationCategory, setCreationCategory] = useState<CreationCategory>("applications");
   const isPlatformCategory = creationCategory === "applications" || creationCategory === "automations" || creationCategory === "templates";
@@ -73,9 +72,6 @@ export default function ProductStudioPage() {
   }, [productId, resumeDraftId]);
   const [gallery, setGallery] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState("");
-  useEffect(() => {
-    surface.current?.scrollIntoView({ block: "start" });
-  }, [productId, designing]);
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(query.trim());
@@ -270,7 +266,6 @@ export default function ProductStudioPage() {
 
   return (
     <section
-      ref={surface}
       className={`product-studio-shell${designing ? " is-designing" : ""}`}
       aria-label="Product Studio"
     >

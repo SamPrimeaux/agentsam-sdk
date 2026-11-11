@@ -448,13 +448,21 @@
     return String(value || '').replace(/[_-]+/g, ' ').replace(/\b\w/g, function(m) { return m.toUpperCase(); });
   }
 
+  let activeCmsSite = null;
+
   function pageRoute(pageSlug) {
     if (host) return host.pageRoutes?.[pageSlug] || null;
     // A site-owned CMS draft must never preview a global SDK/demo route just
     // because another site happens to use a common slug such as 'home'.
     if (window.cmsActiveSiteId) {
-      const owned=pages.find(page=>page.slug===pageSlug);
-      return owned?.live_route || null;
+      const owned = pageSlug === slug && pageData?.slug === slug
+        ? pageData : pages.find(page => page.slug === pageSlug);
+      if (!owned) return null;
+      if (activeCmsSite?.id !== "app-store" || activeCmsSite.id !== window.cmsActiveSiteId) {
+        return pages.find(page => page.slug === pageSlug)?.live_route || null;
+      }
+      const route = owned.route_path || owned.route || owned.live_route;
+      return window.cmsEditorStorefrontUrl?.(activeCmsSite, route) || null;
     }
     // Bridge Fly is a real authored R2 scene, not a publishable storefront
     // route. Its authenticated canvas can still be previewed in this editor.
@@ -3551,6 +3559,15 @@
       byId('te-preview-label').textContent = 'CMS document — no public route';
       return;
     }
+    if (/^https:\/\//.test(route) && new URL(route).origin !== window.location.origin) {
+      const preview = new URL(route);
+      preview.searchParams.set('_', String(Date.now()));
+      byId('theme-preview').removeAttribute('srcdoc');
+      byId('theme-preview').src = preview.href;
+      byId('te-open-tab').href = route;
+      byId('te-preview-label').textContent = 'Published storefront — ' + preview.hostname;
+      return;
+    }
     const separator = route.indexOf('?') >= 0 ? '&' : '?';
     byId('theme-preview').removeAttribute('srcdoc');
     byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
@@ -3593,6 +3610,7 @@
         })
       ]);
       pageData = results[0].page;
+      activeCmsSite = results[1]?.site || null;
       if (!host && pageData) {
         const resolvedSiteId = results[1]?.site?.id || pageData.site_id || window.cmsActiveSiteId;
         if (resolvedSiteId) window.cmsActiveSiteId = resolvedSiteId;
