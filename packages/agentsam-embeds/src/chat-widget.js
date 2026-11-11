@@ -26,9 +26,11 @@ export class AgentSamStoreChat extends HTMLElement {
     const position = config.horizontal_position === 'left' ? 'left:16px' :
       config.horizontal_position === 'center' ? 'left:50%;transform:translateX(-50%)' : 'right:16px';
     const label = escapeHtml(config.label || 'Chat');
-    const icon = config.icon === 'none' ? '' : config.icon === 'mail'
+    const icon = config.icon === 'message'
       ? '<path d="M3 6h18v12H3z M3 7l9 6 9-6"/>'
-      : '<path d="M4 5h16v11H9l-5 3V5z"/>';
+      : config.icon === 'help'
+        ? '<circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 1 1 4 2.83c-1 .38-1 1.17-1 2.17m0 2v1"/>'
+        : '<path d="M4 5h16v11H9l-5 3V5z"/>';
     const featured = config.show_featured_products && Array.isArray(config.featured_products) && Array.isArray(this.products)
       ? this.products.filter(product => product && config.featured_products.includes(product.id) && localPath(product.href)).slice(0, 4)
       : [];
@@ -47,7 +49,7 @@ export class AgentSamStoreChat extends HTMLElement {
       :focus-visible{outline:2px solid currentColor;outline-offset:3px}
     </style>
     <button class="anchor launcher${config.style === 'message_bar' ? ' bar' : ''}" type="button" aria-haspopup="dialog" aria-controls="chat" aria-expanded="false">
-      ${icon ? '<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+icon+'</svg>' : ''}${label}
+      <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${icon}</svg>${label}
     </button>
     <dialog id="chat" class="anchor" aria-labelledby="chat-title">
       <header><h2 id="chat-title">Store inbox</h2><button type="button" aria-label="Close chat">×</button></header>
