@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-contracts": "2.6.14",
-    "@inneranimalmedia/agentsam-sdk": "2.6.14",
+    "@inneranimalmedia/agentsam-sdk": "2.6.13",
     "@inneranimalmedia/agentsam-vault": "2.6.14"
   }
 }
