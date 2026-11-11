@@ -164,7 +164,8 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
         "chat" => Ok((Method::POST, "/api/chat".to_string())),
         "vault" => {
             let path = request.path.as_deref().unwrap_or("").trim();
-            if !(path == "/api/vault/secrets"
+            if !(path == "/api/vault/services"
+                || path == "/api/vault/secrets"
                 || path.starts_with("/api/vault/secrets/")
                 || path == "/api/vault/credentials"
                 || path.starts_with("/api/vault/credentials/"))
