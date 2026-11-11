@@ -43,10 +43,12 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
   };
   const studioProductRoute = /^\/admin\/products\/create\/[A-Za-z0-9_-]+$/.test(url.pathname);
   const allowed = recognized[url.pathname] || (studioProductRoute
-    ? ['site_id', 'resume']
-    : /^\/admin\/collections\/[A-Za-z0-9_-]+$/.test(url.pathname) || url.pathname === '/admin/products/create'
-      ? ['site_id']
-      : []);
+    ? ['site_id', 'resume', 'collection_id']
+    : url.pathname === '/admin/products/create'
+      ? ['site_id', 'collection_id']
+      : /^\/admin\/collections\/[A-Za-z0-9_-]+$/.test(url.pathname)
+        ? ['site_id']
+        : []);
   if ([...url.searchParams.keys()].some((name) => !allowed.includes(name) || url.searchParams.getAll(name).length !== 1)) return null;
   if (url.pathname === '/admin/theme-project-editor') {
     // Online Store's actual + New link is a site-scoped creation intent,
