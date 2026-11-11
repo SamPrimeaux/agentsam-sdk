@@ -895,6 +895,10 @@ export default {
       && url.searchParams.get("__agentsamEmbedded") === "1";
     if ((request.method === "GET" || request.method === "HEAD") &&
         (url.pathname.startsWith("/admin/") && (!isStudioAdminPath(url.pathname) || embeddedEcommerceHome))) {
+      if (url.pathname === "/admin/theme-editor" && url.searchParams.has("marketplace_kind")) {
+        const denied = await guardStudioDocument(request, env);
+        if (denied) return denied;
+      }
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       let storeBootstrap=null;
       if(url.pathname==='/admin/store' && request.method==='GET'){
