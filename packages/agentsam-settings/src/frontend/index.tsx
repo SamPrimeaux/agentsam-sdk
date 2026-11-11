@@ -1890,7 +1890,7 @@ function ThemesView({ themes, host, onChanged }: { themes: SettingsTheme[]; host
 const freshAgent=():SettingsAgentDraft=>({
   name:"",slug:"",description:"",instructions:"",modelId:"",
   allowedTools:[],runInBackground:false,sandboxMode:"workspace-write",
-  reasoningEffort:"medium",maxConcurrentThreads:3,active:true,
+  reasoningEffort:"auto",maxConcurrentThreads:3,active:true,
 });
 function agentDraft(row:SettingsAgent):SettingsAgentDraft{
  return {
@@ -1899,8 +1899,7 @@ function agentDraft(row:SettingsAgent):SettingsAgentDraft{
   modelId:row.modelId||"",allowedTools:row.allowedTools||[],
   runInBackground:row.runInBackground===true,
   sandboxMode:row.sandboxMode==="read-only"?"read-only":"workspace-write",
-  reasoningEffort:(["low","medium","high","extra_high"].includes(row.reasoningEffort||"")
-    ? row.reasoningEffort:"medium") as SettingsAgentDraft["reasoningEffort"],
+  reasoningEffort:row.reasoningEffort||"auto",
   maxConcurrentThreads:row.maxConcurrentThreads||3,active:row.active!==false,
  };
 }
@@ -1921,6 +1920,8 @@ function AgentsView({snapshot,view,host,onChanged}:{
   },[snapshot.agentPolicy]);
   const availableModels=snapshot.models.filter(model=>model.enabled);
   const selectedModel=availableModels.some(model=>model.id===draft.modelId);
+  const verifiedModel=availableModels.find(model=>model.id===draft.modelId);
+  const effortOptions=["auto",...(verifiedModel?.reasoningEfforts||[])];
   const formClass="w-full min-h-10 rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none transition-colors focus:border-foreground/50 focus-visible:ring-2 focus-visible:ring-foreground/15";
   const field=(label:string,value:string,onChange:(next:string)=>void,placeholder="")=>(
     <label className="block space-y-1.5">
@@ -1984,7 +1985,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
           <div className="border-b border-border/70 pb-3 pt-2"><h3 className="text-[13px] font-semibold">Instructions & execution</h3><p className="mt-1 text-[11px] text-muted-foreground">All permissions remain subject to your connected accounts and runtime approvals.</p></div>
           <label className="block space-y-2">
             <span className="text-[11px] font-medium">Execution model (verified inventory)</span>
-            <select className={formClass} value={draft.modelId} onChange={event=>setDraft(current=>({...current,modelId:event.target.value}))}>
+            <select className={formClass} value={draft.modelId} onChange={event=>setDraft(current=>({...current,modelId:event.target.value,reasoningEffort:"auto"}))}>
               <option value="">No model selected</option>
               {draft.modelId&&!selectedModel?<option value={draft.modelId}>{draft.modelId} (saved; not verified)</option>:null}
               {availableModels.map(model=><option key={model.id} value={model.id}>{model.provider}: {model.name}</option>)}
@@ -2006,7 +2007,9 @@ function AgentsView({snapshot,view,host,onChanged}:{
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-2 text-[11px] font-medium">Reasoning effort
               <select className={formClass} value={draft.reasoningEffort} onChange={event=>setDraft(current=>({...current,reasoningEffort:event.target.value as SettingsAgentDraft["reasoningEffort"]}))}>
-                {["low","medium","high","extra_high"].map(value=><option key={value} value={value}>{value}</option>)}
+                {draft.reasoningEffort&&!effortOptions.includes(draft.reasoningEffort)
+                  ?<option value={draft.reasoningEffort}>{draft.reasoningEffort} (saved; not verified)</option>:null}
+                {effortOptions.map(value=><option key={value} value={value}>{value==="auto"?"Model default":value}</option>)}
               </select>
             </label>
             <label className="space-y-2 text-[11px] font-medium">Sandbox permissions
