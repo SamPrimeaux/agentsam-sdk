@@ -14,6 +14,11 @@
   // Canonical public discovery destination; installation itself stays inside
   // the authenticated, site-owned CMS catalog-resources transaction.
   const appStoreUrl = 'https://apps.inneranimalmedia.com/collections/embeds';
+  // The installed Theme Project editor is an isolated srcdoc frame. Its
+  // versioned project adapter does not implement CMS catalog-resources.
+  // Never send guessed site/page writes from that draft into another CMS page.
+  const projectHost = window.AgentSamThemeEditorHost || null;
+  const canInstall = !projectHost || projectHost.adapter?.capabilities?.catalogResources === true;
   const glyph = icon => ({'megaphone':'◩','mail':'✉','mail-open':'▣','send':'↗'}[icon]||'⊞');
   const editableFields = ['first_name','last_name','email','phone','message'];
   const fieldLabel = value => ({
@@ -90,6 +95,7 @@
   }
 
   async function refreshInstalled() {
+    if (!canInstall) { installed = []; return {installed:[],can_install:false}; }
     const payload = await api('/api/admin/cms/pages/' + encodeURIComponent(pageSlug()) + '/catalog-resources');
     installed = Array.isArray(payload.installed) ? payload.installed : [];
     return payload;
@@ -117,7 +123,7 @@
             '<span class="ter-picker-copy"><strong>'+esc(app.name)+'</strong>'+
             '<small>'+esc(app.tagline||'')+'</small>'+
             '<em>'+esc(app.provider||'InnerAnimalMedia')+' · '+(count?'On this page':'Ready to configure')+'</em></span>'+
-            '<span class="ter-picker-add">'+(count?'Edit':'Add')+'</span></button>';
+            '<span class="ter-picker-add">'+(canInstall ? (count?'Edit':'Add') : 'Preview')+'</span></button>';
         }).join('')+'</div></section>').join('')
       : '<p class="ter-picker-empty" role="status">No matching published embed types. Explore the App Store for more.</p>';
     root.querySelectorAll('[data-picker-configure]').forEach(button => button.addEventListener('click', () => {
@@ -133,7 +139,9 @@
     pickerDialog.innerHTML =
       '<header class="ter-picker-head"><div><span>InnerAnimalMedia · Website apps</span>'+
       '<h2>Picked for your website</h2>'+
-      '<p>Configure a published embed before adding it to this page. Nothing is installed just by browsing.</p></div>'+
+      '<p>'+(canInstall
+        ? 'Configure a published embed before adding it to this page. Nothing is installed just by browsing.'
+        : 'Preview available embeds. This theme draft needs a project-scoped installation adapter before any embed can be installed.')+'</p></div>'+
       '<button type="button" data-picker-dismiss aria-label="Close app picker">×</button></header>'+
       '<div class="ter-picker-search"><label for="ter-picker-query">Search apps</label>'+
       '<input id="ter-picker-query" type="search" placeholder="Search the available embeds" autocomplete="off"></div>'+
@@ -194,9 +202,11 @@
       '<small>'+(instance ? ('Installed · '+esc(instance.section_key)) : (instances.length ? (instances.length+' installed on this page') : 'Catalog template'))+'</small></div>'+
       '<button type="button" data-embed-close aria-label="Close embed inspector">×</button></header>'+
       '<div class="ter-inspector-scroll"><p class="ter-notice">'+(
-        instance
-          ? 'Editing an installed CMS instance. Save writes through the page draft provider.'
-          : 'Configure settings, then install into this page. Installation creates a persisted section and block identity.'
+        !canInstall
+          ? 'Preview only. This Theme Project draft cannot install a site-owned CMS embed without a project-scoped installation adapter.'
+          : instance
+            ? 'Editing an installed CMS instance. Save writes through the page draft provider.'
+            : 'Configure settings, then install into this page. Installation creates a persisted section and block identity.'
       )+'</p>'+
       (app.key==='customer_billing' ? '<p class="ter-notice">The account destination is resolved by the authorized site host, never entered through a theme. Publishing requires a working authenticated billing route.</p>' : '')+
       '<details open><summary>Content</summary>'+
@@ -226,7 +236,7 @@
         (app.key.startsWith('newsletter')?checkbox('double_opt_in','Double opt-in',c.double_opt_in!==false):'')+
         '</details>':'')+
       '<div class="ter-actions">'+
-      (instance
+      (!canInstall ? '' : instance
         ? '<button type="button" data-embed-save-instance data-section-key="'+esc(instance.section_key)+'">Save instance</button>'+
           '<button type="button" data-embed-remove-instance data-section-key="'+esc(instance.section_key)+'">Remove</button>'
         : '<button type="button" data-embed-install>Install into page</button>')+
@@ -287,6 +297,7 @@
   }
 
   async function install(key) {
+    if (!canInstall) return;
     if (busy) return;
     const item = get(key);
     if (!item) return;
@@ -311,6 +322,7 @@
   }
 
   async function saveInstance(sectionKey, catalogKey) {
+    if (!canInstall) return;
     if (busy || !sectionKey) return;
     const item = get(catalogKey);
     if (!item) return;
@@ -348,6 +360,7 @@
   }
 
   async function removeInstance(sectionKey, catalogKey) {
+    if (!canInstall) return;
     if (busy || !sectionKey) return;
     busy = true;
     note('Removing instance…');
@@ -448,7 +461,7 @@
     getDraft:key=>get(key)?.config||null,
     getInstalled:()=>installed.slice(),
     open,close,preview,install,openPicker,refreshInstalled,
-    isPreviewOnly:false,
+    isPreviewOnly:!canInstall,
   };
   void boot();
 })();
