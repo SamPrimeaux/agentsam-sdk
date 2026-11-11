@@ -152,11 +152,23 @@ export default function CollectionEditor() {
     }catch(e){setError(e instanceof Error?e.message:"Product scaffolding failed");}
   },[save,form,collection?.status]);
   const goToStudio=useCallback(async (supplierId?:string)=>{
-    const savedId=await save();
-    if(!savedId)return;
+    // A blank new collection must not block creating its first store product.
+    // Preserve any existing collection edits before leaving this editor.
+    let savedId=currentId.current;
+    if (dirty && !form.title.trim()) {
+      setTab("overview");
+      setError("Give this collection a title and save it before opening Product Studio, so your changes are not lost.");
+      return;
+    }
+    if (dirty || (!savedId && form.title.trim())) {
+      const persisted=await save();
+      if (!persisted) return;
+      savedId=persisted;
+    }
     const target=supplierId?`/admin/products/create/${encodeURIComponent(supplierId)}`:"/admin/products/create";
-    window.location.assign(collectionHref(`${target}?collection_id=${encodeURIComponent(savedId)}`));
-  },[save]);
+    const returnId=savedId?`?collection_id=${encodeURIComponent(savedId)}`:"";
+    window.location.assign(collectionHref(target+returnId));
+  },[save,dirty,form.title]);
   useEffect(()=>{
     window.publishDockEdit?.({
       active:true,dirty,canSave:!busy&&!!form.title.trim(),hint:dirty?"Unsaved collection changes":"Collection up to date",
