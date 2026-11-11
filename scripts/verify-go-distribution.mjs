@@ -97,6 +97,29 @@ function pack(cwd) {
 const sdkPack = pack(ROOT);
 const servicePack = pack(SERVICE);
 
+// A release candidate must remain clean-room installable before its first-party
+// dependency reaches npm. Exercise that dependency as a real local tarball;
+// published releases must instead resolve it from the public registry.
+const authority = fs.readFileSync(path.join(ROOT, 'agentsam.yaml'), 'utf8');
+const releaseBlock = authority.split('\nrelease:\n')[1];
+assert.ok(releaseBlock, 'canonical release authority is required');
+const releaseState = releaseBlock.match(/^    state:\s*(candidate|published)\s*$/m)?.[1];
+const targetVersion = releaseBlock.match(/^    target_version:\s*"([^"]+)"\s*$/m)?.[1];
+assert.ok(releaseState, 'release state must be candidate or published');
+assert.equal(targetVersion, sdkPack.version, 'distribution test must target the canonical release version');
+const sdkManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+const errorsVersion = sdkManifest.dependencies?.['@inneranimalmedia/agentsam-errors'];
+assert.equal(errorsVersion, sdkPack.version, 'the SDK must declare its exact release-train error contract');
+const errorsPack = releaseState === 'candidate'
+  ? pack(path.join(ROOT, 'packages', 'agentsam-errors'))
+  : null;
+if (errorsPack) {
+  assert.equal(errorsPack.name, '@inneranimalmedia/agentsam-errors');
+  assert.equal(errorsPack.version, errorsVersion);
+}
+const installTarballs = [sdkPack, servicePack, ...(errorsPack ? [errorsPack] : [])]
+  .map((item) => path.join(artifacts, item.filename));
+
 assert.equal(sdkPack.name, '@inneranimalmedia/agentsam-sdk');
 assert.equal(servicePack.name, '@inneranimalmedia/agentsam-go-worker');
 assert.equal(
@@ -129,8 +152,7 @@ run('npm', ['init', '-y'], { cwd: app });
 run('npm', [
   'install',
   '--ignore-scripts',
-  path.join(artifacts, sdkPack.filename),
-  path.join(artifacts, servicePack.filename),
+  ...installTarballs,
 ], { cwd: app });
 
 const cli = path.join(app, 'node_modules', '.bin', 'agentsam');
@@ -156,8 +178,7 @@ run('npm', [
   '--ignore-scripts',
   '--prefix',
   globalPrefix,
-  path.join(artifacts, sdkPack.filename),
-  path.join(artifacts, servicePack.filename),
+  ...installTarballs,
 ], { cwd: temp });
 
 const globalCli = process.platform === 'win32'
@@ -177,6 +198,8 @@ const receipt = {
   schema: 'agentsam.go-distribution-proof.v1',
   ok: true,
   temp_root: temp,
+  release_phase: releaseState,
+  candidate_error_tarball: errorsPack ? {name: errorsPack.name, version: errorsPack.version} : null,
   sdk: {
     name: sdkPack.name,
     version: sdkPack.version,
