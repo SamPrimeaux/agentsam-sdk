@@ -99,6 +99,46 @@ export default function PlatformProductCatalog({
     } finally { setSaving(false); }
   }
 
+
+  if (productId) return (
+    <section id="studio-product-editor" className="ps-platform ps-platform-editor" aria-label="Registered product editor">
+      <div className="ps-platform-inspector-head">
+        <div>
+          <span className="ps-eyebrow">PRODUCT STUDIO / REGISTERED APPLICATION</span>
+          <h1>{selected?.name || "Product details"}</h1>
+          <p className="ps-platform-description">Edit catalog presentation. Product release, app installations and storefront publishing remain separate managed operations.</p>
+        </div>
+        <button type="button" className="ps-button" onClick={() => {
+          if (!navigateHostedStudioRoute("/admin/products/create")) navigate("/products/create");
+        }}>Back to products</button>
+      </div>
+      {loading && <p role="status" className="ps-result-count">Loading registered product…</p>}
+      {!loading && error && <div className="ps-feedback" role="alert">
+        <strong>Product registry unavailable</strong><p>{error}</p>
+        <button type="button" className="ps-button" onClick={() => { setLoading(true); setRetry(n => n + 1); }}>Retry</button>
+      </div>}
+      {!loading && !error && !selected && <div className="ps-feedback" role="status">
+        <strong>Product not found in this account</strong>
+        <p>This product may be removed, or your account may not have permission to edit it.</p>
+      </div>}
+      {selected && <div id="ps-product-inspector" className="ps-platform-inspector" role="region" aria-label="Edit registered product">
+        <div className="ps-platform-inspector-head"><div><span className="ps-eyebrow">PRODUCT DETAILS</span><h3>{selected.name}</h3></div>
+          <button className="ps-button" type="button" onClick={() => setSelected(null)}>Close</button>
+        </div>
+        <p>Update the presentation details of this existing AgentSam product. Repository, status, and release metadata remain managed by their authoritative systems.</p>
+        <form onSubmit={(event) => void save(event)} className="ps-platform-fields">
+          <label>Name<input required maxLength={160} value={edit.name || ""} onChange={(e) => setEdit((s) => ({...s,name:e.target.value}))}/></label>
+          <label>Collection<input maxLength={120} value={edit.collection || ""} onChange={(e) => setEdit((s) => ({...s,collection:e.target.value}))}/></label>
+          <label className="ps-platform-wide">Description<textarea maxLength={8000} rows={3} value={edit.description || ""} onChange={(e) => setEdit((s) => ({...s,description:e.target.value}))}/></label>
+          <label className="ps-platform-wide">Thumbnail URL<input type="text" maxLength={2048} value={edit.thumbnail_url || ""} onChange={(e) => setEdit((s) => ({...s,thumbnail_url:e.target.value}))}/></label>
+          <div className="ps-platform-wide"><button type="submit" disabled={saving || !selected.revision} className="ps-button ps-primary">{saving ? "Saving…" : "Save product details"}</button>
+            {!selected.revision && <span className="ps-result-count">This product is read-only.</span>}</div>
+        </form>
+        {notice && <p className="ps-notice" role="status">{notice}</p>}
+      </div>}
+    </section>
+  );
+
   return (
     <section id="studio-catalog" className="ps-platform" aria-label="AgentSam product registry">
       <div className="ps-catalog-heading">
@@ -126,21 +166,7 @@ export default function PlatformProductCatalog({
           </button>
         ))}
       </div>
-      {selected && <div id="ps-product-inspector" className="ps-platform-inspector" role="region" aria-label="Edit registered product">
-        <div className="ps-platform-inspector-head"><div><span className="ps-eyebrow">PRODUCT DETAILS</span><h3>{selected.name}</h3></div>
-          <button className="ps-button" type="button" onClick={() => setSelected(null)}>Close</button>
-        </div>
-        <p>Update the presentation details of this existing AgentSam product. Repository, status, and release metadata remain managed by their authoritative systems.</p>
-        <form onSubmit={(event) => void save(event)} className="ps-platform-fields">
-          <label>Name<input required maxLength={160} value={edit.name || ""} onChange={(e) => setEdit((s) => ({...s,name:e.target.value}))}/></label>
-          <label>Collection<input maxLength={120} value={edit.collection || ""} onChange={(e) => setEdit((s) => ({...s,collection:e.target.value}))}/></label>
-          <label className="ps-platform-wide">Description<textarea maxLength={8000} rows={3} value={edit.description || ""} onChange={(e) => setEdit((s) => ({...s,description:e.target.value}))}/></label>
-          <label className="ps-platform-wide">Thumbnail URL<input type="text" maxLength={2048} value={edit.thumbnail_url || ""} onChange={(e) => setEdit((s) => ({...s,thumbnail_url:e.target.value}))}/></label>
-          <div className="ps-platform-wide"><button type="submit" disabled={saving || !selected.revision} className="ps-button ps-primary">{saving ? "Saving…" : "Save product details"}</button>
-            {!selected.revision && <span className="ps-result-count">This product is read-only.</span>}</div>
-        </form>
-        {notice && <p className="ps-notice" role="status">{notice}</p>}
-      </div>}
+
     </section>
   );
 }
