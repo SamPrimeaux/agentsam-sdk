@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import {
   requiredPublishedPackages,
+  appManifestSources,
   registryStatus,
   staleLockTarballs,
 } from './check-first-party-registry.mjs';
@@ -61,6 +63,17 @@ test('checks lock tarballs against their exact manifest pins, not the Local Stud
     'node_modules/@inneranimalmedia/agentsam-sdk': { link: true, resolved: '../../packages/agentsam-sdk' },
   } };
   assert.deepEqual(staleLockTarballs(candidateLock, requirements), []);
+});
+
+test('candidate Studio uses verified source links and checks only real npm tarballs', () => {
+  const manifests = appManifestSources();
+  const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
+  assert.deepEqual(requiredPublishedPackages(manifests, lock), [
+    { name: '@inneranimalmedia/agentsam-sdk', version: '2.6.13' },
+  ]);
+  const tampered = structuredClone(lock);
+  tampered.packages['node_modules/@inneranimalmedia/agentsam-nav'].resolved = '../../packages/agentsam-brand';
+  assert.throws(() => requiredPublishedPackages(manifests, tampered), /untrusted_first_party_lock_link:.*agentsam-nav/);
 });
 
 test('reports a missing lock entry for an exact published dependency', () => {

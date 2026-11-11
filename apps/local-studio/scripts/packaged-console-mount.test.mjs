@@ -359,7 +359,7 @@ test('embedded desktop navigation reaches its parent and API requests use the na
     NAV:{main:[],channels:[],apps:[]}, renderSideNav:()=>'<nav></nav>',
     CONSOLE_APPEARANCE_KEY:'appearance', localStorage:{getItem:()=> 'dark'},
     Request,Response,URL,encodeURIComponent,
-    window:{parent:{agentsamConsoleHost:bridge},location:{origin:'https://native.test',href:'https://native.test/admin/products.html',hash:''},fetch:async()=>{throw Error('wrong cookie transport');}},
+    window:{parent:{agentsamConsoleHost:bridge},location:{origin:'https://native.test',href:'https://native.test/admin/products.html',hash:''},addEventListener:()=>{},fetch:async()=>{throw Error('wrong cookie transport');}},
     document:{addEventListener:(_name,handler)=>events.push(handler)},
   };
   runInNewContext(source,context);
