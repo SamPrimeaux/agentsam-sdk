@@ -82,3 +82,7 @@
 .ter-picker-footer a{color:#34497d;font-weight:650;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:650px){.te-embed-picker-dialog{width:100%;max-width:100%;max-height:90dvh;position:fixed;bottom:0;margin:auto 0 0;border-radius:15px 15px 0 0}.ter-picker-head,.ter-picker-results,.ter-picker-search,.ter-picker-footer{padding-left:15px;padding-right:15px}.ter-picker-grid{grid-template-columns:minmax(0,1fr)}.ter-picker-footer{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.te-embed-picker-dialog::backdrop{backdrop-filter:none}}
+
+/* Chat is configured in the App embeds rail, keeping the preview visible. */
+.te-embed-review-inspector.ter-left-inspector{position:static;border-left:0;border-top:1px solid var(--te-border,#e4e0e8)}
+.ter-left-inspector .ter-field textarea{box-sizing:border-box;width:100%;resize:vertical;padding:8px;border:1px solid #ded9e5;border-radius:7px;font:inherit}

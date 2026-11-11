@@ -45,14 +45,23 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
     await tick();
     assert.match(w.document.querySelector('.ter-inspector-head').textContent, /Announcement bar/i);
     assert.ok(calls.every(call => call.method === 'GET'), 'marketplace arrival only opens configuration');
-    assert.equal(w.document.querySelectorAll('[data-embed-open]').length,6);
+    assert.equal(w.document.querySelectorAll('[data-embed-open]').length,catalog.apps.length);
     assert.equal(w.document.querySelector('#te-embed-empty'),null);
+    w.document.querySelector('[data-embed-open="store_chat"]').click();
+    const chatPane=w.document.querySelector('[data-drawer-panel="app-embeds"] .ter-left-inspector');
+    const greeting=chatPane.querySelector('[data-embed-input="greeting"]');
+    greeting.value='Welcome to the store';
+    greeting.dispatchEvent(new w.Event('input',{bubbles:true}));
+    assert.equal(w.ThemeEmbedReview.getDraft('store_chat').greeting,'Welcome to the store');
+    assert.ok(chatPane.querySelector('[data-embed-select="horizontal_position"]'));
+    assert.ok(chatPane.querySelector('[data-embed-input="border_radius"]'));
+
     assert.equal(w.ThemeEmbedReview.isPreviewOnly,false);
     assert.ok(w.document.querySelector('[data-open-embed-picker]'));
     w.ThemeEmbedReview.openPicker();
     const picker=w.document.querySelector('.te-embed-picker-dialog');
     assert.ok(picker.open);
-    assert.equal(picker.querySelectorAll('[data-picker-configure]').length,6);
+    assert.equal(picker.querySelectorAll('[data-picker-configure]').length,catalog.apps.length);
     assert.match(picker.textContent,/InnerAnimalMedia App Store/);
     picker.querySelector('[data-picker-configure="newsletter_subscribe"]').click();
     assert.equal(picker.open,false);
