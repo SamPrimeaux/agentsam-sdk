@@ -133,7 +133,7 @@ test("GitHub repository read uses only the account-bound sealed grant and never 
   const encoded = await sealOauthToken(e.VAULT_MASTER_KEY,token,oauthAad("github",account,"user23"));
   let lookedUpAccount=null,lookedUpUser=null,providerAuth="";
   e.DB={prepare(sql){
-    assert.match(sql,/account_id = \?/);
+    assert.match(sql,/account_id\s*=\s*\?/);
     return {bind(...args){lookedUpAccount=args[0];lookedUpUser=args[1];return {async first(){
       if(args[0]!==account||args[1]!=="user23")return null;
       return {account_identifier:"user23",access_token_encrypted:encoded,expires_at:null};
