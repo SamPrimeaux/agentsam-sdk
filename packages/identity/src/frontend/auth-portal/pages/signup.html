@@ -438,7 +438,7 @@
                 </button>
             </div>
         </div>
-        <button type="submit" id="submitBtn" class="btn-primary">Connect</button>
+        <button type="submit" id="submitBtn" class="btn-primary">Create account</button>
 
         <div class="oauth-stack">
             <a id="googleSignIn" href="/api/oauth/google/start" class="btn-primary" style="background: #ffffff; color: #1E293B; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -562,7 +562,7 @@
 
         error.classList.remove('visible');
         btn.disabled = true;
-        btn.textContent = 'Connecting...';
+        btn.textContent = 'Creating account...';
 
         try {
             var origin = window.location.origin;
@@ -594,7 +594,7 @@
             error.style.color = '#FF3B30';
             error.classList.add('visible');
             btn.disabled = false;
-            btn.textContent = 'Connect';
+            btn.textContent = 'Create account';
             btn.animate([
                 { transform: 'translateX(0)' },
                 { transform: 'translateX(-5px)' },
@@ -606,7 +606,7 @@
             error.style.color = '#FF3B30';
             error.classList.add('visible');
             btn.disabled = false;
-            btn.textContent = 'Connect';
+            btn.textContent = 'Create account';
         }
     });
 

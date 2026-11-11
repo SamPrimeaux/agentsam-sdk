@@ -28,6 +28,8 @@ describe('auth portal preview server', () => {
     assert.equal(signupRes.status, 200);
     const signupHtml = await signupRes.text();
     assert.match(signupHtml, /\/api\/auth\/signup/);
+    assert.match(signupHtml, /<button type="submit" id="submitBtn" class="btn-primary">Create account<\/button>/);
+    assert.match(signupHtml, /Creating account\.\.\./);
 
     const brandingRes = await fetch(`${baseUrl}/shared/company-branding.js`);
     assert.equal(brandingRes.status, 200);

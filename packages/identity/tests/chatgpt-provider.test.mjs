@@ -63,9 +63,11 @@ describe('chatgpt identity provider', () => {
     assert.equal(allowed.principal?.provider, 'chatgpt');
   });
 
-  it('stock sign-in catalog includes cloudflare, google, iam, chatgpt', () => {
+  it('stock sign-in catalog includes cloudflare, google, github, iam, chatgpt', () => {
     const ids = listStockSignInOptions().map((o) => o.id);
-    assert.deepEqual(ids, ['cloudflare', 'google', 'inneranimalmedia', 'chatgpt']);
+    assert.deepEqual(ids, ['cloudflare', 'google', 'github', 'inneranimalmedia', 'chatgpt']);
+    assert.equal(getStockSignInOption('github')?.kind, 'oauth');
+    assert.ok(getStockSignInOption('github')?.requiredEnv?.includes('GITHUB_CLIENT_ID'));
     assert.deepEqual([...CMS_STOCK_SIGN_IN_IDS], ids);
     assert.equal(getStockSignInOption('iam')?.id, 'inneranimalmedia');
     assert.equal(getStockSignInOption('openai')?.id, 'chatgpt');

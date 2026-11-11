@@ -44,6 +44,16 @@ export const STOCK_SIGN_IN_OPTIONS = Object.freeze([
     implementation: 'src/providers/google',
   },
   {
+    id: 'github',
+    label: 'GitHub',
+    shortLabel: 'GitHub',
+    kind: 'oauth',
+    status: 'ready',
+    description: 'Sign in with GitHub using the packaged OAuth authorization and callback flow.',
+    requiredEnv: ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'],
+    implementation: 'src/providers/github',
+  },
+  {
     id: 'inneranimalmedia',
     label: 'Inner Animal Media',
     shortLabel: 'IAM',
