@@ -275,7 +275,7 @@ export function SettingsThemeGallery({
               <span className="shrink-0 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground">{isCustom ? 'Private' : theme.source === 'catalog' ? 'Shared' : 'Package'}</span>
             </div>
             <p className="truncate font-mono text-[11px] text-muted-foreground" title={theme.slug || theme.packageName}>{theme.slug || theme.packageName}</p>
-            <p className="text-xs text-muted-foreground">{isArchived ? 'Archived · can be restored' : theme.status || theme.source}</p>
+            <p className="text-xs text-muted-foreground">{isArchived ? 'Archived · can be restored' : theme.status === 'active' ? 'Available in catalog' : theme.status || theme.source}</p>
             <div className="flex flex-wrap gap-2">
               {theme.previewUrl && <a className={button} href={theme.previewUrl} target="_blank" rel="noopener noreferrer" aria-label={'Explore ' + theme.name + ' preview in a new tab'}><Expand size={14} />Preview</a>}
               {(theme.source === 'catalog' || isCustom) && !isArchived && <button type="button" className={primaryButton} disabled={busy !== null} onClick={() => openCustomize(theme)}><Paintbrush size={14} />Customize</button>}
