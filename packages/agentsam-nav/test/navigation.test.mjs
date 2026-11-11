@@ -94,3 +94,26 @@ test('navigation keeps one Projects disclosure, pinned resources, and recent cha
   assert.match(html,/Filter projects and conversations/);
   assert.match(html,/View all/);
 });
+
+
+test('shared Apps navigation exposes a host-owned add action on desktop and mobile', () => {
+  const html = renderToString(React.createElement(Nav.Provider, {value: {
+    showHistory:false, showSidebarHeader:false, pathname:'/admin/apps/campaign',
+    destinations:[{id:'installed-apps',label:'Apps',icon:React.createElement('span',null,'Apps'),
+      children:[{id:'campaign',label:'Campaign',href:'/admin/apps/campaign'}],
+      action:{label:'Browse apps',onSelect:()=>{}}}],
+  }, defaultOpen:true}, React.createElement(Nav.Sidenav)));
+  assert.match(html,/aria-label="Browse apps"/);
+  assert.match(html,/aria-label="Expand Apps"|aria-label="Collapse Apps"/);
+  assert.match(html,/href="\/admin\/apps\/campaign"/);
+  assert.equal((html.match(/aria-label="Browse apps"/g) || []).length,1);
+});
+
+test('shared Apps navigation renders an add action even when no app is installed', () => {
+  const html = renderToString(React.createElement(Nav.Provider, {value: {
+    showHistory:false,
+    destinations:[{id:'installed-apps',label:'Apps',children:[],action:{label:'Browse apps',onSelect:()=>{}}}],
+  }}, React.createElement(Nav.Sidenav)));
+  assert.match(html,/aria-label="Browse apps"/);
+  assert.match(html,/title="Apps"/);
+});

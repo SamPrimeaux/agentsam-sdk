@@ -366,25 +366,36 @@ function DestinationRow({ item, depth = 0 }: { item: NavDestination; depth?: num
     if (isMobile) close();
   };
   const rowClass = depth ? 'as-nav-submenu-link' : 'as-nav-destination';
+  const action = item.action ? <NavIconAction
+    className="as-nav-button as-nav-destination-action" label={item.action.label}
+    disabled={item.action.disabled}
+    onClick={(event) => { event.stopPropagation(); item.action?.onSelect(); if (isMobile) close(); }}>
+    <Plus aria-hidden="true" />
+  </NavIconAction> : null;
   if (item.children?.length) return <div className="as-nav-destination-group">
     {item.href ? <div className="as-nav-parent-row" data-active={active || undefined}>
       <a className={rowClass} href={item.href} title={item.label} aria-label={item.label} aria-current={item.active ? 'page' : undefined} data-active={item.active || undefined} onClick={navigate}>
         {item.icon}<span>{item.label}</span>
       </a>
+      {action}
       <NavIconAction className="as-nav-button as-nav-branch-toggle" label={(expanded ? 'Collapse ' : 'Expand ') + item.label} aria-expanded={expanded} aria-controls={'as-nav-submenu-' + item.id} onClick={toggle}>
         <ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
       </NavIconAction>
-    </div> : <button type="button" className={rowClass} title={item.label} data-active={active || undefined} aria-expanded={expanded} aria-controls={'as-nav-submenu-' + item.id} onClick={toggle}>
-      {item.icon}<span>{item.label}</span><ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
-    </button>}
+    </div> : <div className="as-nav-parent-row" data-active={active || undefined}>
+      <button type="button" className={rowClass} title={item.label} aria-label={(expanded ? 'Collapse ' : 'Expand ') + item.label} data-active={active || undefined} aria-expanded={expanded} aria-controls={'as-nav-submenu-' + item.id} onClick={toggle}>
+        {item.icon}<span>{item.label}</span><ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
+      </button>
+      {action}
+    </div>}
     {expanded ? <div className="as-nav-submenu" role="group" aria-label={item.label + ' pages'} id={'as-nav-submenu-' + item.id}>
       {item.children.map((child) => <DestinationRow key={child.id} item={child} depth={depth + 1} />)}
     </div> : null}
   </div>;
   const props = { className: rowClass, title: item.label, 'aria-label': item.label, 'data-active': item.active || undefined, 'aria-current': item.active ? 'page' as const : undefined };
-  return item.href
+  const destination = item.href
     ? <a {...props} href={item.href} onClick={navigate}>{item.icon}<span>{item.label}</span></a>
     : <button {...props} type="button" disabled={!item.onSelect} onClick={navigate}>{item.icon}<span>{item.label}</span></button>;
+  return action ? <div className="as-nav-parent-row" data-active={active || undefined}>{destination}{action}</div> : destination;
 }
 
 function HistoryCollection({id,title,items,empty,searching=false}:{id:string;title:string;items:ReactNode[];empty:string;searching?:boolean}) {

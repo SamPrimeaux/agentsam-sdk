@@ -1,3 +1,5 @@
+import { listLauncherApps } from './apps-launcher.js';
+
 /**
  * Account-owned, runtime-editable presentation of the installed app navigation.
  * The packaged host projection is an allowed starting catalog, not a persisted
@@ -97,6 +99,41 @@ export function applyNavigationOverrides(base, overrides) {
   };
 }
 
+/**
+ * Resolve account installations into the existing host navigation contract.
+ * The published host manifest remains the authority for built-in applications.
+ * A catalog listing is never itself an installation or a permission grant.
+ */
+export function withInstalledApps(base, catalog = []) {
+  const apps = Array.isArray(base?.apps) ? [...base.apps] : [];
+  const ids = new Set(apps.map(app => String(app.id || '')));
+  const hrefs = new Set(apps.map(app => String(app.href || '')));
+  for (const app of catalog) {
+    if (!app || app.installed !== true || app.enabled !== true ||
+        !Array.isArray(app.surfaces) || !app.surfaces.includes('admin-nav')) continue;
+    const href = app.href;
+    const label = typeof app.label === 'string' ? app.label.trim() : '';
+    const key = typeof app.key === 'string' ? app.key.trim() : '';
+    if (!key || !/^[a-z0-9][a-z0-9._-]*$/i.test(key) || !label || label.length > 80 ||
+        typeof href !== 'string' || href.length > 240 ||
+        !/^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(href) ||
+        /[\\\u0000-\u001f<>"']/.test(href)) continue;
+    const id = 'plugin-' + key.replace(/[^a-z0-9-]/gi, '-');
+    if (ids.has(id) || hrefs.has(href)) continue;
+    ids.add(id); hrefs.add(href);
+    apps.push({ id, label, href, icon: 'apps', source: 'account-plugin', pluginKey: key });
+  }
+  return { ...base, apps };
+}
+
+function withCurrentNavigationOverrides(saved, base) {
+  // Uninstalled app rows must not poison the entire settings/navigation read.
+  // New PATCH requests still reject keys that are not in the active catalog.
+  const allowed = new Set(listNavigationEntries(base).map(entry => entry.key));
+  return normalizeNavigationOverrides(
+    Object.fromEntries(Object.entries(saved).filter(([key]) => allowed.has(key))), base);
+}
+
 async function loadBase(request, env) {
   if (typeof env?.ASSETS?.fetch !== 'function') throw new Error('navigation_assets_unavailable');
   const url = new URL('/admin/data/navigation.json', request.url);
@@ -122,7 +159,11 @@ export async function handleStudioNavigation(request, env, accountId) {
   if (!['GET','PATCH'].includes(request.method)) return json({ok:false,error:'method_not_allowed'},405);
   if (request.method === 'PATCH' && !originAllowed(request)) return json({ok:false,error:'origin_not_allowed'},403);
   try {
-    const defaults = await loadBase(request, env);
+    const hostDefaults = await loadBase(request, env);
+    // The account's installation registry is the only source of optional
+    // app destinations. Failure must never invent installed apps.
+    const installed = await listLauncherApps(env.DB, accountId);
+    const defaults = withInstalledApps(hostDefaults, installed);
     let row = await loadRow(env, accountId);
     if (request.method === 'PATCH') {
       const raw = await request.text();
@@ -145,7 +186,7 @@ export async function handleStudioNavigation(request, env, accountId) {
     }
     let saved = {};
     try { saved = JSON.parse(row?.overrides_json || '{}'); } catch { throw new Error('navigation_configuration_invalid'); }
-    const overrides = normalizeNavigationOverrides(saved, defaults);
+    const overrides = withCurrentNavigationOverrides(saved, defaults);
     return json({
       ok:true, ...applyNavigationOverrides(defaults,overrides),
       defaults, overrides, revision:row?.updated_at_ms || 0,
