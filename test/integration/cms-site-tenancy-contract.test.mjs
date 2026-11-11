@@ -131,7 +131,7 @@ test('Local Studio Worker dispatches /api/cms/* with strict tenant isolation', (
   assert.match(cmsService, /createCmsDbClient\(env\.DB,\s*ownedSite\)/);
 });
 
-test('homepage.html is decomposed into reusable site partials with relative links and edge injection markers', () => {
+test('homepage.html mounts CMS-owned shared site partials through the packaged shell', () => {
   assert.ok(fs.existsSync(at('sites', 'agentsam-sdk', 'partials', 'header.html')));
   assert.ok(fs.existsSync(at('sites', 'agentsam-sdk', 'partials', 'footer.html')));
   assert.ok(fs.existsSync(at('apps', 'frontend', 'public', 'site', 'global', 'asbd-header.html')));
@@ -162,12 +162,14 @@ test('homepage.html is decomposed into reusable site partials with relative link
   assert.match(footer, /href="\/sitemap"/);
   assert.doesNotMatch(footer, /href="https:\/\/inneranimalmedia\.com\/(work|about|services|contact|privacy|terms|sitemap)"/);
 
-  // Public homepage shell uses ASBD mounts + client inject of global partials
-  // (R2 sites/{site}/partials remain the publish/edge SSOT via publish-website-assets).
-  assert.match(homepage, /id="asbd-header-mount"/);
-  assert.match(homepage, /id="asbd-footer-mount"/);
-  assert.match(homepage, /inject\('asbd-header-mount',\s*'\/site\/global\/asbd-header\.html'\)/);
-  assert.match(homepage, /inject\('asbd-footer-mount',\s*'\/site\/global\/asbd-footer\.html'\)/);
+  // The page owns CMS header/footer slots, while a single packaged shell
+  // mounts the reusable global partials instead of duplicating inline scripts.
+  assert.match(homepage, /id="asbd-header-mount"[^>]*data-cms-region="header"/);
+  assert.match(homepage, /id="asbd-footer-mount"[^>]*data-cms-region="footer"/);
+  assert.match(homepage, /<script src="\/site\/global\/agentsam-sdk-shell\.js" defer><\/script>/);
+  const shell = read('apps', 'local-studio', 'frontend', 'public', 'site', 'global', 'agentsam-sdk-shell.js');
+  assert.match(shell, /fetch\(`\/site\/global\/asbd-\$\{region\}\.html`\)/);
+  assert.match(shell, /\['header', 'footer'\]\.map\(mount\)/);
   assert.doesNotMatch(homepage, /<nav class="iam-sidenav" id="iamSidenav"/, 'inline sidenav should be in partials');
 });
 
