@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import type { Product } from "./model";
-import { collectionHref, safeMediaUrl } from "./model";
+import { safeMediaUrl } from "./model";
 import StudioIcon from "../products/StudioIcon";
 
-export default function CollectionProductPicker({ products, chosen, onClose, onApply, onRefresh }: {
-  products: Product[]; chosen: number[]; onClose: () => void; onApply: (ids: number[]) => void; onRefresh: () => Promise<void>;
+export default function CollectionProductPicker({ products, chosen, onClose, onApply, onCreateProduct, onRefresh }: {
+  products: Product[]; chosen: number[]; onClose: () => void; onApply: (ids: number[]) => void;
+  onCreateProduct: () => void; onRefresh: () => Promise<void>;
 }) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
@@ -53,9 +54,16 @@ export default function CollectionProductPicker({ products, chosen, onClose, onA
             <span className="cs-check-icon"><StudioIcon name="check" size={13}/></span>
           </button>;
         })}
-        {!products.length ? (
-          <p className="cs-muted">There are no products in this site’s catalog. <a href={collectionHref("/admin/products/create")} target="_blank" rel="noopener">Open Product Studio</a> to create one, then refresh the catalog here.</p>
-        ) : !results.length && <p className="cs-muted">No products match your search and filters.</p>}
+        {!results.length && <div className="cs-picker-empty" role="status">
+          <StudioIcon name="box" size={28}/>
+          <h3>{products.length ? "No products match this view" : "Your store has no products yet"}</h3>
+          <p>{products.length
+            ? (filter === "selected" ? "Nothing selected yet. Choose All products to build a lineup." : "Try All products or clear the search.")
+            : "Create a product in Product Studio, then return to add it to this collection."}</p>
+          {!products.length && <button type="button" className="cs-button primary" onClick={onCreateProduct}>
+            Open Product Studio
+          </button>}
+        </div>}
       </div>
       {refreshError && <p role="alert" className="cs-muted">{refreshError}</p>}
       <footer className="cs-dialog-foot"><span>{selection.length} selected · max 500</span><div>
