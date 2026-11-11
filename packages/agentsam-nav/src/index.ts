@@ -11,3 +11,5 @@ export { NavGroup, NavGroupLabel } from './NavGroup.js';
 export { NavMenu, NavMenuItem, NavMenuButton, NavMenuSub, NavMenuSubButton, NavMenuChevron } from './NavMenu.js';
 export { NavCollapsible, NavCollapsibleTrigger, NavCollapsibleContent } from './NavCollapsible.js';
 export { NavTrigger } from './NavTrigger.js';
+
+export { AdminAppsDialog, type AdminAppsDialogProps, type AdminInstallableApp } from './AdminAppsDialog.js';

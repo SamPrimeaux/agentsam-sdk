@@ -266,8 +266,8 @@
       icon: item.icon ? window.AgentSamNav?.navIcon?.(({agentic:'agentsam',email:'mail',messageSquare:'agentsam',box:'cad',layers:'apps',film:'moviemode',globe:'browser'})[item.icon] || item.icon) : undefined,
       children: item.children?.map(toDestination),
       ...(item.id === 'installed-apps' ? {
-        action: {label:'Browse apps', onSelect:()=>window.open('https://apps.inneranimalmedia.com/', '_blank', 'noopener,noreferrer')},
-        onSelect: ()=>window.open('https://apps.inneranimalmedia.com/', '_blank', 'noopener,noreferrer'),
+        action: {label:'Install apps', onSelect:()=>window.AgentSamNav?.openAppsInstaller?.()},
+        onSelect: ()=>window.AgentSamNav?.openAppsInstaller?.(),
       } : {})
     });
     const nav = buildUserNav(profile);

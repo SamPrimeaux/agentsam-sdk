@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { AdminAppsDialog } from './AdminAppsDialog.js';
 import { createElement, useEffect } from 'react';
 import { Home, ShoppingBag, Package, Users, TrendingUp, Tag, FileText, ChartNoAxesCombined, Store, Mail, Folder, Library, Ticket, Bot, Box, Clapperboard, Settings, Database, Terminal, Globe, Puzzle, Search, Palette, Link, LifeBuoy, LogOut, LayoutDashboard, Bell, Code, Image, CreditCard } from 'lucide-react';
 import { useNav } from './NavProvider.js';
@@ -54,4 +55,38 @@ export function mountNav(options: MountNavOptions) {
     update(next: Partial<MountNavOptions>) { current = { ...current, ...next, stateStore }; render(); },
     unmount() { root.unmount(); anchor.remove(); },
   };
+}
+
+let appsDialogClose: (() => void) | null = null;
+
+/** Native host entry: one global Apps modal, shared across CMS and Studio. */
+export function openAppsInstaller() {
+  if (appsDialogClose) return;
+  const target = document.createElement('div');
+  document.body.appendChild(target);
+  const root = createRoot(target, {identifierPrefix:'agentsam-apps-'});
+  const close = () => {
+    appsDialogClose = null;
+    root.unmount();
+    target.remove();
+  };
+  appsDialogClose = close;
+  const read = async () => {
+    const response = await fetch('/api/apps/launcher', {credentials:'same-origin'});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(data.apps)) throw Error('apps_inventory_unavailable');
+    return data.apps;
+  };
+  const install = async (key: string) => {
+    const response = await fetch('/api/apps/install', {
+      method:'POST', credentials:'same-origin',
+      headers:{'content-type':'application/json'}, body:JSON.stringify({key}),
+    });
+    if (!response.ok) throw Error('app_install_failed');
+  };
+  const theme = document.documentElement.dataset.theme === 'light' ? 'light'
+    : document.documentElement.dataset.theme === 'dark' ? 'dark' : 'system';
+  root.render(<AdminAppsDialog theme={theme} onClose={close} loadApps={read}
+    installApp={install} onInstalled={() => window.dispatchEvent(new Event('agentsam:navigation-changed'))}
+    onOpenApp={href => window.location.assign(href)} />);
 }
