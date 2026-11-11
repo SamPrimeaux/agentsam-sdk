@@ -753,7 +753,11 @@ function PluginCustomizeView({
   const [gitRepositoriesError,setGitRepositoriesError] = useState("");
   const [gitRepositoriesBusy,setGitRepositoriesBusy] = useState(false);
   const [gitRepositoriesHasMore,setGitRepositoriesHasMore] = useState(false);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const key = new URLSearchParams(window.location.search).get("plugin");
+    return key && /^[a-z0-9][a-z0-9_.-]{1,100}$/i.test(key) ? key : null;
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [directoryTab, setDirectoryTab] = useState<"public" | "personal">("public");
