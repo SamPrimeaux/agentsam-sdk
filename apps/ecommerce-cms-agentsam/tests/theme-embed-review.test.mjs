@@ -21,7 +21,7 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
   const dom=new JSDOM('<!doctype html><html><body><div data-drawer-mode="sections"></div><div data-drawer-mode="app-embeds"></div>'+
     '<aside data-drawer-panel="app-embeds"><input id="te-embed-search"><div id="te-embed-empty">No embeds installed</div></aside>'+
     '<aside class="theme-editor-panel"><div id="te-inspector-body"></div></aside></body></html>',{
-    url:'https://example.test/admin/theme-editor?slug=home',runScripts:'outside-only'
+    url:'https://example.test/admin/theme-editor?slug=home&marketplace_kind=cms_embed&marketplace_key=announcement_bar',runScripts:'outside-only'
   });
   const w=dom.window;
   w.structuredClone=globalThis.structuredClone;
@@ -41,7 +41,10 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
   w.HTMLDialogElement.prototype.close=function(){this.open=false;};
   try{
     w.eval(src('theme-embed-review.js'));
+    w.document.dispatchEvent(new w.CustomEvent('theme-editor:global-settings-ready'));
     await tick();
+    assert.match(w.document.querySelector('.ter-inspector-head').textContent, /Announcement bar/i);
+    assert.ok(calls.every(call => call.method === 'GET'), 'marketplace arrival only opens configuration');
     assert.equal(w.document.querySelectorAll('[data-embed-open]').length,6);
     assert.equal(w.document.querySelector('#te-embed-empty'),null);
     assert.equal(w.ThemeEmbedReview.isPreviewOnly,false);
