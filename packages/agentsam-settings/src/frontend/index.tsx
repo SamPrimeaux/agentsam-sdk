@@ -708,8 +708,10 @@ function ExtensionTile({
 function PluginDetailPage({open,title,description,onBack,children}:{
   open:boolean; title:string; description?:string; onBack:()=>void; children:ReactNode;
 }) {
+  const pageRef=useRef<HTMLElement>(null);
+  useEffect(()=>{if(open)pageRef.current?.focus();},[open]);
   if (!open) return null;
-  return <section aria-label={"Plugin details: "+title} className="mx-auto w-full max-w-3xl space-y-6 pb-12">
+  return <section ref={pageRef} tabIndex={-1} aria-label={"Plugin details: "+title} className="mx-auto w-full max-w-3xl space-y-6 pb-12">
     <nav aria-label="Plugin breadcrumb" className="flex items-center gap-2 text-[12px] text-muted-foreground">
       <button type="button" onClick={onBack} className="min-h-9 rounded-lg px-2 transition hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30">Plugins</button>
       <ChevronRight className="size-3.5"/>
@@ -1921,7 +1923,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
   },[snapshot.agentPolicy]);
   const availableModels=snapshot.models.filter(model=>model.enabled);
   const selectedModel=availableModels.some(model=>model.id===draft.modelId);
-  const formClass="w-full min-h-10 rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none transition-colors focus:border-foreground/50 focus-visible:ring-2 focus-visible:ring-foreground/15";
+  const formClass="w-full min-h-10 rounded-lg border border-foreground/50 bg-background px-3 py-2 text-[12px] text-foreground outline-none transition-colors focus:border-foreground/70 focus-visible:ring-2 focus-visible:ring-foreground/25";
   const field=(label:string,value:string,onChange:(next:string)=>void,placeholder="")=>(
     <label className="block space-y-1.5">
       <span className="text-[11px] font-medium">{label}</span>
