@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { navigateHostedStudioRoute } from "../../lib/studio-host-navigation";
 import { adminFetch } from "../../lib/api";
 
 type PlatformProduct = {
@@ -25,12 +27,14 @@ const productMatches = (p: PlatformProduct, category: "applications" | "automati
 };
 
 export default function PlatformProductCatalog({
-  kind, search, refresh,
+  kind, search, refresh, productId,
 }: {
   kind: "applications" | "automations" | "templates";
   search: string;
   refresh: number;
+  productId?: string;
 }) {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<PlatformProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -45,7 +49,16 @@ export default function PlatformProductCatalog({
     adminFetch<{ products: PlatformProduct[] }>("/api/admin/platform/products", { signal: controller.signal })
       .then((response) => {
         if (!controller.signal.aborted) {
-          setProducts(Array.isArray(response.products) ? response.products : []);
+          const items = Array.isArray(response.products) ? response.products : [];
+          setProducts(items);
+          if (productId) {
+            const found = items.find(p => p.id === productId) || null;
+            setSelected(found);
+            setEdit(found ? {
+              name: found.name, description: found.description || "",
+              collection: found.collection || "", thumbnail_url: found.thumbnail_url || "",
+            } : { name: "", description: "", collection: "", thumbnail_url: "" });
+          }
           setError("");
         }
       })
@@ -54,7 +67,7 @@ export default function PlatformProductCatalog({
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [refresh, retry]);
+  }, [refresh, retry, productId]);
 
   const visible = useMemo(() => products.filter((p) => productMatches(p, kind))
     .filter((p) => !search || [p.name, p.slug, p.kind, p.package_name, p.collection]
@@ -62,15 +75,10 @@ export default function PlatformProductCatalog({
     .sort((a,b) => a.name.localeCompare(b.name)), [products, kind, search]);
 
   function inspect(p: PlatformProduct) {
-    setSelected(p);
-    setEdit({ name: p.name, description: p.description || "", collection: p.collection || "", thumbnail_url: p.thumbnail_url || "" });
-    setNotice("");
-    // Bring the existing details panel into view; never make edits appear below
-    // an arbitrarily long product grid without moving the viewport.
-    requestAnimationFrame(() => document.getElementById("ps-product-inspector")?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "start",
-    }));
+    // Registered applications have a real deep-link editor, not a scroll target
+    // hidden below an arbitrarily long catalog.
+    const route = "/products/create/" + encodeURIComponent(p.id);
+    if (!navigateHostedStudioRoute("/admin" + route)) navigate(route);
   }
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
