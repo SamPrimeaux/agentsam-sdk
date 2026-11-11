@@ -11,6 +11,7 @@
 <body>
 <script src="/admin/js/shell.js"></script>
 <script src="/admin/js/pages-shared.js"></script>
+<script src="/admin/js/cms-site-public-url.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
 const slug = params.get("slug") || "shop";
@@ -189,22 +190,11 @@ function updateSeoPreview() {
 
   // A Local Studio origin is not the customer's public site. Never substitute
   // a development/desktop URL or a merchant-specific domain into SEO previews.
-  const domain = typeof site.domain === "string" ? site.domain.trim() : "";
-  let publicHost = null;
-  if (domain) {
-    try {
-      const candidate = new URL(/^https?:\/\//i.test(domain) ? domain : "https://" + domain);
-      if (candidate.protocol === "https:" && !candidate.username && !candidate.password && candidate.pathname === "/" && !candidate.search && !candidate.hash) {
-        publicHost = candidate.origin;
-      }
-    } catch { /* Not a verified public hostname. */ }
-  }
   const route = String(pageData?.route_path || "").trim();
-  const path = /^\/(?!\/)[a-z0-9/_-]*$/i.test(route)
-    ? route : slug === "home" ? "/" : "/" + encodeURIComponent(slug);
-  document.getElementById("seo-url").textContent = publicHost
-    ? publicHost + path
-    : "Site address not verified · " + path;
+  const path = route || (slug === "home" ? "/" : "/" + encodeURIComponent(slug));
+  const publicUrl = window.cmsPublicPageUrl(site, path);
+  document.getElementById("seo-url").textContent = publicUrl
+    || "Site address not configured · " + path;
 
   const section = pageData?.sections?.[0];
   const schema = SECTION_FIELDS[slug]?.[section?.key] || [];
@@ -365,19 +355,18 @@ async function loadPage() {
     await loadCmsRegistry();
 
     pageData = pageRes.page;
-    const publishedRoute = String(pageData?.route_path || "").trim();
+    const publicUrl = window.cmsPublicPageUrl(pageData?.site, pageData?.route_path);
     const isPublicPage = pageData.status === "published" &&
-      /^\/(?!\/)[a-z0-9/_-]*$/i.test(publishedRoute);
+      pageData?.site?.status === "active" && pageData.page_type !== "global" && Boolean(publicUrl);
     if (isPublicPage) {
-      viewButton.href = publishedRoute;
+      viewButton.href = publicUrl;
       viewButton.removeAttribute("aria-disabled");
-      previewLink.href = publishedRoute +
-        (publishedRoute.includes("?") ? "&" : "?") + "preview=1";
-      previewLink.removeAttribute("aria-disabled");
     } else {
-      viewButton.title = "This page has no verified published route yet";
-      previewLink.title = "A public preview requires a connected site renderer";
+      viewButton.title = "This page has no configured published website route yet";
     }
+    // A published URL is never proof of a private draft renderer. Keep the
+    // draft action unavailable until the site exposes an authenticated adapter.
+    previewLink.title = "A draft preview requires a connected authenticated site renderer";
     allPages = (listRes.pages || []).filter((item) => item.slug !== "site");
     window.cmsActiveSiteId = listRes.site?.id || pageData.site_id || window.cmsActiveSiteId;
     window.cmsActivePageId = pageData.slug === "site" ? null : (pageData.id || null);
