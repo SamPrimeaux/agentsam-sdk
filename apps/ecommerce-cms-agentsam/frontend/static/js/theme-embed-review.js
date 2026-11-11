@@ -2,9 +2,14 @@
  * Catalog entries are templates. Install creates a page-owned CMS section
  * instance (cms_page_sections + cms_section_blocks) via the admin CMS API.
  */
-(() => {
+(async () => {
   'use strict';
   if (new URLSearchParams(location.search).has('showcase')) return;
+  if (window.__agentsamCmsSourceHostReady) await window.__agentsamCmsSourceHostReady;
+  if (window.__agentsamThemeEditorEntryReady) {
+    const entry = await window.__agentsamThemeEditorEntryReady;
+    if (!entry?.ready) return;
+  }
   const drawer = document.querySelector('[data-drawer-panel="app-embeds"]');
   const inspector = document.querySelector('.theme-editor-panel');
   if (!drawer || !inspector) return;
@@ -41,6 +46,43 @@
   pickerDialog.className = 'te-embed-picker-dialog';
   pickerDialog.setAttribute('aria-label', 'Pick a storefront app');
   document.body.append(pickerDialog);
+  const marketplace = new URLSearchParams(location.search);
+  const marketplaceKind = marketplace.get('marketplace_kind');
+  const marketplaceKey = marketplace.get('marketplace_key');
+  let pageReady = false;
+  let catalogReady = false;
+  let handoffOpened = false;
+
+  function openMarketplaceHandoff() {
+    if (handoffOpened || !pageReady || !catalogReady ||
+        !['plugin', 'cms_embed'].includes(marketplaceKind) ||
+        !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,159}$/.test(marketplaceKey || '')) return;
+    handoffOpened = true;
+    document.querySelector('[data-drawer-mode="app-embeds"]')?.click();
+    if (marketplaceKind === 'cms_embed' && get(marketplaceKey)) {
+      open(marketplaceKey);
+      return;
+    }
+    const notice = document.createElement('p');
+    notice.className = 'ter-muted';
+    notice.setAttribute('role', 'status');
+    if (marketplaceKind === 'plugin') {
+      notice.textContent = 'This app is configured in AgentSam. Storefront embeds are available below.';
+      const settings = document.createElement('a');
+      settings.href = '/settings/customize?' + new URLSearchParams({view:'plugins', plugin:marketplaceKey});
+      settings.textContent = 'Review app permissions';
+      notice.append(' ', settings);
+    } else {
+      notice.textContent = 'This embed is unavailable for the current editor.';
+    }
+    drawer.querySelector('.ter-picker-launch')?.after(notice);
+  }
+
+  document.addEventListener('theme-editor:global-settings-ready', () => {
+    pageReady = true;
+    queueMicrotask(openMarketplaceHandoff);
+  }, {once:true});
+
   const get = key => {
     const app = catalog.find(item => item.key === key);
     if (!app) return null;
@@ -444,6 +486,9 @@
     }catch{
       drawer.querySelector('[data-embed-list]').innerHTML=
         '<p role="status" class="ter-muted">Unable to load the packaged embed catalog. Installed components were not changed.</p>';
+    } finally {
+      catalogReady = true;
+      openMarketplaceHandoff();
     }
   }
   document.querySelectorAll('[data-drawer-mode]').forEach(button=>button.addEventListener('click',()=>{

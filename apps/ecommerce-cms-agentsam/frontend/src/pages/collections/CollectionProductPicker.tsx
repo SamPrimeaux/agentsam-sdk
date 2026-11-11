@@ -3,10 +3,23 @@ import type { Product } from "./model";
 import { safeMediaUrl } from "./model";
 import StudioIcon from "../products/StudioIcon";
 
-export default function CollectionProductPicker({ products, chosen, onClose, onApply, onCreateProduct }: {
+export default function CollectionProductPicker({ products, chosen, onClose, onApply, onCreateProduct, onRefresh }: {
   products: Product[]; chosen: number[]; onClose: () => void; onApply: (ids: number[]) => void;
-  onCreateProduct: () => void;
+  onCreateProduct: () => void; onRefresh: () => Promise<void>;
 }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+  async function refreshCatalog() {
+    setRefreshing(true);
+    setRefreshError("");
+    try {
+      await onRefresh();
+    } catch (error) {
+      setRefreshError(error instanceof Error ? error.message : "Could not load products.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selection, setSelection] = useState<number[]>(chosen);
@@ -46,13 +59,15 @@ export default function CollectionProductPicker({ products, chosen, onClose, onA
           <h3>{products.length ? "No products match this view" : "Your store has no products yet"}</h3>
           <p>{products.length
             ? (filter === "selected" ? "Nothing selected yet. Choose All products to build a lineup." : "Try All products or clear the search.")
-            : "Supplier blanks are starting points, not published store products. Build a real product in Product Studio, then return to assign it here."}</p>
+            : "Create a product in Product Studio, then return to add it to this collection."}</p>
           {!products.length && <button type="button" className="cs-button primary" onClick={onCreateProduct}>
             Open Product Studio
           </button>}
         </div>}
       </div>
+      {refreshError && <p role="alert" className="cs-muted">{refreshError}</p>}
       <footer className="cs-dialog-foot"><span>{selection.length} selected · max 500</span><div>
+        {!products.length && <button className="cs-button" type="button" disabled={refreshing} onClick={() => void refreshCatalog()}>{refreshing ? "Refreshing…" : "Refresh catalog"}</button>}
         <button className="cs-button" type="button" onClick={onClose}>Cancel</button>
         <button className="cs-button primary" type="button" disabled={selection.length > 500} onClick={() => { onApply(selection); onClose(); }}>Apply products</button>
       </div></footer>

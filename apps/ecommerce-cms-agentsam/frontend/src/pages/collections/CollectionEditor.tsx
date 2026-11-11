@@ -233,7 +233,7 @@ export default function CollectionEditor() {
               </details>
             </section>
           </div>}
-          {tab==="products"&&<CollectionProducts products={products} selected={selected} onSelect={setSelected} plan={form.plan} onPlan={v=>setField("plan",v)} onOpenStudio={goToStudio} onScaffold={scaffoldDrafts} collectionId={currentId.current}/>}
+          {tab==="products"&&<CollectionProducts products={products} selected={selected} onSelect={setSelected} plan={form.plan} onPlan={v=>setField("plan",v)} onOpenStudio={goToStudio} onScaffold={scaffoldDrafts} onRefresh={async () => setProducts(await collectionsApi.products())} collectionId={currentId.current}/>}
           {tab==="presentation"&&<CollectionPresentation form={form} setForm={setForm} openMedia={setMediaRole} products={products} selected={effectiveIds}/>}
           {tab==="rules"&&<CollectionRules products={products} selected={selected} onSelect={setSelected} rules={form.rules} onRules={rules=>setField("rules",rules)} />}
           {tab==="seo"&&<div className="cs-tab-stack"><section className="cs-panel">
