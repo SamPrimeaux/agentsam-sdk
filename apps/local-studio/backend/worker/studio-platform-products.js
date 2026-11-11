@@ -10,7 +10,7 @@ async function revision(row) {
 async function present(row) {
   const data = metadata(row.metadata); const details = data.product_profile || {};
   return { id:row.id, slug:row.slug, name:row.name, kind:row.kind, status:row.status, version:row.version,
-    package_name:row.package_name, description:details.description || '', collection:details.collection || '',
+    package_name:row.package_name, display_name:row.display_name || null, catalog_visibility:row.catalog_visibility || 'internal', sku:row.sku || null, description:details.description || row.description || '', collection:details.collection || '',
     thumbnail_url:details.thumbnail_url || '', revision:await revision(row) };
 }
 export async function handleStudioPlatformProducts(request, env, userId) {
