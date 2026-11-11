@@ -51,6 +51,7 @@ import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service
 import { completeConnectorOAuth, isConnectorOAuthCallbackRequest } from "./connector-oauth.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
+import { listLauncherApps } from "./apps-launcher.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
@@ -770,6 +771,7 @@ export default {
     const isStudioSkills = url.pathname === "/api/settings/skills"
       || url.pathname.startsWith("/api/settings/skills/");
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
+    const isAppsLauncher = url.pathname === "/api/apps/launcher";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
     const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
@@ -1461,6 +1463,18 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         const code=String(error?.code||error?.message||'plugin_oauth_failed').slice(0,120);
         console.warn('plugin_oauth_action_failed',code);
         return json({ok:false,error:code},code.includes('not_found')?404:code.includes('unavailable')?503:400);
+      }
+    }
+    if (isAppsLauncher) {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        const apps = await listLauncherApps(env.DB, userId);
+        return json({ ok: true, apps });
+      } catch (error) {
+        console.error("apps_launcher_error", String(error?.message || error));
+        return json({ ok: false, error: "apps_launcher_unavailable" }, 503);
       }
     }
     if (isPluginCatalog) {
