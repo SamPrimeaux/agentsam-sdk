@@ -9,6 +9,7 @@ export type StudioChatUpstreamBody = {
   temperature?: number;
   max_tokens?: number;
   messages: unknown;
+  reasoning_effort?: string;
   [key: string]: unknown;
 };
 
