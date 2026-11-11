@@ -5,6 +5,7 @@ import { discoverProviderModels } from './discovery.js';
 
 export const INVENTORY_API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', service: 'openai', env: 'OPENAI_API_KEY' },
+  { id: 'meta', label: 'Meta Model API', service: 'meta', env: 'META_MODEL_API_KEY' },
   { id: 'anthropic', label: 'Anthropic', service: 'anthropic', env: 'ANTHROPIC_API_KEY' },
   { id: 'gemini', label: 'Gemini', service: 'gemini', env: 'GEMINI_API_KEY' },
   { id: 'xai', label: 'Grok / xAI', service: 'xai', env: 'XAI_API_KEY', aliases: ['grok'] },
@@ -88,6 +89,7 @@ export function createAiPluginProbePatch(previousMetadata = {}, discovery = {}, 
 
 const SERVICE_TO_PROVIDER = Object.freeze({
   openai: 'openai',
+  meta: 'meta',
   anthropic: 'anthropic',
   gemini: 'gemini',
   xai: 'xai',
@@ -131,7 +133,7 @@ export function makeMapCredentialResolver(credentialByProvider) {
   };
 }
 
-const CHAT_ADAPTER_PROVIDERS = new Set(['openai', 'anthropic', 'gemini', 'xai', 'cloudflare']);
+const CHAT_ADAPTER_PROVIDERS = new Set(['openai', 'meta', 'anthropic', 'gemini', 'xai', 'cloudflare']);
 
 export function modelChatEligibility(row = {}) {
   const rawProvider = String(row.provider || '').trim().toLowerCase();
@@ -152,6 +154,7 @@ export function modelChatEligibility(row = {}) {
 
   const positive =
     (provider === 'openai' && caps.responses === true && caps.agent_runtime === true)
+    || (provider === 'meta' && caps.chat_completions === true && caps.text_output === true)
     || (provider === 'anthropic' && caps.messages === true)
     || (provider === 'gemini' && caps.generate_content === true && caps.text_output === true)
     || (provider === 'xai' && caps.responses === true && caps.text_output === true)
@@ -275,6 +278,46 @@ export function sanitizeInventoryForClient(status = {}) {
     };
   }
   return out;
+}
+
+/**
+ * The portable Settings+execution parameter contract. Model identity and
+ * availability are resolved independently from verified optional controls.
+ */
+export function verifiedModelControls(model = {}) {
+  const reasoning = Array.isArray(model.reasoning_efforts)
+    ? [...new Set(model.reasoning_efforts.filter((x) => typeof x === 'string' && x && x !== 'auto'))]
+    : [];
+  return Object.freeze({
+    reasoning_efforts: Object.freeze(reasoning),
+    eligible: modelChatEligibility(model).chat_eligible === true,
+    source: String(model?.metadata?.capability_source || model?.eligibility_source || 'unknown'),
+  });
+}
+
+/** Shared fail-closed inference admission used by every AgentSam host. */
+export function resolveDiscoveredModelExecution(inventory, provider, modelId, options = {}) {
+  const selected = assertModelAvailableForProvider(inventory, provider, modelId);
+  const controls = verifiedModelControls(selected);
+  if (!controls.eligible) {
+    const error = new Error('selected_model_not_chat_eligible');
+    error.code = 'selected_model_not_chat_eligible';
+    throw error;
+  }
+  const requested = String(options.reasoningEffort || 'auto').trim();
+  if (requested !== 'auto' && !controls.reasoning_efforts.includes(requested)) {
+    const error = new Error('reasoning_effort_not_verified_for_model');
+    error.code = 'reasoning_effort_not_verified_for_model';
+    throw error;
+  }
+  return Object.freeze({
+    provider: String(selected.provider),
+    model_id: String(selected.model_id || selected.provider_model_id),
+    model_key: selected.model_key || null,
+    reasoning_effort: requested === 'auto' ? null : requested,
+    reasoning_efforts: controls.reasoning_efforts,
+    capability_source: controls.source,
+  });
 }
 
 /** Fail-closed check used by chat routers. */

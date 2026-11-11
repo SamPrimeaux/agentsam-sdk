@@ -9,6 +9,19 @@ export function createProviderAdapter(options = {}) {
   if (!record?.provider) throw new TypeError('modelRecord.provider is required');
   const provider = String(record.provider).toLowerCase();
 
+  if (provider === 'meta') {
+    // Meta Model API implements Responses, with an independent account-owned
+    // credential and provider URL. Reuse the canonical SDK Responses adapter.
+    return createOpenAIResponsesAdapter({
+      providerId: 'meta',
+      baseUrl: 'https://api.meta.ai/v1',
+      apiKey: options.credential?.value,
+      modelRecord: record,
+      fetchImpl: options.fetchImpl,
+      emit: options.emit,
+    });
+  }
+
   if (provider === 'openai') {
     return createOpenAIResponsesAdapter({
       apiKey: options.credential?.value,

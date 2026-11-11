@@ -32,6 +32,7 @@ export type StudioEnv = Record<string, string | undefined>;
  */
 export const SERVICE_TO_PROVIDER: Readonly<Record<string, string>> = Object.freeze({
   openai: "openai",
+  meta: "meta",
   anthropic: "anthropic",
   gemini: "gemini",
   google: "gemini",

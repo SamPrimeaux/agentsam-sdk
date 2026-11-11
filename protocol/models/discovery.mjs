@@ -135,6 +135,41 @@ export async function discoverOpenAIModels(apiKey, fetchImpl = fetch) {
   } catch (error) { return failure(error); }
 }
 
+/**
+ * Credential-scoped Meta Model API discovery. The API establishes availability;
+ * documented Muse model-family semantics establish Chat capability. Unknown
+ * specialized models remain visible in inventory, but not runnable as chat.
+ */
+export async function discoverMetaModels(apiKey, fetchImpl = fetch) {
+  if (!clean(apiKey)) return failure('credential unavailable', false);
+  try {
+    const body = await fetchJson(fetchImpl, 'https://api.meta.ai/v1/models', {
+      headers: { authorization: 'Bearer ' + clean(apiKey) },
+    });
+    const models = (Array.isArray(body?.data) ? body.data : [])
+      .map((row) => {
+        const id = clean(row?.id);
+        if (!id) return null;
+        const museChat = /^muse-(?:spark|ember|wonder)-/i.test(id);
+        const contributor = /-contributor$/i.test(id);
+        const maxEffort = !contributor && /^(?:muse-spark-1\.3|muse-wonder-1\.0|muse-ember-1\.0)$/.test(id);
+        const efforts = museChat ? ['minimal', 'low', 'medium', 'high', 'xhigh', ...(maxEffort ? ['max'] : [])] : [];
+        return baseRecord('meta', id, {
+          label: id,
+          reasoning_efforts: efforts.length ? efforts : undefined,
+          source_url: 'https://api.meta.ai/v1/models',
+          capabilities: { responses: museChat, chat_completions: museChat, text_output: museChat, agent_runtime: museChat },
+          metadata: {
+            capability_source: museChat ? 'provider_documentation_and_credential_discovery' : 'provider_api_models_only',
+            created: row.created ?? null,
+            owned_by: row.owned_by ?? null,
+          },
+        });
+      }).filter(Boolean);
+    return { attempted: true, ok: true, models, error: null };
+  } catch (error) { return failure(error); }
+}
+
 export async function discoverAnthropicModels(apiKey, fetchImpl = fetch) {
   if (!clean(apiKey)) return failure('credential unavailable', false);
   try {
@@ -362,6 +397,7 @@ export async function discoverProviderModels(provider, credential, options = {})
   const fetchImpl = options.fetchImpl || fetch;
   switch (clean(provider).toLowerCase()) {
     case 'openai': return discoverOpenAIModels(credential?.value, fetchImpl);
+    case 'meta': return discoverMetaModels(credential?.value, fetchImpl);
     case 'anthropic': return discoverAnthropicModels(credential?.value, fetchImpl);
     case 'gemini': return discoverGeminiModels(credential?.value, fetchImpl);
     case 'grok':

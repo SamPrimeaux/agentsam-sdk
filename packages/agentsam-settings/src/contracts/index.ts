@@ -109,7 +109,7 @@ export type SettingsAgentDraft = {
   name: string;slug: string;description: string;instructions: string;
   modelId: string;allowedTools: string[];runInBackground: boolean;
   sandboxMode: "read-only" | "workspace-write";
-  reasoningEffort: "low" | "medium" | "high" | "extra_high";
+  reasoningEffort: string;
   maxConcurrentThreads: number;active: boolean;
 };
 export type SettingsGeneralPreferences = {
@@ -133,6 +133,8 @@ export type SettingsModel = {
   source?: string | null;
   selected?: boolean;
   verifiedAt?: string | null;
+  /** Verified for this model, not a global Settings preset. */
+  reasoningEfforts?: readonly string[];
 };
 
 export type SettingsCatalogItem = {

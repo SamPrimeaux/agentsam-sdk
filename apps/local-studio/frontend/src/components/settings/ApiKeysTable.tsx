@@ -10,6 +10,7 @@ import type { VaultSecret } from "./types";
 
 const SERVICE_LABELS: Record<string, string> = {
   openai: "OpenAI",
+  meta: "Meta Model API",
   anthropic: "Anthropic",
   gemini: "Gemini",
   google: "Gemini",
@@ -24,7 +25,7 @@ const SERVICE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-const MODEL_PROVIDER_IDS = new Set(["openai", "anthropic", "gemini", "xai", "cursor", "cloudflare"]);
+const MODEL_PROVIDER_IDS = new Set(["meta", "openai", "anthropic", "gemini", "xai", "cursor", "cloudflare"]);
 
 function canonicalProvider(service: string): string {
   const id = String(service || "").trim().toLowerCase();

@@ -5,22 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input, SecretInput } from "@/components/ui/input";
 import { vaultRequest } from "@/lib/vault/client";
 
-/** service_name stored in user_secrets — drives vault AAD + Studio provider map. */
-const SERVICES = [
-  { value: "openai", label: "OpenAI" },
-  { value: "anthropic", label: "Anthropic" },
-  { value: "gemini", label: "Gemini" },
-  { value: "xai", label: "xAI / Grok" },
-  { value: "cursor", label: "Cursor" },
-  { value: "cloudflare", label: "Cloudflare" },
-  { value: "completeful", label: "Completeful (product supplier)" },
-  { value: "meshy", label: "Meshy" },
-  { value: "resend", label: "Resend" },
-  { value: "tavily", label: "Tavily" },
-  { value: "github", label: "GitHub" },
-  { value: "other", label: "Other" },
-] as const;
+type RegisteredService = { value: string; label: string; kind: string };
 
+/** Account vault services are served by the same D1 registry that validates saves. */
 /**
  * Slide-in drawer to add a provider BYOK secret (account vault).
  * Pattern aligned with IntegrationDrawer — not a centered modal.
@@ -34,9 +21,11 @@ export function AddKeyModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
-  initialService?: (typeof SERVICES)[number]["value"];
+  initialService?: string;
 }) {
-  const [service, setService] = useState<(typeof SERVICES)[number]["value"]>("openai");
+  const [service, setService] = useState("openai");
+  const [services, setServices] = useState<RegisteredService[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
   const [showValue, setShowValue] = useState(false);
@@ -50,6 +39,34 @@ export function AddKeyModal({
     setValue("");
     setShowValue(false);
     setService(initialService);
+  }, [open, initialService]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setServicesLoading(true);
+    void vaultRequest<{ services?: Array<{ service_name: string; label: string; kind: string }> }>(
+      "/api/vault/services"
+    ).then((result) => {
+      if (cancelled) return;
+      if (!result.ok || !Array.isArray(result.data.services)) {
+        setError("Provider registry unavailable. Existing keys were not changed.");
+        setServices([]);
+        return;
+      }
+      const registered = result.data.services.map(row => ({
+        value: row.service_name, label: row.label || row.service_name, kind: row.kind || "other",
+      }));
+      setServices(registered);
+      setService(registered.some(row => row.value === initialService)
+        ? initialService : (registered[0]?.value || ""));
+    }).catch(() => {
+      if (!cancelled) {
+        setServices([]);
+        setError("Provider registry unavailable. Existing keys were not changed.");
+      }
+    }).finally(() => { if (!cancelled) setServicesLoading(false); });
+    return () => { cancelled = true; };
   }, [open, initialService]);
 
   async function save(event: React.FormEvent) {
@@ -90,7 +107,7 @@ export function AddKeyModal({
     }
   }
 
-  const selectedLabel = SERVICES.find((item) => item.value === service)?.label || "Provider";
+  const selectedLabel = services.find((item) => item.value === service)?.label || "Provider";
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -127,10 +144,12 @@ export function AddKeyModal({
                 <span>Provider</span>
                 <select
                   value={service}
-                  onChange={(event) => setService(event.target.value as typeof service)}
+                  onChange={(event) => setService(event.target.value)}
+                  disabled={servicesLoading || !services.length}
                   className="h-11 w-full rounded-lg bg-muted px-3 text-sm text-foreground shadow-hairline focus-visible:outline-none"
                 >
-                  {SERVICES.map((item) => (
+                  {!services.length ? <option value="">{servicesLoading?"Loading providers…":"No providers available"}</option> : null}
+                    {services.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
@@ -196,7 +215,7 @@ export function AddKeyModal({
                   Cancel
                 </Button>
               </DialogPrimitive.Close>
-              <Button type="submit" disabled={saving || value.trim().length < 8 || !name.trim()}>
+              <Button type="submit" disabled={saving || servicesLoading || !services.length || !service || value.trim().length < 8 || !name.trim()}>
                 {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
                 {saving ? "Encrypting…" : "Save"}
               </Button>

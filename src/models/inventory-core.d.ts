@@ -58,6 +58,27 @@ export const INVENTORY_API_PROVIDERS: readonly Readonly<{
 
 export const WORKERS_AI_CURATED_MODEL_IDS: readonly string[];
 
+export function verifiedModelControls(model?: Partial<DiscoveredModelRecord>): {
+  reasoning_efforts: readonly string[];
+  eligible: boolean;
+  source: string;
+};
+export function resolveDiscoveredModelExecution(
+  inventory: { availableModels?: Array<Record<string, unknown>> },
+  provider: string,
+  modelId: string,
+  options?: { reasoningEffort?: string | null },
+): {
+  provider: string;
+  model_id: string;
+  model_key: string | null;
+  reasoning_effort: string | null;
+  reasoning_efforts: readonly string[];
+  capability_source: string;
+};
+
+
+
 export function providerIdForService(serviceName: unknown): string | null;
 export function filterWorkersAiCurated(models?: DiscoveredModelRecord[], options?: { curated?: boolean }): DiscoveredModelRecord[];
 export function makeMapCredentialResolver(

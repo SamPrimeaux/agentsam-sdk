@@ -279,6 +279,12 @@ export default defineConfig(({ command, isPreview }) => ({
     tsconfigPaths: true,
     preserveSymlinks: true,
     alias: [
+      // Runtime JS is required here; the frontend tsconfig intentionally names
+      // the adjacent .d.ts for typechecking, which Vite must never execute.
+      {
+        find: /^@inneranimalmedia\/agentsam-sdk\/models\/inventory$/,
+        replacement: fileURLToPath(new URL("../../src/models/inventory-core.js", import.meta.url)),
+      },
       { find: /^@inneranimalmedia\/copro-ui\/styles\.css$/, replacement: coproUiStyles },
       { find: /^@inneranimalmedia\/copro-ui$/, replacement: coproUiSource },
       ...navRuntimeAliases,

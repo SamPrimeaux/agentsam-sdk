@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import {
-  assertModelAvailable,
   buildStudioInventory,
   platformCredentials,
   WORKERS_AI_CURATED,
@@ -18,6 +17,7 @@ import {
   vaultCredentialsForAccount,
 } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
 import { buildStudioChatBody, translateStudioChatUpstreamBody } from "./chat-upstream";
+import { resolveDiscoveredModelExecution } from "@inneranimalmedia/agentsam-sdk/models/inventory";
 
 const Body = z.object({
   messages: z
@@ -39,6 +39,7 @@ const Body = z.object({
   mode: z.enum(["chat", "side"]).optional(),
   provider: z.string().min(1).max(40),
   model_id: z.string().min(1).max(160),
+  reasoning_effort: z.string().min(1).max(20).optional(),
   parentTitle: z.string().max(200).optional(),
   parentExcerpt: z.string().max(8000).optional(),
   workspace: z
@@ -53,6 +54,14 @@ type ChatMessage = { role: string; content: string };
 
 function upstreamFor(provider: string, modelId: string, apiKey: string, body: unknown) {
   const id = provider.toLowerCase();
+  if (id === "meta") {
+    // Separate Meta API origin and account-owned credential, never OpenAI's key.
+    return fetch("https://api.meta.ai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(body),
+    });
+  }
   if (id === "openai") {
     const openaiBody = translateStudioChatUpstreamBody("openai", body as {
       model: string;
@@ -249,7 +258,10 @@ export const Route = createFileRoute("/api/chat")({
             }
           } else {
             const inventory = await buildStudioInventory(credentials);
-            assertModelAvailable(inventory, providerId, modelId);
+            // Same model+reasoning contract consumed by Settings' model controls.
+            resolveDiscoveredModelExecution(inventory, providerId, modelId, {
+              reasoningEffort: parsed.reasoning_effort,
+            });
           }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -294,6 +306,10 @@ export const Route = createFileRoute("/api/chat")({
           maxTokens,
           messages,
         });
+        if (providerId === "meta" && parsed.reasoning_effort && parsed.reasoning_effort !== "auto") {
+          // Meta's documented Chat Completions parameter; validated against discovery above.
+          chatBody.reasoning_effort = parsed.reasoning_effort;
+        }
 
         const plainHeaders = {
           "Content-Type": "text/plain; charset=utf-8",

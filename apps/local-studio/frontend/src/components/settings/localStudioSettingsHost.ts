@@ -34,6 +34,7 @@ import {
   loadEffectiveModelInventory,
 } from "@/lib/work/model-inventory";
 import type { StudioInventoryModel } from "@/lib/work/models";
+import { verifiedModelControls } from "@inneranimalmedia/agentsam-sdk/models/inventory";
 import {
   discoverLocalStudioPlugins,
   installLocalStudioPublicPlugin,
@@ -105,6 +106,7 @@ function settingsModel(
     source,
     selected,
     verifiedAt,
+    reasoningEfforts: verifiedModelControls(model).reasoning_efforts,
   };
 }
 

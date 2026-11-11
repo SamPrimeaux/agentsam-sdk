@@ -14,7 +14,7 @@ function fromRow(row,template=false) {
    workspaceId:row.workspace_id||"",active:row.is_active===1,
    readOnly:template||row.access_mode==="read_only",template,
    runInBackground:row.run_in_background===1,sandboxMode:row.sandbox_mode||"workspace-write",
-   reasoningEffort:row.model_reasoning_effort||"medium",
+   reasoningEffort:row.model_reasoning_effort||"auto",
    maxConcurrentThreads:row.max_concurrent_threads??6,maxSpawnDepth:row.max_spawn_depth??1,
    toolProfileKey:row.tool_profile_key||null,
    updatedAt:row.updated_at,version:row.instruction_version||1
@@ -30,14 +30,14 @@ function validate(body) {
  const instructions=String(body.instructions||"").trim();
  const modelId=String(body.modelId||"").trim();
  const tools=body.allowedTools??[];
- const effort=String(body.reasoningEffort||"medium");
+ const effort=String(body.reasoningEffort||"auto");
  const sandbox=String(body.sandboxMode||"workspace-write");
  const threads=Number(body.maxConcurrentThreads??6);
  if(name.length<2||name.length>120||!slugPattern.test(slug)||description.length>1600||
    instructions.length<8||instructions.length>32000||
    (modelId&&!modelPattern.test(modelId))||
    !Array.isArray(tools)||tools.length>64||tools.some(t=>typeof t!=="string"||t.length>130||!/^[a-z0-9*_.:/-]+$/i.test(t))||
-   !["low","medium","high","extra_high"].includes(effort)||
+   !["auto","none","minimal","low","medium","high","xhigh","max","extra_high"].includes(effort)||
    !["read-only","workspace-write"].includes(sandbox)||
    !Number.isInteger(threads)||threads<1||threads>12) return null;
  return {name,slug,description,instructions,modelId,tools,effort,sandbox,threads,

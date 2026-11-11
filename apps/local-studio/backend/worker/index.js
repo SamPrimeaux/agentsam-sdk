@@ -1695,6 +1695,15 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
     }
 
     try {
+      // The same D1 service registry that authorizes key creation drives
+      // the Settings provider picker. No parallel hardcoded provider list.
+      if (url.pathname === "/api/vault/services" && request.method === "GET") {
+        const rows = await env.DB.prepare(
+          "SELECT service_name, label, kind FROM agentsam_service_registry ORDER BY label, service_name"
+        ).all();
+        return json({ ok: true, services: rows.results || [] }, 200, headers);
+      }
+
       if (url.pathname === "/api/vault/secrets" && request.method === "GET") {
         const res = await handleList(env, userId);
         Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
