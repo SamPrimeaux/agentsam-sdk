@@ -1,6 +1,6 @@
-// This Worker is built from the SDK monorepo before the SDK is published.
-// Import the canonical local provider source, not an unpublished npm self-package.
-import { createProviderAdapter } from '../../../../src/providers/index.js';
+// Consume the SDK's public provider export. The Worker must never deep-import
+// root SDK internals, even while bundling from a monorepo checkout.
+import { createProviderAdapter } from '@inneranimalmedia/agentsam-sdk/providers';
 import { discoverProviderModels } from '../../../../protocol/models/discovery.mjs';
 import { WORKERS_AI_CURATED_MODEL_IDS } from '../../../../protocol/models/workers-ai-curated.mjs';
 import { loadCanvasCreationKnowledge, validateCanvasDirections } from '../../../../protocol/canvas/knowledge-core.mjs';
