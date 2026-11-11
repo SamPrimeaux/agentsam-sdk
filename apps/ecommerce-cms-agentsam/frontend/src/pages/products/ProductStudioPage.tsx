@@ -41,6 +41,7 @@ type CreationCategory = typeof collections[number]["key"];
 export default function ProductStudioPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
+  const registeredProductId = productId && /^prod_[A-Za-z0-9_-]+$/.test(productId) ? productId : null;
   const location = useLocation();
   const resumeDraftId = new URLSearchParams(location.search).get("resume");
   useEffect(() => {
@@ -120,7 +121,7 @@ export default function ProductStudioPage() {
     return () => controller.abort();
   }, [search, offset, refresh, productId, category, isPlatformCategory]);
   useEffect(() => {
-    if (!productId) return;
+    if (!productId || registeredProductId) return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
@@ -167,7 +168,7 @@ export default function ProductStudioPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [productId, refresh]);
+  }, [productId, refresh, registeredProductId]);
   useEffect(() => {
     if (productId) return;
     const controller = new AbortController();
@@ -274,7 +275,11 @@ export default function ProductStudioPage() {
       className={`product-studio-shell${designing ? " is-designing" : ""}`}
       aria-label="Product Studio"
     >
-      {designing && detail ? (
+      {registeredProductId ? (
+        <div className="ps-container">
+          <PlatformProductCatalog kind="applications" search="" refresh={refresh} productId={registeredProductId} />
+        </div>
+      ) : designing && detail ? (
         <Suspense fallback={<div className="ps-workspace-loading" role="status">Loading studio…</div>}>
           <StudioWorkspace
             key={`${catalogProductId(detail.product)}:${resumeDraftId || 'new'}`}
