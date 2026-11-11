@@ -2568,32 +2568,83 @@ function DesignView({snapshot,host}:{
   );
 }
 
-function GitView({snapshot}:{snapshot:SettingsSnapshot}) {
+function GitView({snapshot,host}:{snapshot:SettingsSnapshot;host:SettingsHost}) {
   const data=snapshot.integrationStatus;
   const github=data?.providers.find(provider=>provider.provider==="github");
+  const connection=snapshot.plugins.find(plugin=>
+    plugin.providerKey==="github" && plugin.kind==="oauth" && Boolean(plugin.connectionRef)
+  );
+  const [verification,setVerification]=useState<"idle"|"checking"|"verified"|"failed">("idle");
+  const [verifiedRepoCount,setVerifiedRepoCount]=useState(0);
+  const [verifiedHasMore,setVerifiedHasMore]=useState(false);
+  const [verificationError,setVerificationError]=useState("");
+
+  const verifyAccess=async()=>{
+    if (!connection || !host.listPluginRepositories) return;
+    setVerification("checking");
+    setVerificationError("");
+    try {
+      const result=await host.listPluginRepositories(connection.id);
+      setVerifiedRepoCount(result.repositories.length);
+      setVerifiedHasMore(result.hasMore);
+      setVerification("verified");
+    } catch (error) {
+      const code=error instanceof Error?error.message:"";
+      setVerificationError(
+        code==="github_repositories_unreachable"
+          ? "AgentSam could not reach GitHub from its Worker. The stored grant has not been verified; inspect Worker connectivity and retry."
+          : code==="github_repository_access_denied"
+          ? "GitHub rejected the saved authorization. Reconnect the GitHub plugin, then verify again."
+          : "A live GitHub repository read failed. Check your connected GitHub account and retry."
+      );
+      setVerifiedRepoCount(0);
+      setVerifiedHasMore(false);
+      setVerification("failed");
+    }
+  };
+
   return (
     <>
-      <Section title="GitHub authorization" description="Non-secret evidence from the account's existing OAuth registry. An active grant does not itself prove GitHub API access.">
+      <Section title="GitHub authorization" description="A recorded OAuth grant and a successful live repository read are separate states.">
         {!data?.available ? (
           <p role="status" className="rounded-xl border border-amber-500/25 p-4 text-[12px] text-foreground">
             OAuth connection status is unavailable. No disconnected state is inferred.
           </p>
         ) : (
           <div className="rounded-xl border border-border/70 p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-[13px] font-medium">GitHub</span>
-              <StatusPill status={github?.activeCount?"healthy":"unknown"}
-                label={github?.activeCount?"OAuth grant recorded":"No active grant recorded"}/>
+              <StatusPill status={verification==="verified"?"healthy":verification==="failed"?"attention":"unknown"}
+                label={verification==="verified"?"Repository read verified":verification==="failed"?"Verification failed":github?.activeCount?"OAuth grant recorded · unverified":"No active grant recorded"}/>
             </div>
             <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-              {github?.activeCount
-                ? "Your account has an active GitHub OAuth token record. Live repository authorization and token refresh are not verified by this panel."
-                : "No active GitHub OAuth grant was found in the current account. Provider setup must use the registered identity/OAuth flow."}
+              {verification==="verified"
+                ? `Live GitHub API read succeeded for ${verifiedRepoCount} repositor${verifiedRepoCount===1?"y":"ies"}${verifiedHasMore?" (first 100 returned)":""}. This does not grant new write permissions.`
+                : github?.activeCount
+                  ? "A GitHub OAuth record exists. Token refresh, live API authorization and repository access are not established until verification succeeds."
+                  : "No active GitHub OAuth grant was found in the current account. Connect GitHub through Customize → Plugins."}
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {connection && host.listPluginRepositories ? (
+                <button type="button" disabled={verification==="checking"} onClick={()=>void verifyAccess()}
+                  className="rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-muted disabled:opacity-50">
+                  {verification==="checking"?"Checking GitHub…":verification==="verified"?"Recheck GitHub access":"Verify GitHub access"}
+                </button>
+              ) : null}
+              {host.openSettingsUnit ? (
+                <button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
+                  className="rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">
+                  Manage GitHub plugin
+                </button>
+              ) : null}
+            </div>
+            {verificationError ? (
+              <p role="alert" className="mt-3 text-[12px] text-[var(--settings-warning-ink)]">{verificationError}</p>
+            ) : null}
           </div>
         )}
       </Section>
-      <Section title="Registered repositories" description="Account-owned repository references from code_repositories; only verified GitHub operations can mutate remote repositories.">
+      <Section title="Registered repositories" description="Account-owned references from code_repositories. These are not live GitHub API results.">
         {!data?.repositoriesAvailable ? (
           <p className="text-[12px] text-muted-foreground">Repository registry unavailable.</p>
         ) : data.repositories.length ? (
@@ -2613,7 +2664,7 @@ function GitView({snapshot}:{snapshot:SettingsSnapshot}) {
         </p>}
       </Section>
       <p className="text-[11px] text-muted-foreground">
-        PR enforcement, repository connection creation, token refresh, and revocation remain in their existing host-owned workflows; no unconnected policy switches are presented as enabled.
+        Repository verification is read-only. PR enforcement and repository mutation require their existing host-owned authorization and policy checks.
       </p>
     </>
   );
@@ -2989,7 +3040,7 @@ function renderUnit(
     case "design":
       return <DesignView snapshot={snapshot} host={host} onChanged={onChanged}/>;
     case "git-prs":
-      return <GitView snapshot={snapshot} />;
+      return <GitView snapshot={snapshot} host={host} />;
     case "codebase":
       return <CodebaseView snapshot={snapshot} />;
     case "network":

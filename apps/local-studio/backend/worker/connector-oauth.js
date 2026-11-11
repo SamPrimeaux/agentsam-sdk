@@ -431,19 +431,20 @@ export async function listGitHubConnectionRepositories(request, env, userId, fet
   const material = vaultMaterial(env);
   if (!material) return json({ ok:false, error:"vault_required" }, 503);
 
-  const record = await env.DB.prepare(
-    "SELECT account_identifier, access_token_encrypted, expires_at " +
-    "FROM user_oauth_tokens WHERE account_id = ? AND LOWER(provider) = 'github' " +
-    "AND account_identifier = ? AND is_active = 1 AND (revoked_at IS NULL OR revoked_at = 0) LIMIT 1"
-  ).bind(userId, accountIdentifier).first();
-  if (!record) return json({ ok:false, error:"github_connection_not_found" }, 404);
-  if (record.expires_at && Number(record.expires_at) <= Math.floor(Date.now() / 1000)) {
-    return json({ ok:false, error:"github_connection_expired" }, 401);
+  // Use the same actor/account-bound resolver as other GitHub operations.
+  // It refreshes an expiring GitHub App user token rather than serving stale
+  // credentials, and keeps all secret material on the Worker.
+  const grant = await resolveGithubConnectorAccess(env,userId,accountIdentifier,{fetchImpl:fetcher});
+  if(!grant.ok) {
+    const code=grant.code;
+    const status=code==="github_oauth_required"?404
+      :code==="github_oauth_vault_unavailable"||code==="github_oauth_storage_unavailable"?503
+      :code==="github_oauth_refresh_unavailable"||code==="github_oauth_refresh_storage_failed"?502
+      :code==="github_oauth_refresh_concurrent_retry"?409
+      :401;
+    return json({ok:false,error:code},status);
   }
-  const token = await readStoredOauthToken(material, record, "access",
-    oauthAad("github", userId, record.account_identifier));
-  if (!token) return json({ ok:false, error:"github_connection_token_unavailable" }, 409);
-
+  const token=grant.accessToken;
   let response;
   try {
     response = await fetcher(
@@ -457,8 +458,12 @@ export async function listGitHubConnectionRepositories(request, env, userId, fet
         redirect:"error",
         signal:AbortSignal.timeout(12000),
       });
-  } catch {
-    return json({ ok:false, error:"github_repositories_unreachable" }, 502);
+  } catch (error) {
+    // Never forward fetch exception messages: they may include credentials or
+    // upstream URLs. A bounded failure kind is sufficient for diagnostics.
+    const name=typeof error?.name==="string"?error.name:"";
+    const reason=name==="TimeoutError"||name==="AbortError"?"timeout":"transport";
+    return json({ ok:false, error:"github_repositories_unreachable", reason }, 502);
   }
   if (response.status === 401 || response.status === 403) {
     return json({ ok:false, error:"github_repository_access_denied", providerStatus:response.status }, 403);

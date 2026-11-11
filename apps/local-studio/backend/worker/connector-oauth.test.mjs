@@ -133,7 +133,7 @@ test("GitHub repository read uses only the account-bound sealed grant and never 
   const encoded = await sealOauthToken(e.VAULT_MASTER_KEY,token,oauthAad("github",account,"user23"));
   let lookedUpAccount=null,lookedUpUser=null,providerAuth="";
   e.DB={prepare(sql){
-    assert.match(sql,/account_id = \?/);
+    assert.match(sql,/account_id\s*=\s*\?/);
     return {bind(...args){lookedUpAccount=args[0];lookedUpUser=args[1];return {async first(){
       if(args[0]!==account||args[1]!=="user23")return null;
       return {account_identifier:"user23",access_token_encrypted:encoded,expires_at:null};
@@ -171,4 +171,56 @@ test("GitHub repository read rejects missing grants and revoked provider respons
   const revoked=await listGitHubConnectionRepositories(new Request("https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3Aowner"),e,"au_one",async()=>Response.json({message:"Requires reauthorization"},{status:401}));
   assert.equal(revoked.status,403);
   assert.equal((await revoked.json()).error,"github_repository_access_denied");
+});
+
+
+test("expired GitHub App user token refreshes before the account-scoped repository read", async () => {
+  const e=env(), owner="au_refresh_owner", account="ExampleOwner";
+  const aad=oauthAad("github",owner,account);
+  const oldAccess=await sealOauthToken(e.VAULT_MASTER_KEY,"old-expired-access",aad);
+  const refresh=await sealOauthToken(e.VAULT_MASTER_KEY,"refresh-once",aad);
+  const oldExpiry=Math.floor(Date.now()/1000)-50;
+  const events=[];
+  e.DB={prepare(sql){return {bind(...args){return {
+    async first(){
+      assert.match(sql,/account_id=\?/);
+      assert.deepEqual(args,[owner,account]);
+      return {account_identifier:account,access_token_encrypted:oldAccess,refresh_token_encrypted:refresh,expires_at:oldExpiry};
+    },
+    async run(){
+      events.push({sql,args});
+      return {meta:{changes:1}};
+    },
+  };}};}};
+  const fetcher=async (url,options)=>{
+    if(String(url).startsWith("https://api.github.com/")){
+      assert.equal(options.headers.authorization,"Bearer fresh-access");
+      return Response.json([{id:7,full_name:"ExampleOwner/repo",default_branch:"main"}]);
+    }
+    assert.equal(options.method,"POST");
+    assert.equal(options.body.get("grant_type"),"refresh_token");
+    assert.equal(options.body.get("refresh_token"),"refresh-once");
+    return Response.json({access_token:"fresh-access",refresh_token:"next-refresh",expires_in:28800});
+  };
+  const response=await listGitHubConnectionRepositories(new Request(
+    "https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3AExampleOwner"
+  ),e,owner,fetcher);
+  assert.equal(response.status,200);
+  const json=await response.json();
+  assert.equal(json.repositories[0].fullName,"ExampleOwner/repo");
+  assert.equal(events.length,1,"refreshed token persisted to account row");
+  assert.ok(!JSON.stringify(json).includes("fresh-access"),"no secret returned to browser");
+});
+
+test("repository transport failure is redacted but distinguishes timeout",async()=>{
+  const e=env(),owner="au_timeout",account="ExampleOwner";
+  const encrypted=await sealOauthToken(e.VAULT_MASTER_KEY,"existing-account-token",oauthAad("github",owner,account));
+  e.DB={prepare(){return {bind(){return {async first(){return {access_token_encrypted:encrypted,expires_at:null};}};}};}};
+  const response=await listGitHubConnectionRepositories(new Request(
+    "https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3AExampleOwner"
+  ),e,owner,async()=>{const error=new Error("sensitive upstream URL and bearer text");error.name="TimeoutError";throw error;});
+  assert.equal(response.status,502);
+  const result=await response.json();
+  assert.deepEqual(result,{ok:false,error:"github_repositories_unreachable",reason:"timeout"});
+  assert.ok(!JSON.stringify(result).includes("sensitive"));
 });
