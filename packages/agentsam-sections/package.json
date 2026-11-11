@@ -17,7 +17,6 @@
       "import": "./dist/index.js"
     },
     "./mxs.css": "./styles/mxs.css",
-    "./storefront-embeds.css": "./styles/storefront-embeds.css",
     "./package.json": "./package.json"
   },
   "files": [

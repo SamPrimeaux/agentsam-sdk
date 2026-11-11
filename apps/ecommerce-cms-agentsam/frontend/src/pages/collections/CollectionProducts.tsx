@@ -157,6 +157,6 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
           <button aria-label={`Remove planned item ${index+1}`} onClick={()=>onPlan(plan.filter((_,i)=>i!==index))} type="button">×</button>
         </span>)}</div>}
     </section>
-    {picker && <CollectionProductPicker products={products} chosen={selected} onRefresh={onRefresh} onApply={onSelect} onClose={()=>setPicker(false)}/>}
+    {picker && <CollectionProductPicker products={products} chosen={selected} onRefresh={onRefresh} onApply={onSelect} onClose={()=>setPicker(false)} onCreateProduct={()=>{setPicker(false);void onOpenStudio();}}/>}
   </div>;
 }

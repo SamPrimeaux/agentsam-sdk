@@ -63,20 +63,3 @@ Use:
 
 App media supports autoLaunch when the host wants the live app visible
 immediately rather than gated behind a poster click.
-
-## Storefront Forms, Inbox and Grow components
-
-Import `StorefrontForm`, `OnlineStoreChat`, and `OnlineStoreChatFields` from this
-package and `@inneranimalmedia/agentsam-sections/storefront-embeds.css` for the
-scoped styles. Place the controlled chat settings in the editor's left rail.
-Persist settings with the host's existing site-owned draft operations. Pass
-published settings to the theme layout once, outside page sections, for
-a single launcher across the storefront. Filter featured products through the
-host's site-owned published catalog.
-
-The host supplies `SubmitStorefront` for the three submission kinds. Resolve the
-site and installed embed on the server, enforce the published configuration,
-validate/rate-limit input, and return a real receipt only after durable acceptance.
-An optional absent transport disables submissions. Contact and inbox submit
-customer requests. Signup carries explicit marketing consent separately and
-supports a confirmation-required receipt. No campaign sends are triggered here.

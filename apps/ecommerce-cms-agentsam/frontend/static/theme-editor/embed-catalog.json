@@ -175,6 +175,507 @@
       "surfaces": [
         "storefront_embed"
       ]
+    },
+    {
+      "key": "form_inline",
+      "name": "Form",
+      "icon": "mail",
+      "tagline": "Inline form with editable fields, consent and submission inbox.",
+      "category": "Forms",
+      "provider": "Storefront embeds",
+      "default_config": {
+        "enabled": false,
+        "accent": "",
+        "background": "",
+        "font_color": "",
+        "invert_colors": false,
+        "inherit_typography": true,
+        "font_size": 16,
+        "border_radius": 16,
+        "placement": "inline",
+        "trigger": "manual",
+        "heading": "Get in touch",
+        "subtitle": "Send us a note.",
+        "button_label": "Send message",
+        "required_fields": [
+          "email"
+        ],
+        "fields": [
+          "first_name",
+          "email",
+          "message"
+        ],
+        "success_message": "Thanks, we will reply soon.",
+        "delay_ms": 0
+      },
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ],
+      "editor_fields": [
+        {
+          "key": "heading",
+          "label": "Heading",
+          "type": "text"
+        },
+        {
+          "key": "subtitle",
+          "label": "Subtitle",
+          "type": "text"
+        },
+        {
+          "key": "button_label",
+          "label": "Button label",
+          "type": "text"
+        },
+        {
+          "key": "fields",
+          "label": "Fields",
+          "type": "multiselect",
+          "options": [
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "message"
+          ]
+        },
+        {
+          "key": "required_fields",
+          "label": "Required fields",
+          "type": "multiselect",
+          "options": [
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "message"
+          ]
+        },
+        {
+          "key": "success_message",
+          "label": "Success message",
+          "type": "textarea"
+        },
+        {
+          "key": "accent",
+          "label": "Accent",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "background",
+          "label": "Background",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "font_color",
+          "label": "Font color",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "invert_colors",
+          "label": "Invert widget colors",
+          "type": "toggle"
+        },
+        {
+          "key": "border_radius",
+          "label": "Border radius",
+          "type": "range",
+          "min": 0,
+          "max": 32,
+          "unit": "px"
+        }
+      ]
+    },
+    {
+      "key": "form_popup",
+      "name": "Form popup",
+      "icon": "mail-open",
+      "tagline": "Timed, scroll or exit-intent form modal.",
+      "category": "Forms",
+      "provider": "Storefront embeds",
+      "default_config": {
+        "enabled": false,
+        "accent": "",
+        "background": "",
+        "font_color": "",
+        "invert_colors": false,
+        "inherit_typography": true,
+        "font_size": 16,
+        "border_radius": 16,
+        "placement": "center",
+        "trigger": "delay",
+        "heading": "Before you go",
+        "subtitle": "Leave your details and we will follow up.",
+        "button_label": "Send",
+        "required_fields": [
+          "email"
+        ],
+        "fields": [
+          "first_name",
+          "email"
+        ],
+        "success_message": "Thanks, we will reply soon.",
+        "delay_ms": 6000,
+        "dismissible": true
+      },
+      "surfaces": [
+        "storefront_embed"
+      ],
+      "editor_fields": [
+        {
+          "key": "heading",
+          "label": "Heading",
+          "type": "text"
+        },
+        {
+          "key": "subtitle",
+          "label": "Subtitle",
+          "type": "text"
+        },
+        {
+          "key": "button_label",
+          "label": "Button label",
+          "type": "text"
+        },
+        {
+          "key": "trigger",
+          "label": "Trigger",
+          "type": "select",
+          "options": [
+            "delay",
+            "scroll",
+            "exit_intent",
+            "manual"
+          ]
+        },
+        {
+          "key": "delay_ms",
+          "label": "Delay",
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "key": "fields",
+          "label": "Fields",
+          "type": "multiselect",
+          "options": [
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "message"
+          ]
+        },
+        {
+          "key": "required_fields",
+          "label": "Required fields",
+          "type": "multiselect",
+          "options": [
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "message"
+          ]
+        },
+        {
+          "key": "dismissible",
+          "label": "Dismissible",
+          "type": "toggle"
+        },
+        {
+          "key": "accent",
+          "label": "Accent",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "background",
+          "label": "Background",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "font_color",
+          "label": "Font color",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "invert_colors",
+          "label": "Invert widget colors",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "key": "store_chat",
+      "name": "Online store chat",
+      "icon": "chat",
+      "tagline": "Chat icon and popup that lands conversations in the site inbox.",
+      "category": "Inbox",
+      "provider": "Storefront embeds",
+      "default_config": {
+        "enabled": false,
+        "accent": "",
+        "background": "",
+        "font_color": "",
+        "invert_colors": false,
+        "inherit_typography": true,
+        "font_size": 16,
+        "border_radius": 16,
+        "style": "button",
+        "icon": "chat_bubble",
+        "label": "Chat",
+        "horizontal_position": "right",
+        "vertical_position": "lowest",
+        "greeting": "Hi, message us with any questions. We are happy to help!",
+        "show_featured_products": true,
+        "featured_products": [],
+        "require_email": true,
+        "agent_replies": "draft",
+        "endpoint": ""
+      },
+      "surfaces": [
+        "storefront_embed"
+      ],
+      "editor_fields": [
+        {
+          "key": "greeting",
+          "label": "Greeting message",
+          "type": "textarea"
+        },
+        {
+          "key": "show_featured_products",
+          "label": "Show featured products",
+          "type": "toggle"
+        },
+        {
+          "key": "featured_products",
+          "label": "Featured products",
+          "type": "product_picker",
+          "hint": "Defaults to best sellers"
+        },
+        {
+          "key": "accent",
+          "label": "Accent",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "background",
+          "label": "Background",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "font_color",
+          "label": "Font color",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "invert_colors",
+          "label": "Invert widget colors",
+          "type": "toggle"
+        },
+        {
+          "key": "style",
+          "label": "Style",
+          "type": "radio",
+          "options": [
+            "button",
+            "message_bar"
+          ]
+        },
+        {
+          "key": "icon",
+          "label": "Icon",
+          "type": "select",
+          "options": [
+            "chat_bubble",
+            "message",
+            "help"
+          ]
+        },
+        {
+          "key": "label",
+          "label": "Label",
+          "type": "select",
+          "options": [
+            "Chat",
+            "Message us",
+            "Help",
+            "Ask"
+          ]
+        },
+        {
+          "key": "horizontal_position",
+          "label": "Horizontal position",
+          "type": "radio",
+          "options": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        {
+          "key": "vertical_position",
+          "label": "Vertical position",
+          "type": "radio",
+          "options": [
+            "lowest",
+            "higher",
+            "highest"
+          ]
+        },
+        {
+          "key": "inherit_typography",
+          "label": "Inherit typography from theme",
+          "type": "toggle"
+        },
+        {
+          "key": "font_size",
+          "label": "Widget font size",
+          "type": "range",
+          "min": 12,
+          "max": 22,
+          "unit": "px"
+        },
+        {
+          "key": "border_radius",
+          "label": "Border radius",
+          "type": "range",
+          "min": 0,
+          "max": 32,
+          "unit": "px"
+        },
+        {
+          "key": "require_email",
+          "label": "Ask for email first",
+          "type": "toggle"
+        },
+        {
+          "key": "agent_replies",
+          "label": "Agent replies",
+          "type": "select",
+          "options": [
+            "off",
+            "draft",
+            "auto"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "grow_capture",
+      "name": "AgentSamGrow capture",
+      "icon": "megaphone",
+      "tagline": "Attributed lead capture that feeds agentsam-campaign.",
+      "category": "Grow",
+      "provider": "Storefront embeds",
+      "default_config": {
+        "enabled": false,
+        "accent": "",
+        "background": "",
+        "font_color": "",
+        "invert_colors": false,
+        "inherit_typography": true,
+        "font_size": 16,
+        "border_radius": 16,
+        "placement": "inline",
+        "trigger": "manual",
+        "heading": "Join the list",
+        "subtitle": "First access to new drops.",
+        "button_label": "Join",
+        "fields": [
+          "first_name",
+          "email"
+        ],
+        "required_fields": [
+          "email"
+        ],
+        "campaign_ref": "",
+        "utm_passthrough": true,
+        "consent_text": "I agree to receive updates.",
+        "delay_ms": 0
+      },
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ],
+      "editor_fields": [
+        {
+          "key": "heading",
+          "label": "Heading",
+          "type": "text"
+        },
+        {
+          "key": "subtitle",
+          "label": "Subtitle",
+          "type": "text"
+        },
+        {
+          "key": "button_label",
+          "label": "Button label",
+          "type": "text"
+        },
+        {
+          "key": "fields",
+          "label": "Fields",
+          "type": "multiselect",
+          "options": [
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "message"
+          ]
+        },
+        {
+          "key": "campaign_ref",
+          "label": "Campaign",
+          "type": "campaign_picker",
+          "hint": "Optional; links captures to an agentsam-campaign record"
+        },
+        {
+          "key": "utm_passthrough",
+          "label": "Keep UTM attribution",
+          "type": "toggle"
+        },
+        {
+          "key": "consent_text",
+          "label": "Consent text",
+          "type": "textarea"
+        },
+        {
+          "key": "accent",
+          "label": "Accent",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "background",
+          "label": "Background",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "font_color",
+          "label": "Font color",
+          "type": "color",
+          "theme_token": true
+        },
+        {
+          "key": "invert_colors",
+          "label": "Invert widget colors",
+          "type": "toggle"
+        }
+      ]
     }
   ]
 }

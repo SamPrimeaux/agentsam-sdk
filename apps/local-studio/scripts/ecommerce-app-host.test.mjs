@@ -84,8 +84,13 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
     '/admin/products/create/12?site_id=site-a',
     '/admin/products/create/12?resume=psd_saved_42',
     '/admin/products/create/12?site_id=site-a&resume=psd_saved_42',
+    '/admin/products/create?collection_id=cmscol_existing',
+    '/admin/products/create/prod_test_application?collection_id=cmscol_existing',
+    '/admin/products/create/12?site_id=site-a&collection_id=cmscol_existing',
   ])assert.equal(resolveEcommerceAdminPath(href),href,'site context and saved design must survive the installed host');
   assert.equal(resolveEcommerceAdminPath('/admin/products/create?resume=psd_unscoped'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/products/create?collection_id=../bad'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/products/create/prod_test_application?collection_id=cmscol_ok&unknown=x'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/products/create/12?resume=psd_first&resume=psd_second'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/products/create/12?resume=https://another-site.example'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&site_id=site-b'),null);
