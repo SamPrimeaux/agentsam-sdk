@@ -5,10 +5,18 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 const app = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// The embed pack is owned by @inneranimalmedia/agentsam-embeds; resolve it as a
+// package, falling back to the monorepo path when running from a checkout.
+const embedPack = (() => {
+  try { return createRequire(import.meta.url).resolve('@inneranimalmedia/agentsam-embeds/manifest'); }
+  catch { return resolve(app, '../../packages/agentsam-embeds/agentsam.embeds.json'); }
+})();
 const manifests = [
   resolve(app, 'agentsam.app.json'),
   resolve(app, 'apps/resend/agentsam.app.json'),
+  embedPack,
 ];
 const apps = [];
 for (const file of manifests) {
@@ -20,6 +28,7 @@ for (const file of manifests) {
       category: embed.category, provider: manifest.name || manifest.id || 'core',
       default_config: embed.default_config,
       surfaces: embed.surfaces,
+      ...(embed.editor_fields ? { editor_fields: embed.editor_fields } : {}),
     });
   }
 }

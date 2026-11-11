@@ -273,6 +273,7 @@
     "packages/financial-analytics",
     "packages/agentsam-assets-core",
     "packages/agentsam-brand",
+    "packages/agentsam-embeds",
     "packages/agentsam-communications",
     "packages/agentsam-cms",
     "packages/agentsam-campaign",
