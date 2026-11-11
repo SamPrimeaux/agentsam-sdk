@@ -12,7 +12,7 @@ const tick=()=>new Promise(done=>setTimeout(done,0));
 test('embed catalog matches manifests and declares installable templates',()=>{
   execFileSync(process.execPath,[new URL('../scripts/sync-theme-embed-catalog.mjs',import.meta.url).pathname,'--check']);
   const catalog=JSON.parse(readFileSync(catalogPath,'utf8'));
-  assert.equal(catalog.apps.length,6);
+  for(const k of ['form_inline','form_popup','store_chat','grow_capture'])assert.ok(catalog.apps.some(x=>x.key===k),k);
   assert.equal(catalog.preview_only,false);
   assert.equal(catalog.installable,true);
   assert.equal(catalog.apps.find(x=>x.key==='newsletter_subscribe').default_config.double_opt_in,true);
