@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, MessageSquarePlus, Search } from 'lucide-react';
+import { ArrowLeft, MessageSquarePlus } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { MessageList } from '@/components/workbench/thread';
@@ -62,7 +62,6 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     {!hostModeSlot ? <Nav.Topbar startup={false} showNavigationTrigger rightSlot={data.mode === 'work' ? undefined : <>
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <button type="button" className="as-nav-button" aria-label="New chat" title="New chat (⌘N)" onClick={startNewChat}><MessageSquarePlus size={18}/><span className="sr-only">New chat</span></button>
-      <button type="button" className="as-nav-button agentsam-topbar-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new Event('agentsam:open-command-palette'))}><Search size={18}/><span className="sr-only">Search Studio</span></button>
       <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
       <NotificationsMenu />
       <AnnotationToggle /><SidePanelToggle />

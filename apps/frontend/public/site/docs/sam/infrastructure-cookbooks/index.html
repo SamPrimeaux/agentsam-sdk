@@ -21,7 +21,6 @@
   <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
   <link rel="stylesheet" href="/site/global/agentsam-docs-tokens.css" />
   <link rel="stylesheet" href="/site/global/agentsam-docs-layout.css" />
-  <script src="/site/global/asbd-theme.js" defer></script>
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -40,13 +39,11 @@
 }
   </script>
   <meta name="third-party-trademark-notice" content="Third-party names and trademarks belong to their respective owners; compatibility references do not imply sponsorship, endorsement, partnership, collaboration, or affiliation." />
-<link rel="stylesheet" href="/site/global/agentsam-sdk-type.css">
-<link rel="stylesheet" href="/site/global/agentsam-sdk-editorial.css">
 </head>
 <body data-asbd-theme="dark">
   <div id="asbd-header-mount" data-cms-region="header"></div>
 
-  <div class="agentsam-docs agentsam-sdk-editorial">
+  <div class="agentsam-docs">
     <div class="agentsam-docs-layout">
       <aside class="agentsam-docs-sidebar" data-cms-region="sidebar">
         <div class="agentsam-docs-brand">
@@ -82,25 +79,7 @@
           <div class="agentsam-docs-spacer"></div>
           <button type="button" class="agentsam-docs-action" id="docs-copy-page">Copy page</button>
         </div>
-        <details class="sdk-editorial-contents"><summary>On this page</summary>
-<nav aria-label="Article contents">
-        <a href="#start">Overview</a>
-<a href="#principle">How to test SAM</a>
-<a href="#baseline">Baseline perception</a>
-<a href="#merkle">Merkle delta</a>
-<a href="#blast-radius">AST blast radius</a>
-<a href="#retrieval">Retrieval routing</a>
-<a href="#goap">GOAP proof</a>
-<a href="#release">Release torture test</a>
-<a href="#security">Security drill</a>
-<a href="#terminals">Terminal equivalence</a>
-<a href="#recovery">Failure recovery</a>
-<a href="#stress">Infra stress test</a>
-<a href="#agent-prompt">Operator prompt</a>
-<a href="#scorecard">Scorecard</a>
-<a href="#success">What good looks like</a>
-</nav></details>
-       <article class="agentsam-docs-article" id="docs-article" data-cms-region="body">
+        <article class="agentsam-docs-article" id="docs-article" data-cms-region="body">
 <section id="start" data-cms-section="start">
   <div class="eyebrow">Systematic Autonomous Machinery</div>
   <h1>Infrastructure cookbooks</h1>
@@ -440,7 +419,7 @@ Verification
 <a href="#scorecard">Scorecard</a>
 <a href="#success">What good looks like</a>
 <div class="sep"></div>
-<div class="note">AgentSam engineering field guide</div>
+<div class="note">Public AgentSam guide. Shared ASBD header/footer · violet docs theme.</div>
       </aside>
     </div>
   </div>
@@ -449,7 +428,24 @@ Verification
 
   <script>
   (function () {
-
+    function inject(id, url) {
+      var slot = document.getElementById(id);
+      if (!slot) return;
+      fetch(url, { credentials: 'same-origin' })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          slot.innerHTML = html;
+          slot.querySelectorAll('script').forEach(function (old) {
+            var s = document.createElement('script');
+            if (old.src) s.src = old.src;
+            else s.textContent = old.textContent;
+            old.replaceWith(s);
+          });
+        })
+        .catch(function () {});
+    }
+    inject('asbd-header-mount', '/site/global/asbd-header.html');
+    inject('asbd-footer-mount', '/site/global/asbd-footer.html');
 
     var copy = document.getElementById('docs-copy-page');
     if (copy) {
@@ -505,6 +501,5 @@ Verification
     }
   })();
   </script>
-<script src="/site/global/agentsam-sdk-shell.js" defer></script>
 </body>
 </html>

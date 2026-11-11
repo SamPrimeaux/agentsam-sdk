@@ -76,6 +76,13 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   try { cmsActorRequired(actorUserId); }
   catch { return json({ ok: false, error: 'unauthorized' }, 401); }
   if (method === 'OPTIONS') return new Response(null, { status: 204 });
+  if (!['GET', 'HEAD'].includes(method)) {
+    const origin = request.headers.get('origin');
+    if ((origin && origin !== url.origin) ||
+        request.headers.get('sec-fetch-site') === 'cross-site') {
+      return json({ ok: false, error: 'cms_cross_origin_write_forbidden' }, 403);
+    }
+  }
   if (url.pathname === '/api/cms/sites' && method === 'GET') {
     const sites = await listAuthorizedCmsSites(env.DB, actorUserId, { remoteWorkerNames: configuredCmsWorkers(env) });
     return json({ ok: true, sites });
@@ -104,7 +111,7 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   if (!siteSelector) {
     return json({ ok: false, error: 'site_required', detail: 'Pass ?site_id= or ?site= — no hardcoded default site.' }, 400);
   }
-  const access = /\/publish$/.test(url.pathname) ? 'publish' : method === 'GET' ? 'read' : 'write';
+  const access = /\/(?:publish|rollback)$/.test(url.pathname) ? 'publish' : method === 'GET' ? 'read' : 'write';
   const authorization = await requireCmsSiteAccess(env.DB, actorUserId, siteSelector, access, {
     remoteWorkerNames: configuredCmsWorkers(env),
   });

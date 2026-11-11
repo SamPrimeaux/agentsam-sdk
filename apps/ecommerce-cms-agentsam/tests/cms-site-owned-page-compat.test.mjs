@@ -76,17 +76,22 @@ function fixture() {
 test("site-owned production pages are visible only inside their authorized CMS site", async () => {
   const sql = fixture();
   try {
+    sql.exec("UPDATE cms_pages SET content_object_key='sites/store-a/public/home/index.html' WHERE id='pa';");
+    sql.exec("INSERT INTO cms_page_sections(id,page_id,section_key,section_type,section_name,section_data,is_visible) VALUES ('source-a','pa','html-document','html_source','HTML document','{}',1);");
     const env = { DB: d1(sql) };
     assert.equal(await cmsPageStorageMode(env.DB), "site-owned");
     const alice = await listPagesAdmin(env, "alice", "s-a");
     assert.deepEqual(alice.pages.map(x => x.title), ["Alice Home"]);
-    assert.equal(alice.pages[0].section_count, 2); // includes hidden sections for editor inventory
+    assert.equal(alice.pages[0].section_count, 3); // includes hidden and source sections for editor inventory
+    assert.equal(alice.pages[0].html_source_editable, true);
+
     assert.equal(alice.pages[0].preview, "Hello Alice");
     const second = await listPagesAdmin(env, "alice", "s-a2");
     assert.deepEqual(second.pages.map(x => x.title), ["Alice About"]);
+    assert.equal(second.pages[0].html_source_editable, false);
     await assert.rejects(listPagesAdmin(env, "bob", "s-a"), /not_found/);
     const details = await getPageAdminForSite(env, "alice", "home", "s-a", "pa");
-    assert.equal(details.page.sections.length, 2);
+    assert.equal(details.page.sections.length, 3);
     assert.equal(details.page.sections[0].content.headline, "Hello Alice");
     assert.equal(await getPageAdminForSite(env, "bob", "home", "s-b", "pa"), null);
   } finally { sql.close(); }

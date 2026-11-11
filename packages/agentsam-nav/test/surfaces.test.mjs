@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
+import { readFileSync } from 'node:fs';
 import { Nav } from '../dist/index.js';
 
 const value = { brand: { name: 'Consumer brand', home: '/custom' }, project: { id: 'p', name: 'Project One' }, conversation: { id: 'c', title: 'Conversation One' }, account: { id: 'a', name: 'Account One' } };
@@ -80,3 +81,28 @@ test('host search appears inside navigation only when a search capability is sup
   assert.doesNotMatch(withoutSearch,/Search Studio/);
   assert.match(withoutSearch,/Filter projects and conversations/);
 });
+
+
+test('active conversation title is the only action-menu trigger in the topbar', () => {
+  const conversation = { id: 'chat-1', title: 'Editable thread title', pinned: false, projectId: null };
+  const html = renderToString(React.createElement(Nav.Provider, {
+    value: {
+      conversation, projects: [{ id: 'project-1', name: 'Studio project' }],
+      onPinConversation: () => {}, onRenameConversation: () => {},
+      onDeleteConversation: () => {}, onAssignConversationToProject: () => {},
+      onShare: () => {},
+    },
+  }, React.createElement(Nav.Topbar)));
+  assert.match(html, /aria-label="Editable thread title"/);
+  assert.match(html, /title="Editable thread title"/);
+  assert.doesNotMatch(html, /aria-label="Conversation options"/, 'no duplicate top-right action menu');
+  assert.match(html, /aria-label="Create a public link"/);
+  const source = readNavSource();
+  assert.match(source, /label: 'Add to project'/);
+  assert.match(source, /label: 'Rename'/);
+  assert.match(source, /label: 'Delete chat'/);
+  assert.match(source, /ConfirmDeleteDialog/);
+});
+function readNavSource() {
+  return readFileSync(new URL('../src/Surfaces.tsx', import.meta.url), 'utf8');
+}

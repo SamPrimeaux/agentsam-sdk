@@ -76,11 +76,33 @@ export function NavBreadcrumbs() {
 
 export function NavProjectContext() {
   const { data } = useNav();
-  if (!data.project && !data.conversation && data.breadcrumbs?.length) return <NavBreadcrumbs />;
+  const [renaming, setRenaming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const conversation = data.conversation;
+  const actions = conversation ? [...(data.getConversationActions?.(conversation) ?? data.conversationActions ?? [])] : [];
+  const add = (action: NavAction) => { if (!actions.some(item => item.id === action.id)) actions.push(action); };
+  if (conversation) {
+    if (data.onPinConversation) add({ id: 'pin', label: conversation.pinned ? 'Unpin chat' : 'Pin chat', icon: <Pin />, onSelect: () => data.onPinConversation?.(conversation.id) });
+    if (data.onRenameConversation) add({ id: 'rename', label: 'Rename', icon: <Pencil />, shortcut: 'R', onSelect: () => setRenaming(true) });
+    if (data.onAssignConversationToProject && data.projects?.length) {
+      add({ id: 'project', label: 'Add to project', icon: <Folder />, children: [
+        ...data.projects.map(project => ({ id: 'project-' + project.id, label: project.name, onSelect: () => data.onAssignConversationToProject?.(conversation.id, project.id) })),
+        ...(conversation.projectId ? [{ id: 'project-clear', label: 'Remove from project', separatorBefore: true, onSelect: () => data.onAssignConversationToProject?.(conversation.id, null) }] : []),
+      ] });
+    }
+    if (data.onDeleteConversation) add({ id: 'delete', label: 'Delete chat', icon: <Trash2 />, destructive: true, separatorBefore: true, onSelect: () => setDeleting(true) });
+  }
+  if (!data.project && !conversation && data.breadcrumbs?.length) return <NavBreadcrumbs />;
   return <div className="as-nav-context">
     {data.project ? <><NavOverflowMenu label={data.project.name} actions={data.projectActions}><Folder /><span className="as-nav-project-name">{data.project.name}</span><ChevronDown /></NavOverflowMenu><span className="as-nav-separator">/</span></> : null}
-    <span className="as-nav-title" title={data.conversation?.title}>{data.conversation?.title ?? data.brand?.name}</span>
+    {conversation && actions.length
+      ? <NavOverflowMenu id="active-conversation-title" label={conversation.title} actions={actions} align="start">
+          <span className="as-nav-title" title={conversation.title}>{conversation.title}</span><ChevronDown size={14} aria-hidden="true" />
+        </NavOverflowMenu>
+      : <span className="as-nav-title" title={conversation?.title}>{conversation?.title ?? data.brand?.name}</span>}
     {data.mode ? <span className="as-nav-mode-label">· {data.mode === 'work' ? 'Work' : 'Chat'}</span> : null}
+    {conversation && data.onRenameConversation ? <RenameDialog open={renaming} onOpenChange={setRenaming} title="Rename conversation" value={conversation.title} onSave={title => data.onRenameConversation?.(conversation.id, title)} /> : null}
+    {conversation && data.onDeleteConversation ? <ConfirmDeleteDialog open={deleting} onOpenChange={setDeleting} title={conversation.title} onConfirm={() => data.onDeleteConversation?.(conversation.id)} /> : null}
   </div>;
 }
 
@@ -214,7 +236,7 @@ export function NavTopbar({
       <div className="as-nav-topbar-leading">{showNavigationTrigger ? <NavTrigger aria-label="Toggle sidebar" /> : null}{!startup ? contextSlot ?? <NavProjectContext /> : null}</div>
       {startup ? <div className="as-nav-topbar-center">{modeSlot ?? <NavModeSwitcher />}</div> : modeSlot}
       <NavTopbarSpacer />
-      <div className="as-nav-topbar-actions">{!startup ? <><NavConversationActions /><NavShareButton /><NavPinnedSummary /></> : null}{rightSlot}{showAccount ? <NavAccountSwitcher /> : null}</div>
+      <div className="as-nav-topbar-actions">{!startup ? <><NavShareButton /><NavPinnedSummary /></> : null}{rightSlot}{showAccount ? <NavAccountSwitcher /> : null}</div>
     </>}
   </NavScope>;
 }
@@ -232,6 +254,22 @@ function RenameDialog({ open, onOpenChange, title, value, onSave }: { open: bool
         <input autoFocus aria-label={title} value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={200} />
         <div className="as-nav-dialog-actions"><Dialog.Close asChild><button type="button" className="as-nav-button">Cancel</button></Dialog.Close><button type="submit" className="as-nav-button" disabled={!draft.trim()}>Save</button></div>
       </form>
+    </Dialog.Content>
+  </Dialog.Portal></Dialog.Root>;
+}
+
+function ConfirmDeleteDialog({ open, onOpenChange, title, onConfirm }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; onConfirm: () => void }) {
+  const { theme } = useNav();
+  const style = useNavStyle();
+  return <Dialog.Root open={open} onOpenChange={onOpenChange}><Dialog.Portal>
+    <Dialog.Overlay className="as-nav-dialog-overlay" />
+    <Dialog.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-dialog">
+      <Dialog.Title>Delete conversation?</Dialog.Title>
+      <Dialog.Description>Delete “{title}”? This cannot be undone.</Dialog.Description>
+      <div className="as-nav-dialog-actions">
+        <Dialog.Close asChild><button type="button" className="as-nav-button">Cancel</button></Dialog.Close>
+        <button type="button" className="as-nav-button" data-destructive="true" onClick={() => { onConfirm(); onOpenChange(false); }}>Delete</button>
+      </div>
     </Dialog.Content>
   </Dialog.Portal></Dialog.Root>;
 }

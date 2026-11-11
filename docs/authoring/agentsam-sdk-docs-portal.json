@@ -1,0 +1,175 @@
+{
+  "schema": "agentsam.documentation-collection.v1",
+  "id": "theme_agentsam_docs_portal",
+  "name": "AgentSam Developer Center",
+  "siteName": "AgentSam",
+  "version": "2.6.14",
+  "tokens": {
+    "--docs-bg": "#0d0e12",
+    "--docs-surface": "#171a21",
+    "--docs-text": "#edf0f5",
+    "--docs-muted": "#a5acb8",
+    "--docs-border": "#313640",
+    "--docs-accent": "#91bde5"
+  },
+  "pages": [
+    {
+      "slug": "docs-overview",
+      "route": "/docs/sam/",
+      "title": "AgentSam documentation",
+      "navTitle": "Overview",
+      "category": "Start here",
+      "summary": "Understand the SDK, its execution environments, and how to verify an agent workflow before relying on it.",
+      "metadata": "Developer Center · migration draft",
+      "content": [
+        {
+          "type": "prose",
+          "heading": "Start with a verified environment",
+          "body": "Confirm the installed AgentSam SDK version, choose an authorized execution environment, and verify your account's available tools before running a cookbook. Documentation examples describe intended behavior; verify CLI availability against the installed release."
+        },
+        {
+          "type": "code",
+          "label": "Check the published SDK package",
+          "code": "npm view @inneranimalmedia/agentsam-sdk version"
+        },
+        {
+          "type": "collection",
+          "heading": "Explore the documentation",
+          "description": "Choose a focused guide or a runnable verification workflow.",
+          "resources": ["cookbooks","native-runtime","structured-decisions"]
+        }
+      ]
+    },
+    {
+      "slug": "cookbooks",
+      "route": "/docs/sam/infrastructure-cookbooks/",
+      "title": "AgentSam cookbooks",
+      "navTitle": "Cookbook library",
+      "category": "Cookbooks",
+      "summary": "Task-oriented engineering recipes with prerequisites, examples, expected results, and failure checks.",
+      "metadata": "Cookbook library · migration draft",
+      "content": [
+        {
+          "type": "prose",
+          "heading": "Use a recipe to prove an outcome",
+          "body": "Each cookbook is a repeatable test, not a list of unexplained commands. Start with a clean repository or isolated workspace, record your baseline, and compare observed behavior with the expected result. Treat undocumented or unavailable CLI flags as a verification failure, not a reason to invent substitute commands."
+        },
+        {
+          "type": "collection",
+          "heading": "Infrastructure recipes",
+          "description": "The first independently editable cookbook pages migrated from the original field manual.",
+          "resources": ["merkle-delta","terminal-equivalence"]
+        },
+        {
+          "type": "callout",
+          "title": "Publication rule",
+          "body": "Code examples in this migration are source-preserving drafts. Their runtime support must be checked against the current released SDK before any cookbook is marked runnable."
+        }
+      ]
+    },
+    {
+      "slug": "merkle-delta",
+      "route": "/docs/sam/cookbooks/merkle-delta/",
+      "title": "Detect changes with Merkle snapshots",
+      "navTitle": "Merkle delta",
+      "category": "Cookbooks",
+      "summary": "Compare two repository snapshots and determine which work can be reused after a bounded change.",
+      "metadata": "Source: infrastructure-cookbooks/_sections/04-merkle.html · CLI verification pending",
+      "content": [
+        {
+          "type": "prose",
+          "heading": "What you'll verify",
+          "body": "Given one small, controlled repository change, the system should identify the affected subtree and distinguish reusable prior analysis from work that needs to be recomputed. Prerequisites: a repository you can inspect, a saved baseline, and an AgentSam CLI release with the documented Merkle operations."
+        },
+        {
+          "type": "code",
+          "label": "Baseline — original cookbook example",
+          "code": "agentsam merkle snapshot . --semantic --out /tmp/sam-before.json"
+        },
+        {
+          "type": "prose",
+          "heading": "Make one bounded change",
+          "body": "Change exactly one tracked source file in an isolated working copy. Record the edited path and avoid changing dependencies or generated output at the same time. Capture a second snapshot and compare the two states."
+        },
+        {
+          "type": "code",
+          "label": "Comparison — original cookbook example",
+          "code": "agentsam merkle snapshot . --semantic --out /tmp/sam-after.json\nagentsam merkle diff /tmp/sam-before.json /tmp/sam-after.json --json"
+        },
+        {
+          "type": "callout",
+          "title": "Expected result",
+          "body": "The comparison identifies changed subtrees and produces evidence for invalidated versus reusable analysis. If the installed CLI cannot execute these flags, record the mismatch as a documentation issue and do not mark this recipe verified."
+        }
+      ]
+    },
+    {
+      "slug": "terminal-equivalence",
+      "route": "/docs/sam/cookbooks/terminal-equivalence/",
+      "title": "Compare local and remote terminals",
+      "navTitle": "Terminal equivalence",
+      "category": "Cookbooks",
+      "summary": "Confirm that two authorized execution lanes report consistent repository identity and environment evidence.",
+      "metadata": "Source: infrastructure-cookbooks/_sections/10-terminals.html · migration draft",
+      "content": [
+        {
+          "type": "prose",
+          "heading": "Capture a read-only baseline",
+          "body": "Run the same read-only probe through two authorized terminals. Record the host, current directory, repository commit, and Node.js version. Differences are evidence that the environments are not equivalent, not an invitation to silently rewrite configuration."
+        },
+        {
+          "type": "code",
+          "label": "Read-only host and repository probe",
+          "code": "pwd\ngit rev-parse HEAD\nnode --version"
+        },
+        {
+          "type": "callout",
+          "title": "Expected result",
+          "body": "Both executions return a consistent repository revision when intentionally pointed at the same checkout. Host and working-directory differences must be reported rather than hidden. No write operation is needed to perform this comparison."
+        }
+      ]
+    },
+    {
+      "slug": "native-runtime",
+      "route": "/docs/sam/native-runtime/",
+      "title": "Native runtime and execution environments",
+      "navTitle": "Native runtime",
+      "category": "Concepts",
+      "summary": "Understand what belongs on the local machine, in the hosted control plane, and in an isolated execution environment.",
+      "metadata": "Source: native-runtime guide · migration draft",
+      "content": [
+        {
+          "type": "prose",
+          "heading": "Separate control and execution",
+          "body": "Account authorization and execution placement are different responsibilities. A user request must resolve to a permitted connection and environment before a terminal job starts. The runtime should report its host, execution lane, working directory, and completion status."
+        },
+        {
+          "type": "prose",
+          "heading": "Local and hosted behavior",
+          "body": "Local development can operate against a registered device. Hosted execution requires an explicitly available service or sandbox. Documentation must distinguish supported behavior from proposed capabilities and verify the current release before claiming parity."
+        }
+      ]
+    },
+    {
+      "slug": "structured-decisions",
+      "route": "/docs/sam/structured-decisions/",
+      "title": "Structured decisions",
+      "navTitle": "Decision primitives",
+      "category": "Concepts",
+      "summary": "Make routing, confidence, approval, and action selection explicit in agent workflows.",
+      "metadata": "Source: structured-decisions guide · migration draft",
+      "content": [
+        {
+          "type": "prose",
+          "heading": "Decisions are inspectable",
+          "body": "An agent should be able to explain which alternatives were considered, what evidence was available, and why a particular tool or execution lane was selected. The decision record is distinct from the model's prose response."
+        },
+        {
+          "type": "prose",
+          "heading": "Gates, scores, and confidence",
+          "body": "A gate determines whether an action is permitted. A score helps compare allowed alternatives. Confidence expresses uncertainty and should not bypass the approval boundary. A useful trace records all three without presenting a guess as verified execution."
+        }
+      ]
+    }
+  ]
+}

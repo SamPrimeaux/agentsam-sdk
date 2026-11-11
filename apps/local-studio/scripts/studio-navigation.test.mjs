@@ -31,7 +31,7 @@ test('navigation exposes configured installations only and preserves product ide
 
 test('global React shell renders primary business destinations before sales channels and installed apps', () => {
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
-  const primary = shell.indexOf('...(navigation.primary || []),');
+  const primary = shell.indexOf('...(navigation.primary || []).map(');
   const channels = shell.indexOf("...(navigation.channels?.length ? [{id:'sales-channels'");
   const apps = shell.indexOf("...(navigation.apps?.length ? [{id:'installed-apps'");
   assert.ok(primary >= 0, 'the primary navigation projection must be rendered');

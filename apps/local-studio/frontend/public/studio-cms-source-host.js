@@ -88,8 +88,9 @@
     }
 
     let inventory = null;
+    const loadedVersions = new Map();
     const adapter = {
-      capabilities: { publish: false, createSections: false, createBlocks: false },
+      capabilities: { publish: site.can_publish === true, createSections: false, createBlocks: false },
       async listPages() {
         const data = await call('');
         inventory = data.pages;
@@ -103,7 +104,7 @@
         const descriptor = {
           label: 'HTML document',
           fields: [{ key: 'html', label: 'HTML source', type: 'textarea', group: 'content',
-            description: 'Edit the existing R2-backed HTML. Save stores a private draft; the public file remains unchanged.' }],
+            description: 'Edit this site-owned HTML document. Save keeps it private; Publish live promotes a verified revision with rollback.' }],
           blocks: [], defaultContent: { html: '' }
         };
         return { definitions: [], pages: Object.fromEntries(
@@ -112,6 +113,7 @@
       },
       async getPage(slug) {
         const data = await call('/' + encodeURIComponent(slug));
+        loadedVersions.set(slug, data.page.version);
         return {
           slug, title: data.page.title, status: data.source === 'draft' ? 'draft' : data.page.status,
           sections: [{ key: 'document', name: 'HTML document', sort_order: 0,
@@ -124,7 +126,35 @@
         const data = await call('/' + encodeURIComponent(slug) + '/draft', 'PUT', {
           html: content.html, expected_version: expectedVersion
         });
+        loadedVersions.set(slug, data.version);
         return { version: data.version, updated_at: new Date().toISOString() };
+      },
+      async publishSource(slug) {
+        const current = await call('/' + encodeURIComponent(slug));
+        const expected = loadedVersions.get(slug);
+        if (expected === undefined || expected !== current.page.version) {
+          throw new Error('cms_source_version_conflict');
+        }
+        if (current.source !== 'draft') {
+          throw new Error('cms_source_publish_requires_private_draft');
+        }
+        const result = await call('/' + encodeURIComponent(slug) + '/publish', 'POST', {
+          expected_version: expected, confirm: 'publish'
+        });
+        loadedVersions.set(slug, result.version);
+        return result;
+      },
+      async rollbackSource(slug) {
+        const current = await call('/' + encodeURIComponent(slug));
+        const expected = loadedVersions.get(slug);
+        if (expected === undefined || expected !== current.page.version || current.source === 'draft') {
+          throw new Error('cms_source_rollback_requires_clean_current_version');
+        }
+        const result = await call('/' + encodeURIComponent(slug) + '/rollback', 'POST', {
+          expected_version: expected, confirm: 'rollback'
+        });
+        loadedVersions.set(slug, result.version);
+        return result;
       },
       async resolvePreview(slug, page) {
         const html = page?.sections?.find(s => s.key === 'document')?.content?.html;
@@ -143,6 +173,7 @@
         const slug = decodeURIComponent(chunks[4] || '');
         if (!slug) return { pages: await adapter.listPages() };
         if (chunks.length === 5) return { page: await adapter.getPage(slug), seeded: true };
+        if (chunks[5] === 'publish' && (options.method || 'GET') === 'POST') return adapter.publishSource(slug);
         if (chunks[5] === 'sections' && chunks[6] === 'document' && (options.method || 'GET') === 'PUT') {
           const body = JSON.parse(options.body || '{}');
           return adapter.saveDraft(slug, 'document', body.content, body.expected_version);

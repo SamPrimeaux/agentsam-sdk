@@ -184,3 +184,23 @@ test("unknown hostname never falls back to another site's public content", async
   );
   assert.equal(response, null);
 });
+
+test('missing published R2 page fails closed instead of rendering a stale Worker asset', async () => {
+  let staticRequests = 0;
+  const env = {
+    DB: siteOwnedDb(
+      { 'agentsam.inneranimalmedia.com': [{
+        ...siteA, id: 'site-sdk', slug: 'agentsam-sdk', primary_domain: 'agentsam.inneranimalmedia.com'
+      }] },
+      { 'site-sdk': [{
+        id: 'page-home', site_id: 'site-sdk', slug: 'home', route_path: '/',
+        status: 'published', content_object_key: 'sites/agentsam-sdk/public/home/index.html'
+      }] },
+    ),
+    WEBSITE_ASSETS: { async get() { return null; }, async put() {} },
+    ASSETS: { async fetch() { staticRequests++; return new Response('<h1>Stale</h1>'); } },
+  };
+  const res = await servePublicSitePage(new Request('https://agentsam.inneranimalmedia.com/'), env, '/');
+  assert.equal(res.status, 503);
+  assert.equal(staticRequests, 0);
+});

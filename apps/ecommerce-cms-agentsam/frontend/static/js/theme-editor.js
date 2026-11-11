@@ -133,7 +133,7 @@
   let publishInFlight = false;
   let hasEditedThisSession = false;
   let autosaveFailed = false;
-  const preferredDevice = host?.initialDevice || params.get('previewMode') || localStorage.getItem('fnf-theme-editor-device');
+  const preferredDevice = host?.initialDevice || params.get('previewMode') || (localStorage.getItem('agentsam:cms:preview-device') || localStorage.getItem('fnf-theme-editor-device'));
   let device = ['desktop','tablet','mobile'].includes(preferredDevice) ? preferredDevice : 'desktop';
   let inspectionEnabled = true;
   const undoHistory = [];
@@ -1141,6 +1141,18 @@
             'data-picker-template="' + cmsEscapeAttr(group.template || group.id) + '"',
           (!hasChildren && !page) ? 'Stock · editable starter' : '', hasChildren);
       }).join('');
+    }
+    // Actual installed pages appear first. Stock templates remain available
+    // below them, rather than replacing the merchant's editable site.
+    if (host && !needle && !pagePickerCategory && source.length) {
+      const sitePages = source.slice(0, 40);
+      html = '<div class="te-picker-heading">Site pages ('+source.length+')</div>'+
+        sitePages.map(p=>row(p.title||humanize(p.slug),'page',
+          'data-picker-page="'+cmsEscapeAttr(p.slug)+'"',
+          p.route||p.live_route||'CMS draft',false)).join('')+
+        (source.length>sitePages.length
+          ? '<div class="te-picker-heading">Search to find more site pages</div>' : '')+
+        '<div class="te-picker-divider" role="separator"></div>'+html;
     }
     // One search across actual authorized CMS pages, not only menu headings.
     // Preserve category browsing and do not invent templates or draft pages.
@@ -3311,23 +3323,27 @@
     try { doc = frame.contentDocument; } catch { return; }
     if (!doc || !doc.documentElement) return;
     applyThemeSettingsPreview();
+    // The preview is a separate document: copy only the editor's selection
+    // accent, never overwrite the merchant's storefront palette.
+    const accent = window.getComputedStyle(document.documentElement).getPropertyValue('--te-accent').trim();
+    if (accent) doc.documentElement.style.setProperty('--cms-editor-selection-color', accent);
 
-    let style = doc.getElementById('fnf-theme-editor-preview-style');
+    let style = doc.getElementById('agentsam-theme-editor-preview-style');
     if (!style) {
       style = doc.createElement('style');
-      style.id = 'fnf-theme-editor-preview-style';
+      style.id = 'agentsam-theme-editor-preview-style';
       style.textContent =
-        'html.fnf-theme-editor-outlines [data-cms-section]{outline:1px dashed rgba(95,67,213,.24);outline-offset:-1px}' +
-        'html.fnf-theme-editor-outlines [data-cms]{cursor:pointer!important}' +
-        'html.fnf-theme-editor-outlines [data-cms]:hover{outline:2px solid rgba(95,67,213,.52);outline-offset:2px}' +
-        '[data-theme-editor-selected="true"]{outline:2px solid #7656ee!important;outline-offset:2px!important;box-shadow:0 0 0 3px rgba(118,86,238,.12)!important}' +
-        '[data-theme-editor-hover="true"]:not([data-theme-editor-selected="true"]){outline:2px dashed #7656ee!important;outline-offset:2px!important}';
+        'html.agentsam-theme-editor-outlines [data-cms-section]{outline:1px dashed color-mix(in srgb,var(--cms-editor-selection-color) 25%,transparent);outline-offset:-1px}' +
+        'html.agentsam-theme-editor-outlines [data-cms]{cursor:pointer!important}' +
+        'html.agentsam-theme-editor-outlines [data-cms]:hover{outline:2px solid color-mix(in srgb,var(--cms-editor-selection-color) 52%,transparent);outline-offset:2px}' +
+        '[data-theme-editor-selected="true"]{outline:2px solid var(--cms-editor-selection-color)!important;outline-offset:2px!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--cms-editor-selection-color) 12%,transparent)!important}' +
+        '[data-theme-editor-hover="true"]:not([data-theme-editor-selected="true"]){outline:2px dashed var(--cms-editor-selection-color)!important;outline-offset:2px!important}';
       if (doc.head) doc.head.appendChild(style);
     }
-    doc.documentElement.classList.toggle('fnf-theme-editor-outlines', showOutlines && inspectionEnabled);
+    doc.documentElement.classList.toggle('agentsam-theme-editor-outlines', showOutlines && inspectionEnabled);
 
-    if (doc.documentElement.dataset.fnfThemeEditorBound !== '1') {
-      doc.documentElement.dataset.fnfThemeEditorBound = '1';
+    if (doc.documentElement.dataset.agentsamThemeEditorBound !== '1') {
+      doc.documentElement.dataset.agentsamThemeEditorBound = '1';
       doc.addEventListener('mouseover', function(event) {
         if (!inspectionEnabled) return;
         const el = event.target?.closest?.('[data-cms-block], [data-cms-section], [data-section-id]');
@@ -3338,7 +3354,25 @@
         if (!event.relatedTarget?.closest?.('[data-cms-block], [data-cms-section], [data-section-id]')) hoverEditorNode(null);
       });
       doc.addEventListener('click', function(event) {
+        if (host && !window.__fnfGlobalInspectMode) {
+          const link = event.target?.closest?.('a[href]');
+          if (link && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+            let destination = null;
+            try { destination = new URL(link.getAttribute('href'),location.origin); } catch {}
+            const route = destination?.origin === location.origin && !destination.search && !destination.hash
+              ? destination.pathname.replace(/\/?$/, '/') : null;
+            const matched = route && pages.find(p =>
+              (host.pageRoutes?.[p.slug] || p.route || '').replace(/\/?$/, '/') === route);
+            if (matched) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              void switchPage(matched.slug);
+              return;
+            }
+          }
+        }
         if (!inspectionEnabled || window.__fnfGlobalInspectMode) return;
+        if (event.target?.closest?.('[data-doc-menu],[data-doc-copy],[data-doc-filter]')) return;
         const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-block], [data-cms-section], [data-section-id]');
         if (!target) return;
 
@@ -3431,7 +3465,7 @@
   function setDevice(next) {
     device = next;
     host?.onDeviceChange?.(device);
-    localStorage.setItem('fnf-theme-editor-device', device);
+    localStorage.setItem('agentsam:cms:preview-device', device);
     byId('te-preview-device').dataset.device = device;
     document.querySelectorAll('.te-device-btn').forEach(function(button) {
       const active = button.dataset.device === device;
@@ -4536,7 +4570,7 @@
     let doc;
     try { doc = byId('theme-preview').contentDocument; } catch {}
     if (doc?.documentElement) {
-      doc.documentElement.classList.toggle('fnf-theme-editor-outlines', inspectionEnabled);
+      doc.documentElement.classList.toggle('agentsam-theme-editor-outlines', inspectionEnabled);
       if (!inspectionEnabled) doc.querySelectorAll('[data-theme-editor-selected]').forEach(function(node) {
         node.removeAttribute('data-theme-editor-selected');
       });
@@ -4640,8 +4674,9 @@
     }
     // Read-only copy of the exact rendered private preview; never use the published URL.
     const snapshot = doc.documentElement.cloneNode(true);
-    snapshot.querySelector('#fnf-theme-editor-preview-style')?.remove();
-    snapshot.classList.remove('fnf-theme-editor-outlines');
+    snapshot.querySelector('#agentsam-theme-editor-preview-style')?.remove();
+    snapshot.style.removeProperty('--cms-editor-selection-color');
+    snapshot.classList.remove('agentsam-theme-editor-outlines');
     snapshot.querySelectorAll('[data-theme-editor-selected]').forEach(function(node) { node.removeAttribute('data-theme-editor-selected'); });
     snapshot.querySelectorAll('script').forEach(function(node) { node.remove(); });
     const base = doc.createElement('base');

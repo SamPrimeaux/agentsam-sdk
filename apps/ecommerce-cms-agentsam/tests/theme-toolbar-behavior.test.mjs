@@ -144,6 +144,33 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
 });
 
 
+test("storefront selection stays isolated from site design and follows the account editor accent", async () => {
+  const { dom, doc } = await editorFixture();
+  try {
+    doc.documentElement.style.setProperty("--te-accent", "#247d71");
+    const frame = doc.getElementById("theme-preview");
+    // JSDOM does not load the remote preview URL. Substitute only its DOM;
+    // the real editor's registered iframe load handler remains under test.
+    const previewDocument = doc.implementation.createHTMLDocument("Merchant preview");
+    Object.defineProperty(frame, "contentDocument", {
+      configurable: true, get: () => previewDocument,
+    });
+    frame.dispatchEvent(new dom.window.Event("load"));
+    const preview = frame.contentDocument;
+    assert.equal(preview.documentElement.style.getPropertyValue("--cms-editor-selection-color"), "#247d71");
+    const stylesheet = preview.getElementById("agentsam-theme-editor-preview-style");
+    assert.ok(stylesheet, "the actual canvas receives its transient editor overlay stylesheet");
+    assert.match(stylesheet.textContent, /var\(--cms-editor-selection-color\)/);
+    assert.doesNotMatch(stylesheet.textContent, /#7656ee|rgba\(118,86,238/);
+    assert.equal(preview.getElementById("fnf-theme-editor-preview-style"), null);
+    doc.documentElement.style.setProperty("--te-accent", "#cf543d");
+    frame.dispatchEvent(new dom.window.Event("load"));
+    assert.equal(preview.documentElement.style.getPropertyValue("--cms-editor-selection-color"), "#cf543d");
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("home editor identifies the current page in the toolbar and section tree", async () => {
   const { dom, doc } = await editorFixture({ pageSlug: "home" });
   try {

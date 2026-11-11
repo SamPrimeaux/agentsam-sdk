@@ -21,9 +21,15 @@ const globalDir = path.join(siteRoot, 'global');
 
 function copyThemeAssets() {
   fs.mkdirSync(globalDir, { recursive: true });
-  for (const file of ['tokens.css', 'docs-layout.css']) {
+  const assets = {
+    'tokens.css': 'agentsam-docs-tokens.css',
+    'docs-layout.css': 'agentsam-docs-layout.css',
+    'docs-portal.css': 'agentsam-docs-portal.css',
+    'docs-portal-runtime.js': 'agentsam-docs-portal.js',
+  };
+  for (const [file, target] of Object.entries(assets)) {
     const from = path.join(themePkg, file);
-    const to = path.join(globalDir, file === 'tokens.css' ? 'agentsam-docs-tokens.css' : 'agentsam-docs-layout.css');
+    const to = path.join(globalDir, target);
     fs.copyFileSync(from, to);
   }
 }
