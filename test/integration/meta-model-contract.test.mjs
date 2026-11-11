@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { discoverMetaModels } from '../../protocol/models/discovery.mjs';
+import { createProviderAdapter } from '../../src/providers/factory.js';
 import {
   collectCredentialScopedInventory,
   resolveDiscoveredModelExecution,
@@ -58,6 +59,41 @@ describe('Meta Model API through shared credential-scoped inventory', () => {
       () => resolveDiscoveredModelExecution(inventory, 'openai', 'muse-spark-1.3'),
       /selected_model_not_available_for_credential/,
     );
+  });
+
+  it('runs through the existing SDK Responses provider factory with the same verified record', async () => {
+    const { models } = await discoverMetaModels('credential-from-account-vault', fakeFetch);
+    let requestBody = null;
+    const adapter = createProviderAdapter({
+      modelRecord: models[0],
+      credential: { value: 'credential-from-account-vault' },
+      fetchImpl: async (url, init) => {
+        assert.equal(url, 'https://api.meta.ai/v1/responses');
+        assert.equal(init.headers.authorization, 'Bearer credential-from-account-vault');
+        requestBody = JSON.parse(init.body);
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => null },
+          json: async () => ({
+            id: 'resp_meta_test',
+            status: 'completed',
+            output: [{ type: 'message', content: [{ type: 'output_text', text: 'Verified' }] }],
+            usage: { input_tokens: 2, output_tokens: 1 },
+          }),
+        };
+      },
+    });
+    const result = await adapter.create({
+      input: [{ role: 'user', content: 'Verify a change' }],
+      reasoningEffort: 'low',
+    });
+    assert.equal(result.provider, 'meta');
+    assert.equal(result.output_text, 'Verified');
+    assert.equal(requestBody.model, 'muse-spark-1.3');
+    assert.equal(requestBody.reasoning.effort, 'low');
+    assert.equal(Object.hasOwn(requestBody, 'temperature'), false);
+    assert.equal(Object.hasOwn(requestBody, 'top_p'), false);
   });
 
   it('does not discover anything without an account credential', async () => {
