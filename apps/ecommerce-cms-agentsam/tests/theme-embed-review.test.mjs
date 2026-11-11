@@ -45,6 +45,15 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
     assert.equal(w.document.querySelectorAll('[data-embed-open]').length,6);
     assert.equal(w.document.querySelector('#te-embed-empty'),null);
     assert.equal(w.ThemeEmbedReview.isPreviewOnly,false);
+    assert.ok(w.document.querySelector('[data-open-embed-picker]'));
+    w.ThemeEmbedReview.openPicker();
+    const picker=w.document.querySelector('.te-embed-picker-dialog');
+    assert.ok(picker.open);
+    assert.equal(picker.querySelectorAll('[data-picker-configure]').length,6);
+    assert.match(picker.textContent,/InnerAnimalMedia App Store/);
+    picker.querySelector('[data-picker-configure="newsletter_subscribe"]').click();
+    assert.equal(picker.open,false);
+    assert.ok(w.document.querySelector('[data-embed-install]'),'picker opens the real CMS installer instead of installing silently');
     w.document.querySelector('[data-embed-open="customer_billing"]').click();
     assert.match(w.document.querySelector('.ter-inspector-scroll').textContent,/authenticated billing route/);
     assert.ok(w.document.querySelector('[data-embed-select="style"]'));
@@ -77,6 +86,37 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
     assert.equal(w.document.querySelector('#te-inspector-body').hasAttribute('aria-hidden'),false);
   }finally{dom.window.close();}
 });
+test('installed Theme Project editor cannot silently write CMS embeds to an unrelated site page',{skip:!JSDOM&&'jsdom is not installed'},async()=>{
+  const dom=new JSDOM('<!doctype html><html><body><div data-drawer-mode="app-embeds"></div>'+
+    '<aside data-drawer-panel="app-embeds"><input id="te-embed-search"><div id="te-embed-empty"></div></aside>'+
+    '<aside class="theme-editor-panel"><div id="te-inspector-body"></div></aside></body></html>',{
+    url:'https://example.test/admin/theme-project-editor?site_id=theme-store&project=theme_heuristic',
+    runScripts:'outside-only',
+  });
+  const w=dom.window, calls=[];
+  w.AgentSamThemeEditorHost={adapter:{capabilities:{publish:false}}};
+  w.structuredClone=globalThis.structuredClone;
+  w.matchMedia=()=>({matches:false});
+  w.fetch=async url=>{
+    calls.push(String(url));
+    return {ok:true,json:async()=>JSON.parse(readFileSync(catalogPath,'utf8'))};
+  };
+  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+  w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+  try{
+    w.eval(src('theme-embed-review.js'));
+    await tick();
+    assert.equal(w.ThemeEmbedReview.isPreviewOnly,true);
+    assert.equal(calls.length,1,'no unauthorized catalog-resources GET');
+    w.ThemeEmbedReview.openPicker();
+    assert.match(w.document.querySelector('.te-embed-picker-dialog').textContent,/project-scoped installation adapter/i);
+    w.document.querySelector('[data-picker-configure="newsletter_subscribe"]').click();
+    assert.equal(w.document.querySelector('[data-embed-install]'),null);
+    assert.match(w.document.querySelector('.ter-inspector-scroll').textContent,/Preview only/);
+    assert.ok(w.document.querySelector('[data-embed-preview]'));
+    assert.equal(calls.length,1,'no unauthorized writes');
+  }finally{dom.window.close();}
+});
 test('showcase mode leaves Resolve preview unmodified',{skip:!JSDOM&&'jsdom is not installed on this machine'},()=>{
   const dom=new JSDOM('<aside data-drawer-panel="app-embeds"></aside><aside class="theme-editor-panel"></aside>',{
     url:'https://example.test/admin/theme-editor?showcase=resolve',runScripts:'outside-only'});
@@ -94,7 +134,7 @@ test('review UI is wired to catalog install APIs and keeps theme settings owners
   assert.match(code,/\/admin\/theme-editor\/embed-catalog\.json/);
   assert.match(code,/\/api\/admin\/cms\/pages\/.*catalog-resources/);
   assert.match(code,/data-embed-install/);
-  assert.match(code,/isPreviewOnly:false/);
+  assert.match(code,/isPreviewOnly:!canInstall/);
   assert.match(code,/event\.preventDefault\(\)/);
   assert.doesNotMatch(code,/Copy preview JSON|navigator\.clipboard/);
   for(const key of ['brand.logoUrl','page.maxWidth','inputs.radius','overlays.placement','icons.style']){
