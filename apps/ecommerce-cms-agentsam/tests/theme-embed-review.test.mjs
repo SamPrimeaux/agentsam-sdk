@@ -45,6 +45,15 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
     assert.equal(w.document.querySelectorAll('[data-embed-open]').length,6);
     assert.equal(w.document.querySelector('#te-embed-empty'),null);
     assert.equal(w.ThemeEmbedReview.isPreviewOnly,false);
+    assert.ok(w.document.querySelector('[data-open-embed-picker]'));
+    w.ThemeEmbedReview.openPicker();
+    const picker=w.document.querySelector('.te-embed-picker-dialog');
+    assert.ok(picker.open);
+    assert.equal(picker.querySelectorAll('[data-picker-configure]').length,6);
+    assert.match(picker.textContent,/InnerAnimalMedia App Store/);
+    picker.querySelector('[data-picker-configure="newsletter_subscribe"]').click();
+    assert.equal(picker.open,false);
+    assert.ok(w.document.querySelector('[data-embed-install]'),'picker opens the real CMS installer instead of installing silently');
     w.document.querySelector('[data-embed-open="customer_billing"]').click();
     assert.match(w.document.querySelector('.ter-inspector-scroll').textContent,/authenticated billing route/);
     assert.ok(w.document.querySelector('[data-embed-select="style"]'));

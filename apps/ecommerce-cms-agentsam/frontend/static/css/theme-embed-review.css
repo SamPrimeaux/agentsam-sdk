@@ -50,3 +50,35 @@
 
 /* Account billing is only a secure link preview; disable fake checkout interactions. */
 .ter-dialog-content button:disabled{cursor:not-allowed;opacity:.65;box-shadow:none}
+
+/* Manifest-backed App picker. Shopify-like information density, without
+ * copied styling, ratings, or browser-only installation claims. */
+.ter-picker-launch{display:flex;align-items:center;gap:10px;padding:10px 12px 3px}
+.ter-picker-launch button{font:inherit;font-size:11px;font-weight:720;min-height:34px;padding:6px 12px;border:1px solid var(--te-border,#ddd);background:var(--te-panel,#fff);color:var(--te-text,#232128);border-radius:7px;cursor:pointer}
+.ter-picker-launch a{font-size:10px;color:var(--te-muted,#56515b);text-decoration:underline;text-underline-offset:3px}
+.te-embed-picker-dialog{width:min(810px,calc(100vw - 28px));max-width:100%;max-height:min(84dvh,880px);padding:0;border:1px solid #dcdde1;border-radius:13px;color:#202226;background:#fff;box-shadow:0 26px 80px #10111e3d;overflow:auto}
+.te-embed-picker-dialog::backdrop{background:#11141ca6;backdrop-filter:blur(2px)}
+.ter-picker-head{display:flex;justify-content:space-between;gap:18px;padding:22px 24px 16px;border-bottom:1px solid #e6e6e8}
+.ter-picker-head span{font:650 10px/1.3 system-ui;color:#797b87;letter-spacing:.06em;text-transform:uppercase}
+.ter-picker-head h2{font:750 clamp(21px,2.2vw,28px)/1.2 system-ui;color:#202126;margin:5px 0 8px}
+.ter-picker-head p{font:400 12px/1.5 system-ui;color:#666a73;margin:0}
+.ter-picker-head button{width:32px;height:32px;min-width:32px;cursor:pointer;border:1px solid #e3e4e8;border-radius:7px;background:#fff;color:#343844;font-size:19px}
+.ter-picker-search{padding:15px 24px 5px;display:grid;gap:6px}
+.ter-picker-search label{font:650 11px system-ui;color:#343742}
+.ter-picker-search input{height:38px;padding:8px 12px;background:#fff;border:1px solid #ccced4;border-radius:7px;color:#25272d;font:12px system-ui}
+.ter-picker-results{padding:0 24px 16px}
+.ter-picker-group{margin:12px 0 16px}
+.ter-picker-group h3{font:700 12px system-ui;margin:0 0 9px;color:#343641}
+.ter-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ter-picker-card{display:flex;align-items:flex-start;gap:10px;text-align:left;min-width:0;min-height:96px;padding:13px 11px;border:1px solid #dedfe4;border-radius:9px;background:#fff;color:#292c35;cursor:pointer}
+.ter-picker-card:hover,.ter-picker-card:focus-visible{border-color:#6e77a0;background:#f7f8fb}
+.ter-picker-copy{display:grid;flex:1;min-width:0;gap:5px}
+.ter-picker-copy strong{font:680 12px/1.3 system-ui}
+.ter-picker-copy small{font:400 11px/1.4 system-ui;color:#6a6f7b}
+.ter-picker-copy em{font:450 10px/1.3 system-ui;color:#858996;font-style:normal}
+.ter-picker-add{align-self:flex-start;font:700 10px system-ui;border:1px solid #d6d8df;border-radius:6px;padding:6px 8px;background:#f8f9fa}
+.ter-picker-empty{font:12px/1.5 system-ui;color:#686c77;padding:20px 0}
+.ter-picker-footer{border-top:1px solid #e5e6e9;background:#f8f8f9;padding:15px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px;font:11px system-ui}
+.ter-picker-footer a{color:#34497d;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:650px){.te-embed-picker-dialog{width:100%;max-width:100%;max-height:90dvh;position:fixed;bottom:0;margin:auto 0 0;border-radius:15px 15px 0 0}.ter-picker-head,.ter-picker-results,.ter-picker-search,.ter-picker-footer{padding-left:15px;padding-right:15px}.ter-picker-grid{grid-template-columns:minmax(0,1fr)}.ter-picker-footer{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){.te-embed-picker-dialog::backdrop{backdrop-filter:none}}

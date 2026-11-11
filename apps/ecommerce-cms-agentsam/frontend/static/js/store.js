@@ -372,7 +372,7 @@ function scopedStoreEditorHref(raw,siteId) {
   try { url = new URL(raw || '/admin/theme-editor',origin); }
   catch { return '/admin/store'; }
   if (url.origin!==origin ||
-      !['/admin/theme-editor','/admin/theme-project-editor'].includes(url.pathname))
+      !['/admin/theme-editor','/admin/theme-project-editor','/admin/page-edit'].includes(url.pathname))
     return '/admin/store';
   // An editor URL from a different site is an invalid read-model record.
   // Never silently rewrite its site_id and open the wrong project's editor.
@@ -558,10 +558,27 @@ function showActiveTheme(theme,siteId) {
 
     setStoreViewButton(d.site_preview?.url ||
       (d.store?.visibility==="public" ? d.store?.url : null));
-    // One resolved record owns the image, name, identity and Edit action.
-    const theme = d.active_theme || d.preview_theme;
+    // Published site identity wins over a disconnected Heuristic starter.
+    // A theme draft may still be edited under Draft themes, not impersonate
+    // this domain's live website.
+    const presentation=window.cmsStorePresentation?.chooseStorePresentation(d);
+    const theme=presentation?.kind==='theme'?presentation.record:null;
+    const publishedSite=presentation?.kind==='site'?presentation.record:null;
     let currentId=null;
-    if(theme?.edit_href){
+    if(publishedSite){
+      document.getElementById('active-theme-name').textContent=d.selected_site_name||publishedSite.title||'Published website';
+      document.getElementById('active-theme-saved').textContent='Published website · '+publishedSite.url;
+      const editLink=document.getElementById('edit-theme-btn');
+      const safeHref=scopedStoreEditorHref(publishedSite.edit_href,d.selected_site_id);
+      editLink.href=safeHref;
+      editLink.textContent=safeHref==='/admin/store'?'Manage pages':'Edit page';
+      if(safeHref==='/admin/store'){
+        editLink.href='/admin/pages?site_id='+encodeURIComponent(d.selected_site_id);
+      }
+      showExistingWebsitePreview(publishedSite.url);
+      const card=document.querySelector('.online-store-active');
+      card.hidden=false;card.classList.remove('is-loading');card.setAttribute('aria-busy','false');
+    }else if(theme?.edit_href){
       const editLink=document.getElementById('edit-theme-btn');
       editLink.href=scopedStoreEditorHref(theme.edit_href,d.selected_site_id);
       editLink.textContent='Edit theme';
