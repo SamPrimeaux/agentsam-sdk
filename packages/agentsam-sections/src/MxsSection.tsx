@@ -14,6 +14,8 @@ export interface MxsSectionProps {
   media: MxsMediaSource;
   mediaSide?: 'start' | 'end';
   cta?: MxsLink;
+  secondaryCta?: MxsLink;
+  headingLevel?: 'h1' | 'h2';
   ctaClassName?: string;
 }
 
@@ -27,6 +29,8 @@ export function MxsSection({
   media,
   mediaSide = 'end',
   cta,
+  secondaryCta,
+  headingLevel: Heading = 'h2',
   ctaClassName = 'mxs-btn',
 }: MxsSectionProps) {
   const ref = useRef<HTMLElement>(null);
@@ -46,13 +50,14 @@ export function MxsSection({
         <div className="mxs-grid">
           <div className="mxs-col">
             {index ? <div className="mxs-num" aria-hidden="true">{index}</div> : null}
-            <h2 className="mxs-title" id={headingId}>{title}</h2>
+            <Heading className="mxs-title" id={headingId}>{title}</Heading>
             <div className="mxs-copy">{children}</div>
             {cta ? (
               <a className={`mxs-cta ${ctaClassName}`} href={cta.href}>
                 <span>{cta.label}</span>
               </a>
             ) : null}
+            {secondaryCta && <a className="mxs-cta mxs-secondary-cta" href={secondaryCta.href}>{secondaryCta.label}</a>}
           </div>
           <MxsMedia media={media} />
         </div>

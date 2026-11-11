@@ -13,3 +13,7 @@ export type {
   MxsModelMedia,
   MxsVideoMedia,
 } from './types.js';
+export { OnlineStoreChat, OnlineStoreChatFields, StorefrontForm, storefrontEmbedDefinitions } from './StorefrontEmbeds.js';
+export type {
+  OnlineStoreChatSettings, StorefrontProduct, StorefrontReceipt, StorefrontSubmission, SubmitStorefront,
+} from './StorefrontEmbeds.js';
