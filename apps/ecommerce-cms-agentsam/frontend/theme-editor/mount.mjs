@@ -14,6 +14,16 @@ export const EDITOR_CHROME_TOKEN_MAP = Object.freeze({
   '--font-sans': '--te-font',
 });
 
+const HOST_THEME_ALIASES = Object.freeze({
+  '--color-background': ['--nav-canvas', '--c-canvas'],
+  '--color-card': ['--nav-surface', '--c-surface'],
+  '--color-border': ['--nav-border', '--c-border'],
+  '--color-foreground': ['--nav-text', '--c-ink'],
+  '--color-muted': ['--nav-hover'],
+  '--color-muted-foreground': ['--nav-muted', '--c-muted'],
+  '--color-accent': ['--nav-accent', '--c-accent'],
+});
+
 export function syncEditorChromeTokens(hostDocument, editorDocument, explicit = {}) {
   const root = editorDocument?.documentElement;
   if (!root) return;
@@ -30,12 +40,16 @@ export function syncEditorChromeTokens(hostDocument, editorDocument, explicit = 
       current = parent.document;
     } catch { break; }
   }
-  const computed = documents.map(doc => {
-    try { return doc.defaultView?.getComputedStyle?.(doc.documentElement); }
-    catch { return null; }
+  const computed = documents.flatMap(doc => {
+    const nodes = [doc.documentElement, doc.body, doc.querySelector?.('.as-nav-scope')].filter(Boolean);
+    return nodes.map(node => {
+      try { return doc.defaultView?.getComputedStyle?.(node); }
+      catch { return null; }
+    });
   });
   for (const [semantic, destination] of Object.entries(EDITOR_CHROME_TOKEN_MAP)) {
-    const value = explicit[semantic] || computed.map(style => style?.getPropertyValue(semantic)?.trim()).find(Boolean);
+    const names = [semantic, ...(HOST_THEME_ALIASES[semantic] || [])];
+    const value = explicit[semantic] || computed.map(style => names.map(name => style?.getPropertyValue(name)?.trim()).find(Boolean)).find(Boolean);
     if (typeof value === 'string' && value.trim()) root.style.setProperty(destination, value.trim());
     else root.style.removeProperty(destination);
   }

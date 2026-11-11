@@ -32,6 +32,23 @@ test('packaged CMS editor inherits host-shell tokens, not storefront content or 
     host.window.document.documentElement.style.removeProperty('--color-accent');
     syncEditorChromeTokens(host.window.document, editor.window.document);
     assert.equal(style.getPropertyValue('--te-accent'), '');
+    const navigation = host.window.document.createElement('div');
+    navigation.className = 'as-nav-scope';
+    navigation.style.setProperty('--nav-accent', '#2b765e');
+    navigation.style.setProperty('--nav-surface', '#172328');
+    navigation.style.setProperty('--nav-canvas', '#101b1e');
+    host.window.document.body.appendChild(navigation);
+    syncEditorChromeTokens(host.window.document, editor.window.document);
+    assert.equal(style.getPropertyValue('--te-accent'), '#2b765e');
+    // Actual platform shell tokens also apply to editor surfaces.
+    // The merchant's nested storefront tokens are never read.
+    assert.equal(style.getPropertyValue('--te-panel'), '#1b2529');
+    assert.equal(style.getPropertyValue('--te-canvas'), '#10171a');
+    host.window.document.documentElement.style.removeProperty('--color-card');
+    host.window.document.documentElement.style.removeProperty('--color-background');
+    syncEditorChromeTokens(host.window.document, editor.window.document);
+    assert.equal(style.getPropertyValue('--te-panel'), '#172328');
+    assert.equal(style.getPropertyValue('--te-canvas'), '#101b1e');
   } finally {
     host.window.close();
     editor.window.close();
