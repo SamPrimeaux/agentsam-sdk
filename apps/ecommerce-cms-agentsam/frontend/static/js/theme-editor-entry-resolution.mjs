@@ -35,6 +35,10 @@ function selectedProjectPage(project,slug='') {
 export function planThemeEditorEntry({site,location,projects=[],pages=[]}) {
   if(!site||!ID.test(String(site.id||'')))return {kind:'unavailable',reason:'site_not_owned'};
   const params=new URL(location,'https://agentsam.invalid').searchParams;
+  const marketplaceKind=params.get('marketplace_kind');
+  const marketplaceKey=params.get('marketplace_key')||'';
+  const marketplace=['plugin','cms_embed'].includes(marketplaceKind) && /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,159}$/.test(marketplaceKey)
+    ? {marketplace_kind:marketplaceKind,marketplace_key:marketplaceKey} : null;
   const pageId=params.get('page_id')||'';
   const slug=params.get('slug')||'';
   if(pageId&&!ID.test(pageId))return {kind:'unavailable',reason:'invalid_page_id'};
@@ -44,13 +48,13 @@ export function planThemeEditorEntry({site,location,projects=[],pages=[]}) {
   if(pageId&&(!selected||selected.id!==pageId))return {kind:'unavailable',reason:'page_not_in_site'};
   const installed=(Array.isArray(projects)?projects:[]).filter(p=>
     p&&ID.test(String(p.id||''))&&Array.isArray(p.pages)&&p.pages.length>0);
-  if(!pageId&&installed.length) {
+  if(!marketplace&&!pageId&&installed.length) {
     const project=installed.find(p=>p.pages.some(page=>page.slug===slug))||installed[0];
     const page=selectedProjectPage(project,slug);
     if(page) return {kind:'redirect',resource:'theme-project',
       to:link('/admin/theme-project-editor',{project:project.id,site_id:site.id,page:page.slug})};
   }
   if(selected)return {kind:'redirect',resource:'cms-page',
-    to:link('/admin/theme-editor',{slug:selected.slug,site_id:site.id,page_id:selected.id||null})};
+    to:link('/admin/theme-editor',{slug:selected.slug,site_id:site.id,page_id:selected.id||null,...marketplace})};
   return {kind:'redirect',resource:'empty-site',to:link('/admin/pages',{site_id:site.id})};
 }
