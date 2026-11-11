@@ -35,6 +35,8 @@ jobs:
         run: npm install --global npm@^11.21.0
       - name: Install exact dependency graph
         run: npm ci
+      - name: Verify clean SDK Canvas provider import
+        run: node --test --test-name-pattern='real generation orchestrator' test/integration/canvas-work-runtime.test.mjs
       - name: Check approved release train
         env:
           APPROVED_VERSION: ${{ inputs.version }}
