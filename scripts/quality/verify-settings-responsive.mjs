@@ -142,7 +142,7 @@ async function checkControlsContrast(page){
       return bg;
     };
     const failures=[],samples=[];
-    for(const el of document.querySelectorAll('[role="dialog"] input, [role="dialog"] select, [role="dialog"] textarea')){
+    for(const el of document.querySelectorAll('section[aria-label^="Plugin details: "] input, section[aria-label^="Plugin details: "] select, section[aria-label^="Plugin details: "] textarea')){
       const cs=getComputedStyle(el),rect=el.getBoundingClientRect();
       if(!rect.width||!rect.height||cs.borderTopStyle==='none'||parseFloat(cs.borderTopWidth)===0)continue;
       const border=over(rgba(cs.borderTopColor),colorOf(el));
@@ -195,16 +195,21 @@ try{
     const button=page.getByRole('button',{name:/New agent/i});
     const shown=await button.isVisible();
     await button.click();
-    const dialog=page.getByRole('dialog',{name:/Create agent/i});
-    await dialog.waitFor();
+    const detail=page.getByRole('region',{name:/Plugin details: New agent/i});
+    await detail.waitFor();
+    await detail.getByRole('heading',{name:'New agent',exact:true}).waitFor();
+    await page.waitForFunction(()=>document.activeElement?.closest('section[aria-label="Plugin details: New agent"]'),{timeout:5000});
     const focusIsInside=await page.evaluate(()=>{
-      const dialog=document.querySelector('[role="dialog"]');
-      return !!dialog?.contains(document.activeElement);
+      const section=document.querySelector('section[aria-label="Plugin details: New agent"]');
+      return !!section?.contains(document.activeElement);
     });
-    const dialogWidth=await dialog.evaluate(el=>el.getBoundingClientRect().width);
+    const dialogWidth=await detail.evaluate(el=>el.getBoundingClientRect().width);
     const controlsContrast=await checkControlsContrast(page);
-    await page.keyboard.press('Escape');
-    await dialog.waitFor({state:'hidden'});
+    await page.keyboard.press('Tab');
+    const backButton=detail.getByRole('button',{name:'Plugins',exact:true});
+    const backFocused=await backButton.evaluate(el=>el===document.activeElement);
+    await page.keyboard.press('Enter');
+    await detail.waitFor({state:'hidden'});
     await page.evaluate(()=>window.__setQualityUnit('design'));
     await page.getByText('Brand identity',{exact:true}).first().waitFor();
     const themeGalleryMisplaced=await page.getByText('Theme and appearance',{exact:true}).count();
@@ -227,8 +232,9 @@ try{
     const issues=[];
     if(overflow.document>2||overflow.body>2)issues.push('horizontal overflow: '+JSON.stringify(overflow));
     if(!shown)issues.push('New agent inaccessible');
-    if(!focusIsInside)issues.push('Dialog initial focus missing');
-    if(dialogWidth>size.width+1)issues.push('Dialog exceeds viewport');
+    if(!focusIsInside)issues.push('Inline agent editor initial focus missing');
+    if(!backFocused)issues.push('Inline editor breadcrumb unreachable by keyboard');
+    if(dialogWidth>size.width+1)issues.push('Inline editor exceeds viewport');
     if(mobileUi.undersized.length)issues.push('Mobile touch targets below 44px: '+JSON.stringify(mobileUi.undersized));
     if(mobileUi.unlabeled.length)issues.push('Missing control names or alt: '+JSON.stringify(mobileUi.unlabeled));
     for(const item of additionalScreens){
@@ -255,11 +261,11 @@ const report={schema_version:'agentsam.ui-quality.v1',target:'@inneranimalmedia/
   source_revision:execFileSync('git',['rev-parse','--short','HEAD'],{cwd:root,encoding:'utf8'}).trim(),
   checks:[
     {id:'responsive_overflow',status:pass?'pass':'fail',evidence:'Seven viewport classes checked for overflow and usable controls'},
-    {id:'keyboard',status:pass?'pass':'fail',evidence:'Agent creation dialog initial focus and Escape dismissal exercised'},
+    {id:'keyboard',status:pass?'pass':'fail',evidence:'Inline agent editor receives focus and breadcrumb returns through keyboard activation'},
     {id:'behavior',status:pass?'pass':'fail',evidence:'Brand identity is distinct from themes; native Settings package mounted'},
     {id:'contrast_text',status:pass?'pass':'fail',evidence:'Browser WCAG AA text contrast sampled on visible non-gradient elements in agents and brand views across seven viewports'},
-    {id:'contrast_ui',status:pass?'pass':'fail',evidence:'Visible edit-dialog input/select/textarea borders measured against adjacent surfaces at WCAG AA 3:1 on all seven viewports'},
-    {id:'semantics',status:pass?'pass':'fail',evidence:'Rendered landmark headings and dialog semantics from real portable Settings React components'},
+    {id:'contrast_ui',status:pass?'pass':'fail',evidence:'Visible inline editor input/select/textarea borders measured against adjacent surfaces at WCAG AA 3:1 on all seven viewports'},
+    {id:'semantics',status:pass?'pass':'fail',evidence:'Rendered landmark headings and inline editor region semantics from real portable Settings React components'},
     {id:'accessibility_names',status:pass?'pass':'fail',evidence:'Visible buttons have textual or accessible names across seven viewports'},
     {id:'image_alternatives',status:pass?'pass':'fail',evidence:'Visible image elements must declare alt text'},
     {id:'mobile_touch',status:pass?'pass':'fail',evidence:'Visible mobile action buttons are measured for a 44px minimum touch height'},
