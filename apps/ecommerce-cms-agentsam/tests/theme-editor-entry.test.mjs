@@ -71,3 +71,12 @@ test('the live editor waits for account-owned route verification before CMS/prev
   assert.match(entry,/\/api\/admin\/cms\/pages\?site_id=/);
   assert.match(entry,/\/api\/admin\/cms\/theme-projects\?site_id=/);
 });
+
+test('marketplace intent reaches the authorized page editor with catalog installation support',()=>{
+  const destination=planThemeEditorEntry({site:siteA,
+    location:'/admin/theme-editor?marketplace_kind=cms_embed&marketplace_key=announcement_bar',
+    pages:[home],projects:[project]});
+  assert.equal(destination.resource,'cms-page');
+  assert.equal(destination.to,
+    '/admin/theme-editor?slug=home&site_id=site_a&page_id=cmsp_home_a&marketplace_kind=cms_embed&marketplace_key=announcement_bar');
+});
