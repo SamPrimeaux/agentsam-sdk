@@ -9,7 +9,7 @@ export interface NavConversation { id: string; title: string; projectId?: string
 export interface NavPinnedResource { id: string; title: string; kind: string; open?: string | null }
 export interface NavAccount { id: string; name: string; plan?: string; avatar?: string }
 export interface NavAction { id: string; label: string; icon?: ReactNode; disabled?: boolean; shortcut?: string; destructive?: boolean; separatorBefore?: boolean; children?: NavAction[]; onSelect?: () => void }
-export interface NavDestination { id: string; label: string; icon?: ReactNode; href?: string; onSelect?: () => void; active?: boolean; exact?: boolean; children?: NavDestination[] }
+export interface NavDestination { id: string; label: string; icon?: ReactNode; href?: string; onSelect?: () => void; active?: boolean; exact?: boolean; children?: NavDestination[]; /** Host-provided action displayed beside a destination; no implicit install or permission change. */ action?: { label: string; onSelect: () => void; disabled?: boolean } }
 export interface NavBreadcrumb { id: string; label: string; href?: string }
 
 /** Consumer-owned application context. Only optional shell preferences are persisted. */

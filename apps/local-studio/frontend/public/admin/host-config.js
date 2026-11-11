@@ -264,7 +264,11 @@
     const toDestination = (item, index) => ({
       id: item.id || item.href || String(index), label: item.label, href: item.href,
       icon: item.icon ? window.AgentSamNav?.navIcon?.(({agentic:'agentsam',email:'mail',messageSquare:'agentsam',box:'cad',layers:'apps',film:'moviemode',globe:'browser'})[item.icon] || item.icon) : undefined,
-      children: item.children?.map(toDestination)
+      children: item.children?.map(toDestination),
+      ...(item.id === 'installed-apps' ? {
+        action: {label:'Browse apps', onSelect:()=>window.open('https://apps.inneranimalmedia.com/', '_blank', 'noopener,noreferrer')},
+        onSelect: ()=>window.open('https://apps.inneranimalmedia.com/', '_blank', 'noopener,noreferrer'),
+      } : {})
     });
     const nav = buildUserNav(profile);
     return {
