@@ -13,6 +13,29 @@ export type StudioChatUpstreamBody = {
 };
 
 /**
+ * Build the Studio chat payload without guessing optional model sampling controls.
+ * The selected provider/model is resolved from credential-scoped discovery at the
+ * request boundary. Until a validated per-model parameter contract supplies an
+ * explicit value, the provider's own sampling defaults must remain authoritative.
+ *
+ * This function intentionally accepts no temperature/top_p option. Those settings
+ * must not leak in from a shared UI or a generic agent preset.
+ */
+export function buildStudioChatBody(input: {
+  model: string;
+  stream: boolean;
+  maxTokens: number;
+  messages: unknown;
+}): StudioChatUpstreamBody {
+  return {
+    model: input.model,
+    stream: input.stream,
+    max_tokens: input.maxTokens,
+    messages: input.messages,
+  };
+}
+
+/**
  * OpenAI Chat Completions rejects `max_tokens` for o-series / newer models and
  * requires `max_completion_tokens`. Anthropic and others keep their own fields.
  */

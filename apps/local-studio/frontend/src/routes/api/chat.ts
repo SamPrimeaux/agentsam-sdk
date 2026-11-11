@@ -17,7 +17,7 @@ import {
   studioServerBindings,
   vaultCredentialsForAccount,
 } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
-import { translateStudioChatUpstreamBody } from "./chat-upstream";
+import { buildStudioChatBody, translateStudioChatUpstreamBody } from "./chat-upstream";
 
 const Body = z.object({
   messages: z
@@ -288,13 +288,12 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const maxTokens = surface === "side" ? 2200 : 4200;
-        const chatBody = {
+        const chatBody = buildStudioChatBody({
           model: modelId,
           stream: true,
-          temperature: 0.6,
-          max_tokens: maxTokens,
+          maxTokens,
           messages,
-        };
+        });
 
         const plainHeaders = {
           "Content-Type": "text/plain; charset=utf-8",
