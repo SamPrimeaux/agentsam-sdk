@@ -214,3 +214,34 @@
 .agentsam-media-settings-links a { color: var(--ml-muted); text-underline-offset: .15rem; }
 .agentsam-media-local-note { color: var(--ml-muted); font-size: .78rem; }
 @media (max-width: 640px) { .agentsam-media-local-controls > span { max-width: 10rem; } }
+
+/* Hosted Images inspector: same compact tab grammar as Storage settings. */
+.agentsam-media-viewer__tabs {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .3rem; margin-bottom: 1rem; padding: .25rem;
+  background: var(--background); border: 1px solid var(--ml-border); border-radius: .65rem;
+}
+.agentsam-media-viewer__tabs button {
+  min-width: 0; border: 0; border-radius: .4rem; padding: .55rem .3rem;
+  background: transparent; color: var(--ml-muted); font: inherit; font-size: .76rem;
+  cursor: pointer; text-align: center;
+}
+.agentsam-media-viewer__tabs button:hover { background: var(--ml-hover); }
+.agentsam-media-viewer__tabs button.is-active {
+  background: var(--ml-surface); color: var(--foreground);
+  box-shadow: 0 0 0 1px var(--ml-border);
+}
+.agentsam-media-viewer__tabs button:focus-visible,
+.agentsam-media-viewer__variants button:focus-visible {
+  outline: 2px solid var(--ml-accent); outline-offset: 2px;
+}
+.agentsam-media-viewer__detail { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; }
+.agentsam-media-viewer__detail h3 { margin: 0; }
+.agentsam-media-viewer__detail p { margin: 0; line-height: 1.5; color: var(--ml-muted); }
+.agentsam-media-viewer__variants { display: grid; width: 100%; gap: .35rem; }
+.agentsam-media-viewer__variants button {
+  padding: .65rem .75rem; text-align: left; color: inherit; cursor: pointer;
+  border: 1px solid var(--ml-border); border-radius: .45rem; background: transparent;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.agentsam-media-viewer__variants button.is-active { border-color: var(--ml-accent); background: var(--ml-hover); }

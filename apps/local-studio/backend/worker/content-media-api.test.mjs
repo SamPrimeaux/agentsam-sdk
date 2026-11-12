@@ -125,6 +125,7 @@ test('#419 default Cloudflare gallery never calls IAM_API when OAuth client is a
               size: 2048,
               uploaded: '2026-10-01T00:00:00.000Z',
               variants: ['https://imagedelivery.net/hash/cfimg_great_room/public'],
+              requireSignedURLs: true,
             }],
           },
           result_info: { count: 1, page: 1 },
@@ -142,6 +143,8 @@ test('#419 default Cloudflare gallery never calls IAM_API when OAuth client is a
   assert.equal(data.capabilities.provider_api, 'cloudflare_oauth');
   assert.equal(data.assets.length, 1);
   assert.equal(data.assets[0].cloudflare_image_id, 'cfimg_great_room');
+  assert.deepEqual(data.assets[0].meta.variants, ['https://imagedelivery.net/hash/cfimg_great_room/public']);
+  assert.equal(data.assets[0].meta.require_signed_urls, true);
   assert.equal(data.account.id, 'acct_user_owned');
   assert.equal(data.source, 'cf_images');
 });

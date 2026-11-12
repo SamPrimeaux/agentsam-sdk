@@ -31,6 +31,20 @@ import "./media-library.css";
 
 const PAGE_SIZE = 100;
 
+// Remember only display preferences, NEVER OAuth access or refresh credentials.
+// The encrypted OAuth grant remains on the server in user_oauth_tokens.
+function mediaPreference(owner: string, key: "account" | "bucket", cfAccount = "") {
+  try { return localStorage.getItem(`agentsam.media.v1.${owner}.${key}${key === "bucket" ? `.${cfAccount || "default"}` : ""}`) || ""; }
+  catch { return ""; }
+}
+function rememberMediaPreference(owner: string, key: "account" | "bucket", value: string, cfAccount = "") {
+  try {
+    const path = `agentsam.media.v1.${owner}.${key}${key === "bucket" ? `.${cfAccount || "default"}` : ""}`;
+    if (value) localStorage.setItem(path, value);
+    else localStorage.removeItem(path);
+  } catch { /* storage is optional; the server remains authoritative */ }
+}
+
 async function getJson(url: string) {
   const res = await fetch(url, { credentials: "same-origin", headers: { accept: "application/json" } });
   const body = (await res.json().catch(() => ({}))) as Record<string, any>;
@@ -70,7 +84,7 @@ export function MediaLibraryPage() {
   }
   if (!user) return <RedirectToSignIn />;
 
-  return <MediaLibraryBody key={`${surface.kind}:${String(user.id)}`} surface={surface} accountId={String(user.id)} />;
+  return <MediaLibraryBody key={String(user.id)} surface={surface} accountId={String(user.id)} />;
 }
 
 function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accountId: string }) {
@@ -108,12 +122,14 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<LibraryError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const [resources, setResources] = useState<CfResources | null>(null);
   const [buckets, setBuckets] = useState<R2Bucket[]>([]);
-  const [activeBucket, setActiveBucket] = useState<string | null>(null);
+  const [cfAccountId, setCfAccountId] = useState(() => mediaPreference(accountId, "account"));
+  const [activeBucket, setActiveBucket] = useState<string | null>(() =>
+    mediaPreference(accountId, "bucket", mediaPreference(accountId, "account")) || null);
   const [pinned, setPinned] = useState<string[]>(() => loadPinnedBuckets());
-  const [cfAccountId, setCfAccountId] = useState("");
   const [accountChoices, setAccountChoices] = useState<AccountChoice[]>([]);
 
   const [query, setQuery] = useState("");
@@ -133,6 +149,11 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
     return qs;
   }, [cfAccountId]);
 
+  // Route changes must not reset the authorized account or chosen provider.
+  useEffect(() => { setSource(surface.source); }, [surface.source, surface.kind]);
+  useEffect(() => { rememberMediaPreference(accountId, "bucket", activeBucket || "", cfAccountId); }, [accountId, activeBucket, cfAccountId]);
+  useEffect(() => { rememberMediaPreference(accountId, "account", cfAccountId); }, [accountId, cfAccountId]);
+
   /* ---- account + connection resources (also the full R2 bucket list) ---- */
   useEffect(() => {
     let cancelled = false;
@@ -141,6 +162,13 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
         const qs = accountQs("connection_id", new URLSearchParams({ per_page: "200", return_to: "/media" }));
         const first = await getJson(`/api/connections/cloudflare/resources?${qs}`);
         if (cancelled) return;
+        if (!first.res.ok) {
+          if (Array.isArray(first.body?.accounts)) setAccountChoices(first.body.accounts);
+          setResources({ ...first.body, status: "error" } as CfResources);
+          setConnectionError(String(first.body?.message || first.body?.error || "Cloudflare discovery unavailable"));
+          return;
+        }
+        setConnectionError(null);
         const accounts = Array.isArray(first.body?.accounts) ? first.body.accounts : [];
         if (accounts.length) setAccountChoices(accounts);
         setResources(first.body as CfResources);
@@ -158,8 +186,15 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
           cursor = after && after !== cursor ? after : null;
         }
         setBuckets(all);
-      } catch {
-        if (!cancelled) setResources(null);
+        // A stored bucket may have been removed; keep the choice only if it exists.
+        if (all.length) {
+          setActiveBucket((current) => current && !all.some((bucket) => bucket.name === current) ? null : current);
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setResources({ status: "error" });
+          setConnectionError(cause instanceof Error ? cause.message : "Could not check Cloudflare connection");
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -393,6 +428,7 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
               onChange={(e) => {
                 const next = e.target.value;
                 setCfAccountId(next);
+                setActiveBucket(mediaPreference(accountId, "bucket", next) || null);
                 if (!next) return;
                 void fetch("/api/connections/cloudflare/select", {
                   method: "POST",
@@ -502,6 +538,12 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
             </div>
           </div>
 
+          {connectionError && source !== "local" ? (
+            <div className="agentsam-media-banner is-error" role="status">
+              <span>Cloudflare status could not be verified: {connectionError}. Your account authorization has not been cleared.</span>
+              <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Retry</button>
+            </div>
+          ) : null}
           {resources?.status === "needs_scope" ? (
             <div className="agentsam-media-banner" role="status">
               Some Cloudflare permissions are missing.{" "}
@@ -524,9 +566,10 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
               </div>
             ) : error && error.kind !== "reconnect" ? (
               <div className="agentsam-media-state is-error" role="alert">
-                <strong>{error.kind === "account" ? "Choose an account" : "Couldn’t load media"}</strong>
+                <strong>{error.kind === "account" ? "Choose an account" : error.kind === "session" ? "Sign in to Studio" : "Couldn’t load media"}</strong>
                 <p>{error.message}</p>
-                <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Try again</button>
+                {error.kind === "session" ? <a className="agentsam-media-btn" href="/auth/login">Sign in</a>
+                  : <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Try again</button>}
               </div>
             ) : source === "local" && !localDirectory ? (
               <div className="agentsam-media-state">

@@ -26,13 +26,25 @@ export function MediaViewer({
   onDelete: (asset: MediaAsset) => Promise<boolean>;
 }) {
   const kind = classifyAsset(asset);
-  const preview = previewUrl(asset);
+  const hosted = providerOf(asset) === "cf_images";
+  const privateDelivery = Boolean(asset.meta?.require_signed_urls);
+  const variants = hosted
+    ? (Array.isArray(asset.meta?.variants) ? asset.meta.variants : []).filter((url): url is string => {
+      if (typeof url !== "string") return false;
+      try { return new URL(url).protocol === "https:"; } catch { return false; }
+    })
+    : [];
+  const [chosenVariant, setChosenVariant] = useState<string | null>(null);
+  const [inspectorTab, setInspectorTab] = useState<"storage" | "delivery" | "keys" | "sourcing">("storage");
+  const preview = chosenVariant || previewUrl(asset);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setConfirming(false);
+    setChosenVariant(null);
+    setInspectorTab("storage");
   }, [asset.id]);
 
   useEffect(() => {
@@ -75,7 +87,7 @@ export function MediaViewer({
             <PanelRight size={16} />
           </button>
           {preview ? (
-            <a className="agentsam-media-icon" href={preview} target="_blank" rel="noopener noreferrer" aria-label="Open original">
+            <a className="agentsam-media-icon" href={preview} target="_blank" rel="noopener noreferrer" aria-label="Open selected media delivery">
               <Maximize2 size={16} />
             </a>
           ) : null}
@@ -93,13 +105,68 @@ export function MediaViewer({
         </div>
         {inspectorOpen ? (
           <aside className="agentsam-media-viewer__aside">
-            <h3>Details</h3>
-            <p className="agentsam-media-viewer__identity">{identityLabel(asset)}</p>
-            <dl>
-              {rows.filter(([, value]) => value).map(([label, value]) => (
-                <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
-              ))}
-            </dl>
+            {hosted ? (
+              <nav className="agentsam-media-viewer__tabs" aria-label="Hosted image settings">
+                {(["storage", "delivery", "keys", "sourcing"] as const).map((tab) => (
+                  <button key={tab} type="button" className={inspectorTab === tab ? "is-active" : undefined}
+                    onClick={() => setInspectorTab(tab)} aria-current={inspectorTab === tab ? "page" : undefined}>
+                    {tab === "sourcing" ? "Sourcing Kit" : tab[0].toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </nav>
+            ) : null}
+            {inspectorTab === "storage" || !hosted ? (
+              <>
+                <h3>Storage</h3>
+                <p className="agentsam-media-viewer__identity">{identityLabel(asset)}</p>
+                <dl>
+                  {rows.filter(([, value]) => value).map(([label, value]) => (
+                    <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                  ))}
+                </dl>
+              </>
+            ) : null}
+            {hosted && inspectorTab === "delivery" ? (
+              <section className="agentsam-media-viewer__detail">
+                <h3>Delivery variants</h3>
+                <p>Cloudflare serves these variants on demand. Selecting one changes only the preview, not the original image.</p>
+                {privateDelivery ? (
+                  <p role="status">Private image: use an authorized server-signed URL to deliver variants. No public URL is generated here.</p>
+                ) : variants.length ? (
+                  <div className="agentsam-media-viewer__variants">
+                    {variants.map((url) => {
+                      const name = new URL(url).pathname.split("/").pop() || "Variant";
+                      return <button type="button" key={url} className={preview === url ? "is-active" : undefined}
+                        onClick={() => setChosenVariant(url)}>{name}</button>;
+                    })}
+                  </div>
+                ) : <p>No published delivery variants were returned for this image.</p>}
+                {!privateDelivery && preview ? (
+                  <button type="button" className="agentsam-media-btn" onClick={() => void navigator.clipboard?.writeText(preview)}>
+                    Copy selected delivery URL
+                  </button>
+                ) : null}
+              </section>
+            ) : null}
+            {hosted && inspectorTab === "keys" ? (
+              <section className="agentsam-media-viewer__detail">
+                <h3>Access & signing</h3>
+                <p>{privateDelivery ? "This image requires signed delivery. Signing secrets stay server-side." :
+                  "Public variants can be delivered without a signing token."}</p>
+                <a className="agentsam-media-btn" href="/settings/storage">Storage & provider keys</a>
+              </section>
+            ) : null}
+            {hosted && inspectorTab === "sourcing" ? (
+              <section className="agentsam-media-viewer__detail">
+                <h3>Sourcing Kit</h3>
+                <p>Use this hosted image in Canvas, Product Studio, or a CMS component. Keep image identity and variant separate from the source file.</p>
+                <button type="button" className="agentsam-media-btn"
+                  onClick={() => void navigator.clipboard?.writeText(asset.cloudflare_image_id || asset.id)}>
+                  Copy image ID
+                </button>
+                <a className="agentsam-media-btn" href="/settings/storage">Provider configuration</a>
+              </section>
+            ) : null}
             <div className="agentsam-media-viewer__actions">
               {preview ? <a className="agentsam-media-btn" href={preview} target="_blank" rel="noopener noreferrer">Open</a> : null}
               {preview && providerOf(asset) !== "local" ? (
