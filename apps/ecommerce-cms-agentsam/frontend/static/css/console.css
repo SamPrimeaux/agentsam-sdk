@@ -2424,3 +2424,32 @@ body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:last-child { tr
 .online-store-perf-stat .label{color:#57515a!important}
 .online-store-perf-stat .value{color:#27242b!important}
 .online-store-starter .starter-hero-copy h2{color:#282822!important}
+
+/* AgentSam conversation-only chrome: one glass navigation circle and one
+   two-action menu, without permanently pinning the startup mode selector. */
+.console-topbar-agent-actions:empty { display: none; }
+.console-topbar-agent-actions:not(:empty) {
+  display: flex; align-items: center; margin-left: auto; flex-shrink: 0;
+}
+.console-topbar:has(#agentsam-console-actions-slot:not(:empty)) .console-topbar-actions {
+  display: none;
+}
+@media (max-width: 767px) {
+  .console-shell:has(#agentsam-console-actions-slot:not(:empty)) .console-nav-ghost-toggle--persistent {
+    top: max(5px, env(safe-area-inset-top, 0px));
+    left: 8px;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--c-line);
+    border-radius: 50%;
+    color: var(--c-ink);
+    background: color-mix(in srgb, var(--c-topbar) 83%, transparent);
+    box-shadow: 0 5px 20px rgba(0,0,0,.14);
+    backdrop-filter: blur(18px) saturate(1.08);
+    -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  }
+  .console-shell:has(#agentsam-console-actions-slot:not(:empty)) .console-nav-ghost-toggle--persistent:hover {
+    background: var(--c-topbar-hover);
+    color: var(--c-ink);
+  }
+}
