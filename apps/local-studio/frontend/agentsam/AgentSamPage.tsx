@@ -72,7 +72,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     ...(data.conversationActions ?? []),
     { id: 'pin-current', label: chat.pinned ? 'Unpin conversation' : 'Pin conversation', icon: <Pin size={16}/>,
       onSelect: () => data.onPinConversation?.(chat.id) },
-    { id: 'living-goals', label: 'My goals', icon: <Target size={16}/>, onSelect: showLivingGoals, separatorBefore: true },
+    { id: 'living-goals', label: 'AgentSam GoalGuru', icon: <Target size={16}/>, onSelect: showLivingGoals, separatorBefore: true },
     ...(data.projects?.length ? [{ id: 'assign-project', label: 'Add to project', icon: <Folder size={16}/>,
       children: [
         { id: 'project-none', label: 'No project', icon: <Folder size={16}/>,

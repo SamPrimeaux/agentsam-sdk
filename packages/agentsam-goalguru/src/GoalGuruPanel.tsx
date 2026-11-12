@@ -1,27 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Check, ChevronDown, ChevronRight, Circle, Plus, RefreshCcw, Target } from "lucide-react";
-import { useWorkStore } from "@/lib/work/store";
-import { IconAction } from "@/components/ui/icon-action";
+import type { GoalGuruTransport, GoalGuruGoal, GoalGuruStep, GoalGuruTicketLink } from "./contracts";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-type Goal = {
-  id: string; source_key: string | null; title: string | null; description: string | null;
-  goal_type: "personal" | "platform" | string; status: string; priority: number;
-};
-type Step = {
-  id: string; goal_id: string; title: string; status: string; note?: string | null; evidence_ref?: string | null;
-};
-type LinkedTicket = { goal_id: string; ticket_id: string; title: string; status: string; project?: string | null };
+function IconAction({label,hint,children,...props}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title"|"aria-label"> & {
+  label: string; hint?: string; children: ReactNode;
+}) {
+  return <button {...props} type="button" aria-label={label} title={hint || label}>{children}</button>;
+}
+
+type Goal = GoalGuruGoal;
+type Step = GoalGuruStep;
+type LinkedTicket = GoalGuruTicketLink;
 type TicketCandidate = { id: string; title: string; status: string; project?: string | null };
 type Plan = { goals: Goal[]; steps: Step[]; ticketLinks: LinkedTicket[] };
-const endpoint = "/api/studio/living-plan";
 
-export function LivingPlanPanel({
-  legacyGoal,
-  onLegacyImported,
+export function GoalGuruPanel({
+  request, onContinue, legacyGoal, onLegacyImported, mode = "panel",
 }: {
+  /** Host owns authentication, authorization and data source. No implicit cross-origin cookies. */
+  request: GoalGuruTransport;
+  onContinue?: (prompt: string, context: {goal: Goal; step: Step; links: LinkedTicket[]}) => void;
   legacyGoal?: { title: string; preview?: string } | null;
   onLegacyImported?: () => void;
-} = {}) {
+  mode?: "panel" | "page";
+}) {
   const [plan, setPlan] = useState<Plan>({ goals: [], steps: [], ticketLinks: [] });
   const [filter, setFilter] = useState<"personal" | "platform">(legacyGoal ? "platform" : "personal");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -40,7 +43,7 @@ export function LivingPlanPanel({
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(endpoint, { credentials: "same-origin" });
+      const response = await request("/", { credentials: "same-origin" });
       if (!response.ok) throw new Error(response.status === 401 ? "Sign in to see your private goals." : "Goals are temporarily unavailable.");
       const data = await response.json() as Partial<Plan>;
       if (!Array.isArray(data.goals) || !Array.isArray(data.steps)) throw new Error("Goal data was incomplete.");
@@ -49,7 +52,7 @@ export function LivingPlanPanel({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load goals.");
     } finally { setLoading(false); }
-  }, []);
+  }, [request]);
   useEffect(() => { void reload(); }, [reload]);
 
   const visible = useMemo(() => plan.goals.filter(g => filter === "platform"
@@ -70,7 +73,7 @@ export function LivingPlanPanel({
       .join("\n") : "";
     const prompt = [
       goal.goal_type === "platform"
-        ? "Continue my saved InnerAnimalMedia platform goal without reopening completed decisions."
+        ? "Continue my saved platform goal without reopening completed decisions."
         : "Continue one next step from my private Living Plan.",
       "Goal: " + goal.title,
       "Next action: " + step.title + workItems,
@@ -79,14 +82,7 @@ export function LivingPlanPanel({
         ? "Inspect the existing code, tickets and decisions before changing anything. Complete one testable vertical slice, attach evidence to the goal, and be explicit about blockers and remaining acceptance gates."
         : "Help me organize this one step clearly, without assumptions or declaring it completed for me. Where official records, personal documents, or professional advice are needed, identify what I should verify first.",
     ].join("\n");
-    const state = useWorkStore.getState();
-    const id = state.startChat();
-    state.setDraft(id, prompt);
-    state.setSideOpen(false);
-    state.setWorkSurface("chat");
-    window.dispatchEvent(new CustomEvent("agentsam:navigate", {
-      detail: { to: "/chats/$chatId", params: { chatId: id } },
-    }));
+    onContinue?.(prompt, { goal, step, links });
   }
 
 
@@ -94,7 +90,7 @@ export function LivingPlanPanel({
     const status = step.status === "done" ? "todo" : "done";
     setPending(step.id);
     try {
-      const response = await fetch(endpoint + "/steps/" + encodeURIComponent(step.id), {
+      const response = await request("/steps/" + encodeURIComponent(step.id), {
         method: "PATCH", credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ status, note: step.note || "", evidence_ref: step.evidence_ref || "" }),
@@ -110,7 +106,7 @@ export function LivingPlanPanel({
     if (!legacyGoal?.title.trim() || !onLegacyImported) return;
     setImportingLegacy(true);
     try {
-      const response = await fetch(endpoint + "/goals", {
+      const response = await request("/goals", {
         method: "POST", credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -129,7 +125,7 @@ export function LivingPlanPanel({
     if (!newTitle.trim()) return;
     setPending("create");
     try {
-      const response = await fetch(endpoint + "/goals", {
+      const response = await request("/goals", {
         method: "POST", credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title: newTitle.trim(), goal_type: filter }),
@@ -146,7 +142,7 @@ export function LivingPlanPanel({
     if (!newStepTitle.trim()) return;
     setPending("new-step");
     try {
-      const response = await fetch(endpoint + "/goals/" + encodeURIComponent(goalId) + "/steps", {
+      const response = await request("/goals/" + encodeURIComponent(goalId) + "/steps", {
         method: "POST", credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title: newStepTitle.trim() }),
@@ -161,7 +157,7 @@ export function LivingPlanPanel({
   async function findTickets(query: string) {
     setPending("ticket-search");
     try {
-      const response = await fetch(endpoint + "/tickets?q=" + encodeURIComponent(query), { credentials: "same-origin" });
+      const response = await request("/tickets?q=" + encodeURIComponent(query), { credentials: "same-origin" });
       if (!response.ok) throw new Error("Could not search your engineering tickets.");
       const data = await response.json() as { tickets?: TicketCandidate[] };
       setTicketCandidates(Array.isArray(data.tickets) ? data.tickets : []);
@@ -172,7 +168,7 @@ export function LivingPlanPanel({
   async function linkTicket(goalId: string, ticketId: string) {
     setPending(ticketId);
     try {
-      const response = await fetch(endpoint + "/goals/" + encodeURIComponent(goalId) + "/tickets", {
+      const response = await request("/goals/" + encodeURIComponent(goalId) + "/tickets", {
         method: "POST", credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ticket_id: ticketId }),
@@ -186,7 +182,7 @@ export function LivingPlanPanel({
   async function unlinkTicket(goalId: string, ticketId: string) {
     setPending(ticketId);
     try {
-      const response = await fetch(endpoint + "/goals/" + encodeURIComponent(goalId) + "/tickets/" + encodeURIComponent(ticketId), {
+      const response = await request("/goals/" + encodeURIComponent(goalId) + "/tickets/" + encodeURIComponent(ticketId), {
         method: "DELETE", credentials: "same-origin",
       });
       if (!response.ok) throw new Error("Couldn't unlink this ticket.");
@@ -199,7 +195,7 @@ export function LivingPlanPanel({
     const status = goal.status === "completed" ? "active" : "completed";
     setPending(goal.id);
     try {
-      const response = await fetch(endpoint + "/goals/" + encodeURIComponent(goal.id), {
+      const response = await request("/goals/" + encodeURIComponent(goal.id), {
         method: "PATCH", credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ status }),
@@ -212,12 +208,12 @@ export function LivingPlanPanel({
     finally { setPending(null); }
   }
 
-  return <div className="flex h-full min-h-0 flex-col bg-background" data-living-plan>
-    <div className="shrink-0 border-b border-border/70 px-4 py-4">
+  return <div className="gg-shell flex h-full min-h-0 flex-col bg-background" data-goalguru data-mode={mode} data-living-plan>
+    <div className="gg-header shrink-0 border-b border-border/70 px-4 py-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Target className="size-4 text-accent" aria-hidden="true" />
-          <h2 className="text-base font-semibold tracking-tight">My goals</h2>
+          <h2 className="text-base font-semibold tracking-tight">AgentSam GoalGuru</h2>
         </div>
         <IconAction label="Refresh goals" hint="Reload your account goals" onClick={() => void reload()}
           className="flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -235,7 +231,7 @@ export function LivingPlanPanel({
         </button>)}
       </div>
     </div>
-    <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 pt-4">
+    <div className="gg-content min-h-0 flex-1 overflow-y-auto px-4 pb-10 pt-4">
       {legacyGoal ? <section className="mb-4 rounded-xl border border-border p-3">
         <p className="text-xs font-semibold">Unsaved conversation goal</p>
         <p className="mt-1 line-clamp-3 text-sm">{legacyGoal.title}</p>
@@ -254,7 +250,7 @@ export function LivingPlanPanel({
           <p className="text-sm font-medium">{visible.length} goals</p>
           <p className="text-xs tabular-nums text-muted-foreground">{completed} of {total} steps complete</p>
         </div>
-        {next ? <section className="mb-5 rounded-xl border border-border bg-card p-4" aria-label="Next action">
+        {next ? <section className="gg-card mb-5 rounded-xl border border-border bg-card p-4" aria-label="Next action">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Next concrete step</p>
           <p className="text-xs text-muted-foreground">{focus?.title}</p>
           <div className="mt-3 flex items-start gap-3">
@@ -264,17 +260,17 @@ export function LivingPlanPanel({
             </IconAction>
             <p className="pt-1 text-sm leading-relaxed">{next.title}</p>
           </div>
-          <button type="button" onClick={() => continueInWork(focus!, next)}
+          <button type="button" disabled={!onContinue} onClick={() => continueInWork(focus!, next)}
             className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background text-sm font-medium hover:bg-muted">
             Continue in Work <ArrowUpRight size={16} aria-hidden="true" />
           </button>
-          <p className="mt-2 text-[11px] leading-4 text-muted-foreground">Opens a new conversation with this step already prepared for review. Nothing runs until you send it.</p>
+          <p className="mt-2 text-[11px] leading-4 text-muted-foreground">{onContinue ? "Opens a new conversation with this step prepared for review. Nothing runs until you send it." : "Connect a host work adapter to enable this action."}</p>
         </section> : null}
         <div className="space-y-2">
           {visible.map(goal => {
             const steps = stepList(goal.id);
             const open = expanded === goal.id;
-            return <section key={goal.id} className="overflow-hidden rounded-xl border border-border/80 bg-card/50">
+            return <section key={goal.id} className="gg-card overflow-hidden rounded-xl border border-border/80 bg-card/50">
               <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? null : goal.id)}
                 className="flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold tabular-nums">

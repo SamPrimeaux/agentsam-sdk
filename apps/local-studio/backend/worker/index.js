@@ -71,6 +71,7 @@ import {
 import localStudioApp from "../../agentsam.app.json";
 import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
+import goalGuruApp from "../../../../packages/agentsam-goalguru/agentsam.app.json";
 import { handleStudioPlatformProducts } from "./studio-platform-products.js";
 import { handleStudioSitesOverview } from "./studio-sites-overview.js";
 import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
@@ -164,6 +165,7 @@ const INSTALL_APP_TARGETS = buildInstallTargets([
   localStudioApp,
   cadCreatorApp,
   ecommerceApp,
+  goalGuruApp,
 ]);
 
 /**

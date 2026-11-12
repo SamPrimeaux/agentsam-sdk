@@ -24,6 +24,7 @@ import { Route as appsContentRouteImport } from './routes/(apps)/content'
 import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
 import { Route as appsDocsRouteImport } from './routes/(apps)/docs'
 import { Route as appsFilesRouteImport } from './routes/(apps)/files'
+import { Route as appsGoalguruRouteImport } from './routes/(apps)/goalguru'
 import { Route as appsMailRouteImport } from './routes/(apps)/mail'
 import { Route as appsMediaRouteImport } from './routes/(apps)/media'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
@@ -145,6 +146,11 @@ const appsDocsRoute = appsDocsRouteImport.update({
 const appsFilesRoute = appsFilesRouteImport.update({
   id: '/(apps)/files',
   path: '/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsGoalguruRoute = appsGoalguruRouteImport.update({
+  id: '/(apps)/goalguru',
+  path: '/goalguru',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsMailRoute = appsMailRouteImport.update({
@@ -404,6 +410,7 @@ export interface FileRoutesByFullPath {
   '/database': typeof appsDatabaseRoute
   '/docs': typeof appsDocsRoute
   '/files': typeof appsFilesRoute
+  '/goalguru': typeof appsGoalguruRoute
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
   '/projects': typeof appsProjectsRouteWithChildren
@@ -467,6 +474,7 @@ export interface FileRoutesByTo {
   '/database': typeof appsDatabaseRoute
   '/docs': typeof appsDocsRoute
   '/files': typeof appsFilesRoute
+  '/goalguru': typeof appsGoalguruRoute
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
   '/samsketch': typeof appsSamsketchRoute
@@ -528,6 +536,7 @@ export interface FileRoutesById {
   '/(apps)/database': typeof appsDatabaseRoute
   '/(apps)/docs': typeof appsDocsRoute
   '/(apps)/files': typeof appsFilesRoute
+  '/(apps)/goalguru': typeof appsGoalguruRoute
   '/(apps)/mail': typeof appsMailRoute
   '/(apps)/media': typeof appsMediaRouteWithChildren
   '/(apps)/projects': typeof appsProjectsRouteWithChildren
@@ -594,6 +603,7 @@ export interface FileRouteTypes {
     | '/database'
     | '/docs'
     | '/files'
+    | '/goalguru'
     | '/mail'
     | '/media'
     | '/projects'
@@ -657,6 +667,7 @@ export interface FileRouteTypes {
     | '/database'
     | '/docs'
     | '/files'
+    | '/goalguru'
     | '/mail'
     | '/media'
     | '/samsketch'
@@ -717,6 +728,7 @@ export interface FileRouteTypes {
     | '/(apps)/database'
     | '/(apps)/docs'
     | '/(apps)/files'
+    | '/(apps)/goalguru'
     | '/(apps)/mail'
     | '/(apps)/media'
     | '/(apps)/projects'
@@ -782,6 +794,7 @@ export interface RootRouteChildren {
   appsDatabaseRoute: typeof appsDatabaseRoute
   appsDocsRoute: typeof appsDocsRoute
   appsFilesRoute: typeof appsFilesRoute
+  appsGoalguruRoute: typeof appsGoalguruRoute
   appsMailRoute: typeof appsMailRoute
   appsMediaRoute: typeof appsMediaRouteWithChildren
   appsProjectsRoute: typeof appsProjectsRouteWithChildren
@@ -915,6 +928,13 @@ declare module '@tanstack/react-router' {
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof appsFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/goalguru': {
+      id: '/(apps)/goalguru'
+      path: '/goalguru'
+      fullPath: '/goalguru'
+      preLoaderRoute: typeof appsGoalguruRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/mail': {
@@ -1384,6 +1404,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsDatabaseRoute: appsDatabaseRoute,
   appsDocsRoute: appsDocsRoute,
   appsFilesRoute: appsFilesRoute,
+  appsGoalguruRoute: appsGoalguruRoute,
   appsMailRoute: appsMailRoute,
   appsMediaRoute: appsMediaRouteWithChildren,
   appsProjectsRoute: appsProjectsRouteWithChildren,

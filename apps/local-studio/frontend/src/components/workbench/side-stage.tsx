@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Composer } from "@/components/workbench/composer";
-import { LivingPlanPanel } from "@/components/goals/LivingPlanPanel";
+import { GoalGuruHost } from "@/components/goals/GoalGuruHost";
 import { MessageList } from "@/components/workbench/thread";
 import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
@@ -366,7 +366,7 @@ function GoalEditor({ chatId }: { chatId?: string }) {
 
   // Retired the browser-storage-only editor. A legacy chat goal remains readable
   // until the user deliberately imports it into the account-owned goal domain.
-  return <LivingPlanPanel legacyGoal={goal ? {
+  return <GoalGuruHost legacyGoal={goal ? {
     title: goal.title, preview: goal.preview,
   } : null} onLegacyImported={() => clearGoal(id)} />;
 }

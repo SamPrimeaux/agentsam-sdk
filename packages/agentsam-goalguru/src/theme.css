@@ -1,0 +1,28 @@
+/* Portable GoalGuru surface; host semantic tokens are preferred, never hardcoded purple. */
+.gg-shell { --gg-bg: var(--color-background,#f8f9f7); --gg-ink: var(--color-foreground,#26332b);
+  --gg-muted:var(--color-muted-foreground,#66746b); --gg-border:var(--color-border,#dce1dc);
+  --gg-card:var(--color-card,#fff); --gg-accent:var(--color-accent,#2c6b43);
+  display:flex; flex-direction:column; min-height:0; height:100%; background:var(--gg-bg);
+  color:var(--gg-ink); font:inherit; font-size:14px; line-height:1.5; }
+.gg-shell * { box-sizing:border-box; }
+.gg-shell .gg-header { flex-shrink:0; border-bottom:1px solid var(--gg-border); padding:16px; }
+.gg-shell .gg-header > div:first-child, .gg-shell .gg-header > div:first-child > div { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.gg-shell .gg-content { flex:1; min-height:0; overflow-y:auto; padding:16px 16px 30px; }
+.gg-shell .gg-card { border:1px solid var(--gg-border); background:var(--gg-card); border-radius:12px; padding:14px; margin-bottom:12px; overflow:hidden; }
+.gg-shell h2 { margin:0; font-size:16px; font-weight:650; letter-spacing:-.02em; }
+.gg-shell p { margin:4px 0 10px; }
+.gg-shell button, .gg-shell input, .gg-shell textarea { font:inherit; color:inherit; }
+.gg-shell button { cursor:pointer; border-radius:8px; }
+.gg-shell button:disabled { cursor:not-allowed; opacity:.45; }
+.gg-shell button:focus-visible, .gg-shell input:focus-visible, .gg-shell textarea:focus-visible {
+  outline:2px solid var(--gg-accent); outline-offset:2px; }
+.gg-shell input:not([type=checkbox]), .gg-shell textarea { width:100%; min-width:0; border:1px solid var(--gg-border); background:var(--gg-card); padding:10px; border-radius:8px; }
+.gg-shell input[type=checkbox] { accent-color:var(--gg-accent); }
+.gg-shell section button { min-height:35px; }
+.gg-shell .gg-content > div { margin-bottom:10px; }
+.gg-shell [role=alert] { border:1px solid #ae4c49; border-radius:8px; padding:10px; }
+.gg-shell [aria-pressed=true] { background:var(--gg-accent); color:#fff; }
+.gg-shell [aria-expanded] { width:100%; text-align:left; }
+.gg-shell [data-living-plan] { min-height:0; }
+.gg-shell[data-mode=page] { margin:0 auto; max-width:940px; height:min(100%, 100vh); border-inline:1px solid var(--gg-border); }
+@media (max-width:640px) { .gg-shell .gg-header, .gg-shell .gg-content { padding-inline:12px; } }
