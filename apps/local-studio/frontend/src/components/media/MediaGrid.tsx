@@ -1,4 +1,4 @@
-import { Box, Check, FileStack, Film, Images } from "lucide-react";
+import { Box, Check, FileStack, Film, Folder, Images } from "lucide-react";
 import {
   classifyAsset,
   extensionOf,
@@ -27,7 +27,7 @@ function Thumb({ asset }: { asset: MediaAsset }) {
       {(kind === "image" || kind === "video") && preview ? (
         <img src={preview} alt="" loading="lazy" decoding="async" />
       ) : (
-        <span className="agentsam-media-thumb__glyph"><KindGlyph kind={kind} /></span>
+        <span className="agentsam-media-thumb__glyph">{asset.local_directory ? <Folder size={22} /> : <KindGlyph kind={kind} />}</span>
       )}
       {duration ? <span className="agentsam-media-thumb__duration">{duration}</span> : null}
     </div>

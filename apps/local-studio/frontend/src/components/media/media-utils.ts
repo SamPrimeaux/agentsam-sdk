@@ -1,5 +1,5 @@
 export type MediaKind = "all" | "image" | "video" | "model" | "file";
-export type MediaSource = "cf_images" | "stream" | "r2";
+export type MediaSource = "cf_images" | "stream" | "r2" | "local";
 export type MediaProvider = "cf_images" | "r2" | "stream" | "drive" | "local" | "other";
 
 export type MediaAsset = {
@@ -20,6 +20,8 @@ export type MediaAsset = {
   width?: number | null;
   height?: number | null;
   folder?: string;
+  local_ref?: string;
+  local_directory?: boolean;
   created_at?: string | null;
 };
 

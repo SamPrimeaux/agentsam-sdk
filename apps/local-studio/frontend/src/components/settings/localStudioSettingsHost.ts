@@ -368,6 +368,53 @@ function emptySnapshot(): SettingsSnapshot {
   };
 }
 
+/** Source-aware storage cards for the packaged Settings UI; no fixture targets. */
+async function loadLiveStorageTargets(): Promise<SettingsSnapshot["storage"]> {
+  const localSupported = isPackagedDesktop() ||
+    (typeof window !== "undefined" && typeof window.showDirectoryPicker === "function");
+  const entries: SettingsSnapshot["storage"] = [{
+    id: "local-device",
+    name: "Local device",
+    kind: "File System Access / desktop host",
+    status: localSupported ? "healthy" : "attention",
+    detail: localSupported
+      ? "Choose a folder in Media Library. Browser permissions stay on this device; files are not uploaded automatically."
+      : "This browser cannot attach a folder. Use the desktop runtime or a browser with File System Access support.",
+    actionHref: "/media?source=local",
+    actionLabel: "Browse local files",
+  }];
+  let info: { status?: string; r2?: { available?: boolean; count?: number }; images?: { available?: boolean; count?: number }; stream?: { available?: boolean; count?: number } } | null = null;
+  try {
+    const response = await fetch("/api/connections/cloudflare/resources?return_to=%2Fsettings%2Fstorage", {
+      credentials: "same-origin", headers: { accept: "application/json" },
+    });
+    if (response.ok) info = await response.json();
+  } catch { /* Offline is not the same as disconnected. */ }
+
+  const needsScope = info?.status === "needs_scope";
+  const connected = Boolean(info?.status && !["not_connected", "error"].includes(info.status));
+  const actionHref = !info || (connected && !needsScope) ? "/media" :
+    "/api/connections/cloudflare/start?packs=media,data&return_to=%2Fsettings%2Fstorage";
+  const actionLabel = !info ? "Open Media Library" :
+    needsScope ? "Review permissions" : connected ? "Open Media Library" : "Connect Cloudflare";
+  for (const [id, name, family] of [
+    ["cloudflare-images", "Cloudflare Images", info?.images],
+    ["cloudflare-stream", "Cloudflare Stream", info?.stream],
+    ["cloudflare-r2", "Cloudflare R2", info?.r2],
+  ] as const) {
+    entries.push({
+      id, name, kind: "Account-authorized Cloudflare OAuth",
+      status: !info ? "unknown" : info.status === "not_connected" ? "attention" : family?.available ? "healthy" : "attention",
+      detail: !info ? "Connection could not be verified."
+        : info.status === "not_connected" ? "No active Cloudflare grant for this account."
+        : family?.available ? `Connected provider resource${typeof family.count === "number" ? ` · ${family.count} items reported` : ""}.`
+        : "Provider permissions or availability need attention.",
+      actionHref, actionLabel,
+    });
+  }
+  return entries;
+}
+
 async function liveSnapshot(): Promise<SettingsSnapshot> {
   const snapshot = emptySnapshot();
   const desktop = isPackagedDesktop();
@@ -409,6 +456,9 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     desktop ? Promise.resolve([]) : readAccountToolUsage(),
   ]);
   snapshot.usage = usageMetrics;
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/settings/storage")) {
+    snapshot.storage = await loadLiveStorageTargets();
+  }
 
   snapshot.general.runtime = desktop ? "Desktop runtime ready" : "Web runtime ready";
   snapshot.general.account = desktop

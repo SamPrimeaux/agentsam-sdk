@@ -231,6 +231,71 @@ async function browserRead(ref: LocalFileRef, maxBytes?: number): Promise<Uint8A
 }
 
 /**
+ * Browser Media Library root is persisted as a FileSystemDirectoryHandle in
+ * IndexedDB (structured clone), never as a user path or remote cloud record.
+ * Permissions are queried silently and only requested from a user click.
+ */
+async function localMediaRootStore(mode: IDBTransactionMode) {
+  if (typeof indexedDB === "undefined") return null;
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open("agentsam-local-media-v1", 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains("roots")) request.result.createObjectStore("roots");
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  return { db, store: db.transaction("roots", mode).objectStore("roots") };
+}
+
+export async function rememberLocalMediaDirectory(ref: string, accountId: string): Promise<void> {
+  if (isTauri() || !accountId) return;
+  const entry = browserHandles.get(ref);
+  if (entry?.kind !== "directory") return;
+  try {
+    const ctx = await localMediaRootStore("readwrite");
+    if (!ctx) return;
+    await new Promise<void>((resolve, reject) => {
+      const req = ctx.store.put(entry.handle, accountId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+    ctx.db.close();
+  } catch {
+    // Private browsing may block IndexedDB. The selected directory still works this session.
+  }
+}
+
+export async function restoreLocalMediaDirectory(accountId: string, askPermission = false): Promise<LocalDirectoryRef | null> {
+  if (isTauri() || !accountId) return null;
+  try {
+    const ctx = await localMediaRootStore("readonly");
+    if (!ctx) return null;
+    const handle = await new Promise<FileSystemDirectoryHandle | null>((resolve, reject) => {
+      const req = ctx.store.get(accountId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+    ctx.db.close();
+    if (!handle || handle.kind !== "directory") return null;
+    const permissions = handle as FileSystemDirectoryHandle & {
+      queryPermission?: (options: { mode: "read" }) => Promise<PermissionState>;
+      requestPermission?: (options: { mode: "read" }) => Promise<PermissionState>;
+    };
+    let permission = await permissions.queryPermission?.({ mode: "read" }) || "prompt";
+    if (permission !== "granted" && askPermission) {
+      permission = await permissions.requestPermission?.({ mode: "read" }) || "denied";
+    }
+    if (permission !== "granted") return null;
+    const ref = mintBrowserRef("directory");
+    browserHandles.set(ref, { kind: "directory", handle, name: handle.name });
+    return ref as LocalDirectoryRef;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Real LocalContentHost: native desktop picker/FS, or browser FSA / import fallback.
  */
 export function createLocalStudioContentHostBridge(): LocalContentHost {
