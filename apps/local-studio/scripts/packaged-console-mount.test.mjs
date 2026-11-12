@@ -107,7 +107,8 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.match(shell, /navigation\.primary/);
   assert.match(shell, /navigation\.channels/);
   assert.match(shell, /navigation\.utilities/);
-  assert.match(shell, /showSidebarHeader: isConversation && mode === 'work'/);
+  assert.match(shell, /showSidebarHeader: true/);
+  assert.match(shell, /HostedCompanionHeader/);
   assert.doesNotMatch(shell, /id: 'cad', label: 'CAD Creator'/);
   assert.match(shell, /<SideStage workFocused=\{globalAssistantFocused\}/);
   assert.match(shell, /!isConversation && state.sideOpen/);
@@ -175,9 +176,8 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   ]);
   const products = context.NAV.channels.find((item) => item.id === 'products');
   assert.deepEqual(Array.from(products.children, (item) => [item.label, item.href]), [
-    ['Store Products', '/admin/products'],
     ['Collections', '/admin/collections'],
-    ['Product Studio', '/admin/products/create'],
+    ['Create', '/admin/products/create'],
     ['Inventory', '/admin/inventory'],
     ['Orders', '/admin/orders'],
     ['Discounts', '/admin/discounts'],
