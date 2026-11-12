@@ -47,8 +47,13 @@ export function browserFsaAvailable():boolean {
 export async function chooseBrowserFsaIDEWorkspace():Promise<{name:string;workspace:FileWorkspace}> {
   if(!browserFsaAvailable())return unavailable('Browser folder access requires Chromium and a secure origin. Use the native Local Studio runtime on desktop.');
   const picker=window as unknown as Window & {showDirectoryPicker(options:{mode:'readwrite'}):Promise<BrowserDir>};
-  const root=await picker.showDirectoryPicker({mode:'readwrite'});
-  if(!root||root.kind!=='directory')return unavailable('No folder selected.');
+  const selected=await picker.showDirectoryPicker({mode:'readwrite'});
+  if(!selected||selected.kind!=='directory')return unavailable('No folder selected.');
+  // The native kind discriminant narrows away the extra Chromium FSA methods.
+  // Verify enumeration before restoring the richer browser directory contract.
+  if(typeof (selected as BrowserDir).entries!=='function')
+    return unavailable('This browser cannot enumerate the selected directory.');
+  const root=selected as BrowserDir;
   const permission=await root.queryPermission?.({mode:'readwrite'});
   if(permission && permission!=='granted' && await root.requestPermission?.({mode:'readwrite'})!=='granted')
     return unavailable('The selected folder did not grant read/write access.');

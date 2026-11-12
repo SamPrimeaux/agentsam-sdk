@@ -146,6 +146,12 @@ export async function listAccountSideStages(db, accountId, options = {}) {
     .filter(Boolean);
 }
 
+export async function readAccountSideStageCatalog(db, accountId) {
+  if (!db?.prepare) throw new Error("side_stage_database_unavailable");
+  if (!accountId) throw new Error("side_stage_account_required");
+  return {ok:true,side_stage_catalog:await listAccountSideStages(db, accountId, {includeDisabled:true})};
+}
+
 /** Only account-owned installation state is mutable, not global plugin definitions. */
 export async function updateAccountSideStage(db, accountId, pluginId, enabled) {
   if (!accountId) throw new Error('side_stage_account_required');
