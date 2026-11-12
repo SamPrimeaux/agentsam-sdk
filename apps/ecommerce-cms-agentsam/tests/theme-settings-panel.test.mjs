@@ -224,3 +224,37 @@ test("actual Theme Editor HTML loads the Theme Settings runtime after its editor
  assert.doesNotMatch(shell.window.document.body.textContent,/\\n/,"literal slash-n must not appear in editor markup");
  shell.window.close();
 });
+
+test("installed theme settings save supported controls to the CMS bridge, not just session cache", async()=>{
+ const markup='<!doctype html><body><div id="te-theme-name">Customer Theme</div><div id="te-preview-device" data-device="desktop"></div><iframe id="theme-preview"></iframe><section data-drawer-panel="theme-settings"></section></body>';
+ const dom=new JSDOM(markup,{url:"https://editor.test/admin/theme-project-editor?site_id=site_1&project=theme_a",runScripts:"outside-only",pretendToBeVisual:true});
+ const w=dom.window;
+ w.structuredClone=structuredClone;
+ let persisted={controls:{"page.bg":"#fafafa"}},writes=0;
+ w.CmsThemeSettings={
+   read:()=>structuredClone(persisted),
+   update:next=>{persisted=structuredClone(next);writes++;return true;},
+ };
+ w.eval(script);
+ const root=w.document.getElementById('ts-theme-root');
+ assert.equal(w.ThemeSettingsPanel.getState().storage,'cms-draft');
+ assert.equal(w.ThemeSettingsPanel.getState().values['page.bg'],'#fafafa');
+ w.ThemeSettingsPanel.open('page');
+ const width=root.querySelector('[data-ts-key="page.width"]');
+ width.value='Wide';
+ width.dispatchEvent(new w.Event('change',{bubbles:true}));
+ w.ThemeSettingsPanel.open('buttons');
+ const radius=root.querySelector('[data-ts-key="buttons.primary.radius"][type="number"]');
+ radius.value='20';
+ radius.dispatchEvent(new w.Event('input',{bubbles:true}));
+ await new Promise(resolve=>setTimeout(resolve,350));
+ assert.equal(writes,1,'multiple controls coalesce into one CMS save');
+ assert.equal(persisted.controls['page.width'],'Wide');
+ assert.equal(persisted.controls['buttons.primary.radius'],20);
+ assert.equal(persisted.designDraft['page.maxWidth'],1600);
+ assert.equal(persisted.buttonRadius,20);
+ w.document.dispatchEvent(new w.CustomEvent('theme-editor:global-settings-ready'));
+ assert.equal(w.ThemeSettingsPanel.getState().values['page.width'],'Wide');
+ assert.equal(w.ThemeSettingsPanel.getState().values['buttons.primary.radius'],20);
+ dom.window.close();
+});

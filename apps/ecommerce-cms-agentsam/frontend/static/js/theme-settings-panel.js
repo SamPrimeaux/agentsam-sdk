@@ -141,7 +141,7 @@ const defaults={};fieldMap.forEach((x,k)=>defaults[k]=x.initial);
 for(let i=0;i<4;i++)defaults["palette."+i]=["#FFFFFF","#000000","#303030","#DADADA"][i];
 let state={...defaults},paletteLinks={},category="",popup=null,focusReturn=null,
  selectedVariant=1,imageIndex=0,searchQuery="",brandName="Store",media={},paletteCount=4;
-let root=null,rail=null;
+let root=null,rail=null,workingSettings=null,persistTimer=null;
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const validColor=x=>x==="transparent"||/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(x));
 const hex=x=>validColor(x)&&x!=="transparent"?x:"#000000";
@@ -149,23 +149,48 @@ const v=k=>state[k]??defaults[k]??"";
 const localKey=()=> "ia:theme-settings:v1:"+(window.AgentSamThemeEditorHost?.siteId||window.cmsActiveSiteId||"local")+":"+(window.AgentSamThemeEditorHost?.projectId||document.querySelector("#te-theme-name")?.textContent||"installed");
 const reviewNote=()=>root?.querySelector("[data-ts-review-note]");
 function load(){try{const data=JSON.parse(sessionStorage.getItem(localKey())||"null");if(data){Object.keys(defaults).forEach(k=>{if(data.values&&k in data.values)state[k]=data.values[k];});Object.entries(data.values||{}).forEach(([k,value])=>{if(/^palette\.\d+$/.test(k)){state[k]=value;paletteCount=Math.max(paletteCount,Number(k.split(".")[1])+1);}});paletteLinks=data.links||{};brandName=data.brandName||"Store";media=data.media||{};}else{fieldMap.forEach((item,key)=>{if(item.type!=="color")return;const match=[0,1,2,3].find(i=>defaults["palette."+i]===item.initial);if(match!==undefined)paletteLinks[key]=match;});}}catch{}}
+function flushSiteSettings(){
+ if(!workingSettings)return;
+ const bridge=window.CmsThemeSettings;
+ const result=bridge?.update?.(structuredClone(workingSettings));
+ const notice=reviewNote();
+ if(notice)notice.textContent=result===true
+  ? "Saving to this site's private CMS draft…"
+  : "These settings have not been saved to this site. " + (bridge?.error||"Connect a CMS draft to edit.");
+}
 function save(changedKey){
  const bridge=window.CmsThemeSettings;
- const current=bridge?.read?.();
- if(current && changedKey){
-  const colors={"page.bg":"canvas","type.text":"ink","palette.0":"paper","palette.1":"ink","palette.2":"accent"};
-  if(colors[changedKey])current.colors={...(current.colors||{}),[colors[changedKey]]:hex(v(changedKey))};
-  else if(changedKey==="type.font.Body")current.font=v(changedKey)==="System sans-serif"?"system-ui":v(changedKey);
-  else if(changedKey==="buttons.primary.radius")current.buttonRadius=Math.min(60,Number(v(changedKey)));
-  else if(changedKey==="css.source")current.customCss=String(v(changedKey));
-  else if(changedKey==="page.width")current.designDraft={...(current.designDraft||{}),"page.maxWidth":({Narrow:960,Standard:1280,Wide:1600,"Full width":1920})[v(changedKey)]};
-  else if(changedKey==="inputs.radius")current.designDraft={...(current.designDraft||{}),"inputs.radius":Math.min(32,Number(v(changedKey)))};
-  else changedKey=null;
-  if(changedKey)bridge.update(current);
+ const source=bridge?.read?.();
+ if(source && changedKey){
+  const current=structuredClone(workingSettings||source);
+  const value=v(changedKey);
+  if(typeof value==="string"&&value.length>2000&&changedKey!=="css.source"){
+   const notice=reviewNote();if(notice)notice.textContent="Choose a smaller asset or an existing media-library URL.";
+  }else{
+   current.controls={...(current.controls||{}),[changedKey]:value};
+   current.paletteLinks=Object.fromEntries(Object.entries(paletteLinks).filter(([,index])=>Number.isInteger(index)));
+   const colors={"page.bg":"canvas","type.text":"ink","palette.0":"paper","palette.1":"ink","palette.2":"accent"};
+   if(colors[changedKey]&&/^#[0-9a-f]{6}$/i.test(String(value)))
+     current.colors={...(current.colors||{}),[colors[changedKey]]:String(value)};
+   if(changedKey==="type.font.Body")current.font=value==="System sans-serif"?"system-ui":value;
+   if(changedKey==="buttons.primary.radius")current.buttonRadius=Math.min(60,Number(value));
+   if(changedKey==="css.source")current.customCss=String(value);
+   if(changedKey==="page.width")current.designDraft={...(current.designDraft||{}),
+     "page.maxWidth":({Narrow:960,Standard:1280,Wide:1600,"Full width":1920})[value]};
+   if(changedKey==="inputs.radius")current.designDraft={...(current.designDraft||{}),
+     "inputs.radius":Math.min(32,Number(value))};
+   workingSettings=current;
+   clearTimeout(persistTimer);
+   persistTimer=setTimeout(()=>{persistTimer=null;flushSiteSettings();},260);
+   if(reviewNote())reviewNote().textContent="Unsaved site setting — applying to private draft…";
+  }
  }
- try{const retained=Object.fromEntries(Object.entries(media).filter(([,value])=>String(value).length<1000000));sessionStorage.setItem(localKey(),JSON.stringify({values:state,links:paletteLinks,brandName,media:retained}));}
- catch{if(reviewNote())reviewNote().textContent="Changes could not be retained. Try again.";}
+ try{
+  const retained=Object.fromEntries(Object.entries(media).filter(([,value])=>String(value).length<1000000));
+  sessionStorage.setItem(localKey(),JSON.stringify({values:state,links:paletteLinks,brandName,media:retained}));
+ }catch{if(reviewNote())reviewNote().textContent="Changes could not be retained locally. Try again.";}
 }
+
 function set(k,value){
  const d=fieldMap.get(k);
  if(!d)return;
@@ -265,7 +290,7 @@ function palettePicker(key,paletteIndex=null){
    state["palette."+paletteIndex]=val;
    paletteCount=Math.max(paletteCount,paletteIndex+1);
    Object.keys(paletteLinks).forEach(k=>{if(paletteLinks[k]===paletteIndex)state[k]=val;sync(k);});
-   save();renderPalette();updatePreview();applyWhitelistedPreview();
+   save("palette."+paletteIndex);renderPalette();updatePreview();applyWhitelistedPreview();
  }
  });
  d.querySelector("[data-ts-color-native]").addEventListener("input",e=>{d.querySelector("[data-ts-color-hex]").value=e.target.value;delete d.dataset.paletteChoice;});
@@ -301,7 +326,7 @@ function action(button){
  if(["media","explore"].includes(a))return chooseMedia(key);
  if(a==="mediaRemove"){delete media[key];updateMedia(key);save();return;}
  if(["collection","link"].includes(a))return resourcePicker(key);
- if(a==="name")return dialog("Manage store name",`<label>Store name<input data-ts-name value="${esc(brandName)}"></label>`,d=>{brandName=d.querySelector("[data-ts-name]").value.trim()||"Store";save();updatePreview();});
+ if(a==="name")return dialog("Manage store name",`<label>Store name<input data-ts-name value="${esc(brandName)}"></label>`,d=>{brandName=d.querySelector("[data-ts-name]").value.trim()||"Store";state["brand.name"]=brandName;save("brand.name");updatePreview();});
  if(a==="cssHelp")return dialog("About custom CSS","<p>The source editor is preview-only; CSS is not executed or published before mapping and approval.</p>");
  if(a==="variant"){selectedVariant=+button.dataset.tsChoice;return updatePreview();}
  if(a==="nextImage"){imageIndex=(imageIndex+1)%3;return updatePreview();}
@@ -409,6 +434,7 @@ function mount(){
  load();drawer.innerHTML='<div id="ts-theme-root" class="ts-theme-root"></div>';root=drawer.firstElementChild;
  root.dataset.openCategory="";
  root.innerHTML=`<div class="ts-heading"><h2>Theme settings</h2></div><div class="ts-categories"></div>`;
+ root.querySelector(".ts-heading")?.insertAdjacentHTML("beforeend",'<p data-ts-review-note role="status" aria-live="polite">Changes are drafts until published.</p>');
  rail=root.querySelector(".ts-categories");
  rail.innerHTML=categories.map(([id,label])=>`<section class="ts-category" data-ts-category="${id}"><h3><button type="button" data-ts-toggle aria-expanded="false" aria-controls="ts-panel-${id}" data-state="closed"><span>${esc(label)}</span><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></h3><div id="ts-panel-${id}" data-ts-panel="${id}" class="ts-category-content" aria-hidden="true" inert hidden></div></section>`).join("");
  rail.addEventListener("mouseover",e=>{
@@ -446,18 +472,35 @@ function mount(){
  if(previewDevice)new MutationObserver(updatePreview).observe(previewDevice,{attributes:true,attributeFilter:["data-device"]});
  const hydrateCmsSettings=()=>{
   const current=window.CmsThemeSettings?.read?.();
-  if(!current)return;
+  if(!current){
+   if(reviewNote())reviewNote().textContent="Local preview only. CMS settings are not connected.";
+   return;
+  }
+  // An older in-flight save may complete after newer local edits; never
+  // replace those edits with a stale server snapshot.
+  if(workingSettings && JSON.stringify(workingSettings)!==JSON.stringify(current))return;
+  workingSettings=structuredClone(current);
+  state={...defaults,...(current.controls||{})};
+  paletteCount=Math.max(4,...Object.keys(current.controls||{}).filter(key=>/^palette\.[0-9]+$/.test(key)).map(key=>Number(key.split(".")[1])+1));
+  paletteLinks={...(current.paletteLinks||{})};
+  if(typeof state["brand.name"]==="string")brandName=state["brand.name"];
+  if(reviewNote())reviewNote().textContent="Editing this site's draft. Publish is a separate action.";
   for(const [key,value] of Object.entries({
    "page.bg":current.colors?.canvas,"type.text":current.colors?.ink,"palette.2":current.colors?.accent,
    "type.font.Body":current.font==="system-ui"?"System sans-serif":current.font,
    "buttons.primary.radius":current.buttonRadius,"css.source":current.customCss,
    "inputs.radius":current.designDraft?.["inputs.radius"]
-  }))if(value!==undefined)state[key]=value;
+  }))if(value!==undefined && !(current.controls && key in current.controls))state[key]=value;
   if(category)renderFields();
  };
  document.addEventListener('theme-editor:global-settings-ready',hydrateCmsSettings);
+ document.addEventListener('theme-editor:settings-save-error',()=>{
+   if(reviewNote())reviewNote().textContent="Site draft save failed. Review the editor's error message.";
+ });
  hydrateCmsSettings();
- window.ThemeSettingsPanel={open:openCategory,close:()=>{if(category)openCategory(category);},refresh:updatePreview,getState:()=>({category,values:{...state},links:{...paletteLinks},storage:"sessionStorage",published:false})};
+ window.ThemeSettingsPanel={open:openCategory,close:()=>{if(category)openCategory(category);},refresh:updatePreview,
+   getState:()=>({category,values:{...state},links:{...paletteLinks},
+     storage:window.CmsThemeSettings?.read?.()?"cms-draft":"sessionStorage",published:false})};
  return true;
 }
 if(!mount()){

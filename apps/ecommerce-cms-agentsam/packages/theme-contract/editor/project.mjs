@@ -337,13 +337,67 @@ export function repairEmptyThemeBlockControls(project) {
 export function createThemeProjectAdapter(project, store, { publish, resolveAssetBase = (base) => base, listMedia, uploadMedia } = {}) {
   let state = validateThemeProject(project);
   state.sectionTemplates = installSourceTemplates(state, state.sectionTemplates);
-  const get = (slug) => { const p = state.pages.find((p) => p.slug === slug); if (!p) throw new Error('theme_page_not_found'); return p; };
-  const section = (slug, key) => { const s = get(slug).sections.find((s) => s.key === key); if (!s) throw new Error('theme_section_not_found'); return s; };
+  // A site-global section is authored once, then projected into every page.
+  // This is a view over the installed project, not a second CMS site record.
+  const sharedSections = () => {
+    const chosen = new Map();
+    for (const page of [...state.pages].sort((a,b) => (a.slug === 'home' ? -1 : 0) - (b.slug === 'home' ? -1 : 0))) {
+      for (const item of page.sections || []) {
+        if (!item.globalKey || !['HEADER','FOOTER'].includes(item.zone)) continue;
+        if (!chosen.has(item.globalKey)) chosen.set(item.globalKey, item);
+      }
+    }
+    return [...chosen.values()];
+  };
+  const sharedKey = item => 'global_' + item.globalKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const get = (slug) => {
+    if (slug === 'site') return {slug:'site',title:'Site-wide sections',status:'draft',
+      template:state.pages[0]?.template || '',
+      sections:sharedSections().map(item => ({...clone(item),key:sharedKey(item)}))};
+    const p = state.pages.find((p) => p.slug === slug);
+    if (!p) throw new Error('theme_page_not_found');
+    return p;
+  };
+  const section = (slug, key) => {
+    const s = slug === 'site'
+      ? sharedSections().find(item => sharedKey(item) === key)
+      : get(slug).sections.find(item => item.key === key);
+    if (!s) throw new Error('theme_section_not_found');
+    return s;
+  };
+  const withSharedChrome = (page) => {
+    if (page.slug === 'site') return page;
+    const merged = clone(page);
+    for (const item of sharedSections()) {
+      const key = sharedKey(item);
+      const existing = merged.sections.find(section => section.globalKey === item.globalKey);
+      if (existing) {
+        // Render site-owned keys in the preview even if imported pages reuse
+        // generic section_1 IDs. Selection can then never target a body block.
+        merged.template = merged.template.replaceAll('<!--theme-section:' + existing.key + '-->',
+          '<!--theme-section:' + key + '-->');
+        existing.key = key;
+        continue;
+      }
+      // Install the shared header/footer into the transient preview only.
+      // An existing customer draft is never duplicated or silently mutated.
+      const slot = '<!--theme-section:' + key + '-->';
+      const projected = {...clone(item), key};
+      if (item.zone === 'HEADER') {
+        merged.sections.unshift(projected);
+        merged.template = merged.template.replace(/(<body\b[^>]*>)/i, '$1' + slot);
+      } else {
+        merged.sections.push(projected);
+        merged.template = merged.template.replace(/<\/body>/i, slot + '</body>');
+      }
+    }
+    return merged;
+  };
   const syncGlobal = (slug, s) => {
     if (!s.globalKey) return;
     for (const page of state.pages) {
       if (page.slug === slug) continue;
-      for (const sibling of page.sections.filter(item => item.globalKey === s.globalKey)) {
+      for (const sibling of page.sections.filter(item => item.globalKey === s.globalKey && item !== s)) {
         const fieldKeys = item => (item.schema.fields || []).map(field => field.key).join('|');
         const blockKeys = item => (item.schema.blocks || []).map(block => block.key).join('|');
         if (fieldKeys(sibling) !== fieldKeys(s) || blockKeys(sibling) !== blockKeys(s)) continue;
@@ -353,6 +407,7 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       }
     }
   };
+  let themeSettingsWrite = Promise.resolve();
   const persist = async () => {
     const expectedVersion = Number(state.revision || 0);
     const templates = state.sectionTemplates;
@@ -371,6 +426,25 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
     capabilities: { publish: Boolean(publish) },
     getProject: async () => clone(state),
     getThemeIdentity: async () => ({ name: state.name, status: 'Draft' }),
+    getThemeSettings: () => clone(state.themeSettings || {}),
+    updateThemeSettings(settings) {
+      const snapshot = clone(settings);
+      // Serialize independent slider/color edits against the installed site's
+      // existing revision, so a previous in-flight save cannot win last.
+      themeSettingsWrite = themeSettingsWrite.catch(() => {}).then(async () => {
+        const latest = await store.get(state.id);
+        if (latest) {
+          const templates = state.sectionTemplates;
+          state = validateThemeProject(latest);
+          state.sectionTemplates = installSourceTemplates(state, templates);
+        }
+        const before = clone(state.themeSettings || {});
+        state.themeSettings = snapshot;
+        try { await persist(); } catch (error) { state.themeSettings = before; throw error; }
+        return clone(state.themeSettings);
+      });
+      return themeSettingsWrite;
+    },
     async updatePageSettings(slug, { name, title, tokens }) {
       if (typeof name !== 'string' || !name.trim() || typeof title !== 'string' || !title.trim()) throw new Error('theme_settings_invalid');
       state.name = name.trim(); get(slug).title = title.trim();
@@ -388,7 +462,7 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       }));
       return page;
     },
-    getRegistry: async () => ({ pages: Object.fromEntries(state.pages.map((p) =>
+    getRegistry: async () => ({ pages: Object.fromEntries([...state.pages, get('site')].map((p) =>
       [p.slug, { sections: {
         ...Object.fromEntries(Object.entries(state.sectionTemplates).map(([id,s]) => {
           const sourcePage = state.pages.find(page => page.slug === s.sourcePage) || p;
@@ -408,7 +482,7 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
         })),
         ...Object.fromEntries(p.sections.map((s) => [s.key, s.schema])),
       } }])) }),
-    resolvePreview: async (slug, draft) => { const p = draft || get(slug); return { html: renderThemePage(p, state.tokens, { baseUrl: p.assetBase ? await resolveAssetBase(p.assetBase) : undefined }) }; },
+    resolvePreview: async (slug, draft) => { const p = withSharedChrome(draft || get(slug)); return { html: renderThemePage(p, state.tokens, { baseUrl: p.assetBase ? await resolveAssetBase(p.assetBase) : undefined }) }; },
     async saveDraft(slug, key, content, expectedVersion) {
       const latest = await store.get(state.id);
       if (latest) { const templates = state.sectionTemplates;
