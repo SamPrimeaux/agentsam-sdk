@@ -16,6 +16,7 @@ export type MediaAsset = {
   r2_key?: string | null;
   cloudflare_image_id?: string | null;
   cloudflare_stream_uid?: string | null;
+  meta?: { variants?: string[]; require_signed_urls?: boolean; [key: string]: unknown };
   duration_ms?: number | null;
   width?: number | null;
   height?: number | null;
@@ -45,7 +46,7 @@ export type CfResources = {
 export type AccountChoice = { connectionId?: string; cloudflareAccountId?: string; accountLabel?: string };
 
 /** Typed failure so the UI never has to parse prose to pick the right recovery action. */
-export type LibraryError = { kind: "reconnect" | "account" | "generic"; message: string; connectUrl?: string };
+export type LibraryError = { kind: "reconnect" | "account" | "session" | "generic"; message: string; connectUrl?: string };
 
 export type MediaSurface = { kind: MediaKind; title: string; source: MediaSource };
 
@@ -177,8 +178,14 @@ export function toLibraryError(status: number, body: Record<string, unknown> | n
   const b = body || {};
   const connectUrl = mediaConnectUrl(String(b.connect_url || b.reconnect_url || "") || null);
   const code = String(b.error || "");
-  if (status === 401 || code === "cloudflare_reconnect_required" || code === "cloudflare_authorization_required") {
-    return { kind: "reconnect", message: "Your Cloudflare connection needs to be authorized again.", connectUrl };
+  // An expired Studio session is not a revoked Cloudflare OAuth grant.
+  // Avoid sending an authenticated account through OAuth for every 401.
+  if (code === "authentication_required" || code === "unauthorized" || (status === 401 && !code)) {
+    return { kind: "session", message: "Your Studio session needs sign-in. Your Cloudflare authorization is unchanged." };
+  }
+  if (code === "cloudflare_reconnect_required" || code === "cloudflare_authorization_required"
+      || code === "cloudflare_credential_required" || code === "cloudflare_token_required") {
+    return { kind: "reconnect", message: "Cloudflare needs authorization again. Your saved media remains unchanged.", connectUrl };
   }
   if (status === 409 || code === "cloudflare_account_selection_required") {
     return { kind: "account", message: "Choose which Cloudflare account to browse." };

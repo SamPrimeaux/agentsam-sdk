@@ -298,6 +298,8 @@ export async function refreshCloudflareUserOauthToken(env, ownerId, row, options
 /**
  * Repair only the specific false-inactive state produced by a different
  * first-party app failing to decrypt the shared PKCE refresh envelope.
+ * ACCESS_EXPIRED_NO_REFRESH is a second historical spelling of that state;
+ * it is eligible only when an encrypted refresh token actually survives.
  * Never revive an explicitly revoked grant. Cloudflare must accept a fresh
  * refresh-token exchange before this connector reactivates the row.
  */
@@ -313,7 +315,7 @@ async function recoverCrossHostRefreshFailure(env, ownerId, preferred, options =
       FROM user_oauth_tokens
       WHERE account_id = ? AND LOWER(provider) = 'cloudflare'
         AND COALESCE(is_active, 1) = 0 AND revoked_at IS NULL
-        AND last_refresh_error_code = 'REFRESH_TOKEN_MISSING'
+        AND last_refresh_error_code IN ('REFRESH_TOKEN_MISSING', 'ACCESS_EXPIRED_NO_REFRESH')
         AND refresh_token_encrypted IS NOT NULL
     `).bind(ownerId).all();
     rows = result?.results || [];

@@ -357,6 +357,7 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
       cloudflare_account_id: client.accountId,
       delivery_hash: pageData.delivery_hash,
       variants: img.variants,
+      require_signed_urls: Boolean(img.requireSignedURLs),
     },
   }));
   return markOauth(listResponseShape({
