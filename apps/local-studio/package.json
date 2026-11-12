@@ -26,7 +26,7 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "db:migrate": "node scripts/migrate.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "node --test 'scripts/**/*.test.mjs' && npm run test --workspaces --if-present && node --test backend/worker/studio-companion-settings.test.mjs",
+    "test": "node --test 'scripts/**/*.test.mjs' && npm run test --workspaces --if-present && node --test backend/worker/studio-companion-settings.test.mjs backend/worker/studio-storage-settings.test.mjs",
     "lint": "eslint frontend/src backend/server shared/agentsam/src scripts",
     "format": "prettier --write frontend backend shared scripts docs *.md *.json *.ts",
     "check:auth": "node scripts/check-auth-invariant.mjs",

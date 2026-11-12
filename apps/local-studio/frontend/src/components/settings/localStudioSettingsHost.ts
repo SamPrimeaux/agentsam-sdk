@@ -16,6 +16,7 @@ import type {
   SettingsPlugin,
   SettingsSnapshot,
   SettingsStorageTarget,
+  SettingsStoragePreferenceInput,
   SettingsWidget,
 } from "@inneranimalmedia/agentsam-settings/contracts";
 import {
@@ -53,7 +54,7 @@ import {
   updateLocalStudioPlugin,
   type LocalStudioPluginRecord,
 } from "@/lib/connections/client";
-import { projectSettingsStorageTargets, type CloudflareStorageDiscovery } from "@/lib/storage/settings-targets";
+import { projectSettingsStorageTargets, type CloudflareStorageDiscovery, type StorageSettingsResponse } from "@/lib/storage/settings-targets";
 import {
   listLocalStudioWidgets,
   setLocalStudioWidgetVisible,
@@ -357,7 +358,14 @@ async function loadStorageTargets(): Promise<SettingsStorageTarget[]> {
   } catch {
     // Do not convert failed provider discovery into fake empty/healthy resources.
   }
-  return projectSettingsStorageTargets(indexedDbAvailable, cloudflare);
+  // Storage prefs are account records, not proof of an authorized provider read/write.
+  const settings=await settingsRequest<StorageSettingsResponse & {error?:string}>("/api/settings/storage")
+    .catch(()=>null);
+  const localCapabilities={
+    opfs:typeof navigator!=="undefined" && typeof navigator.storage?.getDirectory==="function",
+    deviceFsa:typeof window!=="undefined" && "showDirectoryPicker" in window,
+  };
+  return projectSettingsStorageTargets(indexedDbAvailable,cloudflare,settings,localCapabilities);
 }
 
 function emptySnapshot(): SettingsSnapshot {
@@ -464,7 +472,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     desktop ? identitySessionExists().catch(() => false) : Promise.resolve(false),
     desktop ? getDesktopWorkspaceContext().catch(() => null) : Promise.resolve(null),
     desktop ? Promise.resolve([]) : readAccountToolUsage(),
-    typeof window !== "undefined" && /^\/settings\/storage(?:\/|$)/.test(window.location.pathname)
+    typeof window !== "undefined" && /^\/(?:dashboard\/)?settings\/storage(?:\/|$)/.test(window.location.pathname)
       ? loadStorageTargets() : Promise.resolve([] as SettingsStorageTarget[]),
   ]);
   snapshot.usage = usageMetrics;
@@ -582,6 +590,10 @@ export const localStudioSettingsHost: SettingsHost = {
   },
   async updateGeneralPreferences(preferences:SettingsGeneralPreferences){
     await settingsRequest("/api/settings/preferences","PUT",preferences);
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+  },
+  async updateStoragePreference(preference:SettingsStoragePreferenceInput){
+    await settingsRequest("/api/settings/storage","PUT",preference);
     if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
   },
   async updateNotificationSettings(settings:SettingsNotificationProfileUpdate){

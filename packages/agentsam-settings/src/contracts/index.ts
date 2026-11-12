@@ -309,6 +309,17 @@ export type SettingsThemeStyle = {
   cssVars?: Record<string, string>;
 };
 
+/** Storage target preferences never include provider credentials. */
+export type SettingsStoragePreferenceProvider =
+  | "artifacts_r2" | "google_drive" | "s3" | "supabase"
+  | "github" | "opfs" | "device_fsa";
+export type SettingsStoragePreferenceInput = {
+  provider: SettingsStoragePreferenceProvider;
+  enabled: boolean;
+  isDefault: boolean;
+  config: Record<string, string>;
+};
+
 export type SettingsStorageTarget = {
   id: string;
   name: string;
@@ -318,6 +329,16 @@ export type SettingsStorageTarget = {
   /** Host-authorized navigation, never a fabricated provider capability. */
   actionHref?: string;
   actionLabel?: string;
+  brand?: "cloudflare-r2" | "cloudflare-images" | "cloudflare-stream" |
+    "amazon-s3" | "google-drive" | "supabase" | "github" | "local";
+  group?: "cloudflare" | "external" | "device" | "other";
+  /** Provider authorization is not the same as verified storage access. */
+  access?: "verified" | "authorization_recorded" | "needs_scope" | "not_configured" | "unverified";
+  preferenceProvider?: SettingsStoragePreferenceProvider;
+  enabled?: boolean;
+  isDefault?: boolean;
+  config?: Record<string, string>;
+  lastVerifiedAt?: string | null;
 };
 
 export type SettingsUsage = {
@@ -467,6 +488,7 @@ export interface SettingsHost {
   archiveAgent?(id: string): Promise<void>;
   updateAgentPolicy?(policy: SettingsAgentPolicy): Promise<void>;
   updateGeneralPreferences?(preferences: SettingsGeneralPreferences): Promise<void>;
+  updateStoragePreference?(preference: SettingsStoragePreferenceInput): Promise<void>;
   updateNotificationSettings?(settings: SettingsNotificationProfileUpdate): Promise<void>;
   openSettingsUnit?(unit: SettingsUnitId): void;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;

@@ -1,5 +1,6 @@
 import { useShellAppearance } from "../appearance";
 import { SettingsBillingPanel } from "./billing";
+import { SettingsStoragePanel } from "./storage";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
 import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
@@ -2512,33 +2513,10 @@ function NetworkView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function StorageView({ snapshot }: { snapshot: SettingsSnapshot }) {
-  return (
-    <Section title="Storage targets" description="Local-first runtime state with explicit hosted targets where durability is required.">
-      <div className="grid gap-3 md:grid-cols-2">
-        {snapshot.storage.map((target) => (
-          <article key={target.id} className="rounded-lg border border-border/70 bg-muted/10 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <HardDrive className="size-4 text-muted-foreground" />
-                <div>
-                  <div className="text-[12px] font-medium">{target.name}</div>
-                  <div className="mt-0.5 text-[10px] text-muted-foreground">{target.kind}</div>
-                </div>
-              </div>
-              <StatusPill status={target.status} />
-            </div>
-            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">{target.detail}</p>
-            {target.actionHref && target.actionLabel ? (
-              <a href={target.actionHref} className="mt-3 inline-flex rounded-md border border-border px-2.5 py-1.5 text-[11px] font-medium hover:bg-muted">
-                {target.actionLabel}
-              </a>
-            ) : null}
-          </article>
-        ))}
-      </div>
-    </Section>
-  );
+function StorageView({ snapshot, host, onChanged }: {
+  snapshot:SettingsSnapshot;host:SettingsHost;onChanged:()=>Promise<void>;
+}) {
+  return <SettingsStoragePanel snapshot={snapshot} host={host} onChanged={onChanged}/>;
 }
 
 function UsageView({ snapshot, host }: { snapshot: SettingsSnapshot; host: SettingsHost }) {
@@ -2861,7 +2839,7 @@ function renderUnit(
     case "themes":
       return <ThemesView themes={snapshot.themes} host={host} onChanged={onChanged} />;
     case "storage":
-      return <StorageView snapshot={snapshot} />;
+      return <StorageView snapshot={snapshot} host={host} onChanged={onChanged} />;
     case "keys":
       return <KeysSubView snapshot={snapshot} view={view} />;
     case "usage":
