@@ -135,6 +135,21 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+/** Hover and keyboard-focus help for icon-only controls; suppressed while its menu is open. */
+function Tooltip({ text, hidden, children }: { text: string; hidden?: boolean; children: ReactNode }) {
+  return (
+    <span className="group relative inline-flex">
+      {children}
+      {hidden ? null : (
+        <span role="tooltip"
+          className="pointer-events-none absolute right-0 top-full z-30 mt-1 hidden whitespace-nowrap rounded-md border border-border bg-background px-2 py-1.5 text-[11px] text-foreground shadow-lg group-hover:block group-focus-within:block">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function RowMenu({
   label, canEdit, canDuplicate, canToggle, enabled, canDelete,
   onOpen, onDuplicate, onToggle, onDelete,
@@ -161,16 +176,18 @@ function RowMenu({
   const run = (action: () => void) => () => { setOpen(false); action(); };
   return (
     <div ref={root} className="relative shrink-0">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Actions for ${label}`}
-        onClick={() => setOpen((value) => !value)}
-        className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
-      >
-        <MoreHorizontal className="size-4" />
-      </button>
+      <Tooltip text="Actions" hidden={open}>
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`Actions for ${label}`}
+          onClick={() => setOpen((value) => !value)}
+          className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
+        >
+          <MoreHorizontal className="size-4" />
+        </button>
+      </Tooltip>
       {open ? (
         <div role="menu" aria-label={`Actions for ${label}`}
           className="absolute right-0 top-9 z-20 w-44 rounded-lg border border-border bg-background p-1 shadow-lg">
