@@ -121,7 +121,7 @@ export async function listAccountSideStages(db, accountId, options = {}) {
   const result = await db.prepare(`
     SELECT p.id,p.plugin_key,p.family_key,p.plugin_kind,p.display_name,
            p.description,p.icon_url,p.metadata_json,p.sort_priority,
-           own.enabled AS stage_enabled,
+           COALESCE(own.enabled, 1) AS stage_enabled,
            CASE WHEN p.family_key='core' AND p.plugin_kind='native' THEN 1
                 ELSE EXISTS (
                   SELECT 1 FROM agentsam_plugin_installations live

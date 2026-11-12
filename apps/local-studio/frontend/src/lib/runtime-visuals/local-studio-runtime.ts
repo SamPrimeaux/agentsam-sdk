@@ -59,7 +59,13 @@ export function createLocalStudioRuntimeVisuals() {
       detail?: string,
       surfaceId?: string,
     ) {
-      controllerFor(surfaceId).start({
+      const surface = controllerFor(surfaceId);
+      // The controller preserves completed/failed operations for their final
+      // frame. A new turn on the same conversation must not inherit a stale
+      // error, success, or the previous turn's progress points.
+      const priorStatus = surface.getScene().status;
+      if (priorStatus === "error" || priorStatus === "success") surface.reset();
+      surface.start({
         operationId,
         scope: "workspace",
         semantic: "thinking",

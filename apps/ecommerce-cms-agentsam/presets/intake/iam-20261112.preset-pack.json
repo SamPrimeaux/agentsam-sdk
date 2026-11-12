@@ -1,0 +1,1872 @@
+{
+  "schema": "iam.cms.platform-preset-intake.v1",
+  "created_at": "2026-11-12",
+  "purpose": "Reusable and editable presets for site owners; sources are references, not HTML publication artifacts.",
+  "distribution": {
+    "catalog_table": "cms_component_templates",
+    "definition_table": "cms_definitions",
+    "renderer_table": "cms_components",
+    "section_instance": "cms_page_sections",
+    "block_instance": "cms_section_blocks",
+    "global_instance": "cms_globals",
+    "auth_runtime": "platform auth services",
+    "media_authority": "shared media assets; original source images are illustrative"
+  },
+  "safety": {
+    "default_state": "draft",
+    "auto_publish": false,
+    "verified_renderer_required": true,
+    "raw_script_installation": false,
+    "oauth_configuration_editable": false,
+    "instance_data_per_site": true
+  },
+  "source_files": [
+    {
+      "key": "agent-modes",
+      "original_name": "agent_sam_mode_color_loading_states_lab(1).html",
+      "sha256": "ffa0231a0a7a1bf55ac0b5f8443769de47c0260753c33cbbf23e03a16ec10fce",
+      "size": 32857,
+      "source_path": "source/agent_sam_mode_color_loading_states_lab(1).html",
+      "style_path": "styles/agent-modes.source.css"
+    },
+    {
+      "key": "globe-loader",
+      "original_name": "globe-loader(1).html",
+      "sha256": "1dba364f5232450cbc18a2f47f30509613d98e191615c236ffa5824a5218a08e",
+      "size": 194821,
+      "source_path": "source/globe-loader(1).html",
+      "style_path": "styles/globe-loader.source.css"
+    },
+    {
+      "key": "iam-header",
+      "original_name": "iam-header(2).html",
+      "sha256": "1637ea3cf7eb2df205a00314b20c45e8922f137b9d765ef26c53233a27cd87ae",
+      "size": 11430,
+      "source_path": "source/iam-header(2).html",
+      "style_path": "styles/iam-header.source.css"
+    },
+    {
+      "key": "iam-footer",
+      "original_name": "iam-footer(2).html",
+      "sha256": "c55d77b794daeb6f7b1417e21708857761be1c2cb2b050dc63cb10504b6b8e5e",
+      "size": 12189,
+      "source_path": "source/iam-footer(2).html",
+      "style_path": "styles/iam-footer.source.css"
+    },
+    {
+      "key": "auth-signin",
+      "original_name": "static-auth-signin.html",
+      "sha256": "391d9cf020ed9bca72b069dab9785991918f7604eb31d26d7e775489b0a68a1e",
+      "size": 32162,
+      "source_path": "source/static-auth-signin.html",
+      "style_path": "styles/auth-signin.source.css"
+    },
+    {
+      "key": "auth-signup",
+      "original_name": "signup(1).html",
+      "sha256": "80f5f32139cac5d7c62462082f865dd4275d791b4b70e3082f85c4dbda64a210",
+      "size": 25596,
+      "source_path": "source/signup(1).html",
+      "style_path": "styles/auth-signup.source.css"
+    },
+    {
+      "key": "case-showcase",
+      "original_name": "conversion-showcase-section(4).html",
+      "sha256": "8f1f4d0a9216c81d00183d397655d61844e8ebb8444ab659cd63f561fb173dc2",
+      "size": 35034,
+      "source_path": "source/conversion-showcase-section(4).html",
+      "style_path": "styles/case-showcase.source.css"
+    }
+  ],
+  "presets": [
+    {
+      "definition_key": "iam-glass-header",
+      "label": "Glass navigation header",
+      "kind": "section",
+      "sku": "SKU-GLB-HEAD-IAM",
+      "category": "Navigation",
+      "source_key": "iam-header",
+      "source_file": "iam-header(2).html",
+      "source_selector": "#iam-header",
+      "placement": "global:header",
+      "settings_schema": {
+        "title": "Glass navigation header",
+        "type": "object",
+        "properties": {
+          "logo_light": {
+            "type": "string",
+            "title": "Light logo asset",
+            "format": "asset",
+            "default": ""
+          },
+          "logo_dark": {
+            "type": "string",
+            "title": "Dark logo asset",
+            "format": "asset",
+            "default": ""
+          },
+          "menu_ref": {
+            "type": "string",
+            "title": "Navigation menu",
+            "format": "menu_reference",
+            "default": "main"
+          },
+          "cta_label": {
+            "type": "string",
+            "title": "Header action",
+            "maxLength": 64,
+            "default": "Sign up"
+          },
+          "cta_href": {
+            "type": "string",
+            "title": "Action destination",
+            "format": "link",
+            "default": "/auth/signup"
+          },
+          "header_height": {
+            "type": "integer",
+            "title": "Header height (px)",
+            "minimum": 56,
+            "maximum": 120,
+            "default": 76
+          },
+          "scroll_threshold": {
+            "type": "integer",
+            "title": "Scrolled threshold (px)",
+            "minimum": 0,
+            "maximum": 500,
+            "default": 50
+          },
+          "hide_on_scroll": {
+            "type": "boolean",
+            "title": "Hide when scrolling down",
+            "default": true
+          },
+          "glass_opacity": {
+            "type": "number",
+            "title": "Glass opacity",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.88
+          },
+          "accent": {
+            "type": "string",
+            "title": "Accent color",
+            "format": "color",
+            "default": "#167BFC"
+          },
+          "mobile_drawer_side": {
+            "type": "string",
+            "title": "Mobile drawer side",
+            "enum": [
+              "left",
+              "right"
+            ],
+            "default": "right"
+          },
+          "mobile_drawer_width": {
+            "type": "integer",
+            "title": "Mobile drawer max-width (px)",
+            "minimum": 240,
+            "maximum": 480,
+            "default": 420
+          },
+          "logo_href": {
+            "type": "string",
+            "title": "Logo destination",
+            "format": "link",
+            "default": "/"
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "logo_light": null,
+        "logo_dark": null,
+        "menu_ref": "main",
+        "cta_label": "Sign up",
+        "cta_href": "/auth/signup",
+        "header_height": 76,
+        "scroll_threshold": 50,
+        "hide_on_scroll": true,
+        "glass_opacity": 0.88,
+        "accent": "#167BFC",
+        "mobile_drawer_side": "right",
+        "mobile_drawer_width": 420,
+        "logo_href": "/"
+      },
+      "blocks": [
+        {
+          "type": "navigation-link",
+          "repeatable": true,
+          "max": 12,
+          "fields": [
+            "label",
+            "href",
+            "external"
+          ]
+        },
+        {
+          "type": "header-action",
+          "repeatable": true,
+          "max": 2,
+          "fields": [
+            "label",
+            "href",
+            "appearance"
+          ]
+        }
+      ],
+      "behavior": [
+        "sticky",
+        "scroll-surface",
+        "scroll-hide",
+        "mobile-drawer",
+        "escape-to-close",
+        "active-route"
+      ],
+      "capabilities": [
+        "global-layout",
+        "menu-binding",
+        "responsive",
+        "accessibility"
+      ],
+      "data_bindings": {
+        "menu_ref": "site.navigation",
+        "logo_light": "site.brand.logo_light",
+        "logo_dark": "site.brand.logo_dark"
+      },
+      "variants": [],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "One site global; never install as per-page duplicate.",
+      "version": "1.0.0",
+      "original_sha256": "1637ea3cf7eb2df205a00314b20c45e8922f137b9d765ef26c53233a27cd87ae",
+      "source_fragment": "iam-header-0.html",
+      "editor_fields": [
+        {
+          "id": "logo_light",
+          "type": "image_picker",
+          "label": "Light logo asset"
+        },
+        {
+          "id": "logo_dark",
+          "type": "image_picker",
+          "label": "Dark logo asset"
+        },
+        {
+          "id": "menu_ref",
+          "type": "menu_picker",
+          "label": "Navigation menu"
+        },
+        {
+          "id": "cta_label",
+          "type": "text",
+          "label": "Header action"
+        },
+        {
+          "id": "cta_href",
+          "type": "link",
+          "label": "Action destination"
+        },
+        {
+          "id": "header_height",
+          "type": "range",
+          "label": "Header height (px)"
+        },
+        {
+          "id": "scroll_threshold",
+          "type": "range",
+          "label": "Scrolled threshold (px)"
+        },
+        {
+          "id": "hide_on_scroll",
+          "type": "checkbox",
+          "label": "Hide when scrolling down"
+        },
+        {
+          "id": "glass_opacity",
+          "type": "range",
+          "label": "Glass opacity"
+        },
+        {
+          "id": "accent",
+          "type": "color",
+          "label": "Accent color"
+        },
+        {
+          "id": "mobile_drawer_side",
+          "type": "select",
+          "label": "Mobile drawer side",
+          "options": [
+            "left",
+            "right"
+          ]
+        },
+        {
+          "id": "mobile_drawer_width",
+          "type": "range",
+          "label": "Mobile drawer max-width (px)"
+        },
+        {
+          "id": "logo_href",
+          "type": "link",
+          "label": "Logo destination"
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    },
+    {
+      "definition_key": "iam-editorial-footer",
+      "label": "Editorial contact footer",
+      "kind": "section",
+      "sku": "SKU-GLB-FOOT-IAM",
+      "category": "Navigation",
+      "source_key": "iam-footer",
+      "source_file": "iam-footer(2).html",
+      "source_selector": "#iam-footer",
+      "placement": "global:footer",
+      "settings_schema": {
+        "title": "Editorial contact footer",
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "title": "Large heading",
+            "maxLength": 120,
+            "default": "Let's Talk"
+          },
+          "email": {
+            "type": "string",
+            "title": "Contact email",
+            "format": "email",
+            "default": ""
+          },
+          "phone": {
+            "type": "string",
+            "title": "Contact phone",
+            "format": "phone",
+            "default": ""
+          },
+          "logo_light": {
+            "type": "string",
+            "title": "Light logo asset",
+            "format": "asset",
+            "default": ""
+          },
+          "logo_dark": {
+            "type": "string",
+            "title": "Dark logo asset",
+            "format": "asset",
+            "default": ""
+          },
+          "menu_refs": {
+            "type": "array",
+            "title": "Footer navigation menus",
+            "items": {
+              "type": "string",
+              "format": "menu_reference"
+            },
+            "default": [
+              "company",
+              "products"
+            ]
+          },
+          "legal_menu_ref": {
+            "type": "string",
+            "title": "Legal menu",
+            "format": "menu_reference",
+            "default": "legal"
+          },
+          "theme": {
+            "type": "string",
+            "title": "Appearance",
+            "enum": [
+              "auto",
+              "light",
+              "dark"
+            ],
+            "default": "auto"
+          },
+          "background_light": {
+            "type": "string",
+            "title": "Light background",
+            "format": "color",
+            "default": "#F0F3F8"
+          },
+          "background_dark": {
+            "type": "string",
+            "title": "Dark background",
+            "format": "color",
+            "default": "#1a1f2e"
+          },
+          "show_sculpture": {
+            "type": "boolean",
+            "title": "Show footer artwork",
+            "default": false
+          },
+          "sculpture_asset": {
+            "type": "string",
+            "title": "3D sculpture asset",
+            "format": "asset",
+            "default": ""
+          },
+          "sculpture_opacity": {
+            "type": "number",
+            "title": "Sculpture opacity",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.13
+          },
+          "attribution_label": {
+            "type": "string",
+            "title": "Attribution label",
+            "maxLength": 80,
+            "default": ""
+          },
+          "attribution_href": {
+            "type": "string",
+            "title": "Attribution link",
+            "format": "link",
+            "default": ""
+          },
+          "copyright": {
+            "type": "string",
+            "title": "Copyright",
+            "maxLength": 160,
+            "default": ""
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "heading": "Let's Talk",
+        "email": "",
+        "phone": "",
+        "logo_light": null,
+        "logo_dark": null,
+        "menu_refs": [
+          "company",
+          "products"
+        ],
+        "legal_menu_ref": "legal",
+        "theme": "auto",
+        "background_light": "#F0F3F8",
+        "background_dark": "#1a1f2e",
+        "show_sculpture": false,
+        "sculpture_asset": null,
+        "sculpture_opacity": 0.13,
+        "attribution_label": "",
+        "attribution_href": "",
+        "copyright": ""
+      },
+      "blocks": [
+        {
+          "type": "footer-menu-group",
+          "repeatable": true,
+          "max": 8,
+          "fields": [
+            "heading",
+            "menu_ref"
+          ]
+        },
+        {
+          "type": "footer-link",
+          "repeatable": true,
+          "max": 32,
+          "fields": [
+            "label",
+            "href"
+          ]
+        },
+        {
+          "type": "footer-contact",
+          "repeatable": false,
+          "max": 1,
+          "fields": [
+            "email",
+            "phone"
+          ]
+        },
+        {
+          "type": "footer-attribution",
+          "repeatable": false,
+          "max": 1,
+          "fields": [
+            "label",
+            "href",
+            "asset_ref"
+          ]
+        }
+      ],
+      "behavior": [
+        "link-active-route",
+        "optional-intersection-activated-3d"
+      ],
+      "capabilities": [
+        "global-layout",
+        "menu-binding",
+        "media-3d",
+        "responsive"
+      ],
+      "data_bindings": {
+        "menu_refs": "site.navigation",
+        "copyright": "site.brand.copyright",
+        "email": "site.contact.email",
+        "phone": "site.contact.phone",
+        "sculpture_asset": "site.media.asset_ref"
+      },
+      "variants": [],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "Three.js/GLTFLoader effect is optional platform capability, not injected from source HTML.",
+      "version": "1.0.0",
+      "original_sha256": "c55d77b794daeb6f7b1417e21708857761be1c2cb2b050dc63cb10504b6b8e5e",
+      "source_fragment": "iam-footer-0.html",
+      "editor_fields": [
+        {
+          "id": "heading",
+          "type": "text",
+          "label": "Large heading"
+        },
+        {
+          "id": "email",
+          "type": "text",
+          "label": "Contact email"
+        },
+        {
+          "id": "phone",
+          "type": "text",
+          "label": "Contact phone"
+        },
+        {
+          "id": "logo_light",
+          "type": "image_picker",
+          "label": "Light logo asset"
+        },
+        {
+          "id": "logo_dark",
+          "type": "image_picker",
+          "label": "Dark logo asset"
+        },
+        {
+          "id": "menu_refs",
+          "type": "list",
+          "label": "Footer navigation menus"
+        },
+        {
+          "id": "legal_menu_ref",
+          "type": "menu_picker",
+          "label": "Legal menu"
+        },
+        {
+          "id": "theme",
+          "type": "select",
+          "label": "Appearance",
+          "options": [
+            "auto",
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "id": "background_light",
+          "type": "color",
+          "label": "Light background"
+        },
+        {
+          "id": "background_dark",
+          "type": "color",
+          "label": "Dark background"
+        },
+        {
+          "id": "show_sculpture",
+          "type": "checkbox",
+          "label": "Show footer artwork"
+        },
+        {
+          "id": "sculpture_asset",
+          "type": "image_picker",
+          "label": "3D sculpture asset"
+        },
+        {
+          "id": "sculpture_opacity",
+          "type": "range",
+          "label": "Sculpture opacity"
+        },
+        {
+          "id": "attribution_label",
+          "type": "text",
+          "label": "Attribution label"
+        },
+        {
+          "id": "attribution_href",
+          "type": "link",
+          "label": "Attribution link"
+        },
+        {
+          "id": "copyright",
+          "type": "text",
+          "label": "Copyright"
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    },
+    {
+      "definition_key": "auth-galaxy-access",
+      "label": "Galaxy glass authentication",
+      "kind": "page",
+      "sku": "SKU-PAGE-AUTH-GALAXY-SIGNIN",
+      "category": "Authentication",
+      "source_key": "auth-signin",
+      "source_file": "static-auth-signin.html",
+      "source_selector": "#loginForm",
+      "placement": "page:auth",
+      "settings_schema": {
+        "title": "Galaxy glass authentication",
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "title": "Screen mode",
+            "enum": [
+              "signin",
+              "signup"
+            ],
+            "default": "signin"
+          },
+          "heading": {
+            "type": "string",
+            "title": "Heading",
+            "maxLength": 120,
+            "default": "Instant Access"
+          },
+          "subtitle": {
+            "type": "string",
+            "title": "Subtitle",
+            "maxLength": 240,
+            "default": ""
+          },
+          "brand_logo": {
+            "type": "string",
+            "title": "Logo asset",
+            "format": "asset",
+            "default": ""
+          },
+          "email_label": {
+            "type": "string",
+            "title": "Email label",
+            "maxLength": 80,
+            "default": "Email Address"
+          },
+          "password_label": {
+            "type": "string",
+            "title": "Password label",
+            "maxLength": 80,
+            "default": "Password"
+          },
+          "submit_label": {
+            "type": "string",
+            "title": "Submit label",
+            "maxLength": 64,
+            "default": "Connect"
+          },
+          "show_oauth": {
+            "type": "boolean",
+            "title": "Show platform-configured identity providers",
+            "default": true
+          },
+          "show_reset": {
+            "type": "boolean",
+            "title": "Show password reset",
+            "default": true
+          },
+          "show_name": {
+            "type": "boolean",
+            "title": "Collect name when signing up",
+            "default": false
+          },
+          "background_effect": {
+            "type": "string",
+            "title": "Background scene",
+            "enum": [
+              "galaxy",
+              "none"
+            ],
+            "default": "galaxy"
+          },
+          "glass_blur": {
+            "type": "integer",
+            "title": "Card blur (px)",
+            "minimum": 0,
+            "maximum": 40,
+            "default": 12
+          },
+          "accent": {
+            "type": "string",
+            "title": "Accent color",
+            "format": "color",
+            "default": "#007aff"
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "mode": "signin",
+        "heading": "Instant Access",
+        "subtitle": "",
+        "brand_logo": null,
+        "email_label": "Email Address",
+        "password_label": "Password",
+        "submit_label": "Connect",
+        "show_oauth": true,
+        "show_reset": true,
+        "show_name": false,
+        "background_effect": "galaxy",
+        "glass_blur": 12,
+        "accent": "#007aff"
+      },
+      "blocks": [],
+      "behavior": [
+        "form-submit-platform-auth-only",
+        "password-visibility",
+        "form-validation",
+        "oauth-platform-config-only",
+        "galaxy-scene",
+        "optional-exit-transition"
+      ],
+      "capabilities": [
+        "secure-auth-binding",
+        "responsive",
+        "reduced-motion",
+        "provider-config"
+      ],
+      "data_bindings": {
+        "auth_action": "platform.auth.signin",
+        "oauth_options": "platform.auth.providers",
+        "redirect": "platform.auth.safe_next",
+        "brand_logo": "site.brand.logo"
+      },
+      "variants": [
+        "signin",
+        "signup"
+      ],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "Signin/signup share a renderer; endpoints, sessions, OAuth credentials, redirect allowlists and validation are NOT editable settings.",
+      "version": "1.0.0",
+      "presets": [
+        {
+          "sku": "SKU-PAGE-AUTH-GALAXY-SIGNIN",
+          "label": "Galaxy glass — Sign in",
+          "mode": "signin",
+          "overrides": {}
+        },
+        {
+          "sku": "SKU-PAGE-AUTH-GALAXY-SIGNUP",
+          "label": "Galaxy glass — Sign up",
+          "mode": "signup",
+          "overrides": {
+            "mode": "signup",
+            "heading": "Sign up",
+            "submit_label": "Create account",
+            "show_name": true
+          }
+        }
+      ],
+      "original_sha256": "391d9cf020ed9bca72b069dab9785991918f7604eb31d26d7e775489b0a68a1e",
+      "source_fragment": null,
+      "editor_fields": [
+        {
+          "id": "mode",
+          "type": "select",
+          "label": "Screen mode",
+          "options": [
+            "signin",
+            "signup"
+          ]
+        },
+        {
+          "id": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "id": "subtitle",
+          "type": "text",
+          "label": "Subtitle"
+        },
+        {
+          "id": "brand_logo",
+          "type": "image_picker",
+          "label": "Logo asset"
+        },
+        {
+          "id": "email_label",
+          "type": "text",
+          "label": "Email label"
+        },
+        {
+          "id": "password_label",
+          "type": "text",
+          "label": "Password label"
+        },
+        {
+          "id": "submit_label",
+          "type": "text",
+          "label": "Submit label"
+        },
+        {
+          "id": "show_oauth",
+          "type": "checkbox",
+          "label": "Show platform-configured identity providers"
+        },
+        {
+          "id": "show_reset",
+          "type": "checkbox",
+          "label": "Show password reset"
+        },
+        {
+          "id": "show_name",
+          "type": "checkbox",
+          "label": "Collect name when signing up"
+        },
+        {
+          "id": "background_effect",
+          "type": "select",
+          "label": "Background scene",
+          "options": [
+            "galaxy",
+            "none"
+          ]
+        },
+        {
+          "id": "glass_blur",
+          "type": "range",
+          "label": "Card blur (px)"
+        },
+        {
+          "id": "accent",
+          "type": "color",
+          "label": "Accent color"
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    },
+    {
+      "definition_key": "case-showcase",
+      "label": "Site-in-a-frame showcase",
+      "kind": "section",
+      "sku": "SKU-SEC-CASE-SHOWCASE",
+      "category": "Showcase",
+      "source_key": "case-showcase",
+      "source_file": "conversion-showcase-section(4).html",
+      "source_selector": "section.sc-show",
+      "placement": "section",
+      "settings_schema": {
+        "title": "Site-in-a-frame showcase",
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "title": "Heading",
+            "maxLength": 180,
+            "default": "We design websites that entice users to keep scrolling and exploring"
+          },
+          "media_asset": {
+            "type": "string",
+            "title": "Demo video",
+            "format": "asset",
+            "default": ""
+          },
+          "poster_asset": {
+            "type": "string",
+            "title": "Poster image",
+            "format": "asset",
+            "default": ""
+          },
+          "frame_radius": {
+            "type": "integer",
+            "title": "Frame radius (px)",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 40
+          },
+          "section_background": {
+            "type": "string",
+            "title": "Background",
+            "format": "color",
+            "default": "#2a2066"
+          },
+          "accent": {
+            "type": "string",
+            "title": "Accent color",
+            "format": "color",
+            "default": "#5be3a8"
+          },
+          "autoplay": {
+            "type": "boolean",
+            "title": "Autoplay muted demo when visible",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "heading": "We design websites that entice users to keep scrolling and exploring",
+        "media_asset": null,
+        "poster_asset": null,
+        "frame_radius": 40,
+        "section_background": "#2a2066",
+        "accent": "#5be3a8",
+        "autoplay": false
+      },
+      "blocks": [],
+      "behavior": [
+        "muted-video-if-opted-in",
+        "fallback-preview-scene"
+      ],
+      "capabilities": [
+        "media-asset-binding",
+        "responsive",
+        "reduced-motion"
+      ],
+      "data_bindings": {
+        "media_asset": "site.media.video_ref",
+        "poster_asset": "site.media.image_ref"
+      },
+      "variants": [],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "Original dashboard demo is a stand-in, never describe it as connected product data.",
+      "version": "1.0.0",
+      "original_sha256": "8f1f4d0a9216c81d00183d397655d61844e8ebb8444ab659cd63f561fb173dc2",
+      "source_fragment": "case-showcase-0.html",
+      "editor_fields": [
+        {
+          "id": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "id": "media_asset",
+          "type": "image_picker",
+          "label": "Demo video"
+        },
+        {
+          "id": "poster_asset",
+          "type": "image_picker",
+          "label": "Poster image"
+        },
+        {
+          "id": "frame_radius",
+          "type": "range",
+          "label": "Frame radius (px)"
+        },
+        {
+          "id": "section_background",
+          "type": "color",
+          "label": "Background"
+        },
+        {
+          "id": "accent",
+          "type": "color",
+          "label": "Accent color"
+        },
+        {
+          "id": "autoplay",
+          "type": "checkbox",
+          "label": "Autoplay muted demo when visible"
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    },
+    {
+      "definition_key": "case-conversion",
+      "label": "Conversion orbit scene",
+      "kind": "section",
+      "sku": "SKU-SEC-CASE-CONVERSION",
+      "category": "Storytelling",
+      "source_key": "case-showcase",
+      "source_file": "conversion-showcase-section(4).html",
+      "source_selector": "section.sc-conv",
+      "placement": "section",
+      "settings_schema": {
+        "title": "Conversion orbit scene",
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "title": "Heading",
+            "maxLength": 140,
+            "default": "Enhancing conversion"
+          },
+          "body1": {
+            "type": "string",
+            "title": "First paragraph",
+            "maxLength": 550,
+            "default": "Our design approach harmonized realistic forms and materials along with vector and text objects."
+          },
+          "body2": {
+            "type": "string",
+            "title": "Second paragraph",
+            "maxLength": 550,
+            "default": "The micro-animations were utilized to bring the objects into focus."
+          },
+          "duration_seconds": {
+            "type": "number",
+            "title": "Orbit duration",
+            "minimum": 4,
+            "maximum": 60,
+            "default": 16
+          },
+          "animation_enabled": {
+            "type": "boolean",
+            "title": "Enable animation",
+            "default": true
+          },
+          "accent": {
+            "type": "string",
+            "title": "Accent",
+            "format": "color",
+            "default": "#5be3a8"
+          },
+          "background": {
+            "type": "string",
+            "title": "Background",
+            "format": "color",
+            "default": "#f5f5f7"
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "heading": "Enhancing conversion",
+        "body1": "Our design approach harmonized realistic forms and materials along with vector and text objects.",
+        "body2": "The micro-animations were utilized to bring the objects into focus.",
+        "duration_seconds": 16,
+        "animation_enabled": true,
+        "accent": "#5be3a8",
+        "background": "#f5f5f7"
+      },
+      "blocks": [],
+      "behavior": [
+        "orbit-animation",
+        "intersection-pause",
+        "reduced-motion-static"
+      ],
+      "capabilities": [
+        "motion",
+        "responsive",
+        "reduced-motion"
+      ],
+      "data_bindings": {},
+      "variants": [],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "",
+      "version": "1.0.0",
+      "original_sha256": "8f1f4d0a9216c81d00183d397655d61844e8ebb8444ab659cd63f561fb173dc2",
+      "source_fragment": "case-showcase-1.html",
+      "editor_fields": [
+        {
+          "id": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "id": "body1",
+          "type": "textarea",
+          "label": "First paragraph"
+        },
+        {
+          "id": "body2",
+          "type": "textarea",
+          "label": "Second paragraph"
+        },
+        {
+          "id": "duration_seconds",
+          "type": "range",
+          "label": "Orbit duration"
+        },
+        {
+          "id": "animation_enabled",
+          "type": "checkbox",
+          "label": "Enable animation"
+        },
+        {
+          "id": "accent",
+          "type": "color",
+          "label": "Accent"
+        },
+        {
+          "id": "background",
+          "type": "color",
+          "label": "Background"
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    },
+    {
+      "definition_key": "case-vignettes",
+      "label": "Beyond the homepage carousel",
+      "kind": "section",
+      "sku": "SKU-SEC-CASE-VIGNETTES",
+      "category": "Storytelling",
+      "source_key": "case-showcase",
+      "source_file": "conversion-showcase-section(4).html",
+      "source_selector": "section.sc-beyond",
+      "placement": "section",
+      "settings_schema": {
+        "title": "Beyond the homepage carousel",
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "title": "Heading",
+            "maxLength": 130,
+            "default": "Beyond the Homepage"
+          },
+          "description": {
+            "type": "string",
+            "title": "Introductory paragraph",
+            "maxLength": 600,
+            "default": "Incorporating visual vignettes to present different features was a key aspect of the homepage."
+          },
+          "visible_cards_desktop": {
+            "type": "integer",
+            "title": "Cards visible on desktop",
+            "minimum": 1,
+            "maximum": 5,
+            "default": 2
+          },
+          "show_arrows": {
+            "type": "boolean",
+            "title": "Show previous/next arrows",
+            "default": true
+          },
+          "drag_enabled": {
+            "type": "boolean",
+            "title": "Enable dragging",
+            "default": true
+          },
+          "card_gap": {
+            "type": "integer",
+            "title": "Card spacing (px)",
+            "minimum": 0,
+            "maximum": 80,
+            "default": 24
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "heading": "Beyond the Homepage",
+        "description": "Incorporating visual vignettes to present different features was a key aspect of the homepage.",
+        "visible_cards_desktop": 2,
+        "show_arrows": true,
+        "drag_enabled": true,
+        "card_gap": 24
+      },
+      "blocks": [
+        {
+          "type": "vignette-card",
+          "repeatable": true,
+          "min": 1,
+          "max": 16,
+          "fields": [
+            "title",
+            "description",
+            "media_asset",
+            "alt_text",
+            "href",
+            "theme_variant"
+          ]
+        }
+      ],
+      "behavior": [
+        "carousel-next-prev",
+        "pointer-drag",
+        "scroll-snap",
+        "keyboard-navigation"
+      ],
+      "capabilities": [
+        "repeatable-blocks",
+        "media-asset-binding",
+        "responsive",
+        "accessibility"
+      ],
+      "data_bindings": {
+        "blocks[].media_asset": "site.media.asset_ref"
+      },
+      "variants": [],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "Five sample cards are illustrative; real customer cards must bind owned media refs.",
+      "version": "1.0.0",
+      "original_sha256": "8f1f4d0a9216c81d00183d397655d61844e8ebb8444ab659cd63f561fb173dc2",
+      "source_fragment": "case-showcase-2.html",
+      "editor_fields": [
+        {
+          "id": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "id": "description",
+          "type": "textarea",
+          "label": "Introductory paragraph"
+        },
+        {
+          "id": "visible_cards_desktop",
+          "type": "range",
+          "label": "Cards visible on desktop"
+        },
+        {
+          "id": "show_arrows",
+          "type": "checkbox",
+          "label": "Show previous/next arrows"
+        },
+        {
+          "id": "drag_enabled",
+          "type": "checkbox",
+          "label": "Enable dragging"
+        },
+        {
+          "id": "card_gap",
+          "type": "range",
+          "label": "Card spacing (px)"
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    },
+    {
+      "definition_key": "case-customizer",
+      "label": "Website customizer demonstration",
+      "kind": "section",
+      "sku": "SKU-SEC-CASE-CUSTOMIZER",
+      "category": "Interactive",
+      "source_key": "case-showcase",
+      "source_file": "conversion-showcase-section(4).html",
+      "source_selector": "section.sc-cust",
+      "placement": "section",
+      "settings_schema": {
+        "title": "Website customizer demonstration",
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "title": "Section heading",
+            "maxLength": 130,
+            "default": "Try customizing a website"
+          },
+          "intro": {
+            "type": "string",
+            "title": "Intro",
+            "maxLength": 300,
+            "default": "Two simple changes. See the result immediately."
+          },
+          "preview_brand": {
+            "type": "string",
+            "title": "Preview brand",
+            "maxLength": 80,
+            "default": "Grove / Concept"
+          },
+          "preview_heading": {
+            "type": "string",
+            "title": "Preview heading",
+            "maxLength": 130,
+            "default": "A better space begins here."
+          },
+          "preview_description": {
+            "type": "string",
+            "title": "Preview description",
+            "maxLength": 350,
+            "default": "Thoughtful interiors, beautiful materials, and a space that feels like yours."
+          },
+          "button_label": {
+            "type": "string",
+            "title": "Preview CTA text",
+            "maxLength": 60,
+            "default": "Explore our work"
+          },
+          "button_href": {
+            "type": "string",
+            "title": "Preview CTA link",
+            "format": "link",
+            "default": "#"
+          },
+          "accent_colors": {
+            "type": "array",
+            "title": "Selectable accent colors",
+            "items": {
+              "type": "string",
+              "format": "color"
+            },
+            "minItems": 1,
+            "maxItems": 8,
+            "default": [
+              "#c86b48",
+              "#c9a074",
+              "#527f80",
+              "#775fa8"
+            ]
+          },
+          "default_accent": {
+            "type": "string",
+            "title": "Default accent",
+            "format": "color",
+            "default": "#c86b48"
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "heading": "Try customizing a website",
+        "intro": "Two simple changes. See the result immediately.",
+        "preview_brand": "Grove / Concept",
+        "preview_heading": "A better space begins here.",
+        "preview_description": "Thoughtful interiors, beautiful materials, and a space that feels like yours.",
+        "button_label": "Explore our work",
+        "button_href": "#",
+        "accent_colors": [
+          "#c86b48",
+          "#c9a074",
+          "#527f80",
+          "#775fa8"
+        ],
+        "default_accent": "#c86b48"
+      },
+      "blocks": [],
+      "behavior": [
+        "local-heading-preview",
+        "local-accent-switch",
+        "reset"
+      ],
+      "capabilities": [
+        "sandboxed-interaction",
+        "responsive",
+        "no-durable-site-change"
+      ],
+      "data_bindings": {},
+      "variants": [],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "The interactive demo changes only its preview; it must not write to actual theme/site settings.",
+      "version": "1.0.0",
+      "original_sha256": "8f1f4d0a9216c81d00183d397655d61844e8ebb8444ab659cd63f561fb173dc2",
+      "source_fragment": "case-showcase-3.html",
+      "editor_fields": [
+        {
+          "id": "heading",
+          "type": "text",
+          "label": "Section heading"
+        },
+        {
+          "id": "intro",
+          "type": "textarea",
+          "label": "Intro"
+        },
+        {
+          "id": "preview_brand",
+          "type": "text",
+          "label": "Preview brand"
+        },
+        {
+          "id": "preview_heading",
+          "type": "text",
+          "label": "Preview heading"
+        },
+        {
+          "id": "preview_description",
+          "type": "text",
+          "label": "Preview description"
+        },
+        {
+          "id": "button_label",
+          "type": "text",
+          "label": "Preview CTA text"
+        },
+        {
+          "id": "button_href",
+          "type": "link",
+          "label": "Preview CTA link"
+        },
+        {
+          "id": "accent_colors",
+          "type": "list",
+          "label": "Selectable accent colors"
+        },
+        {
+          "id": "default_accent",
+          "type": "color",
+          "label": "Default accent"
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    },
+    {
+      "definition_key": "iam-mode-presence",
+      "label": "AgentSam mode-aware loading family",
+      "kind": "component",
+      "sku": "SKU-APP-LOAD-SAMLAB",
+      "category": "Loading & Presence",
+      "source_key": "agent-modes",
+      "source_file": "agent_sam_mode_color_loading_states_lab(1).html",
+      "source_selector": ".grid",
+      "placement": "app-ui:loading",
+      "settings_schema": {
+        "title": "AgentSam mode-aware loading family",
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "title": "Loading pattern",
+            "enum": [
+              "agent-spark",
+              "plan-scan",
+              "debug-diff",
+              "subagent-swarm",
+              "ask-browser-scan",
+              "terminal-pulse",
+              "path-trace",
+              "file-stack",
+              "skeleton-preview"
+            ],
+            "default": "agent-spark"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Agent mode",
+            "enum": [
+              "agent",
+              "plan",
+              "debug",
+              "multitask",
+              "ask"
+            ],
+            "default": "agent"
+          },
+          "visual_style": {
+            "type": "string",
+            "title": "Style",
+            "enum": [
+              "canonical",
+              "soft",
+              "neon"
+            ],
+            "default": "canonical"
+          },
+          "speed": {
+            "type": "number",
+            "title": "Animation speed",
+            "minimum": 0.1,
+            "maximum": 3,
+            "default": 1
+          },
+          "glow": {
+            "type": "number",
+            "title": "Glow intensity",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.34
+          },
+          "scale": {
+            "type": "number",
+            "title": "Icon scale",
+            "minimum": 0.6,
+            "maximum": 1.6,
+            "default": 1
+          },
+          "density": {
+            "type": "number",
+            "title": "Row density",
+            "minimum": 0.7,
+            "maximum": 1.5,
+            "default": 1
+          },
+          "color_agent": {
+            "type": "string",
+            "title": "Agent color",
+            "format": "color",
+            "default": "#13D6C6"
+          },
+          "color_plan": {
+            "type": "string",
+            "title": "Plan color",
+            "format": "color",
+            "default": "#F6C85F"
+          },
+          "color_debug": {
+            "type": "string",
+            "title": "Debug color",
+            "format": "color",
+            "default": "#FF5D6C"
+          },
+          "color_multitask": {
+            "type": "string",
+            "title": "Multitask color",
+            "format": "color",
+            "default": "#8B5CF6"
+          },
+          "color_ask": {
+            "type": "string",
+            "title": "Ask color",
+            "format": "color",
+            "default": "#31D983"
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "pattern": "agent-spark",
+        "mode": "agent",
+        "visual_style": "canonical",
+        "speed": 1,
+        "glow": 0.34,
+        "scale": 1,
+        "density": 1,
+        "color_agent": "#13D6C6",
+        "color_plan": "#F6C85F",
+        "color_debug": "#FF5D6C",
+        "color_multitask": "#8B5CF6",
+        "color_ask": "#31D983"
+      },
+      "blocks": [],
+      "behavior": [
+        "mode-aware-status",
+        "in-progress",
+        "complete",
+        "error",
+        "reduced-motion"
+      ],
+      "capabilities": [
+        "app-ui",
+        "status-binding",
+        "motion",
+        "responsive"
+      ],
+      "data_bindings": {
+        "mode": "runtime.agent.mode",
+        "status": "runtime.task.status",
+        "text": "runtime.task.summary"
+      },
+      "variants": [],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "Extract nine visual/loading patterns; the lab controls are authoring tools, not end-user UI.",
+      "version": "1.0.0",
+      "original_sha256": "ffa0231a0a7a1bf55ac0b5f8443769de47c0260753c33cbbf23e03a16ec10fce",
+      "source_fragment": null,
+      "editor_fields": [
+        {
+          "id": "pattern",
+          "type": "select",
+          "label": "Loading pattern",
+          "options": [
+            "agent-spark",
+            "plan-scan",
+            "debug-diff",
+            "subagent-swarm",
+            "ask-browser-scan",
+            "terminal-pulse",
+            "path-trace",
+            "file-stack",
+            "skeleton-preview"
+          ]
+        },
+        {
+          "id": "mode",
+          "type": "select",
+          "label": "Agent mode",
+          "options": [
+            "agent",
+            "plan",
+            "debug",
+            "multitask",
+            "ask"
+          ]
+        },
+        {
+          "id": "visual_style",
+          "type": "select",
+          "label": "Style",
+          "options": [
+            "canonical",
+            "soft",
+            "neon"
+          ]
+        },
+        {
+          "id": "speed",
+          "type": "range",
+          "label": "Animation speed"
+        },
+        {
+          "id": "glow",
+          "type": "range",
+          "label": "Glow intensity"
+        },
+        {
+          "id": "scale",
+          "type": "range",
+          "label": "Icon scale"
+        },
+        {
+          "id": "density",
+          "type": "range",
+          "label": "Row density"
+        },
+        {
+          "id": "color_agent",
+          "type": "color",
+          "label": "Agent color"
+        },
+        {
+          "id": "color_plan",
+          "type": "color",
+          "label": "Plan color"
+        },
+        {
+          "id": "color_debug",
+          "type": "color",
+          "label": "Debug color"
+        },
+        {
+          "id": "color_multitask",
+          "type": "color",
+          "label": "Multitask color"
+        },
+        {
+          "id": "color_ask",
+          "type": "color",
+          "label": "Ask color"
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    },
+    {
+      "definition_key": "iam-world-globe",
+      "label": "World globe loader",
+      "kind": "component",
+      "sku": "SKU-UI-GLOBE-LOADER-01",
+      "category": "Loading & Presence",
+      "source_key": "globe-loader",
+      "source_file": "globe-loader(1).html",
+      "source_selector": ".loader-wrap",
+      "placement": "app-ui:loading",
+      "settings_schema": {
+        "title": "World globe loader",
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "title": "Diameter (px)",
+            "minimum": 48,
+            "maximum": 400,
+            "default": 200
+          },
+          "background": {
+            "type": "string",
+            "title": "Background",
+            "format": "color",
+            "default": "#f5f4f1"
+          },
+          "land_color": {
+            "type": "string",
+            "title": "Land color",
+            "format": "color",
+            "default": "#24221e"
+          },
+          "ocean_color": {
+            "type": "string",
+            "title": "Ocean color",
+            "format": "color",
+            "default": "#e8e7e3"
+          },
+          "arc_color": {
+            "type": "string",
+            "title": "Whirl accent",
+            "format": "color",
+            "default": "#504c45"
+          },
+          "rotation_speed": {
+            "type": "number",
+            "title": "Rotation speed",
+            "minimum": 0,
+            "maximum": 3,
+            "default": 1
+          },
+          "show_whirl": {
+            "type": "boolean",
+            "title": "Show whirl arcs",
+            "default": true
+          },
+          "accessible_label": {
+            "type": "string",
+            "title": "Accessible status label",
+            "maxLength": 100,
+            "default": "Loading"
+          },
+          "reduced_motion": {
+            "type": "string",
+            "title": "Reduced-motion behavior",
+            "enum": [
+              "static",
+              "slow"
+            ],
+            "default": "static"
+          }
+        },
+        "additionalProperties": false
+      },
+      "default_settings": {
+        "size": 200,
+        "background": "#f5f4f1",
+        "land_color": "#24221e",
+        "ocean_color": "#e8e7e3",
+        "arc_color": "#504c45",
+        "rotation_speed": 1,
+        "show_whirl": true,
+        "accessible_label": "Loading",
+        "reduced_motion": "static"
+      },
+      "blocks": [],
+      "behavior": [
+        "rotating-geographic-globe",
+        "whirl-arcs",
+        "reduced-motion-static"
+      ],
+      "capabilities": [
+        "app-ui",
+        "motion",
+        "asset-dependency-topology",
+        "responsive",
+        "accessibility"
+      ],
+      "data_bindings": {
+        "accessible_label": "runtime.task.accessible_label"
+      },
+      "variants": [],
+      "implementation_status": "unverified",
+      "status": "draft",
+      "notes": "Source is a packed D3/TopoJSON artifact. Unpacked geometry separately; do not re-embed third-party vendor bundles in runtime.",
+      "version": "1.0.0",
+      "original_sha256": "1dba364f5232450cbc18a2f47f30509613d98e191615c236ffa5824a5218a08e",
+      "source_fragment": "globe-loader-renderable.html",
+      "editor_fields": [
+        {
+          "id": "size",
+          "type": "range",
+          "label": "Diameter (px)"
+        },
+        {
+          "id": "background",
+          "type": "color",
+          "label": "Background"
+        },
+        {
+          "id": "land_color",
+          "type": "color",
+          "label": "Land color"
+        },
+        {
+          "id": "ocean_color",
+          "type": "color",
+          "label": "Ocean color"
+        },
+        {
+          "id": "arc_color",
+          "type": "color",
+          "label": "Whirl accent"
+        },
+        {
+          "id": "rotation_speed",
+          "type": "range",
+          "label": "Rotation speed"
+        },
+        {
+          "id": "show_whirl",
+          "type": "checkbox",
+          "label": "Show whirl arcs"
+        },
+        {
+          "id": "accessible_label",
+          "type": "text",
+          "label": "Accessible status label"
+        },
+        {
+          "id": "reduced_motion",
+          "type": "select",
+          "label": "Reduced-motion behavior",
+          "options": [
+            "static",
+            "slow"
+          ]
+        }
+      ],
+      "source_fidelity": {
+        "retains_original_source": true,
+        "typed_controls": true,
+        "script_imported_as_runtime": false,
+        "visual_reviewed": false,
+        "verified_merchant_roundtrip": false
+      }
+    }
+  ],
+  "fidelity_notes": {
+    "auth": "Remove original auth endpoint code; the host auth provider owns submissions, sessions, OAuth and safe redirects.",
+    "global": "Header/footer mounted through cms_globals; site menu, logo, contact data are references, not global hardcoded IAM data.",
+    "showcase": "Four sections share visual tokens but are independently editable; five vignette cards are repeatable blocks.",
+    "mode_lab": "Do not install lab shell; extract nine named loading patterns and mode palette.",
+    "globe": "Unpacked D3/TopoJSON resource into independently licensed dependencies; the original one-file bundler is not a reusable runtime."
+  }
+}

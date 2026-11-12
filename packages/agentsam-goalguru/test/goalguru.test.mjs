@@ -32,7 +32,7 @@ test('GoalGuru renders independently of Local Studio in a server-side React host
     request: async () => Response.json({ goals: [], steps: [], ticketLinks: [] }),
     mode: 'page',
   }));
-  assert.match(html, /AgentSam GoalGuru/);
+  assert.match(html, />Goals<\/h2>/);
   assert.match(html, /data-goalguru/);
   assert.match(html, /data-mode="page"/);
 });

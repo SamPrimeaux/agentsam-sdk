@@ -10,6 +10,7 @@ import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
 import { WorkSurfaceBar } from '@/components/workbench/work-surface-bar';
 import { SidePanelToggle } from './AgentSamShell';
+import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { useActiveCompanion } from './CompanionContext';
 import { companionStateAsset } from './companions';
 import { SplitHandle } from '@/components/shell/split-handle';

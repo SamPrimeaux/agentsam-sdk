@@ -122,7 +122,25 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'identity', summary: 'Identity portal, providers, protocol surfaces', topic: 'create', skill: 'agentsam-app-fundamentals' },
   { id: 'scaffold', summary: 'Generate CMS or worker-api starter', topic: 'create', skill: 'agentsam-jr-dev' },
   { id: 'run', aliases: ['runs'], summary: 'Inspect and control AgentSam runs across local or hosted control planes', topic: 'work', skill: 'agentsam-app-fundamentals' },
-  { id: 'goap', summary: 'GOAP blackboard status/plan', topic: 'inside', skill: 'agentsam-app-fundamentals' },
+  { id: 'goals', aliases: ['goal'], summary: 'List and manage shared account goals', topic: 'inside', skill: 'agentsam-app-fundamentals',
+    usage: [
+      'agentsam goals list [--json]',
+      'agentsam goals set "<title>" [--personal] [--description "<text>"]',
+      'agentsam goals status <goal-id> <active|paused|completed>',
+      'agentsam goals step <goal-id> "<title>"',
+      'agentsam goals link <goal-id> <ticket-id>',
+    ],
+  },
+  { id: 'goap', summary: 'Inspect local GOAP and manage shared repository goals', topic: 'inside', skill: 'agentsam-app-fundamentals',
+    usage: [
+      'agentsam goap [status|goal] [--shared] [--json]',
+      'agentsam goap [why|plan] [--json]',
+      'agentsam goap list [--json]',
+      'agentsam goap new "<title>" [--priority P1] [--subsystem <name>]',
+      'agentsam goap switch <ticket-id>',
+      'agentsam goap close [ticket-id] [--status shipped|abandoned|blocked]',
+    ],
+  },
   { id: 'app', aliases: ['apps'], summary: 'Bundled AgentSam apps launcher', topic: 'create', skill: 'agentsam-app-fundamentals' },
 ]);
 

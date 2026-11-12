@@ -597,7 +597,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'plugins', label: 'Plugins', icon: <Plug />, onSelect: () => go('/settings/integrations') },
       { id: 'files', label: 'View files in conversation', icon: <Files />, separatorBefore: true, onSelect: () => { state.openSideTab('files'); state.setSideOpen(true); } },
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
-      { id: 'living-goals', label: 'AgentSam GoalGuru', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
+      { id: 'living-goals', label: 'Goals', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
       // Installed apps are projected from the host's real app catalog. Tabs such
       // as Terminal and Code are workspace panels, not fake installed packages.
       { id: 'installed-apps', label: 'Installed apps', icon: <Layers3 />, children: [

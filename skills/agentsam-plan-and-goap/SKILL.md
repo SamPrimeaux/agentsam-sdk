@@ -31,8 +31,21 @@ agentsam plan next --json      # the next step; add --start only to begin it
 agentsam goap                  # blackboard: active task, world snapshot, knowledge freshness
 ```
 
-`agentsam goap` also prints `Updated:` and whether knowledge is `stale`. If state is old or
+The project-local GOAP view prints freshness when a local plan is available. If state is old or
 stale, say so before relying on it. Re-indexing is heavy: do it only when asked.
+
+### Shared Goals and GOAP
+
+```bash
+agentsam goals list --json
+agentsam goap status --shared --json
+```
+
+`agentsam goals set "<title>"` creates an account-owned Work goal that appears in Studio.
+`agentsam goap new "<title>"` creates and focuses a GOAP ticket in the registered GitHub
+repository. Studio shows that same ticket and its current status in Goals. Link it to an
+account goal with `agentsam goals link <goal-id> <ticket-id>` when the ticket advances that goal.
+The shared commands use the AgentSam login session.
 
 ## 2. Lifecycle commands
 
