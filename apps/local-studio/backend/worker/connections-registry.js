@@ -118,7 +118,10 @@ export function safePluginSettingsRecord(plugin, tools = []) {
 
 export async function loadConnectionsRegistry(env, userId) {
   const [cloudflareRow, secretsResult, oauthRecords, repositories, oauthTokenRows] = await Promise.all([
-    loadCloudflareConnectionRecord(env, userId),
+    loadCloudflareConnectionRecord(env, userId).catch(error=>{
+      console.warn('cloudflare_connection_status_unavailable',String(error?.message||error).slice(0,120));
+      return null;
+    }),
     env.DB.prepare(
       `SELECT id, secret_name, service_name, description, metadata_json,
               last_used_at, usage_count, created_at, updated_at
@@ -149,12 +152,20 @@ export async function loadConnectionsRegistry(env, userId) {
     userId,
   );
   const oauthConnected = cloudflare.status === "connected";
+  // Cloudflare health/registration must not blank other installed plugins.
+  // The account registry is the read authority; this optional probe is not.
   await materializeCloudflarePlugin(env, userId, {
     connected: oauthConnected,
     available: cloudflare.configured,
     checkSource: "page_load",
+  }).catch(error => {
+    console.warn("cloudflare_plugin_probe_unavailable",String(error?.message||error).slice(0,120));
   });
-  const allSideStages = await listAccountSideStages(env.DB, userId, {includeDisabled:true});
+  const allSideStages = await listAccountSideStages(env.DB, userId, {includeDisabled:true})
+    .catch(error=>{
+      console.warn('side_stage_projection_unavailable',String(error?.message||error).slice(0,120));
+      return [];
+    });
   const sideStages = allSideStages.filter(stage => stage.enabled);
   const pluginRegistry = await loadPluginRegistry(env, userId, { includeDisabled: true });
   pluginRegistry.plugins = pluginRegistry.plugins.map((row) => applyOauthPluginState(row, oauthTokenRows));
@@ -162,11 +173,17 @@ export async function loadConnectionsRegistry(env, userId) {
   const nativeSideStage = row =>
     row.family_key === 'core' && row.plugin_kind === 'native' &&
     row.metadata?.side_stage?.renderer === 'builtin';
+  // Admin applications belong in Settings → Apps even when both surfaces
+  // are backed by the same agentsam_plugins catalog. Do not count them as
+  // installed external plugins or executable tools.
+  const nativeAdminApp = row => row.plugin_kind === 'native' &&
+    Array.isArray(row.metadata?.app?.surfaces) &&
+    row.metadata.app.surfaces.includes('admin-nav');
   const settingsPlugins = pluginRegistry.plugins
-    .filter((row) => (row.settings_visible === 1 || row.settings_visible === true) && !nativeSideStage(row))
+    .filter((row) => (row.settings_visible === 1 || row.settings_visible === true) && !nativeSideStage(row) && !nativeAdminApp(row))
     .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
   const composerPlugins = pluginRegistry.plugins
-    .filter((row) => (row.composer_visible === 1 || row.composer_visible === true) && !nativeSideStage(row))
+    .filter((row) => (row.composer_visible === 1 || row.composer_visible === true) && !nativeSideStage(row) && !nativeAdminApp(row))
     .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
 
   const latestByProvider = new Map();

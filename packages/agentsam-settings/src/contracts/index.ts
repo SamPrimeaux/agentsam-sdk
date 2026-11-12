@@ -245,7 +245,14 @@ export type SettingsDiscoveredPlugin = {
   healthStatus: string;
   availability: 'available' | 'requires_connection' | 'connected';
 };
+export type SettingsPlatformPlugin = {
+  pluginKey:string;name:string;description:string;kind:string;category:string;
+  provider:string;version:string;capabilities:string[];
+  installed:boolean;enabled:boolean;setupStatus:string;
+  surface:'side_stage'|'app'|'integration';readiness:'tools_registered'|'definition_only';
+};
 export type SettingsPluginDiscovery = {
+  platformPlugins?: SettingsPlatformPlugin[];
   plugins: SettingsDiscoveredPlugin[];
   errors: { source: string; reason: string }[];
   configuredSources: number;

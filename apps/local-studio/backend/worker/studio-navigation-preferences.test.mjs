@@ -140,3 +140,29 @@ test('installed-app reconciliation rejects unsafe metadata without creating navi
   assert.deepEqual(payload.apps.map(app=>app.id),['cad-creator','plugin-a']);
   assert.equal(defaults.apps.length,1);
 });
+
+test('account app removal hides optional static host nav without affecting core apps',()=>{
+  const base={...defaults,apps:[
+    {id:'local-studio',label:'AgentSam',href:'/admin/agentsam'},
+    {id:'cad-creator',label:'CAD Creator',href:'/admin/cad',aliases:['/cad']},
+  ]};
+  const catalog=[{key:'agentsam-stage-cad',label:'CAD Creator',href:'/cad',kind:'app',installable:true,
+    installed:false,enabled:false,surfaces:['admin-nav']}];
+  assert.deepEqual(withInstalledApps(base,catalog).apps.map(app=>app.id),['local-studio']);
+  const restored=withInstalledApps(base,[{...catalog[0],installed:true,enabled:true}]);
+  assert.deepEqual(restored.apps.map(app=>app.id),['local-studio','cad-creator']);
+  assert.equal(base.apps.length,2);
+});
+
+test('unregistered ecommerce tools never masquerade as installed admin Apps',()=>{
+  const base={...defaults,apps:[
+    {id:'local-studio',label:'AgentSam',href:'/admin/agentsam'},
+    {id:'completeful',label:'Completeful',href:'/admin/products/create?app=completeful',provenance:'ecommerce-bundled-manifest'},
+    {id:'resend',label:'Email',href:'/admin/email',provenance:'ecommerce-bundled-manifest'},
+    {id:'growth',label:'Growth',href:'/admin/growth',provenance:'ecommerce-bundled-manifest'},
+  ]};
+  const installed=[{key:'agentsam-app-growth',label:'Growth',href:'/admin/growth',kind:'app',installable:true,
+    installed:true,enabled:true,surfaces:['admin-nav']}];
+  assert.deepEqual(withInstalledApps(base,installed).apps.map(row=>row.id),['local-studio','growth']);
+  assert.deepEqual(withInstalledApps(base,[{...installed[0],installed:false}]).apps.map(row=>row.id),['local-studio']);
+});

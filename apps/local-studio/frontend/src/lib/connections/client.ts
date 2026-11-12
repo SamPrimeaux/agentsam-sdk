@@ -348,6 +348,7 @@ export type LocalStudioDiscoveredPlugin = {
 };
 
 export type PluginDiscoveryResponse = {
+  platformPlugins?: import('@inneranimalmedia/agentsam-settings/contracts').SettingsPlatformPlugin[];
   ok?: boolean;
   schema: string;
   plugins: LocalStudioDiscoveredPlugin[];

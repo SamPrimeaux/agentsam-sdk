@@ -787,6 +787,13 @@ function PluginCustomizeView({
         .some(value => value.toLowerCase().includes(needle)))
     ));
   }, [discovered, activeCategory, searchTerm]);
+  const platformDefaults = useMemo(() => {
+    const needle=searchTerm.trim().toLowerCase();
+    return (catalog?.platformPlugins||[]).filter(plugin=>
+      !needle || [plugin.name,plugin.pluginKey,plugin.kind,plugin.category,plugin.description,
+        plugin.provider,...plugin.capabilities].some(text=>text.toLowerCase().includes(needle))
+    );
+  },[catalog,searchTerm]);
   const filteredInstalled = useMemo(() => {
     const needle = searchTerm.trim().toLowerCase();
     return plugins.filter(plugin => !needle || [
@@ -848,10 +855,10 @@ function PluginCustomizeView({
         setCatalogError("Some configured plugin catalogs are unavailable. Existing installations are unaffected.");
       }
       if (!result.configuredSources) {
-        setCatalogError("No trusted plugin catalogs are configured for this host.");
+        setCatalogError("No external plugin directory is configured. Platform definitions remain available below.");
       }
     } catch {
-      setCatalogError("Plugin discovery is unavailable. Installed plugins are still accessible.");
+      setCatalogError("External plugin discovery is unavailable. Existing account installations are unchanged.");
     } finally {
       setLoading(false);
     }
@@ -1046,7 +1053,7 @@ function PluginCustomizeView({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-baseline gap-2">
               <h3 className="text-[14px] font-semibold">Installed</h3>
-              <span className="text-[11px] text-muted-foreground">{plugins.length}</span>
+              <span className="text-[11px] text-muted-foreground">{pluginsError?"Not verified":plugins.length}</span>
             </div>
             <div className="flex items-center gap-1">
               <button type="button" onClick={()=>{setDirectoryTab("personal");setSearchTerm("");}}
@@ -1090,7 +1097,7 @@ function PluginCustomizeView({
                 onClick={()=>setDirectoryTab(tab)}
                 className={cx("min-h-9 rounded-lg px-4 text-[12px] font-medium transition-colors",
                   directoryTab===tab?"bg-background text-foreground shadow-sm ring-1 ring-border/70":"text-muted-foreground hover:text-foreground")}>
-                {tab==="public"?"Public":"Personal"}
+                {tab==="public"?"Browse directory":"My plugins"}
               </button>
             ))}
           </div>
@@ -1144,10 +1151,31 @@ function PluginCustomizeView({
                   </div>
                 ) : (
                   <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-[12px] text-muted-foreground">
-                    {catalog?.plugins.length ? "No plugins match these filters." : "No discoverable plugins available from configured catalogs."}
+                    {catalog?.plugins.length ? "No plugins match these filters." : "No external plugins are available; see registered platform defaults below."}
                     {(searchTerm || activeCategory!=="all") ? <button type="button" onClick={()=>{setSearchTerm("");setActiveCategory("all");}} className="ml-2 underline underline-offset-4">Clear filters</button>:null}
                   </p>
                 )}
+              <section className="mt-6 space-y-3 border-t border-border/70 pt-5" aria-label="Platform plugin defaults">
+                <div><h3 className="text-[15px] font-semibold">Platform defaults <span className="text-[11px] font-normal text-muted-foreground">({catalog?.platformPlugins?.length||0})</span></h3>
+                <p className="mt-1 text-[11px] leading-5 text-muted-foreground">Registered first-party capabilities, including unfinished integrations. Being listed does not install a plugin, grant permissions, or prove a tool works.</p></div>
+                {platformDefaults.length ? <div className="divide-y divide-border/65 overflow-hidden rounded-xl border border-border/70">
+                  {platformDefaults.map(plugin=><details key={plugin.pluginKey} className="group px-3.5 py-3 open:bg-muted/10">
+                    <summary className="flex cursor-pointer list-none items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/20">{iconFor({name:plugin.name},"size-4")}</span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-medium">{plugin.name}</span>
+                      <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{plugin.provider} · {plugin.kind} · {plugin.surface.replace('_',' ')}</span></span>
+                      <span className="text-[10px] text-muted-foreground">{plugin.surface==='side_stage'?(plugin.enabled?'Side Stage on':'Side Stage off'):plugin.installed?(plugin.enabled?'Installed':'Disabled'):'Not installed'}</span>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"/>
+                    </summary>
+                    <div className="ml-12 mt-3 space-y-2 text-[11px] leading-5 text-muted-foreground">
+                      <p>{plugin.description || "Registered capability awaiting a complete product description."}</p>
+                      <p>Key: <code className="text-foreground">{plugin.pluginKey}</code> · Version: {plugin.version} · {plugin.readiness==='tools_registered'?"Tools registered":"Definition only — tool execution not verified"}</p>
+                      {plugin.capabilities.length?<p>Declared: {plugin.capabilities.join(', ')}</p>:null}
+                      <p>{plugin.surface==='app'?"Open Apps to install or manage this application.":plugin.surface==='side_stage'?"Configure this panel in Side Stage; independent app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
+                    </div>
+                  </details>)}
+                </div>:<p className="text-[11px] text-muted-foreground">{catalog?"No platform capabilities match this search.":"Loading registered platform capabilities…"}</p>}
+              </section>
               <p className="text-[11px] leading-5 text-muted-foreground">Installing a catalog plugin records it in this account. OAuth authorization, tool registration and verified connection health are separate requirements before MCP tools can execute.</p>
             </div>
           ) : (

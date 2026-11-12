@@ -12,4 +12,4 @@ export { NavMenu, NavMenuItem, NavMenuButton, NavMenuSub, NavMenuSubButton, NavM
 export { NavCollapsible, NavCollapsibleTrigger, NavCollapsibleContent } from './NavCollapsible.js';
 export { NavTrigger } from './NavTrigger.js';
 
-export { AdminAppsDialog, type AdminAppsDialogProps, type AdminInstallableApp } from './AdminAppsDialog.js';
+export { AdminAppsDialog, AdminAppsDirectory, type AdminAppsDialogProps, type AdminAppsDirectoryProps, type AdminInstallableApp } from './AdminAppsDialog.js';

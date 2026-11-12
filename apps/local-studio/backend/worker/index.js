@@ -79,7 +79,7 @@ import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.
 import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
 import { handleStudioNavigation } from "./studio-navigation-preferences.js";
-import { listLauncherApps, installNativeAdminApp } from "./apps-launcher.js";
+import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled } from "./apps-launcher.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleStudioContentMediaApi } from "./content-media-api.js";
@@ -1519,7 +1519,8 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       }
     }
     if (isAppsInstall) {
-      if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
+      if (!["POST","DELETE","PATCH"].includes(request.method))
+        return json({ok:false,error:"method_not_allowed"},405,{allow:"POST, DELETE, PATCH"});
       const userId = await sessionUser();
       if (!userId) return json({ok:false,error:"unauthorized"},401);
       if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
@@ -1527,15 +1528,24 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
         return json({ok:false,error:"json_content_type_required"},415);
       const body = await request.json().catch(()=>null);
+      const allowed = request.method==="PATCH" ? ["key","enabled"] : ["key"];
       if (!body || typeof body !== "object" || Array.isArray(body) ||
-          Object.keys(body).length !== 1 || typeof body.key !== "string")
+          Object.keys(body).length !== allowed.length ||
+          Object.keys(body).some(key=>!allowed.includes(key)) ||
+          typeof body.key !== "string" ||
+          (request.method==="PATCH" && typeof body.enabled !== "boolean"))
         return json({ok:false,error:"app_install_request_invalid"},400);
-      try { return json({ok:true,...await installNativeAdminApp(env.DB,userId,body.key)},201); }
-      catch (error) {
+      try {
+        const result = request.method==="POST" ? await installNativeAdminApp(env.DB,userId,body.key)
+          : request.method==="DELETE" ? await removeNativeAdminApp(env.DB,userId,body.key)
+          : await setNativeAdminAppEnabled(env.DB,userId,body.key,body.enabled);
+        return json({ok:true,...result},request.method==="POST"?201:200);
+      } catch (error) {
         const code=String(error?.message||"app_install_failed");
         return json({ok:false,error:code.slice(0,120)},
-          code==="app_install_not_found"?404:code==="app_install_not_supported"?409:
-          code==="app_install_key_invalid"?400:503);
+          code==="app_install_not_found"||code==="app_not_installed"?404:
+          code==="app_install_not_supported"?409:
+          code==="app_install_key_invalid"||code==="app_enabled_invalid"?400:503);
       }
     }
     if (isPluginCatalog) {

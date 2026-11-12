@@ -181,13 +181,49 @@ export async function discoverPublicPlugins(env, requestFetch = fetch) {
   };
 }
 
+export function projectPlatformPluginDefinitions(rows, tools = []) {
+  return (Array.isArray(rows)?rows:[]).map(row=>{
+    let metadata={},capabilities=[];
+    try{metadata=JSON.parse(row.metadata_json||'{}');}catch{}
+    try{const parsed=JSON.parse(row.capabilities_json||'[]');if(Array.isArray(parsed))capabilities=parsed.filter(x=>typeof x==='string').slice(0,24);}catch{}
+    const installedCount=Number(row.installations||0);
+    const isStage=metadata?.side_stage?.renderer==='builtin';
+    return {
+      pluginKey:row.plugin_key,name:row.display_name,description:row.description||'',
+      kind:row.plugin_kind,category:row.category,provider:row.provider_key,
+      version:row.version,capabilities,installed:installedCount>0,
+      enabled:Number(row.enabled)===1,setupStatus:row.setup_status||'not_installed',
+      surface:isStage?'side_stage':metadata?.app?'app':'integration',
+      // 'declared' is NOT the same as a verified executable tool or healthy connection.
+      readiness:tools.some(tool=>tool.plugin_key===row.plugin_key)?'tools_registered':'definition_only',
+    };
+  });
+}
+
 export async function listCatalogForAccount(env, accountId, fetcher = fetch) {
   const [catalog, installed] = await Promise.all([
-    discoverPublicPlugins(env,fetcher),
+    discoverPublicPlugins(env,fetcher).catch(error=>({
+      schema:CATALOG_SCHEMA,plugins:[],configuredSources:0,
+      errors:[{source:'external',reason:'catalog_unavailable'}],
+    })),
     loadPluginRegistry(env,accountId,{includeDisabled:true}),
   ]);
   const byKey = new Map(installed.plugins.map(row=>[row.plugin_key,row]));
+  // Platform definitions are authoritative catalog entries, whether or not
+  // this account has installed them. Do not fabricate an OAuth grant or tool.
+  const registryRows = await env.DB.prepare(`
+    SELECT p.plugin_key,p.display_name,p.description,p.plugin_kind,p.category,
+           p.version,p.provider_key,p.capabilities_json,p.metadata_json,
+           SUM(CASE WHEN i.id IS NOT NULL THEN 1 ELSE 0 END) AS installations,
+           MAX(CASE WHEN i.enabled=1 THEN 1 ELSE 0 END) AS enabled,
+           MAX(CASE WHEN i.enabled=1 THEN i.setup_status ELSE NULL END) AS setup_status
+    FROM agentsam_plugins p
+    LEFT JOIN agentsam_plugin_installations i ON i.plugin_id=p.id AND i.account_id=?
+    GROUP BY p.id ORDER BY p.sort_priority,p.display_name
+  `).bind(accountId).all();
+  const platformPlugins=projectPlatformPluginDefinitions(registryRows?.results||[],installed.tools);
   return {
+    platformPlugins,
     ...catalog,
     plugins: catalog.plugins.map(plugin=>{
       const row = byKey.get(plugin.pluginKey);

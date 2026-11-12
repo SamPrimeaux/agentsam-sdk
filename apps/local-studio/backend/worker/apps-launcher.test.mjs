@@ -34,9 +34,9 @@ test("apps launcher uses account-scoped installations and distinct installed/ena
   assert.match(db.state.query, /i\.account_id = \?/);
   assert.match(db.state.query, /GROUP BY p\.id/);
   assert.deepEqual(apps.map(row => [row.key, row.installed, row.enabled]),
-    [["campaign",true,true],["disabled",true,false],["available",false,false]]);
-  assert.deepEqual(apps[0].surfaces, ["admin-nav","add-apps"]);
-  assert.equal(apps[2].setup_status, "not_installed");
+    [["campaign",true,true],["disabled",true,false]]);
+  assert.deepEqual(apps[0].surfaces, ["admin-nav"]);
+  assert.match(db.state.query, /p\.plugin_kind = 'native'/);
 });
 
 test("apps launcher ignores unsupported surfaces and unsafe metadata", async () => {
