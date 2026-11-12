@@ -148,6 +148,7 @@ function renderHelp(options = {}) {
   Usage:
     agentsam mcp create <name> [--preset <preset>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
+    agentsam mcp add browsermcp --client agentsam  Local Chrome extension MCP (Node 20+)
     agentsam mcp connect inneranimalmedia [--write]     Authorize resource-scoped MCP via existing IAM PKCE
     agentsam mcp list [--catalog|--bundles] [--json]
     agentsam mcp status [<name>] [--json]
@@ -365,9 +366,10 @@ export async function runMcp(argv = [], options = {}) {
     }
 
     const preset = resolveServerPreset(name, options);
+    const isStdio = preset?.protocol === 'stdio';
     const url = args.url || preset?.url;
 
-    if (!url) {
+    if (!isStdio && !url) {
       throw new Error(`missing_url: specify --url for custom MCP server "${name}" (or use a catalog name from: agentsam mcp list --catalog)`);
     }
 
@@ -383,13 +385,17 @@ export async function runMcp(argv = [], options = {}) {
       requestedClients = preset.defaultClients;
     }
 
+    if (isStdio && (args.url || args.token)) throw new Error('browsermcp_local_stdio_does_not_accept_url_or_token');
+    if (isStdio && requestedClients.includes('chatgpt')) throw new Error('stdio_mcp_requires_local_host');
+
     const cfBundle = getCloudflareMcpBundle(name);
     const packHint = args.pack || (cfBundle?.feature_packs || [])[0] || '';
 
     const serverConfig = {
       name,
-      url,
+      url: url || '',
       protocol: preset?.protocol || 'streamable_http',
+      ...(isStdio ? { command: preset.command, args: [...preset.args] } : {}),
       auth: args.token
         ? { type: preset?.auth_type === 'none' ? 'bearer' : (preset?.auth_type || 'bearer'), token: args.token }
         : null,
@@ -441,16 +447,18 @@ export async function runMcp(argv = [], options = {}) {
 
     write(`\n  ✓ Configured MCP server: ${name}\n`);
     write(`      Authority:   ~/.agentsam/mcp/${name}.json\n`);
-    write(`      URL:         ${url}\n`);
+    if (isStdio) write(`      Command:     ${serverConfig.command} ${serverConfig.args.join(' ')} (local only)\n`);
+    else write(`      URL:         ${url}\n`);
     write(`      Protocol:    ${serverConfig.protocol}\n`);
     for (const a of syncedAdapters) {
       write(`      Adapter:     ${a.client} -> ${a.configPath}\n`);
     }
     if (ping.ok) {
-      write(`      Ping:        ✓ Connected (${ping.latencyMs}ms${ping.transport ? `, ${ping.transport}` : ''})\n`);
+      write(`      Ping:        ${isStdio ? '✓ MCP initialized; browser approval unverified' : '✓ Connected'} (${ping.latencyMs}ms${ping.transport ? `, ${ping.transport}` : ''})\n`);
     } else {
       write(`      Ping:        ⚠ Warning (${ping.error || 'unreachable'})\n`);
     }
+    if (isStdio) write('      Pairing:     Compare the six-digit code in the Browser MCP extension and click Allow.\n');
     if (cfBundle) {
       write(`      CF packs:    ${(cfBundle.feature_packs || []).join(', ') || '(portal-hosted OAuth)'}\n`);
       write(`      Portal:      ${(cfBundle.portal_manage_scopes || []).join(', ')}\n`);
@@ -483,8 +491,9 @@ export async function runMcp(argv = [], options = {}) {
 
     const report = {
       name,
-      url: server.url,
+      url: server.url || null,
       protocol: server.protocol,
+      ...(server.protocol === 'stdio' ? { command: server.command, args: server.args, pairingStatus: 'unverified' } : {}),
       ping,
       clients: clientStatuses,
       hasAuth: Boolean(server.auth?.token),
@@ -497,9 +506,15 @@ export async function runMcp(argv = [], options = {}) {
     }
 
     write(`\n  MCP Server Status: ${name}\n`);
-    write(`      URL:       ${server.url}\n`);
-    write(`      Ping:      ${ping.ok ? `✓ Active (${ping.latencyMs}ms)` : `✗ Error: ${ping.error}`}\n`);
-    write(`      Auth:      ${report.hasAuth ? '✓ Bearer token present' : '○ No auth token'}\n`);
+    if (server.protocol === 'stdio') {
+      write(`      Local:     ${server.command} ${(server.args || []).join(' ')}\n`);
+      write(`      Server:    ${ping.ok ? 'Initialized (browser approval unverified)' : `Unavailable (${ping.error})`}\n`);
+      write('      Pairing:   Confirm the code in the Browser MCP extension.\n');
+    } else {
+      write(`      URL:       ${server.url}\n`);
+      write(`      Ping:      ${ping.ok ? `✓ Active (${ping.latencyMs}ms)` : `✗ Error: ${ping.error}`}\n`);
+      write(`      Auth:      ${report.hasAuth ? '✓ Bearer token present' : '○ No auth token'}\n`);
+    }
     for (const c of clientStatuses) {
       write(`      ${c.client}:    ${c.configured ? '✓ Configured' : '○ Not configured'} (${c.path})\n`);
     }
@@ -533,8 +548,9 @@ export async function runMcp(argv = [], options = {}) {
     const diagnostics = {
       name,
       authorityPath: `~/.agentsam/mcp/${name}.json`,
-      url: server.url,
-      connectivity: ping.ok ? 'pass' : 'fail',
+      url: server.url || null,
+      connectivity: ping.ok ? (server.protocol === 'stdio' ? 'server_initialized_pairing_unverified' : 'pass') : 'fail',
+      ...(server.protocol === 'stdio' ? { command: server.command, args: server.args, pairingStatus: 'unverified', pairingHint: 'Compare the six-digit code in the Browser MCP extension and click Allow.' } : {}),
       latencyMs: ping.latencyMs,
       transport: ping.transport || null,
       authConfigured: Boolean(server.auth?.token),
@@ -566,9 +582,9 @@ export async function runMcp(argv = [], options = {}) {
 
     write(`\n  AgentSam MCP Doctor · ${name}\n\n`);
     write(`  [1] Authority state:   ✓ Valid (~/.agentsam/mcp/${name}.json)\n`);
-    write(`  [2] Endpoint ping:     ${ping.ok ? `✓ Reachable (${ping.latencyMs}ms)` : `✗ Unreachable (${ping.error})`}\n`);
+    write(`  [2] ${server.protocol === 'stdio' ? 'Local process' : 'Endpoint ping'}:     ${ping.ok ? (server.protocol === 'stdio' ? '✓ MCP initialized; browser pairing not verified' : `✓ Reachable (${ping.latencyMs}ms)`) : `✗ Unavailable (${ping.error})`}\n`);
     write(`  [3] Catalog:           ${preset ? `${preset.auth_type} / ${preset.protocol}` : 'custom'}\n`);
-    write(`  [4] Auth credential:   ${diagnostics.authConfigured ? '✓ Token configured' : '○ Unauthenticated / public'}\n`);
+    write(`  [4] Auth credential:   ${server.protocol === 'stdio' ? 'Extension pairing (user approves locally)' : diagnostics.authConfigured ? '✓ Token configured' : '○ Unauthenticated / public'}\n`);
     write(`  [5] Tool discovery:    ${toolsProbe.count > 0 ? `✓ Found ${toolsProbe.count} tools` : '○ 0 tools discovered'}\n`);
     write(`  [6] Client adapters:\n`);
     for (const c of clientStatuses) {
