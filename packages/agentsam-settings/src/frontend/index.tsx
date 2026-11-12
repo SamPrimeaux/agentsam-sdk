@@ -3,6 +3,7 @@ import { SettingsBillingPanel } from "./billing";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
 import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
+import { CatalogRegistryView, type CatalogRegistryKind } from "./catalog-registry";
 import { BuiltinWidget } from "@inneranimalmedia/agentsam-workbench/widgets";
 export { SettingsThemeGallery } from "./themes";
 import {
@@ -2182,215 +2183,22 @@ function CustomizeView({
     </Section>;
   }
 
-  const map: Record<SettingsCatalogKind, SettingsCatalogItem[]> = {
-    plugins: snapshot.plugins,
+  const registries: Record<CatalogRegistryKind, SettingsCatalogItem[]> = {
     mcps: snapshot.mcps,
     skills: snapshot.skills,
-    subagents: snapshot.subagents,
     rules: snapshot.rules,
     commands: snapshot.commands,
     hooks: snapshot.hooks,
   };
-  const labels: Record<SettingsCatalogKind, string> = {
-    plugins: "Plugins",
-    mcps: "MCP servers",
-    skills: "Skills",
-    subagents: "Subagents",
-    rules: "Rules",
-    commands: "Commands",
-    hooks: "Hooks",
-  };
-  const kind = (view in map ? view : "plugins") as SettingsCatalogKind;
-  // Only Skills currently have verified create/update/delete persistence.
-  const canWrite = kind==="skills" && Boolean(host.upsertCatalogItem);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [draft, setDraft] = useState<{
-    id: string;
-    name: string;
-    subtitle: string;
-    meta: string;
-    status: HealthState;
-    content: string;
-  }>({ id: "", name: "", subtitle: "", meta: "", status: "unknown", content: "" });
-  const [formError,setFormError] = useState("");
-
-  function openAdd() {
-    setFormError("");
-    setDraft({ id: "", name: "", subtitle: "", meta: "", status: "unknown", content: "" });
-    setSheetOpen(true);
-  }
-
-  function openEdit(item: SettingsCatalogItem) {
-    setDraft({
-      id: item.id,
-      name: item.name,
-      subtitle: item.subtitle,
-      meta: item.meta ?? "",
-      status: item.status,
-      content: item.content || "",
-    });
-    setFormError("");
-    setSheetOpen(true);
-  }
-
-  async function save() {
-    if (!host.upsertCatalogItem) return;
-    const name = draft.name.trim();
-    if (!name) return;
-    const trigger = draft.meta.trim().toLowerCase();
-    if (kind==="skills" && (!/^\/[a-z0-9][a-z0-9-]{0,48}$/.test(trigger) || draft.content.trim().length<8)) {
-      setFormError("Skills need a valid /slash-trigger and instructions of at least eight characters.");
-      return;
-    }
-    const id = draft.id || `${kind}-${globalThis.crypto?.randomUUID?.() ?? Date.now().toString(36)}`;
-    try {
-      setFormError("");
-      await host.upsertCatalogItem(kind, {
-        id,name,subtitle:draft.subtitle.trim() || "Personal skill",
-        meta:trigger || undefined,trigger:kind==="skills"?trigger:undefined,
-        content:kind==="skills"?draft.content:undefined,status:draft.status,
-      });
-      await onChanged();
-      setSheetOpen(false);
-    }catch(error) {
-      setFormError(error instanceof Error ? error.message : "Unable to save this skill.");
-    }
-  }
-
-  async function remove() {
-    if (!draft.id || !host.removeCatalogItem) return;
-    try {
-      setFormError("");
-      await host.removeCatalogItem(kind,draft.id);
-      await onChanged();
-      setSheetOpen(false);
-    }catch(error) {
-      setFormError(error instanceof Error ? error.message : "Unable to remove this item.");
-    }
-  }
-
-  const singular = labels[kind].replace(/s$/, "");
-
+  const kind = (view in registries ? view : "skills") as CatalogRegistryKind;
   return (
-    <>
-      <Section
-        title={labels[kind]}
-        description={kind==="skills"
-          ? "Your account's saved skill instructions and slash commands. Select any skill to inspect or edit it."
-          : "Extensions from the current host and its configured registries."}
-        action={
-          <button
-            type="button"
-            onClick={openAdd}
-            disabled={!canWrite}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="size-3.5" />
-            Add
-          </button>
-        }
-      >
-        <Catalog items={map[kind]} onSelect={canWrite ? openEdit : undefined} />
-      </Section>
-
-      <SettingsSheet
-        open={sheetOpen}
-        title={draft.id ? `Edit ${singular}` : `Add ${singular}`}
-        description={kind==="skills" ? "Saved to your account in the existing skills registry." : "Saved through the Settings host."}
-        onClose={() => setSheetOpen(false)}
-      >
-        <div className="space-y-4">
-          <label className="block">
-            <span className="mb-1.5 block text-[11px] font-medium">Name</span>
-            <input
-              value={draft.name}
-              onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-              className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
-              placeholder={`New ${singular.toLowerCase()}`}
-              autoFocus
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-[11px] font-medium">Description</span>
-            <input
-              value={draft.subtitle}
-              onChange={(event) => setDraft((current) => ({ ...current, subtitle: event.target.value }))}
-              className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
-              placeholder="What this extension does"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-[11px] font-medium">{kind==="skills"?"Slash trigger":"Metadata"}</span>
-            <input
-              value={draft.meta}
-              onChange={(event) => setDraft((current) => ({ ...current, meta: event.target.value }))}
-              className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
-              placeholder={kind==="skills"?"/my-skill":"Package, endpoint, command, or source"}
-            />
-          </label>
-          {kind==="skills" ? (
-            <label className="block">
-              <span className="mb-1.5 block text-[11px] font-medium">Skill instructions</span>
-              <textarea
-                value={draft.content}
-                onChange={event=>setDraft(current=>({...current,content:event.target.value}))}
-                rows={14}
-                maxLength={40000}
-                className="w-full resize-y rounded-md border border-border bg-muted/20 px-3 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-violet-400"
-                placeholder="Describe the skill's purpose, inputs, steps and safeguards."
-              />
-              <span className="text-[10px] text-muted-foreground">Instructions persist under your signed-in account, not browser localStorage.</span>
-            </label>
-          ) : (
-          <label className="block">
-            <span className="mb-1.5 block text-[11px] font-medium">Status</span>
-            <select
-              value={draft.status}
-              onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value as HealthState }))}
-              className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
-            >
-              <option value="unknown">Unknown</option>
-              <option value="healthy">Healthy</option>
-              <option value="attention">Attention</option>
-              <option value="blocked">Blocked</option>
-            </select>
-          </label>
-          )}
-          {formError ? <p role="alert" className="rounded-lg border border-red-500/30 p-2 text-[11px] text-[var(--settings-danger-ink)]">{formError}</p> : null}
-
-          <div className="flex items-center justify-between border-t border-border/70 pt-4">
-            <div>
-              {draft.id && host.removeCatalogItem ? (
-                <button
-                  type="button"
-                  onClick={() => void remove()}
-                  className="h-8 rounded-md px-2.5 text-[10px] text-[var(--settings-danger-ink)] hover:bg-red-500/10"
-                >
-                  Delete
-                </button>
-              ) : null}
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setSheetOpen(false)}
-                className="h-8 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void save()}
-                disabled={!draft.name.trim()}
-                className="h-8 rounded-md bg-foreground px-3 text-[10px] font-medium text-background disabled:opacity-40"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      </SettingsSheet>
-    </>
+    <CatalogRegistryView
+      kind={kind}
+      items={registries[kind]}
+      access={snapshot.catalogAccess?.[kind]}
+      host={host}
+      onChanged={onChanged}
+    />
   );
 }
 
