@@ -8,7 +8,7 @@ export interface NavProject { id: string; name: string; pinned?: boolean; update
 export interface NavConversation { id: string; title: string; projectId?: string; pinned?: boolean; updatedAt?: number }
 export interface NavPinnedResource { id: string; title: string; kind: string; open?: string | null }
 export interface NavAccount { id: string; name: string; plan?: string; avatar?: string }
-export interface NavAction { id: string; label: string; icon?: ReactNode; disabled?: boolean; shortcut?: string; destructive?: boolean; separatorBefore?: boolean; children?: NavAction[]; onSelect?: () => void }
+export interface NavAction { id: string; label: string; icon?: ReactNode; disabled?: boolean; loading?: boolean; shortcut?: string; destructive?: boolean; separatorBefore?: boolean; children?: NavAction[]; onSelect?: () => void }
 export interface NavDestination { id: string; label: string; icon?: ReactNode; href?: string; onSelect?: () => void; active?: boolean; exact?: boolean; children?: NavDestination[]; /** Host-provided action displayed beside a destination; no implicit install or permission change. */ action?: { label: string; onSelect: () => void; disabled?: boolean } }
 export interface NavBreadcrumb { id: string; label: string; href?: string }
 
@@ -45,7 +45,11 @@ export interface NavValue {
     subagents?: Array<{ id: string; label: string; status?: string; onSelect?: () => void }>;
     outputs?: Array<string | { id: string; label: string; kind?: string; onSelect?: () => void }>;
     sources?: Array<string | { id: string; label: string; kind?: string; onSelect?: () => void }>;
+    /** Typed context actions for the Outputs plus button. */
+    outputActions?: NavAction[];
     onAddOutput?: () => void;
+    /** Typed context actions for the Sources plus button. */
+    sourceActions?: NavAction[];
     onAddSource?: () => void;
   };
   getProjectActions?: (project: NavProject) => NavAction[];
@@ -60,6 +64,8 @@ export interface NavValue {
   onPinConversation?: (id: string) => void;
   onRenameConversation?: (id: string, title: string) => void;
   onDeleteConversation?: (id: string) => void;
+  /** Archive persisted conversations; unavailable local chats remain outside this action. */
+  onArchiveConversation?: (id: string) => void;
   /** Persist the conversation/project association through the host's account or Work API. */
   onAssignConversationToProject?: (conversationId: string, projectId: string | null) => void;
   onPinProject?: (id: string) => void;

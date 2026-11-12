@@ -35,6 +35,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "node scripts/build.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
+    "preview:components": "node dev/build-preview.mjs",
+    "test:preview": "npm run preview:components && node dev/check-preview.mjs",
     "prepack": "npm run build"
   },
   "peerDependencies": {

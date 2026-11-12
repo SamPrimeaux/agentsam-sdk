@@ -2,7 +2,7 @@ import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type 
 import { createPortal } from 'react-dom';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Box, ChevronDown, FileCode2, FileImage, FileText, Files, Film, Folder, MessageSquare, MoreHorizontal, Palette, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
+import { Archive, Box, ChevronDown, ChevronRight, LoaderCircle, FileCode2, FileImage, FileText, Files, Film, Folder, MessageSquare, MoreHorizontal, Palette, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
 import { useNav } from './NavProvider.js';
 import { NavTrigger } from './NavTrigger.js';
 import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject, NavPinnedResource } from './contracts.js';
@@ -22,8 +22,8 @@ function MenuActions({ actions }: { actions: NavAction[] }) {
   return <>{actions.map((action) => <Fragment key={action.id}>
     {action.separatorBefore ? <Menu.Separator className="as-nav-menu-separator" /> : null}
     {action.children?.length
-      ? <Menu.Sub><Menu.SubTrigger className="as-nav-menu-row" disabled={action.disabled}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span><ChevronDown /></Menu.SubTrigger><Menu.Portal><Menu.SubContent asChild sideOffset={6} collisionPadding={12}><NavScope className="as-nav-popover"><MenuActions actions={action.children} /></NavScope></Menu.SubContent></Menu.Portal></Menu.Sub>
-      : <Menu.Item className="as-nav-menu-row" disabled={action.disabled || !action.onSelect} data-destructive={action.destructive || undefined} onSelect={action.onSelect}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span>{action.shortcut ? <kbd className="as-nav-shortcut">{action.shortcut}</kbd> : null}</Menu.Item>}
+      ? <Menu.Sub><Menu.SubTrigger className="as-nav-menu-row" disabled={action.disabled || action.loading} aria-busy={action.loading || undefined}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span>{action.loading ? <LoaderCircle className="as-nav-menu-spinner" aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}</Menu.SubTrigger><Menu.Portal><Menu.SubContent asChild sideOffset={6} collisionPadding={12}><NavScope className="as-nav-popover"><MenuActions actions={action.children} /></NavScope></Menu.SubContent></Menu.Portal></Menu.Sub>
+      : <Menu.Item className="as-nav-menu-row" disabled={action.disabled || action.loading || !action.onSelect} aria-busy={action.loading || undefined} data-destructive={action.destructive || undefined} onSelect={action.onSelect}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span>{action.loading ? <LoaderCircle className="as-nav-menu-spinner" aria-hidden="true" /> : action.shortcut ? <kbd className="as-nav-shortcut">{action.shortcut}</kbd> : null}</Menu.Item>}
   </Fragment>)}</>;
 }
 
@@ -76,33 +76,12 @@ export function NavBreadcrumbs() {
 
 export function NavProjectContext() {
   const { data } = useNav();
-  const [renaming, setRenaming] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const conversation = data.conversation;
-  const actions = conversation ? [...(data.getConversationActions?.(conversation) ?? data.conversationActions ?? [])] : [];
-  const add = (action: NavAction) => { if (!actions.some(item => item.id === action.id)) actions.push(action); };
-  if (conversation) {
-    if (data.onPinConversation) add({ id: 'pin', label: conversation.pinned ? 'Unpin chat' : 'Pin chat', icon: <Pin />, onSelect: () => data.onPinConversation?.(conversation.id) });
-    if (data.onRenameConversation) add({ id: 'rename', label: 'Rename', icon: <Pencil />, shortcut: 'R', onSelect: () => setRenaming(true) });
-    if (data.onAssignConversationToProject && data.projects?.length) {
-      add({ id: 'project', label: 'Add to project', icon: <Folder />, children: [
-        ...data.projects.map(project => ({ id: 'project-' + project.id, label: project.name, onSelect: () => data.onAssignConversationToProject?.(conversation.id, project.id) })),
-        ...(conversation.projectId ? [{ id: 'project-clear', label: 'Remove from project', separatorBefore: true, onSelect: () => data.onAssignConversationToProject?.(conversation.id, null) }] : []),
-      ] });
-    }
-    if (data.onDeleteConversation) add({ id: 'delete', label: 'Delete chat', icon: <Trash2 />, destructive: true, separatorBefore: true, onSelect: () => setDeleting(true) });
-  }
   if (!data.project && !conversation && data.breadcrumbs?.length) return <NavBreadcrumbs />;
   return <div className="as-nav-context">
     {data.project ? <><NavOverflowMenu label={data.project.name} actions={data.projectActions}><Folder /><span className="as-nav-project-name">{data.project.name}</span><ChevronDown /></NavOverflowMenu><span className="as-nav-separator">/</span></> : null}
-    {conversation && actions.length
-      ? <NavOverflowMenu id="active-conversation-title" label={conversation.title} actions={actions} align="start">
-          <span className="as-nav-title" title={conversation.title}>{conversation.title}</span><ChevronDown size={14} aria-hidden="true" />
-        </NavOverflowMenu>
-      : <span className="as-nav-title" title={conversation?.title}>{conversation?.title ?? data.brand?.name}</span>}
+    <span className="as-nav-title" title={conversation?.title}>{conversation?.title ?? data.brand?.name}</span>
     {data.mode ? <span className="as-nav-mode-label">· {data.mode === 'work' ? 'Work' : 'Chat'}</span> : null}
-    {conversation && data.onRenameConversation ? <RenameDialog open={renaming} onOpenChange={setRenaming} title="Rename conversation" value={conversation.title} onSave={title => data.onRenameConversation?.(conversation.id, title)} /> : null}
-    {conversation && data.onDeleteConversation ? <ConfirmDeleteDialog open={deleting} onOpenChange={setDeleting} title={conversation.title} onConfirm={() => data.onDeleteConversation?.(conversation.id)} /> : null}
   </div>;
 }
 
@@ -116,52 +95,70 @@ export function NavFilesResources() {
 export function NavPinnedSummary() {
   const { data } = useNav();
   const [open, setOpen] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [activeAdd, setActiveAdd] = useState<string | null>(null);
+  useEffect(() => { setOpen(false); setExpandedGroups({}); setActiveAdd(null); }, [data.conversation?.id]);
   const subagents = data.pinnedSummary?.subagents ?? [];
   const outputs = data.pinnedSummary?.outputs ?? [];
   const sources = data.pinnedSummary?.sources ?? [];
-  const item = (value: string | {id:string;label:string;kind?:string;onSelect?:()=>void}, index: number, group: string) => {
-    const entry = typeof value === 'string' ? {id:group+index,label:value,kind:group,onSelect:undefined} : value;
+  const item = (value: string | { id: string; label: string; kind?: string; onSelect?: () => void }, index: number, group: string) => {
+    const entry = typeof value === 'string' ? { id: group + index, label: value, kind: group, onSelect: undefined } : value;
     const Icon = group === 'sources' ? FileText : FileCode2;
     const contents = <><Icon size={16} aria-hidden="true"/><span className="as-nav-activity-item__title">{entry.label}</span>
       {entry.kind ? <small>{entry.kind}</small> : null}</>;
     return entry.onSelect ? <Menu.Item asChild key={entry.id}>
-      <button type="button" className="as-nav-activity-item" onClick={entry.onSelect} title={entry.label}>
-        {contents}
-      </button>
+      <button type="button" className="as-nav-activity-item" onClick={entry.onSelect} title={entry.label}>{contents}</button>
     </Menu.Item> : <div key={entry.id} className="as-nav-activity-item" title={entry.label}>{contents}</div>;
   };
-  const section = (title: string, entries: Array<string | {id:string;label:string;kind?:string;onSelect?:()=>void}>, group:string, add?:()=>void) =>
+  const addControl = (title: string, group: string, actions?: NavAction[], add?: () => void) => {
+    if (actions?.length) return <Menu.Item className="as-nav-activity-add"
+      aria-label={'Add ' + title.toLowerCase()} title={'Add ' + title.toLowerCase()}
+      aria-expanded={activeAdd === group}
+      onSelect={event => { event.preventDefault(); setActiveAdd(current => current === group ? null : group); }}>
+      <Plus size={16} aria-hidden="true"/>
+    </Menu.Item>;
+    return add ? <Menu.Item className="as-nav-activity-add"
+      aria-label={'Add ' + title.toLowerCase()} title={'Add ' + title.toLowerCase()} onSelect={add}>
+      <Plus size={16} aria-hidden="true"/>
+    </Menu.Item> : null;
+  };
+  const more = (group: string, count: number) => !expandedGroups[group] && count > 5
+    ? <Menu.Item asChild><button type="button" className="as-nav-activity-more" onClick={event => { event.preventDefault(); setExpandedGroups(prev => ({ ...prev, [group]: true })); }}>Show {count - 5} more</button></Menu.Item>
+    : null;
+  const section = (title: string, entries: Array<string | {id:string;label:string;kind?:string;onSelect?:()=>void}>, group: string, actions?: NavAction[], add?: () => void) =>
     <section className="as-nav-activity-section" aria-label={title}>
-      <div className="as-nav-activity-section-head"><span>{title}</span>
-        {add ? <Menu.Item asChild><button type="button" className="as-nav-activity-add" onClick={add} aria-label={'Add '+title.toLowerCase()} title={'Add '+title.toLowerCase()}><Plus size={16}/><span className="as-nav-icon-help" aria-hidden="true">{'Add '+title.toLowerCase()}</span></button></Menu.Item> : null}
-      </div>
-      {entries.length ? (showAll ? entries : entries.slice(0,5)).map((entry,index)=>item(entry,index,group))
+      <div className="as-nav-activity-section-head"><span>{title}</span>{addControl(title, group, actions, add)}</div>
+      {activeAdd === group && actions?.length ? <div className="as-nav-activity-add-actions" role="group" aria-label={title + ' actions'}>
+        <MenuActions actions={actions}/>
+      </div> : null}
+      {entries.length ? (expandedGroups[group] ? entries : entries.slice(0, 5)).map((entry, index) => item(entry, index, group))
         : <p className="as-nav-activity-empty">No {title.toLowerCase()} yet</p>}
-      {!showAll && entries.length > 5 ? <Menu.Item asChild><button type="button" className="as-nav-activity-more" onClick={(event)=>{event.preventDefault();setShowAll(true);}}>Show {entries.length - 5} more</button></Menu.Item> : null}
+      {more(group, entries.length)}
     </section>;
-  return <Menu.Root open={open} onOpenChange={(next)=>{setOpen(next); if(!next)setShowAll(false);}}>
+  return <Menu.Root open={open} onOpenChange={next => { setOpen(next); if (!next) { setExpandedGroups({}); setActiveAdd(null); } }}>
     <Menu.Trigger asChild><button type="button" className="as-nav-button as-nav-activity-trigger"
-      aria-label="Toggle Activity" title="Activity" aria-expanded={open} aria-pressed={open}>
-      <PinnedSummaryIcon /><span className="as-nav-icon-help" aria-hidden="true">Activity</span></button></Menu.Trigger>
+      aria-label="Toggle pinned summary" title="Sources and outputs" aria-expanded={open} aria-pressed={open}>
+      <PinnedSummaryIcon/><span className="as-nav-icon-help" aria-hidden="true">Sources and outputs</span></button></Menu.Trigger>
     <Menu.Portal><Menu.Content align="end" sideOffset={8} collisionPadding={12}>
       <NavScope className="as-nav-popover as-nav-summary-popover as-nav-activity-popover">
-      <Menu.Label className="as-nav-activity-title">Activity</Menu.Label>
-      <section className="as-nav-activity-section" aria-label="Subagents">
-        <div className="as-nav-activity-section-head"><span>Subagents</span><small>{subagents.length} used</small></div>
-        {subagents.length ? (showAll ? subagents : subagents.slice(0,5)).map((agent)=>
-          <Menu.Item asChild key={agent.id}><button type="button" className="as-nav-activity-item"
-            disabled={!agent.onSelect} onClick={agent.onSelect}>
-            <Users size={16} aria-hidden="true"/><span className="as-nav-activity-item__title">{agent.label}</span>
-            {agent.status ? <small>{agent.status}</small> : null}
-          </button></Menu.Item>)
-          : <p className="as-nav-activity-empty">No subagents used</p>}
-      </section>
-      <Menu.Separator className="as-nav-menu-separator"/>
-      {section('Outputs',outputs,'outputs',data.pinnedSummary?.onAddOutput)}
-      <Menu.Separator className="as-nav-menu-separator"/>
-      {section('Sources',sources,'sources',data.pinnedSummary?.onAddSource)}
-      </NavScope></Menu.Content></Menu.Portal>
+        <Menu.Label className="as-nav-activity-title">Sources &amp; outputs</Menu.Label>
+        {subagents.length ? <>
+          <section className="as-nav-activity-section" aria-label="Subagents">
+            <div className="as-nav-activity-section-head"><span>Subagents</span><small>{subagents.length} used</small></div>
+            {(expandedGroups.subagents ? subagents : subagents.slice(0, 5)).map(agent =>
+              <Menu.Item asChild key={agent.id}><button type="button" className="as-nav-activity-item" disabled={!agent.onSelect} onClick={agent.onSelect}>
+                <Users size={16} aria-hidden="true"/><span className="as-nav-activity-item__title">{agent.label}</span>
+                {agent.status ? <small>{agent.status}</small> : null}
+              </button></Menu.Item>)}
+            {more('subagents', subagents.length)}
+          </section>
+          <Menu.Separator className="as-nav-menu-separator"/>
+        </> : null}
+        {section('Outputs', outputs, 'outputs', data.pinnedSummary?.outputActions, data.pinnedSummary?.onAddOutput)}
+        <Menu.Separator className="as-nav-menu-separator"/>
+        {section('Sources', sources, 'sources', data.pinnedSummary?.sourceActions, data.pinnedSummary?.onAddSource)}
+      </NavScope>
+    </Menu.Content></Menu.Portal>
   </Menu.Root>;
 }
 
@@ -178,9 +175,35 @@ export function NavShareIcon() {
   </svg>;
 }
 
+/** One action contract for the topbar, fallback header, and independent consumers. */
 export function NavConversationActions() {
   const { data } = useNav();
-  return <NavOverflowMenu label="Conversation options" actions={data.conversationActions} />;
+  const [renaming, setRenaming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const conversation = data.conversation;
+  useEffect(() => { setRenaming(false); setDeleting(false); }, [conversation?.id]);
+  if (!conversation) return null;
+  const extras = data.getConversationActions?.(conversation) ?? data.conversationActions ?? [];
+  const actions: NavAction[] = [];
+  const add = (action: NavAction) => { if (!actions.some(item => item.id === action.id)) actions.push(action); };
+  if (data.onRenameConversation) add({ id: 'rename', label: 'Rename', icon: <Pencil />, onSelect: () => setRenaming(true) });
+  if (data.onPinConversation) add({ id: 'pin', label: conversation.pinned ? 'Unpin' : 'Pin', icon: <Pin />, onSelect: () => data.onPinConversation?.(conversation.id) });
+  extras.forEach((action, index) => add({ ...action, separatorBefore: action.separatorBefore || (index === 0 && actions.length > 0) }));
+  if (data.onArchiveConversation) add({ id: 'archive', label: 'Archive', icon: <Archive />, separatorBefore: true, onSelect: () => data.onArchiveConversation?.(conversation.id) });
+  else if (data.onDeleteConversation) add({ id: 'archive', label: 'Archive (save to account first)', icon: <Archive />, separatorBefore: true, disabled: true });
+  if (data.onDeleteConversation) add({ id: 'delete', label: 'Delete', icon: <Trash2 />, destructive: true, separatorBefore: !data.onArchiveConversation && !actions.some(item => item.id === 'archive'), onSelect: () => setDeleting(true) });
+  if (data.onAssignConversationToProject && data.projects?.length) add({
+    id: 'project', label: 'Move to project', icon: <Folder />, separatorBefore: true,
+    children: [
+      ...data.projects.map(project => ({ id: 'project-' + project.id, label: project.name, onSelect: () => data.onAssignConversationToProject?.(conversation.id, project.id) })),
+      ...(conversation.projectId ? [{ id: 'project-clear', label: 'Remove from project', separatorBefore: true, onSelect: () => data.onAssignConversationToProject?.(conversation.id, null) }] : []),
+    ],
+  });
+  return <>
+    <NavOverflowMenu id="active-conversation-actions" label="Conversation options" actions={actions} />
+    {data.onRenameConversation ? <RenameDialog open={renaming} onOpenChange={setRenaming} title="Rename conversation" value={conversation.title} onSave={title => data.onRenameConversation?.(conversation.id, title)} /> : null}
+    {data.onDeleteConversation ? <ConfirmDeleteDialog open={deleting} onOpenChange={setDeleting} title={conversation.title} onConfirm={() => data.onDeleteConversation?.(conversation.id)} /> : null}
+  </>;
 }
 
 export function NavShareButton() {
@@ -236,7 +259,7 @@ export function NavTopbar({
       <div className="as-nav-topbar-leading">{showNavigationTrigger ? <NavTrigger aria-label="Toggle sidebar" /> : null}{!startup ? contextSlot ?? <NavProjectContext /> : null}</div>
       {startup ? <div className="as-nav-topbar-center">{modeSlot ?? <NavModeSwitcher />}</div> : modeSlot}
       <NavTopbarSpacer />
-      <div className="as-nav-topbar-actions">{!startup ? <><NavShareButton /><NavPinnedSummary /></> : null}{rightSlot}{showAccount ? <NavAccountSwitcher /> : null}</div>
+      <div className="as-nav-topbar-actions">{!startup ? <><NavConversationActions /><NavShareButton /><NavPinnedSummary /></> : null}{rightSlot}{showAccount ? <NavAccountSwitcher /> : null}</div>
     </>}
   </NavScope>;
 }

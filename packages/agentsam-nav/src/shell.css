@@ -125,6 +125,12 @@
 .as-nav-menu-row { display: flex; align-items: center; gap: 10px; min-height: var(--nav-row-height); padding: 8px 10px; border-radius: var(--nav-radius); cursor: pointer; outline: none; }
 .as-nav-menu-row[data-highlighted] { background: var(--nav-selected); }
 .as-nav-menu-row[data-disabled] { opacity: .45; cursor: default; }
+.as-nav-menu-row:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: -2px; }
+.as-nav-menu-row[aria-busy="true"] { cursor: progress; }
+.as-nav-menu-spinner { width: 16px !important; height: 16px !important; animation: as-nav-spin 1s linear infinite; }
+.as-nav-activity-add-actions { border: 1px solid var(--nav-border); border-radius: var(--nav-radius); background: var(--nav-surface); padding: 4px; margin: 3px 0 9px; }
+.as-nav-activity-add[data-state="open"], .as-nav-activity-add[data-highlighted] { background: var(--nav-selected); color: var(--nav-text); }
+@keyframes as-nav-spin { to { transform: rotate(360deg); } }
 .as-nav-menu-row[data-destructive] { color: var(--nav-danger); }
 .as-nav-icon { display: grid; place-items: center; width: 18px; }
 .as-nav-avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--nav-selected); overflow: hidden; }
@@ -201,7 +207,7 @@
 .as-nav-mobile-drawer { position: fixed; z-index: 81; inset: 0 auto 0 0; display: flex; flex-direction: column; width: min(320px, 90vw); background: var(--nav-sidebar); }
 .as-nav-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 @keyframes as-nav-enter { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 767px) { .as-nav-topbar { padding: 0 8px; gap: 4px; } .as-nav-mode-label, .as-nav-share-label, .as-nav-project-name { display: none; } .as-nav-context { gap: 4px; } .as-nav-button { min-width: 44px; min-height: 44px; } .as-nav-menu-row { min-height: 44px; } .as-nav-topbar-center .as-nav-mode-switch button { padding-inline: 16px; } .as-nav-row-actions { display: flex; } }
+@media (max-width: 767px) { .as-nav-activity-add { width: 44px; height: 44px; } .as-nav-topbar { padding: 0 8px; gap: 4px; } .as-nav-mode-label, .as-nav-share-label, .as-nav-project-name { display: none; } .as-nav-context { gap: 4px; } .as-nav-button { min-width: 44px; min-height: 44px; } .as-nav-menu-row { min-height: 44px; } .as-nav-topbar-center .as-nav-mode-switch button { padding-inline: 16px; } .as-nav-row-actions { display: flex; } }
 @media (prefers-reduced-motion: reduce) { .as-nav-scope *, .as-nav-scope *::before { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
 /* Shared shell geometry, navigation feedback, and accessibility. */

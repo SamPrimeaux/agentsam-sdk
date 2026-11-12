@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import type { AgentRunMode } from '@inneranimalmedia/agentsam-contracts';
 
 export interface AgentComposerProps {
@@ -53,6 +53,9 @@ export function AgentComposer({
 }: AgentComposerProps) {
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Controlled draft changes (history restore, mode changes, attachments) must resize too.
+  useEffect(() => { resize(); }, [value, maxHeight]);
+
   function resize() {
     const el = areaRef.current;
     if (!el) return;
@@ -63,7 +66,7 @@ export function AgentComposer({
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     textareaProps?.onKeyDown?.(event);
     if (event.defaultPrevented) return;
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && !event.repeat) {
       event.preventDefault();
       if (!disabled && value.trim()) void onSend();
     }
@@ -99,7 +102,7 @@ export function AgentComposer({
         }}
         onKeyDown={onKeyDown}
       />
-      <div className={toolbarClassName}>
+      <div className={toolbarClassName} role="group" aria-label="Composer controls">
         {toolbarStart}
         <span style={{ flex: 1 }} />
         {toolbarEnd}

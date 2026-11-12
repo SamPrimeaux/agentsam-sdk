@@ -83,26 +83,49 @@ test('host search appears inside navigation only when a search capability is sup
 });
 
 
-test('active conversation title is the only action-menu trigger in the topbar', () => {
+test('active conversation has one shared Chat Actions trigger beside public link and summary', () => {
   const conversation = { id: 'chat-1', title: 'Editable thread title', pinned: false, projectId: null };
   const html = renderToString(React.createElement(Nav.Provider, {
     value: {
       conversation, projects: [{ id: 'project-1', name: 'Studio project' }],
-      onPinConversation: () => {}, onRenameConversation: () => {},
+      onPinConversation: () => {}, onRenameConversation: () => {}, onArchiveConversation: () => {},
       onDeleteConversation: () => {}, onAssignConversationToProject: () => {},
-      onShare: () => {},
+      onShare: () => {}, pinnedSummary: { outputs: [], sources: [] },
     },
   }, React.createElement(Nav.Topbar)));
-  assert.match(html, /aria-label="Editable thread title"/);
   assert.match(html, /title="Editable thread title"/);
-  assert.doesNotMatch(html, /aria-label="Conversation options"/, 'no duplicate top-right action menu');
+  assert.doesNotMatch(html, /aria-label="Editable thread title"/, 'title is not another action menu');
+  assert.equal((html.match(/aria-label="Conversation options"/g) || []).length, 1);
   assert.match(html, /aria-label="Create a public link"/);
+  assert.match(html, /aria-label="Toggle pinned summary"/);
   const source = readNavSource();
-  assert.match(source, /label: 'Add to project'/);
+  assert.match(source, /label: 'Move to project'/);
   assert.match(source, /label: 'Rename'/);
-  assert.match(source, /label: 'Delete chat'/);
+  assert.match(source, /label: 'Archive'/);
+  assert.match(source, /label: 'Delete'/);
   assert.match(source, /ConfirmDeleteDialog/);
 });
+
+test('resource summary offers host-configured plus actions without installing a registry', () => {
+  const html = renderToString(React.createElement(Nav.Provider, {
+    value: { pinnedSummary: { outputs: [{id:'doc',label:'Existing document'}], sources: [],
+      outputActions: [{id:'create-site',label:'Create site',onSelect:()=>{}}],
+      sourceActions: [{id:'browse-files',label:'Browse files',onSelect:()=>{}}] } },
+  }, React.createElement(Nav.PinnedSummary)));
+  assert.match(html, /aria-label="Toggle pinned summary"/);
+  const source = readNavSource();
+  assert.match(source, /data\.pinnedSummary\?\.outputActions/);
+  assert.match(source, /data\.pinnedSummary\?\.sourceActions/);
+  assert.match(source, /className="as-nav-activity-add-actions"/);
+});
+
+test('menu actions expose loading/disabled state through Radix instead of fake callbacks', () => {
+  const source = readNavSource();
+  assert.match(source, /disabled=\{action\.disabled \|\| action\.loading \|\| !action\.onSelect\}/);
+  assert.match(source, /aria-busy=\{action\.loading \|\| undefined\}/);
+  assert.match(source, /collisionPadding=\{12\}/);
+});
+
 function readNavSource() {
   return readFileSync(new URL('../src/Surfaces.tsx', import.meta.url), 'utf8');
 }

@@ -1,0 +1,25 @@
+html, body { margin:0; min-height:100%; background:#161616; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+#component-preview { min-height:100vh; }
+.preview-shell { min-height:100vh; background:var(--nav-canvas); }
+.preview-top { display:flex; align-items:center; justify-content:space-between; padding:12px clamp(16px,4vw,52px); border-bottom:1px solid var(--nav-border); background:var(--nav-sidebar); }
+.preview-brand { font-weight:600; letter-spacing:-.025em; }
+.preview-tag { color:var(--nav-muted); font-size:var(--nav-meta-size); }
+.preview-topbar { padding-inline:clamp(16px,4vw,52px); background:var(--nav-canvas); }
+.preview-body { max-width:840px; margin:0 auto; padding:clamp(16px,4vw,48px); display:grid; gap:22px; }
+.preview-settings h1 { font-size:24px; letter-spacing:-.04em; margin:0 0 12px; }
+.preview-settings p, .preview-card p { margin:0; color:var(--nav-muted); line-height:1.55; max-width:65ch; }
+.preview-options { display:flex; gap:8px; flex-wrap:wrap; margin-top:20px; }
+.preview-control { background:var(--nav-surface); color:var(--nav-text); border:1px solid var(--nav-border); border-radius:var(--nav-radius); padding:9px 12px; }
+.preview-control:hover,.preview-control[aria-pressed="true"] { background:var(--nav-selected); }
+.preview-card { border:1px solid var(--nav-border); padding:clamp(16px,3vw,24px); border-radius:var(--nav-menu-radius); background:var(--nav-sidebar); display:grid; gap:16px; }
+.preview-card h2 { margin:0; font-size:16px; letter-spacing:-.02em; }
+.preview-composer { border:1px solid var(--nav-border); border-radius:16px; background:var(--nav-surface); padding:14px; display:grid; gap:12px; transition:border-color 120ms; }
+.preview-composer:focus-within { border-color:var(--nav-accent); }
+.preview-composer-input { display:block; width:100%; min-height:52px; max-height:220px; resize:none; background:transparent; border:0; outline:0; color:var(--nav-text); font:inherit; }
+.preview-composer-toolbar { display:flex; align-items:center; gap:8px; }
+.preview-effort { display:flex; align-items:center; gap:5px; color:var(--nav-muted); font-size:12px; }
+.preview-effort select { background:var(--nav-surface); color:var(--nav-text); border:1px solid var(--nav-border); border-radius:8px; padding:6px; }
+.preview-send { border:0; border-radius:8px; color:#fff; background:var(--nav-accent); padding:8px 14px; }
+.preview-send:disabled { opacity:.4; cursor:not-allowed; }
+.preview-status { display:block; min-height:44px; color:var(--nav-muted); font-size:13px; }
+@media (max-width:600px) {.preview-body { padding:16px; }.preview-top { gap:8px; }.preview-tag { display:none; }}
