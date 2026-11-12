@@ -187,7 +187,7 @@
 .agentsam-media-viewer__nav { display: flex; gap: 0.35rem; }
 .agentsam-media-viewer__body { flex: 1; min-height: 0; display: flex; }
 .agentsam-media-viewer__stage { flex: 1; min-width: 0; display: grid; place-items: center; padding: 1.5rem; }
-.agentsam-media-viewer__stage img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 0.5rem; }
+.agentsam-media-viewer__stage img, .agentsam-media-viewer__stage video { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 0.5rem; }
 .agentsam-media-viewer__glyph { color: var(--ml-muted); }
 .agentsam-media-viewer__aside { width: 20rem; flex: none; overflow: auto; padding: 1.1rem; border-left: 1px solid var(--ml-border); background: var(--ml-surface); }
 .agentsam-media-viewer__aside h3 { margin: 0 0 0.35rem; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ml-muted); }
@@ -204,3 +204,13 @@
   .agentsam-media-header, .agentsam-media-toolbar, .agentsam-media-body { padding-left: 1rem; padding-right: 1rem; }
   .agentsam-media-viewer__aside { position: absolute; inset: auto 0 0 0; width: auto; max-height: 55%; border-left: 0; border-top: 1px solid var(--ml-border); }
 }
+
+/* Local folder is an independent source, not gated behind Cloudflare OAuth. */
+.agentsam-media-local-status { display: inline-flex; align-items: center; gap: .4rem; color: var(--ml-muted); font-size: .8125rem; }
+.agentsam-media-local-controls { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.agentsam-media-local-controls > span { color: var(--ml-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 19rem; font-size: .8125rem; }
+.agentsam-media-connect-actions { display: flex; justify-content: center; gap: .5rem; flex-wrap: wrap; margin-top: .75rem; }
+.agentsam-media-settings-links { display: flex; justify-content: center; gap: 1rem; margin-top: .85rem; font-size: .78rem; }
+.agentsam-media-settings-links a { color: var(--ml-muted); text-underline-offset: .15rem; }
+.agentsam-media-local-note { color: var(--ml-muted); font-size: .78rem; }
+@media (max-width: 640px) { .agentsam-media-local-controls > span { max-width: 10rem; } }

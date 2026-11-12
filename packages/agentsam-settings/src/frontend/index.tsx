@@ -2529,6 +2529,11 @@ function StorageView({ snapshot }: { snapshot: SettingsSnapshot }) {
               <StatusPill status={target.status} />
             </div>
             <p className="mt-3 text-[10px] leading-4 text-muted-foreground">{target.detail}</p>
+            {target.actionHref && target.actionLabel ? (
+              <a href={target.actionHref} className="mt-3 inline-flex rounded-md border border-border px-2.5 py-1.5 text-[11px] font-medium hover:bg-muted">
+                {target.actionLabel}
+              </a>
+            ) : null}
           </article>
         ))}
       </div>

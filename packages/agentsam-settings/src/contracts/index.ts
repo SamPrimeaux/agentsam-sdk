@@ -315,6 +315,9 @@ export type SettingsStorageTarget = {
   kind: string;
   detail: string;
   status: HealthState;
+  /** Host-authorized navigation, never a fabricated provider capability. */
+  actionHref?: string;
+  actionLabel?: string;
 };
 
 export type SettingsUsage = {

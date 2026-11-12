@@ -296,6 +296,45 @@ export async function refreshCloudflareUserOauthToken(env, ownerId, row, options
 }
 
 /**
+ * Repair only the specific false-inactive state produced by a different
+ * first-party app failing to decrypt the shared PKCE refresh envelope.
+ * Never revive an explicitly revoked grant. Cloudflare must accept a fresh
+ * refresh-token exchange before this connector reactivates the row.
+ */
+async function recoverCrossHostRefreshFailure(env, ownerId, preferred, options = {}) {
+  if (!oauthVaultMaterial(env) || !clean(env?.CLOUDFLARE_OAUTH_CLIENT_ID)) return false;
+  let rows = [];
+  try {
+    const result = await env.DB.prepare(`
+      SELECT account_id, provider, account_identifier,
+        json_extract(metadata_json, '$.display') AS account_display,
+        access_token_encrypted, refresh_token_encrypted,
+        scopes, expires_at, metadata_json, is_active
+      FROM user_oauth_tokens
+      WHERE account_id = ? AND LOWER(provider) = 'cloudflare'
+        AND COALESCE(is_active, 1) = 0 AND revoked_at IS NULL
+        AND last_refresh_error_code = 'REFRESH_TOKEN_MISSING'
+        AND refresh_token_encrypted IS NOT NULL
+    `).bind(ownerId).all();
+    rows = result?.results || [];
+  } catch {
+    return false;
+  }
+  const candidates = preferred
+    ? rows.filter((row) => accountIdFromRow(row) === preferred)
+    : rows.filter((row) => isPreferredRow(row));
+  const selected = candidates.length === 1 ? candidates[0]
+    : !preferred && rows.length === 1 ? rows[0] : null;
+  if (!selected) return false;
+  try {
+    const result = await refreshCloudflareUserOauthToken(env, ownerId, selected, options);
+    return Boolean(result?.ok);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Load Cloudflare credential from user_oauth_tokens (SSOT).
  * Decrypt order: plaintext → host decryptUserOauthToken → connector vault AAD.
  * Pass connectionId / accountId for explicit multi-account selection.
@@ -356,7 +395,16 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
     console.error('loadCloudflareFromUserOauthTokens_failed', String(err?.message || err));
     return null;
   }
-  if (!row) return null;
+  if (!row) {
+    if (options._crossHostRecoveryAttempted) return null;
+    const recovered = await recoverCrossHostRefreshFailure(env, ownerId, preferred, options);
+    if (!recovered) return null;
+    // Follow the original row selection rules after provider-verified recovery.
+    return loadCloudflareFromUserOauthTokens(env, ownerId, {
+      ...options,
+      _crossHostRecoveryAttempted: true,
+    });
+  }
 
   const accountId = accountIdFromRow(row);
   let accessToken = '';

@@ -83,7 +83,9 @@ export function MediaViewer({
       </header>
       <div className="agentsam-media-viewer__body">
         <div className="agentsam-media-viewer__stage">
-          {(kind === "image" || kind === "video") && preview ? (
+          {kind === "video" && providerOf(asset) === "local" && preview ? (
+            <video src={preview} controls playsInline preload="metadata" aria-label={asset.filename} />
+          ) : (kind === "image" || kind === "video") && preview ? (
             <img src={preview} alt={asset.filename} />
           ) : (
             <span className="agentsam-media-viewer__glyph"><KindGlyph kind={kind} size={56} /></span>
@@ -100,16 +102,16 @@ export function MediaViewer({
             </dl>
             <div className="agentsam-media-viewer__actions">
               {preview ? <a className="agentsam-media-btn" href={preview} target="_blank" rel="noopener noreferrer">Open</a> : null}
-              {preview ? (
+              {preview && providerOf(asset) !== "local" ? (
                 <button type="button" className="agentsam-media-btn" onClick={() => void navigator.clipboard?.writeText(preview)}>
                   Copy link
                 </button>
               ) : null}
-              <a className="agentsam-media-btn" href={`/admin/moviemode?import=${encodeURIComponent(asset.id)}`}>
+              {providerOf(asset) !== "local" ? <a className="agentsam-media-btn" href={`/admin/moviemode?import=${encodeURIComponent(asset.id)}`}>
                 Use in MovieMode
-              </a>
+              </a> : null}
             </div>
-            <div className="agentsam-media-viewer__danger">
+            {providerOf(asset) !== "local" ? <div className="agentsam-media-viewer__danger">
               {confirming ? (
                 <>
                   <p>Delete this file from Cloudflare? This can’t be undone.</p>
@@ -135,7 +137,7 @@ export function MediaViewer({
                   <Trash2 size={14} /> Delete
                 </button>
               )}
-            </div>
+            </div> : null}
           </aside>
         ) : null}
       </div>

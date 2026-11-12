@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { Grid2X2, List, Loader2, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { FolderOpen, Grid2X2, List, Loader2, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 import { BucketPicker, loadPinnedBuckets, savePinnedBuckets } from "./BucketPicker";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { MediaItems } from "./MediaGrid";
 import { MediaViewer } from "./MediaViewer";
+import { createLocalStudioContentHostBridge, rememberLocalMediaDirectory, restoreLocalMediaDirectory } from "@/lib/content/localContentHost";
+import { listLocalMedia } from "./localMediaSource";
 import {
   formatCount,
   guessMime,
@@ -68,11 +70,37 @@ export function MediaLibraryPage() {
   }
   if (!user) return <RedirectToSignIn />;
 
-  return <MediaLibraryBody key={surface.kind} surface={surface} />;
+  return <MediaLibraryBody key={`${surface.kind}:${String(user.id)}`} surface={surface} accountId={String(user.id)} />;
 }
 
-function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
-  const [source, setSource] = useState<MediaSource>(surface.source);
+function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accountId: string }) {
+  const [source, setSource] = useState<MediaSource>(() => {
+    const requested = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("source") : null;
+    return requested === "local" ? "local" : surface.source;
+  });
+  const localHost = useMemo(() => createLocalStudioContentHostBridge(), []);
+  const [localRoot, setLocalRoot] = useState<string | null>(null);
+  const [localFolders, setLocalFolders] = useState<Array<{ ref: string; name: string }>>([]);
+  const [localBusy, setLocalBusy] = useState(false);
+  const localUrls = useRef<string[]>([]);
+  const localDirectory = localFolders.at(-1)?.ref || localRoot;
+
+  useEffect(() => {
+    let active = true;
+    void restoreLocalMediaDirectory(accountId).then(async (ref) => {
+      if (!active || !ref) return;
+      const info = await localHost.stat(ref);
+      if (!active) return;
+      setLocalRoot(ref);
+      setLocalFolders([{ ref, name: info.name || "Local folder" }]);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [accountId, localHost]);
+
+  useEffect(() => () => {
+    localUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    localUrls.current = [];
+  }, []);
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -137,12 +165,50 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
     return () => { cancelled = true; };
   }, [accountQs, refreshTick]);
 
+  const pickLocalFolder = useCallback(async (useSaved = false) => {
+    setLocalBusy(true);
+    try {
+      const ref = (useSaved ? await restoreLocalMediaDirectory(accountId, true) : null)
+        || await localHost.pickDirectory?.({ title: "Choose a local media folder" });
+      if (!ref) return;
+      const details = await localHost.stat(ref);
+      await rememberLocalMediaDirectory(ref, accountId);
+      setLocalRoot(ref);
+      setLocalFolders([{ ref, name: details.name || "Local folder" }]);
+      setQuery("");
+      setSource("local");
+      setNotice(null);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Local folder is unavailable in this browser.");
+    } finally {
+      setLocalBusy(false);
+    }
+  }, [accountId, localHost]);
+
   /* ---- assets for the current source ---- */
   const loadAssets = useCallback(async (append: boolean) => {
     const ticket = ++requestRef.current;
     if (append) setLoadingMore(true);
     else { setLoading(true); setError(null); setSelected(new Set()); }
     try {
+      if (source === "local") {
+        if (!localDirectory) {
+          setAssets([]); setTotal(0); setHasMore(false);
+          return;
+        }
+        const local = await listLocalMedia(localHost, localDirectory);
+        if (ticket !== requestRef.current) {
+          local.previewUrls.forEach((url) => URL.revokeObjectURL(url));
+          return;
+        }
+        localUrls.current.forEach((url) => URL.revokeObjectURL(url));
+        localUrls.current = local.previewUrls;
+        setAssets(local.assets);
+        setTotal(local.assets.length);
+        setHasMore(false);
+        if (local.truncated) setNotice("Showing the first 500 entries in this folder.");
+        return;
+      }
       if (source === "r2") {
         if (!activeBucket) {
           setAssets([]); setTotal(null); setHasMore(false);
@@ -205,7 +271,7 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
     } finally {
       if (ticket === requestRef.current) { setLoading(false); setLoadingMore(false); }
     }
-  }, [source, activeBucket, accountQs]);
+  }, [source, activeBucket, accountQs, localHost, localDirectory]);
 
   useEffect(() => {
     pageRef.current = 1;
@@ -227,7 +293,7 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
   const viewerIndex = visible.findIndex((a) => a.id === viewerId);
   const viewing = viewerIndex >= 0 ? visible[viewerIndex] : null;
   const connectUrl = mediaConnectUrl(resources?.connect_url || resources?.reconnect_url, "/media");
-  const notConnected = resources?.status === "not_connected" || error?.kind === "reconnect";
+  const notConnected = source !== "local" && (resources?.status === "not_connected" || error?.kind === "reconnect");
 
   const counts = {
     cf_images: resources?.images?.count ?? null,
@@ -238,6 +304,7 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
     { id: "cf_images", label: "Images", count: counts.cf_images },
     { id: "stream", label: "Videos", count: counts.stream },
     { id: "r2", label: "R2 buckets", count: counts.r2 },
+    { id: "local", label: "Local", count: source === "local" ? total : null },
   ];
 
   /* ---- actions ---- */
@@ -259,6 +326,10 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
     const failed: string[] = [];
     const removed = new Set<string>();
     for (const asset of list) {
+      if (asset.source === "local") {
+        failed.push(asset.filename);
+        continue;
+      }
       try {
         const qs = accountQs("connection_id", new URLSearchParams());
         const res = await fetch(`/api/admin/media/${encodeURIComponent(asset.id)}?${qs}`, {
@@ -290,8 +361,17 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
   };
 
   const selectedAssets = visible.filter((a) => selected.has(a.id));
+  const openMediaItem = (id: string) => {
+    const asset = visible.find((item) => item.id === id);
+    if (source === "local" && asset?.local_directory && asset.local_ref) {
+      setLocalFolders((folders) => [...folders, { ref: asset.local_ref!, name: asset.filename }]);
+      setQuery("");
+      return;
+    }
+    setViewerId(id);
+  };
   const subtitle = surface.kind === "all"
-    ? "Images, videos and R2 objects from your connected Cloudflare account."
+    ? "Browse connected Cloudflare media or your local device—without copying files to the cloud."
     : `Your Cloudflare ${surface.title.toLowerCase()}.`;
   const countLabel = total != null ? `${formatCount(total)} total` : `${formatCount(visible.length) ?? 0} shown`;
 
@@ -303,7 +383,8 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
           <p>{subtitle}</p>
         </div>
         <div className="agentsam-media-header__actions">
-          <ConnectionStatus resources={resources} bucketCount={buckets.length} connectUrl={connectUrl} />
+          {source === "local" ? <span className="agentsam-media-local-status"><FolderOpen size={14} /> Local device</span>
+            : <ConnectionStatus resources={resources} bucketCount={buckets.length} connectUrl={connectUrl} />}
           {accountChoices.length > 1 ? (
             <select
               className="agentsam-media-select"
@@ -344,9 +425,18 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
                 ? error.message
                 : "Authorize Cloudflare to browse your Images, Stream videos and R2 buckets here."}
             </p>
-            <a className="agentsam-media-btn is-primary" href={error?.connectUrl || connectUrl}>
-              {error?.kind === "reconnect" ? "Reconnect" : "Connect Cloudflare"}
-            </a>
+            <div className="agentsam-media-connect-actions">
+              <a className="agentsam-media-btn is-primary" href={error?.connectUrl || connectUrl}>
+                {error?.kind === "reconnect" ? "Reconnect" : "Connect Cloudflare"}
+              </a>
+              <button type="button" className="agentsam-media-btn" onClick={() => chooseSource("local")}>
+                <FolderOpen size={14} /> Browse local files
+              </button>
+            </div>
+            <div className="agentsam-media-settings-links">
+              <a href="/settings/storage">Storage settings</a>
+              <a href="/settings/customize?view=plugins">Plugins</a>
+            </div>
           </div>
         </div>
       ) : (
@@ -377,6 +467,19 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
                 </button>
               ))}
             </div>
+            ) : null}
+            {source === "local" ? (
+              <div className="agentsam-media-local-controls">
+                {localFolders.length > 1 ? (
+                  <button type="button" className="agentsam-media-btn" onClick={() => { setLocalFolders((folders) => folders.slice(0, -1)); setQuery(""); }}>
+                    Back
+                  </button>
+                ) : null}
+                {localFolders.length ? <span title={localFolders.map((d) => d.name).join(" / ")}>{localFolders.map((d) => d.name).join(" / ")}</span> : null}
+                <button type="button" className="agentsam-media-btn" disabled={localBusy} onClick={() => void pickLocalFolder(false)}>
+                  <FolderOpen size={14} /> {localRoot ? "Change folder" : "Choose folder"}
+                </button>
+              </div>
             ) : null}
             {source === "r2" ? (
               <BucketPicker
@@ -425,6 +528,16 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
                 <p>{error.message}</p>
                 <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Try again</button>
               </div>
+            ) : source === "local" && !localDirectory ? (
+              <div className="agentsam-media-state">
+                <strong>Browse files on this device</strong>
+                <p>Choose a folder to view images, videos, models and files. Nothing is uploaded or shared.</p>
+                <div className="agentsam-media-connect-actions">
+                  <button type="button" className="agentsam-media-btn is-primary" disabled={localBusy} onClick={() => void pickLocalFolder(false)}>
+                    <FolderOpen size={14} /> Connect local folder
+                  </button>
+                </div>
+              </div>
             ) : source === "r2" && !activeBucket ? (
               <div className="agentsam-media-state">
                 <strong>Choose a bucket</strong>
@@ -450,7 +563,7 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
                   view={view}
                   selected={selected}
                   anySelected={selected.size > 0}
-                  onOpen={setViewerId}
+                  onOpen={openMediaItem}
                   onToggle={toggle}
                 />
                 {hasMore ? (
@@ -474,14 +587,14 @@ function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
             type="button"
             className="agentsam-media-btn"
             onClick={() => {
-              const links = selectedAssets.map(previewUrl).filter(Boolean).join("\n");
+              const links = selectedAssets.filter((item) => item.source !== "local").map(previewUrl).filter(Boolean).join("\n");
               if (links) void navigator.clipboard?.writeText(links);
               setNotice(links ? `Copied ${links.split("\n").length} link(s).` : "These items have no public link.");
             }}
           >
             Copy links
           </button>
-          {confirmBatch ? (
+          {source === "local" ? <span className="agentsam-media-local-note">Local files are read-only here</span> : confirmBatch ? (
             <>
               <button
                 type="button"
