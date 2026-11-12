@@ -89,10 +89,20 @@ export function computeDeployFingerprint(repoRoot) {
   }
   files.sort();
   for (const file of files) {
+    // Optional generated files can disappear between directory enumeration
+    // and hashing (for example a concurrent build replacing .env.cloudflare).
+    // Skip only missing files; permissions and other I/O errors remain fatal.
+    let digest;
+    try {
+      digest = hashFile(file);
+    } catch (error) {
+      if (error?.code === 'ENOENT') continue;
+      throw error;
+    }
     const rel = path.relative(repoRoot, file).split(path.sep).join('/');
     h.update(rel);
     h.update('\0');
-    h.update(hashFile(file));
+    h.update(digest);
     h.update('\n');
   }
   return h.digest('hex');

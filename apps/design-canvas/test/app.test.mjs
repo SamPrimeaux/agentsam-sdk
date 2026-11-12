@@ -28,3 +28,17 @@ test('built app includes preview and all sources',async()=>{
  await stat(new URL('dist/sources/agentsam/Shell.dc.html',base));
  await stat(new URL('dist/sources/onboarding/AppInstalled.dc.html',base));
 });
+
+test('Design Canvas is an independent npm-publishable app, not an SDK root workspace',async()=>{
+ const pkg=await json('package.json');
+ const app=await json('agentsam.app.json');
+ const sdk=await json('../../package.json');
+ assert.equal(pkg.name,'@inneranimalmedia/agentsam-design-canvas');
+ assert.equal(pkg.version,sdk.version);
+ assert.equal(app.version,pkg.version);
+ assert.equal(pkg.publishConfig.access,'public');
+ assert.equal(pkg.license,'FSL-1.1-MIT');
+ assert.equal(sdk.workspaces.includes('apps/design-canvas'),false);
+ const lock=await json('package-lock.json');
+ assert.equal(lock.packages[''].version,pkg.version);
+});
