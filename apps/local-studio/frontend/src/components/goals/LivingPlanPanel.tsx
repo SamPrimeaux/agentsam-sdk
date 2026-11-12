@@ -219,7 +219,7 @@ export function LivingPlanPanel({
           <Target className="size-4 text-accent" aria-hidden="true" />
           <h2 className="text-base font-semibold tracking-tight">My goals</h2>
         </div>
-        <IconAction label="Refresh goals" hint="Reload your account goals" onClick={() => void reload()
+        <IconAction label="Refresh goals" hint="Reload your account goals" onClick={() => void reload()}
           className="flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
           <RefreshCcw className="size-4" aria-hidden="true" />
         </IconAction>
