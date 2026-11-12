@@ -15,7 +15,7 @@ import type {
   SettingsNotificationProfileUpdate,
   SettingsPlugin,
   SettingsSnapshot,
-  type SettingsStorageTarget,
+  SettingsStorageTarget,
   SettingsWidget,
 } from "@inneranimalmedia/agentsam-settings/contracts";
 import {
