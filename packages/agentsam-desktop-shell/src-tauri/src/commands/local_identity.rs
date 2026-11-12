@@ -115,6 +115,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
         "settings" => {
             let path = request.path.as_deref().unwrap_or("").trim();
             let root = path == "/api/settings/skills"
+                || path == "/api/settings/rules"
                 || path == "/api/settings/preferences"
                 || path == "/api/settings/account-avatar"
                 || path == "/api/settings/notifications"
@@ -132,7 +133,15 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             let agent = path.strip_prefix("/api/settings/agents/").is_some_and(|id| {
                 id.starts_with("asp_") && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
             });
-            if !(root || skill || agent)
+            // Rule ids predate the rule_ prefix, so the shape is validated instead of a prefix.
+            let rule_id = |id: &str| id.len() >= 3 && id.len() <= 120
+                && id.chars().next().is_some_and(|ch| ch.is_ascii_alphanumeric())
+                && !id.contains("..")
+                && id.chars().all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | ':' | '.'));
+            let rule_rest = path.strip_prefix("/api/settings/rules/");
+            let rule = rule_rest.is_some_and(|id| rule_id(id));
+            let rule_toggle = rule_rest.and_then(|rest| rest.strip_suffix("/enabled")).is_some_and(|id| rule_id(id));
+            if !(root || skill || agent || rule || rule_toggle)
                 || path.contains("://")
                 || path.contains('\\')
                 || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
@@ -149,12 +158,13 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             let valid = match method {
                 Method::GET => root && path != "/api/notifications/read-all" && !path.ends_with("/read"),
                 Method::POST => path == "/api/settings/skills" || path == "/api/settings/agents"
+                    || path == "/api/settings/rules"
                     || path == "/api/notifications/read-all"
                     || (path.starts_with("/api/notifications/") && path.ends_with("/read")),
-                Method::PUT => skill || agent || path == "/api/settings/agents/policy"
+                Method::PUT => skill || agent || rule || rule_toggle || path == "/api/settings/agents/policy"
                     || path == "/api/settings/preferences" || path == "/api/settings/account-avatar"
                     || path == "/api/settings/notifications",
-                Method::DELETE => skill || agent,
+                Method::DELETE => skill || agent || rule,
                 _ => false,
             };
             if !valid {return Err("studio_service_settings_operation_invalid".into());}
@@ -1111,6 +1121,11 @@ mod tests {
             ("/api/settings/skills", "POST"),
             ("/api/settings/skills/skill_1234", "PUT"),
             ("/api/settings/skills/skill_1234", "DELETE"),
+            ("/api/settings/rules", "GET"),
+            ("/api/settings/rules", "POST"),
+            ("/api/settings/rules/rule_1234", "PUT"),
+            ("/api/settings/rules/rule_1234/enabled", "PUT"),
+            ("/api/settings/rules/rule_1234", "DELETE"),
         ] {
             let request = StudioServiceBridgeRequest {
                 operation: "settings".into(),account_id:None,body: None, body_base64: None, content_type: None,
@@ -1129,6 +1144,10 @@ mod tests {
             ("/api/settings/agents/../vault/secrets", "GET"),
             ("/api/settings/agents/asp_1234", "POST"),
             ("/api/settings/skills/skill_1234", "GET"),
+            ("/api/settings/rules/rule_1234", "GET"),
+            ("/api/settings/rules/rule_1234/enabled", "DELETE"),
+            ("/api/settings/rules/../skills", "PUT"),
+            ("/api/settings/rules/a/b", "PUT"),
             ("/api/settings/agents/policy", "DELETE"),
             ("https://evil.invalid/api/settings/agents", "GET"),
         ] {
