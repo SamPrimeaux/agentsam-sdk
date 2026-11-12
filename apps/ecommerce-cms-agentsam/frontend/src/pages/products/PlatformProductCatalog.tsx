@@ -15,6 +15,9 @@ type PlatformProduct = {
   collection?: string;
   thumbnail_url?: string;
   revision?: string;
+  display_name?: string | null;
+  catalog_visibility?: "internal" | "unlisted" | "public";
+  sku?: string | null;
 };
 
 type ProductEdit = Pick<PlatformProduct, "name" | "description" | "collection" | "thumbnail_url">;
@@ -43,6 +46,7 @@ export default function PlatformProductCatalog({
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [retry, setRetry] = useState(0);
+  const [showInternal, setShowInternal] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,9 +74,10 @@ export default function PlatformProductCatalog({
   }, [refresh, retry, productId]);
 
   const visible = useMemo(() => products.filter((p) => productMatches(p, kind))
-    .filter((p) => !search || [p.name, p.slug, p.kind, p.package_name, p.collection]
+    .filter((p) => showInternal || p.catalog_visibility !== "internal")
+    .filter((p) => !search || [p.display_name, p.name, p.slug, p.kind, p.package_name, p.collection]
       .some((v) => String(v || "").toLowerCase().includes(search.toLowerCase())))
-    .sort((a,b) => a.name.localeCompare(b.name)), [products, kind, search]);
+    .sort((a,b) => (a.display_name || a.name).localeCompare(b.display_name || b.name)), [products, kind, search, showInternal]);
 
   function inspect(p: PlatformProduct) {
     // Registered applications have a real deep-link editor, not a scroll target
@@ -143,7 +148,7 @@ export default function PlatformProductCatalog({
     <section id="studio-catalog" className="ps-platform" aria-label="AgentSam product registry">
       <div className="ps-catalog-heading">
         <div><span className="ps-eyebrow">YOUR AGENTSAM PRODUCTS</span><h2>Find your canvas.</h2></div>
-        <button type="button" className="ps-button" onClick={() => { setLoading(true); setRetry((v) => v + 1); }}>Refresh products</button>
+        <div className="ps-catalog-actions">{products.some(p => p.catalog_visibility === "internal") && <button type="button" aria-pressed={showInternal} className="ps-button" onClick={() => setShowInternal(v => !v)}>{showInternal ? "Hide internal packages" : "Show internal packages"}</button>}<button type="button" className="ps-button" onClick={() => { setLoading(true); setRetry((v) => v + 1); }}>Refresh products</button></div>
       </div>
       <p className="ps-platform-description">Explore and manage products you own in the existing AgentSam product registry.</p>
       <p className="ps-result-count" aria-live="polite">{loading ? "Loading products…" : visible.length + " products"}</p>
@@ -157,10 +162,10 @@ export default function PlatformProductCatalog({
             <div className="ps-product-photo">
               {p.thumbnail_url
                 ? <img src={p.thumbnail_url} alt="" loading="lazy" />
-                : <span className="ps-platform-initials" aria-hidden="true">{p.name.split(/\s+/).slice(0,2).map((w) => w[0]).join("").toUpperCase()}</span>}
+                : <span className="ps-platform-initials" aria-hidden="true">{(p.display_name || p.name).split(/\s+/).slice(0,2).map((w) => w[0]).join("").toUpperCase()}</span>}
               <span className="ps-card-arrow" aria-hidden="true">↗</span>
             </div>
-            <div className="ps-product-copy"><small>{p.kind}</small><h3>{p.name}</h3>
+            <div className="ps-product-copy"><small>{p.kind}</small><h3>{p.display_name || p.name}</h3>
               <div><span>{p.version || p.status || "Registered"}</span><span>{p.package_name || ""}</span></div>
             </div>
           </button>

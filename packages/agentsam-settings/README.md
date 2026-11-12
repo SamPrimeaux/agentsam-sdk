@@ -61,3 +61,31 @@ portal link. Installation alone is **not proof of a live published renderer**.
 Do not turn either provider data or a CMS theme setting into an authorization
 source. Payment processing, subscription activation, and invoice settlement
 require server-verified transactions and webhooks.
+
+## Storage & providers
+
+The Storage unit renders SettingsStoragePanel from SettingsSnapshot.storage
+and SettingsHost.updateStoragePreference with host-authorized navigation.
+Provider identity uses bundled recognizable vector marks rather than remote
+icon fetching. Cloudflare's R2, Images and Stream glyphs come from
+[Cloudflare Docs](https://github.com/cloudflare/cloudflare-docs/tree/production/src/icons);
+Google Drive, GitHub and Supabase from [Simple Icons](https://github.com/simple-icons/simple-icons)
+(CC0); the AWS mark comes from [Font Awesome Free Brands](https://github.com/FortAwesome/Font-Awesome)
+(CC BY 4.0). Trademarks remain the property of their respective owners.
+
+In Local Studio, GET/PUT /api/settings/storage reads/writes only non-secret
+location preferences in the existing account-scoped
+user_storage_provider_preferences table. The authenticated IAM account
+session is the principal, not workspace or request-body IDs. Cloudflare
+capabilities are projected from authenticated /api/connections/cloudflare/resources
+discovery; R2, Images and Stream are evaluated independently. The existing
+Plugins/Keys settings remain credential and authorization authorities.
+An OAuth row, saved location, or browser API is not proof of a successful
+provider read/write or a durable backup.
+
+Supported configuration surfaces: R2, S3 and S3-compatible, Google Drive,
+Supabase Storage, GitHub repository path, OPFS, and device folders. Cloudflare
+Images and Stream are distinct capability cards using the same Cloudflare
+grant. This slice does not claim new S3, Google Drive, Supabase, or device
+upload/write implementation. Provider-adapter operations require their own
+capability checks.

@@ -117,3 +117,28 @@ export async function canvasRequest<T>(path: string, init: RequestInit = {}): Pr
   );
   return data as T;
 }
+
+/** A valid, editable first section so a page is never an empty artboard. */
+export function starterSection(title: string, width = 1200): CanvasNode {
+  return {
+    id: makeId("node"), type: "frame", name: "Hero", x: 0, y: 0, width, height: 420,
+    style: { backgroundColor: "#f0f1f3" },
+    children: [
+      { id: makeId("node"), type: "text", name: "Heading", x: 64, y: 120, width: Math.max(200, width - 128), height: 72,
+        text: title, style: { color: "#24262d", fontSize: 48, fontWeight: 600 } },
+      { id: makeId("node"), type: "text", name: "Subheading", x: 64, y: 216, width: Math.max(200, width - 128), height: 60,
+        text: "Add a short description of this page.", style: { color: "#24262d", fontSize: 20 } },
+    ],
+  };
+}
+export function starterBoard(name: string, x = 0, route?: string): Artboard {
+  return { id: makeId("artboard"), name, width: 1200, height: 900, x, y: 0, background: "#ffffff",
+    nodes: [starterSection(name)], ...(route ? { route } : {}) };
+}
+/** Returns a CMS-ready copy: at least one page, and no empty pages. Null when nothing needed fixing. */
+export function withStarterPages(document: CanvasDocument): CanvasDocument | null {
+  const next = copy(document); let changed = false;
+  if (!next.artboards.length) { next.artboards.push(starterBoard("Home", 0)); changed = true; }
+  for (const board of next.artboards) if (!board.nodes.length) { board.nodes.push(starterSection(board.name, board.width)); changed = true; }
+  return changed ? next : null;
+}

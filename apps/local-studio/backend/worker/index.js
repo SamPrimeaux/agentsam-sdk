@@ -57,6 +57,7 @@ import { handleStudioRules } from "./studio-rules.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
 import { handleStudioUserPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings } from "./studio-user-preferences.js";
 import { handleStudioLivingPlan } from "./studio-living-plan.js";
+import { handleStudioStorageSettings } from "./studio-storage-settings.js";
 import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
@@ -766,6 +767,7 @@ export default {
     const isSideStageCatalog = url.pathname === "/api/connections/side-stages";
     const sideStagePreferenceMatch = /^\/api\/connections\/side-stages\/(plg_[a-f0-9]{8,})$/i.exec(url.pathname);
     const isStudioPreferences=url.pathname==="/api/settings/preferences";
+    const isStudioStorage=url.pathname==="/api/settings/storage";
     const isStudioAccountAvatar=url.pathname==="/api/settings/account-avatar";
     const isStudioCompanions=url.pathname==="/api/settings/companions";
     const isStudioNotifications=url.pathname==="/api/settings/notifications";
@@ -1201,6 +1203,11 @@ export default {
       try { return await handleStudioLivingPlan(request, env, await sessionUser()); }
       catch (error) { console.warn("studio_living_plan_unavailable", String(error?.message || error).slice(0, 100));
         return json({ ok: false, error: "living_plan_unavailable" }, 503); }
+    }
+    if (isStudioStorage) {
+      try { return await handleStudioStorageSettings(request, env, await sessionUser()); }
+      catch (error) { console.warn("studio_storage_settings_error", String(error?.message || error).slice(0, 120));
+        return json({ ok: false, error: "storage_settings_unavailable" }, 503); }
     }
     if(isStudioPreferences) {
       try{return await handleStudioUserPreferences(request,env,await sessionUser());}
