@@ -164,7 +164,11 @@ export async function fetchMcpServerCatalog(options = {}) {
 export function listKnownServers(options = {}) {
   const cached = loadCachedServerCatalog(options);
   if (cached?.servers?.length) {
-    return cached.servers;
+    // Local, reviewed stdio presets cannot be replaced by remote catalog data.
+    return [
+      ...IAM_SEED_SERVERS.filter(server => server.protocol === 'stdio'),
+      ...cached.servers.filter(server => server.name !== BROWSER_MCP_NAME && server.server_key !== BROWSER_MCP_NAME),
+    ];
   }
   return [...SEED_MCP_SERVER_CATALOG];
 }
