@@ -57,3 +57,35 @@ test("agent failures remain errors for the normal recovery UI to handle", () => 
   visuals.failAgentTurn(id, "provider unavailable", surface);
   assert.equal(visuals.controllerFor(surface).getScene().status, "error");
 });
+
+
+test("a retry on the same conversation clears the previous failure and progress", () => {
+  const visuals = createLocalStudioRuntimeVisuals();
+  const surface = "chat:retry";
+  visuals.startAgentTurn("turn:failed", "First attempt", undefined, surface);
+  visuals.progressPoints("turn:failed", "thinking", "Planning", 3, 5, undefined, "steps", surface);
+  visuals.failAgentTurn("turn:failed", "provider unavailable", surface);
+  assert.equal(visuals.controllerFor(surface).getScene().status, "error");
+
+  visuals.startAgentTurn("turn:retry", "Trying again", undefined, surface);
+  const retry = visuals.controllerFor(surface).getScene();
+  assert.equal(retry.status, "running");
+  assert.equal(retry.label, "Trying again");
+  assert.equal(retry.activeCount, 1);
+  assert.equal(retry.progress, null);
+  assert.equal(retry.metricPoints, undefined);
+  visuals.completeAgentTurn("turn:retry", surface);
+  assert.equal(visuals.controllerFor(surface).getScene().status, "success");
+});
+
+test("a new turn after success starts fresh without affecting another surface", () => {
+  const visuals = createLocalStudioRuntimeVisuals();
+  visuals.startAgentTurn("turn:one", "Finished", undefined, "chat:one");
+  visuals.completeAgentTurn("turn:one", "chat:one");
+  visuals.startAgentTurn("turn:other", "Other running", undefined, "side:other");
+
+  visuals.startAgentTurn("turn:two", "New request", undefined, "chat:one");
+  assert.equal(visuals.controllerFor("chat:one").getScene().status, "running");
+  assert.equal(visuals.controllerFor("chat:one").getScene().label, "New request");
+  assert.equal(visuals.controllerFor("side:other").getScene().status, "running");
+});
