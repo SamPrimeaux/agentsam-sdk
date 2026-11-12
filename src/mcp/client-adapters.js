@@ -355,8 +355,12 @@ export function inspectClientAdapter(clientName, serverName, options = {}) {
 
   const existing = readJsonSafe(configPath);
   const configured = existing?.mcpServers?.[serverName];
-  const hasServer = serverName === 'browsermcp' && configured?.type === 'stdio'
-    ? (() => { try { assertApprovedBrowserMcpStdio({ name: serverName, protocol: 'stdio', command: configured.command, args: configured.args }); return true; } catch { return false; } })()
+  const hasServer = serverName === 'browsermcp'
+    ? (() => {
+        if (configured?.type !== 'stdio') return false;
+        try { assertApprovedBrowserMcpStdio({ name: serverName, protocol: 'stdio', command: configured.command, args: configured.args }); return true; }
+        catch { return false; }
+      })()
     : Boolean(configured);
   return {
     client: clientName,
