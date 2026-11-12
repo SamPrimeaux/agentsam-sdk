@@ -440,10 +440,10 @@
 .as-apps-directory { display:flex; flex:1; min-height:0; flex-direction:column; color:var(--nav-text); }
 .as-apps-directory .as-apps-picker-list { min-height:180px; }
 .as-apps-picker-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:5px; }
-.as-apps-picker-actions > button, .as-apps-picker-refresh { border:1px solid var(--nav-border); background:transparent; border-radius:6px; padding:6px 9px; color:var(--nav-text); font:inherit; font-size:12px; }
+.as-apps-picker-actions > button, .as-apps-picker-refresh { border:1px solid var(--nav-border); background:transparent; border-radius:6px; padding:6px 9px; color:var(--nav-text); font:inherit; font-size:var(--nav-meta-size); }
 .as-apps-picker-actions > button:hover, .as-apps-picker-refresh:hover { background:var(--nav-hover); }
 .as-apps-picker-actions > button:disabled { opacity:.45; cursor:not-allowed; }
-.as-apps-picker-confirm-label { color:var(--nav-muted); font-size:11px; }
+.as-apps-picker-confirm-label { color:var(--nav-muted); font-size:var(--nav-meta-size); }
 .as-apps-picker-refresh { margin-left:auto; }
 .as-apps-inline .as-apps-directory { min-height:300px; }
 @media (max-width:650px){ .as-apps-picker-item{flex-wrap:wrap}.as-apps-picker-actions{width:100%;justify-content:flex-end}.as-apps-picker-controls,.as-apps-picker-list{padding-left:14px;padding-right:14px} }
