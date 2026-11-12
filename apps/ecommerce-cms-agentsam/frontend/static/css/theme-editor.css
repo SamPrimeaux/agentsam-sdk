@@ -13,6 +13,25 @@
   --te-accent-soft: color-mix(in srgb, var(--te-accent) 11%, var(--te-panel));
   --te-success: #17844a;
   --te-danger: #b42318;
+  /* Editor stage only. The storefront iframe keeps its own site theme. */
+  --te-stage-base: color-mix(in srgb, var(--te-canvas) 15%, #eeeeeb);
+  --te-stage-dots: color-mix(in srgb, var(--te-text) 15%, transparent);
+  --te-stage-sheen: rgba(255, 255, 255, .78);
+  --te-stage-strip: color-mix(in srgb, var(--te-panel) 40%, #f8f8f6);
+  --te-stage-strip-ink: var(--te-muted);
+  --te-stage-device-border: color-mix(in srgb, var(--te-text) 16%, transparent);
+  --te-stage-device-shadow: 0 12px 38px rgba(0, 0, 0, .1);
+}
+
+/* Derived by the packaged account-shell bridge; not an editor setting. */
+:root[data-te-shell-mode="dark"] {
+  --te-stage-base: color-mix(in srgb, var(--te-canvas) 84%, #17251e);
+  --te-stage-dots: color-mix(in srgb, var(--te-text) 17%, transparent);
+  --te-stage-sheen: color-mix(in srgb, var(--te-accent) 10%, transparent);
+  --te-stage-strip: color-mix(in srgb, var(--te-canvas) 78%, var(--te-panel));
+  --te-stage-strip-ink: var(--te-muted);
+  --te-stage-device-border: color-mix(in srgb, var(--te-text) 22%, transparent);
+  --te-stage-device-shadow: 0 18px 48px rgba(0, 0, 0, .38);
 }
 
 .theme-studio {
@@ -490,8 +509,9 @@
   display: grid;
   grid-template-rows: 42px minmax(0, 1fr) 30px;
   background:
-    radial-gradient(circle at 50% 5%, rgba(255,255,255,.85), transparent 42%),
-    #eeeeeb;
+    radial-gradient(circle at 50% 5%, var(--te-stage-sheen), transparent 45%),
+    radial-gradient(circle, var(--te-stage-dots) .7px, transparent .75px) 0 0 / 18px 18px,
+    var(--te-stage-base);
 }
 
 .te-preview-bar,
@@ -501,9 +521,9 @@
   justify-content: space-between;
   gap: 10px;
   padding: 0 12px;
-  color: #777772;
+  color: var(--te-stage-strip-ink);
   font-size: 11px;
-  background: #f8f8f6;
+  background: var(--te-stage-strip);
 }
 
 .te-preview-bar { border-bottom: 1px solid var(--te-border); }
@@ -550,10 +570,10 @@
   height: 100%;
   min-height: 520px;
   background: white;
-  border: 1px solid #dadad4;
+  border: 1px solid var(--te-stage-device-border);
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 10px 34px rgba(0,0,0,.08);
+  box-shadow: var(--te-stage-device-shadow);
   transition: width .22s ease, max-width .22s ease;
 }
 

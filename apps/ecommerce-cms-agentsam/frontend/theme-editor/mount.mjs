@@ -24,6 +24,40 @@ const HOST_THEME_ALIASES = Object.freeze({
   '--color-accent': ['--nav-accent', '--c-accent'],
 });
 
+/**
+ * Stage appearance follows the effective account-shell canvas color. Do not
+ * inspect the merchant's iframe: a black storefront can be edited on a light
+ * platform, and vice versa. The light/dark authority stays in Settings > Themes.
+ */
+function canvasBrightness(value) {
+  const raw = String(value || '').trim();
+  let channels = null;
+  if (/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(raw)) {
+    const hex = raw.slice(1);
+    const digits = hex.length === 3 ? [...hex].map(c => c + c) :
+      [hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)];
+    channels = digits.map(v => parseInt(v, 16));
+  } else if (/^rgba?\(/i.test(raw)) {
+    channels = raw.match(/[0-9]+(?:\.[0-9]+)?/g)?.slice(0, 3).map(Number) || null;
+  }
+  if (!channels || channels.length !== 3 || channels.some(v => !Number.isFinite(v)))
+    return null;
+  return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+}
+function declaredShellMode(documents) {
+  for (const doc of documents) {
+    for (const node of [doc?.documentElement, doc?.body]) {
+      if (!node) continue;
+      const value = ['data-color-scheme', 'data-theme-mode', 'data-appearance', 'data-theme']
+        .map(key => node.getAttribute?.(key)).find(v => v === 'light' || v === 'dark');
+      if (value) return value;
+      if (node.classList?.contains('dark')) return 'dark';
+      if (node.classList?.contains('light')) return 'light';
+    }
+  }
+  return 'light';
+}
+
 export function syncEditorChromeTokens(hostDocument, editorDocument, explicit = {}) {
   const root = editorDocument?.documentElement;
   if (!root) return;
@@ -53,6 +87,11 @@ export function syncEditorChromeTokens(hostDocument, editorDocument, explicit = 
     if (typeof value === 'string' && value.trim()) root.style.setProperty(destination, value.trim());
     else root.style.removeProperty(destination);
   }
+  // Semantic shell colors win over stale document classes. Mode is applied to
+  // the editor chrome only, and updates in place when the active theme changes.
+  const brightness = canvasBrightness(root.style.getPropertyValue('--te-canvas'));
+  root.dataset.teShellMode = brightness === null
+    ? declaredShellMode(documents) : brightness < 145 ? 'dark' : 'light';
 }
 
 /** Mount the existing Theme Studio in an isolated document. Runtime adapters are supplied by the consumer. */
