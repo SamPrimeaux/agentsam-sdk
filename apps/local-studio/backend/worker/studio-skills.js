@@ -3,12 +3,15 @@
  * No tenant, new table, or client-side localStorage authority is introduced.
  */
 const reply=(body,status=200)=>Response.json(body,{status,headers:{'cache-control':'no-store'}});
-const skillFields='id,name,slash_trigger,description,content_markdown,version,is_active,updated_at';
+const skillFields='id,name,slash_trigger,description,content_markdown,version,is_active,access_mode,updated_at';
+// Skills are archived on delete and only active ones are listed, so there is no separate toggle.
+const ACCESS=Object.freeze({create:true,update:true,remove:true,toggle:false});
 const validTrigger=value=>typeof value==='string'&&/^\/[a-z0-9][a-z0-9-]{0,48}$/.test(value);
 const display=row=>({
   id:row.id,name:row.name,trigger:row.slash_trigger,
   description:row.description,content:row.content_markdown,
   version:row.version,updatedAt:row.updated_at,
+  readOnly:row.access_mode==='read_only',
 });
 export async function handleStudioSkills(request,env,accountId) {
   if(!accountId)return reply({ok:false,error:'unauthorized'},401);
@@ -21,7 +24,7 @@ export async function handleStudioSkills(request,env,accountId) {
     const list=await env.DB.prepare(`SELECT ${skillFields} FROM agentsam_skill
        WHERE account_id=? AND is_active=1 ORDER BY sort_order ASC,name COLLATE NOCASE ASC LIMIT 300`)
       .bind(accountId).all();
-    return reply({ok:true,skills:(list.results||[]).map(display)});
+    return reply({ok:true,skills:(list.results||[]).map(display),access:ACCESS});
   }
   if(!['POST','PUT','DELETE'].includes(request.method)||
      (request.method==='POST'&&id)||(request.method!=='POST'&&!id))
@@ -30,10 +33,10 @@ export async function handleStudioSkills(request,env,accountId) {
     return reply({ok:false,error:'origin_not_allowed'},403);
   if(request.method==='DELETE') {
     const changed=await env.DB.prepare(`UPDATE agentsam_skill SET is_active=0,
-      updated_at=datetime('now') WHERE id=? AND account_id=? AND is_active=1`)
+      updated_at=datetime('now') WHERE id=? AND account_id=? AND is_active=1 AND access_mode='read_write'`)
       .bind(id,accountId).run();
     return Number(changed.meta?.changes||0)===1
-      ?reply({ok:true,deleted:true}):reply({ok:false,error:'skill_not_found'},404);
+      ?reply({ok:true,deleted:true}):reply({ok:false,error:'skill_not_found_or_read_only'},404);
   }
   if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
     return reply({ok:false,error:'json_content_type_required'},415);

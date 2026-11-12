@@ -54,6 +54,7 @@ import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } 
 import { listLauncherApps } from "./apps-launcher.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
+import { handleStudioRules } from "./studio-rules.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
 import { handleStudioUserPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings } from "./studio-user-preferences.js";
 import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
@@ -771,6 +772,8 @@ export default {
       || url.pathname.startsWith("/api/settings/agents/");
     const isStudioSkills = url.pathname === "/api/settings/skills"
       || url.pathname.startsWith("/api/settings/skills/");
+    const isStudioRules = url.pathname === "/api/settings/rules"
+      || url.pathname.startsWith("/api/settings/rules/");
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
     const isAppsLauncher = url.pathname === "/api/apps/launcher";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
@@ -1217,6 +1220,14 @@ export default {
       } catch(error) {
         console.warn('studio_skills_error',String(error?.message||error).slice(0,150));
         return json({ok:false,error:'skills_unavailable'},503);
+      }
+    }
+    if (isStudioRules) {
+      try {
+        return await handleStudioRules(request,env,await sessionUser());
+      } catch(error) {
+        console.warn('studio_rules_error',String(error?.message||error).slice(0,150));
+        return json({ok:false,error:'rules_unavailable'},503);
       }
     }
     if (isTerminalConnect) {
