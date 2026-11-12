@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { MessageSquarePlus, MoreHorizontal, Pin, Target, Settings, Folder, Layers, Plug, SquareTerminal, Globe, Users, MonitorPlay, FileCode } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
+import { IconAction } from '@/components/ui/icon-action';
 import { MessageList } from '@/components/workbench/thread';
 import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
@@ -94,9 +95,9 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       onSelect: () => void navigate({ to: '/settings/general' as never }), separatorBefore: true },
   ];
   const headerActions = <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
-    <button type="button" className="agentsam-header-action" aria-label="New chat" title="New chat (⌘N)" onClick={startNewChat}>
+    <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}>
       <MessageSquarePlus size={20} aria-hidden="true" />
-    </button>
+    </IconAction>
     <Nav.OverflowMenu label="Conversation options" actions={menuActions}>
       <MoreHorizontal size={22} aria-hidden="true"/>
     </Nav.OverflowMenu>
