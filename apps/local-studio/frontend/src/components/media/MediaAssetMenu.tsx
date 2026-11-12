@@ -1,4 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Copy, Download, Ellipsis, Eye, Pencil, Trash2 } from "lucide-react";
 import { canDeleteMediaAsset, canEditMediaMetadata, previewUrl, providerOf, type MediaAsset } from "./media-utils";
 
@@ -21,11 +22,16 @@ export function MediaAssetMenu({
   const copyable = Boolean(preview) && providerOf(asset) !== "local" && !asset.meta?.require_signed_urls;
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
-        <button type="button" className="agentsam-media-item__more" aria-label={"Actions for " + asset.filename} title="Asset actions">
-          <Ellipsis size={17} />
-        </button>
-      </DropdownMenu.Trigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenu.Trigger asChild>
+            <button type="button" className="agentsam-media-item__more" aria-label={"Actions for " + asset.filename}>
+              <Ellipsis size={17} />
+            </button>
+          </DropdownMenu.Trigger>
+        </TooltipTrigger>
+        <TooltipContent>Actions for {asset.filename}</TooltipContent>
+      </Tooltip>
       <DropdownMenu.Portal>
         <DropdownMenu.Content side="bottom" align="end" sideOffset={5} collisionPadding={12} className="agentsam-media-item__menu">
           <DropdownMenu.Item onSelect={() => onOpen(asset)}><Eye size={15} /> Open details</DropdownMenu.Item>
