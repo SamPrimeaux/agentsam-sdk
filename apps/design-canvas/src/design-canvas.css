@@ -1,4 +1,4 @@
-:root{color-scheme:dark}
+:root{color-scheme:dark}body{margin:0}#app{height:100dvh}
 .dca-app{--dca-bg:#111317;--dca-plate:#1b1d22;--dca-panel:#191b20;--dca-line:#31353d;--dca-text:#e9eaed;--dca-muted:#969ba5;--dca-accent:#7295ff;display:flex;flex-direction:column;height:100%;min-height:540px;min-width:540px;background:var(--dca-bg);color:var(--dca-text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;overflow:hidden}
 .dca-app *{box-sizing:border-box}
 .dca-app button,.dca-app select,.dca-app input,.dca-app textarea{font:inherit;color:inherit}
@@ -53,13 +53,13 @@
 .dca-canvas-scroll{position:absolute;inset:0 0 24px;overflow:auto;overscroll-behavior:contain;background-color:#1b1d23;background-image:radial-gradient(#31343c 1px,transparent 1px);background-size:20px 20px}
 .dca-board-space{display:flex;align-items:flex-start;flex-wrap:wrap;gap:40px 28px;min-width:max-content;padding:55px 45px 130px;align-content:start}
 .dca-board-space.dca-focus{min-width:0;justify-content:center}
-.dca-board{flex:none;transition:filter .14s;position:relative}
+.dca-board{flex:none;transition:filter .14s;position:relative;width:var(--dca-board-width)}
 .dca-board-head{height:31px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:#bec4cf;font-size:11px;font-weight:550}
 .dca-board-head span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dca-board-head span:last-child{color:#79818c;white-space:nowrap;font-size:10px}
-.dca-frame-wrap{position:relative;background:white;box-shadow:0 14px 44px #0006;outline:1px solid #4a505a;overflow:hidden}
+.dca-frame-wrap{position:relative;width:var(--dca-frame-width);height:var(--dca-frame-height);background:white;box-shadow:0 14px 44px #0006;outline:1px solid #4a505a;overflow:hidden}
 .dca-board.selected .dca-frame-wrap{outline:2px solid #9cb5ff;box-shadow:0 0 0 4px #7ca0ff24,0 15px 44px #0007}
-.dca-frame-wrap iframe{display:block;border:0;background:white}
+.dca-frame-wrap iframe{display:block;border:0;background:white}.dca-source-iframe{width:var(--dca-natural-width);height:var(--dca-natural-height);transform:scale(var(--dca-scale));transform-origin:top left;pointer-events:var(--dca-events)}
 .dca-frame-select{position:absolute;inset:0;width:100%;height:100%;align-items:flex-end!important;justify-content:center!important;padding:0 0 12px;background:transparent!important;opacity:0;transition:opacity .15s}
 .dca-frame-select:hover,.dca-frame-select:focus-visible{opacity:1;background:#07090c32!important}
 .dca-frame-select>span{background:#20242ce6;color:white;display:flex;align-items:center;gap:6px;padding:8px 11px;border-radius:5px;font-size:11px;box-shadow:0 3px 12px #0006}
@@ -89,3 +89,8 @@
 @media(max-width:1200px){.dca-inspector{width:264px;min-width:235px}.dca-sidebar{width:214px;min-width:190px}.dca-topbar{padding:0 10px}.dca-route>span:first-child,.dca-counter{display:none}.dca-board-space{padding:30px 22px}}
 @media(max-width:840px){.dca-app{min-width:300px}.dca-sidebar{position:absolute;top:104px;bottom:0;left:0;z-index:8;width:265px;box-shadow:10px 0 24px #0009}.dca-inspector{position:absolute;top:104px;right:0;bottom:0;z-index:8;width:290px;box-shadow:-10px 0 24px #0009}.dca-top-actions .dca-secondary{display:none}.dca-route{min-width:0}.dca-route b{max-width:170px}.dca-tools button[title="Reset zoom and framing"]{display:none}.dca-topbar{height:54px;min-height:54px}.dca-top-actions .dca-primary{padding:0 8px}}
 @media(max-width:480px){.dca-heading span{display:none}.dca-toolbar{padding:0 7px}.dca-route b{max-width:86px}.dca-toolbar{gap:5px}.dca-route{gap:5px}.dca-tools button{padding:0 4px}.dca-tools button[title="Focus selected artboard"]{font-size:0}.dca-tools button[title="Interact with the selected source document"]{font-size:0}.dca-zoom-label{width:29px}.dca-board-space{padding:20px 15px 90px}}
+
+.dca-help-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.dca-help-tip{position:absolute;pointer-events:none;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%);z-index:20;opacity:0;visibility:hidden;white-space:nowrap;padding:5px 8px;border:1px solid #5a6473;border-radius:5px;background:#252a31;color:#f1f4fa;font-size:11px;font-weight:500;box-shadow:0 4px 14px #0008;transition:opacity .14s}
+.dca-help-wrap:focus-within .dca-help-tip,.dca-help-wrap:hover .dca-help-tip{opacity:1;visibility:visible}
+.dca-tools .dca-help-tip,.dca-pane-heading .dca-help-tip{bottom:auto;top:calc(100% + 8px)}
