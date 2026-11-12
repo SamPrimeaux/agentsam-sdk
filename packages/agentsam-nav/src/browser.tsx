@@ -84,9 +84,23 @@ export function openAppsInstaller() {
     });
     if (!response.ok) throw Error('app_install_failed');
   };
+  const remove = async (key: string) => {
+    const response = await fetch('/api/apps/install', {
+      method:'DELETE', credentials:'same-origin',
+      headers:{'content-type':'application/json'}, body:JSON.stringify({key}),
+    });
+    if (!response.ok) throw Error('app_remove_failed');
+  };
+  const update = async (key: string, enabled: boolean) => {
+    const response = await fetch('/api/apps/install', {
+      method:'PATCH', credentials:'same-origin',
+      headers:{'content-type':'application/json'}, body:JSON.stringify({key,enabled}),
+    });
+    if (!response.ok) throw Error('app_update_failed');
+  };
   const theme = document.documentElement.dataset.theme === 'light' ? 'light'
     : document.documentElement.dataset.theme === 'dark' ? 'dark' : 'system';
   root.render(<AdminAppsDialog theme={theme} onClose={close} loadApps={read}
-    installApp={install} onInstalled={() => window.dispatchEvent(new Event('agentsam:navigation-changed'))}
+    installApp={install} removeApp={remove} updateApp={update} onInstalled={() => window.dispatchEvent(new Event('agentsam:navigation-changed'))}
     onOpenApp={href => window.location.assign(href)} />);
 }

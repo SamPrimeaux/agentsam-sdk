@@ -13,6 +13,7 @@ import { localStudioSettingsHost } from "./localStudioSettingsHost";
 import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
 import { InnerAnimalCompanionsPage } from "../../../agentsam/InnerAnimalCompanionsPage";
 import { SideStagePreferencesPage } from "./SideStagePreferencesPage";
+import { AppsManagementPage } from "./AppsManagementPage";
 import { PlatformNavigationSettings } from "./PlatformNavigationSettings";
 
 export function LocalStudioSettingsPage({
@@ -70,7 +71,9 @@ export function LocalStudioSettingsPage({
         url.searchParams.set("view", view);
         window.history.replaceState(window.history.state, "", url);
       }}
-      renderCustomView={(unit, view) => unit === "customize" && view === "companions"
+      renderCustomView={(unit, view) => unit === "customize" && view === "apps"
+        ? <AppsManagementPage />
+        : unit === "customize" && view === "companions"
         ? <InnerAnimalCompanionsPage />
         : unit === "customize" && view === "panels"
           ? <SideStagePreferencesPage />

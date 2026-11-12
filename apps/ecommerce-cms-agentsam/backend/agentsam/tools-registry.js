@@ -288,16 +288,10 @@ export async function listAgentSamMcpServers(env) {
       );
     }
 
-    // Compatibility projection — do not add new writers here.
-    const { results } = await env.DB.prepare(
-      `SELECT *
-       FROM agentsam_mcp_servers
-       WHERE account_id = ? AND is_active = 1
-       ORDER BY display_name ASC`,
-    )
-      .bind(requireApplicationAccountId())
-      .all();
-    return (results || []).map((row) => mapServerRow({ ...row, source: "agentsam_mcp_servers" }));
+    // No account-owned MCP installations. The retired agentsam_mcp_servers
+    // table has no account_id in production: never query it as account-scoped
+    // or expose its global entries to an arbitrary signed-in account.
+    return [];
   } catch (err) {
     console.error("agentsam mcp servers list failed", err?.message || err);
     return [];
@@ -310,10 +304,10 @@ export async function listToolPolicyKeys(env, policyKind) {
     const { results } = await env.DB.prepare(
       `SELECT tool_key, sort_order, notes
        FROM agentsam_tool_policy_keys
-       WHERE account_id = ? AND policy_kind = ? AND is_active = 1
+       WHERE policy_kind = ? AND is_active = 1
        ORDER BY sort_order ASC`
     )
-      .bind(requireApplicationAccountId(), policyKind)
+      .bind(policyKind)
       .all();
     return results || [];
   } catch {
@@ -344,41 +338,34 @@ export async function selectToolsForChat(env, routing = {}) {
 }
 
 export async function getToolsRegistryStatus(env) {
-  let toolsCount = 0;
-  let mcpServersCount = 0;
-  let policyKeysCount = 0;
+  const empty = { tools_registry_count: 0, mcp_servers_registered: 0, tool_policy_keys_count: 0 };
+  if (!env?.DB) return empty;
+  let accountId;
+  try { accountId = requireApplicationAccountId(); }
+  catch { return empty; }
 
-  try {
-    if (env?.DB) {
-      const t = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM agentsam_tools WHERE account_id = ? AND is_active = 1`
-      )
-        .bind(requireApplicationAccountId())
-        .first();
-      toolsCount = t?.n ?? 0;
-
-      const s = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM agentsam_mcp_servers WHERE account_id = ? AND is_active = 1`
-      )
-        .bind(requireApplicationAccountId())
-        .first();
-      mcpServersCount = s?.n ?? 0;
-
-      const p = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM agentsam_tool_policy_keys WHERE account_id = ? AND is_active = 1`
-      )
-        .bind(requireApplicationAccountId())
-        .first();
-      policyKeysCount = p?.n ?? 0;
-    }
-  } catch {
-    /* tables may not exist yet */
-  }
-
+  // Each diagnostic is independent. A missing optional policy table should not
+  // erase valid installed-tool or MCP counts, and no legacy global MCP table
+  // should ever masquerade as an account-owned installation.
+  const counts = await Promise.all([
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM agentsam_tools t
+      WHERE t.is_active = 1 AND (t.account_id = ? OR t.account_id IS NULL)
+        AND EXISTS (SELECT 1 FROM agentsam_plugin_installations i
+          WHERE i.account_id = ? AND i.plugin_id = t.plugin_id AND i.enabled = 1)`)
+      .bind(accountId, accountId).first().catch(() => null),
+    env.DB.prepare(`SELECT COUNT(DISTINCT p.id) AS n FROM agentsam_plugin_installations i
+      JOIN agentsam_plugins p ON p.id = i.plugin_id
+      WHERE i.account_id = ? AND i.enabled = 1
+        AND (p.plugin_kind = 'mcp' OR p.plugin_key LIKE '%mcp%')`)
+      .bind(accountId).first().catch(() => null),
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM agentsam_tool_policy_keys
+      WHERE is_active = 1`)
+      .first().catch(() => null),
+  ]);
   return {
-    tools_registry_count: toolsCount,
-    mcp_servers_registered: mcpServersCount,
-    tool_policy_keys_count: policyKeysCount,
+    tools_registry_count: Number(counts[0]?.n || 0),
+    mcp_servers_registered: Number(counts[1]?.n || 0),
+    tool_policy_keys_count: Number(counts[2]?.n || 0),
   };
 }
 

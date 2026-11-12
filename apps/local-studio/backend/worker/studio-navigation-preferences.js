@@ -1,4 +1,5 @@
 import { listLauncherApps } from './apps-launcher.js';
+import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
 
 /**
  * Account-owned, runtime-editable presentation of the installed app navigation.
@@ -105,7 +106,20 @@ export function applyNavigationOverrides(base, overrides) {
  * A catalog listing is never itself an installation or a permission grant.
  */
 export function withInstalledApps(base, catalog = []) {
-  const apps = Array.isArray(base?.apps) ? [...base.apps] : [];
+  // A manifest-owned, optional app also requires an account installation to
+  // appear. Match by its canonical href/aliases; do not create a second key map.
+  // Host-core and CMS-owned entries without a matching installable native app
+  // remain the host's responsibility, never a fake account installation.
+  const managed = catalog.filter(app=>app?.installable && app.kind==='app');
+  const apps = (Array.isArray(base?.apps) ? base.apps : []).filter(entry=>{
+    const item=managed.find(app=>app.href===entry.href ||
+      (Array.isArray(entry.aliases) && entry.aliases.includes(app.href)));
+    // An ecommerce-bundled destination is not an account Apps installation.
+    // Keep such services in their owned Commerce routes until they expose a
+    // native admin App manifest and the account explicitly installs it.
+    if (!item && entry.provenance==='ecommerce-bundled-manifest') return false;
+    return !item || (item.installed===true && item.enabled===true);
+  });
   const ids = new Set(apps.map(app => String(app.id || '')));
   const hrefs = new Set(apps.map(app => String(app.href || '')));
   for (const app of catalog) {
@@ -119,11 +133,12 @@ export function withInstalledApps(base, catalog = []) {
         !/^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(href) ||
         /[\\\u0000-\u001f<>"']/.test(href)) continue;
     const id = 'plugin-' + key.replace(/[^a-z0-9-]/gi, '-');
-    if (ids.has(id) || hrefs.has(href)) continue;
+    if (ids.has(id) || hrefs.has(href) ||
+      apps.some(existing=>Array.isArray(existing.aliases) && existing.aliases.includes(href))) continue;
     ids.add(id); hrefs.add(href);
     apps.push({ id, label, href, icon: 'apps', source: 'account-plugin', pluginKey: key });
   }
-  return { ...base, apps };
+  return { ...base, apps: dedupeAppNavigation(apps) };
 }
 
 function withCurrentNavigationOverrides(saved, base) {

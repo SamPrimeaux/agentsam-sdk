@@ -85,11 +85,11 @@ test('immutable product sources and packaged shell are the authority', () => {
 
   const app = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
   assert.match(app, /return \(isApp \|\| isStudioAdminPath\(pathname\)\) \? <PackagedConsoleFrame><AgentSamShell embedded \/><\/PackagedConsoleFrame> : <Outlet \/>/);
-  assert.match(app, /title="AgentSam home"/);
+  assert.match(app, /pathname === "\/admin\/home"/);
   for (const file of [
     'frontend/public/admin/host-config.js',
-    '.output/public/admin/js/shell.js',
-    '.output/public/ecommerce-cms-agentsam/admin/home.html'
+    'frontend/public/admin/js/shell.js',
+    'frontend/public/ecommerce-cms-agentsam/admin/home.html'
   ]) assert.ok(existsSync(new URL('../' + file, import.meta.url)), file);
 });
 
@@ -107,8 +107,7 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.match(shell, /navigation\.primary/);
   assert.match(shell, /navigation\.channels/);
   assert.match(shell, /navigation\.utilities/);
-  assert.match(shell, /showSidebarHeader: true/);
-  assert.match(shell, /HostedCompanionHeader/);
+  assert.match(shell, /\{!embedded \? <Nav\.Sidenav \/> : null\}/);
   assert.doesNotMatch(shell, /id: 'cad', label: 'CAD Creator'/);
   assert.match(shell, /<SideStage workFocused=\{globalAssistantFocused\}/);
   assert.match(shell, /!isConversation && state.sideOpen/);
@@ -121,7 +120,9 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
 test('admin home resolves to the packaged Ecommerce home on Local Studio', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   const root = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
-  assert.match(root, /src="\/ecommerce-cms-agentsam\/admin\/home\.html"/);
+  const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
+  assert.match(root, /pathname === "\/admin\/home"/);
+  assert.match(shell, /title="AgentSam admin home" src="\/ecommerce-cms-agentsam\/admin\/home\.html\?__agentsamEmbedded=1"/);
   assert.match(worker, /handleEcommerceAdminApi/);
   assert.match(worker, /handleCompletefulWebhook/);
 });
@@ -321,7 +322,8 @@ test('hosted AgentSam renders Chat/Work in its single packaged Console header', 
   assert.match(ecommerce, /id="console-notifications-trigger"/);
   assert.match(ecommerce, /id="console-notifications-menu"/);
   assert.match(workspace, /hostModeSlot \? createPortal\(<div className="agentsam-mode-host"><Nav\.ModeSwitcher \/><\/div>, hostModeSlot\)/);
-  assert.match(workspace, /empty && !hostModeSlot \? <div className="agentsam-welcome-mode-bar"/);
+  assert.match(workspace, /!hostModeSlot \? <Nav\.Topbar className="agentsam-conversation-topbar"/);
+  assert.match(workspace, /empty \? <div className="agentsam-topbar-mode"><Nav\.ModeSwitcher \/><\/div>/);
   assert.match(workspace, /<Nav\.ModeSwitcher \/>/);
   assert.doesNotMatch(workspace, /createPortal\(<Nav\.Scope className="agentsam-mode-host"/);
   assert.match(host, /event\.stopImmediatePropagation\(\)/);

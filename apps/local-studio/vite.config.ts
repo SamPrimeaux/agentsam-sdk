@@ -19,6 +19,11 @@ import { isMigrationFile } from "./scripts/migration-plan.mjs";
 // `preserveSymlinks`, imports inside that linked source resolve from its real
 // path, not Local Studio's node_modules. Keep its public Workbench dependency
 // on the package boundary while giving source builds one deterministic target.
+// ABS is source-owned by this SDK worktree. CI's clean checkout does not
+// always install or build its workspace package before the hosted Vite bundle.
+const absPackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-abs", import.meta.url)),
+);
 const loadingScenePackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-loading-scene", import.meta.url)),
 );
@@ -288,6 +293,9 @@ export default defineConfig(({ command, isPreview }) => ({
       { find: /^@inneranimalmedia\/copro-ui\/styles\.css$/, replacement: coproUiStyles },
       { find: /^@inneranimalmedia\/copro-ui$/, replacement: coproUiSource },
       ...navRuntimeAliases,
+      { find: /^@inneranimalmedia\/agentsam-abs\/react$/, replacement: resolvePath(absPackageRoot, "src/react/index.ts") },
+      { find: /^@inneranimalmedia\/agentsam-abs\/browser\.css$/, replacement: resolvePath(absPackageRoot, "styles/browser.css") },
+      { find: /^@inneranimalmedia\/agentsam-abs$/, replacement: resolvePath(absPackageRoot, "src/index.ts") },
       {
         find: "@agentsam/icon-registry",
         replacement: iconRegistrySource,

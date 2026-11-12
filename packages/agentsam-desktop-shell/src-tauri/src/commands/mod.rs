@@ -2,6 +2,7 @@
 pub mod agentsamd;
 pub mod autorag;
 pub mod chrome_browser;
+pub mod embedded_browser;
 
 // CAD Engine & Geometry Pipeline
 pub mod cad;

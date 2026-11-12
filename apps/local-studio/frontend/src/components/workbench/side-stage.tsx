@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,7 @@ import { DatabaseStage } from "@/components/workbench/database-stage";
 import { TerminalPane } from "@/components/workbench/terminal";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
+import { getTauriInvoke } from "@/lib/desktop/tauri";
 import { StudioMark } from "@/components/mark";
 import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistantContext";
 import { consumePendingCadAssistantContext } from "@/lib/cad/assistantContext";
@@ -85,21 +87,29 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 <TabIcon kind={item.kind} />
                 <span className="max-w-28 truncate">{item.title}</span>
               </button>
-              <button
+              <IconAction
                 type="button"
-                aria-label={`Close ${item.title}`}
-                className="rounded-full p-1.5 hover:bg-background hover:text-foreground"
-                onClick={() => closeSideTab(item.id)}
+                variant="ghost"
+                label={`Close ${item.title}`}
+                hint={`Close ${item.title} Side Stage tab`}
+                className="rounded-md p-1.5 hover:bg-background hover:text-foreground"
+                onClick={() => {
+                  if (item.kind === 'browser') {
+                    const invoke = getTauriInvoke();
+                    if (invoke) void invoke('embedded_browser_close', { sessionId: item.id }).catch(() => undefined);
+                  }
+                  closeSideTab(item.id);
+                }}
               >
                 <X className="size-3" />
-              </button>
+              </IconAction>
             </div>
           ))}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" size="icon-sm" variant="ghost" aria-label="Add Side Panel tab">
+              <IconAction type="button" variant="ghost" label="Add Side Stage tab" hint="Choose an available Side Stage tool">
                 <Plus className="size-4" />
-              </Button>
+              </IconAction>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               {!registry.loaded && <div role="status" className="px-3 py-2 text-xs text-muted-foreground">Loading additions…</div>}
@@ -135,32 +145,30 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {tab?.kind === "media" && <Button
+        {tab?.kind === "media" && <IconAction
           type="button"
-          size="icon-sm"
           variant="ghost"
-          aria-label="Open Media workspace"
-          title="Open Media full screen"
+          label="Open Media workspace"
+          hint="Open Media in its dedicated workspace"
           onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/media" } }))}
-        ><ExternalLink className="size-4" /></Button>}
-        {onFocusToggle && <Button
+        ><ExternalLink className="size-4" /></IconAction>}
+        {onFocusToggle && <IconAction
           type="button"
-          size="icon-sm"
           variant="ghost"
-          aria-label={workFocused ? "Restore split conversation and Work" : "Focus Work panel"}
-          title={workFocused ? "Restore split view" : "Focus Work"}
+          label={workFocused ? "Restore split conversation and Work" : "Focus Work panel"}
+          hint={workFocused ? "Restore split view" : "Expand Work within the current window"}
           onClick={onFocusToggle}
-        >{workFocused ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</Button>}
-        <Button
+        >{workFocused ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</IconAction>}
+        <IconAction
           type="button"
-          size="icon-sm"
           variant="ghost"
           className="ml-auto"
-          aria-label="Close Side Panel"
+          label="Close Side Stage"
+          hint="Hide the Side Stage without closing its tabs"
           onClick={() => setSideOpen(false)}
         >
           <X className="size-4" />
-        </Button>
+        </IconAction>
       </div>
 
       <div className="min-h-0 flex-1">
