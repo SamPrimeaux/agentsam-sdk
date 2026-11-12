@@ -78,7 +78,7 @@ To exercise the tool after pairing:
 
 ```sh
 agentsam mcp call browsermcp --tool browser \
-  --input '{"command":"goto https://browsermcp.io\nget title"}' --json
+  --input '{"commands":"goto https://browsermcp.io\nget title"}' --json
 ```
 
 Tool discovery or successful MCP initialization **does not prove the Chrome
