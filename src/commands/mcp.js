@@ -394,8 +394,8 @@ export async function runMcp(argv = [], options = {}) {
       requestedClients = preset.defaultClients;
     }
 
-    if (isStdio && (args.url || args.token)) throw new Error('browsermcp_local_stdio_does_not_accept_url_or_token');
-    if (isStdio && requestedClients.includes('chatgpt')) throw new Error('stdio_mcp_requires_local_host');
+    if (isStdio && (args.url || args.token)) throw new McpResourceError('browsermcp_local_stdio_does_not_accept_url_or_token', 'agentsam mcp add browsermcp --client agentsam');
+    if (isStdio && requestedClients.includes('chatgpt')) throw new McpResourceError('stdio_mcp_requires_local_host', 'agentsam mcp add browsermcp --client agentsam');
 
     const cfBundle = getCloudflareMcpBundle(name);
     const packHint = args.pack || (cfBundle?.feature_packs || [])[0] || '';
@@ -608,11 +608,11 @@ export async function runMcp(argv = [], options = {}) {
   }
 
   if (subcommand === 'tools' || subcommand === 'call') {
-    if (!target) throw new Error('mcp_server_name_required');
+    if (!target) throw new McpResourceError('mcp_server_name_required', 'agentsam mcp list');
     const server = readMcpServer(target, options);
-    if (!server) throw new Error(`mcp_server_not_configured:${target}`);
+    if (!server) throw new McpResourceError(`mcp_server_not_configured:${target}`, `agentsam mcp add ${target}`);
     const resource = await probeMcpServer(server, target, options);
-    if (resource.error) throw new Error(resource.error);
+    if (resource.error) throw new McpResourceError(resource.error, `agentsam mcp doctor ${target}`);
     if (subcommand === 'tools') {
       const result = await (options.listMcpToolsImpl || listMcpTools)(resource.server, options);
       if (args.json) write(JSON.stringify(result, null, 2) + '\n');
@@ -622,11 +622,11 @@ export async function runMcp(argv = [], options = {}) {
       }
       return result;
     }
-    if (!args.toolName) throw new Error('mcp_tool_name_required: use --tool <name>');
+    if (!args.toolName) throw new McpResourceError('mcp_tool_name_required: use --tool <name>', `agentsam mcp tools ${target}`);
     let payload;
     try { payload = JSON.parse(args.toolInput); }
-    catch { throw new Error('mcp_tool_input_invalid_json'); }
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('mcp_tool_input_object_required');
+    catch { throw new McpResourceError('mcp_tool_input_invalid_json', 'pass a JSON object to --input'); }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new McpResourceError('mcp_tool_input_object_required', 'pass a JSON object to --input');
     // An explicit CLI call is required. No browser automation runs on install
     // or from untrusted catalog metadata.
     const result = await (options.callMcpToolImpl || callMcpTool)(resource.server, args.toolName, payload, options);
