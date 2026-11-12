@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "asset": {
+    "id": "dispatch-3d",
+    "type": "scene",
+    "source": "pipeline/dispatch_scene.py",
+    "usage": "review",
+    "alt": "Original geometric study of a parcel, platform and dispatch kiosk inspired by the supplied shipping reference"
+  },
+  "sourceSha256": "02c0197d0fc0c5128d76ad1cb18c60c83e28fb54e454908fa4ed46526363da2a",
+  "pipelineSha256": "2b6c52a6fe1912878c3b00f5680f2468740472f46a9207d55586ccea553a7e54",
+  "artifacts": {
+    "geometry.js": {
+      "sha256": "6f6172adb48329d2d09bfc052b5989fcd88f06fdff18b63348893cfc141d06b3",
+      "bytes": 55529
+    },
+    "poster.png": {
+      "sha256": "596eb72deb22346c24ad9c5c841f0f327589a9737cceee58d90d374e95af5d5c",
+      "bytes": 875668
+    },
+    "scene.blend": {
+      "sha256": "510ccc6675300dcffc7c5fe0ef04dafdb885bf247ef8c9eeef9c076572d9ee09",
+      "bytes": 711472
+    },
+    "scene.glb": {
+      "sha256": "c9a74f39f9bd3914c995c53295639f34952f75e513241b9f189d0e5a4e4c2ea6",
+      "bytes": 57188
+    }
+  }
+}

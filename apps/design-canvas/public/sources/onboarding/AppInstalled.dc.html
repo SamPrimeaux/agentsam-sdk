@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Installed app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit}
+input::placeholder{color:#71717A}
+.card{border:1px solid #E4E4E7;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:12px;background:#FFFFFF}
+.h{font-size:13px;line-height:18px;font-weight:600}
+.p{font-size:14px;line-height:20px;color:#52525B}
+.out{height:40px;padding:0 16px;border-radius:999px;border:1px solid #0A0A0A;background:#FFFFFF;color:#0A0A0A;font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer}
+.nav{height:40px;padding:0 10px;border-radius:10px;font-size:14px;display:flex;align-items:center;gap:10px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1320px; box-sizing: border-box; display: flex; background: #F4F4F5; font-family: 'Inter', system-ui, sans-serif; color: #0A0A0A">
+
+<div style="flex: none; width: 288px; box-sizing: border-box; padding: 16px 12px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 8px; height: 44px; font-size: 15px; font-weight: 600"><a href="WelcomeHome.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #52525B"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>Settings</div>
+<div style="height: 44px; box-sizing: border-box; border: 1px solid #D4D4D8; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #52525B; font-size: 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg>Search settings</div>
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px"><div style="display: flex; flex-direction: column; gap: 2px"><div style="font-size: 14px; font-weight: 500">My Workspace</div><div style="font-size: 12px; color: #52525B">my-workspace.inneranimalmedia.com</div></div><span style="width: 36px; height: 36px; border-radius: 10px; background: #0A0A0A; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">MW</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="9">
+<a href="#" class="nav" style="background: {{n.bg}}; border: 1px solid {{n.border}}">{{n.label}}</a>
+</sc-for>
+</div>
+</div>
+
+<div style="flex: 1 1 auto; min-width: 0; margin: 8px 8px 8px 0; background: #FFFFFF; border: 1px solid #E4E4E7; border-radius: 20px; padding: 20px 32px; box-sizing: border-box; overflow: hidden">
+
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #52525B"><a href="AppListing.dc.html" aria-label="Back to apps" style="width: 44px; height: 44px; border-radius: 999px; border: 1px solid #D4D4D8; display: flex; align-items: center; justify-content: center; color: #0A0A0A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>Apps</div>
+<div style="display: flex; gap: 8px">
+<button class="out"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v4h4M12 8v4l3 2"/></svg>View activity</button>
+<button class="out">Uninstall app</button>
+<a href="WelcomeHome.dc.html" style="height: 40px; padding: 0 18px; border-radius: 999px; background: #0A0A0A; color: #FFFFFF; font-size: 14px; font-weight: 500; display: flex; align-items: center">Open app</a>
+</div>
+</div>
+
+<div style="width: 784px; margin: 32px auto 0; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em">Completeful</h1>
+<div class="p">Built by Inner Animal Media · Installed November 10, 2026 · Version 1.0.0</div>
+</div>
+
+<div class="card">
+<div style="display: flex; align-items: center; justify-content: space-between"><div class="h">Setup</div><span style="font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 999px; background: {{chipBg}}; color: {{chipFg}}">{{chipText}}</span></div>
+<div style="display: flex; align-items: flex-end; gap: 12px">
+<div style="flex: 1 1 auto; border: 1px solid #D4D4D8; border-radius: 12px; padding: 8px 16px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2px"><label for="key" style="font-size: 12px; line-height: 16px; color: #52525B">Completeful API key</label><input id="key" type="password" placeholder="Paste your key" onChange="{{onKey}}" style="border: 0; outline: 0; padding: 0; background: transparent; font: inherit; font-size: 15px; line-height: 20px; color: #0A0A0A; width: 100%"></div>
+<button onClick="{{save}}" style="flex: none; height: 56px; padding: 0 24px; border: 0; border-radius: 999px; background: #0A0A0A; color: #FFFFFF; font-size: 14px; font-weight: 500; cursor: pointer">{{saveLabel}}</button>
+</div>
+<div class="p">Your key is stored securely and only used when this app runs.</div>
+</div>
+
+<div style="display: flex; gap: 20px">
+<div class="card" style="flex: 1 1 0; min-width: 0"><div class="h">Connection health</div><div style="font-size: 22px; line-height: 28px; font-weight: 500">{{health}}</div><div class="p">{{healthNote}}</div></div>
+<div class="card" style="flex: 1 1 0; min-width: 0"><div class="h">Billing</div><div style="font-size: 22px; line-height: 28px; font-weight: 500">Free</div><div class="p">No plan needed for this app.</div></div>
+</div>
+
+<div class="card">
+<div class="h">Where it shows up</div>
+<sc-for list="{{places}}" as="pl" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; border-top: 1px solid #E4E4E7"><div style="font-size: 14px; line-height: 20px">{{pl.label}}</div>
+<button role="switch" aria-checked="{{pl.on}}" aria-label="{{pl.label}}" onClick="{{pl.pick}}" style="flex: none; width: 44px; height: 26px; border: 0; border-radius: 999px; background: {{pl.track}}; padding: 3px; display: flex; justify-content: {{pl.align}}; cursor: pointer"><span style="width: 20px; height: 20px; border-radius: 999px; background: #FFFFFF"></span></button></div>
+</sc-for>
+</div>
+
+<div class="card">
+<div class="h">Permissions</div>
+<div class="p">Turn off anything you don't want this app to do.</div>
+<sc-for list="{{perms}}" as="pm" hint-placeholder-count="6">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; border-top: 1px solid #E4E4E7"><div style="font-size: 14px; line-height: 20px">{{pm.label}}</div>
+<button role="switch" aria-checked="{{pm.on}}" aria-label="Allow: {{pm.label}}" onClick="{{pm.pick}}" style="flex: none; width: 44px; height: 26px; border: 0; border-radius: 999px; background: {{pm.track}}; padding: 3px; display: flex; justify-content: {{pm.align}}; cursor: pointer"><span style="width: 20px; height: 20px; border-radius: 999px; background: #FFFFFF"></span></button></div>
+</sc-for>
+</div>
+
+<div class="card">
+<div class="h">App history</div>
+<div style="display: flex; justify-content: space-between; min-height: 40px; align-items: center; border-top: 1px solid #E4E4E7; font-size: 14px"><span>Installed by you</span><span style="color: #52525B">Nov 10, 2026</span></div>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1320}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { saved: false, key: '', places: { composer: true, settings: true }, on: { read: true, sync: true, design: true, publish: true, quote: true, order: true } };
+}
+renderVals() {
+const s = this.state;
+const sw = (on) => ({ on, track: on ? '#0A0A0A' : '#D4D4D8', align: on ? 'flex-end' : 'flex-start' });
+const placeDefs = [['composer', 'Show in the AgentSam composer as @completeful'], ['settings', 'Show in Settings']];
+const places = placeDefs.map(([id, label]) => ({ label, ...sw(!!s.places[id]), pick: () => this.setState({ places: { ...s.places, [id]: !s.places[id] } }) }));
+const permDefs = [['read', 'Search and read the curated catalog'], ['sync', 'Sync catalog items into your products'], ['design', 'Create designs'], ['publish', 'Publish products and keep them in sync'], ['quote', 'Get order quotes'], ['order', 'Create orders']];
+const perms = permDefs.map(([id, label]) => ({ label, ...sw(!!s.on[id]), pick: () => this.setState({ on: { ...s.on, [id]: !s.on[id] } }) }));
+const navNames = ['General', 'Plan', 'Billing', 'Users', 'Payments', 'Domains', 'Apps', 'Notifications', 'Policies'];
+const nav = navNames.map((label) => ({ label, bg: label === 'Apps' ? '#FFFFFF' : 'transparent', border: label === 'Apps' ? '#D4D4D8' : 'transparent' }));
+return {
+nav, places, perms,
+chipText: s.saved ? 'Connected' : 'API key needed', chipBg: s.saved ? '#0A0A0A' : '#EDEDEF', chipFg: s.saved ? '#FFFFFF' : '#0A0A0A',
+saveLabel: s.saved ? 'Saved' : 'Save key',
+health: s.saved ? 'Healthy' : 'Not connected yet',
+healthNote: s.saved ? 'Checked just now.' : 'Add your API key to connect.',
+onKey: (e) => this.setState({ key: e.target.value }),
+save: () => this.setState({ saved: true })
+};
+}
+}
+</script>
+</body>
+</html>

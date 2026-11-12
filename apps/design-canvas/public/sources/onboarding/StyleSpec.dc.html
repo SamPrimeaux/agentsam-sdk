@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Style spec</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1700px; box-sizing: border-box; background: #FFFFFF; font-family: 'Inter', system-ui, sans-serif; color: #0A0A0A; padding: 64px 80px; display: flex; flex-direction: column; gap: 56px">
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">Clean company b/w</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #52525B; max-width: 720px">Black, white and neutral grays only. Hierarchy comes from size, weight and hairlines, never from color. One typeface (Inter). Every value on this page is used by the three flow screens.</p>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-size: 15px; line-height: 22px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #0A0A0A">Color tokens</div>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{swatches}}" as="sw" hint-placeholder-count="12">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="height: 64px; border-radius: 12px; border: 1px solid #D4D4D8; background: {{sw.hex}}"></div>
+<div style="font-size: 13px; line-height: 18px; font-weight: 500">{{sw.name}}</div>
+<div style="font-size: 12px; line-height: 16px; color: #52525B">{{sw.hex}} · {{sw.use}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 15px; line-height: 22px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #0A0A0A; margin-bottom: 12px">Type scale · Inter, sizes in px as size / line-height</div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 280px; align-items: baseline; gap: 24px; padding: 10px 0; border-bottom: 1px solid #E4E4E7"><div style="font-size: 13px; color: #52525B">Display</div><div style="font-size: 36px; line-height: 42px; font-weight: 400; letter-spacing: -0.02em">Start your Solo trial</div><div style="font-size: 12px; color: #52525B">36/42 · 400 · -0.02em · dark modal headline</div></div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 280px; align-items: baseline; gap: 24px; padding: 10px 0; border-bottom: 1px solid #E4E4E7"><div style="font-size: 13px; color: #52525B">Page title / price</div><div style="font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">Choose your plan</div><div style="font-size: 12px; color: #52525B">32/40 · 500 · -0.02em</div></div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 280px; align-items: baseline; gap: 24px; padding: 10px 0; border-bottom: 1px solid #E4E4E7"><div style="font-size: 13px; color: #52525B">Section title</div><div style="font-size: 28px; line-height: 36px; font-weight: 500; letter-spacing: -0.02em">Compare plans</div><div style="font-size: 12px; color: #52525B">28/36 · 500 · -0.02em</div></div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 280px; align-items: baseline; gap: 24px; padding: 10px 0; border-bottom: 1px solid #E4E4E7"><div style="font-size: 13px; color: #52525B">Card title</div><div style="font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em">Team</div><div style="font-size: 12px; color: #52525B">24/32 · 500 · -0.01em</div></div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 280px; align-items: baseline; gap: 24px; padding: 10px 0; border-bottom: 1px solid #E4E4E7"><div style="font-size: 13px; color: #52525B">Body large</div><div style="font-size: 18px; line-height: 26px; color: #52525B">14 days free, then $29/mo.</div><div style="font-size: 12px; color: #52525B">18/26 · 400 · muted</div></div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 280px; align-items: baseline; gap: 24px; padding: 10px 0; border-bottom: 1px solid #E4E4E7"><div style="font-size: 13px; color: #52525B">Body</div><div style="font-size: 16px; line-height: 24px; color: #52525B">Start free for 14 days. Change or cancel anytime.</div><div style="font-size: 12px; color: #52525B">16/24 · 400 · muted</div></div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 280px; align-items: baseline; gap: 24px; padding: 10px 0; border-bottom: 1px solid #E4E4E7"><div style="font-size: 13px; color: #52525B">UI / table row</div><div style="font-size: 14px; line-height: 20px; font-weight: 500">Agent Sam AI assistant</div><div style="font-size: 12px; color: #52525B">14/20 · 400 rows, 500 buttons</div></div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr) 280px; align-items: baseline; gap: 24px; padding: 10px 0; border-bottom: 1px solid #E4E4E7"><div style="font-size: 13px; color: #52525B">Caption / legal</div><div style="font-size: 12px; line-height: 18px; color: #52525B">Cancel anytime in Settings.</div><div style="font-size: 12px; color: #52525B">12/18 and 13/18 · 400 · muted</div></div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-size: 15px; line-height: 22px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #0A0A0A">Shape and spacing</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border: 1px solid #0A0A0A; border-radius: 28px"></div><div style="font-size: 13px; font-weight: 500">Modal shell · 28</div><div style="font-size: 12px; color: #52525B">Inner panel 22, padding 8 between</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border: 1px solid #0A0A0A; border-radius: 20px"></div><div style="font-size: 13px; font-weight: 500">Card · 20</div><div style="font-size: 12px; color: #52525B">Padding 24, 1px #E4E4E7</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border: 1px solid #0A0A0A; border-radius: 12px"></div><div style="font-size: 13px; font-weight: 500">Field and small button · 12</div><div style="font-size: 12px; color: #52525B">Field height 56, border #D4D4D8</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border: 1px solid #0A0A0A; border-radius: 999px"></div><div style="font-size: 13px; font-weight: 500">Pill · 999</div><div style="font-size: 12px; color: #52525B">Buttons 44 or 48 high, badges, chips</div></div>
+</div>
+<div style="font-size: 13px; line-height: 20px; color: #52525B">Spacing steps: 4, 8, 12, 16, 20, 24, 32, 40, 48, 64. Content max-width 1120 on pages, 560 on setup steps, modal 960 × 528. Gaps between cards 12.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-size: 15px; line-height: 22px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #0A0A0A">Components</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px">
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; align-items: center; justify-content: center; height: 44px; padding: 0 24px; border-radius: 999px; background: #0A0A0A; color: #FFFFFF; font-size: 14px; font-weight: 500">Primary</div>
+<div style="display: flex; align-items: center; justify-content: center; height: 44px; padding: 0 24px; border-radius: 999px; background: #FFFFFF; border: 1px solid #0A0A0A; box-sizing: border-box; font-size: 14px; font-weight: 500">Outline</div>
+<div style="display: flex; align-items: center; justify-content: center; height: 44px; padding: 0 24px; border-radius: 999px; background: #EDEDEF; font-size: 14px; font-weight: 500">Quiet</div>
+</div>
+<div style="font-size: 13px; font-weight: 500">Pill button</div>
+<div style="font-size: 12px; line-height: 18px; color: #52525B">Height 44 (48 for the main action in a form). Full width inside cards. Text 14/500. One primary per screen region. On dark: primary becomes #FFFFFF on #0A0A0A, secondary is #1B1E20 with white text, radius 12.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="border: 1px solid #D4D4D8; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; background: #FFFFFF">
+<div style="padding: 8px 16px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2px"><div style="font-size: 12px; line-height: 16px; color: #52525B">Card number</div><div style="font-size: 15px; line-height: 20px; color: #71717A">1234 1234 1234 1234</div></div>
+<div style="display: flex; border-top: 1px solid #D4D4D8"><div style="flex: 1 1 0; padding: 8px 16px; height: 56px; box-sizing: border-box; border-right: 1px solid #D4D4D8; display: flex; flex-direction: column; justify-content: center; gap: 2px"><div style="font-size: 12px; line-height: 16px; color: #52525B">Expiry</div><div style="font-size: 15px; line-height: 20px; color: #71717A">MM / YY</div></div><div style="flex: 1 1 0; padding: 8px 16px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2px"><div style="font-size: 12px; line-height: 16px; color: #52525B">CVC</div><div style="font-size: 15px; line-height: 20px; color: #71717A">123</div></div></div>
+</div>
+<div style="font-size: 13px; font-weight: 500">Grouped field</div>
+<div style="font-size: 12px; line-height: 18px; color: #52525B">One bordered shell, internal 1px dividers, label (12/16 muted) sits above the value (15/20) inside the cell. Real label plus input in markup. Standalone fields use the same cell with their own border.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; border-top: 1px solid #0A0A0A">
+<div style="display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); align-items: center; min-height: 52px; border-bottom: 1px solid #E4E4E7; font-size: 14px"><div>Workspaces</div><div style="text-align: center">1</div><div style="text-align: center">3</div></div>
+<div style="display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); align-items: center; min-height: 52px; border-bottom: 1px solid #E4E4E7; font-size: 14px"><div>Workflow canvas</div><div style="display: flex; justify-content: center"><svg width="22" height="22" viewBox="0 0 22 22" role="img" aria-label="Included"><circle cx="11" cy="11" r="11" fill="#0A0A0A"/><path d="M6.5 11.4l3 3 6-6.4" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="text-align: center; color: #71717A">—</div></div>
+</div>
+<div style="font-size: 13px; font-weight: 500">Compare row</div>
+<div style="font-size: 12px; line-height: 18px; color: #52525B">Min height 52, 1px #E4E4E7 divider, first column 1.6fr then equal columns. Included = 22px black circle with white check. Not included = em dash in #71717A. Section titles 15/600 with a divider; the table header rule is #0A0A0A.</div>
+</div>
+
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+swatches: [
+{ name: 'Ink', hex: '#0A0A0A', use: 'text, primary button' },
+{ name: 'Surface', hex: '#F4F4F5', use: 'page background' },
+{ name: 'Card', hex: '#FFFFFF', use: 'cards, panels' },
+{ name: 'Line', hex: '#E4E4E7', use: 'hairlines' },
+{ name: 'Field line', hex: '#D4D4D8', use: 'input borders' },
+{ name: 'Muted', hex: '#52525B', use: 'secondary text' },
+{ name: 'Badge fill', hex: '#EDEDEF', use: 'badges, quiet button' },
+{ name: 'Dash', hex: '#71717A', use: 'not included, placeholders' },
+{ name: 'Dark ground', hex: '#0B0C0D', use: 'checkout backdrop' },
+{ name: 'Dark panel', hex: '#101214', use: 'modal shell' },
+{ name: 'Dark line', hex: '#26292C', use: 'modal border' },
+{ name: 'Muted on dark', hex: '#A1A1AA', use: 'secondary text on dark' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

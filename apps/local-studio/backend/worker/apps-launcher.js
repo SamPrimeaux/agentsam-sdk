@@ -1,3 +1,4 @@
+import { normalizeCatalogSideStage } from './plugin-side-stages.js';
 /**
  * Read-only account-scoped projection for the console's Apps rail and + menu.
  * Registry visibility never implies installation, enablement, or authorization.
@@ -78,6 +79,21 @@ export async function installNativeAdminApp(db, accountId, pluginKey) {
     "WHERE account_id=? AND plugin_id=? AND instance_key='default'"
   ).bind(accountId,row.id).first();
   if (!current) throw new Error("app_install_unavailable");
+  // Install the optional stage surface only after the account installs the app.
+  // A stage preference is independent of the application's installation.
+  let sideStage = null;
+  try {
+    const metadata = JSON.parse(row.metadata_json || '{}');
+    sideStage = normalizeCatalogSideStage(metadata.side_stage, metadata.source);
+  } catch { /* Invalid source grants no embed. */ }
+  if (sideStage?.renderer === 'embed') {
+    await db.prepare(
+      "INSERT OR IGNORE INTO agentsam_plugin_installations " +
+      "(account_id,plugin_id,instance_key,enabled,setup_status,health_status,composer_visible,settings_visible) " +
+      "VALUES (?,?,'side-stage-v1',1,'configured','healthy',0,1)"
+    ).bind(accountId,row.id).run();
+  }
+
   return {
     key: pluginKey, installed: true, enabled: Number(current.enabled) === 1,
     href, status: Number(current.enabled) === 1 ? "installed" : "disabled",

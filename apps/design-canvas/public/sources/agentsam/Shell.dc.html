@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Agent Sam shell</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:#191919}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;color:inherit}
+input::placeholder,textarea::placeholder{color:var(--text-faint)}
+.hv:hover{background:var(--surface-2)}
+.hv:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.nav{width:260px;flex:none}
+.rp{width:328px;flex:none}
+@media(max-width:1000px){.rp{position:absolute;right:0;top:0;bottom:0;z-index:15;background:var(--chrome);box-shadow:-12px 0 32px rgba(0,0,0,.45)}}
+@media(max-width:760px){.nav{position:absolute;left:0;top:0;bottom:0;z-index:16;background:var(--chrome);box-shadow:12px 0 32px rgba(0,0,0,.45)}.rp{width:100%;max-width:360px}}
+</style>
+</helmet>
+<div style="{{themeVars}} height: 100vh; min-height: 640px; box-sizing: border-box; position: relative; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif">
+
+<sc-if value="{{anyMenu}}" hint-placeholder-val="{{ false }}"><div onClick="{{closeAll}}" style="position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 10"></div></sc-if>
+
+<header style="flex: none; height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: 4px; padding: 0 8px; border-bottom: 1px solid var(--line); background: var(--chrome); position: relative; z-index: 20">
+<button class="hv" aria-label="Toggle sidebar" aria-expanded="{{navOpen}}" onClick="{{toggleNav}}" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: {{navBtnBg}}; color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3"></rect><path d="M9 5v14"></path></svg></button>
+
+<sc-if value="{{notEditing}}" hint-placeholder-val="{{ true }}">
+<div style="position: relative; display: flex; align-items: center; gap: 2px; min-width: 0">
+<button class="hv" onClick="{{startEdit}}" style="min-width: 0; max-width: 46vw; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--text); cursor: text; display: flex; align-items: center; gap: 8px"><sc-if value="{{pinned}}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-text)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Pinned" role="img"><path d="M12 17v5M9 3h6l-1 6 3 3H7l3-3z"></path></svg></sc-if><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{title}}</span></button>
+<button class="hv" aria-label="Thread menu" aria-haspopup="menu" aria-expanded="{{menuOpen}}" onClick="{{toggleMenu}}" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: {{menuBtnBg}}; color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+
+<sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+<div role="menu" aria-label="Thread actions" style="position: absolute; left: 0; top: 52px; z-index: 30; width: 240px; box-sizing: border-box; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.5); display: flex; flex-direction: column">
+<sc-for list="{{menuItems}}" as="it" hint-placeholder-count="10">
+<div>
+<sc-if value="{{it.isDivider}}" hint-placeholder-val="{{ false }}"><div style="height: 1px; margin: 6px 4px; background: var(--line)"></div></sc-if>
+<sc-if value="{{it.isItem}}" hint-placeholder-val="{{ true }}"><button class="hv" role="menuitem" onClick="{{it.run}}" style="width: 100%; height: 40px; box-sizing: border-box; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: {{it.color}}; font-size: 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{it.d}}"></path></svg><span style="flex: 1 1 auto">{{it.label}}</span><sc-if value="{{it.hasHint}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: var(--text-faint)">{{it.hint}}</span></sc-if><sc-if value="{{it.hasChevron}}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></sc-if></button></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+<input id="thread-title" aria-label="Thread name" value="{{title}}" onInput="{{onTitle}}" onBlur="{{stopEdit}}" onKeyDown="{{onTitleKey}}" style="min-width: 0; width: 320px; max-width: 60vw; height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--brand-line); border-radius: 10px; outline: 0; background: var(--input); color: var(--text); font: inherit; font-size: 14px; font-weight: 500">
+</sc-if>
+
+<div style="flex: 1 1 auto"></div>
+
+<button class="hv" aria-label="Toggle details panel" aria-expanded="{{rightOpen}}" onClick="{{toggleRight}}" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: {{rightBtnBg}}; color: {{rightBtnFg}}; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"></path></svg></button>
+</header>
+
+<div style="flex: 1 1 auto; min-height: 0; display: flex; position: relative">
+
+<sc-if value="{{navOpen}}" hint-placeholder-val="{{ true }}">
+<nav class="nav" aria-label="Primary" style="box-sizing: border-box; padding: 12px; border-right: 1px solid var(--line); background: var(--chrome); display: flex; flex-direction: column; gap: 12px; overflow-y: auto">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em"><span style="width: 28px; height: 28px; border-radius: 8px; background: var(--brand); color: var(--on-brand); display: flex; align-items: center; justify-content: center" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"></path></svg></span>Agent Sam</div>
+<a class="hv" href="#" style="height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New thread</a>
+<div style="height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; background: var(--surface); color: var(--text-muted); font-size: 14px; display: flex; align-items: center; justify-content: space-between"><span style="display: flex; align-items: center; gap: 10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4-4"></path></svg>Search</span><span style="font-size: 12px">⌘K</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{navItems}}" as="n" hint-placeholder-count="5">
+<a class="hv" href="#" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; background: {{n.bg}}; color: {{n.fg}}; font-size: 14px; display: flex; align-items: center; gap: 10px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.d}}"></path></svg>{{n.label}}</a>
+</sc-for>
+</div>
+<div style="padding: 8px 12px 0; font-size: 12px; line-height: 16px; color: var(--text-faint)">Recent</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{recents}}" as="r" hint-placeholder-count="4">
+<a class="hv" href="#" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; background: {{r.bg}}; color: {{r.fg}}; font-size: 14px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.label}}</a>
+</sc-for>
+</div>
+<div style="flex: 1 1 auto"></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 8px; border-top: 1px solid var(--line); font-size: 14px"><span style="width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center" aria-hidden="true">MW</span><span style="display: flex; flex-direction: column; min-width: 0"><span>My Workspace</span><span style="font-size: 12px; color: var(--text-faint)">Trial ends in 14 days</span></span></div>
+</nav>
+</sc-if>
+
+<main style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; position: relative">
+
+<div style="flex: 1 1 auto; min-height: 0; overflow-y: auto">
+<div style="width: 100%; max-width: 760px; margin: 0 auto; box-sizing: border-box; padding: 32px clamp(16px, 4vw, 24px) 24px; display: flex; flex-direction: column; gap: 28px">
+
+<div style="align-self: flex-end; max-width: 85%; display: flex; flex-direction: column; align-items: flex-end; gap: 8px">
+<div style="width: 104px; height: 64px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center" role="img" aria-label="Attached screenshot"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M4 17l5-4 4 3 3-2 4 3"></path></svg></div>
+<div style="background: var(--surface); border-radius: 16px; padding: 12px 16px; font-size: 15px; line-height: 22px">make that a colorway for me, with a clean green instead of orange</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<button class="hv" style="align-self: flex-start; min-height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text-muted); font-size: 14px; display: flex; align-items: center; gap: 6px; cursor: pointer">Ran 2 commands, created a file<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+<p style="margin: 0; font-size: 15px; line-height: 24px">Charcoal and green is ready. The grays stay neutral and the accent is a deep green, so white button labels pass at 4.6:1.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+<span style="display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 13px"><span style="width: 16px; height: 16px; border-radius: 999px; border: 1px solid var(--line-strong); background: {{c.hex}}"></span>{{c.label}}</span>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 2px; color: var(--text-faint)">
+<button class="hv" aria-label="Copy" style="width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 012-2h9"></path></svg></button>
+<button class="hv" aria-label="Good response" style="width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11v9H4v-9zM7 11l4-7c1.5 0 2.5 1.2 2 3l-.5 3H19a2 2 0 011.9 2.6l-1.6 6A2 2 0 0117.4 20H7"></path></svg></button>
+<button class="hv" aria-label="Bad response" style="width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 13V4H4v9zM7 13l4 7c1.5 0 2.5-1.200 2-3l-.5-3H19a2 2 0 001.9-2.600l-1.600-6A2 2 0 0017.400 4H7"></path></svg></button>
+<span style="margin-left: 8px; font-size: 12px">5 minutes ago</span>
+</div>
+</div>
+
+</div>
+</div>
+
+<div style="flex: none; width: 100%; max-width: 760px; margin: 0 auto; box-sizing: border-box; padding: 0 clamp(16px, 4vw, 24px) 12px; position: relative; z-index: 25">
+
+<sc-if value="{{modelOpen}}" hint-placeholder-val="{{ false }}">
+<div role="menu" aria-label="Model" style="position: absolute; right: clamp(16px, 4vw, 24px); bottom: 100%; margin-bottom: -4px; width: 320px; max-width: calc(100% - 32px); box-sizing: border-box; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.5); display: flex; flex-direction: column">
+<sc-for list="{{tiers}}" as="t" hint-placeholder-count="4">
+<button class="hv" role="menuitemradio" aria-checked="{{t.on}}" onClick="{{t.pick}}" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text); text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; line-height: 20px; font-weight: 500">{{t.title}}</span><span style="font-size: 12px; line-height: 16px; color: var(--text-muted)">{{t.note}}</span></span><sc-if value="{{t.on}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Selected" role="img"><path d="M5 12.5l4.500 4.500L19 7.500"></path></svg></sc-if></button>
+</sc-for>
+<div style="height: 1px; margin: 6px 4px; background: var(--line)"></div>
+<button class="hv" role="menuitem" onClick="{{cycleEffort}}" style="width: 100%; height: 40px; box-sizing: border-box; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font-size: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer"><span>Effort</span><span style="display: flex; align-items: center; gap: 6px; color: var(--text-muted)">{{effort}}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span></button>
+<button class="hv" role="menuitem" style="width: 100%; height: 40px; box-sizing: border-box; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font-size: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer"><span>More models</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</div>
+</sc-if>
+
+<div style="box-sizing: border-box; background: var(--input); border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{attachments}}" as="a" hint-placeholder-count="2">
+<div style="position: relative; width: 56px; height: 56px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center" role="img" aria-label="{{a.label}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="M4 17l5-4 4 3 3-2 4 3"></path></svg></div>
+</sc-for>
+</div>
+<label for="msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Message Agent Sam</label>
+<textarea id="msg" rows="1" placeholder="Write a message..." style="border: 0; outline: 0; resize: none; padding: 6px 6px 2px; font: inherit; font-size: 15px; line-height: 22px; color: var(--text); background: transparent; width: 100%; box-sizing: border-box"></textarea>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<div style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<button class="hv" aria-label="Add" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<button class="hv" style="height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--text); font-size: 14px; display: flex; align-items: center; gap: 6px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6l6 6-6 6M13 18h6"></path></svg>Auto<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 4px; flex: none">
+<button class="hv" aria-haspopup="menu" aria-expanded="{{modelOpen}}" onClick="{{toggleModel}}" style="height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: {{modelBtnBg}}; color: var(--text); font-size: 14px; display: flex; align-items: center; gap: 6px; cursor: pointer">{{modelLabel}}</button>
+<button class="hv" aria-label="Dictate" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0014 0M12 18v3"></path></svg></button>
+<button aria-label="Send" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: var(--agent); color: var(--on-agent); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button>
+</div>
+</div>
+</div>
+<div style="padding-top: 8px; text-align: center; font-size: 12px; line-height: 16px; color: var(--text-faint)">AgentSam is AI and can make mistakes. Please double-check responses.</div>
+</div>
+
+<sc-if value="{{toast}}" hint-placeholder-val="{{ false }}"><div role="status" style="position: absolute; left: 50%; top: 16px; transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 999px; background: var(--text); color: var(--chrome); font-size: 14px; font-weight: 500; white-space: nowrap">{{toast}}</div></sc-if>
+
+</main>
+
+<sc-if value="{{rightOpen}}" hint-placeholder-val="{{ true }}">
+<aside class="rp" aria-label="Task details" style="box-sizing: border-box; border-left: 1px solid var(--line); background: var(--chrome); overflow-y: auto; display: flex; flex-direction: column">
+
+<div style="border-bottom: 1px solid var(--line)">
+<button class="hv" aria-expanded="{{progressOpen}}" onClick="{{toggleProgress}}" style="width: 100%; height: 48px; box-sizing: border-box; padding: 0 20px; border: 0; background: transparent; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">Progress<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: rotate({{progressRot}}deg)"><path d="M6 9l6 6 6-6"></path></svg></button>
+<sc-if value="{{progressOpen}}" hint-placeholder-val="{{ true }}">
+<div style="padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 4px" role="img" aria-label="2 of 3 steps done">
+<sc-for list="{{steps}}" as="st" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 4px"><span style="width: 28px; height: 28px; box-sizing: border-box; border-radius: 999px; border: 1px solid {{st.line}}; background: {{st.fill}}; display: flex; align-items: center; justify-content: center"><sc-if value="{{st.done}}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--agent-text)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.500 4.500L19 7.500"></path></svg></sc-if></span><sc-if value="{{st.hasJoin}}" hint-placeholder-val="{{ true }}"><span style="width: 8px; height: 1px; background: var(--line-strong)"></span></sc-if></div>
+</sc-for>
+</div>
+<div style="font-size: 12px; line-height: 18px; color: var(--text-faint)">Progress on longer tasks appears here.</div>
+</div>
+</sc-if>
+</div>
+
+<div style="border-bottom: 1px solid var(--line)">
+<button class="hv" aria-expanded="{{outputsOpen}}" onClick="{{toggleOutputs}}" style="width: 100%; height: 48px; box-sizing: border-box; padding: 0 20px; border: 0; background: transparent; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">Outputs<span style="font-weight: 400; color: var(--text-muted)">2</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: rotate({{outputsRot}}deg)"><path d="M6 9l6 6 6-6"></path></svg></button>
+<sc-if value="{{outputsOpen}}" hint-placeholder-val="{{ true }}">
+<div style="padding: 0 8px 12px; display: flex; flex-direction: column">
+<a class="hv" href="#" style="height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px"><span style="flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--surface-2); color: var(--text-muted); display: flex; align-items: center; justify-content: center" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5M13.500 5l-3 14"></path></svg></span><span style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">colorway-charcoal-green.css</span></a>
+<a class="hv" href="#" style="height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px"><span style="flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--brand-tint); border: 1px solid var(--brand-line); display: flex; align-items: center; justify-content: center" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-text)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.500" y="3.500" width="11" height="11" rx="3"></rect><rect x="9.500" y="9.500" width="11" height="11" rx="3" fill="var(--brand-tint)"></rect><path d="M13 15h4"></path></svg></span><span style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Onboarding &amp; Offers</span><span style="flex: none; font-size: 12px; color: var(--text-faint)">Artifact</span></a>
+</div>
+</sc-if>
+</div>
+
+<div style="border-bottom: 1px solid var(--line)">
+<button class="hv" aria-expanded="{{contextOpen}}" onClick="{{toggleContext}}" style="width: 100%; height: 48px; box-sizing: border-box; padding: 0 20px; border: 0; background: transparent; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">Context<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: rotate({{contextRot}}deg)"><path d="M6 9l6 6 6-6"></path></svg></button>
+<sc-if value="{{contextOpen}}" hint-placeholder-val="{{ true }}">
+<div style="padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 14px">
+<svg width="96" height="52" viewBox="0 0 96 52" fill="none" stroke="var(--line-strong)" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><rect x="1" y="9" width="30" height="36" rx="6"></rect><path d="M7 20h18M7 26h14M7 32h16"></path><rect x="25" y="9" width="30" height="36" rx="6" fill="var(--chrome)"></rect><path d="M31 20h18M31 26h14M31 32h16"></path><rect x="49" y="2" width="38" height="40" rx="6" fill="var(--surface)" stroke="var(--text-faint)"></rect><path d="M56 13h24M56 19h18M56 25h22" stroke="var(--text-faint)"></path><circle cx="68" cy="34" r="0.1" stroke="var(--brand-text)" stroke-width="3"></circle></svg>
+<div style="font-size: 12px; line-height: 18px; color: var(--text-faint)">Track tools and referenced files used in this task.</div>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{showConnectors}}" hint-placeholder-val="{{ true }}">
+<div style="margin: 12px; box-sizing: border-box; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 12px 8px; display: flex; flex-direction: column; gap: 12px">
+<div style="padding: 0 4px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between"><div style="font-size: 14px; line-height: 20px; font-weight: 500">Suggested connectors</div><button class="hv" aria-label="Dismiss suggestions" onClick="{{dismissConnectors}}" style="width: 44px; height: 44px; margin: -12px -8px -12px 0; border: 0; border-radius: 12px; background: transparent; color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+<div style="font-size: 12px; line-height: 18px; color: var(--text-muted)">Connect tools so Agent Sam can build, manage your store, and design on your behalf.</div>
+</div>
+<div style="display: flex; flex-direction: column; border-top: 1px solid var(--line)">
+<sc-for list="{{connectors}}" as="cn" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 4px; border-bottom: 1px solid var(--line)">
+<span style="flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--chrome); border: 1px solid var(--line); color: var(--brand-text); display: flex; align-items: center; justify-content: center" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{cn.d}}"></path></svg></span>
+<span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{cn.title}}</span><span style="font-size: 12px; line-height: 16px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{cn.id}}</span></span>
+<button class="hv" aria-label="{{cn.aria}}" aria-pressed="{{cn.on}}" onClick="{{cn.toggle}}" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: {{cn.bg}}; color: {{cn.fg}}; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{cn.glyph}}"></path></svg></button>
+</div>
+</sc-for>
+<a class="hv" href="#" style="height: 44px; box-sizing: border-box; padding: 0 4px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-muted)">See all connectors<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+</div>
+</div>
+</sc-if>
+
+</aside>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dev","light"],"default":"dev","section":"Theme"},"demo":{"editor":"enum","options":["none","thread","model","collapsed"],"default":"none","section":"Open state"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+const demo = (props && props.demo) || 'none';
+this.state = {
+navOpen: demo !== 'collapsed',
+rightOpen: demo !== 'collapsed',
+menuOpen: demo === 'thread',
+modelOpen: demo === 'model',
+editing: false,
+pinned: false,
+title: 'Charcoal green colorway',
+toast: '',
+progressOpen: true,
+outputsOpen: true,
+contextOpen: true,
+connectorsShown: true,
+connected: {},
+tier: 'fast',
+effortIdx: 1
+};
+}
+renderVals() {
+const s = this.state;
+const THEMES = {"dev": "--bg:#191919;--canvas:#141414;--canvas-dot:#2a2a2a;--chrome:#191919;--surface:#262626;--surface-2:#2a2a2a;--input:#303030;--line:#313131;--line-strong:#3a3a3a;--text:#ececec;--text-muted:#ababab;--text-faint:#8a8a8a;--brand:#238552;--brand-hover:#1f7a4b;--on-brand:#ffffff;--brand-text:#3dba7a;--brand-tint:#162a20;--brand-line:#2a5a40;--action:#238552;--action-hover:#1f7a4b;--on-action:#ffffff;--link:#3dba7a;--focus:#3dba7a;--select-tint:#162a20;--select-line:#2a5a40;--agent:#238552;--agent-hover:#1f7a4b;--on-agent:#ffffff;--agent-text:#3dba7a;--agent-tint:#162a20;--agent-line:#2a5a40;--danger:#ff8a80;--scrim:rgba(0,0,0,0.55)", "light": "--bg:#f4f5fa;--canvas:#fbfbfe;--canvas-dot:#d9dce8;--chrome:#ffffff;--surface:#ffffff;--surface-2:#f1f2f8;--input:#f1f2f8;--line:#e3e5ef;--line-strong:#c9ccdb;--text:#14161f;--text-muted:#5b6075;--text-faint:#6b7085;--brand:#238552;--brand-hover:#1d6f45;--on-brand:#ffffff;--brand-text:#1a7a49;--brand-tint:#e6f4ec;--brand-line:#a9d6bb;--action:#2f5bea;--action-hover:#2447c9;--on-action:#ffffff;--link:#2447c9;--focus:#2f5bea;--select-tint:#e8eeff;--select-line:#9db4f8;--agent:#6d4ae8;--agent-hover:#5b35d5;--on-agent:#ffffff;--agent-text:#5b35d5;--agent-tint:#f1ecff;--agent-line:#c9b9fa;--danger:#c62828;--scrim:rgba(20,22,31,0.35)"};
+const themeVars = THEMES[(this.props && this.props.theme) === 'light' ? 'light' : 'dev'];
+const set = (o) => this.setState(o);
+const flash = (msg) => { set({ toast: msg }); setTimeout(() => this.setState({ toast: '' }), 1800); };
+const closeMenu = (o) => set({ menuOpen: false, ...(o || {}) });
+const efforts = ['Low', 'Medium', 'High'];
+const tierDefs = [
+{ id: 'deep', title: 'Deep', note: 'For your toughest challenges' },
+{ id: 'balanced', title: 'Balanced', note: 'For complex work and everyday tasks' },
+{ id: 'fast', title: 'Fast', note: 'Most efficient for simpler tasks' },
+{ id: 'instant', title: 'Instant', note: 'Fastest for quick answers' }
+];
+const cur = tierDefs.find((t) => t.id === s.tier);
+const raw = [
+{ d: 'M12 7v5l3 2M12 3a9 9 0 100 18 9 9 0 000-18z', label: 'Schedule', run: () => closeMenu() },
+{ d: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z', label: 'Turn into skill', run: () => closeMenu() },
+{ div: true },
+{ d: 'M9 9h11v11H9zM5 15V6a2 2 0 012-2h9', label: 'Copy session ID', run: () => { closeMenu(); flash('Session ID copied'); } },
+{ div: true },
+{ d: 'M12 17v5M9 3h6l-1 6 3 3H7l3-3z', label: s.pinned ? 'Unpin' : 'Pin', hint: 'P', run: () => closeMenu({ pinned: !s.pinned }) },
+{ d: 'M4 20h4L19 9l-4-4L4 16z', label: 'Rename', hint: 'R', run: () => { closeMenu({ editing: true }); setTimeout(() => { const el = document.getElementById('thread-title'); if (el) { el.focus(); el.select(); } }, 30); } },
+{ d: 'M3 7h6l2 2h10v10H3z', label: 'Add to project', chevron: true, run: () => closeMenu() },
+{ div: true },
+{ d: 'M4 7h16v4H4zM6 11v8h12v-8M10 15h4', label: 'Archive', hint: 'A', run: () => closeMenu() },
+{ d: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13', label: 'Delete', hint: 'D', danger: true, run: () => closeMenu() }
+];
+const navDefs = [['Threads', 'M4 5h16v11H9l-5 4z', true], ['Projects', 'M3 7h6l2 2h10v10H3z'], ['Library', 'M5 4h4v16H5zM11 4h4v16h-4zM17 6l3 1-3 13-3-1'], ['Apps', 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'], ['Settings', 'M12 9a3 3 0 100 6 3 3 0 000-6zM12 3v3M12 18v3M3 12h3M18 12h3']];
+const recentDefs = ['Charcoal green colorway', 'Onboarding and offers flow', 'App store listing', 'Library, curate and save'];
+const connDefs = [
+{ id: 'inneranimalmedia-mcp-server', title: 'Inner Animal Media', d: 'M6 7a2 2 0 100-4 2 2 0 000 4zM18 21a2 2 0 100-4 2 2 0 000 4zM18 7a2 2 0 100-4 2 2 0 000 4zM8 6h8M7 8l9 9M18 9v8' },
+{ id: 'agentsam-ecommerce-cms', title: 'Agent Sam Commerce CMS', d: 'M5 8l1-4h12l1 4M5 8v12h14V8M9 12a3 3 0 006 0' },
+{ id: 'agentsam-design-dr', title: 'Agent Sam Design DR', d: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3M4 20h16' }
+];
+const done = [true, true, false];
+return { themeVars,
+demoDone: true,
+navOpen: s.navOpen, rightOpen: s.rightOpen, menuOpen: s.menuOpen, modelOpen: s.modelOpen,
+editing: s.editing, notEditing: !s.editing, pinned: s.pinned,
+title: s.title,
+anyMenu: s.menuOpen || s.modelOpen,
+toast: s.toast,
+navBtnBg: s.navOpen ? 'var(--surface)' : 'transparent',
+menuBtnBg: s.menuOpen ? 'var(--surface-2)' : 'transparent',
+modelBtnBg: s.modelOpen ? 'var(--surface-2)' : 'transparent',
+rightBtnBg: s.rightOpen ? 'var(--brand-tint)' : 'transparent',
+rightBtnFg: s.rightOpen ? 'var(--brand-text)' : 'var(--text)',
+toggleNav: () => set({ navOpen: !s.navOpen }),
+toggleRight: () => set({ rightOpen: !s.rightOpen }),
+toggleMenu: () => set({ menuOpen: !s.menuOpen, modelOpen: false }),
+toggleModel: () => set({ modelOpen: !s.modelOpen, menuOpen: false }),
+closeAll: () => set({ menuOpen: false, modelOpen: false }),
+startEdit: () => { set({ editing: true }); setTimeout(() => { const el = document.getElementById('thread-title'); if (el) { el.focus(); el.select(); } }, 30); },
+stopEdit: () => set({ editing: false, title: (s.title || '').trim() || 'Untitled thread' }),
+onTitle: (e) => set({ title: e.target.value }),
+onTitleKey: (e) => { if (e.key === 'Enter' || e.key === 'Escape') { set({ editing: false, title: (s.title || '').trim() || 'Untitled thread' }); } },
+menuItems: raw.map((it) => it.div ? { isDivider: true, isItem: false } : { isDivider: false, isItem: true, d: it.d, label: it.label, hint: it.hint || '', hasHint: !!it.hint, hasChevron: !!it.chevron, color: it.danger ? 'var(--danger)' : 'var(--text)', run: it.run }),
+navItems: navDefs.map(([label, d, on]) => ({ label, d, bg: on ? 'var(--surface)' : 'transparent', fg: on ? 'var(--text)' : 'var(--text-muted)' })),
+recents: recentDefs.map((label, i) => ({ label: i === 0 ? s.title : label, bg: i === 0 ? 'var(--surface)' : 'transparent', fg: i === 0 ? 'var(--text)' : 'var(--text-muted)' })),
+chips: [['Ground', '#191919'], ['Card', '#262626'], ['Line', '#313131'], ['Green', '#238552'], ['Green text', '#3DBA7A']].map(([label, hex]) => ({ label, hex })),
+attachments: [{ label: 'Attached screenshot 1' }, { label: 'Attached screenshot 2' }],
+tiers: tierDefs.map((t) => ({ ...t, on: t.id === s.tier, pick: () => set({ tier: t.id, modelOpen: false }) })),
+modelLabel: cur.title + ' ' + efforts[s.effortIdx],
+effort: efforts[s.effortIdx],
+cycleEffort: () => set({ effortIdx: (s.effortIdx + 1) % 3 }),
+progressOpen: s.progressOpen, outputsOpen: s.outputsOpen, contextOpen: s.contextOpen,
+progressRot: s.progressOpen ? 0 : -90, outputsRot: s.outputsOpen ? 0 : -90, contextRot: s.contextOpen ? 0 : -90,
+toggleProgress: () => set({ progressOpen: !s.progressOpen }),
+toggleOutputs: () => set({ outputsOpen: !s.outputsOpen }),
+toggleContext: () => set({ contextOpen: !s.contextOpen }),
+steps: done.map((d, i) => ({ done: d, hasJoin: i < done.length - 1, fill: d ? 'var(--agent-tint)' : 'transparent', line: d ? 'var(--agent-line)' : 'var(--line-strong)' })),
+showConnectors: s.connectorsShown,
+dismissConnectors: () => set({ connectorsShown: false }),
+connectors: connDefs.map((c) => {
+const on = !!s.connected[c.id];
+return { ...c, on, aria: (on ? 'Disconnect ' : 'Connect ') + c.id, bg: on ? 'var(--brand)' : 'transparent', fg: on ? 'var(--on-brand)' : 'var(--text)', glyph: on ? 'M5 12.5l4.5 4.5L19 7.5' : 'M12 5v14M5 12h14', toggle: () => set({ connected: { ...s.connected, [c.id]: !on } }) };
+})
+};
+}
+}
+</script>
+</body>
+</html>

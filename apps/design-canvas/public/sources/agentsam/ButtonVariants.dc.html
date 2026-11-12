@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Button variants</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:#191919}
+button{font-family:inherit}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px}
+</style>
+</helmet>
+<div style="{{themeVars}} min-height: 900px; box-sizing: border-box; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; padding: clamp(16px, 4vw, 40px); display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 6px"><h1 style="margin: 0; font-size: clamp(24px, 4vw, 32px); font-weight: 500; letter-spacing: -0.02em">Button variants</h1><p style="margin: 0; font-size: 15px; line-height: 22px; color: var(--text-muted); max-width: 640px">Two families, same roles. Rounded pills are solid and calm. Glass rectangles are translucent, blurred and edge-lit, and need something behind them to read well.</p></div>
+
+<div style="position: relative; overflow: hidden; border-radius: 24px; border: 1px solid var(--line); background: var(--canvas); padding: clamp(16px, 3vw, 32px); display: flex; flex-direction: column; gap: 28px">
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: radial-gradient(circle at 12% 20%, color-mix(in srgb, var(--action) 55%, transparent), transparent 38%), radial-gradient(circle at 85% 30%, color-mix(in srgb, var(--agent) 55%, transparent), transparent 40%), radial-gradient(circle at 55% 95%, color-mix(in srgb, var(--brand) 45%, transparent), transparent 40%)"></div>
+<sc-for list="{{families}}" as="f" hint-placeholder-count="2">
+<section style="position: relative; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px"><h2 style="margin: 0; font-size: 16px; font-weight: 600">{{f.title}}</h2><span style="font-size: 13px; color: var(--text-muted)">{{f.note}}</span></div>
+<div class="g">
+<sc-for list="{{f.items}}" as="b" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 8px"><button style="{{b.style}}">{{b.label}}</button><span style="font-size: 12px; color: var(--text-muted)">{{b.role}}</span></div>
+</sc-for>
+</div>
+<div class="g">
+<sc-for list="{{f.states}}" as="b" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 8px"><button style="{{b.style}}">{{b.label}}</button><span style="font-size: 12px; color: var(--text-muted)">{{b.role}}</span></div>
+</sc-for>
+</div>
+</section>
+</sc-for>
+</div>
+
+<section style="border: 1px solid var(--line); border-radius: 20px; background: var(--surface); padding: clamp(16px, 3vw, 28px); display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+<div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 16px; font-weight: 600">Pick your default CTA style</div>
+<div role="group" aria-label="CTA style" style="display: inline-flex; gap: 2px; padding: 2px; border-radius: 12px; background: var(--surface-2); align-self: flex-start">
+<sc-for list="{{prefs}}" as="p" hint-placeholder-count="3"><button aria-pressed="{{p.on}}" onClick="{{p.pick}}" style="height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: {{p.bg}}; color: {{p.fg}}; font-size: 13px; cursor: pointer">{{p.label}}</button></sc-for>
+</div>
+<div style="font-size: 13px; line-height: 19px; color: var(--text-muted)">{{prefNote}}</div>
+</div>
+<div style="flex: 1 1 320px; position: relative; overflow: hidden; border-radius: 18px; min-height: 140px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--action) 50%, transparent), transparent 55%), radial-gradient(circle at 80% 70%, color-mix(in srgb, var(--agent) 50%, transparent), transparent 55%), var(--canvas)">
+<button style="{{heroA}}">Start free</button><button style="{{heroB}}">See plans</button>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dev","light"],"default":"dev","section":"Theme"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { pref: 'both' }; }
+renderVals() {
+const s = this.state;
+const THEMES = {"dev": "--bg:#191919;--canvas:#141414;--canvas-dot:#2a2a2a;--chrome:#191919;--surface:#262626;--surface-2:#2a2a2a;--input:#303030;--line:#313131;--line-strong:#3a3a3a;--text:#ececec;--text-muted:#ababab;--text-faint:#8a8a8a;--brand:#238552;--brand-hover:#1f7a4b;--on-brand:#ffffff;--brand-text:#3dba7a;--brand-tint:#162a20;--brand-line:#2a5a40;--action:#238552;--action-hover:#1f7a4b;--on-action:#ffffff;--link:#3dba7a;--focus:#3dba7a;--select-tint:#162a20;--select-line:#2a5a40;--agent:#238552;--agent-hover:#1f7a4b;--on-agent:#ffffff;--agent-text:#3dba7a;--agent-tint:#162a20;--agent-line:#2a5a40;--danger:#ff8a80;--scrim:rgba(0,0,0,0.55)", "light": "--bg:#f4f5fa;--canvas:#fbfbfe;--canvas-dot:#d9dce8;--chrome:#ffffff;--surface:#ffffff;--surface-2:#f1f2f8;--input:#f1f2f8;--line:#e3e5ef;--line-strong:#c9ccdb;--text:#14161f;--text-muted:#5b6075;--text-faint:#6b7085;--brand:#238552;--brand-hover:#1d6f45;--on-brand:#ffffff;--brand-text:#1a7a49;--brand-tint:#e6f4ec;--brand-line:#a9d6bb;--action:#2f5bea;--action-hover:#2447c9;--on-action:#ffffff;--link:#2447c9;--focus:#2f5bea;--select-tint:#e8eeff;--select-line:#9db4f8;--agent:#6d4ae8;--agent-hover:#5b35d5;--on-agent:#ffffff;--agent-text:#5b35d5;--agent-tint:#f1ecff;--agent-line:#c9b9fa;--danger:#c62828;--scrim:rgba(20,22,31,0.35)"};
+const light = (this.props && this.props.theme) === 'light';
+const themeVars = THEMES[light ? 'light' : 'dev'];
+const base = 'height:44px;padding:0 22px;font:inherit;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-sizing:border-box;width:100%;';
+const edge = light ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.16)';
+const glassBase = (tint, ink) => base + 'border-radius:10px;border:1px solid ' + edge + ';background:' + tint + ';color:' + ink + ';backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);box-shadow:inset 0 1px 0 ' + (light ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.18)') + ',0 6px 18px rgba(0,0,0,' + (light ? '.10' : '.28') + ');';
+const wash = light ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.08)';
+const tint = (c, p) => 'color-mix(in srgb, var(--' + c + ') ' + p + '%, transparent)';
+const pill = {
+primary: base + 'border-radius:999px;border:0;background:var(--action);color:var(--on-action);',
+secondary: base + 'border-radius:999px;border:1px solid var(--line-strong);background:transparent;color:var(--text);',
+quiet: base + 'border-radius:999px;border:0;background:var(--surface-2);color:var(--text);',
+agent: base + 'border-radius:999px;border:0;background:var(--agent);color:var(--on-agent);',
+danger: base + 'border-radius:999px;border:1px solid var(--danger);background:transparent;color:var(--danger);'
+};
+const glass = {
+primary: glassBase(tint('action', 62), light ? '#ffffff' : '#ffffff'),
+secondary: glassBase(wash, 'var(--text)'),
+quiet: glassBase(light ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.04)', 'var(--text)'),
+agent: glassBase(tint('agent', 62), '#ffffff'),
+danger: glassBase(wash, 'var(--danger)')
+};
+const roles = { primary: 'Primary action', secondary: 'Secondary', quiet: 'Quiet', agent: 'Agent action', danger: 'Destructive' };
+const names = { primary: 'Publish', secondary: 'Cancel', quiet: 'Skip', agent: 'Ask AgentSam', danger: 'Delete' };
+const mk = (set) => ['primary', 'secondary', 'quiet', 'agent', 'danger'].map((k) => ({ label: names[k], role: roles[k], style: set[k] }));
+const stateMk = (set) => [
+{ label: 'Default', role: 'Rest', style: set.primary },
+{ label: 'Hover', role: 'Lift, +brightness', style: set.primary + 'filter:brightness(1.12);transform:translateY(-1px);' },
+{ label: 'Pressed', role: 'Settle', style: set.primary + 'filter:brightness(.92);transform:translateY(1px);' },
+{ label: 'Focus', role: '2px focus ring', style: set.primary + 'outline:2px solid var(--focus);outline-offset:3px;' },
+{ label: 'Disabled', role: 'Not available', style: set.primary + 'opacity:.4;cursor:not-allowed;' }
+];
+const prefs = [['pill', 'Rounded'], ['glass', 'Glass'], ['both', 'Both']].map(([id, label]) => { const on = s.pref === id; return { label, on, bg: on ? 'var(--select-tint)' : 'transparent', fg: on ? 'var(--link)' : 'var(--text-muted)', pick: () => this.setState({ pref: id }) }; });
+const heroA = s.pref === 'glass' ? glass.primary : pill.primary;
+const heroB = s.pref === 'pill' ? pill.secondary : glass.secondary;
+const notes = { pill: 'Rounded pills everywhere: solid, calm, works on any ground.', glass: 'Glass rectangles everywhere: best over imagery and gradients.', both: 'Rounded for everyday product UI, glass for hero and marketing moments over imagery.' };
+return {
+themeVars,
+families: [
+{ title: 'Rounded pill', note: 'Radius 999, solid fills.', items: mk(pill), states: stateMk(pill) },
+{ title: 'Glass rectangle', note: 'Radius 10, 16px blur, edge light.', items: mk(glass), states: stateMk(glass) }
+],
+prefs, heroA: base + heroA.replace(base, '') + 'width:auto;', heroB: base + heroB.replace(base, '') + 'width:auto;', prefNote: notes[s.pref]
+};
+}
+}
+</script>
+</body>
+</html>

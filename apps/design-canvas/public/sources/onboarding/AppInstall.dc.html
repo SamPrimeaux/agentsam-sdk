@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Install app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif}
+a{text-decoration:none}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; background: #FFFFFF; font-family: 'Inter', system-ui, sans-serif; color: #0A0A0A; overflow: hidden">
+
+<div style="position: absolute; inset: 0; opacity: 0.7" aria-hidden="true">
+<div style="height: 72px; border-bottom: 1px solid #E4E4E7"></div>
+<div style="width: 1144px; margin: 56px auto 0; display: flex; gap: 64px">
+<div style="width: 328px; display: flex; flex-direction: column; gap: 20px"><div style="height: 56px; width: 200px; border-radius: 14px; background: #F4F4F5"></div><div style="height: 12px; border-radius: 6px; background: #F4F4F5"></div><div style="height: 12px; width: 60%; border-radius: 6px; background: #F4F4F5"></div><div style="height: 56px; border-radius: 999px; background: #E4E4E7"></div></div>
+<div style="flex: 1 1 auto; height: 380px; border-radius: 20px; background: #F4F4F5"></div>
+</div>
+</div>
+<div style="position: absolute; inset: 0; background: rgba(10,10,10,0.55)"></div>
+
+<div role="dialog" aria-modal="true" aria-label="Install Completeful" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 560px; box-sizing: border-box; background: #FFFFFF; border-radius: 24px; padding: 32px; display: flex; flex-direction: column; gap: 24px; box-shadow: 0 24px 64px rgba(0,0,0,0.3)">
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+<div style="display: flex; align-items: center; gap: 14px"><span style="width: 52px; height: 52px; border-radius: 14px; background: #F4F4F5; border: 1px solid #E4E4E7; font-size: 22px; font-weight: 600; display: flex; align-items: center; justify-content: center" aria-hidden="true">C</span>
+<div style="display: flex; flex-direction: column; gap: 2px"><h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em">Install Completeful?</h1><div style="font-size: 13px; line-height: 18px; color: #52525B">Free · Version 1.0.0 · by Inner Animal Media</div></div></div>
+<a href="AppListing.dc.html" aria-label="Close" style="width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #52525B"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a>
+</div>
+
+<div style="display: flex; flex-direction: column">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px"><div style="font-size: 14px; font-weight: 600">What it can do</div><div style="font-size: 13px; color: #52525B">{{countLabel}}</div></div>
+<sc-for list="{{perms}}" as="pm" hint-placeholder-count="6">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; border-top: 1px solid #E4E4E7">
+<div style="font-size: 14px; line-height: 20px">{{pm.label}}</div>
+<button role="switch" aria-checked="{{pm.on}}" aria-label="Allow: {{pm.label}}" onClick="{{pm.pick}}" style="flex: none; width: 44px; height: 26px; border: 0; border-radius: 999px; background: {{pm.track}}; padding: 3px; display: flex; justify-content: {{pm.align}}; cursor: pointer"><span style="width: 20px; height: 20px; border-radius: 999px; background: #FFFFFF"></span></button>
+</div>
+</sc-for>
+</div>
+
+<div style="background: #F4F4F5; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 20px; color: #3F3F46">
+<div style="font-weight: 600; color: #0A0A0A">After you install</div>
+<div>1. Add your Completeful API key.</div>
+<div>2. Mention @completeful in AgentSam, or open it from Settings.</div>
+</div>
+
+<div style="display: flex; justify-content: flex-end; gap: 8px">
+<a href="AppListing.dc.html" style="height: 48px; padding: 0 22px; border-radius: 999px; border: 1px solid #D4D4D8; color: #0A0A0A; font-size: 14px; font-weight: 500; display: flex; align-items: center">Cancel</a>
+<a href="AppInstalled.dc.html" style="height: 48px; padding: 0 28px; border-radius: 999px; background: #0A0A0A; color: #FFFFFF; font-size: 14px; font-weight: 500; display: flex; align-items: center">Install</a>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { on: { read: true, sync: true, design: true, publish: true, quote: true, order: true } };
+}
+renderVals() {
+const s = this.state;
+const defs = [['read', 'Search and read the curated catalog'], ['sync', 'Sync catalog items into your products'], ['design', 'Create designs'], ['publish', 'Publish products and keep them in sync'], ['quote', 'Get order quotes'], ['order', 'Create orders']];
+const perms = defs.map(([id, label]) => { const on = !!s.on[id]; return { label, on, track: on ? '#0A0A0A' : '#D4D4D8', align: on ? 'flex-end' : 'flex-start', pick: () => this.setState({ on: { ...s.on, [id]: !on } }) }; });
+const n = perms.filter((p) => p.on).length;
+return { perms, countLabel: n + ' of ' + perms.length + ' allowed' };
+}
+}
+</script>
+</body>
+</html>

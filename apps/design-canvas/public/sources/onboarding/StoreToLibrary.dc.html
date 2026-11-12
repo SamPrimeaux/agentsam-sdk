@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Save to library</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif}
+a{text-decoration:none}
+button{font-family:inherit}
+input::placeholder{color:var(--dim)}
+</style>
+</helmet>
+<div style="{{rootStyle}}">
+
+<div style="width: 920px; height: 620px; box-sizing: border-box; display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 24px; overflow: hidden">
+
+<div style="flex: none; width: 340px; box-sizing: border-box; background: var(--panel2); padding: 28px; display: flex; flex-direction: column; gap: 16px">
+<div style="position: relative; width: 100%; height: 184px; border: 1px solid var(--line); border-radius: 10px; background: var(--frame); overflow: hidden">
+<sc-for list="{{blocks}}" as="b" hint-placeholder-count="12">
+<span style="position: absolute; {{b.style}}"></span>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 16px; line-height: 22px; font-weight: 500">Pricing plans</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--muted)">{{kindLabel}} · 1440 × 900</div>
+</div>
+<div style="font-size: 13px; line-height: 20px; color: var(--muted)">A preview image is created for you when you save, so it shows up in the library right away.</div>
+</div>
+
+<div style="flex: 1 1 auto; min-width: 0; box-sizing: border-box; padding: 32px; display: flex; flex-direction: column; gap: 20px">
+
+<sc-if value="{{editing}}" hint-placeholder-val="{{ true }}">
+<div style="flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em">Save to library</h1>
+
+<div style="border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden">
+<div style="padding: 8px 16px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2px"><label for="nm" style="font-size: 12px; line-height: 16px; color: var(--dim)">Name</label><input id="nm" value="Pricing plans" style="border: 0; outline: 0; padding: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 20px; width: 100%"></div>
+<div style="display: flex; border-top: 1px solid var(--line)">
+<div style="flex: 1 1 0; min-width: 0; padding: 8px 16px; height: 56px; box-sizing: border-box; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; gap: 2px"><label for="cat" style="font-size: 12px; line-height: 16px; color: var(--dim)">Category</label><select id="cat" style="border: 0; outline: 0; padding: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 20px; width: 100%"><option>Pricing</option><option>Hero</option><option>Features</option><option>Footer</option></select></div>
+<div style="flex: 1 1 0; min-width: 0; padding: 8px 16px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2px"><label for="tg" style="font-size: 12px; line-height: 16px; color: var(--dim)">Tags</label><input id="tg" value="plans, trial, cards" style="border: 0; outline: 0; padding: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 20px; width: 100%"></div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 12px; line-height: 16px; color: var(--dim)">Type</div>
+<div style="display: flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 2px">
+<sc-for list="{{kinds}}" as="k" hint-placeholder-count="3">
+<button aria-pressed="{{k.on}}" onClick="{{k.pick}}" style="flex: 1 1 0; height: 32px; border: 0; border-radius: 8px; background: {{k.bg}}; color: {{k.fg}}; font-size: 13px; font-weight: 500; cursor: pointer">{{k.label}}</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; min-height: 0">
+<div style="font-size: 12px; line-height: 16px; color: var(--dim); padding-bottom: 8px">Editable content</div>
+<sc-for list="{{fields}}" as="fl" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; border-top: 1px solid var(--line)">
+<div style="display: flex; align-items: baseline; gap: 10px; min-width: 0"><div style="font-size: 14px; line-height: 20px">{{fl.label}}</div><div style="font-size: 12px; line-height: 16px; color: var(--muted)">{{fl.type}}</div></div>
+<button role="switch" aria-checked="{{fl.on}}" aria-label="Allow editing {{fl.label}}" onClick="{{fl.pick}}" style="flex: none; width: 44px; height: 26px; border: 0; border-radius: 999px; background: {{fl.track}}; padding: 3px; display: flex; justify-content: {{fl.align}}; cursor: pointer"><span style="width: 20px; height: 20px; border-radius: 999px; background: {{fl.knob}}"></span></button>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<div style="font-size: 12px; line-height: 18px; color: var(--muted); max-width: 300px">Saved as version 1. Saving again later keeps the earlier version.</div>
+<div style="display: flex; gap: 8px">
+<a href="CanvasEditor.dc.html" style="height: 44px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink); font-size: 14px; font-weight: 500; display: flex; align-items: center">Cancel</a>
+<button onClick="{{save}}" style="height: 44px; padding: 0 24px; border-radius: 999px; border: 0; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 500; cursor: pointer">Save to library</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{saved}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 24px">
+<svg width="44" height="44" viewBox="0 0 22 22" role="img" aria-label="Saved"><circle cx="11" cy="11" r="11" fill="var(--ink)"/><path d="M6.5 11.4l3 3 6-6.4" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 500; letter-spacing: -0.02em">Pricing plans is in your library</h1>
+<p style="margin: 0; font-size: 15px; line-height: 22px; color: var(--muted)">Add it to any page from Theme Studio or the Page Builder. Open it on a canvas any time to change it and save a new version.</p>
+</div>
+<div style="display: flex; gap: 8px">
+<a href="CanvasLibrary.dc.html" style="height: 44px; padding: 0 24px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 500; display: flex; align-items: center">Open library</a>
+<a href="CanvasEditor.dc.html" style="height: 44px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink); font-size: 14px; font-weight: 500; display: flex; align-items: center">Back to canvas</a>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { kind: 'Section', saved: false, on: { heading: true, sub: true, plan: true, price: true, cta: true } };
+}
+renderVals() {
+const s = this.state;
+const light = this.props.theme === 'light';
+const T = light
+? { bg: '#F4F4F5', panel: '#FFFFFF', panel2: '#F4F4F5', line: '#E4E4E7', ink: '#0A0A0A', muted: '#52525B', dim: '#6B6B73', frame: '#FFFFFF', wi: '#27272A', wl: '#D4D4D8', ws: '#F4F4F5' }
+: { bg: '#0B0C0D', panel: '#111315', panel2: '#17191B', line: '#26292C', ink: '#F4F4F5', muted: '#A1A1AA', dim: '#8B8B94', frame: '#101214', wi: '#D4D4D8', wl: '#3A3D41', ws: '#1E2124' };
+const rootStyle = '--bg:' + T.bg + ';--panel:' + T.panel + ';--panel2:' + T.panel2 + ';--line:' + T.line + ';--ink:' + T.ink + ';--muted:' + T.muted + ';--dim:' + T.dim + ';--frame:' + T.frame + ';--wi:' + T.wi + ';--wl:' + T.wl + ';--ws:' + T.ws + ';width:1440px;height:900px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:' + (light ? '#E4E4E7' : '#060707') + ';font-family:Inter,system-ui,sans-serif;color:var(--ink)';
+const B = (x, y, w, h, t, r) => ({ x, y, w, h, t, r });
+const style = (b) => 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%;border-radius:' + (b.r || '3px') + ';background:' + (b.t === 'i' ? 'var(--wi)' : b.t === 'l' ? 'var(--wl)' : 'var(--ws)');
+const pricing = [B(32,8,36,7,'i')];
+[4, 27.5, 51, 74.5].forEach((x) => { pricing.push(B(x,28,21.5,62,'s','6px'), B(x+2,34,10,4,'i'), B(x+2,44,8,7,'i'), B(x+2,78,17.5,7,'i','999px')); });
+const kinds = ['Page', 'Section', 'Block'].map((label) => { const on = s.kind === label; return { label, on, bg: on ? 'var(--panel2)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--muted)', pick: () => this.setState({ kind: label }) }; });
+const fieldDefs = [['heading', 'Heading', 'Text'], ['sub', 'Subheading', 'Text'], ['plan', 'Plan name', 'Text'], ['price', 'Price', 'Text'], ['cta', 'Button', 'Text and link']];
+const fields = fieldDefs.map(([id, label, type]) => { const on = !!s.on[id]; return { label, type, on, track: on ? 'var(--ink)' : 'var(--line)', knob: on ? 'var(--bg)' : 'var(--muted)', align: on ? 'flex-end' : 'flex-start', pick: () => this.setState({ on: { ...s.on, [id]: !on } }) }; });
+return {
+rootStyle, kinds, fields, kindLabel: s.kind,
+blocks: pricing.map((b) => ({ style: style(b) })),
+editing: !s.saved, saved: s.saved,
+save: () => this.setState({ saved: true })
+};
+}
+}
+</script>
+</body>
+</html>

@@ -59,9 +59,10 @@ test("apps launcher requires an account and database instead of listing another 
 
 function installDb(definitions) {
   const installed = new Map();
+  const stages = new Map();
   const tracked = [];
   return {
-    installed, tracked,
+    installed, stages, tracked,
     prepare(query) {
       return {
         bind(...args) {
@@ -75,7 +76,8 @@ function installDb(definitions) {
               if (!query.startsWith("INSERT OR IGNORE INTO agentsam_plugin_installations")) throw Error("unexpected_write");
               tracked.push({query,args});
               const key=args[0]+":"+args[1];
-              if (!installed.has(key)) installed.set(key,{id:"pinst_1",enabled:1,setup_status:"configured"});
+              if (query.includes("'side-stage-v1'")) stages.set(key,{enabled:1});
+              else if (!installed.has(key)) installed.set(key,{id:"pinst_1",enabled:1,setup_status:"configured"});
               return {success:true};
             },
           };
@@ -118,4 +120,22 @@ test("app installs preserve disabled preferences and reject plugin, embed, unsaf
   await assert.rejects(()=>installNativeAdminApp(db,"acct_a","unknown"),/app_install_not_found/);
   await assert.rejects(()=>installNativeAdminApp(db,"acct_a","../bad"),/app_install_key_invalid/);
   await assert.rejects(()=>installNativeAdminApp(db,"","cad"),/apps_launcher_context_missing/);
+});
+
+test('installable native design app also registers its valid sandboxed embed stage',async()=>{
+  const db=installDb([{
+    id:'plg_design',plugin_key:'agentsam-design-canvas',plugin_kind:'native',
+    metadata_json:JSON.stringify({
+      source:'https://agentsam.inneranimalmedia.com/catalog/plugins',
+      app:{surfaces:['admin-nav','add-apps'],nav:{href:'/design-canvas/'}},
+      side_stage:{version:1,id:'design-canvas',renderer:'embed',href:'https://agentsam.inneranimalmedia.com/design-canvas/'}
+    })
+  }]);
+  const installed=await installNativeAdminApp(db,'acct_design','agentsam-design-canvas');
+  assert.equal(installed.installed,true);
+  assert.equal(db.installed.size,1);
+  assert.equal(db.stages.size,1);
+  assert.equal(db.tracked.length,2);
+  await installNativeAdminApp(db,'acct_design','agentsam-design-canvas');
+  assert.equal(db.stages.size,1);
 });

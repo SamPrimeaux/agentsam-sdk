@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Workspace setup</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif}
+a{color:#0A0A0A}a:hover{color:#3F3F46}
+input::placeholder{color:#71717A}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #F4F4F5; font-family: 'Inter', system-ui, sans-serif; color: #0A0A0A; display: flex; flex-direction: column">
+
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: #FFFFFF; border-bottom: 1px solid #E4E4E7">
+<div style="font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: -0.01em">Inner Animal Media</div>
+<div style="font-size: 14px; line-height: 20px; color: #52525B">{{stepLabel}}</div>
+</div>
+
+<div style="flex: 1 1 auto; display: flex; align-items: center; justify-content: center; padding: 24px">
+<div style="width: 100%; max-width: 560px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E4E4E7; border-radius: 20px; padding: 40px; display: flex; flex-direction: column; gap: 28px">
+
+<div style="display: flex; gap: 6px" aria-hidden="true">
+<sc-for list="{{bars}}" as="bar" hint-placeholder-count="3">
+<div style="flex: 1 1 0; height: 4px; border-radius: 2px; background: {{bar.bg}}"></div>
+</sc-for>
+</div>
+
+<sc-if value="{{step1}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">Name your workspace</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #52525B">This is where your projects, agents and sites live. You can change it later.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="border: 1px solid #D4D4D8; border-radius: 12px; padding: 8px 16px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; justify-content: center">
+<label for="ws" style="font-size: 12px; line-height: 16px; color: #52525B">Workspace name</label>
+<input id="ws" placeholder="Acme Studio" onInput="{{onName}}" style="border: 0; outline: 0; padding: 0; font: inherit; font-size: 15px; line-height: 20px; color: #0A0A0A; background: transparent; width: 100%">
+</div>
+<div style="font-size: 13px; line-height: 18px; color: #52525B">{{slug}}.inneranimalmedia.com</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{step2}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">What are you building?</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #52525B">Pick any that apply. Agent Sam uses this to suggest a starting point.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<sc-for list="{{picks}}" as="pick" hint-placeholder-count="4">
+<button aria-pressed="{{pick.pressed}}" onClick="{{pick.toggle}}" style="flex: 1 1 200px; min-width: 0; min-height: 96px; box-sizing: border-box; text-align: left; font: inherit; color: #0A0A0A; background: #FFFFFF; border: 1px solid {{pick.border}}; box-shadow: {{pick.ring}}; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; cursor: pointer">
+<span style="font-size: 16px; line-height: 22px; font-weight: 500">{{pick.title}}</span>
+<span style="font-size: 13px; line-height: 18px; color: #52525B">{{pick.note}}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{step3}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">Connect your tools</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #52525B">Optional. You can connect these any time from Settings.</p>
+</div>
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{conns}}" as="conn" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid #E4E4E7">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<div style="font-size: 16px; line-height: 22px; font-weight: 500">{{conn.title}}</div>
+<div style="font-size: 13px; line-height: 18px; color: #52525B">{{conn.note}}</div>
+</div>
+<button onClick="{{conn.toggle}}" style="flex: none; height: 44px; padding: 0 20px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid #0A0A0A; background: {{conn.bg}}; color: {{conn.fg}}">{{conn.label}}</button>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{step4}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 28px; align-items: flex-start">
+<svg width="44" height="44" viewBox="0 0 22 22" role="img" aria-label="Done"><circle cx="11" cy="11" r="11" fill="#0A0A0A"/><path d="M6.5 11.4l3 3 6-6.4" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">Your workspace is ready</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #52525B">{{slug}}.inneranimalmedia.com is live. Your 14-day trial has started.</p>
+</div>
+<a href="WelcomeHome.dc.html" style="display: flex; align-items: center; justify-content: center; height: 48px; padding: 0 28px; border-radius: 999px; background: #0A0A0A; color: #FFFFFF; font-size: 14px; font-weight: 500; text-decoration: none">Open dashboard</a>
+</div>
+</sc-if>
+
+<sc-if value="{{showNav}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<div>
+<sc-if value="{{canBack}}" hint-placeholder-val="{{ false }}"><button onClick="{{back}}" style="height: 44px; padding: 0 20px; border-radius: 999px; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 500; color: #0A0A0A; cursor: pointer">Back</button></sc-if>
+</div>
+<button onClick="{{next}}" style="height: 48px; padding: 0 28px; border-radius: 999px; border: 0; background: #0A0A0A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">{{nextLabel}}</button>
+</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { step: 1, name: '', picked: {}, connected: {} };
+}
+renderVals() {
+const s = this.state;
+const step = s.step;
+const slug = (s.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'your-workspace';
+const pickDefs = [
+{ id: 'sites', title: 'Websites and stores', note: 'Sites and storefronts on the edge' },
+{ id: 'agents', title: 'AI agents and workflows', note: 'Agent Sam, subagents, MCP tools' },
+{ id: 'clients', title: 'Client dashboards', note: 'White-label apps for your clients' },
+{ id: 'other', title: 'Something else', note: 'Tell us as we go' }
+];
+const connDefs = [
+{ id: 'cf', title: 'Cloudflare account', note: 'Host projects in your own account' },
+{ id: 'gh', title: 'GitHub', note: 'Sync repositories and deploy from main' }
+];
+return {
+step1: step === 1, step2: step === 2, step3: step === 3, step4: step === 4,
+stepLabel: step === 4 ? 'Done' : 'Step ' + step + ' of 3',
+slug,
+bars: [1, 2, 3].map((i) => ({ bg: step >= i ? '#0A0A0A' : '#D4D4D8' })),
+onName: (e) => this.setState({ name: e.target.value }),
+picks: pickDefs.map((p) => {
+const on = !!s.picked[p.id];
+return { ...p, pressed: on, border: on ? '#0A0A0A' : '#D4D4D8', ring: on ? '0 0 0 1px #0A0A0A' : 'none', toggle: () => this.setState({ picked: { ...s.picked, [p.id]: !on } }) };
+}),
+conns: connDefs.map((c) => {
+const on = !!s.connected[c.id];
+return { ...c, label: on ? 'Connected' : 'Connect', bg: on ? '#0A0A0A' : '#FFFFFF', fg: on ? '#FFFFFF' : '#0A0A0A', toggle: () => this.setState({ connected: { ...s.connected, [c.id]: !on } }) };
+}),
+showNav: step < 4,
+canBack: step > 1,
+nextLabel: step === 3 ? 'Finish setup' : 'Continue',
+next: () => this.setState({ step: Math.min(4, step + 1) }),
+back: () => this.setState({ step: Math.max(1, step - 1) })
+};
+}
+}
+</script>
+</body>
+</html>

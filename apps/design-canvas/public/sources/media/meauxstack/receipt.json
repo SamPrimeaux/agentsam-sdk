@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "asset": {
+    "id": "meauxstack",
+    "type": "image",
+    "source": "inputs/meauxstackhero.png",
+    "usage": "review",
+    "alt": "Isometric desk illustration with two displays bearing legacy MeauxStack artwork"
+  },
+  "sourceSha256": "c5bce6ca3a69f53a27720b4d4b635e4100d32db3326f49c462f3ea88abd29c9c",
+  "pipelineSha256": "2b6c52a6fe1912878c3b00f5680f2468740472f46a9207d55586ccea553a7e54",
+  "artifacts": {
+    "master.png": {
+      "sha256": "4c2470678ca0400cc5fe6367fc3b8a5f3f5c68d7b86c58ad35b0c4e4e4e4a168",
+      "bytes": 969921
+    },
+    "still-480.webp": {
+      "sha256": "fed42998ac6f7027e8632c269a93fb8ee28375a7fc17aea9671d262529eabd6f",
+      "bytes": 16864
+    },
+    "still-960.webp": {
+      "sha256": "bf6d7d92c613bde6890d30ccdc09f1545b885b04bc40b361231a39777506327b",
+      "bytes": 39118
+    }
+  }
+}
