@@ -125,3 +125,36 @@ test('AgentSam plugin installer registers metadata without executing local brows
     assert.equal(state.plugins.browsermcp.manifest.tools.length,0);
   }finally{process.stdout.write=previousStdout;}
 });
+
+test('Browser MCP plugin connect and status preserve local authority without claiming pairing', async () => {
+  const root = home();
+  const previousWrite = process.stdout.write;
+  const output = [];
+  process.stdout.write = function(chunk) { output.push(String(chunk)); return true; };
+  const injected = {
+    home: root,
+    pingMcpServerImpl: async () => ({
+      ok:true, transport:'stdio', toolCount:1,
+      pairingStatus:'unverified', latencyMs:5,
+    }),
+  };
+  try {
+    const connection = await runPlugins(['connect','@browsermcp','--cwd',root,'--json'],injected);
+    assert.equal(connection.ok,true);
+    assert.equal(connection.status,'configured');
+    assert.equal(connection.server_initialized,true);
+    assert.equal(connection.pairing_status,'unverified');
+    assert.equal(readMcpServer('browsermcp',{home:root}).protocol,'stdio');
+
+    const status = await runPlugins(['status','@browsermcp','--cwd',root,'--json'],injected);
+    assert.equal(status.ok,true);
+    assert.equal(status.status,'configured');
+    assert.equal(status.server_initialized,true);
+    assert.equal(status.pairing_status,'unverified');
+    assert.equal(status.adapters.length,1);
+    assert.equal(status.adapters[0].configured,true);
+    assert.doesNotMatch(output.join(''),/\bpaired\s*:\s*true\b/i);
+  } finally {
+    process.stdout.write=previousWrite;
+  }
+});
