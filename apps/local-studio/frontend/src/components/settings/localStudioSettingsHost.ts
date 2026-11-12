@@ -15,6 +15,7 @@ import type {
   SettingsNotificationProfileUpdate,
   SettingsPlugin,
   SettingsSnapshot,
+  type SettingsStorageTarget,
   SettingsWidget,
 } from "@inneranimalmedia/agentsam-settings/contracts";
 import {
@@ -52,6 +53,7 @@ import {
   updateLocalStudioPlugin,
   type LocalStudioPluginRecord,
 } from "@/lib/connections/client";
+import { projectSettingsStorageTargets, type CloudflareStorageDiscovery } from "@/lib/storage/settings-targets";
 import {
   listLocalStudioWidgets,
   setLocalStudioWidgetVisible,
@@ -307,6 +309,35 @@ async function loadPluginSettings() {
   return listLocalStudioConnections();
 }
 
+/** Cloudflare inventory is read from the existing OAuth discovery endpoint.
+ * Browser/local capability and hosted provider health are reported separately.
+ * A failed probe is unknown, never an empty bucket or healthy connection. */
+async function loadStorageTargets(): Promise<SettingsStorageTarget[]> {
+  const indexedDbAvailable = typeof indexedDB !== "undefined";
+  const path = "/api/connections/cloudflare/resources?per_page=50&return_to=%2Fsettings%2Fstorage";
+  let cloudflare: CloudflareStorageDiscovery | null = null;
+  try {
+    if (isPackagedDesktop()) {
+      const response = await invokeStudioService({
+        operation: "connections",
+        account_id: await resolveDesktopStudioAccountId(),
+        method: "GET",
+        path,
+      });
+      if (response.ok) cloudflare = JSON.parse(response.body) as CloudflareStorageDiscovery;
+    } else {
+      const response = await fetch(path, {
+        credentials: "same-origin",
+        headers: { accept: "application/json" },
+      });
+      if (response.ok) cloudflare = await response.json() as CloudflareStorageDiscovery;
+    }
+  } catch {
+    // Do not convert failed provider discovery into fake empty/healthy resources.
+  }
+  return projectSettingsStorageTargets(indexedDbAvailable, cloudflare);
+}
+
 function emptySnapshot(): SettingsSnapshot {
   return {
     fixtureName: "local-studio-live",
@@ -379,7 +410,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     snapshot.health = "attention";
   }
 
-  const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, notificationsResult, signedIn, workspace, usageMetrics] = await Promise.all([
+  const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, notificationsResult, signedIn, workspace, usageMetrics, storageTargets] = await Promise.all([
     loadEffectiveModelInventory().then(
       (value) => ({ ok: true as const, value }),
       () => ({ ok: false as const, value: null }),
@@ -407,8 +438,11 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     desktop ? identitySessionExists().catch(() => false) : Promise.resolve(false),
     desktop ? getDesktopWorkspaceContext().catch(() => null) : Promise.resolve(null),
     desktop ? Promise.resolve([]) : readAccountToolUsage(),
+    typeof window !== "undefined" && /^\/settings\/storage(?:\/|$)/.test(window.location.pathname)
+      ? loadStorageTargets() : Promise.resolve([] as SettingsStorageTarget[]),
   ]);
   snapshot.usage = usageMetrics;
+  snapshot.storage = storageTargets;
 
   snapshot.general.runtime = desktop ? "Desktop runtime ready" : "Web runtime ready";
   snapshot.general.account = desktop
