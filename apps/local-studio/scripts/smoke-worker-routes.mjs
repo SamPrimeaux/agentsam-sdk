@@ -126,6 +126,7 @@ try {
     '/api/admin/completeful/status',
     '/api/admin/completeful/catalog?category=apparel',
     '/api/settings/companions',
+    '/api/apps/launcher',
     '/api/work/canvases',
     '/api/work/canvases/canvas_aaaaaaaaaaaa',
     '/api/work/canvases/canvas_aaaaaaaaaaaa/directions',
@@ -144,6 +145,20 @@ try {
     }
     console.log(`PASS ${pathname}: authenticated JSON route`);
   }
+  // No anonymous account can install a native app through the shared Apps picker.
+  const installProbe = await fetch(base + '/api/apps/install', {
+    method:'POST', headers:{'content-type':'application/json'},
+    body:JSON.stringify({key:'agentsam-app-samsketch'}), redirect:'manual',
+    signal:AbortSignal.timeout(5000),
+  });
+  if (installProbe.status !== 401 || !(installProbe.headers.get('content-type')||'').includes('application/json'))
+    throw new Error('/api/apps/install expected authenticated JSON 401, got ' + installProbe.status);
+  console.log('PASS /api/apps/install: unauthenticated installation rejected');
+  const navAsset = await request('/admin/js/agentsam-nav.js');
+  const navText = await navAsset.text();
+  if (navAsset.status !== 200 || !navText.includes('openAppsInstaller'))
+    throw new Error('Canonical navigation Apps picker not included in hosted build');
+  console.log('PASS /admin/js/agentsam-nav.js: shared Apps picker bundled');
   // The platform must never serve the embedded customer's legacy login
   // or send AgentSam credentials to /api/admin/login.
   for (const legacyLogin of [

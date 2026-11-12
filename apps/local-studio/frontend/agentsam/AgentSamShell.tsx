@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
+import { openAppsInstaller } from '@inneranimalmedia/agentsam-nav/browser';
 import {
   projectStudioShellAppearance,
   applyStudioShellAppearance,
@@ -466,8 +467,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       ...(navigation.utilities || []),
     ].map(destination).map(item => item.id === 'installed-apps' ? {
       ...item,
-      action: { label: 'Browse apps', onSelect: () => window.open('https://apps.inneranimalmedia.com/', '_blank', 'noopener,noreferrer') },
-      onSelect: () => window.open('https://apps.inneranimalmedia.com/', '_blank', 'noopener,noreferrer'),
+      action: { label: 'Install apps', onSelect: openAppsInstaller },
+      onSelect: openAppsInstaller,
     } : item),
     onNavigate: go,
     onSearch: () => window.dispatchEvent(new Event('agentsam:open-command-palette')),

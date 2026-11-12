@@ -327,3 +327,43 @@
     background: var(--nav-selected); border-color: var(--nav-accent);
   }
 }
+
+/* One reusable admin Apps installation surface; never a separate CMS sidebar. */
+.as-apps-picker-overlay { position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,.58); }
+.as-apps-picker {
+  position:fixed; z-index:3001; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(650px,calc(100vw - 28px)); max-height:min(730px,calc(100dvh - 28px));
+  display:flex; flex-direction:column; overflow:hidden;
+  background:var(--nav-popover); border:1px solid var(--nav-border);
+  border-radius:14px; box-shadow:var(--nav-shadow);
+}
+.as-apps-picker-header { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; padding:22px 24px 15px; }
+.as-apps-picker-header h2 { margin:0 0 4px; font-size:var(--nav-apps-heading-size, 1.25rem); font-weight:var(--nav-apps-heading-weight, 650); }
+.as-apps-picker-header p { margin:0; color:var(--nav-muted); font-size:var(--nav-label-size); }
+.as-apps-picker-close { display:grid; place-items:center; width:32px; height:32px; flex:none; border:1px solid var(--nav-border); border-radius:8px; background:transparent; }
+.as-apps-picker-controls { display:grid; gap:12px; padding:0 24px 15px; }
+.as-apps-picker-tabs { display:flex; gap:4px; padding:3px; width:max-content; background:var(--nav-hover); border-radius:8px; }
+.as-apps-picker-tabs button { border:0; padding:7px 13px; border-radius:6px; background:transparent; color:var(--nav-muted); }
+.as-apps-picker-tabs button[aria-selected="true"] { background:var(--nav-selected); color:var(--nav-text); }
+.as-apps-picker-search { display:flex; align-items:center; gap:9px; border:1px solid var(--nav-border); padding:8px 11px; border-radius:8px; }
+.as-apps-picker-search input { flex:1; min-width:0; border:0; outline:none; background:transparent; color:var(--nav-text); }
+.as-apps-picker-list { flex:1; min-height:130px; overflow:auto; padding:0 24px 14px; }
+.as-apps-picker-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--nav-border); }
+.as-apps-picker-symbol { display:grid; place-items:center; width:38px; height:38px; border:1px solid var(--nav-border); background:var(--nav-surface); border-radius:9px; flex:none; }
+.as-apps-picker-symbol img { width:23px; height:23px; object-fit:contain; }
+.as-apps-picker-item-label { flex:1; min-width:0; display:grid; gap:3px; }
+.as-apps-picker-item-label strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--nav-label-size); }
+.as-apps-picker-item-label small, .as-apps-picker-status { color:var(--nav-muted); font-size:var(--nav-meta-size); }
+.as-apps-picker-status { display:inline-flex; gap:5px; align-items:center; flex:none; }
+.as-apps-picker-primary { border:1px solid var(--nav-border); padding:7px 14px; border-radius:7px; color:var(--nav-text); background:var(--nav-selected); }
+.as-apps-picker-primary:hover { background:var(--nav-hover); }
+.as-apps-picker-state { padding:28px 0; color:var(--nav-muted); text-align:center; font-size:var(--nav-label-size); }
+.as-apps-picker-state button { border:1px solid var(--nav-border); border-radius:6px; padding:8px 13px; background:var(--nav-selected); }
+.as-apps-picker-error { margin:0; padding:8px 24px; color:var(--nav-danger); font-size:var(--nav-meta-size); }
+.as-apps-picker-footer { display:flex; gap:16px; flex-wrap:wrap; justify-content:space-between; align-items:center; padding:14px 24px; border-top:1px solid var(--nav-border); color:var(--nav-muted); font-size:var(--nav-meta-size); }
+.as-apps-picker-footer a { display:inline-flex; align-items:center; gap:5px; color:var(--nav-text); }
+@media (max-width:520px) {
+ .as-apps-picker { width:100vw; max-height:calc(100dvh - env(safe-area-inset-top)); height:min(690px,calc(100dvh - env(safe-area-inset-top))); top:auto; bottom:0; left:0; transform:none; border-radius:16px 16px 0 0; }
+ .as-apps-picker-header, .as-apps-picker-controls, .as-apps-picker-list { padding-left:16px; padding-right:16px; }
+ .as-apps-picker-footer { padding:12px 16px; }
+}

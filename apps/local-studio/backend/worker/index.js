@@ -51,7 +51,6 @@ import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service
 import { completeConnectorOAuth, isConnectorOAuthCallbackRequest } from "./connector-oauth.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
-import { listLauncherApps } from "./apps-launcher.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioRules } from "./studio-rules.js";
@@ -77,6 +76,7 @@ import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.
 import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
 import { handleStudioNavigation } from "./studio-navigation-preferences.js";
+import { listLauncherApps, installNativeAdminApp } from "./apps-launcher.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleStudioContentMediaApi } from "./content-media-api.js";
@@ -776,6 +776,7 @@ export default {
       || url.pathname.startsWith("/api/settings/rules/");
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
     const isAppsLauncher = url.pathname === "/api/apps/launcher";
+    const isAppsInstall = url.pathname === "/api/apps/install";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
     const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
@@ -1496,12 +1497,30 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
       const userId = await sessionUser();
       if (!userId) return json({ok:false,error:"unauthorized"},401);
-      try {
-        const apps = await listLauncherApps(env.DB, userId);
-        return json({ ok: true, apps });
-      } catch (error) {
-        console.error("apps_launcher_error", String(error?.message || error));
-        return json({ ok: false, error: "apps_launcher_unavailable" }, 503);
+      try { return json({ok:true,apps:await listLauncherApps(env.DB,userId)}); }
+      catch (error) {
+        console.error("apps_launcher_error",String(error?.message||error));
+        return json({ok:false,error:"apps_launcher_unavailable"},503);
+      }
+    }
+    if (isAppsInstall) {
+      if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+        return json({ok:false,error:"origin_not_allowed"},403);
+      if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
+        return json({ok:false,error:"json_content_type_required"},415);
+      const body = await request.json().catch(()=>null);
+      if (!body || typeof body !== "object" || Array.isArray(body) ||
+          Object.keys(body).length !== 1 || typeof body.key !== "string")
+        return json({ok:false,error:"app_install_request_invalid"},400);
+      try { return json({ok:true,...await installNativeAdminApp(env.DB,userId,body.key)},201); }
+      catch (error) {
+        const code=String(error?.message||"app_install_failed");
+        return json({ok:false,error:code.slice(0,120)},
+          code==="app_install_not_found"?404:code==="app_install_not_supported"?409:
+          code==="app_install_key_invalid"?400:503);
       }
     }
     if (isPluginCatalog) {
