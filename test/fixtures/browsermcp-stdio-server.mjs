@@ -15,8 +15,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     description: 'Browser MCP protocol fixture',
     inputSchema: {
       type: 'object',
-      properties: { command: { type: 'string' } },
-      required: ['command'],
+      properties: { commands: { type: 'string' } },
+      required: ['commands'],
       additionalProperties: false,
     },
   }],
@@ -25,7 +25,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => ({
   content: [{
     type: 'text',
-    text: 'fixture:' + String(request.params.arguments?.command || ''),
+    text: 'fixture:' + String(request.params.arguments?.commands || ''),
   }],
 }));
 
