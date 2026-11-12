@@ -25,6 +25,7 @@ import { runStatus } from './commands/status.js';
 import { runInteractive } from './commands/interactive.js';
 import { runShell } from './commands/shell.js';
 import { runGoap } from './commands/goap.js';
+import { runGoals } from './commands/goals.js';
 import { runBrand } from './commands/brand.js';
 import { runPlan } from './commands/plan.js';
 import { runDockerize } from './commands/dockerize.js';
@@ -638,11 +639,18 @@ if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
     reportCliError(e);
     process.exit(1);
   }
+} else if (command === 'goals' || command === 'goal') {
+  try {
+    await runGoals(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
 } else if (command === 'goap') {
   try {
-    await runGoap(rest[0], {
+    await runGoap(rest[0]?.startsWith('-') ? 'status' : rest[0], {
       cwd: process.cwd(),
-      json: rest.includes('--json'), args: rest.slice(1),
+      json: rest.includes('--json'), args: rest[0]?.startsWith('-') ? rest : rest.slice(1),
     });
   } catch (e) {
     reportCliError(e);

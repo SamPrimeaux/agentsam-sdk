@@ -8,7 +8,7 @@
 
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
-| `src/cli/command-catalog.js` | 76 | Registered top-level CLI command entries |
+| `src/cli/command-catalog.js` | 77 | Registered top-level CLI command entries |
 | `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 7 | APP manifests discoverable from this checkout |
@@ -50,7 +50,8 @@ Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Ho
 | `agentsam exec` | work | Run the existing AgentSam coding agent noninteractively with scoped permissions |
 | `agentsam explain` | start | Explain a runtime or package from the offline catalog |
 | `agentsam go` | runtime | Go product discover/build/deploy |
-| `agentsam goap` | inside | GOAP blackboard status/plan |
+| `agentsam goals` | inside | List and manage shared account goals |
+| `agentsam goap` | inside | Inspect local GOAP and manage shared repository goals |
 | `agentsam google-cloud` | runtime | Google Cloud auth, projects, compute, IAM SAs, billing, doctor |
 | `agentsam help` | start | Interactive or topic help from this catalog |
 | `agentsam hooks` | runtime | Inspect lifecycle hooks, sources, and execution receipts |

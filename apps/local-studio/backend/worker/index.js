@@ -5,6 +5,7 @@ import { handleStudioConversationShares, handlePublicConversationShare } from ".
 import { handleStudioQueueObservability } from "./studio-queue-observability.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { resolveStudioSessionUser, guardStudioDocumentSession } from "./studio-session.js";
+import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cfoa/src/routes.js";
@@ -1202,7 +1203,10 @@ export default {
       }
     }
     if (url.pathname === "/api/studio/living-plan" || url.pathname.startsWith("/api/studio/living-plan/")) {
-      try { return await handleStudioLivingPlan(request, env, await sessionUser()); }
+      try {
+        const accountId = await sessionUser() || await resolveStudioGoalsCliAccount(request,env);
+        return await handleStudioLivingPlan(request,env,accountId);
+      }
       catch (error) { console.warn("studio_living_plan_unavailable", String(error?.message || error).slice(0, 100));
         return json({ ok: false, error: "living_plan_unavailable" }, 503); }
     }

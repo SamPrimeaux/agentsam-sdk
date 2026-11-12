@@ -13,10 +13,18 @@ type Goal = GoalGuruGoal;
 type Step = GoalGuruStep;
 type LinkedTicket = GoalGuruTicketLink;
 type TicketCandidate = { id: string; title: string; status: string; project?: string | null };
-type Plan = { goals: Goal[]; steps: Step[]; ticketLinks: LinkedTicket[] };
+type GoapGoal = {
+  id: string; title: string; goal_status?: string; status: string;
+  project?: string | null; priority?: string | null; focused: boolean;
+};
+type Plan = { goals: Goal[]; steps: Step[]; ticketLinks: LinkedTicket[]; goapGoals: GoapGoal[] };
+const GOAP_STATUS_LABEL: Record<string,string> = {
+  proposed: 'Proposed', active: 'Active', blocked: 'Blocked',
+  verifying: 'Verifying', satisfied: 'Satisfied', cancelled: 'Cancelled',
+};
 
 export function GoalGuruPanel({
-  request, onContinue, legacyGoal, onLegacyImported, mode = "panel",
+  request, onContinue, legacyGoal, onLegacyImported, refreshKey, mode = "panel",
 }: {
   /** Host owns authentication, authorization and data source. No implicit cross-origin cookies. */
   request: GoalGuruTransport;
@@ -24,9 +32,10 @@ export function GoalGuruPanel({
   legacyGoal?: { title: string; preview?: string } | null;
   onLegacyImported?: () => void;
   mode?: "panel" | "page";
+  refreshKey?: number;
 }) {
-  const [plan, setPlan] = useState<Plan>({ goals: [], steps: [], ticketLinks: [] });
-  const [filter, setFilter] = useState<"personal" | "platform">(legacyGoal ? "platform" : "personal");
+  const [plan, setPlan] = useState<Plan>({ goals: [], steps: [], ticketLinks: [], goapGoals: [] });
+  const [filter, setFilter] = useState<"personal" | "platform">("platform");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,13 +56,14 @@ export function GoalGuruPanel({
       if (!response.ok) throw new Error(response.status === 401 ? "Sign in to see your private goals." : "Goals are temporarily unavailable.");
       const data = await response.json() as Partial<Plan>;
       if (!Array.isArray(data.goals) || !Array.isArray(data.steps)) throw new Error("Goal data was incomplete.");
-      setPlan({ goals: data.goals, steps: data.steps, ticketLinks: Array.isArray(data.ticketLinks) ? data.ticketLinks : [] });
+      setPlan({ goals: data.goals, steps: data.steps, ticketLinks: Array.isArray(data.ticketLinks) ? data.ticketLinks : [],
+        goapGoals: Array.isArray(data.goapGoals) ? data.goapGoals : [] });
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load goals.");
     } finally { setLoading(false); }
   }, [request]);
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => { void reload(); }, [reload, refreshKey]);
 
   const visible = useMemo(() => plan.goals.filter(g => filter === "platform"
     ? g.goal_type === "platform"
@@ -213,21 +223,20 @@ export function GoalGuruPanel({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Target className="size-4 text-accent" aria-hidden="true" />
-          <h2 className="text-base font-semibold tracking-tight">AgentSam GoalGuru</h2>
+          <h2 className="text-base font-semibold tracking-tight">Goals</h2>
         </div>
         <IconAction label="Refresh goals" hint="Reload your account goals" onClick={() => void reload()}
           className="flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
           <RefreshCcw className="size-4" aria-hidden="true" />
         </IconAction>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">One next step. Progress is saved to your account, not a chat.</p>
       <div className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-muted/50 p-1" role="group" aria-label="Goal areas">
         {(["personal", "platform"] as const).map(area => <button key={area} type="button"
           onClick={() => { setFilter(area); setExpanded(null); setCreating(false); }}
           aria-pressed={filter === area}
           className={"min-h-10 rounded-md px-3 text-sm font-medium transition-colors " + (filter === area
             ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-          {area === "personal" ? "Life" : "InnerAnimalMedia"}
+          {area === "personal" ? "Life" : "Work"}
         </button>)}
       </div>
     </div>
@@ -241,11 +250,28 @@ export function GoalGuruPanel({
         <button type="button" disabled={importingLegacy || !onLegacyImported}
           onClick={() => void importOldConversationGoal()}
           className="mt-3 min-h-11 rounded-lg bg-foreground px-4 text-sm font-medium text-background">
-          {importingLegacy ? "Saving…" : "Save to " + (filter === "personal" ? "Life goals" : "InnerAnimalMedia goals")}
+          {importingLegacy ? "Saving…" : "Save to " + (filter === "personal" ? "Life goals" : "Work goals")}
         </button>
       </section> : null}
       {error ? <div role="alert" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</div> : null}
       {loading ? <p className="py-10 text-center text-sm text-muted-foreground">Loading private goals…</p> : <>
+        {filter === "platform" && plan.goapGoals.length > 0 ? <section className="mb-5" aria-label="GOAP goals">
+          <h3 className="mb-1 text-xs font-medium text-muted-foreground">GOAP goals</h3>
+          <ul className="divide-y divide-border/70 rounded-lg border border-border/70">
+            {plan.goapGoals.map(goal => <li key={goal.id}>
+              <a href={"/artifacts/tickets/" + encodeURIComponent(goal.id)}
+                className="flex min-h-12 items-center gap-3 px-3 py-2 text-sm hover:bg-muted/50">
+                <span className="min-w-0 flex-1 break-words">
+                  <span className="block font-medium">{goal.title}</span>
+                  {goal.project ? <span className="block text-xs text-muted-foreground">{goal.project}</span> : null}
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {goal.focused ? "Current · " : ""}{GOAP_STATUS_LABEL[goal.goal_status ?? ""] ?? goal.status}
+                </span>
+              </a>
+            </li>)}
+          </ul>
+        </section> : null}
         <div className="mb-5 flex items-baseline justify-between gap-2">
           <p className="text-sm font-medium">{visible.length} goals</p>
           <p className="text-xs tabular-nums text-muted-foreground">{completed} of {total} steps complete</p>
@@ -341,7 +367,7 @@ export function GoalGuruPanel({
               </div> : null}
             </section>;
           })}
-          {!visible.length && <p className="py-10 text-center text-sm text-muted-foreground">No goals in this area yet.</p>}
+          {!(visible.length || (filter === "platform" && plan.goapGoals.length)) && <p className="py-10 text-center text-sm text-muted-foreground">No goals in this area yet.</p>}
         </div>
         <div className="mt-5">
           {creating ? <form className="space-y-2" onSubmit={event => { event.preventDefault(); void addGoal(); }}>
