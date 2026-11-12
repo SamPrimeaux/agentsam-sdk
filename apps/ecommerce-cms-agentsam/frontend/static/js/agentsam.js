@@ -234,9 +234,32 @@ function renderAgentSamMarkdown(container, content) {
   }
 }
 
+/**
+ * A new conversation is an empty editor state, not a synthetic assistant
+ * turn. The existing account-context routing stays authoritative.
+ */
+function renderAgentsamEmptyState() {
+  const messages = document.getElementById("agentsam-messages");
+  if (!messages || messages.childElementCount) return;
+  const empty = document.createElement("div");
+  empty.className = "agentsam-empty";
+  empty.setAttribute("aria-label", "New AgentSam conversation");
+  const mark = document.createElement("img");
+  mark.className = "agentsam-empty-mark";
+  mark.src = "/admin/brand/agentsam-sidekick-symbol.svg";
+  mark.alt = "";
+  const title = document.createElement("strong");
+  title.textContent = "What would you like to build?";
+  const description = document.createElement("p");
+  description.textContent = "Work with AgentSam in the current editor.";
+  empty.append(mark, title, description);
+  messages.append(empty);
+}
+
 function appendMessage(role, text, routing, attachments = []) {
   const box = document.getElementById("agentsam-messages");
   if (!box) return;
+  box.querySelector(".agentsam-empty")?.remove();
   const el = document.createElement("div");
   el.className = `agentsam-msg agentsam-msg--${role}`;
 
@@ -526,7 +549,7 @@ function bindAgentsamStaticHandlers() {
       drawerConversationId = null;
       const messages = document.getElementById("agentsam-messages");
       messages?.replaceChildren();
-      appendMessage("assistant", "New chat ready. I can use the selected page or section as context.");
+      renderAgentsamEmptyState();
       document.getElementById("agentsam-input")?.focus();
     } else if (action === "Expand" || action === "Collapse") {
       setAgentsamFocus(!document.body.classList.contains("agentsam-focus-mode"));
@@ -585,13 +608,7 @@ function initAgentsamDrawer() {
   renderAgentsamShell();
   bindAgentsamToggle();
 
-  const messages = document.getElementById("agentsam-messages");
-  if (messages && !messages.childElementCount) {
-    appendMessage(
-      "assistant",
-      "Ask about this page, store operations, customers, content, or repository work. I’ll route the request using the current admin context."
-    );
-  }
+  renderAgentsamEmptyState();
 
   bindAgentsamStaticHandlers();
   mountAgentSamCapabilityMenu();
