@@ -10,6 +10,7 @@ import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
 import { WorkSurfaceBar } from '@/components/workbench/work-surface-bar';
 import { SidePanelToggle } from './AgentSamShell';
+import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { useActiveCompanion } from './CompanionContext';
 import { companionStateAsset } from './companions';
 import { SplitHandle } from '@/components/shell/split-handle';
@@ -62,6 +63,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
   // The host supplies one typed conversation action list. Both header placements consume it.
   const headerActions = <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
+    {isMobile ? <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} /> : null}
     <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}>
       <MessageSquarePlus size={20} aria-hidden="true" />
     </IconAction>
@@ -102,7 +104,6 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               </div>
               <div className="agentsam-work-welcome-copy">
                 <h1>What should we work on?</h1>
-                <p className="agentsam-work-welcome-prompt">{companion.id === 'geaux' ? 'Geaux is ready to GEAUX!' : `${companion.name} is ready to work.`}</p>
               </div>
             </div> : <h1>Where should we begin?</h1>}
           </div>}
@@ -112,7 +113,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       </section>
       {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width - delta, window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused((value) => !value)} /></aside></> : null}
     </div>
-    {(!isMobile || empty) ? <WorkSurfaceBar /> : null}
+    {!isMobile ? <WorkSurfaceBar /> : null}
   </div>;
 }
 

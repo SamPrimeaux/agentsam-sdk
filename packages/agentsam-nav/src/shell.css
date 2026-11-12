@@ -373,3 +373,44 @@
  .as-apps-picker-header, .as-apps-picker-controls, .as-apps-picker-list { padding-left:16px; padding-right:16px; }
  .as-apps-picker-footer { padding:12px 16px; }
 }
+
+
+/* One thumb-reachable launch dock; independent of the contextual Work surface bar. */
+.as-nav-launch-dock { display: none; }
+.as-nav-drawer-search { display: flex; align-items: center; gap: 5px; padding: 5px 9px 9px; }
+.as-nav-drawer-search .as-nav-search { flex: 1; min-width: 0; min-height: 39px; border: 1px solid var(--nav-border); border-radius: 10px; background: var(--nav-surface); }
+.as-nav-drawer-search input { outline: none; color: var(--nav-text); }
+.as-nav-drawer-search input:focus-visible { outline: none; }
+.as-nav-drawer-search .as-nav-search:focus-within { border-color: var(--nav-accent); }
+.as-nav-search-everywhere { flex: 0 0 auto; min-width: 43px; height: 39px; padding-inline: 5px; border: 1px solid var(--nav-border); border-radius: 10px; background: transparent; color: var(--nav-muted); font-size: 11px; cursor: pointer; }
+.as-nav-search-everywhere:hover, .as-nav-search-everywhere:focus-visible { background: var(--nav-selected); color: var(--nav-text); }
+@media (max-width: 767px) {
+  .as-nav-launch-dock {
+    position: fixed; z-index: 65; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch; gap: 3px; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: max(9px, env(safe-area-inset-bottom, 0px)); padding: 6px;
+    border: 1px solid var(--nav-border); border-radius: 22px;
+    background: color-mix(in srgb, var(--nav-surface) 92%, transparent);
+    box-shadow: 0 10px 36px #0005;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .as-nav-launch-dock button {
+    min-width: 0; min-height: 51px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    border: 0; border-radius: 16px; background: transparent; color: var(--nav-muted);
+    cursor: pointer; transition: background 120ms ease, color 120ms ease;
+  }
+  .as-nav-launch-dock button:hover, .as-nav-launch-dock button:focus-visible {
+    background: var(--nav-selected); color: var(--nav-text);
+  }
+  .as-nav-launch-dock button[aria-pressed="true"] { background: var(--nav-selected); color: var(--nav-text); }
+  .as-nav-launch-dock-icon { display: grid; place-items: center; }
+  .as-nav-launch-dock-icon svg { width: 21px; height: 21px; stroke-width: 1.8; }
+  /* Icon-only like the native reference, with accessible names on each button. */
+  .as-nav-launch-dock-label { display: none; }
+  .as-nav-launch-dock-icon svg { width: 24px; height: 24px; }
+
+}
+@media (prefers-reduced-motion: reduce) {
+  .as-nav-launch-dock button { transition: none; }
+}

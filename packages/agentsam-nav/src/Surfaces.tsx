@@ -13,6 +13,28 @@ export function useNavStyle(): CSSProperties {
   return { ...(resizable ? { '--nav-width': width + 'px' } : {}), ...Object.fromEntries(Object.entries(tokens).map(([key, value]) => [`--nav-${key}`, value])), '--nav-accent': accentColor } as CSSProperties;
 }
 
+export type NavLaunchItem = {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+  onSelect: () => void;
+};
+
+/** The host supplies the destinations; navigation never invents app capabilities. */
+export function NavLaunchDock({ items }: { items: NavLaunchItem[] }) {
+  return <nav className="as-nav-launch-dock" aria-label="Quick navigation">
+    {items.map(item => <button
+      type="button" key={item.id} aria-label={item.label} title={item.label}
+      aria-pressed={Boolean(item.active)} disabled={item.disabled}
+      onClick={item.onSelect}
+    ><span className="as-nav-launch-dock-icon" aria-hidden="true">{item.icon}</span>
+      <span className="as-nav-launch-dock-label">{item.label}</span>
+    </button>)}
+  </nav>;
+}
+
 export function NavScope({ className, style, ...props }: HTMLAttributes<HTMLDivElement>) {
   const { theme } = useNav();
   return <div {...props} data-nav-theme={theme} className={cx('as-nav-scope', className)} style={{ ...useNavStyle(), ...style }} />;
@@ -455,25 +477,24 @@ function SidenavContents() {
   return <>
     {data.showSidebarHeader !== false ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /></div> : isMobile ? <div className="as-nav-sidenav-head as-nav-sidenav-head--close"><button type="button" className="as-nav-button" onClick={close}><X aria-hidden="true" /><span>Close navigation</span></button></div> : null}
     <div className="as-nav-sidenav-main">
-      {data.onSearch ? <div className="as-nav-sidenav-search-launch as-nav-expanded-only">
-        <button type="button" className="as-nav-destination as-nav-global-search"
-          aria-label="Search Studio pages, tools and conversations"
+      {data.showHistory !== false ? <div className="as-nav-drawer-search as-nav-expanded-only">
+        <label className="as-nav-search"><Search aria-hidden="true" />
+          <input aria-label="Filter projects and conversations" placeholder="Find a chat or project" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </label>
+        {data.onSearch ? <button type="button" className="as-nav-search-everywhere"
+          aria-label="Search all Studio" title="Search all Studio (⌘K)"
           onClick={() => {
             if (isMobile) {
               close();
-              // Let the sidebar focus trap release before opening the host palette.
               requestAnimationFrame(() => data.onSearch?.());
             } else data.onSearch?.();
-          }}>
-          <Search aria-hidden="true" /><span>Search Studio</span><kbd aria-hidden="true">⌘K</kbd>
-        </button>
+          }}>⌘K</button> : null}
       </div> : null}
       <div className="as-nav-destinations">
         {!insertAfter ? newConversation : null}
         {(data.destinations ?? []).map((item) => <Fragment key={item.id}><DestinationRow item={item} />{item.id === insertAfter ? newConversation : null}</Fragment>)}
       </div>
       {data.showHistory !== false ? <div className="as-nav-expanded-only as-nav-history">
-        <label className="as-nav-search"><Search /><input aria-label="Filter projects and conversations" placeholder="Filter chats & projects" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         {data.historyStatus === 'error' && data.onRetryHistory ? <button type="button" className="as-nav-collection-more" onClick={data.onRetryHistory}>Retry project list</button> : null}
         <HistoryCollection id="pinned" title="Pinned" searching={Boolean(query)} empty={query ? 'No matching pinned items.' : 'Pin projects or conversations from their menus.'}
           items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />),...(data.pinnedResources||[]).map(item => <PinnedResourceRow key={item.id} item={item} />)]} />

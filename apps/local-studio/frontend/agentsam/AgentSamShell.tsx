@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
@@ -35,7 +36,8 @@ import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionPro
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
-import { CompanionProvider } from './CompanionContext';
+import { AgentSamLaunchDock } from './AgentSamLaunchDock';
+import { CompanionProvider, useActiveCompanion } from './CompanionContext';
 import { NotificationsMenu } from './NotificationsMenu';
 import { ChatShareDialog } from './ChatShareDialog';
 import { shareAttachmentMetadata } from '@/lib/content/share-attachment-metadata';
@@ -72,6 +74,27 @@ function initialCachedAppearance() {
     bootstrappedAppearance = bootstrapStudioAppearanceFromCache(undefined, document.documentElement);
   }
   return bootstrappedAppearance;
+}
+
+/** The selected pet belongs to the shared header, not to a specific page.
+ * Mount into the existing packaged Console slot without creating another bar. */
+function HostedCompanionHeader({ state }: { state: 'idle' | 'working' }) {
+  const companion = useActiveCompanion();
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const find = () => setTarget(document.getElementById('agentsam-console-mode-slot'));
+    find();
+    const observer = new MutationObserver(find);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+  return target ? createPortal(
+    <div className="agentsam-mobile-companion-identity" title={companion.name + ' · ' + state}>
+      <AgentSamPetTrigger state={state}
+        onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+      <span>AgentSam</span>
+    </div>, target
+  ) : null;
 }
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
@@ -259,6 +282,14 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     const chatId = store.activeChatId || store.startChat();
     const context = shares.map(formatChromeTabShare).join('\n\n');
     store.setDraft(chatId, [store.drafts[chatId]?.trimEnd(), context].filter(Boolean).join('\n\n'));
+    // User-approved Chrome handoffs also become restorable browser sessions.
+    // Keep the current chat and draft; do not pretend to mirror native Chrome tabs.
+    for (const share of shares) {
+      if (useWorkStore.getState().sideTabs.some(tab => tab.kind === 'browser' && tab.url === share.url)) continue;
+      const browserTabId = store.openSideTab('browser', { ephemeral: false });
+      store.setTabUrl(browserTabId, share.url);
+    }
+    store.setSideOpen(false);
     window.location.hash = '#/admin/agentsam';
     const first = shares[0];
     toast(`Added ${shares.length > 1 ? `${shares.length} pages` : `“${first.title || new URL(first.url).hostname}”`} to the draft`);
@@ -447,7 +478,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         .map(item => ({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
     ],
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
-    showSidebarHeader: isConversation && mode === 'work',
+    showSidebarHeader: true,
     newConversationAfter: 'home',
     showHistory: true,
     destinations: [
@@ -619,7 +650,9 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   },[state.chats,state.activeChatId,workProjects,historyStatus]);
   return <CompanionProvider accountKey={user?.id || "anonymous"}><ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
     <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
-      {!embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
+      {!embedded ? <Nav.Sidenav /> : null}
+      {embedded && !isConversation ? <HostedCompanionHeader state={petState} /> : null}
+      <div className="agentsam-main">
         {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">
           <Nav.Trigger aria-label="Toggle sidebar" />
           <Nav.TopbarSpacer />
@@ -628,7 +661,10 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         </Nav.Topbar> : null}
         <OfflineBanner />
         <div className="platform-console-stage" data-assistant-focused={!isConversation && globalAssistantFocused && state.sideOpen ? "true" : "false"}>
-          <main className="agentsam-route"><Outlet /></main>
+          <main className="agentsam-route">{pathname === '/admin/home'
+            ? <iframe title="AgentSam admin home" src="/ecommerce-cms-agentsam/admin/home.html?__agentsamEmbedded=1"
+                className="h-full min-h-0 w-full flex-1 border-0" />
+            : <Outlet />}</main>
           {!isConversation && state.sideOpen ? <>
             {!globalAssistantFocused && <SplitHandle label="Resize AgentSam panel" onDrag={(delta) => setGlobalAssistantWidth((width) => Math.max(320, Math.min(720, width - delta)))} onDoubleClick={() => setGlobalAssistantWidth(390)} />}
             <aside className="platform-console-assistant" aria-label="AgentSam Side Assistant"
@@ -637,7 +673,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
             </aside>
           </> : null}
         </div>
-
+        <AgentSamLaunchDock />
       </div><CliDrawer /><CommandPalette />
       <ChatShareDialog open={sharing} onOpenChange={setSharing} chat={chat ?? null} />
       <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}><DialogContent>

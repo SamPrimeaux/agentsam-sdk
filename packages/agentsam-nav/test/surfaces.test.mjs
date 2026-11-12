@@ -73,12 +73,12 @@ test('brand image surfaces retain an icon fallback when a consumer image fails',
 test('host search appears inside navigation only when a search capability is supplied', () => {
   const withSearch = renderToString(React.createElement(Nav.Provider,
     {value:{...value,onSearch:()=>{}},defaultOpen:true},React.createElement(Nav.Sidenav)));
-  assert.match(withSearch,/Search Studio/);
-  assert.match(withSearch,/Search Studio pages, tools and conversations/);
-  assert.match(withSearch,/Filter projects and conversations/);
+  assert.match(withSearch,/Search all Studio/);
+  assert.match(withSearch,/Find a chat or project/);
+  assert.equal((withSearch.match(/aria-label="Filter projects and conversations"/g) || []).length, 1);
   const withoutSearch = renderToString(React.createElement(Nav.Provider,
     {value,defaultOpen:true},React.createElement(Nav.Sidenav)));
-  assert.doesNotMatch(withoutSearch,/Search Studio/);
+  assert.doesNotMatch(withoutSearch,/Search all Studio/);
   assert.match(withoutSearch,/Filter projects and conversations/);
 });
 
@@ -129,3 +129,20 @@ test('menu actions expose loading/disabled state through Radix instead of fake c
 function readNavSource() {
   return readFileSync(new URL('../src/Surfaces.tsx', import.meta.url), 'utf8');
 }
+
+
+test('mobile launch dock is driven by real host destinations and has accessible selected states', () => {
+  const labels = ['Chats', 'Work', 'Browser', 'Files', 'Apps'];
+  const html = renderToString(React.createElement(Nav.Provider,
+    {value,defaultOpen:true}, React.createElement(Nav.LaunchDock, {
+      items: labels.map((label,index) => ({
+        id: label.toLowerCase(), label,
+        icon: React.createElement('span',null,String(index)),
+        active: index===2, onSelect:()=>{},
+      }))
+    })));
+  assert.match(html,/aria-label="Quick navigation"/);
+  for(const label of labels) assert.match(html,new RegExp('aria-label="'+label+'"'));
+  assert.equal((html.match(/aria-pressed="true"/g) || []).length, 1);
+  assert.equal((html.match(/class="as-nav-launch-dock-icon"/g) || []).length, 5);
+});

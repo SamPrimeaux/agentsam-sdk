@@ -95,7 +95,7 @@ pub fn open_agent_browser(
         .arg(format!("--user-data-dir={}", profile.display()))
         .arg("--no-first-run")
         .arg("--no-default-browser-check")
-        .arg("--new-window")
+        // Reuse the dedicated Chrome profile's running window for subsequent tabs.
         .arg(&target_url)
         .stdin(Stdio::null())
         .stdout(Stdio::null())

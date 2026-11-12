@@ -9,6 +9,25 @@
 <link rel="stylesheet" href="/admin/css/home-workspace.css">
 <script defer src="/admin/js/agent-composer-menu.js"></script>
 <script defer src="/admin/js/home-workspace.js"></script>
+<script>
+if (new URLSearchParams(location.search).get('__agentsamEmbedded') === '1') {
+  document.documentElement.classList.add('agentsam-embedded-home');
+}
+</script>
+<style>
+/* Only when this original admin page is mounted within AgentSam's app shell:
+   its own page content remains, while duplicate global navigation is hidden. */
+html.agentsam-embedded-home .console-topbar,
+html.agentsam-embedded-home .console-sidenav,
+html.agentsam-embedded-home .console-nav-ghost-toggle,
+html.agentsam-embedded-home .admin-menu-toggle,
+html.agentsam-embedded-home .admin-mobile-dock,
+html.agentsam-embedded-home #agentsam-dock { display: none !important; }
+html.agentsam-embedded-home .console-body,
+html.agentsam-embedded-home .console-workspace,
+html.agentsam-embedded-home .console-main { width: 100%; min-width: 0; }
+html.agentsam-embedded-home .fnf-home { padding-bottom: 2rem; }
+</style>
 </head>
 <body>
 <script src="/admin/js/shell.js"></script>
