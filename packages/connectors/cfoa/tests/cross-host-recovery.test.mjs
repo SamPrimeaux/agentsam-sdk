@@ -3,7 +3,8 @@ import { test } from 'node:test';
 import { loadCloudflareFromUserOauthTokens } from '../src/credential.js';
 import { oauthAad, sealOauthToken } from '../../../agentsam-vault/src/crypto/oauth-envelope.js';
 
-test('recovers only false-inactive shared PKCE grants with provider-verified refresh', async () => {
+for (const recoveryCode of ['REFRESH_TOKEN_MISSING', 'ACCESS_EXPIRED_NO_REFRESH']) {
+test(`recovers false-inactive ${recoveryCode} grants only after provider-verified refresh`, async () => {
   const account = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   const owner = 'au_local_media';
   const material = 'unit-test-vault-key';
@@ -19,7 +20,7 @@ test('recovers only false-inactive shared PKCE grants with provider-verified ref
     metadata_json: JSON.stringify({ is_preferred: true, connected_via_client_id: 'pkce-test-client' }),
     is_active: 0,
     revoked_at: null,
-    last_refresh_error_code: 'REFRESH_TOKEN_MISSING',
+    last_refresh_error_code: recoveryCode,
   };
   const env = {
     VAULT_MASTER_KEY: material,
@@ -30,8 +31,10 @@ test('recovers only false-inactive shared PKCE grants with provider-verified ref
           bind(...args) {
             return {
               async all() {
-                if (sql.includes("last_refresh_error_code = 'REFRESH_TOKEN_MISSING'")) {
-                  return { results: !row.is_active && row.revoked_at == null ? [row] : [] };
+                if (sql.includes("last_refresh_error_code IN ('REFRESH_TOKEN_MISSING', 'ACCESS_EXPIRED_NO_REFRESH')")) {
+                  return { results: !row.is_active && row.revoked_at == null &&
+                    ['REFRESH_TOKEN_MISSING', 'ACCESS_EXPIRED_NO_REFRESH'].includes(row.last_refresh_error_code) &&
+                    row.refresh_token_encrypted ? [row] : [] };
                 }
                 if (sql.includes('COALESCE(is_active, 1) = 1')) {
                   return { results: row.is_active ? [row] : [] };
@@ -83,6 +86,7 @@ test('recovers only false-inactive shared PKCE grants with provider-verified ref
   assert.equal(row.is_active, 1);
   assert.equal(requests, 1);
 });
+}
 
 test('does not recover a revoked or deliberately deactivated grant', async () => {
   const env = {
@@ -94,4 +98,28 @@ test('does not recover a revoked or deliberately deactivated grant', async () =>
     }; } }; } },
   };
   assert.equal(await loadCloudflareFromUserOauthTokens(env, 'au_revoked'), null);
+});
+
+test('does not attempt a provider refresh for an inactive grant without a saved refresh token', async () => {
+  let providerCalls = 0;
+  let refreshQuery = false;
+  const env = {
+    VAULT_MASTER_KEY: 'unit-test-vault-key',
+    CLOUDFLARE_OAUTH_CLIENT_ID: 'pkce-test-client',
+    DB: {
+      prepare(sql) {
+        if (sql.includes('last_refresh_error_code IN')) refreshQuery = true;
+        return { bind() { return {
+          async all() { return { results: [] }; },
+          async first() { return null; },
+        }; } };
+      },
+    },
+  };
+  const out = await loadCloudflareFromUserOauthTokens(env, 'au_without_refresh', {
+    fetchImpl: async () => { providerCalls++; throw new Error('provider_must_not_be_called'); },
+  });
+  assert.equal(out, null);
+  assert.equal(refreshQuery, true);
+  assert.equal(providerCalls, 0);
 });
