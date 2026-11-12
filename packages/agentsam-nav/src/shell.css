@@ -235,6 +235,22 @@
 
 .as-nav-shortcut { margin-left: auto; color: var(--nav-muted); font: inherit; font-size: var(--nav-meta-size); white-space: nowrap; }
 
+/* One search affordance in the header; its filter appears only when requested. */
+.as-nav-search-launch{margin-left:auto;flex:none;}
+.as-nav-search-launch svg{width:18px;height:18px;}
+.as-nav-sidenav:not([data-expanded="true"]) .as-nav-search-launch{display:none;}
+/* Compact branded environment menu, separate from Chat / Work selection. */
+.as-nav-experience-trigger {display:inline-flex;align-items:center;gap:7px;min-width:0;padding:6px 8px;border:0;border-radius:var(--nav-radius);background:transparent;color:var(--nav-text);font-weight:550;text-align:left;cursor:pointer;}
+.as-nav-experience-trigger:hover,.as-nav-experience-trigger[data-state="open"]{background:var(--nav-hover);}
+.as-nav-experience-trigger svg{width:14px;height:14px;color:var(--nav-muted);}
+.as-nav-experience-label{font-weight:550;}
+.as-nav-experience-menu{min-width:260px;padding:6px;}
+.as-nav-experience-option{display:grid;position:relative;grid-template-columns:1fr auto;gap:1px 10px;padding:11px 12px;border-radius:8px;cursor:pointer;outline:none;}
+.as-nav-experience-option[data-highlighted],.as-nav-experience-option[data-active]{background:var(--nav-selected);}
+.as-nav-experience-name{font-size:14px;line-height:1.4;}
+.as-nav-experience-description{grid-column:1;grid-row:2;color:var(--nav-muted);font-size:12px;}
+.as-nav-experience-check{grid-column:2;grid-row:1;align-self:center;color:var(--nav-accent);}
+.as-nav-sidenav:not([data-expanded="true"]) .as-nav-experience-trigger,.as-nav-sidenav:not([data-expanded="true"]) .as-nav-experience-label{display:none;}
 /* Parents with destinations keep navigation and disclosure as separate actions. */
 .as-nav-parent-row { display: flex; align-items: center; min-width: 0; gap: 1px; border-radius: var(--nav-radius); }
 .as-nav-parent-row[data-active] { background: var(--nav-selected); }
@@ -282,6 +298,12 @@
 .as-nav-icon-action:focus-within > .as-nav-icon-help { visibility:visible; }
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-parent-row > .as-nav-icon-action { display:none; }
 
+/* A project owns its conversation rows; unfiled chats live in Recents. */
+.as-nav-project-disclose svg{width:15px;height:15px;transition:transform 160ms ease;}
+.as-nav-project-disclose svg[data-expanded="false"]{transform:rotate(-90deg);}
+.as-nav-project-threads{margin:1px 0 5px 23px;padding-left:7px;border-left:1px solid var(--nav-border);}
+.as-nav-project-threads .as-nav-conversation-link{padding-left:8px;}
+@media (prefers-reduced-motion:reduce){.as-nav-project-disclose svg{transition:none;}}
 /* Chats V2.1: compact conversation navigation, without icons for every message. */
 .as-nav-chat-dot { flex:0 0 5px; width:5px; height:5px; border:1px solid var(--nav-muted); border-radius:50%; opacity:.72; }
 .as-nav-conversation[data-active] .as-nav-chat-dot { background:var(--nav-accent); border-color:var(--nav-accent); opacity:1; }

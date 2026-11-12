@@ -8,7 +8,7 @@ import { NavMenu, NavMenuButton, NavMenuChevron, NavMenuItem, NavMenuSub, NavMen
 import { NavProvider, useNav } from './NavProvider.js';
 import { NavTrigger } from './NavTrigger.js';
 import { cx } from './utils.js';
-import { NavScope, NavBreadcrumbs, NavSidenav, NavTopbar, NavTopbarLogo, NavTopbarSpacer, NavProjectContext, NavAccountSwitcher, NavFilesResources, NavPinnedSummary, NavConversationActions, NavShareButton, NavOverflowMenu, NavModeSwitcher, NavLaunchDock } from './Surfaces.js';
+import { NavScope, NavBreadcrumbs, NavSidenav, NavTopbar, NavTopbarLogo, NavTopbarSpacer, NavProjectContext, NavAccountSwitcher, NavFilesResources, NavPinnedSummary, NavConversationActions, NavShareButton, NavOverflowMenu, NavModeSwitcher, NavExperienceSwitcher, NavLaunchDock } from './Surfaces.js';
 
 function NavRoot({ className, children, ...props }: HTMLAttributes<HTMLElement>) {
   const { close, isMobile, isPeeking, open, peekable, resizable, setPeeking, setWidth, width } = useNav();
@@ -61,6 +61,7 @@ export const Nav = Object.assign(NavRoot, {
   ShareButton: NavShareButton,
   OverflowMenu: NavOverflowMenu,
   ModeSwitcher: NavModeSwitcher,
+  ExperienceSwitcher: NavExperienceSwitcher,
   LaunchDock: NavLaunchDock,
   Provider: NavProvider,
   Header: NavHeader,

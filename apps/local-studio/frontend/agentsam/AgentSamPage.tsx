@@ -72,7 +72,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     <Nav.PinnedSummary />
   </div>;
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
-    {hostModeSlot && empty ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
+    {hostModeSlot ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
     {hostActionsSlot ? createPortal(headerActions, hostActionsSlot) : null}
     {!hostModeSlot ? <Nav.Topbar className="agentsam-conversation-topbar">
       <Nav.Trigger aria-label="Open navigation" />

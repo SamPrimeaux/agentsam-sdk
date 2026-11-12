@@ -11,11 +11,16 @@ export interface NavAccount { id: string; name: string; plan?: string; avatar?: 
 export interface NavAction { id: string; label: string; icon?: ReactNode; disabled?: boolean; loading?: boolean; shortcut?: string; destructive?: boolean; separatorBefore?: boolean; children?: NavAction[]; onSelect?: () => void }
 export interface NavDestination { id: string; label: string; icon?: ReactNode; href?: string; onSelect?: () => void; active?: boolean; exact?: boolean; children?: NavDestination[]; /** Host-provided action displayed beside a destination; no implicit install or permission change. */ action?: { label: string; onSelect: () => void; disabled?: boolean } }
 export interface NavBreadcrumb { id: string; label: string; href?: string }
+/** Product environment is separate from the Chat/Work task mode. */
+export interface NavExperience { id: string; label: string; description: string }
 
 /** Consumer-owned application context. Only optional shell preferences are persisted. */
 export interface NavValue {
   brand?: NavBrand;
   mode?: NavMode;
+  experiences?: NavExperience[];
+  activeExperienceId?: string;
+  onSelectExperience?: (id: string) => void;
   project?: NavProject;
   conversation?: NavConversation;
   projects?: NavProject[];

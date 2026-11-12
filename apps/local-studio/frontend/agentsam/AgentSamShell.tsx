@@ -461,6 +461,13 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     : pathname + searchStr;
   const value: NavValue = {
     brand, mode, onModeChange: setMode, pathname: navPathname,
+    // The product switcher sits above Chat / Work and reuses existing routes.
+    experiences: [
+      { id: 'agentsam', label: 'AgentSam', description: 'Create, learn and work' },
+      { id: 'developer', label: 'Developer', description: 'Build, debug and ship' },
+    ],
+    activeExperienceId: pathname === '/cli' ? 'developer' : 'agentsam',
+    onSelectExperience: id => go(id === 'developer' ? '/cli' : '/admin/agentsam'),
     project: project ? { id: project.id, name: project.name } : undefined,
     conversation: chat ? { id: chat.id, title: chat.title, pinned: chat.pinned, projectId: chat.workProjectId } : undefined,
     pinnedResources,
@@ -479,7 +486,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     ],
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
     showSidebarHeader: true,
-    newConversationAfter: 'home',
+    // New conversation is the first entry; product destinations follow below.
     showHistory: true,
     destinations: [
       // Render the platform-owned business destinations first. These are the

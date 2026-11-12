@@ -47,6 +47,9 @@ try {
   const drawer = page.getByRole('dialog', { name: 'Navigation' });
   assert.equal(await drawer.isVisible(), true);
   assert.equal(await page.locator('.as-nav-mobile-drawer').count(), 1);
+  assert.equal(await drawer.getByRole('textbox', { name: 'Filter projects and conversations' }).count(), 0,
+    'search stays concealed until requested');
+  await drawer.getByRole('button', { name: 'Search projects and conversations' }).click();
   assert.equal(await drawer.getByRole('textbox', { name: 'Filter projects and conversations' }).count(), 1);
   await page.keyboard.press('Escape');
   await drawer.waitFor({ state: 'hidden' });

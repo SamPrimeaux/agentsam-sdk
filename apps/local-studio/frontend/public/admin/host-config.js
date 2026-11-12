@@ -272,7 +272,15 @@
     });
     const nav = buildUserNav(profile);
     return {
-      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/settings/docs?topic=artwork' : sharedNavPath, showHistory: true, showSidebarHeader: false, newConversationAfter:'home',
+      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/settings/docs?topic=artwork' : sharedNavPath, showHistory: true, showSidebarHeader: false,
+      // Same host-owned destinations on web and desktop. A product environment
+      // is not the Chat / Work task mode or an implicit permission change.
+      experiences: [
+        { id:'agentsam', label:'AgentSam', description:'Create, learn and work' },
+        { id:'developer', label:'Developer', description:'Build, debug and ship' },
+      ],
+      activeExperienceId: sharedNavPath === '/cli' ? 'developer' : 'agentsam',
+      onSelectExperience: id => navigateHost(id === 'developer' ? '/cli' : '/admin/agentsam'),
       ...workspaceNavigation(),
       ...(sharedNavPath.startsWith('/settings') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'}]} : {}),
       ...(sharedNavPath.startsWith('/admin/products/help/artwork') || sharedNavPath.startsWith('/settings/docs') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'},{id:'docs',label:'Documentation',href:'/settings/docs'},...(sharedNavPath.includes('artwork')?[{id:'artwork-guide',label:'Artwork Help'}]:[])]} : {}),

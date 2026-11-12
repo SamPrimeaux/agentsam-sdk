@@ -85,6 +85,30 @@ export function NavTopbarLogo({ variant = 'mark', onClick, toggle = false }: { v
   </button>;
 }
 
+/** Host-owned product environments; this selector never changes model/runtime policy. */
+export function NavExperienceSwitcher() {
+  const { data, theme } = useNav();
+  const options = data.experiences ?? [];
+  const current = options.find(item => item.id === data.activeExperienceId) ?? options[0];
+  const style = useNavStyle();
+  if (!current) return <span className="as-nav-experience-label">{data.brand?.name}</span>;
+  return <Menu.Root>
+    <Menu.Trigger asChild><button type="button" className="as-nav-experience-trigger" aria-label="Switch application environment">
+      <span>{current.label}</span><ChevronDown aria-hidden="true" />
+    </button></Menu.Trigger>
+    <Menu.Portal><Menu.Content align="start" sideOffset={8} collisionPadding={12}
+      data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover as-nav-experience-menu">
+      {options.map(item => <Menu.Item key={item.id} className="as-nav-experience-option"
+        data-active={item.id === current.id || undefined}
+        onSelect={() => data.onSelectExperience?.(item.id)}>
+        <span className="as-nav-experience-name">{item.label}</span>
+        <span className="as-nav-experience-description">{item.description}</span>
+        {item.id === current.id ? <span className="as-nav-experience-check" aria-label="Current environment">✓</span> : null}
+      </Menu.Item>)}
+    </Menu.Content></Menu.Portal>
+  </Menu.Root>;
+}
+
 export function NavBreadcrumbs() {
   const { data, isMobile, close } = useNav();
   const breadcrumbs = data.breadcrumbs ?? [];
@@ -352,10 +376,14 @@ function PinnedResourceRow({ item }: { item: NavPinnedResource }) {
   </div>;
 }
 
-function ProjectRow({ item }: { item: NavProject }) {
+function ProjectRow({ item, threads = [] }: { item: NavProject; threads?: NavConversation[] }) {
   const { data, close, isMobile } = useNav();
   const [rename, setRename] = useState(false);
   const selected = item.id === data.project?.id;
+  const [expanded, setExpanded] = useState(item.id === data.conversation?.projectId);
+  useEffect(() => {
+    if (item.id === data.conversation?.projectId) setExpanded(true);
+  }, [item.id, data.conversation?.projectId]);
   const actions = data.getProjectActions?.(item) ?? [
     ...(data.onPinProject ? [{ id:'pin', label:item.pinned ? 'Unpin project' : 'Pin project', icon:<Pin />, onSelect:()=>data.onPinProject?.(item.id) }] : []),
     ...(data.onDeleteProject ? [{ id:'delete', label:'Delete project', icon:<Trash2 />, destructive:true, separatorBefore:true, onSelect:()=>data.onDeleteProject?.(item.id) }] : []),
@@ -367,10 +395,18 @@ function ProjectRow({ item }: { item: NavProject }) {
         <Folder /><span>{item.name}</span>
       </button>
       <div className="as-nav-row-actions">
+        {threads.length ? <button type="button" className="as-nav-button as-nav-project-disclose"
+          aria-label={(expanded ? 'Collapse ' : 'Expand ') + item.name + ' conversations'}
+          aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>
+          <ChevronDown aria-hidden="true" data-expanded={expanded} />
+        </button> : null}
         {data.onRenameProject ? <button type="button" className="as-nav-button" aria-label={"Rename "+item.name} title="Rename" onClick={()=>setRename(true)}><Pencil /></button> : null}
         {actions.length ? <NavOverflowMenu id={"project-"+item.id} label={item.name+" options"} actions={actions} /> : null}
       </div>
     </div>
+    {expanded && threads.length ? <div className="as-nav-project-threads" aria-label={item.name + ' conversations'}>
+      {threads.map(thread => <ConversationRow key={thread.id} item={thread} />)}
+    </div> : null}
     {data.onRenameProject ? <RenameDialog open={rename} onOpenChange={setRename} title="Rename project" value={item.name} onSave={name=>data.onRenameProject?.(item.id,name)} /> : null}
   </div>;
 }
@@ -445,11 +481,11 @@ function DestinationRow({ item, depth = 0 }: { item: NavDestination; depth?: num
 
 function HistoryCollection({id,title,items,empty,searching=false}:{id:string;title:string;items:ReactNode[];empty:string;searching?:boolean}) {
   const {storageKey} = useNav();
-  const [expanded,setExpanded] = useState(id === "recent");
+  const [expanded,setExpanded] = useState(id === "projects");
   const [more,setMore] = useState(false);
   useEffect(() => {
     if (!storageKey) return;
-    try { setExpanded(JSON.parse(localStorage.getItem(storageKey+':collections-v2') || '{}')[id] ?? (id === 'recent')); } catch { /* Optional UI preferences. */ }
+    try { setExpanded(JSON.parse(localStorage.getItem(storageKey+':collections-v2') || '{}')[id] ?? (id === 'projects')); } catch { /* Optional UI preferences. */ }
   },[storageKey,id]);
   const toggle = () => setExpanded(value => {
     const next = !value;
@@ -464,31 +500,36 @@ function HistoryCollection({id,title,items,empty,searching=false}:{id:string;tit
 }
 
 function SidenavContents() {
-  const { data, close, isMobile } = useNav();
+  const { data, close, isMobile, open, setOpen } = useNav();
   const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => { if (searchOpen) searchRef.current?.focus(); }, [searchOpen]);
   const normalized = query.trim().toLowerCase();
   const conversations = (data.conversations ?? []).filter((item) => !normalized || item.title.toLowerCase().includes(normalized));
   const projects = (data.projects ?? []).filter((item) => !normalized || item.name.toLowerCase().includes(normalized) || conversations.some((conversation) => conversation.projectId === item.id));
   const pinnedConversations = conversations.filter((item) => item.pinned);
   const pinnedProjects = projects.filter((item) => item.pinned);
-  const recent = conversations.filter((item) => !item.pinned).sort((a,b) => (b.updatedAt ?? 0)-(a.updatedAt ?? 0));
+  const unpinnedProjects = projects.filter((item) => !item.pinned);
+  const recent = conversations.filter((item) => !item.pinned && (!item.projectId || !(data.projects ?? []).some(project => project.id === item.projectId))).sort((a,b) => (b.updatedAt ?? 0)-(a.updatedAt ?? 0));
+  const projectThreads = (id: string) => conversations.filter(item => item.projectId === id && !item.pinned).sort((a,b) => (b.updatedAt ?? 0)-(a.updatedAt ?? 0));
   const newConversation = data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null;
   const insertAfter = data.destinations?.some(item => item.id === data.newConversationAfter) ? data.newConversationAfter : undefined;
   return <>
-    {data.showSidebarHeader !== false ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /></div> : isMobile ? <div className="as-nav-sidenav-head as-nav-sidenav-head--close"><button type="button" className="as-nav-button" onClick={close}><X aria-hidden="true" /><span>Close navigation</span></button></div> : null}
+    {(data.showSidebarHeader !== false || isMobile) ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /><NavExperienceSwitcher />
+      {data.showHistory !== false ? <button type="button" className="as-nav-button as-nav-search-launch"
+        aria-label="Search projects and conversations" aria-expanded={searchOpen}
+        onClick={() => { if (!open && !isMobile) setOpen(true); setSearchOpen(value => !value); if (searchOpen) setQuery(''); }}>
+        <Search aria-hidden="true" />
+      </button> : null}
+    </div> : null}
     <div className="as-nav-sidenav-main">
-      {data.showHistory !== false ? <div className="as-nav-drawer-search as-nav-expanded-only">
+      {data.showHistory !== false && searchOpen ? <div className="as-nav-drawer-search as-nav-expanded-only">
         <label className="as-nav-search"><Search aria-hidden="true" />
-          <input aria-label="Filter projects and conversations" placeholder="Find a chat or project" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <input ref={searchRef} aria-label="Filter projects and conversations" placeholder="Find a chat or project"
+            value={query} onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); setSearchOpen(false); setQuery(''); } }} />
         </label>
-        {data.onSearch ? <button type="button" className="as-nav-search-everywhere"
-          aria-label="Search all Studio" title="Search all Studio (⌘K)"
-          onClick={() => {
-            if (isMobile) {
-              close();
-              requestAnimationFrame(() => data.onSearch?.());
-            } else data.onSearch?.();
-          }}>⌘K</button> : null}
       </div> : null}
       <div className="as-nav-destinations">
         {!insertAfter ? newConversation : null}
@@ -497,8 +538,10 @@ function SidenavContents() {
       {data.showHistory !== false ? <div className="as-nav-expanded-only as-nav-history">
         {data.historyStatus === 'error' && data.onRetryHistory ? <button type="button" className="as-nav-collection-more" onClick={data.onRetryHistory}>Retry project list</button> : null}
         <HistoryCollection id="pinned" title="Pinned" searching={Boolean(query)} empty={query ? 'No matching pinned items.' : 'Pin projects or conversations from their menus.'}
-          items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />),...(data.pinnedResources||[]).map(item => <PinnedResourceRow key={item.id} item={item} />)]} />
-        <HistoryCollection id="recent" title="Chats and tasks" searching={Boolean(query)} empty={query ? 'No matching conversations.' : 'Your conversations will appear here.'}
+          items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} threads={projectThreads(item.id)} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />),...(data.pinnedResources||[]).map(item => <PinnedResourceRow key={item.id} item={item} />)]} />
+        <HistoryCollection id="projects" title="Projects" searching={Boolean(query)} empty={query ? 'No matching projects.' : 'Your projects will appear here.'}
+          items={unpinnedProjects.map(item => <ProjectRow key={item.id} item={item} threads={projectThreads(item.id)} />)} />
+        <HistoryCollection id="recent" title="Recents" searching={Boolean(query)} empty={query ? 'No matching conversations.' : 'Your unfiled conversations will appear here.'}
           items={recent.slice(0,20).map(item => <ConversationRow key={item.id} item={item} />)} />
       </div> : null}
     </div>

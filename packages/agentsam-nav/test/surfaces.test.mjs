@@ -70,16 +70,14 @@ test('brand image surfaces retain an icon fallback when a consumer image fails',
 });
 
 
-test('host search appears inside navigation only when a search capability is supplied', () => {
-  const withSearch = renderToString(React.createElement(Nav.Provider,
+test('sidebar provides one search button and discloses the filter only on demand', () => {
+  const html = renderToString(React.createElement(Nav.Provider,
     {value:{...value,onSearch:()=>{}},defaultOpen:true},React.createElement(Nav.Sidenav)));
-  assert.match(withSearch,/Search all Studio/);
-  assert.match(withSearch,/Find a chat or project/);
-  assert.equal((withSearch.match(/aria-label="Filter projects and conversations"/g) || []).length, 1);
-  const withoutSearch = renderToString(React.createElement(Nav.Provider,
-    {value,defaultOpen:true},React.createElement(Nav.Sidenav)));
-  assert.doesNotMatch(withoutSearch,/Search all Studio/);
-  assert.match(withoutSearch,/Filter projects and conversations/);
+  assert.equal((html.match(/aria-label="Search projects and conversations"/g) || []).length,1);
+  assert.match(html,/aria-expanded="false"/);
+  assert.doesNotMatch(html,/Find a chat or project/);
+  assert.doesNotMatch(html,/Search all Studio/);
+  assert.doesNotMatch(html,/Filter projects and conversations/);
 });
 
 
