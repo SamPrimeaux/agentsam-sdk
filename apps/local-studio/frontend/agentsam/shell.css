@@ -461,3 +461,39 @@
 @media (prefers-reduced-motion: reduce) {
   .agentsam-work-welcome-art img { animation: none !important; }
 }
+
+
+/* Conversation-specific compact controls: startup mode, then contextual actions. */
+.agentsam-header-action-pill {
+  display: inline-flex; align-items: center; gap: 2px; padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--nav-border, currentColor) 75%, transparent);
+  border-radius: 17px; background: color-mix(in srgb, var(--nav-canvas, #141b21) 78%, transparent);
+  box-shadow: 0 6px 22px #0002; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+}
+.agentsam-header-action-pill :is(.agentsam-header-action, .as-nav-button) {
+  display: inline-grid; place-items: center; height: 42px; width: 42px;
+  min-height: 42px; min-width: 42px; padding: 0; border: 0;
+  border-radius: 12px; background: transparent; color: var(--nav-ink, currentColor);
+}
+.agentsam-header-action-pill :is(.agentsam-header-action, .as-nav-button):hover,
+.agentsam-header-action-pill :is(.agentsam-header-action, .as-nav-button):focus-visible {
+  background: color-mix(in srgb, var(--nav-ink, currentColor) 11%, transparent);
+}
+.agentsam-conversation-topbar { justify-content: space-between; }
+.agentsam-conversation-topbar > .agentsam-nav__trigger { flex-shrink: 0; border-radius: 50%; }
+.agentsam-topbar-mode { min-width: 0; }
+.agentsam-topbar-thread-title {
+  min-width: 0; max-width: min(36vw, 320px);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: 13px; font-weight: 550; opacity: .85;
+}
+.console-topbar-agent-actions:empty { display: none; }
+.console-topbar-agent-actions:not(:empty) { display: flex; align-items: center; margin-left: auto; }
+.console-topbar:has(#agentsam-console-actions-slot:not(:empty)) .console-topbar-actions { display: none; }
+@media (max-width: 767px) {
+  .agentsam-header-action-pill { border-radius: 18px; }
+  .agentsam-topbar-thread-title { max-width: 30vw; }
+  .console-topbar:has(#agentsam-console-actions-slot:not(:empty)) { padding-right: 10px; }
+  .console-topbar:has(#agentsam-console-actions-slot:not(:empty)) .console-topbar-spacer { flex: 0 0 48px; }
+  .console-topbar:has(#agentsam-console-actions-slot:not(:empty)) #agentsam-console-mode-slot:not(:empty) { min-width: 0; }
+}

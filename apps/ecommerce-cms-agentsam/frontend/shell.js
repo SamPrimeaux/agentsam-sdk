@@ -800,6 +800,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
         <div class="console-topbar-center" id="agentsam-console-mode-slot"></div>
+        <div class="console-topbar-agent-actions" id="agentsam-console-actions-slot"></div>
         <div class="console-topbar-actions">
           <div class="console-search-wrap">
             <button type="button" class="console-search console-search--icon" id="console-search-trigger" aria-label="Search pages and tools" title="Search pages and tools" aria-haspopup="dialog" aria-expanded="false" aria-controls="console-search-dialog">
