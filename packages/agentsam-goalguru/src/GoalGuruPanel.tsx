@@ -43,7 +43,7 @@ export function GoalGuruPanel({
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await request("/", { credentials: "same-origin" });
+      const response = await request("/");
       if (!response.ok) throw new Error(response.status === 401 ? "Sign in to see your private goals." : "Goals are temporarily unavailable.");
       const data = await response.json() as Partial<Plan>;
       if (!Array.isArray(data.goals) || !Array.isArray(data.steps)) throw new Error("Goal data was incomplete.");
@@ -91,7 +91,7 @@ export function GoalGuruPanel({
     setPending(step.id);
     try {
       const response = await request("/steps/" + encodeURIComponent(step.id), {
-        method: "PATCH", credentials: "same-origin",
+        method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ status, note: step.note || "", evidence_ref: step.evidence_ref || "" }),
       });
@@ -107,7 +107,7 @@ export function GoalGuruPanel({
     setImportingLegacy(true);
     try {
       const response = await request("/goals", {
-        method: "POST", credentials: "same-origin",
+        method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           goal_type: filter,
@@ -126,7 +126,7 @@ export function GoalGuruPanel({
     setPending("create");
     try {
       const response = await request("/goals", {
-        method: "POST", credentials: "same-origin",
+        method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title: newTitle.trim(), goal_type: filter }),
       });
@@ -143,7 +143,7 @@ export function GoalGuruPanel({
     setPending("new-step");
     try {
       const response = await request("/goals/" + encodeURIComponent(goalId) + "/steps", {
-        method: "POST", credentials: "same-origin",
+        method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title: newStepTitle.trim() }),
       });
@@ -157,7 +157,7 @@ export function GoalGuruPanel({
   async function findTickets(query: string) {
     setPending("ticket-search");
     try {
-      const response = await request("/tickets?q=" + encodeURIComponent(query), { credentials: "same-origin" });
+      const response = await request("/tickets?q=" + encodeURIComponent(query));
       if (!response.ok) throw new Error("Could not search your engineering tickets.");
       const data = await response.json() as { tickets?: TicketCandidate[] };
       setTicketCandidates(Array.isArray(data.tickets) ? data.tickets : []);
@@ -169,7 +169,7 @@ export function GoalGuruPanel({
     setPending(ticketId);
     try {
       const response = await request("/goals/" + encodeURIComponent(goalId) + "/tickets", {
-        method: "POST", credentials: "same-origin",
+        method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ticket_id: ticketId }),
       });
@@ -183,7 +183,7 @@ export function GoalGuruPanel({
     setPending(ticketId);
     try {
       const response = await request("/goals/" + encodeURIComponent(goalId) + "/tickets/" + encodeURIComponent(ticketId), {
-        method: "DELETE", credentials: "same-origin",
+        method: "DELETE",
       });
       if (!response.ok) throw new Error("Couldn't unlink this ticket.");
       setPlan(current => ({ ...current, ticketLinks: current.ticketLinks.filter(link =>
@@ -196,7 +196,7 @@ export function GoalGuruPanel({
     setPending(goal.id);
     try {
       const response = await request("/goals/" + encodeURIComponent(goal.id), {
-        method: "PATCH", credentials: "same-origin",
+        method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ status }),
       });

@@ -20,6 +20,7 @@ test('host transport scopes paths and uses host fetch without credential leakage
 test('GoalGuru UI contains no host-global store or fixed endpoint',()=>{
  const src=readFileSync(new URL('../src/GoalGuruPanel.tsx',import.meta.url),'utf8');
  assert.doesNotMatch(src,/useWorkStore|window\.|fetch\(|@\//);
+ assert.doesNotMatch(src,/credentials\s*:/);
  assert.match(src,/onContinue/);
  assert.match(src,/request\(/);
 });
