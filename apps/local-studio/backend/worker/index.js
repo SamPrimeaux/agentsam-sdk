@@ -140,6 +140,7 @@ function isLocalStudioCommerceApi(pathname) {
     || pathname === "/api/admin/platform/bindings"
     || pathname === "/api/admin/media" || pathname.startsWith("/api/admin/media/")
     || pathname.startsWith("/api/admin/assets/")
+    || pathname.startsWith("/api/admin/growth/")
     || pathname.startsWith("/api/admin/product-studio/")
     || pathname.startsWith("/api/admin/completeful/")
     || pathname.startsWith("/api/admin/cms/")

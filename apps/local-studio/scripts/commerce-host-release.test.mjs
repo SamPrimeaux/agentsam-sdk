@@ -16,11 +16,13 @@ test('original Ecommerce Theme Studio ships authoring and mobile dock without mi
 });
 test('host routes authenticated Ecommerce CMS and AgentSam APIs rather than returning generic Nitro 404', () => {
   const worker = read('../backend/worker/index.js');
-  for (const prefix of ['/api/admin/cms/','/api/admin/agentsam/','/api/admin/theme-editor/','/api/admin/store/']) {
+  for (const prefix of ['/api/admin/cms/','/api/admin/agentsam/','/api/admin/theme-editor/','/api/admin/store/','/api/admin/growth/']) {
     assert.ok(worker.includes('pathname.startsWith("' + prefix + '")'), 'missing hosted route: ' + prefix);
   }
   assert.match(worker, /resolveSessionUserId\(request, env\)/);
   assert.match(worker, /handleEcommerceAdminApi\(request, commerceEnv, url, context, studioUser\)/);
+  const ecommerceApi = read('../../ecommerce-cms-agentsam/backend/admin/api.js');
+  assert.match(ecommerceApi, /path.startsWith\(\"\/api\/admin\/growth\/\"\)/);
 });
 test('installed site/editor entrypoints and programmatic page changes stay in Local Studio', () => {
   const sites = read('../frontend/src/routes/(apps)/sites.tsx');
