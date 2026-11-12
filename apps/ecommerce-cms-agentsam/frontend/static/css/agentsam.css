@@ -208,6 +208,39 @@ body.agentsam-overlay-mode.agentsam-open {
   min-height: 0;
 }
 
+/* New chat is a quiet state, not a model-authored message bubble. */
+.agentsam-empty {
+  margin: auto;
+  width: min(100%, 320px);
+  padding: 36px 16px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--nav-ink, var(--te-text, #222));
+  text-align: center;
+}
+.agentsam-empty-mark {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+.agentsam-empty strong {
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+.agentsam-empty p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 240px;
+  color: var(--nav-inkMuted, var(--te-muted, #777));
+}
+@media (max-width: 640px) {
+  .agentsam-empty {padding: 24px 10px;}
+}
+
 .agentsam-msg {
   max-width: 92%;
   padding: 10px 12px;
