@@ -7,10 +7,12 @@ import {
   listKnownServers,
   listMcpServers,
   listMcpTools,
+  callMcpTool,
   listOfferableMcpServerConnections,
   listRegisteredClients,
   pingMcpServer,
   readMcpServer,
+  recordToolReceipt,
   removeServerFromClient,
   resolveServerPreset,
   scopesForCloudflareMcpBundle,
@@ -71,6 +73,8 @@ export function parseMcpArgs(argv = []) {
   let issuer = '';
   let audience = '';
   let displayName = '';
+  let toolName = '';
+  let toolInput = '{}';
   let authMode = '';
   let writeAccess = false;
   let force = false;
@@ -86,6 +90,8 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--issuer') issuer = argv[++i] || '';
     else if (arg === '--audience') audience = argv[++i] || '';
     else if (arg === '--display-name') displayName = argv[++i] || '';
+    else if (arg === '--tool') toolName = argv[++i] || '';
+    else if (arg === '--input') toolInput = argv[++i] || '{}';
     else if (arg === '--public') authMode = 'public';
     else if (arg === '--oauth') authMode = 'oauth';
     else if (arg === '--write') writeAccess = true;
@@ -108,6 +114,8 @@ export function parseMcpArgs(argv = []) {
     issuer,
     audience,
     displayName,
+    toolName,
+    toolInput,
     authMode,
     writeAccess,
     force,
@@ -148,9 +156,12 @@ function renderHelp(options = {}) {
   Usage:
     agentsam mcp create <name> [--preset <preset>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
+    agentsam mcp add browsermcp --client agentsam  Local Chrome extension MCP (Node 20+)
     agentsam mcp connect inneranimalmedia [--write]     Authorize resource-scoped MCP via existing IAM PKCE
     agentsam mcp list [--catalog|--bundles] [--json]
     agentsam mcp status [<name>] [--json]
+    agentsam mcp tools <name> [--json]
+    agentsam mcp call <name> --tool <tool> --input '{\"command\":\"tab list\"}' [--json]
     agentsam mcp doctor [<name>] [--json]
     agentsam mcp remove <name> [--client <client>|all]
     agentsam mcp scopes <cloudflare-bundle> [--json]
@@ -365,9 +376,10 @@ export async function runMcp(argv = [], options = {}) {
     }
 
     const preset = resolveServerPreset(name, options);
+    const isStdio = preset?.protocol === 'stdio';
     const url = args.url || preset?.url;
 
-    if (!url) {
+    if (!isStdio && !url) {
       throw new Error(`missing_url: specify --url for custom MCP server "${name}" (or use a catalog name from: agentsam mcp list --catalog)`);
     }
 
@@ -383,13 +395,17 @@ export async function runMcp(argv = [], options = {}) {
       requestedClients = preset.defaultClients;
     }
 
+    if (isStdio && (args.url || args.token)) throw new McpResourceError('browsermcp_local_stdio_does_not_accept_url_or_token', 'agentsam mcp add browsermcp --client agentsam');
+    if (isStdio && requestedClients.includes('chatgpt')) throw new McpResourceError('stdio_mcp_requires_local_host', 'agentsam mcp add browsermcp --client agentsam');
+
     const cfBundle = getCloudflareMcpBundle(name);
     const packHint = args.pack || (cfBundle?.feature_packs || [])[0] || '';
 
     const serverConfig = {
       name,
-      url,
+      url: url || '',
       protocol: preset?.protocol || 'streamable_http',
+      ...(isStdio ? { command: preset.command, args: [...preset.args] } : {}),
       auth: args.token
         ? { type: preset?.auth_type === 'none' ? 'bearer' : (preset?.auth_type || 'bearer'), token: args.token }
         : null,
@@ -418,7 +434,7 @@ export async function runMcp(argv = [], options = {}) {
       syncedAdapters.push(res);
     }
 
-    const ping = await pingMcpServer(serverConfig, options);
+    const ping = await (options.pingMcpServerImpl || pingMcpServer)(serverConfig, options);
     const scopePreview = cfBundle ? scopesForCloudflareMcpBundle(name) : null;
 
     if (args.json) {
@@ -441,16 +457,18 @@ export async function runMcp(argv = [], options = {}) {
 
     write(`\n  ✓ Configured MCP server: ${name}\n`);
     write(`      Authority:   ~/.agentsam/mcp/${name}.json\n`);
-    write(`      URL:         ${url}\n`);
+    if (isStdio) write(`      Command:     ${serverConfig.command} ${serverConfig.args.join(' ')} (local only)\n`);
+    else write(`      URL:         ${url}\n`);
     write(`      Protocol:    ${serverConfig.protocol}\n`);
     for (const a of syncedAdapters) {
       write(`      Adapter:     ${a.client} -> ${a.configPath}\n`);
     }
     if (ping.ok) {
-      write(`      Ping:        ✓ Connected (${ping.latencyMs}ms${ping.transport ? `, ${ping.transport}` : ''})\n`);
+      write(`      Ping:        ${isStdio ? '✓ MCP initialized; browser approval unverified' : '✓ Connected'} (${ping.latencyMs}ms${ping.transport ? `, ${ping.transport}` : ''})\n`);
     } else {
       write(`      Ping:        ⚠ Warning (${ping.error || 'unreachable'})\n`);
     }
+    if (isStdio) write('      Pairing:     Compare the six-digit code in the Browser MCP extension and click Allow.\n');
     if (cfBundle) {
       write(`      CF packs:    ${(cfBundle.feature_packs || []).join(', ') || '(portal-hosted OAuth)'}\n`);
       write(`      Portal:      ${(cfBundle.portal_manage_scopes || []).join(', ')}\n`);
@@ -476,15 +494,16 @@ export async function runMcp(argv = [], options = {}) {
     const resource = await probeMcpServer(server, name, options);
     const ping = resource.error
       ? { ok:false, error:resource.error, next:resource.next }
-      : await pingMcpServer(resource.server, options);
+      : await (options.pingMcpServerImpl || pingMcpServer)(resource.server, options);
     const clientStatuses = (server.clients || ['cursor']).map((c) =>
       inspectClientAdapter(c, name, options),
     );
 
     const report = {
       name,
-      url: server.url,
+      url: server.url || null,
       protocol: server.protocol,
+      ...(server.protocol === 'stdio' ? { command: server.command, args: server.args, pairingStatus: 'unverified' } : {}),
       ping,
       clients: clientStatuses,
       hasAuth: Boolean(server.auth?.token),
@@ -497,9 +516,15 @@ export async function runMcp(argv = [], options = {}) {
     }
 
     write(`\n  MCP Server Status: ${name}\n`);
-    write(`      URL:       ${server.url}\n`);
-    write(`      Ping:      ${ping.ok ? `✓ Active (${ping.latencyMs}ms)` : `✗ Error: ${ping.error}`}\n`);
-    write(`      Auth:      ${report.hasAuth ? '✓ Bearer token present' : '○ No auth token'}\n`);
+    if (server.protocol === 'stdio') {
+      write(`      Local:     ${server.command} ${(server.args || []).join(' ')}\n`);
+      write(`      Server:    ${ping.ok ? 'Initialized (browser approval unverified)' : `Unavailable (${ping.error})`}\n`);
+      write('      Pairing:   Confirm the code in the Browser MCP extension.\n');
+    } else {
+      write(`      URL:       ${server.url}\n`);
+      write(`      Ping:      ${ping.ok ? `✓ Active (${ping.latencyMs}ms)` : `✗ Error: ${ping.error}`}\n`);
+      write(`      Auth:      ${report.hasAuth ? '✓ Bearer token present' : '○ No auth token'}\n`);
+    }
     for (const c of clientStatuses) {
       write(`      ${c.client}:    ${c.configured ? '✓ Configured' : '○ Not configured'} (${c.path})\n`);
     }
@@ -522,19 +547,20 @@ export async function runMcp(argv = [], options = {}) {
     const resource = await probeMcpServer(server, name, options);
     const ping = resource.error
       ? { ok:false, error:resource.error, next:resource.next }
-      : await pingMcpServer(resource.server, options);
+      : await (options.pingMcpServerImpl || pingMcpServer)(resource.server, options);
     const clientStatuses = (server.clients || ['cursor']).map((c) =>
       inspectClientAdapter(c, name, options),
     );
-    const toolsProbe = ping.ok ? await listMcpTools(resource.server, options) : { count: 0, tools: [] };
+    const toolsProbe = ping.ok ? await (options.listMcpToolsImpl || listMcpTools)(resource.server, options) : { count: 0, tools: [] };
 
     const detectedClients = detectInstalledClients(options);
     const cfBundle = getCloudflareMcpBundle(name);
     const diagnostics = {
       name,
       authorityPath: `~/.agentsam/mcp/${name}.json`,
-      url: server.url,
-      connectivity: ping.ok ? 'pass' : 'fail',
+      url: server.url || null,
+      connectivity: ping.ok ? (server.protocol === 'stdio' ? 'server_initialized_pairing_unverified' : 'pass') : 'fail',
+      ...(server.protocol === 'stdio' ? { command: server.command, args: server.args, pairingStatus: 'unverified', pairingHint: 'Compare the six-digit code in the Browser MCP extension and click Allow.' } : {}),
       latencyMs: ping.latencyMs,
       transport: ping.transport || null,
       authConfigured: Boolean(server.auth?.token),
@@ -566,9 +592,9 @@ export async function runMcp(argv = [], options = {}) {
 
     write(`\n  AgentSam MCP Doctor · ${name}\n\n`);
     write(`  [1] Authority state:   ✓ Valid (~/.agentsam/mcp/${name}.json)\n`);
-    write(`  [2] Endpoint ping:     ${ping.ok ? `✓ Reachable (${ping.latencyMs}ms)` : `✗ Unreachable (${ping.error})`}\n`);
+    write(`  [2] ${server.protocol === 'stdio' ? 'Local process' : 'Endpoint ping'}:     ${ping.ok ? (server.protocol === 'stdio' ? '✓ MCP initialized; browser pairing not verified' : `✓ Reachable (${ping.latencyMs}ms)`) : `✗ Unavailable (${ping.error})`}\n`);
     write(`  [3] Catalog:           ${preset ? `${preset.auth_type} / ${preset.protocol}` : 'custom'}\n`);
-    write(`  [4] Auth credential:   ${diagnostics.authConfigured ? '✓ Token configured' : '○ Unauthenticated / public'}\n`);
+    write(`  [4] Auth credential:   ${server.protocol === 'stdio' ? 'Extension pairing (user approves locally)' : diagnostics.authConfigured ? '✓ Token configured' : '○ Unauthenticated / public'}\n`);
     write(`  [5] Tool discovery:    ${toolsProbe.count > 0 ? `✓ Found ${toolsProbe.count} tools` : '○ 0 tools discovered'}\n`);
     write(`  [6] Client adapters:\n`);
     for (const c of clientStatuses) {
@@ -580,6 +606,44 @@ export async function runMcp(argv = [], options = {}) {
     }
     write('\n');
     return diagnostics;
+  }
+
+  if (subcommand === 'tools' || subcommand === 'call') {
+    if (!target) throw new McpResourceError('mcp_server_name_required', 'agentsam mcp list');
+    const server = readMcpServer(target, options);
+    if (!server) throw new McpResourceError(`mcp_server_not_configured:${target}`, `agentsam mcp add ${target}`);
+    const resource = await probeMcpServer(server, target, options);
+    if (resource.error) throw new McpResourceError(resource.error, `agentsam mcp doctor ${target}`);
+    if (subcommand === 'tools') {
+      const result = await (options.listMcpToolsImpl || listMcpTools)(resource.server, options);
+      if (args.json) write(JSON.stringify(result, null, 2) + '\n');
+      else {
+        if (result.error) write(`  MCP tool discovery failed: ${result.error}\n`);
+        else for (const tool of result.tools || []) write(`  ${tool.name}  ${tool.description || ''}\n`);
+      }
+      return result;
+    }
+    if (!args.toolName) throw new McpResourceError('mcp_tool_name_required: use --tool <name>', `agentsam mcp tools ${target}`);
+    let payload;
+    try { payload = JSON.parse(args.toolInput); }
+    catch { throw new McpResourceError('mcp_tool_input_invalid_json', 'pass a JSON object to --input'); }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new McpResourceError('mcp_tool_input_object_required', 'pass a JSON object to --input');
+    // An explicit CLI call is required. No browser automation runs on install
+    // or from untrusted catalog metadata.
+    const result = await (options.callMcpToolImpl || callMcpTool)(resource.server, args.toolName, payload, options);
+    // Store bounded metadata only. Never persist page text, screenshots,
+    // Browser MCP pairing secrets or raw browser commands in telemetry.
+    recordToolReceipt({
+      tool_key: `mcp:${target}:${args.toolName}`,
+      source_client: 'agentsam',
+      status: result.ok ? 'success' : 'failure',
+      duration_ms: result.latencyMs || 0,
+      error_code: result.ok ? null : 'mcp_tool_execution_failed',
+      failure_origin: result.ok ? null : 'tool',
+    }, options);
+    if (args.json) write(JSON.stringify(result, null, 2) + '\n');
+    else write(result.ok ? JSON.stringify(result.result, null, 2) + '\n' : `  MCP tool failed: ${result.error}\n`);
+    return result;
   }
 
   if (subcommand === 'remove') {

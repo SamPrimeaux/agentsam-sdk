@@ -41,3 +41,57 @@ only the materialized latest result.
 `https://mcp.inneranimalmedia.com/mcp` with client
 `iam_mcp_inneranimalmedia`. It must not be conflated with the Cloudflare OAuth
 client used by `@agentsam-mcp`.
+
+## Browser MCP — local Chrome extension
+
+Browser MCP is an additional **device-local** plugin. It does not use the
+Cloudflare Worker as a browser proxy and does not ask users to export Chrome
+cookies, credentials, or the Browser MCP daemon token. Browser MCP's own
+daemon and Chrome extension enforce the six-digit pairing step.
+
+On the machine running AgentSam (Node.js 20+; the SDK itself requires Node 22+):
+
+```sh
+agentsam plugins install @browsermcp
+agentsam plugins connect @browsermcp --client agentsam
+agentsam mcp doctor browsermcp --json
+agentsam mcp tools browsermcp --json
+```
+
+The local MCP authority is `~/.agentsam/mcp/browsermcp.json`; the
+independent AgentSam-app adapter is `~/.agentsam/mcp.json`.
+You can also use `agentsam mcp add browsermcp --client cursor` or
+`--client claude` to sync the documented **stdio** configuration to those
+local applications without overwriting unrelated servers.
+
+The CLI starts `npx @browsermcp/mcp@latest` and uses the official
+`@modelcontextprotocol/sdk` stdio client to initialize, list, and call real
+tools. It only accepts this reviewed Browser MCP executable and arguments.
+It will never execute a local program supplied by a remote catalog.
+
+After starting the server, open the **Browser MCP Chrome extension**, verify
+that its six-digit code matches the code in the agent's response, and click
+**Allow**. This is a user-controlled security boundary. Do not approve a
+mismatched or unexpected code.
+
+To exercise the tool after pairing:
+
+```sh
+agentsam mcp call browsermcp --tool browser \
+  --input '{"command":"goto https://browsermcp.io\nget title"}' --json
+```
+
+Tool discovery or successful MCP initialization **does not prove the Chrome
+extension is paired**. The plugin reports pairing as unverified until an
+actual authorized browser command succeeds. Account registration alone
+does not create executable D1 tool rows: tools are discovered from the live
+local MCP session.
+
+**Host boundary:** the browser integration works only inside a supported
+local CLI/desktop agent host. Hosted Cloudflare Workers and ChatGPT remote
+connectors cannot start the user-device stdio process, and are deliberately
+refused as execution destinations. A separate, authenticated device bridge
+would be required before a hosted Studio chat could invoke this MCP server.
+
+Sources: https://browsermcp.io/docs/ai-apps and
+https://browsermcp.io/docs/how-it-works

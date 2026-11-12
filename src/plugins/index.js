@@ -5,6 +5,7 @@ export {
   INNERANIMALMEDIA_CLOUDFLARE_OAUTH_PLUGIN_MANIFEST,
 } from './cloudflare.js';
 export { COMPLETEFUL_PLUGIN_MANIFEST } from './completeful.js';
+export { BROWSER_MCP_PLUGIN_MANIFEST } from './browsermcp.js';
 export {
   installPlugin,
   listPlugins,

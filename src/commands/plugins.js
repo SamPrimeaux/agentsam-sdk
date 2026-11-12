@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   AGENTSAM_MCP_PLUGIN_MANIFEST,
+  BROWSER_MCP_PLUGIN_MANIFEST,
   buildPluginQualityReceipt,
   inspectPluginProduct,
   readPluginEvidenceBundle,
@@ -9,10 +10,12 @@ import {
   verifyPluginProduct,
 } from '../plugins/index.js';
 import { authenticateViaBrowser } from '../lib/auth.js';
+import { runMcp } from './mcp.js';
+import { readMcpServer } from '../mcp/index.js';
 import { promptToOpenUrl } from '../lib/open-url.js';
 import { readAccountSession, resolveAccountApiKey, saveAccountSession } from '../lib/account-session.js';
 
-const CATALOG = Object.freeze({ 'agentsam-mcp': AGENTSAM_MCP_PLUGIN_MANIFEST });
+const CATALOG = Object.freeze({ 'agentsam-mcp': AGENTSAM_MCP_PLUGIN_MANIFEST, browsermcp: BROWSER_MCP_PLUGIN_MANIFEST });
 const PLUGIN_MIGRATION = '0001_agentsam_plugin_runtime.sql';
 
 function statePath(cwd) { return path.join(path.resolve(cwd), '.agentsam', 'plugins.json'); }
@@ -34,11 +37,13 @@ function installMigration(cwd) {
 function parse(argv) {
   const out = {
     action: argv[0] || 'list', key: '', cwd: process.cwd(), json: false,
+    client: 'agentsam',
     origin: '', evidence: '',
     timeoutMs: 180_000, noOpen: false,
   };
   for (let i = 1; i < argv.length; i += 1) {
     if (argv[i] === '--cwd') out.cwd = argv[++i] || out.cwd;
+    else if (argv[i] === '--client') out.client = argv[++i] || out.client;
     else if (argv[i] === '--json') out.json = true;
     else if (argv[i] === '--origin') out.origin = argv[++i] || out.origin;
     else if (argv[i] === '--evidence') out.evidence = argv[++i] || out.evidence;
@@ -79,8 +84,8 @@ async function fetchConnector(opts, token, pathname, init = {}) {
   return fetch(`${origin}${pathname}`, { ...init, headers });
 }
 
-async function connectPlugin(opts, key) {
-  if (key !== 'agentsam-mcp') throw new Error(`plugin_connect_not_supported:${key}`);
+async function connectPlugin(opts, key, hostOptions = {}) {
+  if (key !== 'agentsam-mcp' && key !== 'browsermcp') throw new Error(`plugin_connect_not_supported:${key}`);
   const state = readState(opts.cwd);
   if (!state.plugins[key]) {
     state.plugins[key] = { plugin_key: key, installed_at: new Date().toISOString(), manifest: CATALOG[key] };
@@ -88,6 +93,23 @@ async function connectPlugin(opts, key) {
     fs.writeFileSync(statePath(opts.cwd), `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
     installMigration(opts.cwd);
     if (!opts.json) console.log(`\n  Installed @${key}.`);
+  }
+
+  if (key === 'browsermcp') {
+    const result = await runMcp(['add', 'browsermcp', '--client', opts.client, '--json'], {
+      home: hostOptions.home,
+      write: () => {},
+    });
+    const payload = {
+      ok: Boolean(result.ok), plugin_key: key, provider: 'browsermcp',
+      status: 'configured', pairing_status: 'unverified',
+      server_initialized: result.ping?.ok === true,
+      adapters: result.syncedAdapters,
+      next: 'In Chrome open the Browser MCP extension, compare the six-digit code, click Allow, then run agentsam mcp doctor browsermcp.',
+    };
+    if (opts.json) writeJson(payload);
+    else console.log(`\n  Browser MCP configured locally. ${payload.next}\n`);
+    return payload;
   }
 
   const { token } = await resolveCliBearer(opts);
@@ -137,7 +159,24 @@ async function connectPlugin(opts, key) {
   return result;
 }
 
-async function statusPlugin(opts, key) {
+async function statusPlugin(opts, key, hostOptions = {}) {
+  if (key === 'browsermcp') {
+    const server = readMcpServer('browsermcp', { home: hostOptions.home });
+    const probe = server ? await runMcp(['status', 'browsermcp', '--json'], {
+      home: hostOptions.home, write: () => {},
+    }) : null;
+    const result = {
+      ok: Boolean(server), plugin_key: key, provider: 'browsermcp',
+      status: server ? 'configured' : 'unconfigured',
+      server_initialized: probe?.ping?.ok === true,
+      pairing_status: 'unverified',
+      adapters: probe?.clients || [],
+      next: server ? 'Approve the six-digit code in the Chrome extension and verify a real browser tool call.' : 'Run agentsam plugins connect @browsermcp',
+    };
+    if (opts.json) writeJson(result);
+    else console.log(`\n  @browsermcp: ${result.status} (${result.server_initialized ? 'MCP server initialized' : 'server not verified'}; browser pairing unverified)\n`);
+    return result;
+  }
   if (key !== 'agentsam-mcp') throw new Error(`unknown_plugin:${key}`);
   const { token } = await resolveCliBearer(opts);
   const response = await fetchConnector(opts, token, '/api/connections/cloudflare');
@@ -149,7 +188,7 @@ async function statusPlugin(opts, key) {
   return result;
 }
 
-export async function runPlugins(argv = []) {
+export async function runPlugins(argv = [], hostOptions = {}) {
   const opts = parse(argv);
   if (['inspect','verify','receipt'].includes(opts.action)) {
     const target = path.resolve(opts.cwd, opts.key || '.');
@@ -191,8 +230,8 @@ export async function runPlugins(argv = []) {
   const key = normalizePluginKey(opts.key || 'agentsam-mcp');
   const manifest = CATALOG[key];
   if (!manifest) throw new Error(`unknown_plugin:${key}`);
-  if (opts.action === 'connect') return connectPlugin(opts, key);
-  if (opts.action === 'status') return statusPlugin(opts, key);
+  if (opts.action === 'connect') return connectPlugin(opts, key, hostOptions);
+  if (opts.action === 'status') return statusPlugin(opts, key, hostOptions);
   if (opts.action !== 'install' && opts.action !== 'remove') throw new Error(`unknown plugins action:${opts.action}`);
   const state = readState(opts.cwd);
   let migration = null;
