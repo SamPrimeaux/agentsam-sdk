@@ -565,7 +565,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'plugins', label: 'Plugins', icon: <Plug />, onSelect: () => go('/settings/integrations') },
       { id: 'files', label: 'View files in conversation', icon: <Files />, separatorBefore: true, onSelect: () => { state.openSideTab('files'); state.setSideOpen(true); } },
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
-      { id: 'living-goals', label: 'AgentSam GoalGuru', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
+      { id: 'living-goals', label: 'Goals', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
       { id: 'work-tools', label: 'Work tools', icon: <Layers3 />, children: [
         { id: 'co-worker', label: 'Co-worker', icon: <Users />, onSelect: () => { state.openSideTab('chat', { ephemeral: false }); state.setSideOpen(true); } },
         { id: 'browser', label: 'Browser', icon: <Globe />, onSelect: () => { state.openSideTab('browser', { ephemeral: false }); state.setSideOpen(true); } },

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { GoalGuruPanel, createGoalGuruHttpTransport } from "@inneranimalmedia/agentsam-goalguru";
 import "@inneranimalmedia/agentsam-goalguru/theme.css";
 import { useWorkStore } from "@/lib/work/store";
@@ -9,6 +10,12 @@ export function GoalGuruHost({ legacyGoal, onLegacyImported, mode = "panel" }: {
   onLegacyImported?: () => void;
   mode?: "panel" | "page";
 }) {
+  const [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => {
+    const refresh = () => setRefreshKey(key => key + 1);
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, []);
   const continueInWork = (prompt: string) => {
     const state = useWorkStore.getState();
     const id = state.startChat();
@@ -20,5 +27,5 @@ export function GoalGuruHost({ legacyGoal, onLegacyImported, mode = "panel" }: {
     }));
   };
   return <GoalGuruPanel request={request} mode={mode} onContinue={continueInWork}
-    legacyGoal={legacyGoal} onLegacyImported={onLegacyImported} />;
+    refreshKey={refreshKey} legacyGoal={legacyGoal} onLegacyImported={onLegacyImported} />;
 }

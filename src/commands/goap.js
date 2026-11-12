@@ -1,3 +1,4 @@
+import { usageError } from '../../packages/agentsam-errors/src/cli.js';
 import {
   readGoapState,
   listGoapTickets,
@@ -11,6 +12,8 @@ import {
   renderGoapPlan,
 } from '../../packages/agentsam-repository/src/goap.js';
 import { readAccountSession } from '../lib/account-session.js';
+import { requestSharedGoals } from './goals.js';
+import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { buildLocalGoapState } from './goap-world.js';
 
 function parseArgs(args = []) {
@@ -19,6 +22,8 @@ function parseArgs(args = []) {
     const a = args[i];
     if (a === '--json') {
       flags.json = true;
+    } else if (a === '--shared') {
+      flags.shared = true;
     } else if (a.startsWith('--priority=')) {
       flags.priority = a.slice('--priority='.length);
     } else if (a === '--priority' || a === '-p') {
@@ -54,6 +59,36 @@ function parseArgs(args = []) {
   return flags;
 }
 
+const SHARED_ACTIONS = {
+  new: 'create', create: 'create', switch: 'activate', select: 'activate', close: 'close',
+};
+
+async function runSharedGoap(sub, flags, options) {
+  const git = tryResolveGitContext({ cwd: options.cwd });
+  if (git?.remoteHost !== 'github.com' || !git.repoFullName) {
+    throw usageError('Shared GOAP requires a registered GitHub repository.',{command:'agentsam goap'});
+  }
+  const repositoryId = 'github:' + git.repoFullName.toLowerCase();
+  const route = '/goap?' + new URLSearchParams({ repository: repositoryId, limit: String(flags.limit || 20) });
+  const action = Object.hasOwn(SHARED_ACTIONS,sub) ? SHARED_ACTIONS[sub] : null;
+  const body = action ? {
+    action,
+    ...(action === 'create'
+      ? { title: flags._.join(' ').trim(), priority: flags.priority, subsystem: flags.subsystem, description: flags.description }
+      : { ticketId: flags._[0], status: flags.status, reason: flags.reason }),
+  } : undefined;
+  const result = await requestSharedGoals(route, { ...options, command: 'agentsam goap', method: action ? 'POST' : 'GET', body });
+  if (options.json) { console.log(JSON.stringify(result,null,2)); return; }
+  if (action) {
+    console.log(`${action === 'close' ? 'Closed' : 'Activated'} ${result.ticketId} [${result.status}]`);
+  } else if (sub === 'list' || sub === 'ls') {
+    console.log(renderGoapList(result));
+  } else {
+    const current = result.tickets.find(ticket => ticket.focused);
+    console.log(current ? `${current.title} [${current.goal_status}]  ${current.id}` : 'No current shared GOAP goal.');
+  }
+}
+
 /**
  * Handle agentsam goap [status|goal|why|plan|list|new|switch|close] command.
  */
@@ -62,7 +97,16 @@ export async function runGoap(subcommand = 'status', options = {}) {
   const sub = String(subcommand || 'status').trim().toLowerCase();
   const flags = parseArgs(options.args || []);
   const jsonMode = Boolean(options.json || flags.json);
-  const accountId = flags.accountId || readAccountSession({ home: options.home })?.account_id || null;
+  const accountSession = readAccountSession({ home: options.home });
+  const accountId = flags.accountId || accountSession?.account_id || null;
+  if (flags.shared && !['status','goal','list','ls',...Object.keys(SHARED_ACTIONS)].includes(sub)) {
+    throw usageError('Shared GOAP supports status, list and ticket actions.',{
+      command:'agentsam goap',hints:{next:'Run agentsam goap plan for the project-local plan.'},
+    });
+  }
+  if (flags.shared || (!flags.accountId && (Object.hasOwn(SHARED_ACTIONS,sub) || sub === 'list' || sub === 'ls'))) {
+    return runSharedGoap(sub, flags, { ...options, cwd, json: jsonMode });
+  }
 
   if (sub === 'list' || sub === 'ls') {
     const res = await listGoapTickets({ cwd, accountId, limit: flags.limit || 20 });
@@ -153,6 +197,9 @@ export async function runGoap(subcommand = 'status', options = {}) {
     state = await buildLocalGoapState({ cwd });
   } catch (error) {
     if (jsonMode && options.debug) console.error(error?.stack || error);
+  }
+  if (!state && !flags.accountId && accountSession && ['status','goal'].includes(sub)) {
+    return runSharedGoap(sub, flags, { ...options, cwd, json: jsonMode });
   }
   if (!state && accountId) state = await readGoapState({ cwd, accountId });
   if (!state?.ok) {
