@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Check, ChevronDown, ChevronRight, Circle, Plus, RefreshCcw, Target } from "lucide-react";
 import { useWorkStore } from "@/lib/work/store";
+import { IconAction } from "@/components/ui/icon-action";
 
 type Goal = {
   id: string; source_key: string | null; title: string | null; description: string | null;
@@ -218,10 +219,10 @@ export function LivingPlanPanel({
           <Target className="size-4 text-accent" aria-hidden="true" />
           <h2 className="text-base font-semibold tracking-tight">My goals</h2>
         </div>
-        <button type="button" onClick={() => void reload()} aria-label="Refresh goals" title="Refresh goals"
+        <IconAction label="Refresh goals" hint="Reload your account goals" onClick={() => void reload()
           className="flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
           <RefreshCcw className="size-4" aria-hidden="true" />
-        </button>
+        </IconAction>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">One next step. Progress is saved to your account, not a chat.</p>
       <div className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-muted/50 p-1" role="group" aria-label="Goal areas">
@@ -257,10 +258,10 @@ export function LivingPlanPanel({
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Next concrete step</p>
           <p className="text-xs text-muted-foreground">{focus?.title}</p>
           <div className="mt-3 flex items-start gap-3">
-            <button type="button" disabled={pending === next.id} aria-label="Complete next step" onClick={() => void setStep(next)}
+            <IconAction label="Complete next step" hint="Mark this step complete" disabled={pending === next.id} onClick={() => void setStep(next)}
               className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-accent hover:text-accent">
               <Circle size={19} aria-hidden="true" />
-            </button>
+            </IconAction>
             <p className="pt-1 text-sm leading-relaxed">{next.title}</p>
           </div>
           <button type="button" onClick={() => continueInWork(focus!, next)}
