@@ -47,6 +47,8 @@ try {
   const drawer = page.getByRole('dialog', { name: 'Navigation' });
   assert.equal(await drawer.isVisible(), true);
   assert.equal(await page.locator('.as-nav-mobile-drawer').count(), 1);
+  assert.equal(await drawer.getByRole('button', { name: 'New chat' }).count(), 1, 'New chat is the first navigation action');
+  assert.equal(await drawer.getByRole('button', { name: 'Open Projects' }).count(), 1, 'one Projects collection has a real management route');
   assert.equal(await drawer.getByRole('textbox', { name: 'Filter projects and conversations' }).count(), 0,
     'search stays concealed until requested');
   await drawer.getByRole('button', { name: 'Search projects and conversations' }).click();

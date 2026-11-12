@@ -2,7 +2,7 @@ import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type 
 import { createPortal } from 'react-dom';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Archive, Box, ChevronDown, ChevronRight, LoaderCircle, FileCode2, FileImage, FileText, Files, Film, Folder, MessageSquare, MoreHorizontal, Palette, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
+import { Archive, Box, ChevronDown, ChevronRight, LoaderCircle, FileCode2, FileImage, FileText, Files, Film, Folder, FolderOpen, MessageSquare, MoreHorizontal, Palette, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
 import { useNav } from './NavProvider.js';
 import { NavTrigger } from './NavTrigger.js';
 import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject, NavPinnedResource } from './contracts.js';
@@ -71,7 +71,7 @@ export function NavTopbarLogo({ variant = 'mark', onClick, toggle = false }: { v
   if (toggle) return <button type="button" className="as-nav-work-brand-toggle" aria-label={label}
     title={label + ' (⌘⇧S)'} aria-keyshortcuts="Meta+Shift+S" aria-expanded={open} onClick={toggleNavigation}>
       <span className="as-nav-work-brand-toggle__mark as-nav-brand-mark" aria-hidden="true">
-        {data.brand?.logo && !logoFailed ? <>
+        {data.brand?.icon ? data.brand.icon : data.brand?.logo && !logoFailed ? <>
           <img className="as-nav-logo-dark" src={data.brand.logo} alt="" onError={() => setLogoFailed(true)} />
           <img className="as-nav-logo-light" data-fallback={!data.brand.lightLogo || undefined}
             src={data.brand.lightLogo ?? data.brand.logo} alt="" onError={() => setLogoFailed(true)} />
@@ -83,30 +83,6 @@ export function NavTopbarLogo({ variant = 'mark', onClick, toggle = false }: { v
     <span className="as-nav-brand-mark">{data.brand?.logo && !logoFailed ? <><img className="as-nav-logo-dark" src={data.brand.logo} alt="" onError={() => setLogoFailed(true)} /><img className="as-nav-logo-light" data-fallback={!data.brand.lightLogo || undefined} src={data.brand.lightLogo ?? data.brand.logo} alt="" onError={() => setLogoFailed(true)} /></> : <PanelLeft />}</span>
     {variant === 'expanded' ? <span>{data.brand?.name}</span> : null}
   </button>;
-}
-
-/** Host-owned product environments; this selector never changes model/runtime policy. */
-export function NavExperienceSwitcher() {
-  const { data, theme } = useNav();
-  const options = data.experiences ?? [];
-  const current = options.find(item => item.id === data.activeExperienceId) ?? options[0];
-  const style = useNavStyle();
-  if (!current) return <span className="as-nav-experience-label">{data.brand?.name}</span>;
-  return <Menu.Root>
-    <Menu.Trigger asChild><button type="button" className="as-nav-experience-trigger" aria-label="Switch application environment">
-      <span>{current.label}</span><ChevronDown aria-hidden="true" />
-    </button></Menu.Trigger>
-    <Menu.Portal><Menu.Content align="start" sideOffset={8} collisionPadding={12}
-      data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover as-nav-experience-menu">
-      {options.map(item => <Menu.Item key={item.id} className="as-nav-experience-option"
-        data-active={item.id === current.id || undefined}
-        onSelect={() => data.onSelectExperience?.(item.id)}>
-        <span className="as-nav-experience-name">{item.label}</span>
-        <span className="as-nav-experience-description">{item.description}</span>
-        {item.id === current.id ? <span className="as-nav-experience-check" aria-label="Current environment">✓</span> : null}
-      </Menu.Item>)}
-    </Menu.Content></Menu.Portal>
-  </Menu.Root>;
 }
 
 export function NavBreadcrumbs() {
@@ -479,7 +455,7 @@ function DestinationRow({ item, depth = 0 }: { item: NavDestination; depth?: num
   return action ? <div className="as-nav-parent-row" data-active={active || undefined}>{destination}{action}</div> : destination;
 }
 
-function HistoryCollection({id,title,items,empty,searching=false}:{id:string;title:string;items:ReactNode[];empty:string;searching?:boolean}) {
+function HistoryCollection({id,title,items,empty,searching=false,onOpen}:{id:string;title:string;items:ReactNode[];empty:string;searching?:boolean;onOpen?:()=>void}) {
   const {storageKey} = useNav();
   const [expanded,setExpanded] = useState(id === "projects");
   const [more,setMore] = useState(false);
@@ -493,7 +469,10 @@ function HistoryCollection({id,title,items,empty,searching=false}:{id:string;tit
     return next;
   });
   const shown = searching || expanded;
-  return <section aria-label={title}><h2><button type="button" className="as-nav-collection-toggle" aria-expanded={shown} onClick={toggle}>{title}<ChevronDown data-expanded={shown}/></button></h2>
+  return <section aria-label={title}><h2 className="as-nav-collection-heading">
+    <button type="button" className="as-nav-collection-toggle" aria-expanded={shown} onClick={toggle}>{title}<ChevronDown data-expanded={shown}/></button>
+    {onOpen ? <button type="button" className="as-nav-collection-open" aria-label={'Open ' + title} title={'Open ' + title} onClick={onOpen}><FolderOpen aria-hidden="true" /></button> : null}
+  </h2>
     {shown ? <>{items.length ? (more || searching ? items : items.slice(0,id === 'recent' ? 20 : 6)) : <p className="as-nav-empty">{empty}</p>}
     {items.length>(id === 'recent' ? 20 : 6) && !searching ? <button type="button" className="as-nav-collection-more" onClick={() => setMore(value => !value)}>{more?'Show less':'Show more'}</button> : null}</> : null}
   </section>;
@@ -516,7 +495,7 @@ function SidenavContents() {
   const newConversation = data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null;
   const insertAfter = data.destinations?.some(item => item.id === data.newConversationAfter) ? data.newConversationAfter : undefined;
   return <>
-    {(data.showSidebarHeader !== false || isMobile) ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /><NavExperienceSwitcher />
+    {(data.showSidebarHeader !== false || isMobile) ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /><span className="as-nav-current-app" title={data.brand?.name}>{data.brand?.name ?? "InnerAnimalMedia"}</span>
       {data.showHistory !== false ? <button type="button" className="as-nav-button as-nav-search-launch"
         aria-label="Search projects and conversations" aria-expanded={searchOpen}
         onClick={() => { if (!open && !isMobile) setOpen(true); setSearchOpen(value => !value); if (searchOpen) setQuery(''); }}>
@@ -540,6 +519,7 @@ function SidenavContents() {
         <HistoryCollection id="pinned" title="Pinned" searching={Boolean(query)} empty={query ? 'No matching pinned items.' : 'Pin projects or conversations from their menus.'}
           items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} threads={projectThreads(item.id)} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />),...(data.pinnedResources||[]).map(item => <PinnedResourceRow key={item.id} item={item} />)]} />
         <HistoryCollection id="projects" title="Projects" searching={Boolean(query)} empty={query ? 'No matching projects.' : 'Your projects will appear here.'}
+          onOpen={data.onNavigate ? () => { data.onNavigate?.('/admin/projects'); if (isMobile) close(); } : undefined}
           items={unpinnedProjects.map(item => <ProjectRow key={item.id} item={item} threads={projectThreads(item.id)} />)} />
         <HistoryCollection id="recent" title="Recents" searching={Boolean(query)} empty={query ? 'No matching conversations.' : 'Your unfiled conversations will appear here.'}
           items={recent.slice(0,20).map(item => <ConversationRow key={item.id} item={item} />)} />

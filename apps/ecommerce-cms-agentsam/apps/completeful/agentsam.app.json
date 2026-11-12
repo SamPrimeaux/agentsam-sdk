@@ -64,5 +64,13 @@
         "commerce.product.publish"
       ]
     }
+  },
+  "routes": [
+    "/admin/products/create?app=completeful"
+  ],
+  "navigation": {
+    "placement": "apps",
+    "label": "Completeful",
+    "icon": "products"
   }
 }

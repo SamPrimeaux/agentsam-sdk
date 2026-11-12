@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, Loader2, Maximize2, PanelRight, Pencil, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Loader2, Maximize2, MessageSquareText, PanelRight, Pencil, Trash2, X } from "lucide-react";
 import { KindGlyph } from "./MediaGrid";
 import {
   classifyAsset,
@@ -97,6 +97,11 @@ export function MediaViewer({
         <button type="button" className="agentsam-media-icon" onClick={onClose} aria-label="Close viewer"><X size={16} /></button>
         <h2 title={asset.filename}>{asset.filename}</h2>
         <div className="agentsam-media-viewer__nav">
+          <button type="button" className="agentsam-media-icon" aria-label="Open AgentSam beside this file"
+            title="Open AgentSam — attach the file in chat when needed"
+            onClick={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))}>
+            <MessageSquareText size={16} />
+          </button>
           <button type="button" className="agentsam-media-icon" onClick={onPrev} disabled={!onPrev} aria-label="Previous"><ChevronLeft size={16} /></button>
           <button type="button" className="agentsam-media-icon" onClick={onNext} disabled={!onNext} aria-label="Next"><ChevronRight size={16} /></button>
           <button

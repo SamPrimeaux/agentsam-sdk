@@ -239,18 +239,10 @@
 .as-nav-search-launch{margin-left:auto;flex:none;}
 .as-nav-search-launch svg{width:18px;height:18px;}
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-search-launch{display:none;}
-/* Compact branded environment menu, separate from Chat / Work selection. */
-.as-nav-experience-trigger {display:inline-flex;align-items:center;gap:7px;min-width:0;padding:6px 8px;border:0;border-radius:var(--nav-radius);background:transparent;color:var(--nav-text);font-weight:550;text-align:left;cursor:pointer;}
-.as-nav-experience-trigger:hover,.as-nav-experience-trigger[data-state="open"]{background:var(--nav-hover);}
-.as-nav-experience-trigger svg{width:14px;height:14px;color:var(--nav-muted);}
-.as-nav-experience-label{font-weight:550;}
-.as-nav-experience-menu{min-width:260px;padding:6px;}
-.as-nav-experience-option{display:grid;position:relative;grid-template-columns:1fr auto;gap:1px 10px;padding:11px 12px;border-radius:8px;cursor:pointer;outline:none;}
-.as-nav-experience-option[data-highlighted],.as-nav-experience-option[data-active]{background:var(--nav-selected);}
-.as-nav-experience-name{font-size:14px;line-height:1.4;}
-.as-nav-experience-description{grid-column:1;grid-row:2;color:var(--nav-muted);font-size:12px;}
-.as-nav-experience-check{grid-column:2;grid-row:1;align-self:center;color:var(--nav-accent);}
-.as-nav-sidenav:not([data-expanded="true"]) .as-nav-experience-trigger,.as-nav-sidenav:not([data-expanded="true"]) .as-nav-experience-label{display:none;}
+/* Active-app identity comes from the host's installed app registry. */
+.as-nav-current-app{min-width:0;max-width:172px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--nav-text);font-size:13px;font-weight:550;}
+.as-nav-sidenav:not([data-expanded="true"]) .as-nav-current-app{display:none;}
+.as-nav-work-brand-toggle__mark > svg{width:22px;height:22px;}
 /* Parents with destinations keep navigation and disclosure as separate actions. */
 .as-nav-parent-row { display: flex; align-items: center; min-width: 0; gap: 1px; border-radius: var(--nav-radius); }
 .as-nav-parent-row[data-active] { background: var(--nav-selected); }
@@ -436,3 +428,10 @@
 @media (prefers-reduced-motion: reduce) {
   .as-nav-launch-dock button { transition: none; }
 }
+
+/* One Projects collection between pinned and recent; label discloses, icon opens its existing route. */
+.as-nav-collection-heading{display:flex;align-items:center;min-width:0;gap:4px;}
+.as-nav-collection-heading .as-nav-collection-toggle{min-width:0;flex:1;}
+.as-nav-collection-open{display:grid;place-items:center;flex:none;width:26px;height:28px;border:0;border-radius:var(--nav-radius);background:transparent;color:var(--nav-muted);}
+.as-nav-collection-open:hover,.as-nav-collection-open:focus-visible{background:var(--nav-selected);color:var(--nav-text);}
+.as-nav-collection-open svg{width:15px;height:15px;}

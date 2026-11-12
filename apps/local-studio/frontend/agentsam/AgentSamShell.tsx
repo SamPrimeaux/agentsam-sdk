@@ -460,14 +460,15 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     ? new URLSearchParams(searchStr).get('page') || pathname
     : pathname + searchStr;
   const value: NavValue = {
-    brand, mode, onModeChange: setMode, pathname: navPathname,
-    // The product switcher sits above Chat / Work and reuses existing routes.
-    experiences: [
-      { id: 'agentsam', label: 'AgentSam', description: 'Create, learn and work' },
-      { id: 'developer', label: 'Developer', description: 'Build, debug and ship' },
-    ],
-    activeExperienceId: pathname === '/cli' ? 'developer' : 'agentsam',
-    onSelectExperience: id => go(id === 'developer' ? '/cli' : '/admin/agentsam'),
+    brand: (() => {
+      const active = (navigation.apps || []).find(app => app.href &&
+        (app.href.includes('?')
+          ? navPathname === app.href
+          : navPathname.split('?')[0] === app.href || navPathname.startsWith(app.href + '/')));
+      const Icon = navigationIcons[active?.icon as keyof typeof navigationIcons];
+      return active ? { ...brand, name: active.label, icon: Icon ? <Icon /> : undefined } : { ...brand, name: 'InnerAnimalMedia' };
+    })(),
+    mode, onModeChange: setMode, pathname: navPathname,
     project: project ? { id: project.id, name: project.name } : undefined,
     conversation: chat ? { id: chat.id, title: chat.title, pinned: chat.pinned, projectId: chat.workProjectId } : undefined,
     pinnedResources,
@@ -491,15 +492,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     destinations: [
       // Render the platform-owned business destinations first. These are the
       // canonical primary entries from the same host projection as installed apps.
-      ...(navigation.primary || []).map(entry => entry.id === 'projects' ? {
-        ...entry,
-        // Project shortcuts belong under the ONE canonical Projects destination.
-        // Its label opens the Projects workspace; its chevron discloses saved projects.
-        children: [...workProjects]
-          .sort((a,b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || a.name.localeCompare(b.name))
-          .map(project => ({ id: 'project-' + project.id, label: project.name,
-            href: '/admin/projects/' + encodeURIComponent(project.id) })),
-      } : entry),
+      ...(navigation.primary || []).filter(entry => entry.id !== 'projects'),
       ...(navigation.channels?.length ? [{id:'sales-channels',label:'Sales channels',icon:'store',children:navigation.channels}] : []),
       {id:'installed-apps',label:'Apps',icon:'apps',children:navigation.apps || []},
       ...(navigation.utilities || []),
@@ -604,7 +597,16 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'files', label: 'View files in conversation', icon: <Files />, separatorBefore: true, onSelect: () => { state.openSideTab('files'); state.setSideOpen(true); } },
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
       { id: 'living-goals', label: 'AgentSam GoalGuru', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
-      { id: 'work-tools', label: 'Work tools', icon: <Layers3 />, children: [
+      // Installed apps are projected from the host's real app catalog. Tabs such
+      // as Terminal and Code are workspace panels, not fake installed packages.
+      { id: 'installed-apps', label: 'Installed apps', icon: <Layers3 />, children: [
+        ...(navigation.apps || []).filter(item => item.href?.startsWith('/') && !item.href.startsWith('//')).map(item => {
+          const Icon = navigationIcons[item.icon as keyof typeof navigationIcons] || Layers3;
+          return { id: 'open-app-' + item.id, label: item.label, icon: <Icon />, onSelect: () => go(item.href!) };
+        }),
+        { id: 'all-apps', label: 'Manage apps', icon: <Plug />, separatorBefore: true, onSelect: openAppsInstaller },
+      ] },
+      { id: 'workspace-panels', label: 'Workspace panels', icon: <PanelRight />, children: [
         { id: 'co-worker', label: 'Co-worker', icon: <Users />, onSelect: () => { state.openSideTab('chat', { ephemeral: false }); state.setSideOpen(true); } },
         { id: 'browser', label: 'Browser', icon: <Globe />, onSelect: () => { state.openSideTab('browser', { ephemeral: false }); state.setSideOpen(true); } },
         { id: 'files-work', label: 'Files', icon: <Folder />, onSelect: () => state.setWorkSurface('files') },
@@ -649,7 +651,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     ],
   };
   useEffect(() => {
-    const projection = {projects:value.projects,conversations:value.conversations,project:value.project,conversation:value.conversation,historyStatus:value.historyStatus,onRetryHistory:value.onRetryHistory,onSelectConversation:value.onSelectConversation,onSelectProject:value.onSelectProject,onPinConversation:value.onPinConversation,onAssignConversationToProject:value.onAssignConversationToProject,onDeleteConversation:value.onDeleteConversation,onShare:value.onShare,conversationActions:value.conversationActions,onPinProject:value.onPinProject,onRenameConversation:value.onRenameConversation,onRenameProject:value.onRenameProject};
+    const projection = {onCreateConversation:value.onCreateConversation,projects:value.projects,conversations:value.conversations,project:value.project,conversation:value.conversation,historyStatus:value.historyStatus,onRetryHistory:value.onRetryHistory,onSelectConversation:value.onSelectConversation,onSelectProject:value.onSelectProject,onPinConversation:value.onPinConversation,onAssignConversationToProject:value.onAssignConversationToProject,onDeleteConversation:value.onDeleteConversation,onShare:value.onShare,conversationActions:value.conversationActions,onPinProject:value.onPinProject,onRenameConversation:value.onRenameConversation,onRenameProject:value.onRenameProject};
     const host=window as Window & {__agentsamWorkspaceNavigation?:typeof projection};
     host.__agentsamWorkspaceNavigation=projection;
     window.dispatchEvent(new Event('agentsam:workspace-navigation'));

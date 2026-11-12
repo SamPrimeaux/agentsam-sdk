@@ -112,17 +112,15 @@ test('active project expands to show live conversations, without duplicating the
   assert.equal((html.match(/title="Older"/g)||[]).length,1);
 });
 
-test('white-label environment selector remains distinct from the Chat / Work mode control', () => {
-  const value = { brand:{name:'AgentSam'}, mode:'work', experiences:[
-    {id:'agentsam',label:'AgentSam',description:'Create, learn and work'},
-    {id:'developer',label:'Developer',description:'Build, debug and ship'},
-  ], activeExperienceId:'agentsam', onSelectExperience:()=>{},onModeChange:()=>{} };
+test('active installed app identity is host-owned and Chat / Work remains a task mode', () => {
+  const value = { brand:{name:'CAD Creator',icon:React.createElement('span',{'data-app-icon':'cad'},'CAD')}, mode:'work', onModeChange:()=>{} };
   const html=renderToString(React.createElement(Nav.Provider,{value,defaultOpen:true},React.createElement(Nav.Sidenav),React.createElement(Nav.ModeSwitcher)));
-  assert.match(html,/aria-label="Switch application environment"/);
+  assert.match(html,/CAD Creator/);
+  assert.match(html,/data-app-icon="cad"/);
   assert.match(html,/aria-label="Conversation mode"/);
   assert.match(html,/aria-pressed="true">Work/);
+  assert.doesNotMatch(html,/Switch application environment/);
 });
-
 
 test('shared Apps navigation exposes a host-owned add action on desktop and mobile', () => {
   const html = renderToString(React.createElement(Nav.Provider, {value: {

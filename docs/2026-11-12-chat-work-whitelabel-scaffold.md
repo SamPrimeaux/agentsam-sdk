@@ -1,38 +1,42 @@
-# AgentSam desktop Chat / Work white-label scaffold
+# AgentSam Local Studio — Chat/Work navigation repair
 Date: 2026-11-12
-Visual reference: user-supplied ChatGPT desktop screenshots.
+Status: existing feature branch only; no remote push or production deployment.
 
-## Model: two navigation levels
-1. Product environment: AgentSam (conversation/multi-step work) or Developer (existing Local Studio /cli route). The host routes this selection; it does not change the LLM or grant permissions.
-2. Task mode within AgentSam: Chat / Work. The existing Nav.ModeSwitcher controls this independently of product environment.
+## Correct product ownership
+- InnerAnimalMedia owns the main authenticated platform shell and installed-app catalog.
+- AgentSam Local Studio is the existing Chat/Work conversational interface at /admin/agentsam, not a newly invented Developer environment.
+- The AgentSam SDK is the independently distributed npm/PyPI development toolkit.
+- CAD Creator, MovieMode, SamSketch, Growth, Completeful and other bundled or installed capabilities are projected from their actual manifest/host records.
 
-This reproduces useful information architecture, not OpenAI branding or a new standalone app.
-
-## Source ownership
-- packages/agentsam-nav: environment switcher, Chat/Work control, sidebar, collections, search disclosure, responsive states and semantic theme tokens. No account data is owned here.
-- apps/local-studio/frontend/agentsam/AgentSamShell.tsx: authenticated routing, project/chat actions and selected environment.
-- apps/local-studio/frontend/public/admin/host-config.js: actual packaged Console navigation projection and mobile drawer; this adapter is reused rather than duplicated.
-- apps/local-studio/frontend/agentsam/AgentSamPage.tsx: conversation surface and visible Chat/Work mode control.
-- apps/local-studio/frontend/src/components/workbench/composer.tsx: existing model/run-mode selection, attachments, project picker and plugin entry points.
-- apps/local-studio/frontend/agentsam/AgentSamLaunchDock.tsx: existing five mobile destinations Chats, Home, Ideas, Goals, Library. Root / remains public; /admin/home remains signed-in Home.
+## Single-source implementation
+- packages/agentsam-nav owns presentation primitives, not routing or account data.
+- apps/local-studio/scripts/studio-navigation.mjs emits navigation from app manifests and existing route ownership.
+- apps/local-studio/frontend/public/admin/host-config.js owns the packaged Console sidebar projection.
+- apps/local-studio/frontend/agentsam/AgentSamShell.tsx owns the conversation/work callbacks and the embedded application's navigation state.
+- The installed app identity supplies the contextual sidebar icon and name; the previous AgentSam / Developer selector has been removed.
 
 ## Implemented
-- AgentSam / Developer product environment menu in the real desktop and packaged host navigation; Developer links to existing /cli, AgentSam to /admin/agentsam.
-- Separate Chat / Work selection visible within active conversations.
-- Pinned, Projects, Recents grouped from real account projects and conversations; projects disclose associated threads; unfiled chats appear in Recents.
-- One search icon in the sidebar header with on-demand local chat/project filter.
-- Mobile drawer with logo-to-close behavior and the product environment selector.
-- Existing host callbacks control actions. No hardcoded plugins, pretend projects or synthetic installed apps.
+- One visible search icon with a project/chat filter disclosed on demand. The packaged Console's redundant top search control is hidden; Cmd+K remains.
+- New chat above the platform destinations when the live conversation handler is available.
+- Exactly one Projects history collection between Pinned and Recents, with a separate action opening existing /admin/projects.
+- Library is the menu label for existing /media routes. No media data migration.
+- Products is the single /admin/products destination; duplicate Store Products child removed; Product Studio renamed Create at /admin/products/create.
+- Completeful's existing bundled provider-app manifest now declares its route and navigation metadata. It opens the actual Create/Completeful surface; no second catalog was created. Its read/search/sync capabilities are further along than order creation or publishing, which remain degraded or approval gated.
+- Conversation actions split real Installed apps from contextual Workspace panels, preserving both.
+- File viewer has an Open AgentSam entrypoint to the existing assistant. The viewer does not claim to attach file bytes or provide complete DOCX rendering.
+- OpenAI Chat Completions translation drops unvalidated temperature/top_p overrides (including legacy temperature 0.6) rather than forwarding incompatible sampling parameters.
 
-## Acceptance results
-- npm test --workspace=@inneranimalmedia/agentsam-nav: 26 tests passed.
-- cd apps/local-studio && npm run build:desktop: passed.
-- cd apps/local-studio && npm run smoke:mobile-launch-dock: passed at 390x844, including environment menu, search disclosure, one drawer, Home, Ideas, Goals, Library/Media.
-- The broad frontend TypeScript check has unrelated implicit-any diagnostics in frontend/src/components/media/localMediaSource.test.mjs; no new diagnostics observed in modified source.
+## Verification
+- Navigation package: 26 tests pass.
+- Navigation projection: 4 tests pass.
+- Chat upstream translation: 4 tests pass.
+- Local Studio packaged desktop build: passes, existing code-splitting warnings remain.
+- 390x844 mobile smoke: passes, including one drawer, New chat, Projects, Home, Ideas, Goals, and Library/Media.
+- A broader packaged-console-mount source-assertion suite has stale expectations for prior markup; it has 5 failures and was not used as proof of this change.
+- Broad frontend TypeScript check still reports unrelated implicit-any diagnostics in localMediaSource.test.mjs.
 
-## Known gaps before production parity
-- Developer currently navigates to the actual CLI. It is not yet a complete Codex-equivalent repository/diff/test interface.
-- The Chat / Work selector preserves existing UI state. Distinct task execution policies, persistence and end-to-end Work orchestration are not yet verified.
-- Screenshot entries such as Scheduled, Explore and composer tool actions should only be displayed when real installed apps/capability records back them.
-- ChatGPT plugins or MCP Apps can extend the host but cannot replace its native outer shell. Do not create a duplicate AgentSam plugin merely to emulate navigation.
-- No remote push or production deployment is included in this scaffold.
+## Deferred work
+- Live authenticated backend verification of the Completeful order/publish pipeline and any app-specific provider enablement.
+- Fully paginated in-app DOCX/document rendering and automatic file-context attachment in miniAgentSam.
+- Full runtime model error verification beyond the request-construction regression test.
+- Production deployment, release, and visual signoff on the hosted desktop interface.

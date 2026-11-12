@@ -38,6 +38,8 @@ describe("translateStudioChatUpstreamBody", () => {
     assert.equal(out.max_completion_tokens, 4200);
     assert.equal(out.model, "o4-mini");
     assert.equal(out.stream, true);
+    assert.equal(Object.hasOwn(out, 'temperature'), false, 'unvalidated sampling preset must not reach OpenAI');
+    assert.equal(Object.hasOwn(out, 'top_p'), false);
   });
 
   it("keeps max_tokens for Anthropic bodies (no global rename)", () => {

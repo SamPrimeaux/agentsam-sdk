@@ -127,3 +127,6 @@ body.console-body-bleed:has([data-agentsam-console-host]) .console-main--bleed {
     padding-inline: 10px !important;
   }
 }
+
+/* Local Studio navigation owns the one visible search affordance. Global Cmd+K remains available. */
+#console-app .console-topbar .console-search-wrap { display:none; }
