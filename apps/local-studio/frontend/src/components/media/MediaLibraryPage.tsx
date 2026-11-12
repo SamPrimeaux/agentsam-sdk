@@ -88,10 +88,7 @@ export function MediaLibraryPage() {
 }
 
 function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accountId: string }) {
-  const [source, setSource] = useState<MediaSource>(() => {
-    const requested = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("source") : null;
-    return requested === "local" ? "local" : surface.source;
-  });
+  const [source, setSource] = useState<MediaSource>(surface.source);
   const localHost = useMemo(() => createLocalStudioContentHostBridge(), []);
   const [localRoot, setLocalRoot] = useState<string | null>(null);
   const [localFolders, setLocalFolders] = useState<Array<{ ref: string; name: string }>>([]);
@@ -126,9 +123,10 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
 
   const [resources, setResources] = useState<CfResources | null>(null);
   const [buckets, setBuckets] = useState<R2Bucket[]>([]);
-  const [cfAccountId, setCfAccountId] = useState(() => mediaPreference(accountId, "account"));
-  const [activeBucket, setActiveBucket] = useState<string | null>(() =>
-    mediaPreference(accountId, "bucket", mediaPreference(accountId, "account")) || null);
+  // Restore device preferences after hydration, never during the server render.
+  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [cfAccountId, setCfAccountId] = useState("");
+  const [activeBucket, setActiveBucket] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string[]>(() => loadPinnedBuckets());
   const [accountChoices, setAccountChoices] = useState<AccountChoice[]>([]);
 
@@ -150,12 +148,26 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
   }, [cfAccountId]);
 
   // Route changes must not reset the authorized account or chosen provider.
-  useEffect(() => { setSource(surface.source); }, [surface.source, surface.kind]);
-  useEffect(() => { rememberMediaPreference(accountId, "bucket", activeBucket || "", cfAccountId); }, [accountId, activeBucket, cfAccountId]);
-  useEffect(() => { rememberMediaPreference(accountId, "account", cfAccountId); }, [accountId, cfAccountId]);
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("source");
+    setSource(requested === "local" && surface.kind === "all" ? "local" : surface.source);
+  }, [surface.source, surface.kind]);
+  useEffect(() => {
+    const preferredAccount = mediaPreference(accountId, "account");
+    setCfAccountId(preferredAccount);
+    setActiveBucket(mediaPreference(accountId, "bucket", preferredAccount) || null);
+    setPreferencesReady(true);
+  }, [accountId]);
+  useEffect(() => {
+    if (preferencesReady) rememberMediaPreference(accountId, "bucket", activeBucket || "", cfAccountId);
+  }, [accountId, activeBucket, cfAccountId, preferencesReady]);
+  useEffect(() => {
+    if (preferencesReady) rememberMediaPreference(accountId, "account", cfAccountId);
+  }, [accountId, cfAccountId, preferencesReady]);
 
   /* ---- account + connection resources (also the full R2 bucket list) ---- */
   useEffect(() => {
+    if (!preferencesReady) return;
     let cancelled = false;
     (async () => {
       try {
@@ -198,7 +210,7 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
       }
     })();
     return () => { cancelled = true; };
-  }, [accountQs, refreshTick]);
+  }, [accountQs, refreshTick, preferencesReady]);
 
   const pickLocalFolder = useCallback(async (useSaved = false) => {
     setLocalBusy(true);
@@ -309,10 +321,11 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
   }, [source, activeBucket, accountQs, localHost, localDirectory]);
 
   useEffect(() => {
+    if (!preferencesReady) return;
     pageRef.current = 1;
     cursorRef.current = null;
     void loadAssets(false);
-  }, [loadAssets, refreshTick]);
+  }, [loadAssets, refreshTick, preferencesReady]);
 
   /* ---- derived ---- */
   const visible = useMemo(() => {
