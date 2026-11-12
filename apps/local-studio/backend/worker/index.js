@@ -56,6 +56,7 @@ import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioRules } from "./studio-rules.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
 import { handleStudioUserPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings } from "./studio-user-preferences.js";
+import { handleStudioLivingPlan } from "./studio-living-plan.js";
 import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
@@ -1195,6 +1196,11 @@ export default {
         console.warn("studio_companion_settings_error",String(error?.message||error).slice(0,120));
         return json({ok:false,error:"companion_settings_unavailable"},503);
       }
+    }
+    if (url.pathname === "/api/studio/living-plan" || url.pathname.startsWith("/api/studio/living-plan/")) {
+      try { return await handleStudioLivingPlan(request, env, await sessionUser()); }
+      catch (error) { console.warn("studio_living_plan_unavailable", String(error?.message || error).slice(0, 100));
+        return json({ ok: false, error: "living_plan_unavailable" }, 503); }
     }
     if(isStudioPreferences) {
       try{return await handleStudioUserPreferences(request,env,await sessionUser());}
