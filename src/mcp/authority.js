@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { cloudflareBundlesAsServerCatalog, getCloudflareMcpBundle } from './cloudflare-bundles.js';
+import { BROWSER_MCP_NAME, BROWSER_MCP_COMMAND, BROWSER_MCP_ARGS, assertApprovedBrowserMcpStdio } from './browsermcp.js';
 
 export const MCP_AUTHORITY_SCHEMA = 'agentsam.mcp.authority.v1';
 export const SERVER_CATALOG_CACHE_SCHEMA = 'agentsam.mcp.server-catalog.v1';
@@ -13,6 +14,20 @@ export const DEFAULT_SERVER_CATALOG_URL = 'https://mcp.inneranimalmedia.com/api/
  * Health metrics are unknown until probed — do not fabricate latency.
  */
 const IAM_SEED_SERVERS = Object.freeze([
+  {
+    name: BROWSER_MCP_NAME,
+    display_name: 'Browser MCP',
+    url: null,
+    command: BROWSER_MCP_COMMAND,
+    args: [...BROWSER_MCP_ARGS],
+    auth_type: 'local_extension_pairing',
+    protocol: 'stdio',
+    defaultClients: ['agentsam'],
+    health_status: 'unknown',
+    description: 'Run the Browser MCP server on this computer and approve the six-digit code in the Chrome extension.',
+    provider: 'browsermcp',
+    kind: 'local_mcp_server',
+  },
   {
     name: 'inneranimalmedia',
     display_name: 'InnerAnimalMedia Main MCP',
@@ -186,7 +201,8 @@ export function resolveServerPreset(name, options = {}) {
     return {
       name: found.name || found.server_key,
       display_name: found.display_name || found.name || found.server_key,
-      url: found.url,
+      url: found.url || null,
+      ...(found.protocol === 'stdio' ? { command: found.command, args: [...found.args] } : {}),
       authUrl: found.authUrl || (found.name === 'inneranimalmedia' ? 'https://mcp.inneranimalmedia.com/auth/connect' : null),
       auth_type: found.auth_type || 'bearer',
       protocol: found.protocol || 'streamable_http',
@@ -246,11 +262,15 @@ export function writeMcpServer(name, serverConfig, options = {}) {
   const now = new Date().toISOString();
   const existing = readMcpServer(name, options);
 
+  if (serverConfig.protocol === 'stdio') {
+    assertApprovedBrowserMcpStdio({ ...serverConfig, name: clean(name).toLowerCase() });
+  }
   const record = {
     schema_version: MCP_AUTHORITY_SCHEMA,
     name: clean(name).toLowerCase(),
     url: clean(serverConfig.url),
     protocol: clean(serverConfig.protocol) || 'streamable_http',
+    ...(serverConfig.protocol === 'stdio' ? { command: serverConfig.command, args: [...serverConfig.args] } : {}),
     auth: serverConfig.auth || null,
     clients: Array.isArray(serverConfig.clients) ? [...new Set(serverConfig.clients.map(clean).filter(Boolean))] : ['cursor'],
     metadata: serverConfig.metadata || {},
