@@ -7,7 +7,7 @@ mod selftest;
 mod tray;
 
 use commands::{
-    agent_sam_pet, agentsamd, cad, cad_engine, chrome_browser, cloudflare_desktop_identity,
+    agent_sam_pet, agentsamd, cad, cad_engine, chrome_browser, embedded_browser, cloudflare_desktop_identity,
     deep_link, google_desktop_identity, keychain, local_content, local_identity, local_lsp,
     local_node, local_provider, local_sqlite, native_capabilities, system, updater,
 };
@@ -82,6 +82,11 @@ fn main() {
             system::open_external_url,
             system::focus_main_window,
             chrome_browser::open_agent_browser,
+            embedded_browser::embedded_browser_sync,
+            embedded_browser::embedded_browser_resize,
+            embedded_browser::embedded_browser_hide,
+            embedded_browser::embedded_browser_action,
+            embedded_browser::embedded_browser_close,
             system::desktop_workspace_context,
             commands::autorag::autorag_workflow_bridge,
             commands::autorag::autorag_choose_repository,

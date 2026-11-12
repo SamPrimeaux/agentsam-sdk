@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Plus, X } from 'lucide-react';
 import { BrowserStage } from '@/components/workbench/browser';
 import { useWorkStore } from '@/lib/work/store';
+import { getTauriInvoke } from '@/lib/desktop/tauri';
 
 export const Route = createFileRoute('/(apps)/browse')({
   component: BrowsePage,
@@ -37,6 +38,8 @@ function BrowsePage() {
     setSideOpen(false);
   };
   const closeSession = (id: string) => {
+    const invoke = getTauriInvoke();
+    if (invoke) void invoke('embedded_browser_close', { sessionId: id }).catch(() => undefined);
     closeSideTab(id, true);
     setSideOpen(false);
   };

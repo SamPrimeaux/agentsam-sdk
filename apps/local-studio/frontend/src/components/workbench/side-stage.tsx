@@ -23,6 +23,7 @@ import { DatabaseStage } from "@/components/workbench/database-stage";
 import { TerminalPane } from "@/components/workbench/terminal";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
+import { getTauriInvoke } from "@/lib/desktop/tauri";
 import { StudioMark } from "@/components/mark";
 import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistantContext";
 import { consumePendingCadAssistantContext } from "@/lib/cad/assistantContext";
@@ -89,7 +90,13 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 type="button"
                 aria-label={`Close ${item.title}`}
                 className="rounded-full p-1.5 hover:bg-background hover:text-foreground"
-                onClick={() => closeSideTab(item.id)}
+                onClick={() => {
+                  if (item.kind === 'browser') {
+                    const invoke = getTauriInvoke();
+                    if (invoke) void invoke('embedded_browser_close', { sessionId: item.id }).catch(() => undefined);
+                  }
+                  closeSideTab(item.id);
+                }}
               >
                 <X className="size-3" />
               </button>
