@@ -6,6 +6,7 @@ import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
 import { useWorkStore } from '@/lib/work/store';
 import { getTauriInvoke, isPackagedDesktop, listenTauriEvent, openAgentBrowser } from '@/lib/desktop/tauri';
 import { EmbeddedBrowserViewport } from './embedded-browser-viewport';
+import { IconAction } from '@/components/ui/icon-action';
 import { toast } from 'sonner';
 import '@inneranimalmedia/agentsam-abs/browser.css';
 import './browser-stage.css';
@@ -128,10 +129,10 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         onSwitchTab={() => undefined}
         statusSlot={<span className="as-work-browser-status">{native ? 'In-app browser' : 'Web preview'}</span>}
         toolbarActions={<div className="as-work-browser-actions">
-          {native && <button type="button" title="Chrome extensions (optional external handoff)" aria-label="Chrome extensions" onClick={() => {
+          {native && <IconAction type="button" label="Chrome extensions" hint="Manage optional Chrome extensions in the external browser" variant="ghost" onClick={() => {
             void openAgentBrowser('chrome://extensions/').catch((error) => toast.error(String(error)));
-          }}><Puzzle size={14} /></button>}
-          <button type="button" title="Open in an external browser" aria-label="Open externally" onClick={() => openExternally()} disabled={!tab.url}><ExternalLink size={14} /></button>
+          }}><Puzzle size={14} /></IconAction>}
+          <IconAction type="button" label="Open externally" hint="Open this page in an external browser" variant="ghost" onClick={() => openExternally()} disabled={!tab.url}><ExternalLink size={14} /></IconAction>
         </div>}
       >
         {tab.srcdoc ? <iframe title={tab.title} key={`${tab.id}-${reloadKey}`} srcDoc={tab.srcdoc}

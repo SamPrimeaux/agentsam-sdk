@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,10 +87,12 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 <TabIcon kind={item.kind} />
                 <span className="max-w-28 truncate">{item.title}</span>
               </button>
-              <button
+              <IconAction
                 type="button"
-                aria-label={`Close ${item.title}`}
-                className="rounded-full p-1.5 hover:bg-background hover:text-foreground"
+                label={`Close ${item.title}`}
+                hint={`Close ${item.title} Side Stage tab`}
+                variant="ghost"
+                className="min-h-7 min-w-7 rounded-md hover:bg-background hover:text-foreground"
                 onClick={() => {
                   if (item.kind === 'browser') {
                     const invoke = getTauriInvoke();
@@ -99,7 +102,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 }}
               >
                 <X className="size-3" />
-              </button>
+              </IconAction>
             </div>
           ))}
           <DropdownMenu>
