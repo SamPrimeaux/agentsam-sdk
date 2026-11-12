@@ -11,7 +11,7 @@
 | `src/cli/command-catalog.js` | 77 | Registered top-level CLI command entries |
 | `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
-| `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 7 | APP manifests discoverable from this checkout |
+| `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 8 | APP manifests discoverable from this checkout |
 | `packages/catalog/generated/packages.json` | 66 | Package inventory rows (not npm publication proof) |
 
 Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Host binding and approval remain separate.
@@ -205,6 +205,7 @@ Run `agentsam setup --list` for the current recipe catalog. `agentsam setup runt
 | `agentsam-copro-studio` | MovieMode / CoPro Studio | `@inneranimalmedia/agentsam-copro-studio` | — |
 | `cad-creator` | AgentSam CAD Creator | `@inneranimalmedia/agentsam-cad-creator` | `bin/agentsam-cad-creator.mjs` |
 | `database-editor` | AgentSam Database Editor | `@inneranimalmedia/agentsam-database-editor` | `bin/agentsam-database-editor.mjs` |
+| `design-canvas` | AgentSam Design Canvas | `@inneranimalmedia/agentsam-design-canvas` | `bin/agentsam-design-canvas.mjs` |
 | `ecommerce-cms-agentsam` | AgentSam Ecommerce + CMS | `@inneranimalmedia/ecommerce-cms-agentsam` | `bin/ecommerce.mjs` |
 | `goalguru` | AgentSam GoalGuru | `@inneranimalmedia/agentsam-goalguru` | — |
 | `local-studio` | AgentSam Local Studio | `@inneranimalmedia/agentsam-local-studio` | `bin/agentsam-studio.mjs` |
