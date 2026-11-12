@@ -49,9 +49,9 @@ export function SideStagePreferencesPage() {
     <section className="space-y-5 pb-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Side Stage panels</h2>
+          <h2 className="text-lg font-semibold text-foreground">Apps</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Decide which built-in workspaces appear in the + menu. Hiding a panel does not delete its files or history, uninstall an app, or revoke a connection.
+            Choose which installed app panels appear in Side Stage and the + menu. This controls shortcuts, not installations. Hiding an app panel does not delete work, uninstall an app, or revoke a plugin connection.
           </p>
         </div>
         <button type="button" onClick={() => void refresh()} disabled={loading || pending !== null}
@@ -85,7 +85,7 @@ export function SideStagePreferencesPage() {
           ))}
         </div>
       ) : !error ? <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">No built-in panels are registered for this account.</p> : null}
-      <p className="text-xs text-muted-foreground">Applications and external extensions are managed separately. These controls only affect your panel shortcuts.</p>
+      <p className="text-xs text-muted-foreground">Installed application management and plugin authorizations remain separate from visibility here. These controls only change app-panel shortcuts.</p>
     </section>
   );
 }
