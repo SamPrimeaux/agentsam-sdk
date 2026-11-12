@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { syncEditorChromeTokens, EDITOR_CHROME_TOKEN_MAP } from '../frontend/theme-editor/mount.mjs';
 
 const require = createRequire(new URL('../package.json', import.meta.url));
@@ -18,6 +19,7 @@ test('packaged CMS editor inherits host-shell tokens, not storefront content or 
     const style = editor.window.document.documentElement.style;
     assert.equal(style.getPropertyValue('--te-accent'), '#217e75');
     assert.equal(style.getPropertyValue('--te-canvas'), '#10171a');
+    assert.equal(editor.window.document.documentElement.dataset.teShellMode, 'dark');
     assert.equal(style.getPropertyValue('--te-panel'), '#1b2529');
     assert.equal(style.getPropertyValue('--te-font'), 'Inter, sans-serif');
     assert.equal(Object.keys(EDITOR_CHROME_TOKEN_MAP).length, 8);
@@ -49,8 +51,25 @@ test('packaged CMS editor inherits host-shell tokens, not storefront content or 
     syncEditorChromeTokens(host.window.document, editor.window.document);
     assert.equal(style.getPropertyValue('--te-panel'), '#172328');
     assert.equal(style.getPropertyValue('--te-canvas'), '#101b1e');
+    host.window.document.documentElement.style.setProperty('--color-background', '#f4f4f2');
+    syncEditorChromeTokens(host.window.document, editor.window.document);
+    assert.equal(editor.window.document.documentElement.dataset.teShellMode, 'light');
+    host.window.document.documentElement.style.removeProperty('--color-background');
+    host.window.document.documentElement.classList.add('dark');
+    navigation.style.removeProperty('--nav-canvas');
+    syncEditorChromeTokens(host.window.document, editor.window.document);
+    assert.equal(editor.window.document.documentElement.dataset.teShellMode, 'dark');
   } finally {
     host.window.close();
     editor.window.close();
   }
+});
+
+test('preview stage uses semantic light-dark tokens, not a hardcoded light canvas', () => {
+  const css = readFileSync(new URL('../frontend/static/css/theme-editor.css', import.meta.url), 'utf8');
+  assert.match(css, /:root\[data-te-shell-mode="dark"\]/);
+  assert.match(css, /var\(--te-stage-base\)/);
+  assert.match(css, /var\(--te-stage-strip\)/);
+  assert.match(css, /var\(--te-stage-device-border\)/);
+  assert.doesNotMatch(css, /radial-gradient\(circle at 50% 5%, rgba\(255,255,255,\.85\)/);
 });
