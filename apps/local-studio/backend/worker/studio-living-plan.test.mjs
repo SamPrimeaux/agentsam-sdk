@@ -1,72 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
-import { handleStudioLivingPlan } from './studio-living-plan.js';
-
-function fixture() {
-  const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec('PRAGMA foreign_keys=ON');
-  sqlite.exec(`
-    CREATE TABLE accounts(id TEXT PRIMARY KEY);
-    INSERT INTO accounts VALUES('au_owner'),('au_other');
-    CREATE TABLE user_goals (
-      id TEXT PRIMARY KEY, goal_saved REAL DEFAULT 0, goal_paid_off REAL DEFAULT 0,
-      goal_owed REAL DEFAULT 0, goal_monthly_payment REAL DEFAULT 0,
-      goal_target_label TEXT, updated_at INTEGER DEFAULT(unixepoch()),
-      user_id TEXT, person_uuid TEXT, goal_type TEXT DEFAULT 'personal',
-      title TEXT, description TEXT, priority INTEGER DEFAULT 1,
-      status TEXT DEFAULT 'active', target_date INTEGER, completed_at INTEGER,
-      workspace_id TEXT, tenant_id TEXT, metadata_json TEXT DEFAULT '{}');
-    CREATE TABLE agentsam_tickets (
-      id TEXT PRIMARY KEY, title TEXT, status TEXT, project TEXT,
-      subsystem TEXT, priority TEXT, updated_at INTEGER, account_id TEXT
-    );
-    INSERT INTO agentsam_tickets VALUES
-      ('ticket_owned','Implement checkout','active','commerce','web','P1',12,'au_owner'),
-      ('ticket_other','Private work','active','other','internal','P1',13,'au_other');
-  `);
-  for (const filename of [
-    '../migrations/1356_user_living_plan_goals.sql',
-    '../migrations/1357_user_goal_ticket_links.sql',
-  ]) sqlite.exec(readFileSync(new URL(filename, import.meta.url), 'utf8'));
-
-  function statement(sql, params = []) {
-    return {
-      bind(...args) { return statement(sql, args); },
-      async all() { return { results: sqlite.prepare(sql).all(...params) }; },
-      async first() { return sqlite.prepare(sql).get(...params) || null; },
-      async run() {
-        const result = sqlite.prepare(sql).run(...params);
-        return { meta: { changes: Number(result.changes) } };
-      },
-    };
-  }
-  const DB = {
-    prepare(sql) { return statement(sql); },
-    async batch(statements) {
-      sqlite.exec('BEGIN');
-      try {
-        const results = [];
-        for (const query of statements) results.push(await query.run());
-        sqlite.exec('COMMIT');
-        return results;
-      } catch (error) {
-        sqlite.exec('ROLLBACK');
-        throw error;
-      }
-    },
-  };
-  async function call(path, method = 'GET', body, accountId = 'au_owner', origin) {
-    const request = new Request('https://example.test' + path, {
-      method, ...(body ? { headers: { 'content-type':'application/json', ...(origin ? {origin} : {}) },
-        body: JSON.stringify(body) } : {}),
-    });
-    const response = await handleStudioLivingPlan(request, { DB }, accountId);
-    return { status: response.status, data: await response.json() };
-  }
-  return { call, sqlite };
-}
+import { createLivingPlanFixture as fixture } from './studio-living-plan.fixture.mjs';
 
 test('requires a signed-in account; never falls back to tenant or workspace', async () => {
   const { call } = fixture();
@@ -133,4 +67,33 @@ test('rejects cross-origin writes and invalid statuses', async () => {
     { title:'Bounded status' })).data.id;
   const invalid = await call('/api/studio/living-plan/goals/' + goalId, 'PATCH', {status:'shipped'});
   assert.equal(invalid.status, 400);
+});
+
+test('GOAP creates and switches durable repository focus without a workspace and shares it with Goals', async () => {
+  const { call, sqlite } = fixture();
+  const root = '/api/studio/living-plan';
+  const goap = root + '/goap?repository=github%3Aowner%2Frepo';
+  const denied = await call(goap,'POST',{ action:'create',title:'Private' },'au_other');
+  assert.equal(denied.status,404);
+  const first = await call(goap,'POST',{ action:'create',title:'Ship checkout' });
+  const second = await call(goap,'POST',{ action:'create',title:'Verify checkout' });
+  assert.equal(first.status,200);
+  assert.equal(second.status,200);
+  const ticketId = first.data.ticketId;
+  assert.equal((await call(goap)).data.currentTaskId,second.data.ticketId);
+  assert.equal((await call(goap,'POST',{ action:'activate',ticketId })).status,200);
+  let snapshot = await call(root);
+  assert.equal(snapshot.data.goapGoals[0].id,ticketId);
+  assert.equal(snapshot.data.goapGoals[0].goal_status,'active');
+  assert.equal(snapshot.data.goapGoals[0].focused,true);
+  assert.equal((await call(root,'GET',null,'au_other')).data.goapGoals.length,0);
+  await call(goap,'POST',{ action:'close',ticketId:second.data.ticketId,status:'abandoned' });
+  assert.equal((await call(goap)).data.currentTaskId,ticketId);
+  assert.equal((await call(goap,'POST',{ action:'close' })).data.ticketId,ticketId);
+  assert.equal((await call(goap)).data.currentTaskId,null);
+  snapshot = await call(root);
+  assert.equal(snapshot.data.goapGoals.find(goal=>goal.id===ticketId).goal_status,'satisfied');
+  assert.equal(sqlite.prepare('SELECT count(*) AS n FROM agentsam_workspace_state').get().n,0);
+  assert.deepEqual(sqlite.prepare("SELECT from_status,to_status FROM agentsam_ticket_events WHERE ticket_id=? AND event_type<>'goal_released' ORDER BY rowid").all(ticketId)
+    .map(row=>[row.from_status,row.to_status]),[[null,'active'],['active','active'],['active','shipped']]);
 });

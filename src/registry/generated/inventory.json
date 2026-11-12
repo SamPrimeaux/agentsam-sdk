@@ -6,7 +6,7 @@
     "packages/catalog/generated/packages.json"
   ],
   "counts": {
-    "commands": 76,
+    "commands": 77,
     "capabilities": 82,
     "packages": 66
   },
@@ -821,12 +821,33 @@
       "operation": null
     },
     {
-      "id": "goap",
-      "aliases": [],
-      "summary": "GOAP blackboard status/plan",
+      "id": "goals",
+      "aliases": [
+        "goal"
+      ],
+      "summary": "List and manage shared account goals",
       "topic": "inside",
       "usage": [
-        "agentsam goap"
+        "agentsam goals list [--json]",
+        "agentsam goals set \"<title>\" [--personal] [--description \"<text>\"]",
+        "agentsam goals status <goal-id> <active|paused|completed>",
+        "agentsam goals step <goal-id> \"<title>\"",
+        "agentsam goals link <goal-id> <ticket-id>"
+      ],
+      "operation": null
+    },
+    {
+      "id": "goap",
+      "aliases": [],
+      "summary": "Inspect local GOAP and manage shared repository goals",
+      "topic": "inside",
+      "usage": [
+        "agentsam goap [status|goal] [--shared] [--json]",
+        "agentsam goap [why|plan] [--json]",
+        "agentsam goap list [--json]",
+        "agentsam goap new \"<title>\" [--priority P1] [--subsystem <name>]",
+        "agentsam goap switch <ticket-id>",
+        "agentsam goap close [ticket-id] [--status shipped|abandoned|blocked]"
       ],
       "operation": null
     },

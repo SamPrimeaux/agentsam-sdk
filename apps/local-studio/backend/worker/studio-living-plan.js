@@ -1,3 +1,5 @@
+import { readStudioGoapGoals, updateStudioGoapGoal } from './studio-goap-goals.js';
+
 /**
  * Authenticated personal living-plan adapter over existing user_goals.
  * No workspace/tenant fallback, no client-provided account owner and no
@@ -40,8 +42,23 @@ export async function handleStudioLivingPlan(request, env, accountId) {
         updated_at DESC LIMIT 25`).bind(accountId,query,query,query).all();
     return reply({ ok: true, tickets: matched.results || [] });
   }
+  if (path === ROOT + '/goap') {
+    const repositoryId = new URL(request.url).searchParams.get('repository') || '';
+    if (!/^github:[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(repositoryId))
+      return reply({ ok: false, error: 'github_repository_required' }, 400);
+    if (method === 'GET') {
+      const limit = Math.max(1, Math.min(100, Number.parseInt(new URL(request.url).searchParams.get('limit'), 10) || 20));
+      const tickets = await readStudioGoapGoals(env.DB,accountId,repositoryId,limit);
+      return reply({ ok: true, repositoryId, tickets, currentTaskId: tickets.find(ticket => ticket.focused)?.id ?? null });
+    }
+    if (method === 'POST') {
+      const result = await updateStudioGoapGoal(env.DB,accountId,repositoryId,await jsonInput(request));
+      return result.ok ? reply(result) : reply({ ok: false, error: result.error },result.status);
+    }
+    return reply({ ok: false, error: 'method_not_allowed' },405);
+  }
   if (path === ROOT && method === 'GET') {
-    const [goals, steps, ticketLinks] = await Promise.all([
+    const [goals, steps, ticketLinks, goapGoals] = await Promise.all([
       env.DB.prepare(`SELECT id,source_key,title,description,goal_type,status,priority,
           target_date,completed_at,updated_at,metadata_json
         FROM user_goals WHERE account_id=?
@@ -59,9 +76,10 @@ export async function handleStudioLivingPlan(request, env, accountId) {
         JOIN agentsam_tickets t ON t.id=l.ticket_id
         WHERE l.account_id=? AND g.account_id=? AND t.account_id=?
         ORDER BY t.updated_at DESC`).bind(accountId,accountId,accountId).all(),
+      readStudioGoapGoals(env.DB,accountId),
     ]);
     return reply({ ok: true, goals: goals.results || [], steps: steps.results || [],
-      ticketLinks: ticketLinks.results || [] });
+      ticketLinks: ticketLinks.results || [], goapGoals });
   }
   if (path === ROOT + '/goals' && method === 'POST') {
     const data = await jsonInput(request);
