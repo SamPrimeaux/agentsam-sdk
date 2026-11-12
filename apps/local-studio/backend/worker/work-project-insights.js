@@ -31,11 +31,17 @@ export async function readProjectInsights(db, ownerId, projectId) {
     if (columns.has('user_id') && columns.has('body_markdown') && columns.has('is_active')) {
       const where = columns.has('project_id') ? '(project_id = ? OR id = ?)' : 'id = ?';
       const params = columns.has('project_id') ? [id, 'rule_' + id + '_runtimecontract'] : ['rule_' + id + '_runtimecontract'];
+      // The deployed table records updated_at_epoch (unix seconds); older local schemas used updated_at.
+      const stamp = columns.has('updated_at_epoch') ? 'updated_at_epoch' : columns.has('updated_at') ? 'updated_at' : null;
       const doc = await db.prepare(
-        'SELECT id, title, version, updated_at FROM agentsam_rules_document WHERE ' + where
-        + ' AND user_id = ? AND is_active = 1 ORDER BY updated_at DESC LIMIT 1'
+        'SELECT id, title, version' + (stamp ? ', ' + stamp + ' AS updated' : '') + ' FROM agentsam_rules_document WHERE ' + where
+        + ' AND user_id = ? AND is_active = 1' + (stamp ? ' ORDER BY ' + stamp + ' DESC' : '') + ' LIMIT 1'
       ).bind(...params, owner).first();
-      if (doc) rules = { id: doc.id, title: doc.title, version: Number(doc.version) || 1, updatedAt: doc.updated_at };
+      if (doc) {
+        const updatedAt = stamp === 'updated_at_epoch' && Number(doc.updated) > 0
+          ? new Date(Number(doc.updated) * 1000).toISOString() : doc.updated ?? null;
+        rules = { id: doc.id, title: doc.title, version: Number(doc.version) || 1, updatedAt };
+      }
     }
   }
   let measurements = null;

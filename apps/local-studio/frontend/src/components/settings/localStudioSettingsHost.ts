@@ -60,22 +60,6 @@ import {
   subscribeLocalStudioWidgets,
 } from "@/lib/widgets/preferences";
 
-const capabilities: SettingsCapabilities = {
-  host: "local-studio",
-  capabilities: [
-    { id: "settings.read", available: true },
-    { id: "settings.write", available: true },
-    { id: "agents.read", available: true },
-    { id: "agents.write", available: true },
-    { id: "agents.policy", available: true },
-    { id: "models.inventory", available: true },
-    { id: "plugins.read", available: true },
-    { id: "plugins.write", available: true },
-    { id: "widgets.read", available: true },
-    { id: "widgets.write", available: true },
-  ],
-};
-
 import { SETTINGS_CATALOG_CHANGED_EVENT, buildConnectionReturnUrl } from "@/lib/desktop/connection-deep-link";
 
 function applyCatalogOverlay(snapshot: SettingsSnapshot): SettingsSnapshot {
@@ -255,8 +239,36 @@ async function openAccountBillingPortal(){
 }
 
 type StudioSkillApiRecord = {
-  id:string;name:string;description:string;trigger:string;content:string;
+  id:string;name:string;description:string;trigger:string;content:string;readOnly?:boolean;
 };
+type StudioRuleApiRecord = {
+  id:string;name:string;content:string;enabled:boolean;applyMode:string;globs:string;
+};
+type CatalogAccess = NonNullable<SettingsSnapshot["catalogAccess"]>[SettingsCatalogKind];
+function isStudioRuleRecord(value:unknown):value is StudioRuleApiRecord {
+  if(!value||typeof value!=="object")return false;
+  const record=value as Record<string,unknown>;
+  return ["id","name","content","applyMode","globs"].every(key=>typeof record[key]==="string")
+    && typeof record.enabled==="boolean";
+}
+/**
+ * The adapter's capabilities are the operations it actually implements, so the
+ * list cannot drift from the code. Per-registry permissions for the signed-in
+ * account come from the service in SettingsSnapshot.catalogAccess.
+ */
+const HOST_CAPABILITY_METHODS:Array<[string,keyof SettingsHost]> = [
+  ["settings.read","snapshot"],["settings.write","updateGeneralPreferences"],
+  ["agents.write","saveAgent"],["agents.policy","updateAgentPolicy"],
+  ["plugins.read","discoverPlugins"],["plugins.write","setPluginEnabled"],
+  ["widgets.write","setWidgetVisible"],["catalog.write","upsertCatalogItem"],
+  ["catalog.remove","removeCatalogItem"],["catalog.toggle","setCatalogItemEnabled"],
+  ["themes.write","updateTheme"],["billing.read","readBilling"],
+];
+function describeHostCapabilities(host:SettingsHost):SettingsCapabilities {
+  return {host:"local-studio",capabilities:HOST_CAPABILITY_METHODS.map(([id,method])=>({
+    id,available:typeof host[method]==="function",
+  }))};
+}
 function isStudioSkillRecord(value:unknown):value is StudioSkillApiRecord {
   if(!value||typeof value!=="object")return false;
   const record=value as Record<string,unknown>;
@@ -264,7 +276,7 @@ function isStudioSkillRecord(value:unknown):value is StudioSkillApiRecord {
 }
 async function skillRequest(path="",init?:RequestInit) {
   const body=init?.body?JSON.parse(String(init.body)):undefined;
-  return settingsRequest<{ok:boolean;skills?:unknown[];error?:string}>(
+  return settingsRequest<{ok:boolean;skills?:unknown[];access?:CatalogAccess;error?:string}>(
     "/api/settings/skills"+path,(init?.method||"GET") as "GET"|"POST"|"PUT"|"DELETE",body);
 }
 type AgentApiRecord = SettingsAgent & {modelId:string;active:boolean};
@@ -297,12 +309,22 @@ async function loadAgentSettings():Promise<{
     templates:(agents.templates||[]).map(normalize),policy:policy.policy};
 }
 
-async function loadAccountSkills():Promise<SettingsCatalogItem[]> {
+async function loadAccountSkills():Promise<{items:SettingsCatalogItem[];access?:CatalogAccess}> {
   const data=await skillRequest();
-  return (data.skills||[]).filter(isStudioSkillRecord).map(skill=>({
+  return {access:data.access,items:(data.skills||[]).filter(isStudioSkillRecord).map(skill=>({
     id:skill.id,name:skill.name,subtitle:skill.description,
     meta:skill.trigger,trigger:skill.trigger,content:skill.content,status:"healthy" as const,
-  }));
+    readOnly:skill.readOnly===true,
+  }))};
+}
+
+async function loadAccountRules():Promise<{items:SettingsCatalogItem[];access?:CatalogAccess}> {
+  const data=await settingsRequest<{ok:boolean;rules?:unknown[];access?:CatalogAccess}>("/api/settings/rules");
+  return {access:data.access,items:(data.rules||[]).filter(isStudioRuleRecord).map(rule=>({
+    id:rule.id,name:rule.name,subtitle:"",content:rule.content,
+    status:rule.enabled?"healthy" as const:"unknown" as const,
+    enabled:rule.enabled,applyMode:rule.applyMode,globs:rule.globs,
+  }))};
 }
 
 async function loadPluginSettings() {
@@ -410,7 +432,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     snapshot.health = "attention";
   }
 
-  const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, notificationsResult, signedIn, workspace, usageMetrics, storageTargets] = await Promise.all([
+  const [inventoryResult, pluginResult, skillsResult, rulesResult, agentsResult, prefsResult, notificationsResult, signedIn, workspace, usageMetrics, storageTargets] = await Promise.all([
     loadEffectiveModelInventory().then(
       (value) => ({ ok: true as const, value }),
       () => ({ ok: false as const, value: null }),
@@ -421,7 +443,11 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     ),
     loadAccountSkills().then(
       (value) => ({ ok: true as const, value }),
-      () => ({ ok: false as const, value: [] as SettingsCatalogItem[] }),
+      () => ({ ok: false as const, value: null }),
+    ),
+    loadAccountRules().then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const, value: null }),
     ),
     loadAgentSettings().then(
       (value)=>({ok:true as const,value}),
@@ -470,7 +496,12 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
       conn=>conn.provider==="cloudflare"&&conn.status==="connected"
     )?"Connected":"Not connected";
   }
-  snapshot.skills = skillsResult.value;
+  snapshot.skills = skillsResult.value?.items || [];
+  snapshot.rules = rulesResult.value?.items || [];
+  snapshot.catalogAccess = {
+    ...(skillsResult.value?.access ? { skills: skillsResult.value.access } : {}),
+    ...(rulesResult.value?.access ? { rules: rulesResult.value.access } : {}),
+  };
   if(prefsResult.ok)snapshot.general.preferences=prefsResult.value;
   else snapshot.general.preferencesError=prefsResult.error;
   if(notificationsResult.ok&&notificationsResult.value){
@@ -540,7 +571,7 @@ export const localStudioSettingsHost: SettingsHost = {
   readBilling: readAccountBilling,
   openBillingPortal: openAccountBillingPortal,
   async capabilities() {
-    return capabilities;
+    return describeHostCapabilities(localStudioSettingsHost);
   },
   async snapshot() {
     return liveSnapshot();
@@ -709,11 +740,31 @@ export const localStudioSettingsHost: SettingsHost = {
         window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
       return;
     }
+    if(kind==="rules") {
+      const path="/api/settings/rules"+(item.id?"/"+encodeURIComponent(item.id):"");
+      await settingsRequest(path,item.id?"PUT":"POST",{name:item.name,content:item.content||"",
+        applyMode:item.applyMode||"always",globs:item.globs||"",enabled:item.enabled!==false});
+      if(typeof window!=="undefined")
+        window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+      return;
+    }
     throw new Error("settings_catalog_kind_requires_verified_adapter:"+kind);
+  },
+  async setCatalogItemEnabled(kind, id, enabled) {
+    if(kind!=="rules")throw new Error("settings_catalog_kind_requires_verified_adapter:"+kind);
+    await settingsRequest("/api/settings/rules/"+encodeURIComponent(id)+"/enabled","PUT",{enabled});
+    if(typeof window!=="undefined")
+      window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
   },
   async removeCatalogItem(kind, id) {
     if(kind==="skills") {
       await skillRequest("/"+encodeURIComponent(id),{method:"DELETE"});
+      if(typeof window!=="undefined")
+        window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+      return;
+    }
+    if(kind==="rules") {
+      await settingsRequest("/api/settings/rules/"+encodeURIComponent(id),"DELETE");
       if(typeof window!=="undefined")
         window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
       return;

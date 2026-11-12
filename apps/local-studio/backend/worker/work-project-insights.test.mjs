@@ -9,15 +9,17 @@ test('project insights honor account ownership and expose no other users costs o
     db.exec([
       'CREATE TABLE projects (id TEXT PRIMARY KEY, owner_user_id TEXT)',
       'CREATE TABLE project_costs (id INTEGER PRIMARY KEY, project_id TEXT, amount REAL)',
-      'CREATE TABLE agentsam_rules_document (id TEXT PRIMARY KEY, project_id TEXT, user_id TEXT, title TEXT, version INTEGER, updated_at TEXT, is_active INTEGER, body_markdown TEXT)',
+      // Deployed column name: updated_at_epoch (unix seconds).
+      'CREATE TABLE agentsam_rules_document (id TEXT PRIMARY KEY, project_id TEXT, user_id TEXT, title TEXT, version INTEGER, updated_at_epoch INTEGER, is_active INTEGER, body_markdown TEXT)',
       "INSERT INTO projects VALUES ('p1','owner-a'),('p2','owner-b')",
       "INSERT INTO project_costs (project_id,amount) VALUES ('p1',2.5),('p1',1.25),('p2',1000)",
-      "INSERT INTO agentsam_rules_document VALUES ('rule_p1_runtimecontract','p1','owner-a','Actual project rules',5,'2026-10-15',1,'Rules'),('rule_p2_runtimecontract','p2','owner-b','Private rules',1,'2026-10-15',1,'Private')",
+      "INSERT INTO agentsam_rules_document VALUES ('rule_p1_runtimecontract','p1','owner-a','Actual project rules',5,1792022400,1,'Rules'),('rule_p2_runtimecontract','p2','owner-b','Private rules',1,1792022400,1,'Private')",
     ].join(';\n') + ';');
     const a = await readProjectInsights(db, 'owner-a', 'p1');
     assert.equal(a.costs.recordedTotal, 3.75);
     assert.equal(a.costs.lineItems, 2);
     assert.equal(a.rules.version, 5);
+    assert.equal(a.rules.updatedAt, '2026-10-15T00:00:00.000Z');
     assert.equal(await readProjectInsights(db, 'owner-a', 'p2'), null);
     assert.equal(await readProjectInsights(db, 'owner-b', 'p1'), null);
     assert.equal(await readProjectInsights(db, 'owner-a', 'bad'), null);
