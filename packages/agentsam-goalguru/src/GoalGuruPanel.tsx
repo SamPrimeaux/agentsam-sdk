@@ -73,8 +73,7 @@ export function GoalGuruPanel({
   const finished = (id: string) => stepList(id).filter(s => s.status === "done").length;
   const total = visible.reduce((acc, g) => acc + stepList(g.id).length, 0);
   const completed = visible.reduce((acc, g) => acc + finished(g.id), 0);
-  const focus = visible.find(g => g.status === "active" && stepList(g.id).some(s => s.status !== "done"))
-    ?? visible.find(g => stepList(g.id).some(s => s.status !== "done"));
+  const focus = visible.find(g => g.status === "active" && stepList(g.id).some(s => s.status !== "done"));
   const next = focus && stepList(focus.id).find(s => s.status !== "done");
   function continueInWork(goal: Goal, step: Step) {
     const links = plan.ticketLinks.filter(item => item.goal_id === goal.id);
@@ -272,10 +271,9 @@ export function GoalGuruPanel({
             </li>)}
           </ul>
         </section> : null}
-        <div className="mb-5 flex items-baseline justify-between gap-2">
-          <p className="text-sm font-medium">{visible.length} goals</p>
-          <p className="text-xs tabular-nums text-muted-foreground">{completed} of {total} steps complete</p>
-        </div>
+        {total > 0 ? <p className="mb-3 text-xs tabular-nums text-muted-foreground">
+          {completed} of {total} steps complete
+        </p> : null}
         {next ? <section className="gg-card mb-5 rounded-xl border border-border bg-card p-4" aria-label="Next action">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Next concrete step</p>
           <p className="text-xs text-muted-foreground">{focus?.title}</p>
@@ -303,7 +301,11 @@ export function GoalGuruPanel({
                   {steps.length && steps.every(step => step.status === "done") ? <Check size={16} /> : (goal.source_key?.match(/\d+$/)?.[0] ?? <Target size={15} />)}
                 </span>
                 <span className="min-w-0 flex-1"><span className="block text-sm font-medium leading-snug">{goal.title}</span>
-                  <span className="mt-1 block text-xs tabular-nums text-muted-foreground">{finished(goal.id)}/{steps.length} complete</span></span>
+                  <span className="mt-1 block text-xs tabular-nums text-muted-foreground">
+                    {goal.status === "completed" ? "Completed" : goal.status === "paused" ? "Paused"
+                      : steps.length ? `${finished(goal.id)}/${steps.length} complete` : "Active"}
+                  </span>
+                </span>
                 {open ? <ChevronDown className="size-4 shrink-0 text-muted-foreground"/> : <ChevronRight className="size-4 shrink-0 text-muted-foreground" />}
               </button>
               {open ? <div className="border-t border-border/70 px-3 py-3">
