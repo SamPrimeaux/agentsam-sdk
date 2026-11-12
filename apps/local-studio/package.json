@@ -41,6 +41,7 @@
     "cf:env": "bash scripts/with-cloudflare-env.sh",
     "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs",
     "smoke:desktop": "node scripts/smoke-desktop-spa.mjs",
+    "smoke:mobile-launch-dock": "node scripts/smoke-mobile-launch-dock.mjs",
     "verify:desktop": "npm run verify:brand-assets && npm run build:desktop && npm run smoke:desktop && npm run smoke:desktop-auth",
     "smoke:themes": "node scripts/smoke-theme-surfaces.mjs",
     "smoke:commerce-store": "node scripts/smoke-commerce-store.mjs",

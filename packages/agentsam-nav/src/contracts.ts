@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 export type NavMode = 'chat' | 'work';
 export type NavTheme = 'dark' | 'light' | 'system';
 export type NavTokens = Partial<Record<'canvas' | 'sidebar' | 'surface' | 'popover' | 'text' | 'muted' | 'border' | 'hover' | 'selected' | 'danger' | 'font' | 'label-size' | 'meta-size' | 'row-height' | 'radius' | 'menu-radius' | 'shadow' | 'width' | 'rail-width', string>>;
-export interface NavBrand { name: string; logo?: string; lightLogo?: string; home?: string }
+export interface NavBrand { name: string; logo?: string; lightLogo?: string; home?: string; /** Host-supplied active app icon, no product-specific assets in this package. */ icon?: ReactNode }
 export interface NavProject { id: string; name: string; pinned?: boolean; updatedAt?: number }
 export interface NavConversation { id: string; title: string; projectId?: string; pinned?: boolean; updatedAt?: number }
 export interface NavPinnedResource { id: string; title: string; kind: string; open?: string | null }

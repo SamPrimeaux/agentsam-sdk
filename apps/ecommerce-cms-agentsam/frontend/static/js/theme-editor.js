@@ -1471,6 +1471,9 @@
   }
 
   function renderTree() {
+    // Catalog is portalled beside the tree on desktop; discard the prior dialog
+    // before rebuilding the live section hierarchy.
+    document.querySelector('.theme-studio-workspace > #te-section-menu')?.remove();
     if (resolveShowcase && window.AgentSamResolveStudio?.renderSections) {
       window.AgentSamResolveStudio.renderSections();
       return;
@@ -1484,10 +1487,11 @@
       if (zone === 'FOOTER' || kind === 'site-footer') return 'footer';
       return 'template';
     };
-    const headerSections = [...siteSections.filter(section => section.key === 'header'),
-      ...pageSections.filter(section => zoneFor(section) === 'header')];
-    const footerSections = [...siteSections.filter(section => section.key === 'footer'),
-      ...pageSections.filter(section => zoneFor(section) === 'footer')];
+    const sharedKeys = new Set(siteSections.map(section => section.globalKey).filter(Boolean));
+    const headerSections = [...siteSections.filter(section => zoneFor(section) === 'header'),
+      ...pageSections.filter(section => zoneFor(section) === 'header' && !sharedKeys.has(section.globalKey))];
+    const footerSections = [...siteSections.filter(section => zoneFor(section) === 'footer'),
+      ...pageSections.filter(section => zoneFor(section) === 'footer' && !sharedKeys.has(section.globalKey))];
     const templateSections = pageSections.filter(section => zoneFor(section) === 'template');
     const registrySections = (window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug]) || {};
 
@@ -2974,7 +2978,8 @@
     if (!doc?.head) return;
     const brand = ownerSections('site').find(section => section.key === 'brand');
     if (!themeStyles) return;
-    const css = themeStyles.renderThemeSettings(brand?.content?.__editor?.themeSettings);
+    const current = host?.adapter?.getThemeSettings?.() || brand?.content?.__editor?.themeSettings;
+    const css = themeStyles.renderThemeSettings(current);
     let style = doc.getElementById('cms-merchant-theme-style');
     if (!css) { style?.remove(); return; }
     if (!style) {
@@ -3663,8 +3668,11 @@
 
       const selectedStillExists = activeSectionKey && findSection(activeSectionKey, activeSectionOwner);
       if (!selectedStillExists) {
-        activeSectionOwner = slug;
-        activeSectionKey = pageData.sections && pageData.sections[0] ? pageData.sections[0].key : (siteData.sections?.find(function(section) { return section.key === 'header'; })?.key || null);
+        const firstGlobal = siteData.sections?.find(function(section) {
+          return section.zone === 'HEADER' || section.globalKey === 'site-header' || section.key === 'header';
+        });
+        activeSectionOwner = firstGlobal ? 'site' : slug;
+        activeSectionKey = firstGlobal?.key || pageData.sections?.[0]?.key || null;
         activeBlockId = null;
         activeFieldKey = null;
       }
@@ -4557,7 +4565,7 @@
   document.addEventListener('pointerdown', function(event) {
     const picker = byId('te-section-menu');
     if (picker?.open && !picker.contains(event.target) &&
-        !event.target.closest('#te-add-section, [data-insert-at], #te-library-browse')) picker.close();
+        !event.target.closest('#te-add-section, [data-insert-at], #te-library-browse, .te-resize-handle')) picker.close();
   });
   document.addEventListener('keydown', function(event) {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
@@ -4931,6 +4939,7 @@
   // there is no browser-only mock, new theme table, or separate authority.
   window.CmsThemeSettings = {
     read: function() {
+      if (host?.adapter?.getThemeSettings) return host.adapter.getThemeSettings();
       const brand = ownerSections('site').find(function(section) { return section.key === 'brand'; });
       return brand ? structuredClone(brand.content?.__editor?.themeSettings || {}) : null;
     },
@@ -4940,6 +4949,21 @@
       const checked = themeStyles.validateThemeSettings(settings);
       window.CmsThemeSettings.error = checked.ok ? null : checked.error;
       if (!checked.ok) return false;
+      if (host?.adapter?.updateThemeSettings) {
+        if (liveUnimported) return false;
+        setSaveState('Saving theme settings', 'dirty');
+        Promise.resolve(host.adapter.updateThemeSettings(settings)).then(function() {
+          setSaveState('Theme settings saved', 'saved');
+          document.dispatchEvent(new CustomEvent('theme-editor:global-settings-ready'));
+          scheduleLocalPreview();
+        }).catch(function(error) {
+          window.CmsThemeSettings.error = error.message || String(error);
+          setSaveState('Settings save failed', 'error');
+          setNote('Theme settings were not saved: ' + window.CmsThemeSettings.error, 'error');
+          document.dispatchEvent(new CustomEvent('theme-editor:settings-save-error'));
+        });
+        return true;
+      }
       const brand = ownerSections('site').find(function(section) { return section.key === 'brand'; });
       if (!brand || !settings || liveUnimported) return false;
       const previous = structuredClone(brand.content || {});

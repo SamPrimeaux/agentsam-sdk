@@ -64,7 +64,7 @@
           : item));
       NAV.channels.splice(0, NAV.channels.length, ...(data.channels || []));
       NAV.utilities = data.utilities || [];
-      NAV.apps.splice(0, NAV.apps.length, ...data.apps.map(app => ({id:app.id,href:app.href,label:app.label,icon:app.icon})));
+      NAV.apps.splice(0, NAV.apps.length, ...data.apps.map(app => ({id:app.id,href:app.href,label:app.label,icon:app.icon,aliases:app.aliases || []})));
       updateSharedNavigation();
     } catch (error) { console.error('[navigation/apps]', error); }
   }
@@ -271,13 +271,23 @@
       } : {})
     });
     const nav = buildUserNav(profile);
+    const currentPath = sharedNavPath.split('?')[0];
+    const activeApp = nav.apps.find(app => [app.href, ...(app.aliases || [])].some(route =>
+      route && (route.includes('?')
+        ? sharedNavPath === route
+        : currentPath === route || currentPath.startsWith(route + '/'))));
+    const appIcon = activeApp && activeApp.id !== 'local-studio'
+      ? window.AgentSamNav?.navIcon?.(({messageSquare:'agentsam',box:'cad',film:'moviemode',layers:'apps'})[activeApp.icon] || activeApp.icon)
+      : undefined;
     return {
-      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/settings/docs?topic=artwork' : sharedNavPath, showHistory: true, showSidebarHeader: false, newConversationAfter:'home',
+      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/settings/docs?topic=artwork' : sharedNavPath, showHistory: true, showSidebarHeader: false,
       ...workspaceNavigation(),
       ...(sharedNavPath.startsWith('/settings') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'}]} : {}),
       ...(sharedNavPath.startsWith('/admin/products/help/artwork') || sharedNavPath.startsWith('/settings/docs') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'},{id:'docs',label:'Documentation',href:'/settings/docs'},...(sharedNavPath.includes('artwork')?[{id:'artwork-guide',label:'Artwork Help'}]:[])]} : {}),
-      brand: { name: 'AgentSam', logo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', lightLogo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', home: '/admin/home' },
-      destinations: [...nav.main, { id: 'sales-channels', label: 'Sales channels', icon: 'store', children: nav.channels },
+      brand: { name: activeApp?.label || 'InnerAnimalMedia', icon: appIcon,
+        logo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg',
+        lightLogo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', home: '/admin/home' },
+      destinations: [...nav.main.filter(entry => entry.id !== 'projects'), { id: 'sales-channels', label: 'Sales channels', icon: 'store', children: nav.channels },
         { id: 'installed-apps', label: 'Apps', icon: 'apps', children: nav.apps }, ...(nav.utilities || [])].map(toDestination),
       account: { id: profile.id || 'local', name: profile.id ? profile.display_name || profile.email || 'Account' : 'Local account',
         avatar: safeAvatarUrl(profile.avatar_url) || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', plan: profile.id ? profile.email || 'Personal workspace' : 'Sign in required' },

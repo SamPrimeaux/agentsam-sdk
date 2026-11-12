@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { listAppManifests } from '../../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
@@ -27,6 +27,8 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
   const growthPath = path.join(repoRoot, 'apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json');
   const bundledApps = [];
   let growthNav = null;
+  const bundledDir = path.join(repoRoot, 'apps/ecommerce-cms-agentsam/apps');
+  const bundledAppDirectories = existsSync(bundledDir) ? readdirSync(bundledDir) : [];
   if (commerce) {
     const growth = JSON.parse(readFileSync(growthPath, 'utf8'));
     if (growth.status === 'bundled' && growth.role === 'embedded-app') {
@@ -42,12 +44,25 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
       // Growth stays discoverable under Audience; keep Apps entry for deep links.
       bundledApps.push(growthNav);
     }
+    // Only expose bundled provider/extension apps that declare real routes.
+    // No fake product/fulfillment launcher, duplicate catalog, or new registry.
+    for (const name of bundledAppDirectories) {
+      if (name === 'growth') continue;
+      const manifestFile = path.join(bundledDir, name, 'agentsam.app.json');
+      if (!existsSync(manifestFile)) continue;
+      const app = JSON.parse(readFileSync(manifestFile,'utf8'));
+      if (app.status !== 'bundled' || app.navigation?.placement !== 'apps' || !app.routes?.[0]) continue;
+      bundledApps.push({
+        id:app.id,name:app.name,label:app.navigation.label || app.name,
+        href:app.routes[0],icon:app.navigation.icon || 'apps',aliases:[],
+        provenance:'ecommerce-bundled-manifest'
+      });
+    }
   }
   return {
     primary: [
       {id:'home',label:'Home',href:'/admin/home',icon:'home'},
-      {id:'projects',label:'Projects',href:'/admin/projects',icon:'projects'},
-      {id:'media',label:'Media',href:'/media',icon:'content',children:[
+      {id:'media',label:'Library',href:'/media',icon:'library',children:[
         {id:'images',label:'Images',href:'/media/images'},
         {id:'videos',label:'Videos',href:'/media/videos'},
         {id:'models',label:'Models',href:'/media/models'},
@@ -66,9 +81,8 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
         {id:'preferences',label:'Preferences',href:'/admin/preferences'},
       ]},
       {id:'products',label:'Products',href:'/admin/products',icon:'products',children:[
-        {id:'store-products',label:'Store Products',href:'/admin/products'},
         {id:'collections',label:'Collections',href:'/admin/collections'},
-        {id:'product-studio',label:'Product Studio',href:'/admin/products/create'},
+        {id:'create',label:'Create',href:'/admin/products/create'},
         {id:'inventory',label:'Inventory',href:'/admin/inventory'},
         {id:'orders',label:'Orders',href:'/admin/orders'},
         {id:'discounts',label:'Discounts',href:'/admin/discounts'},

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
@@ -35,7 +36,8 @@ import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionPro
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
-import { CompanionProvider } from './CompanionContext';
+import { AgentSamLaunchDock } from './AgentSamLaunchDock';
+import { CompanionProvider, useActiveCompanion } from './CompanionContext';
 import { NotificationsMenu } from './NotificationsMenu';
 import { ChatShareDialog } from './ChatShareDialog';
 import { shareAttachmentMetadata } from '@/lib/content/share-attachment-metadata';
@@ -72,6 +74,27 @@ function initialCachedAppearance() {
     bootstrappedAppearance = bootstrapStudioAppearanceFromCache(undefined, document.documentElement);
   }
   return bootstrappedAppearance;
+}
+
+/** The selected pet belongs to the shared header, not to a specific page.
+ * Mount into the existing packaged Console slot without creating another bar. */
+function HostedCompanionHeader({ state }: { state: 'idle' | 'working' }) {
+  const companion = useActiveCompanion();
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const find = () => setTarget(document.getElementById('agentsam-console-mode-slot'));
+    find();
+    const observer = new MutationObserver(find);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+  return target ? createPortal(
+    <div className="agentsam-mobile-companion-identity" title={companion.name + ' · ' + state}>
+      <AgentSamPetTrigger state={state}
+        onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+      <span>AgentSam</span>
+    </div>, target
+  ) : null;
 }
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
@@ -259,6 +282,14 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     const chatId = store.activeChatId || store.startChat();
     const context = shares.map(formatChromeTabShare).join('\n\n');
     store.setDraft(chatId, [store.drafts[chatId]?.trimEnd(), context].filter(Boolean).join('\n\n'));
+    // User-approved Chrome handoffs also become restorable browser sessions.
+    // Keep the current chat and draft; do not pretend to mirror native Chrome tabs.
+    for (const share of shares) {
+      if (useWorkStore.getState().sideTabs.some(tab => tab.kind === 'browser' && tab.url === share.url)) continue;
+      const browserTabId = store.openSideTab('browser', { ephemeral: false });
+      store.setTabUrl(browserTabId, share.url);
+    }
+    store.setSideOpen(false);
     window.location.hash = '#/admin/agentsam';
     const first = shares[0];
     toast(`Added ${shares.length > 1 ? `${shares.length} pages` : `“${first.title || new URL(first.url).hostname}”`} to the draft`);
@@ -429,7 +460,15 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     ? new URLSearchParams(searchStr).get('page') || pathname
     : pathname + searchStr;
   const value: NavValue = {
-    brand, mode, onModeChange: setMode, pathname: navPathname,
+    brand: (() => {
+      const active = (navigation.apps || []).find(app => app.href &&
+        (app.href.includes('?')
+          ? navPathname === app.href
+          : navPathname.split('?')[0] === app.href || navPathname.startsWith(app.href + '/')));
+      const Icon = navigationIcons[active?.icon as keyof typeof navigationIcons];
+      return active ? { ...brand, name: active.label, icon: Icon ? <Icon /> : undefined } : { ...brand, name: 'InnerAnimalMedia' };
+    })(),
+    mode, onModeChange: setMode, pathname: navPathname,
     project: project ? { id: project.id, name: project.name } : undefined,
     conversation: chat ? { id: chat.id, title: chat.title, pinned: chat.pinned, projectId: chat.workProjectId } : undefined,
     pinnedResources,
@@ -447,21 +486,13 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         .map(item => ({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
     ],
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
-    showSidebarHeader: isConversation && mode === 'work',
-    newConversationAfter: 'home',
+    showSidebarHeader: true,
+    // New conversation is the first entry; product destinations follow below.
     showHistory: true,
     destinations: [
       // Render the platform-owned business destinations first. These are the
       // canonical primary entries from the same host projection as installed apps.
-      ...(navigation.primary || []).map(entry => entry.id === 'projects' ? {
-        ...entry,
-        // Project shortcuts belong under the ONE canonical Projects destination.
-        // Its label opens the Projects workspace; its chevron discloses saved projects.
-        children: [...workProjects]
-          .sort((a,b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || a.name.localeCompare(b.name))
-          .map(project => ({ id: 'project-' + project.id, label: project.name,
-            href: '/admin/projects/' + encodeURIComponent(project.id) })),
-      } : entry),
+      ...(navigation.primary || []).filter(entry => entry.id !== 'projects'),
       ...(navigation.channels?.length ? [{id:'sales-channels',label:'Sales channels',icon:'store',children:navigation.channels}] : []),
       {id:'installed-apps',label:'Apps',icon:'apps',children:navigation.apps || []},
       ...(navigation.utilities || []),
@@ -566,7 +597,16 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'files', label: 'View files in conversation', icon: <Files />, separatorBefore: true, onSelect: () => { state.openSideTab('files'); state.setSideOpen(true); } },
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
       { id: 'living-goals', label: 'Goals', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
-      { id: 'work-tools', label: 'Work tools', icon: <Layers3 />, children: [
+      // Installed apps are projected from the host's real app catalog. Tabs such
+      // as Terminal and Code are workspace panels, not fake installed packages.
+      { id: 'installed-apps', label: 'Installed apps', icon: <Layers3 />, children: [
+        ...(navigation.apps || []).filter(item => item.href?.startsWith('/') && !item.href.startsWith('//')).map(item => {
+          const Icon = navigationIcons[item.icon as keyof typeof navigationIcons] || Layers3;
+          return { id: 'open-app-' + item.id, label: item.label, icon: <Icon />, onSelect: () => go(item.href!) };
+        }),
+        { id: 'all-apps', label: 'Manage apps', icon: <Plug />, separatorBefore: true, onSelect: openAppsInstaller },
+      ] },
+      { id: 'workspace-panels', label: 'Workspace panels', icon: <PanelRight />, children: [
         { id: 'co-worker', label: 'Co-worker', icon: <Users />, onSelect: () => { state.openSideTab('chat', { ephemeral: false }); state.setSideOpen(true); } },
         { id: 'browser', label: 'Browser', icon: <Globe />, onSelect: () => { state.openSideTab('browser', { ephemeral: false }); state.setSideOpen(true); } },
         { id: 'files-work', label: 'Files', icon: <Folder />, onSelect: () => state.setWorkSurface('files') },
@@ -611,7 +651,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     ],
   };
   useEffect(() => {
-    const projection = {projects:value.projects,conversations:value.conversations,project:value.project,conversation:value.conversation,historyStatus:value.historyStatus,onRetryHistory:value.onRetryHistory,onSelectConversation:value.onSelectConversation,onSelectProject:value.onSelectProject,onPinConversation:value.onPinConversation,onAssignConversationToProject:value.onAssignConversationToProject,onDeleteConversation:value.onDeleteConversation,onShare:value.onShare,conversationActions:value.conversationActions,onPinProject:value.onPinProject,onRenameConversation:value.onRenameConversation,onRenameProject:value.onRenameProject};
+    const projection = {onCreateConversation:value.onCreateConversation,projects:value.projects,conversations:value.conversations,project:value.project,conversation:value.conversation,historyStatus:value.historyStatus,onRetryHistory:value.onRetryHistory,onSelectConversation:value.onSelectConversation,onSelectProject:value.onSelectProject,onPinConversation:value.onPinConversation,onAssignConversationToProject:value.onAssignConversationToProject,onDeleteConversation:value.onDeleteConversation,onShare:value.onShare,conversationActions:value.conversationActions,onPinProject:value.onPinProject,onRenameConversation:value.onRenameConversation,onRenameProject:value.onRenameProject};
     const host=window as Window & {__agentsamWorkspaceNavigation?:typeof projection};
     host.__agentsamWorkspaceNavigation=projection;
     window.dispatchEvent(new Event('agentsam:workspace-navigation'));
@@ -619,7 +659,9 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   },[state.chats,state.activeChatId,workProjects,historyStatus]);
   return <CompanionProvider accountKey={user?.id || "anonymous"}><ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
     <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
-      {!embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
+      {!embedded ? <Nav.Sidenav /> : null}
+      {embedded && !isConversation ? <HostedCompanionHeader state={petState} /> : null}
+      <div className="agentsam-main">
         {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">
           <Nav.Trigger aria-label="Toggle sidebar" />
           <Nav.TopbarSpacer />
@@ -628,7 +670,10 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         </Nav.Topbar> : null}
         <OfflineBanner />
         <div className="platform-console-stage" data-assistant-focused={!isConversation && globalAssistantFocused && state.sideOpen ? "true" : "false"}>
-          <main className="agentsam-route"><Outlet /></main>
+          <main className="agentsam-route">{pathname === '/admin/home'
+            ? <iframe title="AgentSam admin home" src="/ecommerce-cms-agentsam/admin/home.html?__agentsamEmbedded=1"
+                className="h-full min-h-0 w-full flex-1 border-0" />
+            : <Outlet />}</main>
           {!isConversation && state.sideOpen ? <>
             {!globalAssistantFocused && <SplitHandle label="Resize AgentSam panel" onDrag={(delta) => setGlobalAssistantWidth((width) => Math.max(320, Math.min(720, width - delta)))} onDoubleClick={() => setGlobalAssistantWidth(390)} />}
             <aside className="platform-console-assistant" aria-label="AgentSam Side Assistant"
@@ -637,7 +682,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
             </aside>
           </> : null}
         </div>
-
+        <AgentSamLaunchDock />
       </div><CliDrawer /><CommandPalette />
       <ChatShareDialog open={sharing} onOpenChange={setSharing} chat={chat ?? null} />
       <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}><DialogContent>

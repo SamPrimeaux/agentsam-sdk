@@ -150,6 +150,7 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
 
   const load = (name) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
+    if(name.endsWith('.mjs')) script.type='module';
     script.src = name.startsWith('/') ? name : assetsBase + name;
     script.onload = resolve;
     script.onerror = () => reject(new Error('theme_editor_asset_failed:' + name));
@@ -171,5 +172,8 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
     // The platform owns complete panels; every installed theme mounts them.
     await load('/admin/js/theme-settings-panel.js');
     await load('/admin/js/theme-embed-review.js');
+    // Installed projects use this srcdoc mount, not theme-editor.html. Load
+    // the same resizable hierarchy/picker/inspector here as in standalone.
+    await load('/admin/js/theme-editor-resize.mjs');
   });
 }

@@ -268,7 +268,7 @@ export default function ProductStudioPage() {
   return (
     <section
       className={`product-studio-shell${designing ? " is-designing" : ""}`}
-      aria-label="Product Studio"
+      aria-label="Create products"
     >
       {registeredProductId ? (
         <div className="ps-container">

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowRight, Download, ExternalLink, Globe, Puzzle, RotateCw, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, ExternalLink, Globe, Monitor, Puzzle, RotateCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useWorkStore } from "@/lib/work/store";
@@ -33,6 +33,10 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
   const [draft, setDraft] = useState(tab.url);
   const [reloadKey, setReloadKey] = useState(0);
   const [browserProfile, setBrowserProfile] = useState<AgentBrowserLaunch | null>(null);
+  // The in-app view is an intentionally constrained page preview. Full Chrome
+  // retains normal extensions, downloads and permissions in its own profile.
+  const [desktopView, setDesktopView] = useState<'preview' | 'chrome'>('preview');
+  const chromeMode = desktop && desktopView === 'chrome' && !tab.srcdoc;
   const src = tab.srcdoc ? undefined : tab.url;
   const canBack = tab.historyIndex > 0;
   const canForward = tab.historyIndex >= 0 && tab.historyIndex < tab.history.length - 1;
@@ -46,13 +50,13 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
     if (!next) return;
     setDraft(next);
     setTabUrl(tab.id, next);
-    if (desktop) {
+    if (chromeMode) {
       void openAgentBrowser(next).then(setBrowserProfile).catch((error) => {
         toast.error(error instanceof Error ? error.message : 'Could not open Google Chrome');
       });
-      return;
+    } else {
+      setReloadKey((k) => k + 1);
     }
-    setReloadKey((k) => k + 1);
   }
 
   function openChrome(target = tab.url || undefined) {
@@ -71,7 +75,20 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background" data-agentsam-resource={`browser:${tab.id}`} aria-label={desktop ? 'AgentSam Google Chrome browser controls' : `Browser preview: ${tab.url || tab.title}. Annotation refers to the preview frame; embedded page contents are not captured.`}>
-      {!desktop && tab.srcdoc ? (
+      {desktop && !tab.srcdoc ? <div className="flex flex-none items-center justify-between gap-2 border-b border-border px-3 py-2" role="group" aria-label="Browser location">
+        <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
+          <button type="button" onClick={() => setDesktopView('preview')} aria-pressed={!chromeMode}
+            className={'inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-xs ' + (!chromeMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+            <Monitor className="size-4" /> In-app preview
+          </button>
+          <button type="button" onClick={() => setDesktopView('chrome')} aria-pressed={chromeMode}
+            className={'inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-xs ' + (chromeMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
+            <Globe className="size-4" /> Full Chrome
+          </button>
+        </div>
+        <span className="hidden text-xs text-muted-foreground sm:inline">{chromeMode ? 'Dedicated browser profile' : 'Sites may restrict embedding'}</span>
+      </div> : null}
+      {tab.srcdoc ? (
         <div className="flex h-10 items-center gap-2 border-b border-border px-3" aria-label="Rendered project preview">
           <span className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium">Preview</span>
           <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{tab.title}</span>
@@ -82,8 +99,8 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         </div>
       ) : (
       <form onSubmit={onSubmit} className="flex items-center gap-1 border-b border-border px-2 py-2">
-        {!desktop ? <AnnotationToggle /> : null}
-        {!desktop ? <Button
+        {!chromeMode ? <AnnotationToggle /> : null}
+        {!chromeMode ? <Button
           type="button"
           size="icon"
           variant="ghost"
@@ -94,7 +111,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         >
           <ArrowLeft className="size-4" />
         </Button> : null}
-        {!desktop ? <Button
+        {!chromeMode ? <Button
           type="button"
           size="icon"
           variant="ghost"
@@ -105,7 +122,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         >
           <ArrowRight className="size-4" />
         </Button> : null}
-        {!desktop ? <Button
+        {!chromeMode ? <Button
           type="button"
           size="icon"
           variant="ghost"
@@ -139,14 +156,14 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
             <Puzzle className="size-4" />
           </Button>
         ) : null}
-        {desktop ? <Button type="submit" size="sm" className="h-11 shrink-0 md:h-8">Open in Chrome</Button> : tab.url ? (
+        {chromeMode ? <Button type="submit" size="sm" className="h-11 shrink-0 md:h-8">Open in Chrome</Button> : tab.url ? (
           <Button
             type="button"
             size="icon"
             variant="ghost"
             className="size-11 shrink-0 md:size-8"
-            aria-label="Open externally"
-            onClick={() => window.open(tab.url, "_blank", "noopener,noreferrer")}
+            aria-label={desktop ? 'Open in full Chrome' : 'Open externally'}
+            onClick={() => desktop ? openChrome(tab.url) : window.open(tab.url, "_blank", "noopener,noreferrer")}
           >
             <ExternalLink className="size-4" />
           </Button>
@@ -154,7 +171,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
       </form>
       )}
 
-      {desktop ? (
+      {chromeMode ? (
         <section className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-auto px-6 py-8 text-center" aria-label="AgentSam Google Chrome browser">
           <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-muted"><Globe className="size-6 text-primary" /></div>
           <div className="max-w-lg">
@@ -196,10 +213,10 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
           <Globe className="mb-3 size-8 text-stone" />
-          <h2 className="text-base font-medium">Live browser</h2>
+          <h2 className="text-base font-medium">Browser preview</h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground text-pretty">
-            Look something up without leaving the lead chat. Preview HTML from Monaco here too.
-            Sites that block embedding can be opened externally.
+            Inspect embeddable pages and preview local HTML without leaving Work.
+            Sites that block embedded frames need an external browser.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {BOOKMARKS.map((item) => (

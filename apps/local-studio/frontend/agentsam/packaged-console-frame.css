@@ -108,3 +108,25 @@ body.console-body-bleed:has([data-agentsam-console-host]) .console-main--bleed {
 }
 #agentsam-host-workspace .agentsam-page-layout { flex: 1 1 0%; min-height: 0; min-width: 0; height: auto; width: 100%; }
 #agentsam-host-workspace .agentsam-workspace { overflow: hidden; }
+
+
+/* The packaged host disables its legacy mobile drawer; AgentSam provides one
+   authenticated Chats drawer through @inneranimalmedia/agentsam-nav instead.
+   The legacy persistent rail's later CSS must not resurrect it at phone widths. */
+@media (max-width: 767px) {
+  #console-app:has(#agentsam-host-workspace) .console-sidenav.admin-sidebar,
+  #console-app:has(#agentsam-host-workspace) .console-nav-ghost-toggle--persistent {
+    display: none !important;
+  }
+  #console-app:has(#agentsam-host-workspace) .console-topbar-spacer {
+    width: 8px !important;
+    min-width: 8px !important;
+    flex: 0 0 8px;
+  }
+  #console-app:has(#agentsam-host-workspace) .console-topbar {
+    padding-inline: 10px !important;
+  }
+}
+
+/* Local Studio navigation owns the one visible search affordance. Global Cmd+K remains available. */
+#console-app .console-topbar .console-search-wrap { display:none; }

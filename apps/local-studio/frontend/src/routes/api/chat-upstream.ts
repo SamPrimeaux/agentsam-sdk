@@ -47,7 +47,10 @@ export function translateStudioChatUpstreamBody(
   const id = String(provider || "").trim().toLowerCase();
   if (id !== "openai") return body;
 
-  const { max_tokens, ...rest } = body;
+  // The Studio has no capability-validated sampling overrides. Strip legacy
+  // shared temperature/top_p presets rather than sending unsupported 0.6 to
+  // reasoning models, which may accept only the provider default.
+  const { max_tokens, temperature: _legacyTemperature, top_p: _legacyTopP, ...rest } = body;
   if (typeof max_tokens !== "number" || !Number.isFinite(max_tokens)) {
     return rest as StudioChatUpstreamBody;
   }

@@ -4,6 +4,7 @@
  * No local-only theme project table or parallel theme database is introduced.
  */
 import { validateThemeProject } from "../../frontend/theme-editor/project.mjs";
+import { validateThemeSettings } from "./theme-style-contract.mjs";
 import { fillMissingThemeChrome } from "../../frontend/theme-editor/starter-chrome.mjs";
 import { readR2Json, writeR2Json } from "./r2-store.js";
 import { resolveCmsSite } from "./site-context.mjs";
@@ -45,6 +46,10 @@ function hashText(value) {
 
 export function validateThemeProjectPayload(value) {
   const project = validateThemeProject(value);
+  // Installed theme controls share the site CMS validation contract before
+  // storing a new immutable project revision. UI validation is not a gate.
+  if (project.themeSettings !== undefined && !validateThemeSettings(project.themeSettings).ok)
+    throw new Error("theme_project_settings_invalid");
   if (!SAFE_ID.test(String(project.id)) || ["__proto__", "constructor", "prototype"].includes(String(project.id))) {
     throw new Error("theme_project_id_invalid");
   }

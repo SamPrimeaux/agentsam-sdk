@@ -78,7 +78,7 @@ test('parent destinations navigate directly while a separate button controls the
 });
 
 
-test('navigation keeps one Projects disclosure, pinned resources, and recent chats with View all at the bottom', () => {
+test('navigation separates pinned, projects, and unfiled recent conversations', () => {
   const value = {
     destinations:[{id:'projects',label:'Projects',href:'/admin/projects',icon:React.createElement('span',null,'Project'),children:[{id:'project-a',label:'Project A',href:'/admin/projects/project-a'}]}],
     projects:[{id:'project-a',name:'Pinned project',pinned:true}],
@@ -86,15 +86,41 @@ test('navigation keeps one Projects disclosure, pinned resources, and recent cha
     onNavigate:()=>{},showHistory:true,
   };
   const html=renderToString(React.createElement(Nav.Provider,{value,defaultOpen:true},React.createElement(Nav.Sidenav)));
-  const recent=html.slice(html.indexOf('aria-label="Chats and tasks"'));
   assert.match(html,/Expand Projects/);
   assert.match(html,/aria-label="Pinned"/);
-  assert.ok(recent.indexOf('title="Newer"')<recent.indexOf('title="Older"'));
-  assert.doesNotMatch(recent,/title="Important"/);
-  assert.match(html,/Filter projects and conversations/);
+  assert.match(html,/aria-label="Projects"/);
+  assert.match(html,/aria-label="Recents"/);
+  // A project-linked conversation is no longer repeated in the unfiled Recents.
+  assert.doesNotMatch(html,/title="Older"/);
+  assert.doesNotMatch(html,/title="Important"/);
+  assert.match(html,/Search projects and conversations/);
   assert.match(html,/View all/);
 });
 
+test('active project expands to show live conversations, without duplicating them in Recents', () => {
+  const value = {
+    projects:[{id:'project-a',name:'Project A'}],
+    conversations:[{id:'older',title:'Older',projectId:'project-a',updatedAt:10},{id:'newer',title:'Newer',projectId:'project-a',updatedAt:20}],
+    conversation:{id:'older',title:'Older',projectId:'project-a'},
+  };
+  const html=renderToString(React.createElement(Nav.Provider,{value,defaultOpen:true},React.createElement(Nav.Sidenav)));
+  const project=html.slice(html.indexOf('aria-label="Project A conversations"'));
+  assert.match(html,/aria-label="Expand Project A conversations"|aria-label="Collapse Project A conversations"/);
+  assert.match(project,/title="Newer"/);
+  assert.match(project,/title="Older"/);
+  assert.ok(project.indexOf('title="Newer"') < project.indexOf('title="Older"'));
+  assert.equal((html.match(/title="Older"/g)||[]).length,1);
+});
+
+test('active installed app identity is host-owned and Chat / Work remains a task mode', () => {
+  const value = { brand:{name:'CAD Creator',icon:React.createElement('span',{'data-app-icon':'cad'},'CAD')}, mode:'work', onModeChange:()=>{} };
+  const html=renderToString(React.createElement(Nav.Provider,{value,defaultOpen:true},React.createElement(Nav.Sidenav),React.createElement(Nav.ModeSwitcher)));
+  assert.match(html,/CAD Creator/);
+  assert.match(html,/data-app-icon="cad"/);
+  assert.match(html,/aria-label="Conversation mode"/);
+  assert.match(html,/aria-pressed="true">Work/);
+  assert.doesNotMatch(html,/Switch application environment/);
+});
 
 test('shared Apps navigation exposes a host-owned add action on desktop and mobile', () => {
   const html = renderToString(React.createElement(Nav.Provider, {value: {

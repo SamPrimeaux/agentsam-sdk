@@ -13,6 +13,8 @@ export function createThemeEditorBridge(adapter) {
     capabilities: adapter.capabilities || {},
     getRegistry: () => invoke('getRegistry'),
     getThemeIdentity: () => typeof adapter.getThemeIdentity === 'function' ? adapter.getThemeIdentity() : Promise.resolve(null),
+    getThemeSettings: () => typeof adapter.getThemeSettings === 'function' ? adapter.getThemeSettings() : null,
+    updateThemeSettings: (settings) => invoke('updateThemeSettings', settings),
     resolvePreview: (slug, draft) => invoke('resolvePreview', slug, draft),
     uploadMedia: async (files) => new Response(JSON.stringify({ assets: await invoke('uploadMedia', files) }), { headers: { 'content-type': 'application/json' } }),
     async request(path, options = {}) {

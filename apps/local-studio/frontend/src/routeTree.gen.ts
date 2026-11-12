@@ -25,6 +25,8 @@ import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
 import { Route as appsDocsRouteImport } from './routes/(apps)/docs'
 import { Route as appsFilesRouteImport } from './routes/(apps)/files'
 import { Route as appsGoalguruRouteImport } from './routes/(apps)/goalguru'
+import { Route as appsIdeasRouteImport } from './routes/(apps)/ideas'
+import { Route as appsLibraryRouteImport } from './routes/(apps)/library'
 import { Route as appsMailRouteImport } from './routes/(apps)/mail'
 import { Route as appsMediaRouteImport } from './routes/(apps)/media'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
@@ -151,6 +153,16 @@ const appsFilesRoute = appsFilesRouteImport.update({
 const appsGoalguruRoute = appsGoalguruRouteImport.update({
   id: '/(apps)/goalguru',
   path: '/goalguru',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsIdeasRoute = appsIdeasRouteImport.update({
+  id: '/(apps)/ideas',
+  path: '/ideas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsLibraryRoute = appsLibraryRouteImport.update({
+  id: '/(apps)/library',
+  path: '/library',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsMailRoute = appsMailRouteImport.update({
@@ -411,6 +423,8 @@ export interface FileRoutesByFullPath {
   '/docs': typeof appsDocsRoute
   '/files': typeof appsFilesRoute
   '/goalguru': typeof appsGoalguruRoute
+  '/ideas': typeof appsIdeasRoute
+  '/library': typeof appsLibraryRoute
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
   '/projects': typeof appsProjectsRouteWithChildren
@@ -475,6 +489,8 @@ export interface FileRoutesByTo {
   '/docs': typeof appsDocsRoute
   '/files': typeof appsFilesRoute
   '/goalguru': typeof appsGoalguruRoute
+  '/ideas': typeof appsIdeasRoute
+  '/library': typeof appsLibraryRoute
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
   '/samsketch': typeof appsSamsketchRoute
@@ -537,6 +553,8 @@ export interface FileRoutesById {
   '/(apps)/docs': typeof appsDocsRoute
   '/(apps)/files': typeof appsFilesRoute
   '/(apps)/goalguru': typeof appsGoalguruRoute
+  '/(apps)/ideas': typeof appsIdeasRoute
+  '/(apps)/library': typeof appsLibraryRoute
   '/(apps)/mail': typeof appsMailRoute
   '/(apps)/media': typeof appsMediaRouteWithChildren
   '/(apps)/projects': typeof appsProjectsRouteWithChildren
@@ -604,6 +622,8 @@ export interface FileRouteTypes {
     | '/docs'
     | '/files'
     | '/goalguru'
+    | '/ideas'
+    | '/library'
     | '/mail'
     | '/media'
     | '/projects'
@@ -668,6 +688,8 @@ export interface FileRouteTypes {
     | '/docs'
     | '/files'
     | '/goalguru'
+    | '/ideas'
+    | '/library'
     | '/mail'
     | '/media'
     | '/samsketch'
@@ -729,6 +751,8 @@ export interface FileRouteTypes {
     | '/(apps)/docs'
     | '/(apps)/files'
     | '/(apps)/goalguru'
+    | '/(apps)/ideas'
+    | '/(apps)/library'
     | '/(apps)/mail'
     | '/(apps)/media'
     | '/(apps)/projects'
@@ -795,6 +819,8 @@ export interface RootRouteChildren {
   appsDocsRoute: typeof appsDocsRoute
   appsFilesRoute: typeof appsFilesRoute
   appsGoalguruRoute: typeof appsGoalguruRoute
+  appsIdeasRoute: typeof appsIdeasRoute
+  appsLibraryRoute: typeof appsLibraryRoute
   appsMailRoute: typeof appsMailRoute
   appsMediaRoute: typeof appsMediaRouteWithChildren
   appsProjectsRoute: typeof appsProjectsRouteWithChildren
@@ -935,6 +961,20 @@ declare module '@tanstack/react-router' {
       path: '/goalguru'
       fullPath: '/goalguru'
       preLoaderRoute: typeof appsGoalguruRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/ideas': {
+      id: '/(apps)/ideas'
+      path: '/ideas'
+      fullPath: '/ideas'
+      preLoaderRoute: typeof appsIdeasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/library': {
+      id: '/(apps)/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof appsLibraryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/mail': {
@@ -1405,6 +1445,8 @@ const rootRouteChildren: RootRouteChildren = {
   appsDocsRoute: appsDocsRoute,
   appsFilesRoute: appsFilesRoute,
   appsGoalguruRoute: appsGoalguruRoute,
+  appsIdeasRoute: appsIdeasRoute,
+  appsLibraryRoute: appsLibraryRoute,
   appsMailRoute: appsMailRoute,
   appsMediaRoute: appsMediaRouteWithChildren,
   appsProjectsRoute: appsProjectsRouteWithChildren,
