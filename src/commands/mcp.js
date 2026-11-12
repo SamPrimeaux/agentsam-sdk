@@ -12,6 +12,7 @@ import {
   listRegisteredClients,
   pingMcpServer,
   readMcpServer,
+  recordToolReceipt,
   removeServerFromClient,
   resolveServerPreset,
   scopesForCloudflareMcpBundle,
@@ -630,6 +631,16 @@ export async function runMcp(argv = [], options = {}) {
     // An explicit CLI call is required. No browser automation runs on install
     // or from untrusted catalog metadata.
     const result = await (options.callMcpToolImpl || callMcpTool)(resource.server, args.toolName, payload, options);
+    // Store bounded metadata only. Never persist page text, screenshots,
+    // Browser MCP pairing secrets or raw browser commands in telemetry.
+    recordToolReceipt({
+      tool_key: `mcp:${target}:${args.toolName}`,
+      source_client: 'agentsam',
+      status: result.ok ? 'success' : 'failure',
+      duration_ms: result.latencyMs || 0,
+      error_code: result.ok ? null : 'mcp_tool_execution_failed',
+      failure_origin: result.ok ? null : 'tool',
+    }, options);
     if (args.json) write(JSON.stringify(result, null, 2) + '\n');
     else write(result.ok ? JSON.stringify(result.result, null, 2) + '\n' : `  MCP tool failed: ${result.error}\n`);
     return result;
