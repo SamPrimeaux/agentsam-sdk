@@ -108,7 +108,7 @@ function settingsModel(
     source,
     selected,
     verifiedAt,
-    reasoningEfforts: verifiedModelControls(model).reasoning_efforts,
+    reasoningEfforts: verifiedModelControls({ ...model, model_key: model.model_key ?? undefined }).reasoning_efforts,
   };
 }
 
