@@ -438,3 +438,79 @@ test('default Cloudflare media path with unbound IAM_API never falls back to IAM
     /cloudflare|oauth|authorization|credential|token|media_list/i,
   );
 });
+
+test('Cloudflare Images metadata editing uses the existing OAuth PATCH and preserves original bytes', async () => {
+  const operations = [];
+  const env = {
+    __agentsamTestCfClient: {
+      accountId: 'account_owned',
+      requireAccount() {},
+      accountPath(suffix) { return '/accounts/account_owned' + suffix; },
+      async request(method, path, opts) {
+        operations.push({ method, path, opts });
+        if (method === 'GET') return {
+          result: {
+            id: 'brand_asset', filename: 'original.png', size: 734,
+            variants: ['https://imagedelivery.net/test/brand_asset/public'],
+            meta: { campaign: 'keep-me' },
+          },
+        };
+        if (method === 'PATCH') return {
+          result: {
+            id: 'brand_asset', filename: 'original.png', size: 734,
+            variants: ['https://imagedelivery.net/test/brand_asset/public'],
+            meta: opts.body.metadata,
+          },
+        };
+        throw new Error('unexpected_provider_operation');
+      },
+    },
+  };
+  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media/brand_asset?provider=cloudflare', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ alt_text: 'Accessible description', folder: 'campaigns' }),
+  }), env, principal);
+  const result = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(result.asset.meta.alt_text, 'Accessible description');
+  assert.equal(result.asset.meta.folder, 'campaigns');
+  assert.equal(result.asset.filename, 'original.png');
+  assert.equal(result.asset.size_bytes, 734);
+  assert.deepEqual(operations.map(({ method }) => method), ['GET', 'PATCH']);
+  assert.equal(operations[1].opts.body.metadata.campaign, 'keep-me');
+  assert.equal(operations[1].opts.body.metadata.alt_text, 'Accessible description');
+});
+
+test('R2 upload creates collision-resistant object keys without changing existing objects', async () => {
+  const keys = [];
+  const env = {
+    __agentsamTestCfClient: {
+      accountId: 'account_owned',
+      requireAccount() {},
+      accountPath(path) { return '/accounts/account_owned' + path; },
+      async request(method, path, options) {
+        assert.equal(method, 'PUT');
+        assert.equal(options.capabilityId, 'cloudflare.r2');
+        keys.push(path);
+        return { success: true };
+      },
+    },
+  };
+  const form = new FormData();
+  form.append('files', new File(['a'], 'design.png', { type: 'image/png' }));
+  form.append('files', new File(['b'], 'design.png', { type: 'image/png' }));
+  form.set('r2_bucket', 'my-media');
+  form.set('derivative_role', 'original');
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?provider=cloudflare', { method: 'POST', body: form }), env, principal,
+  );
+  const data = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(data.uploaded_count, 2);
+  assert.equal(keys.length, 2);
+  assert.notEqual(keys[0], keys[1], 'identical filenames must not overwrite one another');
+  assert.ok(keys.every((path) => path.includes('/r2/buckets/my-media/objects/')));
+  assert.ok(keys.every((path) => path.endsWith('/design.png')));
+  assert.ok(data.assets.every((asset) => asset.r2_bucket === 'my-media' && asset.source === 'r2'));
+});

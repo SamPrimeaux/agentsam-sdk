@@ -1,4 +1,5 @@
 import { Box, Check, FileStack, Film, Folder, Images } from "lucide-react";
+import { MediaAssetMenu } from "./MediaAssetMenu";
 import {
   classifyAsset,
   extensionOf,
@@ -39,15 +40,25 @@ export function MediaItems({
   view,
   selected,
   anySelected,
+  inspectingId,
   onOpen,
   onToggle,
+  onEdit,
+  onCopy,
+  onExport,
+  onDelete,
 }: {
   assets: MediaAsset[];
   view: "grid" | "list";
   selected: Set<string>;
   anySelected: boolean;
+  inspectingId?: string | null;
   onOpen: (id: string) => void;
   onToggle: (id: string) => void;
+  onEdit: (asset: MediaAsset) => void;
+  onCopy: (asset: MediaAsset) => void;
+  onExport: (asset: MediaAsset) => void;
+  onDelete: (asset: MediaAsset) => void;
 }) {
   return (
     <ul className={view === "grid" ? "agentsam-media-grid" : "agentsam-media-list"} role="list">
@@ -55,7 +66,7 @@ export function MediaItems({
         const checked = selected.has(asset.id);
         const ext = extensionOf(asset);
         return (
-          <li key={asset.id} className={`agentsam-media-item${checked ? " is-selected" : ""}${anySelected ? " is-selecting" : ""}`}>
+          <li key={asset.id} className={`agentsam-media-item${checked ? " is-selected" : ""}${anySelected ? " is-selecting" : ""}${inspectingId === asset.id ? " is-inspected" : ""}`}>
             <button
               type="button"
               className="agentsam-media-item__check"
@@ -66,6 +77,14 @@ export function MediaItems({
             >
               {checked ? <Check size={13} /> : null}
             </button>
+            <MediaAssetMenu
+              asset={asset}
+              onOpen={(item) => onOpen(item.id)}
+              onEdit={onEdit}
+              onCopy={onCopy}
+              onExport={onExport}
+              onDelete={onDelete}
+            />
             <button type="button" className="agentsam-media-item__open" onClick={() => onOpen(asset.id)}>
               <Thumb asset={asset} />
               <span className="agentsam-media-item__meta">
