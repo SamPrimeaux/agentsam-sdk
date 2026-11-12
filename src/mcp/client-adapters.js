@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getMcpDir, homeDirectory } from './authority.js';
 import { listCloudflareMcpBundles } from './cloudflare-bundles.js';
+import { assertApprovedBrowserMcpStdio } from './browsermcp.js';
 
 export const DEFAULT_CLIENT_REGISTRY_URL = 'https://mcp.inneranimalmedia.com/api/mcp/clients';
 export const CLIENT_REGISTRY_CACHE_SCHEMA = 'agentsam.mcp.client-registry.v1';
@@ -18,6 +19,7 @@ export const CLIENT_REGISTRY_CACHE_SCHEMA = 'agentsam.mcp.client-registry.v1';
  * These are what `agentsam mcp add` / Studio connection pickers should list.
  */
 export const SEED_OFFERABLE_MCP_SERVER_CONNECTIONS = Object.freeze([
+  { connection_key: 'browsermcp', display_name: 'Browser MCP', url: null, protocol: 'stdio', kind: 'local_mcp_server', provider: 'browsermcp', notes: 'Requires the user-hosted Browser MCP extension and local runtime.' },
   {
     connection_key: 'inneranimalmedia',
     display_name: 'Inner Animal Media MCP',
@@ -264,6 +266,12 @@ export function syncServerToClient(clientName, serverName, serverConfig, options
   const configPath = getClientConfigPath(clientName, options);
   const client = clean(clientName).toLowerCase();
 
+  if (serverConfig.protocol === 'stdio') {
+    assertApprovedBrowserMcpStdio({ ...serverConfig, name: serverName });
+    // Hosted ChatGPT connectors cannot launch an executable on the user's Mac.
+    if (client === 'chatgpt') throw new Error('stdio_mcp_requires_local_host');
+  }
+
   if (client === 'chatgpt') {
     const chatgptPayload = {
       schema: 'agentsam.mcp.client-adapter.chatgpt.v1',
@@ -292,10 +300,12 @@ export function syncServerToClient(clientName, serverName, serverConfig, options
     headers.Accept = 'application/json, text/event-stream';
   }
 
-  existing.mcpServers[serverName] = {
-    url: serverConfig.url,
-    ...(Object.keys(headers).length > 0 ? { headers } : {}),
-  };
+  existing.mcpServers[serverName] = serverConfig.protocol === 'stdio'
+    ? { type: 'stdio', command: serverConfig.command, args: [...serverConfig.args] }
+    : {
+        url: serverConfig.url,
+        ...(Object.keys(headers).length > 0 ? { headers } : {}),
+      };
 
   writeJsonAtomic(configPath, existing);
   return { client, configPath, synced: true };
@@ -344,7 +354,10 @@ export function inspectClientAdapter(clientName, serverName, options = {}) {
   }
 
   const existing = readJsonSafe(configPath);
-  const hasServer = Boolean(existing?.mcpServers?.[serverName]);
+  const configured = existing?.mcpServers?.[serverName];
+  const hasServer = serverName === 'browsermcp' && configured?.type === 'stdio'
+    ? (() => { try { assertApprovedBrowserMcpStdio({ name: serverName, protocol: 'stdio', command: configured.command, args: configured.args }); return true; } catch { return false; } })()
+    : Boolean(configured);
   return {
     client: clientName,
     path: configPath,
