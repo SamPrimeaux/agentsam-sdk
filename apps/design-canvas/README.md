@@ -24,3 +24,7 @@ The agentsam.app.v1 manifest is compatible with the Local Studio included-app bu
 - The existing Local Studio native CanvasStage/CanvasInspector remain the separate canonical editor; they are not reimplemented inside this app. The localhost 4176 Native Canvas action opens the existing component while the hosted app is readied for an explicit host bridge.
 - Drafts persist in localStorage and export as portable JSON. This is not server-side, multi-device persistence; the existing authenticated Canvas API is a separate authority.
 - The app remains unpublished until the first-party HTTPS assets are deployed and the account explicitly installs it. Running the local build or including its registration migration does not establish a production installation.
+
+## Distribution and asset rights
+
+The independently versioned AgentSam application source follows the repository's FSL-1.1-MIT licensing policy. Original imported design exports, user-provided screenshots, and upstream vendored React files remain subject to their original owners' applicable rights and licenses. Their inclusion as source-backed examples is not a claim that they are authored by AgentSam, nor that an external browser product is installed.
