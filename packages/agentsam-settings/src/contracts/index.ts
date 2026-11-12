@@ -146,6 +146,24 @@ export type SettingsCatalogItem = {
   /** Account-owned instruction body, not a generated template. */
   content?: string;
   trigger?: string;
+  /** Undefined means the registry has no on/off state for this item. */
+  enabled?: boolean;
+  /** The host refuses edits and deletes for this item. */
+  readOnly?: boolean;
+  /** Rules: when the rule is applied, and the comma-separated file patterns it targets. */
+  applyMode?: string;
+  globs?: string;
+};
+
+/**
+ * What the signed-in account may do in one Customize registry. Reported by
+ * the host from its installed storage, never assumed by the Settings UI.
+ */
+export type SettingsCatalogAccess = {
+  create: boolean;
+  update: boolean;
+  remove: boolean;
+  toggle: boolean;
 };
 
 export type SettingsPlugin = SettingsCatalogItem & {
@@ -367,6 +385,8 @@ export type SettingsSnapshot = {
   rules: SettingsCatalogItem[];
   commands: SettingsCatalogItem[];
   hooks: SettingsCatalogItem[];
+  /** Per-registry permissions from the host; a missing kind is read-only. */
+  catalogAccess?: Partial<Record<SettingsCatalogKind, SettingsCatalogAccess>>;
   cloudAgents: SettingsCatalogItem[];
   themes: SettingsTheme[];
   storage: SettingsStorageTarget[];
@@ -448,6 +468,7 @@ export interface SettingsHost {
   openSettingsUnit?(unit: SettingsUnitId): void;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
   removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;
+  setCatalogItemEnabled?(kind: SettingsCatalogKind, id: string, enabled: boolean): Promise<void>;
   discoverPlugins?(): Promise<SettingsPluginDiscovery>;
   installPluginFromCatalog?(pluginKey: string): Promise<void>;
   removeCatalogPlugin?(pluginId: string): Promise<void>;
