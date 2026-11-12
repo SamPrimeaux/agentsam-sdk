@@ -664,8 +664,16 @@ async function uploadMediaViaOauth(env, ownerId, url, form) {
     }, 400);
   }
 
-  const imagesClient = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.images");
-  if (!imagesClient.ok) return json(imagesClient, imagesClient.status || 401);
+  // R2-only media uploads must not require a separate Images OAuth permission.
+  const needsImages = files.some((file) => {
+    const isModelFile = /\.(glb|gltf|usdz)$/i.test(String(file.name || "")) || String(file.type || "").startsWith("model/");
+    return !preserveOriginal && !isModelFile && String(file.type || "").startsWith("image/");
+  });
+  let imagesClient = null;
+  if (needsImages) {
+    imagesClient = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.images");
+    if (!imagesClient.ok) return json(imagesClient, imagesClient.status || 401);
+  }
   let r2Client = null;
   if (needsR2) {
     r2Client = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.r2");
@@ -682,7 +690,7 @@ async function uploadMediaViaOauth(env, ownerId, url, form) {
     try {
       if (useR2) {
         const prefix = folder ? `${folder.replace(/^\/+|\/+$/g, "")}/` : "";
-        const key = `${prefix}${file.name || "upload.bin"}`;
+        const key = `${prefix}${crypto.randomUUID() + "/" + (file.name || "upload.bin")}`;
         const body = await file.arrayBuffer();
         const uploaded = await uploadCloudflareR2Object(r2Client.client, bucket, key, body, {
           contentType: file.type || "application/octet-stream",

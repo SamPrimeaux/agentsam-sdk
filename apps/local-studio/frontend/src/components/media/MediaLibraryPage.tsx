@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { FolderOpen, Grid2X2, List, Loader2, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { FolderOpen, Grid2X2, List, Loader2, RefreshCw, Search, Trash2, Upload, X } from "lucide-react";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 import { BucketPicker, loadPinnedBuckets, savePinnedBuckets } from "./BucketPicker";
@@ -15,6 +15,7 @@ import {
   matchesSurface,
   mediaConnectUrl,
   previewUrl,
+  canEditMediaMetadata,
   resolveMediaSurface,
   sortAssets,
   toLibraryError,
@@ -47,6 +48,17 @@ function rememberMediaPreference(owner: string, key: "account" | "bucket", value
 
 async function getJson(url: string) {
   const res = await fetch(url, { credentials: "same-origin", headers: { accept: "application/json" } });
+  const body = (await res.json().catch(() => ({}))) as Record<string, any>;
+  return { res, body };
+}
+
+async function getJsonWithPatch(id: string, qs: URLSearchParams, patch: { alt_text: string; folder: string }) {
+  const res = await fetch("/api/admin/media/" + encodeURIComponent(id) + "?" + qs, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { accept: "application/json", "content-type": "application/json" },
+    body: JSON.stringify(patch),
+  });
   const body = (await res.json().catch(() => ({}))) as Record<string, any>;
   return { res, body };
 }
@@ -94,6 +106,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const [localFolders, setLocalFolders] = useState<Array<{ ref: string; name: string }>>([]);
   const [localBusy, setLocalBusy] = useState(false);
   const localUrls = useRef<string[]>([]);
+  const fileUploadRef = useRef<HTMLInputElement>(null);
   const localDirectory = localFolders.at(-1)?.ref || localRoot;
 
   useEffect(() => {
@@ -117,6 +130,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<LibraryError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -135,6 +149,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const [view, setView] = useState<"grid" | "list">("grid");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [viewerId, setViewerId] = useState<string | null>(null);
+  const [viewerIntent, setViewerIntent] = useState<"details" | "edit" | "delete">("details");
   const [confirmBatch, setConfirmBatch] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -402,10 +417,114 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     return failed.length === 0;
   }, [accountQs]);
 
+  const showAsset = (id: string, intent: "details" | "edit" | "delete" = "details") => {
+    setViewerIntent(intent);
+    setViewerId(id);
+  };
+
+  const copyAssetLink = async (asset: MediaAsset) => {
+    const link = previewUrl(asset);
+    if (!link || asset.source === "local" || asset.meta?.require_signed_urls) {
+      setNotice("This asset has no public URL to copy.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(link);
+      setNotice("Copied delivery URL.");
+    } catch {
+      setNotice("Could not copy the URL. Try opening the asset instead.");
+    }
+  };
+
+  const exportAssetPreview = async (asset: MediaAsset) => {
+    const link = previewUrl(asset);
+    if (!link) { setNotice("No downloadable preview is available."); return; }
+    try {
+      const response = await fetch(link, { credentials: "omit" });
+      if (!response.ok || response.headers.get("content-type")?.includes("text/html")) throw new Error("No authorized downloadable preview");
+      if (Number(response.headers.get("content-length") || 0) > 150 * 1024 * 1024) {
+        throw new Error("Use Open for large media files");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = asset.filename || "asset";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      setNotice("Exported the available preview. The original asset is unchanged.");
+    } catch {
+      setNotice("Preview export isn't available for this provider. Open the file instead.");
+    }
+  };
+
+  const saveAssetMetadata = async (asset: MediaAsset, patch: { alt_text: string; folder: string }) => {
+    if (!canEditMediaMetadata(asset)) return false;
+    try {
+      const qs = accountQs("connection_id", new URLSearchParams());
+      const { res, body } = await getJsonWithPatch(asset.id, qs, patch);
+      if (!res.ok || body?.ok === false) throw new Error(String(body?.error || res.status));
+      setAssets((prev) => prev.map((current) => current.id === asset.id
+        ? { ...current, ...body.asset, meta: { ...current.meta, ...body.asset?.meta, ...patch } }
+        : current));
+      setNotice("Cloudflare image metadata saved.");
+      return true;
+    } catch {
+      setNotice("Couldn't save metadata. Nothing was changed.");
+      return false;
+    }
+  };
+
+  const uploadAssets = async (files: FileList | File[] | null) => {
+    if (!files?.length || uploading) return;
+    if (source !== "cf_images" && source !== "r2") {
+      setNotice("Use the provider's dedicated upload workflow for this media type.");
+      return;
+    }
+    if (source === "r2" && !activeBucket) {
+      setNotice("Select the destination R2 bucket before uploading.");
+      return;
+    }
+    const items = Array.from(files);
+    if (source === "cf_images" && items.some((file) => !file.type.startsWith("image/"))) {
+      setNotice("Cloudflare Images accepts image files. Select R2 for other files.");
+      return;
+    }
+    const form = new FormData();
+    items.forEach((file) => form.append("files", file, file.name));
+    if (source === "r2" && activeBucket) {
+      form.set("r2_bucket", activeBucket);
+      form.set("derivative_role", "original");
+    }
+    const qs = accountQs("connection_id", new URLSearchParams({ provider: "cloudflare" }));
+    setUploading(true);
+    try {
+      const res = await fetch("/api/admin/media?" + qs, {
+        method: "POST", credentials: "same-origin", body: form, headers: { accept: "application/json" },
+      });
+      const body = await res.json().catch(() => ({}));
+      const uploaded = Number(body?.uploaded_count || 0);
+      const failed = Number(body?.failed_count || (res.ok ? 0 : items.length));
+      setNotice(uploaded
+        ? "Uploaded " + uploaded + " asset(s)." + (failed ? " " + failed + " failed." : "")
+        : "Upload failed: " + String(body?.message || body?.error || res.status));
+      if (uploaded) setRefreshTick((tick) => tick + 1);
+    } catch {
+      setNotice("Upload failed. No assets have been removed or changed.");
+    } finally {
+      setUploading(false);
+      if (fileUploadRef.current) fileUploadRef.current.value = "";
+    }
+  };
+
   const chooseSource = (next: MediaSource) => {
     if (next === source) return;
     setSource(next);
     setQuery("");
+    setViewerId(null);
+    setViewerIntent("details");
   };
 
   const selectedAssets = visible.filter((a) => selected.has(a.id));
@@ -416,7 +535,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
       setQuery("");
       return;
     }
-    setViewerId(id);
+    showAsset(id);
   };
   const subtitle = surface.kind === "all"
     ? "Browse connected Cloudflare media or your local device—without copying files to the cloud."
@@ -424,7 +543,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const countLabel = total != null ? `${formatCount(total)} total` : `${formatCount(visible.length) ?? 0} shown`;
 
   return (
-    <div className="agentsam-media-library" data-agentsam-media-library={surface.kind}>
+    <div className={viewing ? "agentsam-media-library is-inspecting" : "agentsam-media-library"} data-agentsam-media-library={surface.kind}>
       <header className="agentsam-media-header">
         <div className="agentsam-media-header__titles">
           <h1>{surface.title}</h1>
@@ -457,6 +576,20 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                 return <option key={id} value={id}>{row.accountLabel || id}</option>;
               })}
             </select>
+          ) : null}
+          {(source === "cf_images" || source === "r2") ? (
+            <>
+              <input ref={fileUploadRef} type="file" multiple className="agentsam-media-upload-input"
+                accept={source === "cf_images" ? "image/*" : undefined}
+                aria-label="Select files to upload"
+                onChange={(event) => { void uploadAssets(event.currentTarget.files); }} />
+              <button type="button" className="agentsam-media-btn" disabled={uploading || (source === "r2" && !activeBucket)}
+                title={source === "r2" && !activeBucket ? "Select an R2 bucket first" : "Upload to the selected provider"}
+                onClick={() => fileUploadRef.current?.click()}>
+                {uploading ? <Loader2 size={14} className="agentsam-media-spin" /> : <Upload size={14} />}
+                {uploading ? "Uploading…" : "Upload"}
+              </button>
+            </>
           ) : null}
           <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)} disabled={loading}>
             <RefreshCw size={14} className={loading ? "agentsam-media-spin" : undefined} /> Refresh
@@ -619,8 +752,13 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                   view={view}
                   selected={selected}
                   anySelected={selected.size > 0}
+                  inspectingId={viewerId}
                   onOpen={openMediaItem}
                   onToggle={toggle}
+                  onEdit={(asset) => showAsset(asset.id, "edit")}
+                  onCopy={(asset) => { void copyAssetLink(asset); }}
+                  onExport={(asset) => { void exportAssetPreview(asset); }}
+                  onDelete={(asset) => showAsset(asset.id, "delete")}
                 />
                 {hasMore ? (
                   <div className="agentsam-media-more">
@@ -673,9 +811,12 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
       {viewing ? (
         <MediaViewer
           asset={viewing}
-          onClose={() => setViewerId(null)}
-          onPrev={viewerIndex > 0 ? () => setViewerId(visible[viewerIndex - 1].id) : undefined}
-          onNext={viewerIndex < visible.length - 1 ? () => setViewerId(visible[viewerIndex + 1].id) : undefined}
+          intent={viewerIntent}
+          onClose={() => { setViewerId(null); setViewerIntent("details"); }}
+          onPrev={viewerIndex > 0 ? () => showAsset(visible[viewerIndex - 1].id) : undefined}
+          onNext={viewerIndex < visible.length - 1 ? () => showAsset(visible[viewerIndex + 1].id) : undefined}
+          onSaveMetadata={saveAssetMetadata}
+          onExport={exportAssetPreview}
           onDelete={async (asset) => {
             const ok = await removeAssets([asset]);
             if (ok) setViewerId(null);

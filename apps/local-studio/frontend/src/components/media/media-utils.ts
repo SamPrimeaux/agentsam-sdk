@@ -142,6 +142,15 @@ export function identityLabel(asset: MediaAsset) {
   return asset.id;
 }
 
+/** Exactly the operations backed by the current OAuth media API. */
+export function canEditMediaMetadata(asset: MediaAsset) {
+  return providerOf(asset) === "cf_images";
+}
+
+export function canDeleteMediaAsset(asset: MediaAsset) {
+  return ["cf_images", "r2", "stream"].includes(providerOf(asset));
+}
+
 export function previewUrl(asset: MediaAsset) {
   return asset.thumbnail_url || asset.delivery_url || asset.url || "";
 }
