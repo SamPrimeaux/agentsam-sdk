@@ -333,7 +333,8 @@
     "packages/copro-ui",
     "packages/copro-storage",
     "packages/agentsam-occt",
-    "packages/agentsam-3d-viewer"
+    "packages/agentsam-3d-viewer",
+    "apps/design-canvas"
   ],
   "scripts": {
     "verify:ui-quality": "node --test scripts/ui-quality/*.test.mjs && node scripts/ui-quality/contrast.mjs",

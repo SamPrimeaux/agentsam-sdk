@@ -4,7 +4,7 @@
   "name": "AgentSam Design Canvas",
   "kind": "app",
   "package": "@inneranimalmedia/agentsam-design-canvas",
-  "version": "0.1.0",
+  "version": "2.6.14",
   "entrypoints": {"frontend":"./dist","cli":"./bin/agentsam-design-canvas.mjs"},
   "capabilities": ["design","artboards","source-editing","library","local-drafts"],
   "provides": ["workspace.panel","preview","app.embed"],
