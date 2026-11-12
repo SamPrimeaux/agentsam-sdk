@@ -1,0 +1,40 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "goalguru",
+  "name": "AgentSam GoalGuru",
+  "kind": "app",
+  "display_name": "GoalGuru",
+  "package": "@inneranimalmedia/agentsam-goalguru",
+  "version": "2.6.14",
+  "icon": "target",
+  "category": "productivity",
+  "routes": {
+    "home": "/goalguru"
+  },
+  "surfaces": [
+    "standalone",
+    "side-stage"
+  ],
+  "capabilities": [
+    "goals.manage",
+    "goals.steps",
+    "goals.tickets.link"
+  ],
+  "requires": [
+    "account.authenticated",
+    "goals.api"
+  ],
+  "optional": [
+    "agentsam.work"
+  ],
+  "install": {
+    "supported": true,
+    "selector": "goalguru",
+    "command": "agentsam app install goalguru"
+  },
+  "entrypoints": {
+    "frontend": "./dist/index.js",
+    "manifest": "./agentsam.app.json"
+  },
+  "directory_id_exception": true
+}

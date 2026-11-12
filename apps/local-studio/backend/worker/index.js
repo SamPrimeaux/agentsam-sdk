@@ -56,6 +56,7 @@ import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioRules } from "./studio-rules.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
 import { handleStudioUserPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings } from "./studio-user-preferences.js";
+import { handleStudioLivingPlan } from "./studio-living-plan.js";
 import { handleStudioStorageSettings } from "./studio-storage-settings.js";
 import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
@@ -70,6 +71,7 @@ import {
 import localStudioApp from "../../agentsam.app.json";
 import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
+import goalGuruApp from "../../../../packages/agentsam-goalguru/agentsam.app.json";
 import { handleStudioPlatformProducts } from "./studio-platform-products.js";
 import { handleStudioSitesOverview } from "./studio-sites-overview.js";
 import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
@@ -163,6 +165,7 @@ const INSTALL_APP_TARGETS = buildInstallTargets([
   localStudioApp,
   cadCreatorApp,
   ecommerceApp,
+  goalGuruApp,
 ]);
 
 /**
@@ -1198,10 +1201,15 @@ export default {
         return json({ok:false,error:"companion_settings_unavailable"},503);
       }
     }
-    if(isStudioStorage) {
-      try{return await handleStudioStorageSettings(request,env,await sessionUser());}
-      catch(error){console.warn("studio_storage_settings_error",String(error?.message||error).slice(0,120));
-        return json({ok:false,error:"storage_settings_unavailable"},503);}
+    if (url.pathname === "/api/studio/living-plan" || url.pathname.startsWith("/api/studio/living-plan/")) {
+      try { return await handleStudioLivingPlan(request, env, await sessionUser()); }
+      catch (error) { console.warn("studio_living_plan_unavailable", String(error?.message || error).slice(0, 100));
+        return json({ ok: false, error: "living_plan_unavailable" }, 503); }
+    }
+    if (isStudioStorage) {
+      try { return await handleStudioStorageSettings(request, env, await sessionUser()); }
+      catch (error) { console.warn("studio_storage_settings_error", String(error?.message || error).slice(0, 120));
+        return json({ ok: false, error: "storage_settings_unavailable" }, 503); }
     }
     if(isStudioPreferences) {
       try{return await handleStudioUserPreferences(request,env,await sessionUser());}

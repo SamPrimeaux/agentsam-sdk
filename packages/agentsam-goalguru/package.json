@@ -1,0 +1,54 @@
+{
+  "name": "@inneranimalmedia/agentsam-goalguru",
+  "version": "2.6.14",
+  "type": "module",
+  "description": "AgentSam GoalGuru: installable account-owned goals and ticket-linked plans for full-page and Side Stage hosts.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/GoalGuruPanel.d.ts",
+      "import": "./dist/GoalGuruPanel.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./manifest": "./agentsam.app.json",
+    "./theme.css": "./dist/theme.css"
+  },
+  "sideEffects": [
+    "./dist/theme.css"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "files": [
+    "dist",
+    "agentsam.app.json",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "lucide-react": ">=0.400.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "lucide-react": "^0.510.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "FSL-1.1-MIT"
+}
