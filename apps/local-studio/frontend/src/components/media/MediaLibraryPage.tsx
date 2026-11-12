@@ -84,10 +84,10 @@ export function MediaLibraryPage() {
   }
   if (!user) return <RedirectToSignIn />;
 
-  return <MediaLibraryBody key={String(user.id)} surface={surface} accountId={String(user.id)} />;
+  return <MediaLibraryBody key={String(user.id)} surface={surface} accountId={String(user.id)} returnTo={pathname} />;
 }
 
-function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accountId: string }) {
+function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurface; accountId: string; returnTo: string }) {
   const [source, setSource] = useState<MediaSource>(surface.source);
   const localHost = useMemo(() => createLocalStudioContentHostBridge(), []);
   const [localRoot, setLocalRoot] = useState<string | null>(null);
@@ -340,7 +340,7 @@ function MediaLibraryBody({ surface, accountId }: { surface: MediaSurface; accou
 
   const viewerIndex = visible.findIndex((a) => a.id === viewerId);
   const viewing = viewerIndex >= 0 ? visible[viewerIndex] : null;
-  const connectUrl = mediaConnectUrl(resources?.connect_url || resources?.reconnect_url, "/media");
+  const connectUrl = mediaConnectUrl(resources?.connect_url || resources?.reconnect_url, returnTo);
   const notConnected = source !== "local" && (resources?.status === "not_connected" || error?.kind === "reconnect");
 
   const counts = {
