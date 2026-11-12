@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowRight, Code2, Download, ExternalLink, FileCode2, Grid2X2, Hand, LayoutGrid, Maximize2, Minus, MousePointer2, PanelLeftClose, PanelRightClose, Plus, RotateCcw, Save, Search, Upload, X } from 'lucide-react';
 import manifest from '../public/sources/manifest.json';
 import sourceDocuments from './source-documents.generated.json';
@@ -14,6 +14,10 @@ const persistKey = 'iam.design-canvas.app.v1';
 function readDrafts():Record<string,Draft>{try{return JSON.parse(localStorage.getItem(persistKey)||'{}')||{};}catch{return {};}}
 function download(name:string,body:string,type:string){const blob=new Blob([body],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
 function safeFile(name:string){return name.replace(/[^a-z0-9_.-]+/gi,'-');}
+/** Keyboard- and focus-visible explanations for icon-only controls. */
+function Tooltip({label,children}:{label:string;children:ReactNode}){
+ return <span className="dca-help-wrap">{children}<span className="dca-help-tip" role="tooltip">{label}</span></span>;
+}
 export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
  const [group,setGroup]=useState(groups[0]);
  const [family,setFamily]=useState<'all'|'agentsam'|'onboarding'|'onboarding-exports'|'media'|'reference'>('all');
@@ -41,6 +45,12 @@ export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
  const active=boards.find(b=>b.id===selected)||visible[0];
  const shown=focus&&active?[active]:visible;
  const base=assetsBase.replace(/\/$/,'');
+ useEffect(()=>{
+  const query=window.matchMedia('(max-width: 840px)');
+  const adapt=()=>{setLeft(!query.matches);setRight(!query.matches);};
+  query.addEventListener('change',adapt);
+  return()=>query.removeEventListener('change',adapt);
+ },[]);
  const currentDraft=active?drafts[active.id]:undefined;
  useEffect(()=>{if(!persistent)return;try{localStorage.setItem(persistKey,JSON.stringify(drafts));}catch{setMessage('Storage unavailable. Export your edited source to preserve it.');}},[drafts,persistent]);
  useEffect(()=>{if(!persistent)return;try{localStorage.setItem(persistKey+'.notes',JSON.stringify(notes));}catch{}},[notes,persistent]);
@@ -104,23 +114,23 @@ export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
   </header>
   <div className="dca-toolbar">
    <div className="dca-route">
-    {!left?<button aria-label="Show pages" onClick={()=>setLeft(true)}><PanelLeftClose size={16}/></button>:null}
+    {!left?<Tooltip label="Show pages"><button aria-label="Show pages" onClick={()=>setLeft(true)}><PanelLeftClose size={16}/></button></Tooltip>:null}
     <span>Projects</span><span className="dca-route-divider">/</span><b>{group}</b><span className="dca-counter">{visible.length} of {count}</span>
    </div>
    <div className="dca-tools">
-    <button aria-label="Zoom out" onClick={()=>zoomBy(-.1)}><Minus size={15}/></button>
+    <Tooltip label="Zoom out"><button aria-label="Zoom out" onClick={()=>zoomBy(-.1)}><Minus size={15}/></button></Tooltip>
     <span className="dca-zoom-label">{Math.round(zoom*100)}%</span>
-    <button aria-label="Zoom in" onClick={()=>zoomBy(.1)}><Plus size={15}/></button>
-    <button title="Reset zoom and framing" onClick={()=>{setZoom(.48);setFocus(false);setInteract(false);}}><Maximize2 size={15}/></button>
+    <Tooltip label="Zoom in"><button aria-label="Zoom in" onClick={()=>zoomBy(.1)}><Plus size={15}/></button></Tooltip>
+    <Tooltip label="Reset zoom and framing"><button aria-label="Reset zoom and framing" title="Reset zoom and framing" onClick={()=>{setZoom(.48);setFocus(false);setInteract(false);}}><Maximize2 size={15}/></button></Tooltip>
     <span className="dca-toolbar-divider"/>
     <button aria-pressed={focus} title="Focus selected artboard" onClick={()=>{setFocus(v=>!v);setInteract(false);}}><Grid2X2 size={15}/>{focus?'All boards':'Focus'}</button>
     <button aria-pressed={interact} title="Interact with the selected source document" onClick={()=>{setInteract(v=>!v);setFocus(true);}}><MousePointer2 size={15}/>{interact?'Edit layout':'Interact'}</button>
-    {!right?<button aria-label="Show inspector" onClick={()=>setRight(true)}><PanelRightClose size={16}/></button>:null}
+    {!right?<Tooltip label="Show inspector"><button aria-label="Show inspector" onClick={()=>setRight(true)}><PanelRightClose size={16}/></button></Tooltip>:null}
    </div>
   </div>
   <div className="dca-main">
    {left?<aside className="dca-sidebar" aria-label="Design canvas pages">
-     <div className="dca-pane-heading"><b>Scenes</b><button onClick={()=>setLeft(false)} aria-label="Hide scenes"><PanelLeftClose size={16}/></button></div>
+     <div className="dca-pane-heading"><b>Scenes</b><Tooltip label="Hide scenes"><button onClick={()=>setLeft(false)} aria-label="Hide scenes"><PanelLeftClose size={16}/></button></Tooltip></div>
      <nav className="dca-scenes">{groups.map(name=><button key={name} aria-current={name===group?'page':undefined} onClick={()=>{setGroup(name);setQuery('');}}><span>{name}</span><small>{boards.filter(b=>b.category===name).length}</small></button>)}</nav>
      <div className="dca-pane-heading"><b>Artboards</b><small>{visible.length}</small></div>
      <div className="dca-search"><Search size={14}/><input aria-label="Search artboards" placeholder="Find a screen..." value={query} onChange={e=>setQuery(e.target.value)}/></div>
@@ -134,21 +144,21 @@ export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
       {shown.length===0?<div className="dca-empty">No artboards match this view.</div>:null}
       {shown.map((b,i)=>{
        const selectedBoard=active?.id===b.id;
-       return <article className={'dca-board'+(selectedBoard?' selected':'')} key={b.id} style={{width:b.width*zoom+4}}>
+       return <article className={'dca-board'+(selectedBoard?' selected':'')} key={b.id} style={{'--dca-board-width':(b.width*zoom+4)+'px'} as CSSProperties}>
         <div className="dca-board-head"><span>{String(i+1).padStart(2,'0')} / {b.title}</span><span>{b.width} × {b.height}</span></div>
-        <div className="dca-frame-wrap" style={{width:b.width*zoom,height:b.height*zoom}}>
-         <iframe title={b.title} srcDoc={srcDoc(b)} loading={focus?'eager':'lazy'} sandbox="allow-scripts allow-forms" referrerPolicy="no-referrer" style={{width:b.width,height:b.height,transform:'scale('+zoom+')',transformOrigin:'top left',pointerEvents:interact&&selectedBoard?'auto':'none'}}/>
+        <div className="dca-frame-wrap" style={{'--dca-frame-width':b.width*zoom+'px','--dca-frame-height':b.height*zoom+'px'} as CSSProperties}>
+         <iframe title={b.title} srcDoc={srcDoc(b)} loading={focus?'eager':'lazy'} sandbox="allow-scripts allow-forms" referrerPolicy="no-referrer" className="dca-source-iframe" style={{'--dca-natural-width':b.width+'px','--dca-natural-height':b.height+'px','--dca-scale':String(zoom),'--dca-events':interact&&selectedBoard?'auto':'none'} as CSSProperties}/>
          {!(interact&&selectedBoard)?<button className="dca-frame-select" aria-label={'Open '+b.title} onClick={()=>select(b)}><span>Open artboard <ArrowRight size={13}/></span></button>:null}
         </div>
        </article>;
       })}
      </div>
     </div>
-    <div className="dca-floating-tools"><button aria-pressed={!panning} onClick={()=>setPanning(false)} title="Select"><MousePointer2 size={16}/></button><button aria-pressed={panning} onClick={()=>setPanning(true)} title="Pan with pointer"><Hand size={16}/></button><button onClick={()=>{setZoom(.48);setFocus(false);}} title="Fit all artboards"><Maximize2 size={16}/></button></div>
+    <div className="dca-floating-tools"><Tooltip label="Select"><button aria-label="Select" aria-pressed={!panning} onClick={()=>setPanning(false)} title="Select"><MousePointer2 size={16}/></button></Tooltip><Tooltip label="Pan with pointer"><button aria-label="Pan with pointer" aria-pressed={panning} onClick={()=>setPanning(true)} title="Pan with pointer"><Hand size={16}/></button></Tooltip><Tooltip label="Fit all artboards"><button aria-label="Fit all artboards" onClick={()=>{setZoom(.48);setFocus(false);}} title="Fit all artboards"><Maximize2 size={16}/></button></Tooltip></div>
     <div className="dca-footer"><span>Source-owned HTML artboards · no publishing to a storefront</span><span>{focus?'Focused artboard':'Scene board'}</span></div>
    </section>
    {right?<aside className="dca-inspector" aria-label="Artboard inspector">
-      <div className="dca-pane-heading"><b>Inspector</b><button aria-label="Hide inspector" onClick={()=>setRight(false)}><PanelRightClose size={16}/></button></div>
+      <div className="dca-pane-heading"><b>Inspector</b><Tooltip label="Hide inspector"><button aria-label="Hide inspector" onClick={()=>setRight(false)}><PanelRightClose size={16}/></button></Tooltip></div>
       <div className="dca-inspector-tabs">{(['details','source','notes'] as const).map(tab=><button key={tab} aria-current={inspector===tab?'page':undefined} onClick={()=>setInspector(tab)}>{tab}</button>)}</div>
       {!active?<div className="dca-inspector-body">Select an artboard.</div>:inspector==='details'?<div className="dca-inspector-body">
         <h3>{active.title}</h3><p className="dca-muted">{active.family==='reference'?'A source reference image, not an active browser session.':active.family==='media'?'Original media exports, not a simulated application.':'An authored interactive source document, not a screenshot or fabricated production route.'}</p>
@@ -164,6 +174,6 @@ export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
        </div>:<div className="dca-inspector-body"><label className="dca-note-label" htmlFor="dca-note">Review notes</label><textarea id="dca-note" className="dca-notes" placeholder="Record acceptance criteria, changes, or decisions" value={notes[active.id]||''} onChange={e=>setNotes(n=>({...n,[active.id]:e.target.value}))}/><p className="dca-muted">Notes are included in the exported edit bundle.</p></div>}
      </aside>:null}
   </div>
-  {message?<div className="dca-message" role="status">{message}<button aria-label="Dismiss notification" onClick={()=>setMessage('')}><X size={14}/></button></div>:null}
+  {message?<div className="dca-message" role="status">{message}<Tooltip label="Dismiss notification"><button aria-label="Dismiss notification" onClick={()=>setMessage('')}><X size={14}/></button></Tooltip></div>:null}
  </div>;
 }
