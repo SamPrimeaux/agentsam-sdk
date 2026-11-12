@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { MessageSquarePlus, MoreHorizontal, Pin, Target, Settings, Folder, Layers, Plug, SquareTerminal, Globe, Users, MonitorPlay, FileCode } from 'lucide-react';
+import { MessageSquarePlus } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { IconAction } from '@/components/ui/icon-action';
@@ -60,47 +60,14 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const companionArt = companionStateAsset(companion, streaming ? 'working' : 'idle');
   const workSurface = state.workSurface;
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
-  const showLivingGoals = () => {
-    state.openSideTab('goal', { ephemeral: false });
-    state.setSideOpen(true);
-  };
-  const openWorkTool = (kind: "chat" | "browser" | "files" | "artifacts" | "terminal") => {
-    state.openSideTab(kind, { ephemeral: false });
-    state.setSideOpen(true);
-  };
-  const menuActions = [
-    ...(data.conversationActions ?? []),
-    { id: 'pin-current', label: chat.pinned ? 'Unpin conversation' : 'Pin conversation', icon: <Pin size={16}/>,
-      onSelect: () => data.onPinConversation?.(chat.id) },
-    { id: 'living-goals', label: 'AgentSam GoalGuru', icon: <Target size={16}/>, onSelect: showLivingGoals, separatorBefore: true },
-    ...(data.projects?.length ? [{ id: 'assign-project', label: 'Add to project', icon: <Folder size={16}/>,
-      children: [
-        { id: 'project-none', label: 'No project', icon: <Folder size={16}/>,
-          onSelect: () => data.onAssignConversationToProject?.(chat.id, null) },
-        ...data.projects.map(project => ({ id: 'project-' + project.id, label: project.name,
-          icon: <Folder size={16}/>, onSelect: () => data.onAssignConversationToProject?.(chat.id, project.id) })),
-      ] }] : []),
-    { id: 'work-tools', label: 'Work tools', icon: <Layers size={16}/>, children: [
-      { id: 'co-worker', label: 'Co-worker', icon: <Users size={16}/>, onSelect: () => openWorkTool('chat') },
-      { id: 'browser', label: 'Browser', icon: <Globe size={16}/>, onSelect: () => openWorkTool('browser') },
-      { id: 'files-work', label: 'Files', icon: <Folder size={16}/>, onSelect: () => state.setWorkSurface('files') },
-      { id: 'code-work', label: 'Code', icon: <FileCode size={16}/>, onSelect: () => state.setWorkSurface('code') },
-      { id: 'terminal-work', label: 'Terminal', icon: <SquareTerminal size={16}/>, onSelect: () => state.setWorkSurface('terminal') },
-      { id: 'preview-work', label: 'Preview', icon: <MonitorPlay size={16}/>, onSelect: () => state.setWorkSurface('preview') },
-      { id: 'artifacts-work', label: 'Artifacts', icon: <Layers size={16}/>, onSelect: () => openWorkTool('artifacts') },
-    ] },
-    { id: 'plugins', label: 'Manage plugins', icon: <Plug size={16}/>,
-      onSelect: () => void navigate({ to: '/settings/integrations' as never }) },
-    { id: 'settings', label: 'Settings', icon: <Settings size={16}/>,
-      onSelect: () => void navigate({ to: '/settings/general' as never }), separatorBefore: true },
-  ];
+  // The host supplies one typed conversation action list. Both header placements consume it.
   const headerActions = <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
     <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}>
       <MessageSquarePlus size={20} aria-hidden="true" />
     </IconAction>
-    <Nav.OverflowMenu label="Conversation options" actions={menuActions}>
-      <MoreHorizontal size={22} aria-hidden="true"/>
-    </Nav.OverflowMenu>
+    <Nav.ConversationActions />
+    <Nav.ShareButton />
+    <Nav.PinnedSummary />
   </div>;
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
     {hostModeSlot && empty ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
@@ -110,7 +77,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       {empty ? <div className="agentsam-topbar-mode"><Nav.ModeSwitcher /></div>
         : <span className="agentsam-topbar-thread-title" title={chat.title}>{chat.title}</span>}
       <span className="flex-1" aria-hidden="true" />
-      {headerActions}
+      {!hostActionsSlot ? headerActions : null}
     </Nav.Topbar> : null}
     <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "")}>
       {hostModeSlot && empty && data.mode !== 'work' ? <div className="agentsam-context-tools" aria-label="Conversation tools"><AnnotationToggle /><SidePanelToggle /></div> : null}

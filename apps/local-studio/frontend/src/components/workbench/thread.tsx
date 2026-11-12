@@ -110,7 +110,7 @@ function MessageBubble({
 
   if (message.role === "user") {
     return (
-      <div className="flex justify-end">
+      <div className="flex justify-end" data-chat-message-id={message.id} tabIndex={-1}>
         <div className="max-w-[min(100%,40rem)] rounded-2xl bg-accent px-4 py-3 text-sm leading-relaxed text-accent-foreground">
           {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
             <div className="mb-3 grid max-w-[min(100%,38rem)] grid-cols-2 gap-2 sm:grid-cols-3">

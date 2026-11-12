@@ -10,7 +10,7 @@ import {
   writeStudioAppearanceCache,
   clearStudioAppearanceCache,
 } from '../../shared/shell-appearance.mjs';
-import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
+import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp, Target, Plug, SquareTerminal, MonitorPlay, FileCode } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -513,6 +513,16 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         }).catch(()=>toast.error('Could not rename conversation.'));
       } else state.renameChat(id,title);
     },
+    onArchiveConversation: accountChats.some(item => item.id === chat?.id) ? (id) => {
+      void patchAccountChat(id, { state: 'archived' })
+        .then(() => {
+          if (state.chats.some(item => item.id === id)) state.deleteChat(id);
+          setChatRevision(value => value + 1);
+          toast.success('Conversation archived');
+          go('/chats');
+        })
+        .catch(() => toast.error('Could not archive conversation.'));
+    } : undefined,
     onDeleteConversation: (id) => {
       const chat=accountChats.find(item=>item.id===id);
       if(chat) {
@@ -552,9 +562,19 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'files', label: 'Project files', icon: <Files />, onSelect: () => state.openSideTab('files') },
     ],
     conversationActions: chat ? [
-      ...(shareableChat ? [{ id: 'share', label: 'Create a public link', icon: <NavShareIcon />, onSelect: () => setSharing(true) }] : []),
-      { id: 'files', label: 'View files in conversation', icon: <Files />, onSelect: () => state.openSideTab('files') },
-      { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
+      { id: 'plugins', label: 'Plugins', icon: <Plug />, onSelect: () => go('/settings/integrations') },
+      { id: 'files', label: 'View files in conversation', icon: <Files />, separatorBefore: true, onSelect: () => { state.openSideTab('files'); state.setSideOpen(true); } },
+      { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
+      { id: 'living-goals', label: 'AgentSam GoalGuru', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
+      { id: 'work-tools', label: 'Work tools', icon: <Layers3 />, children: [
+        { id: 'co-worker', label: 'Co-worker', icon: <Users />, onSelect: () => { state.openSideTab('chat', { ephemeral: false }); state.setSideOpen(true); } },
+        { id: 'browser', label: 'Browser', icon: <Globe />, onSelect: () => { state.openSideTab('browser', { ephemeral: false }); state.setSideOpen(true); } },
+        { id: 'files-work', label: 'Files', icon: <Folder />, onSelect: () => state.setWorkSurface('files') },
+        { id: 'code-work', label: 'Code', icon: <FileCode />, onSelect: () => state.setWorkSurface('code') },
+        { id: 'terminal-work', label: 'Terminal', icon: <SquareTerminal />, onSelect: () => state.setWorkSurface('terminal') },
+        { id: 'preview-work', label: 'Preview', icon: <MonitorPlay />, onSelect: () => state.setWorkSurface('preview') },
+        { id: 'artifacts-work', label: 'Artifacts', icon: <Layers3 />, onSelect: () => { state.openSideTab('artifacts', { ephemeral: false }); state.setSideOpen(true); } },
+      ] },
     ] : [],
     pinnedSummary: chat ? {
       subagents: state.sideTabs.filter(tab => tab.kind === 'chat' && tab.parentChatId === chat.id).map(tab => ({
@@ -568,9 +588,21 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       })),
       sources: chat.messages.flatMap(message => shareAttachmentMetadata(message).map((file, index) => ({
         id: message.id + ':' + index, label: file.name, kind: 'Attachment',
+        onSelect: () => {
+          const source = document.querySelector<HTMLElement>('[data-chat-message-id="' + CSS.escape(message.id) + '"]');
+          if (!source) { toast.error('The source message is not visible in this conversation.'); return; }
+          source.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          source.focus({ preventScroll: true });
+        },
       }))),
-      onAddOutput: () => { state.openSideTab('files'); state.setSideOpen(true); },
-      onAddSource: () => { state.openSideTab('files'); state.setSideOpen(true); },
+      outputActions: [
+        { id: 'open-artifacts', label: 'Open artifacts', icon: <BookOpen />, onSelect: () => { state.openSideTab('artifacts', { ephemeral: false }); state.setSideOpen(true); } },
+        { id: 'edit-site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/sites') },
+      ],
+      sourceActions: [
+        { id: 'browse-files', label: 'Browse files', icon: <Files />, onSelect: () => { state.openSideTab('files', { ephemeral: false }); state.setSideOpen(true); } },
+        { id: 'open-files-library', label: 'Open file library', icon: <Folder />, onSelect: () => go('/files') },
+      ],
     } : undefined,
     resourceActions: [
       { id: 'outputs', label: 'Outputs', icon: <BookOpen />, onSelect: () => state.openSideTab('artifacts') },
