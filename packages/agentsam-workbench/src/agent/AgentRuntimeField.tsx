@@ -78,10 +78,15 @@ export function AgentRuntimeField({
     if (!renderer) return;
 
     renderer.setScene(scene);
+    if (scene.status === 'error') {
+      // Errors are presented by the owning conversation/retry UI. The
+      // background scene must not keep animating or obscuring that recovery.
+      renderer.suspend();
+      return;
+    }
     if (
       scene.status === 'running' ||
-      scene.status === 'waiting' ||
-      scene.status === 'error'
+      scene.status === 'waiting'
     ) {
       renderer.resume();
       return;
@@ -95,10 +100,10 @@ export function AgentRuntimeField({
   }, [scene, preset]);
 
   const active =
-    blocking ||
-    scene.status === 'running' ||
-    scene.status === 'waiting' ||
-    scene.status === 'error';
+    scene.status !== 'error' &&
+    (blocking ||
+      scene.status === 'running' ||
+      scene.status === 'waiting');
 
   return (
     <div
@@ -110,7 +115,7 @@ export function AgentRuntimeField({
         position: 'absolute',
         inset: 0,
         overflow: 'hidden',
-        pointerEvents: blocking ? 'auto' : 'none',
+        pointerEvents: blocking && active ? 'auto' : 'none',
         opacity: active ? 1 : 0,
         transition: 'opacity 500ms ease',
         background: blocking ? preset.palette.canvas : 'transparent',
