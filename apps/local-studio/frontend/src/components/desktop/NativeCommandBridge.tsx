@@ -13,6 +13,7 @@ import {
 import { getTauriInvoke, getTauriWindowLabel, isPackagedDesktop, listenTauriEvent } from "@/lib/desktop/tauri";
 import { navigateApp } from "@/lib/work/navigate";
 import { useWorkStore } from "@/lib/work/store";
+import { openBrowserSideStage } from "@/lib/work/open-browser-side-stage";
 import { applySessionBackground, type TerminalProfileId } from "@/lib/work/terminal-appearance";
 import * as shell from "@/lib/work/terminal-commands";
 
@@ -94,7 +95,10 @@ export function NativeCommandBridge() {
       "app.cache_delete_failed": () => void toast.error("Local cache could not be deleted."),
       "view.toggle_terminal": () => useWorkStore.getState().toggleTerminal(),
       "view.open_terminal": () => shell.ensureTerminalVisible(),
-      "view.open_browser": () => navigateApp("/browse"),
+      "view.open_browser": () => {
+        openBrowserSideStage();
+        if (/^\/(?:admin\/agentsam|agentsam|chats)(?:\/|$)/.test(window.location.pathname)) navigateApp('/admin/home');
+      },
       "shell.new_terminal": () => void shell.shellNewTerminal(),
       "shell.new_tab": () => void shell.shellNewTab(),
       "shell.new_command": shell.shellPromptCommand,

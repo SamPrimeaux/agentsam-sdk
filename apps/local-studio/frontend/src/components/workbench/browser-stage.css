@@ -1,0 +1,53 @@
+/* Work Browser consumes active shell tokens. ABS's public-site palettes are not imported. */
+.as-work-browser-shell .abs-browser {
+  --app-bg: var(--nav-canvas, var(--background));
+  --app-canvas-bg: var(--nav-canvas, var(--background));
+  --app-surface-1: var(--nav-surface, var(--card));
+  --app-surface-2: var(--nav-sidebar, var(--muted));
+  --app-surface-3: var(--nav-surface, var(--muted));
+  --app-text-primary: var(--nav-text, var(--foreground));
+  --app-text-secondary: var(--nav-muted, var(--muted-foreground));
+  --app-text-muted: var(--nav-muted, var(--muted-foreground));
+  --app-border: var(--nav-border, var(--border));
+  --app-border-hover: var(--nav-border, var(--border));
+  --app-border-focus: var(--nav-accent, var(--primary));
+  --app-accent: var(--nav-accent, var(--primary));
+  --app-accent-soft: var(--nav-accent, var(--primary));
+  --app-tab-bg: var(--nav-sidebar, var(--muted));
+  --app-tab-active: var(--nav-selected, var(--card));
+  --app-omnibar-bg: var(--nav-surface, var(--input));
+  --app-omnibar-focus: var(--nav-surface, var(--input));
+  --abs-toolbar-bg: var(--nav-sidebar, var(--background));
+  --abs-stage-bg: var(--nav-canvas, var(--background));
+  --abs-control-hover: var(--nav-hover, transparent);
+  --abs-chrome-highlight: transparent;
+  --app-radius-base: 8px;
+  --app-font-family: inherit;
+  min-height: 0;
+}
+.as-work-browser-shell .abs-windowbar { min-height: 36px; padding: 4px 10px; }
+.as-work-browser-shell .abs-toolbar { padding: 5px 8px; gap: 6px; }
+.as-work-browser-shell .abs-brand-mark { background: var(--app-accent); box-shadow: none; }
+.as-work-browser-shell .abs-brand-name { font-size: 12px; }
+.as-work-browser-shell .abs-mode-switch button { min-height: 28px; }
+.as-work-browser-shell .abs-omnibar { min-width: 0; }
+.as-work-browser-shell .abs-browser-stage { background: var(--abs-stage-bg); }
+.as-work-browser-shell .abs-open-external { display: none; }
+.as-work-browser-status { font-size: 11px; color: var(--app-text-muted); }
+.as-work-browser-actions { display: flex; gap: 4px; }
+.as-work-browser-actions button { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 6px; color: var(--app-text-secondary); }
+.as-work-browser-actions button:hover:not(:disabled) { background: var(--app-surface-3); color: var(--app-text-primary); }
+.as-work-browser-actions button:disabled { opacity: .35; }
+.as-embedded-browser-viewport { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; background: var(--abs-stage-bg); }
+.as-embedded-browser-error { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; color: var(--app-text-primary); text-align: center; background: var(--abs-stage-bg); overflow-wrap: anywhere; }
+.as-browser-no-iframe { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; text-align: center; color: var(--app-text-secondary); }
+.as-browser-no-iframe strong { color: var(--app-text-primary); }
+.as-browser-no-iframe p { max-width: 430px; font-size: 12px; line-height: 1.5; }
+.as-browser-no-iframe button { border: 1px solid var(--app-border); border-radius: 7px; padding: 8px 12px; color: var(--app-text-primary); }
+.as-work-generated-preview { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+@media (max-width: 640px) {
+  .as-work-browser-shell .abs-windowbar { padding: 3px 7px; }
+  .as-work-browser-shell .abs-toolbar { padding: 6px; }
+  .as-work-browser-shell .abs-toolbar .abs-omnibar { flex-basis: 100%; }
+  .as-work-browser-status { display: none; }
+}

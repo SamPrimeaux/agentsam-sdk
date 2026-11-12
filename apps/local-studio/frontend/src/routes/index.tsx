@@ -5,7 +5,7 @@ import "./platform-home.css";
 
 export const Route = createFileRoute("/")({ component: LocalStudioHome });
 
-type Destination = "/cad" | "/samsketch" | "/projects" | "/agentsam" | "/sites" | "/cms" | "/browse" | "/tickets" | "/artifacts" | "/media";
+type Destination = "/cad" | "/samsketch" | "/projects" | "/agentsam" | "/sites" | "/cms" | "/tickets" | "/artifacts" | "/media";
 
 const quick = [
   { to: "/sites" as Destination, label: "Sites & themes", summary: "Edit pages, sections, and published sites.", icon: Globe },
@@ -19,7 +19,6 @@ const installed = [
   { to: "/cad" as Destination, name: "CAD Creator", label: "Modeling & BIM", icon: Box },
   { to: "/samsketch" as Destination, name: "SamSketch", label: "Creative studio", icon: Layers3 },
   { to: "/media" as Destination, name: "Media", label: "Asset library", icon: Film },
-  { to: "/browse" as Destination, name: "Browser", label: "Research", icon: Search },
   { to: "/sites" as Destination, name: "Sites", label: "Website CMS", icon: Globe },
 ];
 

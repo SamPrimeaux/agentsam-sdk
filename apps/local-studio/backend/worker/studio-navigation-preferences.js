@@ -1,4 +1,5 @@
 import { listLauncherApps } from './apps-launcher.js';
+import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
 
 /**
  * Account-owned, runtime-editable presentation of the installed app navigation.
@@ -137,7 +138,7 @@ export function withInstalledApps(base, catalog = []) {
     ids.add(id); hrefs.add(href);
     apps.push({ id, label, href, icon: 'apps', source: 'account-plugin', pluginKey: key });
   }
-  return { ...base, apps };
+  return { ...base, apps: dedupeAppNavigation(apps) };
 }
 
 function withCurrentNavigationOverrides(saved, base) {

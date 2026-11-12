@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { shortTime, uid } from "@/lib/utils";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
 import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
+import { openBrowserSideStage } from "@/lib/work/open-browser-side-stage";
 import type { Artifact, SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { ArtifactDocumentEditor, isEditableDocument } from "./document-editor";
 import { RuntimeFilesystemAdapter } from "@/lib/work/workspace-fs";
@@ -100,21 +101,11 @@ export function ArtifactsStage({tab}: {tab?:SideTab}) {
                     onClick={() => {
                       if (supportsDocumentPreview(file)) { setDocumentId(file.id); return; }
                       if (kind === "preview") {
-                        openSideTab("browser", {
-                          title: file.path,
-                          srcdoc: buildWorkspacePreview(file, project?.files ?? []),
-                          ephemeral: false,
-                        });
-                        void navigate({ to: "/browse" });
+                        openBrowserSideStage({ title: file.path, srcdoc: buildWorkspacePreview(file, project?.files ?? []) });
                         return;
                       }
                       if (kind === "deploy" && file.url) {
-                        openSideTab("browser", {
-                          url: file.url,
-                          title: file.title ?? "Deploy",
-                          ephemeral: false,
-                        });
-                        void navigate({ to: "/browse" });
+                        openBrowserSideStage({ url: file.url, title: file.title ?? 'Deploy' });
                         return;
                       }
                       selectFile(file.id);

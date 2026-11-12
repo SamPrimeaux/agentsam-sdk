@@ -4,6 +4,7 @@ import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/s
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
 import { openAppsInstaller } from '@inneranimalmedia/agentsam-nav/browser';
+import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
 import {
   projectStudioShellAppearance,
   applyStudioShellAppearance,
@@ -214,7 +215,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         if (!response.ok) throw new Error('Application navigation unavailable');
         const projection = await response.json();
         if (!controller.signal.aborted && projection.schema === 'agentsam.host-navigation.v1' && Array.isArray(projection.apps)) {
-          setNavigation(projection);
+          setNavigation({ ...projection, apps: dedupeAppNavigation(projection.apps) });
         }
       } catch { /* Never show invented installed apps. */ }
     };

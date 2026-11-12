@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
   type FormEvent,
@@ -54,9 +55,20 @@ export interface AgentSamAbsBrowserProps {
   defaultMode?: AbsBrowserMode;
   onModeChange?: (mode: AbsBrowserMode) => void;
   exploreLinks?: AbsQuickLink[];
+  /** Optional host-managed browse viewport (native WebView, remote browser stream, etc.). */
+  exploreSurface?: ReactNode;
+  exploreUrl?: string;
+  exploreCanBack?: boolean;
+  exploreCanForward?: boolean;
+  onExploreNavigate?: (url: string) => void;
+  onExploreBack?: () => void;
+  onExploreForward?: () => void;
+  onExploreRefresh?: () => void;
   theme?: AbsThemeMode;
   defaultTheme?: AbsThemeMode;
   onThemeChange?: (theme: AbsThemeMode) => void;
+  showBuildTabs?: boolean;
+  showThemeToggle?: boolean;
   toolbarActions?: ReactNode;
   statusSlot?: ReactNode;
 }
@@ -84,9 +96,19 @@ export function AgentSamAbsBrowser({
   defaultMode = 'explore',
   onModeChange,
   exploreLinks = DEFAULT_EXPLORE_LINKS,
+  exploreSurface,
+  exploreUrl: controlledExploreUrl,
+  exploreCanBack: controlledExploreCanBack,
+  exploreCanForward: controlledExploreCanForward,
+  onExploreNavigate,
+  onExploreBack,
+  onExploreForward,
+  onExploreRefresh,
   theme: controlledTheme,
   defaultTheme = 'dark',
   onThemeChange,
+  showBuildTabs = true,
+  showThemeToggle = true,
   toolbarActions,
   statusSlot,
 }: AgentSamAbsBrowserProps) {
@@ -100,9 +122,14 @@ export function AgentSamAbsBrowser({
   const [exploreIndex, setExploreIndex] = useState(-1);
   const [exploreReloadKey, setExploreReloadKey] = useState(0);
 
-  const exploreUrl = exploreIndex >= 0 ? exploreHistory[exploreIndex] || '' : '';
-  const exploreCanBack = exploreIndex > 0;
-  const exploreCanForward = exploreIndex >= 0 && exploreIndex < exploreHistory.length - 1;
+  const exploreUrl = controlledExploreUrl ?? (exploreIndex >= 0 ? exploreHistory[exploreIndex] || '' : '');
+  // Sync the omnibar after native navigation, redirects and browser history updates.
+  // The public showcase continues to use its local deterministic history.
+  useEffect(() => {
+    if (controlledExploreUrl !== undefined) setExploreDraft(controlledExploreUrl);
+  }, [controlledExploreUrl]);
+  const exploreCanBack = controlledExploreCanBack ?? exploreIndex > 0;
+  const exploreCanForward = controlledExploreCanForward ?? (exploreIndex >= 0 && exploreIndex < exploreHistory.length - 1);
 
   const activeTabTitle = useMemo(() => {
     const tab = tabs[activeTabIndex];
@@ -123,6 +150,10 @@ export function AgentSamAbsBrowser({
     const next = resolveExploreInput(raw);
     if (!next) return;
     setExploreDraft(next);
+    if (onExploreNavigate) {
+      onExploreNavigate(next);
+      return;
+    }
     setExploreHistory((history) => {
       const base = history.slice(0, exploreIndex + 1);
       return [...base, next];
@@ -155,16 +186,16 @@ export function AgentSamAbsBrowser({
         <div className="abs-windowbar-spacer" />
         {statusSlot ? <div className="abs-status-slot">{statusSlot}</div> : null}
         {toolbarActions ? <div className="abs-toolbar-actions">{toolbarActions}</div> : null}
-        <button
+        {showThemeToggle && <button
           type="button"
           className="abs-theme-toggle"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           aria-label={'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' theme'}
         >
           {theme === 'dark' ? 'Light' : 'Dark'}
-        </button>
+        </button>}
       </div>
-      {mode === 'build' && (
+      {mode === 'build' && showBuildTabs && (
         <div className="abs-tabbar" role="tablist" aria-label="Build tabs">
           <div className="abs-tablist">
             {tabs.map((tab, index) => (
@@ -227,21 +258,21 @@ export function AgentSamAbsBrowser({
               <button
                 type="button"
                 disabled={!exploreCanBack}
-                onClick={() => setExploreIndex((index) => Math.max(0, index - 1))}
+                onClick={() => onExploreBack ? onExploreBack() : setExploreIndex((index) => Math.max(0, index - 1))}
               >
                 Back
               </button>
               <button
                 type="button"
                 disabled={!exploreCanForward}
-                onClick={() => setExploreIndex((index) => Math.min(exploreHistory.length - 1, index + 1))}
+                onClick={() => onExploreForward ? onExploreForward() : setExploreIndex((index) => Math.min(exploreHistory.length - 1, index + 1))}
               >
                 Forward
               </button>
               <button
                 type="button"
                 disabled={!exploreUrl}
-                onClick={() => setExploreReloadKey((key) => key + 1)}
+                onClick={() => onExploreRefresh ? onExploreRefresh() : setExploreReloadKey((key) => key + 1)}
               >
                 Reload
               </button>
@@ -292,7 +323,9 @@ export function AgentSamAbsBrowser({
 
       <div className="abs-browser-stage">
         {mode === 'explore' ? (
-          exploreUrl ? (
+          exploreUrl && exploreSurface ? (
+            exploreSurface
+          ) : exploreUrl ? (
             <iframe
               key={`${exploreUrl}-${exploreReloadKey}`}
               className="abs-explore-frame"

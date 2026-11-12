@@ -117,6 +117,7 @@ const EDITOR_RETURN_KEY = "agentsam.editorReturn";
 
 const SHELL_MODES = {
   admin: { id: "admin", hideAdminNav: false, shortcuts: [], exitFallback: "/admin/store", exitRoutes: ADMIN_EXIT_ROUTES },
+  "embedded-home": { id: "embedded-home", hideAdminNav: true, shortcuts: [], exitFallback: "/admin/home", exitRoutes: ADMIN_EXIT_ROUTES },
   "theme-editor": {
     id: "theme-editor",
     hideAdminNav: true,
@@ -822,7 +823,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
       </header>
 `;
   document.getElementById("console-app").innerHTML = `
-    <div class="console-shell admin-shell${shellMode.hideAdminNav ? " is-editor-mode" : ""}" data-shell-mode="${shellMode.id}" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
+    <div class="console-shell admin-shell${shellMode.id === "theme-editor" ? " is-editor-mode" : ""}" data-shell-mode="${shellMode.id}" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
       ${adminChrome}
       <div class="console-body">
         ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>`}

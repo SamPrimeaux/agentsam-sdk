@@ -3,6 +3,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
 import { Box, FileCode, FolderGit2, Globe, MessageSquare, Plus, Search, SquareTerminal } from "lucide-react";
 import { useWorkStore } from "@/lib/work/store";
+import { openBrowserSideStage } from "@/lib/work/open-browser-side-stage";
+import { navigateApp } from "@/lib/work/navigate";
 import { COMMANDS, runCommand } from "@/lib/commands/native-commands";
 
 export function CommandPalette() {
@@ -84,7 +86,10 @@ export function CommandPalette() {
           </Command.Item>
           <Command.Item
             onSelect={() => {
-              void navigate({ to: "/browse" });
+              openBrowserSideStage();
+              if (/^\/(?:admin\/agentsam|agentsam|chats)(?:\/|$)/.test(window.location.pathname)) {
+                navigateApp("/admin/home");
+              }
               setOpen(false);
             }}
           >

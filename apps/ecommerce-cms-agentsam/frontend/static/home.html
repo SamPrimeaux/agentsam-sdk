@@ -111,7 +111,7 @@ renderShell("/admin/home", `
 
     </section>
   </div>
-`);
+`, { shellMode: document.documentElement.classList.contains('agentsam-embedded-home') ? 'embedded-home' : 'admin' });
 
 (async function () {
   try {
