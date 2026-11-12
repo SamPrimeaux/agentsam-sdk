@@ -26,3 +26,21 @@ test("registry failures cannot masquerade as no installed plugins or disconnecte
   assert.match(source, /snapshot\.pluginsError\?\(/);
   assert.match(host, /snapshot\.pluginsError\s*=\s*pluginResult\.ok\s*\?/);
 });
+
+test("account registries open as focused pages with per-row actions, gated by host-reported access", async () => {
+  const source = await readFile(new URL("../src/frontend/index.tsx", import.meta.url), "utf8");
+  const registry = await readFile(new URL("../src/frontend/catalog-registry.tsx", import.meta.url), "utf8");
+  const host = await readFile(new URL("../../../apps/local-studio/frontend/src/components/settings/localStudioSettingsHost.ts", import.meta.url), "utf8");
+  const customize = source.slice(source.indexOf("function CustomizeView("), source.indexOf("function GeneralView("));
+  assert.match(customize, /<CatalogRegistryView/);
+  assert.match(customize, /snapshot\.catalogAccess\?\.\[kind\]/);
+  assert.doesNotMatch(customize, /SettingsSheet/);
+  assert.doesNotMatch(registry, /SettingsSheet|aria-modal|role="dialog"/);
+  for (const action of ["Duplicate", "Turn off", "Turn on", "Delete"]) assert.match(registry, new RegExp(action));
+  assert.match(registry, /role="menu"/);
+  assert.match(registry, /granted\.create && Boolean\(host\.upsertCatalogItem\)/);
+  // Host capabilities are derived from implemented operations, not a hand-kept list.
+  assert.doesNotMatch(host, /const capabilities: SettingsCapabilities = \{/);
+  assert.match(host, /describeHostCapabilities\(localStudioSettingsHost\)/);
+  assert.match(host, /snapshot\.catalogAccess = \{/);
+});
