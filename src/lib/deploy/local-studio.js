@@ -89,10 +89,18 @@ export function computeDeployFingerprint(repoRoot) {
   }
   files.sort();
   for (const file of files) {
+    // Optional generated files can disappear between enumeration and hashing.
+    // Ignore only ENOENT; permission and other I/O failures must still fail.
+    let digest;
+    try { digest = hashFile(file); }
+    catch (error) {
+      if (error?.code === 'ENOENT') continue;
+      throw error;
+    }
     const rel = path.relative(repoRoot, file).split(path.sep).join('/');
     h.update(rel);
     h.update('\0');
-    h.update(hashFile(file));
+    h.update(digest);
     h.update('\n');
   }
   return h.digest('hex');

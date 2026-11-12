@@ -12,7 +12,8 @@
     "nf3": "0.3.17",
     "lru-cache": "11.5.2",
     "dompurify": "3.4.17",
-    "@hono/node-server": "2.1.6"
+    "@hono/node-server": "2.1.6",
+    "hono": "4.13.18"
   },
   "scripts": {
     "dev": "npm run build:settings && node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
