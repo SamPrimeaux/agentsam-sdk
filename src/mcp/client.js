@@ -7,6 +7,8 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { assertApprovedBrowserMcpStdio } from './browsermcp.js';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -42,8 +44,14 @@ export function buildHeaders(serverConfig = {}) {
  * @returns {Promise<{ ok: true, value: T, transport: string } | { ok: false, error: string, transport?: string }>}
  */
 export async function withMcpClient(serverConfig, fn, options = {}) {
+  const isStdio = serverConfig?.protocol === 'stdio';
+  // No remote manifest or D1 value may cause an arbitrary local process spawn.
+  if (isStdio) {
+    try { assertApprovedBrowserMcpStdio(serverConfig); }
+    catch (error) { return { ok: false, error: error.message, transport: 'stdio' }; }
+  }
   const url = clean(serverConfig.url);
-  if (!url) return { ok: false, error: 'missing_mcp_server_url' };
+  if (!isStdio && !url) return { ok: false, error: 'missing_mcp_server_url' };
 
   const headers = buildHeaders(serverConfig);
   const requestInit = { headers };
@@ -68,6 +76,20 @@ export async function withMcpClient(serverConfig, fn, options = {}) {
     }
   };
 
+  if (isStdio) {
+    try {
+      return await tryTransport('stdio', () =>
+        options.createStdioTransport?.(serverConfig) ?? new StdioClientTransport({
+          command: serverConfig.command,
+          args: serverConfig.args,
+          stderr: 'pipe',
+        }),
+      );
+    } catch (error) {
+      return { ok: false, transport: 'stdio', error: `stdio:${error?.message || error}` };
+    }
+  }
+
   try {
     return await tryTransport(
       'streamable_http',
@@ -90,8 +112,9 @@ export async function withMcpClient(serverConfig, fn, options = {}) {
 }
 
 export async function pingMcpServer(serverConfig = {}, options = {}) {
+  const isStdio = serverConfig.protocol === 'stdio';
   const url = clean(serverConfig.url);
-  if (!url) throw new Error('missing_mcp_server_url');
+  if (!isStdio && !url) throw new Error('missing_mcp_server_url');
 
   const startMs = Date.now();
   const connected = await withMcpClient(
@@ -101,7 +124,7 @@ export async function pingMcpServer(serverConfig = {}, options = {}) {
       const tools = await client.listTools().catch(() => ({ tools: [] }));
       return { toolCount: tools?.tools?.length ?? 0 };
     },
-    { timeoutMs: options.timeoutMs || 8000 },
+    { timeoutMs: options.timeoutMs || 8000, createStdioTransport: options.createStdioTransport },
   );
 
   const latencyMs = Date.now() - startMs;
@@ -109,13 +132,17 @@ export async function pingMcpServer(serverConfig = {}, options = {}) {
     return {
       ok: true,
       status: 200,
-      statusText: 'connected',
+      statusText: isStdio ? 'mcp_server_initialized' : 'connected',
+      // Browser extension approval is a separate user-controlled step.
+      ...(isStdio ? { pairingStatus: 'unverified', next: 'Compare the six-digit code in the Browser MCP extension and click Allow.' } : {}),
       latencyMs,
       url,
       transport: connected.transport,
       toolCount: connected.value?.toolCount ?? null,
     };
   }
+
+  if (isStdio) return { ok: false, error: connected.error, transport: 'stdio', pairingStatus: 'unverified', latencyMs };
 
   // Last-resort HTTP reachability (does not prove MCP session)
   try {
@@ -150,7 +177,7 @@ export async function listMcpTools(serverConfig = {}, options = {}) {
   const connected = await withMcpClient(
     serverConfig,
     async (client) => client.listTools(),
-    { timeoutMs: options.timeoutMs || 12000 },
+    { timeoutMs: options.timeoutMs || 12000, createStdioTransport: options.createStdioTransport },
   );
 
   if (connected.ok) {
@@ -174,7 +201,7 @@ export async function callMcpTool(serverConfig = {}, toolName, args = {}, option
   const connected = await withMcpClient(
     serverConfig,
     async (client) => client.callTool({ name: toolName, arguments: args }),
-    { timeoutMs: options.timeoutMs || 30000 },
+    { timeoutMs: options.timeoutMs || 30000, createStdioTransport: options.createStdioTransport },
   );
 
   const latencyMs = Date.now() - startMs;
