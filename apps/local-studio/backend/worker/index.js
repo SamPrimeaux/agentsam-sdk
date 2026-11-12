@@ -40,7 +40,7 @@ import {
   isGoogleCliCloudPath,
 } from "./gclioa.js";
 import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
-import { updateAccountSideStage } from "./plugin-side-stages.js";
+import { readAccountSideStageCatalog, updateAccountSideStage } from "./plugin-side-stages.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { handleStudioChatHistory } from "./studio-chat-history.js";
@@ -761,6 +761,7 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const isSideStageCatalog = url.pathname === "/api/connections/side-stages";
     const sideStagePreferenceMatch = /^\/api\/connections\/side-stages\/(plg_[a-f0-9]{8,})$/i.exec(url.pathname);
     const isStudioPreferences=url.pathname==="/api/settings/preferences";
     const isStudioAccountAvatar=url.pathname==="/api/settings/account-avatar";
@@ -1383,6 +1384,21 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       } catch(error) {
         const code=String(error?.message||'side_stage_update_failed');
         return json({ok:false,error:code.slice(0,100)},code==='side_stage_not_found'?404:400);
+      }
+    }
+
+    // Read native panel preferences directly from the existing plugin/install tables.
+    // This view must not depend on OAuth probes or plugin registration side effects.
+    if (isSideStageCatalog) {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (!env.DB) return json({ok:false,error:"panel_registry_unavailable"},503);
+      try {
+        return json(await readAccountSideStageCatalog(env.DB,userId));
+      } catch (err) {
+        console.error("side_stage_catalog_error",String(err));
+        return json({ok:false,error:"panel_registry_unavailable"},503);
       }
     }
 

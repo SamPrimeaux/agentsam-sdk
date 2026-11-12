@@ -1,6 +1,6 @@
-// Consume the SDK's public provider export. The Worker must never deep-import
-// root SDK internals, even while bundling from a monorepo checkout.
-import { createProviderAdapter } from '@inneranimalmedia/agentsam-sdk/providers';
+// Root-only SDK CI and the prepublication Worker build both run before the
+// nested Studio install. This is the source behind the public SDK ./providers export.
+import { createProviderAdapter } from '../../../../src/providers/index.js';
 import { discoverProviderModels } from '../../../../protocol/models/discovery.mjs';
 import { WORKERS_AI_CURATED_MODEL_IDS } from '../../../../protocol/models/workers-ai-curated.mjs';
 import { loadCanvasCreationKnowledge, validateCanvasDirections } from '../../../../protocol/canvas/knowledge-core.mjs';

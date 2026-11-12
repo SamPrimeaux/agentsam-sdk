@@ -86,6 +86,18 @@ const CAD_COMPAT_REEXPORTS = new Map([
     '../../../../../../src/lib/cad/project-tools.js',
   ],
 ]);
+// The Worker is built as part of the SDK source train before the nested Studio
+// dependency installation (or npm publication). This single import resolves to
+// the *public* SDK ./providers entry, never a private src implementation.
+// Remove this exception once SDK/Studio have a verified common package install.
+const SDK_PUBLIC_SOURCE_IMPORTS = new Map([
+  ['apps/local-studio/backend/worker/work-canvas-generation.js', {
+    specifier: '../../../../src/providers/index.js',
+    exportKey: './providers',
+    exportedPath: './src/providers/index.js',
+  }],
+]);
+const sdkExports = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).exports || {};
 for (const appFile of walk(path.join(root, 'apps'))) {
   const text = fs.readFileSync(appFile, 'utf8');
   if (text.includes('@inneranimalmedia/agentsam-sdk/src/')) {
@@ -98,7 +110,13 @@ for (const appFile of walk(path.join(root, 'apps'))) {
       const expected = CAD_COMPAT_REEXPORTS.get(rel);
       const exactCompat = expected === match[1] &&
         text.trim() === `// Compatibility export; SDK is canonical.\nexport * from '${expected}';`;
-      if (!exactCompat) failures.push(`${rel} reaches into root src via ${match[1]}`);
+      const publicSource = SDK_PUBLIC_SOURCE_IMPORTS.get(rel);
+      const exactPublicExport = publicSource?.specifier === match[1] &&
+        sdkExports[publicSource.exportKey] === publicSource.exportedPath &&
+        resolved === path.resolve(root, publicSource.exportedPath) &&
+        text.includes("import { createProviderAdapter } from '" + publicSource.specifier + "';");
+      if (!exactCompat && !exactPublicExport)
+        failures.push(rel + ' reaches into root src via ' + match[1]);
     }
   }
 }

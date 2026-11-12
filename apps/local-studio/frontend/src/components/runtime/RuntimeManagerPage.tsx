@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Box, Cloud, Container, Cpu, Loader2, Monitor, RefreshCw, TerminalSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getTauriInvoke } from "@/lib/desktop/tauri";
-import { isConnectedRuntimeSession } from "./runtime-sessions";
+import { isConnectedRuntimeSession, type RuntimeKind } from "./runtime-sessions";
 import { useTerminalSessionStore, type StudioTerminalSession } from "@/lib/work/terminal-sessions";
 import { useWorkStore } from "@/lib/work/store";
 
 type RuntimeState = "online" | "available" | "offline" | "setup_required" | "unknown";
 type RuntimeCard = {
-  id: string;
+  id: RuntimeKind;
   name: string;
   detail: string;
   adapter: string;

@@ -179,6 +179,18 @@ export async function listLocalStudioConnections(): Promise<LocalStudioConnectio
   return connectionRequest<LocalStudioConnectionsResponse>("/api/connections");
 }
 
+/** Native panel preferences share the canonical plugin installation registry,
+ * but must remain readable when unrelated OAuth/plugin health checks fail. */
+export async function listLocalStudioSideStages(): Promise<LocalStudioSideStageRecord[]> {
+  const response = await connectionRequest<Pick<LocalStudioConnectionsResponse, "ok" | "side_stage_catalog">>(
+    "/api/connections/side-stages",
+  );
+  if (response.ok !== true || !Array.isArray(response.side_stage_catalog)) {
+    throw new Error("Panel preferences are not available on this host.");
+  }
+  return response.side_stage_catalog;
+}
+
 /** Controls only personal panel visibility, never OAuth, install or permissions. */
 export async function updateSideStageVisibility(pluginId: string, enabled: boolean) {
   if (!/^plg_[a-f0-9]{8,}$/i.test(pluginId)) throw new Error("side_stage_plugin_invalid");

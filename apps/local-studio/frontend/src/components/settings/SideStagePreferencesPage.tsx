@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { LoaderCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
-  listLocalStudioConnections,
+  listLocalStudioSideStages,
   updateSideStageVisibility,
   type LocalStudioSideStageRecord,
 } from "@/lib/connections/client";
@@ -19,9 +19,8 @@ export function SideStagePreferencesPage() {
     setLoading(true);
     setError("");
     try {
-      const result = await listLocalStudioConnections();
-      if (!Array.isArray(result.side_stage_catalog)) throw new Error("Panel preferences are not available on this host.");
-      setItems(result.side_stage_catalog.filter(item => item.renderer === "builtin"));
+      const catalog = await listLocalStudioSideStages();
+      setItems(catalog.filter(item => item.renderer === "builtin"));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to load your panels.");
     } finally {
@@ -85,7 +84,7 @@ export function SideStagePreferencesPage() {
             </label>
           ))}
         </div>
-      ) : <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">No built-in panels are registered for this account.</p>}
+      ) : !error ? <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">No built-in panels are registered for this account.</p> : null}
       <p className="text-xs text-muted-foreground">Applications and external extensions are managed separately. These controls only affect your panel shortcuts.</p>
     </section>
   );

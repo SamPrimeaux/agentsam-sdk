@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import {
   listAccountSideStages, updateAccountSideStage, projectSideStageContribution,
+  readAccountSideStageCatalog,
 } from './plugin-side-stages.js';
 
 const pluginId='plg_1234567890abcdef';
@@ -56,4 +57,19 @@ test('no other plugin can impersonate a builtin panel',async()=>{
     });
     assert.equal(nonCore,null);
   } finally {sqlite.close();}
+});
+
+test('isolated read lists disabled panels without requiring provider probes',async()=>{
+  const {sqlite,db}=fixture();
+  try {
+    const enabled=await readAccountSideStageCatalog(db,'alice');
+    assert.equal(enabled.ok,true);
+    assert.deepEqual(enabled.side_stage_catalog.map(x=>x.label),['Files']);
+    await updateAccountSideStage(db,'alice',pluginId,false);
+    const disabled=await readAccountSideStageCatalog(db,'alice');
+    assert.equal(disabled.side_stage_catalog[0].enabled,false);
+    assert.equal((await readAccountSideStageCatalog(db,'bob')).side_stage_catalog[0].enabled,true);
+    await assert.rejects(readAccountSideStageCatalog(null,'alice'),/side_stage_database_unavailable/);
+    await assert.rejects(readAccountSideStageCatalog(db,''),/side_stage_account_required/);
+  } finally { sqlite.close(); }
 });
