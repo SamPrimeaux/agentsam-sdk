@@ -121,13 +121,17 @@ export async function listAccountSideStages(db, accountId, options = {}) {
   const result = await db.prepare(`
     SELECT p.id,p.plugin_key,p.family_key,p.plugin_kind,p.display_name,
            p.description,p.icon_url,p.metadata_json,p.sort_priority,
-           COALESCE(own.enabled, 1) AS stage_enabled,
+           own.enabled AS stage_enabled,
            CASE WHEN p.family_key='core' AND p.plugin_kind='native' THEN 1
                 ELSE EXISTS (
                   SELECT 1 FROM agentsam_plugin_installations live
                   WHERE live.plugin_id=p.id AND live.account_id=?
                     AND live.instance_key<>'side-stage-v1'
-                    AND live.enabled=1 AND live.setup_status='connected'
+                    AND live.enabled=1
+                    AND (live.setup_status='connected'
+                      OR (p.plugin_kind='native'
+                        AND json_type(p.metadata_json,'$.app')='object'
+                        AND live.setup_status='configured'))
                 ) END AS installed_and_ready
     FROM agentsam_plugins p
     LEFT JOIN agentsam_plugin_installations own
@@ -160,12 +164,23 @@ export async function updateAccountSideStage(db, accountId, pluginId, enabled) {
   await ensureCoreSideStageInstallations(db, accountId);
   const exists = await db.prepare(`
     SELECT p.id FROM agentsam_plugins p
-    JOIN agentsam_plugin_installations i ON i.plugin_id=p.id
-    WHERE p.id=? AND i.account_id=? AND i.instance_key='side-stage-v1'
-      AND p.family_key='core' AND p.plugin_kind='native'
-      AND json_extract(p.metadata_json,'$.side_stage.renderer')='builtin'
+    JOIN agentsam_plugin_installations own ON own.plugin_id=p.id
+      AND own.account_id=? AND own.instance_key='side-stage-v1'
+    WHERE p.id=? AND json_type(p.metadata_json,'$.side_stage')='object'
+      AND (
+        (p.family_key='core' AND p.plugin_kind='native'
+          AND json_extract(p.metadata_json,'$.side_stage.renderer')='builtin')
+        OR EXISTS (
+          SELECT 1 FROM agentsam_plugin_installations live
+          WHERE live.plugin_id=p.id AND live.account_id=?
+            AND live.instance_key<>'side-stage-v1' AND live.enabled=1
+            AND (live.setup_status='connected'
+              OR (p.plugin_kind='native' AND json_type(p.metadata_json,'$.app')='object'
+                AND live.setup_status='configured'))
+        )
+      )
     LIMIT 1
-  `).bind(pluginId,accountId).first();
+  `).bind(accountId,pluginId,accountId).first();
   if (!exists) throw new Error('side_stage_not_found');
   await db.prepare(`
     UPDATE agentsam_plugin_installations

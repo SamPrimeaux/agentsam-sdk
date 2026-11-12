@@ -1,0 +1,2 @@
+# Preserve the user-supplied, self-contained original HTML artifact verbatim.
+public/sources/onboarding-exports/OnboardingOffersCollection.html -diff

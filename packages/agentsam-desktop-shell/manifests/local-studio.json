@@ -76,7 +76,8 @@
     "cad-creator",
     "ecommerce-cms-agentsam",
     "agentsam-copro-studio",
-    "samsketch"
+    "samsketch",
+    "design-canvas"
   ],
   "theme": {
     "primary_color": "#0a0a0c",

@@ -1,0 +1,22 @@
+/* Compatibility aliases: old name resolves to the new token. Delete a line once nothing references it. */
+:root{
+  --mini-surface:var(--assistant-mini-container-surface);
+  --mini-surface-raised:var(--assistant-mini-container-raised);
+  --mini-text:var(--semantic-text-primary);
+  --mini-muted:var(--semantic-text-muted);
+  --mini-border:var(--semantic-border-default);
+  --mini-accent:var(--semantic-accent-primary);
+  --mini-accent-strong:var(--semantic-action-primary);
+  --composer-send-bg:var(--assistant-shared-composer-send-background);
+  --composer-send-fg:var(--assistant-shared-composer-send-foreground);
+  --composer-send-disabled-bg:var(--assistant-shared-composer-send-disabled-background);
+  --composer-send-disabled-fg:var(--assistant-shared-composer-send-disabled-foreground);
+  --composer-control-hover:var(--assistant-shared-composer-control-hover);
+  --composer-mode-accent-strong:var(--assistant-shared-composer-mode-accent-strong);
+  --composer-mode-accent:var(--assistant-shared-composer-mode-accent);
+  --nav-surface:var(--semantic-surface-navigation);
+  --nav-text:var(--semantic-text-primary);
+  --nav-muted:var(--semantic-text-muted);
+  --nav-accent:var(--semantic-action-primary);
+  --agentsam-mark-color:var(--assistant-shared-brand-foreground);
+}

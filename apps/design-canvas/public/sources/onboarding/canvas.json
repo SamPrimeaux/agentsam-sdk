@@ -1,0 +1,178 @@
+{
+  "v": 3,
+  "attachments": {},
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-10T19:30:00Z"
+  },
+  "title": "Inner Animal Media: Onboarding & Offers",
+  "launch": {
+    "view": "canvas"
+  },
+  "designSystems": [],
+  "pages": [
+    {
+      "id": "onb",
+      "name": "Onboarding and offers"
+    },
+    {
+      "id": "dash",
+      "name": "Dashboard canvas"
+    },
+    {
+      "id": "apps",
+      "name": "App store"
+    }
+  ],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 2200,
+      "title": "1 \u00b7 Choose a plan",
+      "expand": "fill"
+    },
+    "Checkout.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "2 \u00b7 Start trial (checkout)"
+    },
+    "SetupGoals.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "3 \u00b7 What can we help you do",
+      "is_interactive": true
+    },
+    "Onboarding.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "4 \u00b7 Workspace setup",
+      "is_interactive": true
+    },
+    "WelcomeHome.dc.html": {
+      "x": 6080,
+      "y": 0,
+      "w": 1440,
+      "h": 1400,
+      "title": "5 \u00b7 First-run home"
+    },
+    "StyleSpec.dc.html": {
+      "x": 7600,
+      "y": 0,
+      "w": 1440,
+      "h": 1700,
+      "title": "Style spec \u00b7 clean company b/w"
+    },
+    "CanvasEditor.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "1 \u00b7 Canvas editor",
+      "page": "dash",
+      "is_interactive": true
+    },
+    "CanvasLibrary.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "2 \u00b7 Library (curate)",
+      "page": "dash",
+      "is_interactive": true
+    },
+    "StoreToLibrary.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "3 \u00b7 Save to library",
+      "page": "dash",
+      "is_interactive": true
+    },
+    "AppListing.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1240,
+      "title": "1 \u00b7 App listing",
+      "page": "apps"
+    },
+    "AppInstall.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "2 \u00b7 Install and permissions",
+      "page": "apps",
+      "is_interactive": true
+    },
+    "AppInstalled.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1320,
+      "title": "3 \u00b7 Installed app page",
+      "page": "apps",
+      "is_interactive": true
+    },
+    "EditorEmbeds.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "4 \u00b7 Editor: Add menu and app embeds",
+      "page": "apps",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Checkout.dc.html",
+    "SetupGoals.dc.html",
+    "Onboarding.dc.html",
+    "WelcomeHome.dc.html",
+    "StyleSpec.dc.html",
+    "CanvasEditor.dc.html",
+    "CanvasLibrary.dc.html",
+    "StoreToLibrary.dc.html",
+    "AppListing.dc.html",
+    "AppInstall.dc.html",
+    "AppInstalled.dc.html",
+    "EditorEmbeds.dc.html"
+  ],
+  "notes": {
+    "flowtitle": {
+      "x": 0,
+      "y": -320,
+      "text": "Onboarding & offers: baseline flow",
+      "kind": "title1",
+      "maxW": 8000,
+      "w": 240
+    },
+    "dashtitle": {
+      "x": 0,
+      "y": -320,
+      "text": "Dashboard: canvas, library, save",
+      "kind": "title1",
+      "maxW": 4480,
+      "page": "dash",
+      "w": 240
+    },
+    "appstitle": {
+      "x": 0,
+      "y": -320,
+      "text": "App store: install an app, use it in the editor",
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "apps"
+    }
+  }
+}

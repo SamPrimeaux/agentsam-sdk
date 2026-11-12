@@ -1,0 +1,24 @@
+{
+  "name": "@inneranimalmedia/agentsam-design-canvas",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Installable, source-backed design canvas application for AgentSam and InnerAnimalMedia",
+  "bin": {
+    "agentsam-design-canvas": "./bin/agentsam-design-canvas.mjs"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "preview": "node bin/agentsam-design-canvas.mjs preview",
+    "doctor": "node bin/agentsam-design-canvas.mjs doctor",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "files": [
+    "dist/**",
+    "bin/**",
+    "agentsam.app.json",
+    "README.md"
+  ],
+  "license": "UNLICENSED"
+}

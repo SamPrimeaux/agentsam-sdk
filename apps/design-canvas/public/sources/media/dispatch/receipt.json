@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "asset": {
+    "id": "dispatch",
+    "type": "image",
+    "source": "inputs/dispatch-art.png",
+    "usage": "review",
+    "alt": "Orange and cream isometric illustration of a shipping box, receipt, scanner and globe",
+    "motion": true,
+    "sprite": true
+  },
+  "sourceSha256": "df0a28c57e0113d77297d8ced65a15d47076ec92e66fdf32f8961ad51bbf7ae3",
+  "pipelineSha256": "2b6c52a6fe1912878c3b00f5680f2468740472f46a9207d55586ccea553a7e54",
+  "artifacts": {
+    "edit.mov": {
+      "sha256": "4a9e32f3290647a4545478395c696f58d538941194a2a556782f7b12b54d11ad",
+      "bytes": 12810473
+    },
+    "loop.gif": {
+      "sha256": "c2cb970574b3d0023e173167d261b6f6a2e942cfcb79242a6b1f090b47f70074",
+      "bytes": 750762
+    },
+    "loop.mp4": {
+      "sha256": "7fa658a180bd80076ec810f5491a0c307c1c98fdef46ca05b4c1636c9c9e153e",
+      "bytes": 318942
+    },
+    "loop.webm": {
+      "sha256": "1e18e4f79670dff77545b33acc62b60fb8487f02fb5cbcdd5dfe27f19e276249",
+      "bytes": 110535
+    },
+    "master.png": {
+      "sha256": "b7a3405c98490850782fed8d2d67108002abe9aefe84cfbcbb5d6f898b7d343b",
+      "bytes": 520570
+    },
+    "poster.png": {
+      "sha256": "95c2996d64341bb49653278771f42441bcb221b04fd024f898f5b543dba8aaab",
+      "bytes": 138790
+    },
+    "sprite-sheet.png": {
+      "sha256": "3daf3dbd780474019b00364455990c98fbcfcdbd2dc483bbc7de09943c19e7ad",
+      "bytes": 649060
+    },
+    "sprite.apng": {
+      "sha256": "c04a4e7efcfc69cc9bac1736abe5a76b2cffb03e640d0961bddaf0b924a2651c",
+      "bytes": 754652
+    },
+    "sprite.json": {
+      "sha256": "db7060c2d7239f658b566f20155f1752ea380fd4cad5a11508860d518b7b3039",
+      "bytes": 1863
+    },
+    "still-480.webp": {
+      "sha256": "eea0202c4909345269b283fd4572d0e1d517db4f3d5a23e8c5c1de8a70a5d2fb",
+      "bytes": 36598
+    },
+    "still-960.webp": {
+      "sha256": "96a0de8e7fa68a192bfdb79551b2d3e4b75ddea6fbe4f70d804944949b2c9fd7",
+      "bytes": 81298
+    }
+  }
+}

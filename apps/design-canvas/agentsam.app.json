@@ -1,0 +1,23 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "design-canvas",
+  "name": "AgentSam Design Canvas",
+  "kind": "app",
+  "package": "@inneranimalmedia/agentsam-design-canvas",
+  "version": "0.1.0",
+  "entrypoints": {"frontend":"./dist","cli":"./bin/agentsam-design-canvas.mjs"},
+  "capabilities": ["design","artboards","source-editing","library","local-drafts"],
+  "provides": ["workspace.panel","preview","app.embed"],
+  "surfaces": ["desktop","mobile","side-stage","design","source"],
+  "auth": {"required":false,"note":"Standalone build is local-only; hosted installations must use the account-scoped application and plugin installation authority."},
+  "routes": {"app.home":{"path":"/design-canvas"},"entry":"/design-canvas","mounts":[{"path":"/design-canvas","spa":true,"shell":"dist/index.html"}]},
+  "preview": {"kind":"web","bridge":"agentsam.preview.v1","entry":"/"},
+  "runtime": {"local_preview":"ready","source_scaffold":"ready","cloudflare":"not-deployed","hosted_install":"requires-deployment-and-account-install"},
+  "commands": {"preview":"agentsam-design-canvas preview","doctor":"agentsam-design-canvas doctor","info":"agentsam-design-canvas info"},
+  "bin":"bin/agentsam-design-canvas.mjs",
+  "install": {"command":"npm install @inneranimalmedia/agentsam-design-canvas","selector":"design-canvas"},
+  "embed": {
+    "stage":"design-canvas",
+    "build":{"cwd":".","command":["node","scripts/build.mjs"],"output":"dist","index":"index.html"}
+  }
+}
