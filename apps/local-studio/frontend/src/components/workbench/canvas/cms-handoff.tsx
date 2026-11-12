@@ -4,7 +4,8 @@ import { ArrowUpRight, Check, X } from "lucide-react";
 import { API, canvasRequest, type CanvasMeta } from "./model";
 
 type Review = {compatible:boolean;issues:Array<{severity:string;code:string;node_id?:string;message:string}>;mapping:{page_count:number;section_count:number;block_count:number};source:{id:string;revision:string|number;content_hash:string}};
-export function CanvasCmsHandoff({canvas,onClose}:{canvas:CanvasMeta;onClose:()=>void}) {
+const FIXABLE=new Set(["pages_required","artboard_empty"]);
+export function CanvasCmsHandoff({canvas,onClose,onRepair}:{canvas:CanvasMeta;onClose:()=>void;onRepair:()=>Promise<CanvasMeta|null>}) {
  const [sites,setSites]=useState<Array<{id:string;name:string}>>([]);
  const [site,setSite]=useState("");
  const [review,setReview]=useState<Review|null>(null);
@@ -18,16 +19,23 @@ export function CanvasCmsHandoff({canvas,onClose}:{canvas:CanvasMeta;onClose:()=
    .catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setBusy("");});
   return()=>{active=false;};
  },[]);
- async function submit(convert=false) {
+ async function submit(convert=false,revision?:string|number) {
   setError("");setBusy(convert?"Creating private draft":"Validating compatibility");
   try {
    const data=await canvasRequest<Review&{editor_url:string;project_id:string}>(API+"/"+encodeURIComponent(canvas.id)+"/cms/"+(convert?"convert":"validate"),{
-    method:"POST",body:JSON.stringify({site_id:site,expected_revision:canvas.revision}),
+    method:"POST",body:JSON.stringify({site_id:site,expected_revision:revision??canvas.revision}),
    });
    if(convert)setResult(data);else setReview(data);
   }catch(e){setError(e instanceof Error?e.message:"The handoff could not be completed.");}
   finally{setBusy("");}
  }
+ async function fix() {
+  setError("");setBusy("Adding starter content");
+  const saved=await onRepair();
+  setBusy("");
+  if(saved)await submit(false,saved.revision);
+ }
+ const fixable=Boolean(review?.issues.some(issue=>FIXABLE.has(issue.code)));
  return <div className="cv-modal-backdrop"><section role="dialog" aria-modal="true" aria-labelledby="canvas-cms-title" className="cv-modal">
   <header><div><span className="cv-eyebrow">Optional next step</span><h2 id="canvas-cms-title">Prepare for your website</h2></div><IconAction label="Close CMS handoff" onClick={onClose}><X size={18}/></IconAction></header>
   <p>Your Canvas remains independent. This checks the selected website's capabilities and creates an editable private draft.</p>
@@ -36,7 +44,7 @@ export function CanvasCmsHandoff({canvas,onClose}:{canvas:CanvasMeta;onClose:()=
    {review&&<div className="cv-conversion-review"><strong>{review.compatible?"Ready to create a draft":"Some elements need attention"}</strong><p>{review.mapping.page_count} pages · {review.mapping.section_count} sections · {review.mapping.block_count} blocks</p>
     {review.issues.map((issue,index)=><div key={index} className={"cv-issue "+issue.severity}><strong>{issue.node_id?issue.node_id+" · ":""}{issue.code.replaceAll("_"," ")}</strong><p>{issue.message}</p></div>)}
    </div>}
-   <footer><button disabled={!site||Boolean(busy)} onClick={()=>void submit(false)}>{review?"Check again":"Check compatibility"}</button><button className="cv-primary" disabled={!review?.compatible||Boolean(busy)} onClick={()=>void submit(true)}>Create private draft</button></footer>
+   <footer>{fixable&&<button disabled={Boolean(busy)} onClick={()=>void fix()}>Add starter page content</button>}<button disabled={!site||Boolean(busy)} onClick={()=>void submit(false)}>{review?"Check again":"Check compatibility"}</button><button className="cv-primary" disabled={!review?.compatible||Boolean(busy)} onClick={()=>void submit(true)}>Create private draft</button></footer>
   </>:<div className="cv-conversion-success"><Check size={22}/><h3>Private draft created</h3><p>Open it in the Theme Editor to edit sections, blocks, and preview the saved result. Nothing has been published.</p><a className="cv-primary" href={result.editor_url} target="_blank" rel="noopener noreferrer">Open Theme Editor <ArrowUpRight size={14}/></a></div>}
   {busy&&<p role="status">{busy}…</p>}{error&&<p role="alert" className="cv-error-text">{error}</p>}
  </section></div>;
