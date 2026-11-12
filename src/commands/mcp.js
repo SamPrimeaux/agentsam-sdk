@@ -7,6 +7,7 @@ import {
   listKnownServers,
   listMcpServers,
   listMcpTools,
+  callMcpTool,
   listOfferableMcpServerConnections,
   listRegisteredClients,
   pingMcpServer,
@@ -71,6 +72,8 @@ export function parseMcpArgs(argv = []) {
   let issuer = '';
   let audience = '';
   let displayName = '';
+  let toolName = '';
+  let toolInput = '{}';
   let authMode = '';
   let writeAccess = false;
   let force = false;
@@ -86,6 +89,8 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--issuer') issuer = argv[++i] || '';
     else if (arg === '--audience') audience = argv[++i] || '';
     else if (arg === '--display-name') displayName = argv[++i] || '';
+    else if (arg === '--tool') toolName = argv[++i] || '';
+    else if (arg === '--input') toolInput = argv[++i] || '{}';
     else if (arg === '--public') authMode = 'public';
     else if (arg === '--oauth') authMode = 'oauth';
     else if (arg === '--write') writeAccess = true;
@@ -108,6 +113,8 @@ export function parseMcpArgs(argv = []) {
     issuer,
     audience,
     displayName,
+    toolName,
+    toolInput,
     authMode,
     writeAccess,
     force,
@@ -152,6 +159,8 @@ function renderHelp(options = {}) {
     agentsam mcp connect inneranimalmedia [--write]     Authorize resource-scoped MCP via existing IAM PKCE
     agentsam mcp list [--catalog|--bundles] [--json]
     agentsam mcp status [<name>] [--json]
+    agentsam mcp tools <name> [--json]
+    agentsam mcp call <name> --tool <tool> --input '{\"command\":\"tab list\"}' [--json]
     agentsam mcp doctor [<name>] [--json]
     agentsam mcp remove <name> [--client <client>|all]
     agentsam mcp scopes <cloudflare-bundle> [--json]
@@ -424,7 +433,7 @@ export async function runMcp(argv = [], options = {}) {
       syncedAdapters.push(res);
     }
 
-    const ping = await pingMcpServer(serverConfig, options);
+    const ping = await (options.pingMcpServerImpl || pingMcpServer)(serverConfig, options);
     const scopePreview = cfBundle ? scopesForCloudflareMcpBundle(name) : null;
 
     if (args.json) {
@@ -484,7 +493,7 @@ export async function runMcp(argv = [], options = {}) {
     const resource = await probeMcpServer(server, name, options);
     const ping = resource.error
       ? { ok:false, error:resource.error, next:resource.next }
-      : await pingMcpServer(resource.server, options);
+      : await (options.pingMcpServerImpl || pingMcpServer)(resource.server, options);
     const clientStatuses = (server.clients || ['cursor']).map((c) =>
       inspectClientAdapter(c, name, options),
     );
@@ -537,11 +546,11 @@ export async function runMcp(argv = [], options = {}) {
     const resource = await probeMcpServer(server, name, options);
     const ping = resource.error
       ? { ok:false, error:resource.error, next:resource.next }
-      : await pingMcpServer(resource.server, options);
+      : await (options.pingMcpServerImpl || pingMcpServer)(resource.server, options);
     const clientStatuses = (server.clients || ['cursor']).map((c) =>
       inspectClientAdapter(c, name, options),
     );
-    const toolsProbe = ping.ok ? await listMcpTools(resource.server, options) : { count: 0, tools: [] };
+    const toolsProbe = ping.ok ? await (options.listMcpToolsImpl || listMcpTools)(resource.server, options) : { count: 0, tools: [] };
 
     const detectedClients = detectInstalledClients(options);
     const cfBundle = getCloudflareMcpBundle(name);
@@ -596,6 +605,34 @@ export async function runMcp(argv = [], options = {}) {
     }
     write('\n');
     return diagnostics;
+  }
+
+  if (subcommand === 'tools' || subcommand === 'call') {
+    if (!target) throw new Error('mcp_server_name_required');
+    const server = readMcpServer(target, options);
+    if (!server) throw new Error(`mcp_server_not_configured:${target}`);
+    const resource = await probeMcpServer(server, target, options);
+    if (resource.error) throw new Error(resource.error);
+    if (subcommand === 'tools') {
+      const result = await (options.listMcpToolsImpl || listMcpTools)(resource.server, options);
+      if (args.json) write(JSON.stringify(result, null, 2) + '\n');
+      else {
+        if (result.error) write(`  MCP tool discovery failed: ${result.error}\n`);
+        else for (const tool of result.tools || []) write(`  ${tool.name}  ${tool.description || ''}\n`);
+      }
+      return result;
+    }
+    if (!args.toolName) throw new Error('mcp_tool_name_required: use --tool <name>');
+    let payload;
+    try { payload = JSON.parse(args.toolInput); }
+    catch { throw new Error('mcp_tool_input_invalid_json'); }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('mcp_tool_input_object_required');
+    // An explicit CLI call is required. No browser automation runs on install
+    // or from untrusted catalog metadata.
+    const result = await (options.callMcpToolImpl || callMcpTool)(resource.server, args.toolName, payload, options);
+    if (args.json) write(JSON.stringify(result, null, 2) + '\n');
+    else write(result.ok ? JSON.stringify(result.result, null, 2) + '\n' : `  MCP tool failed: ${result.error}\n`);
+    return result;
   }
 
   if (subcommand === 'remove') {
