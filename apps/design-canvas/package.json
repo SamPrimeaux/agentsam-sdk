@@ -20,5 +20,9 @@
     "agentsam.app.json",
     "README.md"
   ],
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "releaseTrain": "independent",
+  "publishConfig": {
+    "access": "public"
+  }
 }

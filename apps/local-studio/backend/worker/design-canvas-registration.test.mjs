@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { projectSideStageContribution } from './plugin-side-stages.js';
 
 const sql = readFileSync(new URL('../migrations/1359_design_canvas_installable_app.sql', import.meta.url), 'utf8');
+const versionSql = readFileSync(new URL('../migrations/1360_design_canvas_registry_version.sql', import.meta.url), 'utf8');
 
 test('Design Canvas registration uses live D1 family constraints and is idempotent', () => {
   const db = new DatabaseSync(':memory:');
@@ -29,10 +30,15 @@ test('Design Canvas registration uses live D1 family constraints and is idempote
     );`);
     db.exec(sql);
     db.exec(sql);
+    db.exec('ALTER TABLE agentsam_plugins ADD COLUMN version TEXT NOT NULL DEFAULT "1.0.0";');
+    db.exec('ALTER TABLE agentsam_plugins ADD COLUMN updated_at INTEGER DEFAULT 0;');
+    db.exec(versionSql);
+    db.exec(versionSql);
     const row = db.prepare('SELECT * FROM agentsam_plugins').get();
     assert.equal(db.prepare('SELECT count(*) n FROM agentsam_plugins').get().n, 1);
     assert.equal(row.plugin_key, 'agentsam-design-canvas');
     assert.equal(row.family_key, 'build');
+    assert.equal(row.version,'0.1.0');
     const details = projectSideStageContribution(row);
     assert.equal(details?.renderer, 'embed');
     assert.equal(details?.href, 'https://agentsam.inneranimalmedia.com/design-canvas/');

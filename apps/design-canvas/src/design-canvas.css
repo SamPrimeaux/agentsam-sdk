@@ -94,3 +94,8 @@
 .dca-help-tip{position:absolute;pointer-events:none;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%);z-index:20;opacity:0;visibility:hidden;white-space:nowrap;padding:5px 8px;border:1px solid #5a6473;border-radius:5px;background:#252a31;color:#f1f4fa;font-size:11px;font-weight:500;box-shadow:0 4px 14px #0008;transition:opacity .14s}
 .dca-help-wrap:focus-within .dca-help-tip,.dca-help-wrap:hover .dca-help-tip{opacity:1;visibility:visible}
 .dca-tools .dca-help-tip,.dca-pane-heading .dca-help-tip{bottom:auto;top:calc(100% + 8px)}
+@media(max-width:480px){
+  .dca-toolbar .dca-tools .dca-help-wrap:last-child .dca-help-tip,
+  .dca-pane-heading .dca-help-wrap:last-child .dca-help-tip{left:auto;right:0;transform:none}
+  .dca-route .dca-help-wrap:first-child .dca-help-tip{left:0;right:auto;transform:none}
+}
