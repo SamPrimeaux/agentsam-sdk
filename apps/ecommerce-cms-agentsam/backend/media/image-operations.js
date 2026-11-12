@@ -90,13 +90,15 @@ function imageEditModelId(value) {
 
 export async function listEditableImageModels(env) {
   if (!env.DB?.prepare || !env.OPENAI_API_KEY) return [];
+  // Model identity and image specialization come from the canonical model
+  // catalog. The legacy api_model_id, model_kind and routing_eligible fields
+  // do not exist in production D1; querying them caused an HTTP 500.
+  // A model hidden from the picker remains unavailable for this operation.
   const { results } = await env.DB.prepare(
-    `SELECT c.api_model_id AS id, c.display_name AS name
+    `SELECT c.model_key AS id, c.display_name AS name
     FROM agentsam_model_catalog c
-    JOIN agentsam_model_policies p ON p.model_key = c.model_key
-    WHERE c.provider = 'openai' AND c.is_active = 1 AND c.show_in_picker = 1
-      AND p.is_active = 1 AND p.routing_eligible = 1
-      AND (c.model_kind LIKE 'image%' OR c.api_model_id LIKE 'gpt-image-%' OR c.api_model_id = 'chatgpt-image-latest')
+    WHERE c.provider = 'openai' AND c.api_platform = 'openai_images'
+      AND c.is_active = 1 AND c.show_in_picker = 1
     ORDER BY c.display_name`,
   ).all();
   return results || [];
