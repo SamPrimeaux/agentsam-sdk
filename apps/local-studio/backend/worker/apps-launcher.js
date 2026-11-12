@@ -6,7 +6,7 @@
 export async function listLauncherApps(db, accountId) {
   if (!db?.prepare || !accountId) throw new Error("apps_launcher_context_missing");
   const query = [
-    "SELECT p.plugin_key, p.plugin_kind, p.display_name, p.description, p.icon_url, p.metadata_json,",
+    "SELECT p.id AS plugin_id, p.plugin_key, p.plugin_kind, p.display_name, p.description, p.icon_url, p.metadata_json,",
     "       MAX(CASE WHEN i.id IS NOT NULL THEN 1 ELSE 0 END) AS installed,",
     "       MAX(COALESCE(i.enabled, 0)) AS enabled,",
     "       COALESCE(MAX(CASE WHEN i.enabled = 1 THEN i.setup_status END),",
@@ -29,7 +29,7 @@ export async function listLauncherApps(db, accountId) {
     const signIn = typeof app.setup?.sign_in_url === "string" &&
       /^https:\/\//.test(app.setup.sign_in_url) ? app.setup.sign_in_url : null;
     return [{
-      key: row.plugin_key,
+      key: row.plugin_key, plugin_id: row.plugin_id,
       label: typeof app.nav?.label === "string" && app.nav.label.trim()
         ? app.nav.label.trim().slice(0, 64) : row.display_name,
       href, sign_in_url: signIn, surfaces,

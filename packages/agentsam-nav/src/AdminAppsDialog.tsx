@@ -4,6 +4,8 @@ import { Box, Check, Clapperboard, Layers3, LayoutPanelTop, Search, TrendingUp, 
 
 export interface AdminInstallableApp {
   key: string;
+  plugin_id?: string;
+  surfaces?: string[];
   label: string;
   kind: 'app' | 'plugin';
   icon_url?: string | null;
@@ -106,7 +108,7 @@ export function AdminAppsDirectory({loadApps,installApp,removeApp,updateApp,onOp
           </div>):<p className="as-apps-picker-state">{needle?'No Apps match this search.':view==='installed'?'No Apps installed for this account.':'No additional Apps available in this catalog.'}</p>}
     </section>
     {error&&apps.length?<p role="alert" className="as-apps-picker-error">{error}</p>:null}
-    <footer className="as-apps-picker-footer"><span>App installations belong to your account. Side Stage visibility, plugins and public storefront apps are managed separately.</span></footer>
+    <footer className="as-apps-picker-footer"><span>Apps belong to your account. Installed apps launch alongside conversations when supported, or in their full editor. Plugins connect external tools.</span></footer>
   </div>;
 }
 

@@ -33,6 +33,7 @@ test("apps launcher uses account-scoped installations and distinct installed/ena
   assert.equal(db.state.accountId, "acct_123");
   assert.match(db.state.query, /i\.account_id = \?/);
   assert.match(db.state.query, /GROUP BY p\.id/);
+  assert.match(db.state.query, /p\.id AS plugin_id/);
   assert.deepEqual(apps.map(row => [row.key, row.installed, row.enabled]),
     [["campaign",true,true],["disabled",true,false]]);
   assert.deepEqual(apps[0].surfaces, ["admin-nav"]);

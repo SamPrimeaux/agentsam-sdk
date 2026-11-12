@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import {
-  listLocalStudioConnections,
+  listLocalStudioSideStages,
   type LocalStudioSideStageRecord,
 } from "../src/lib/connections/client";
 import { SETTINGS_CATALOG_CHANGED_EVENT } from "../src/lib/desktop/connection-deep-link";
@@ -54,9 +54,9 @@ export function receiveSideStageRegistry(input: unknown) {
 
 export async function reloadSideStageRegistry(): Promise<Registry> {
   if (inFlight) return inFlight;
-  inFlight = listLocalStudioConnections()
-    .then(payload => {
-      receiveSideStageRegistry(payload.side_stages ?? []);
+  inFlight = listLocalStudioSideStages()
+    .then(stages => {
+      receiveSideStageRegistry(stages.filter(stage => stage.enabled !== false));
       return current;
     })
     .catch(() => {

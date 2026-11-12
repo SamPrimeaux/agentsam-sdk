@@ -131,7 +131,10 @@ export async function loadConnectionsRegistry(env, userId) {
        LIMIT 100`,
     )
       .bind(userId)
-      .all(),
+      .all().catch(error=>{
+        console.warn('connection_secrets_unavailable',String(error?.message||error).slice(0,120));
+        return {results:[]};
+      }),
     env.DB.prepare(`SELECT LOWER(provider) AS provider,COUNT(*) AS active_count
       FROM user_oauth_tokens
       WHERE account_id=? AND is_active=1 AND LOWER(provider) IN ('github','google_drive','google_gmail')
@@ -206,6 +209,7 @@ export async function loadConnectionsRegistry(env, userId) {
 
   return {
     plugins: settingsPlugins,
+    tools_verified:pluginRegistry.toolsVerified !== false,
     // Independent views of the SAME registry, never a second authority.
     composer_plugins: composerPlugins,
     side_stages: sideStages,

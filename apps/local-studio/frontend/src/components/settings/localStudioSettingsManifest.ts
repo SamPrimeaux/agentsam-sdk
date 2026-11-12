@@ -27,7 +27,7 @@ export const localStudioSettingsManifest = defineSettingsManifest({
     {
       id: "customize",
       label: "Customize",
-      description: "Apps, connected plugins, Side Stage, companions and advanced capabilities.",
+      description: "Install Apps, connect plugins, manage MCP servers and your agent skills.",
       icon: "sliders",
       views: [
         { id: "plugins", label: "Plugins" },

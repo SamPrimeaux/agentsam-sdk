@@ -54,6 +54,7 @@ import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPl
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
+import { handleStudioMcps } from "./studio-mcps.js";
 import { handleStudioRules } from "./studio-rules.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
 import { handleStudioUserPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings } from "./studio-user-preferences.js";
@@ -779,6 +780,8 @@ export default {
       || url.pathname.startsWith("/api/settings/agents/");
     const isStudioSkills = url.pathname === "/api/settings/skills"
       || url.pathname.startsWith("/api/settings/skills/");
+    const isStudioMcps = url.pathname === "/api/settings/mcps"
+      || url.pathname.startsWith("/api/settings/mcps/");
     const isStudioRules = url.pathname === "/api/settings/rules"
       || url.pathname.startsWith("/api/settings/rules/");
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
@@ -1235,6 +1238,15 @@ export default {
       catch(error){console.warn("studio_agent_settings_error",String(error?.message||error).slice(0,140));
         return json({ok:false,error:"agent_settings_unavailable"},503);}
     }
+    if (isStudioMcps) {
+      try {
+        return await handleStudioMcps(request,env,await sessionUser());
+      } catch(error) {
+        console.warn('studio_mcps_error',String(error?.message||error).slice(0,150));
+        return json({ok:false,error:'mcp_registry_unavailable'},503);
+      }
+    }
+
     if (isStudioSkills) {
       try {
         return await handleStudioSkills(request,env,await sessionUser());

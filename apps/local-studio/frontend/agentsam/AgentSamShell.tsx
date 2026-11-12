@@ -3,7 +3,11 @@ import { createPortal } from 'react-dom';
 import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
-import { openAppsInstaller } from '@inneranimalmedia/agentsam-nav/browser';
+import { openAppsInstaller, setAppsInstallerAdapter } from '@inneranimalmedia/agentsam-nav/browser';
+import {
+  listAccountApps, installAccountApp, removeAccountApp,
+  setAccountAppEnabled, launchAccountApp,
+} from '@/lib/apps/client';
 import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
 import {
   projectStudioShellAppearance,
@@ -100,6 +104,15 @@ function HostedCompanionHeader({ state }: { state: 'idle' | 'working' }) {
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
 export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
+  useEffect(()=>{
+    setAppsInstallerAdapter({
+      loadApps:listAccountApps,installApp:installAccountApp,
+      removeApp:removeAccountApp,updateApp:setAccountAppEnabled,
+      onOpenApp:launchAccountApp,
+    });
+    return ()=>setAppsInstallerAdapter(null);
+  },[]);
+
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });
@@ -598,23 +611,14 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'files', label: 'View files in conversation', icon: <Files />, separatorBefore: true, onSelect: () => { state.openSideTab('files'); state.setSideOpen(true); } },
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
       { id: 'living-goals', label: 'Goals', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
-      // Installed apps are projected from the host's real app catalog. Tabs such
-      // as Terminal and Code are workspace panels, not fake installed packages.
-      { id: 'installed-apps', label: 'Installed apps', icon: <Layers3 />, children: [
+      // Installed applications are the launch surface, not arbitrary panel
+      // preferences. Built-in utilities remain accessible in the Side Stage +.
+      { id: 'installed-apps', label: 'Apps', icon: <Layers3 />, children: [
         ...(navigation.apps || []).filter(item => item.href?.startsWith('/') && !item.href.startsWith('//')).map(item => {
           const Icon = navigationIcons[item.icon as keyof typeof navigationIcons] || Layers3;
           return { id: 'open-app-' + item.id, label: item.label, icon: <Icon />, onSelect: () => go(item.href!) };
         }),
-        { id: 'all-apps', label: 'Manage apps', icon: <Plug />, separatorBefore: true, onSelect: openAppsInstaller },
-      ] },
-      { id: 'workspace-panels', label: 'Workspace panels', icon: <PanelRight />, children: [
-        { id: 'co-worker', label: 'Co-worker', icon: <Users />, onSelect: () => { state.openSideTab('chat', { ephemeral: false }); state.setSideOpen(true); } },
-        { id: 'browser', label: 'Browser', icon: <Globe />, onSelect: () => { state.openSideTab('browser', { ephemeral: false }); state.setSideOpen(true); } },
-        { id: 'files-work', label: 'Files', icon: <Folder />, onSelect: () => state.setWorkSurface('files') },
-        { id: 'code-work', label: 'Code', icon: <FileCode />, onSelect: () => state.setWorkSurface('code') },
-        { id: 'terminal-work', label: 'Terminal', icon: <SquareTerminal />, onSelect: () => state.setWorkSurface('terminal') },
-        { id: 'preview-work', label: 'Preview', icon: <MonitorPlay />, onSelect: () => state.setWorkSurface('preview') },
-        { id: 'artifacts-work', label: 'Artifacts', icon: <Layers3 />, onSelect: () => { state.openSideTab('artifacts', { ephemeral: false }); state.setSideOpen(true); } },
+        { id: 'all-apps', label: 'Install or manage apps', icon: <Plug />, separatorBefore: true, onSelect: openAppsInstaller },
       ] },
     ] : [],
     pinnedSummary: chat ? {

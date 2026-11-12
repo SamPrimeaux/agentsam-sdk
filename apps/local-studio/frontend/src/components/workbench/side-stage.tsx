@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { openAppsInstaller } from "@inneranimalmedia/agentsam-nav/browser";
+import type { AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
+import { listAccountApps } from "@/lib/apps/client";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,7 +55,33 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
   const setConfirmDiscard = useWorkStore((s) => s.setConfirmDiscard);
   const keepSideChat = useWorkStore((s) => s.keepSideChat);
   const registry = useSideStageRegistry();
-  const stages = registry.actions;
+  const [installedApps,setInstalledApps]=useState<AdminInstallableApp[]>([]);
+  const [availableApps,setAvailableApps]=useState<AdminInstallableApp[]>([]);
+  const [appsFailed,setAppsFailed]=useState(false);
+  useEffect(()=>{
+    let cancelled=false;
+    const refresh=async()=>{
+      try{
+        const apps=await listAccountApps();
+        if(!cancelled){
+          setAvailableApps(apps);
+          setInstalledApps(apps.filter((app:AdminInstallableApp)=>
+            app.kind==="app"&&app.installed&&app.enabled&&typeof app.href==="string"&&
+            /^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(app.href)));
+          setAppsFailed(false);
+        }
+      }catch{
+        if(!cancelled){setInstalledApps([]);setAvailableApps([]);setAppsFailed(true);}
+      }
+    };
+    void refresh();
+    window.addEventListener("agentsam:navigation-changed",refresh);
+    return ()=>{cancelled=true;window.removeEventListener("agentsam:navigation-changed",refresh);};
+  },[]);
+  const stages = registry.actions.filter(stage=>{
+    const app=availableApps.find(item=>item.plugin_id===stage.pluginId);
+    return !app || (app.installed&&app.enabled);
+  });
   const registered = (item: (typeof tabs)[number]) => item.pluginId
     ? stages.some(stage => stage.pluginId === item.pluginId && stage.stageId === item.stageId)
     : stages.some(stage => stage.renderer === "builtin" && stage.tabKind === item.kind);
@@ -115,7 +144,31 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
               }}>Retry loading additions</DropdownMenuItem>}
               {registry.loaded && !registry.error && !stages.length &&
                 <div role="status" className="px-3 py-2 text-xs text-muted-foreground">No additions enabled</div>}
-              {stages.map((stage) => {
+              {installedApps.length>0&&<div role="presentation" className="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Installed apps</div>}
+              {installedApps.map(app=>{
+                const stage=registry.actions.find(item=>
+                  item.pluginId===app.plugin_id&&app.surfaces?.includes("side-stage"));
+                return <DropdownMenuItem key={"app:"+app.key} onSelect={()=>{
+                  if(stage){
+                    openSideTab(stage.tabKind as Parameters<typeof openSideTab>[0],{
+                      title:app.label,pluginId:stage.pluginId,stageId:stage.stageId,ephemeral:false,
+                    });
+                    setSideOpen(true);
+                  }else if(app.href){
+                    window.dispatchEvent(new CustomEvent("agentsam:navigate",{detail:{to:app.href}}));
+                  }
+                }}>
+                  {app.icon_url&&/^(https:\/\/|\/)/.test(app.icon_url)
+                    ? <img src={app.icon_url} alt="" className="mr-2 size-3.5 object-contain"/>
+                    : <Layers className="mr-2 size-3.5"/>}
+                  {app.label}{stage?<span className="ml-auto text-[10px] text-muted-foreground">Side Stage</span>:<ExternalLink className="ml-auto size-3 text-muted-foreground"/>}
+                </DropdownMenuItem>;
+              })}
+              {appsFailed&&<div role="status" className="px-3 py-2 text-xs text-muted-foreground">App installations unavailable</div>}
+              <DropdownMenuItem onSelect={openAppsInstaller}><Plus className="mr-2 size-3.5"/>Install or manage apps</DropdownMenuItem>
+              {stages.length>0&&<div role="presentation" className="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Tools</div>}
+              {stages.filter(stage=>!installedApps.some(app=>
+                app.plugin_id===stage.pluginId&&app.surfaces?.includes("side-stage"))).map((stage) => {
                 const Icon = {
                   target: Target, users: Users, globe: Globe, "file-code": FileCode,
                   box: Box, layers: Layers, layout: Layers, film: Film,

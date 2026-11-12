@@ -115,6 +115,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
         "settings" => {
             let path = request.path.as_deref().unwrap_or("").trim();
             let root = path == "/api/settings/skills"
+                || path == "/api/settings/mcps"
                 || path == "/api/settings/rules"
                 || path == "/api/settings/preferences"
                 || path == "/api/settings/account-avatar"
@@ -130,6 +131,10 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             let skill = path.strip_prefix("/api/settings/skills/").is_some_and(|id| {
                 id.starts_with("skill_") && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
             });
+            let mcp = path.strip_prefix("/api/settings/mcps/").is_some_and(|id| {
+                id.starts_with("mcps_") && id.len() <= 64 &&
+                    id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+            });
             let agent = path.strip_prefix("/api/settings/agents/").is_some_and(|id| {
                 id.starts_with("asp_") && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
             });
@@ -141,7 +146,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             let rule_rest = path.strip_prefix("/api/settings/rules/");
             let rule = rule_rest.is_some_and(|id| rule_id(id));
             let rule_toggle = rule_rest.and_then(|rest| rest.strip_suffix("/enabled")).is_some_and(|id| rule_id(id));
-            if !(root || skill || agent || rule || rule_toggle)
+            if !(root || skill || mcp || agent || rule || rule_toggle)
                 || path.contains("://")
                 || path.contains('\\')
                 || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
@@ -152,23 +157,44 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 "GET" => Method::GET,
                 "POST" => Method::POST,
                 "PUT" => Method::PUT,
+                "PATCH" => Method::PATCH,
                 "DELETE" => Method::DELETE,
                 _ => return Err("studio_service_settings_method_invalid".into()),
             };
             let valid = match method {
                 Method::GET => root && path != "/api/notifications/read-all" && !path.ends_with("/read"),
-                Method::POST => path == "/api/settings/skills" || path == "/api/settings/agents"
+                Method::POST => path == "/api/settings/skills" || path == "/api/settings/mcps" || path == "/api/settings/agents"
                     || path == "/api/settings/rules"
                     || path == "/api/notifications/read-all"
                     || (path.starts_with("/api/notifications/") && path.ends_with("/read")),
-                Method::PUT => skill || agent || rule || rule_toggle || path == "/api/settings/agents/policy"
+                Method::PUT => skill || mcp || agent || rule || rule_toggle || path == "/api/settings/agents/policy"
                     || path == "/api/settings/preferences" || path == "/api/settings/account-avatar"
                     || path == "/api/settings/notifications",
-                Method::DELETE => skill || agent || rule,
+                Method::PATCH => mcp,
+                Method::DELETE => skill || mcp || agent || rule,
                 _ => false,
             };
             if !valid {return Err("studio_service_settings_operation_invalid".into());}
             Ok((method,path.to_string()))
+        }
+        "apps" => {
+            // The account Apps registry has two exact endpoints. Native clients
+            // may install and launch products, but this is not a generic proxy.
+            let path = request.path.as_deref().unwrap_or("").trim();
+            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+                "GET" => Method::GET,
+                "POST" => Method::POST,
+                "PATCH" => Method::PATCH,
+                "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_apps_method_invalid".into()),
+            };
+            let write = method == Method::POST || method == Method::DELETE || method == Method::PATCH;
+            if (path == "/api/apps/launcher" && method == Method::GET)
+                || (path == "/api/apps/install" && write) {
+                Ok((method,path.to_string()))
+            } else {
+                Err("studio_service_apps_path_invalid".into())
+            }
         }
         "inventory" => Ok((Method::GET, "/api/llm/inventory".to_string())),
         "chat" => Ok((Method::POST, "/api/chat".to_string())),
@@ -1036,6 +1062,22 @@ mod tests {
     }
 
     #[test]
+    fn native_apps_service_bridge_allowlist_is_exact() {
+        for (path,method) in [("/api/apps/launcher","GET"),("/api/apps/install","POST"),
+            ("/api/apps/install","PATCH"),("/api/apps/install","DELETE")] {
+            let request=StudioServiceBridgeRequest{operation:"apps".into(),account_id:None,
+                body:None,body_base64:None,content_type:None,path:Some(path.into()),method:Some(method.into())};
+            assert_eq!(studio_service_route(&request).unwrap().0.as_str(),method);
+        }
+        for (path,method) in [("/api/apps/launcher","DELETE"),("/api/apps/install","GET"),
+            ("/api/apps/install/../vault","GET"),("https://bad.example/api/apps/install","POST")] {
+            let request=StudioServiceBridgeRequest{operation:"apps".into(),account_id:None,
+                body:None,body_base64:None,content_type:None,path:Some(path.into()),method:Some(method.into())};
+            assert!(studio_service_route(&request).is_err());
+        }
+    }
+
+    #[test]
     fn vault_sync_provider_aliases_are_canonical() {
         assert_eq!(canonical_sync_provider("openai").unwrap(), "openai");
         assert_eq!(canonical_sync_provider("google").unwrap(), "gemini");
@@ -1117,6 +1159,11 @@ mod tests {
             ("/api/notifications/notif_123/read", "POST"),
             ("/api/settings/preferences", "GET"),
             ("/api/settings/preferences", "PUT"),
+            ("/api/settings/mcps", "GET"),
+            ("/api/settings/mcps", "POST"),
+            ("/api/settings/mcps/mcps_abcdef0123456789", "PUT"),
+            ("/api/settings/mcps/mcps_abcdef0123456789", "PATCH"),
+            ("/api/settings/mcps/mcps_abcdef0123456789", "DELETE"),
             ("/api/settings/skills", "GET"),
             ("/api/settings/skills", "POST"),
             ("/api/settings/skills/skill_1234", "PUT"),
@@ -1143,6 +1190,9 @@ mod tests {
             ("/api/notifications/../read", "POST"),
             ("/api/settings/agents/../vault/secrets", "GET"),
             ("/api/settings/agents/asp_1234", "POST"),
+            ("/api/settings/mcps/mcps_abcdef0123456789", "POST"),
+            ("/api/settings/mcps/../secrets", "PUT"),
+            ("/api/settings/mcps/mcps_abcdef0123456789", "GET"),
             ("/api/settings/skills/skill_1234", "GET"),
             ("/api/settings/rules/rule_1234", "GET"),
             ("/api/settings/rules/rule_1234/enabled", "DELETE"),

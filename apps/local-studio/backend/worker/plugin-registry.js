@@ -67,11 +67,16 @@ export async function materializeCloudflarePlugin(env, accountId, options = {}) 
 
 export async function loadPluginRegistry(env, accountId, options = {}) {
   const includeDisabled = options.includeDisabled === true;
+  // An unavailable optional tool enumeration must not erase installed plugin
+  // definitions, OAuth status, or account authorization history in Settings.
   const [plugins, tools] = await Promise.all([
     listPlugins(env.DB, { accountId, environment: 'production', includeDisabled }),
-    listPluginTools(env.DB, { accountId, includeDisabledPlugins: includeDisabled }),
+    listPluginTools(env.DB, { accountId, includeDisabledPlugins: includeDisabled }).catch(error => {
+      console.warn('installed_plugin_tools_unavailable',String(error?.message||error).slice(0,120));
+      return null;
+    }),
   ]);
-  return { plugins, tools };
+  return { plugins, tools:tools || [], toolsVerified:tools !== null };
 }
 
 export async function updateLocalStudioPluginPreferences(env, accountId, pluginId, value = {}) {
