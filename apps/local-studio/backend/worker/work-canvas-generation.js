@@ -1,5 +1,5 @@
-// This Worker is built from the SDK monorepo before the SDK is published.
-// Import the canonical local provider source, not an unpublished npm self-package.
+// Root-only SDK CI and the prepublication Worker build both run before the
+// nested Studio install. This is the source behind the public SDK ./providers export.
 import { createProviderAdapter } from '../../../../src/providers/index.js';
 import { discoverProviderModels } from '../../../../protocol/models/discovery.mjs';
 import { WORKERS_AI_CURATED_MODEL_IDS } from '../../../../protocol/models/workers-ai-curated.mjs';

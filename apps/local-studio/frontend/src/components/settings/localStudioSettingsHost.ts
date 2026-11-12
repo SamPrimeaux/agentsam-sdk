@@ -15,6 +15,7 @@ import type {
   SettingsNotificationProfileUpdate,
   SettingsPlugin,
   SettingsSnapshot,
+  SettingsStorageTarget,
   SettingsWidget,
 } from "@inneranimalmedia/agentsam-settings/contracts";
 import {
@@ -52,6 +53,7 @@ import {
   updateLocalStudioPlugin,
   type LocalStudioPluginRecord,
 } from "@/lib/connections/client";
+import { projectSettingsStorageTargets, type CloudflareStorageDiscovery } from "@/lib/storage/settings-targets";
 import {
   listLocalStudioWidgets,
   setLocalStudioWidgetVisible,
@@ -106,7 +108,7 @@ function settingsModel(
     source,
     selected,
     verifiedAt,
-    reasoningEfforts: verifiedModelControls(model).reasoning_efforts,
+    reasoningEfforts: verifiedModelControls({ ...model, model_key: model.model_key ?? undefined }).reasoning_efforts,
   };
 }
 
@@ -307,6 +309,35 @@ async function loadPluginSettings() {
   return listLocalStudioConnections();
 }
 
+/** Cloudflare inventory is read from the existing OAuth discovery endpoint.
+ * Browser/local capability and hosted provider health are reported separately.
+ * A failed probe is unknown, never an empty bucket or healthy connection. */
+async function loadStorageTargets(): Promise<SettingsStorageTarget[]> {
+  const indexedDbAvailable = typeof indexedDB !== "undefined";
+  const path = "/api/connections/cloudflare/resources?per_page=50&return_to=%2Fsettings%2Fstorage";
+  let cloudflare: CloudflareStorageDiscovery | null = null;
+  try {
+    if (isPackagedDesktop()) {
+      const response = await invokeStudioService({
+        operation: "connections",
+        account_id: await resolveDesktopStudioAccountId(),
+        method: "GET",
+        path,
+      });
+      if (response.ok) cloudflare = JSON.parse(response.body) as CloudflareStorageDiscovery;
+    } else {
+      const response = await fetch(path, {
+        credentials: "same-origin",
+        headers: { accept: "application/json" },
+      });
+      if (response.ok) cloudflare = await response.json() as CloudflareStorageDiscovery;
+    }
+  } catch {
+    // Do not convert failed provider discovery into fake empty/healthy resources.
+  }
+  return projectSettingsStorageTargets(indexedDbAvailable, cloudflare);
+}
+
 function emptySnapshot(): SettingsSnapshot {
   return {
     fixtureName: "local-studio-live",
@@ -368,53 +399,6 @@ function emptySnapshot(): SettingsSnapshot {
   };
 }
 
-/** Source-aware storage cards for the packaged Settings UI; no fixture targets. */
-async function loadLiveStorageTargets(): Promise<SettingsSnapshot["storage"]> {
-  const localSupported = isPackagedDesktop() ||
-    (typeof window !== "undefined" && typeof window.showDirectoryPicker === "function");
-  const entries: SettingsSnapshot["storage"] = [{
-    id: "local-device",
-    name: "Local device",
-    kind: "File System Access / desktop host",
-    status: localSupported ? "healthy" : "attention",
-    detail: localSupported
-      ? "Choose a folder in Media Library. Browser permissions stay on this device; files are not uploaded automatically."
-      : "This browser cannot attach a folder. Use the desktop runtime or a browser with File System Access support.",
-    actionHref: "/media?source=local",
-    actionLabel: "Browse local files",
-  }];
-  let info: { status?: string; r2?: { available?: boolean; count?: number }; images?: { available?: boolean; count?: number }; stream?: { available?: boolean; count?: number } } | null = null;
-  try {
-    const response = await fetch("/api/connections/cloudflare/resources?return_to=%2Fsettings%2Fstorage", {
-      credentials: "same-origin", headers: { accept: "application/json" },
-    });
-    if (response.ok) info = await response.json();
-  } catch { /* Offline is not the same as disconnected. */ }
-
-  const needsScope = info?.status === "needs_scope";
-  const connected = Boolean(info?.status && !["not_connected", "error"].includes(info.status));
-  const actionHref = !info || (connected && !needsScope) ? "/media" :
-    "/api/connections/cloudflare/start?packs=media,data&return_to=%2Fsettings%2Fstorage";
-  const actionLabel = !info ? "Open Media Library" :
-    needsScope ? "Review permissions" : connected ? "Open Media Library" : "Connect Cloudflare";
-  for (const [id, name, family] of [
-    ["cloudflare-images", "Cloudflare Images", info?.images],
-    ["cloudflare-stream", "Cloudflare Stream", info?.stream],
-    ["cloudflare-r2", "Cloudflare R2", info?.r2],
-  ] as const) {
-    entries.push({
-      id, name, kind: "Account-authorized Cloudflare OAuth",
-      status: !info ? "unknown" : info.status === "not_connected" ? "attention" : family?.available ? "healthy" : "attention",
-      detail: !info ? "Connection could not be verified."
-        : info.status === "not_connected" ? "No active Cloudflare grant for this account."
-        : family?.available ? `Connected provider resource${typeof family.count === "number" ? ` · ${family.count} items reported` : ""}.`
-        : "Provider permissions or availability need attention.",
-      actionHref, actionLabel,
-    });
-  }
-  return entries;
-}
-
 async function liveSnapshot(): Promise<SettingsSnapshot> {
   const snapshot = emptySnapshot();
   const desktop = isPackagedDesktop();
@@ -426,7 +410,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     snapshot.health = "attention";
   }
 
-  const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, notificationsResult, signedIn, workspace, usageMetrics] = await Promise.all([
+  const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, notificationsResult, signedIn, workspace, usageMetrics, storageTargets] = await Promise.all([
     loadEffectiveModelInventory().then(
       (value) => ({ ok: true as const, value }),
       () => ({ ok: false as const, value: null }),
@@ -454,11 +438,11 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     desktop ? identitySessionExists().catch(() => false) : Promise.resolve(false),
     desktop ? getDesktopWorkspaceContext().catch(() => null) : Promise.resolve(null),
     desktop ? Promise.resolve([]) : readAccountToolUsage(),
+    typeof window !== "undefined" && /^\/settings\/storage(?:\/|$)/.test(window.location.pathname)
+      ? loadStorageTargets() : Promise.resolve([] as SettingsStorageTarget[]),
   ]);
   snapshot.usage = usageMetrics;
-  if (typeof window !== "undefined" && window.location.pathname.startsWith("/settings/storage")) {
-    snapshot.storage = await loadLiveStorageTargets();
-  }
+  snapshot.storage = storageTargets;
 
   snapshot.general.runtime = desktop ? "Desktop runtime ready" : "Web runtime ready";
   snapshot.general.account = desktop
