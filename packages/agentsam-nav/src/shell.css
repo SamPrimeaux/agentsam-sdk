@@ -240,7 +240,7 @@
 .as-nav-search-launch svg{width:18px;height:18px;}
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-search-launch{display:none;}
 /* Active-app identity comes from the host's installed app registry. */
-.as-nav-current-app{min-width:0;max-width:172px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--nav-text);font-size:13px;font-weight:550;}
+.as-nav-current-app{min-width:0;max-width:172px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--nav-text);font-size:var(--nav-label-size);font-weight:var(--fw-heading, 500); }
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-current-app{display:none;}
 .as-nav-work-brand-toggle__mark > svg{width:22px;height:22px;}
 /* Parents with destinations keep navigation and disclosure as separate actions. */
@@ -396,7 +396,7 @@
 .as-nav-drawer-search input { outline: none; color: var(--nav-text); }
 .as-nav-drawer-search input:focus-visible { outline: none; }
 .as-nav-drawer-search .as-nav-search:focus-within { border-color: var(--nav-accent); }
-.as-nav-search-everywhere { flex: 0 0 auto; min-width: 43px; height: 39px; padding-inline: 5px; border: 1px solid var(--nav-border); border-radius: 10px; background: transparent; color: var(--nav-muted); font-size: 11px; cursor: pointer; }
+.as-nav-search-everywhere { flex: 0 0 auto; min-width: 43px; height: 39px; padding-inline: 5px; border: 1px solid var(--nav-border); border-radius: 10px; background: transparent; color: var(--nav-muted); font-size: var(--nav-meta-size); cursor: pointer; }
 .as-nav-search-everywhere:hover, .as-nav-search-everywhere:focus-visible { background: var(--nav-selected); color: var(--nav-text); }
 @media (max-width: 767px) {
   .as-nav-launch-dock {
