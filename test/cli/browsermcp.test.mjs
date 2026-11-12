@@ -53,16 +53,16 @@ test('Browser MCP stdio authority installs as a local adapter without overwritin
 
   const tools = await runMcp(['tools','browsermcp','--json'], {
     home:root,write:()=>{},
-    listMcpToolsImpl:async()=>({tools:[{name:'browser',inputSchema:{type:'object'}}],count:1,transport:'stdio'}),
+    listMcpToolsImpl:async()=>({tools:[{name:'browser',inputSchema:{type:'object',properties:{commands:{type:'string'}},required:['commands']}}],count:1,transport:'stdio'}),
   });
   assert.deepEqual(tools.tools.map(tool=>tool.name),['browser']);
 
-  const call = await runMcp(['call','browsermcp','--tool','browser','--input',JSON.stringify({command:'tab list'}),'--json'], {
+  const call = await runMcp(['call','browsermcp','--tool','browser','--input',JSON.stringify({commands:'tab list'}),'--json'], {
     home:root,write:()=>{},
     callMcpToolImpl:async (server,name,args)=>{
       assert.equal(server.protocol,'stdio');
       assert.equal(name,'browser');
-      assert.deepEqual(args,{command:'tab list'});
+      assert.deepEqual(args,{commands:'tab list'});
       return {ok:true,result:{content:[{type:'text',text:'fixture:tab list'}]}};
     },
   });
@@ -105,7 +105,8 @@ test('MCP stdio initialize, tools/list and tools/call work against the actual SD
   const list=await listMcpTools(config,opts);
   assert.equal(list.count,1,list.error);
   assert.equal(list.tools[0].name,'browser');
-  const call=await callMcpTool(config,'browser',{command:'tab list'},opts);
+  assert.deepEqual(list.tools[0].inputSchema.required,['commands']);
+  const call=await callMcpTool(config,'browser',{commands:'tab list'},opts);
   assert.equal(call.ok,true,call.error);
   assert.equal(call.transport,'stdio');
   assert.equal(call.result.content[0].text,'fixture:tab list');
