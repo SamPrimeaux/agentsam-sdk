@@ -54,3 +54,11 @@ test('legacy /browse is a redirect, never a standalone browser workspace', () =>
   assert.match(home, /shellMode: document\.documentElement\.classList\.contains\('agentsam-embedded-home'\)/);
   assert.match(shell, /"embedded-home": \{ id: "embedded-home", hideAdminNav: true/);
 });
+
+test('clean CI build resolves the source-owned ABS React, styles and core without relying on node_modules', () => {
+  const vite = read('../vite.config.ts');
+  assert.match(vite, /find: \/\^@inneranimalmedia\\\/agentsam-abs\\\/react\$\//);
+  assert.match(vite, /replacement: resolvePath\(absPackageRoot, "src\/react\/index\.ts"\)/);
+  assert.match(vite, /replacement: resolvePath\(absPackageRoot, "styles\/browser\.css"\)/);
+  assert.match(vite, /replacement: resolvePath\(absPackageRoot, "src\/index\.ts"\)/);
+});
