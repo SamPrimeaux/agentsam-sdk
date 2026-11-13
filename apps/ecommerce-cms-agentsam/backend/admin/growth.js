@@ -87,7 +87,7 @@ async function uniqueSlug(env, base) {
   }
 }
 
-async function getOverview(env) {
+async function getOverview(env, accountId) {
   const [campaignStats, orders, subscribers, campaigns] = await Promise.all([
     env.DB.prepare(
       `SELECT
@@ -96,7 +96,7 @@ async function getOverview(env) {
          SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active
        FROM growth_campaigns WHERE account_id = ?`
     )
-      .bind(requireApplicationAccountId())
+      .bind(accountId)
       .first()
       .catch(() => ({ total: 0, drafts: 0, active: 0 })),
     env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS revenue FROM orders`)
@@ -108,7 +108,7 @@ async function getOverview(env) {
     env.DB.prepare(
       `SELECT * FROM growth_campaigns WHERE account_id = ? AND status != 'archived' ORDER BY updated_at DESC LIMIT 6`
     )
-      .bind(requireApplicationAccountId())
+      .bind(accountId)
       .all()
       .catch(() => ({ results: [] })),
   ]);
@@ -116,7 +116,7 @@ async function getOverview(env) {
   const sessionRow = await env.DB.prepare(
     `SELECT COALESCE(SUM(session_count), 0) AS n FROM growth_campaigns WHERE account_id = ?`
   )
-    .bind(requireApplicationAccountId())
+    .bind(accountId)
     .first()
     .catch(() => ({ n: 0 }));
 
@@ -591,7 +591,7 @@ export async function handleGrowthApi(request, env, url, user) {
 
   if (path === "/api/admin/growth/overview" && method === "GET") {
     try {
-      return await getOverview(env);
+      return await getOverview(env, user.account_id);
     } catch (err) {
       console.error("[growth/overview]", err);
       return json({ error: err?.message || "Overview failed" }, { status: 500 });
