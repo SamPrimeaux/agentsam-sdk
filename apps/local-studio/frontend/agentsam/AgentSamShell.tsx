@@ -598,7 +598,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     // Conversation actions are about the conversation, not a second app or panel launcher.
     // Installed apps and native Side Stage surfaces live in the Side Stage + menu.
     conversationActions: hasStartedConversation && chat ? [
-      { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\\n' + item.content).join('\\n\\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
+      { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
     ] : [],
     pinnedSummary: hasStartedConversation && chat ? {
       subagents: state.sideTabs.filter(tab => tab.kind === 'chat' && tab.parentChatId === chat.id).map(tab => ({
