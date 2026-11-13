@@ -1216,3 +1216,41 @@ window.hydrateShellProfile = hydrateShellProfile;
 window.hydrateShellNav = hydrateShellNav;
 window.loadShellUser = loadShellUser;
 window.AgentSamShell = { modes: SHELL_MODES, resolveShellMode, resolveExitTarget, rememberEditorReturn, bindShellShortcuts, unbindShellShortcuts };
+
+/**
+ * Reuse the already-authoritative account-shell theme for installed editor
+ * chrome and miniAgentSam, without touching the independently site-scoped
+ * storefront preview or storing a second theme preference.
+ *
+ * The Ecommerce CMS is often framed by Local Studio. CSS custom properties
+ * cannot cross iframe boundaries, so read only the computed semantic accent
+ * and light/dark mode from our same-origin host root. Standalone CMS uses
+ * existing local/fallback tokens. Changes from Theme Settings propagate.
+ */
+(function synchronizeInstalledChromeTheme() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  let hostRoot;
+  try {
+    if (window.parent === window || window.parent.location.origin !== window.location.origin) return;
+    hostRoot = window.parent.document.documentElement;
+  } catch { return; }
+  if (!hostRoot || !window.MutationObserver) return;
+  const ownRoot = document.documentElement;
+  function applyHostChromeTheme() {
+    const hostStyles = window.parent.getComputedStyle(hostRoot);
+    const accent = String(hostStyles.getPropertyValue('--nav-accent') || '').trim();
+    if (accent && accent.length < 96 &&
+        (!window.CSS?.supports || window.CSS.supports('color', accent))) {
+      ownRoot.style.setProperty('--nav-accent', accent);
+      ownRoot.style.setProperty('--te-accent', accent);
+      ownRoot.style.setProperty('--agentsam-sidekick-accent', accent);
+    }
+    const mode = hostRoot.dataset.theme === 'dark' || hostRoot.classList.contains('dark')
+      ? 'dark' : 'light';
+    ownRoot.dataset.teShellMode = mode;
+  }
+  applyHostChromeTheme();
+  const observer = new MutationObserver(applyHostChromeTheme);
+  observer.observe(hostRoot, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] });
+  window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
+})();

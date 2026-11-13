@@ -45,6 +45,7 @@ import { Route as appsAdminAgentsamRouteImport } from './routes/(apps)/admin/age
 import { Route as appsAdminCadRouteImport } from './routes/(apps)/admin/cad'
 import { Route as appsAdminMoviemodeRouteImport } from './routes/(apps)/admin/moviemode'
 import { Route as appsAdminProjectsRouteImport } from './routes/(apps)/admin/projects'
+import { Route as appsAdminStoreRouteImport } from './routes/(apps)/admin/store'
 import { Route as appsAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/apps/ecommerce-cms-agentsam'
 import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
 import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
@@ -255,6 +256,11 @@ const appsAdminProjectsRoute = appsAdminProjectsRouteImport.update({
   path: '/admin/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminStoreRoute = appsAdminStoreRouteImport.update({
+  id: '/(apps)/admin/store',
+  path: '/admin/store',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsAppsEcommerceCmsAgentsamRoute =
   appsAppsEcommerceCmsAgentsamRouteImport.update({
     id: '/(apps)/apps/ecommerce-cms-agentsam',
@@ -443,6 +449,7 @@ export interface FileRoutesByFullPath {
   '/admin/cad': typeof appsAdminCadRoute
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/admin/projects': typeof appsAdminProjectsRouteWithChildren
+  '/admin/store': typeof appsAdminStoreRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/chats/$chatId': typeof appsChatsChatIdRoute
@@ -506,6 +513,7 @@ export interface FileRoutesByTo {
   '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/admin/cad': typeof appsAdminCadRoute
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
+  '/admin/store': typeof appsAdminStoreRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
   '/help/cms': typeof appsHelpCmsRoute
@@ -573,6 +581,7 @@ export interface FileRoutesById {
   '/(apps)/admin/cad': typeof appsAdminCadRoute
   '/(apps)/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/(apps)/admin/projects': typeof appsAdminProjectsRouteWithChildren
+  '/(apps)/admin/store': typeof appsAdminStoreRoute
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
@@ -642,6 +651,7 @@ export interface FileRouteTypes {
     | '/admin/cad'
     | '/admin/moviemode'
     | '/admin/projects'
+    | '/admin/store'
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
     | '/chats/$chatId'
@@ -705,6 +715,7 @@ export interface FileRouteTypes {
     | '/admin/agentsam'
     | '/admin/cad'
     | '/admin/moviemode'
+    | '/admin/store'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
     | '/help/cms'
@@ -771,6 +782,7 @@ export interface FileRouteTypes {
     | '/(apps)/admin/cad'
     | '/(apps)/admin/moviemode'
     | '/(apps)/admin/projects'
+    | '/(apps)/admin/store'
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
     | '/(apps)/chats/$chatId'
@@ -839,6 +851,7 @@ export interface RootRouteChildren {
   appsAdminCadRoute: typeof appsAdminCadRoute
   appsAdminMoviemodeRoute: typeof appsAdminMoviemodeRouteWithChildren
   appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
+  appsAdminStoreRoute: typeof appsAdminStoreRoute
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
   appsChatsChatIdRoute: typeof appsChatsChatIdRoute
   appsHelpCmsRoute: typeof appsHelpCmsRoute
@@ -1101,6 +1114,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/projects'
       fullPath: '/admin/projects'
       preLoaderRoute: typeof appsAdminProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin/store': {
+      id: '/(apps)/admin/store'
+      path: '/admin/store'
+      fullPath: '/admin/store'
+      preLoaderRoute: typeof appsAdminStoreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/apps/ecommerce-cms-agentsam': {
@@ -1465,6 +1485,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsAdminCadRoute: appsAdminCadRoute,
   appsAdminMoviemodeRoute: appsAdminMoviemodeRouteWithChildren,
   appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
+  appsAdminStoreRoute: appsAdminStoreRoute,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,
   appsChatsChatIdRoute: appsChatsChatIdRoute,
   appsHelpCmsRoute: appsHelpCmsRoute,

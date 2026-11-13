@@ -9,7 +9,7 @@ type Props = { assetsBase?:string; onNativeCanvas?:()=>void };
 type Draft = { content:string; updatedAt:string };
 const boards = manifest.boards as Board[];
 const documents = sourceDocuments as Record<string,string>;
-const groups = ['Desktop GPT shell','Design canvas','Side Assistant','miniAgentSam','Apps & embeds','Canvas & library','Onboarding & offers','Design system','Light & responsive','Browser & control','Media & motion'];
+const groups = ['Desktop GPT shell','Design canvas','Side Assistant','miniAgentSam','Apps & embeds','Canvas & library','Onboarding & offers','Design system','Light & responsive','Browser & control','Media & motion','Platform stock'];
 const persistKey = 'iam.design-canvas.app.v1';
 function readDrafts():Record<string,Draft>{try{return JSON.parse(localStorage.getItem(persistKey)||'{}')||{};}catch{return {};}}
 function download(name:string,body:string,type:string){const blob=new Blob([body],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
@@ -20,7 +20,7 @@ function Tooltip({label,children}:{label:string;children:ReactNode}){
 }
 export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
  const [group,setGroup]=useState(groups[0]);
- const [family,setFamily]=useState<'all'|'agentsam'|'onboarding'|'onboarding-exports'|'media'|'reference'>('all');
+ const [family,setFamily]=useState<'all'|'agentsam'|'onboarding'|'onboarding-exports'|'media'|'reference'|'stock'>('all');
  const [query,setQuery]=useState('');
  const [selected,setSelected]=useState('agentsam:Shell.dc.html');
  const [zoom,setZoom]=useState(()=>typeof window!=='undefined'&&window.innerWidth<=480?.24:.48);
@@ -84,19 +84,25 @@ export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
  function srcDoc(board:Board){
   const content=drafts[board.id]?.content||documents[board.family+'/'+board.filename];
   if(!content)return '<p>Bundled document not found.</p>';
-  const root=new URL(base+'/'+board.family+'/',location.href).href;
+  const folder=board.filename.includes('/')?board.filename.slice(0,board.filename.lastIndexOf('/')+1):'';
+  const root=new URL(base+'/'+board.family+'/'+folder,location.href).href;
   const own=JSON.stringify(board.family+'/'+board.filename);
   const bridge=[
     '<script>(function(){',
     'var originalFetch=window.fetch.bind(window),counter=0,waiting=new Map(),own='+own+';',
     'window.addEventListener("message",function(e){var d=e.data;if(e.source!==window.parent||!d||d.__agentsam_canvas_document!==1)return;var r=waiting.get(d.id);if(!r)return;waiting.delete(d.id);r.resolve(new Response(d.body,{status:200,headers:{"content-type":"text/html"}}));});',
     'window.fetch=function(input,init){var raw=typeof input==="string"?input:(input&&input.url)||"",path="";',
-    'if(raw==="about:srcdoc"||raw===location.href){path=own;}else{try{var u=new URL(raw,document.baseURI),p=u.pathname.split("/"),f=p[p.length-1],g=p[p.length-2];if(["agentsam","onboarding","onboarding-exports","reference","media"].indexOf(g)>=0&&/^[a-zA-Z0-9_.-]+[.]html$/.test(f))path=g+"/"+f;}catch(e){}}',
+    'if(raw==="about:srcdoc"||raw===location.href){path=own;}else{try{var u=new URL(raw,document.baseURI),p=u.pathname.split("/").filter(Boolean),i=p.lastIndexOf("sources"),q=p.slice(i+1),f=q[q.length-1];if(i>=0&&/^[a-zA-Z0-9_.-]+[.]html$/.test(f)&&((q.length===2&&["agentsam","onboarding","onboarding-exports","reference","media"].indexOf(q[0])>=0)||(q.length===3&&q[0]==="stock"&&/^[a-z0-9-]+$/.test(q[1]))))path=q.join("/");}catch(e){}}',
     'if(!path)return originalFetch(input,init);',
     'return new Promise(function(resolve,reject){var id=++counter;waiting.set(id,{resolve:resolve,reject:reject});window.parent.postMessage({__agentsam_canvas_need:1,id:id,path:path},"*");setTimeout(function(){var p=waiting.get(id);if(p){waiting.delete(id);reject(Error("Design source timed out: "+path));}},4000);});};',
     '})();</scr'+'ipt>'
   ].join('');
-  return content.replace(/<head([^>]*)>/i,match=>match+'<base href="'+root.replace(/"/g,'%22')+'">'+bridge);
+  const injected='<base href="'+root.replace(/"/g,'%22')+'">'+bridge;
+  if(/<head(?:\s|>)/i.test(content))return content.replace(/<head([^>]*)>/i,match=>match+injected);
+  // Many authentic .dc.html exports omit an explicit head. Their relative
+  // vendor scripts and nested document imports still need the sandbox base.
+  if(/^\s*<!doctype[^>]*>/i.test(content))return content.replace(/^(\s*<!doctype[^>]*>)/i,'$1<head>'+injected+'</head>');
+  return '<head>'+injected+'</head>'+content;
  }
 
  function zoomBy(n:number){setZoom(z=>Math.min(1.5,Math.max(.18,Number((z+n).toFixed(2)))))}
@@ -161,7 +167,7 @@ export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
       <div className="dca-pane-heading"><b>Inspector</b><Tooltip label="Hide inspector"><button aria-label="Hide inspector" onClick={()=>setRight(false)}><PanelRightClose size={16}/></button></Tooltip></div>
       <div className="dca-inspector-tabs">{(['details','source','notes'] as const).map(tab=><button key={tab} aria-current={inspector===tab?'page':undefined} onClick={()=>setInspector(tab)}>{tab}</button>)}</div>
       {!active?<div className="dca-inspector-body">Select an artboard.</div>:inspector==='details'?<div className="dca-inspector-body">
-        <h3>{active.title}</h3><p className="dca-muted">{active.family==='reference'?'A source reference image, not an active browser session.':active.family==='media'?'Original media exports, not a simulated application.':'An authored interactive source document, not a screenshot or fabricated production route.'}</p>
+        <h3>{active.title}</h3><p className="dca-muted">{active.family==='reference'?'A source reference image, not an active browser session.':active.family==='media'?'Original media exports, not a simulated application.':active.family==='stock'?'Versioned platform stock from an original HTML export. Editing here never changes a customer site.':'An authored interactive source document, not a screenshot or fabricated production route.'}</p>
         <dl><dt>Source file</dt><dd>{active.filename}</dd><dt>Set</dt><dd>{active.family}</dd><dt>Canvas size</dt><dd>{active.width} × {active.height}</dd><dt>Mode</dt><dd>{active.interactive?'Interactive': 'Design reference'}</dd><dt>Local edits</dt><dd>{currentDraft?'Saved '+new Date(currentDraft.updatedAt).toLocaleString():'Original source'}</dd></dl>
         <button className="dca-wide" onClick={()=>{setInspector('source');setFocus(true);}}><Code2 size={15}/> Edit source</button>
         <button className="dca-wide" onClick={()=>{setFocus(true);setInteract(true);}}><ExternalLink size={15}/> Interact with screen</button>

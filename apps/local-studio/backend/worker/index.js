@@ -4,6 +4,7 @@ import { handleStudioNotifications } from "./studio-notifications.js";
 import { handleStudioConversationShares, handlePublicConversationShare } from "./studio-conversation-shares.js";
 import { handleStudioQueueObservability } from "./studio-queue-observability.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
+import { serveDesignCanvasAdminRoute } from "./design-canvas-admin-route.js";
 import { resolveStudioSessionUser, guardStudioDocumentSession } from "./studio-session.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
@@ -729,6 +730,8 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    const designCanvasAdmin = await serveDesignCanvasAdminRoute(request, env, guardStudioDocument);
+    if (designCanvasAdmin) return designCanvasAdmin;
     const publicShareMatch = /^\/share\/([A-Za-z0-9_-]{40,60})$/.exec(url.pathname);
     if (publicShareMatch) return handlePublicConversationShare(request, env, publicShareMatch[1]);
     if (url.pathname === "/api/studio/conversation-shares" || url.pathname.startsWith("/api/studio/conversation-shares/")) {
