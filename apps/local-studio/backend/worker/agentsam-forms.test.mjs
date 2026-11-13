@@ -21,9 +21,10 @@ function fakeDb(installedAccounts=['acc_a']) {
       const row=forms.get(args[1]);
       return row?.account_id===args[0]?{...row}:null;
     }
-    if(query.startsWith('SELECT * FROM agentsam_forms WHERE id=')) {
-      const row=forms.get(args[0]);
-      return row?.status==='published'?{...row}:null;
+    if(query.startsWith('SELECT f.* FROM agentsam_forms f')) {
+      const row=forms.get(args[1]);
+      return row?.status==='published' && installedAccounts.includes(row.account_id)
+        && args[0]==='agentsam-app-forms' ? {...row}:null;
     }
     if(query.startsWith('SELECT id,key,title,description,status')) {
       return [...forms.values()].filter(f=>f.account_id===args[0]).map(f=>({
