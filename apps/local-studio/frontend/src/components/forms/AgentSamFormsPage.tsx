@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ArrowLeft, Check, ClipboardCopy, Code2, Eye, FileText, Loader2, Mail, Plus, RotateCcw, Save, Send, ShieldCheck, Trash2, X } from "lucide-react";
 import "./AgentSamFormsPage.css";
 
@@ -12,7 +12,7 @@ type FormDocument = {
 type FormSummary = { id:string;key:string;title:string;description:string;status:"draft"|"published";version:number;updated_at:number;submission_count:number };
 type FormDetail = FormSummary & { document:FormDocument };
 type Submission = { id:string;values:Record<string,string|boolean>;is_test:boolean;created_at:number };
-type ApiResult = {ok:boolean;error?:string;installed?:boolean;forms?:FormSummary[];form?:FormDetail;submissions?:Submission[]};
+type ApiResult = {ok:boolean;error?:string;installed?:boolean;enabled?:boolean;forms?:FormSummary[];form?:FormDetail;submissions?:Submission[]};
 
 const API = "/api/forms";
 const INSTALL_KEY = "agentsam-app-forms";
@@ -127,7 +127,7 @@ export function AgentSamFormsPage(){
     ...doc,
     style:{"--form-bg":doc.appearance.background,"--form-fg":doc.appearance.text,
       "--form-accent":doc.appearance.accent,"--form-button":doc.appearance.button,
-      "--form-radius":doc.appearance.radius+"px"} as React.CSSProperties,
+      "--form-radius":doc.appearance.radius+"px"} as CSSProperties,
   }:null,[doc,active]);
   return <main className="as-forms-root">
     <header className="as-forms-header">
