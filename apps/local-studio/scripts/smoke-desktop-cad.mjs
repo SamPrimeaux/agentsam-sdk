@@ -58,12 +58,25 @@ const deadline = Date.now() + 25000;
 let ws;
 try {
   const portFile = join(profile, "DevToolsActivePort");
-  while (!existsSync(portFile) && !browserExit && Date.now() < deadline) await sleep(100);
-  if (!existsSync(portFile)) throw Error(
+  // Chrome may create DevToolsActivePort before its first line is written.
+  // Never turn a temporarily empty port into a fetch of localhost:80.
+  let port = null;
+  while (!port && !browserExit && Date.now() < deadline) {
+    if (existsSync(portFile)) {
+      try {
+        const firstLine = readFileSync(portFile, "utf8").split("\n")[0].trim();
+        const parsed = Number(firstLine);
+        if (/^\d+$/.test(firstLine) && Number.isInteger(parsed) && parsed > 0 && parsed <= 65535) port = parsed;
+      } catch (error) {
+        if (error?.code !== 'ENOENT') throw error;
+      }
+    }
+    if (!port) await sleep(100);
+  }
+  if (!port) throw Error(
     "cad_browser_debug_port_unavailable: " +
     JSON.stringify({ browserExit, stderr: browserStderr.join("").slice(-2500) })
   );
-  const port = readFileSync(portFile, "utf8").split("\n")[0];
   const targets = await (await fetch("http://127.0.0.1:" + port + "/json")).json();
   const page = targets.find((target) => target.type === "page");
   if (!page) throw Error("cad_browser_page_unavailable");

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-local-shared",
-  "version": "2.6.14",
+  "version": "2.6.15",
   "private": true,
   "type": "module",
   "exports": {
