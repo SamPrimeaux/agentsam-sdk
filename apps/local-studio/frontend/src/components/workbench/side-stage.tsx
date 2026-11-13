@@ -95,8 +95,10 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
             <div
               key={item.id}
               className={cn(
-                "flex h-8 shrink-0 items-center rounded-full pl-2.5",
-                item.id === activeId ? "bg-muted text-foreground" : "text-muted-foreground",
+                "flex h-8 shrink-0 items-center rounded-[7px] border pl-2.5 backdrop-blur-md transition-colors",
+                item.id === activeId
+                  ? "border-border bg-muted/80 text-foreground shadow-sm"
+                  : "border-transparent bg-background/30 text-muted-foreground hover:border-border/60 hover:bg-muted/40",
               )}
             >
               <button
