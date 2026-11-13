@@ -1526,8 +1526,12 @@
     const zoneFor = section => {
       const zone = String(section.zone || section.schema?.zone || '').toUpperCase();
       const kind = String(section.sourceKind || section.schema?.sourceKind || section.globalKey || '').toLowerCase();
-      if (zone === 'HEADER' || kind === 'site-header' || kind === 'announcement-bar') return 'header';
-      if (zone === 'FOOTER' || kind === 'site-footer') return 'footer';
+      // Legacy global registry records carry key=header/footer but no zone.
+      // Without this site-owned fallback those sections silently disappear on
+      // About and other merchant pages, despite being editable real content.
+      const shared = section.__ownerSlug === 'site';
+      if (zone === 'HEADER' || kind === 'site-header' || kind === 'announcement-bar' || (shared && section.key === 'header')) return 'header';
+      if (zone === 'FOOTER' || kind === 'site-footer' || (shared && section.key === 'footer')) return 'footer';
       return 'template';
     };
     const sharedKeys = new Set(siteSections.map(section => section.globalKey).filter(Boolean));
