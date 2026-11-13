@@ -477,6 +477,8 @@ cli:
     - whoami
     - resume
     - exec
+    - studio
+    - tui
     - shell
     - start-local
     - ollama
