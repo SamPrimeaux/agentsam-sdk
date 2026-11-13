@@ -6,7 +6,7 @@
   "status": "extracted",
   "package": {
     "name": "@inneranimalmedia/agentsam-identity",
-    "version": "2.6.14",
+    "version": "2.6.15",
     "directory": "packages/identity"
   },
   "provides": [

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-knowledge",
-  "version": "2.6.14",
+  "version": "2.6.15",
   "description": "Portable AutoRAG discovery, adapter registries, probes, and company routing contracts for AgentSam.",
   "type": "module",
   "exports": {

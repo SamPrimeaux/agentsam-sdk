@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-ember",
-  "version": "2.6.14",
+  "version": "2.6.15",
   "description": "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid.",
   "type": "module",
   "main": "./src/index.js",
