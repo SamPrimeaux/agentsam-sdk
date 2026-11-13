@@ -142,7 +142,11 @@ export function normalizeCmsCatalogTemplate(row) {
     dataBindings,
     preview,
     r2Key: row.r2_key || null,
-    sourceHtmlR2Key: row.source_html_r2_key || null,
+    sourceHtmlR2Key: row.source_html_r2_key || null, // Legacy v1 source URL; retained for older clients.
+    packageRef: row.resolved_package_ref || null,
+    packageManifestKey: row.resolved_package_manifest_key || null,
+    packageManifestBucket: row.resolved_package_manifest_bucket || null,
+    packageManifestSha256: row.resolved_package_manifest_sha256 || null,
     definitionKey: row.definition_key || null,
     definitionVersion: row.definition_version || null,
     definition,
@@ -178,7 +182,10 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
     d.version AS resolved_definition_version,d.status AS definition_status,
     d.settings_schema_json AS definition_settings_schema_json,
     d.allowed_blocks_json AS definition_allowed_blocks_json,
-    d.max_blocks AS definition_max_blocks,d.metadata_json AS definition_metadata_json
+    d.max_blocks AS definition_max_blocks,d.metadata_json AS definition_metadata_json,
+    c.package_ref AS resolved_package_ref,c.artifact_r2_bucket AS resolved_package_manifest_bucket,
+    c.artifact_r2_key AS resolved_package_manifest_key,
+    c.artifact_sha256 AS resolved_package_manifest_sha256
     FROM cms_component_templates t
     LEFT JOIN cms_definitions d
       ON d.id=COALESCE(
@@ -192,6 +199,7 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
             AND builtin.version=t.definition_version AND builtin.kind=t.item_type
           LIMIT 1)
       )
+    LEFT JOIN cms_components c ON c.definition_id=d.id
     WHERE COALESCE(t.is_system,1)=1 AND t.item_type IN ('section','block')
       AND t.status!='archived'`;
   const binds = [accountId];

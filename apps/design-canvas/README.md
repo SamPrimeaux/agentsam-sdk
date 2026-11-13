@@ -35,14 +35,29 @@ byte-identical to older sources; the additional stock variants do not
 overwrite those originals. Design Canvas offers them under **Platform stock**
 with local interactive source/inspector support.
 
-The immutable source objects and a content-addressed catalog are stored in
-the existing **`theme-store` R2 bucket** under `cms/design-stock/v1/`.
-`node apps/design-canvas/scripts/publish-stock-assets.mjs` checks every file
-without uploading by default; `--execute --verify` uploads to R2 and
-downloads every object again for checksum verification. A catalog snapshot
-publishes only after the object verification succeeds. This is separate from
-both account appearance presets (`cms_themes`) and installable storefront
-theme packages/site-scoped CMS drafts.
+**CMS stock source storage v2** now uses stable component references such as
+`cms-component:platform/start-trial-checkout@1.0.0`, stored separately from
+object paths. The existing `theme-store` bucket contains:
+
+- `packages/platform/start-trial-checkout/1.0.0/manifest.json` — immutable
+  version metadata, renderer identity, source file names and blob checksums
+- `blobs/sha256/7c/7c2175...` — immutable deduplicated file bytes
+- `catalogs/cms-components/releases/<index-sha256>.json` — content-addressed
+  snapshot of the platform's stock component release inventory
+
+`node apps/design-canvas/scripts/publish-stock-assets.mjs` performs a dry-run
+by default; `--execute` uploads and verifies each missing blob before publishing
+its version manifest, then the index last. It fails if a published version's
+manifest contents change; bump `release_version` to publish a new release.
+The original `catalog.json` is source provenance, not an additional runtime
+registry. CMS identity/version assignment remains in `cms_components.package_ref`
+and its existing artifact fields. Customer installations still use site-scoped
+CMS drafts, not executable copies of these authoring exports.
+
+The original `cms/design-stock/v1/` URLs remain readable. The old publisher
+is preserved as `publish-stock-assets-legacy-v1.mjs` for compatibility only;
+new releases use v2. No source preview URLs, site themes, or dashboard
+appearance presets (`cms_themes`) are changed by packaging.
 
 The canonical authenticated Studio entry is `/admin/design-canvas/`.
 `/design-canvas/` remains the app's published static asset distribution URL
