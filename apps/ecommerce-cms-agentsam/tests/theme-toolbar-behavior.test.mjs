@@ -11,7 +11,7 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null, packageSections = null } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null, packageSections = null, portableSections = [] } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
     runScripts: "outside-only",
@@ -27,6 +27,7 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
     Object.defineProperty(w, "visualViewport", { configurable: true, value: viewport });
   }
   if (themePreviews.length) w.ThemeStudioPreview = { themes: themePreviews };
+  if (portableSections.length) w.ThemePortableSections = { catalog: () => portableSections };
   w.HTMLElement.prototype.scrollIntoView = () => {};
   const writes = [];
   const publishes = [];
@@ -143,6 +144,31 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
   }
 });
 
+
+test("Add Section is keyboard browseable, accessible, and returns focus on dismiss", async () => {
+  const { dom, doc } = await editorFixture({portableSections:[
+    {id:'stock-hero',label:'Stock Hero',type:'hero',category:'Hero'},
+    {id:'stock-collection',label:'Stock Collection',type:'collection',category:'Products'}
+  ]});
+  try {
+    const opener = doc.getElementById("te-add-section");
+    opener.focus();
+    opener.click();
+    const modal = doc.getElementById("te-section-menu");
+    assert.equal(modal.hidden, false);
+    assert.equal(modal.getAttribute("aria-label"), "Add a section");
+    assert.equal(modal.querySelectorAll('[role="tab"]').length, 2);
+    assert.equal(modal.querySelector('#te-section-list').getAttribute("role"), "listbox");
+    const search = doc.getElementById("te-section-search");
+    assert.equal(search.type, "search");
+    search.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    assert.ok(doc.activeElement.matches('[data-choose-section]'), "ArrowDown focuses a real catalog section");
+    assert.equal(doc.activeElement.getAttribute("aria-selected"), "true");
+    doc.activeElement.dispatchEvent(new dom.window.KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+    assert.equal(modal.hidden, true, "Escape dismisses the non-modal section catalog");
+    assert.equal(doc.activeElement, opener, "focus returns to Add Section");
+  } finally { dom.window.close(); }
+});
 
 test("storefront selection stays isolated from site design and follows the account editor accent", async () => {
   const { dom, doc } = await editorFixture();

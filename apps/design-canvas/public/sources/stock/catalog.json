@@ -1,0 +1,623 @@
+{
+  "schema": "agentsam.platform-stock.v1",
+  "version": "1.0.0",
+  "storage": "theme-store",
+  "r2_prefix": "cms/design-stock/v1",
+  "purpose": "interactive Design Canvas/editor source references; not installed customer themes",
+  "items": [
+    {
+      "id": "agentsam.stock.choose-a-plan",
+      "slug": "choose-a-plan",
+      "title": "Choose a plan",
+      "kind": "onboarding",
+      "source": "user-provided-export",
+      "source_zip": "1 · Choose a plan-html (1).zip",
+      "main_html": "Main.dc.html",
+      "main_sha256": "7a1c3fc5ca54764b18cc93999c45846138e1ce1cc1b8c25479d8bcd548f58bff",
+      "files": [
+        {
+          "path": "Main.dc.html",
+          "sha256": "7a1c3fc5ca54764b18cc93999c45846138e1ce1cc1b8c25479d8bcd548f58bff",
+          "bytes": 18594,
+          "r2_key": "cms/design-stock/v1/choose-a-plan/7a1c3fc5ca54764b/Main.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/choose-a-plan/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/choose-a-plan/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/choose-a-plan/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "7aa5c0ceaa99d05eee864b9d105315ccfb7bf383ce737fde5f0bb7df2680bd28",
+          "bytes": 898,
+          "r2_key": "cms/design-stock/v1/choose-a-plan/7aa5c0ceaa99d05e/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/choose-a-plan/Main.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.start-trial-checkout",
+      "slug": "start-trial-checkout",
+      "title": "Start trial",
+      "kind": "onboarding",
+      "source": "user-provided-export",
+      "source_zip": "2 · Start trial (checkout)-html (1).zip",
+      "main_html": "Checkout.dc.html",
+      "main_sha256": "7c217582d7b4ed828a1c86d56c4d7925714b4e6e847964d4abc5025fe705139b",
+      "files": [
+        {
+          "path": "Checkout.dc.html",
+          "sha256": "7c217582d7b4ed828a1c86d56c4d7925714b4e6e847964d4abc5025fe705139b",
+          "bytes": 11540,
+          "r2_key": "cms/design-stock/v1/start-trial-checkout/7c217582d7b4ed82/Checkout.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/start-trial-checkout/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/start-trial-checkout/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/start-trial-checkout/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "6a3e3b81b4b182a13287463173797b72223b7d88425ade88688fea526201a19b",
+          "bytes": 915,
+          "r2_key": "cms/design-stock/v1/start-trial-checkout/6a3e3b81b4b182a1/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/start-trial-checkout/Checkout.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.setup-goals",
+      "slug": "setup-goals",
+      "title": "What can we help you do",
+      "kind": "onboarding",
+      "source": "user-provided-export",
+      "source_zip": "3 · What can we help you do-html (1).zip",
+      "main_html": "SetupGoals.dc.html",
+      "main_sha256": "70cdfc1642ba8e00e72850273051852d0f7682104744734a72f985a063cd6670",
+      "files": [
+        {
+          "path": "SetupGoals.dc.html",
+          "sha256": "70cdfc1642ba8e00e72850273051852d0f7682104744734a72f985a063cd6670",
+          "bytes": 8377,
+          "r2_key": "cms/design-stock/v1/setup-goals/70cdfc1642ba8e00/SetupGoals.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/setup-goals/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/setup-goals/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/setup-goals/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "531d31bd11b2ac20d016e73670ad9f2e3d27a3471b16a9f8dfec0d7d520e96ee",
+          "bytes": 920,
+          "r2_key": "cms/design-stock/v1/setup-goals/531d31bd11b2ac20/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/setup-goals/SetupGoals.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.first-run-home",
+      "slug": "first-run-home",
+      "title": "First-run home",
+      "kind": "onboarding",
+      "source": "user-provided-export",
+      "source_zip": "5 · First-run home-html (1).zip",
+      "main_html": "WelcomeHome.dc.html",
+      "main_sha256": "30f64e2e668821757988c9f4fb3e5dbf4e59662f4b913dee790359f5eef2e2e6",
+      "files": [
+        {
+          "path": "WelcomeHome.dc.html",
+          "sha256": "30f64e2e668821757988c9f4fb3e5dbf4e59662f4b913dee790359f5eef2e2e6",
+          "bytes": 18109,
+          "r2_key": "cms/design-stock/v1/first-run-home/30f64e2e66882175/WelcomeHome.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/first-run-home/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/first-run-home/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/first-run-home/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "51f6d29db1fe9a9362556e775c8ad1fc4e147f489c6b3be7aa38ac3b8cdc35ff",
+          "bytes": 913,
+          "r2_key": "cms/design-stock/v1/first-run-home/51f6d29db1fe9a93/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/first-run-home/WelcomeHome.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.design-canvas-dark",
+      "slug": "design-canvas-dark",
+      "title": "Dev dark",
+      "kind": "design",
+      "source": "user-provided-export",
+      "source_zip": "1 · Dev dark (default)-html.zip",
+      "main_html": "DesignCanvas.dc.html",
+      "main_sha256": "9bc0fddfe00ba016ed7f74a78188c628aad7944f54e92c2aac1ad6188757e857",
+      "files": [
+        {
+          "path": "DesignCanvas.dc.html",
+          "sha256": "9bc0fddfe00ba016ed7f74a78188c628aad7944f54e92c2aac1ad6188757e857",
+          "bytes": 38811,
+          "r2_key": "cms/design-stock/v1/design-canvas-dark/9bc0fddfe00ba016/DesignCanvas.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/design-canvas-dark/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/design-canvas-dark/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/design-canvas-dark/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "73570b754a2f38dd7c6734b3ca45967483b266321f74297c727fec9d646e9b5b",
+          "bytes": 919,
+          "r2_key": "cms/design-stock/v1/design-canvas-dark/73570b754a2f38dd/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/design-canvas-dark/DesignCanvas.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.design-theme-settings",
+      "slug": "design-theme-settings",
+      "title": "Theme settings",
+      "kind": "design",
+      "source": "user-provided-export",
+      "source_zip": "5 · Theme settings-html.zip",
+      "main_html": "DesignCanvasSettings.dc.html",
+      "main_sha256": "e996b43749b0539e07e43b3768c36c4397391896882fbe159878f633beb0ecff",
+      "files": [
+        {
+          "path": "DesignCanvasSettings.dc.html",
+          "sha256": "e996b43749b0539e07e43b3768c36c4397391896882fbe159878f633beb0ecff",
+          "bytes": 4645,
+          "r2_key": "cms/design-stock/v1/design-theme-settings/e996b43749b0539e/DesignCanvasSettings.dc.html"
+        },
+        {
+          "path": "DesignCanvas.dc.html",
+          "sha256": "239712973f5fd2d71952f91ea9ccbf7b59087ec5d900defdbe3ee7b077f4377b",
+          "bytes": 34748,
+          "r2_key": "cms/design-stock/v1/design-theme-settings/239712973f5fd2d7/DesignCanvas.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/design-theme-settings/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/design-theme-settings/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/design-theme-settings/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "51e0d1688e9d5bb028d0396039bcf8e4157de0624d9739b9f3c8a7d18e84d0d4",
+          "bytes": 980,
+          "r2_key": "cms/design-stock/v1/design-theme-settings/51e0d1688e9d5bb0/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/design-theme-settings/DesignCanvasSettings.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.design-publish-popover",
+      "slug": "design-publish-popover",
+      "title": "Publish popover",
+      "kind": "design",
+      "source": "user-provided-export",
+      "source_zip": "6 · Publish popover-html.zip",
+      "main_html": "DesignCanvasPublish.dc.html",
+      "main_sha256": "d3aee0d5aefd6410551376236b5ff143d56f27c2fcd6fb44bfc036d98fa48737",
+      "files": [
+        {
+          "path": "DesignCanvasPublish.dc.html",
+          "sha256": "d3aee0d5aefd6410551376236b5ff143d56f27c2fcd6fb44bfc036d98fa48737",
+          "bytes": 4637,
+          "r2_key": "cms/design-stock/v1/design-publish-popover/d3aee0d5aefd6410/DesignCanvasPublish.dc.html"
+        },
+        {
+          "path": "DesignCanvas.dc.html",
+          "sha256": "239712973f5fd2d71952f91ea9ccbf7b59087ec5d900defdbe3ee7b077f4377b",
+          "bytes": 34748,
+          "r2_key": "cms/design-stock/v1/design-publish-popover/239712973f5fd2d7/DesignCanvas.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/design-publish-popover/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/design-publish-popover/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/design-publish-popover/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "ad889cddfaa5ae29d72ebd6972c40d6088ded4b49b81d7b14f2d066f72be61c0",
+          "bytes": 979,
+          "r2_key": "cms/design-stock/v1/design-publish-popover/ad889cddfaa5ae29/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/design-publish-popover/DesignCanvasPublish.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.design-jump-to",
+      "slug": "design-jump-to",
+      "title": "Jump to",
+      "kind": "design",
+      "source": "user-provided-export",
+      "source_zip": "3 · Jump to… menu-html.zip",
+      "main_html": "DesignCanvasJump.dc.html",
+      "main_sha256": "f92d687b3379056366fae56353fe9b7a21929aa46ecfff9c2149e228a682e8bf",
+      "files": [
+        {
+          "path": "DesignCanvasJump.dc.html",
+          "sha256": "f92d687b3379056366fae56353fe9b7a21929aa46ecfff9c2149e228a682e8bf",
+          "bytes": 4634,
+          "r2_key": "cms/design-stock/v1/design-jump-to/f92d687b33790563/DesignCanvasJump.dc.html"
+        },
+        {
+          "path": "DesignCanvas.dc.html",
+          "sha256": "239712973f5fd2d71952f91ea9ccbf7b59087ec5d900defdbe3ee7b077f4377b",
+          "bytes": 34748,
+          "r2_key": "cms/design-stock/v1/design-jump-to/239712973f5fd2d7/DesignCanvas.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/design-jump-to/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/design-jump-to/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/design-jump-to/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "d125e848ed000a4def0f5b3ffabcac7ef0b0c55f8ec1f348452a97f42099847c",
+          "bytes": 973,
+          "r2_key": "cms/design-stock/v1/design-jump-to/d125e848ed000a4d/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/design-jump-to/DesignCanvasJump.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.design-screen-sizes",
+      "slug": "design-screen-sizes",
+      "title": "Screen sizes",
+      "kind": "design",
+      "source": "user-provided-export",
+      "source_zip": "4 · Screen sizes (light)-html.zip",
+      "main_html": "DesignCanvasSizes.dc.html",
+      "main_sha256": "8dcaac1c0e39a646f3c6b0a2db518264f081bb33b54e5ca2d3922397a4f78b38",
+      "files": [
+        {
+          "path": "DesignCanvasSizes.dc.html",
+          "sha256": "8dcaac1c0e39a646f3c6b0a2db518264f081bb33b54e5ca2d3922397a4f78b38",
+          "bytes": 4654,
+          "r2_key": "cms/design-stock/v1/design-screen-sizes/8dcaac1c0e39a646/DesignCanvasSizes.dc.html"
+        },
+        {
+          "path": "DesignCanvas.dc.html",
+          "sha256": "239712973f5fd2d71952f91ea9ccbf7b59087ec5d900defdbe3ee7b077f4377b",
+          "bytes": 34748,
+          "r2_key": "cms/design-stock/v1/design-screen-sizes/239712973f5fd2d7/DesignCanvas.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/design-screen-sizes/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/design-screen-sizes/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/design-screen-sizes/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "be4d9024bb01a0bcc33c2b7840c912836fc3069b17ca7383ffcb29699149ae97",
+          "bytes": 980,
+          "r2_key": "cms/design-stock/v1/design-screen-sizes/be4d9024bb01a0bc/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/design-screen-sizes/DesignCanvasSizes.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.mini-expanded",
+      "slug": "mini-expanded",
+      "title": "Expanded block settings",
+      "kind": "assistant",
+      "source": "user-provided-export",
+      "source_zip": "2 · Expanded block settings, scope, suggestions-html.zip",
+      "main_html": "MiniAgentSamSettings.dc.html",
+      "main_sha256": "ad82a3b422bbab6e8458cb2df3910c70d95e1204da25695d024ce77f3fcbccf0",
+      "files": [
+        {
+          "path": "MiniAgentSamSettings.dc.html",
+          "sha256": "ad82a3b422bbab6e8458cb2df3910c70d95e1204da25695d024ce77f3fcbccf0",
+          "bytes": 4644,
+          "r2_key": "cms/design-stock/v1/mini-expanded/ad82a3b422bbab6e/MiniAgentSamSettings.dc.html"
+        },
+        {
+          "path": "MiniAgentSam.dc.html",
+          "sha256": "68baa154e5bb712fc35dc6971d22bff059cbda84d3ad76495a9b2eaa962fe86e",
+          "bytes": 22744,
+          "r2_key": "cms/design-stock/v1/mini-expanded/68baa154e5bb712f/MiniAgentSam.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/mini-expanded/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/mini-expanded/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/mini-expanded/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "30184167b7b973786d041e487bcee5da6364a3d42f94fd196ba5712e0a6091f3",
+          "bytes": 1009,
+          "r2_key": "cms/design-stock/v1/mini-expanded/30184167b7b97378/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/mini-expanded/MiniAgentSamSettings.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.mini-compact",
+      "slug": "mini-compact",
+      "title": "Compact, on a selected block",
+      "kind": "assistant",
+      "source": "user-provided-export",
+      "source_zip": "1 · Compact, on a selected block-html.zip",
+      "main_html": "MiniAgentSam.dc.html",
+      "main_sha256": "a8b098552ef3c90900ddb2aa07e6bfe2539af96fc84654c485529723b48e9789",
+      "files": [
+        {
+          "path": "MiniAgentSam.dc.html",
+          "sha256": "a8b098552ef3c90900ddb2aa07e6bfe2539af96fc84654c485529723b48e9789",
+          "bytes": 26813,
+          "r2_key": "cms/design-stock/v1/mini-compact/a8b098552ef3c909/MiniAgentSam.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/mini-compact/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/mini-compact/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/mini-compact/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "592777710e7bd3b22d46d46d2c5cedc334e2de7902c984be6fa8d8abc2246f7f",
+          "bytes": 929,
+          "r2_key": "cms/design-stock/v1/mini-compact/592777710e7bd3b2/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/mini-compact/MiniAgentSam.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.mini-confirmation",
+      "slug": "mini-confirmation",
+      "title": "Confirmation",
+      "kind": "assistant",
+      "source": "user-provided-export",
+      "source_zip": "1 · Confirmation-html.zip",
+      "main_html": "MiniAgentSamPublish.dc.html",
+      "main_sha256": "2e6608f2849b6235aad041819faf3c94b63d384ea52f60eb87535c5a0993bd47",
+      "files": [
+        {
+          "path": "MiniAgentSamPublish.dc.html",
+          "sha256": "2e6608f2849b6235aad041819faf3c94b63d384ea52f60eb87535c5a0993bd47",
+          "bytes": 4630,
+          "r2_key": "cms/design-stock/v1/mini-confirmation/2e6608f2849b6235/MiniAgentSamPublish.dc.html"
+        },
+        {
+          "path": "MiniAgentSam.dc.html",
+          "sha256": "26153240ef61511c997d265a3322fde6633247cfe46eb1c0fe1f3d174bd6f46e",
+          "bytes": 22750,
+          "r2_key": "cms/design-stock/v1/mini-confirmation/26153240ef61511c/MiniAgentSam.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/mini-confirmation/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/mini-confirmation/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/mini-confirmation/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "7b358f83764b0d59e68ae653850594053da5c0870ed93be7233b441157e372ae",
+          "bytes": 976,
+          "r2_key": "cms/design-stock/v1/mini-confirmation/7b358f83764b0d59/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/mini-confirmation/MiniAgentSamPublish.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.assistant-workspace",
+      "slug": "assistant-workspace",
+      "title": "Agent workspace",
+      "kind": "assistant",
+      "source": "user-provided-export",
+      "source_zip": "3 · Agent workspace (expanded)-html.zip",
+      "main_html": "SideAssistantWorkspace.dc.html",
+      "main_sha256": "4b76065bfea7c4285eea0ebdfe0d50e46a8bb9fea0958828b2010a88693d6120",
+      "files": [
+        {
+          "path": "SideAssistantWorkspace.dc.html",
+          "sha256": "4b76065bfea7c4285eea0ebdfe0d50e46a8bb9fea0958828b2010a88693d6120",
+          "bytes": 4633,
+          "r2_key": "cms/design-stock/v1/assistant-workspace/4b76065bfea7c428/SideAssistantWorkspace.dc.html"
+        },
+        {
+          "path": "SideAssistant.dc.html",
+          "sha256": "b6bc2542a94dbf84d1b300ca1909de56383d744a3f3af007220c877a9e47185a",
+          "bytes": 19621,
+          "r2_key": "cms/design-stock/v1/assistant-workspace/b6bc2542a94dbf84/SideAssistant.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/assistant-workspace/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/assistant-workspace/d949f1c3687aedad/vendor/react.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/assistant-workspace/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "README.md",
+          "sha256": "2fbf0f15f5fcc28287730fc64f7d0905b7af3dd604772445e47873123ed3f70f",
+          "bytes": 997,
+          "r2_key": "cms/design-stock/v1/assistant-workspace/2fbf0f15f5fcc282/README.md"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/assistant-workspace/SideAssistantWorkspace.dc.html",
+      "status": "bundled"
+    }
+  ]
+}

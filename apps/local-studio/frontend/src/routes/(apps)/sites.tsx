@@ -1,9 +1,9 @@
 import { createFileRoute, Navigate, useLocation } from '@tanstack/react-router';
 
 /**
- * Compatibility entry only. Route inside Local Studio instead of navigating
- * the Tauri webview to /admin/store (which is not a desktop SPA route).
- * Ecommerce CMS owns the actual Online Store, Pages and Theme Editor.
+ * Compatibility entry only. /admin/store is the canonical installed Studio
+ * app entry on web and desktop; Ecommerce CMS still owns its pages, theme
+ * editor and site-scoped data APIs. No duplicate storefront is created.
  */
 function CanonicalSitesEntry() {
   const location = useLocation();
@@ -17,6 +17,6 @@ function CanonicalSitesEntry() {
   const selected = /^iam\.theme\.[a-z][a-z0-9-]{0,63}$/.test(sku)
     ? { theme_sku: sku, ...(/^\d+\.\d+\.\d+$/.test(version) ? { theme_version: version } : {}), ...(action ? { action } : {}), ...(/^[A-Za-z0-9_-]{1,160}$/.test(siteId) ? { site_id: siteId } : {}) }
     : {};
-  return <Navigate to="/apps/ecommerce-cms-agentsam" search={{ page: '/admin/store', ...selected }} replace />;
+  return <Navigate to="/admin/store" search={selected} replace />;
 }
 export const Route = createFileRoute('/(apps)/sites')({ component: CanonicalSitesEntry });

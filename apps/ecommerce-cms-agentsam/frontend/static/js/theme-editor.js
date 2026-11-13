@@ -1275,6 +1275,46 @@
     renderTree();
   }
 
+  /** One keyboard model for the docked section catalog and modal block catalog.
+   * Keep placement/editing in the existing CMS methods; this only manages focus.
+   */
+  function wireCatalogKeyboard(dialog, list, search, optionSelector, tabSelector, onClose) {
+    dialog.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      const tab = event.target.closest?.(tabSelector);
+      if (tab && ['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
+        const tabs = Array.from(dialog.querySelectorAll(tabSelector));
+        const index = tabs.indexOf(tab);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+          : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+        event.preventDefault();
+        tabs[next]?.focus();
+        tabs[next]?.click();
+        return;
+      }
+      if (!['ArrowDown','ArrowUp','Home','End'].includes(event.key)
+          || (event.target !== search && !list.contains(event.target))) return;
+      const choices = Array.from(list.querySelectorAll(optionSelector))
+        .filter(button => !button.disabled);
+      if (!choices.length) return;
+      const index = choices.indexOf(document.activeElement);
+      const nextIndex = event.key === 'Home' ? 0
+        : event.key === 'End' ? choices.length - 1
+        : index < 0 ? (event.key === 'ArrowUp' ? choices.length - 1 : Math.max(0, choices.findIndex(button => button.getAttribute('aria-selected') === 'true')))
+        : (index + (event.key === 'ArrowUp' ? -1 : 1) + choices.length) % choices.length;
+      const choice = choices[nextIndex];
+      event.preventDefault();
+      choice.click(); // selection updates the real preview; never inserts here
+      const selected = Array.from(list.querySelectorAll(optionSelector)).find(button => button.getAttribute('aria-selected') === 'true');
+      (selected || list.querySelector(optionSelector))?.focus();
+    });
+  }
+
   function openBlockCatalog(sectionKey, owner = slug) {
     const section = findSection(sectionKey, owner);
     const schema = section && schemaForSection(section);
@@ -1284,19 +1324,21 @@
     const modal = document.createElement('dialog');
     modal.className = 'te-section-menu te-block-picker';
     modal.setAttribute('aria-label', 'Add block');
+    const returnFocus = document.activeElement;
     modal.innerHTML =
       '<div class="te-section-menu__head"><div><strong>Add a block</strong>' +
         '<small>' + cmsEscapeHtml(schema.label || humanize(sectionKey)) + ' · compatible blocks</small></div>' +
         '<button type="button" class="te-tree-mini" data-close-block-catalog aria-label="Close block catalog">×</button></div>' +
       '<div class="te-catalog-toolbar">' +
-        '<input class="te-section-search" data-block-search placeholder="Search blocks" aria-label="Search blocks" autocomplete="off">' +
+        '<input class="te-section-search" type="search" data-block-search placeholder="Search blocks" aria-label="Search blocks" aria-describedby="te-block-catalog-help" autocomplete="off">' +
+        '<span class="te-catalog-help" id="te-block-catalog-help">Arrow keys to browse · Enter to select · Escape to close</span>' +
         '<div class="te-catalog-tabs" role="tablist" aria-label="Block source">' +
           '<button type="button" class="is-active" data-block-tab="blocks" role="tab" aria-selected="true">Blocks</button>' +
           '<button type="button" data-block-tab="apps" role="tab" aria-selected="false">Apps</button>' +
         '</div>' +
       '</div>' +
       '<div class="te-catalog-layout">' +
-        '<div class="te-catalog-list" data-block-list role="listbox" aria-label="Compatible blocks"></div>' +
+        '<div class="te-catalog-list" data-block-list role="listbox" aria-label="Compatible blocks" tabindex="-1"></div>' +
         '<section class="te-catalog-preview" data-block-preview aria-live="polite"></section>' +
       '</div>';
     const list = modal.querySelector('[data-block-list]');
@@ -1385,7 +1427,7 @@
         list.innerHTML = apps.length
           ? '<div class="te-catalog-list-group"><div class="te-catalog-list-group__label">Storefront apps</div>' +
             apps.map(function(app) {
-              return '<button type="button" class="te-catalog-list-item' +
+              return '<button type="button" role="option" aria-selected="' + (activeKey === app.key) + '" class="te-catalog-list-item' +
                 (activeKey === app.key ? ' is-selected' : '') + '" data-choose-app="' + cmsEscapeAttr(app.key) + '">' +
                 '<span class="te-catalog-list-item__icon">⊞</span><span><strong>' + cmsEscapeHtml(app.name) +
                 '</strong><small>' + cmsEscapeHtml(app.category || 'App extension') + '</small></span></button>';
@@ -1440,7 +1482,8 @@
       });
     }
 
-    modal.addEventListener('close', function() { modal.remove(); });
+    modal.addEventListener('close', function() { modal.remove(); if(returnFocus?.isConnected) returnFocus.focus(); });
+    wireCatalogKeyboard(modal, list, search, '[data-choose-block], [data-choose-app]', '[data-block-tab]', function() { modal.close(); });
     modal.querySelector('[data-close-block-catalog]').addEventListener('click', function() { modal.close(); });
     modal.querySelectorAll('[data-block-tab]').forEach(function(button) {
       button.addEventListener('click', function() {
@@ -1611,17 +1654,18 @@
         unmanagedLiveSections.map(function(region, index) {
           return '<button type="button" class="te-live-only-row" data-scroll-live="' + index + '"><span>' + icon.section + '</span><span><strong>' + cmsEscapeHtml(humanize(region.label.replaceAll('.', ' '))) + '</strong><small>Existing storefront · adapter needed</small></span></button>';
         }).join('') + '</div>' : '') +
-      '<dialog class="te-section-menu" id="te-section-menu" aria-label="Add a section" hidden>' +
+      '<dialog class="te-section-menu" id="te-section-menu" aria-label="Add a section" aria-describedby="te-section-catalog-help" hidden>' +
         '<div class="te-section-menu__head"><div><strong>Add a section</strong><small>Choose a reusable storefront component</small></div><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close section catalog">×</button></div>' +
         '<div class="te-catalog-toolbar">' +
-          '<input class="te-section-search" id="te-section-search" placeholder="Search sections" aria-label="Search available sections" autocomplete="off">' +
+          '<input class="te-section-search" type="search" id="te-section-search" placeholder="Search sections" aria-label="Search available sections" autocomplete="off">' +
+          '<span class="te-catalog-help" id="te-section-catalog-help">Arrow keys to browse · Enter to select · Escape to close</span>' +
           '<div class="te-catalog-tabs" role="tablist" aria-label="Section source">' +
             '<button type="button" class="is-active" data-section-tab="sections" role="tab" aria-selected="true">Sections</button>' +
             '<button type="button" data-section-tab="apps" role="tab" aria-selected="false">Apps</button>' +
           '</div>' +
         '</div>' +
         '<div class="te-catalog-layout">' +
-          '<div class="te-catalog-list" id="te-section-list" role="listbox" aria-label="Available sections"></div>' +
+          '<div class="te-catalog-list" id="te-section-list" role="listbox" aria-label="Available sections" tabindex="-1"></div>' +
           '<section class="te-catalog-preview" id="te-section-preview" aria-live="polite"></section>' +
         '</div>' +
       '</dialog>' +
@@ -1670,6 +1714,9 @@
       else if (catalog) {
         catalog.removeAttribute('open');
         catalog.hidden = true;
+        // Non-modal dialog fallback also restores the originating tree button.
+        if (sectionReturnFocus?.isConnected) sectionReturnFocus.focus();
+        sectionReturnFocus = null;
       }
       sectionInsertIndex = null;
     }
@@ -1698,7 +1745,7 @@
         if (!apps.some(app => app.key === activeAppKey)) activeAppKey = apps[0]?.key || '';
         list.innerHTML = apps.length ? '<div class="te-catalog-list-group"><div class="te-catalog-list-group__label">Storefront apps</div>' +
           apps.map(function(app) {
-            return '<button type="button" class="te-catalog-list-item' +
+            return '<button type="button" role="option" aria-selected="' + (activeAppKey === app.key) + '" class="te-catalog-list-item' +
               (activeAppKey === app.key ? ' is-selected' : '') + '" data-choose-section-app="' + cmsEscapeAttr(app.key) + '">' +
               '<span class="te-catalog-list-item__icon">⊞</span><span><strong>' + cmsEscapeHtml(app.name) +
               '</strong><small>' + cmsEscapeHtml(app.category || 'App extension') + '</small></span></button>';
@@ -1883,7 +1930,10 @@
     const add = byId('te-add-section');
     const menu = byId('te-section-menu');
     const searchInput = byId('te-section-search');
+    let sectionReturnFocus = null;
+    wireCatalogKeyboard(menu, byId('te-section-list'), searchInput, '[data-choose-section], [data-choose-section-app]', '[data-section-tab]', closeSectionCatalog);
     function openCatalog(anchor, index) {
+      sectionReturnFocus = anchor;
       sectionInsertIndex = index;
       activeSectionTab = 'sections';
       activeSectionId = '';
@@ -1908,6 +1958,8 @@
     menu.addEventListener('close', function() {
       menu.hidden = true;
       sectionInsertIndex = null;
+      if(sectionReturnFocus?.isConnected) sectionReturnFocus.focus();
+      sectionReturnFocus = null;
     });
     byId('te-section-cancel')?.addEventListener('click', function() {
       if (menu.open) closeSectionCatalog();
