@@ -14,9 +14,14 @@ function CanonicalSitesEntry() {
   const siteId = params.get('site_id') || '';
   // Keep the public Theme Store's chosen package when following the Sites
   // compatibility route. The authenticated receiver checks release readiness.
-  const selected = /^iam\.theme\.[a-z][a-z0-9-]{0,63}$/.test(sku)
-    ? { theme_sku: sku, ...(/^\d+\.\d+\.\d+$/.test(version) ? { theme_version: version } : {}), ...(action ? { action } : {}), ...(/^[A-Za-z0-9_-]{1,160}$/.test(siteId) ? { site_id: siteId } : {}) }
-    : {};
+  const validTheme = /^iam\\.theme\\.[a-z][a-z0-9-]{0,63}$/.test(sku);
+  const selected = {
+    site_id: validTheme && /^[A-Za-z0-9_-]{1,160}$/.test(siteId) ? siteId : undefined,
+    theme_sku: validTheme ? sku : undefined,
+    theme_version: validTheme && /^\\d+\\.\\d+\\.\\d+$/.test(version) ? version : undefined,
+    action: validTheme && action === 'try' ? 'try' as const : undefined,
+    stock: undefined,
+  };
   return <Navigate to="/admin/store" search={selected} replace />;
 }
 export const Route = createFileRoute('/(apps)/sites')({ component: CanonicalSitesEntry });
