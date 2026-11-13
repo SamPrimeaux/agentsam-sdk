@@ -3039,6 +3039,17 @@
     if (!themeStyles) return;
     const current = host?.adapter?.getThemeSettings?.() || brand?.content?.__editor?.themeSettings;
     const css = themeStyles.renderThemeSettings(current);
+    const href = themeStyles.themeFontCssHref(current);
+    let fontLink = doc.getElementById('cms-merchant-fonts');
+    if (href) {
+      if (!fontLink) {
+        fontLink = doc.createElement('link');
+        fontLink.id = 'cms-merchant-fonts';
+        fontLink.rel = 'stylesheet';
+        doc.head.appendChild(fontLink);
+      }
+      if (fontLink.href !== href) fontLink.href = href;
+    } else fontLink?.remove();
     let style = doc.getElementById('cms-merchant-theme-style');
     if (!css) { style?.remove(); return; }
     if (!style) {
