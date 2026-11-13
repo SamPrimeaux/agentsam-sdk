@@ -10,13 +10,14 @@ type FormDocument = {
   behavior:{ trigger:string; device:string; pages:string };
   success:{ title:string; message:string };
 };
-type FormSummary = { id:string;key:string;title:string;description:string;status:"draft"|"published";version:number;updated_at:number;submission_count:number };
+type FormSummary = { id:string;site_id:string;key:string;title:string;description:string;status:"draft"|"published";version:number;updated_at:number;submission_count:number };
 type FormDetail = FormSummary & { document:FormDocument };
 type Submission = { id:string;values:Record<string,string|boolean>;is_test:boolean;created_at:number };
-type ApiResult = {ok:boolean;error?:string;installed?:boolean;enabled?:boolean;forms?:FormSummary[];form?:FormDetail;submissions?:Submission[]};
+type Storefront = { id:string;name:string;status:string;primary_domain?:string|null };
+type ApiResult = {ok:boolean;error?:string;installed?:boolean;enabled?:boolean;site_id?:string|null;sites?:Storefront[];forms?:FormSummary[];form?:FormDetail;submissions?:Submission[]};
 
 const API = "/api/forms";
-const INSTALL_KEY = "agentsam-app-forms";
+const INSTALL_KEY = "agentsamforms";
 const inputs:Record<FormField["type"],string> = {
   text:"Short text",email:"Email",tel:"Phone",textarea:"Long answer",select:"Dropdown",checkbox:"Consent checkbox",
 };
@@ -46,6 +47,8 @@ export function AgentSamFormsPage(){
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
   const [installed,setInstalled]=useState(false);
+  const [sites,setSites]=useState<Storefront[]>([]);
+  const [siteId,setSiteId]=useState<string|null>(null);
   const [forms,setForms]=useState<FormSummary[]>([]);
   const [active,setActive]=useState<FormDetail|null>(null);
   const [doc,setDoc]=useState<FormDocument|null>(null);
@@ -56,12 +59,26 @@ export function AgentSamFormsPage(){
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
   const load = useCallback(async()=>{
-    const r=await request(API);
-    setInstalled(Boolean(r.installed));setForms(r.forms||[]);
-  },[]);
-  useEffect(()=>{let active=true;request(API).then(r=>{if(active){setInstalled(Boolean(r.installed));setForms(r.forms||[]);}})
-    .catch(e=>{if(active)setError(String(e.message));}).finally(()=>{if(active)setLoading(false);});
+    const r=await request(API+(siteId?"?site="+encodeURIComponent(siteId):""));
+    setInstalled(Boolean(r.installed));setSites(r.sites||[]);setForms(r.forms||[]);
+    if (r.site_id) setSiteId(r.site_id);
+  },[siteId]);
+  useEffect(()=>{let active=true;request(API).then(r=>{if(active){
+      setInstalled(Boolean(r.installed));setSites(r.sites||[]);
+      setSiteId(r.site_id||null);setForms(r.forms||[]);
+    }}).catch(e=>{if(active)setError(String(e.message));})
+    .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false};},[]);
+  const changeSite=async(next:string)=>{
+    if (busy || dirty) {setError("Save the draft before switching storefronts.");return;}
+    setBusy(true);setError("");setNotice("");
+    try{
+      const r=await request(API+"?site="+encodeURIComponent(next));
+      setSiteId(r.site_id||null);setForms(r.forms||[]);
+      setActive(null);setDoc(null);setAnswers({});setSubmissions(null);
+    }catch(e){setError(e instanceof Error?e.message:"Unable to load storefront forms");}
+    finally{setBusy(false);}
+  };
   const run=async(operation:()=>Promise<void>)=>{
     setBusy(true);setError("");setNotice("");
     try{await operation();}catch(e){setError(e instanceof Error?e.message:"Operation failed");}
@@ -74,10 +91,12 @@ export function AgentSamFormsPage(){
     });
   };
   const install=()=>run(async()=>{
+    if(!siteId) throw Error("Choose a storefront before installing AgentSamForms.");
     const response=await request("/api/apps/install","POST",{key:INSTALL_KEY});
     if(response.enabled===false) throw Error("This app is disabled. Re-enable AgentSamForms in Apps first.");
-    const seeded=await request(API+"/bootstrap","POST");
-    setInstalled(true);setForms(seeded.forms||[]);setNotice("Five starter forms are now saved to this account.");
+    const seeded=await request(API+"/bootstrap?site="+encodeURIComponent(siteId),"POST");
+    setInstalled(true);setForms(seeded.forms||[]);
+    setNotice("Five editable draft forms are ready for this storefront.");
   });
   const changeDoc=(update:(current:FormDocument)=>FormDocument)=>{
     setDoc(current=>current?update(current):null);setDirty(true);
@@ -129,6 +148,11 @@ export function AgentSamFormsPage(){
       <div className="as-forms-heading"><div className="as-forms-icon"><FileText size={19}/></div><div>
         <h1>AgentSamForms</h1><p>Forms, inquiries and signups owned by your account</p>
       </div></div>
+      {sites.length>0&&<label className="as-forms-storefront">Storefront
+        <select aria-label="Storefront for these forms" value={siteId||""} disabled={busy||dirty} onChange={e=>void changeSite(e.target.value)}>
+          {sites.map(site=><option key={site.id} value={site.id}>{site.name}{site.status!=="active"?" (draft)":""}</option>)}
+        </select>
+      </label>}
       {active&&<div className="as-forms-toolbar">
         <button onClick={()=>{setActive(null);setDoc(null);setSubmissions(null);}}><ArrowLeft size={15}/> All forms</button>
         <span className={"as-forms-status "+active.status}>{active.status==="published"?"Published":"Draft"}</span>
@@ -145,13 +169,14 @@ export function AgentSamFormsPage(){
     {loading ? <div className="as-forms-loading"><Loader2 className="animate-spin"/> Loading forms…</div> :
     !installed ? <section className="as-forms-install">
       <div className="as-forms-icon"><ShieldCheck size={28}/></div><h2>Install AgentSamForms</h2>
-      <p>Add one account-owned application and five complete, editable starter forms. Form definitions and submissions stay separate from every other customer's account.</p>
-      <button className="as-forms-primary" disabled={busy} onClick={install}>{busy?<Loader2 className="animate-spin" size={16}/>:<Plus size={16}/>} Install and create five forms</button>
-      <span>No storefront forms publish automatically.</span>
+      <p>Install Forms for your account, then configure five ready-to-edit drafts on the selected storefront. No form publishes automatically.</p>
+      {sites.length===0&&<p>No storefront found. <a href="/admin/store">Create a storefront</a> before installing Forms.</p>}
+      <button className="as-forms-primary" disabled={busy||!siteId} onClick={install}>{busy?<Loader2 className="animate-spin" size={16}/>:<Plus size={16}/>} Install and create five forms</button>
+      <span>Published forms can be embedded on your active storefront using Copy embed.</span>
     </section> :
     !active ? <section className="as-forms-library">
-      <div className="as-forms-library-header"><div><h2>Your forms</h2><p>Five ready-to-edit starters, stored as drafts until you publish.</p></div>
-        <button disabled={busy} onClick={()=>run(async()=>{const r=await request(API+"/bootstrap","POST");setForms(r.forms||[]);setNotice("Starter forms verified.");})}><RotateCcw size={15}/> Restore missing starters</button></div>
+      <div className="as-forms-library-header"><div><h2>Storefront forms</h2><p>Five ready-to-edit starters for the selected site, stored as drafts until published.</p></div>
+        <button disabled={busy||!siteId} onClick={()=>run(async()=>{if(!siteId)return;const r=await request(API+"/bootstrap?site="+encodeURIComponent(siteId),"POST");setForms(r.forms||[]);setNotice("Starter forms verified.");})}><RotateCcw size={15}/> Restore missing starters</button></div>
       <div className="as-forms-grid">
         {forms.map((f,i)=><button key={f.id} className="as-forms-card" onClick={()=>selectForm(f.id)} disabled={busy}>
           <div className="as-forms-card-top"><span className="as-forms-card-number">{String(i+1).padStart(2,"0")}</span><span className={"as-forms-status "+f.status}>{f.status}</span></div>
