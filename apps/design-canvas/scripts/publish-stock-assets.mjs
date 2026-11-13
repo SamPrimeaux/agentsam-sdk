@@ -32,19 +32,22 @@ for(const item of catalog.items) {
   const pkg=createStockPackage(item);
   releasePackages.push(pkg);
   for(const file of item.files){
-    const bytes=await readFile(join(stock,item.slug,file.path));
+    const sourcePath=join(stock,item.slug,file.path);
+    const bytes=await readFile(sourcePath);
     validateStockSourceFile(item,file,bytes);
     const record=pkg.manifest.files.find(entry=>entry.path===file.path);
     const stored=blobs.get(record.object_key);
     if(stored&&stored.sha256!==record.sha256)throw Error('blob_collision');
+    // Retain only one filesystem path per unique object, not its full contents.
+    // Upload workers read on demand; memory scales with concurrency, not bytes.
     if(!stored)blobs.set(record.object_key,{key:record.object_key,sha256:record.sha256,
-      bytes,contentType:stockContentType(file.path)});
+      sourcePath,bytes:file.bytes,contentType:stockContentType(file.path)});
   }
 }
 const index=createStockIndex(releasePackages);
 const rawFiles=catalog.items.reduce((n,item)=>n+item.files.length,0);
 const totalBytes=catalog.items.reduce((n,item)=>n+item.files.reduce((sum,f)=>sum+f.bytes,0),0);
-const uniqueBytes=[...blobs.values()].reduce((sum,blob)=>sum+blob.bytes.length,0);
+const uniqueBytes=[...blobs.values()].reduce((sum,blob)=>sum+blob.bytes,0);
 const report={ok:true,dry_run:!execute,bucket:STORAGE_BUCKET,
   packages:releasePackages.length,file_references:rawFiles,
   unique_blobs:blobs.size,logical_bytes:totalBytes,stored_blob_bytes:uniqueBytes,
@@ -88,7 +91,8 @@ async function parallel(items,limit,fn){
 }
 try{
   // Dependencies first. Every file reference points at a verified object.
-  await parallel([...blobs.values()],4,entry=>publishImmutable(entry.key,entry.bytes,entry.contentType));
+  await parallel([...blobs.values()],4,async entry=>
+    publishImmutable(entry.key,await readFile(entry.sourcePath),entry.contentType));
   // Version manifests are immutable and referenced by stable logical IDs.
   await parallel(releasePackages,4,pkg=>publishImmutable(pkg.key,pkg.bytes,'application/json'));
   // Index is written last; no dangling package dependency can be published.
