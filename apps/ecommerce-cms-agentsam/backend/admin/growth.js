@@ -120,7 +120,7 @@ async function getOverview(env, accountId) {
     .first()
     .catch(() => ({ n: 0 }));
 
-  const attr = await getAttributionMetrics(env).catch(() => null);
+  const attr = await getAttributionMetrics(env, accountId).catch(() => null);
   const sessionCount =
     Number(attr?.total_sessions) > 0
       ? Number(attr.total_sessions)
