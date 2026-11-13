@@ -73,7 +73,9 @@ test('candidate Studio uses verified source links and checks only real npm tarba
   ]);
   const tampered = structuredClone(lock);
   tampered.packages['node_modules/@inneranimalmedia/agentsam-nav'].resolved = '../../packages/agentsam-brand';
-  assert.throws(() => requiredPublishedPackages(manifests, tampered), /untrusted_first_party_lock_link:.*agentsam-nav/);
+  // Studio source-pins agentsam-nav with file:, so exercise the lock-link guard with a registry-versioned dependency.
+  const registryManifests = [{ path: 'frontend/package.json', manifest: { dependencies: { '@inneranimalmedia/agentsam-nav': '1.0.0' } } }];
+  assert.throws(() => requiredPublishedPackages(registryManifests, tampered), /untrusted_first_party_lock_link:.*agentsam-nav/);
 });
 
 test('reports a missing lock entry for an exact published dependency', () => {

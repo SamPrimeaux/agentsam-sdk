@@ -11,22 +11,23 @@ const { outputFiles } = await build({
 const { listLocalMedia } = await import(`data:text/javascript;base64,${Buffer.from(outputFiles[0].contents).toString('base64')}`);
 
 test('Local media adapter lists actual FSA entries with type, metadata and previews', async () => {
+  /** @type {string[]} */
   const reads = [];
   const fakeHost = {
-    async list(ref) {
+    async list(/** @type {string} */ ref) {
       assert.equal(ref, 'directory_1');
       return [
         { kind: 'file', ref: 'file_a', name: 'photo.png' },
         { kind: 'directory', ref: 'directory_2', name: 'Models' },
       ];
     },
-    async stat(ref) {
+    async stat(/** @type {string} */ ref) {
       if (ref === 'file_a') return { bytes: 3, mime: 'image/png', mtime: '2026-11-11T00:00:00.000Z' };
       return { kind: 'directory', name: 'Models' };
     },
-    async openRead(ref) {
+    async openRead(/** @type {string} */ ref) {
       reads.push(ref);
-      return { async read(maxBytes) {
+      return { async read(/** @type {number} */ maxBytes) {
         assert.equal(maxBytes, 8 * 1024 * 1024);
         return new Uint8Array([1, 2, 3]);
       } };

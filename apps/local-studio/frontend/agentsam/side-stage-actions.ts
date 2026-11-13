@@ -2,8 +2,8 @@ import { useEffect, useSyncExternalStore } from "react";
 import {
   listLocalStudioConnections,
   type LocalStudioSideStageRecord,
-} from "../src/lib/connections/client";
-import { SETTINGS_CATALOG_CHANGED_EVENT } from "../src/lib/desktop/connection-deep-link";
+} from "../src/lib/connections/client.ts";
+import { SETTINGS_CATALOG_CHANGED_EVENT } from "../src/lib/desktop/connection-deep-link.ts";
 
 /**
  * Side Stage registration is account-scoped plugin catalog data, not a JSX
