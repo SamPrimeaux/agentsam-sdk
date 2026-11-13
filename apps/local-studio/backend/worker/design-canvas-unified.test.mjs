@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { validateCanvasDocument, blankCanvasDocument } from './work-canvas.js';
 import { canvasToThemeProject } from './work-canvas-cms.js';
 import { projectSideStageContribution } from './plugin-side-stages.js';
-const sql = readFileSync(new URL('../migrations/1362_design_canvas_native_unification.sql', import.meta.url), 'utf8');
+const sql = readFileSync(new URL('../migrations/1364_design_canvas_native_unification.sql', import.meta.url), 'utf8');
 
 function htmlDocument(html = '<!doctype html><html><head></head><body>Hello</body></html>') {
   return { ...blankCanvasDocument(), artboards:[{id:'board_unified',name:'Imported source',x:0,y:0,width:1200,height:900,background:'#fff',nodes:[{id:'node_html',type:'html',name:'Source HTML',x:0,y:0,width:1200,height:900,sourceHtml:html,sourceBase:'/design-canvas/sources/agentsam/'}]}] };
