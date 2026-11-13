@@ -100,3 +100,8 @@
 @media(max-width:1150px){.as-forms-workspace{grid-template-columns:190px minmax(280px,1fr) 250px}.as-forms-preview-column{padding:18px 12px}.as-forms-header{padding:15px}}
 @media(max-width:850px){.as-forms-workspace{grid-template-columns:minmax(0,1fr) 255px}.as-forms-sidebar{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--ff-line)}.as-forms-fieldlist{display:flex;gap:6px;overflow-x:auto}.as-forms-fieldlist>button{width:auto;white-space:nowrap;flex-shrink:0}.as-forms-addfield{display:none}.as-forms-preview-column{grid-column:1}.as-forms-inspector{grid-column:2}}
 @media(max-width:650px){.as-forms-header{align-items:start;flex-direction:column}.as-forms-heading p{font-size:11px}.as-forms-library{padding:15px}.as-forms-library-header{align-items:start;flex-direction:column}.as-forms-workspace{display:flex;flex-direction:column}.as-forms-sidebar,.as-forms-inspector{width:100%;overflow:visible;border:0;border-bottom:1px solid var(--ff-line)}.as-forms-addfield{display:block}.as-forms-preview-column{padding:12px}.as-forms-preview{padding:22px 17px}.as-forms-toolbar{gap:4px}.as-forms-toolbar button,.as-forms-toolbar a{padding:6px 8px}}
+
+/* Storefront scope belongs above the editor, not inside each form's field settings. */
+.as-forms-storefront{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:600;white-space:nowrap}
+.as-forms-storefront select{max-width:240px;min-height:34px;border:1px solid var(--border, #ddd);border-radius:8px;background:var(--card, #fff);color:inherit;padding:6px 10px;font:inherit}
+@media(max-width:760px){.as-forms-storefront{width:100%;justify-content:space-between}.as-forms-storefront select{max-width:68%;min-width:0}}

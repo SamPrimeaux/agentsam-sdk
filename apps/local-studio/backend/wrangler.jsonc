@@ -3,6 +3,12 @@
   "name": "agentsam-sdk",
   "account_id": "ede6590ac0d2fb7daf155b35653457b2",
   "main": "worker/index.js",
+  // Local Studio is authored within the SDK repository. Bundle these worker-safe
+  // source exports directly instead of relying on an older published SDK self-dependency.
+  "alias": {
+    "@inneranimalmedia/agentsam-sdk/models/inventory": "../../../src/models/inventory-core.js",
+    "@inneranimalmedia/agentsam-sdk/plugins": "../../../src/plugins/index.js"
+  },
   "compatibility_date": "2026-09-11",
   "compatibility_flags": ["nodejs_compat"],
   "rules": [
