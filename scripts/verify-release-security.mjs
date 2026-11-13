@@ -46,7 +46,16 @@ try {
   assert.equal(packed.name, pkg.name);
   assert.equal(packed.version, pkg.version);
   run('npm', ['init', '-y'], { cwd: consumer });
-  run('npm', ['install', '--no-audit', '--no-fund', path.join(artifacts, packed.filename)], { cwd: consumer });
+  // The release train publishes siblings first; before that, their exact
+  // versions are not on the registry yet, so install them from local tarballs.
+  const siblingNames = Object.keys(pkg.dependencies || {})
+    .filter((name) => name.startsWith('@inneranimalmedia/'))
+    .filter((name) => fs.existsSync(path.join(ROOT, 'packages', name.split('/')[1], 'package.json')));
+  const siblingTarballs = siblingNames
+    .map((name) => path.join(ROOT, 'packages', name.split('/')[1]))
+    .map((dir) => path.join(artifacts, firstPack(JSON.parse(
+      run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], { cwd: dir }).stdout)).filename));
+  run('npm', ['install', '--no-audit', '--no-fund', ...siblingTarballs, path.join(artifacts, packed.filename)], { cwd: consumer });
 
   const installed = JSON.parse(fs.readFileSync(path.join(consumer, 'node_modules', '@inneranimalmedia', 'agentsam-sdk', 'package.json'), 'utf8'));
   assert.equal(installed.name, pkg.name);
@@ -54,11 +63,10 @@ try {
 
   const report = await scanProjectSecurity({
     projectRoot: consumer,
-    releaseCandidate: {
-      name: pkg.name,
-      version: pkg.version,
-      location: 'node_modules/@inneranimalmedia/agentsam-sdk',
-    },
+    releaseCandidate: [
+      { name: pkg.name, version: pkg.version, location: 'node_modules/@inneranimalmedia/agentsam-sdk' },
+      ...siblingNames.map((name) => ({ name, version: pkg.dependencies[name], location: 'node_modules/' + name })),
+    ],
   });
   const code = reportExitCode(report);
   if (code !== 0) {
