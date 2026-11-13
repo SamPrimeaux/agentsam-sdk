@@ -9,7 +9,7 @@ import { MessageList } from '@/components/workbench/thread';
 import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
 import { WorkSurfaceBar } from '@/components/workbench/work-surface-bar';
-import { SidePanelToggle } from './AgentSamShell';
+
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { useActiveCompanion } from './CompanionContext';
 import { companionStateAsset } from './companions';
@@ -24,8 +24,13 @@ const CHAT_PANEL_MIN = 380;
 
 // Session-local visited-thread history; unlike browser history, these arrows
 // never navigate the user out of AgentSam into an unrelated site or route.
-const visitedThreads = { ids: [] as string[], index: -1 };
-function rememberThread(id: string) {
+const visitedThreads = { accountId: '' as string, ids: [] as string[], index: -1 };
+function rememberThread(id: string, accountId: string) {
+  if (visitedThreads.accountId !== accountId) {
+    visitedThreads.accountId = accountId;
+    visitedThreads.ids = [];
+    visitedThreads.index = -1;
+  }
   if (visitedThreads.ids[visitedThreads.index] === id) return;
   visitedThreads.ids.splice(visitedThreads.index + 1);
   visitedThreads.ids.push(id);
@@ -63,9 +68,9 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const [threadHistory, setThreadHistory] = useState({ index: visitedThreads.index, total: visitedThreads.ids.length });
   useEffect(() => {
     if (!chat?.id) return;
-    rememberThread(chat.id);
+    rememberThread(chat.id, data.account?.id ?? 'local');
     setThreadHistory({ index: visitedThreads.index, total: visitedThreads.ids.length });
-  }, [chat?.id]);
+  }, [chat?.id, data.account?.id]);
   useEffect(() => { if (!state.sideOpen && workFocused) setWorkFocused(false); }, [state.sideOpen, workFocused]);
   const visitThread = (direction: -1 | 1) => {
     const nextIndex = visitedThreads.index + direction;
@@ -107,14 +112,12 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     }}>{workFocused ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</IconAction>
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
-  const headerActions = <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
-    {!empty ? <>
+  const headerActions = empty ? <span className="agentsam-blank-conversation-actions" aria-hidden="true" /> : <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
       {isMobile ? <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} /> : null}
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><MessageSquarePlus size={20} aria-hidden="true" /></IconAction>
       <Nav.ConversationActions />
       <Nav.ShareButton />
       <Nav.PinnedSummary />
-    </> : null}
   </div>;
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
     {hostModeSlot ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
