@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { IconAction } from "@/components/ui/icon-action";
 import { ArrowLeft, Check, ClipboardCopy, Code2, Eye, FileText, Loader2, Mail, Plus, RotateCcw, Save, Send, ShieldCheck, Trash2, X } from "lucide-react";
 import "./AgentSamFormsPage.css";
 
@@ -123,13 +124,7 @@ export function AgentSamFormsPage(){
     try { await navigator.clipboard.writeText(code);setNotice("Embed code copied."); }
     catch {setError("Clipboard access unavailable. Open the public form to copy its URL.");}
   };
-  const view=useMemo(()=>doc&&active?{
-    ...doc,
-    style:{"--form-bg":doc.appearance.background,"--form-fg":doc.appearance.text,
-      "--form-accent":doc.appearance.accent,"--form-button":doc.appearance.button,
-      "--form-radius":doc.appearance.radius+"px"} as CSSProperties,
-  }:null,[doc,active]);
-  return <main className="as-forms-root">
+   return <main className="as-forms-root">
     <header className="as-forms-header">
       <div className="as-forms-heading"><div className="as-forms-icon"><FileText size={19}/></div><div>
         <h1>AgentSamForms</h1><p>Forms, inquiries and signups owned by your account</p>
@@ -145,8 +140,8 @@ export function AgentSamFormsPage(){
         {active.status==="draft"&&<button className="as-forms-primary" disabled={!dirty||busy} onClick={save}><Save size={15}/> Save</button>}
       </div>}
     </header>
-    {error&&<div className="as-forms-alert error" role="alert"><span>{error}</span><button aria-label="Dismiss error" onClick={()=>setError("")}><X size={16}/></button></div>}
-    {notice&&<div className="as-forms-alert success" role="status"><Check size={15}/><span>{notice}</span><button aria-label="Dismiss message" onClick={()=>setNotice("")}><X size={16}/></button></div>}
+    {error&&<div className="as-forms-alert error" role="alert"><span>{error}</span><IconAction label="Dismiss error" hint="Close error message" onClick={()=>setError("")}><X size={16}/></IconAction></div>}
+    {notice&&<div className="as-forms-alert success" role="status"><Check size={15}/><span>{notice}</span><IconAction label="Dismiss message" hint="Close confirmation" onClick={()=>setNotice("")}><X size={16}/></IconAction></div>}
     {loading ? <div className="as-forms-loading"><Loader2 className="animate-spin"/> Loading forms…</div> :
     !installed ? <section className="as-forms-install">
       <div className="as-forms-icon"><ShieldCheck size={28}/></div><h2>Install AgentSamForms</h2>
@@ -167,7 +162,7 @@ export function AgentSamFormsPage(){
       </div>
       {forms.length===0&&<EmptyState title="No forms yet" detail="Use Restore missing starters to create your five forms."/>}
     </section> :
-    doc&&view&&<div className="as-forms-workspace">
+    doc&&<div className="as-forms-workspace">
       <aside className="as-forms-sidebar">
         <PanelHeader title="Form fields" sub={String(doc.fields.length)+" fields · click to edit"}/>
         <div className="as-forms-fieldlist">{doc.fields.map((field,i)=><button key={field.key} onClick={()=>setSelected(i)} className={selected===i?"selected":""}>
@@ -179,10 +174,14 @@ export function AgentSamFormsPage(){
       </aside>
       <section className="as-forms-preview-column">
         <div className="as-forms-previewbar"><div><strong>Live preview</strong><span>Test submissions are saved; visitors cannot see drafts.</span></div><span>{doc.mode==="popup"?"Popup-style":"Inline form"}</span></div>
-        <form className="as-forms-preview" style={view.style} onSubmit={e=>{e.preventDefault();void testSubmission();}}>
+        <form className="as-forms-preview" style={{
+          "--form-bg":doc.appearance.background,"--form-fg":doc.appearance.text,
+          "--form-accent":doc.appearance.accent,"--form-button":doc.appearance.button,
+          "--form-radius":doc.appearance.radius+"px",
+        } as CSSProperties} onSubmit={e=>{e.preventDefault();void testSubmission();}}>
           <div className="as-forms-preview-inner">
             <h2>{doc.title}</h2><p>{doc.description}</p>
-            {doc.fields.map((field,i)=><div key={field.key} className={"as-forms-preview-selectable "+(i===selected?"is-selected":"")} onClick={()=>setSelected(i)}>
+            {doc.fields.map((field,i)=><div key={field.key} className={"as-forms-preview-selectable "+(i===selected?"is-selected":"")}>
               <FieldPreview field={field} value={answers[field.key]} setValue={value=>setAnswers(a=>({...a,[field.key]:value}))}/>
             </div>)}
             <button type="submit" className="as-forms-preview-submit" disabled={busy||dirty}><Send size={15}/> Submit test response</button>
@@ -218,7 +217,7 @@ export function AgentSamFormsPage(){
             <button className="as-forms-danger" disabled={doc.fields.length===1} onClick={()=>{changeDoc(d=>({...d,fields:d.fields.filter((_,i)=>i!==selected)}));setSelected(0);}}><Trash2 size={14}/> Remove selected field</button>
           </>}
           <div className="as-forms-section-title">Appearance</div>
-          <div className="as-forms-swatches">{colors.map(c=><button type="button" key={c} aria-label={"Set accent to "+c} style={{background:c}} onClick={()=>changeDoc(d=>({...d,appearance:{...d.appearance,accent:c,button:c}}))} />)}</div>
+          <div className="as-forms-swatches">{colors.map(c=><IconAction key={c} label={"Use "+c+" accent"} hint={"Use "+c+" accent color"} className="as-forms-swatch" style={{"--form-swatch":c} as CSSProperties} onClick={()=>changeDoc(d=>({...d,appearance:{...d.appearance,accent:c,button:c}}))}><span className="sr-only">Use {c} accent</span></IconAction>)}</div>
           <label className="as-forms-setting">Background<input type="color" value={doc.appearance.background} onChange={e=>changeDoc(d=>({...d,appearance:{...d.appearance,background:e.target.value}}))}/></label>
           <div className="as-forms-section-title">Success message</div>
           <label className="as-forms-setting">Title<input value={doc.success.title} onChange={e=>changeDoc(d=>({...d,success:{...d.success,title:e.target.value}}))}/></label>
