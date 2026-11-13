@@ -24,6 +24,7 @@ import { runDb } from './commands/db.js';
 import { runStatus } from './commands/status.js';
 import { runInteractive } from './commands/interactive.js';
 import { runShell } from './commands/shell.js';
+import { DesktopLaunchError, isDirectoryArg, launchDesktop, resolveProjectDir } from './lib/desktop-launch.js';
 import { runGoap } from './commands/goap.js';
 import { runGoals } from './commands/goals.js';
 import { runBrand } from './commands/brand.js';
@@ -310,6 +311,28 @@ async function initFromArgs(argv) {
   await runLocalInit({ ...opts, prompt: null });
 }
 
+async function runTuiCommand() {
+  try { await runInteractive(); }
+  catch (e) {
+    if (e?.code !== 'AGENTSAM_SETUP_CANCELLED') {
+      reportCliError(e);
+      process.exitCode = 1;
+    }
+  }
+}
+
+/** Desktop-first: open/focus AgentSam Local Studio, optionally at a project directory. */
+function runDesktopCommand(dirArg) {
+  try {
+    const projectDir = resolveProjectDir(dirArg);
+    launchDesktop({ projectDir });
+  } catch (e) {
+    if (!(e instanceof DesktopLaunchError)) throw e;
+    console.error(e.message);
+    process.exitCode = e.code === 'path_not_found' || e.code === 'path_not_directory' || e.code === 'invalid_path' ? 2 : 1;
+  }
+}
+
 const command = process.argv[2];
 const rest = process.argv.slice(3);
 
@@ -339,16 +362,16 @@ if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
   printHelp();
 } else if (!command) {
   if (process.stdin.isTTY && process.stdout.isTTY) {
-    try { await runInteractive(); }
-    catch (e) {
-      if (e?.code !== 'AGENTSAM_SETUP_CANCELLED') {
-        reportCliError(e);
-        process.exitCode = 1;
-      }
-    }
+    runDesktopCommand(null);
   } else {
     printHelp();
   }
+} else if (command === 'tui') {
+  await runTuiCommand();
+} else if (command === 'studio') {
+  runDesktopCommand(rest.find((a) => !a.startsWith('-')) ?? null);
+} else if (isDirectoryArg(command)) {
+  runDesktopCommand(command);
 } else if (command === 'explain' || command === 'assist' || (command === 'choose' && rest[0] === 'runtime')) {
   const code = await runCatalog(command === 'choose' ? 'choose' : command, command === 'choose' ? rest.slice(1) : rest);
   if (code) process.exitCode = code;
