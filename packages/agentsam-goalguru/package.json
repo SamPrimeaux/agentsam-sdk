@@ -1,6 +1,11 @@
 {
   "name": "@inneranimalmedia/agentsam-goalguru",
   "version": "2.6.15",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-goalguru"
+  },
   "type": "module",
   "description": "AgentSam GoalGuru: installable account-owned goals and ticket-linked plans for full-page and Side Stage hosts.",
   "exports": {
