@@ -39,7 +39,7 @@ test('global and contextual help icons lead to real documentation routes', () =>
   assert.match(navigationProjection, /utilities: \[\]/);
   assert.match(globalShell, /help:CircleHelp/);
   assert.match(globalShell, /onNavigate: go/);
-  assert.match(cmsRoute, /<Navigate[\s\S]*to="\/apps\/ecommerce-cms-agentsam"[\s\S]*search=\{\{ page: '\/admin\/store' \}\}/);
+  assert.match(cmsRoute, /<Navigate[\s\S]*to="\/admin\/store"[\s\S]*replace/);
   assert.match(docsHome, /createFileRoute\('\/\(apps\)\/docs'\)/);
   assert.match(sitesPage, /go\('\/help\/cms'\)/);
   assert.match(cmsGuide, /createFileRoute\('\/\(apps\)\/help\/cms'\)/);
