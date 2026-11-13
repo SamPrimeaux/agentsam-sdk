@@ -298,9 +298,14 @@ export async function handleAgentSamFormsPublic(request, env) {
   if (submit && request.method !== 'POST') return new Response('Method not allowed',{status:405});
   try {
     const id=(embed||submit)[1];
+    // Disabling/uninstalling this account's App stops public delivery; stored
+    // drafts and submissions are retained for a later reinstall.
     const row=await env.DB.prepare(
-      "SELECT * FROM agentsam_forms WHERE id=? AND status='published' LIMIT 1"
-    ).bind(id).first();
+      "SELECT f.* FROM agentsam_forms f " +
+      "JOIN agentsam_plugin_installations i ON i.account_id=f.account_id AND i.instance_key='default' AND i.enabled=1 " +
+      "JOIN agentsam_plugins p ON p.id=i.plugin_id AND p.plugin_key=? " +
+      "WHERE f.id=? AND f.status='published' LIMIT 1"
+    ).bind(FORMS_APP_KEY,id).first();
     if (!row) return new Response('Form not found',{status:404,headers:publicHeaders});
     if (embed) return new Response(request.method==='HEAD'?null:formHtml(row), {
       headers:{...publicHeaders,'content-type':'text/html; charset=utf-8',
