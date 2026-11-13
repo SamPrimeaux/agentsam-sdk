@@ -33,6 +33,8 @@ function run(cmd, args, cwd) {
 describe('Lane 1 packed identity consumer proof', () => {
   it('npm pack → clean install → portable migrate + sqlite smoke', () => {
     const work = fs.mkdtempSync(path.join(os.tmpdir(), 'lane1-pack-'));
+    // Each run installs ~180MB; never leave it behind in the tmp dir.
+    process.on('exit', () => fs.rmSync(work, { recursive: true, force: true }));
     const artifacts = path.join(work, 'artifacts');
     fs.mkdirSync(artifacts);
     const errorsRoot = path.join(REPO, 'packages', 'agentsam-errors');
