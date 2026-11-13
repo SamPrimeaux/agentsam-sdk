@@ -107,7 +107,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 className="flex items-center gap-1.5 py-1 text-xs"
               >
                 <TabIcon kind={item.kind} />
-                <span className="max-w-28 truncate">{item.title}</span>
+                <span className="max-w-28 truncate" title={item.title}>{item.title}</span>
               </button>
               <IconAction
                 type="button"
