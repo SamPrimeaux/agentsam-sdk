@@ -109,7 +109,10 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       else state.openSideTab('browser', { ephemeral: false });
     }}><PanelRight size={18} /></IconAction>
     <IconAction label={workFocused ? 'Exit full view' : 'Enter full view'} hint="Focus Side Stage while keeping the lead composer" onClick={() => {
-      if (!workFocused) state.setSideOpen(true);
+      if (!workFocused) {
+        if (!state.sideTabs.length) state.openSideTab('browser', { ephemeral: false });
+        else state.setSideOpen(true);
+      }
       setWorkFocused(focused => !focused);
     }}>{workFocused ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</IconAction>
   </div>;
