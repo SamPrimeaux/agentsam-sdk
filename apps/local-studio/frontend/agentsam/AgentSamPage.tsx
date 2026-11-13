@@ -95,6 +95,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const companionArt = companionStateAsset(companion, streaming ? 'working' : 'idle');
   const workSurface = state.workSurface;
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
+  const leadComposerDetached = workFocused || mobileWorkOpen || (isMobile && state.sideOpen);
   // One set of controls is portalled into hosted chrome or rendered locally.
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
     <IconAction label="Previous thread" hint="Previous visited conversation" disabled={threadHistory.index <= 0} onClick={() => visitThread(-1)}><ArrowLeft size={17} /></IconAction>
@@ -135,7 +136,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       <span className="flex-1" aria-hidden="true" />
       {!hostActionsSlot ? headerActions : null}
     </Nav.Topbar> : null}
-    <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "")}>
+    <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "") + (leadComposerDetached ? " has-detached-composer" : "")}>
       {hostModeSlot && empty && data.mode !== 'work' ? <div className="agentsam-context-tools" aria-label="Conversation tools"><AnnotationToggle /></div> : null}
       <section className="agentsam-conversation" aria-label="Conversation" inert={mobileWorkOpen || (isMobile && state.sideOpen) || workFocused} style={workFocused || mobileWorkOpen ? { display:"none" } : undefined}>
         <AgentConversationSurface
@@ -161,12 +162,12 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               </div>
             </div> : <h1>Where should we begin?</h1>}
           </div>}
-          composer={workFocused ? null : <Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />}
+          composer={leadComposerDetached ? null : <Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />}
           composerClassName="agentsam-conversation-dock"
         />
       </section>
       {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width - delta, window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} /></aside></> : null}
-      {workFocused && <div className="agentsam-focused-lead-composer" aria-label="Lead AgentSam composer">
+      {leadComposerDetached && <div className="agentsam-focused-lead-composer" aria-label="Lead AgentSam composer">
         <Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />
       </div>}
     </div>
