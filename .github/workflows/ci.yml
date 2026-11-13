@@ -59,6 +59,9 @@ jobs:
       - name: Verify app-scoped Cloudflare SDK dependency links
         run: node --test apps/local-studio/scripts/ensure-aliased-deps.test.mjs apps/local-studio/scripts/studio-source-deps.test.mjs
 
+      - name: Verify AgentSamForms account ownership, drafts and submissions
+        run: node --test apps/local-studio/backend/worker/agentsam-forms.test.mjs
+
       - name: Verify packaged Console navigation before dependency gate
         run: node --test --test-name-pattern='Local Studio owns|platform home|AgentSam app|Growth appearance|legacy /cli|desktop Console' apps/local-studio/scripts/packaged-console-mount.test.mjs
 
