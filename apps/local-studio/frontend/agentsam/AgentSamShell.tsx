@@ -156,6 +156,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     return () => controller.abort();
   }, [user?.id]);
   const chat = state.chats.find((item) => item.id === state.activeChatId);
+  // The store can hold a placeholder New chat before the user sends a message.
+  const hasStartedConversation = Boolean(chat?.messages.some(message => message.role === 'user'));
   const conversationOutputFiles = chat
     ? [...(chat.files ?? []), ...((state.projects.find(item => item.id === state.activeProjectId)?.files ?? [])
         .filter(file => file.chatId === chat.id))]
@@ -471,7 +473,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     })(),
     mode, onModeChange: setMode, pathname: navPathname,
     project: project ? { id: project.id, name: project.name } : undefined,
-    conversation: chat ? { id: chat.id, title: chat.title, pinned: chat.pinned, projectId: chat.workProjectId } : undefined,
+    conversation: hasStartedConversation && chat ? { id: chat.id, title: chat.title, pinned: chat.pinned, projectId: chat.workProjectId } : undefined,
     pinnedResources,
     onOpenResource: item => {
       if(item.open && (item.open.startsWith('/') && !item.open.startsWith('//') || item.open.startsWith('https://'))) {
@@ -593,31 +595,12 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'home', label: 'Project home', icon: <Folder />, onSelect: () => go('/admin/projects') },
       { id: 'files', label: 'Project files', icon: <Files />, onSelect: () => state.openSideTab('files') },
     ],
-    conversationActions: chat ? [
-      { id: 'plugins', label: 'Plugins', icon: <Plug />, onSelect: () => go('/settings/integrations') },
-      { id: 'files', label: 'View files in conversation', icon: <Files />, separatorBefore: true, onSelect: () => { state.openSideTab('files'); state.setSideOpen(true); } },
-      { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
-      { id: 'living-goals', label: 'Goals', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
-      // Installed apps are projected from the host's real app catalog. Tabs such
-      // as Terminal and Code are workspace panels, not fake installed packages.
-      { id: 'installed-apps', label: 'Installed apps', icon: <Layers3 />, children: [
-        ...(navigation.apps || []).filter(item => item.href?.startsWith('/') && !item.href.startsWith('//')).map(item => {
-          const Icon = navigationIcons[item.icon as keyof typeof navigationIcons] || Layers3;
-          return { id: 'open-app-' + item.id, label: item.label, icon: <Icon />, onSelect: () => go(item.href!) };
-        }),
-        { id: 'all-apps', label: 'Manage apps', icon: <Plug />, separatorBefore: true, onSelect: openAppsInstaller },
-      ] },
-      { id: 'workspace-panels', label: 'Workspace panels', icon: <PanelRight />, children: [
-        { id: 'co-worker', label: 'Co-worker', icon: <Users />, onSelect: () => { state.openSideTab('chat', { ephemeral: false }); state.setSideOpen(true); } },
-        { id: 'browser', label: 'Browser', icon: <Globe />, onSelect: () => { state.openSideTab('browser', { ephemeral: false }); state.setSideOpen(true); } },
-        { id: 'files-work', label: 'Files', icon: <Folder />, onSelect: () => state.setWorkSurface('files') },
-        { id: 'code-work', label: 'Code', icon: <FileCode />, onSelect: () => state.setWorkSurface('code') },
-        { id: 'terminal-work', label: 'Terminal', icon: <SquareTerminal />, onSelect: () => state.setWorkSurface('terminal') },
-        { id: 'preview-work', label: 'Preview', icon: <MonitorPlay />, onSelect: () => state.setWorkSurface('preview') },
-        { id: 'artifacts-work', label: 'Artifacts', icon: <Layers3 />, onSelect: () => { state.openSideTab('artifacts', { ephemeral: false }); state.setSideOpen(true); } },
-      ] },
+    // Conversation actions are about the conversation, not a second app or panel launcher.
+    // Installed apps and native Side Stage surfaces live in the Side Stage + menu.
+    conversationActions: hasStartedConversation && chat ? [
+      { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\\n' + item.content).join('\\n\\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
     ] : [],
-    pinnedSummary: chat ? {
+    pinnedSummary: hasStartedConversation && chat ? {
       subagents: state.sideTabs.filter(tab => tab.kind === 'chat' && tab.parentChatId === chat.id).map(tab => ({
         id: tab.id, label: tab.title || 'Co-worker',
         status: state.streamingIds.includes(tab.id) ? 'Working' : 'Idle',
