@@ -434,8 +434,7 @@
     "wip:audit": "node scripts/wip-landscape.mjs"
   },
   "engines": {
-    "node": ">=22 <25",
-    "npm": ">=10 <12"
+    "node": ">=22"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",

@@ -27,7 +27,7 @@
     "sync:demo-catalog": "python3 scripts/sync-demo-catalog.py"
   },
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public"

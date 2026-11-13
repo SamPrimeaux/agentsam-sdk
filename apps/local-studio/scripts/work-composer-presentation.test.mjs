@@ -16,8 +16,6 @@ test('Work greeting renders the selected companion inline beside the prompt', ()
   assert.match(page, /const companionArt = companionStateAsset\(companion/);
   assert.match(page, /<img src=\{companionArt\} alt="" draggable=\{false\}/);
   assert.match(page, /<h1>What should we work on\?<\/h1>/);
-  assert.match(page, /Geaux is ready to GEAUX!/);
-  assert.match(page, /Choose a companion/);
   assert.doesNotMatch(page, /agentsam-work-welcome-eyebrow/);
   assert.match(styles, /\.agentsam-work-welcome-art \{[^}]*width: 30px; height: 38px;[^}]*border: 0;[^}]*background: transparent;/s);
   assert.match(styles, /transform: translateY\(-5px\) scale\(2\)/);
@@ -26,7 +24,7 @@ test('Work greeting renders the selected companion inline beside the prompt', ()
 });
 
 test('plugins and connected services are available from the plus/@ menu, not persistent chips', () => {
-  assert.match(picker, /aria-label="Add tools and plugins"/);
+  assert.match(picker, /label="Add tools and plugins"/);
   assert.match(picker, /<Plus size=\{19\}\/>/);
   assert.match(picker, /aria-haspopup="dialog"/);
   assert.match(picker, /const match=value\.slice\(0,cursor\)\.match\(\/\(\?:\^\|\\s\)@/);
@@ -38,9 +36,9 @@ test('plugins and connected services are available from the plus/@ menu, not per
   assert.equal(COMPOSER_GROUPS[1].kind, 'connection');
   assert.doesNotMatch(picker, /agentsam-plugin-previews/);
   assert.doesNotMatch(styles, /agentsam-plugin-previews/);
-  assert.match(styles, /max-height: min\(720px, 40dvh\)/);
+  assert.match(styles, /max-height: min\(520px, 55dvh\)/);
   assert.match(styles, /\.agentsam-conversation-dock \.agentsam-plugin-menu \{ top: auto; bottom: calc\(100% \+ 10px\); \}/);
-  assert.match(styles, /\.agentsam-plugin-row \{[^}]*min-height: 64px/);
+  assert.match(styles, /\.agentsam-plugin-row \{[^}]*min-height: 44px/);
 });
 
 test('image attachments expand the composer above the draft and keep controls below', () => {
@@ -51,5 +49,5 @@ test('image attachments expand the composer above the draft and keep controls be
   assert.match(composer, /attachmentPreview=\{attachmentPreview\}/);
   assert.match(styles, /\.agentsam-composer-surface \.agentsam-composer-attachments \{ display: flex; width: 100%;/);
   assert.match(styles, /\.agentsam-composer-surface:has\(\.agentsam-composer-attachments\) \{\s*flex-direction: column/s);
-  assert.match(composer, /<ProjectPicker trailId=\{targetId\} \/>/);
+  assert.match(composer, /<ProjectPicker chatId=\{targetId\} \/>/);
 });

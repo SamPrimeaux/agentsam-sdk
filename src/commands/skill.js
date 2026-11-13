@@ -92,7 +92,7 @@ export function resolveNpmSkillPackage(spec, options = {}) {
 
     try {
       const payload = JSON.parse(String(pack.stdout || ''));
-      const entry = Array.isArray(payload) ? payload[0] : payload;
+      const entry = Array.isArray(payload) ? payload[0] : (payload?.filename ? payload : Object.values(payload || {})[0]);
       if (entry?.filename) tgzName = path.basename(String(entry.filename));
     } catch {
       // Fall through to filesystem discovery.

@@ -4,7 +4,7 @@ import { STARTER_KITS, safeMediaUrl, supplierId, supplierImage } from "./model";
 import { collectionsApi } from "./api";
 import StudioIcon from "../products/StudioIcon";
 import CollectionProductPicker from "./CollectionProductPicker";
-import { resolveAssortmentCandidates, type AssortmentSlotMatch } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
+import { resolveAssortmentCandidates, type AssortmentSlotMatch } from "@inneranimalmedia/agentsam-merch/collection-planning";
 
 export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio, onScaffold, onRefresh, collectionId }: {
   products: Product[]; selected: number[]; onSelect: (ids: number[]) => void;

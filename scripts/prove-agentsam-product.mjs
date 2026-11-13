@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { firstPack } from './lib/npm-pack-json.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(ROOT, 'bin/agentsam');
@@ -132,7 +133,7 @@ step('app', 'npm-distribution', () => {
   const pkgFile = path.join(appRoot, 'package.json');
   const pkg = readJson(pkgFile);
   const result = spawnSync('npm', ['pack', '--dry-run', '--ignore-scripts', '--json'], { cwd: appRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
-  const pack = result.status === 0 ? JSON.parse(result.stdout)[0] : null;
+  const pack = result.status === 0 ? firstPack(JSON.parse(result.stdout)) : null;
   const expectedBin = appManifest.bin || appManifest.entrypoints?.cli || null;
   const binValues = typeof pkg.bin === 'string' ? [pkg.bin] : Object.values(pkg.bin || {});
   const blockers = [];

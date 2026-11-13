@@ -27,7 +27,7 @@ test('CAD Creator and SamSketch remain distinct products with distinct canonical
 
 test('SamSketch owns its route and mounts its own scene-authoring bundle', () => {
   assert.match(samSketchRoute, /createFileRoute\("\/\(apps\)\/samsketch"\)/);
-  assert.match(samSketchRoute, /src="\/samsketch\/index\.html\?presentation=embedded"/);
+  assert.match(samSketchRoute, /src=\{"\/samsketch\/index\.html\?presentation=embedded"/);
   assert.match(samSketchRoute, /app: "SamSketch"/);
   assert.doesNotMatch(samSketchRoute, /Navigate to="\/cad"/);
 });
