@@ -104,7 +104,9 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       trigger?.click();
     }}><PanelLeft size={18} /></IconAction> : <Nav.Trigger aria-label="Toggle global navigation" />}
     <IconAction label={state.sideOpen ? 'Close Side Stage tabs' : 'Open Side Stage tabs'} hint="Show or hide Side Stage" onClick={() => {
-      state.setSideOpen(!state.sideOpen);
+      if (state.sideOpen) state.setSideOpen(false);
+      else if (state.sideTabs.length) state.setSideOpen(true);
+      else state.openSideTab('browser', { ephemeral: false });
     }}><PanelRight size={18} /></IconAction>
     <IconAction label={workFocused ? 'Exit full view' : 'Enter full view'} hint="Focus Side Stage while keeping the lead composer" onClick={() => {
       if (!workFocused) state.setSideOpen(true);
@@ -160,7 +162,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width - delta, window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused((value) => !value)} /></aside></> : null}
+      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width - delta, window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} /></aside></> : null}
       {workFocused && <div className="agentsam-focused-lead-composer" aria-label="Lead AgentSam composer">
         <Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />
       </div>}
