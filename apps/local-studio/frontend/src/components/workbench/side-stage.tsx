@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
+import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
 import {
@@ -42,6 +42,20 @@ function TabIcon({ kind }: { kind: string }) {
   return <FileCode className="size-3.5" />;
 }
 
+// Native stages are available even when optional plugin discovery is offline.
+// Only installed plugin entries come from the account-scoped registry.
+const NATIVE_STAGE_ITEMS = [
+  { kind: 'chat', label: 'Co-worker', icon: Users },
+  { kind: 'browser', label: 'Browser', icon: Globe },
+  { kind: 'files', label: 'Files', icon: FileCode },
+  { kind: 'artifacts', label: 'Artifacts', icon: Box },
+  { kind: 'design', label: 'Canvas', icon: Layers },
+  { kind: 'media', label: 'MovieMode', icon: Film },
+  { kind: 'database', label: 'Database', icon: Database },
+  { kind: 'terminal', label: 'Terminal', icon: SquareTerminal },
+  { kind: 'goal', label: 'Goals', icon: Target },
+] as const;
+
 export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?: boolean; onFocusToggle?: () => void }) {
   const tabs = useWorkStore((s) => s.sideTabs);
   const activeId = useWorkStore((s) => s.activeSideTabId);
@@ -54,9 +68,15 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
   const keepSideChat = useWorkStore((s) => s.keepSideChat);
   const registry = useSideStageRegistry();
   const stages = registry.actions;
-  const registered = (item: (typeof tabs)[number]) => item.pluginId
-    ? stages.some(stage => stage.pluginId === item.pluginId && stage.stageId === item.stageId)
-    : stages.some(stage => stage.renderer === "builtin" && stage.tabKind === item.kind);
+  const registered = (item: (typeof tabs)[number]) => item.kind !== 'plugin'
+    || stages.some(stage => stage.pluginId === item.pluginId && stage.stageId === item.stageId);
+  const removeTab = (item: (typeof tabs)[number]) => {
+    if (item.kind === 'browser') {
+      const invoke = getTauriInvoke();
+      if (invoke) void invoke('embedded_browser_close', { sessionId: item.id }).catch(() => undefined);
+    }
+    closeSideTab(item.id);
+  };
   // Account disabling and plugin uninstalling remove the visual entry, but
   // preserve cached tab state, draft text and conversations for re-enabling.
   const visibleTabs = registry.loaded && !registry.error ? tabs.filter(registered) : tabs;
@@ -93,13 +113,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 label={`Close ${item.title}`}
                 hint={`Close ${item.title} Side Stage tab`}
                 className="rounded-md p-1.5 hover:bg-background hover:text-foreground"
-                onClick={() => {
-                  if (item.kind === 'browser') {
-                    const invoke = getTauriInvoke();
-                    if (invoke) void invoke('embedded_browser_close', { sessionId: item.id }).catch(() => undefined);
-                  }
-                  closeSideTab(item.id);
-                }}
+                onClick={() => removeTab(item)}
               >
                 <X className="size-3" />
               </IconAction>
@@ -112,13 +126,21 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
               </IconAction>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
+              <div className="px-3 py-1.5 text-[11px] text-muted-foreground">Built-in tools</div>
+              {NATIVE_STAGE_ITEMS.map(({ kind, label, icon: Icon }) => (
+                <DropdownMenuItem key={kind} onSelect={() => {
+                  openSideTab(kind, { ephemeral: false });
+                  setSideOpen(true);
+                }}>
+                  <Icon className="size-3.5" />{label}
+                </DropdownMenuItem>
+              ))}
+              <div className="border-t border-border px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Installed additions</div>
               {!registry.loaded && <div role="status" className="px-3 py-2 text-xs text-muted-foreground">Loading additions…</div>}
-              {registry.error && <DropdownMenuItem onSelect={() => {
-                void reloadSideStageRegistry();
-              }}>Retry loading additions</DropdownMenuItem>}
-              {registry.loaded && !registry.error && !stages.length &&
-                <div role="status" className="px-3 py-2 text-xs text-muted-foreground">No additions enabled</div>}
-              {stages.map((stage) => {
+              {registry.error && <DropdownMenuItem onSelect={() => { void reloadSideStageRegistry(); }}>Additions unavailable · Retry</DropdownMenuItem>}
+              {registry.loaded && !registry.error && !stages.some(stage => stage.renderer !== 'builtin') &&
+                <div role="status" className="px-3 py-2 text-xs text-muted-foreground">No installed additions</div>}
+              {stages.filter(stage => stage.renderer !== 'builtin').map((stage) => {
                 const Icon = {
                   target: Target, users: Users, globe: Globe, "file-code": FileCode,
                   box: Box, layers: Layers, layout: Layers, film: Film,
@@ -142,6 +164,20 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                   </DropdownMenuItem>
                 );
               })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <IconAction type="button" variant="ghost" label="Manage Side Stage tabs" hint="Remove open tabs without uninstalling apps">
+                <MoreHorizontal className="size-4" />
+              </IconAction>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {visibleTabs.length ? visibleTabs.map(item => (
+                <DropdownMenuItem key={item.id} onSelect={() => removeTab(item)}>
+                  <X className="mr-2 size-3.5" />Remove {item.title}
+                </DropdownMenuItem>
+              )) : <div className="px-3 py-2 text-xs text-muted-foreground">No open tabs</div>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
