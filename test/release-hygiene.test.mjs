@@ -23,8 +23,12 @@ test('release candidate metadata and public terminal vocabulary are aligned', ()
   assert.match(manifest, /state: (candidate|published)/);
   assert.match(manifest, /current_latest: "\d+\.\d+\.\d+"/);
   assert.match(manifest, /verification_command: npm run verify:release/);
-  assert.doesNotMatch(manifest, /^\s*- tui\s*$/m);
-  assert.doesNotMatch(readme, /agentsam tui|CLI\/TUI/);
+  // The desktop-first CLI explicitly retains a separate, functional TUI
+  // command; a removed branded splash is not a reason to hide that CLI route.
+  assert.match(manifest, /^\s*- tui\s*$/m);
+  assert.match(read('src/cli.js'), /command === 'tui'/);
+  assert.match(read('src/cli/command-catalog.js'), /id: 'tui'/);
+  assert.doesNotMatch(readme, /CLI\/TUI/);
 });
 
 test('dead branded splash paths are gone and UI preview stays dev-only', () => {
