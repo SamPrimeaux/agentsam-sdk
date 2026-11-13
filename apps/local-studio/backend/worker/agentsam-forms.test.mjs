@@ -10,7 +10,7 @@ import { installNativeAdminApp, setNativeAdminAppEnabled } from './apps-launcher
 
 const site='https://agentsam.inneranimalmedia.com';
 const migrationPath=resolve(dirname(fileURLToPath(import.meta.url)),
-  '../migrations/1364_agentsamforms_cms_site_and_submissions.sql');
+  '../migrations/1365_agentsamforms_cms_site_and_submissions.sql');
 const migration=readFileSync(migrationPath,'utf8');
 function call(path,{method='GET',data,origin=site}={}){
   return new Request(site+path,{method,headers:{origin,...(data===undefined?{}:{'content-type':'application/json'})},

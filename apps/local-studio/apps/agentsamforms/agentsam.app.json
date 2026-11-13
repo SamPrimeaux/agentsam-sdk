@@ -38,7 +38,7 @@
   "implementation": {
     "frontend": "frontend/src/components/forms/AgentSamFormsPage.tsx",
     "backend": "backend/worker/agentsam-forms.js",
-    "migration": "backend/migrations/1364_agentsamforms_cms_site_and_submissions.sql",
+    "migration": "backend/migrations/1365_agentsamforms_cms_site_and_submissions.sql",
     "content_store": "cms_globals",
     "revisions": "cms_revisions",
     "submissions": "cms_form_submissions"
