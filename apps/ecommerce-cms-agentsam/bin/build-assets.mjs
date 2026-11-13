@@ -74,6 +74,12 @@ for (const extension of ["js", "css"]) {
   await copy(runtime, path.join(dest, "js/portable-sections." + extension));
   await copy(runtime, path.join(dest, "admin/js/portable-sections." + extension));
 }
+// The same owner-provided, schema-validated stock components run in the
+// merchant editor and Cloudflare Worker. Never ship a labels-only picker.
+for (const name of ["js/platform-stock-sections.js", "admin/js/platform-stock-sections.js"]) {
+  await copy(source("packages/theme-contract/runtime/platform-stock-sections.js"),
+    path.join(dest,name));
+}
 const atlas = await bundle({
   entryPoints: [source("packages/theme-contract/runtime/revise-atlas-browser.js")],
   bundle: true, platform: "browser", format: "iife", target: "es2022",
@@ -108,7 +114,7 @@ for (const critical of [
   "admin/workbench/media-asset-workbench.js",
   "admin/_spa/index.html", "admin/theme-editor.html",
   "admin/js/shell.js", "admin/js/inspector.js",
-  "admin/js/revise-atlas.js", "admin/js/portable-sections.js",
+  "admin/js/revise-atlas.js", "admin/js/portable-sections.js", "admin/js/platform-stock-sections.js",
   "admin/js/cms-authoring-engine.js", "admin/js/theme-preview-registry.js",
   "admin/dock/index.js", "admin/dock/dock.css", "admin/dock/dock.config.json",
   "admin/profile-popup/index.js",

@@ -174,9 +174,9 @@ body.agentsam-overlay-mode.agentsam-open {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: #5c2d91;
-  background: linear-gradient(135deg, rgba(92, 45, 145, 0.14), rgba(255, 69, 0, 0.1));
-  border: 1px solid rgba(92, 45, 145, 0.18);
+  color: var(--agentsam-sidekick-accent, var(--nav-accent,#238552));
+  background: color-mix(in srgb,var(--agentsam-sidekick-accent,var(--nav-accent,#238552)) 12%,transparent);
+  border: 1px solid color-mix(in srgb,var(--agentsam-sidekick-accent,var(--nav-accent,#238552)) 24%,transparent);
   flex-shrink: 0;
 }
 
@@ -292,9 +292,9 @@ body.agentsam-overlay-mode.agentsam-open {
 }
 
 .agentsam-workflow.is-active {
-  background: rgba(92, 45, 145, 0.12);
-  border-color: rgba(92, 45, 145, 0.35);
-  color: #3d2060;
+  background: color-mix(in srgb,var(--agentsam-sidekick-accent,var(--nav-accent,#238552)) 12%,transparent);
+  border-color: color-mix(in srgb,var(--agentsam-sidekick-accent,var(--nav-accent,#238552)) 35%,transparent);
+  color: var(--agentsam-sidekick-accent, var(--nav-accent,#238552));
 }
 
 .agentsam-mcp {
@@ -367,8 +367,8 @@ body.agentsam-overlay-mode.agentsam-open {
 }
 
 .agentsam-proposal-actions button.is-primary {
-  border-color: #5c2d91;
-  background: #5c2d91;
+  border-color: var(--agentsam-sidekick-accent, var(--nav-accent,#238552));
+  background: var(--agentsam-sidekick-accent, var(--nav-accent,#238552));
   color: #fff;
 }
 
@@ -381,7 +381,7 @@ body.agentsam-overlay-mode.agentsam-open {
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #6b4c99;
+  color: var(--agentsam-sidekick-accent, var(--nav-accent,#238552));
   margin-bottom: 4px;
 }
 
@@ -406,7 +406,7 @@ body.agentsam-overlay-mode.agentsam-open {
 
 .agentsam-chip:hover {
   background: #fff;
-  border-color: rgba(92, 45, 145, 0.35);
+  border-color: color-mix(in srgb,var(--agentsam-sidekick-accent,var(--nav-accent,#238552)) 35%,transparent);
   color: #1a1a1a;
 }
 
@@ -836,4 +836,60 @@ body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-b
 @media (prefers-reduced-motion: reduce) {
   .asm-capability-popover,.asm-skill-dialog { transition: none !important; }
   .asm-skill-dialog::backdrop { backdrop-filter: none; }
+}
+
+
+/* Sidekick identity and action colors inherit account chrome, not a fixed
+   violet persona. Site-theme colors stay isolated inside the preview iframe. */
+:root { --agentsam-sidekick-accent: var(--nav-accent, var(--te-accent, #238552)); }
+.agentsam-mark {
+  color: var(--agentsam-sidekick-accent);
+  background: color-mix(in srgb,var(--agentsam-sidekick-accent) 12%,transparent);
+  border-color: color-mix(in srgb,var(--agentsam-sidekick-accent) 25%,transparent);
+}
+.agentsam-proposal-actions button.is-primary {
+  background: var(--agentsam-sidekick-accent);
+  border-color: var(--agentsam-sidekick-accent);
+}
+.agentsam-msg-route { color: var(--agentsam-sidekick-accent); }
+.agentsam-proposal-actions button:focus-visible,
+.agentsam-close:focus-visible { outline:2px solid var(--agentsam-sidekick-accent); outline-offset:2px; }
+
+
+/* Installed Site Editor and Sidekick read identical account chrome tokens;
+   stock theme controls never recolor the merchant storefront iframe. */
+:root {
+  --agentsam-chrome-surface: var(--nav-surface,var(--te-panel,#fff));
+  --agentsam-chrome-ink: var(--nav-ink,var(--te-text,#20201f));
+  --agentsam-chrome-border: var(--nav-border,var(--te-border,#e3e3df));
+  --agentsam-chrome-popover: var(--nav-popover,var(--te-panel,#fff));
+  --agentsam-chrome-accent: var(--nav-accent,var(--te-accent,#238552));
+}
+.agentsam-drawer,.agentsam-head,.agentsam-compose,
+.asm-capability-popover,.asm-skill-dialog {
+  color: var(--agentsam-chrome-ink);
+  background: var(--agentsam-chrome-surface);
+  border-color: var(--agentsam-chrome-border);
+}
+.asm-capability-popover,.asm-skill-dialog {background:var(--agentsam-chrome-popover)}
+.agentsam-compose textarea {
+  background: var(--agentsam-chrome-popover);
+  color: var(--agentsam-chrome-ink);
+  border-color: var(--agentsam-chrome-border);
+}
+.agentsam-compose textarea:focus-visible,
+.agentsam-compose button:focus-visible,
+.asm-menu-row:focus-visible {outline:2px solid var(--agentsam-chrome-accent);outline-offset:2px}
+.agentsam-workflow.is-active,.agentsam-chip:hover {
+  border-color: color-mix(in srgb,var(--agentsam-chrome-accent) 35%,var(--agentsam-chrome-border));
+  color:var(--agentsam-chrome-ink);
+  background:color-mix(in srgb,var(--agentsam-chrome-accent) 10%,var(--agentsam-chrome-surface));
+}
+:root[data-te-shell-mode="dark"] .agentsam-msg--assistant,
+:root[data-te-shell-mode="dark"] .agentsam-chip,
+:root[data-te-shell-mode="dark"] .agentsam-workflow,
+:root[data-te-shell-mode="dark"] .agentsam-proposal-actions button:not(.is-primary){
+  color:var(--agentsam-chrome-ink);
+  background:var(--agentsam-chrome-popover);
+  border-color:var(--agentsam-chrome-border);
 }

@@ -342,7 +342,7 @@ function runPackDryRun(pkg) {
   if (proc.status === 0) {
     try {
       const parsed = JSON.parse(proc.stdout);
-      const first = Array.isArray(parsed) ? parsed[0] : parsed;
+      const first = Array.isArray(parsed) ? parsed[0] : (parsed?.filename || parsed?.files ? parsed : Object.values(parsed || {})[0]);
       artifact = {
         name: first?.name,
         version: first?.version,

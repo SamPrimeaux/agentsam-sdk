@@ -23,7 +23,7 @@
     "@inneranimalmedia/agentsam-errors": "2.6.15"
   },
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public"

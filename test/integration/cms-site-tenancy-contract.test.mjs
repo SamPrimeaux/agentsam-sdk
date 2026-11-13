@@ -91,8 +91,8 @@ test('Local Studio /cms delegates to the canonical Ecommerce Online Store', () =
 
   assert.match(route, /createFileRoute\(['"]\/\(apps\)\/cms['"]\)/);
   assert.match(route, /<Navigate/);
-  assert.match(route, /to="\/apps\/ecommerce-cms-agentsam"/);
-  assert.match(route, /page:\s*['"]\/admin\/store['"]/);
+  assert.match(route, /to="\/admin\/store"/);
+  assert.match(read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'admin', 'store.tsx'), /forcePackagedAsset/);
   assert.match(route, /replace/);
   assert.doesNotMatch(route, /client-cms-editor|CmsHomePage|CmsOnlineStoreFrame|ThemeProjectEditor|ThemeEditorFrame|ContentStudioPage|studioCmsFetch/);
 });
@@ -109,8 +109,8 @@ test('Local Studio /cms is a route alias, not a second CMS editor', () => {
   assert.doesNotMatch(donor, /createFileRoute\(/);
   assert.match(donor, /export\s*\{\s*\}\s*;/);
 
-  assert.match(routeContent, /to="\/apps\/ecommerce-cms-agentsam"/);
-  assert.match(routeContent, /page:\s*['"]\/admin\/store['"]/);
+  assert.match(routeContent, /to="\/admin\/store"/);
+  assert.doesNotMatch(routeContent, /page:\s*['"]\/admin\/store['"]/);
   assert.doesNotMatch(routeContent, /useAuthorizedCmsSites|createHttpCmsAdapter|createRemoteThemeEditorAdapter|CmsOnlineStoreFrame|ThemeProjectEditor|ThemeEditorFrame|ContentStudioPage/);
   assert.doesNotMatch(routeContent, /slug:\s*["']agentsam-sdk["']/);
 

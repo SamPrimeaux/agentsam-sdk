@@ -10,7 +10,7 @@ import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
 import { runCommand } from '@/lib/commands/native-commands';
 import { AlertCircle, ArrowLeft, Package, RefreshCw } from 'lucide-react';
 
-type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
+type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try'; stock?: string };
 
 function UnavailableProductRoute({ requested }: { requested?: string }) {
   const productRequested = requested?.startsWith('/admin/products');
@@ -67,6 +67,7 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
     theme_sku: typeof search.theme_sku === 'string' ? search.theme_sku : undefined,
     theme_version: typeof search.theme_version === 'string' ? search.theme_version : undefined,
     action: search.action === 'try' ? 'try' : undefined,
+    stock: typeof search.stock === 'string' && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock) ? search.stock : undefined,
   }),
   component: EcommerceAppHost,
 });
@@ -78,7 +79,18 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
  * and its page search parameter. The Worker separately serves direct /admin/* URLs.
  */
 function EcommerceAppHost() {
-  const search = Route.useSearch();
+  return <EcommerceAppView search={Route.useSearch()} />;
+}
+
+/**
+ * Reusable installed product view. The clean /admin/store mount and legacy
+ * /apps/... wrapper intentionally share this one component and product routes.
+ * The clean mount frames the packaged asset to avoid an iframe self-loop.
+ */
+export function EcommerceAppView({ search, forcePackagedAsset = false }: {
+  search: Search;
+  forcePackagedAsset?: boolean;
+}) {
   const [bridgeReady, setBridgeReady] = useState(!isPackagedDesktop());
   useEffect(() => {
     if (!isPackagedDesktop()) return;
@@ -92,7 +104,7 @@ function EcommerceAppHost() {
   const localPreview = localHost && search.preview === 'local';
   const isCodeEditor = search.page === '/admin/theme-code-editor';
   const page = isCodeEditor ? '/admin/theme-code-editor' : resolveEcommerceAdminPath(search.page || '/admin/store');
-  const assetPath = page && !isCodeEditor && (isPackagedDesktop() ? resolveEcommerceAssetPath(page) : page);
+  const assetPath = page && !isCodeEditor && ((isPackagedDesktop() || forcePackagedAsset) ? resolveEcommerceAssetPath(page) : page);
   const url = typeof window !== 'undefined' && assetPath
     ? (() => {
       const resolved = new URL(assetPath, window.location.origin);
@@ -103,6 +115,10 @@ function EcommerceAppHost() {
       if (page?.split('?')[0] === '/admin/theme-project-editor' && search.project && /^[A-Za-z0-9_-]{1,160}$/.test(search.project)) {
         resolved.searchParams.set('project', search.project);
       }
+      // The source-backed Design Canvas handoff is only an editor selection.
+      // It never grants site ownership, installs a component or publishes content.
+      if (search.stock && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock))
+        resolved.searchParams.set('stock', search.stock);
       // Preserve a validated Theme Store Try intent into the authenticated CMS
       // receiver. This is a selection hint, never authorization for installation.
       const trySelection = page === '/admin/store' ? themeStoreTrySelection(search) : null;

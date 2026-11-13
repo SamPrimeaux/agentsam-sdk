@@ -13,7 +13,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public"

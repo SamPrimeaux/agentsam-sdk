@@ -1,7 +1,7 @@
 import { adminFetch } from "../../lib/api";
 import type { Collection, CollectionForm, Product, MediaAsset, SupplierBlank, CollectionStatus, MerchCollectionRules } from "./model";
 import { serializeCollection, collectionSiteId } from "./model";
-import { normalizeCollectionRules } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
+import { normalizeCollectionRules } from "@inneranimalmedia/agentsam-merch/collection-planning";
 
 // The existing Collections Studio UI speaks the FNF merchandising contract.
 // This is its site-scoped AgentSam CMS adapter; never write legacy store_* tables.

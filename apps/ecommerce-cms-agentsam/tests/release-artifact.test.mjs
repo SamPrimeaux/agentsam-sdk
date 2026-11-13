@@ -40,7 +40,8 @@ test("npm release list includes backend, frontend, modules, schemas, and built a
   const output = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
     cwd: app, encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 30000,
   });
-  const manifest = JSON.parse(output)[0];
+  const parsedPack = JSON.parse(output);
+  const manifest = Array.isArray(parsedPack) ? parsedPack[0] : Object.values(parsedPack)[0];
   const entries = manifest.files.map((f) => f.path);
   for (const f of required.filter((f) => f !== "cms" && f !== "db" && f !== "theme")) {
     assert.ok(entries.includes(f), `Not in tarball: ${f}`);

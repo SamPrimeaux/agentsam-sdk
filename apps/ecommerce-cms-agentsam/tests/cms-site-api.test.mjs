@@ -497,3 +497,53 @@ test("same-name sites return distinct real page counts without exposing another 
     ]);
   } finally { sqlite.close(); }
 });
+
+test("platform stock component is inserted, edited and block-managed through the actual site-owned D1 + R2 API", async () => {
+  const sqlite = createCmsTestDb();
+  const objects = new Map();
+  const env = {DB:d1(sqlite),WEBSITE_ASSETS:{
+    async put(key,value){objects.set(key,String(value));},
+    async get(key){return objects.has(key)?{text:async()=>objects.get(key)}:null;},
+    async delete(key){objects.delete(key);},
+  }};
+  const run = (url,method="GET",body,accountId="acct-a") =>
+    handleAdminCmsApi(request(url,method,body),env,new URL("https://cms.test"+url),{accountId});
+  try {
+    sqlite.exec("INSERT INTO accounts(id) VALUES ('acct-a'),('acct-b');");
+    sqlite.exec("INSERT INTO cms_sites(id,account_id,name,slug,status,is_default) VALUES "+
+      "('site-a','acct-a','Website','website','active',1),"+
+      "('site-b','acct-b','Other','other','active',1);");
+    const created=await run("/api/admin/cms/pages?site_id=site-a","POST",{title:"Stock Demo"});
+    assert.equal(created.status,201);
+    const page=(await created.json()).page;
+    const endpoint=`/api/admin/cms/pages/${page.slug}/sections?site_id=site-a&page_id=${page.id}`;
+    const inserted=await run(endpoint,"POST",{templateKey:"portable",themePreset:"platform/choose-a-plan"});
+    const result=await inserted.json();
+    assert.equal(inserted.status,201,JSON.stringify(result));
+    assert.equal(result.section.content.__editor.themePreset,"platform/choose-a-plan");
+    assert.equal(result.section.content.__editor.blocks.length,2);
+    const sectionKey=result.section_key;
+    assert.ok([...objects.keys()].some(key=>key.includes(page.id)&&key.includes(sectionKey)),"stock draft created in R2");
+    const sectionEndpoint=`/api/admin/cms/pages/${page.slug}/sections/${sectionKey}?site_id=site-a&page_id=${page.id}`;
+    const content=result.section.content;
+    content.title="Merchant's actual offerings";
+    const updated=await run(sectionEndpoint,"PUT",{content,expected_version:1});
+    assert.equal(updated.status,200,JSON.stringify(await updated.json()));
+    const reopened=await run(`/api/admin/cms/pages/${page.slug}?site_id=site-a&page_id=${page.id}`);
+    assert.equal(reopened.status,200);
+    const source=(await reopened.json()).page.sections.find(section=>section.key===sectionKey);
+    assert.equal(source.content.title,"Merchant's actual offerings");
+    assert.equal(source.version,2);
+    const blockEndpoint=`/api/admin/cms/pages/${page.slug}/sections/${sectionKey}/blocks?site_id=site-a&page_id=${page.id}`;
+    const blockAdded=await run(blockEndpoint,"POST",{templateKey:"plan",toIndex:1});
+    const blockResult=await blockAdded.json();
+    assert.equal(blockAdded.status,200,JSON.stringify(blockResult));
+    assert.match(blockResult.block_id,/^plan-/);
+    const foreign=await run(`/api/admin/cms/pages/${page.slug}?site_id=site-a&page_id=${page.id}`,"GET",undefined,"acct-b");
+    assert.equal(foreign.status,404);
+    const stale=await run(sectionEndpoint,"PUT",{content,expected_version:1});
+    assert.equal(stale.status,409,"stale saves cannot overwrite a newer R2 draft");
+    const invalid=await run(endpoint,"POST",{templateKey:"portable",themePreset:"platform/does-not-exist"});
+    assert.equal(invalid.status,400,"unregistered stock components cannot be installed");
+  }finally{sqlite.close();}
+});

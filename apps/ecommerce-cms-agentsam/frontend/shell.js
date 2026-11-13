@@ -1217,3 +1217,63 @@ window.hydrateShellProfile = hydrateShellProfile;
 window.hydrateShellNav = hydrateShellNav;
 window.loadShellUser = loadShellUser;
 window.AgentSamShell = { modes: SHELL_MODES, resolveShellMode, resolveExitTarget, rememberEditorReturn, bindShellShortcuts, unbindShellShortcuts };
+
+/**
+ * Reuse the already-authoritative account-shell theme for installed editor
+ * chrome and miniAgentSam, without touching the independently site-scoped
+ * storefront preview or storing a second theme preference.
+ *
+ * The Ecommerce CMS is often framed by Local Studio. CSS custom properties
+ * cannot cross iframe boundaries, so read only the computed semantic accent
+ * and light/dark mode from our same-origin host root. Standalone CMS uses
+ * existing local/fallback tokens. Changes from Theme Settings propagate.
+ */
+(function synchronizeInstalledChromeTheme() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  let hostRoot;
+  try {
+    if (window.parent === window || window.parent.location.origin !== window.location.origin) return;
+    hostRoot = window.parent.document.documentElement;
+  } catch { return; }
+  if (!hostRoot || !window.MutationObserver) return;
+  const ownRoot = document.documentElement;
+  function applyHostChromeTheme() {
+    const hostStyles = window.parent.getComputedStyle(hostRoot);
+    // Copy the complete semantic chrome palette across the isolated CMS frame.
+    // CSS custom properties do not inherit across frames; copying only accent
+    // left Sidekick's popovers and inspector permanently white in dark mode.
+    const names = [
+      '--nav-accent','--nav-canvas','--nav-surface','--nav-popover',
+      '--nav-border','--nav-hover','--nav-ink','--nav-inkMuted',
+      '--nav-danger','--color-background','--color-card',
+      '--color-border','--color-foreground','--color-accent',
+    ];
+    for (const name of names) {
+      const value=String(hostStyles.getPropertyValue(name) || '').trim();
+      if (!value || value.length>=256 || /[;{}<>\0\r\n]/.test(value)) continue;
+      ownRoot.style.setProperty(name,value);
+    }
+    const accent = String(hostStyles.getPropertyValue('--nav-accent') ||
+      hostStyles.getPropertyValue('--color-accent') || '').trim();
+    if (accent && accent.length < 96 &&
+        (!window.CSS?.supports || window.CSS.supports('color', accent))) {
+      ownRoot.style.setProperty('--te-accent', accent);
+      ownRoot.style.setProperty('--agentsam-sidekick-accent', accent);
+    }
+    const declared = hostRoot.dataset.theme || hostRoot.dataset.teShellMode ||
+      (hostRoot.classList.contains('dark') ? 'dark' : '');
+    const surface = String(hostStyles.getPropertyValue('--nav-canvas') ||
+      hostStyles.getPropertyValue('--color-background') || '').trim();
+    const rgb = /^#([a-f0-9]{6})$/i.exec(surface);
+    const brightness = rgb ? [1,3,5].map(i=>parseInt(rgb[1].slice(i-1,i+1),16))
+      .reduce((sum,v)=>sum+v,0)/3 : null;
+    const mode = declared === 'dark' || declared === 'light' ? declared
+      : brightness == null ? 'light' : brightness < 145 ? 'dark' : 'light';
+    ownRoot.dataset.teShellMode = mode;
+    ownRoot.dataset.theme = mode;
+  }
+  applyHostChromeTheme();
+  const observer = new MutationObserver(applyHostChromeTheme);
+  observer.observe(hostRoot, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] });
+  window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
+})();

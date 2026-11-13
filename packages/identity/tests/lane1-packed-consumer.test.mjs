@@ -10,6 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { firstPack } from '../../../scripts/lib/npm-pack-json.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -32,12 +33,14 @@ function run(cmd, args, cwd) {
 describe('Lane 1 packed identity consumer proof', () => {
   it('npm pack → clean install → portable migrate + sqlite smoke', () => {
     const work = fs.mkdtempSync(path.join(os.tmpdir(), 'lane1-pack-'));
+    // Each run installs ~180MB; never leave it behind in the tmp dir.
+    process.on('exit', () => fs.rmSync(work, { recursive: true, force: true }));
     const artifacts = path.join(work, 'artifacts');
     fs.mkdirSync(artifacts);
     const errorsRoot = path.join(REPO, 'packages', 'agentsam-errors');
     const errorsPackOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], errorsRoot);
     const errorsPacked = JSON.parse(errorsPackOut);
-    const errorsTarballName = errorsPacked[0]?.filename || errorsPacked.filename;
+    const errorsTarballName = firstPack(errorsPacked)?.filename;
     assert.ok(errorsTarballName, 'agentsam-errors npm pack must emit a tarball name');
     const errorsTarballDest = path.join(artifacts, errorsTarballName);
     assert.ok(fs.existsSync(errorsTarballDest), errorsTarballDest);
@@ -48,14 +51,14 @@ describe('Lane 1 packed identity consumer proof', () => {
     const cmsPackOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts],
       path.join(REPO, 'packages', 'agentsam-cms'));
     const cmsPacked = JSON.parse(cmsPackOut);
-    const cmsTarballName = cmsPacked[0]?.filename || cmsPacked.filename;
+    const cmsTarballName = firstPack(cmsPacked)?.filename;
     assert.ok(cmsTarballName, 'portable CMS npm pack must emit a tarball name');
     const cmsTarballDest = path.join(artifacts, cmsTarballName);
     assert.ok(fs.existsSync(cmsTarballDest), cmsTarballDest);
 
     const packOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], REPO);
     const packed = JSON.parse(packOut);
-    const tarballName = packed[0]?.filename || packed.filename;
+    const tarballName = firstPack(packed)?.filename;
     assert.ok(tarballName, 'npm pack must emit a tarball name');
     const tarballDest = path.join(artifacts, tarballName);
     assert.ok(fs.existsSync(tarballDest), tarballDest);

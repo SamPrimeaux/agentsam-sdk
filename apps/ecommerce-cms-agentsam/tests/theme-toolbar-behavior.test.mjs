@@ -11,9 +11,10 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null, packageSections = null } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null, packageSections = null, portableSections = [], stockHandoff = null } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-    url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
+    url: "https://editor.test/admin/theme-editor?slug=" + pageSlug +
+      (stockHandoff ? "&stock="+encodeURIComponent(stockHandoff) : ""),
     runScripts: "outside-only",
     pretendToBeVisual: true
   });
@@ -27,6 +28,7 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
     Object.defineProperty(w, "visualViewport", { configurable: true, value: viewport });
   }
   if (themePreviews.length) w.ThemeStudioPreview = { themes: themePreviews };
+  if (portableSections.length) w.ThemePortableSections = { catalog: () => portableSections };
   w.HTMLElement.prototype.scrollIntoView = () => {};
   const writes = [];
   const publishes = [];
@@ -51,6 +53,15 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
       publishes.push({url,method:options.method});
       return w.__publishResponder ? w.__publishResponder() : { published_at: "2026-10-10T05:00:00Z" };
     }
+    if (stockHandoff && url.endsWith("/pages/" + pageSlug + "/sections") && options.method === "POST") {
+      const body = JSON.parse(options.body || "{}");
+      const content = w.ThemePortableSections?.defaults?.(body.themePreset);
+      if (!content || body.templateKey !== "portable") throw new Error("stock_section_not_registered");
+      const key = "stock-created";
+      writes.push({url,operation:"insert",...body});
+      page.sections.push({key,content,version:1,status:"draft",sort_order:page.sections.length,source:"cms"});
+      return {ok:true,section_key:key,template_key:"portable",version:1};
+    }
     if (url.includes("/sections/") && options.method === "PUT") {
       writes.push({ url, ...JSON.parse(options.body) });
       return { version: 2, updated_at: "2026-10-10T02:00:00Z" };
@@ -72,6 +83,10 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   // This JSDOM fixture executes scripts with eval rather than a browser
   // module loader. Inject the real registry export, not a test-only menu.
   w.__templateNavigation = templateNavigation;
+  if (stockHandoff) {
+    w.eval(readFileSync(new URL("../../../packages/theme-contract/runtime/platform-stock-sections.js",root),"utf8"));
+    w.eval(readFileSync(new URL("../../../packages/theme-contract/runtime/portable-sections.js",root),"utf8"));
+  }
   for (const file of ["pages-shared.js", "agentsam.js", "theme-editor.js"]) {
     let script = readFileSync(new URL(file, root), "utf8");
     if (file === "theme-editor.js") script = script.replace(
@@ -143,6 +158,60 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
   }
 });
 
+
+test("Canvas handoff selects real platform stock without inserting until explicit confirmation", async () => {
+  const {dom,doc,w,writes}=await editorFixture({stockHandoff:"platform/choose-a-plan"});
+  try {
+    // Canvas handoff intentionally runs on requestAnimationFrame after the
+    // original page and authorized section catalog have been loaded.
+    await new Promise(resolve=>setTimeout(resolve,35));
+    const modal=doc.getElementById("te-section-menu");
+    assert.equal(modal.hidden,false,"authorized editor opens Add Section library");
+    const selected=doc.querySelector('[data-choose-section="platform/choose-a-plan"]');
+    assert.ok(selected,"actual worker-shared stock renderer appears in CMS picker");
+    assert.equal(selected.getAttribute("aria-selected"),"true");
+    assert.ok(doc.querySelector("#te-section-preview iframe.te-catalog-visual"));
+    assert.equal(writes.length,0,"handoff never inserts or publishes automatically");
+    doc.querySelector('[data-add-selected-section]').click();
+    await tick();await tick();
+    assert.equal(writes.length,1,"merchant's explicit Add section persists via the real API");
+    assert.equal(writes[0].templateKey,"portable");
+    assert.equal(writes[0].themePreset,"platform/choose-a-plan");
+    assert.equal(doc.querySelector('[data-select-section="stock-created"]') != null,true);
+  }finally{dom.window.close();}
+});
+
+test("unknown or invalid stock intent does not open the section catalog or write",async()=>{
+  const {dom,doc,writes}=await editorFixture({stockHandoff:"platform/unknown-inventory"});
+  try{await tick();assert.equal(doc.getElementById("te-section-menu").hidden,true);
+      assert.equal(writes.length,0);}
+  finally{dom.window.close();}
+});
+
+test("Add Section is keyboard browseable, accessible, and returns focus on dismiss", async () => {
+  const { dom, doc } = await editorFixture({portableSections:[
+    {id:'stock-hero',label:'Stock Hero',type:'hero',category:'Hero'},
+    {id:'stock-collection',label:'Stock Collection',type:'collection',category:'Products'}
+  ]});
+  try {
+    const opener = doc.getElementById("te-add-section");
+    opener.focus();
+    opener.click();
+    const modal = doc.getElementById("te-section-menu");
+    assert.equal(modal.hidden, false);
+    assert.equal(modal.getAttribute("aria-label"), "Add a section");
+    assert.equal(modal.querySelectorAll('[role="tab"]').length, 2);
+    assert.equal(modal.querySelector('#te-section-list').getAttribute("role"), "listbox");
+    const search = doc.getElementById("te-section-search");
+    assert.equal(search.type, "search");
+    search.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    assert.ok(doc.activeElement.matches('[data-choose-section]'), "ArrowDown focuses a real catalog section");
+    assert.equal(doc.activeElement.getAttribute("aria-selected"), "true");
+    doc.activeElement.dispatchEvent(new dom.window.KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+    assert.equal(modal.hidden, true, "Escape dismisses the non-modal section catalog");
+    assert.equal(doc.activeElement, opener, "focus returns to Add Section");
+  } finally { dom.window.close(); }
+});
 
 test("storefront selection stays isolated from site design and follows the account editor accent", async () => {
   const { dom, doc } = await editorFixture();

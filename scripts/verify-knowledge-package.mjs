@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { firstPack } from './lib/npm-pack-json.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-consumer-'));
@@ -24,9 +25,9 @@ try {
       .map(row => [row.name, path.join(root, row.location)])
   );
 
-  const packed = JSON.parse(
+  const packed = firstPack(JSON.parse(
     run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tmp], root)
-  )[0];
+  ));
 
   const localFirstPartyTarballs = [];
   const firstPartyDependencies = Object.keys(rootManifest.dependencies || {})
@@ -36,13 +37,13 @@ try {
     const workspaceDir = workspaceByName.get(name);
     assert.ok(workspaceDir, `First-party dependency is not a workspace: ${name}`);
 
-    const dependencyPack = JSON.parse(
+    const dependencyPack = firstPack(JSON.parse(
       run(
         'npm',
         ['pack', '--json', '--ignore-scripts', '--pack-destination', tmp],
         workspaceDir
       )
-    )[0];
+    ));
 
     localFirstPartyTarballs.push(path.join(tmp, dependencyPack.filename));
   }

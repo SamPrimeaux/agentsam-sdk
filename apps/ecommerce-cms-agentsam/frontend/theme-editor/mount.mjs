@@ -92,6 +92,9 @@ export function syncEditorChromeTokens(hostDocument, editorDocument, explicit = 
   const brightness = canvasBrightness(root.style.getPropertyValue('--te-canvas'));
   root.dataset.teShellMode = brightness === null
     ? declaredShellMode(documents) : brightness < 145 ? 'dark' : 'light';
+  // Sidekick is editor chrome, never the nested storefront: its existing
+  // dark-mode selectors consume data-theme, not data-te-shell-mode.
+  root.dataset.theme = root.dataset.teShellMode;
 }
 
 /** Mount the existing Theme Studio in an isolated document. Runtime adapters are supplied by the consumer. */
@@ -167,6 +170,10 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
         window.SECTION_SCHEMAS = schemas;
       }
     }
+    // srcdoc editor has an independent global namespace: load the same real
+    // stock + portable renderers the Worker and external Theme Studio use.
+    await load('/admin/js/platform-stock-sections.js');
+    await load('/admin/js/portable-sections.js');
     await load('runtime.js');
     if(document.querySelector('.theme-studio'))frame.ownerDocument.getElementById('theme-project-loading')?.remove();
     // The platform owns complete panels; every installed theme mounts them.

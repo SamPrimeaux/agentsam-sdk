@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { projectComposerCatalog, filterComposerCatalog, COMPOSER_GROUPS } from '../../../packages/agentsam-workbench/src/agent/capability-catalog.ts';
-import { SIDE_STAGE_ACTIONS, sideStageComposerWidgets } from '../frontend/agentsam/side-stage-actions.ts';
+import { receiveSideStageRegistry, sideStageComposerWidgets } from '../frontend/agentsam/side-stage-actions.ts';
 
 const connected = {provider:'cloudflare',kind:'oauth',display_name:'Cloudflare',status:'connected'};
 const mcp = {id:'pmcp',plugin_key:'agentsam-mcp',display_name:'AgentSam MCP',plugin_kind:'mcp',
@@ -31,6 +31,11 @@ test('Visible plugins use real boolean settings fields; no stale numeric-only fi
   assert.deepEqual(catalog.map(x=>x.mention),['@github']);
 });
 test('SideStage + and composer @ expose exactly the same mounted widget actions', () => {
+  const registry=[
+    {id:'browser',pluginId:'plg_aaaaaaaa',stageId:'browser',label:'Browser',description:'Browse',icon:'globe',renderer:'builtin',tabKind:'browser'},
+    {id:'cli',pluginId:'plg_bbbbbbbb',stageId:'cli',label:'CLI',description:'Terminal',icon:'terminal',renderer:'builtin',tabKind:'terminal'},
+  ];
+  const SIDE_STAGE_ACTIONS=receiveSideStageRegistry(registry).map(x=>({tab:x.tabKind}));
   const widgets=sideStageComposerWidgets();
   const projected=projectComposerCatalog({widgets});
   assert.deepEqual(projected.map(x=>x.action.type),SIDE_STAGE_ACTIONS.map(()=> 'open-side-stage'));

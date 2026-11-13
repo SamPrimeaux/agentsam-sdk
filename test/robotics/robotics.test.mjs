@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { squareToWorld, worldToSquare, createWorld, inchesToMm, inchesToM, applyRelocation } from '../../src/sam/robotics/world.js';
 import { checkJointLimits, FRANKA, planTrajectory } from '../../src/sam/robotics/franka.js';
-import { moveToGoals } from '../../src/sam/robotics/chess-adapter.js';
+import { moveToGoals, ORNATE_BAROQUE_BASE, ornatePieceUrl } from '../../src/sam/robotics/chess-adapter.js';
 import { roboticsOps } from '../../src/sam/operations/robotics.js';
 import { CORE_OPERATIONS } from '../../src/sam/packs/core.js';
 
@@ -33,6 +33,14 @@ test('chess adapter: capture first, castling both, en passant, promotion replace
   assert.equal(moveToGoals({ object_id: 'p', from: 'e5', to: 'd6', captured_id: 'bp', captured_square: 'd5' }).goals[0].to, 'capture_tray');
   assert.equal(moveToGoals({ object_id: 'p', from: 'e7', to: 'e8', promotion: 'q' }).goals.at(-1).goal, 'replace_representation');
 });
+test('chess GLB paths are portable and support host-injected asset bases', () => {
+  assert.equal(ORNATE_BAROQUE_BASE, '/glb/chess/baroque');
+  assert.equal(ornatePieceUrl('queen', 'white'), '/glb/chess/baroque/baroque_queen_white_opt.glb');
+  assert.equal(ornatePieceUrl('knight', 'black', { baseUrl: 'https://assets.example.test/chess/' }),
+    'https://assets.example.test/chess/baroque_knight_black_opt.glb');
+  assert.throws(() => ornatePieceUrl('king', 'white', { baseUrl: '' }), /ornate_asset_base_required/);
+});
+
 test('100 deterministic simulated moves, exactly-once verify, zero LLM, Mode A not claimed as grasp', async () => {
   let world = mkWorld(), ok = 0;
   const files = 'abcdefgh';

@@ -26,7 +26,7 @@ test('host routes authenticated Ecommerce CMS and AgentSam APIs rather than retu
 });
 test('installed site/editor entrypoints and programmatic page changes stay in Local Studio', () => {
   const sites = read('../frontend/src/routes/(apps)/sites.tsx');
-  assert.match(sites, /<Navigate to="\/apps\/ecommerce-cms-agentsam"/);
+  assert.match(sites, /<Navigate to="\/admin\/store"/);
   assert.doesNotMatch(sites, /window\.location\.replace/);
   const adapter = read('../frontend/public/admin/host-config.js');
   assert.match(adapter, /window\.__agentsamAdminNavigate/);

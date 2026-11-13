@@ -2,84 +2,68 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { listLauncherApps, installNativeAdminApp } from "./apps-launcher.js";
 
-function dbFor(rows) {
+function listDb(rows) {
   const state = { query: "", accountId: "" };
   return {
     state,
     prepare(query) {
       state.query = query;
-      return {
-        bind(accountId) {
-          state.accountId = accountId;
-          return { all: async () => ({ results: rows }) };
-        },
-      };
+      return { bind(accountId) { state.accountId = accountId; return { all: async () => ({ results: rows }) }; } };
     },
   };
 }
-const app = (surfaces, href, label = "Campaign") =>
-  JSON.stringify({ app: { surfaces, nav: { href, label } } });
 
-test("apps launcher uses account-scoped installations and distinct installed/enabled states", async () => {
-  const db = dbFor([
-    { plugin_key: "campaign", display_name: "Campaign", metadata_json: app(["admin-nav","add-apps"], "/admin/campaign"),
-      installed: 1, enabled: 1, setup_status: "connected" },
-    { plugin_key: "disabled", display_name: "Disabled", metadata_json: app(["admin-nav"], "/admin/disabled", "Disabled"),
-      installed: 1, enabled: 0, setup_status: "unconfigured" },
-    { plugin_key: "available", display_name: "Available", metadata_json: app(["add-apps"], "/admin/available", "Available"),
-      installed: 0, enabled: 0, setup_status: null },
+test("apps launcher lists public applications with per-account installed/enabled state", async () => {
+  const db = listDb([
+    { id: "campaign", name: "Campaign", launch_url: "/admin/campaign", install_id: "ainst_1", enabled: 1 },
+    { id: "disabled", name: "Disabled", launch_url: "/admin/disabled", install_id: "ainst_2", enabled: 0 },
+    { id: "available", name: "Available", launch_url: "/admin/available", install_id: null, enabled: null },
   ]);
   const apps = await listLauncherApps(db, "acct_123");
   assert.equal(db.state.accountId, "acct_123");
   assert.match(db.state.query, /i\.account_id = \?/);
-  assert.match(db.state.query, /GROUP BY p\.id/);
-  assert.deepEqual(apps.map(row => [row.key, row.installed, row.enabled]),
-    [["campaign",true,true],["disabled",true,false]]);
+  assert.match(db.state.query, /a\.app_type = 'application'/);
+  assert.match(db.state.query, /a\.status = 'active'/);
+  assert.match(db.state.query, /a\.visibility = 'public'/);
+  assert.deepEqual(
+    apps.map(row => [row.key, row.installed, row.enabled, row.setup_status]),
+    [["campaign", true, true, "configured"], ["disabled", true, false, "disabled"], ["available", false, false, "not_installed"]],
+  );
   assert.deepEqual(apps[0].surfaces, ["admin-nav"]);
-  assert.match(db.state.query, /p\.plugin_kind = 'native'/);
 });
 
-test("apps launcher ignores unsupported surfaces and unsafe metadata", async () => {
-  const db = dbFor([
-    { plugin_key:"bad-json", metadata_json:"{", installed:1,enabled:1 },
-    { plugin_key:"no-surface", metadata_json:app(["storefront-widget"], "/admin/widget"), installed:1,enabled:1 },
-    { plugin_key:"external",display_name:"External",metadata_json:app(["admin-nav"], "https://evil.example"),installed:1,enabled:1 },
-    { plugin_key:"injection",display_name:"Injection",metadata_json:app(["admin-nav"], '/admin/foo" onclick="evil'),installed:1,enabled:1 },
+test("apps launcher never exposes unsafe launch urls", async () => {
+  const db = listDb([
+    { id: "external", name: "External", launch_url: "https://evil.example" },
+    { id: "protocol-relative", name: "Protocol relative", launch_url: "//evil.example" },
+    { id: "injection", name: "Injection", launch_url: '/admin/foo" onclick="evil' },
+    { id: "none", name: "None", launch_url: null },
   ]);
   const result = await listLauncherApps(db, "acct_123");
-  assert.deepEqual(result.map(row => row.key), ["external","injection"]);
-  assert.ok(result.every(row => row.href === null));
+  assert.equal(result.length, 4);
+  assert.ok(result.every(row => row.href === null && row.installable === false));
 });
 
 test("apps launcher requires an account and database instead of listing another tenant", async () => {
   await assert.rejects(() => listLauncherApps(null, "acct_123"), /apps_launcher_context_missing/);
-  await assert.rejects(() => listLauncherApps(dbFor([]), ""), /apps_launcher_context_missing/);
+  await assert.rejects(() => listLauncherApps(listDb([]), ""), /apps_launcher_context_missing/);
 });
 
-
-function installDb(definitions) {
-  const installed = new Map();
-  const stages = new Map();
-  const tracked = [];
+function installDb(apps) {
+  const reads = [];
+  const writes = [];
   return {
-    installed, stages, tracked,
+    reads, writes,
     prepare(query) {
       return {
         bind(...args) {
           return {
             async first() {
-              if (query.startsWith("SELECT id, plugin_key")) return definitions.find(row=>row.plugin_key===args[0]) || null;
-              if (query.startsWith("SELECT id,enabled")) return installed.get(args[0]+":"+args[1]) || null;
-              throw Error("unexpected_read:"+query);
+              if (!query.startsWith("SELECT id, launch_url FROM apps")) throw Error("unexpected_read:" + query);
+              reads.push({ query, args });
+              return apps.find(row => row.id === args[0]) || null;
             },
-            async run() {
-              if (!query.startsWith("INSERT OR IGNORE INTO agentsam_plugin_installations")) throw Error("unexpected_write");
-              tracked.push({query,args});
-              const key=args[0]+":"+args[1];
-              if (query.includes("'side-stage-v1'")) stages.set(key,{enabled:1});
-              else if (!installed.has(key)) installed.set(key,{id:"pinst_1",enabled:1,setup_status:"configured"});
-              return {success:true};
-            },
+            async run() { writes.push({ query, args }); return { meta: { changes: 1 } }; },
           };
         },
       };
@@ -87,55 +71,21 @@ function installDb(definitions) {
   };
 }
 
-test("native app installation is account scoped, idempotent and uses the existing plugin manifest", async () => {
-  const db=installDb([{
-    id:"plg_cad",plugin_key:"agentsam-stage-cad",plugin_kind:"native",
-    metadata_json:app(["admin-nav","side-stage"],"/cad","CAD Creator"),
-  }]);
-  const first=await installNativeAdminApp(db,"acct_alice","agentsam-stage-cad");
-  assert.deepEqual(first,{key:"agentsam-stage-cad",installed:true,enabled:true,href:"/cad",status:"installed"});
-  assert.equal(db.tracked.length,1);
-  assert.deepEqual(db.tracked[0].args,["acct_alice","plg_cad"]);
-  assert.match(db.tracked[0].query,/INSERT OR IGNORE/);
-  await installNativeAdminApp(db,"acct_alice","agentsam-stage-cad");
-  assert.equal(db.installed.size,1);
-  await installNativeAdminApp(db,"acct_bob","agentsam-stage-cad");
-  assert.equal(db.installed.size,2);
+test("install is account scoped, only reads public active applications, and is idempotent in SQL", async () => {
+  const db = installDb([{ id: "cad", launch_url: "/cad" }]);
+  const result = await installNativeAdminApp(db, "acct_a", "cad");
+  assert.deepEqual(result, { key: "cad", installed: true, enabled: true, href: "/cad", status: "installed" });
+  assert.match(db.reads[0].query, /status = 'active' AND visibility = 'public'/);
+  assert.deepEqual(db.writes[0].args, ["acct_a", "cad"]);
+  assert.match(db.writes[0].query, /ON CONFLICT\(account_id, app_id\)/);
 });
 
-test("app installs preserve disabled preferences and reject plugin, embed, unsafe and absent manifests", async () => {
-  const db=installDb([
-    {id:"plg_cad",plugin_key:"cad",plugin_kind:"native",metadata_json:app(["admin-nav"],"/cad")},
-    {id:"plg_mcp",plugin_key:"mcp",plugin_kind:"mcp",metadata_json:app(["admin-nav"],"/mcp")},
-    {id:"plg_embed",plugin_key:"embed",plugin_kind:"native",metadata_json:app(["storefront_embed"],"/admin/embed")},
-    {id:"plg_ext",plugin_key:"ext",plugin_kind:"native",metadata_json:app(["admin-nav"],"https://evil.example/")},
-    {id:"plg_bad",plugin_key:"bad",plugin_kind:"native",metadata_json:"{"},
-  ]);
-  db.installed.set("acct_a:plg_cad",{id:"pinst_existing",enabled:0,setup_status:"disabled"});
-  const disabled=await installNativeAdminApp(db,"acct_a","cad");
-  assert.equal(disabled.enabled,false);
-  assert.equal(disabled.status,"disabled");
-  for (const key of ["mcp","embed","ext","bad"])
-    await assert.rejects(()=>installNativeAdminApp(db,"acct_a",key),/app_install_not_supported/);
-  await assert.rejects(()=>installNativeAdminApp(db,"acct_a","unknown"),/app_install_not_found/);
-  await assert.rejects(()=>installNativeAdminApp(db,"acct_a","../bad"),/app_install_key_invalid/);
-  await assert.rejects(()=>installNativeAdminApp(db,"","cad"),/apps_launcher_context_missing/);
-});
-
-test('installable native design app also registers its valid sandboxed embed stage',async()=>{
-  const db=installDb([{
-    id:'plg_design',plugin_key:'agentsam-design-canvas',plugin_kind:'native',
-    metadata_json:JSON.stringify({
-      source:'https://agentsam.inneranimalmedia.com/catalog/plugins',
-      app:{surfaces:['admin-nav','add-apps'],nav:{href:'/design-canvas/'}},
-      side_stage:{version:1,id:'design-canvas',renderer:'embed',href:'https://agentsam.inneranimalmedia.com/design-canvas/'}
-    })
-  }]);
-  const installed=await installNativeAdminApp(db,'acct_design','agentsam-design-canvas');
-  assert.equal(installed.installed,true);
-  assert.equal(db.installed.size,1);
-  assert.equal(db.stages.size,1);
-  assert.equal(db.tracked.length,2);
-  await installNativeAdminApp(db,'acct_design','agentsam-design-canvas');
-  assert.equal(db.stages.size,1);
+test("install rejects unknown apps, apps without a safe launch url, bad keys and missing context", async () => {
+  const db = installDb([{ id: "ext", launch_url: "https://evil.example/" }, { id: "bare", launch_url: null }]);
+  for (const key of ["unknown", "ext", "bare"]) {
+    await assert.rejects(() => installNativeAdminApp(db, "acct_a", key), /app_install_unavailable/);
+  }
+  await assert.rejects(() => installNativeAdminApp(db, "acct_a", "../bad"), /app_install_key_invalid/);
+  await assert.rejects(() => installNativeAdminApp(db, "", "cad"), /apps_launcher_context_missing/);
+  assert.equal(db.writes.length, 0);
 });
