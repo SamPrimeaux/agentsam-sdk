@@ -32,8 +32,10 @@
     "prebuild": "npm run sync:theme-contract"
   },
   "dependencies": {
+    "@inneranimalmedia/agentsam-merch": "2.6.15",
     "@inneranimalmedia/revise-theme": "0.2.0",
     "@inneranimalmedia/section-library": "0.1.0",
+    "@inneranimalmedia/theme-heuristic": "2.6.15",
     "@jsquash/jpeg": "1.6.0",
     "@jsquash/png": "3.1.1",
     "@jsquash/resize": "2.1.1",
@@ -72,7 +74,8 @@
     "theme/",
     "repository.contracts.json",
     "tsconfig.cms.json",
-    "tsconfig.tools.json"
+    "tsconfig.tools.json",
+    "!**/*.test.mjs"
   ],
   "exports": {
     "./manifest": "./agentsam.app.json",
