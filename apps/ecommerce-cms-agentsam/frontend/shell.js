@@ -800,6 +800,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
   const adminChrome = shellMode.hideAdminNav ? "" : `
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
+        <div class="console-topbar-leading" id="agentsam-console-leading-slot"></div>
         <div class="console-topbar-center" id="agentsam-console-mode-slot"></div>
         <div class="console-topbar-agent-actions" id="agentsam-console-actions-slot"></div>
         <div class="console-topbar-actions">
