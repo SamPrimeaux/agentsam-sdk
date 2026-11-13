@@ -1,0 +1,48 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "agentsamforms",
+  "name": "AgentSamForms",
+  "kind": "app",
+  "version": "2.6.15",
+  "category": "forms",
+  "status": "bundled",
+  "description": "Account-owned forms, public embeds and stored submissions.",
+  "routes": {
+    "home": "/forms",
+    "embed": "/forms/embed/:id",
+    "api": "/api/forms"
+  },
+  "surfaces": [
+    "admin-nav",
+    "standalone"
+  ],
+  "requires": [
+    "account.authenticated",
+    "storage.sql"
+  ],
+  "provides": [
+    "forms.read",
+    "forms.edit",
+    "forms.publish",
+    "forms.submissions"
+  ],
+  "install": {
+    "supported": true,
+    "registry_key": "agentsam-app-forms",
+    "authority": "agentsam_plugin_installations",
+    "seed": "five-account-owned-draft-forms",
+    "new_accounts": "not-installed"
+  },
+  "implementation": {
+    "frontend": "frontend/src/components/forms/AgentSamFormsPage.tsx",
+    "backend": "backend/worker/agentsam-forms.js",
+    "migration": "backend/migrations/1361_agentsamforms_app_and_submissions.sql"
+  },
+  "safety": {
+    "public_routes": "published-only",
+    "published_edit": "explicit-unpublish",
+    "automatic_emails": false,
+    "automatic_orders": false,
+    "automatic_checkout": false
+  }
+}

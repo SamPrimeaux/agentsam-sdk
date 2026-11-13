@@ -82,6 +82,7 @@ import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.
 import { handleStudioThemes } from "./studio-themes.js";
 import { handleStudioNavigation } from "./studio-navigation-preferences.js";
 import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled } from "./apps-launcher.js";
+import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleStudioContentMediaApi } from "./content-media-api.js";
@@ -732,6 +733,12 @@ export default {
     const url = new URL(request.url);
     const designCanvasAdmin = await serveDesignCanvasAdminRoute(request, env, guardStudioDocument);
     if (designCanvasAdmin) return designCanvasAdmin;
+    // Only published forms are exposed publicly; account-owned management uses
+    // the existing authenticated /api/forms path further below.
+    if (url.pathname.startsWith("/forms/embed/") || url.pathname.startsWith("/api/forms/public/")) {
+      const formPage = await handleAgentSamFormsPublic(request, env);
+      if (formPage) return formPage;
+    }
     const publicShareMatch = /^\/share\/([A-Za-z0-9_-]{40,60})$/.exec(url.pathname);
     if (publicShareMatch) return handlePublicConversationShare(request, env, publicShareMatch[1]);
     if (url.pathname === "/api/studio/conversation-shares" || url.pathname.startsWith("/api/studio/conversation-shares/")) {
@@ -1515,6 +1522,9 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         console.warn('plugin_oauth_action_failed',code);
         return json({ok:false,error:code},code.includes('not_found')?404:code.includes('unavailable')?503:400);
       }
+    }
+    if (url.pathname === "/api/forms" || url.pathname.startsWith("/api/forms/")) {
+      return handleAgentSamFormsApi(request, env, await sessionUser());
     }
     if (isAppsLauncher) {
       if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
