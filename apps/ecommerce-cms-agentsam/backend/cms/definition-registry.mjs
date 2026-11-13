@@ -181,8 +181,17 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
     d.max_blocks AS definition_max_blocks,d.metadata_json AS definition_metadata_json
     FROM cms_component_templates t
     LEFT JOIN cms_definitions d
-      ON d.account_id=? AND d.definition_key=t.definition_key
-      AND d.version=t.definition_version AND d.kind=t.item_type
+      ON d.id=COALESCE(
+        (SELECT owned.id FROM cms_definitions owned
+          WHERE owned.account_id=? AND owned.definition_key=t.definition_key
+            AND owned.version=t.definition_version AND owned.kind=t.item_type
+          LIMIT 1),
+        (SELECT builtin.id FROM cms_definitions builtin
+          WHERE builtin.id=t.definition_id AND builtin.origin='built_in'
+            AND COALESCE(t.is_system,1)=1 AND builtin.definition_key=t.definition_key
+            AND builtin.version=t.definition_version AND builtin.kind=t.item_type
+          LIMIT 1)
+      )
     WHERE COALESCE(t.is_system,1)=1 AND t.item_type IN ('section','block')
       AND t.status!='archived'`;
   const binds = [accountId];

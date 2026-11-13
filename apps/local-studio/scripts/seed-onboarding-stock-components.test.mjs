@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import '../../../apps/ecommerce-cms-agentsam/packages/theme-contract/runtime/platform-stock-sections.js';
+import {listCmsComponentCatalog} from '../../../apps/ecommerce-cms-agentsam/backend/cms/definition-registry.mjs';
 
 const src=new URL('../backend/migrations/1363_onboarding_stock_six.sql',import.meta.url);
 const sql=readFileSync(src,'utf8');
@@ -29,13 +30,16 @@ function setup(){
   implementation_status TEXT NOT NULL DEFAULT 'unverified'
  );
  CREATE TABLE cms_component_templates(
-  sku TEXT PRIMARY KEY,template_name TEXT NOT NULL,template_type TEXT NOT NULL,
+  id TEXT DEFAULT (lower(hex(randomblob(16)))),sku TEXT PRIMARY KEY,
+  template_name TEXT NOT NULL,template_type TEXT NOT NULL,
   category TEXT NOT NULL,label TEXT,item_type TEXT,status TEXT NOT NULL DEFAULT 'active',
   is_system INTEGER DEFAULT 1,r2_bucket TEXT,r2_key TEXT,source_html_r2_key TEXT,slug TEXT,
   definition_id TEXT REFERENCES cms_definitions(id),definition_key TEXT,definition_version TEXT,
   template_data TEXT NOT NULL DEFAULT '{}',editor_schema_json TEXT NOT NULL DEFAULT '{}',
   compatibility_json TEXT NOT NULL DEFAULT '{}',responsive_schema_json TEXT NOT NULL DEFAULT '{}',
-  data_bindings_json TEXT NOT NULL DEFAULT '{}',preview_json TEXT NOT NULL DEFAULT '{}',tags TEXT NOT NULL DEFAULT '[]'
+  data_bindings_json TEXT NOT NULL DEFAULT '{}',preview_json TEXT NOT NULL DEFAULT '{}',
+  tags TEXT NOT NULL DEFAULT '[]',sort_order INTEGER DEFAULT 50,usage_count INTEGER DEFAULT 0,
+  is_featured INTEGER DEFAULT 0,featured_collection TEXT
  );
  INSERT INTO accounts(id) VALUES ('acct-platform'),('acct-other');
  INSERT INTO cms_definitions(id,account_id,definition_key,kind,label,origin) VALUES
@@ -78,5 +82,24 @@ test('all six onboarding stock records are real native renderers, source-backed 
     globalThis.ThemePlatformStock.schema(id).fields.length);
   }
   assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);
+ }finally{db.close();}
+});
+
+test('native system components are installable for another account without copying the platform definitions',async()=>{
+ const db=setup();
+ try{
+  db.exec(sql);
+  const env={DB:{prepare(sql){let params=[];return {
+   bind(...args){params=args;return this;},
+   async all(){return {results:db.prepare(sql).all(...params)};}
+  };}}};
+  const catalog=await listCmsComponentCatalog(env,'acct-other');
+  const stock=catalog.filter(row=>row.definitionKey?.startsWith('platform/'));
+  assert.equal(stock.length,6,'All six system stock entries remain discoverable');
+  assert.ok(stock.every(row=>row.installable===true),'All builtin native stocks are installable');
+  assert.ok(stock.every(row=>row.definition?.origin==='built_in'));
+  assert.ok(stock.every(row=>row.rendererKey?.startsWith('platform/')));
+  assert.equal(db.prepare("SELECT count(*) n FROM cms_definitions WHERE account_id='acct-other'").get().n,0,
+    'Offering platform components never creates duplicate account-owned system definitions');
  }finally{db.close();}
 });

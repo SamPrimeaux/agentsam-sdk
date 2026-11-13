@@ -47,7 +47,8 @@ for(const [slug,sku,title] of names){
  const definition='cmsd_stock_onb_'+slug.replaceAll('-','_');
  const component='cmp_stock_onb_'+slug.replaceAll('-','_');
  const metadata={stock_asset_id:entry.id,source:"platform-stock",source_preview:entry.preview_path,
-   content_sha256:file.sha256,provider_required:false,checkout_simulated_only:slug==='start-trial-checkout'};
+   content_sha256:file.sha256,provider_required:false,checkout_simulated_only:slug==='start-trial-checkout',
+   rendererKey:id,implementationStatus:'implemented',implementationClass:'native'};
  const requirements={fields:fields.fields,blocks:fields.blocks,settings:fields.settings};
  sql.push(
   '',
@@ -72,7 +73,8 @@ for(const [slug,sku,title] of names){
   'SELECT '+[
     quote(sku),quote(title),quote('section'),quote('Onboarding & offers'),quote(title),quote('section'),
     quote('active'),1,quote('theme-store'),quote(file.r2_key),quote(file.r2_key),quote(slug),
-    quote(definition),quote(id),quote('1'),encoded({renderer_key:id,default_content:content}),
+    quote(definition),quote(id),quote('1'),encoded({renderer_key:id,implementation_status:'implemented',
+      implementation_class:'native',default_content:content}),
     encoded(requirements),encoded({site_editor:true,theme_project:true,payment_provider:'none'}),
     encoded({mobile_first:true,breakpoints:[600,960]}),
     encoded({}),encoded({source_url:entry.preview_path,stock_asset_id:entry.id,source_sha256:file.sha256}),
