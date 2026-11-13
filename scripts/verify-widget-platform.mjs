@@ -4,6 +4,14 @@ import os from "node:os";
 import { execFileSync } from "node:child_process";
 import { firstPack } from './lib/npm-pack-json.mjs';
 
+// Child npm calls must really pack/install even when the outer command is
+// `npm publish --dry-run`, which exports npm_config_dry_run to children.
+const cleanNpmEnv = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([key]) => !["npm_config_allow_scripts", "npm_config_dry_run"].includes(key.toLowerCase()),
+  ),
+);
+
 const root = process.cwd();
 const pkgPath = path.join(root, "packages/agentsam-workbench/package.json");
 const rootPkgPath = path.join(root, "package.json");
@@ -142,7 +150,7 @@ for (const name of closure) {
     execFileSync(
       "npm",
       ["pack", "--json", "--pack-destination", tempRoot],
-      { cwd: record.dir, encoding: "utf8" },
+      { cwd: record.dir, encoding: "utf8", env: cleanNpmEnv },
     ),
   );
   const filename = firstPack(packedJson)?.filename;
@@ -162,11 +170,6 @@ fs.writeFileSync(
   JSON.stringify({ name: "agentsam-widget-pack-smoke", private: true, type: "module" }, null, 2) + "\n",
 );
 
-const cleanNpmEnv = Object.fromEntries(
-  Object.entries(process.env).filter(
-    ([key]) => key.toLowerCase() !== "npm_config_allow_scripts",
-  ),
-);
 
 execFileSync(
   "npm",
