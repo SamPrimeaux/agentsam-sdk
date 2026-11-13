@@ -12,7 +12,7 @@ import {
   writeStudioAppearanceCache,
   clearStudioAppearanceCache,
 } from '../../shared/shell-appearance.mjs';
-import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp, Target, Plug, SquareTerminal, MonitorPlay, FileCode } from "lucide-react";
+import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
