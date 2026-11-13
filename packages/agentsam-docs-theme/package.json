@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-docs-theme",
-  "version": "2.6.14",
+  "version": "2.6.15",
   "description": "Reusable CMS-native documentation and cookbook templates, layout styles and navigation",
   "exports": {
     ".": "./tokens.css",
