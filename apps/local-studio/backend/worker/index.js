@@ -1551,7 +1551,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       } catch (error) {
         const code=String(error?.message||"app_install_failed");
         return json({ok:false,error:code.slice(0,120)},
-          code==="app_install_not_found"||code==="app_not_installed"?404:
+          code==="app_install_not_found"||code==="app_install_unavailable"||code==="app_not_installed"?404:
           code==="app_install_not_supported"?409:
           code==="app_install_key_invalid"||code==="app_enabled_invalid"?400:503);
       }
