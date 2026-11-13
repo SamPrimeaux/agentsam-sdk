@@ -10,7 +10,7 @@ import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
 import { runCommand } from '@/lib/commands/native-commands';
 import { AlertCircle, ArrowLeft, Package, RefreshCw } from 'lucide-react';
 
-type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
+type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try'; stock?: string };
 
 function UnavailableProductRoute({ requested }: { requested?: string }) {
   const productRequested = requested?.startsWith('/admin/products');
@@ -67,6 +67,7 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
     theme_sku: typeof search.theme_sku === 'string' ? search.theme_sku : undefined,
     theme_version: typeof search.theme_version === 'string' ? search.theme_version : undefined,
     action: search.action === 'try' ? 'try' : undefined,
+    stock: typeof search.stock === 'string' && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock) ? search.stock : undefined,
   }),
   component: EcommerceAppHost,
 });
@@ -114,6 +115,10 @@ export function EcommerceAppView({ search, forcePackagedAsset = false }: {
       if (page?.split('?')[0] === '/admin/theme-project-editor' && search.project && /^[A-Za-z0-9_-]{1,160}$/.test(search.project)) {
         resolved.searchParams.set('project', search.project);
       }
+      // The source-backed Design Canvas handoff is only an editor selection.
+      // It never grants site ownership, installs a component or publishes content.
+      if (search.stock && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock))
+        resolved.searchParams.set('stock', search.stock);
       // Preserve a validated Theme Store Try intent into the authenticated CMS
       // receiver. This is a selection hint, never authorization for installation.
       const trySelection = page === '/admin/store' ? themeStoreTrySelection(search) : null;

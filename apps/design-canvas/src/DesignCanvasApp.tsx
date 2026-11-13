@@ -4,7 +4,7 @@ import manifest from '../public/sources/manifest.json';
 import sourceDocuments from './source-documents.generated.json';
 import './design-canvas.css';
 
-type Board = { id:string;filename:string;family:string;title:string;category:string;page:string;width:number;height:number;x:number;y:number;interactive:boolean };
+type Board = { id:string;filename:string;family:string;title:string;category:string;page:string;width:number;height:number;x:number;y:number;interactive:boolean;stock_asset_id?:string };
 type Props = { assetsBase?:string; onNativeCanvas?:()=>void };
 type Draft = { content:string; updatedAt:string };
 const boards = manifest.boards as Board[];
@@ -169,6 +169,10 @@ export function DesignCanvasApp({assetsBase='./sources',onNativeCanvas}:Props){
       {!active?<div className="dca-inspector-body">Select an artboard.</div>:inspector==='details'?<div className="dca-inspector-body">
         <h3>{active.title}</h3><p className="dca-muted">{active.family==='reference'?'A source reference image, not an active browser session.':active.family==='media'?'Original media exports, not a simulated application.':active.family==='stock'?'Versioned platform stock from an original HTML export. Editing here never changes a customer site.':'An authored interactive source document, not a screenshot or fabricated production route.'}</p>
         <dl><dt>Source file</dt><dd>{active.filename}</dd><dt>Set</dt><dd>{active.family}</dd><dt>Canvas size</dt><dd>{active.width} × {active.height}</dd><dt>Mode</dt><dd>{active.interactive?'Interactive': 'Design reference'}</dd><dt>Local edits</dt><dd>{currentDraft?'Saved '+new Date(currentDraft.updatedAt).toLocaleString():'Original source'}</dd></dl>
+        {active.family==='stock' && active.stock_asset_id && /^agentsam\.stock\.[a-z0-9-]+$/.test(active.stock_asset_id)
+          ? <a className="dca-wide" href={'/admin/store?stock=platform/'+encodeURIComponent(active.stock_asset_id.slice('agentsam.stock.'.length))} target="_blank" rel="noopener noreferrer">
+            <ExternalLink size={15}/> Add to website
+          </a> : null}
         <button className="dca-wide" onClick={()=>{setInspector('source');setFocus(true);}}><Code2 size={15}/> Edit source</button>
         <button className="dca-wide" onClick={()=>{setFocus(true);setInteract(true);}}><ExternalLink size={15}/> Interact with screen</button>
         <button className="dca-wide" onClick={()=>download(safeFile(active.filename),currentDraft?.content||source,'text/html')}><Download size={15}/> Export HTML</button>

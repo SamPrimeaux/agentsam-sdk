@@ -25,6 +25,7 @@
   // a site-scoped CMS adapter. Resolve's local proof uses the same editor API
   // contract without connecting to a customer or production database.
   const host = window.AgentSamThemeEditorHost || null;
+  let stockHandoffShown = false;
   const editorRequest = host ? host.adapter.request.bind(host.adapter) : (window.cmsAdminFetch || window.adminFetch);
   const violetShowcase = showcaseTheme === 'violet';
   const resolveShowcase = showcaseTheme === 'resolve';
@@ -522,13 +523,15 @@
     if (host) {
       return Object.entries(window.SECTION_SCHEMAS?.[slug] || {})
         .filter(function([key, definition]) {
-          return /^(source-|custom-)/.test(key) && definition?.capabilities?.insert === true;
+          return /^(source-|custom-|stock-)/.test(key) && definition?.capabilities?.insert === true;
         })
         .map(function([key, definition]) {
           return { id: key, label: definition.label || humanize(key),
             type: definition.sourceKind || 'content-section', templateKey: key,
-            source: definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
-            preset: key, category: 'Theme sections', previewHtml: definition.previewHtml || '' };
+            source: key.startsWith('stock-') ? 'Platform stock' :
+              definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
+            preset: key, category: key.startsWith('stock-') ? 'Platform stock' : 'Theme sections',
+            previewHtml: definition.previewHtml || '' };
         });
     }
     // CMS pages use the published portable renderer catalog, not fixture labels.
@@ -3764,6 +3767,25 @@
       renderPageOptions('');
       renderTree();
       renderInspector();
+      // A source-backed Design Canvas stock item is selectable for insertion
+      // into the CURRENT authorized project/page. Never auto-insert or publish.
+      // The merchant must explicitly press Add section in this catalog.
+      if (!stockHandoffShown) {
+        stockHandoffShown = true;
+        const chosen = host?.initialStock || params.get('stock');
+        const match = /^platform\/([a-z0-9-]{1,70})$/.exec(String(chosen || ''));
+        if (match) {
+          const key = host ? 'stock-' + match[1] : 'platform/' + match[1];
+          requestAnimationFrame(function() {
+            const trigger = byId('te-add-section');
+            if (!trigger || !themeCatalog().some(item => item.id === key)) return;
+            trigger.click();
+            byId('te-section-list')?.querySelectorAll('[data-choose-section]')
+              .forEach(button => { if (button.dataset.chooseSection === key) button.click(); });
+            setNote('Platform stock selected. Confirm Add section to insert into this draft.');
+          });
+        }
+      }
       if(!deepSelectionRestored){
         deepSelectionRestored=true;
         const target=host?.initialSelection || {section:params.get('section'),block:params.get('block')};

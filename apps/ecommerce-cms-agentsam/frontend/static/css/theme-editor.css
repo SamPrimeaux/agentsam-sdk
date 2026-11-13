@@ -25,8 +25,18 @@
   --te-stage-device-shadow: 0 12px 38px rgba(0, 0, 0, .1);
 }
 
-/* Derived by the packaged account-shell bridge; not an editor setting. */
+/* Dark/light surfaces use the selected account theme's semantic variables.
+   Merchant storefront CSS stays isolated inside its own preview document. */
 :root[data-te-shell-mode="dark"] {
+  --te-panel: var(--nav-surface, #202420);
+  --te-canvas: var(--nav-canvas, #151917);
+  --te-border: var(--nav-border, #353b37);
+  --te-border-strong: color-mix(in srgb,var(--te-border) 80%,var(--te-text));
+  --te-text: var(--nav-ink, #e7eae8);
+  --te-muted: var(--nav-inkMuted, #a5aaa6);
+  --te-soft: var(--nav-hover, #2d3430);
+  color-scheme: dark;
+
   --te-stage-base: color-mix(in srgb, var(--te-canvas) 84%, #17251e);
   --te-stage-dots: color-mix(in srgb, var(--te-text) 17%, transparent);
   --te-stage-sheen: color-mix(in srgb, var(--te-accent) 10%, transparent);

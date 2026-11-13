@@ -379,6 +379,8 @@ function scopedStoreEditorHref(raw,siteId) {
   const linkedSite=url.searchParams.get('site_id');
   if(linkedSite && linkedSite!==siteId)return '/admin/store';
   if (/^[A-Za-z0-9_-]{1,160}$/.test(siteId||'')) url.searchParams.set('site_id',siteId);
+  const chosenStock = new URLSearchParams(window.location.search).get('stock');
+  if (/^platform\/[a-z0-9-]{1,70}$/.test(chosenStock || '')) url.searchParams.set('stock',chosenStock);
   return url.pathname+url.search;
 }
 function showActiveTheme(theme,siteId) {

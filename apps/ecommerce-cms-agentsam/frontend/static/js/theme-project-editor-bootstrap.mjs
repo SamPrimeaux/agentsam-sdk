@@ -154,6 +154,8 @@ async function boot() {
       projectId,
       initialSelection:{section:parameters.get('section'),block:parameters.get('block')},
       initialDevice:parameters.get('previewMode'),
+      initialStock: /^platform\/[a-z0-9-]{1,70}$/.test(parameters.get('stock') || '')
+        ? parameters.get('stock') : null,
       onSelectionChange(selection) {
         const next=new URL(location.href);
         for(const [key,value] of [['section',selection.section_key],['block',selection.block_id]])
