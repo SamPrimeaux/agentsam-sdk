@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scanProjectSecurity, reportExitCode } from '../src/security/index.js';
+import { firstPack } from './lib/npm-pack-json.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
@@ -41,7 +42,7 @@ function run(command, args, options = {}) {
 }
 
 try {
-  const packed = JSON.parse(run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], { cwd: ROOT }).stdout)[0];
+  const packed = firstPack(JSON.parse(run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], { cwd: ROOT }).stdout));
   assert.equal(packed.name, pkg.name);
   assert.equal(packed.version, pkg.version);
   run('npm', ['init', '-y'], { cwd: consumer });

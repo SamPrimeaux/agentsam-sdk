@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { firstPack } from './lib/npm-pack-json.mjs';
 
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
@@ -17,7 +18,7 @@ if (result.status !== 0) {
 }
 
 const payload = JSON.parse(result.stdout);
-const pack = payload[0];
+const pack = firstPack(payload);
 
 const nestedNodeModules = (pack.files || [])
   .map((entry) => entry.path)

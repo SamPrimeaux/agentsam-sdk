@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { listAppManifests } from '../src/commands/app.js';
+import { firstPack } from './lib/npm-pack-json.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -80,7 +81,7 @@ function checkApp(app) {
   if (pack) {
     const result = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: app.dir, encoding: 'utf8' });
     if (result.status !== 0) { errors.push(app.id + ': npm pack dry-run failed: ' + String(result.stderr || result.stdout).trim()); return; }
-    let payload; try { payload = JSON.parse(result.stdout)[0]; } catch { errors.push(app.id + ': npm pack returned invalid JSON'); return; }
+    let payload; try { payload = firstPack(JSON.parse(result.stdout)); } catch { errors.push(app.id + ': npm pack returned invalid JSON'); return; }
     if (payload.name !== pkg.name) errors.push(app.id + ': npm pack name mismatch');
     for (const file of payload.files || []) {
       if (/^(reference|attachments|node_modules)(\/|$)/.test(file.path)) errors.push(app.id + ': forbidden packed path: ' + file.path);

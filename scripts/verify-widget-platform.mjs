@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
+import { firstPack } from './lib/npm-pack-json.mjs';
 
 const root = process.cwd();
 const pkgPath = path.join(root, "packages/agentsam-workbench/package.json");
@@ -81,7 +82,7 @@ const dryRun = JSON.parse(
   ),
 );
 
-const files = new Set((dryRun[0]?.files || []).map((entry) => entry.path));
+const files = new Set((firstPack(dryRun)?.files || []).map((entry) => entry.path));
 
 for (const rel of [
   "dist/widgets/index.js",
@@ -144,7 +145,7 @@ for (const name of closure) {
       { cwd: record.dir, encoding: "utf8" },
     ),
   );
-  const filename = packedJson[0]?.filename;
+  const filename = firstPack(packedJson)?.filename;
   if (!filename) {
     fail("npm pack did not return a tarball filename for " + name);
     continue;
