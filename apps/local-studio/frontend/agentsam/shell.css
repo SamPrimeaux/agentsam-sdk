@@ -509,7 +509,13 @@
 .console-shell:has(#agentsam-console-leading-slot:not(:empty)) :is(.console-nav-ghost-toggle--persistent, #admin-menu-toggle) {
   opacity: 0; pointer-events: none;
 }
-.agentsam-workspace.is-work-focused { flex-direction: column; }
+.agentsam-workspace.is-work-focused,
+.agentsam-workspace.has-detached-composer { flex-direction: column; }
+@media (max-width: 767px) {
+  .agentsam-workspace.has-detached-composer .agentsam-side-panel {
+    position: relative; inset: auto; flex: 1 1 0; width: 100%; max-width: 100%; min-width: 0;
+  }
+}
 .agentsam-workspace.is-work-focused .agentsam-side-panel {
   width: 100%; max-width: 100%; min-width: 0; flex: 1 1 0; border-left: 0;
 }
