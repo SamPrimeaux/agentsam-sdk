@@ -96,6 +96,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const workSurface = state.workSurface;
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
   const leadComposerDetached = workFocused || mobileWorkOpen || (isMobile && state.sideOpen);
+  const leadComposer = <Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
   // One set of controls is portalled into hosted chrome or rendered locally.
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
     <IconAction label="Previous thread" hint="Previous visited conversation" disabled={threadHistory.index <= 0} onClick={() => visitThread(-1)}><ArrowLeft size={17} /></IconAction>
@@ -162,13 +163,13 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               </div>
             </div> : <h1>Where should we begin?</h1>}
           </div>}
-          composer={leadComposerDetached ? null : <Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />}
+          composer={leadComposerDetached ? null : leadComposer}
           composerClassName="agentsam-conversation-dock"
         />
       </section>
       {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width - delta, window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} /></aside></> : null}
       {leadComposerDetached && <div className="agentsam-focused-lead-composer" aria-label="Lead AgentSam composer">
-        <Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />
+        {leadComposer}
       </div>}
     </div>
     {!isMobile ? <WorkSurfaceBar /> : null}
