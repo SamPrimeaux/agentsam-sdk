@@ -523,6 +523,7 @@
 @media (max-width: 767px) {
   .agentsam-topbar-leading { gap: 0; }
   .agentsam-topbar-leading > :is(button, .agentsam-nav__trigger) { width: 32px; height: 34px; }
+  .agentsam-workspace.is-work-focused .agentsam-side-panel { position: relative; inset: auto; min-height: 0; }
   .agentsam-focused-lead-composer { padding: 6px 8px; }
 }
 @media (max-width: 560px) {
