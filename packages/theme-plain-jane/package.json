@@ -27,7 +27,7 @@
     "pack:check": "npm pack --dry-run --json"
   },
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22"
   },
   "license": "UNLICENSED",
   "agentsam": {

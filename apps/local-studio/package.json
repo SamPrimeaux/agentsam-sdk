@@ -96,8 +96,7 @@
     "wrangler": "^4.157.0"
   },
   "engines": {
-    "node": ">=22 <25",
-    "npm": ">=10 <12"
+    "node": ">=22"
   },
   "packageManager": "npm@10.9.2",
   "allowScripts": {
