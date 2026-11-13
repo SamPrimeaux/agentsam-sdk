@@ -38,6 +38,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/collections/new': ['site_id'],
     '/admin/inventory': ['site_id'],
     '/admin/store': ['site_id'],
+    '/admin/onboarding-preview': ['site_id', 'preview_id'],
     '/admin/content': ['kind'],
     '/admin/email': ['folder'],
   };

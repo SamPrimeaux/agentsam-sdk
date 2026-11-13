@@ -70,6 +70,14 @@
       [...common],block("step","Step",[
         f("title","Step name"),f("detail","Description","textarea"),
       ],{title:"Plan",detail:"Explain this part of the process."},12)],
+    ["workspace-setup", "Workspace setup", "steps",
+      [...common],block("step","Setup step",[
+        f("title","Step name"),f("detail","Instructions","textarea"),
+      ],{title:"Configure",detail:"Describe this setup step."},8)],
+    ["style-spec-bw", "Clean company style spec", "palette",
+      [...common],block("swatch","Brand color",[
+        f("title","Color name"),f("color","Color","color"),f("detail","Usage","textarea"),
+      ],{title:"Ink",color:"#1f1e1d",detail:"Primary text"},8)],
   ];
   const labels = Object.freeze({
     "choose-a-plan":"Compare options",
@@ -85,6 +93,8 @@
     "mini-compact":"Made to fit",
     "mini-confirmation":"You're all set",
     "assistant-workspace":"How we work",
+    "workspace-setup":"Set up your space",
+    "style-spec-bw":"A considered black and white identity",
   });
   const definitions = Object.freeze(specs.map(([slug,label,family,fields,repeatable]) => Object.freeze({
     id:"platform/"+slug, slug, label, type:family, family, source:"platform",

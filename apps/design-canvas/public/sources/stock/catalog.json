@@ -1,6 +1,6 @@
 {
   "schema": "agentsam.platform-stock.v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "storage": "theme-store",
   "r2_prefix": "cms/design-stock/v1",
   "purpose": "interactive Design Canvas/editor source references; not installed customer themes",
@@ -617,6 +617,94 @@
         }
       ],
       "preview_path": "/design-canvas/sources/stock/assistant-workspace/SideAssistantWorkspace.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.workspace-setup",
+      "slug": "workspace-setup",
+      "title": "Workspace setup",
+      "kind": "onboarding",
+      "source": "user-provided-export",
+      "source_zip": "4 · Workspace setup-html.zip",
+      "main_html": "Onboarding.dc.html",
+      "main_sha256": "f61eff3a89145f13b7151834ec48a48907ceb35399b1da945d79b34ec122488c",
+      "files": [
+        {
+          "path": "Onboarding.dc.html",
+          "sha256": "f61eff3a89145f13b7151834ec48a48907ceb35399b1da945d79b34ec122488c",
+          "bytes": 13280,
+          "r2_key": "cms/design-stock/v1/workspace-setup/f61eff3a89145f13/Onboarding.dc.html"
+        },
+        {
+          "path": "README.md",
+          "sha256": "9bffa652975f9488dc363ea52b70f2b1f8b2ac4e9afea36c7f25973c2df1cf8d",
+          "bytes": 912,
+          "r2_key": "cms/design-stock/v1/workspace-setup/9bffa652975f9488/README.md"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/workspace-setup/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/workspace-setup/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/workspace-setup/d949f1c3687aedad/vendor/react.js"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/workspace-setup/Onboarding.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.style-spec-bw",
+      "slug": "style-spec-bw",
+      "title": "Style spec · clean company b/w",
+      "kind": "onboarding",
+      "source": "authored-onboarding-board",
+      "source_zip": null,
+      "main_html": "StyleSpec.dc.html",
+      "main_sha256": "b9d3a8ab28e58742689b04d05b6c528aec1ad1d4729236f09b9732d736f6b6ca",
+      "files": [
+        {
+          "path": "README.md",
+          "sha256": "071ecb095cd905cd36067704c10c369c8a8f4789e01085caa0c8cf4ca1728132",
+          "bytes": 159,
+          "r2_key": "cms/design-stock/v1/style-spec-bw/071ecb095cd905cd/README.md"
+        },
+        {
+          "path": "StyleSpec.dc.html",
+          "sha256": "b9d3a8ab28e58742689b04d05b6c528aec1ad1d4729236f09b9732d736f6b6ca",
+          "bytes": 12581,
+          "r2_key": "cms/design-stock/v1/style-spec-bw/b9d3a8ab28e58742/StyleSpec.dc.html"
+        },
+        {
+          "path": "support.js",
+          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
+          "bytes": 46105,
+          "r2_key": "cms/design-stock/v1/style-spec-bw/85c4831871e1b2b2/support.js"
+        },
+        {
+          "path": "vendor/react-dom.js",
+          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+          "bytes": 131835,
+          "r2_key": "cms/design-stock/v1/style-spec-bw/35f4f974f4b2bcd4/vendor/react-dom.js"
+        },
+        {
+          "path": "vendor/react.js",
+          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+          "bytes": 10751,
+          "r2_key": "cms/design-stock/v1/style-spec-bw/d949f1c3687aedad/vendor/react.js"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/style-spec-bw/StyleSpec.dc.html",
       "status": "bundled"
     }
   ]

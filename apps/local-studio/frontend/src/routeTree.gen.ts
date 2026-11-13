@@ -44,6 +44,7 @@ import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as appsAdminAgentsamRouteImport } from './routes/(apps)/admin/agentsam'
 import { Route as appsAdminCadRouteImport } from './routes/(apps)/admin/cad'
 import { Route as appsAdminMoviemodeRouteImport } from './routes/(apps)/admin/moviemode'
+import { Route as appsAdminOnboardingPreviewRouteImport } from './routes/(apps)/admin/onboarding-preview'
 import { Route as appsAdminProjectsRouteImport } from './routes/(apps)/admin/projects'
 import { Route as appsAdminStoreRouteImport } from './routes/(apps)/admin/store'
 import { Route as appsAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/apps/ecommerce-cms-agentsam'
@@ -251,6 +252,12 @@ const appsAdminMoviemodeRoute = appsAdminMoviemodeRouteImport.update({
   path: '/admin/moviemode',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminOnboardingPreviewRoute =
+  appsAdminOnboardingPreviewRouteImport.update({
+    id: '/(apps)/admin/onboarding-preview',
+    path: '/admin/onboarding-preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const appsAdminProjectsRoute = appsAdminProjectsRouteImport.update({
   id: '/(apps)/admin/projects',
   path: '/admin/projects',
@@ -448,6 +455,7 @@ export interface FileRoutesByFullPath {
   '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/admin/cad': typeof appsAdminCadRoute
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
+  '/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/admin/store': typeof appsAdminStoreRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
@@ -513,6 +521,7 @@ export interface FileRoutesByTo {
   '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/admin/cad': typeof appsAdminCadRoute
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
+  '/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/admin/store': typeof appsAdminStoreRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
@@ -580,6 +589,7 @@ export interface FileRoutesById {
   '/(apps)/admin/agentsam': typeof appsAdminAgentsamRoute
   '/(apps)/admin/cad': typeof appsAdminCadRoute
   '/(apps)/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
+  '/(apps)/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/(apps)/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/(apps)/admin/store': typeof appsAdminStoreRoute
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
@@ -650,6 +660,7 @@ export interface FileRouteTypes {
     | '/admin/agentsam'
     | '/admin/cad'
     | '/admin/moviemode'
+    | '/admin/onboarding-preview'
     | '/admin/projects'
     | '/admin/store'
     | '/apps/ecommerce-cms-agentsam'
@@ -715,6 +726,7 @@ export interface FileRouteTypes {
     | '/admin/agentsam'
     | '/admin/cad'
     | '/admin/moviemode'
+    | '/admin/onboarding-preview'
     | '/admin/store'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
@@ -781,6 +793,7 @@ export interface FileRouteTypes {
     | '/(apps)/admin/agentsam'
     | '/(apps)/admin/cad'
     | '/(apps)/admin/moviemode'
+    | '/(apps)/admin/onboarding-preview'
     | '/(apps)/admin/projects'
     | '/(apps)/admin/store'
     | '/(apps)/apps/ecommerce-cms-agentsam'
@@ -850,6 +863,7 @@ export interface RootRouteChildren {
   appsAdminAgentsamRoute: typeof appsAdminAgentsamRoute
   appsAdminCadRoute: typeof appsAdminCadRoute
   appsAdminMoviemodeRoute: typeof appsAdminMoviemodeRouteWithChildren
+  appsAdminOnboardingPreviewRoute: typeof appsAdminOnboardingPreviewRoute
   appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
   appsAdminStoreRoute: typeof appsAdminStoreRoute
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
@@ -1107,6 +1121,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/moviemode'
       fullPath: '/admin/moviemode'
       preLoaderRoute: typeof appsAdminMoviemodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin/onboarding-preview': {
+      id: '/(apps)/admin/onboarding-preview'
+      path: '/admin/onboarding-preview'
+      fullPath: '/admin/onboarding-preview'
+      preLoaderRoute: typeof appsAdminOnboardingPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/admin/projects': {
@@ -1484,6 +1505,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsAdminAgentsamRoute: appsAdminAgentsamRoute,
   appsAdminCadRoute: appsAdminCadRoute,
   appsAdminMoviemodeRoute: appsAdminMoviemodeRouteWithChildren,
+  appsAdminOnboardingPreviewRoute: appsAdminOnboardingPreviewRoute,
   appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
   appsAdminStoreRoute: appsAdminStoreRoute,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,

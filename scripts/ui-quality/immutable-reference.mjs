@@ -24,7 +24,7 @@ export function isImmutableDesignReference(file) {
   try {
     const catalog = JSON.parse(readFileSync(path.join(root,'apps/design-canvas/public/sources/stock/catalog.json'),'utf8'));
     if (catalog.schema !== 'agentsam.platform-stock.v1') return false;
-    const item = catalog.items?.find(x => x.slug === match[1] && x.source === 'user-provided-export');
+    const item = catalog.items?.find(x => x.slug === match[1] && ['user-provided-export','authored-onboarding-board'].includes(x.source));
     const record = item?.files?.find(x => x.path === match[2]);
     if (!record?.sha256 || !/^[a-f0-9]{64}$/.test(record.sha256)) return false;
     const contents = readFileSync(path.join(root,file));
