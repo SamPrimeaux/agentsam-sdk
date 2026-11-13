@@ -12,6 +12,7 @@
  *    re-validate it; the CLI never interpolates it into a shell command.
  */
 import { execFileSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -54,8 +55,10 @@ export function resolveProjectDir(arg, { cwd = process.cwd(), home = os.homedir(
   return real;
 }
 
-export function buildOpenUrl(realDir) {
-  return `${DESKTOP_URL_SCHEME}://open?path=${encodeURIComponent(realDir)}`;
+/** `t` makes every launch a distinct URL: the app's deep-link queue drops exact duplicates,
+ *  so re-running `agentsam .` (or switching back to a repo) must not look like a repeat. */
+export function buildOpenUrl(realDir, token = randomBytes(6).toString('hex')) {
+  return `${DESKTOP_URL_SCHEME}://open?path=${encodeURIComponent(realDir)}&t=${token}`;
 }
 
 const IGNORED_APP_PATH = /\/(backups|installers|\.Trash|Trash)\//i;
@@ -83,6 +86,7 @@ export function launchDesktop({
   platform = process.platform,
   find = findDesktopApp,
   run = execFileSync,
+  token,
 } = {}) {
   if (platform !== 'darwin') {
     throw new DesktopLaunchError('unsupported_platform',
@@ -96,7 +100,7 @@ export function launchDesktop({
       '  Terminal agent (separate from the desktop app): agentsam tui');
   }
   const args = ['-a', app];
-  if (projectDir) args.push(buildOpenUrl(projectDir));
+  if (projectDir) args.push(buildOpenUrl(projectDir, token));
   try { run('open', args, { stdio: 'ignore' }); }
   catch (e) { throw new DesktopLaunchError('launch_failed', `Could not launch ${app}: ${e.message}`); }
   return { app, projectDir };

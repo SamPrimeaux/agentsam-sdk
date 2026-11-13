@@ -38,7 +38,9 @@ test('buildOpenUrl encodes and round-trips hostile characters', () => {
   const url = buildOpenUrl(real);
   assert.ok(url.startsWith('agentsamstudio://open?path='));
   assert.equal(new URL(url).searchParams.get('path'), real);
-  assert.ok(!/[ &#]/.test(url.slice('agentsamstudio://open?path='.length)));
+  assert.ok(!/[ #]/.test(url));
+  assert.equal(new URL(url).searchParams.get('t')?.length, 12);
+  assert.notEqual(buildOpenUrl(real), buildOpenUrl(real), 'every launch must be a distinct URL');
 });
 
 test('findDesktopApp ignores backups/installers and prefers /Applications', () => {
@@ -58,9 +60,9 @@ test('launchDesktop uses argv (no shell) pinned to the discovered app', () => {
   const run = (cmd, args, opts) => calls.push({ cmd, args, opts });
   const find = () => '/Applications/AgentSam Local Studio.app';
   launchDesktop({ platform: 'darwin', find, run });
-  launchDesktop({ platform: 'darwin', find, run, projectDir: '/tmp/a b' });
+  launchDesktop({ platform: 'darwin', find, run, projectDir: '/tmp/a b', token: 'abc123' });
   assert.deepEqual(calls[0].args, ['-a', '/Applications/AgentSam Local Studio.app']);
-  assert.deepEqual(calls[1].args, ['-a', '/Applications/AgentSam Local Studio.app', 'agentsamstudio://open?path=%2Ftmp%2Fa%20b']);
+  assert.deepEqual(calls[1].args, ['-a', '/Applications/AgentSam Local Studio.app', 'agentsamstudio://open?path=%2Ftmp%2Fa%20b&t=abc123']);
   assert.equal(calls[1].cmd, 'open');
   assert.ok(!calls[1].opts.shell);
 });
