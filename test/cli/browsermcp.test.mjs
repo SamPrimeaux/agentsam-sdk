@@ -53,16 +53,16 @@ test('Browser MCP stdio authority installs as a local adapter without overwritin
 
   const tools = await runMcp(['tools','browsermcp','--json'], {
     home:root,write:()=>{},
-    listMcpToolsImpl:async()=>({tools:[{name:'browser',inputSchema:{type:'object'}}],count:1,transport:'stdio'}),
+    listMcpToolsImpl:async()=>({tools:[{name:'browser',inputSchema:{type:'object',properties:{commands:{type:'string'}},required:['commands']}}],count:1,transport:'stdio'}),
   });
   assert.deepEqual(tools.tools.map(tool=>tool.name),['browser']);
 
-  const call = await runMcp(['call','browsermcp','--tool','browser','--input',JSON.stringify({command:'tab list'}),'--json'], {
+  const call = await runMcp(['call','browsermcp','--tool','browser','--input',JSON.stringify({commands:'tab list'}),'--json'], {
     home:root,write:()=>{},
     callMcpToolImpl:async (server,name,args)=>{
       assert.equal(server.protocol,'stdio');
       assert.equal(name,'browser');
-      assert.deepEqual(args,{command:'tab list'});
+      assert.deepEqual(args,{commands:'tab list'});
       return {ok:true,result:{content:[{type:'text',text:'fixture:tab list'}]}};
     },
   });
@@ -105,7 +105,8 @@ test('MCP stdio initialize, tools/list and tools/call work against the actual SD
   const list=await listMcpTools(config,opts);
   assert.equal(list.count,1,list.error);
   assert.equal(list.tools[0].name,'browser');
-  const call=await callMcpTool(config,'browser',{command:'tab list'},opts);
+  assert.deepEqual(list.tools[0].inputSchema.required,['commands']);
+  const call=await callMcpTool(config,'browser',{commands:'tab list'},opts);
   assert.equal(call.ok,true,call.error);
   assert.equal(call.transport,'stdio');
   assert.equal(call.result.content[0].text,'fixture:tab list');
@@ -123,4 +124,37 @@ test('AgentSam plugin installer registers metadata without executing local brows
     assert.equal(state.plugins.browsermcp.manifest.config.protocol,'stdio');
     assert.equal(state.plugins.browsermcp.manifest.tools.length,0);
   }finally{process.stdout.write=previousStdout;}
+});
+
+test('Browser MCP plugin connect and status preserve local authority without claiming pairing', async () => {
+  const root = home();
+  const previousWrite = process.stdout.write;
+  const output = [];
+  process.stdout.write = function(chunk) { output.push(String(chunk)); return true; };
+  const injected = {
+    home: root,
+    pingMcpServerImpl: async () => ({
+      ok:true, transport:'stdio', toolCount:1,
+      pairingStatus:'unverified', latencyMs:5,
+    }),
+  };
+  try {
+    const connection = await runPlugins(['connect','@browsermcp','--cwd',root,'--json'],injected);
+    assert.equal(connection.ok,true);
+    assert.equal(connection.status,'configured');
+    assert.equal(connection.server_initialized,true);
+    assert.equal(connection.pairing_status,'unverified');
+    assert.equal(readMcpServer('browsermcp',{home:root}).protocol,'stdio');
+
+    const status = await runPlugins(['status','@browsermcp','--cwd',root,'--json'],injected);
+    assert.equal(status.ok,true);
+    assert.equal(status.status,'configured');
+    assert.equal(status.server_initialized,true);
+    assert.equal(status.pairing_status,'unverified');
+    assert.equal(status.adapters.length,1);
+    assert.equal(status.adapters[0].configured,true);
+    assert.doesNotMatch(output.join(''),/\bpaired\s*:\s*true\b/i);
+  } finally {
+    process.stdout.write=previousWrite;
+  }
 });

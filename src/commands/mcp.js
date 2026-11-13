@@ -161,7 +161,7 @@ function renderHelp(options = {}) {
     agentsam mcp list [--catalog|--bundles] [--json]
     agentsam mcp status [<name>] [--json]
     agentsam mcp tools <name> [--json]
-    agentsam mcp call <name> --tool <tool> --input '{\"command\":\"tab list\"}' [--json]
+    agentsam mcp call <name> --tool <tool> --input '{\"commands\":\"tab list\"}' [--json]
     agentsam mcp doctor [<name>] [--json]
     agentsam mcp remove <name> [--client <client>|all]
     agentsam mcp scopes <cloudflare-bundle> [--json]
