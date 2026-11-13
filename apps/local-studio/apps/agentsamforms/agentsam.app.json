@@ -6,7 +6,7 @@
   "version": "2.6.15",
   "category": "forms",
   "status": "bundled",
-  "description": "Account-owned forms, public embeds and stored submissions.",
+  "description": "Merchant-installed storefront forms with site-owned CMS drafts and stored submissions.",
   "routes": {
     "home": "/forms",
     "embed": "/forms/embed/:id",
@@ -14,10 +14,12 @@
   },
   "surfaces": [
     "admin-nav",
+    "merchant-storefront",
     "standalone"
   ],
   "requires": [
     "account.authenticated",
+    "cms.site",
     "storage.sql"
   ],
   "provides": [
@@ -28,15 +30,18 @@
   ],
   "install": {
     "supported": true,
-    "registry_key": "agentsam-app-forms",
-    "authority": "agentsam_plugin_installations",
-    "seed": "five-account-owned-draft-forms",
+    "registry_key": "agentsamforms",
+    "authority": "agentsam_app_installations",
+    "seed": "five-site-scoped-cms-global-drafts",
     "new_accounts": "not-installed"
   },
   "implementation": {
     "frontend": "frontend/src/components/forms/AgentSamFormsPage.tsx",
     "backend": "backend/worker/agentsam-forms.js",
-    "migration": "backend/migrations/1361_agentsamforms_app_and_submissions.sql"
+    "migration": "backend/migrations/1364_agentsamforms_cms_site_and_submissions.sql",
+    "content_store": "cms_globals",
+    "revisions": "cms_revisions",
+    "submissions": "cms_form_submissions"
   },
   "safety": {
     "public_routes": "published-only",
