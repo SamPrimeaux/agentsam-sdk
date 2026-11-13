@@ -10,7 +10,7 @@ import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
 import { runCommand } from '@/lib/commands/native-commands';
 import { AlertCircle, ArrowLeft, Package, RefreshCw } from 'lucide-react';
 
-type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try'; stock?: string };
+type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try'; stock?: string; preview_id?: string };
 
 function UnavailableProductRoute({ requested }: { requested?: string }) {
   const productRequested = requested?.startsWith('/admin/products');
@@ -119,6 +119,9 @@ export function EcommerceAppView({ search, forcePackagedAsset = false }: {
       // It never grants site ownership, installs a component or publishes content.
       if (search.stock && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock))
         resolved.searchParams.set('stock', search.stock);
+      if (page?.split('?')[0]==='/admin/onboarding-preview' && search.preview_id &&
+          /^cprev_[a-f0-9]{24}$/.test(search.preview_id))
+        resolved.searchParams.set('preview_id', search.preview_id);
       // Preserve a validated Theme Store Try intent into the authenticated CMS
       // receiver. This is a selection hint, never authorization for installation.
       const trySelection = page === '/admin/store' ? themeStoreTrySelection(search) : null;

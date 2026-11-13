@@ -18,6 +18,7 @@ renderShell("/admin/store", `
           <span id="store-visibility-label">Online Store</span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
+        <a class="btn ghost small" id="test-customer-flow-btn" href="/admin/onboarding-preview" target="_top" rel="noopener" title="Test plan selection, checkout review, setup and welcome without a payment provider">Preview checkout</a>
         <button type="button" class="btn ghost small" id="view-storefront-btn" disabled title="Connect a site to preview the published storefront">View site</button>
         <button type="button" class="online-store-icon-btn" aria-label="More actions">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
@@ -405,6 +406,13 @@ function showActiveTheme(theme,siteId) {
     const d = initial?.ok && (!siteId || initial.selected_site_id===siteId) ? initial :
       await adminFetch('/api/admin/store/online'+(siteId?'?site_id='+encodeURIComponent(siteId):''));
     const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
+    const journey=document.getElementById('test-customer-flow-btn');
+    if(journey) {
+      const intent=new URL('/admin/onboarding-preview',location.origin);
+      if(d.selected_site_id && /^[A-Za-z0-9_-]{1,120}$/.test(d.selected_site_id))
+        intent.searchParams.set('site_id',d.selected_site_id);
+      journey.href=intent.pathname+intent.search;
+    }
     document.querySelector('.online-store').dataset.siteId=d.selected_site_id||'';
     if(d.selected_site_id && location.pathname==='/admin/store'){
       const canonical=new URL(location.href);

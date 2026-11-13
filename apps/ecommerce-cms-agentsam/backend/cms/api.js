@@ -11,6 +11,7 @@ import {
   saveSiteOwnedSectionDraft,
 } from "./site-owned-page-adapter.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
+import {handleCheckoutPreviewApi} from "./checkout-preview.mjs";
 import {
   buildCatalogInstanceContent,
   isCatalogInstalledContent,
@@ -2750,6 +2751,8 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if(collectionResponse)return collectionResponse;
   const path = url.pathname;
   const method = request.method;
+  const checkoutPreview=await handleCheckoutPreviewApi(request,env,url,context);
+  if(checkoutPreview)return checkoutPreview;
   const siteId = url.searchParams.get("site_id") || null;
   const pageId = url.searchParams.get("page_id") || null;
   const pageMode = async (slug) => {

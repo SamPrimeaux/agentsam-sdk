@@ -1009,6 +1009,36 @@
       "interactive": true,
       "stock_asset_id": "agentsam.stock.assistant-workspace",
       "source_sha256": "4b76065bfea7c4285eea0ebdfe0d50e46a8bb9fea0958828b2010a88693d6120"
+    },
+    {
+      "id": "stock:workspace-setup/Onboarding.dc.html",
+      "filename": "workspace-setup/Onboarding.dc.html",
+      "family": "stock",
+      "title": "Workspace setup",
+      "category": "Platform stock",
+      "page": "onboarding",
+      "width": 1440,
+      "height": 900,
+      "x": 1520,
+      "y": 7200,
+      "interactive": true,
+      "stock_asset_id": "agentsam.stock.workspace-setup",
+      "source_sha256": "f61eff3a89145f13b7151834ec48a48907ceb35399b1da945d79b34ec122488c"
+    },
+    {
+      "id": "stock:style-spec-bw/StyleSpec.dc.html",
+      "filename": "style-spec-bw/StyleSpec.dc.html",
+      "family": "stock",
+      "title": "Style spec · clean company b/w",
+      "category": "Platform stock",
+      "page": "onboarding",
+      "width": 1440,
+      "height": 1700,
+      "x": 3040,
+      "y": 7200,
+      "interactive": true,
+      "stock_asset_id": "agentsam.stock.style-spec-bw",
+      "source_sha256": "b9d3a8ab28e58742689b04d05b6c528aec1ad1d4729236f09b9732d736f6b6ca"
     }
   ]
 }

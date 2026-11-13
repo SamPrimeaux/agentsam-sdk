@@ -36,7 +36,7 @@ function memoryStore(project){
 test("all 13 owner-supplied stock sources have an actual renderer, controls and a CMS draft contract",()=>{
   const expected=new Set(catalog.items.map(item=>item.id));
   const entries=stock.catalog();
-  assert.equal(entries.length,13);
+  assert.equal(entries.length,15);
   for(const entry of entries){
     assert.ok(expected.has(entry.stockAssetId),entry.id);
     assert.ok(portable.get(entry.id));

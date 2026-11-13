@@ -9,6 +9,8 @@ test('only frozen original HTML imports skip authored UI gates', () => {
     'apps/design-canvas/public/sources/onboarding-exports/Onboarding.dc.html',
     'apps/design-canvas/public/sources/onboarding-exports/OnboardingOffersCollection.html',
     'apps/design-canvas/public/sources/stock/choose-a-plan/Main.dc.html',
+    'apps/design-canvas/public/sources/stock/workspace-setup/Onboarding.dc.html',
+    'apps/design-canvas/public/sources/stock/style-spec-bw/StyleSpec.dc.html',
     'apps/design-canvas/public/sources/stock/mini-confirmation/MiniAgentSamPublish.dc.html',
   ]) assert.equal(isImmutableDesignReference(path), true, path);
 

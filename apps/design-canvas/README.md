@@ -17,7 +17,7 @@ The agentsam.app.v1 manifest is compatible with the Local Studio included-app bu
 
 ## Source boundaries
 
-- All 75 HTML documents (62 existing artboards plus 13 additional versioned platform stock sources) are packaged as app-owned data and rendered inside sandboxed iframes without allow-same-origin. A narrowly allowlisted postMessage document bridge resolves only filenames in the packaged source manifest, so imported dc-import compositions work when the Side Stage host itself runs the app in an opaque origin. The bridge grants no host API, authentication, or network access.
+- All 77 HTML documents (62 existing artboards plus 15 versioned platform stock sources) are packaged as app-owned data and rendered inside sandboxed iframes without allow-same-origin. A narrowly allowlisted postMessage document bridge resolves only filenames in the packaged source manifest, so imported dc-import compositions work when the Side Stage host itself runs the app in an opaque origin. The bridge grants no host API, authentication, or network access.
 - Original scripts may request public static assets such as CSS, support.js, reference image, GLB, and video. The app intentionally does not treat those assets as authentication or live business data.
 - Source-backed artboards and onboarding screens are interactive imported design documents, not proof that checkout, billing, or user signup are wired to the live backend.
 - The theme tokens are preserved under design-system/.
@@ -27,7 +27,7 @@ The agentsam.app.v1 manifest is compatible with the Local Studio included-app bu
 
 ## Platform stock and route ownership
 
-The original 13 user-provided ZIP exports are preserved under
+The original 13 user-provided ZIP exports and two further onboarding collection boards are preserved under
 `public/sources/stock/<slug>/` with their HTML, dependency scripts, original
 README files, provenance, SHA-256 object checksums and R2 keys in
 `public/sources/stock/catalog.json`. Four baseline onboarding documents are
