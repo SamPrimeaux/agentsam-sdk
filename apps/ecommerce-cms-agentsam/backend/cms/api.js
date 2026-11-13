@@ -32,6 +32,7 @@ import {
   PAGE_REGISTRY,
 } from "./registry.js";
 // The same concrete section definitions are loaded by the browser and Worker.
+import "../../packages/theme-contract/runtime/platform-stock-sections.js";
 import "../../packages/theme-contract/runtime/portable-sections.js";
 import { reviseAtlas } from "../../packages/theme-contract/runtime/revise-atlas-source.js";
 // The Worker validates the exact same Revise section contract the browser renders.
