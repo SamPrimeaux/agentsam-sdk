@@ -837,3 +837,20 @@ body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-b
   .asm-capability-popover,.asm-skill-dialog { transition: none !important; }
   .asm-skill-dialog::backdrop { backdrop-filter: none; }
 }
+
+
+/* Sidekick identity and action colors inherit account chrome, not a fixed
+   violet persona. Site-theme colors stay isolated inside the preview iframe. */
+:root { --agentsam-sidekick-accent: var(--nav-accent, var(--te-accent, #238552)); }
+.agentsam-mark {
+  color: var(--agentsam-sidekick-accent);
+  background: color-mix(in srgb,var(--agentsam-sidekick-accent) 12%,transparent);
+  border-color: color-mix(in srgb,var(--agentsam-sidekick-accent) 25%,transparent);
+}
+.agentsam-proposal-actions button.is-primary {
+  background: var(--agentsam-sidekick-accent);
+  border-color: var(--agentsam-sidekick-accent);
+}
+.agentsam-msg-route { color: var(--agentsam-sidekick-accent); }
+.agentsam-proposal-actions button:focus-visible,
+.agentsam-close:focus-visible { outline:2px solid var(--agentsam-sidekick-accent); outline-offset:2px; }

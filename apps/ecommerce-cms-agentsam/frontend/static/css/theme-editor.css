@@ -9,7 +9,9 @@
   --te-text: #20201f;
   --te-muted: #74746f;
   --te-soft: #f7f7f5;
-  --te-accent: #5f43d5;
+  /* Account shell appearance is the editor chrome authority. The storefront
+     preview retains its own independent site-owned theme tokens. */
+  --te-accent: var(--nav-accent, var(--iam-ui-accent, #238552));
   --te-accent-soft: color-mix(in srgb, var(--te-accent) 11%, var(--te-panel));
   --te-success: #17844a;
   --te-danger: #b42318;
@@ -4077,4 +4079,67 @@ dialog.te-section-menu .te-section-search {
 }
 @media (prefers-reduced-motion: reduce) {
   .te-resize-handle::after { transition: none; }
+}
+
+
+/* Source-catalog accessibility polish. These controls are editor chrome,
+   never storefront theme content, and use the account shell token contract. */
+.te-section-menu {
+  --catalog-panel: var(--te-panel, #fff);
+  --catalog-ink: var(--te-text, #20201f);
+  --catalog-muted: var(--te-muted, #74746f);
+  --catalog-border: var(--te-border, #e3e3df);
+  --catalog-selection: var(--te-accent-soft, #ecf5ef);
+}
+dialog.te-section-menu {
+  background: var(--catalog-panel);
+  color: var(--catalog-ink);
+  border-color: var(--catalog-border);
+}
+dialog.te-section-menu .te-section-menu__head,
+.te-catalog-toolbar,
+.te-catalog-preview-meta { border-color: var(--catalog-border); background: var(--catalog-panel); }
+dialog.te-section-menu .te-section-menu__head small,
+.te-catalog-preview-meta small,
+.te-catalog-list-item small { color: var(--catalog-muted); }
+dialog.te-section-menu .te-section-search {
+  border-color: var(--catalog-border);
+  color: var(--catalog-ink);
+  background: var(--catalog-panel);
+}
+.te-catalog-tabs { border-color: var(--catalog-border); background: var(--te-soft, #f7f7f5); }
+.te-catalog-tabs button.is-active { color: var(--catalog-ink); background: var(--catalog-panel); }
+.te-catalog-list { background: var(--catalog-panel); border-color: var(--catalog-border); }
+.te-catalog-list-item { color: var(--catalog-ink); min-height: 44px; }
+.te-catalog-list-item:hover { background: var(--te-soft, #f7f7f5); }
+.te-catalog-list-item.is-selected {
+  border-color: var(--te-accent);
+  background: var(--catalog-selection);
+  color: var(--catalog-ink);
+}
+.te-catalog-preview { background: var(--te-canvas, #f4f4f2); }
+.te-catalog-preview-meta strong { color: var(--catalog-ink); }
+.te-catalog-add { background: var(--te-accent); border-color: var(--te-accent); min-height: 44px; }
+.te-catalog-add:hover:not(:disabled) { background: color-mix(in srgb,var(--te-accent) 85%,black); }
+.te-catalog-generate {
+  background: var(--catalog-selection);
+  border-color: color-mix(in srgb,var(--te-accent) 35%,var(--catalog-border));
+  color: var(--catalog-ink);
+}
+.te-catalog-generate small { color: var(--catalog-muted); }
+.te-catalog-help { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+dialog.te-section-menu :is(button,input):focus-visible {
+  outline: 2px solid var(--te-accent);
+  outline-offset: 2px;
+}
+@media (max-width:700px) {
+  dialog.te-section-menu .te-section-menu__head { min-height:52px; padding:10px 14px; }
+  dialog.te-section-menu .te-section-search { min-height:44px; }
+  .te-catalog-tabs button { min-height:40px; }
+  .te-catalog-preview-meta { flex-wrap:wrap; }
+  .te-catalog-preview-meta .te-catalog-add { margin-left:auto; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .te-catalog-tabs button,.te-catalog-add,.te-catalog-list-item { transition:none!important; }
 }

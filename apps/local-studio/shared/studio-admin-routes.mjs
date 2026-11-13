@@ -13,6 +13,9 @@
 export const STUDIO_ADMIN_MOUNTS = Object.freeze([
   Object.freeze({ id: 'work.projects', flat: '/projects', canonical: '/admin/projects' }),
   Object.freeze({ id: 'commerce.home', flat: '/admin/home', canonical: '/admin/home', exactOnly: true }),
+  // Canonical Online Store uses the same installed Ecommerce component as the
+  // legacy /apps/ecommerce-cms-agentsam?page=/admin/store launch surface.
+  Object.freeze({ id: 'commerce.store', flat: '/admin/store', canonical: '/admin/store', exactOnly: true }),
   Object.freeze({ id: 'agent.chat', flat: '/agentsam', canonical: '/admin/agentsam', exactOnly: true }),
   Object.freeze({ id: 'cad.studio', flat: '/cad', canonical: '/admin/cad' }),
   // SamSketch owns /samsketch as an included app route — do not redirect it into CAD.

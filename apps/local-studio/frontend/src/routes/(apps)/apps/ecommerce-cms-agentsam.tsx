@@ -78,7 +78,18 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
  * and its page search parameter. The Worker separately serves direct /admin/* URLs.
  */
 function EcommerceAppHost() {
-  const search = Route.useSearch();
+  return <EcommerceAppView search={Route.useSearch()} />;
+}
+
+/**
+ * Reusable installed product view. The clean /admin/store mount and legacy
+ * /apps/... wrapper intentionally share this one component and product routes.
+ * The clean mount frames the packaged asset to avoid an iframe self-loop.
+ */
+export function EcommerceAppView({ search, forcePackagedAsset = false }: {
+  search: Search;
+  forcePackagedAsset?: boolean;
+}) {
   const [bridgeReady, setBridgeReady] = useState(!isPackagedDesktop());
   useEffect(() => {
     if (!isPackagedDesktop()) return;
@@ -92,7 +103,7 @@ function EcommerceAppHost() {
   const localPreview = localHost && search.preview === 'local';
   const isCodeEditor = search.page === '/admin/theme-code-editor';
   const page = isCodeEditor ? '/admin/theme-code-editor' : resolveEcommerceAdminPath(search.page || '/admin/store');
-  const assetPath = page && !isCodeEditor && (isPackagedDesktop() ? resolveEcommerceAssetPath(page) : page);
+  const assetPath = page && !isCodeEditor && ((isPackagedDesktop() || forcePackagedAsset) ? resolveEcommerceAssetPath(page) : page);
   const url = typeof window !== 'undefined' && assetPath
     ? (() => {
       const resolved = new URL(assetPath, window.location.origin);
