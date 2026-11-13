@@ -7,6 +7,8 @@ import {listCmsComponentCatalog} from '../../../apps/ecommerce-cms-agentsam/back
 
 const src=new URL('../backend/migrations/1363_onboarding_stock_six.sql',import.meta.url);
 const sql=readFileSync(src,'utf8');
+const packageSql=readFileSync(
+ new URL('../backend/migrations/1364_cms_stock_package_manifests.sql',import.meta.url),'utf8');
 const catalog=JSON.parse(readFileSync(new URL('../../../apps/design-canvas/public/sources/stock/catalog.json',import.meta.url),'utf8'));
 const slugs=['choose-a-plan','start-trial-checkout','setup-goals','workspace-setup','first-run-home','style-spec-bw'];
 function setup(){
@@ -25,7 +27,8 @@ function setup(){
  CREATE TABLE cms_components(
   id TEXT PRIMARY KEY,definition_id TEXT NOT NULL UNIQUE REFERENCES cms_definitions(id),
   renderer_key TEXT NOT NULL,delivery_mode TEXT NOT NULL DEFAULT 'bundled',
-  source_ref TEXT,preview_r2_bucket TEXT,preview_r2_key TEXT,capabilities_json TEXT NOT NULL DEFAULT '{}',
+  source_ref TEXT,package_ref TEXT,artifact_r2_bucket TEXT,artifact_r2_key TEXT,artifact_sha256 TEXT,
+  preview_r2_bucket TEXT,preview_r2_key TEXT,capabilities_json TEXT NOT NULL DEFAULT '{}',
   compatibility_json TEXT NOT NULL DEFAULT '{}',verification_json TEXT NOT NULL DEFAULT '{}',
   implementation_status TEXT NOT NULL DEFAULT 'unverified'
  );
@@ -89,6 +92,8 @@ test('native system components are installable for another account without copyi
  const db=setup();
  try{
   db.exec(sql);
+  db.exec(packageSql);
+  db.exec(packageSql); // repeat application must preserve stable references
   const env={DB:{prepare(sql){let params=[];return {
    bind(...args){params=args;return this;},
    async all(){return {results:db.prepare(sql).all(...params)};}
@@ -99,6 +104,12 @@ test('native system components are installable for another account without copyi
   assert.ok(stock.every(row=>row.installable===true),'All builtin native stocks are installable');
   assert.ok(stock.every(row=>row.definition?.origin==='built_in'));
   assert.ok(stock.every(row=>row.rendererKey?.startsWith('platform/')));
+  assert.ok(stock.every(row=>/^cms-component:platform\/[a-z0-9-]+@1\.0\.0$/.test(row.packageRef)));
+  assert.ok(stock.every(row=>row.packageManifestKey?.startsWith('packages/platform/')));
+  assert.ok(stock.every(row=>row.packageManifestSha256?.length===64));
+  assert.ok(stock.every(row=>row.r2Key.startsWith('cms/design-stock/v1/')),
+   'v1 preview source pointers remain available to previously published consumers');
+  assert.ok(stock.every(row=>row.installable===true));
   assert.equal(db.prepare("SELECT count(*) n FROM cms_definitions WHERE account_id='acct-other'").get().n,0,
     'Offering platform components never creates duplicate account-owned system definitions');
  }finally{db.close();}
