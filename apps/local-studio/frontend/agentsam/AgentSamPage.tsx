@@ -1,10 +1,11 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Maximize2, Minimize2, PanelLeft, PanelRight, MessageSquarePlus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Maximize2, Minimize2, PanelLeft, Plus, MessageSquarePlus } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { IconAction } from '@/components/ui/icon-action';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MessageList } from '@/components/workbench/thread';
 import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
@@ -86,6 +87,10 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     const id = state.startChat();
     void navigate({ to: '/chats/$chatId', params: { chatId: id } });
   };
+  const openBrowserTab = (fullView: boolean) => {
+    state.openSideTab('browser', { ephemeral: false });
+    setWorkFocused(fullView);
+  };
 
   if (!chat) return <div className="agentsam-welcome"><h1>Conversation unavailable</h1><button type="button" className="as-nav-button" onClick={startNewChat}>New chat</button></div>;
 
@@ -105,26 +110,33 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       const trigger = document.querySelector<HTMLButtonElement>('[data-console-nav-toggle]') || document.getElementById('admin-menu-toggle') as HTMLButtonElement | null;
       trigger?.click();
     }}><PanelLeft size={18} /></IconAction> : <Nav.Trigger aria-label="Toggle global navigation" />}
-    <IconAction label={state.sideOpen ? 'Close Side Stage tabs' : 'Open Side Stage tabs'} hint="Show or hide Side Stage" onClick={() => {
-      if (state.sideOpen) state.setSideOpen(false);
-      else if (state.sideTabs.length) state.setSideOpen(true);
-      else state.openSideTab('browser', { ephemeral: false });
-    }}><PanelRight size={18} /></IconAction>
-    <IconAction label={workFocused ? 'Exit full view' : 'Enter full view'} hint="Focus Side Stage while keeping the lead composer" onClick={() => {
-      if (!workFocused) {
-        if (!state.sideTabs.length) state.openSideTab('browser', { ephemeral: false });
-        else state.setSideOpen(true);
-      }
-      setWorkFocused(focused => !focused);
-    }}>{workFocused ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</IconAction>
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
-  const headerActions = empty ? <span className="agentsam-blank-conversation-actions" aria-hidden="true" /> : <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
+  const headerActions = <div className="agentsam-header-utilities">
+    <div className="agentsam-topbar-browser-actions" role="group" aria-label="Browser and annotation controls">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild><IconAction label="New browser tab" hint="New tab or new tab in full view"><Plus size={18} /></IconAction></DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => openBrowserTab(false)}>New tab</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => openBrowserTab(true)}>New tab in full view</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <IconAction label={workFocused ? 'Exit full view' : 'Enter full view'} hint="Toggle focused Side Stage" onClick={() => {
+        if (!workFocused) {
+          if (!state.sideTabs.length) state.openSideTab('browser', { ephemeral: false });
+          else state.setSideOpen(true);
+        }
+        setWorkFocused(focused => !focused);
+      }}>{workFocused ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</IconAction>
+      <AnnotationToggle />
+    </div>
+    {!empty && <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
       {isMobile ? <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} /> : null}
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><MessageSquarePlus size={20} aria-hidden="true" /></IconAction>
       <Nav.ConversationActions />
       <Nav.ShareButton />
       <Nav.PinnedSummary />
+    </div>}
   </div>;
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
     {hostModeSlot ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
@@ -138,7 +150,6 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       {!hostActionsSlot ? headerActions : null}
     </Nav.Topbar> : null}
     <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "") + (leadComposerDetached ? " has-detached-composer" : "")}>
-      {hostModeSlot && empty && data.mode !== 'work' ? <div className="agentsam-context-tools" aria-label="Conversation tools"><AnnotationToggle /></div> : null}
       <section className="agentsam-conversation" aria-label="Conversation" inert={mobileWorkOpen || (isMobile && state.sideOpen) || workFocused} style={workFocused || mobileWorkOpen ? { display:"none" } : undefined}>
         <AgentConversationSurface
           empty={empty}

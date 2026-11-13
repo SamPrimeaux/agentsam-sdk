@@ -95,8 +95,10 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
             <div
               key={item.id}
               className={cn(
-                "flex h-8 shrink-0 items-center rounded-full pl-2.5",
-                item.id === activeId ? "bg-muted text-foreground" : "text-muted-foreground",
+                "flex h-8 shrink-0 items-center rounded-[7px] border pl-2.5 backdrop-blur-md transition-colors",
+                item.id === activeId
+                  ? "border-border bg-muted/80 text-foreground shadow-sm"
+                  : "border-transparent bg-background/30 text-muted-foreground hover:border-border/60 hover:bg-muted/40",
               )}
             >
               <button
@@ -105,7 +107,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 className="flex items-center gap-1.5 py-1 text-xs"
               >
                 <TabIcon kind={item.kind} />
-                <span className="max-w-28 truncate">{item.title}</span>
+                <span className="max-w-28 truncate" title={item.title}>{item.title}</span>
               </button>
               <IconAction
                 type="button"
