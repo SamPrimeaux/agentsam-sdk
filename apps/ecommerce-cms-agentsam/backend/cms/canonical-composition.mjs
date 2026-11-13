@@ -1,5 +1,7 @@
 import { buildBlockTree } from "./composition-contract.ts";
 import { resolveCmsSite } from "./site-context.mjs";
+import { cmsPageStorageMode } from "./page-inventory.mjs";
+import { getSiteOwnedPage } from "./site-owned-page-adapter.mjs";
 
 /**
  * Read the installed D1 document without interpreting PAGE_REGISTRY fixture
@@ -8,6 +10,11 @@ import { resolveCmsSite } from "./site-context.mjs";
 export async function readCanonicalComposition(env, accountId, slug, siteId = null) {
   if (!accountId || !/^[a-z0-9-]{1,100}$/.test(String(slug))) {
     throw new Error("cms_composition_invalid_scope");
+  }
+  // The old account-scoped composer is kept only for migration-era site-first
+  // installations. Live shared D1 pages are owned through cms_sites.
+  if ((await cmsPageStorageMode(env.DB)) !== "site-first") {
+    return readSiteOwnedComposition(env, accountId, slug, siteId);
   }
   const site = siteId
     ? await resolveCmsSite(env.DB, { accountId, siteId })
@@ -55,5 +62,54 @@ export async function readCanonicalComposition(env, accountId, slug, siteId = nu
       metadata:decode(row.metadata_json),
       blocks:buildBlockTree(row.id,blockRows.filter(b=>b.section_id===row.id)),
     })),
+  };
+}
+
+
+/**
+ * Canonical site-owned composition. Use the same R2 hydration and ownership
+ * checks as the page editor rather than inventing a second content reader.
+ * Do not mix draft section content with the published site artifact.
+ */
+async function readSiteOwnedComposition(env, accountId, slug, siteId) {
+  const site = siteId
+    ? await resolveCmsSite(env.DB, { accountId, siteId })
+    : await resolveCmsSite(env.DB, { accountId, createDefault: true });
+  const resolved = await getSiteOwnedPage(env, accountId, slug, site.id);
+  if (!resolved?.page) return null;
+  const page = resolved.page;
+  const [sectionResult, blockResult] = await Promise.all([
+    env.DB.prepare(`SELECT id, section_type, draft_r2_key, published_r2_key, r2_bucket
+      FROM cms_page_sections WHERE page_id=? ORDER BY sort_order,id`).bind(page.id).all(),
+    env.DB.prepare(`SELECT b.id,b.section_id,b.parent_block_id,b.block_key,b.block_type,
+      b.sort_order,b.status,b.content_json
+      FROM cms_section_blocks b
+      INNER JOIN cms_page_sections s ON s.id=b.section_id
+      WHERE b.account_id=? AND s.page_id=?
+      ORDER BY b.sort_order,b.id`).bind(accountId,page.id).all(),
+  ]);
+  const sectionRows = new Map((sectionResult.results || []).map(row => [row.id, row]));
+  const blockRows = blockResult.results || [];
+  return {
+    authority: "cms_d1_installed",
+    revision: "draft",
+    page: {
+      id: page.id, siteId: page.site_id, slug: page.slug, title: page.title,
+      pageType: page.page_type, templateKey: page.template_sku,
+      status: page.status, metadata: page.metadata || {},
+    },
+    sections: page.sections.map(section => {
+      const source = sectionRows.get(section.id);
+      if (!source) throw new Error("cms_composition_section_missing");
+      return {
+        id: section.id, key: section.key, type: source.section_type,
+        order: section.sort_order, status: section.status,
+        settings: section.content,
+        contentObjectKey: source.draft_r2_key || source.published_r2_key || null,
+        contentVersion: section.version,
+        metadata: {},
+        blocks: buildBlockTree(section.id, blockRows.filter(row => row.section_id === section.id)),
+      };
+    }),
   };
 }
