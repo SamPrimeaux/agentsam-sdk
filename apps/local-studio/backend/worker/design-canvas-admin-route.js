@@ -18,6 +18,15 @@ export async function serveDesignCanvasAdminRoute(request, env, guardDocument) {
   // document dependencies. Do not use the site theme or CMS page router.
   const denied = await guardDocument(request, env);
   if (denied) return denied;
+  // One editor owner: the account-backed native Canvas. Only its old static
+  // root redirects; nested source assets continue resolving as before.
+  if (url.pathname === prefix + '/') {
+    const destination = new URL('/canvas', url);
+    destination.searchParams.set('library','sources');
+    return new Response(null, { status: 302, headers: {
+      location: destination.toString(), 'cache-control':'private, no-store',
+    }});
+  }
   const tail = url.pathname.slice(prefix.length + 1);
   if (tail.split('/').some(part => part === '..' || part === '.') ||
       !/^[A-Za-z0-9_./%-]*$/.test(tail))

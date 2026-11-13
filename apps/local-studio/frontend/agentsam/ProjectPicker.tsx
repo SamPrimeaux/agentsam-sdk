@@ -95,6 +95,12 @@ export function ProjectPicker({ chatId }: { chatId: string }) {
     } finally { setBusy(false); }
   }
 
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener('agentsam:open-project-picker:' + chatId, show);
+    return () => window.removeEventListener('agentsam:open-project-picker:' + chatId, show);
+  }, [chatId]);
+
   return <Dialog.Root modal={false} open={open} onOpenChange={setOpen}><div className="agentsam-project-picker" ref={root}><Dialog.Trigger asChild>
     <button type="button" className="agentsam-project-trigger" aria-label="Choose project" aria-expanded={open}
       aria-haspopup="dialog" onClick={() => { setOpen((value) => !value); setCreating(false); }}>

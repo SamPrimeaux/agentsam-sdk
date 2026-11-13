@@ -157,6 +157,8 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
       onClick={event=>{event.stopPropagation();if(preview)void action(node);else onSelect(node.id,board.id);}}>
       {renderComponent&&node.componentId?.startsWith("live-preview:") ? renderComponent(node,board) :
        node.type==="image" ? <CanvasImage src={safeUrl(node.src,true)} alt={node.text||node.name}/> :
+       node.type==="html" ? <iframe className="cv-native-html" title={node.name} sandbox="allow-scripts" referrerPolicy="no-referrer"
+         srcDoc={node.sourceHtml ? (node.sourceBase ? node.sourceHtml.replace(/<head([^>]*)>/i, `<head$1><base href="${node.sourceBase}">`) : node.sourceHtml) : '<!doctype html><html><body></body></html>'} /> :
        node.type==="input" ? <input className="cv-native-input" aria-label={node.name} placeholder={node.text} readOnly={!preview} onChange={e=>{previewValues.current[node.id]=e.target.value;}}/> :
        node.type==="button" ? <button type="button" className="cv-native-button" tabIndex={preview?0:-1}>{node.text||node.name}</button> :
        node.type==="link" ? <span className="cv-link">{node.text||node.name}</span> :

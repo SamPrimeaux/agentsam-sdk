@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Maximize2, Paperclip, Pause, Play, Square, Target, Trash2 } from "lucide-react";
+import { ArrowUp, ImagePlus, Maximize2, Mic, Paperclip, Pause, Play, Square, Target, Trash2, X } from "lucide-react";
 import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
@@ -15,6 +15,10 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { resolveChatImages, stageChatImage, type ChatImagePayload, type ChatImageReference } from "@/lib/content/chat-images";
 import { ImageLightbox } from "@/components/workbench/image-lightbox";
 import { CHAT_IMAGE_DROP_EVENT, takeChatImages } from "@/lib/content/chat-drop-queue";
+import { ComposerLibraryPicker } from "./composer-library-picker";
+import { VoiceSession, startDictation, canDictate } from "./voice-session";
+import "./composer-library.css";
+import "./work-voice.css";
 
 const RUN_MODE_PLACEHOLDERS = {
   agent: "Work on anything…",
@@ -32,6 +36,7 @@ export function Composer({
   onCancel,
   busy,
   contextLabel,
+  workMode = false,
 }: {
   targetId: string;
   targetKind: "chat" | "side";
@@ -40,10 +45,17 @@ export function Composer({
   onCancel?: () => void;
   busy?: boolean;
   contextLabel?: string;
+  workMode?: boolean;
 }) {
   const value = useWorkStore((s) => s.drafts[targetId] ?? "");
   const { user } = useCurrentUserState();
   const [staging, setStaging] = useState(false);
+  const [libraryOpen,setLibraryOpen] = useState(false);
+  const [voiceOpen,setVoiceOpen] = useState(false);
+  const [imageMode,setImageMode] = useState(false);
+  const [dictating,setDictating] = useState(false);
+  const dictationStop = useRef<(() => void) | null>(null);
+  useEffect(() => () => { dictationStop.current?.(); }, []);
   const setDraft = useWorkStore((s) => s.setDraft);
   const send = useWorkStore((s) => s.send);
   const stop = useWorkStore((s) => s.stop);
@@ -83,8 +95,19 @@ export function Composer({
       }
       if (selected.length > capacity) toast.message(`Only the first ${capacity} image(s) were added. The limit is 20 per message.`);
       for (const file of selected.slice(0, capacity)) {
-        const image = await stageChatImage(file, user?.id || "");
-        next.push({ ...image, previewUrl: URL.createObjectURL(file) });
+        const supportedImage = ['image/png', 'image/jpeg', 'image/webp'].includes(file.type);
+        const supportedText = ['text/plain', 'text/markdown', 'text/csv', 'text/html', 'application/json', 'application/xml'].includes(file.type)
+          || /\.(md|txt|csv|json|html|xml)$/i.test(file.name);
+        if (supportedImage) {
+          const image = await stageChatImage(file, user?.id || '');
+          next.push({ ...image, previewUrl: URL.createObjectURL(file) });
+        } else if (supportedText && file.size <= 1_000_000) {
+          const contents = (await file.text()).slice(0, 24_000).replaceAll('```', '``\u200b`');
+          const old = useWorkStore.getState().drafts[targetId] || '';
+          setDraft(targetId, [old, 'Attached reference file: ' + file.name + '\n```text\n' + contents + '\n```'].filter(Boolean).join('\n\n'));
+        } else {
+          toast.error('Unsupported file: ' + file.name + '. Attach PNG/JPEG/WebP or a text, Markdown, JSON, CSV, HTML or XML file under 1 MB.');
+        }
       }
       setPendingAttachments((previous) => [...previous, ...next].slice(0, 20));
     } catch (error) {
@@ -120,6 +143,7 @@ export function Composer({
   }
 
   async function submitWithAttachments() {
+    if (imageMode) { await generateImage(); return; }
     if (staging || submitting || streaming || (!value.trim() && !pendingAttachments.length)) return;
     if (onSubmit) {
       setSubmitting(true);
@@ -146,6 +170,56 @@ export function Composer({
     setPendingAttachments([]);
   }
 
+  function webSearch() {
+    const state = useWorkStore.getState();
+    const id = state.openSideTab('browser', { ephemeral: false });
+    if (value.trim()) state.setTabUrl(id, 'https://duckduckgo.com/?q=' + encodeURIComponent(value.trim()));
+  }
+  function openProject() {
+    window.dispatchEvent(new Event('agentsam:open-project-picker:' + targetId));
+  }
+  function beginDictation() {
+    if (dictating) { dictationStop.current?.(); dictationStop.current = null; setDictating(false); return; }
+    if (!canDictate()) { toast.error('Dictation is not supported by this browser.'); return; }
+    setDictating(true);
+    dictationStop.current = startDictation(text => {
+      const current = useWorkStore.getState().drafts[targetId] || '';
+      setDraft(targetId, [current.trim(), text].filter(Boolean).join(' '));
+      setDictating(false);
+    }, message => {
+      if (!message.startsWith('Listening')) { setDictating(false); toast.message(message); }
+    });
+  }
+  async function generateImage() {
+    const prompt = value.trim();
+    if (!prompt || submitting || staging) return;
+    setSubmitting(true);
+    try {
+      // This is the existing image-generation runtime, not a fabricated chat-only image mode.
+      const response = await fetch('/api/admin/agentsam/chat', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ message: prompt, task_type: 'image_generation', mode: 'image', lane: 'image',
+          workflow_key: 'commerce_creative_studio', context: { page: '/admin/agentsam',
+            task_type: 'image_generation', mode: 'image', lane: 'image', workflow_key: 'commerce_creative_studio' } }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ai?.image_base64) throw new Error(String(body.ai?.error_code || body.error || 'Image generation is not configured or returned no artwork.'));
+      const base64 = String(body.ai.image_base64).split(',').pop() || '';
+      const decoded = atob(base64);
+      const bytes = Uint8Array.from(decoded, char => char.charCodeAt(0));
+      const mime = String(body.ai.mime_type || 'image/png');
+      const file = new File([bytes], 'agentsam-generated-' + Date.now() + (mime === 'image/jpeg' ? '.jpg' : '.png'), { type: mime });
+      if (file.size > 5_000_000) throw new Error('The image exceeds the 5 MB message attachment limit.');
+      const asset = await stageChatImage(file, user?.id || '');
+      setPendingAttachments(items => [...items, { ...asset, previewUrl: URL.createObjectURL(file) }].slice(0,20));
+      if (useWorkStore.getState().drafts[targetId] === value) setDraft(targetId, '');
+      setImageMode(false);
+      toast.success('Image generated and attached for review.');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Image generation could not run.'); }
+    finally { setSubmitting(false); }
+  }
+
   const attachControl = (
     <>
       <input
@@ -154,7 +228,7 @@ export function Composer({
         className="hidden"
         suppressHydrationWarning
         multiple
-        accept="image/png,image/jpeg,image/webp"
+        accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json,.html,.xml"
         onChange={(event) => {
           void onFiles(event.target.files);
           event.target.value = "";
@@ -164,13 +238,12 @@ export function Composer({
         size="icon-sm"
         variant="ghost"
         label="Attach images"
-        hint="Attach up to 20 images (PNG, JPEG, WebP, 5 MB each)"
+        hint="Attach images or reference text files"
         onClick={() => fileRef.current?.click()}
       >
         <Paperclip className="size-4" />
       </IconAction>
-      <RunModeSelect value={runMode} onChange={(mode) => setRunMode(targetId, mode)} compact />
-      <ModelSelect compact />
+      {!workMode ? <><RunModeSelect value={runMode} onChange={(mode) => setRunMode(targetId, mode)} compact /><ModelSelect compact /></> : null}
     </>
   );
 
@@ -196,7 +269,7 @@ export function Composer({
   ) : null;
 
   const sendControl = (
-    <IconAction
+    <span className="as-composer-send-wrap"><button type="button" className="as-composer-voice-quick" onClick={() => setVoiceOpen(true)}>Start voice</button><IconAction
       type="button"
       size="icon-sm"
       label="Send"
@@ -206,7 +279,7 @@ export function Composer({
       onClick={submitWithAttachments}
     >
       <ArrowUp className="size-4" />
-    </IconAction>
+    </IconAction></span>
   );
 
   const cancelControl = (
@@ -265,19 +338,29 @@ export function Composer({
           }
         />
       ) : null}
-      <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()} contextLabel={contextLabel}>{({ trigger, onKeyDown, onSelect }) => <AgentComposer
+      <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()}
+        onLibrary={workMode ? () => setLibraryOpen(true) : undefined}
+        onImage={workMode ? () => setImageMode(true) : undefined}
+        onWebSearch={workMode ? webSearch : undefined}
+        onProject={workMode && targetKind === 'chat' ? openProject : undefined}
+        activeMode={workMode ? runMode : undefined}
+        onModeChange={workMode ? mode => setRunMode(targetId,mode) : undefined}
+        contextLabel={contextLabel}>{({ trigger, onKeyDown, onSelect }) => <><AgentComposer
         value={value}
         runMode={runMode}
         onChange={(next) => setDraft(targetId, next)}
         onSend={submitWithAttachments}
         onCancel={cancel}
         streaming={streaming}
-        placeholder={targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
-        toolbarStart={<>{trigger}{targetKind === 'chat' ? <ProjectPicker chatId={targetId} /> : null}{attachControl}</>}
+        placeholder={imageMode ? 'Describe the image to create…' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
+        toolbarStart={<>{trigger}{!workMode && targetKind === 'chat' ? <ProjectPicker chatId={targetId} /> : null}{!workMode ? attachControl : <>
+          <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title={imageMode ? 'Leave image creation mode' : 'Select active mode from the + menu'}>{imageMode ? <><ImagePlus size={14}/> Image creation <X size={13}/></> : <>Mode: {runMode[0].toUpperCase() + runMode.slice(1)}</>}</button>
+        </>}</>}
+        toolbarEnd={workMode ? <><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></> : null}
         attachmentPreview={attachmentPreview}
         sendControl={sendControl}
         cancelControl={cancelControl}
-        containerClassName="agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline"
+        containerClassName={cn('agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline', workMode && 'as-work-composer-surface')}
         inputClassName={cn(
           "flex min-h-[44px] max-h-52 w-full resize-none rounded-lg bg-transparent px-1 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
           "focus:outline-none focus-visible:outline-none focus-visible:shadow-none disabled:cursor-not-allowed disabled:opacity-40",
@@ -295,7 +378,11 @@ export function Composer({
             }
           },
         }}
-      />}</PluginPicker>
+      />
+        {workMode && targetKind === 'chat' ? <div className="as-work-composer-under"><ProjectPicker chatId={targetId}/></div> : null}
+      </>}</PluginPicker>
+      <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async file => { await onFiles([file]); }} />
+      <VoiceSession open={voiceOpen} onClose={() => setVoiceOpen(false)} targetId={targetId} targetKind={targetKind} />
     </div>
   );
 }

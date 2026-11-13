@@ -731,6 +731,14 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    // Preserve source distribution under /design-canvas/sources/ while removing
+    // the second editor presented at its obsolete app root.
+    if ((url.pathname === '/design-canvas/' || url.pathname === '/design-canvas') &&
+        (request.method === 'GET' || request.method === 'HEAD')) {
+      return new Response(null, {status:302, headers:{
+        location:new URL('/canvas?library=sources',url).toString(), 'cache-control':'no-store',
+      }});
+    }
     const designCanvasAdmin = await serveDesignCanvasAdminRoute(request, env, guardStudioDocument);
     if (designCanvasAdmin) return designCanvasAdmin;
     // Only published forms are exposed publicly; account-owned management uses

@@ -30,6 +30,12 @@
       "@inneranimalmedia/agentsam-sdk/models/inventory": [
         "../../../src/models/inventory-core.d.ts"
       ],
+      "@inneranimalmedia/agentsam-abs/react": [
+        "../../../packages/agentsam-abs/src/react/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-abs": [
+        "../../../packages/agentsam-abs/src/index.ts"
+      ],
       "@inneranimalmedia/agentsam-nav": [
         "../../../packages/agentsam-nav/src/index.ts"
       ],
