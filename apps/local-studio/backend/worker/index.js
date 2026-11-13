@@ -4,6 +4,7 @@ import { handleStudioNotifications } from "./studio-notifications.js";
 import { handleStudioConversationShares, handlePublicConversationShare } from "./studio-conversation-shares.js";
 import { handleStudioQueueObservability } from "./studio-queue-observability.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
+import { serveDesignCanvasAdminRoute } from "./design-canvas-admin-route.js";
 import { resolveStudioSessionUser, guardStudioDocumentSession } from "./studio-session.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
@@ -730,6 +731,8 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    const designCanvasAdmin = await serveDesignCanvasAdminRoute(request, env, guardStudioDocument);
+    if (designCanvasAdmin) return designCanvasAdmin;
     // Only published forms are exposed publicly; account-owned management uses
     // the existing authenticated /api/forms path further below.
     if (url.pathname.startsWith("/forms/embed/") || url.pathname.startsWith("/api/forms/public/")) {
@@ -1558,7 +1561,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       } catch (error) {
         const code=String(error?.message||"app_install_failed");
         return json({ok:false,error:code.slice(0,120)},
-          code==="app_install_not_found"||code==="app_not_installed"?404:
+          code==="app_install_not_found"||code==="app_install_unavailable"||code==="app_not_installed"?404:
           code==="app_install_not_supported"?409:
           code==="app_install_key_invalid"||code==="app_enabled_invalid"?400:503);
       }
