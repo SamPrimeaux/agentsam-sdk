@@ -8,6 +8,8 @@ test('only frozen original HTML imports skip authored UI gates', () => {
     'apps/design-canvas/public/sources/onboarding/Checkout.dc.html',
     'apps/design-canvas/public/sources/onboarding-exports/Onboarding.dc.html',
     'apps/design-canvas/public/sources/onboarding-exports/OnboardingOffersCollection.html',
+    'apps/design-canvas/public/sources/stock/choose-a-plan/Main.dc.html',
+    'apps/design-canvas/public/sources/stock/mini-confirmation/MiniAgentSamPublish.dc.html',
   ]) assert.equal(isImmutableDesignReference(path), true, path);
 
   for (const path of [
@@ -16,6 +18,10 @@ test('only frozen original HTML imports skip authored UI gates', () => {
     'apps/design-canvas/public/sources/reference/BrowserControl.html',
     'apps/design-canvas/public/sources/media/dispatch.html',
     'apps/design-canvas/public/sources/agentsam/NewProductionPage.html',
+    'apps/design-canvas/public/sources/stock/new-fake-stock/Fake.dc.html',
+    'apps/design-canvas/public/sources/stock/choose-a-plan/Fake.dc.html',
+    'apps/design-canvas/public/sources/stock/choose-a-plan/README.md',
+    'apps/design-canvas/public/sources/reference/StockNewPage.dc.html',
     'apps/another-app/public/sources/agentsam/Shell.dc.html',
   ]) assert.equal(isImmutableDesignReference(path), false, path);
 });
