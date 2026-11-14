@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useActiveCompanion } from './CompanionContext';
 import { companionStateAsset } from './companions';
 
@@ -16,6 +16,7 @@ export function AgentSamPetTrigger({ state, onActivate }: {
 }) {
   const companion = useActiveCompanion();
   const [fallback, setFallback] = useState(false);
+  useEffect(() => setFallback(false), [companion.id, state]);
   const animated = companionStateAsset(companion, state);
   const still = companion.avatarUrl || (companion.builtIn ? FALLBACK_IMAGES.idle : null);
   const image = fallback ? still : animated || still;

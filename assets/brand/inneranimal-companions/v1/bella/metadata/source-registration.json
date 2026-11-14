@@ -1,0 +1,37 @@
+{
+  "source": "User-provided 4x4 Bella Companion Sprite Overview plus generated transparent keyframe redraw",
+  "sourceImage": "a_clean_transparent_background_sprite_sheet_4x4_g.png",
+  "grid": {
+    "columns": 4,
+    "rows": 4,
+    "frameCount": 16
+  },
+  "extraction": "Each visual state was cropped into its own transparent 256x256 PNG, preserving aspect ratio and centering on a transparent canvas.",
+  "runtimeMapping": {
+    "idle": "idle",
+    "blinking": "blink",
+    "thinking": "thinking",
+    "working": "working",
+    "waiting": "waiting",
+    "attention": "attentive",
+    "success": "success",
+    "error": "alert-error",
+    "resting": "resting",
+    "signature": "tail-wag"
+  },
+  "sourceArchive": "InnerAnimal-Bella-v1.0.0.zip",
+  "sourceArchiveSha256": "aa4201f7e387321dc3cd628cb6449e063cbd053b76a45639df83e0158e9ae902",
+  "keyframeDirectory": "keyframes/",
+  "animationOutputDirectory": "animations/",
+  "animationMethod": "8-frame transparent APNG micro-motion generated from each of the 16 source keyframes",
+  "animationFrameCount": 8,
+  "animationFps": 6,
+  "notes": [
+    "All 16 source keyframes are retained unchanged under keyframes/.",
+    "The 16 gallery states each have an 8-frame RGBA APNG; 10 of these are mapped to the shared AgentSam runtime states.",
+    "Motion is whole-character micro-motion; no articulated tail, paw or facial rig is claimed.",
+    "All 16 source keyframes are retained unchanged under keyframes/.",
+    "The 16 gallery states each have an 8-frame RGBA APNG; 10 of these are mapped to the shared AgentSam runtime states.",
+    "Motion is whole-character micro-motion; no articulated tail, paw or facial rig is claimed."
+  ]
+}

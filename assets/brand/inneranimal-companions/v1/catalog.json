@@ -97,6 +97,25 @@
       },
       "sourcePackage": "InnerAnimal-Py-v0.1.0.zip",
       "sourceArchiveSha256": "5d073899a6b3788ae6ea85902bd54ae92c3315616201cc75972947c4e3a5a270"
+    },
+    {
+      "id": "bella",
+      "name": "Bella",
+      "animal": "Chocolate Labrador Retriever",
+      "version": "1.1.0",
+      "status": "production-review-candidate",
+      "description": "A gentle, steady companion with a warm presence. Bella brings curiosity, encouragement, and a little joy to the moments in between.",
+      "visualApproval": "pending",
+      "structuralValidation": {
+        "ok": true,
+        "errors": [],
+        "warnings": [
+          "Motion is derived from each source still pose using subtle whole-character transforms; articulated tail, paw and facial rigs are not included."
+        ]
+      },
+      "sourcePackage": "InnerAnimal-Bella-v1.0.0.zip",
+      "sourceArchiveSha256": "aa4201f7e387321dc3cd628cb6449e063cbd053b76a45639df83e0158e9ae902",
+      "releasePackage": "InnerAnimal-Bella-v1.1.0.zip"
     }
   ]
 }

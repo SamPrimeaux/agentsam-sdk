@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "companionId": "bella",
+  "version": "1.1.0",
+  "sourceKeyframes": 16,
+  "galleryStates": 16,
+  "runtimeStates": 10,
+  "framesPerGalleryState": 8,
+  "totalAnimationFrames": 128,
+  "checks": [
+    "all 16 keyframes present",
+    "all 16 APNGs contain 8 frames",
+    "all APNGs are 256x256 RGBA",
+    "avatar, icon and portrait present",
+    "runtime state aliases resolve to gallery APNGs"
+  ],
+  "warnings": [
+    "Motion is derived from each source still pose using subtle whole-character transforms; articulated tail, paw and facial rigs are not included."
+  ]
+}
