@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
 import { ArrowUpRight, ImageOff, MousePointer2 } from "lucide-react";
 import { canvasBounds, locateNode, nodeAtWidth, safeStyle, safeUrl, type Artboard, type CanvasDocument, type CanvasNode } from "./model";
 
 type Props = {
   document: CanvasDocument; selected: string; boardId: string; preview: boolean; width: number;
   zoom: number; onZoom: (zoom:number)=>void; onSelect:(id:string,boardId:string)=>void;
-  onChange:(id:string,patch:Partial<CanvasNode>)=>void; fitToken:number; tool:"select"|"pan";
+  onChange:(id:string,patch:Partial<CanvasNode>)=>void; fitToken:number; tool:"select"|"pan"|"comment"; onPlacePin?:(boardId:string,x:number,y:number)=>void; renderComponent?:(node:CanvasNode,board:Artboard)=>ReactNode;
 };
-export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom,onSelect,onChange,fitToken,tool}:Props) {
+export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom,onSelect,onChange,fitToken,tool,onPlacePin,renderComponent}:Props) {
   const viewport=useRef<HTMLDivElement>(null);
   const [pan,setPan]=useState({x:56,y:72});
   const [drag,setDrag]=useState<{id:string;x:number;y:number;startX:number;startY:number;mode:"move"|"resize"}|null>(null);
@@ -42,8 +42,19 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
       onZoom(z);
     } else setPan(p=>({x:p.x-event.deltaX,y:p.y-event.deltaY}));
   }
+  function placePin(event:ReactPointerEvent<HTMLElement>,board:Artboard) {
+    const rect=event.currentTarget.closest(".cv-artboard")?.getBoundingClientRect();
+    if(!rect||!onPlacePin)return;
+    onPlacePin(board.id,Math.max(0,Math.min(board.width,Math.round((event.clientX-rect.left)/zoom))),Math.max(0,Math.min(board.height,Math.round((event.clientY-rect.top)/zoom))));
+  }
   function startNode(event:ReactPointerEvent<HTMLDivElement>,node:CanvasNode,board:Artboard,mode:"move"|"resize"="move") {
     if(preview||tool==="pan"||event.button!==0)return;
+    if(tool==="comment" && !node.componentId?.startsWith("review-pin:")) {
+      event.stopPropagation();event.preventDefault();placePin(event,board);return;
+    }
+    if(node.componentId?.startsWith("review-pin:")) {
+      event.stopPropagation();onSelect(node.id,board.id);return;
+    }
     event.stopPropagation();event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     onSelect(node.id,board.id);
@@ -144,7 +155,8 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
       aria-label={node.name}
       onKeyDown={event=>{if(event.target!==event.currentTarget)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();if(preview)void action(node);else onSelect(node.id,board.id);}}}
       onClick={event=>{event.stopPropagation();if(preview)void action(node);else onSelect(node.id,board.id);}}>
-      {node.type==="image" ? <CanvasImage src={safeUrl(node.src,true)} alt={node.text||node.name}/> :
+      {renderComponent&&node.componentId?.startsWith("live-preview:") ? renderComponent(node,board) :
+       node.type==="image" ? <CanvasImage src={safeUrl(node.src,true)} alt={node.text||node.name}/> :
        node.type==="input" ? <input className="cv-native-input" aria-label={node.name} placeholder={node.text} readOnly={!preview} onChange={e=>{previewValues.current[node.id]=e.target.value;}}/> :
        node.type==="button" ? <button type="button" className="cv-native-button" tabIndex={preview?0:-1}>{node.text||node.name}</button> :
        node.type==="link" ? <span className="cv-link">{node.text||node.name}</span> :
@@ -171,7 +183,7 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
     <div className="cv-world" style={{"--cv-world-transform":"translate("+pan.x+"px,"+pan.y+"px) scale("+zoom+")"} as CSSProperties}>
       {boards.map(board=><section key={board.id} className="cv-artboard" data-artboard={board.id}
         aria-label={board.name} style={{"--cv-board-left":board.x+"px","--cv-board-top":board.y+"px","--cv-board-width":(preview&&width?width:board.width)+"px","--cv-board-height":board.height+"px","--cv-board-background":board.background||"#fff"} as CSSProperties}
-        onPointerDown={event=>{if(tool==="pan")return;event.stopPropagation();if(!preview)onSelect("",board.id);}}>
+        onPointerDown={event=>{if(tool==="pan")return;event.stopPropagation();if(tool==="comment"&&event.button===0){placePin(event,board);return;}if(!preview)onSelect("",board.id);}}>
         <button type="button" className={"cv-artboard-name"+(board.id===boardId?" active":"")} style={{"--cv-board-label-font":12/zoom+"px","--cv-board-label-top":-30/zoom+"px"} as CSSProperties}
           onClick={event=>{event.stopPropagation();onSelect("",board.id);}}>{board.name}<span>{preview&&width?width:board.width} × {board.height}</span></button>
         {board.nodes.map(node=>renderNode(node,board))}
