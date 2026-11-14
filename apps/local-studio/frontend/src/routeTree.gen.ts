@@ -42,6 +42,7 @@ import { Route as appsWidgetsRouteImport } from './routes/(apps)/widgets'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
+import { Route as OnboardingCompanionRouteImport } from './routes/onboarding/companion'
 import { Route as appsAdminAgentsamRouteImport } from './routes/(apps)/admin/agentsam'
 import { Route as appsAdminCadRouteImport } from './routes/(apps)/admin/cad'
 import { Route as appsAdminMoviemodeRouteImport } from './routes/(apps)/admin/moviemode'
@@ -241,6 +242,11 @@ const ApiCloudflareRoute = ApiCloudflareRouteImport.update({
 const ApiGithubRoute = ApiGithubRouteImport.update({
   id: '/api/github',
   path: '/api/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingCompanionRoute = OnboardingCompanionRouteImport.update({
+  id: '/onboarding/companion',
+  path: '/onboarding/companion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsAdminAgentsamRoute = appsAdminAgentsamRouteImport.update({
@@ -459,6 +465,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/onboarding/companion': typeof OnboardingCompanionRoute
   '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/admin/cad': typeof appsAdminCadRoute
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
@@ -526,6 +533,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/onboarding/companion': typeof OnboardingCompanionRoute
   '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/admin/cad': typeof appsAdminCadRoute
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
@@ -595,6 +603,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/onboarding/companion': typeof OnboardingCompanionRoute
   '/(apps)/admin/agentsam': typeof appsAdminAgentsamRoute
   '/(apps)/admin/cad': typeof appsAdminCadRoute
   '/(apps)/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
@@ -667,6 +676,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/onboarding/companion'
     | '/admin/agentsam'
     | '/admin/cad'
     | '/admin/moviemode'
@@ -734,6 +744,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/onboarding/companion'
     | '/admin/agentsam'
     | '/admin/cad'
     | '/admin/moviemode'
@@ -802,6 +813,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/onboarding/companion'
     | '/(apps)/admin/agentsam'
     | '/(apps)/admin/cad'
     | '/(apps)/admin/moviemode'
@@ -873,6 +885,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
+  OnboardingCompanionRoute: typeof OnboardingCompanionRoute
   appsAdminAgentsamRoute: typeof appsAdminAgentsamRoute
   appsAdminCadRoute: typeof appsAdminCadRoute
   appsAdminMoviemodeRoute: typeof appsAdminMoviemodeRouteWithChildren
@@ -1120,6 +1133,13 @@ declare module '@tanstack/react-router' {
       path: '/api/github'
       fullPath: '/api/github'
       preLoaderRoute: typeof ApiGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/companion': {
+      id: '/onboarding/companion'
+      path: '/onboarding/companion'
+      fullPath: '/onboarding/companion'
+      preLoaderRoute: typeof OnboardingCompanionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/admin/agentsam': {
@@ -1523,6 +1543,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
+  OnboardingCompanionRoute: OnboardingCompanionRoute,
   appsAdminAgentsamRoute: appsAdminAgentsamRoute,
   appsAdminCadRoute: appsAdminCadRoute,
   appsAdminMoviemodeRoute: appsAdminMoviemodeRouteWithChildren,

@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "id": "roux",
+  "name": "Roux",
+  "animal": "Wolf",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "availability": "approved-awaiting-ingest",
+  "visualApproval": "approved",
+  "assetStatus": "sprite-package-generated",
+  "habitatIds": [
+    "field-operations"
+  ],
+  "role": "Field guidance · scouting & navigation",
+  "description": "The pathfinder. Reads the terrain, spots useful routes, and keeps complex work moving in the right direction.",
+  "personality": [
+    "loyal",
+    "observant",
+    "steady",
+    "resourceful"
+  ],
+  "capabilities": [
+    "scouting",
+    "navigation",
+    "research",
+    "coordination"
+  ],
+  "signatureAction": "A proud guidance howl framed by a soft green arc.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "frameCount": 40,
+  "atlas": "atlases/roux-sprite-atlas-4x10.png",
+  "avatar": "avatars/roux-avatar-128.png",
+  "portrait": "avatars/roux-portrait-256.png",
+  "icon": "avatars/roux-icon-64.png",
+  "animationOrder": [
+    "idle",
+    "working",
+    "thinking",
+    "attention",
+    "success",
+    "signature",
+    "waiting",
+    "error",
+    "resting",
+    "blinking"
+  ],
+  "states": {
+    "idle": {
+      "atlasRow": 0,
+      "frames": [
+        "frames/idle/roux-idle-01.png",
+        "frames/idle/roux-idle-02.png",
+        "frames/idle/roux-idle-03.png",
+        "frames/idle/roux-idle-04.png"
+      ],
+      "animation": "animations/roux-idle.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "working": {
+      "atlasRow": 1,
+      "frames": [
+        "frames/working/roux-working-01.png",
+        "frames/working/roux-working-02.png",
+        "frames/working/roux-working-03.png",
+        "frames/working/roux-working-04.png"
+      ],
+      "animation": "animations/roux-working.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "thinking": {
+      "atlasRow": 2,
+      "frames": [
+        "frames/thinking/roux-thinking-01.png",
+        "frames/thinking/roux-thinking-02.png",
+        "frames/thinking/roux-thinking-03.png",
+        "frames/thinking/roux-thinking-04.png"
+      ],
+      "animation": "animations/roux-thinking.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "attention": {
+      "atlasRow": 3,
+      "frames": [
+        "frames/attention/roux-attention-01.png",
+        "frames/attention/roux-attention-02.png",
+        "frames/attention/roux-attention-03.png",
+        "frames/attention/roux-attention-04.png"
+      ],
+      "animation": "animations/roux-attention.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "success": {
+      "atlasRow": 4,
+      "frames": [
+        "frames/success/roux-success-01.png",
+        "frames/success/roux-success-02.png",
+        "frames/success/roux-success-03.png",
+        "frames/success/roux-success-04.png"
+      ],
+      "animation": "animations/roux-success.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "signature": {
+      "atlasRow": 5,
+      "frames": [
+        "frames/signature/roux-signature-01.png",
+        "frames/signature/roux-signature-02.png",
+        "frames/signature/roux-signature-03.png",
+        "frames/signature/roux-signature-04.png"
+      ],
+      "animation": "animations/roux-signature.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "waiting": {
+      "atlasRow": 6,
+      "frames": [
+        "frames/waiting/roux-waiting-01.png",
+        "frames/waiting/roux-waiting-02.png",
+        "frames/waiting/roux-waiting-03.png",
+        "frames/waiting/roux-waiting-04.png"
+      ],
+      "animation": "animations/roux-waiting.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "error": {
+      "atlasRow": 7,
+      "frames": [
+        "frames/error/roux-error-01.png",
+        "frames/error/roux-error-02.png",
+        "frames/error/roux-error-03.png",
+        "frames/error/roux-error-04.png"
+      ],
+      "animation": "animations/roux-error.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "resting": {
+      "atlasRow": 8,
+      "frames": [
+        "frames/resting/roux-resting-01.png",
+        "frames/resting/roux-resting-02.png",
+        "frames/resting/roux-resting-03.png",
+        "frames/resting/roux-resting-04.png"
+      ],
+      "animation": "animations/roux-resting.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "blinking": {
+      "atlasRow": 9,
+      "frames": [
+        "frames/blinking/roux-blinking-01.png",
+        "frames/blinking/roux-blinking-02.png",
+        "frames/blinking/roux-blinking-03.png",
+        "frames/blinking/roux-blinking-04.png"
+      ],
+      "animation": "animations/roux-blinking.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    }
+  },
+  "sourceArtwork": "a_clean_high_detail_sprite_sheet_illustration_a_1_batch_1.png",
+  "sourceDimensions": [
+    793,
+    1983
+  ],
+  "qualityNote": "Best-effort alpha cleanup was applied to pale atlas backgrounds. Inspect edge matte and motion continuity before marking this profile runtime-ready."
+}

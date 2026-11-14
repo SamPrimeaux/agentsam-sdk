@@ -1,7 +1,7 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Maximize2, Minimize2, PanelLeft, Plus, MessageSquarePlus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Compass, Maximize2, Minimize2, PanelLeft, Plus, MessageSquarePlus } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { IconAction } from '@/components/ui/icon-action';
@@ -12,8 +12,9 @@ import { SideStage } from '@/components/workbench/side-stage';
 import { WorkSurfaceBar } from '@/components/workbench/work-surface-bar';
 
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
-import { useActiveCompanion } from './CompanionContext';
+import { useActiveCompanion, useCompanionSettings } from './CompanionContext';
 import { companionStateAsset } from './companions';
+import { emitCompanionHandoff } from './companion-events';
 import { SplitHandle } from '@/components/shell/split-handle';
 import { AnnotationToggle } from './AnnotationHelper';
 import { AgentConversationSurface, AgentRuntimeField } from '@inneranimalmedia/agentsam-workbench/agent';
@@ -45,6 +46,15 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const navigate = useNavigate();
   const state = useWorkStore();
   const companion = useActiveCompanion();
+  const { settings: companionSettings, loading: companionSettingsLoading } = useCompanionSettings();
+  const previousMode = useRef(data.mode);
+  useEffect(() => {
+    const fromMode = previousMode.current;
+    previousMode.current = data.mode;
+    if (fromMode === 'chat' && data.mode === 'work' && companion.id === 'geaux') {
+      emitCompanionHandoff({ fromId: 'geaux', toId: 'bella', context: 'strategy-to-execution', message: 'Geaux sets the direction. Bella is ready to carry the next step.' });
+    }
+  }, [data.mode, companion.id]);
   const [hostModeSlot, setHostModeSlot] = useState<HTMLElement | null>(null);
   const [hostActionsSlot, setHostActionsSlot] = useState<HTMLElement | null>(null);
   const [hostLeadingSlot, setHostLeadingSlot] = useState<HTMLElement | null>(null);
@@ -171,8 +181,9 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               </div>
               <div className="agentsam-work-welcome-copy">
                 <h1>What should we work on?</h1>
+                {!companionSettingsLoading && !companionSettings.onboarding?.completedAt ? <button type="button" onClick={() => { window.location.href = '/onboarding/companion'; }} className="mt-3 inline-flex h-8 items-center gap-2 rounded-lg border border-emerald-400/25 bg-emerald-400/[.06] px-3 text-[10px] font-medium text-emerald-200 hover:bg-emerald-400/10"><Compass className="size-3.5" /> Discover your InnerAnimal <ArrowRight className="size-3" /></button> : null}
               </div>
-            </div> : <h1>Where should we begin?</h1>}
+            </div> : <div><h1>Where should we begin?</h1>{!companionSettingsLoading && !companionSettings.onboarding?.completedAt ? <button type="button" onClick={() => { window.location.href = '/onboarding/companion'; }} className="mt-3 inline-flex h-8 items-center gap-2 rounded-lg border border-emerald-400/25 bg-emerald-400/[.06] px-3 text-[10px] font-medium text-emerald-200 hover:bg-emerald-400/10"><Compass className="size-3.5" /> Discover your InnerAnimal <ArrowRight className="size-3" /></button> : null}</div>}
           </div>}
           composer={leadComposerDetached ? null : leadComposer}
           composerClassName="agentsam-conversation-dock"

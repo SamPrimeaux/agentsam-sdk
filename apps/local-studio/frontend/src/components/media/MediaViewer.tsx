@@ -122,7 +122,7 @@ export function MediaViewer({
       </header>
       <div className="agentsam-media-viewer__body">
         <div className="agentsam-media-viewer__stage">
-          {kind === "video" && providerOf(asset) === "local" && preview ? (
+          {kind === "video" && ["local", "intake"].includes(providerOf(asset)) && preview ? (
             <video src={preview} controls playsInline preload="metadata" aria-label={asset.filename} />
           ) : (kind === "image" || kind === "video") && preview ? (
             <img src={preview} alt={asset.filename} />

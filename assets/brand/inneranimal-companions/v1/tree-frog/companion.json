@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "tree-frog",
+  "name": "Tree Frog",
+  "animal": "Green tree frog",
+  "version": "0.1.0",
+  "status": "planned",
+  "availability": "coming-soon",
+  "assetStatus": "brief-only",
+  "visualApproval": "pending",
+  "role": "Rapid prototyping \u00b7 experiments & iteration",
+  "description": "The rapid prototyper. Leaps between ideas, builds quick proofs, and turns early concepts into something testable.",
+  "habitatIds": [
+    "deep-canopy"
+  ],
+  "capabilities": [
+    "rapid-prototyping",
+    "experimentation",
+    "wireframing",
+    "iteration"
+  ],
+  "personality": [
+    "energetic",
+    "curious",
+    "inventive"
+  ],
+  "visualNotes": "A bright green tree frog with rounded, friendly proportions, a tiny sketch kit, and springy feet; playful and highly readable at small sizes.",
+  "signatureAction": "A compact leap from one idea marker to the next, landing on a working prototype.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns \u00d7 10 rows"
+  },
+  "states": {},
+  "avatar": null,
+  "icon": null,
+  "portrait": null,
+  "creativeBrief": {
+    "characterDirection": "A bright green tree frog with rounded, friendly proportions, a tiny sketch kit, and springy feet; playful and highly readable at small sizes.",
+    "motionDirection": "A compact leap from one idea marker to the next, landing on a working prototype."
+  }
+}

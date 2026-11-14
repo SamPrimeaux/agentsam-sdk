@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "id": "nyra",
+  "name": "Nyra",
+  "animal": "Panther",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "availability": "approved-awaiting-ingest",
+  "visualApproval": "approved",
+  "assetStatus": "sprite-package-generated",
+  "habitatIds": [
+    "field-operations"
+  ],
+  "role": "Precision · stealth diagnostics & focus",
+  "description": "The precision scout. Moves quietly through complex systems, catches subtle anomalies, and keeps attention on the critical detail.",
+  "personality": [
+    "focused",
+    "agile",
+    "discerning",
+    "calm"
+  ],
+  "capabilities": [
+    "precision",
+    "diagnostics",
+    "anomaly-detection",
+    "focused-research"
+  ],
+  "signatureAction": "A shadow-leap with a clean green energy arc.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "frameCount": 40,
+  "atlas": "atlases/nyra-sprite-atlas-4x10.png",
+  "avatar": "avatars/nyra-avatar-128.png",
+  "portrait": "avatars/nyra-portrait-256.png",
+  "icon": "avatars/nyra-icon-64.png",
+  "animationOrder": [
+    "idle",
+    "working",
+    "thinking",
+    "attention",
+    "success",
+    "signature",
+    "waiting",
+    "error",
+    "resting",
+    "blinking"
+  ],
+  "states": {
+    "idle": {
+      "atlasRow": 0,
+      "frames": [
+        "frames/idle/nyra-idle-01.png",
+        "frames/idle/nyra-idle-02.png",
+        "frames/idle/nyra-idle-03.png",
+        "frames/idle/nyra-idle-04.png"
+      ],
+      "animation": "animations/nyra-idle.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "working": {
+      "atlasRow": 1,
+      "frames": [
+        "frames/working/nyra-working-01.png",
+        "frames/working/nyra-working-02.png",
+        "frames/working/nyra-working-03.png",
+        "frames/working/nyra-working-04.png"
+      ],
+      "animation": "animations/nyra-working.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "thinking": {
+      "atlasRow": 2,
+      "frames": [
+        "frames/thinking/nyra-thinking-01.png",
+        "frames/thinking/nyra-thinking-02.png",
+        "frames/thinking/nyra-thinking-03.png",
+        "frames/thinking/nyra-thinking-04.png"
+      ],
+      "animation": "animations/nyra-thinking.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "attention": {
+      "atlasRow": 3,
+      "frames": [
+        "frames/attention/nyra-attention-01.png",
+        "frames/attention/nyra-attention-02.png",
+        "frames/attention/nyra-attention-03.png",
+        "frames/attention/nyra-attention-04.png"
+      ],
+      "animation": "animations/nyra-attention.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "success": {
+      "atlasRow": 4,
+      "frames": [
+        "frames/success/nyra-success-01.png",
+        "frames/success/nyra-success-02.png",
+        "frames/success/nyra-success-03.png",
+        "frames/success/nyra-success-04.png"
+      ],
+      "animation": "animations/nyra-success.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "signature": {
+      "atlasRow": 5,
+      "frames": [
+        "frames/signature/nyra-signature-01.png",
+        "frames/signature/nyra-signature-02.png",
+        "frames/signature/nyra-signature-03.png",
+        "frames/signature/nyra-signature-04.png"
+      ],
+      "animation": "animations/nyra-signature.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "waiting": {
+      "atlasRow": 6,
+      "frames": [
+        "frames/waiting/nyra-waiting-01.png",
+        "frames/waiting/nyra-waiting-02.png",
+        "frames/waiting/nyra-waiting-03.png",
+        "frames/waiting/nyra-waiting-04.png"
+      ],
+      "animation": "animations/nyra-waiting.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "error": {
+      "atlasRow": 7,
+      "frames": [
+        "frames/error/nyra-error-01.png",
+        "frames/error/nyra-error-02.png",
+        "frames/error/nyra-error-03.png",
+        "frames/error/nyra-error-04.png"
+      ],
+      "animation": "animations/nyra-error.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "resting": {
+      "atlasRow": 8,
+      "frames": [
+        "frames/resting/nyra-resting-01.png",
+        "frames/resting/nyra-resting-02.png",
+        "frames/resting/nyra-resting-03.png",
+        "frames/resting/nyra-resting-04.png"
+      ],
+      "animation": "animations/nyra-resting.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "blinking": {
+      "atlasRow": 9,
+      "frames": [
+        "frames/blinking/nyra-blinking-01.png",
+        "frames/blinking/nyra-blinking-02.png",
+        "frames/blinking/nyra-blinking-03.png",
+        "frames/blinking/nyra-blinking-04.png"
+      ],
+      "animation": "animations/nyra-blinking.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    }
+  },
+  "sourceArtwork": "a_clean_high_detail_sprite_atlas_illustration_on_3_batch_3.png",
+  "sourceDimensions": [
+    793,
+    1983
+  ],
+  "qualityNote": "Best-effort alpha cleanup was applied to pale atlas backgrounds. Inspect edge matte and motion continuity before marking this profile runtime-ready."
+}

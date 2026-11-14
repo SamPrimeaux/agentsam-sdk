@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "id": "toro",
+  "name": "Toro",
+  "animal": "Bull",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "availability": "approved-awaiting-ingest",
+  "visualApproval": "approved",
+  "assetStatus": "sprite-package-generated",
+  "habitatIds": [
+    "field-operations"
+  ],
+  "role": "Momentum · operations & execution",
+  "description": "The momentum keeper. Turns decisions into forward motion, carries operational load, and helps teams finish what they start.",
+  "personality": [
+    "determined",
+    "reliable",
+    "confident",
+    "persistent"
+  ],
+  "capabilities": [
+    "operations",
+    "execution",
+    "delivery",
+    "momentum"
+  ],
+  "signatureAction": "A grounded momentum surge that ends in a confident braced stance.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "frameCount": 40,
+  "atlas": "atlases/toro-sprite-atlas-4x10.png",
+  "avatar": "avatars/toro-avatar-128.png",
+  "portrait": "avatars/toro-portrait-256.png",
+  "icon": "avatars/toro-icon-64.png",
+  "animationOrder": [
+    "idle",
+    "working",
+    "thinking",
+    "attention",
+    "success",
+    "signature",
+    "waiting",
+    "error",
+    "resting",
+    "blinking"
+  ],
+  "states": {
+    "idle": {
+      "atlasRow": 0,
+      "frames": [
+        "frames/idle/toro-idle-01.png",
+        "frames/idle/toro-idle-02.png",
+        "frames/idle/toro-idle-03.png",
+        "frames/idle/toro-idle-04.png"
+      ],
+      "animation": "animations/toro-idle.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "working": {
+      "atlasRow": 1,
+      "frames": [
+        "frames/working/toro-working-01.png",
+        "frames/working/toro-working-02.png",
+        "frames/working/toro-working-03.png",
+        "frames/working/toro-working-04.png"
+      ],
+      "animation": "animations/toro-working.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "thinking": {
+      "atlasRow": 2,
+      "frames": [
+        "frames/thinking/toro-thinking-01.png",
+        "frames/thinking/toro-thinking-02.png",
+        "frames/thinking/toro-thinking-03.png",
+        "frames/thinking/toro-thinking-04.png"
+      ],
+      "animation": "animations/toro-thinking.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "attention": {
+      "atlasRow": 3,
+      "frames": [
+        "frames/attention/toro-attention-01.png",
+        "frames/attention/toro-attention-02.png",
+        "frames/attention/toro-attention-03.png",
+        "frames/attention/toro-attention-04.png"
+      ],
+      "animation": "animations/toro-attention.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "success": {
+      "atlasRow": 4,
+      "frames": [
+        "frames/success/toro-success-01.png",
+        "frames/success/toro-success-02.png",
+        "frames/success/toro-success-03.png",
+        "frames/success/toro-success-04.png"
+      ],
+      "animation": "animations/toro-success.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "signature": {
+      "atlasRow": 5,
+      "frames": [
+        "frames/signature/toro-signature-01.png",
+        "frames/signature/toro-signature-02.png",
+        "frames/signature/toro-signature-03.png",
+        "frames/signature/toro-signature-04.png"
+      ],
+      "animation": "animations/toro-signature.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "waiting": {
+      "atlasRow": 6,
+      "frames": [
+        "frames/waiting/toro-waiting-01.png",
+        "frames/waiting/toro-waiting-02.png",
+        "frames/waiting/toro-waiting-03.png",
+        "frames/waiting/toro-waiting-04.png"
+      ],
+      "animation": "animations/toro-waiting.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "error": {
+      "atlasRow": 7,
+      "frames": [
+        "frames/error/toro-error-01.png",
+        "frames/error/toro-error-02.png",
+        "frames/error/toro-error-03.png",
+        "frames/error/toro-error-04.png"
+      ],
+      "animation": "animations/toro-error.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "resting": {
+      "atlasRow": 8,
+      "frames": [
+        "frames/resting/toro-resting-01.png",
+        "frames/resting/toro-resting-02.png",
+        "frames/resting/toro-resting-03.png",
+        "frames/resting/toro-resting-04.png"
+      ],
+      "animation": "animations/toro-resting.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "blinking": {
+      "atlasRow": 9,
+      "frames": [
+        "frames/blinking/toro-blinking-01.png",
+        "frames/blinking/toro-blinking-02.png",
+        "frames/blinking/toro-blinking-03.png",
+        "frames/blinking/toro-blinking-04.png"
+      ],
+      "animation": "animations/toro-blinking.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    }
+  },
+  "sourceArtwork": "a_clean_4_columns_10_rows_sprite_atlas_40_frame_4_batch_4.png",
+  "sourceDimensions": [
+    793,
+    1983
+  ],
+  "qualityNote": "Best-effort alpha cleanup was applied to pale atlas backgrounds. Inspect edge matte and motion continuity before marking this profile runtime-ready."
+}

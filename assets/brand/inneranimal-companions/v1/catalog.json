@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "defaultCompanionId": "geaux",
   "companions": [
     {
@@ -16,7 +16,18 @@
         "warnings": []
       },
       "sourcePackage": "InnerAnimal-Geaux-v0.1.0.zip",
-      "sourceArchiveSha256": "6e54ff9ed5e6bed75623cb55c36f336f6caa13e4e18d6038d6c6f2184aca5cb0"
+      "sourceArchiveSha256": "6e54ff9ed5e6bed75623cb55c36f336f6caa13e4e18d6038d6c6f2184aca5cb0",
+      "habitatIds": [
+        "founding-family",
+        "bayou-gulf"
+      ],
+      "capabilities": [
+        "leadership",
+        "strategy",
+        "resilience",
+        "review"
+      ],
+      "assetStatus": "runtime-ready"
     },
     {
       "id": "meaux",
@@ -32,7 +43,18 @@
         "warnings": []
       },
       "sourcePackage": "InnerAnimal-Meaux-v0.1.0.zip",
-      "sourceArchiveSha256": "89726adddc559c41aa1f59d58f170c062cdcfccf55d4f0975cbfbff7426b559a"
+      "sourceArchiveSha256": "89726adddc559c41aa1f59d58f170c062cdcfccf55d4f0975cbfbff7426b559a",
+      "habitatIds": [
+        "founding-family",
+        "bayou-gulf"
+      ],
+      "capabilities": [
+        "ideation",
+        "creative-research",
+        "storytelling",
+        "prototyping"
+      ],
+      "assetStatus": "runtime-ready"
     },
     {
       "id": "coder",
@@ -48,7 +70,17 @@
         "warnings": []
       },
       "sourcePackage": "InnerAnimal-Coder-v0.1.0.zip",
-      "sourceArchiveSha256": "613f586c68b76b8335b1977a0ebf8ac7727a4e4113fc7cde809dd7d53e5c713b"
+      "sourceArchiveSha256": "613f586c68b76b8335b1977a0ebf8ac7727a4e4113fc7cde809dd7d53e5c713b",
+      "habitatIds": [
+        "founding-family"
+      ],
+      "capabilities": [
+        "coding",
+        "debugging",
+        "refactoring",
+        "code-review"
+      ],
+      "assetStatus": "runtime-ready"
     },
     {
       "id": "architect",
@@ -64,7 +96,18 @@
         "warnings": []
       },
       "sourcePackage": "InnerAnimal-Architect-v0.1.0.zip",
-      "sourceArchiveSha256": "a5914880a94a4e467f309f7a2ddabbf4b3a6dec128c05f24ee6b867b0c5815c4"
+      "sourceArchiveSha256": "a5914880a94a4e467f309f7a2ddabbf4b3a6dec128c05f24ee6b867b0c5815c4",
+      "habitatIds": [
+        "founding-family",
+        "night-shift"
+      ],
+      "capabilities": [
+        "architecture",
+        "systems-design",
+        "planning",
+        "orchestration"
+      ],
+      "assetStatus": "runtime-ready"
     },
     {
       "id": "engineer",
@@ -80,7 +123,17 @@
         "warnings": []
       },
       "sourcePackage": "InnerAnimal-Engineer-v0.1.0.zip",
-      "sourceArchiveSha256": "40c322378f46805879a5e9441e43b984d54a0828f3ffa819d95486101d87c6f0"
+      "sourceArchiveSha256": "40c322378f46805879a5e9441e43b984d54a0828f3ffa819d95486101d87c6f0",
+      "habitatIds": [
+        "founding-family"
+      ],
+      "capabilities": [
+        "implementation",
+        "prototyping",
+        "integration",
+        "construction"
+      ],
+      "assetStatus": "runtime-ready"
     },
     {
       "id": "py",
@@ -96,7 +149,17 @@
         "warnings": []
       },
       "sourcePackage": "InnerAnimal-Py-v0.1.0.zip",
-      "sourceArchiveSha256": "5d073899a6b3788ae6ea85902bd54ae92c3315616201cc75972947c4e3a5a270"
+      "sourceArchiveSha256": "5d073899a6b3788ae6ea85902bd54ae92c3315616201cc75972947c4e3a5a270",
+      "habitatIds": [
+        "founding-family"
+      ],
+      "capabilities": [
+        "python",
+        "automation",
+        "machine-learning",
+        "data-tooling"
+      ],
+      "assetStatus": "runtime-ready"
     },
     {
       "id": "bella",
@@ -115,7 +178,546 @@
       },
       "sourcePackage": "InnerAnimal-Bella-v1.0.0.zip",
       "sourceArchiveSha256": "aa4201f7e387321dc3cd628cb6449e063cbd053b76a45639df83e0158e9ae902",
-      "releasePackage": "InnerAnimal-Bella-v1.1.0.zip"
+      "releasePackage": "InnerAnimal-Bella-v1.1.0.zip",
+      "habitatIds": [
+        "founding-family",
+        "bayou-gulf"
+      ],
+      "capabilities": [
+        "encouragement",
+        "voice-presence",
+        "status-companion",
+        "handoff-support"
+      ],
+      "assetStatus": "runtime-ready"
+    },
+    {
+      "id": "pelican",
+      "name": "Pelican",
+      "animal": "Brown pelican",
+      "role": "Data transport · pipelines & storage",
+      "description": "The payload carrier. Moves large datasets and media safely through pipelines, keeping transfers visible and organized.",
+      "habitatIds": [
+        "bayou-gulf"
+      ],
+      "capabilities": [
+        "data-pipelines",
+        "payload-routing",
+        "storage",
+        "media-transfer"
+      ],
+      "assetStatus": "brief-only",
+      "personality": [
+        "helpful",
+        "organized",
+        "steady"
+      ],
+      "visualNotes": "A Gulf Coast brown pelican with a clean field-utility harness and a reinforced data pouch; friendly, capable, and unmistakably coastal.",
+      "signatureAction": "A pouch-load swoop that gathers a payload and delivers it to the right destination.",
+      "version": "0.1.0",
+      "status": "planned",
+      "availability": "coming-soon",
+      "visualApproval": "pending"
+    },
+    {
+      "id": "crawfish",
+      "name": "Crawfish",
+      "animal": "Louisiana crawfish",
+      "role": "Debugging · bug triage & repair",
+      "description": "The bug catcher. Finds small defects, isolates the cause, and pinches troublesome bugs out of the codebase.",
+      "habitatIds": [
+        "bayou-gulf"
+      ],
+      "capabilities": [
+        "debugging",
+        "issue-triage",
+        "repair",
+        "regression-hunting"
+      ],
+      "assetStatus": "brief-only",
+      "personality": [
+        "sharp",
+        "playful",
+        "precise"
+      ],
+      "visualNotes": "A bright Louisiana crawfish with expressive claws, a compact utility belt, and a small inspection lens; playful but precise.",
+      "signatureAction": "A quick double-pinch that catches a bug and flicks it into a tiny evidence jar.",
+      "version": "0.1.0",
+      "status": "planned",
+      "availability": "coming-soon",
+      "visualApproval": "pending"
+    },
+    {
+      "id": "gator",
+      "name": "Gator",
+      "animal": "American alligator",
+      "role": "Security · perimeter monitoring & protection",
+      "description": "The quiet guardian. Watches access boundaries, notices unusual activity, and protects the workspace without creating noise.",
+      "habitatIds": [
+        "bayou-gulf"
+      ],
+      "capabilities": [
+        "security",
+        "access-monitoring",
+        "threat-detection",
+        "policy-guardrails"
+      ],
+      "assetStatus": "brief-only",
+      "personality": [
+        "calm",
+        "protective",
+        "watchful"
+      ],
+      "visualNotes": "A deep-olive alligator with a sturdy security vest, shield-shaped IA insignia, and warm amber eyes; reassuring rather than aggressive.",
+      "signatureAction": "A low, steady perimeter sweep followed by a calm protective tail curl.",
+      "version": "0.1.0",
+      "status": "planned",
+      "availability": "coming-soon",
+      "visualApproval": "pending"
+    },
+    {
+      "id": "chameleon",
+      "name": "Chameleon",
+      "animal": "Veiled chameleon",
+      "role": "Brand & design · adaptive visual systems",
+      "description": "The visual adapter. Explores palettes, theme tokens, CSS systems, and responsive design variations while keeping a brand coherent.",
+      "habitatIds": [
+        "deep-canopy"
+      ],
+      "capabilities": [
+        "brand-design",
+        "color-systems",
+        "theme-tokens",
+        "css-adaptation"
+      ],
+      "assetStatus": "brief-only",
+      "personality": [
+        "expressive",
+        "adaptable",
+        "tasteful"
+      ],
+      "visualNotes": "A friendly veiled chameleon with a subtle crest and a modular color-shifting pattern; polished, flat-clay accents with controlled gradients.",
+      "signatureAction": "A slow palette-shift from one coordinated brand color family to another.",
+      "version": "0.1.0",
+      "status": "planned",
+      "availability": "coming-soon",
+      "visualApproval": "pending"
+    },
+    {
+      "id": "lyrebird",
+      "name": "Lyrebird",
+      "animal": "Superb lyrebird",
+      "role": "Copywriting & voice · tone and narrative",
+      "description": "The voice specialist. Studies a brand’s language and produces consistent copy, narration, and voice direction across channels.",
+      "habitatIds": [
+        "deep-canopy"
+      ],
+      "capabilities": [
+        "copywriting",
+        "brand-voice",
+        "narration",
+        "content-editing"
+      ],
+      "assetStatus": "brief-only",
+      "personality": [
+        "expressive",
+        "attentive",
+        "articulate"
+      ],
+      "visualNotes": "An elegant lyrebird with a refined fan tail, small field notebook, and a few sound-wave motifs; editorial and expressive.",
+      "signatureAction": "A fan-tail flourish that shifts through a few distinct voice-note gestures.",
+      "version": "0.1.0",
+      "status": "planned",
+      "availability": "coming-soon",
+      "visualApproval": "pending"
+    },
+    {
+      "id": "tree-frog",
+      "name": "Tree Frog",
+      "animal": "Green tree frog",
+      "role": "Rapid prototyping · experiments & iteration",
+      "description": "The rapid prototyper. Leaps between ideas, builds quick proofs, and turns early concepts into something testable.",
+      "habitatIds": [
+        "deep-canopy"
+      ],
+      "capabilities": [
+        "rapid-prototyping",
+        "experimentation",
+        "wireframing",
+        "iteration"
+      ],
+      "assetStatus": "brief-only",
+      "personality": [
+        "energetic",
+        "curious",
+        "inventive"
+      ],
+      "visualNotes": "A bright green tree frog with rounded, friendly proportions, a tiny sketch kit, and springy feet; playful and highly readable at small sizes.",
+      "signatureAction": "A compact leap from one idea marker to the next, landing on a working prototype.",
+      "version": "0.1.0",
+      "status": "planned",
+      "availability": "coming-soon",
+      "visualApproval": "pending"
+    },
+    {
+      "id": "bat",
+      "name": "Bat",
+      "animal": "Free-tailed bat",
+      "role": "Network diagnostics · sonar & connectivity",
+      "description": "The signal scout. Uses sonar-like sweeps to map routes, spot latency, and notice network interruptions during overnight operations.",
+      "habitatIds": [
+        "night-shift"
+      ],
+      "capabilities": [
+        "network-diagnostics",
+        "latency-analysis",
+        "connectivity",
+        "route-mapping"
+      ],
+      "assetStatus": "brief-only",
+      "personality": [
+        "alert",
+        "quiet",
+        "analytical"
+      ],
+      "visualNotes": "A small free-tailed bat with a dark technical flight jacket, soft teal sonar accents, and a compact diagnostic headset; alert, not spooky.",
+      "signatureAction": "A pair of sonar pulses that map a route and resolve into a clean signal.",
+      "version": "0.1.0",
+      "status": "planned",
+      "availability": "coming-soon",
+      "visualApproval": "pending"
+    },
+    {
+      "id": "badger",
+      "name": "Badger",
+      "animal": "American badger",
+      "role": "QA & stress testing · relentless verification",
+      "description": "The relentless tester. Repeats checks, probes edge cases, and keeps pressure on a build until it is dependable.",
+      "habitatIds": [
+        "night-shift"
+      ],
+      "capabilities": [
+        "quality-assurance",
+        "stress-testing",
+        "test-automation",
+        "regression-testing"
+      ],
+      "assetStatus": "brief-only",
+      "personality": [
+        "determined",
+        "thorough",
+        "dependable"
+      ],
+      "visualNotes": "A sturdy American badger with a practical testing vest, reinforced gloves, and a compact test rig; determined and dependable.",
+      "signatureAction": "A focused inspection loop that checks, stamps, and confirms a build.",
+      "version": "0.1.0",
+      "status": "planned",
+      "availability": "coming-soon",
+      "visualApproval": "pending"
+    },
+    {
+      "id": "roux",
+      "name": "Roux",
+      "animal": "Wolf",
+      "role": "Field guidance · scouting & navigation",
+      "description": "The pathfinder. Reads the terrain, spots useful routes, and keeps complex work moving in the right direction.",
+      "habitatIds": [
+        "field-operations"
+      ],
+      "capabilities": [
+        "scouting",
+        "navigation",
+        "research",
+        "coordination"
+      ],
+      "assetStatus": "runtime-ready",
+      "personality": [
+        "loyal",
+        "observant",
+        "steady",
+        "resourceful"
+      ],
+      "visualNotes": "Gray-and-cream wolf with amber eyes, brass goggles, olive IA field scarf, hiking harness, rolled bedroll, and compass medallion.",
+      "signatureAction": "A proud guidance howl framed by a soft green arc.",
+      "version": "1.0.0",
+      "status": "production-review-candidate",
+      "availability": "preview",
+      "visualApproval": "approved",
+      "sourceArtwork": [
+        "a_clean_high_detail_sprite_sheet_illustration_a_1_batch_1.png"
+      ],
+      "sourcePackage": "InnerAnimal-Field-Operations-v1.0.0.zip",
+      "sourceSha256": "cc21fde4b510e32e453423b1fd27a7001ca5635f23acac45a0654e19dbe7673f",
+      "runtimeStateCount": 10,
+      "animationFrameCount": 40
+    },
+    {
+      "id": "bruneaux",
+      "name": "Bruneaux",
+      "animal": "Bear",
+      "role": "Forge guardian · systems building & resilience",
+      "description": "The forge guardian. Carries the heavy work, builds durable systems, and stays steady when a project needs endurance.",
+      "habitatIds": [
+        "field-operations"
+      ],
+      "capabilities": [
+        "systems-building",
+        "infrastructure",
+        "resilience",
+        "implementation"
+      ],
+      "assetStatus": "runtime-ready",
+      "personality": [
+        "dependable",
+        "patient",
+        "strong",
+        "protective"
+      ],
+      "visualNotes": "A powerful brown bear with brass goggles, olive IA scarf, heavy utility harness, lantern canister, and anvil-like shoulder emblem.",
+      "signatureAction": "A warm forge-ring gesture that signals a durable build is ready.",
+      "version": "1.0.0",
+      "status": "production-review-candidate",
+      "availability": "preview",
+      "visualApproval": "approved",
+      "sourceArtwork": [
+        "a_clean_spritesheet_illustration_on_a_transparent_2_batch_2.png"
+      ],
+      "sourcePackage": "InnerAnimal-Field-Operations-v1.0.0.zip",
+      "sourceSha256": "cc21fde4b510e32e453423b1fd27a7001ca5635f23acac45a0654e19dbe7673f",
+      "runtimeStateCount": 10,
+      "animationFrameCount": 40
+    },
+    {
+      "id": "nyra",
+      "name": "Nyra",
+      "animal": "Panther",
+      "role": "Precision · stealth diagnostics & focus",
+      "description": "The precision scout. Moves quietly through complex systems, catches subtle anomalies, and keeps attention on the critical detail.",
+      "habitatIds": [
+        "field-operations"
+      ],
+      "capabilities": [
+        "precision",
+        "diagnostics",
+        "anomaly-detection",
+        "focused-research"
+      ],
+      "assetStatus": "runtime-ready",
+      "personality": [
+        "focused",
+        "agile",
+        "discerning",
+        "calm"
+      ],
+      "visualNotes": "Sleek black panther with luminous yellow-green eyes, bronze goggles, dark IA scarf, utility harness, and a compass medallion.",
+      "signatureAction": "A shadow-leap with a clean green energy arc.",
+      "version": "1.0.0",
+      "status": "production-review-candidate",
+      "availability": "preview",
+      "visualApproval": "approved",
+      "sourceArtwork": [
+        "a_clean_high_detail_sprite_atlas_illustration_on_3_batch_3.png"
+      ],
+      "sourcePackage": "InnerAnimal-Field-Operations-v1.0.0.zip",
+      "sourceSha256": "cc21fde4b510e32e453423b1fd27a7001ca5635f23acac45a0654e19dbe7673f",
+      "runtimeStateCount": 10,
+      "animationFrameCount": 40
+    },
+    {
+      "id": "toro",
+      "name": "Toro",
+      "animal": "Bull",
+      "role": "Momentum · operations & execution",
+      "description": "The momentum keeper. Turns decisions into forward motion, carries operational load, and helps teams finish what they start.",
+      "habitatIds": [
+        "field-operations"
+      ],
+      "capabilities": [
+        "operations",
+        "execution",
+        "delivery",
+        "momentum"
+      ],
+      "assetStatus": "runtime-ready",
+      "personality": [
+        "determined",
+        "reliable",
+        "confident",
+        "persistent"
+      ],
+      "visualNotes": "Muscular brown bull with cream horns, brass goggles, olive IA scarf, heavy field backpack, and a strong chest medallion.",
+      "signatureAction": "A grounded momentum surge that ends in a confident braced stance.",
+      "version": "1.0.0",
+      "status": "production-review-candidate",
+      "availability": "preview",
+      "visualApproval": "approved",
+      "sourceArtwork": [
+        "a_clean_4_columns_10_rows_sprite_atlas_40_frame_4_batch_4.png"
+      ],
+      "sourcePackage": "InnerAnimal-Field-Operations-v1.0.0.zip",
+      "sourceSha256": "cc21fde4b510e32e453423b1fd27a7001ca5635f23acac45a0654e19dbe7673f",
+      "runtimeStateCount": 10,
+      "animationFrameCount": 40
+    }
+  ],
+  "habitats": [
+    {
+      "id": "founding-family",
+      "name": "Founding Family",
+      "subtitle": "The original InnerAnimal crew",
+      "description": "The established companions that anchor the InnerAnimal identity and first AgentSam experience.",
+      "companionIds": [
+        "geaux",
+        "meaux",
+        "coder",
+        "architect",
+        "engineer",
+        "py",
+        "bella"
+      ],
+      "status": "established",
+      "accessMode": "included",
+      "collectionKey": "inneranimal.habitat.founding-family"
+    },
+    {
+      "id": "bayou-gulf",
+      "name": "Bayou & Gulf",
+      "subtitle": "Rooted in brand heritage",
+      "description": "A Gulf Coast habitat for leadership, creative collaboration, data movement, debugging, security, and dependable execution.",
+      "companionIds": [
+        "geaux",
+        "meaux",
+        "bella",
+        "pelican",
+        "crawfish",
+        "gator"
+      ],
+      "status": "expansion",
+      "accessMode": "collectible",
+      "collectionKey": "inneranimal.habitat.bayou-gulf"
+    },
+    {
+      "id": "deep-canopy",
+      "name": "Deep Canopy",
+      "subtitle": "Creative & strategy",
+      "description": "A living creative department for visual systems, brand voice, storytelling, and rapid experimentation.",
+      "companionIds": [
+        "chameleon",
+        "lyrebird",
+        "tree-frog"
+      ],
+      "status": "planned",
+      "accessMode": "collectible",
+      "collectionKey": "inneranimal.habitat.deep-canopy"
+    },
+    {
+      "id": "night-shift",
+      "name": "Night Shift",
+      "subtitle": "Automation & background jobs",
+      "description": "The overnight crew for orchestration, network diagnostics, scheduled work, QA, and resilient operations. Architect reuses the existing great horned owl identity.",
+      "companionIds": [
+        "architect",
+        "bat",
+        "badger"
+      ],
+      "status": "planned",
+      "accessMode": "collectible",
+      "collectionKey": "inneranimal.habitat.night-shift"
+    },
+    {
+      "id": "field-operations",
+      "name": "Field Operations",
+      "subtitle": "Approved character expansion",
+      "description": "Four approved field companions for navigation, durable building, precision diagnostics, and forward momentum.",
+      "companionIds": [
+        "roux",
+        "bruneaux",
+        "nyra",
+        "toro"
+      ],
+      "status": "expansion",
+      "accessMode": "collectible",
+      "collectionKey": "inneranimal.habitat.field-operations"
+    }
+  ],
+  "duoDynamics": [
+    {
+      "id": "geaux-bella-handoff",
+      "fromId": "geaux",
+      "toId": "bella",
+      "trigger": "strategy-to-execution",
+      "description": "Geaux frames the direction and Bella takes the next practical step."
+    }
+  ],
+  "onboarding": {
+    "id": "discover-your-inneranimal",
+    "version": "1",
+    "questionCount": 4,
+    "defaultCompanionId": "geaux",
+    "resultScope": "existing-selectable-companions"
+  },
+  "milestoneUnlocks": [
+    {
+      "id": "coder-pr-50-celebration",
+      "companionId": "coder",
+      "metric": "github.pull_request.merged",
+      "threshold": 50,
+      "animationId": "celebration-backflip",
+      "status": "artwork-queued"
+    },
+    {
+      "id": "py-night-shift-coffee",
+      "companionId": "py",
+      "metric": "automation.overnight_run.success",
+      "threshold": 25,
+      "animationId": "coffee-mug-idle",
+      "status": "artwork-queued"
+    }
+  ],
+  "commissioning": {
+    "id": "agency-brand-mascot",
+    "tier": "Agency / B2B",
+    "deliverables": [
+      "brand-aligned profile",
+      "icon/avatar/portrait exports",
+      "10 runtime states",
+      "transparent frames and atlases",
+      "APNG runtime package",
+      "manifest and usage notes"
+    ]
+  },
+  "costumePacks": [
+    {
+      "id": "primetechpy",
+      "name": "PrimeTechPy",
+      "companionId": "py",
+      "packType": "add-on asset pack",
+      "status": "reference-sheet-awaiting-ingest",
+      "directionCount": 10,
+      "directionIds": [
+        "lab-coat-idle",
+        "data-diver",
+        "code-swimmer",
+        "circuit-scout",
+        "debug-detective",
+        "research-presenter",
+        "sketch-coder",
+        "success-spark",
+        "thoughtful-coil",
+        "ocean-of-syntax"
+      ],
+      "directionNames": [
+        "Lab Coat Idle",
+        "Data Diver",
+        "Code Swimmer",
+        "Circuit Scout",
+        "Debug Detective",
+        "Research Presenter",
+        "Sketch Coder",
+        "Success Spark",
+        "Thoughtful Coil",
+        "Ocean of Syntax"
+      ]
     }
   ]
 }

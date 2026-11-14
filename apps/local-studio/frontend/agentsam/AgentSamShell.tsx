@@ -37,6 +37,9 @@ import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionPro
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
+import { AgentSamStatusBuddy } from './AgentSamStatusBuddy';
+import { AgentSamDuoHandoff } from './AgentSamDuoHandoff';
+import { emitCompanionStatus } from './companion-events';
 import { AgentSamLaunchDock } from './AgentSamLaunchDock';
 import { CompanionProvider, useActiveCompanion } from './CompanionContext';
 import { NotificationsMenu } from './NotificationsMenu';
@@ -358,6 +361,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
 
   const petState = state.activeChatId && state.streamingIds.includes(state.activeChatId) ? "working" : "idle";
   useEffect(() => {
+    emitCompanionStatus({ type: petState === 'working' ? 'work-started' : 'runtime-idle' });
     if (!isPackagedDesktop()) return;
     void emitTauriEvent("agentsam:pet:state", { state: petState }).catch(() => {});
   }, [petState]);
@@ -692,6 +696,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       </DialogContent></Dialog>
       <DesktopIdentityPortal open={identityOpen} onOpenChange={setIdentityOpen} />
       <DesktopStartupOverlay />
+      <AgentSamStatusBuddy />
+      <AgentSamDuoHandoff />
       <AnnotationHelper />
       <Toaster theme={theme === 'light' ? 'light' : 'dark'} position="bottom-center" />
     </Nav.Scope>

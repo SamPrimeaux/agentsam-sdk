@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "badger",
+  "name": "Badger",
+  "animal": "American badger",
+  "version": "0.1.0",
+  "status": "planned",
+  "availability": "coming-soon",
+  "assetStatus": "brief-only",
+  "visualApproval": "pending",
+  "role": "QA & stress testing \u00b7 relentless verification",
+  "description": "The relentless tester. Repeats checks, probes edge cases, and keeps pressure on a build until it is dependable.",
+  "habitatIds": [
+    "night-shift"
+  ],
+  "capabilities": [
+    "quality-assurance",
+    "stress-testing",
+    "test-automation",
+    "regression-testing"
+  ],
+  "personality": [
+    "determined",
+    "thorough",
+    "dependable"
+  ],
+  "visualNotes": "A sturdy American badger with a practical testing vest, reinforced gloves, and a compact test rig; determined and dependable.",
+  "signatureAction": "A focused inspection loop that checks, stamps, and confirms a build.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns \u00d7 10 rows"
+  },
+  "states": {},
+  "avatar": null,
+  "icon": null,
+  "portrait": null,
+  "creativeBrief": {
+    "characterDirection": "A sturdy American badger with a practical testing vest, reinforced gloves, and a compact test rig; determined and dependable.",
+    "motionDirection": "A focused inspection loop that checks, stamps, and confirms a build."
+  }
+}

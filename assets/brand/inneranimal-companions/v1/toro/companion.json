@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "id": "toro",
+  "name": "Toro",
+  "animal": "Bull",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "availability": "preview",
+  "assetStatus": "runtime-ready",
+  "visualApproval": "approved",
+  "role": "Momentum · operations & execution",
+  "description": "The momentum keeper. Turns decisions into forward motion, carries operational load, and helps teams finish what they start.",
+  "habitatIds": [
+    "field-operations"
+  ],
+  "capabilities": [
+    "operations",
+    "execution",
+    "delivery",
+    "momentum"
+  ],
+  "personality": [
+    "determined",
+    "reliable",
+    "confident",
+    "persistent"
+  ],
+  "visualNotes": "Muscular brown bull with cream horns, brass goggles, olive IA scarf, heavy field backpack, and a strong chest medallion.",
+  "signatureAction": "A grounded momentum surge that ends in a confident braced stance.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns × 10 rows"
+  },
+  "states": {
+    "idle": {
+      "src": "animations/toro-idle.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "working": {
+      "src": "animations/toro-working.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "thinking": {
+      "src": "animations/toro-thinking.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "attention": {
+      "src": "animations/toro-attention.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "success": {
+      "src": "animations/toro-success.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "signature": {
+      "src": "animations/toro-signature.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "waiting": {
+      "src": "animations/toro-waiting.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "error": {
+      "src": "animations/toro-error.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "resting": {
+      "src": "animations/toro-resting.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "blinking": {
+      "src": "animations/toro-blinking.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    }
+  },
+  "avatar": "avatars/toro-avatar-128.png",
+  "icon": "avatars/toro-icon-64.png",
+  "portrait": "avatars/toro-portrait-256.png",
+  "creativeBrief": {
+    "characterDirection": "Muscular brown bull with cream horns, brass goggles, olive IA scarf, heavy field backpack, and a strong chest medallion.",
+    "motionDirection": "A grounded momentum surge that ends in a confident braced stance."
+  },
+  "sourceArtwork": [
+    "a_clean_4_columns_10_rows_sprite_atlas_40_frame_4_batch_4.png"
+  ],
+  "ingestNote": "Imported, validated APNG runtime art from the approved Field Operations package. Local preview only until release approval.",
+  "sourcePackage": "InnerAnimal-Field-Operations-v1.0.0.zip",
+  "sourceSha256": "cc21fde4b510e32e453423b1fd27a7001ca5635f23acac45a0654e19dbe7673f",
+  "frameCount": 40,
+  "runtimeStateCount": 10,
+  "animationFrameCount": 40,
+  "atlas": "atlases/toro-sprite-atlas-4x10.png",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "4-frame transparent APNG for each runtime state; independent character rigging is not certified."
+    ]
+  }
+}

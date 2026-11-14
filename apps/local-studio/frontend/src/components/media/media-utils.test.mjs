@@ -29,7 +29,7 @@ test("reconnect callback remains within app and preserves the media destination"
 
 
 test("asset menu only exposes provider-backed mutations", () => {
-  for (const source of ["cf_images", "r2", "stream", "local", "drive"]) {
+  for (const source of ["cf_images", "r2", "stream", "local", "drive", "intake"]) {
     const asset = { id: source + "_asset", filename: "test.png", source };
     assert.equal(canEditMediaMetadata(asset), source === "cf_images");
     assert.equal(canDeleteMediaAsset(asset), ["cf_images", "r2", "stream"].includes(source));

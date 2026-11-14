@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "lyrebird",
+  "name": "Lyrebird",
+  "animal": "Superb lyrebird",
+  "version": "0.1.0",
+  "status": "planned",
+  "availability": "coming-soon",
+  "assetStatus": "brief-only",
+  "visualApproval": "pending",
+  "role": "Copywriting & voice \u00b7 tone and narrative",
+  "description": "The voice specialist. Studies a brand\u2019s language and produces consistent copy, narration, and voice direction across channels.",
+  "habitatIds": [
+    "deep-canopy"
+  ],
+  "capabilities": [
+    "copywriting",
+    "brand-voice",
+    "narration",
+    "content-editing"
+  ],
+  "personality": [
+    "expressive",
+    "attentive",
+    "articulate"
+  ],
+  "visualNotes": "An elegant lyrebird with a refined fan tail, small field notebook, and a few sound-wave motifs; editorial and expressive.",
+  "signatureAction": "A fan-tail flourish that shifts through a few distinct voice-note gestures.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns \u00d7 10 rows"
+  },
+  "states": {},
+  "avatar": null,
+  "icon": null,
+  "portrait": null,
+  "creativeBrief": {
+    "characterDirection": "An elegant lyrebird with a refined fan tail, small field notebook, and a few sound-wave motifs; editorial and expressive.",
+    "motionDirection": "A fan-tail flourish that shifts through a few distinct voice-note gestures."
+  }
+}

@@ -25,7 +25,7 @@ function Thumb({ asset }: { asset: MediaAsset }) {
   const duration = formatDuration(asset.duration_ms);
   return (
     <div className={`agentsam-media-thumb is-${kind}`}>
-      {(kind === "image" || kind === "video") && preview ? (
+      {((kind === "image" && !/\.icns$/i.test(asset.filename)) || (kind === "video" && asset.source !== "intake")) && preview ? (
         <img src={preview} alt="" loading="lazy" decoding="async" />
       ) : (
         <span className="agentsam-media-thumb__glyph">{asset.local_directory ? <Folder size={22} /> : <KindGlyph kind={kind} />}</span>

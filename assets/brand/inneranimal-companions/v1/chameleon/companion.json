@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "chameleon",
+  "name": "Chameleon",
+  "animal": "Veiled chameleon",
+  "version": "0.1.0",
+  "status": "planned",
+  "availability": "coming-soon",
+  "assetStatus": "brief-only",
+  "visualApproval": "pending",
+  "role": "Brand & design \u00b7 adaptive visual systems",
+  "description": "The visual adapter. Explores palettes, theme tokens, CSS systems, and responsive design variations while keeping a brand coherent.",
+  "habitatIds": [
+    "deep-canopy"
+  ],
+  "capabilities": [
+    "brand-design",
+    "color-systems",
+    "theme-tokens",
+    "css-adaptation"
+  ],
+  "personality": [
+    "expressive",
+    "adaptable",
+    "tasteful"
+  ],
+  "visualNotes": "A friendly veiled chameleon with a subtle crest and a modular color-shifting pattern; polished, flat-clay accents with controlled gradients.",
+  "signatureAction": "A slow palette-shift from one coordinated brand color family to another.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns \u00d7 10 rows"
+  },
+  "states": {},
+  "avatar": null,
+  "icon": null,
+  "portrait": null,
+  "creativeBrief": {
+    "characterDirection": "A friendly veiled chameleon with a subtle crest and a modular color-shifting pattern; polished, flat-clay accents with controlled gradients.",
+    "motionDirection": "A slow palette-shift from one coordinated brand color family to another."
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "id": "bruneaux",
+  "name": "Bruneaux",
+  "animal": "Bear",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "availability": "preview",
+  "assetStatus": "runtime-ready",
+  "visualApproval": "approved",
+  "role": "Forge guardian · systems building & resilience",
+  "description": "The forge guardian. Carries the heavy work, builds durable systems, and stays steady when a project needs endurance.",
+  "habitatIds": [
+    "field-operations"
+  ],
+  "capabilities": [
+    "systems-building",
+    "infrastructure",
+    "resilience",
+    "implementation"
+  ],
+  "personality": [
+    "dependable",
+    "patient",
+    "strong",
+    "protective"
+  ],
+  "visualNotes": "A powerful brown bear with brass goggles, olive IA scarf, heavy utility harness, lantern canister, and anvil-like shoulder emblem.",
+  "signatureAction": "A warm forge-ring gesture that signals a durable build is ready.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns × 10 rows"
+  },
+  "states": {
+    "idle": {
+      "src": "animations/bruneaux-idle.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "working": {
+      "src": "animations/bruneaux-working.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "thinking": {
+      "src": "animations/bruneaux-thinking.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "attention": {
+      "src": "animations/bruneaux-attention.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "success": {
+      "src": "animations/bruneaux-success.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "signature": {
+      "src": "animations/bruneaux-signature.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "waiting": {
+      "src": "animations/bruneaux-waiting.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "error": {
+      "src": "animations/bruneaux-error.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "resting": {
+      "src": "animations/bruneaux-resting.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "blinking": {
+      "src": "animations/bruneaux-blinking.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    }
+  },
+  "avatar": "avatars/bruneaux-avatar-128.png",
+  "icon": "avatars/bruneaux-icon-64.png",
+  "portrait": "avatars/bruneaux-portrait-256.png",
+  "creativeBrief": {
+    "characterDirection": "A powerful brown bear with brass goggles, olive IA scarf, heavy utility harness, lantern canister, and anvil-like shoulder emblem.",
+    "motionDirection": "A warm forge-ring gesture that signals a durable build is ready."
+  },
+  "sourceArtwork": [
+    "a_clean_spritesheet_illustration_on_a_transparent_2_batch_2.png"
+  ],
+  "ingestNote": "Imported, validated APNG runtime art from the approved Field Operations package. Local preview only until release approval.",
+  "sourcePackage": "InnerAnimal-Field-Operations-v1.0.0.zip",
+  "sourceSha256": "cc21fde4b510e32e453423b1fd27a7001ca5635f23acac45a0654e19dbe7673f",
+  "frameCount": 40,
+  "runtimeStateCount": 10,
+  "animationFrameCount": 40,
+  "atlas": "atlases/bruneaux-sprite-atlas-4x10.png",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "4-frame transparent APNG for each runtime state; independent character rigging is not certified."
+    ]
+  }
+}

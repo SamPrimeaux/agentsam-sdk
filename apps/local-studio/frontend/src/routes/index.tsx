@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, BookOpen, Box, ChevronRight, FilePlus2, Film, Folder, Globe, Layers3, MessageSquare, Search, Ticket } from "lucide-react";
 import { useWorkStore } from "@/lib/work/store";
+import { useCompanionSettings } from "../../agentsam/CompanionContext";
 import "./platform-home.css";
 
 export const Route = createFileRoute("/")({ component: LocalStudioHome });
@@ -30,6 +31,7 @@ function chatPreview(chat: { messages: Array<{ role: string; content: string }> 
 export function LocalStudioHome() {
   const navigate = useNavigate();
   const state = useWorkStore();
+  const { settings: companionSettings, loading: companionSettingsLoading } = useCompanionSettings();
   const recentProjects = state.hydrated ? state.projects.slice(0, 3) : [];
   const recentChats = state.hydrated
     ? [...state.chats]
@@ -57,6 +59,10 @@ export function LocalStudioHome() {
         <div className="platform-home-eyebrow"><span className="platform-home-live" /> AgentSam Studio <span className="platform-home-separator">/</span> Workspace</div>
         <h1 id="platform-home-title">What should we build next?</h1>
         <p>Your workspace is restored. Start a new chat, or resume a recent conversation — you are not forced into an old failed thread.</p>
+        {!companionSettingsLoading && !companionSettings.onboarding?.completedAt ? <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[.06] p-4">
+          <div><p className="text-[10px] font-semibold uppercase tracking-[.16em] text-emerald-300">A good place to begin</p><p className="mt-1 text-sm font-semibold">Discover your InnerAnimal</p><p className="mt-1 text-xs text-muted-foreground">Answer four quick questions and choose a companion for your workspace.</p></div>
+          <button type="button" onClick={() => { window.location.href = '/onboarding/companion'; }} className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-300 px-3 text-xs font-semibold text-[#0b170f] hover:bg-emerald-200">Find my companion <ArrowRight size={14}/></button>
+        </div> : null}
         <div className="platform-home-composer">
           <button type="button" className="platform-home-composer-entry" onClick={newConversation} aria-label="Start a new AgentSam conversation">
             <span>New Chat</span><span className="platform-home-composer-prompt">Ask, plan, build, or refine anything…</span>

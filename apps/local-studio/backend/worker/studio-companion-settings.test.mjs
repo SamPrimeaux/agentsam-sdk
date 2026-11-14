@@ -25,6 +25,8 @@ const request = (method = 'GET', body) => new Request('https://agentsam.innerani
   body: body === undefined ? undefined : JSON.stringify(body),
 });
 
+const defaults = { activeId: 'geaux', secondaryId: null, desktopBuddyEnabled: false, onboarding: null, customCompanions: [] };
+
 const custom = {
   id: 'custom_12345678-1234-4234-8234-123456789abc',
   name: 'Moss', animal: 'Red panda', role: 'Research companion',
@@ -32,13 +34,14 @@ const custom = {
   personality: 'Curious and thoughtful', visualNotes: 'Rust red coat, cream face, dark paws.',
   signatureAction: 'Unrolls a field notebook', imageUrl: null,
   stateAssets: { idle: '/brand/inneranimal-companions/v1/custom/moss/idle.png', working: '/brand/inneranimal-companions/v1/custom/moss/working.png' },
+  brandName: '', commissioningMode: 'personal',
 };
 
 test('companion settings default to Geaux without creating a second storage table', async () => {
   const db = memoryDb();
   const response = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-1');
   assert.equal(response.status, 200);
-  assert.deepEqual((await response.json()).settings, { activeId: 'geaux', customCompanions: [] });
+  assert.deepEqual((await response.json()).settings, defaults);
   assert.equal(db.rows.size, 0, 'GET does not create or mutate the preference row');
 });
 
@@ -46,9 +49,9 @@ test('Bella is accepted as a built-in companion and can be selected without a cu
   const db = memoryDb();
   const saved = await handleStudioCompanionSettings(request('PUT', { activeId: 'bella', customCompanions: [] }), { DB: db }, 'acct-bella');
   assert.equal(saved.status, 200);
-  assert.deepEqual((await saved.json()).settings, { activeId: 'bella', customCompanions: [] });
+  assert.deepEqual((await saved.json()).settings, { ...defaults, activeId: 'bella' });
   const loaded = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-bella');
-  assert.deepEqual((await loaded.json()).settings, { activeId: 'bella', customCompanions: [] });
+  assert.deepEqual((await loaded.json()).settings, { ...defaults, activeId: 'bella' });
 });
 
 test('companion selection and custom creation preserve unrelated account preferences', async () => {
@@ -56,12 +59,12 @@ test('companion selection and custom creation preserve unrelated account prefere
   const body = { activeId: custom.id, customCompanions: [custom] };
   const saved = await handleStudioCompanionSettings(request('PUT', body), { DB: db }, 'acct-1');
   assert.equal(saved.status, 200);
-  assert.deepEqual((await saved.json()).settings, body);
+  assert.deepEqual((await saved.json()).settings, { ...defaults, activeId: custom.id, customCompanions: [custom] });
   const stored = JSON.parse(db.rows.get('acct-1'));
   assert.deepEqual(stored.settings_general, { openLastProject: true });
   assert.equal(stored.account_avatar_url, '/brand/avatar.png');
   const loaded = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-1');
-  assert.deepEqual((await loaded.json()).settings, body);
+  assert.deepEqual((await loaded.json()).settings, { ...defaults, activeId: custom.id, customCompanions: [custom] });
 });
 
 test('companion settings reject unknown active pets and malformed custom records', async () => {
@@ -93,5 +96,5 @@ test('companion selection and custom profiles never cross account boundaries', a
   const saved = await handleStudioCompanionSettings(request('PUT', { activeId: custom.id, customCompanions: [custom] }), { DB: db }, 'acct-owner');
   assert.equal(saved.status, 200);
   const otherAccount = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-other');
-  assert.deepEqual((await otherAccount.json()).settings, { activeId: 'geaux', customCompanions: [] });
+  assert.deepEqual((await otherAccount.json()).settings, defaults);
 });

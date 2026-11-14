@@ -85,9 +85,9 @@ export async function handleStudioAccountAvatar(request, env, userId) {
 
 
 const BUILT_IN_COMPANION_IDS = new Set([
- "geaux", "meaux", "coder", "architect", "engineer", "py", "bella",
+ "geaux", "meaux", "coder", "architect", "engineer", "py", "bella", "roux", "bruneaux", "nyra", "toro",
 ]);
-const DEFAULT_COMPANION_SETTINGS = Object.freeze({ activeId: "geaux", customCompanions: [] });
+const DEFAULT_COMPANION_SETTINGS = Object.freeze({ activeId: "geaux", secondaryId: null, desktopBuddyEnabled: false, onboarding: null, customCompanions: [] });
 const COMPANION_STATES = new Set([
  "idle", "working", "thinking", "attention", "success", "signature", "waiting", "error", "resting", "blinking",
 ]);
@@ -110,6 +110,8 @@ function normalizeCustomCompanion(value) {
  const personality = boundedText(value.personality, 180);
  const visualNotes = boundedText(value.visualNotes, 400);
  const signatureAction = boundedText(value.signatureAction, 180);
+ const brandName = boundedText(value.brandName, 80);
+ const commissioningMode = value.commissioningMode === "agency" ? "agency" : "personal";
  const imageUrl = normalizeAccountAvatar(value.imageUrl);
  const stateAssets = {};
  if (value.stateAssets != null) {
@@ -122,8 +124,8 @@ function normalizeCustomCompanion(value) {
   }
  }
  if (!id || !name || !animal || !role || !description || personality === undefined ||
-     visualNotes === undefined || signatureAction === undefined || imageUrl === undefined) return null;
- return { id, name, animal, role, description, personality, visualNotes, signatureAction, imageUrl, stateAssets };
+     visualNotes === undefined || signatureAction === undefined || brandName === undefined || imageUrl === undefined) return null;
+ return { id, name, animal, role, description, personality, visualNotes, signatureAction, imageUrl, stateAssets, brandName, commissioningMode };
 }
 
 function normalizeCompanionSettings(value) {
@@ -141,7 +143,25 @@ function normalizeCompanionSettings(value) {
  const requested = typeof value.activeId === "string" ? value.activeId : "";
  const activeId = BUILT_IN_COMPANION_IDS.has(requested) || customCompanions.some(item => item.id === requested)
   ? requested : "geaux";
- return { activeId, customCompanions };
+ const requestedSecondary = typeof value.secondaryId === "string" ? value.secondaryId : "";
+ const secondaryId = requestedSecondary && requestedSecondary !== activeId &&
+  (BUILT_IN_COMPANION_IDS.has(requestedSecondary) || customCompanions.some(item => item.id === requestedSecondary))
+  ? requestedSecondary : null;
+ const desktopBuddyEnabled = secondaryId !== null && value.desktopBuddyEnabled === true;
+ let onboarding = null;
+ if (value.onboarding && typeof value.onboarding === "object" && !Array.isArray(value.onboarding)) {
+  const completedAt = boundedText(value.onboarding.completedAt, 40, true);
+  const recommendedId = boundedText(value.onboarding.recommendedId, 48, true);
+  const answers = {};
+  for (const key of ["work-style", "problem-style", "notice", "presence"]) {
+   const answer = boundedText(value.onboarding.answers?.[key], 48, true);
+   if (answer) answers[key] = answer;
+  }
+  if (completedAt && recommendedId && BUILT_IN_COMPANION_IDS.has(recommendedId) && Object.keys(answers).length === 4) {
+   onboarding = { version: "1", completedAt, recommendedId, answers };
+  }
+ }
+ return { activeId, secondaryId, desktopBuddyEnabled, onboarding, customCompanions };
 }
 
 /** Account-scoped InnerAnimal companion selection and creation briefs.
@@ -177,7 +197,7 @@ export async function handleStudioCompanionSettings(request, env, accountId) {
  if (!BUILT_IN_COMPANION_IDS.has(activeId) && !customCompanions.some(item => item.id === activeId)) {
   return answer({ ok: false, error: "active_companion_invalid" }, 400);
  }
- const settings = { activeId, customCompanions };
+ const settings = normalizeCompanionSettings({ ...input, activeId, customCompanions });
  const next = { ...existing, inneranimal_companions: settings };
  await env.DB.prepare(`INSERT INTO agentsam_user_ui_preferences
   (workspace_id,user_id,ui_preferences_json,updated_at_unix)

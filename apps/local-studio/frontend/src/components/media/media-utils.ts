@@ -1,6 +1,6 @@
 export type MediaKind = "all" | "image" | "video" | "model" | "file";
-export type MediaSource = "cf_images" | "stream" | "r2" | "local";
-export type MediaProvider = "cf_images" | "r2" | "stream" | "drive" | "local" | "other";
+export type MediaSource = "cf_images" | "stream" | "r2" | "local" | "intake";
+export type MediaProvider = "cf_images" | "r2" | "stream" | "drive" | "local" | "intake" | "other";
 
 export type MediaAsset = {
   id: string;
@@ -81,7 +81,7 @@ export function classifyAsset(asset: MediaAsset): MediaKind {
   const name = String(asset.filename || "").toLowerCase();
   if (asset.cloudflare_stream_uid || mime.startsWith("video/") || /\.(mp4|webm|mov|m4v|mkv)$/.test(name)) return "video";
   if (mime.startsWith("image/") || asset.cloudflare_image_id || /\.(png|jpe?g|gif|webp|svg|avif)$/.test(name)) return "image";
-  if (/\.(glb|gltf|obj|fbx|stl|3mf|usd|usda|usdc)$/.test(name) || asset.folder === "models") return "model";
+  if (/\.(glb|gltf|obj|fbx|stl|3mf|usd|usda|usdc|usdz|blend|dae|ply|step|stp|iges|igs)$/.test(name) || asset.folder === "models") return "model";
   return "file";
 }
 
@@ -92,6 +92,7 @@ export function providerOf(asset: MediaAsset): MediaProvider {
   if (source === "r2" || asset.r2_key) return "r2";
   if (source === "drive" || source === "google-drive") return "drive";
   if (source === "local") return "local";
+  if (source === "intake") return "intake";
   return "other";
 }
 
@@ -101,6 +102,7 @@ const PROVIDER_LABEL: Record<MediaProvider, string> = {
   r2: "R2",
   drive: "Google Drive",
   local: "Local",
+  intake: "Mac intake · preview",
   other: "Library",
 };
 
@@ -158,7 +160,7 @@ export function previewUrl(asset: MediaAsset) {
 const MIME_BY_EXT: Record<string, string> = {
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp",
   svg: "image/svg+xml", avif: "image/avif", mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
-  glb: "model/gltf-binary", gltf: "model/gltf+json", pdf: "application/pdf", json: "application/json",
+  glb: "model/gltf-binary", gltf: "model/gltf+json", usdz: "model/vnd.usdz+zip", blend: "application/octet-stream", stl: "model/stl", pdf: "application/pdf", json: "application/json",
   txt: "text/plain", md: "text/markdown",
 };
 

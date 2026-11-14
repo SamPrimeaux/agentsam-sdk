@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "id": "roux",
+  "name": "Roux",
+  "animal": "Wolf",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "availability": "preview",
+  "assetStatus": "runtime-ready",
+  "visualApproval": "approved",
+  "role": "Field guidance · scouting & navigation",
+  "description": "The pathfinder. Reads the terrain, spots useful routes, and keeps complex work moving in the right direction.",
+  "habitatIds": [
+    "field-operations"
+  ],
+  "capabilities": [
+    "scouting",
+    "navigation",
+    "research",
+    "coordination"
+  ],
+  "personality": [
+    "loyal",
+    "observant",
+    "steady",
+    "resourceful"
+  ],
+  "visualNotes": "Gray-and-cream wolf with amber eyes, brass goggles, olive IA field scarf, hiking harness, rolled bedroll, and compass medallion.",
+  "signatureAction": "A proud guidance howl framed by a soft green arc.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns × 10 rows"
+  },
+  "states": {
+    "idle": {
+      "src": "animations/roux-idle.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "working": {
+      "src": "animations/roux-working.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "thinking": {
+      "src": "animations/roux-thinking.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "attention": {
+      "src": "animations/roux-attention.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "success": {
+      "src": "animations/roux-success.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "signature": {
+      "src": "animations/roux-signature.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "waiting": {
+      "src": "animations/roux-waiting.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "error": {
+      "src": "animations/roux-error.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "resting": {
+      "src": "animations/roux-resting.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "blinking": {
+      "src": "animations/roux-blinking.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    }
+  },
+  "avatar": "avatars/roux-avatar-128.png",
+  "icon": "avatars/roux-icon-64.png",
+  "portrait": "avatars/roux-portrait-256.png",
+  "creativeBrief": {
+    "characterDirection": "Gray-and-cream wolf with amber eyes, brass goggles, olive IA field scarf, hiking harness, rolled bedroll, and compass medallion.",
+    "motionDirection": "A proud guidance howl framed by a soft green arc."
+  },
+  "sourceArtwork": [
+    "a_clean_high_detail_sprite_sheet_illustration_a_1_batch_1.png"
+  ],
+  "ingestNote": "Imported, validated APNG runtime art from the approved Field Operations package. Local preview only until release approval.",
+  "sourcePackage": "InnerAnimal-Field-Operations-v1.0.0.zip",
+  "sourceSha256": "cc21fde4b510e32e453423b1fd27a7001ca5635f23acac45a0654e19dbe7673f",
+  "frameCount": 40,
+  "runtimeStateCount": 10,
+  "animationFrameCount": 40,
+  "atlas": "atlases/roux-sprite-atlas-4x10.png",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "4-frame transparent APNG for each runtime state; independent character rigging is not certified."
+    ]
+  }
+}

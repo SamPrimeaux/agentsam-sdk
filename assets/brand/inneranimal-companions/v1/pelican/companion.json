@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "pelican",
+  "name": "Pelican",
+  "animal": "Brown pelican",
+  "version": "0.1.0",
+  "status": "planned",
+  "availability": "coming-soon",
+  "assetStatus": "brief-only",
+  "visualApproval": "pending",
+  "role": "Data transport \u00b7 pipelines & storage",
+  "description": "The payload carrier. Moves large datasets and media safely through pipelines, keeping transfers visible and organized.",
+  "habitatIds": [
+    "bayou-gulf"
+  ],
+  "capabilities": [
+    "data-pipelines",
+    "payload-routing",
+    "storage",
+    "media-transfer"
+  ],
+  "personality": [
+    "helpful",
+    "organized",
+    "steady"
+  ],
+  "visualNotes": "A Gulf Coast brown pelican with a clean field-utility harness and a reinforced data pouch; friendly, capable, and unmistakably coastal.",
+  "signatureAction": "A pouch-load swoop that gathers a payload and delivers it to the right destination.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns \u00d7 10 rows"
+  },
+  "states": {},
+  "avatar": null,
+  "icon": null,
+  "portrait": null,
+  "creativeBrief": {
+    "characterDirection": "A Gulf Coast brown pelican with a clean field-utility harness and a reinforced data pouch; friendly, capable, and unmistakably coastal.",
+    "motionDirection": "A pouch-load swoop that gathers a payload and delivers it to the right destination."
+  }
+}

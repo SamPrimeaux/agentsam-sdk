@@ -106,9 +106,10 @@ export function EcommerceAppView({ search, forcePackagedAsset = false }: {
   const isCodeEditor = search.page === '/admin/theme-code-editor';
   const page = isCodeEditor ? '/admin/theme-code-editor' : resolveEcommerceAdminPath(search.page || '/admin/store');
   const assetPath = page && !isCodeEditor && ((isPackagedDesktop() || forcePackagedAsset) ? resolveEcommerceAssetPath(page) : page);
-  const url = typeof window !== 'undefined' && assetPath
+  const url = assetPath
     ? (() => {
-      const resolved = new URL(assetPath, window.location.origin);
+      // The iframe URL is origin-relative so server and client render the same markup.
+      const resolved = new URL(assetPath, 'https://agentsam.local');
       if (!isPackagedDesktop() && page === '/admin/home') resolved.searchParams.set('__agentsamEmbedded', '1');
       if (search.site_id && /^[A-Za-z0-9_-]{1,120}$/.test(search.site_id) && page?.startsWith('/admin/')) {
         resolved.searchParams.set('site_id', search.site_id);
@@ -135,7 +136,7 @@ export function EcommerceAppView({ search, forcePackagedAsset = false }: {
         resolved.searchParams.set('theme_version', trySelection.theme_version);
         resolved.searchParams.set('action', trySelection.action);
       }
-      return resolved.toString();
+      return resolved.pathname + resolved.search + resolved.hash;
     })()
     : null;
 
