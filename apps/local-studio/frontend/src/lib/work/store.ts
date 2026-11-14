@@ -99,6 +99,7 @@ const SIDE_TITLES: Record<SideKind, string> = {
   media: "MovieMode",
   goal: "Edit goal",
   database: "Database",
+  apps: "Apps",
   design: "Canvas",
   plugin: "Plugin",
 };
@@ -909,6 +910,7 @@ export const useWorkStore = create<WorkState>()(
           kind === "goal" ||
           kind === "terminal" ||
           kind === "database" ||
+          kind === "apps" ||
           kind === "design" ||
           kind === "plugin"
             ? get().sideTabs.find((t) => t.kind === kind &&
