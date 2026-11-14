@@ -35,7 +35,7 @@ export function PluginLogo({ plugin, className }: { plugin: LocalStudioPluginRec
   const dark = useThemeIsDark();
   const src = pluginLogoUrl(plugin, dark);
   if (!src) return <Plug className={className} />;
-  return <img src={src} alt={plugin.icon_alt || ""} className={className} style={{ objectFit: plugin.icon_fit === "cover" ? "cover" : "contain" }} draggable={false} />;
+  return <img src={src} alt={plugin.icon_alt || ""} className={[className, plugin.icon_fit === "cover" ? "object-cover" : "object-contain"].filter(Boolean).join(" ")} draggable={false} />;
 }
 
 /**

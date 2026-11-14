@@ -3,6 +3,7 @@ import { AdminAppMark, type AdminInstallableApp } from "@inneranimalmedia/agents
 import { ChevronDown, Globe, LayoutGrid, Pin, PinOff, Plug, X } from "lucide-react";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -184,12 +185,12 @@ export function NewTabStage({ tab }: { tab?: SideTab }) {
                       <StageIcon stage={stage} className="size-4 shrink-0 text-muted-foreground" />
                       <span className="truncate">{stage.label}</span>
                     </button>
-                    <button type="button" aria-label={pinned ? `Unpin ${stage.label}` : `Pin ${stage.label}`}
+                    <IconAction label={pinned ? `Unpin ${stage.label}` : `Pin ${stage.label}`} variant="ghost"
                       onClick={() => togglePin(stage.id)}
-                      className={cn("absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-opacity hover:text-foreground focus-visible:opacity-100",
+                      className={cn("absolute right-0.5 top-1/2 size-7 min-h-0 min-w-0 -translate-y-1/2 p-0 transition-opacity focus-visible:opacity-100",
                         pinned ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                       {pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
-                    </button>
+                    </IconAction>
                   </li>
                 );
               })}
@@ -257,10 +258,10 @@ export function NewTabStage({ tab }: { tab?: SideTab }) {
                     <span className="grid size-11 place-items-center rounded-xl border border-border bg-card"><SuggestedIcon entry={entry} apps={apps} /></span>
                     <span className="line-clamp-2 w-full text-xs">{entry.title}</span>
                   </button>
-                  <button type="button" aria-label={`Remove ${entry.title} from suggestions`} onClick={() => forgetPage(entry)}
-                    className="absolute right-1 top-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100">
+                  <IconAction label={`Remove ${entry.title} from suggestions`} variant="ghost" onClick={() => forgetPage(entry)}
+                    className="absolute right-0.5 top-0.5 size-6 min-h-0 min-w-0 p-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100">
                     <X className="size-3" />
-                  </button>
+                  </IconAction>
                 </li>
               ))}
             </ul>

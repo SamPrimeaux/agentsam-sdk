@@ -12,6 +12,7 @@ import { settingsPaneLabel } from "@/components/settings/settingsPaneLabel";
 import { useActiveCompanion } from "../../../agentsam/CompanionContext";
 import { resolveCompanion } from "../../../agentsam/companions";
 import { PluginLogo } from "./stage-icons";
+import "./item-stage.css";
 
 const LocalStudioSettingsPage = lazy(() =>
   import("@/components/settings/LocalStudioSettingsPage").then((m) => ({ default: m.LocalStudioSettingsPage })));
@@ -39,9 +40,7 @@ function CompanionMascot() {
   if (!src || hidden) return null;
   return (
     <img
-      src={src} alt="" draggable={false}
-      // Sized from the container, never a fixed pixel size: grows with the stage, stays within sane bounds.
-      style={{ width: "clamp(6rem, 34cqmin, 22rem)", height: "auto" }}
+      src={src} alt="" draggable={false} className="as-item-issue__mascot"
       onError={() => { if (fallback) setHidden(true); else setFallback(true); }}
     />
   );
@@ -49,11 +48,11 @@ function CompanionMascot() {
 
 function ConnectionIssue({ name, onReconnect, onRetry }: { name: string; onReconnect: () => void; onRetry: () => void }) {
   return (
-    <div className="h-full w-full" style={{ containerType: "size" }}>
-      <div className="grid h-full place-items-center px-6">
-        <div className="flex flex-col items-center text-center" style={{ gap: "clamp(0.75rem, 3cqmin, 1.5rem)" }}>
+    <div className="as-item-issue">
+      <div className="as-item-issue__body">
+        <div className="as-item-issue__stack">
           <CompanionMascot />
-          <h2 className="font-semibold" style={{ fontSize: "clamp(1.125rem, 4.4cqmin, 2rem)" }}>Couldn’t connect to {name}</h2>
+          <h2 className="as-item-issue__title">Couldn’t connect to {name}</h2>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button type="button" onClick={onReconnect}>Reconnect</Button>
             <Button type="button" variant="outline" onClick={onRetry}>Retry</Button>
