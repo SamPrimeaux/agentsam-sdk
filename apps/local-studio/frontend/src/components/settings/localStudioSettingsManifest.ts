@@ -65,6 +65,10 @@ export const localStudioSettingsManifest = defineSettingsManifest({
       label: "Browser & Network",
       description: "Browser runtime, local device tunnel, provider OAuth and network capability health.",
       icon: "network",
+      views: [
+        { id: "overview", label: "Overview" },
+        { id: "browser", label: "Browser" },
+      ],
     },
     {
       id: "runtime",

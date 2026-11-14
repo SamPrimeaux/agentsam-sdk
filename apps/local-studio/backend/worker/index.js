@@ -83,6 +83,7 @@ import { handleStudioThemes } from "./studio-themes.js";
 import { handleStudioNavigation } from "./studio-navigation-preferences.js";
 import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled, setNativeAdminAppPinned, touchNativeAdminAppOpened } from "./apps-launcher.js";
 import { listBrowserHistory, recordBrowserVisit, removeBrowserHistoryEntry } from "./browser-history.js";
+import { listEmbedPolicy, listTrustedOrigins, trustOrigin, untrustOrigin } from "./browser-trust.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
@@ -805,6 +806,7 @@ export default {
     const isAppsInstall = url.pathname === "/api/apps/install";
     const isAppsOpen = url.pathname === "/api/apps/open";
     const isBrowserHistory = url.pathname === "/api/browser/history";
+    const isBrowserSettings = url.pathname === "/api/settings/browser";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
     const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
@@ -1616,6 +1618,26 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       } catch (error) {
         const code=String(error?.message||"history_unavailable");
         return json({ok:false,error:code.slice(0,120)},code==="history_url_invalid"?400:503);
+      }
+    }
+    if (isBrowserSettings) {
+      if (!["GET","POST","DELETE"].includes(request.method))
+        return json({ok:false,error:"method_not_allowed"},405,{allow:"GET, POST, DELETE"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        if (request.method === "GET")
+          return json({ok:true,trusted_origins:await listTrustedOrigins(env.DB,userId),embed_policy:await listEmbedPolicy(env.DB)});
+        if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+          return json({ok:false,error:"origin_not_allowed"},403);
+        const body = await request.json().catch(()=>null);
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.origin !== "string")
+          return json({ok:false,error:"browser_trust_request_invalid"},400);
+        if (request.method === "POST") return json({ok:true,...await trustOrigin(env.DB,userId,body)},201);
+        return json({ok:true,...await untrustOrigin(env.DB,userId,body.origin)});
+      } catch (error) {
+        const code=String(error?.message||"browser_trust_unavailable");
+        return json({ok:false,error:code.slice(0,120)},code==="trust_origin_invalid"||code==="trust_scope_invalid"?400:503);
       }
     }
     if (isPluginCatalog) {

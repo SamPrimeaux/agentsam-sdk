@@ -128,6 +128,7 @@ try {
     '/api/settings/companions',
     '/api/apps/launcher',
     '/api/browser/history',
+    '/api/settings/browser',
     '/api/work/canvases',
     '/api/work/canvases/canvas_aaaaaaaaaaaa',
     '/api/work/canvases/canvas_aaaaaaaaaaaa/directions',

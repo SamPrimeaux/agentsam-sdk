@@ -13,6 +13,7 @@ import { localStudioSettingsHost } from "./localStudioSettingsHost";
 import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
 import { InnerAnimalCompanionsPage } from "../../../agentsam/InnerAnimalCompanionsPage";
 import { AppsManagementPage } from "./AppsManagementPage";
+import { BrowserSettings } from "./BrowserSettings";
 import { PlatformNavigationSettings } from "./PlatformNavigationSettings";
 
 export function LocalStudioSettingsPage({
@@ -79,7 +80,9 @@ export function LocalStudioSettingsPage({
         ? <AppsManagementPage />
         : unit === "customize" && view === "companions"
         ? <InnerAnimalCompanionsPage />
-        : null}
+        : unit === "network" && view === "browser"
+          ? <BrowserSettings />
+          : null}
     />
   );
 }
