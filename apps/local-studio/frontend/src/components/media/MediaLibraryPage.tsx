@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { FolderOpen, Grid2X2, List, Loader2, RefreshCw, Search, Trash2, Upload, X } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { FolderOpen, Grid2X2, List, Loader2, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 import { BucketPicker, loadPinnedBuckets, savePinnedBuckets } from "./BucketPicker";
@@ -577,24 +578,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
               })}
             </select>
           ) : null}
-          {(source === "cf_images" || source === "r2") ? (
-            <>
-              <input ref={fileUploadRef} type="file" multiple className="agentsam-media-upload-input"
-                accept={source === "cf_images" ? "image/*" : undefined}
-                aria-label="Select files to upload"
-                onChange={(event) => { void uploadAssets(event.currentTarget.files); }} />
-              <button type="button" className="agentsam-media-btn" disabled={uploading || (source === "r2" && !activeBucket)}
-                title={source === "r2" && !activeBucket ? "Select an R2 bucket first" : "Upload to the selected provider"}
-                onClick={() => fileUploadRef.current?.click()}>
-                {uploading ? <Loader2 size={14} className="agentsam-media-spin" /> : <Upload size={14} />}
-                {uploading ? "Uploading…" : "Upload"}
-              </button>
-            </>
-          ) : null}
-          <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)} disabled={loading}>
-            <RefreshCw size={14} className={loading ? "agentsam-media-spin" : undefined} /> Refresh
-          </button>
-          <a className="agentsam-media-btn is-primary" href="/admin/moviemode">Open MovieMode</a>
+          <a className="agentsam-media-btn agentsam-media-moviemode" href="/admin/moviemode">MovieMode</a>
         </div>
       </header>
 
@@ -624,7 +608,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
       ) : (
         <>
           <div className="agentsam-media-toolbar">
-            <label className="agentsam-media-search">
+            <div className="agentsam-media-search" role="search">
               <Search size={15} aria-hidden="true" />
               <input
                 value={query}
@@ -632,7 +616,16 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                 placeholder={source === "r2" ? "Filter loaded objects" : "Search by name"}
                 aria-label="Search media"
               />
-            </label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="agentsam-media-search__refresh" aria-label="Refresh media"
+                    disabled={loading} onClick={() => setRefreshTick((n) => n + 1)}>
+                    <RefreshCw size={16} className={loading ? "agentsam-media-spin" : undefined} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh media</TooltipContent>
+              </Tooltip>
+            </div>
             {surface.kind === "all" ? (
             <div className="agentsam-media-tabs" role="tablist" aria-label="Source">
               {tabs.map((tab) => (
@@ -649,6 +642,21 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                 </button>
               ))}
             </div>
+            ) : null}
+            {(source === "cf_images" || source === "r2") ? (
+              <>
+                <input ref={fileUploadRef} type="file" multiple className="agentsam-media-upload-input"
+                  accept={source === "cf_images" ? "image/*" : undefined}
+                  aria-label="Select files to upload"
+                  onChange={(event) => { void uploadAssets(event.currentTarget.files); }} />
+                <button type="button" className="agentsam-media-btn is-primary agentsam-media-add"
+                  disabled={uploading || (source === "r2" && !activeBucket)}
+                  title={source === "r2" && !activeBucket ? "Select an R2 bucket first" : "Add files to the selected provider"}
+                  onClick={() => fileUploadRef.current?.click()}>
+                  {uploading ? <Loader2 size={15} className="agentsam-media-spin" /> : <Plus size={16} />}
+                  {uploading ? "Uploading…" : "Add"}
+                </button>
+              </>
             ) : null}
             {source === "local" ? (
               <div className="agentsam-media-local-controls">
@@ -673,7 +681,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
               />
             ) : null}
             <span className="agentsam-media-toolbar__spacer" />
-            <select className="agentsam-media-select" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
+            <select className="agentsam-media-select agentsam-media-sort" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
               <option value="recent">Recent</option>
               <option value="name">Name</option>
               <option value="size">Size</option>
