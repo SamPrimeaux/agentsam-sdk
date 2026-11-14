@@ -32,7 +32,7 @@ const ITEMS = [
   { to: "/cms", label: "CMS", icon: LayoutTemplate, match: (p: string) => p.startsWith("/cms") },
   { to: "/sites", label: "Sites", icon: Globe, match: (p: string) => p.startsWith("/sites") },
   { to: "/media", label: "Media", icon: Images, match: (p: string) => p.startsWith("/media") || p.startsWith("/content") },
-  { to: "/campaigns", label: "Campaigns", icon: Megaphone, match: (p: string) => p.startsWith("/campaigns") },
+  { to: "/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth", label: "Growth", icon: Megaphone, match: (p: string) => p === "/campaigns" || (p.startsWith("/apps/ecommerce-cms-agentsam") && new URLSearchParams(window.location.search).get("page") === "/admin/growth") },
   { to: "/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/database") },
   { to: "/collaborate", label: "Work", icon: CalendarDays, match: (p: string) => p.startsWith("/collaborate") || p.startsWith("/mail") },
   { to: "/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/projects") },

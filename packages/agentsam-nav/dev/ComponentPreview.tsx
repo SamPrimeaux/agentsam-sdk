@@ -10,6 +10,9 @@ import type { NavAction, NavMode } from '../src/contracts.js';
 import { AgentComposer } from '../../agentsam-workbench/src/agent/Composer.js';
 import '../src/shell.css';
 import '../src/theme.css';
+import { ComponentAtlas } from './ComponentAtlas';
+import { VisualReview } from './VisualReview';
+import { DesignCanvasApp } from '../../../apps/design-canvas/src/DesignCanvasApp';
 import './showcase.css';
 
 function DemoButton({ children, onClick, active }: { children: ReactNode; onClick: () => void; active?: boolean }) {
@@ -115,6 +118,16 @@ function ComponentPreview() {
   </Nav.Provider>;
 }
 
+function PreviewApp() {
+  const [view,setView]=useState<'board'|'visual'|'atlas'|'lab'>('board');
+  if(view==='board') return <DesignCanvasApp assetsBase="./.generated/design-sources" onNativeCanvas={()=>setView('visual')}/>;
+  return <div style={{height:'100%',position:'relative'}}>
+    <button type="button" style={{position:'fixed',right:18,bottom:15,zIndex:99,padding:'9px 12px',border:'1px solid #6a7280',background:'#2a2e35',color:'white',borderRadius:6,fontSize:12,cursor:'pointer'}} onClick={()=>setView('board')}>Source boards</button>
+    {view==='visual'?<VisualReview onInventory={()=>setView('atlas')} onLab={()=>setView('lab')}/>
+      :view==='atlas'?<ComponentAtlas onLab={()=>setView('lab')}/>
+      :<div><button className="preview-back-atlas" onClick={()=>setView('visual')}>Visual review</button><ComponentPreview /></div>}
+  </div>;
+}
 const mount = document.getElementById('component-preview');
 if (!mount) throw new Error('Component preview mount missing');
-createRoot(mount).render(<ComponentPreview/>);
+createRoot(mount).render(<PreviewApp/>);
