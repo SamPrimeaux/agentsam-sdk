@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { parseOpenDeepLink } from "./open-deep-link.ts";
 
 test("an open link yields the absolute path, decoded", () => {
-  assert.equal(parseOpenDeepLink("agentsamstudio://open?path=%2FUsers%2Fsam%2Fmy%20repo%20%26%20co&t=abc"), "/Users/sam/my repo & co");
+  assert.equal(parseOpenDeepLink("agentsamstudio://open?path=%2Fworkspace%2Fmy%20repo%20%26%20co&t=abc"), "/workspace/my repo & co");
   assert.equal(parseOpenDeepLink("agentsamstudio://open/?path=%2Ftmp%2Fx"), "/tmp/x");
 });
 
