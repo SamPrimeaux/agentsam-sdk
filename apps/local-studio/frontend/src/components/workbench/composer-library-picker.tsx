@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { FileText, FolderOpen, Search, X } from 'lucide-react';
 import { classifyAsset, previewUrl, type MediaAsset } from '@/components/media/media-utils';
 
+import { IconAction } from '@/components/ui/icon-action';
 /** Select existing owner-authorized images; download through their actual delivery URLs before staging. */
 export function ComposerLibraryPicker({ open, onClose, onAttach }: {
   open: boolean; onClose: () => void; onAttach: (file: File) => Promise<void>;
@@ -57,7 +58,7 @@ export function ComposerLibraryPicker({ open, onClose, onAttach }: {
   if (!open) return null;
   return <div className="as-composer-library-backdrop" role="presentation" onPointerDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="as-composer-library-dialog" role="dialog" aria-modal="true" aria-label="Add from library">
-      <header><strong><FolderOpen size={17}/> Add from library</strong><button type="button" onClick={onClose} aria-label="Close library"><X size={17}/></button></header>
+      <header><strong><FolderOpen size={17}/> Add from library</strong><IconAction type="button" label="Close library" onClick={onClose}><X size={17}/></IconAction></header>
       <label><Search size={15}/><input autoFocus type="search" placeholder="Search media…" aria-label="Search your library" value={query} onChange={event => setQuery(event.target.value)} /></label>
       {loading ? <p role="status">Loading your saved images…</p> : error ? <p role="alert">{error}</p> : !filtered.length ? <p>No matching media or reference files are available in your connected library.</p> : null}
       <div className="as-composer-library-grid">{filtered.map(asset => <button type="button" key={asset.id} disabled={Boolean(busy)} onClick={() => void choose(asset)}>{classifyAsset(asset)==='image'?<img src={previewUrl(asset)} alt="" loading="lazy"/>:<span className="as-library-file-icon"><FileText size={27} aria-hidden="true"/></span>}<span>{busy===asset.id?'Attaching…':asset.filename}</span></button>)}</div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AudioLines, Mic, MicOff, Volume2, X } from 'lucide-react';
 import { useWorkStore } from '@/lib/work/store';
 
+import { IconAction } from '@/components/ui/icon-action';
 /** Browser speech is a capability-gated voice transport; text turns use the existing authenticated AgentSam agent. */
 type SpeechResult = { isFinal: boolean; 0: { transcript: string } };
 type RecognitionEvent = { resultIndex: number; results: ArrayLike<SpeechResult> };
@@ -120,7 +121,7 @@ export function VoiceSession({ open, onClose, targetId, targetKind }: { open: bo
   if (!open) return null;
   return <div className="as-voice-backdrop" role="presentation" onPointerDown={event => { if (event.target === event.currentTarget) { stop(); onClose(); } }}>
     <section className="as-voice-dialog" role="dialog" aria-modal="true" aria-label="AgentSam voice session">
-      <header><span><AudioLines size={18}/> AgentSam Voice</span><button type="button" aria-label="Close voice session" onClick={() => { stop(); onClose(); }}><X size={18}/></button></header>
+      <header><span><AudioLines size={18}/> AgentSam Voice</span><IconAction type="button" label="Close voice session" onClick={() => { stop(); onClose(); }}><X size={18}/></IconAction></header>
       <div className="as-voice-status" role="status"><span className="as-voice-orb" data-phase={phase} /><strong>{phase === 'listening' ? 'Listening' : phase === 'working' ? 'AgentSam is working' : phase === 'speaking' ? 'Speaking' : phase === 'unavailable' ? 'Unavailable' : 'Ready for voice'}</strong><p>{status || 'Voice exchanges use your selected AgentSam model. Speech services depend on your browser.'}</p></div>
       <label className="as-voice-select"><Volume2 size={15}/> Voice <select aria-label="Choose voice" value={voiceURI} onChange={event => setVoiceURI(event.target.value)}><option value="">System default</option>{voices.map(voice => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}</option>)}</select></label>
       <div className="as-voice-controls"><button type="button" disabled={phase === 'unavailable' && !canDictate()} onClick={phase === 'ready' || phase === 'unavailable' ? begin : stop}>{phase === 'ready' || phase === 'unavailable' ? <Mic size={16}/> : <MicOff size={16}/>} {phase === 'ready' || phase === 'unavailable' ? 'Start listening' : 'Stop voice'}</button></div>

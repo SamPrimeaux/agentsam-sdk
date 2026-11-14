@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, FileCode2, Search, X } from 'lucide-react';
 
+import { IconAction } from '@/components/ui/icon-action';
 export type SourceArtboard = {
   id: string; family: string; filename: string; title: string; category: string;
   width: number; height: number; interactive?: boolean;
@@ -49,7 +50,7 @@ export function SourceArtboardLibrary({open,onClose,onImport}: {
   if(!open)return null;
   return <div className="cv-modal-backdrop" onPointerDown={event=>{if(event.currentTarget===event.target)onClose();}}>
     <section className="cv-modal cv-source-library" role="dialog" aria-modal="true" aria-labelledby="canvas-sources-title">
-      <header><h2 id="canvas-sources-title">Source artboards</h2><button type="button" aria-label="Close source library" onClick={onClose}><X size={18}/></button></header>
+      <header><h2 id="canvas-sources-title">Source artboards</h2><IconAction type="button" label="Close source library" onClick={onClose}><X size={18}/></IconAction></header>
       <p className="cv-source-intro">Import source-backed HTML into this account-owned Canvas. It becomes editable source, participates in undo, and can be saved with your document.</p>
       <div className="cv-source-search"><Search size={14}/><input autoFocus type="search" aria-label="Search source artboards" placeholder="Find a screen…" value={query} onChange={event=>setQuery(event.target.value)}/><select aria-label="Filter source sets" value={family} onChange={event=>setFamily(event.target.value)}><option value="all">All sources</option>{families.map(id=><option key={id} value={id}>{id}</option>)}</select></div>
       {loading?<p role="status">Loading source artboards…</p>:null}

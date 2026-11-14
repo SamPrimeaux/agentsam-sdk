@@ -170,7 +170,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
       </AgentSamAbsBrowser>
       {mode === 'build' && (busy || buildRequested || buildError) && <section className="as-browser-build-activity" data-open={activityOpen} aria-label="Browser build activity">
         <header><strong>{busy ? 'Building with AgentSam…' : buildError ? 'Build needs attention' : 'Build complete'}</strong>
-          {busy && <button type="button" onClick={() => stop(tab.id)} aria-label="Stop browser build"><Square size={13}/></button>}
+          {busy && <IconAction type="button" label="Stop browser build" onClick={() => stop(tab.id)}><Square size={13}/></IconAction>}
           <button type="button" aria-label={activityOpen ? 'Collapse build details' : 'Expand build details'} onClick={() => setActivityOpen(value => !value)}>{activityOpen ? <ChevronDown size={14}/> : <ChevronUp size={14}/>}</button>
         </header>
         {activityOpen && <div className="as-browser-build-details">

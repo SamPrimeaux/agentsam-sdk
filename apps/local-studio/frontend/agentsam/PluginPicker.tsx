@@ -9,6 +9,10 @@ import { useWorkStore } from '@/lib/work/store';
 import { SETTINGS_CATALOG_CHANGED_EVENT } from '@/lib/desktop/connection-deep-link';
 
 /** A single compact capability/context picker for both + and typed @. */
+function PlusMenuRow({ icon, title, hint, onClick }: { icon: ReactNode; title: string; hint: string; onClick: () => void }) {
+  return <button type="button" className="agentsam-plugin-row" onClick={onClick}>{icon}<span><strong>{title}</strong><small>{hint}</small></span></button>;
+}
+
 export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, onWebSearch, onProject, activeMode, onModeChange, contextLabel, children }: {
   value: string;
   onChange: (value: string) => void;
@@ -179,18 +183,18 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
       <div className="agentsam-plugin-heading">
         {section!=='root'&&<button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');}}>Back</button>}
         <strong>{section==='root'?'Add to your message':section==='skills'?'Skills':section==='apps'?'Apps':section==='modes'?'Agent mode':'Mention'}</strong>
-        <button type="button" className="as-nav-button" aria-label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></button>
+        <IconAction type="button" className="as-nav-button" label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></IconAction>
       </div>
       {section==='root' && onModeChange ? <div className="agentsam-plugin-sections" data-work-plus-menu="">
-        {onAttach&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onAttach();}}><Upload size={17}/><span><strong>Add photos & files</strong><small>Upload from computer</small></span></button>}
-        {onLibrary&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onLibrary();}}><Folder size={17}/><span><strong>Add from library</strong><small>Browse saved media and files</small></span></button>}
-        {onImage&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onImage();}}><ImagePlus size={17}/><span><strong>Create image</strong><small>Generate an image with AgentSam</small></span></button>}
-        {onWebSearch&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onWebSearch();}}><Globe size={17}/><span><strong>Web search</strong><small>Research in AgentSam Browser</small></span></button>}
-        {onProject&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onProject();}}><Folder size={17}/><span><strong>Work in a project</strong><small>Connect this conversation to a project</small></span></button>}
+        {onAttach&&<PlusMenuRow icon={<Upload size={17}/>} title="Add photos & files" hint="Upload from computer" onClick={()=>{setOpen(false);onAttach();}}/>}
+        {onLibrary&&<PlusMenuRow icon={<Folder size={17}/>} title="Add from library" hint="Browse saved media and files" onClick={()=>{setOpen(false);onLibrary();}}/>}
+        {onImage&&<PlusMenuRow icon={<ImagePlus size={17}/>} title="Create image" hint="Generate an image with AgentSam" onClick={()=>{setOpen(false);onImage();}}/>}
+        {onWebSearch&&<PlusMenuRow icon={<Globe size={17}/>} title="Web search" hint="Research in AgentSam Browser" onClick={()=>{setOpen(false);onWebSearch();}}/>}
+        {onProject&&<PlusMenuRow icon={<Folder size={17}/>} title="Work in a project" hint="Connect this conversation to a project" onClick={()=>{setOpen(false);onProject();}}/>}
         <div className="agentsam-plugin-section-divider" />
-        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('modes')}><Bot size={17}/><span><strong>Mode · {(activeMode||'agent').replace(/^./,letter=>letter.toUpperCase())}</strong><small>Agent, Plan, Debug, Multitask or Ask</small></span></button>
-        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('apps')}><Plug size={17}/><span><strong>Plugins & apps</strong><small>Installed connected capabilities</small></span></button>
-        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('skills')}><Sparkles size={17}/><span><strong>Skills</strong><small>Private instructions and knowledge</small></span></button>
+        <PlusMenuRow icon={<Bot size={17}/>} title={`Mode · ${(activeMode||'agent').replace(/^./,letter=>letter.toUpperCase())}`} hint="Agent, Plan, Debug, Multitask or Ask" onClick={()=>setSection('modes')}/>
+        <PlusMenuRow icon={<Plug size={17}/>} title="Plugins & apps" hint="Installed connected capabilities" onClick={()=>setSection('apps')}/>
+        <PlusMenuRow icon={<Sparkles size={17}/>} title="Skills" hint="Private instructions and knowledge" onClick={()=>setSection('skills')}/>
       </div> : section==='root' ? <div className="agentsam-plugin-sections">
         {onAttach&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onAttach();}}><Upload size={17}/><span className="sr-only" aria-hidden="true">Files</span><span><strong>Files</strong><small>Attach images and references</small></span></button>}
         <button type="button" className="agentsam-plugin-row" disabled={!contextLabel} onClick={()=>{onChange(value+(value?'\n':'')+'Target: '+contextLabel);setOpen(false);}}><Target size={17}/><span className="sr-only" aria-hidden="true">Target</span><span><strong>Target</strong><small>{contextLabel||'Select an element in your workspace'}</small></span></button>
