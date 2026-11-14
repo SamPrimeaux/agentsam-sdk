@@ -121,8 +121,8 @@ function ComponentPreview() {
 function PreviewApp() {
   const [view,setView]=useState<'board'|'visual'|'atlas'|'lab'>('board');
   if(view==='board') return <DesignCanvasApp assetsBase="./.generated/design-sources" onNativeCanvas={()=>setView('visual')}/>;
-  return <div style={{height:'100%',position:'relative'}}>
-    <button type="button" style={{position:'fixed',right:18,bottom:15,zIndex:99,padding:'9px 12px',border:'1px solid #6a7280',background:'#2a2e35',color:'white',borderRadius:6,fontSize:12,cursor:'pointer'}} onClick={()=>setView('board')}>Source boards</button>
+  return <div className="preview-root">
+    <button type="button" className="preview-source-boards" onClick={()=>setView('board')}>Source boards</button>
     {view==='visual'?<VisualReview onInventory={()=>setView('atlas')} onLab={()=>setView('lab')}/>
       :view==='atlas'?<ComponentAtlas onLab={()=>setView('lab')}/>
       :<div><button className="preview-back-atlas" onClick={()=>setView('visual')}>Visual review</button><ComponentPreview /></div>}

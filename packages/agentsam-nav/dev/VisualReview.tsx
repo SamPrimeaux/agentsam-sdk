@@ -10,6 +10,7 @@ import evidence from './visual-assets/manifest.json';
 import '../../../apps/local-studio/frontend/src/components/workbench/canvas/canvas.css';
 import './visual-review.css';
 
+import { IconAction } from '../../copro-ui/src/icon-action';
 type Evidence={id:string;name:string;group:string;owner:string;source:string;url:string;image:string|null;status:string;detail:string;capturedAt?:string};
 type Thread={id:string;boardId:string;nodeId:string;replies:{body:string;at:string}[];resolved:boolean};
 type Review={verdict?:'keep'|'refine'|'repair'|'retire';note?:string};
@@ -118,7 +119,7 @@ export function VisualReview({onInventory,onLab,onHandoff}:Props){
    <div className="vr-live-head"><strong>AgentComposer · {isWork?'Work':'Chat'}</strong><small>LIVE · @inneranimalmedia/agentsam-workbench</small></div>
    <div className="vr-live-holder"><AgentComposer value={liveDraft} onChange={setLiveDraft} onSend={()=>{setFeedback('Packaged composer submitted in local demo: '+liveDraft);setLiveDraft('');}}
      runMode={isWork?'agent':'ask'} placeholder={isWork?'Work with AgentSam':'Ask AgentSam'}
-     toolbarStart={<button type="button" title="Tools menu uses the shared Nav contract in the component lab" onClick={onLab}><Plus size={18}/></button>}
+     toolbarStart={<IconAction type="button" title="Tools menu uses the shared Nav contract in the component lab" onClick={onLab}><Plus size={18}/></IconAction>}
      toolbarEnd={<label>Thinking <select value={liveEffort} onChange={e=>setLiveEffort(e.target.value)}>
        <option>Instant</option><option>Medium</option><option>High</option><option>Extra High</option>
      </select></label>}
@@ -136,16 +137,16 @@ export function VisualReview({onInventory,onLab,onHandoff}:Props){
  async function submit(){if(!onHandoff)return;setSubmitting(true);try{const receipt=await onHandoff(task);if(!isAgentSamCanvasHandoffReceipt(receipt))throw Error('Host returned no valid task receipt.');setFeedback('AgentSam task '+receipt.status+': '+receipt.taskId);setHandoffModal(false);}catch(err){setFeedback('AgentSam handoff was not confirmed: '+String(err));}finally{setSubmitting(false);}}
  return <div className="vr-root" data-visual-review="true">
   <header className="vr-global">
-   <div className="vr-brand"><button className="vr-icon" title="Source inventory" onClick={onInventory}><Layers size={16}/></button><strong>InnerAnimalMedia</strong><span>/ Visual Atlas</span><small>Local development</small></div>
+   <div className="vr-brand"><IconAction className="vr-icon" title="Source inventory" onClick={onInventory}><Layers size={16}/></IconAction><strong>InnerAnimalMedia</strong><span>/ Visual Atlas</span><small>Local development</small></div>
    <div className="vr-actions">
     <button onClick={()=>{setShowRight(true);setRightTab('comments');}}><MessageSquare size={15}/> Comments <small>{pageThreads.length}</small></button>
     <button className="vr-primary" onClick={()=>setHandoffModal(true)}><Send size={14}/> Hand off to AgentSam</button>
-    <button className="vr-icon" title="Export native Canvas" onClick={()=>download('agentsam-review.canvas.json',doc)}><Download size={16}/></button>
+    <IconAction className="vr-icon" title="Export native Canvas" onClick={()=>download('agentsam-review.canvas.json',doc)}><Download size={16}/></IconAction>
    </div>
   </header>
   <div className="vr-toolbar">
    <div className="vr-page-control">
-    {!showLeft?<button className="vr-icon" title="Open layers" onClick={()=>setShowLeft(true)}><Layers size={15}/></button>:null}
+    {!showLeft?<IconAction className="vr-icon" title="Open layers" onClick={()=>setShowLeft(true)}><Layers size={15}/></IconAction>:null}
     <button className="vr-page" onClick={()=>setPageMenu(v=>!v)} aria-expanded={pageMenu}><span>{groups.indexOf(page)+1}</span> {page} <ChevronDown size={13}/></button>
     {pageMenu?<div role="menu" className="vr-page-menu"><p>Design pages</p>{pageOptions.map(name=><button key={name} role="menuitem" aria-current={name===page?'page':undefined} onClick={()=>{setPage(name);setPageMenu(false);}}>{name}{name===page?<Check size={13}/>:null}</button>)}
       <form className="vr-new-page" onSubmit={e=>{e.preventDefault();const value=newPageName.trim();if(!value||pageOptions.includes(value))return;setUserPages(list=>[...list,value]);setPage(value);setNewPageName('');setPageMenu(false);}}>
@@ -156,7 +157,7 @@ export function VisualReview({onInventory,onLab,onHandoff}:Props){
     <small>{visibleBoards.length} artboards</small>
    </div>
    <div className="vr-zoom-actions">
-    <button title="Fit artboards" onClick={()=>setFit(v=>v+1)}><Maximize2 size={15}/></button>
+    <IconAction title="Fit artboards" onClick={()=>setFit(v=>v+1)}><Maximize2 size={15}/></IconAction>
     <button onClick={()=>{setFocus(v=>v?'':active?.id||'');setInteract(false);setFit(v=>v+1);}}>{focus?'Show all':'Focus selection'}</button>
     {source?.id==='visual:chat-composer'||source?.id==='visual:work-composer'?<button aria-pressed={interact} onClick={()=>{setInteract(v=>!v);setFocus(active?.id||'');setFit(v=>v+1);}}>{interact?'Edit/Pin':'Interact'}</button>:null}
     <button aria-label="Zoom out" onClick={()=>setZoom(z=>Math.max(.08,z/1.25))}>−</button>
@@ -165,14 +166,14 @@ export function VisualReview({onInventory,onLab,onHandoff}:Props){
      {[25,50,75,100,150,200].map(n=><option key={n} value={n}>{n}%</option>)}
     </select>
     <button aria-label="Zoom in" onClick={()=>setZoom(z=>Math.min(3,z*1.25))}>+</button>
-    {!showRight?<button className="vr-icon" onClick={()=>setShowRight(true)} title="Show inspector"><PanelRightClose size={15}/></button>:null}
+    {!showRight?<IconAction className="vr-icon" onClick={()=>setShowRight(true)} title="Show inspector"><PanelRightClose size={15}/></IconAction>:null}
    </div>
   </div>
   <div className="vr-layout" style={{'--vr-left':showLeft?leftWidth+'px':'0px','--vr-right':showRight?rightWidth+'px':'0px'} as CSSProperties}>
    {showLeft?<aside className="vr-left" aria-label="Pages and layers">
-    <nav className="vr-tabs">{(['pages','layers','sources'] as const).map(t=><button key={t} aria-pressed={leftTab===t} onClick={()=>setLeftTab(t)}>{t}</button>)}<button title="Collapse left panel" onClick={()=>setShowLeft(false)}><PanelLeftClose size={13}/></button></nav>
+    <nav className="vr-tabs">{(['pages','layers','sources'] as const).map(t=><button key={t} aria-pressed={leftTab===t} onClick={()=>setLeftTab(t)}>{t}</button>)}<IconAction title="Collapse left panel" onClick={()=>setShowLeft(false)}><PanelLeftClose size={13}/></IconAction></nav>
     {leftTab==='pages'?<div className="vr-sidebar">
-      <div className="vr-section-head"><strong>{page}</strong><button aria-label="Add artboard" onClick={addBoard}><Plus size={16}/></button></div>
+      <div className="vr-section-head"><strong>{page}</strong><IconAction aria-label="Add artboard" onClick={addBoard}><Plus size={16}/></IconAction></div>
       <label className="vr-search"><Search size={14}/><input placeholder="Search visual artboards" value={query} onChange={e=>setQuery(e.target.value)}/></label>
       {visibleBoards.filter(b=>b.name.toLowerCase().includes(query.toLowerCase())).map(b=>{
        const ref=evidenceFor(b),count=threads.filter(x=>x.boardId===b.id).length;
@@ -197,18 +198,18 @@ export function VisualReview({onInventory,onLab,onHandoff}:Props){
     <div className="vr-stage"><CanvasStage document={stageDoc} selected={selected} boardId={boardId} preview={interact} width={0} zoom={zoom} onZoom={setZoom} onSelect={selectNode}
       onChange={(id,patch)=>setDoc(editNode(doc,id,patch))} fitToken={fit} tool={tool} onPlacePin={placePin} renderComponent={liveComponent}/></div>
     <div className="vr-floating" aria-label="Canvas tools">
-     <button title="Select (V)" aria-pressed={tool==='select'} onClick={()=>setTool('select')}><MousePointer2 size={16}/></button>
-     <button title="Hand / pan (H)" aria-pressed={tool==='pan'} onClick={()=>setTool('pan')}><Hand size={16}/></button>
+     <IconAction title="Select (V)" aria-pressed={tool==='select'} onClick={()=>setTool('select')}><MousePointer2 size={16}/></IconAction>
+     <IconAction title="Hand / pan (H)" aria-pressed={tool==='pan'} onClick={()=>setTool('pan')}><Hand size={16}/></IconAction>
      <span/>
-     <button title="Pin comment (P) — click on artboard" aria-pressed={tool==='comment'} onClick={()=>{setTool('comment');setRightTab('comments');setShowRight(true);}}><Pin size={16}/></button>
-     {theme?<><span/><button title="Insert text" onClick={()=>addElement('text')}><Type size={16}/></button><button title="Insert frame" onClick={()=>addElement('frame')}><Plus size={16}/></button></>:null}
-     <span/><button title="Fit all artboards" onClick={()=>setFit(v=>v+1)}><Maximize2 size={15}/></button>
+     <IconAction title="Pin comment (P) — click on artboard" aria-pressed={tool==='comment'} onClick={()=>{setTool('comment');setRightTab('comments');setShowRight(true);}}><Pin size={16}/></IconAction>
+     {theme?<><span/><IconAction title="Insert text" onClick={()=>addElement('text')}><Type size={16}/></IconAction><IconAction title="Insert frame" onClick={()=>addElement('frame')}><Plus size={16}/></IconAction></>:null}
+     <span/><IconAction title="Fit all artboards" onClick={()=>setFit(v=>v+1)}><Maximize2 size={15}/></IconAction>
     </div>
     <div className="vr-footer"><span>{tool==='comment'?'Click anywhere on a design to pin a comment':theme?'Native editable artboards · independent of CMS':'Genuine captures · review pins · linked source'}</span><span>{active?.name||''}</span></div>
    </main>
    {showRight?<div className="vr-resizer" role="separator" aria-label="Resize properties panel" tabIndex={0} aria-orientation="vertical" onPointerDown={e=>resize('right',e)} onKeyDown={e=>{if(e.key==='ArrowLeft')setRightWidth(v=>Math.min(540,v+12));if(e.key==='ArrowRight')setRightWidth(v=>Math.max(180,v-12));}}/>:null}
    {showRight?<aside className="vr-right" aria-label="Properties, comments, provenance, and AgentSam">
-    <nav className="vr-tabs">{(['properties','comments','source','agent'] as const).map(t=><button key={t} aria-pressed={rightTab===t} onClick={()=>setRightTab(t)}>{t==='agent'?'AgentSam':t}</button>)}<button onClick={()=>setShowRight(false)} aria-label="Collapse inspector"><PanelRightClose size={14}/></button></nav>
+    <nav className="vr-tabs">{(['properties','comments','source','agent'] as const).map(t=><button key={t} aria-pressed={rightTab===t} onClick={()=>setRightTab(t)}>{t==='agent'?'AgentSam':t}</button>)}<IconAction onClick={()=>setShowRight(false)} aria-label="Collapse inspector"><PanelRightClose size={14}/></IconAction></nav>
     {rightTab==='properties'?<div className="vr-panel">
      <div className="vr-section-head"><strong>Design properties</strong><small>{source?.status==='captured'?'Real screenshot':theme?'Editable Canvas':'Source record'}</small></div>
      {source?<p className="vr-helper">{source.detail}</p>:null}
@@ -254,10 +255,10 @@ export function VisualReview({onInventory,onLab,onHandoff}:Props){
     </div>:null}
    </aside>:null}
   </div>
-  {feedback?<div className="vr-toast" role="status">{feedback}<button onClick={()=>setFeedback('')} aria-label="Dismiss notice"><X size={13}/></button></div>:null}
+  {feedback?<div className="vr-toast" role="status">{feedback}<IconAction onClick={()=>setFeedback('')} aria-label="Dismiss notice"><X size={13}/></IconAction></div>:null}
   {handoffModal?<div className="vr-modal-mask" onMouseDown={e=>{if(e.target===e.currentTarget)setHandoffModal(false);}}>
    <section className="vr-modal" role="dialog" aria-modal="true" aria-label="Hand off to AgentSam">
-    <header><div><small>DEVELOPMENT HANDOFF</small><h2>Hand off to AgentSam</h2></div><button aria-label="Close handoff" onClick={()=>setHandoffModal(false)}><X size={17}/></button></header>
+    <header><div><small>DEVELOPMENT HANDOFF</small><h2>Hand off to AgentSam</h2></div><IconAction aria-label="Close handoff" onClick={()=>setHandoffModal(false)}><X size={17}/></IconAction></header>
     <p>Package the selected artboard, real source reference, review verdict, pinned comments and acceptance requirements for an AgentSam coding agent.</p>
     <dl className="vr-source"><dt>Artboard</dt><dd>{task.target.board}</dd><dt>Owner</dt><dd>{task.target.owner}</dd><dt>Source</dt><dd><code>{task.target.source||'New native Canvas'}</code></dd><dt>Pins</dt><dd>{task.threads.length}</dd><dt>Verdict</dt><dd>{task.review.verdict||'Not reviewed'}</dd></dl>
     <div className="vr-task-ready"><Check size={14}/> Source-backed engineering brief ready for review.</div>

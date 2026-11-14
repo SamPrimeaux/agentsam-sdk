@@ -10,6 +10,7 @@ import '../../../apps/local-studio/frontend/src/components/workbench/canvas/canv
 import './atlas.css';
 import './.generated/cms-theme-stage.css';
 
+import { IconAction } from '../../copro-ui/src/icon-action';
 const inventory = inventoryData as Inventory;
 const reviewKey='agentsam.component-atlas.reviews.v1';
 const documentKey='agentsam.component-atlas.artboard.v1.';
@@ -235,7 +236,7 @@ export function ComponentAtlas({onLab}:{onLab:()=>void}) {
   </section>
   <div className="atlas-workspace">
    <aside className="atlas-catalog" aria-label="Source inventory">
-    <div className="atlas-pane-heading"><div><strong>Inventory</strong><small>Real source and manifest records</small></div><button title="Reset to overview" aria-label="Show inventory overview" onClick={()=>setStageView('overview')}><Layers size={17}/></button></div>
+    <div className="atlas-pane-heading"><div><strong>Inventory</strong><small>Real source and manifest records</small></div><IconAction title="Reset to overview" aria-label="Show inventory overview" onClick={()=>setStageView('overview')}><Layers size={17}/></IconAction></div>
     <label className="atlas-search"><Search size={15}/><input aria-label="Search components and apps" placeholder="Search source, component, owner…" value={query} onChange={e=>setQuery(e.target.value)}/></label>
     <div className="atlas-filters"><select aria-label="Source family" value={family} onChange={e=>{setFamily(e.target.value);setStageView('overview');}}>{familyFilters.map(group=><option key={group}>{group}</option>)}</select>
      <select aria-label="Review filter" value={scope} onChange={e=>{setScope(e.target.value as typeof scope);setStageView('overview');}}><option value="all">All records</option><option value="review">Reviewed</option><option value="favorite">Favorites</option></select>
@@ -268,7 +269,7 @@ export function ComponentAtlas({onLab}:{onLab:()=>void}) {
       <button onClick={()=>setZoom(z=>Math.max(.08,z/1.2))} aria-label="Zoom out">−</button>
       <span>{Math.round(zoom*100)}%</span>
       <button onClick={()=>setZoom(z=>Math.min(3,z*1.2))} aria-label="Zoom in">+</button>
-      <button aria-pressed={showInspector} aria-label="Toggle inspector" onClick={()=>setShowInspector(x=>!x)}><PanelRight size={14}/></button>
+      <IconAction aria-pressed={showInspector} aria-label="Toggle inspector" onClick={()=>setShowInspector(x=>!x)}><PanelRight size={14}/></IconAction>
      </div>
     </div>
     <div className="atlas-canvas-region">
@@ -335,6 +336,6 @@ export function ComponentAtlas({onLab}:{onLab:()=>void}) {
     </div>}
    </aside>:null}
   </div>
-  {feedback?<output role="status" className="atlas-feedback">{feedback}<button onClick={()=>setFeedback('')} aria-label="Dismiss message"><X size={14}/></button></output>:null}
+  {feedback?<output role="status" className="atlas-feedback">{feedback}<IconAction onClick={()=>setFeedback('')} aria-label="Dismiss message"><X size={14}/></IconAction></output>:null}
  </div></TooltipProvider>;
 }
