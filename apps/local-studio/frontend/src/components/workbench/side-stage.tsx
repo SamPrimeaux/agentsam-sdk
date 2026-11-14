@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
+import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
 import {
@@ -16,6 +16,8 @@ import { MessageList } from "@/components/workbench/thread";
 import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
+import { AppLibraryStage } from "@/components/workbench/app-library-stage";
+import { NATIVE_STAGE_ITEMS } from "@/components/workbench/side-stage-tools";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
 import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
 import { PluginSideStage } from "@/components/workbench/plugin-side-stage";
@@ -38,23 +40,10 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "media") return <Film className="size-3.5" />;
   if (kind === "goal") return <Target className="size-3.5" />;
   if (kind === "database") return <Database className="size-3.5" />;
+  if (kind === "apps") return <LayoutGrid className="size-3.5" />;
   if (kind === "terminal") return <SquareTerminal className="size-3.5" />;
   return <FileCode className="size-3.5" />;
 }
-
-// Native stages are available even when optional plugin discovery is offline.
-// Only installed plugin entries come from the account-scoped registry.
-const NATIVE_STAGE_ITEMS = [
-  { kind: 'chat', label: 'Co-worker', icon: Users },
-  { kind: 'browser', label: 'Browser', icon: Globe },
-  { kind: 'files', label: 'Files', icon: FileCode },
-  { kind: 'artifacts', label: 'Artifacts', icon: Box },
-  { kind: 'design', label: 'Canvas', icon: Layers },
-  { kind: 'media', label: 'MovieMode', icon: Film },
-  { kind: 'database', label: 'Database', icon: Database },
-  { kind: 'terminal', label: 'Terminal', icon: SquareTerminal },
-  { kind: 'goal', label: 'Goals', icon: Target },
-] as const;
 
 export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?: boolean; onFocusToggle?: () => void }) {
   const tabs = useWorkStore((s) => s.sideTabs);
@@ -219,13 +208,10 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
         {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId && stage.stageId === tab.stageId)} /> : null}
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
+        {tab?.kind === "apps" ? <AppLibraryStage /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}
         {tab?.kind === "goal" ? <GoalEditor chatId={tab.parentChatId ?? undefined} /> : null}
-        {!tab ? (
-          <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-            <p className="text-sm text-muted-foreground">Open a co-worker, browser, files, or CLI pane.</p>
-          </div>
-        ) : null}
+        {!tab ? <AppLibraryStage /> : null}
       </div>
 
       <Dialog open={Boolean(confirmId)} onOpenChange={(open) => !open && setConfirmDiscard(null)}>
