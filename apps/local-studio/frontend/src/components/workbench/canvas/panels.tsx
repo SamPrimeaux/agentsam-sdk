@@ -41,7 +41,12 @@ export function CanvasInspector({document,selected,boardId,onNode,onBoard,onDocu
    <div className="cv-alignment" aria-label="Align within parent">
     <button onClick={()=>onNode({x:0})} title="Align left">Left</button><button onClick={()=>onNode({x:Math.round(((found?.parent?.width||board?.width||0)-node.width)/2)})}>Center</button><button onClick={()=>onNode({x:(found?.parent?.width||board?.width||0)-node.width})}>Right</button>
    </div>
-   {node.type!=="image"&&<label className="cv-field cv-text-field"><span>Content</span><textarea value={node.text||""} rows={3} onChange={e=>onNode({text:e.target.value})}/></label>}
+   {node.type==="html"&&<>
+     <label className="cv-field cv-text-field"><span>Editable HTML source</span><textarea rows={14} spellCheck={false} value={node.sourceHtml||''} onChange={event=>onNode({sourceHtml:event.target.value})}/></label>
+     <p className="cv-panel-help">Sandboxed preview. HTML is saved in this Canvas and cannot be published through the CMS converter until explicitly mapped to supported components.</p>
+     <button type="button" className="cv-toolbar-button" onClick={()=>{const content=node.sourceHtml||'';if(!content)return;const blob=new Blob([content],{type:'text/html'}),url=URL.createObjectURL(blob),link=window.document.createElement('a');link.href=url;link.download=(node.name||'artboard').replace(/[^a-z0-9_-]+/gi,'-')+'.html';link.click();URL.revokeObjectURL(url);}}>Export HTML</button>
+   </>}
+   {node.type!=="image"&&node.type!=="html"&&<label className="cv-field cv-text-field"><span>Content</span><textarea value={node.text||""} rows={3} onChange={e=>onNode({text:e.target.value})}/></label>}
    {node.type==="image"&&<><Field label="Image URL" value={node.src||""} onChange={src=>{if(!src||safeUrl(src,true))onNode({src});}}/><p className="cv-panel-help">Use an image from your asset library or an authorized image URL.</p></>}
    <header className="cv-panel-heading cv-section-gap"><strong>Appearance</strong></header>
    <Field label="Fill" value={String(node.style?.backgroundColor||node.style?.background||"")} onChange={v=>style("backgroundColor",v)}/>

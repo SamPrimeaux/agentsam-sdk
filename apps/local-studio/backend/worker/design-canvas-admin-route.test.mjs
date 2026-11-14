@@ -25,13 +25,16 @@ test('admin Canvas has a clean stable URL, preserves search on one redirect',asy
 test('served document and nested stock dependencies share the existing bundle and auth gate',async()=>{
   const {env,seen}=fixtures();let guards=0;
   const guard=()=>{guards++;return null;};
-  for(const path of ['/admin/design-canvas/','/admin/design-canvas/app.js',
+  const root=await serveDesignCanvasAdminRoute(new Request(origin+'/admin/design-canvas/'),env,guard);
+  assert.equal(root.status,302);
+  assert.equal(root.headers.get('location'),origin+'/canvas?library=sources');
+  for(const path of ['/admin/design-canvas/app.js',
     '/admin/design-canvas/sources/stock/design-theme-settings/vendor/react.js']){
     const response=await serveDesignCanvasAdminRoute(new Request(origin+path),env,guard);
     assert.equal(response.status,200);
     assert.equal(response.headers.get('cache-control'),'private, no-store');
   }
-  assert.deepEqual(seen,['/design-canvas/','/design-canvas/app.js',
+  assert.deepEqual(seen,['/design-canvas/app.js',
     '/design-canvas/sources/stock/design-theme-settings/vendor/react.js']);
   assert.equal(guards,3);
 });

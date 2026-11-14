@@ -63,8 +63,11 @@ export function projectSideStageContribution(row) {
   const stage = safeObject(metadata.side_stage);
   if (stage.version !== 1 || typeof stage.id !== "string" ||
       !TOKEN.test(stage.id)) return null;
-  const core = row.plugin_kind === "native" &&
-    row.family_key === "core" && stage.renderer === "builtin";
+  const nativeCanvas = row.plugin_kind === 'native' && row.family_key === 'build' &&
+    row.plugin_key === 'agentsam-design-canvas' && stage.renderer === 'builtin' &&
+    stage.id === 'design-canvas' && stage.tab_kind === 'design';
+  const core = (row.plugin_kind === "native" &&
+    row.family_key === "core" && stage.renderer === "builtin") || nativeCanvas;
   const renderer = stage.renderer;
   let tabKind;
   let href;

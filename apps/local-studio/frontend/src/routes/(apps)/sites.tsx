@@ -10,15 +10,15 @@ function CanonicalSitesEntry() {
   const params = new URLSearchParams(location.searchStr);
   const sku = params.get('theme_sku') || '';
   const version = params.get('theme_version') || '';
-  const action = params.get('action') === 'try' ? 'try' : '';
+  const action: 'try' | undefined = params.get('action') === 'try' ? 'try' : undefined;
   const siteId = params.get('site_id') || '';
   // Keep the public Theme Store's chosen package when following the Sites
   // compatibility route. The authenticated receiver checks release readiness.
-  const validTheme = /^iam\\.theme\\.[a-z][a-z0-9-]{0,63}$/.test(sku);
+  const validTheme = /^iam\.theme\.[a-z][a-z0-9-]{0,63}$/.test(sku);
   const selected = {
     site_id: validTheme && /^[A-Za-z0-9_-]{1,160}$/.test(siteId) ? siteId : undefined,
     theme_sku: validTheme ? sku : undefined,
-    theme_version: validTheme && /^\\d+\\.\\d+\\.\\d+$/.test(version) ? version : undefined,
+    theme_version: validTheme && /^\d+\.\d+\.\d+$/.test(version) ? version : undefined,
     action: validTheme && action === 'try' ? 'try' as const : undefined,
     stock: undefined,
   };
