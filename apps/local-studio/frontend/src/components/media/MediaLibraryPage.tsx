@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { FolderOpen, Grid2X2, List, Loader2, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
@@ -615,10 +616,15 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                 placeholder={source === "r2" ? "Filter loaded objects" : "Search by name"}
                 aria-label="Search media"
               />
-              <button type="button" className="agentsam-media-search__refresh" aria-label="Refresh media"
-                title="Refresh media" disabled={loading} onClick={() => setRefreshTick((n) => n + 1)}>
-                <RefreshCw size={16} className={loading ? "agentsam-media-spin" : undefined} />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="agentsam-media-search__refresh" aria-label="Refresh media"
+                    disabled={loading} onClick={() => setRefreshTick((n) => n + 1)}>
+                    <RefreshCw size={16} className={loading ? "agentsam-media-spin" : undefined} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh media</TooltipContent>
+              </Tooltip>
             </div>
             {surface.kind === "all" ? (
             <div className="agentsam-media-tabs" role="tablist" aria-label="Source">
