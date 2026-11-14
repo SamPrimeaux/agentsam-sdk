@@ -22,18 +22,21 @@ const emptyDraft: CompanionDraft = {
 };
 
 function openWorkWithBrief(companion: CustomCompanion | CompanionProfile) {
-  const custom = 'custom' in companion && companion.custom ? companion.custom : null;
+  const custom = 'stateAssets' in companion ? companion : ('custom' in companion ? companion.custom || null : null);
   const name = custom?.name || companion.name;
   const animal = custom?.animal || companion.animal;
   const role = custom?.role || companion.role;
   const description = custom?.description || companion.description;
+  const personality = custom?.personality || ('personality' in companion && Array.isArray(companion.personality) ? companion.personality.join(', ') : '') || '';
+  const visualNotes = custom?.visualNotes || ('visualIdentity' in companion && companion.visualIdentity ? Object.values(companion.visualIdentity).join('; ') : '') || '';
+  const signatureAction = custom?.signatureAction || ('signatureAction' in companion ? companion.signatureAction : '') || '';
   const prompt = [
     `Create or continue the InnerAnimal companion package for ${name}, a ${animal}.`,
     `Role: ${role}.`,
     `Character brief: ${description}`,
-    custom?.personality ? `Personality: ${custom.personality}` : '',
-    custom?.visualNotes ? `Visual direction: ${custom.visualNotes}` : '',
-    custom?.signatureAction ? `Signature action: ${custom.signatureAction}` : '',
+    personality ? `Personality: ${personality}` : '',
+    visualNotes ? `Visual direction: ${visualNotes}` : '',
+    signatureAction ? `Signature action: ${signatureAction}` : '',
     'Use the existing InnerAnimal v0.1 package contract: transparent 256×256 character frames, idle/blinking/thinking/working/waiting/attention/success/error/resting/signature states, APNG exports, animation metadata, atlas, contact sheet and previews.',
     'Place the runtime APNGs under assets/brand/inneranimal-companions/v1/custom/<slug>/animations/<slug>-<state>.png. Keep every frame and state independently reviewable, and return the exact /brand/inneranimal-companions/v1/custom/<slug>/animations/<slug>-<state>.png paths so they can be registered in the companion profile.',
     'Preserve original source art, do not overwrite or silently replace an existing character package, and present the finished character for visual approval before calling it production-ready.',
@@ -54,8 +57,8 @@ function Portrait({ companion, large = false }: { companion: CompanionProfile; l
   </div>;
 }
 
-function Preview({ companion, state }: { companion: CompanionProfile; state: CompanionState }) {
-  const src = companionStateAsset(companion, state);
+function Preview({ companion, state, srcOverride }: { companion: CompanionProfile; state: string; srcOverride?: string | null }) {
+  const src = srcOverride || companionStateAsset(companion, state as CompanionState);
   return <div className="flex min-h-[260px] items-center justify-center overflow-hidden rounded-2xl border border-border/70 bg-[#071b20]/70 p-5">
     {src ? <img src={src} alt={`${companion.name} · ${state}`} className="max-h-[260px] max-w-full object-contain" draggable={false} /> :
       <div className="flex flex-col items-center gap-3 text-center text-muted-foreground"><ImageIcon className="size-8" /><p className="max-w-xs text-xs">Add a portrait or build the character artwork and animation package in Work.</p></div>}
@@ -65,7 +68,7 @@ function Preview({ companion, state }: { companion: CompanionProfile; state: Com
 export function InnerAnimalCompanionsPage() {
   const { settings, activeCompanion, loading, saving, error, refresh, save } = useCompanionSettings();
   const [view, setView] = useState<CompanionView>('library');
-  const [previewState, setPreviewState] = useState<CompanionState>('idle');
+  const [previewState, setPreviewState] = useState<string>('idle');
   const [draft, setDraft] = useState<CompanionDraft>(emptyDraft);
   const [editingCompanionId, setEditingCompanionId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
@@ -74,6 +77,10 @@ export function InnerAnimalCompanionsPage() {
     ...INNERANIMAL_COMPANIONS,
     ...settings.customCompanions.map((item) => resolveCompanion(item.id, settings.customCompanions)),
   ], [settings.customCompanions]);
+  const previewStates = activeCompanion.galleryStates?.length
+    ? activeCompanion.galleryStates
+    : COMPANION_STATE_LABELS.map((state) => ({ ...state, src: companionStateAsset(activeCompanion, state.id) || '' }));
+  const selectedPreviewState = previewStates.find((state) => state.id === previewState) || previewStates[0];
 
   async function choose(companionId: string) {
     if (loading || error || companionId === settings.activeId || saving) return;
@@ -205,6 +212,9 @@ export function InnerAnimalCompanionsPage() {
               <h3 className="mt-2 text-xl font-semibold tracking-tight">{activeCompanion.name}</h3>
               <p className="mt-1 text-[11px] text-cyan-100/70">{activeCompanion.animal} · {activeCompanion.role}</p>
               <p className="mt-3 max-w-xl text-[11px] leading-5 text-muted-foreground">{activeCompanion.description}</p>
+              {activeCompanion.personality?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{activeCompanion.personality.map((trait) => <span key={trait} className="rounded-full border border-cyan-300/15 bg-cyan-300/[.06] px-2 py-1 text-[9px] capitalize text-cyan-100/80">{trait}</span>)}</div> : null}
+              {activeCompanion.signatureAction ? <p className="mt-3 text-[10px] text-muted-foreground"><span className="font-semibold text-cyan-100/80">Signature:</span> {activeCompanion.signatureAction}</p> : null}
+              {activeCompanion.visualIdentity ? <p className="mt-2 text-[10px] leading-4 text-muted-foreground/80">{activeCompanion.visualIdentity.coat} · {activeCompanion.visualIdentity.eyes} · {activeCompanion.visualIdentity.markings}</p> : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 text-[9px] text-emerald-200"><Check className="size-3" /> Selected for Work</span>
                 <button type="button" onClick={() => setView('animations')} className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border px-2.5 text-[9px] text-muted-foreground hover:bg-muted">Preview animations <ArrowRight className="size-3" /></button>
@@ -228,7 +238,7 @@ export function InnerAnimalCompanionsPage() {
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <div><h3 className="text-sm font-semibold">The founding family</h3><p className="mt-1 text-[10px] text-muted-foreground">Six original character packages · 345 animation frames · 60 defined states.</p></div>
+          <div><h3 className="text-sm font-semibold">The founding family</h3><p className="mt-1 text-[10px] text-muted-foreground">Six founding companions + Bella · 473 animation frames · 76 defined states.</p></div>
           <span className="text-[9px] text-muted-foreground">Visual approval remains pending</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -251,17 +261,17 @@ export function InnerAnimalCompanionsPage() {
 
     {view === 'animations' ? <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-3">
-        <div><h3 className="text-sm font-semibold">{activeCompanion.name} · animation states</h3><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Preview the source APNGs without converting or flattening their transparency.</p></div>
-        <Preview companion={activeCompanion} state={previewState} />
+        <div><h3 className="text-sm font-semibold">{activeCompanion.name} · animation states</h3><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Preview each transparent APNG state at its native frame rate.</p></div>
+        <Preview companion={activeCompanion} state={selectedPreviewState?.label || previewState} srcOverride={selectedPreviewState?.src} />
         <div className="flex flex-wrap gap-2">
-          {COMPANION_STATE_LABELS.map((state) => <button key={state.id} type="button" onClick={() => setPreviewState(state.id)} aria-pressed={previewState === state.id}
+          {previewStates.map((state) => <button key={state.id} type="button" onClick={() => setPreviewState(state.id)} aria-pressed={previewState === state.id}
             className={`rounded-lg border px-2.5 py-1.5 text-[10px] ${previewState === state.id ? 'border-cyan-400/40 bg-cyan-400/10 text-cyan-100' : 'border-border text-muted-foreground hover:bg-muted'}`}>{state.label}</button>)}
         </div>
       </div>
       <aside className="rounded-xl border border-border/70 bg-card/40 p-4">
         <p className="text-[9px] font-semibold uppercase tracking-[.16em] text-muted-foreground">State description</p>
-        <h4 className="mt-2 text-sm font-semibold">{COMPANION_STATE_LABELS.find((state) => state.id === previewState)?.label}</h4>
-        <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{COMPANION_STATE_LABELS.find((state) => state.id === previewState)?.description}</p>
+        <h4 className="mt-2 text-sm font-semibold">{selectedPreviewState?.label || 'Idle'}</h4>
+        <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{selectedPreviewState?.description || 'At rest and ready for the next task.'}</p>
         {!activeCompanion.builtIn ? <p className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-[10px] leading-5 text-amber-100/80">This custom companion has a profile only. Build its transparent animation package in Work to activate these states.</p> : null}
         <button type="button" onClick={() => setView('library')} className="mt-4 h-8 rounded-lg border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted">Back to library</button>
       </aside>

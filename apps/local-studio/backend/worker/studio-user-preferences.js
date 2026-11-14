@@ -85,7 +85,7 @@ export async function handleStudioAccountAvatar(request, env, userId) {
 
 
 const BUILT_IN_COMPANION_IDS = new Set([
- "geaux", "meaux", "coder", "architect", "engineer", "py",
+ "geaux", "meaux", "coder", "architect", "engineer", "py", "bella",
 ]);
 const DEFAULT_COMPANION_SETTINGS = Object.freeze({ activeId: "geaux", customCompanions: [] });
 const COMPANION_STATES = new Set([

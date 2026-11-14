@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "companionId": "bella",
+  "frameSize": [
+    256,
+    256
+  ],
+  "framesPerState": 8,
+  "fps": 6,
+  "loopPlays": "infinite for loop states; one play for success and welcome",
+  "totalGalleryStates": 16,
+  "totalAnimationFrames": 128,
+  "runtimeStateMap": {
+    "idle": "idle",
+    "blinking": "blink",
+    "thinking": "thinking",
+    "working": "working",
+    "waiting": "waiting",
+    "attention": "attentive",
+    "success": "success",
+    "error": "alert-error",
+    "resting": "resting",
+    "signature": "tail-wag"
+  },
+  "motionModel": "FFmpeg zoompan + optional rotate, RGBA preserved; 8-frame eased micro-motion cycles generated from original transparent keyframes.",
+  "limitation": "The motion is intentionally subtle whole-character motion, not skeletal animation or independent tail/paw/eye articulation.",
+  "sourceArchiveSha256": "aa4201f7e387321dc3cd628cb6449e063cbd053b76a45639df83e0158e9ae902",
+  "builtAt": "2026-11-14T10:37:49.442Z",
+  "states": {
+    "idle": {
+      "zoom": 0.008,
+      "tilt": 0,
+      "bob": 0.55,
+      "loop": true,
+      "description": "Slow breathing and a gentle vertical rise."
+    },
+    "attentive": {
+      "zoom": 0.004,
+      "tilt": 0.004,
+      "bob": 0.35,
+      "loop": true,
+      "description": "Small alert posture shift."
+    },
+    "blink": {
+      "zoom": 0.002,
+      "tilt": 0,
+      "bob": 0.12,
+      "loop": true,
+      "description": "Soft, relaxed micro-motion on the eyes-closed pose."
+    },
+    "curious": {
+      "zoom": 0.003,
+      "tilt": 0.01,
+      "bob": 0.25,
+      "loop": true,
+      "description": "Gentle inquisitive sway."
+    },
+    "head-tilt": {
+      "zoom": 0.002,
+      "tilt": 0.018,
+      "bob": 0.18,
+      "loop": true,
+      "description": "Subtle rocking around the tilted pose."
+    },
+    "asking": {
+      "zoom": 0.003,
+      "tilt": 0.006,
+      "bob": 0.48,
+      "loop": true,
+      "description": "Small hopeful lift around the raised-paw pose."
+    },
+    "thinking": {
+      "zoom": 0.003,
+      "tilt": 0.01,
+      "bob": 0.22,
+      "loop": true,
+      "description": "Quiet thoughtful sway."
+    },
+    "waiting": {
+      "zoom": 0.006,
+      "tilt": 0.003,
+      "bob": 0.25,
+      "loop": true,
+      "description": "Patient breathing pulse."
+    },
+    "voice-headset": {
+      "zoom": 0.003,
+      "tilt": 0.007,
+      "bob": 0.22,
+      "loop": true,
+      "description": "Gentle listening nod."
+    },
+    "working": {
+      "zoom": 0.005,
+      "tilt": 0.003,
+      "bob": 0.48,
+      "loop": true,
+      "description": "Focused forward-and-back breathing motion."
+    },
+    "tail-wag": {
+      "zoom": 0.003,
+      "tilt": 0.02,
+      "bob": 0.22,
+      "loop": true,
+      "description": "Light whole-character sway around the tail-wag pose."
+    },
+    "success": {
+      "zoom": 0.007,
+      "tilt": 0.005,
+      "bob": 0.9,
+      "loop": false,
+      "description": "A single gentle celebratory bounce."
+    },
+    "welcome": {
+      "zoom": 0.004,
+      "tilt": 0.012,
+      "bob": 0.62,
+      "loop": false,
+      "description": "A friendly one-shot greeting sway."
+    },
+    "alert-error": {
+      "zoom": 0.006,
+      "tilt": 0.005,
+      "bob": 0.28,
+      "loop": true,
+      "description": "A restrained attention pulse."
+    },
+    "resting": {
+      "zoom": 0.006,
+      "tilt": 0.001,
+      "bob": 0.28,
+      "loop": true,
+      "description": "Slow resting breath."
+    },
+    "sleeping": {
+      "zoom": 0.005,
+      "tilt": 0,
+      "bob": 0.22,
+      "loop": true,
+      "description": "Very slow sleeping breath."
+    }
+  }
+}

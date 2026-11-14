@@ -42,6 +42,15 @@ test('companion settings default to Geaux without creating a second storage tabl
   assert.equal(db.rows.size, 0, 'GET does not create or mutate the preference row');
 });
 
+test('Bella is accepted as a built-in companion and can be selected without a custom profile', async () => {
+  const db = memoryDb();
+  const saved = await handleStudioCompanionSettings(request('PUT', { activeId: 'bella', customCompanions: [] }), { DB: db }, 'acct-bella');
+  assert.equal(saved.status, 200);
+  assert.deepEqual((await saved.json()).settings, { activeId: 'bella', customCompanions: [] });
+  const loaded = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-bella');
+  assert.deepEqual((await loaded.json()).settings, { activeId: 'bella', customCompanions: [] });
+});
+
 test('companion selection and custom creation preserve unrelated account preferences', async () => {
   const db = memoryDb({ 'acct-1': JSON.stringify({ settings_general: { openLastProject: true }, account_avatar_url: '/brand/avatar.png' }) });
   const body = { activeId: custom.id, customCompanions: [custom] };

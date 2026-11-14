@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "frameCount": 16,
+  "frameSize": [
+    256,
+    256
+  ],
+  "alphaChannel": true,
+  "runtimeStateCount": 10,
+  "galleryStateCount": 16,
+  "continuousAnimation": "not_yet_authored"
+}

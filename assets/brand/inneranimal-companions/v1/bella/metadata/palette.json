@@ -1,0 +1,11 @@
+{
+  "name": "Bella",
+  "colors": {
+    "coat": "#5B321F",
+    "highlight": "#A86B3E",
+    "eyes": "#B87928",
+    "chest": "#E5D5C2",
+    "accent": "#27C4C2",
+    "background": "#071B20"
+  }
+}

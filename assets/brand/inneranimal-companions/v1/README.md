@@ -1,7 +1,7 @@
 # InnerAnimal companion runtime assets
 
-Versioned runtime projection of the six original InnerAnimal v0.1.0 character packages. Transparent 256×256 APNG state animations, portraits, and source metadata are copied without redrawing or recompressing the artwork.
+Versioned runtime projection of the six founding InnerAnimal character packages plus Bella. Runtime characters use transparent 256×256 APNG state animations and compact portraits. Bella additionally retains her 16 source keyframes, 4×4 atlas, contact sheet and animation-build metadata alongside the runtime APNGs.
 
-The full authoring archives (including original frame PNGs, atlases, and source artwork) remain separate provenance inputs; this runtime projection intentionally keeps only the assets required by the app and their validation metadata. Each character manifest records its source ZIP filename and SHA-256 digest.
+Each character manifest records its source ZIP filename and SHA-256 digest. Bella v1.1.0 includes 16 gallery animations (8 frames each) and maps 10 of those animations into the shared AgentSam runtime state contract.
 
-All six characters remain `production-review-candidate`. Structural validation passed for all packages; visual/identity approval remains pending. This runtime bundle does not imply production approval. Geaux is the default companion.
+All seven characters remain `production-review-candidate`. Structural validation passed; visual/identity approval remains pending. This runtime bundle does not imply final production approval. Geaux remains the default companion; Bella can be selected from Companion Studio.
