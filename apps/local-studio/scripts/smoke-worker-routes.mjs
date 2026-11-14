@@ -127,6 +127,7 @@ try {
     '/api/admin/completeful/catalog?category=apparel',
     '/api/settings/companions',
     '/api/apps/launcher',
+    '/api/browser/history',
     '/api/work/canvases',
     '/api/work/canvases/canvas_aaaaaaaaaaaa',
     '/api/work/canvases/canvas_aaaaaaaaaaaa/directions',

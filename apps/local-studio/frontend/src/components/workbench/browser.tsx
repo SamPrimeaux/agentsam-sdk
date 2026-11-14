@@ -13,6 +13,7 @@ import { companionStateAsset } from '../../../agentsam/companions';
 import '@inneranimalmedia/agentsam-abs/browser.css';
 import './browser-stage.css';
 import { extractRunnableHtml, buildBrowserInstruction } from './browser-build-result';
+import { recordBrowserVisit } from '@/lib/browser-history';
 
 interface BrowserNativeEvent { sessionId: string; url: string; title?: string | null }
 
@@ -35,6 +36,12 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
   const stop = useWorkStore(state => state.stop);
   const latestReply = [...tab.messages].reverse().find(message => message.role === 'assistant')?.content || '';
   useEffect(() => { if (tab.url) setMode('explore'); }, [tab.url]);
+  // Settled page visits feed the New tab's Suggested tiles (account history, best-effort).
+  useEffect(() => {
+    if (!/^https?:\/\//i.test(tab.url)) return;
+    const timer = window.setTimeout(() => { void recordBrowserVisit(tab.url, tab.title === 'Browser' ? '' : tab.title); }, 800);
+    return () => window.clearTimeout(timer);
+  }, [tab.url, tab.title]);
   const canBack = tab.historyIndex > 0;
   const canForward = tab.historyIndex >= 0 && tab.historyIndex < tab.history.length - 1;
 

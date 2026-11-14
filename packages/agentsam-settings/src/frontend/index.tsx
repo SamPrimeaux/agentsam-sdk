@@ -1164,14 +1164,14 @@ function PluginCustomizeView({
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/20">{iconFor({name:plugin.name},"size-4")}</span>
                       <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-medium">{plugin.name}</span>
                       <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{plugin.provider} · {plugin.kind} · {plugin.surface.replace('_',' ')}</span></span>
-                      <span className="text-[10px] text-muted-foreground">{plugin.surface==='side_stage'?(plugin.enabled?'Side Stage on':'Side Stage off'):plugin.installed?(plugin.enabled?'Installed':'Disabled'):'Not installed'}</span>
+                      <span className="text-[10px] text-muted-foreground">{plugin.surface==='side_stage'?(plugin.enabled?'Tool on':'Tool off'):plugin.installed?(plugin.enabled?'Installed':'Disabled'):'Not installed'}</span>
                       <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"/>
                     </summary>
                     <div className="ml-12 mt-3 space-y-2 text-[11px] leading-5 text-muted-foreground">
                       <p>{plugin.description || "Registered capability awaiting a complete product description."}</p>
                       <p>Key: <code className="text-foreground">{plugin.pluginKey}</code> · Version: {plugin.version} · {plugin.readiness==='tools_registered'?"Tools registered":"Definition only — tool execution not verified"}</p>
                       {plugin.capabilities.length?<p>Declared: {plugin.capabilities.join(', ')}</p>:null}
-                      <p>{plugin.surface==='app'?"Open Apps to install or manage this application.":plugin.surface==='side_stage'?"Configure this panel in Side Stage; independent app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
+                      <p>{plugin.surface==='app'?"Open Apps to install or manage this application.":plugin.surface==='side_stage'?"Choose whether this tool appears in Settings → Apps → Tools; independent app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
                     </div>
                   </details>)}
                 </div>:<p className="text-[11px] text-muted-foreground">{catalog?"No platform capabilities match this search.":"Loading registered platform capabilities…"}</p>}

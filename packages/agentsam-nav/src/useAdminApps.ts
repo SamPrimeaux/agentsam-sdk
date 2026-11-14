@@ -13,6 +13,10 @@ export interface AdminInstallableApp {
   enabled: boolean;
   installable: boolean;
   setup_status: string;
+  /** Same-origin work view a host can frame in place (an app's standalone mount). */
+  embed_href?: string | null;
+  pinned?: boolean;
+  last_opened_at?: number | null;
 }
 export interface AdminAppsDirectoryProps {
   loadApps(): Promise<AdminInstallableApp[]>;
