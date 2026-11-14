@@ -31,7 +31,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/pages': ['site_id'],
     '/admin/theme-editor': ['slug', 'site', 'site_id', 'page_id', 'showcase', 'catalog', 'source'],
     '/admin/page-edit': ['slug', 'site_id', 'page_id'],
-    '/admin/theme-project-editor': ['project','site_id','page','section','block','previewMode','new'],
+    '/admin/theme-project-editor': ['project','site_id','page','section','block','previewMode','new','scope'],
     '/admin/product-edit': ['id','site_id'],
     '/admin/products': ['view','site_id','collection_id'],
     '/admin/collections': ['site_id'],
@@ -52,11 +52,14 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
         : []);
   if ([...url.searchParams.keys()].some((name) => !allowed.includes(name) || url.searchParams.getAll(name).length !== 1)) return null;
   if (url.pathname === '/admin/theme-project-editor') {
-    // Online Store's actual + New link is a site-scoped creation intent,
-    // not an arbitrary route or a request to overwrite an existing project.
+    // Site-bound + New remains a site-owned creation intent. Theme Studio is
+    // a separate account-owned scope and must never carry a site_id.
     if (url.searchParams.has('new') &&
         (url.searchParams.get('new') !== '1' ||
-         !url.searchParams.has('site_id') || url.searchParams.has('project'))) return null;
+         !url.searchParams.has('site_id') || url.searchParams.has('project') || url.searchParams.has('scope'))) return null;
+    if (url.searchParams.has('scope') &&
+        (url.searchParams.get('scope') !== 'studio' || !url.searchParams.has('project') ||
+         url.searchParams.has('site_id') || url.searchParams.has('new'))) return null;
     if (url.searchParams.has('previewMode') &&
         !['desktop', 'tablet', 'mobile'].includes(url.searchParams.get('previewMode') || '')) return null;
   }

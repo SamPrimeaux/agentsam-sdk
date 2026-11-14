@@ -24,7 +24,7 @@ import { runDb } from './commands/db.js';
 import { runStatus } from './commands/status.js';
 import { runInteractive } from './commands/interactive.js';
 import { runShell } from './commands/shell.js';
-import { DesktopLaunchError, isDirectoryArg, launchDesktop, resolveProjectDir } from './lib/desktop-launch.js';
+import { DesktopLaunchError, isDirectoryArg, launchDesktop, resolveProjectDir } from './cli/desktop-launch.js';
 import { runGoap } from './commands/goap.js';
 import { runGoals } from './commands/goals.js';
 import { runBrand } from './commands/brand.js';

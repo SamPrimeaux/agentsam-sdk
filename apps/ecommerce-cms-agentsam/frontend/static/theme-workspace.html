@@ -2,14 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Draft Theme Studio — Fuel & Free Time</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f4f4f2">
+<title>Theme Studio — Your Workspaces</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/theme-editor.css">
+<style>
+.theme-studio-home{max-width:1240px;margin:0 auto;padding:clamp(22px,4vw,48px);color:var(--text-primary,#20202a)}
+.theme-studio-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:30px}
+.theme-studio-kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted,#777)}
+.theme-studio-title{font-size:clamp(30px,4vw,42px);font-weight:650;letter-spacing:-.035em;margin:7px 0 8px}
+.theme-studio-description{max-width:680px;color:var(--text-secondary,#666);font-size:14px;line-height:1.65;margin:0}
+.theme-studio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.theme-studio-card{min-width:0;border:1px solid var(--border,#ddd);border-radius:16px;background:var(--surface,#fff);padding:20px;display:flex;flex-direction:column;gap:13px}
+.theme-studio-card h2{font-size:18px;font-weight:650;margin:0;overflow-wrap:anywhere}
+.theme-studio-meta{font-size:12px;color:var(--text-secondary,#777);line-height:1.6}
+.theme-studio-tags{display:flex;gap:7px;flex-wrap:wrap}
+.theme-studio-tag{font-size:11px;border:1px solid var(--border,#ddd);border-radius:999px;padding:4px 9px;color:var(--text-secondary,#666)}
+.theme-studio-card-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:6px}
+.theme-studio-empty{border:1px dashed var(--border,#ccc);border-radius:16px;padding:36px 24px;text-align:center;background:var(--surface,#fff)}
+.theme-studio-empty h2{font-size:19px;font-weight:650;margin:0 0 8px}
+.theme-studio-empty p{max-width:520px;margin:0 auto 18px;color:var(--text-secondary,#777);font-size:13px;line-height:1.65}
+.theme-studio-status{padding:22px;border:1px solid var(--border,#ddd);border-radius:12px;color:var(--text-secondary,#777);background:var(--surface,#fff)}
+@media(max-width:640px){.theme-studio-home{padding:18px}.theme-studio-hero{align-items:flex-start}}
+</style>
 </head>
 <body>
-<main class="admin-empty">Loading draft theme…</main>
+<script src="/admin/js/shell.js"></script>
 <script type="module" src="/admin/js/theme-workspace-loader.js"></script>
 </body>
 </html>

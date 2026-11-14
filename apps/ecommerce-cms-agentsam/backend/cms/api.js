@@ -3,6 +3,7 @@ import { handleCollectionApi } from "./collection-store.mjs";
 import { attachCmsDefinitions, listCmsDefinitions, listCmsComponentCatalog } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject, listThemeProjectHistory, getThemeProjectSnapshot } from "./theme-project-store.mjs";
+import { listStudioThemeProjects, getStudioThemeProject, createStudioThemeProject, saveStudioThemeProject, listStudioThemeProjectHistory, getStudioThemeProjectSnapshot } from "./theme-studio-store.mjs";
 import { ensureCmsSiteStarter } from "./site-starter.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
@@ -2793,14 +2794,18 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   if (path === "/api/admin/cms/theme-projects" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    if (url.searchParams.get('scope') === 'studio') {
+      if (url.searchParams.has('site_id')) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
+      const result = await listStudioThemeProjects(env, context.accountId);
+      return json(result, { status: result.status || (result.ok ? 200 : 503) });
+    }
     const selectedSite=url.searchParams.get('site_id') || null;
     if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
     let site;
     try { site=await resolveCmsSite(env.DB,{accountId:context.accountId,siteId:selectedSite}); }
     catch (error) {return json({ok:false,error:String(error.message||error)},{status:409});}
-    // Listing installed theme projects must be a pure account/site-scoped
-    // read. The previous starter seeder could inject Heuristic pages and
-    // globals into an otherwise independent marketplace draft on editor open.
+    // Site-installed theme projects remain site-scoped. Studio projects use
+    // their separate account-owned store and never synthesize a CMS site.
     const result = await listThemeProjects(env, context.accountId, site.id);
     return json(result, { status: result.status || (result.ok ? 200 : 503) });
   }
@@ -2808,6 +2813,11 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    if (url.searchParams.get('scope') === 'studio' || body.scope === 'studio') {
+      if (url.searchParams.has('site_id') || body.site_id) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
+      const result = await createStudioThemeProject(env, context.accountId, body.project);
+      return json(result, { status: result.status || (result.ok ? 201 : 400) });
+    }
     const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
     if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
     const result = await createThemeProject(env, context.accountId, body.project, selectedSite);
@@ -2816,28 +2826,43 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   const projectHistoryMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})\/history(?:\/([0-9]{1,10}))?$/);
   if (projectHistoryMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    const studioScope = url.searchParams.get('scope') === 'studio';
     const selected = url.searchParams.get("site_id") || null;
-    if (!selected) return json({ok:false,error:'site_id_required'}, {status:400});
-    const result = projectHistoryMatch[2]
-      ? await getThemeProjectSnapshot(env, context.accountId, projectHistoryMatch[1], projectHistoryMatch[2], selected)
-      : await listThemeProjectHistory(env, context.accountId, projectHistoryMatch[1], selected);
+    if (studioScope && selected) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
+    if (!studioScope && !selected) return json({ok:false,error:'site_id_required'}, {status:400});
+    const result = studioScope
+      ? projectHistoryMatch[2]
+        ? await getStudioThemeProjectSnapshot(env, context.accountId, projectHistoryMatch[1], projectHistoryMatch[2])
+        : await listStudioThemeProjectHistory(env, context.accountId, projectHistoryMatch[1])
+      : projectHistoryMatch[2]
+        ? await getThemeProjectSnapshot(env, context.accountId, projectHistoryMatch[1], projectHistoryMatch[2], selected)
+        : await listThemeProjectHistory(env, context.accountId, projectHistoryMatch[1], selected);
     return json(result, { status: result.status || (result.ok ? 200 : 404) });
   }
   const themeProjectMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})$/);
   if (themeProjectMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const selectedSite = url.searchParams.get("site_id") || null;
-    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
-    const result = await getThemeProject(env, context.accountId, themeProjectMatch[1], selectedSite);
+    const studioScope = url.searchParams.get('scope') === 'studio';
+    if (studioScope && url.searchParams.has('site_id')) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
+    const result = studioScope
+      ? await getStudioThemeProject(env, context.accountId, themeProjectMatch[1])
+      : url.searchParams.get("site_id")
+        ? await getThemeProject(env, context.accountId, themeProjectMatch[1], url.searchParams.get("site_id"))
+        : {ok:false,status:400,error:'site_id_required'};
     return json(result, { status: result.status || (result.ok ? 200 : 404) });
   }
   if (themeProjectMatch && method === "PUT") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const studioScope = url.searchParams.get('scope') === 'studio' || body.scope === 'studio';
     const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
-    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
-    const result = await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version, selectedSite);
+    if (studioScope && selectedSite) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
+    const result = studioScope
+      ? await saveStudioThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version)
+      : selectedSite
+        ? await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version, selectedSite)
+        : {ok:false,status:400,error:'site_id_required'};
     return json(result, { status: result.status || (result.ok ? 200 : 400) });
   }
   const themeInstallMatch = path.match(/^\/api\/admin\/cms\/themes\/([a-z][a-z0-9-]{0,63})\/install$/);

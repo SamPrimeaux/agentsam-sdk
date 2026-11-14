@@ -4,7 +4,7 @@
  */
 
 import { getPreviewPage, getPublishedPage } from "./api.js";
-import { renderThemeSettings } from "./theme-style-contract.mjs";
+import { renderThemeSettings, themeFontCssHref } from "./theme-style-contract.mjs";
 
 function getPath(obj, path) {
   return path.split(".").reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
@@ -130,9 +130,12 @@ export class HtmlEdgeHydratedHandler {
 export class HeadEdgeHydratedHandler {
   constructor(sectionsByKey = {}) {
     this.themeCss = renderThemeSettings(sectionsByKey.brand?.__editor?.themeSettings);
+    this.fontHref = themeFontCssHref(sectionsByKey.brand?.__editor?.themeSettings);
   }
   element(el) {
     el.append('<meta name="cms-edge-hydrated" content="1">', { html: true });
+    if (this.fontHref)
+      el.append('<link id="cms-merchant-fonts" rel="stylesheet" href="' + this.fontHref + '">', {html:true});
     if (this.themeCss)
       el.append('<style id="cms-merchant-theme-style">' + this.themeCss + '</style>', {html:true});
   }

@@ -20,6 +20,7 @@ renderShell("/admin/store", `
         </button>
         <a class="btn ghost small" id="test-customer-flow-btn" href="/admin/onboarding-preview" target="_top" rel="noopener" title="Test plan selection, checkout review, setup and welcome without a payment provider">Preview checkout</a>
         <button type="button" class="btn ghost small" id="view-storefront-btn" disabled title="Connect a site to preview the published storefront">View site</button>
+        <a class="btn ghost small" id="my-theme-studio-btn" href="/admin/theme-workspace">My Theme Studio</a>
         <button type="button" class="online-store-icon-btn" aria-label="More actions">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
         </button>
@@ -88,9 +89,11 @@ function fmtStoreDate(iso) {
   const raw = String(iso);
   const d = new Date(/[zZ]$|[+-]\d{2}:\d{2}$/.test(raw) ? raw : raw.replace(" ", "T") + "Z");
   if (Number.isNaN(d.getTime())) return "—";
+  const sameYear = d.getFullYear() === new Date().getFullYear();
   return d.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
     hour: "numeric",
     minute: "2-digit",
   }).replace(",", " at");
@@ -107,28 +110,39 @@ function escapeThemeText(value) {
 }
 function renderDraftRow(theme) {
   const name=escapeThemeText(theme.name||"Untitled theme");
-  const meta=escapeThemeText('Added: '+fmtStoreDate(theme.created_at));
-  const preview=theme.installed && theme.edit_href;
+  const savedAt=theme.last_saved||theme.updated_at||theme.created_at;
+  const meta=escapeThemeText('Last saved: '+fmtStoreDate(savedAt));
+  const version=escapeThemeText(themeVersion(theme)||'');
+  const thumbSrc=theme.snapshot_url||theme.preview_url||null;
+  const preview=theme.installed!==false && theme.edit_href;
+  const publishable=Boolean(theme.publish_ready) && theme.id;
   return `
     <div class="online-store-draft-row" data-draft-id="${escapeThemeText(theme.id)}">
-      <div class="online-store-draft-thumb" aria-hidden="true">${theme.snapshot_url?'<img src="'+escapeThemeText(theme.snapshot_url)+'" alt="" loading="lazy">':preview?'<iframe data-saved-draft-preview title="" tabindex="-1" sandbox="allow-scripts" loading="lazy"></iframe>':''}</div>
+      <div class="online-store-draft-thumb" aria-hidden="true">${thumbSrc?'<img src="'+escapeThemeText(thumbSrc)+'" alt="" loading="lazy">':preview?'<iframe data-saved-draft-preview title="" tabindex="-1" sandbox="allow-scripts" loading="lazy"></iframe>':''}</div>
       <div class="online-store-draft-copy">
         <div class="online-store-draft-name">${name}</div>
-        <div class="online-store-draft-meta">${meta}</div>
+        <div class="online-store-draft-meta">${meta}${version?' · v'+version:''}</div>
 
       </div>
       <div class="online-store-draft-actions">
-
-        ${theme.installed && theme.edit_href
+        ${publishable?'<button type="button" class="btn primary small draft-publish" data-theme-id="'+escapeThemeText(theme.slug||theme.id)+'">Publish</button>':''}
+        ${theme.installed!==false && theme.edit_href
           ? '<a class="btn ghost small" href="'+escapeThemeText(scopedStoreEditorHref(theme.edit_href,theme.site_id))+'">Edit theme</a>'
-          : ''}
+          : theme.preview_url
+            ? '<a class="btn ghost small" href="'+escapeThemeText(theme.preview_url)+'" target="_blank" rel="noopener">Preview</a>'
+            : ''}
       </div>
     </div>`;
 }
 function paintStoreDrafts(drafts) {
   const container=document.getElementById("draft-themes");
   if(!container)return;
-  container.innerHTML=(drafts||[]).map(renderDraftRow).join("");
+  const rows=drafts||[];
+  if(!rows.length){
+    container.innerHTML='<div class="online-store-empty"><p>No draft themes yet.</p><a class="btn ghost small" href="#theme-product-marketplace">Browse website themes</a></div>';
+    return;
+  }
+  container.innerHTML=rows.map(renderDraftRow).join("");
   container.querySelectorAll('[data-saved-draft-preview]').forEach(frame=>{
     const row=frame.closest('[data-draft-id]');
     const draft=(drafts||[]).find(item=>item.id===row.dataset.draftId);
@@ -610,7 +624,16 @@ function showActiveTheme(theme,siteId) {
       const card=document.querySelector('.online-store-active');
       card.hidden=false;card.classList.remove('is-loading');card.setAttribute('aria-busy','false');
     }else showThemeUnavailable('empty');
-    document.getElementById('active-theme-version').hidden=true;
+    {
+      const activeRecord=theme||d.preview_theme||d.active_theme||null;
+      const versionText=activeRecord?themeVersion(activeRecord):null;
+      const versionWrap=document.getElementById('active-theme-version');
+      const versionLabel=document.getElementById('active-version-text');
+      if(versionText){
+        versionLabel.textContent='v'+versionText;
+        versionWrap.hidden=false;
+      }else versionWrap.hidden=true;
+    }
     paintStoreDrafts((d.draft_themes||[]).filter(draft=>draft.id!==currentId));
     // Do not pretend that publishing the Shop CMS page publishes a theme.
     // Keep draft rows read-only until a real theme publish transaction exists.
@@ -641,5 +664,5 @@ function showActiveTheme(theme,siteId) {
 })();
 
 document.getElementById("import-theme-btn")?.addEventListener("click", () => {
-  alert("Theme import is coming soon. Use the theme editor to customize your live storefront.");
+  document.getElementById("theme-product-marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });

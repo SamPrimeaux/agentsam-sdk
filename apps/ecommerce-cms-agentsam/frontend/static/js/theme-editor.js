@@ -754,7 +754,7 @@
     const defined = ((schema && schema.settings) || []).filter(function(field) {
       // A merchant adjusts the common layout and spacing in the standard
       // inspector. Rare motion/visibility are available under the section menu.
-      return /^(layout|spacing|appearance|media)$/.test(field.group || '');
+      return /^(layout|spacing|surface|appearance|media)$/i.test(field.group || '');
     }).filter(function(field) {
       // Initial surface should not expose 12 identical margin controls.
       return !/margin(Top|Bottom|Left|Right)|padding(Left|Right)|borderRadius/.test(field.key);
@@ -827,6 +827,12 @@
     el.className = 'te-save-state' + (state ? ' is-' + state : '');
   }
 
+  function savedStamp(base) {
+    try {
+      return base + ' · ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    } catch { return base; }
+  }
+
   function schedulePrivateAutosave() {
     clearTimeout(autosaveTimer);
     if (!dirty || liveUnimported || autosaveFailed || (localShowcase && !host?.capabilities?.cmsWrite)) return;
@@ -859,6 +865,10 @@
     else if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
+    if (!dirty && hasEditedThisSession) {
+      const el = byId('te-save-state');
+      if (el) el.title = savedStamp('Draft saved');
+    }
     if (dirty) schedulePrivateAutosave();
     else clearTimeout(autosaveTimer);
   }
@@ -2362,7 +2372,15 @@
       // Native contextual groups, not a nested generic CSS inventory card.
       // Advanced motion/responsive/visibility controls remain accessible
       // without consuming the initial editing viewport.
-      const settingGroups = Object.keys(byGroup);
+      const settingOrder = ['layout', 'spacing', 'surface', 'appearance', 'media', 'typography'];
+      const settingGroups = Object.keys(byGroup).sort(function(a, b) {
+        const ai = settingOrder.indexOf(String(a).toLowerCase());
+        const bi = settingOrder.indexOf(String(b).toLowerCase());
+        if (ai === -1 && bi === -1) return String(a).localeCompare(String(b));
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
       if (focusedField && fieldKind(focusedField) === 'content' && byGroup.typography) {
         settingGroups.splice(settingGroups.indexOf('typography'),1);
         settingGroups.unshift('typography');
@@ -2454,8 +2472,8 @@
       ? ((blockSchema && blockSchema.label) || humanize(blockMeta.templateKey || blockMeta.id))
       : (focusedTitle || sectionLabel);
     byId('te-inspector-subtitle').textContent = blockMeta
-      ? sectionLabel + ' · ' + blockMeta.id
-      : ((pageData && pageData.title) || humanize(slug)) + ' · ' + section.key;
+      ? sectionLabel + ' · ' + humanize(blockMeta.templateKey || blockMeta.id)
+      : ((pageData && pageData.title) || humanize(slug)) + ' · ' + sectionLabel;
     byId('te-section-status').textContent = section.status || 'draft';
     byId('te-section-status').className = 'te-badge' + (section.status === 'published' ? ' is-published' : '');
 
@@ -3039,6 +3057,17 @@
     if (!themeStyles) return;
     const current = host?.adapter?.getThemeSettings?.() || brand?.content?.__editor?.themeSettings;
     const css = themeStyles.renderThemeSettings(current);
+    const href = themeStyles.themeFontCssHref(current);
+    let fontLink = doc.getElementById('cms-merchant-fonts');
+    if (href) {
+      if (!fontLink) {
+        fontLink = doc.createElement('link');
+        fontLink.id = 'cms-merchant-fonts';
+        fontLink.rel = 'stylesheet';
+        doc.head.appendChild(fontLink);
+      }
+      if (fontLink.href !== href) fontLink.href = href;
+    } else fontLink?.remove();
     let style = doc.getElementById('cms-merchant-theme-style');
     if (!css) { style?.remove(); return; }
     if (!style) {
@@ -3328,8 +3357,8 @@
     // Keep the selected storefront element visible on mobile. The merchant
     // enters editing controls via the dedicated Settings pane.
     if (isPhoneEditor()) { setMobileSheetSize('half'); setMobilePane('settings'); }
-    const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
-    byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + sectionKey + ' / ' + fieldKey : prefix + ' / ' + sectionKey;
+    const prefix = activeSectionOwner === 'site' ? 'Global' : humanize(slug);
+    byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + humanize(sectionKey) + ' / ' + humanize(String(fieldKey).split('.').pop()) : prefix + ' / ' + humanize(sectionKey);
 
     if (scrollPreview) scrollPreviewToSelection(sectionKey, fieldKey, null);
     highlightPreviewSelection();
@@ -3363,10 +3392,10 @@
     // Keep the selected storefront element visible on mobile. The merchant
     // enters editing controls via the dedicated Settings pane.
     if (isPhoneEditor()) { setMobileSheetSize('half'); setMobilePane('settings'); }
-    const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
+    const prefix = activeSectionOwner === 'site' ? 'Global' : humanize(slug);
     byId('te-selected-path').textContent = activeFieldKey
-      ? prefix + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
-      : prefix + ' / ' + sectionKey + ' / ' + blockId;
+      ? prefix + ' / ' + humanize(sectionKey) + ' / ' + humanize(blockId) + ' / ' + humanize(String(activeFieldKey).replace(blockId + '.', '').split('.').pop())
+      : prefix + ' / ' + humanize(sectionKey) + ' / ' + humanize(blockId);
 
     if (scrollPreview) scrollPreviewToSelection(sectionKey, activeFieldKey, blockId);
     highlightPreviewSelection();
