@@ -10,7 +10,7 @@ import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
 import { runCommand } from '@/lib/commands/native-commands';
 import { AlertCircle, ArrowLeft, Package, RefreshCw } from 'lucide-react';
 
-type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try'; stock?: string; preview_id?: string };
+type Search = { site?: string; site_id?: string; project?: string; page?: string; scope?: 'studio'; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try'; stock?: string; preview_id?: string };
 
 function UnavailableProductRoute({ requested }: { requested?: string }) {
   const productRequested = requested?.startsWith('/admin/products');
@@ -62,6 +62,7 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
     site: typeof search.site === 'string' ? search.site : undefined,
     site_id: typeof search.site_id === 'string' ? search.site_id : undefined,
     project: typeof search.project === 'string' ? search.project : undefined,
+    scope: search.scope === 'studio' ? 'studio' : undefined,
     page: typeof search.page === 'string' ? search.page : undefined,
     preview: search.preview === 'local' ? 'local' : undefined,
     theme_sku: typeof search.theme_sku === 'string' ? search.theme_sku : undefined,
@@ -114,6 +115,10 @@ export function EcommerceAppView({ search, forcePackagedAsset = false }: {
       }
       if (page?.split('?')[0] === '/admin/theme-project-editor' && search.project && /^[A-Za-z0-9_-]{1,160}$/.test(search.project)) {
         resolved.searchParams.set('project', search.project);
+        if (search.scope === 'studio') {
+          resolved.searchParams.set('scope', 'studio');
+          resolved.searchParams.delete('site_id');
+        }
       }
       // The source-backed Design Canvas handoff is only an editor selection.
       // It never grants site ownership, installs a component or publishes content.
@@ -139,7 +144,7 @@ export function EcommerceAppView({ search, forcePackagedAsset = false }: {
 
   return <section className="flex h-full min-h-0 w-full flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">
     {!page ? <UnavailableProductRoute requested={search.page} />
-      : isCodeEditor && search.project && search.site_id ? <CmsThemeCodeEditor projectId={search.project} siteId={search.site_id} />
+      : isCodeEditor && search.project && (search.site_id || search.scope === 'studio') ? <CmsThemeCodeEditor projectId={search.project} siteId={search.site_id} scope={search.scope} />
       : !url ? <UnavailableProductRoute requested={search.page} />
       : <iframe title="Ecommerce CMS — complete admin application" src={url} className="min-h-0 w-full flex-1 border-0" referrerPolicy="strict-origin-when-cross-origin" allow="fullscreen" />}
   </section>;

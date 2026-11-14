@@ -69,32 +69,41 @@ async function installed(env, accountId, siteId) {
   }
   return [...bySlug.values()];
 }
-function appearance(row, state) {
+function appearance(row, state, siteId = null) {
   const slug = row?.slug || DEFAULT;
   const artifact = row || null;
   const isDefault = !artifact;
+  const previewUrl = artifact?.metadata?.preview_url || null;
+  const createdAt = artifact?.created_at || null;
   return {
     id: artifact?.id || 'runtime:' + DEFAULT,
     slug,
     name: artifact?.metadata?.label || (slug === 'revise' ? 'Revise' : slug === DEFAULT ? 'Heuristic' : slug),
     package_name: artifact?.source_ref || null,
     package_version: artifact?.version || null,
+    version: artifact?.version || null,
     source_kind: artifact?.source_kind || (isDefault ? 'installed-runtime' : null),
     artifact_id: artifact?.id || null,
     manifest_object_key: artifact?.manifest_object_key || null,
     state: slug === state.active ? 'active' : 'draft',
     preview_selected: slug === state.preview,
     editor_mode: 'canonical-cms',
-    preview_href: artifact?.metadata?.preview_url || '/admin/theme-editor?slug=shop',
+    preview_href: previewUrl || '/admin/theme-editor?slug=shop',
+    preview_url: previewUrl,
+    snapshot_url: previewUrl,
     edit_href: artifact?.metadata?.project_id
       ? '/admin/theme-project-editor?project=' + encodeURIComponent(artifact.metadata.project_id)
       : '/admin/theme-editor?slug=shop',
+    installed: true,
+    site_id: siteId,
+    created_at: createdAt,
+    updated_at: createdAt,
     review_ready: Boolean(state.reviewed[slug]),
     // Only the existing Heuristic renderer is connected to public page delivery.
     // A ready R2 bundle alone is never a publication authorization.
     runtime_ready: slug === DEFAULT,
     publish_ready: slug === DEFAULT && Boolean(state.reviewed[slug]),
-    last_saved: artifact?.created_at || null,
+    last_saved: createdAt,
   };
 }
 export async function listStoreThemes(env, accountId = null, siteId = null) {
@@ -105,7 +114,7 @@ export async function listStoreThemes(env, accountId = null, siteId = null) {
       : await resolveCmsSite(env.DB, { accountId: account, createDefault: true });
     const [record, artifacts] = await Promise.all([globalRow(env, account, site.id), installed(env, account, site.id)]);
     const state = current(record);
-    const themes = [appearance(null, state), ...artifacts.filter(a => a.slug !== DEFAULT).map(a => appearance(a, state))];
+    const themes = [appearance(null, state, site.id), ...artifacts.filter(a => a.slug !== DEFAULT).map(a => appearance(a, state, site.id))];
     return {
       ok: true, source: 'cms_artifacts+cms_globals', active_theme: themes.find(x => x.state === 'active') || null,
       preview_theme: themes.find(x => x.preview_selected) || null,

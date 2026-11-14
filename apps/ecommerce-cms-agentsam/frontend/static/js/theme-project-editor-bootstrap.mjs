@@ -8,15 +8,18 @@ const frame = document.getElementById('theme-project-editor-frame');
 const parameters = new URLSearchParams(location.search);
 let projectId = parameters.get('project');
 let siteId = parameters.get('site_id');
+const studioMode = parameters.get('scope') === 'studio';
 const pageSlug = parameters.get('page');
 const API = '/api/admin/cms/theme-projects';
-const scoped = path => siteId ? path + (path.includes('?') ? '&' : '?') +
-  'site_id=' + encodeURIComponent(siteId) : path;
+const scoped = path => {
+  const query = studioMode ? 'scope=studio' : siteId ? 'site_id=' + encodeURIComponent(siteId) : '';
+  return query ? path + (path.includes('?') ? '&' : '?') + query : path;
+};
 
 // A verified document identity travels back to the optional AgentSam Side
 // Stage host. It only receives route/selection state, never auth credentials.
 function publishCanvasRoute() {
-  if (!siteId || !projectId || window.parent === window) return;
+  if (studioMode || !siteId || !projectId || window.parent === window) return;
   const canonical = new URL(location.href);
   if (canonical.pathname !== '/admin/theme-project-editor' ||
       canonical.searchParams.get('site_id') !== siteId ||
@@ -31,7 +34,9 @@ function publishCanvasRoute() {
 
 function showError(error) {
   errorNode.hidden = false;
-  errorNode.textContent = 'Your theme could not be opened. Please return to Online Store and try again.';
+  errorNode.textContent = studioMode
+    ? 'Your Theme Studio workspace could not be opened. Please return to Theme Studio and try again.'
+    : 'Your theme could not be opened. Please return to Online Store and try again.';
   console.error('theme_project_open_failed',error);
 }
 
@@ -76,25 +81,26 @@ const store = {
   async save(project, options = {}) {
     const expectedVersion = Number(options.expectedVersion || 0);
     const updating = expectedVersion > 0;
+    const scopeBody = studioMode ? { scope:'studio' } : { site_id:siteId };
     const data = await jsonRequest(scoped(updating ? `${API}/${encodeURIComponent(project.id)}` : API), {
       method: updating ? 'PUT' : 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(updating ?
-        { project, expected_version: expectedVersion, site_id:siteId } :
-        { project, site_id:siteId }),
+        { ...scopeBody, project, expected_version: expectedVersion } :
+        { ...scopeBody, project }),
     });
     return data.project;
   },
 };
 
 async function boot() {
-  // Private installed drafts cannot be addressed by project ID alone:
-  // another site may contain an independent copy with the same project ID.
-  if (!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId))
+  // A site-scoped project requires its authorized site ID. Account-scoped
+  // Theme Studio projects deliberately have no site identity.
+  if (!studioMode && (!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)))
     throw new Error('theme_project_site_required');
   if (projectId && !/^[A-Za-z0-9_-]{1,160}$/.test(projectId))
     throw new Error('theme_project_id_invalid');
-  if(parameters.get('new')==='1'){
+  if(parameters.get('new')==='1' && !studioMode){
     // The historical three-field wizard was a dead-end, blank CMS theme.
     // New creation is owned by independent AgentSam Canvas, not by a CMS
     // theme draft. Verify the merchant context before offering its hint;
@@ -109,20 +115,25 @@ async function boot() {
     else location.replace(target.href);
     return;
   }
-  // List only this site's authorized projects before accepting a URL hint.
+  // List only projects in the selected account or site scope before accepting a URL hint.
   const listing=await jsonRequest(scoped(API));
   const projects=Array.isArray(listing.projects)?listing.projects:[];
-  // Never substitute another installed project for an explicit account/site
-  // editor deep link, even when this site has a different installed theme.
+  // Never substitute another project for an explicit deep link.
   const selected=projectId
     ? projects.find(item=>item.id===projectId)
     : (projects.length===1 ? projects[0] : null);
   if (!selected) throw new Error(projectId
-    ? 'theme_project_not_found_for_site'
+    ? (studioMode ? 'theme_studio_project_not_found' : 'theme_project_not_found_for_site')
     : 'theme_project_selection_required');
   projectId=selected.id;
   const canonical=new URL(location.href);
-  canonical.searchParams.set('site_id',siteId);
+  if (studioMode) {
+    canonical.searchParams.set('scope','studio');
+    canonical.searchParams.delete('site_id');
+  } else {
+    canonical.searchParams.set('site_id',siteId);
+    canonical.searchParams.delete('scope');
+  }
   canonical.searchParams.set('project',projectId);
   history.replaceState(history.state,'',canonical.pathname+canonical.search);
   let project = await store.get(projectId);
@@ -132,7 +143,7 @@ async function boot() {
   const inherited=inheritDefaultTemplates(repaired.project);
   if(repaired.changed || inherited.changed)project=await store.save(inherited.project,{expectedVersion:project.revision});
   if (pageSlug && !project.pages.some(page=>page.slug===pageSlug))
-    throw new Error('theme_project_page_not_in_site');
+    throw new Error('theme_project_page_not_found');
   const initialPage=pageSlug ||
     project.pages.find(page=>page.slug==='home')?.slug || project.pages[0]?.slug;
   if (!initialPage) throw new Error('theme_project_empty');
@@ -182,9 +193,10 @@ async function boot() {
         developer: project.sourcePackage?.split('/')?.[0]?.replace(/^@/, '') || null,
       },
       onEditCode() {
-        const route='/apps/ecommerce-cms-agentsam?'+new URLSearchParams({
-          page:'/admin/theme-code-editor', project:projectId, site_id:siteId,
-        }).toString();
+        const codeParams = new URLSearchParams({ page:'/admin/theme-code-editor', project:projectId });
+        if (studioMode) codeParams.set('scope','studio');
+        else codeParams.set('site_id',siteId);
+        const route='/apps/ecommerce-cms-agentsam?'+codeParams.toString();
         const target=window.top||window;
         if(target.__AGENTSAM_DESKTOP__ || target.__TAURI_INTERNALS__)
           target.location.hash='#'+route;

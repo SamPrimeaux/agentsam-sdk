@@ -72,6 +72,23 @@ test('the live editor waits for account-owned route verification before CMS/prev
   assert.match(entry,/\/api\/admin\/cms\/theme-projects\?site_id=/);
 });
 
+
+test('Theme Studio editor bootstraps an account scope without requiring or inventing a site',()=>{
+  const bootstrap=readFileSync(new URL('../frontend/static/js/theme-project-editor-bootstrap.mjs',import.meta.url),'utf8');
+  const editor=readFileSync(new URL('../frontend/static/theme-project-editor.html',import.meta.url),'utf8');
+  const workspace=readFileSync(new URL('../frontend/static/js/theme-workspace-loader.js',import.meta.url),'utf8');
+  const store=readFileSync(new URL('../frontend/static/js/store.js',import.meta.url),'utf8');
+  assert.match(bootstrap,/const studioMode = parameters\.get\('scope'\) === 'studio'/);
+  assert.match(bootstrap,/scope=studio/);
+  assert.match(bootstrap,/if \(!studioMode &&/);
+  assert.match(bootstrap,/studioMode \? 'scope=studio'/);
+  assert.match(editor,/<title>Theme Studio — AgentSam CMS<\/title>/);
+  assert.match(workspace,/api\/admin\/cms\/theme-projects\?scope=studio/);
+  assert.match(workspace,/Continue editing/);
+  assert.doesNotMatch(workspace,/site_id/);
+  assert.match(store,/id="my-theme-studio-btn" href="\/admin\/theme-workspace"/);
+});
+
 test('marketplace intent reaches the authorized page editor with catalog installation support',()=>{
   const destination=planThemeEditorEntry({site:siteA,
     location:'/admin/theme-editor?marketplace_kind=cms_embed&marketplace_key=announcement_bar',

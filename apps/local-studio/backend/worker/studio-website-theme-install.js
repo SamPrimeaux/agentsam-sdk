@@ -3,12 +3,13 @@
  *
  * The Theme Store owns released packages. This Worker verifies its published
  * checksum against an immutable source-rendered project bundled with the SDK,
- * resolves the authenticated owner's site, then delegates persistence to
- * canonical CMS cms_globals + cms_revisions + R2 theme-projects.
- * No cms_themes appearance presets and no parallel install table.
+ * resolves an optional explicit site, then delegates persistence to either
+ * the account-scoped Theme Studio store or the canonical site CMS store.
+ * Site-free authoring never creates cms_sites or uses cms_globals as a proxy.
  */
-import { resolveCmsSite, ensureThemePreviewDraftSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
+import { resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
 import { installThemeDraft } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
+import { installThemeStudioDraft } from '../../../ecommerce-cms-agentsam/backend/cms/theme-studio-store.mjs';
 
 const STORE = 'https://themes.inneranimalmedia.com';
 const INDEX = '/ecommerce-cms-agentsam/admin/data/site-theme-projects/index.json';
@@ -97,9 +98,9 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
 
   try {
     if(!env.DB||!env.WEBSITE_ASSETS)return json({ok:false,error:'cms_storage_unavailable'},503);
-    // Validate the released artifact *before* creating a draft site.
-    // An omitted site_id is intentional: marketplace Try creates an isolated
-    // private draft, not a mutation of the user's default/production website.
+    // Validate the released artifact before persisting any customer data.
+    // Without an explicit site_id, Try creates an account-owned Theme Studio
+    // workspace only. It does not create or select a CMS site.
     const packages=await getWebsiteThemeInstallIndex(request,env);
     const ready=packages.find(p=>p.slug===slug && p.version===body.version);
     if(!ready)return json({ok:false,error:'theme_release_not_installer_ready'},409);
@@ -124,22 +125,25 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
 
     const site=body.site_id
       ? await resolveCmsSite(env.DB,{accountId,siteId:body.site_id})
-      : await ensureThemePreviewDraftSite(env.DB,accountId,{
-          slug,version:body.version,name:listing.name,
-        });
-    const result=await installThemeDraft(env,accountId,slug,{
+      : null;
+    const installPayload={
       project,
       package_name:project.sourcePackage,
       package_version:body.version,
       preview_url:base,
-    },site.id);
+    };
+    const result=site
+      ? await installThemeDraft(env,accountId,slug,installPayload,site.id)
+      : await installThemeStudioDraft(env,accountId,slug,installPayload);
     if(!result.ok)return json(result,result.status||503);
     const projectId=result.project.id;
     const editor='/admin/theme-project-editor?project='+encodeURIComponent(projectId)+
-      '&site_id='+encodeURIComponent(site.id);
+      (site ? '&site_id='+encodeURIComponent(site.id) : '&scope=studio');
     return json({
       ok:true,installed:true,unchanged:result.unchanged===true,
-      site_id:site.id, site_name:site.name, site_status:site.status, project_id:projectId,
+      scope:site?'site':'studio',
+      ...(site ? {site_id:site.id,site_name:site.name,site_status:site.status} : {}),
+      project_id:projectId,
       page_count:result.project.pages.length,
       source_release_sha256:ready.sha256,
       revision:result.project.revision,

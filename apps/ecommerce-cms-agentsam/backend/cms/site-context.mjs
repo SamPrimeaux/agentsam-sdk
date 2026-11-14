@@ -39,9 +39,8 @@ export async function ensureDefaultCmsSite(db, accountId, { name = "Default site
 
 export async function listCmsSites(db, accountId) {
   if (!accountId) throw new Error("cms_site_account_required");
-  // This GET is an inventory, not a setup transaction. In particular, an
-  // account containing only one unlisted private marketplace draft must not
-  // have that draft promoted to the default site merely by opening the editor.
+  // This GET is an inventory, not a setup transaction. Opening an editor
+  // must never create a site or silently promote an existing site to default.
   const { results = [] } = await db.prepare(`
     SELECT id, account_id, name, slug, primary_domain, domain_aliases_json, status, is_default, created_at, updated_at
     FROM cms_sites WHERE account_id = ?
@@ -84,46 +83,6 @@ export async function createCmsSite(db, accountId, input = {}) {
     SELECT id, account_id, name, slug, primary_domain, domain_aliases_json, status, is_default, created_at, updated_at
     FROM cms_sites WHERE id = ? AND account_id = ?
   `).bind(id, accountId).first();
-}
-
-/**
- * A marketplace Try action owns its own private draft site. Never make the
- * customer select (or inadvertently edit) an existing domain or app site.
- * Repeated Try for the same exact release resumes the existing draft.
- *
- * This uses the canonical cms_sites table, not a theme-specific site registry.
- */
-export async function ensureThemePreviewDraftSite(db, accountId, { slug, version, name }) {
-  if (!accountId) throw new Error('cms_site_account_required');
-  if (!/^[a-z][a-z0-9-]{0,63}$/.test(slug || '') ||
-      !/^\d+\.\d+\.\d+$/.test(version || '')) {
-    throw new Error('cms_theme_draft_identity_invalid');
-  }
-  const siteSlug = 'theme-draft-' + slug + '-' + version.replaceAll('.', '-');
-  const settings = {
-    kind: 'marketplace-theme-draft',
-    source_theme_slug: slug,
-    source_release_version: version,
-    store: { ...DEFAULT_SITE_STORE_SETTINGS },
-  };
-  const draftName = (String(name || slug).trim().slice(0, 105) + ' — Draft').slice(0, 120);
-  const id = 'cmssite_' + crypto.randomUUID().replaceAll('-', '').slice(0, 16);
-  await db.prepare(`
-    INSERT INTO cms_sites (id,account_id,name,slug,status,is_default,settings_json)
-    VALUES (?,?,?,?,'draft',0,?)
-    ON CONFLICT(account_id,slug) DO NOTHING
-  `).bind(id,accountId,draftName,siteSlug,JSON.stringify(settings)).run();
-  const site = await db.prepare(`
-    SELECT id,account_id,name,slug,status,is_default,primary_domain,settings_json
-    FROM cms_sites WHERE account_id=? AND slug=? LIMIT 1
-  `).bind(accountId,siteSlug).first();
-  const props = site ? JSON.parse(site.settings_json || '{}') : {};
-  if (!site || site.status !== 'draft' || site.primary_domain ||
-      props.kind !== settings.kind || props.source_theme_slug !== slug ||
-      props.source_release_version !== version) {
-    throw new Error('cms_theme_draft_site_conflict');
-  }
-  return site;
 }
 
 export async function resolveCmsSite(db, { accountId = null, siteId = null, hostname = null, createDefault = false } = {}) {

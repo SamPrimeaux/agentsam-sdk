@@ -1,6 +1,6 @@
 /* Source-owned, released website packages for both hosted Online Store surfaces.
- * Color/appearance presets remain independent in cms_themes and /themes.
- * Installer persists through the canonical authenticated CMS site API. */
+ * A Try opens an account-owned Theme Studio workspace; a CMS site is optional
+ * and is created only later when the customer chooses a publish destination. */
 (() => {
   const API = window.__AGENTSAM_WEBSITE_THEMES_ENDPOINT;
   if (!API) return;
@@ -76,36 +76,40 @@
     message.setAttribute('role','alert');
     container.append(message);
   };
-  // A Try action creates (or resumes) a self-contained draft site. It must
-  // never pick the current/default/live site or interrupt dashboard startup
-  // with a nested modal. Explicit installs into existing sites remain supported
-  // by the authenticated backend for later site management.
-  async function createPrivateDraft(theme,button,container) {
+  // A Try action creates (or resumes) an account-owned authoring workspace.
+  // It does not create a CMS site or select a customer's existing website.
+  // An explicit site_id remains available for deliberate site-bound installs.
+  async function openStudioWorkspace(theme,button,container) {
     if(button.disabled) return;
     button.disabled=true;
     const previous=button.textContent;
-    button.textContent='Preparing draft…';
+    button.textContent='Opening Theme Studio…';
     const message=container.querySelector('.theme-install-message');
-    if(message)message.textContent='Creating your private editable draft. Existing websites stay unchanged.';
+    if(message)message.textContent='Preparing your private Theme Studio workspace. No website or domain is required.';
     try {
       const result=await requestJSON(
         '/api/admin/website-themes/'+encodeURIComponent(theme.slug)+'/install',
         {method:'POST',headers:{'content-type':'application/json'},
           body:JSON.stringify({version:theme.version})});
-      if(typeof result.editor_url!=='string' ||
-        !/^\/admin\/theme-project-editor\?project=[A-Za-z0-9_%\-]+&site_id=[A-Za-z0-9_%\-]+$/.test(result.editor_url) ||
-        !/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id||''))
-        throw Error('The installer did not return an owned draft and editor');
+      if(typeof result.editor_url!=='string' || !['studio','site'].includes(result.scope))
+        throw Error('The installer did not return an owned Theme Studio workspace');
+      const editor=new URL(result.editor_url,location.origin);
+      if(editor.origin!==location.origin || editor.pathname!=='/admin/theme-project-editor' ||
+        editor.searchParams.get('project')!==result.project_id ||
+        (result.scope==='studio' && (editor.searchParams.get('scope')!=='studio' || editor.searchParams.has('site_id'))) ||
+        (result.scope==='site' && (!/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id||'') || editor.searchParams.get('site_id')!==result.site_id)))
+        throw Error('The installer returned an invalid editor destination');
       if(message)message.textContent=result.unchanged
-        ? 'Opening your previously saved draft…'
-        : 'Your draft is ready. Opening its theme library…';
-      // The site_id belongs to the newly created private draft site. Route to
-      // the actual Online Store library, not a synthetic editor template.
+        ? 'Opening your saved Theme Studio workspace…'
+        : 'Your workspace is ready. Opening Theme Studio…';
       const embedded=window.parent&&window.parent!==window;
       const target=embedded?window.parent:window;
+      const appRoute=new URLSearchParams({page:editor.pathname,project:result.project_id});
+      if(result.scope==='studio') appRoute.set('scope','studio');
+      else appRoute.set('site_id',result.site_id);
       const route=embedded
-        ? '/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fstore&site_id='+encodeURIComponent(result.site_id)
-        : '/admin/store?site_id='+encodeURIComponent(result.site_id);
+        ? '/apps/ecommerce-cms-agentsam?'+appRoute.toString()
+        : editor.pathname+editor.search;
       target.location.assign(route);
     }catch(error) {
       button.disabled=false;
@@ -128,7 +132,7 @@
     stage.setAttribute('aria-label','Theme installation');
     const name=selectedTheme?.name || selectedSlug || 'Selected theme';
     const title=node('h2','', 'Preparing '+name);
-    const message=node('p','theme-install-message','Preparing your private theme draft.');
+    const message=node('p','theme-install-message','Preparing your private Theme Studio workspace. No site or domain needed.');
     message.setAttribute('role','status');
     const progress=node('div','theme-install-progress');
     progress.setAttribute('aria-hidden','true');
@@ -140,18 +144,18 @@
     root.replaceChildren(stage);
     if (!selectedTheme || !selectedTheme.can_install || (selectedVersion && selectedTheme.version!==selectedVersion)) {
       message.textContent=selectedTheme
-        ? 'This release is not ready to install. Your current store is unchanged.'
-        : 'The selected theme is unavailable. Your current store is unchanged.';
+        ? 'This release is not ready to add to Theme Studio.'
+        : 'The selected theme is unavailable. No workspace has been created.';
       progress.hidden=true;
       action.textContent='Browse themes';
       action.onclick=()=>{location.assign(ORIGIN)};
       return;
     }
-    action.onclick=()=>void createPrivateDraft(selectedTheme,action,stage);
-    if(trustedHandoff) void createPrivateDraft(selectedTheme,action,stage);
+    action.onclick=()=>void openStudioWorkspace(selectedTheme,action,stage);
+    if(trustedHandoff) void openStudioWorkspace(selectedTheme,action,stage);
     else {
       progress.hidden=true;
-      message.textContent='Continue to add this theme to your store as a private draft.';
+      message.textContent='Continue to open this theme in your private Theme Studio workspace. No site or domain is required.';
     }
   };
   const render = () => {
@@ -201,7 +205,7 @@
         install.type='button';
         install.dataset.installTheme=theme.slug;
         install.setAttribute('aria-label', 'Add ' + theme.name);
-        install.addEventListener('click',()=>void createPrivateDraft(theme,install,item));
+        install.addEventListener('click',()=>void openStudioWorkspace(theme,install,item));
         body.append(identity,install);
       } else {
         const detail = trusted(theme.detail_url, '/themes/' + theme.slug + '/');
