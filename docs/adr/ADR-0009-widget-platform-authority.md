@@ -7,7 +7,7 @@ Date: 2026-10-05
 
 AgentSam already has a portable widget foundation in `@inneranimalmedia/agentsam-workbench`, Local Studio widget preferences, and persisted widget catalog/install/layout/preference state.
 
-A donor application in `/Users/samprimeaux/agentsamweatherwidget-audit` demonstrates a much stronger widget operating model:
+A donor application demonstrates a much stronger widget operating model:
 
 - polished widget cards;
 - category taxonomy;
