@@ -9,5 +9,7 @@ CREATE TABLE IF NOT EXISTS agentsam_app_installations (
   config_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(config_json)),
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  pinned INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0,1)),
+  last_opened_at INTEGER,
   UNIQUE (account_id, app_id)
 );

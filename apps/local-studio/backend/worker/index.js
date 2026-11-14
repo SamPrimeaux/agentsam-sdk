@@ -81,7 +81,8 @@ import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.
 import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
 import { handleStudioNavigation } from "./studio-navigation-preferences.js";
-import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled } from "./apps-launcher.js";
+import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled, setNativeAdminAppPinned, touchNativeAdminAppOpened } from "./apps-launcher.js";
+import { listBrowserHistory, recordBrowserVisit, removeBrowserHistoryEntry } from "./browser-history.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
@@ -802,6 +803,8 @@ export default {
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
     const isAppsLauncher = url.pathname === "/api/apps/launcher";
     const isAppsInstall = url.pathname === "/api/apps/install";
+    const isAppsOpen = url.pathname === "/api/apps/open";
+    const isBrowserHistory = url.pathname === "/api/browser/history";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
     const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
@@ -1554,16 +1557,18 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
         return json({ok:false,error:"json_content_type_required"},415);
       const body = await request.json().catch(()=>null);
-      const allowed = request.method==="PATCH" ? ["key","enabled"] : ["key"];
+      const patchField = request.method==="PATCH" && body && typeof body==="object" && "pinned" in body ? "pinned" : "enabled";
+      const allowed = request.method==="PATCH" ? ["key",patchField] : ["key"];
       if (!body || typeof body !== "object" || Array.isArray(body) ||
           Object.keys(body).length !== allowed.length ||
           Object.keys(body).some(key=>!allowed.includes(key)) ||
           typeof body.key !== "string" ||
-          (request.method==="PATCH" && typeof body.enabled !== "boolean"))
+          (request.method==="PATCH" && typeof body[patchField] !== "boolean"))
         return json({ok:false,error:"app_install_request_invalid"},400);
       try {
         const result = request.method==="POST" ? await installNativeAdminApp(env.DB,userId,body.key)
           : request.method==="DELETE" ? await removeNativeAdminApp(env.DB,userId,body.key)
+          : patchField==="pinned" ? await setNativeAdminAppPinned(env.DB,userId,body.key,body.pinned)
           : await setNativeAdminAppEnabled(env.DB,userId,body.key,body.enabled);
         return json({ok:true,...result},request.method==="POST"?201:200);
       } catch (error) {
@@ -1571,7 +1576,46 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         return json({ok:false,error:code.slice(0,120)},
           code==="app_install_not_found"||code==="app_install_unavailable"||code==="app_not_installed"?404:
           code==="app_install_not_supported"?409:
-          code==="app_install_key_invalid"||code==="app_enabled_invalid"?400:503);
+          code==="app_install_key_invalid"||code==="app_enabled_invalid"||code==="app_pinned_invalid"?400:503);
+      }
+    }
+    if (isAppsOpen) {
+      if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+        return json({ok:false,error:"origin_not_allowed"},403);
+      const body = await request.json().catch(()=>null);
+      if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.key !== "string" ||
+          Object.keys(body).length !== 1)
+        return json({ok:false,error:"app_open_request_invalid"},400);
+      try { return json({ok:true,...await touchNativeAdminAppOpened(env.DB,userId,body.key)}); }
+      catch (error) {
+        const code=String(error?.message||"app_open_failed");
+        return json({ok:false,error:code.slice(0,120)},
+          code==="app_not_installed"?404:code==="app_install_key_invalid"?400:503);
+      }
+    }
+    if (isBrowserHistory) {
+      if (!["GET","POST","DELETE"].includes(request.method))
+        return json({ok:false,error:"method_not_allowed"},405,{allow:"GET, POST, DELETE"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        if (request.method === "GET") {
+          const limit = Number(url.searchParams.get("limit") || 12);
+          return json({ok:true,history:await listBrowserHistory(env.DB,userId,limit)});
+        }
+        if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+          return json({ok:false,error:"origin_not_allowed"},403);
+        const body = await request.json().catch(()=>null);
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.url !== "string")
+          return json({ok:false,error:"history_request_invalid"},400);
+        if (request.method === "POST") return json({ok:true,entry:await recordBrowserVisit(env.DB,userId,body)},201);
+        return json({ok:true,...await removeBrowserHistoryEntry(env.DB,userId,body.url)});
+      } catch (error) {
+        const code=String(error?.message||"history_unavailable");
+        return json({ok:false,error:code.slice(0,120)},code==="history_url_invalid"?400:503);
       }
     }
     if (isPluginCatalog) {
