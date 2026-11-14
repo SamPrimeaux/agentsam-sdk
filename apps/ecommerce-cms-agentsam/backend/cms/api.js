@@ -2800,8 +2800,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
       return json(result, { status: result.status || (result.ok ? 200 : 503) });
     }
     const selectedSite=url.searchParams.get('site_id') || null;
-    // Accept the account's default or sole active site for legacy callers.
-    // Multi-site accounts still fail closed with cms_site_required.
+    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
     let site;
     try { site=await resolveCmsSite(env.DB,{accountId:context.accountId,siteId:selectedSite}); }
     catch (error) {return json({ok:false,error:String(error.message||error)},{status:409});}
