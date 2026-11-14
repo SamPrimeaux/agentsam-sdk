@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   DesktopLaunchError, buildOpenUrl, findDesktopApp, isDirectoryArg, launchDesktop, resolveProjectDir,
-} from '../../src/lib/desktop-launch.js';
+} from '../../src/cli/desktop-launch.js';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-launch-'));
 const weird = path.join(tmp, 'my proj & #1 é');
