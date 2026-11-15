@@ -244,7 +244,22 @@ export async function listCatalogForAccount(env, accountId, fetcher = fetch) {
   };
 }
 
+/** First-party native Docker capability. Installation does NOT authorize the host. */
+export async function installFirstPartyDocker(env,accountId) {
+  if(!accountId)throw Error('plugin_account_required');
+  const plugin=await env.DB.prepare(
+    "SELECT id FROM agentsam_plugins WHERE plugin_key='agentsam-docker-engine' AND plugin_kind='native' LIMIT 1"
+  ).first();
+  if(!plugin)throw Error('docker_plugin_not_registered');
+  await env.DB.prepare(
+    "INSERT INTO agentsam_plugin_installations (account_id,plugin_id,instance_key,enabled,setup_status,health_status) VALUES (?,?,'docker-v1',1,'configured','unknown') "
+    + "ON CONFLICT(account_id,plugin_id,instance_key) DO UPDATE SET enabled=1,setup_status='configured',updated_at=unixepoch()"
+  ).bind(accountId,plugin.id).run();
+  return {pluginId:plugin.id,installed:true,enabled:true,setup_status:'configured',authorization:'host_required'};
+}
+
 export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) {
+  if(pluginKey==='agentsam-docker-engine')return installFirstPartyDocker(env,accountId);
   if (!isCatalogPluginKey(pluginKey)) throw new Error('plugin_catalog_key_invalid');
   const catalog = await discoverPublicPlugins(env,fetcher);
   const entry = catalog.plugins.find(plugin=>plugin.pluginKey===pluginKey);
