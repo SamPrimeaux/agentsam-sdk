@@ -86,4 +86,10 @@ test('admin routing requires verified identity and fails closed when identity is
     resolveUser: async () => { throw Error('login alias must remain reachable'); }, loginPath: '/auth/login',
   });
   assert.equal(new URL(loginAlias.headers.get('location')).pathname, '/auth/login');
+  const loginAliasWithNext = await guardStudioAdminBoundary(new Request(
+    'https://studio.example/admin/login?next=%2Fadmin%2Fstore%3Faction%3Dtry'), {
+    resolveUser: async () => { throw Error('login alias must remain reachable'); }, loginPath: '/auth/login',
+  });
+  assert.equal(new URL(loginAliasWithNext.headers.get('location')).searchParams.get('next'),
+    '/admin/store?action=try');
 });

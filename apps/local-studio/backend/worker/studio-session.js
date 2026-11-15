@@ -47,7 +47,7 @@ export async function guardStudioAdminBoundary(request, { resolveUser, loginPath
   if (url.pathname !== '/admin' && !url.pathname.startsWith('/admin/')) return null;
   if (/^\/admin\/login(?:\.html)?\/?$/.test(url.pathname)) {
     return new Response(null, { status: 302, headers: {
-      location: new URL(loginPath, url.origin).toString(),
+      location: new URL(loginPath + url.search, url.origin).toString(),
       'cache-control': 'private, no-store',
     } });
   }
