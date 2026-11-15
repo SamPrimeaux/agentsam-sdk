@@ -8,7 +8,7 @@
 <style>
 :root{color-scheme:dark;--bg:#111513;--panel:#1d2420;--panel2:#252e27;--line:#39483b;--text:#e8efe6;--muted:#a3b3a8;--accent:#a3d86a;--max:1400px}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-button,input{font:inherit}button{cursor:pointer}a{color:inherit}a:hover{color:var(--accent)}.container{width:min(calc(100% - 48px),var(--max));margin:auto}
+.brand-subtitle{color:var(--muted);font-weight:400}.empty-wide{grid-column:1/-1}button,input{font:inherit}button{cursor:pointer}a{color:inherit}a:hover{color:var(--accent)}.container{width:min(calc(100% - 48px),var(--max));margin:auto}
 header{height:70px;border-bottom:1px solid var(--line);background:#131a16;position:sticky;top:0;z-index:10}
 header .container{height:100%;display:flex;gap:20px;justify-content:space-between;align-items:center}
 .brand{font-size:14px;font-weight:750;letter-spacing:.08em;display:flex;align-items:center;gap:11px}.mark{width:30px;height:30px;background:var(--accent);color:#122014;border-radius:9px;display:grid;place-items:center;font-weight:800}
@@ -47,7 +47,7 @@ footer{padding:24px 0;border-top:1px solid var(--line);font-size:11px;color:var(
 </head>
 <body>
 <header><div class="container">
-<div class="brand"><span class="mark">IA</span><span>INNERANIMAL <span style="color:var(--muted);font-weight:400">/ The Kingdom</span></span></div>
+<div class="brand"><span class="mark">IA</span><span>INNERANIMAL <span class="brand-subtitle">/ The Kingdom</span></span></div>
 <div class="top-right"><span class="crumb">Companions / Habitat explorer</span><span class="status"><b>●</b> Public collection</span></div>
 </div></header>
 <main>
@@ -115,7 +115,7 @@ function renderMedia(){
 $('filters').innerHTML=categories.map(c=>'<button type="button" class="segment" data-filter="'+c+'" aria-pressed="'+(state.filter===c)+'">'+c+'</button>').join('');
 const arr=galleryAssets(),shown=arr.slice(0,state.visible);
 $('assetSub').textContent=arr.length+' matching assets · Original frames, previews, models and editions remain individually accessible';
-$('gallery').innerHTML=shown.length?shown.map(a=>'<a class="tile" href="'+safe(a.publicUrl)+'" target="_blank" rel="noopener" title="Open public original"><span class="tile-cover">'+(a.type==='image'?img(a.publicUrl,a.name):'<span class="char-placeholder">3D</span>')+'</span><span class="tile-title">'+safe(a.name)+'</span><span class="tile-meta">'+safe(a.state||kind(a))+' · '+(a.bytes/1024).toFixed(1)+' KB'+(a.edition?' · '+safe(a.edition):'')+'</span></a>').join(''):'<div class="empty" style="grid-column:1/-1">No matching artwork. This may be a planned character or an empty media category.</div>';
+$('gallery').innerHTML=shown.length?shown.map(a=>'<a class="tile" href="'+safe(a.publicUrl)+'" target="_blank" rel="noopener" title="Open public original"><span class="tile-cover">'+(a.type==='image'?img(a.publicUrl,a.name):'<span class="char-placeholder">3D</span>')+'</span><span class="tile-title">'+safe(a.name)+'</span><span class="tile-meta">'+safe(a.state||kind(a))+' · '+(a.bytes/1024).toFixed(1)+' KB'+(a.edition?' · '+safe(a.edition):'')+'</span></a>').join(''):'<div class="empty empty-wide">No matching artwork. This may be a planned character or an empty media category.</div>';
 $('loadMore').style.display=arr.length>state.visible?'':'none';
 }
 function renderStory(){
