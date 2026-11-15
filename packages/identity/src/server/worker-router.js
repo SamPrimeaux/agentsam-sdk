@@ -76,7 +76,11 @@ function buildPasswordResetService(env, adapter, options = {}) {
       await adapter.updateUserPassword(userId, hashHex, saltHex);
     },
     sendResetEmail: async ({ email, name, code }) => {
-      const company = await adapter.getDefaultCompany().catch(() => null);
+      // Brand and credential follow the portal the user is on (company.meta.hosts),
+      // falling back to the default company — same resolution as GET /api/company.
+      const company = (options.requestHost && typeof adapter.getCompanyByHost === 'function'
+        ? await adapter.getCompanyByHost(options.requestHost).catch(() => null)
+        : null) || await adapter.getDefaultCompany().catch(() => null);
       const apiKey = await resolveTransactionalEmailKey(env, company, options);
       if (!apiKey) {
         const err = new Error('email_not_configured');
@@ -177,7 +181,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     || loginPath();
   const resetPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.RESET)
     || loginPath();
-  const passwordReset = buildPasswordResetService(env, adapter, options);
+  const passwordReset = buildPasswordResetService(env, adapter, { ...options, requestHost: url.hostname });
 
   // ── API: email auth ─────────────────────────────────────────────────────
   if (path === '/api/auth/login' && method === 'POST') {

@@ -288,3 +288,54 @@ describe('account self-service API', () => {
     assert.equal((await res.json()).error, 'account_security_migration_required');
   });
 });
+
+describe('password reset email resolves its key through the injected vault resolver', () => {
+  it('uses the host company credential reference, not env', async () => {
+    const sent = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      sent.push({ url: String(url), auth: init.headers.Authorization, body: JSON.parse(init.body) });
+      return new Response('{}', { status: 200 });
+    };
+    const kv = new Map();
+    const company = {
+      name: 'Portal Co', supportEmail: 'help@portal.test',
+      meta: { credentials: { transactional_email: { provider: 'resend', vault_account_id: 'acct_owner' } } },
+    };
+    const adapter = {
+      findUserByEmail: async () => ({ id: 'u1', email: 'u@portal.test', display_name: 'U', status: 'active' }),
+      getCompanyByHost: async (host) => (host === 'portal.test' ? company : null),
+      getDefaultCompany: async () => ({ name: 'Default', supportEmail: 'x@default.test', meta: {} }),
+    };
+    const lookups = [];
+    try {
+      const res = await handleIdentityWorkerRequest(
+        new Request('https://portal.test/api/auth/password-reset/request', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: 'u@portal.test' }),
+        }),
+        {
+          RESEND_API_KEY: 'env-key-should-not-win',
+          SESSION_CACHE: {
+            get: async (k) => kv.get(k) ?? null,
+            put: async (k, v) => { kv.set(k, v); },
+            delete: async (k) => { kv.delete(k); },
+          },
+        },
+        {
+          adapter,
+          identity: identityFor(adapter),
+          resolveCredential: async (q) => { lookups.push(q); return { source: 'vault', value: 'vault-key' }; },
+        },
+      );
+      assert.equal(res.status, 200);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    assert.equal(lookups[0].provider, 'resend');
+    assert.equal(lookups[0].accountId, 'acct_owner');
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].auth, 'Bearer vault-key');
+    assert.match(sent[0].body.from, /Portal Co <help@portal\.test>/);
+  });
+});

@@ -485,7 +485,7 @@ export function createPortableIdentityStore(db, options = {}) {
       async canManageCompany(userId) {
         await ensure();
         const owner = await db.prepare(
-          `SELECT id FROM identity_users ORDER BY created_at ASC, id ASC LIMIT 1`,
+          `SELECT id FROM identity_users ORDER BY created_at ASC, rowid ASC LIMIT 1`,
         ).bind().first();
         return Boolean(owner?.id && owner.id === userId);
       },
