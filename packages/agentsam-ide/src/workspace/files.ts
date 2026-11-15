@@ -69,10 +69,22 @@ export type WorkspaceSnapshot = {
   entries?: Array<{path: string; hash: string}>;
 };
 
+export type WorkspacePreview = {
+  kind: 'image' | 'video' | 'audio' | 'pdf' | 'binary';
+  url: string;
+  contentType?: string;
+  size?: number;
+  version?: string;
+  /** Host-created blob URLs must be revoked when the preview closes. */
+  release?: () => void;
+};
+
 export interface FileWorkspace {
   /** The host authenticates, authorizes and scopes every operation. */
   list(directory?: string): Promise<WorkspaceEntry[]>;
   read(path: string): Promise<WorkspaceFile>;
+  /** Optional authenticated binary preview, distinct from Monaco text. */
+  preview?(path: string): Promise<WorkspacePreview | null>;
   write(path: string, content: string, expectedVersion: string | null, options?: { overwrite?: boolean }): Promise<WorkspaceWriteResult>;
   create(path: string, kind: WorkspaceEntry['kind']): Promise<WorkspaceEntry>;
   rename(path: string, destination: string): Promise<WorkspaceEntry>;

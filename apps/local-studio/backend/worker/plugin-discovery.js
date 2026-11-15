@@ -244,7 +244,22 @@ export async function listCatalogForAccount(env, accountId, fetcher = fetch) {
   };
 }
 
+/** First-party native Docker capability. Installation does NOT authorize the host. */
+export async function installFirstPartyDocker(env,accountId) {
+  if(!accountId)throw Error('plugin_account_required');
+  const plugin=await env.DB.prepare(
+    "SELECT id FROM agentsam_plugins WHERE plugin_key='agentsam-docker-engine' AND plugin_kind='native' LIMIT 1"
+  ).first();
+  if(!plugin)throw Error('docker_plugin_not_registered');
+  await env.DB.prepare(
+    "INSERT INTO agentsam_plugin_installations (account_id,plugin_id,instance_key,enabled,setup_status,health_status) VALUES (?,?,'docker-v1',1,'configured','unknown') "
+    + "ON CONFLICT(account_id,plugin_id,instance_key) DO UPDATE SET enabled=1,setup_status='configured',updated_at=unixepoch()"
+  ).bind(accountId,plugin.id).run();
+  return {pluginId:plugin.id,installed:true,enabled:true,setup_status:'configured',authorization:'host_required'};
+}
+
 export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) {
+  if(pluginKey==='agentsam-docker-engine')return installFirstPartyDocker(env,accountId);
   if (!isCatalogPluginKey(pluginKey)) throw new Error('plugin_catalog_key_invalid');
   const catalog = await discoverPublicPlugins(env,fetcher);
   const entry = catalog.plugins.find(plugin=>plugin.pluginKey===pluginKey);
@@ -308,9 +323,11 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
 
 export async function removeCatalogInstallation(env,accountId,pluginId) {
   if (!/^plg_[a-z0-9]+$/i.test(pluginId)) throw new Error('plugin_id_invalid');
+  const definition=await env.DB.prepare('SELECT plugin_key FROM agentsam_plugins WHERE id=? LIMIT 1').bind(pluginId).first();
+  const installKey=definition?.plugin_key==='agentsam-docker-engine'?'docker-v1':'catalog-v1';
   const row = await env.DB.prepare(
     'SELECT id FROM agentsam_plugin_installations WHERE plugin_id = ? AND account_id = ? AND instance_key = ? LIMIT 1'
-  ).bind(pluginId,accountId,'catalog-v1').first();
+  ).bind(pluginId,accountId,installKey).first();
   if (!row) throw new Error('plugin_installation_not_found');
   const tools = await env.DB.prepare(
     'SELECT COUNT(*) AS total FROM agentsam_tools WHERE plugin_id = ? AND account_id = ?'
@@ -318,6 +335,6 @@ export async function removeCatalogInstallation(env,accountId,pluginId) {
   if (Number(tools?.total || 0) > 0) throw new Error('plugin_remove_requires_disconnect');
   await env.DB.prepare(
     'DELETE FROM agentsam_plugin_installations WHERE plugin_id = ? AND account_id = ? AND instance_key = ?'
-  ).bind(pluginId,accountId,'catalog-v1').run();
+  ).bind(pluginId,accountId,installKey).run();
   return {pluginId,removed:true};
 }

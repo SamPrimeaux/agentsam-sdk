@@ -1,5 +1,6 @@
 // Core Agent & Daemon Integration
 pub mod agentsamd;
+pub mod docker_bridge;
 pub mod autorag;
 pub mod chrome_browser;
 pub mod embedded_browser;

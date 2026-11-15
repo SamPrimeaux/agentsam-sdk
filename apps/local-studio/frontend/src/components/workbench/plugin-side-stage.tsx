@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, RefreshCw, Settings2 } from "lucide-react";
 import { IconAction } from "@/components/ui/icon-action";
+import { DockerConnectionPanel } from "@/components/runtime/DockerConnectionPanel";
 import type { LocalStudioSideStageRecord } from "@/lib/connections/client";
 import { readLocalStudioPluginWorkspace } from "@/lib/connections/client";
 
@@ -25,7 +26,7 @@ export function PluginSideStage({ stage }: Props) {
   }>({ loading: true, error: false, result: null });
 
   useEffect(() => {
-    if (!stage || stage.renderer !== "workspace") return;
+    if (!stage || stage.renderer !== "workspace" || stage.id === "agentsam-docker-engine") return;
     let active = true;
     setState({ loading: true, error: false, result: null });
     readLocalStudioPluginWorkspace(stage.pluginId)
@@ -40,6 +41,11 @@ export function PluginSideStage({ stage }: Props) {
   if (!stage) return <section role="status" className="p-5 text-sm text-muted-foreground">
     This addition isn't available in your connected plugins.
   </section>;
+
+  if (stage.id === "agentsam-docker-engine") return <div className="h-full overflow-y-auto p-4">
+    <DockerConnectionPanel />
+    <p className="mt-3 text-xs text-muted-foreground">Open Files → Docker to attach a selected container directory to the full Monaco IDE.</p>
+  </div>;
 
   if (stage.renderer === "embed") {
     return <div className="flex h-full min-h-0 flex-col bg-background">
