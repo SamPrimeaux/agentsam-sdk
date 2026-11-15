@@ -14,6 +14,7 @@ import {
 function fakeDb() {
   const log = [];
   let nonce = null;
+  let grantPersisted = false;
   return {
     log,
     prepare(sql) {
@@ -26,6 +27,7 @@ function fakeDb() {
                 nonce = { id: args[0], user_id: args[1], provider: args[2], state_hash: args[3],
                   code_verifier_encrypted: args[4], redirect_after: args[5], expires_at: args[7], consumed_at: null };
               }
+              if (/^INSERT INTO user_oauth_tokens/.test(sql)) grantPersisted = true;
               if (/^UPDATE oauth_state_nonces SET consumed_at/.test(sql)) {
                 if (!nonce || nonce.consumed_at) return { meta: { changes: 0 } };
                 nonce.consumed_at = args[0];
@@ -35,6 +37,7 @@ function fakeDb() {
             async first() {
               log.push({ sql, args });
               if (/FROM oauth_state_nonces/.test(sql)) return nonce && nonce.state_hash === args[0] && nonce.provider === args[1] ? nonce : null;
+              if (/FROM user_oauth_tokens/.test(sql) && /AS granted/.test(sql)) return grantPersisted && nonce?.consumed_at && args[0] === nonce.user_id && args[1] === nonce.provider.replace('connector_', '') ? { granted: 1 } : null;
               if (/FROM agentsam_plugins/.test(sql)) return { id: "plg_test_" + args[0] };
               return null;
             },
@@ -105,9 +108,13 @@ for (const [key, authHost, cb, prefix] of [
     assert.notEqual(upsert.args[3], "at", "access token is sealed, not plaintext");
     assert.ok(e.DB.log.some((l) => /INSERT INTO agentsam_plugin_installations/.test(l.sql)));
 
-    // state is single-use
+    // The authorization code is single-use. A repeated browser callback may
+    // redirect to the existing installed grant, but must not exchange it again.
+    const previousExchanges = e.DB.log.filter(entry => /INSERT INTO user_oauth_tokens/.test(entry.sql)).length;
     const replay = await completeConnectorOAuth(callback, e);
-    assert.equal(replay.status, 400);
+    assert.equal(replay.status, 302);
+    assert.match(replay.headers.get('location') || '', /result=connected/);
+    assert.equal(e.DB.log.filter(entry => /INSERT INTO user_oauth_tokens/.test(entry.sql)).length, previousExchanges);
   });
 }
 
