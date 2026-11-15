@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Cloud, Container, Cpu, Loader2, Monitor, RefreshCw, TerminalSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DockerConnectionPanel } from "./DockerConnectionPanel";
 import { getTauriInvoke } from "@/lib/desktop/tauri";
 import { isConnectedRuntimeSession, type RuntimeKind } from "./runtime-sessions";
 import { useTerminalSessionStore, type StudioTerminalSession } from "@/lib/work/terminal-sessions";
@@ -22,7 +23,7 @@ type RuntimeCard = {
 
 const BASE_RUNTIMES: RuntimeCard[] = [
   { id: "local", name: "My Computer", detail: "Your connected computer", adapter: "agentsamd", transport: "direct_https", state: "unknown", capabilities: ["exec", "pty", "filesystem", "process"], icon: Monitor },
-  { id: "docker", name: "Docker", detail: "Project container", adapter: "agentsamd", transport: "direct_https", state: "unknown", capabilities: ["exec", "pty", "filesystem"], icon: Container },
+  { id: "docker", name: "Docker", detail: "Your local or remote Docker contexts", adapter: "docker_engine", transport: "local_socket", state: "unknown", capabilities: ["exec", "pty", "filesystem"], icon: Container },
   { id: "gcp", name: "Google Cloud", detail: "Remote machine", adapter: "agentsamd", transport: "cloudflare_tunnel", state: "unknown", capabilities: ["exec", "pty", "filesystem"], icon: Cloud },
   { id: "cf-sandbox", name: "Cloudflare Sandbox", detail: "Isolated temporary workspace", adapter: "cloudflare_sandbox", transport: "service_binding", state: "unknown", capabilities: ["exec"], icon: Box },
   { id: "cf-container", name: "Cloudflare Container", detail: "Hosted container workspace", adapter: "agentsamd", transport: "service_binding", state: "unknown", capabilities: ["exec", "filesystem"], icon: Cpu },
@@ -108,7 +109,7 @@ export function RuntimeManagerPage() {
                   </div>
                   <p className="mt-1 break-all text-xs text-muted-foreground">{runtime.detail}</p>
                   {runtime.missing?.length ? <p className="mt-2 text-xs text-muted-foreground">{runtime.missing.join(", ")}</p> : null}
-                  {runtime.id === "docker" && runtime.state === "available" ? <p className="mt-2 text-xs text-muted-foreground">Docker is installed. Start or attach a container through the local CLI; no container session has been verified.</p> : null}
+                  {runtime.id === "docker" && runtime.state === "available" ? <p className="mt-2 text-xs text-muted-foreground">Docker CLI detected. Open Details to authorize a context, inspect containers and manage your workspace.</p> : null}
                   {runtime.id !== "local" && runtime.state === "unknown" ? <p className="mt-2 text-xs text-muted-foreground">Connect the provider and attach an authorized runtime before a terminal can start.</p> : null}
                 </div>
                 <button type="button" className="inline-flex min-h-9 items-center rounded-md border border-border px-3 text-xs hover:bg-muted" aria-expanded={expandedRuntime === runtime.id} onClick={() => setExpandedRuntime(value => value === runtime.id ? null : runtime.id)}>
@@ -146,6 +147,8 @@ export function RuntimeManagerPage() {
                   {runtime.activeSession ? <div className="sm:col-span-3"><p className="text-muted-foreground">Verified session</p><p className="mt-1 break-all font-medium">{runtime.activeSession.connectionId} · {runtime.activeSession.cwd || "Default directory"}</p></div> : <p className="text-muted-foreground sm:col-span-3">No verified session. Expected capabilities describe the adapter contract, not an active grant.</p>}
                 </div>
               ) : null}
+              {runtime.id === "docker" && expandedRuntime === "docker" ?
+                <div className="mt-4 border-t border-border pt-4"><DockerConnectionPanel /></div> : null}
             </section>
           );
         })}
