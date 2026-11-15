@@ -79,7 +79,7 @@ test('immutable product sources and packaged shell are the authority', () => {
   const workerFirstMatch = cloudflare.match(/"run_worker_first":\s*(\[[^\]]+\])/);
   assert.ok(workerFirstMatch, 'run_worker_first missing');
   const runWorkerFirst = JSON.parse(workerFirstMatch[1]);
-  for (const route of ['/admin/*', '/sites', '/samsketch', '/projects', '/projects/*']) {
+  for (const route of ['/admin', '/admin/*', '/sites', '/samsketch', '/projects', '/projects/*']) {
     assert.ok(runWorkerFirst.includes(route), 'Worker must own route: ' + route);
   }
 

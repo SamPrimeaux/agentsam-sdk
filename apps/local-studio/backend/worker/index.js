@@ -5,7 +5,7 @@ import { handleStudioConversationShares, handlePublicConversationShare } from ".
 import { handleStudioQueueObservability } from "./studio-queue-observability.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { serveDesignCanvasAdminRoute } from "./design-canvas-admin-route.js";
-import { resolveStudioSessionUser, guardStudioDocumentSession } from "./studio-session.js";
+import { resolveStudioSessionUser, guardStudioDocumentSession, guardStudioAdminBoundary } from "./studio-session.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
@@ -733,6 +733,12 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    // Signing in (or up) mints the owning principal before any /admin/ shell,
+    // script, editor, theme install or mutation is reachable. No site_id needed.
+    const adminDenied = await guardStudioAdminBoundary(request, {
+      resolveUser: () => resolveSessionUserId(request, env), loginPath: LOGIN_PATH,
+    });
+    if (adminDenied) return adminDenied;
     // Preserve source distribution under /design-canvas/sources/ while removing
     // the second editor presented at its obsolete app root.
     if ((url.pathname === '/design-canvas/' || url.pathname === '/design-canvas') &&
