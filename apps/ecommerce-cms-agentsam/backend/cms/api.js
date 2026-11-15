@@ -3,7 +3,7 @@ import { handleCollectionApi } from "./collection-store.mjs";
 import { attachCmsDefinitions, listCmsDefinitions, listCmsComponentCatalog } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject, listThemeProjectHistory, getThemeProjectSnapshot } from "./theme-project-store.mjs";
-import { listStudioThemeProjects, getStudioThemeProject, createStudioThemeProject, saveStudioThemeProject, listStudioThemeProjectHistory, getStudioThemeProjectSnapshot } from "./theme-studio-store.mjs";
+import { listStudioThemeProjects, getStudioThemeProject, createStudioThemeProject, saveStudioThemeProject, deleteStudioThemeProject, duplicateStudioThemeProject, listStudioThemeProjectHistory, getStudioThemeProjectSnapshot } from "./theme-studio-store.mjs";
 import { ensureCmsSiteStarter } from "./site-starter.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
@@ -2823,6 +2823,20 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     const result = await createThemeProject(env, context.accountId, body.project, selectedSite);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
+  const duplicateStudioMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})\/duplicate$/);
+  if (duplicateStudioMatch && method === 'POST') {
+    if (!context.accountId) return json({ok:false,error:'account_required'},{status:403});
+    const studioScope = url.searchParams.get('scope') === 'studio';
+    if (!studioScope || url.searchParams.has('site_id'))
+      return json({ok:false,error:'theme_studio_scope_required'},{status:400});
+    let body;
+    try {body=await request.json();}catch{return json({ok:false,error:'invalid_json'},{status:400});}
+    if (!body || typeof body!=='object' || Array.isArray(body) ||
+        Object.keys(body).some(k=>!['name'].includes(k)))
+      return json({ok:false,error:'invalid_duplicate_options'},{status:400});
+    const result = await duplicateStudioThemeProject(env,context.accountId,duplicateStudioMatch[1],body.name);
+    return json(result,{status:result.status || (result.ok?201:400)});
+  }
   const projectHistoryMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})\/history(?:\/([0-9]{1,10}))?$/);
   if (projectHistoryMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
@@ -2864,6 +2878,18 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
         ? await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version, selectedSite)
         : {ok:false,status:400,error:'site_id_required'};
     return json(result, { status: result.status || (result.ok ? 200 : 400) });
+  }
+  if (themeProjectMatch && method === 'DELETE') {
+    if (!context.accountId) return json({ok:false,error:'account_required'},{status:403});
+    const studioScope = url.searchParams.get('scope') === 'studio';
+    if (!studioScope || url.searchParams.has('site_id'))
+      return json({ok:false,error:'theme_studio_scope_required'},{status:400});
+    let body;
+    try {body=await request.json();}catch{return json({ok:false,error:'invalid_json'},{status:400});}
+    if (!body || !Number.isSafeInteger(body.expected_version))
+      return json({ok:false,error:'theme_studio_version_required'},{status:400});
+    const result = await deleteStudioThemeProject(env,context.accountId,themeProjectMatch[1],body.expected_version);
+    return json(result,{status:result.status || (result.ok?200:400)});
   }
   const themeInstallMatch = path.match(/^\/api\/admin\/cms\/themes\/([a-z][a-z0-9-]{0,63})\/install$/);
   if (themeInstallMatch && method === "POST") {

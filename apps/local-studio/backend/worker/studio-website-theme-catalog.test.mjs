@@ -103,3 +103,21 @@ test('catalog marks a release install-ready only when its packaged editable proj
     assert.equal(result.products[0].manifest_page_count,9);
   }finally{globalThis.fetch=previous;}
 });
+
+test('short preview aliases come from Theme Store metadata, never the SDK slug or arbitrary URL',async()=>{
+  const before=globalThis.fetch;
+  const base={...product,release:{status:'preview',sha256:null,storageKey:null}};
+  try{
+    globalThis.fetch=async()=>Response.json({ok:true,products:[
+      {...base,slug:'plain-jane',version:'0.3.0',previewAlias:'iapj',previewUrl:'https://themes.inneranimalmedia.com/iapj/'},
+      {...base,slug:'unsafe-preview',version:'0.3.0',previewUrl:'https://themes.inneranimalmedia.com/iapj/'},
+      {...base,slug:'redirected-login',version:'0.3.0',previewAlias:'auth',previewUrl:'https://themes.inneranimalmedia.com/auth/'},
+    ]});
+    const data=await (await handleStudioWebsiteThemeCatalog(
+      new Request('https://agent.test/api/admin/website-themes'),'account_verified')).json();
+    assert.equal(data.products[0].preview_url,'https://themes.inneranimalmedia.com/iapj/');
+    assert.equal(data.products[0].preview_alias,'iapj');
+    assert.equal(data.products[1].preview_url,null);
+    assert.equal(data.products[2].preview_url,null);
+  }finally{globalThis.fetch=before;}
+});

@@ -192,6 +192,34 @@ async function boot() {
         version: project.sourcePackageVersion || project.version || null,
         developer: project.sourcePackage?.split('/')?.[0]?.replace(/^@/, '') || null,
       },
+      ...(studioMode ? {
+        async onDuplicate() {
+          try {
+            const result = await jsonRequest(scoped(`${API}/${encodeURIComponent(projectId)}/duplicate`), {
+              method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({}),
+            });
+            if (!result.ok || !result.project?.id) throw Error('theme_duplicate_failed');
+            const destination=new URL(location.href);
+            destination.searchParams.set('project',result.project.id);
+            destination.searchParams.set('scope','studio');
+            destination.searchParams.delete('site_id');
+            destination.searchParams.delete('page');
+            location.assign(destination.pathname+destination.search);
+          } catch(error) { showError(error); }
+        },
+        async onDelete() {
+          try {
+            const current=await store.get(projectId);
+            if (!current || !Number.isInteger(current.revision)) throw Error('theme_delete_version_missing');
+            const result=await jsonRequest(scoped(`${API}/${encodeURIComponent(projectId)}`), {
+              method:'DELETE', headers:{'content-type':'application/json'},
+              body:JSON.stringify({expected_version:current.revision}),
+            });
+            if (result.deleted !== true) throw Error('theme_delete_failed');
+            location.assign('/admin/store');
+          } catch(error) { showError(error); }
+        },
+      } : {}),
       onEditCode() {
         const codeParams = new URLSearchParams({ page:'/admin/theme-code-editor', project:projectId });
         if (studioMode) codeParams.set('scope','studio');

@@ -79,7 +79,7 @@
   // A Try action creates (or resumes) an account-owned authoring workspace.
   // It does not create a CMS site or select a customer's existing website.
   // An explicit site_id remains available for deliberate site-bound installs.
-  async function openStudioWorkspace(theme,button,container) {
+  async function openStudioWorkspace(theme,button,container,{copy=false}={}) {
     if(button.disabled) return;
     button.disabled=true;
     const previous=button.textContent;
@@ -90,7 +90,7 @@
       const result=await requestJSON(
         '/api/admin/website-themes/'+encodeURIComponent(theme.slug)+'/install',
         {method:'POST',headers:{'content-type':'application/json'},
-          body:JSON.stringify({version:theme.version})});
+          body:JSON.stringify({version:theme.version,...(copy?{copy:true}:{})})});
       if(typeof result.editor_url!=='string' || !['studio','site'].includes(result.scope))
         throw Error('The installer did not return an owned Theme Studio workspace');
       const editor=new URL(result.editor_url,location.origin);
@@ -188,8 +188,20 @@
         image.alt = theme.name + ' website theme cover';
         visual.append(image);
       } else visual.append(node('div', 'theme-marketplace-unavailable', theme.name));
+      // Theme Store is the authority for the preview destination. Its
+      // authenticated catalog adapter has already checked this same-origin URL.
+      const compact = (() => {
+        try {
+          const u = new URL(theme.preview_url);
+          return u.origin === ORIGIN && typeof theme.preview_alias === 'string' &&
+            /^[a-z][a-z0-9-]{1,63}$/.test(theme.preview_alias) &&
+            !['admin','api','auth','media','themes','apps','settings'].includes(theme.preview_alias) &&
+            u.pathname === '/' + theme.preview_alias + '/' &&
+            !u.search && !u.hash ? u.href : null;
+        } catch { return null; }
+      })();
       const preview = trusted(theme.preview_url, '/theme-packages/' + theme.slug + '/') ||
-        trusted(theme.preview_url, '/themes/' + theme.slug + '/presets/' + theme.slug + '/demo/');
+        trusted(theme.preview_url, '/themes/' + theme.slug + '/presets/' + theme.slug + '/demo/') || compact;
       if (preview) {
         const overlay = link('', preview);
         overlay.className = 'theme-marketplace-preview';
@@ -206,7 +218,11 @@
         install.dataset.installTheme=theme.slug;
         install.setAttribute('aria-label', 'Add ' + theme.name);
         install.addEventListener('click',()=>void openStudioWorkspace(theme,install,item));
-        body.append(identity,install);
+        const copy = node('button','btn ghost small theme-marketplace-copy','Make a copy');
+        copy.type='button';
+        copy.setAttribute('aria-label','Create another independent copy of '+theme.name);
+        copy.addEventListener('click',()=>void openStudioWorkspace(theme,copy,item,{copy:true}));
+        body.append(identity,install,copy);
       } else {
         const detail = trusted(theme.detail_url, '/themes/' + theme.slug + '/');
         const view = detail && link('View theme', detail);

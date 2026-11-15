@@ -16,13 +16,19 @@ const json = (body, status = 200) => Response.json(body, {
   headers: { 'cache-control': 'private, max-age=60', 'x-content-type-options': 'nosniff' },
 });
 
-function allowPreview(value, slug, version) {
+function allowPreview(value, slug, version, previewAlias = null) {
   if (typeof value !== 'string') return null;
   try {
     const u = new URL(value);
-    return u.origin === STORE_ORIGIN &&
+    // Short provider-owned preview routes (e.g. /iapj/) are public catalog
+    // aliases, never arbitrary browser-supplied URLs or app/admin endpoints.
+    const compact = typeof previewAlias === 'string' && /^[a-z][a-z0-9-]{1,63}$/.test(previewAlias) &&
+      !['admin','api','auth','media','themes','apps','settings'].includes(previewAlias) &&
+      u.pathname === '/' + previewAlias + '/';
+    return u.origin === STORE_ORIGIN && !u.username && !u.password &&
+      !u.search && !u.hash &&
       (u.pathname.startsWith('/theme-packages/' + slug + '/' + version + '/preview/') ||
-       u.pathname.startsWith('/themes/' + slug + '/presets/' + slug + '/demo/')) ?
+       u.pathname.startsWith('/themes/' + slug + '/presets/' + slug + '/demo/') || compact) ?
       u.href : null;
   } catch { return null; }
 }
@@ -53,7 +59,8 @@ function normalizeTheme(p) {
     description: String(p.summary || '').slice(0, 500),
     category: String(p.category || 'Website').slice(0, 70),
     pages: Array.isArray(p.pages) ? p.pages.filter(v => typeof v === 'string').slice(0, 40) : [],
-    preview_url: allowPreview(p.previewUrl, slug, version),
+    preview_url: allowPreview(p.previewUrl, slug, version, p.previewAlias),
+    preview_alias: typeof p.previewAlias === 'string' && /^[a-z][a-z0-9-]{1,63}$/.test(p.previewAlias) ? p.previewAlias : null,
     thumbnail_url: image,
     detail_url: STORE_ORIGIN + '/themes/' + slug + '/',
     download_url: verified ? STORE_ORIGIN + '/api/themes/' + slug + '/' + version + '/download' : null,

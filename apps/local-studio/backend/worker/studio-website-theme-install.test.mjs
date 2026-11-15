@@ -249,3 +249,30 @@ test('site-free Try ignores existing CMS site slugs and never creates or adopts 
     assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_theme_studio_projects WHERE account_id='a'").get().n,1);
   });}finally{sqlite.close();}
 });
+
+test('user can install multiple stock canvases without a site; each copy belongs to the authenticated account',async()=>{
+  const {sqlite,env,objects}=fixture();
+  try{await withCatalog(async()=>{
+    const createCopy = async account => {
+      const req=new Request('https://cms.test/api/admin/website-themes/plain-jane/install',{
+        method:'POST',headers:{origin:'https://cms.test','content-type':'application/json'},
+        body:JSON.stringify({version,copy:true}),
+      });
+      return handleStudioWebsiteThemeInstall(req,env,account,slug);
+    };
+    const one=await createCopy('a');
+    const two=await createCopy('a');
+    assert.equal(one.status,201);
+    assert.equal(two.status,201);
+    const first=await one.json(),second=await two.json();
+    assert.equal(first.scope,'studio');assert.equal(second.scope,'studio');
+    assert.notEqual(first.project_id,second.project_id);
+    assert.match(first.project_id,/^copy_[a-f0-9]{12}$/);
+    assert.equal(first.page_count,project.pages.length);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_sites').get().n,3,
+      'the existing fixture sites must remain unchanged');
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_theme_studio_projects').get().n,2);
+    assert.equal((await getStudioThemeProject(env,'b',first.project_id)).status,404);
+    assert.ok(objects.size>=2,'copies must each persist private R2 revisions');
+  });}finally{sqlite.close();}
+});
