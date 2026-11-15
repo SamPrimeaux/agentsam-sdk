@@ -422,7 +422,7 @@ function showActiveTheme(theme,siteId) {
     const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
     const journey=document.getElementById('test-customer-flow-btn');
     if(journey) {
-      const intent=new URL('/admin/onboarding-preview',location.origin);
+      const intent=new URL('/admin/onboarding-preview',window.AgentSamOnlineStoreHost?.baseUrl || location.origin);
       if(d.selected_site_id && /^[A-Za-z0-9_-]{1,120}$/.test(d.selected_site_id))
         intent.searchParams.set('site_id',d.selected_site_id);
       journey.href=intent.pathname+intent.search;
