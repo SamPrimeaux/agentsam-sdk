@@ -11,7 +11,7 @@ const display=row=>({
   id:row.id,name:row.name,trigger:row.slash_trigger,
   description:row.description,content:row.content_markdown,
   version:row.version,updatedAt:row.updated_at,
-  readOnly:row.access_mode==='read_only',
+  readOnly:false, // Account-owned records are editable; platform-wide templates live outside this account listing.
 });
 export async function handleStudioSkills(request,env,accountId) {
   if(!accountId)return reply({ok:false,error:'unauthorized'},401);
@@ -33,10 +33,10 @@ export async function handleStudioSkills(request,env,accountId) {
     return reply({ok:false,error:'origin_not_allowed'},403);
   if(request.method==='DELETE') {
     const changed=await env.DB.prepare(`UPDATE agentsam_skill SET is_active=0,
-      updated_at=datetime('now') WHERE id=? AND account_id=? AND is_active=1 AND access_mode='read_write'`)
+      updated_at=datetime('now') WHERE id=? AND account_id=? AND is_active=1`)
       .bind(id,accountId).run();
     return Number(changed.meta?.changes||0)===1
-      ?reply({ok:true,deleted:true}):reply({ok:false,error:'skill_not_found_or_read_only'},404);
+      ?reply({ok:true,deleted:true}):reply({ok:false,error:'skill_not_found_or_forbidden'},404);
   }
   if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
     return reply({ok:false,error:'json_content_type_required'},415);
@@ -62,10 +62,10 @@ export async function handleStudioSkills(request,env,accountId) {
     }
     const updated=await env.DB.prepare(`UPDATE agentsam_skill SET
       name=?,slash_trigger=?,description=?,content_markdown=?,content_checksum=?,version=version+1,
-      updated_at=datetime('now') WHERE id=? AND account_id=? AND is_active=1 AND access_mode='read_write'`)
+      updated_at=datetime('now') WHERE id=? AND account_id=? AND is_active=1`)
       .bind(name,trigger,description,content,checksum,id,accountId).run();
     if(Number(updated.meta?.changes||0)!==1)
-      return reply({ok:false,error:'skill_not_found_or_read_only'},404);
+      return reply({ok:false,error:'skill_not_found_or_forbidden'},404);
     return reply({ok:true,skill:{id,name,trigger,description,content}});
   }catch(error){
     const msg=String(error?.message||'');

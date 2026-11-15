@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
 import { navigateApp } from "@/lib/work/navigate";
+import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
 
 type Method = "GET" | "POST" | "DELETE" | "PATCH";
 
@@ -10,7 +11,20 @@ type Method = "GET" | "POST" | "DELETE" | "PATCH";
  * client path.
  */
 async function appsRequest(method: Method, body?: Record<string, unknown>) {
-  const response = await fetch(method === "GET" ? "/api/apps/launcher" : "/api/apps/install", {
+  const path = method === "GET" ? "/api/apps/launcher" : "/api/apps/install";
+  if (isPackagedDesktop()) {
+    // The packaged app has no same-origin session cookie: the native bridge
+    // carries the signed-in account to the exact same two endpoints.
+    const native = await invokeStudioService({
+      operation: "apps", path, method, account_id: await resolveDesktopStudioAccountId(),
+      ...(body === undefined ? {} : { body }),
+    });
+    let nativePayload: any = null;
+    try { nativePayload = JSON.parse(native.body || "null"); } catch { /* handled below */ }
+    if (native.status >= 400 || !nativePayload?.ok) throw new Error("apps_account_request_failed");
+    return nativePayload;
+  }
+  const response = await fetch(path, {
     method,
     credentials: "same-origin",
     headers: { accept: "application/json", ...(body ? { "content-type": "application/json" } : {}) },

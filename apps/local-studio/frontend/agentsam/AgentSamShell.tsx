@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
-import { openAppsInstaller } from '@inneranimalmedia/agentsam-nav/browser';
+import { openAppsInstaller, setAppsInstallerAdapter } from '@inneranimalmedia/agentsam-nav/browser';
+import { loadAccountApps, installAccountApp, removeAccountApp, setAccountAppEnabled, openAccountApp } from '@/lib/apps-account';
 import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
 import {
   projectStudioShellAppearance,
@@ -100,6 +101,13 @@ function HostedCompanionHeader({ state }: { state: 'idle' | 'working' }) {
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
 export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
+  useEffect(() => {
+    setAppsInstallerAdapter({
+      loadApps: loadAccountApps, installApp: installAccountApp, removeApp: removeAccountApp,
+      updateApp: setAccountAppEnabled, onOpenApp: openAccountApp,
+    });
+    return () => setAppsInstallerAdapter(null);
+  }, []);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });

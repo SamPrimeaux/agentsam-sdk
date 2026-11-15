@@ -14,6 +14,7 @@ import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
 import { InnerAnimalCompanionsPage } from "../../../agentsam/InnerAnimalCompanionsPage";
 import { AppsManagementPage } from "./AppsManagementPage";
 import { BrowserSettings } from "./BrowserSettings";
+import { McpManagementPage } from "./McpManagementPage";
 import { PlatformNavigationSettings } from "./PlatformNavigationSettings";
 
 export function LocalStudioSettingsPage({
@@ -78,6 +79,8 @@ export function LocalStudioSettingsPage({
       }}
       renderCustomView={(unit, view) => unit === "customize" && view === "apps"
         ? <AppsManagementPage />
+        : unit === "customize" && view === "mcps"
+        ? <McpManagementPage />
         : unit === "customize" && view === "companions"
         ? <InnerAnimalCompanionsPage />
         : unit === "network" && view === "browser"
