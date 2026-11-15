@@ -11,7 +11,7 @@ import type {
 
 export type DockerContext = {name:string;current?:string;description?:string};
 export type DockerContainer = {ID:string;Names:string;Image:string;State:string;Status:string};
-type DockerAction = 'contexts'|'health'|'containers'|'images'|'logs'|'start'|'stop'|'restart'
+type DockerAction = 'createContext'|'contexts'|'health'|'containers'|'images'|'logs'|'start'|'stop'|'restart'
   |'list'|'read'|'preview'|'write'|'create'|'mkdir'|'rename'|'delete';
 type DockerResponse = {
   ok:boolean;contexts?:DockerContext[];containers?:DockerContainer[];
