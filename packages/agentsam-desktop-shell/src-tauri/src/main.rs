@@ -7,7 +7,7 @@ mod selftest;
 mod tray;
 
 use commands::{
-    agent_sam_pet, agentsamd, cad, cad_engine, chrome_browser, embedded_browser, cloudflare_desktop_identity,
+    agent_sam_pet, agentsamd, docker_bridge, cad, cad_engine, chrome_browser, embedded_browser, cloudflare_desktop_identity,
     deep_link, google_desktop_identity, keychain, local_content, local_identity, local_lsp,
     local_node, local_provider, local_sqlite, native_capabilities, system, updater,
 };
@@ -65,6 +65,7 @@ fn main() {
             updater::install_update,
             local_node::enroll_as_local_node,
             agentsamd::ensure_agentsamd,
+            docker_bridge::docker_bridge,
             agentsamd::agentsamd_health,
             agentsamd::agentsamd_language_packs,
             agentsamd::agentsamd_install_language_pack,
