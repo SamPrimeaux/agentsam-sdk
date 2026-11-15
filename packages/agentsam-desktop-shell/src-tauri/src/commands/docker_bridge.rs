@@ -5,6 +5,8 @@ use serde_json::{json,Value};
 use sha2::{Sha256,Digest};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use std::{process::{Command,Stdio},io::Write};
+use tauri::State;
+use super::keychain::{IdentitySessionState,identity_session_exists};
 
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
@@ -50,7 +52,7 @@ fn docker(argv:&[&str],input:Option<&[u8]>)->Result<Vec<u8>,String>{
   let mut p=c.spawn().map_err(|_|"docker_cli_unavailable".to_string())?;
   if let Some(b)=input{p.stdin.take().ok_or("docker_stdin_unavailable")?.write_all(b).map_err(|_|"docker_stdin_failed".to_string())?;}
   let output=p.wait_with_output().map_err(|_|"docker_command_failed".to_string())?;
-  if !output.status.success(){return Err(format!("docker_failed:{}",String::from_utf8_lossy(&output.stderr).chars().take(180).collect::<String>()));}
+  if !output.status.success(){return Err("docker_engine_command_failed_check_local_context".into());}
   if output.stdout.len()>16*1024*1024+65536{return Err("docker_result_too_large".into());}
   Ok(output.stdout)
 }
@@ -134,7 +136,7 @@ find . -mindepth 1 -maxdepth 6 -type f -print | sed 's/^/f /'
       let entries=txt.lines().filter_map(|line|{
         if line.chars().any(char::is_control){return None;}
         let (kind,item)=line.split_once(' ')?;
-        let item=item.trim_start_matches("./");
+        let item=item.strip_prefix("./").unwrap_or(item);
         Some(json!({"path":if path=="."{item.to_string()}else{format!("{}/{}",path,item)},
           "kind":if kind=="d"{"folder"}else{"file"}}))
       }).collect::<Vec<_>>();
@@ -192,7 +194,9 @@ mv "$tmp" "$name"
   }
 }
 #[tauri::command]
-pub async fn docker_bridge(request:DockerRequest)->Result<Value,String>{
+pub async fn docker_bridge(request:DockerRequest,state:State<'_,IdentitySessionState>)->Result<Value,String>{
+  let authenticated=identity_session_exists(state).map_err(|_|"docker_identity_unavailable".to_string())?;
+  if !authenticated{return Err("docker_sign_in_required".into());}
   tauri::async_runtime::spawn_blocking(move||run(request)).await.map_err(|_|"docker_bridge_failed".to_string())?
 }
 #[cfg(test)]
