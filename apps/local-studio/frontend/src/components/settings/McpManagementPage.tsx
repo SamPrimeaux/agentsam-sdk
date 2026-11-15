@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, ExternalLink, Pencil, Plus, RefreshCw, Server, Trash2, X } from "lucide-react";
+import { IconAction } from "@/components/ui/icon-action";
 import { isPackagedDesktop, invokeStudioService, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
 
 type McpRecord = {
@@ -94,7 +95,7 @@ export function McpManagementPage(){
 
     {error?<p role="alert" className="rounded-md border border-destructive/40 px-3 py-2 text-sm text-destructive">{error}</p>:null}
     {draft?<div className="space-y-4 rounded-lg border border-border bg-card p-5">
-      <header className="flex items-center justify-between"><h3 className="font-semibold">{draft.id?"Edit MCP server":"Register MCP server"}</h3><button type="button" aria-label="Close editor" onClick={()=>setDraft(null)}><X size={16}/></button></header>
+      <header className="flex items-center justify-between"><h3 className="font-semibold">{draft.id?"Edit MCP server":"Register MCP server"}</h3><IconAction label="Close editor" variant="ghost" onClick={()=>setDraft(null)}><X className="size-4"/></IconAction></header>
       <label className="block text-xs font-medium">Name
         <input autoFocus maxLength={120} value={draft.name} onChange={e=>setDraft(v=>v?{...v,name:e.target.value}:v)} placeholder="My MCP server" className="mt-1 h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"/>
       </label>
@@ -126,8 +127,8 @@ export function McpManagementPage(){
         </div>
         {server.managed?<div className="flex items-center gap-2">
           <span className="text-[11px] text-muted-foreground">{server.enabled?"Active":"Not connected"}</span>
-          <button type="button" aria-label={"Edit "+server.name} title="Edit" disabled={busy} onClick={()=>setDraft({id:server.id,name:server.name,url:server.url||""})} className="rounded-md p-2 hover:bg-muted"><Pencil size={14}/></button>
-          {confirmDelete===server.id?<span className="flex items-center gap-1"><button type="button" disabled={busy} className="text-xs text-destructive" onClick={()=>void mutate("DELETE",server.id)}>Confirm delete</button><button type="button" className="text-xs" onClick={()=>setConfirmDelete(null)}>Cancel</button></span>:<button type="button" aria-label={"Delete "+server.name} disabled={busy} onClick={()=>setConfirmDelete(server.id)} className="rounded-md p-2 hover:bg-muted"><Trash2 size={14}/></button>}
+          <IconAction label={"Edit "+server.name} variant="ghost" disabled={busy} onClick={()=>setDraft({id:server.id,name:server.name,url:server.url||""})}><Pencil className="size-4"/></IconAction>
+          {confirmDelete===server.id?<span className="flex items-center gap-1"><button type="button" disabled={busy} className="text-xs text-destructive" onClick={()=>void mutate("DELETE",server.id)}>Confirm delete</button><button type="button" className="text-xs" onClick={()=>setConfirmDelete(null)}>Cancel</button></span>:<IconAction label={"Delete "+server.name} variant="ghost" disabled={busy} onClick={()=>setConfirmDelete(server.id)}><Trash2 className="size-4"/></IconAction>}
         </div>:<a href="/settings/customize?view=plugins" className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-2 text-xs hover:bg-muted">Plugins <ExternalLink size={12}/></a>}
       </div>)}
     </div>
