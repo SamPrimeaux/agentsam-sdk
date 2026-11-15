@@ -1,6 +1,7 @@
 import { useShellAppearance } from "../appearance";
 import { SettingsBillingPanel } from "./billing";
 import { SettingsAccountPanel } from "./account";
+import { SettingsDesignSpecSheet } from "./design-spec";
 import { SettingsStoragePanel } from "./storage";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
@@ -2404,6 +2405,10 @@ function DesignView({snapshot,host}:{
         {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("themes")}
           className="mt-3 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">View themes separately →</button>:null}
       </Section>
+      <Section title="Design spec sheet" description="Every token, type size, radius and component rule for a theme. Pair any brand's colors with any spec's structure to check it before you ship it.">
+        <SettingsDesignSpecSheet themes={snapshot.themes}
+          onOpenThemes={host.openSettingsUnit?()=>host.openSettingsUnit?.("themes"):undefined}/>
+      </Section>
     </div>
   );
 }
@@ -2997,3 +3002,4 @@ export function SettingsProductPage({
 
 
 export { SettingsAccountPanel } from "./account";
+export { SettingsDesignSpecSheet } from "./design-spec";

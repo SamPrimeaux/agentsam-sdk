@@ -302,12 +302,34 @@ export type SettingsTheme = {
   slug?: string;
   themeFamily?: string;
   cssVars?: Record<string, string>;
+  /** Typed design spec (cms_themes tokens/typography/layout/components JSON). */
+  spec?: SettingsThemeSpec | null;
   visibility?: 'public' | 'private';
   accountOwned?: boolean;
   ownerAccountId?: string | null;
   aliasOfThemeId?: string | null;
   capabilities?: { preview: boolean; editable: boolean; duplicable: boolean; publishable: boolean };
   active?: boolean;
+};
+
+export type SettingsThemeTypeRole = {
+  role: string; label: string; size: number; line: number; weight: number;
+  tracking?: string; tone?: "muted"; sample: string; note?: string;
+};
+export type SettingsThemeSpec = {
+  tokens?: Record<string, string>;
+  typography?: { family?: string; scale?: SettingsThemeTypeRole[] };
+  layout?: {
+    radii?: Array<{ label: string; value: number; note?: string }>;
+    spacing?: number[];
+    maxWidth?: Record<string, number>;
+    [key: string]: unknown;
+  };
+  components?: {
+    swatches?: Array<[label: string, token: string, use: string]>;
+    [key: string]: unknown;
+  };
+  brand?: Record<string, unknown>;
 };
 
 export type SettingsThemeStyle = {

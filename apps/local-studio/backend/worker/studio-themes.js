@@ -62,6 +62,17 @@ function getCssVars(row) {
   const inline = Object.fromEntries(Object.entries(config).filter(([key, value]) => key.startsWith('--') && typeof value === 'string'));
   return Object.keys(inline).length ? inline : {};
 }
+/** Structured design spec from the typed JSON columns; null when a theme has none. */
+function themeSpec(row) {
+  const spec = {
+    tokens: objectJson(row?.tokens_json, {}),
+    typography: objectJson(row?.typography_json, {}),
+    layout: objectJson(row?.layout_json, {}),
+    components: objectJson(row?.components_json, {}),
+    brand: objectJson(row?.brand_json, {}),
+  };
+  return Object.values(spec).some((part) => Object.keys(part).length) ? spec : null;
+}
 function themeSwatches(cssVars) {
   return ['--bg-canvas', '--bg-surface', '--bg-panel', '--bg-nav', '--color-primary', '--accent', '--text-main']
     .map(key => cssVars[key]).filter(value => typeof value === 'string' && value.length <= 120).slice(0, 7);
@@ -77,7 +88,7 @@ function publicTheme(row, accountId, activeThemeId = null) {
     version: row.status === 'draft' ? 'Draft' : 'Theme preset',
     source: owned ? 'account-custom' : 'catalog',
     status: String(row.status || 'active'), slug: String(row.slug || ''),
-    themeFamily: String(row.theme_family || 'custom'), cssVars,
+    themeFamily: String(row.theme_family || 'custom'), cssVars, spec: themeSpec(row),
     swatches: themeSwatches(cssVars), previewImageUrl: row.preview_image_url || null,
     visibility: String(row.visibility || (owned ? 'private' : 'public')),
     accountOwned: owned, aliasOfThemeId: row.alias_of_theme_id || null,

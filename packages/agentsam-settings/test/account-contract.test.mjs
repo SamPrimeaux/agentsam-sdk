@@ -60,3 +60,26 @@ test("Local Studio account host maps every operation onto the identity routes", 
   globalThis.fetch = async () => new Response(JSON.stringify({ ok: false, error: "current_password_invalid" }), { status: 403 });
   await assert.rejects(() => studioAccountHost.regenerateBackupCodes("bad"), /current_password_invalid/);
 });
+
+test("Design spec sheet is token-driven and mounted in Brand & Design", async () => {
+  const index = await read("../src/frontend/index.tsx");
+  const sheet = await read("../src/frontend/design-spec.tsx");
+  const design = index.slice(index.indexOf("function DesignView("), index.indexOf("function GitView("));
+  assert.match(design, /<SettingsDesignSpecSheet themes=\{snapshot\.themes\}/);
+  // Colors from any theme, structure from a spec theme; contrast computed, not asserted.
+  assert.match(sheet, /Colors from/);
+  assert.match(sheet, /Structure from/);
+  assert.match(sheet, /function contrast\(/);
+  // No baked brand hex in the sheet: every color is a resolved var.
+  assert.doesNotMatch(sheet, /#238552|#3DBA7A|#191919|#262626/i);
+});
+
+test("charcoal green migration is a platform theme with a full spec", async () => {
+  const sql = await read("../../../apps/local-studio/backend/migrations/1369_charcoal_green_ui_theme.sql");
+  assert.match(sql, /INSERT OR IGNORE INTO cms_themes/);
+  assert.match(sql, /'theme-charcoal-green', 'Charcoal Green', 'charcoal-green'/);
+  assert.doesNotMatch(sql, /account_id,/, "platform stock theme: no account owner column written");
+  for (const part of ['"scale":', '"radii":', '"spacing":', '"groupedField":', '"compareRow":', '"--color-primary":"#238552"']) {
+    assert.ok(sql.includes(part), `missing ${part}`);
+  }
+});
