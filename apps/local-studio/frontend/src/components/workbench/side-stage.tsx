@@ -17,7 +17,9 @@ import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
 import { AppLibraryStage } from "@/components/workbench/app-library-stage";
-import { NATIVE_STAGE_ITEMS } from "@/components/workbench/side-stage-tools";
+import { NewTabStage } from "@/components/workbench/new-tab-stage";
+import { ItemStage } from "@/components/workbench/item-stage";
+import { StageIcon, TabItemIcon } from "@/components/workbench/stage-icons";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
 import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
 import { PluginSideStage } from "@/components/workbench/plugin-side-stage";
@@ -32,7 +34,8 @@ import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistant
 import { consumePendingCadAssistantContext } from "@/lib/cad/assistantContext";
 import { reloadSideStageRegistry, useSideStageRegistry } from "../../../agentsam/side-stage-actions";
 
-function TabIcon({ kind }: { kind: string }) {
+function TabIcon({ kind, icon }: { kind: string; icon?: string | null }) {
+  if (icon) return <TabItemIcon icon={icon} className="size-3.5 rounded-sm object-contain" />;
   if (kind === "chat") return <Users className="size-3.5" />;
   if (kind === "browser") return <Globe className="size-3.5" />;
   if (kind === "artifacts") return <Box className="size-3.5" />;
@@ -41,6 +44,7 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "goal") return <Target className="size-3.5" />;
   if (kind === "database") return <Database className="size-3.5" />;
   if (kind === "apps") return <LayoutGrid className="size-3.5" />;
+  if (kind === "newtab") return <LayoutGrid className="size-3.5" />;
   if (kind === "terminal") return <SquareTerminal className="size-3.5" />;
   return <FileCode className="size-3.5" />;
 }
@@ -95,7 +99,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 onClick={() => setActiveSideTab(item.id)}
                 className="flex items-center gap-1.5 py-1 text-xs"
               >
-                <TabIcon kind={item.kind} />
+                <TabIcon kind={item.kind} icon={item.icon} />
                 <span className="max-w-28 truncate" title={item.title}>{item.title}</span>
               </button>
               <IconAction
@@ -117,13 +121,17 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
               </IconAction>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <div className="px-3 py-1.5 text-[11px] text-muted-foreground">Built-in tools</div>
-              {NATIVE_STAGE_ITEMS.map(({ kind, label, icon: Icon }) => (
-                <DropdownMenuItem key={kind} onSelect={() => {
-                  openSideTab(kind, { ephemeral: false });
+              <DropdownMenuItem onSelect={() => { openSideTab("newtab", { ephemeral: false }); setSideOpen(true); }}>
+                <Plus className="size-3.5" />New tab
+              </DropdownMenuItem>
+              <div className="border-t border-border px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Built-in tools</div>
+              {!registry.loaded && <div role="status" className="px-3 py-2 text-xs text-muted-foreground">Loading tools…</div>}
+              {registry.loaded && !registry.error && stages.filter(stage => stage.renderer === 'builtin').map((stage) => (
+                <DropdownMenuItem key={stage.id} onSelect={() => {
+                  openSideTab(stage.tabKind as Parameters<typeof openSideTab>[0], { title: stage.label, ephemeral: false });
                   setSideOpen(true);
                 }}>
-                  <Icon className="size-3.5" />{label}
+                  <StageIcon stage={stage} className="size-3.5" />{stage.label}
                 </DropdownMenuItem>
               ))}
               <div className="border-t border-border px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Installed additions</div>
@@ -209,9 +217,11 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
         {tab?.kind === "apps" ? <AppLibraryStage /> : null}
+        {tab?.kind === "newtab" ? <NewTabStage tab={tab} /> : null}
+        {tab?.kind === "item" ? <ItemStage tab={tab} /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}
         {tab?.kind === "goal" ? <GoalEditor chatId={tab.parentChatId ?? undefined} /> : null}
-        {!tab ? <AppLibraryStage /> : null}
+        {!tab ? <NewTabStage /> : null}
       </div>
 
       <Dialog open={Boolean(confirmId)} onOpenChange={(open) => !open && setConfirmDiscard(null)}>

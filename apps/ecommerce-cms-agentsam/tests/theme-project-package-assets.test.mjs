@@ -28,7 +28,7 @@ test('other releases and unrelated URLs are not rewritten', () => {
 });
 
 test('every bundled editable project retains source stylesheet paths after resolution', async () => {
-  const root = new URL('../frontend/static/data/site-theme-projects/', import.meta.url);
+  const root = new URL('./fixtures/site-theme-projects/', import.meta.url);
   const index = JSON.parse(await readFile(new URL('index.json', root), 'utf8'));
   for (const entry of index.packages) {
     const project = JSON.parse(await readFile(new URL(entry.slug + '-' + entry.version + '.json', root), 'utf8'));

@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { AdminAppsDialog } from './AdminAppsDialog.js';
+import { AdminAppsDialog, type AdminAppsDirectoryProps } from './AdminAppsDialog.js';
 import { createElement, useEffect } from 'react';
 import { Home, ShoppingBag, Package, Users, TrendingUp, Tag, FileText, ChartNoAxesCombined, Store, Mail, Folder, Library, Ticket, Bot, Box, Clapperboard, Settings, Database, Terminal, Globe, Puzzle, Search, Palette, Link, LifeBuoy, LogOut, LayoutDashboard, Bell, Code, Image, CreditCard } from 'lucide-react';
 import { useNav } from './NavProvider.js';
@@ -58,6 +58,14 @@ export function mountNav(options: MountNavOptions) {
 }
 
 let appsDialogClose: (() => void) | null = null;
+type AppsAdapter = Pick<AdminAppsDirectoryProps,
+  'loadApps' | 'installApp' | 'removeApp' | 'updateApp' | 'onOpenApp'>;
+let installedAppsAdapter: AppsAdapter | null = null;
+/** Host-provided service bridge keeps the exact same installer on web and native. */
+export function setAppsInstallerAdapter(adapter: AppsAdapter | null) {
+  installedAppsAdapter = adapter;
+}
+
 
 /** Native host entry: one global Apps modal, shared across CMS and Studio. */
 export function openAppsInstaller() {
@@ -100,7 +108,12 @@ export function openAppsInstaller() {
   };
   const theme = document.documentElement.dataset.theme === 'light' ? 'light'
     : document.documentElement.dataset.theme === 'dark' ? 'dark' : 'system';
-  root.render(<AdminAppsDialog theme={theme} onClose={close} loadApps={read}
-    installApp={install} removeApp={remove} updateApp={update} onInstalled={() => window.dispatchEvent(new Event('agentsam:navigation-changed'))}
-    onOpenApp={href => window.location.assign(href)} />);
+  const adapter = installedAppsAdapter;
+  root.render(<AdminAppsDialog theme={theme} onClose={close}
+    loadApps={adapter?.loadApps ?? read}
+    installApp={adapter?.installApp ?? install}
+    removeApp={adapter?.removeApp ?? remove}
+    updateApp={adapter?.updateApp ?? update}
+    onInstalled={() => window.dispatchEvent(new Event('agentsam:navigation-changed'))}
+    onOpenApp={adapter?.onOpenApp ?? (href => window.location.assign(href))} />);
 }

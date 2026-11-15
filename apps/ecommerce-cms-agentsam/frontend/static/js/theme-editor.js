@@ -253,6 +253,8 @@
               '<button type="button" class="te-icon-btn" id="te-more" aria-label="More editor actions" aria-haspopup="true" aria-expanded="false" title="More actions">', icon.more, '</button>',
               '<div class="te-toolbar-dropdown" id="te-more-menu" hidden>' +
                 (typeof host?.onEditCode === 'function' ? '<button type="button" id="te-edit-code">Edit code</button>' : '') +
+                (typeof host?.onDuplicate === 'function' ? '<button type="button" id="te-duplicate-draft">Duplicate private draft</button>' : '') +
+                (typeof host?.onDelete === 'function' ? '<button type="button" id="te-delete-draft">Delete private draft…</button>' : '') +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-settings">Theme settings</button>' +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-inspect" aria-pressed="true">Canvas inspection</button>' +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-embeds">App embeds</button>' +
@@ -4757,6 +4759,16 @@
     closeToolbarMore();
     if (dirty && !(await saveDraft())) return;
     host?.onEditCode?.();
+  });
+  byId('te-duplicate-draft')?.addEventListener('click', async function() {
+    closeToolbarMore();
+    if (dirty && !(await saveDraft())) return;
+    await host?.onDuplicate?.();
+  });
+  byId('te-delete-draft')?.addEventListener('click', async function() {
+    closeToolbarMore();
+    if (!window.confirm('Permanently delete this private theme draft and its saved revisions?')) return;
+    await host?.onDelete?.();
   });
   // Mobile keeps the actual editing controls; secondary actions live behind More.
   function closeToolbarMore() {

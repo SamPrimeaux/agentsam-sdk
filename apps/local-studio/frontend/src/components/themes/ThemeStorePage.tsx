@@ -1,3 +1,4 @@
+import "@inneranimalmedia/agentsam-settings/frontend/styles.css";
 import { useEffect, useState } from 'react';
 import { SettingsThemeGallery } from '@inneranimalmedia/agentsam-settings';
 import type { SettingsTheme } from '@inneranimalmedia/agentsam-settings/contracts';

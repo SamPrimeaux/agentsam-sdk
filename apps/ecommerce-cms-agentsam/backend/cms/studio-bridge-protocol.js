@@ -15,9 +15,12 @@ export function isAllowedStudioCmsBridgeRoute(tail,method) {
   if(tail==='themes')return method==='GET';
   if(tail==='theme-selection')return method==='PUT';
   const s=tail.split('/');
-  // Private Theme Studio project reads/saves and installations only.
+  // Private Theme Studio project CRUD is account-scoped in the destination
+  // API. The bridge only permits canonical methods/paths, not ownership.
   if(s[0]==='theme-projects'&&s.length===2&&/^[A-Za-z0-9_-]{1,160}$/.test(s[1]))
-    return ['GET','PUT'].includes(method);
+    return ['GET','PUT','DELETE'].includes(method);
+  if(s[0]==='theme-projects'&&s.length===3&&/^[A-Za-z0-9_-]{1,160}$/.test(s[1])&&s[2]==='duplicate')
+    return method==='POST';
   if(s[0]==='themes'&&s.length===3&&SEG.test(s[1])&&s[2]==='install')
     return method==='POST';
   if(s[0]!=='pages'||!SEG.test(s[1]||''))return false;

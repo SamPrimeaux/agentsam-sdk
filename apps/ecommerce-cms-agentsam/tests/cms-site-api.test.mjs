@@ -235,7 +235,10 @@ test("Studio CMS bridge permits page creation without broadening page-route writ
   assert.equal(isAllowedStudioCmsBridgeRoute("theme-projects", "DELETE"), false);
   assert.equal(isAllowedStudioCmsBridgeRoute("theme-projects/theme_heuristic", "GET"), true);
   assert.equal(isAllowedStudioCmsBridgeRoute("theme-projects/theme_heuristic", "PUT"), true);
-  assert.equal(isAllowedStudioCmsBridgeRoute("theme-projects/theme_heuristic", "DELETE"), false);
+  assert.equal(isAllowedStudioCmsBridgeRoute("theme-projects/theme_heuristic", "DELETE"), true);
+  assert.equal(isAllowedStudioCmsBridgeRoute("theme-projects/theme_heuristic/duplicate", "POST"), true);
+  assert.equal(isAllowedStudioCmsBridgeRoute("theme-projects/theme_heuristic/duplicate", "GET"), false);
+  assert.equal(isAllowedStudioCmsBridgeRoute("theme-projects/theme_heuristic/other", "POST"), false);
   assert.equal(isAllowedStudioCmsBridgeRoute("themes/heuristic/install", "POST"), true);
   assert.equal(isAllowedStudioCmsBridgeRoute("themes/heuristic/install", "GET"), false);
   assert.equal(isAllowedStudioCmsBridgeRoute("themes/heuristic/delete", "POST"), false);

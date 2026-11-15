@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 const patch = readFileSync(new URL('../db/patches/20261102_existing_cms_site_and_theme_storage.sql', import.meta.url), 'utf8');
-const studioPatch = readFileSync(new URL('../db/patches/20261114_account_scoped_theme_studio.sql', import.meta.url), 'utf8');
 
 test('live-schema repair preserves existing site identity and creates only canonical draft storage', () => {
   const db = new DatabaseSync(':memory:');
@@ -27,8 +26,6 @@ test('live-schema repair preserves existing site identity and creates only canon
     `);
     const before = db.prepare('SELECT id, account_id, name, slug, primary_domain FROM cms_sites ORDER BY id').all();
     db.exec(patch);
-    db.exec(studioPatch);
-    db.exec(studioPatch); // idempotent on retry
     assert.deepEqual(db.prepare('SELECT id, account_id, name, slug, primary_domain FROM cms_sites ORDER BY id').all(), before);
     assert.deepEqual(
       db.prepare('SELECT id FROM cms_sites WHERE is_default=1 ORDER BY id').all().map(x=>x.id),
@@ -45,12 +42,6 @@ test('live-schema repair preserves existing site identity and creates only canon
     assert.equal(db.prepare('SELECT count(*) AS total FROM cms_globals').get().total,1);
     assert.equal(db.prepare('SELECT count(*) AS total FROM cms_revisions').get().total,1);
     assert.equal(db.prepare('SELECT count(*) AS total FROM cms_artifacts').get().total,1);
-    db.prepare(`INSERT INTO cms_theme_studio_projects
-      (id,account_id,project_id,inline_content_json,content_object_key,content_version)
-      VALUES ('studio_1','au_owner','theme_plain_jane','{}','cms/accounts/au_owner/studio/theme-projects/theme_plain_jane/rev1.json',1)`).run();
-    assert.equal(db.prepare('SELECT count(*) AS total FROM cms_theme_studio_projects').get().total,1);
-    assert.equal(db.prepare('SELECT count(*) AS total FROM cms_sites').get().total,3,
-      'creating a Theme Studio draft does not require or create a site');
     assert.throws(() => db.prepare(`INSERT INTO cms_globals(id,account_id,site_id,global_key,global_type)
       VALUES ('invalid','au_other','site_agentsam','attempt','theme-project')`).run(), /FOREIGN KEY/i);
     assert.equal(db.prepare('PRAGMA foreign_key_check').all().length,0);

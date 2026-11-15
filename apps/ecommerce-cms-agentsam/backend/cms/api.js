@@ -3,7 +3,7 @@ import { handleCollectionApi } from "./collection-store.mjs";
 import { attachCmsDefinitions, listCmsDefinitions, listCmsComponentCatalog } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject, listThemeProjectHistory, getThemeProjectSnapshot } from "./theme-project-store.mjs";
-import { listStudioThemeProjects, getStudioThemeProject, createStudioThemeProject, saveStudioThemeProject, listStudioThemeProjectHistory, getStudioThemeProjectSnapshot } from "./theme-studio-store.mjs";
+import { installThemeDraftSite, duplicateThemeDraftSite, listThemeDraftSites, archiveThemeDraftSite, syncSiteThemeRevision } from "./theme-draft-sites.mjs";
 import { ensureCmsSiteStarter } from "./site-starter.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
@@ -2792,87 +2792,91 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json(result,{status:result.status || 200});
   }
 
+  // Theme projects live on a draft site per try (cms_sites + cms_site_themes).
+  // Without site_id the list is the account's draft-theme inventory.
+  const draftSite = async (siteId) => {
+    try { return { site: await resolveCmsSite(env.DB, { accountId: context.accountId, siteId }) }; }
+    catch (error) { return { error: json({ ok: false, error: String(error.message || error) }, { status: 404 }) }; }
+  };
   if (path === "/api/admin/cms/theme-projects" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    if (url.searchParams.get('scope') === 'studio') {
-      if (url.searchParams.has('site_id')) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
-      const result = await listStudioThemeProjects(env, context.accountId);
-      return json(result, { status: result.status || (result.ok ? 200 : 503) });
+    const selectedSite = url.searchParams.get("site_id") || null;
+    if (!selectedSite) {
+      const drafts = await listThemeDraftSites(env, context.accountId);
+      return json(drafts, { status: drafts.status || (drafts.ok ? 200 : 503) });
     }
-    const selectedSite=url.searchParams.get('site_id') || null;
-    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
-    let site;
-    try { site=await resolveCmsSite(env.DB,{accountId:context.accountId,siteId:selectedSite}); }
-    catch (error) {return json({ok:false,error:String(error.message||error)},{status:409});}
-    // Site-installed theme projects remain site-scoped. Studio projects use
-    // their separate account-owned store and never synthesize a CMS site.
-    const result = await listThemeProjects(env, context.accountId, site.id);
+    const resolved = await draftSite(selectedSite);
+    if (resolved.error) return resolved.error;
+    const result = await listThemeProjects(env, context.accountId, resolved.site.id);
     return json(result, { status: result.status || (result.ok ? 200 : 503) });
   }
   if (path === "/api/admin/cms/theme-projects" && method === "POST") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    if (url.searchParams.get('scope') === 'studio' || body.scope === 'studio') {
-      if (url.searchParams.has('site_id') || body.site_id) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
-      const result = await createStudioThemeProject(env, context.accountId, body.project);
-      return json(result, { status: result.status || (result.ok ? 201 : 400) });
-    }
     const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
     if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
     const result = await createThemeProject(env, context.accountId, body.project, selectedSite);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
+  const duplicateMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})\/duplicate$/);
+  if (duplicateMatch && method === 'POST') {
+    if (!context.accountId) return json({ok:false,error:'account_required'},{status:403});
+    let body;
+    try { body = await request.json(); } catch { return json({ok:false,error:'invalid_json'},{status:400}); }
+    const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
+    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
+    const result = await duplicateThemeDraftSite(env, context.accountId, selectedSite, duplicateMatch[1], body.name);
+    return json(result, { status: result.status || (result.ok ? 201 : 400) });
+  }
   const projectHistoryMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})\/history(?:\/([0-9]{1,10}))?$/);
   if (projectHistoryMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const studioScope = url.searchParams.get('scope') === 'studio';
     const selected = url.searchParams.get("site_id") || null;
-    if (studioScope && selected) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
-    if (!studioScope && !selected) return json({ok:false,error:'site_id_required'}, {status:400});
-    const result = studioScope
-      ? projectHistoryMatch[2]
-        ? await getStudioThemeProjectSnapshot(env, context.accountId, projectHistoryMatch[1], projectHistoryMatch[2])
-        : await listStudioThemeProjectHistory(env, context.accountId, projectHistoryMatch[1])
-      : projectHistoryMatch[2]
-        ? await getThemeProjectSnapshot(env, context.accountId, projectHistoryMatch[1], projectHistoryMatch[2], selected)
-        : await listThemeProjectHistory(env, context.accountId, projectHistoryMatch[1], selected);
+    if (!selected) return json({ok:false,error:'site_id_required'}, {status:400});
+    const result = projectHistoryMatch[2]
+      ? await getThemeProjectSnapshot(env, context.accountId, projectHistoryMatch[1], projectHistoryMatch[2], selected)
+      : await listThemeProjectHistory(env, context.accountId, projectHistoryMatch[1], selected);
     return json(result, { status: result.status || (result.ok ? 200 : 404) });
   }
   const themeProjectMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})$/);
   if (themeProjectMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const studioScope = url.searchParams.get('scope') === 'studio';
-    if (studioScope && url.searchParams.has('site_id')) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
-    const result = studioScope
-      ? await getStudioThemeProject(env, context.accountId, themeProjectMatch[1])
-      : url.searchParams.get("site_id")
-        ? await getThemeProject(env, context.accountId, themeProjectMatch[1], url.searchParams.get("site_id"))
-        : {ok:false,status:400,error:'site_id_required'};
+    const selected = url.searchParams.get("site_id") || null;
+    const result = selected
+      ? await getThemeProject(env, context.accountId, themeProjectMatch[1], selected)
+      : {ok:false,status:400,error:'site_id_required'};
     return json(result, { status: result.status || (result.ok ? 200 : 404) });
   }
   if (themeProjectMatch && method === "PUT") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    const studioScope = url.searchParams.get('scope') === 'studio' || body.scope === 'studio';
     const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
-    if (studioScope && selectedSite) return json({ok:false,error:'theme_project_scope_conflict'}, {status:400});
-    const result = studioScope
-      ? await saveStudioThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version)
-      : selectedSite
-        ? await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version, selectedSite)
-        : {ok:false,status:400,error:'site_id_required'};
+    const result = selectedSite
+      ? await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version, selectedSite)
+      : {ok:false,status:400,error:'site_id_required'};
+    if (result.ok) await syncSiteThemeRevision(env, context.accountId, selectedSite, themeProjectMatch[1]);
     return json(result, { status: result.status || (result.ok ? 200 : 400) });
+  }
+  if (themeProjectMatch && method === 'DELETE') {
+    if (!context.accountId) return json({ok:false,error:'account_required'},{status:403});
+    const selectedSite = url.searchParams.get("site_id") || null;
+    if (!selectedSite) return json({ok:false,error:'site_id_required'},{status:400});
+    const result = await archiveThemeDraftSite(env, context.accountId, selectedSite, themeProjectMatch[1]);
+    return json(result,{status:result.status || (result.ok?200:400)});
   }
   const themeInstallMatch = path.match(/^\/api\/admin\/cms\/themes\/([a-z][a-z0-9-]{0,63})\/install$/);
   if (themeInstallMatch && method === "POST") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    // With an explicit site the theme is installed there; otherwise every try
+    // gets its own draft site so users can sandbox as many themes as they like.
     const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
-    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
-    const result = await installThemeDraft(env, context.accountId, themeInstallMatch[1], body, selectedSite);
+    const result = selectedSite
+      ? await installThemeDraft(env, context.accountId, themeInstallMatch[1], body, selectedSite)
+      : await installThemeDraftSite(env, context.accountId, themeInstallMatch[1], body);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
 

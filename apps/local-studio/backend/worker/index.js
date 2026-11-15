@@ -5,7 +5,7 @@ import { handleStudioConversationShares, handlePublicConversationShare } from ".
 import { handleStudioQueueObservability } from "./studio-queue-observability.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { serveDesignCanvasAdminRoute } from "./design-canvas-admin-route.js";
-import { resolveStudioSessionUser, guardStudioDocumentSession } from "./studio-session.js";
+import { resolveStudioSessionUser, guardStudioDocumentSession, guardStudioAdminBoundary } from "./studio-session.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
@@ -25,6 +25,7 @@ import {
   decryptVaultSecret,
   last4 as vaultLast4,
   createProviderRegistry,
+  createCredentialResolver,
 } from "../../../../packages/agentsam-vault/src/index.js";
 import {
   collectCredentialScopedInventory,
@@ -55,6 +56,7 @@ import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPl
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
+import { handleStudioMcps } from "./studio-mcps.js";
 import { handleStudioRules } from "./studio-rules.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
 import { handleStudioUserPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings } from "./studio-user-preferences.js";
@@ -81,7 +83,9 @@ import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.
 import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
 import { handleStudioNavigation } from "./studio-navigation-preferences.js";
-import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled } from "./apps-launcher.js";
+import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled, setNativeAdminAppPinned, touchNativeAdminAppOpened } from "./apps-launcher.js";
+import { listBrowserHistory, recordBrowserVisit, removeBrowserHistoryEntry } from "./browser-history.js";
+import { listEmbedPolicy, listTrustedOrigins, trustOrigin, untrustOrigin } from "./browser-trust.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
@@ -125,7 +129,9 @@ function isIdentityPath(pathname) {
   return (
     IDENTITY_EXACT_PATHS.has(pathname) ||
     pathname.startsWith("/api/auth/") ||
-    pathname.startsWith("/api/oauth/")
+    pathname.startsWith("/api/oauth/") ||
+    pathname === "/api/account" ||
+    pathname.startsWith("/api/account/")
   );
 }
 
@@ -541,6 +547,54 @@ async function handleDelete(env, accountId, secretId) {
   return json({ ok: true, id: secretId, revoked: true });
 }
 
+/**
+ * Server-side vault resolution for identity-owned outbound capabilities
+ * (transactional email). The company row names WHICH account's vault holds the
+ * credential (meta.credentials.<purpose>.vault_account_id); this host only
+ * decrypts that account's active row for the requested provider. Precedence and
+ * the env compatibility lane come from @inneranimalmedia/agentsam-vault.
+ */
+function createIdentityCredentialResolver(env) {
+  return async function resolveCredential({ provider, accountId }) {
+    const resolver = createCredentialResolver({
+      env,
+      envMap: { resend: "RESEND_API_KEY" },
+      async lookupVaultMeta({ provider: service }) {
+        if (!accountId || !env.DB) return null;
+        const row = await env.DB.prepare(
+          `SELECT id, metadata_json FROM user_secrets
+           WHERE account_id = ? AND service_name = ? AND is_active = 1
+           ORDER BY updated_at DESC LIMIT 1`,
+        ).bind(accountId, service).first();
+        if (!row?.id) return null;
+        let meta = {};
+        try { meta = JSON.parse(row.metadata_json || "{}"); } catch { meta = {}; }
+        return { ref: row.id, last4: meta.last4 };
+      },
+      async unwrap(ref) {
+        const row = await env.DB.prepare(
+          `SELECT id, account_id, secret_name, service_name, secret_value_encrypted
+           FROM user_secrets WHERE id = ? AND account_id = ? AND is_active = 1`,
+        ).bind(ref, accountId).first();
+        if (!row) return null;
+        const value = await decryptSecret(env, row.secret_value_encrypted, `${row.account_id}:${row.service_name}:${row.secret_name}`);
+        await env.DB.prepare(
+          `UPDATE user_secrets SET last_used_at = unixepoch(), usage_count = COALESCE(usage_count,0) + 1 WHERE id = ?`,
+        ).bind(row.id).run();
+        await audit(env, {
+          secret_id: row.id,
+          account_id: row.account_id,
+          event_type: "decrypted_for_use",
+          new_last4: last4(value),
+          notes: "identity:email.transactional",
+        });
+        return value;
+      },
+    });
+    return resolver.resolve({ provider });
+  };
+}
+
 /** Internal decrypt-for-use — never expose via public docs as a browser API. */
 async function handleUnwrap(env, accountId, body) {
   const secretId = String(body.id || body.secret_id || "").trim();
@@ -731,6 +785,12 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    // Signing in (or up) mints the owning principal before any /admin/ shell,
+    // script, editor, theme install or mutation is reachable. No site_id needed.
+    const adminDenied = await guardStudioAdminBoundary(request, {
+      resolveUser: () => resolveSessionUserId(request, env), loginPath: LOGIN_PATH,
+    });
+    if (adminDenied) return adminDenied;
     // Preserve source distribution under /design-canvas/sources/ while removing
     // the second editor presented at its obsolete app root.
     if ((url.pathname === '/design-canvas/' || url.pathname === '/design-canvas') &&
@@ -797,11 +857,16 @@ export default {
       || url.pathname.startsWith("/api/settings/agents/");
     const isStudioSkills = url.pathname === "/api/settings/skills"
       || url.pathname.startsWith("/api/settings/skills/");
+    const isStudioMcps = url.pathname === "/api/settings/mcps"
+      || url.pathname.startsWith("/api/settings/mcps/");
     const isStudioRules = url.pathname === "/api/settings/rules"
       || url.pathname.startsWith("/api/settings/rules/");
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
     const isAppsLauncher = url.pathname === "/api/apps/launcher";
     const isAppsInstall = url.pathname === "/api/apps/install";
+    const isAppsOpen = url.pathname === "/api/apps/open";
+    const isBrowserHistory = url.pathname === "/api/browser/history";
+    const isBrowserSettings = url.pathname === "/api/settings/browser";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
     const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
@@ -1107,6 +1172,7 @@ export default {
       return handleIdentityWorkerRequest(request, env, {
         app: APP,
         routeRegistry: ROUTE_REGISTRY,
+        resolveCredential: createIdentityCredentialResolver(env),
       });
     }
 
@@ -1253,6 +1319,15 @@ export default {
       catch(error){console.warn("studio_agent_settings_error",String(error?.message||error).slice(0,140));
         return json({ok:false,error:"agent_settings_unavailable"},503);}
     }
+    if (isStudioMcps) {
+      try {
+        return await handleStudioMcps(request,env,await sessionUser());
+      } catch(error) {
+        console.warn('studio_mcps_error',String(error?.message||error).slice(0,150));
+        return json({ok:false,error:'mcp_registry_unavailable'},503);
+      }
+    }
+
     if (isStudioSkills) {
       try {
         return await handleStudioSkills(request,env,await sessionUser());
@@ -1554,16 +1629,18 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
         return json({ok:false,error:"json_content_type_required"},415);
       const body = await request.json().catch(()=>null);
-      const allowed = request.method==="PATCH" ? ["key","enabled"] : ["key"];
+      const patchField = request.method==="PATCH" && body && typeof body==="object" && "pinned" in body ? "pinned" : "enabled";
+      const allowed = request.method==="PATCH" ? ["key",patchField] : ["key"];
       if (!body || typeof body !== "object" || Array.isArray(body) ||
           Object.keys(body).length !== allowed.length ||
           Object.keys(body).some(key=>!allowed.includes(key)) ||
           typeof body.key !== "string" ||
-          (request.method==="PATCH" && typeof body.enabled !== "boolean"))
+          (request.method==="PATCH" && typeof body[patchField] !== "boolean"))
         return json({ok:false,error:"app_install_request_invalid"},400);
       try {
         const result = request.method==="POST" ? await installNativeAdminApp(env.DB,userId,body.key)
           : request.method==="DELETE" ? await removeNativeAdminApp(env.DB,userId,body.key)
+          : patchField==="pinned" ? await setNativeAdminAppPinned(env.DB,userId,body.key,body.pinned)
           : await setNativeAdminAppEnabled(env.DB,userId,body.key,body.enabled);
         return json({ok:true,...result},request.method==="POST"?201:200);
       } catch (error) {
@@ -1571,7 +1648,66 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         return json({ok:false,error:code.slice(0,120)},
           code==="app_install_not_found"||code==="app_install_unavailable"||code==="app_not_installed"?404:
           code==="app_install_not_supported"?409:
-          code==="app_install_key_invalid"||code==="app_enabled_invalid"?400:503);
+          code==="app_install_key_invalid"||code==="app_enabled_invalid"||code==="app_pinned_invalid"?400:503);
+      }
+    }
+    if (isAppsOpen) {
+      if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+        return json({ok:false,error:"origin_not_allowed"},403);
+      const body = await request.json().catch(()=>null);
+      if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.key !== "string" ||
+          Object.keys(body).length !== 1)
+        return json({ok:false,error:"app_open_request_invalid"},400);
+      try { return json({ok:true,...await touchNativeAdminAppOpened(env.DB,userId,body.key)}); }
+      catch (error) {
+        const code=String(error?.message||"app_open_failed");
+        return json({ok:false,error:code.slice(0,120)},
+          code==="app_not_installed"?404:code==="app_install_key_invalid"?400:503);
+      }
+    }
+    if (isBrowserHistory) {
+      if (!["GET","POST","DELETE"].includes(request.method))
+        return json({ok:false,error:"method_not_allowed"},405,{allow:"GET, POST, DELETE"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        if (request.method === "GET") {
+          const limit = Number(url.searchParams.get("limit") || 12);
+          return json({ok:true,history:await listBrowserHistory(env.DB,userId,limit)});
+        }
+        if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+          return json({ok:false,error:"origin_not_allowed"},403);
+        const body = await request.json().catch(()=>null);
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.url !== "string")
+          return json({ok:false,error:"history_request_invalid"},400);
+        if (request.method === "POST") return json({ok:true,entry:await recordBrowserVisit(env.DB,userId,body)},201);
+        return json({ok:true,...await removeBrowserHistoryEntry(env.DB,userId,body.url)});
+      } catch (error) {
+        const code=String(error?.message||"history_unavailable");
+        return json({ok:false,error:code.slice(0,120)},code==="history_url_invalid"?400:503);
+      }
+    }
+    if (isBrowserSettings) {
+      if (!["GET","POST","DELETE"].includes(request.method))
+        return json({ok:false,error:"method_not_allowed"},405,{allow:"GET, POST, DELETE"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        if (request.method === "GET")
+          return json({ok:true,trusted_origins:await listTrustedOrigins(env.DB,userId),embed_policy:await listEmbedPolicy(env.DB)});
+        if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+          return json({ok:false,error:"origin_not_allowed"},403);
+        const body = await request.json().catch(()=>null);
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.origin !== "string")
+          return json({ok:false,error:"browser_trust_request_invalid"},400);
+        if (request.method === "POST") return json({ok:true,...await trustOrigin(env.DB,userId,body)},201);
+        return json({ok:true,...await untrustOrigin(env.DB,userId,body.origin)});
+      } catch (error) {
+        const code=String(error?.message||"browser_trust_unavailable");
+        return json({ok:false,error:code.slice(0,120)},code==="trust_origin_invalid"||code==="trust_scope_invalid"?400:503);
       }
     }
     if (isPluginCatalog) {

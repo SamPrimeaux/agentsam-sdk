@@ -9,22 +9,27 @@ function formatDate(value) {
   return date.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
 }
 
-function editorHref(project) {
-  const query = new URLSearchParams({ project: project.id, scope:'studio' });
+const validId = value => /^[A-Za-z0-9_-]{1,160}$/.test(String(value || ''));
+
+function editorHref(draft) {
+  if (!validId(draft.project_id) || !validId(draft.site_id)) return null;
+  const query = new URLSearchParams({ project: draft.project_id, site_id: draft.site_id });
   return '/admin/theme-project-editor?' + query.toString();
 }
 
-function render(projects) {
-  const content = projects.length
-    ? `<section class="theme-studio-grid" aria-label="Your theme workspaces">${projects.map(project => {
-        const pageCount = Array.isArray(project.pages) ? project.pages.length : 0;
-        const source = project.sourceThemeId || 'Custom design';
-        const version = project.sourcePackageVersion ? 'v' + project.sourcePackageVersion : 'Working draft';
+function render(drafts) {
+  const editable = drafts.filter(draft => draft && editorHref(draft));
+  const content = editable.length
+    ? `<section class="theme-studio-grid" aria-label="Your theme workspaces">${editable.map(draft => {
+        const source = draft.source_kind === 'catalog' ? 'Theme Store' : 'Your designs';
+        const version = draft.source_version ? 'v' + draft.source_version : 'Working draft';
+        const revision = Number.isSafeInteger(draft.revision) && draft.revision >= 0
+          ? ' · Revision ' + draft.revision : '';
         return `<article class="theme-studio-card">
           <div class="theme-studio-tags"><span class="theme-studio-tag">Private draft</span><span class="theme-studio-tag">${escapeHtml(version)}</span></div>
-          <h2>${escapeHtml(project.name || 'Untitled website')}</h2>
-          <div class="theme-studio-meta">Based on ${escapeHtml(source)} · ${pageCount} ${pageCount === 1 ? 'page' : 'pages'}<br>Last saved ${escapeHtml(formatDate(project.updatedAt))}</div>
-          <div class="theme-studio-card-footer"><span class="theme-studio-meta">Not published</span><a class="btn primary small" href="${escapeHtml(editorHref(project))}">Continue editing</a></div>
+          <h2>${escapeHtml(draft.name || 'Untitled website')}</h2>
+          <div class="theme-studio-meta">From ${escapeHtml(source)}${escapeHtml(revision)}<br>Last saved ${escapeHtml(formatDate(draft.updated_at))}</div>
+          <div class="theme-studio-card-footer"><span class="theme-studio-meta">Not published</span><a class="btn primary small" href="${escapeHtml(editorHref(draft))}">Continue editing</a></div>
         </article>`;
       }).join('')}</section>`
     : `<section class="theme-studio-empty">
@@ -49,12 +54,12 @@ async function boot() {
   renderShell('/admin/theme-workspace', `
     <main class="theme-studio-home"><div class="theme-studio-status" role="status">Loading your Theme Studio workspaces…</div></main>
   `, { shellMode:'default' });
-  const response = await fetch('/api/admin/cms/theme-projects?scope=studio', {
+  const response = await fetch('/api/admin/cms/theme-projects', {
     credentials:'same-origin', cache:'no-store', headers:{ accept:'application/json' },
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.ok !== true) throw new Error(data.error || `Could not load Theme Studio (${response.status})`);
-  render(Array.isArray(data.projects) ? data.projects : []);
+  render(Array.isArray(data.drafts) ? data.drafts : []);
 }
 
 boot().catch(error => {

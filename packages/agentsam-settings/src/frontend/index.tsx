@@ -1,5 +1,7 @@
 import { useShellAppearance } from "../appearance";
 import { SettingsBillingPanel } from "./billing";
+import { SettingsAccountPanel } from "./account";
+import { SettingsDesignSpecSheet } from "./design-spec";
 import { SettingsStoragePanel } from "./storage";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
@@ -1164,14 +1166,14 @@ function PluginCustomizeView({
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/20">{iconFor({name:plugin.name},"size-4")}</span>
                       <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-medium">{plugin.name}</span>
                       <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{plugin.provider} · {plugin.kind} · {plugin.surface.replace('_',' ')}</span></span>
-                      <span className="text-[10px] text-muted-foreground">{plugin.surface==='side_stage'?(plugin.enabled?'Side Stage on':'Side Stage off'):plugin.installed?(plugin.enabled?'Installed':'Disabled'):'Not installed'}</span>
+                      <span className="text-[10px] text-muted-foreground">{plugin.surface==='side_stage'?(plugin.enabled?'Tool on':'Tool off'):plugin.installed?(plugin.enabled?'Installed':'Disabled'):'Not installed'}</span>
                       <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"/>
                     </summary>
                     <div className="ml-12 mt-3 space-y-2 text-[11px] leading-5 text-muted-foreground">
                       <p>{plugin.description || "Registered capability awaiting a complete product description."}</p>
                       <p>Key: <code className="text-foreground">{plugin.pluginKey}</code> · Version: {plugin.version} · {plugin.readiness==='tools_registered'?"Tools registered":"Definition only — tool execution not verified"}</p>
                       {plugin.capabilities.length?<p>Declared: {plugin.capabilities.join(', ')}</p>:null}
-                      <p>{plugin.surface==='app'?"Open Apps to install or manage this application.":plugin.surface==='side_stage'?"Configure this panel in Side Stage; independent app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
+                      <p>{plugin.surface==='app'?"Open Apps to install or manage this application.":plugin.surface==='side_stage'?"Choose whether this tool appears in Settings → Apps → Tools; independent app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
                     </div>
                   </details>)}
                 </div>:<p className="text-[11px] text-muted-foreground">{catalog?"No platform capabilities match this search.":"Loading registered platform capabilities…"}</p>}
@@ -2103,7 +2105,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
             <span className="block text-[10px] text-muted-foreground">{desc}</span></span>
             <input type="checkbox" checked={policy[key]}
               onChange={event=>setPolicy(current=>({...current,[key]:event.target.checked}))}
-              className="size-4 accent-violet-500"/>
+              className="size-4 accent-primary"/>
           </label>
         ))}
         <label className="block space-y-2 text-[12px]">
@@ -2249,7 +2251,7 @@ function GeneralView({snapshot,host,onChanged}:{
   catch(e){setError(e instanceof Error?e.message:"Unable to save preferences");}
   finally{setBusy(false);}
  }
- return (
+ const context=(
    <>
      <Section title="Product context" description="Current authenticated account and runtime, resolved by the host.">
        <div className="rounded-lg border border-border/70 px-3">
@@ -2287,13 +2289,15 @@ function GeneralView({snapshot,host,onChanged}:{
          ))}
          {error?<p role="alert" className="text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
          <button type="button" disabled={busy||!!snapshot.general.preferencesError||!host.updateGeneralPreferences}
-           onClick={()=>void save()} className="rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100">
+           onClick={()=>void save()} className="rounded-lg bg-primary px-4 py-2 text-[11px] font-medium text-primary-foreground disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100">
            Save preferences
          </button>
        </div>
      </Section>
    </>
  );
+ // Hosts with an account authority get full self-service; others keep the read-only context.
+ return host.account ? <SettingsAccountPanel host={host.account} footer={context}/> : context;
 }
 
 export { readShellAppearancePreference, type ShellAppearancePreference } from "../appearance";
@@ -2400,6 +2404,10 @@ function DesignView({snapshot,host}:{
         </p>
         {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("themes")}
           className="mt-3 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">View themes separately →</button>:null}
+      </Section>
+      <Section title="Design spec sheet" description="Every token, type size, radius and component rule for a theme. Pair any brand's colors with any spec's structure to check it before you ship it.">
+        <SettingsDesignSpecSheet themes={snapshot.themes}
+          onOpenThemes={host.openSettingsUnit?()=>host.openSettingsUnit?.("themes"):undefined}/>
       </Section>
     </div>
   );
@@ -2992,3 +3000,6 @@ export function SettingsProductPage({
   );
 }
 
+
+export { SettingsAccountPanel } from "./account";
+export { SettingsDesignSpecSheet } from "./design-spec";

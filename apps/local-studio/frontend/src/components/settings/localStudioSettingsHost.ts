@@ -1,4 +1,5 @@
 import { listStudioThemes, themeManagement } from "@/lib/themes/inventory";
+import { studioAccountHost } from "@/lib/account/account-host";
 import { THEME_PROJECTS_CHANGED } from "@/lib/themes/projects";
 import type {
   HealthState,
@@ -575,6 +576,8 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
 
 export const localStudioSettingsHost: SettingsHost = {
   documentationHref: "/settings/docs",
+  // Account self-service runs on the web session; the desktop bridge does not proxy it yet.
+  account: isPackagedDesktop() ? undefined : studioAccountHost,
   ...themeManagement,
   readBilling: readAccountBilling,
   openBillingPortal: openAccountBillingPortal,

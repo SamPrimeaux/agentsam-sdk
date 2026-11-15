@@ -20,7 +20,7 @@ test('Try theme opens its account-owned Theme Studio workspace, not a synthetic 
   assert.match(browser,/if \(installIntent && selectedSlug\)/);
   assert.match(browser,/showInstallStage\(\)/);
   assert.match(browser,/trustedHandoff/);
-  assert.match(browser,/async function openStudioWorkspace\(theme,button,container\)/);
+  assert.match(browser,/async function openStudioWorkspace\(theme,button,container,\{copy=false\}=\{\}\)/);
   assert.match(browser,/api\/admin\/website-themes\/.*\/install/);
   assert.match(browser,/version:theme\.version/);
   assert.doesNotMatch(browser,/preferredSiteId\(\)/);
@@ -60,6 +60,8 @@ test('real Theme Store selection is accepted, malformed or forged handoffs are i
 
 test('Try Theme always posts a site-free install body even after browsing a production site',()=>{
   const browser=read('../ecommerce-cms-agentsam/frontend/static/js/website-theme-browser.js');
-  assert.ok(browser.includes('body:JSON.stringify({version:theme.version})'));
+  assert.ok(browser.includes('body:JSON.stringify({version:theme.version,...(copy?{copy:true}:{})})'));
+  assert.ok(!browser.includes('site_id:preferredSiteId'));
+  assert.match(browser,/Make a copy/);
   assert.ok(!browser.includes('preferredSiteId()'));
 });

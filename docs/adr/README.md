@@ -23,3 +23,8 @@ ADRs describe **why the system is shaped this way**. Product behavior and accept
 - `ADR-0003-product-portfolio-and-package-taxonomy.md`
 - `ADR-0004-product-composition-and-provider-neutrality.md`
 - `ADR-0005-offer-graduation-standard.md`
+
+## Widget platform ADRs
+
+- `ADR-0009-widget-platform-authority.md` — Workbench as the canonical portable widget UI/runtime authority.
+- `ADR-0010-widget-contributions-registry-persistence.md` — Contracts, registry composition, and persistence authority for widgets.

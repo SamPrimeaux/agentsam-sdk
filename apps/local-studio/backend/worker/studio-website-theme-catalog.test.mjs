@@ -78,28 +78,65 @@ test('catalog endpoint requires an authenticated account and is read-only', asyn
   assert.equal((await handleStudioWebsiteThemeCatalog(new Request(request.url, { method: 'POST' }), 'account-one')).status, 405);
 });
 
-test('catalog marks a release install-ready only when its packaged editable project and release checksum match', async () => {
+test('catalog marks releases install-ready only when the R2 verified editor project and ZIP match', async () => {
   const previous=globalThis.fetch;
-  globalThis.fetch=async()=>Response.json({ok:true,products:[product]});
-  const env={ASSETS:{async fetch(request){
-    assert.equal(new URL(request.url).pathname,
-      '/ecommerce-cms-agentsam/admin/data/site-theme-projects/index.json');
-    return Response.json({
-      schema:'agentsam.website-theme-install-index.v1',
-      packages:[{
-        slug:'plain-jane',version:'0.1.0',sha256:sha,
-        project_asset:'/ecommerce-cms-agentsam/admin/data/site-theme-projects/plain-jane-0.1.0.json',
-        page_count:5,manifest_page_count:9,
-      }],
-    });
-  }}};
+  const digest='b'.repeat(64);
+  const remote={slug:'plain-jane',version:'0.1.0',sha256:sha,
+    project_sha256:digest,
+    project_key:'install-projects/plain-jane/0.1.0/'+digest+'.json',
+    project_url:'/api/themes/plain-jane/0.1.0/project',
+    page_count:5,manifest_page_count:9};
+  const requested=[];
+  globalThis.fetch=async url=>{
+    requested.push(url);
+    if(url===origin+'/api/catalog')return Response.json({ok:true,products:[product]});
+    if(url===origin+'/api/install-index')return Response.json({
+      ok:true,schema:'agentsam.website-theme-install-index.v1',packages:[remote]});
+    throw Error('unexpected remote URL '+url);
+  };
   try {
     const response=await handleStudioWebsiteThemeCatalog(
-      new Request('https://agentsam.test/api/admin/website-themes'),'account-one',env);
+      new Request('https://agentsam.test/api/admin/website-themes'),'account-one');
     assert.equal(response.status,200);
     const result=await response.json();
     assert.equal(result.products[0].can_install,true);
     assert.equal(result.products[0].editable_page_count,5);
     assert.equal(result.products[0].manifest_page_count,9);
+    assert.deepEqual(requested.sort(),[origin+'/api/catalog',origin+'/api/install-index'].sort());
   }finally{globalThis.fetch=previous;}
+});
+
+test('Theme Store index outages never fall back to SDK-bundled themes',async()=>{
+  const previous=globalThis.fetch;
+  globalThis.fetch=async url=>{
+    if(url===origin+'/api/catalog')return Response.json({ok:true,products:[product]});
+    if(url===origin+'/api/install-index')throw Error('unavailable');
+    throw Error('unexpected URL '+url);
+  };
+  try{
+    const result=await (await handleStudioWebsiteThemeCatalog(new Request(
+      'https://agentsam.test/api/admin/website-themes'),'account-one',
+      {ASSETS:{fetch:()=>{throw Error('SDK assets must not be read for theme installation')}}})).json();
+    assert.equal(result.ok,true);
+    assert.equal(result.products[0].can_install,false);
+    assert.equal(result.products[0].release_status,'published');
+  }finally{globalThis.fetch=previous;}
+});
+
+test('short preview aliases come from Theme Store metadata, never the SDK slug or arbitrary URL',async()=>{
+  const before=globalThis.fetch;
+  const base={...product,release:{status:'preview',sha256:null,storageKey:null}};
+  try{
+    globalThis.fetch=async()=>Response.json({ok:true,products:[
+      {...base,slug:'plain-jane',version:'0.3.0',previewAlias:'iapj',previewUrl:'https://themes.inneranimalmedia.com/iapj/'},
+      {...base,slug:'unsafe-preview',version:'0.3.0',previewUrl:'https://themes.inneranimalmedia.com/iapj/'},
+      {...base,slug:'redirected-login',version:'0.3.0',previewAlias:'auth',previewUrl:'https://themes.inneranimalmedia.com/auth/'},
+    ]});
+    const data=await (await handleStudioWebsiteThemeCatalog(
+      new Request('https://agent.test/api/admin/website-themes'),'account_verified')).json();
+    assert.equal(data.products[0].preview_url,'https://themes.inneranimalmedia.com/iapj/');
+    assert.equal(data.products[0].preview_alias,'iapj');
+    assert.equal(data.products[1].preview_url,null);
+    assert.equal(data.products[2].preview_url,null);
+  }finally{globalThis.fetch=before;}
 });

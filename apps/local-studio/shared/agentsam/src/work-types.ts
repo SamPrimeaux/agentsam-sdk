@@ -99,7 +99,7 @@ export type Chat = {
   workProjectId?: string;
 };
 
-export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app" | "media" | "goal" | "database" | "apps" | "design" | "plugin";
+export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app" | "media" | "goal" | "database" | "apps" | "newtab" | "item" | "design" | "plugin";
 
 export type WorkGoal = {
   id: string;
@@ -111,9 +111,19 @@ export type WorkGoal = {
   updatedAt: number;
 };
 
+/** What an in-tab item view shows. Opening one never navigates the page; the tab itself becomes the item. */
+export type SideItem =
+  | { type: "app"; key: string }
+  | { type: "plugin"; pluginId: string; pluginKey: string }
+  | { type: "settings"; unit: string; view?: string };
+
 export type SideTab = {
   id: string;
   kind: SideKind;
+  /** Icon image for tabs that take on an item's identity (app or plugin logo). */
+  icon?: string | null;
+  /** Present when kind is "item". */
+  item?: SideItem | null;
   pluginId?: string;
   stageId?: string;
   title: string;

@@ -1,3 +1,4 @@
+import "@inneranimalmedia/agentsam-settings/frontend/styles.css";
 import { useEffect, useState } from "react";
 import "@inneranimalmedia/agentsam-workbench/widgets/widgets.css";
 import { toast } from "sonner";
@@ -12,19 +13,25 @@ import { localStudioSettingsManifest } from "./localStudioSettingsManifest";
 import { localStudioSettingsHost } from "./localStudioSettingsHost";
 import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
 import { InnerAnimalCompanionsPage } from "../../../agentsam/InnerAnimalCompanionsPage";
-import { SideStagePreferencesPage } from "./SideStagePreferencesPage";
 import { AppsManagementPage } from "./AppsManagementPage";
+import { BrowserSettings } from "./BrowserSettings";
+import { McpManagementPage } from "./McpManagementPage";
 import { PlatformNavigationSettings } from "./PlatformNavigationSettings";
 
 export function LocalStudioSettingsPage({
   unitId,
-  requestedView,
+  requestedView: requestedViewProp,
   connectedPluginKey,
+  embedded = false,
 }: {
   unitId: SettingsUnitId;
   requestedView?: string;
   connectedPluginKey?: string;
+  /** Rendered inside a Side Stage tab: never reads or writes the page address. */
+  embedded?: boolean;
 }) {
+  // The Side Stage tab was retired; its tool toggles now live in Customize → Apps.
+  const requestedView = unitId === "customize" && requestedViewProp === "panels" ? "apps" : requestedViewProp;
   useEffect(() => {
     if (unitId !== "customize" || !connectedPluginKey) return;
     let cancelled = false;
@@ -41,13 +48,13 @@ export function LocalStudioSettingsPage({
     }).catch(() => {
       if (!cancelled) toast.error("Couldn't verify the plugin connection");
     }).finally(() => {
-      if (cancelled) return;
+      if (cancelled || embedded) return;
       const current = new URL(window.location.href);
       current.searchParams.delete("connected");
       window.history.replaceState(window.history.state, "", current);
     });
     return () => { cancelled = true; };
-  }, [unitId, connectedPluginKey]);
+  }, [unitId, connectedPluginKey, embedded]);
 
   if (unitId === "keys") {
     return <LiveKeysSettingsPage />;
@@ -66,17 +73,19 @@ export function LocalStudioSettingsPage({
       unitId={unitId}
       requestedView={requestedView}
       onViewChange={(view) => {
-        if (typeof window === "undefined") return;
+        if (embedded || typeof window === "undefined") return;
         const url = new URL(window.location.href);
         url.searchParams.set("view", view);
         window.history.replaceState(window.history.state, "", url);
       }}
       renderCustomView={(unit, view) => unit === "customize" && view === "apps"
         ? <AppsManagementPage />
+        : unit === "customize" && view === "mcps"
+        ? <McpManagementPage />
         : unit === "customize" && view === "companions"
         ? <InnerAnimalCompanionsPage />
-        : unit === "customize" && view === "panels"
-          ? <SideStagePreferencesPage />
+        : unit === "network" && view === "browser"
+          ? <BrowserSettings />
           : null}
     />
   );

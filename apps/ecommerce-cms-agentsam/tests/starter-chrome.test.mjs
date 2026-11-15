@@ -53,7 +53,7 @@ test('package chrome remains its own source when already present', () => {
 });
 
 test('packaged markup with a static shell is not doubled by neutral fallbacks', () => {
-  const packaged = require('../frontend/static/data/site-theme-projects/plain-jane-0.1.0.json');
+  const packaged = require('./fixtures/site-theme-projects/plain-jane-0.1.0.json');
   const filled = fillMissingThemeChrome(packaged, 'Merchant Store');
   for (const page of filled.pages) {
     assert.equal(page.sections.some(s => s.key === 'site_header'), false);

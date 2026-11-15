@@ -27,12 +27,11 @@ export const localStudioSettingsManifest = defineSettingsManifest({
     {
       id: "customize",
       label: "Customize",
-      description: "Apps, connected plugins, Side Stage, companions and advanced capabilities.",
+      description: "Apps, tools, connected plugins, companions and advanced capabilities.",
       icon: "sliders",
       views: [
         { id: "plugins", label: "Plugins" },
         { id: "apps", label: "Apps" },
-        { id: "panels", label: "Side Stage" },
         { id: "companions", label: "Companions" },
         { id: "widgets", label: "Widgets" },
         { id: "mcps", label: "MCPs" },
@@ -66,6 +65,10 @@ export const localStudioSettingsManifest = defineSettingsManifest({
       label: "Browser & Network",
       description: "Browser runtime, local device tunnel, provider OAuth and network capability health.",
       icon: "network",
+      views: [
+        { id: "overview", label: "Overview" },
+        { id: "browser", label: "Browser" },
+      ],
     },
     {
       id: "runtime",

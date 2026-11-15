@@ -1,3 +1,4 @@
+import { createAccountSecurityStore } from './account-security-store.js';
 import {
   IDENTITY_STORE_SCHEMA_VERSION,
   IdentitySchemaError,
@@ -475,5 +476,19 @@ export function createPortableIdentityStore(db, options = {}) {
         updated_at: row.updated_at,
       };
     },
+
+    // Self-service account security (identity.account-security component).
+    // Portable installs have no platform superadmin; the installation owner is
+    // the first registered identity user.
+    ...createAccountSecurityStore(db, {
+      layout: 'portable',
+      async canManageCompany(userId) {
+        await ensure();
+        const owner = await db.prepare(
+          `SELECT id FROM identity_users ORDER BY created_at ASC, rowid ASC LIMIT 1`,
+        ).bind().first();
+        return Boolean(owner?.id && owner.id === userId);
+      },
+    }),
   });
 }

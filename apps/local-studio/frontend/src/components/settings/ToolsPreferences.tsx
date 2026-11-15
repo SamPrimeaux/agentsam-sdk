@@ -8,8 +8,8 @@ import {
 } from "@/lib/connections/client";
 import { reloadSideStageRegistry } from "../../../agentsam/side-stage-actions";
 
-/** Account-owned view: listing a native panel is NOT a plugin connection or app entitlement. */
-export function SideStagePreferencesPage() {
+/** Account-owned view: showing a native tool is NOT a plugin connection or app entitlement. */
+export function ToolsPreferences() {
   const [items, setItems] = useState<LocalStudioSideStageRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,7 +26,7 @@ export function SideStagePreferencesPage() {
       const catalog = await listLocalStudioSideStages();
       setItems(catalog.filter(item => item.renderer === "builtin"));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to load your panels.");
+      setError(caught instanceof Error ? caught.message : "Unable to load your tools.");
     } finally {
       setLoading(false);
     }
@@ -41,9 +41,9 @@ export function SideStagePreferencesPage() {
       await updateSideStageVisibility(item.pluginId, enabled);
       setItems(current => current.map(candidate => candidate.pluginId === item.pluginId ? {...candidate,enabled} : candidate));
       await reloadSideStageRegistry();
-      toast.success(enabled ? item.label + " is available in Side Stage" : item.label + " hidden from Side Stage");
+      toast.success(enabled ? item.label + " is on your New tab" : item.label + " hidden from your New tab");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not save panel preference.");
+      setError(caught instanceof Error ? caught.message : "Could not save this tool preference.");
     } finally {
       setPending(null);
     }
@@ -53,9 +53,9 @@ export function SideStagePreferencesPage() {
     <section className="space-y-5 pb-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Side Stage shortcuts</h2>
+          <h2 className="text-lg font-semibold text-foreground">Tools</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Choose which workspaces open alongside your conversation. Editor apps such as CAD Creator and MovieMode keep their full standalone routes; hiding a Side Stage shortcut never uninstalls them or deletes their work.
+            Choose which tools appear on your New tab and in the + menu. Editor apps such as CAD Creator and MovieMode keep their full standalone routes; hiding a tool never uninstalls them or deletes their work.
           </p>
         </div>
         <button type="button" onClick={() => void refresh()} disabled={loading || pending !== null}
@@ -65,13 +65,13 @@ export function SideStagePreferencesPage() {
       </div>
       <label className="flex max-w-2xl items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
         <Search className="size-4 shrink-0 text-muted-foreground" />
-        <input type="search" aria-label="Search Side Stage shortcuts" placeholder="Search editor apps and workspaces"
+        <input type="search" aria-label="Search tools" placeholder="Search tools"
           value={query} onChange={event=>setQuery(event.target.value)}
           className="w-full border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"/>
       </label>
       {error ? <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{error}</p> : null}
       {loading ? (
-        <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" /> Loading your panel preferences…</p>
+        <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" /> Loading your tools…</p>
       ) : filtered.length ? (
         <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {filtered.map(item => (
@@ -84,7 +84,7 @@ export function SideStagePreferencesPage() {
                 <span className="min-w-0">
                   <span className="block text-sm font-medium text-foreground">{item.label}</span>
                   <span className="block text-xs text-muted-foreground">{item.description || "Built-in workspace"}</span>
-                  <span className="mt-1 block text-[11px] text-muted-foreground">{appStages.has(item.stageId)?"Available in Side Stage and its own editor":"Side Stage workspace utility"}</span>
+                  <span className="mt-1 block text-[11px] text-muted-foreground">{appStages.has(item.stageId)?"Opens in a tab and in its own editor":"Opens in a tab"}</span>
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
@@ -92,14 +92,14 @@ export function SideStagePreferencesPage() {
                 <input type="checkbox" checked={Boolean(item.enabled)}
                   onChange={event => void setEnabled(item,event.target.checked)}
                   disabled={pending !== null}
-                  aria-label={"Show " + item.label + " in Side Stage"}
+                  aria-label={"Show " + item.label + " on the New tab"}
                   className="size-4 accent-primary disabled:opacity-50" />
               </span>
             </label>
           ))}
         </div>
-      ) : !error ? <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">{items.length?"No shortcuts match your search.":"No Side Stage shortcuts are registered for this account."}</p> : null}
-      <p className="text-xs text-muted-foreground">Use the Apps tab to install or remove an application. Use Plugins to manage external connections and capabilities. This page controls only the Side Stage shortcuts.</p>
+      ) : !error ? <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">{items.length?"No tools match your search.":"No tools are available for this account."}</p> : null}
+      <p className="text-xs text-muted-foreground">Use Apps above to install or remove an application. Use Plugins to manage external connections and capabilities. This section controls only which tools appear on your New tab.</p>
     </section>
   );
 }

@@ -17,8 +17,8 @@ const safeHref = (href) =>
 export async function listLauncherApps(db, accountId) {
   need(db, accountId);
   const { results } = await db.prepare(
-    "SELECT a.id, a.name, a.description, a.icon_url, a.app_icon, a.launch_url, " +
-    "       i.id AS install_id, COALESCE(i.enabled, 0) AS enabled " +
+    "SELECT a.id, a.name, a.description, a.icon_url, a.app_icon, a.launch_url, a.editor_url, " +
+    "       i.id AS install_id, COALESCE(i.enabled, 0) AS enabled, COALESCE(i.pinned, 0) AS pinned, i.last_opened_at " +
     "  FROM apps a LEFT JOIN agentsam_app_installations i ON i.app_id = a.id AND i.account_id = ? " +
     " WHERE a.app_type = 'application' AND a.status = 'active' AND a.visibility = 'public' " +
     " ORDER BY a.featured DESC, a.name"
@@ -31,6 +31,8 @@ export async function listLauncherApps(db, accountId) {
       key: row.id,
       label: row.name,
       href,
+      // Same-origin work view the New tab can frame in place (an app's standalone mount).
+      embed_href: safeHref(row.editor_url),
       sign_in_url: null,
       surfaces: ["admin-nav"],
       icon_url: row.icon_url || null,
@@ -40,6 +42,8 @@ export async function listLauncherApps(db, accountId) {
       installable: Boolean(href),
       installed,
       enabled,
+      pinned: installed && Number(row.pinned) === 1,
+      last_opened_at: installed && row.last_opened_at != null ? Number(row.last_opened_at) : null,
       setup_status: !installed ? "not_installed" : enabled ? "configured" : "disabled",
     };
   });
@@ -81,4 +85,28 @@ export async function setNativeAdminAppEnabled(db, accountId, pluginKey, enabled
   ).bind(flag, accountId, key).run();
   if (!(res?.meta?.changes > 0)) throw new Error("app_not_installed");
   return { key, installed: true, enabled: Boolean(flag), status: flag ? "installed" : "disabled" };
+}
+
+/** Opening an installed, enabled app stamps last_opened_at so the New tab can rank recents. */
+export async function touchNativeAdminAppOpened(db, accountId, pluginKey) {
+  need(db, accountId);
+  const key = safeKey(pluginKey);
+  const res = await db.prepare(
+    "UPDATE agentsam_app_installations SET last_opened_at = unixepoch() WHERE account_id = ? AND app_id = ? AND enabled = 1"
+  ).bind(accountId, key).run();
+  if (!(res?.meta?.changes > 0)) throw new Error("app_not_installed");
+  return { key, opened: true };
+}
+
+/** Pinned apps lead the New tab. Pinning is the account owner's choice and never alters enabled state. */
+export async function setNativeAdminAppPinned(db, accountId, pluginKey, pinned) {
+  need(db, accountId);
+  const key = safeKey(pluginKey);
+  if (typeof pinned !== "boolean") throw new Error("app_pinned_invalid");
+  const flag = pinned ? 1 : 0;
+  const res = await db.prepare(
+    "UPDATE agentsam_app_installations SET pinned = ?, updated_at = unixepoch() WHERE account_id = ? AND app_id = ?"
+  ).bind(flag, accountId, key).run();
+  if (!(res?.meta?.changes > 0)) throw new Error("app_not_installed");
+  return { key, installed: true, pinned: Boolean(flag) };
 }
