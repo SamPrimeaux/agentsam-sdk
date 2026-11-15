@@ -31,8 +31,14 @@ function safeToken(name,value){return /^--[a-zA-Z][\w-]*$/.test(name)&&typeof va
 function color(v,fallback){return typeof v==='string'&&/^#[\da-fA-F]{3,8}$/.test(v)?v:fallback}
 function xml(v){return String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&apos;")}
 function exec(bin,args,timeoutMs=90000){return new Promise((resolve,reject)=>{const child=spawn(bin,args,{stdio:['ignore','pipe','pipe']});let out='',err='';const timer=setTimeout(()=>child.kill('SIGTERM'),timeoutMs);child.stdout.on('data',d=>{out+=d});child.stderr.on('data',d=>{err+=d});child.on('error',reject);child.on('close',code=>{clearTimeout(timer);code===0?resolve(out):reject(Error(bin+' '+args.slice(0,3).join(' ')+' failed('+code+'): '+err.slice(-850)+' '+out.slice(-500)))})})}
-const rows=JSON.parse(await exec('wrangler',['d1','execute',DB,'--remote','--json','--command',"SELECT * FROM cms_themes WHERE status != 'archived' ORDER BY name"]));
-const records=Array.isArray(rows)?(rows[0]?.results||[]):[];
+// --rows-file=<json>: compile from an exported cms_themes result (D1 JSON shape) when
+// Wrangler is unavailable; upload/pointer steps then go through the caller's own lane.
+const rowsFileArg=[...argv].find(x=>x.startsWith('--rows-file='));
+if(rowsFileArg&&execute)throw Error('--rows-file compiles only; upload with an authenticated lane');
+const rows=rowsFileArg
+ ?JSON.parse(await readFile(rowsFileArg.slice(12),'utf8'))
+ :JSON.parse(await exec('wrangler',['d1','execute',DB,'--remote','--json','--command',"SELECT * FROM cms_themes WHERE status != 'archived' ORDER BY name"]));
+const records=Array.isArray(rows)?(rows[0]?.results||rows.filter(r=>r&&r.id)):[];
 const chosen=records.filter(r=>onlySlugs?onlySlugs.has(r.slug):all||['IAM Studio Dark','IAM Studio Light'].includes(r.name)).slice(0,limit);
 if(!chosen.length)throw Error('No eligible themes');
 function pack(r){
