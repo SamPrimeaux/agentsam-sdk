@@ -227,6 +227,34 @@ async function persistConnectorGrant(env, userId, def, tokens, profile) {
   }
 }
 
+/**
+ * A browser back/reload may repeat the completed Google callback. OAuth codes
+ * remain strictly single-use; a replay can only reopen the original same-origin
+ * return page after the first exchange has already persisted an active grant.
+ * Never exchange the code again, install plugins, or reveal tokens.
+ */
+async function completedConnectorReturn(env, state, def, origin) {
+  const hash = createHash("sha256").update(state).digest("hex");
+  const row = await env.DB.prepare(
+    "SELECT user_id, redirect_after, consumed_at, expires_at FROM oauth_state_nonces " +
+    "WHERE state_hash = ? AND provider = ? LIMIT 1"
+  ).bind(hash, stateProvider(def)).first();
+  const now = Math.floor(Date.now() / 1000);
+  if (!row?.user_id || !row.consumed_at || Number(row.expires_at) <= now ||
+      now - Number(row.consumed_at) > 600) return null;
+  const grant = await env.DB.prepare(
+    "SELECT 1 AS granted FROM user_oauth_tokens " +
+    "WHERE account_id = ? AND LOWER(provider) = ? AND is_active = 1 " +
+    "AND (revoked_at IS NULL OR revoked_at = 0) AND updated_at >= ? LIMIT 1"
+  ).bind(row.user_id, def.provider, row.consumed_at).first();
+  if (!grant?.granted) return null;
+  const target = new URL(safeReturnTo(row.redirect_after), origin);
+  if (target.origin !== origin) return null;
+  target.searchParams.set("provider", def.provider);
+  target.searchParams.set("result", "connected");
+  return Response.redirect(target.toString(), 302);
+}
+
 export async function completeConnectorOAuth(request, env) {
   const def = connectorForCallback(request);
   if (!def) return new Response("Unknown connector callback.", { status: 400 });
@@ -238,6 +266,8 @@ export async function completeConnectorOAuth(request, env) {
   }
   const pending = await consumeOauthState(env, state, stateProvider(def));
   if (!pending) {
+    const completed = await completedConnectorReturn(env, state, def, url.origin).catch(() => null);
+    if (completed) return completed;
     return new Response(def.label + " authorization expired. Return to AgentSam and retry.", { status: 400 });
   }
   const tokens = await exchangeCode(env, def, code, pending.code_verifier, url.origin + callbackPath(def));
