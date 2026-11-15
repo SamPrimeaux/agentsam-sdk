@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
 import {chooseThemeEditorSite,planThemeEditorEntry} from '../frontend/static/js/theme-editor-entry-resolution.mjs';
 
 const siteA={id:'site_a',name:'Agency site',status:'active',is_default:1};
@@ -73,20 +74,39 @@ test('the live editor waits for account-owned route verification before CMS/prev
 });
 
 
-test('Theme Studio editor bootstraps an account scope without requiring or inventing a site',()=>{
-  const bootstrap=readFileSync(new URL('../frontend/static/js/theme-project-editor-bootstrap.mjs',import.meta.url),'utf8');
-  const editor=readFileSync(new URL('../frontend/static/theme-project-editor.html',import.meta.url),'utf8');
+test('Theme Studio gives every draft an account-owned site route instead of the removed Studio scope',()=>{
   const workspace=readFileSync(new URL('../frontend/static/js/theme-workspace-loader.js',import.meta.url),'utf8');
   const store=readFileSync(new URL('../frontend/static/js/store.js',import.meta.url),'utf8');
-  assert.match(bootstrap,/const studioMode = parameters\.get\('scope'\) === 'studio'/);
-  assert.match(bootstrap,/scope=studio/);
-  assert.match(bootstrap,/if \(!studioMode &&/);
-  assert.match(bootstrap,/studioMode \? 'scope=studio'/);
-  assert.match(editor,/<title>Theme Studio — AgentSam CMS<\/title>/);
-  assert.match(workspace,/api\/admin\/cms\/theme-projects\?scope=studio/);
-  assert.match(workspace,/Continue editing/);
-  assert.doesNotMatch(workspace,/site_id/);
+  assert.match(workspace,/api\/admin\/cms\/theme-projects/);
+  assert.match(workspace,/Array\.isArray\(data\.drafts\)/);
+  assert.match(workspace,/site_id: draft\.site_id/);
+  assert.doesNotMatch(workspace,/scope=studio/);
   assert.match(store,/id="my-theme-studio-btn" href="\/admin\/theme-workspace"/);
+});
+
+test('Theme Studio renders real site-owned drafts and refuses fabricated or missing editor identifiers', async ()=>{
+  const workspace=readFileSync(new URL('../frontend/static/js/theme-workspace-loader.js',import.meta.url),'utf8');
+  const pages=[];
+  const requests=[];
+  const response={ok:true,drafts:[
+    {project_id:'theme_violet',site_id:'site_violet',name:'Violet — Draft',source_kind:'catalog',source_version:'2.6.13',revision:3,updated_at:'2026-11-15T05:00:00Z'},
+    {project_id:'theme_invalid',site_id:null,name:'Invalid ghost',source_kind:'catalog'},
+    {project_id:'<script>',site_id:'site_bad',name:'Unsafe ID',source_kind:'catalog'},
+  ]};
+  runInNewContext(workspace,{
+    URLSearchParams,Date,console:{error(){ }},
+    renderShell(_path,markup){pages.push(markup);},
+    fetch:async (url)=>{requests.push(url);return {ok:true,json:async()=>response};},
+  });
+  for(let n=0;n<8&&pages.length<2;n++)await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(requests,['/api/admin/cms/theme-projects']);
+  assert.equal(pages.length,2);
+  const html=pages.at(-1);
+  assert.match(html,/Violet — Draft/);
+  assert.match(html,/site_id=site_violet/);
+  assert.match(html,/project=theme_violet/);
+  assert.match(html,/Revision 3/);
+  assert.doesNotMatch(html,/Invalid ghost|Unsafe ID|scope=studio/);
 });
 
 test('marketplace intent reaches the authorized page editor with catalog installation support',()=>{
