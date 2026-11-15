@@ -10,7 +10,7 @@ import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
 import { runCommand } from '@/lib/commands/native-commands';
 import { AlertCircle, ArrowLeft, Package, RefreshCw } from 'lucide-react';
 
-type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
+type Search = { site?: string; site_id?: string; project?: string; page?: string; scope?: 'studio'; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try'; stock?: string; preview_id?: string };
 
 function UnavailableProductRoute({ requested }: { requested?: string }) {
   const productRequested = requested?.startsWith('/admin/products');
@@ -62,11 +62,13 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
     site: typeof search.site === 'string' ? search.site : undefined,
     site_id: typeof search.site_id === 'string' ? search.site_id : undefined,
     project: typeof search.project === 'string' ? search.project : undefined,
+    scope: search.scope === 'studio' ? 'studio' : undefined,
     page: typeof search.page === 'string' ? search.page : undefined,
     preview: search.preview === 'local' ? 'local' : undefined,
     theme_sku: typeof search.theme_sku === 'string' ? search.theme_sku : undefined,
     theme_version: typeof search.theme_version === 'string' ? search.theme_version : undefined,
     action: search.action === 'try' ? 'try' : undefined,
+    stock: typeof search.stock === 'string' && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock) ? search.stock : undefined,
   }),
   component: EcommerceAppHost,
 });
@@ -78,7 +80,18 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
  * and its page search parameter. The Worker separately serves direct /admin/* URLs.
  */
 function EcommerceAppHost() {
-  const search = Route.useSearch();
+  return <EcommerceAppView search={Route.useSearch()} />;
+}
+
+/**
+ * Reusable installed product view. The clean /admin/store mount and legacy
+ * /apps/... wrapper intentionally share this one component and product routes.
+ * The clean mount frames the packaged asset to avoid an iframe self-loop.
+ */
+export function EcommerceAppView({ search, forcePackagedAsset = false }: {
+  search: Search;
+  forcePackagedAsset?: boolean;
+}) {
   const [bridgeReady, setBridgeReady] = useState(!isPackagedDesktop());
   useEffect(() => {
     if (!isPackagedDesktop()) return;
@@ -92,7 +105,7 @@ function EcommerceAppHost() {
   const localPreview = localHost && search.preview === 'local';
   const isCodeEditor = search.page === '/admin/theme-code-editor';
   const page = isCodeEditor ? '/admin/theme-code-editor' : resolveEcommerceAdminPath(search.page || '/admin/store');
-  const assetPath = page && !isCodeEditor && (isPackagedDesktop() ? resolveEcommerceAssetPath(page) : page);
+  const assetPath = page && !isCodeEditor && ((isPackagedDesktop() || forcePackagedAsset) ? resolveEcommerceAssetPath(page) : page);
   const url = typeof window !== 'undefined' && assetPath
     ? (() => {
       const resolved = new URL(assetPath, window.location.origin);
@@ -102,7 +115,18 @@ function EcommerceAppHost() {
       }
       if (page?.split('?')[0] === '/admin/theme-project-editor' && search.project && /^[A-Za-z0-9_-]{1,160}$/.test(search.project)) {
         resolved.searchParams.set('project', search.project);
+        if (search.scope === 'studio') {
+          resolved.searchParams.set('scope', 'studio');
+          resolved.searchParams.delete('site_id');
+        }
       }
+      // The source-backed Design Canvas handoff is only an editor selection.
+      // It never grants site ownership, installs a component or publishes content.
+      if (search.stock && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock))
+        resolved.searchParams.set('stock', search.stock);
+      if (page?.split('?')[0]==='/admin/onboarding-preview' && search.preview_id &&
+          /^cprev_[a-f0-9]{24}$/.test(search.preview_id))
+        resolved.searchParams.set('preview_id', search.preview_id);
       // Preserve a validated Theme Store Try intent into the authenticated CMS
       // receiver. This is a selection hint, never authorization for installation.
       const trySelection = page === '/admin/store' ? themeStoreTrySelection(search) : null;
@@ -120,7 +144,7 @@ function EcommerceAppHost() {
 
   return <section className="flex h-full min-h-0 w-full flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">
     {!page ? <UnavailableProductRoute requested={search.page} />
-      : isCodeEditor && search.project && search.site_id ? <CmsThemeCodeEditor projectId={search.project} siteId={search.site_id} />
+      : isCodeEditor && search.project && (search.site_id || search.scope === 'studio') ? <CmsThemeCodeEditor projectId={search.project} siteId={search.site_id} scope={search.scope} />
       : !url ? <UnavailableProductRoute requested={search.page} />
       : <iframe title="Ecommerce CMS — complete admin application" src={url} className="min-h-0 w-full flex-1 border-0" referrerPolicy="strict-origin-when-cross-origin" allow="fullscreen" />}
   </section>;

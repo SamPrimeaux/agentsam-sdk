@@ -97,6 +97,7 @@ async function connectPlugin(opts, key, hostOptions = {}) {
 
   if (key === 'browsermcp') {
     const result = await runMcp(['add', 'browsermcp', '--client', opts.client, '--json'], {
+      ...hostOptions,
       home: hostOptions.home,
       write: () => {},
     });
@@ -163,7 +164,7 @@ async function statusPlugin(opts, key, hostOptions = {}) {
   if (key === 'browsermcp') {
     const server = readMcpServer('browsermcp', { home: hostOptions.home });
     const probe = server ? await runMcp(['status', 'browsermcp', '--json'], {
-      home: hostOptions.home, write: () => {},
+      ...hostOptions, home: hostOptions.home, write: () => {},
     }) : null;
     const result = {
       ok: Boolean(server), plugin_key: key, provider: 'browsermcp',

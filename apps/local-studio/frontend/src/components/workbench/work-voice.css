@@ -1,0 +1,13 @@
+.as-voice-backdrop {position:fixed;inset:0;z-index:11000;display:grid;place-items:center;background:#0008;backdrop-filter:blur(7px);padding:16px}
+.as-voice-dialog {width:min(100%,420px);border:1px solid var(--nav-border);border-radius:16px;background:var(--nav-surface);box-shadow:0 28px 84px #0009;color:var(--nav-text);padding:18px}
+.as-voice-dialog header {display:flex;align-items:center;justify-content:space-between}.as-voice-dialog header span{display:flex;align-items:center;gap:8px;font-weight:600}.as-voice-dialog header button{padding:6px;border-radius:8px}
+.as-voice-status {display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:30px 8px}.as-voice-status p{max-width:32ch;color:var(--nav-muted);font-size:12px}
+.as-voice-orb {display:block;width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 30% 22%,color-mix(in srgb,var(--nav-accent) 38%,white),var(--nav-accent));box-shadow:0 0 42px color-mix(in srgb,var(--nav-accent) 30%,transparent)}
+.as-voice-orb[data-phase="listening"] {animation:as-voice-pulse 1.6s ease-in-out infinite}.as-voice-orb[data-phase="speaking"]{animation:as-voice-pulse .8s ease-in-out infinite}
+.as-voice-select {display:flex;align-items:center;gap:9px;color:var(--nav-muted);font-size:12px}.as-voice-select select{min-width:0;flex:1;background:var(--nav-popover);border:1px solid var(--nav-border);border-radius:8px;padding:8px;color:var(--nav-text)}
+.as-voice-controls {display:flex;justify-content:center;margin-top:20px}.as-voice-controls button{display:inline-flex;align-items:center;gap:9px;padding:10px 16px;border-radius:9px;background:var(--nav-selected);border:1px solid var(--nav-border)}
+.as-voice-controls button:disabled{opacity:.45}
+.as-composer-send-wrap{position:relative;display:inline-flex;align-items:center;gap:2px}.as-composer-voice-quick{display:none;position:absolute;right:0;bottom:calc(100% + 8px);white-space:nowrap;padding:7px 10px;border:1px solid var(--nav-border);border-radius:8px;background:var(--nav-popover);color:var(--nav-text);box-shadow:0 8px 26px #0005;font-size:12px}
+.as-composer-send-wrap:hover .as-composer-voice-quick,.as-composer-send-wrap:focus-within .as-composer-voice-quick{display:block}
+.as-composer-dictate[data-listening="true"]{color:var(--nav-accent);background:var(--nav-selected)}
+@keyframes as-voice-pulse {50%{transform:scale(1.08);filter:brightness(1.2)}}@media(prefers-reduced-motion:reduce){.as-voice-orb{animation:none!important}}

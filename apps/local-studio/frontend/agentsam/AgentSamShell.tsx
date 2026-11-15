@@ -4,10 +4,7 @@ import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/s
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
 import { openAppsInstaller, setAppsInstallerAdapter } from '@inneranimalmedia/agentsam-nav/browser';
-import {
-  listAccountApps, installAccountApp, removeAccountApp,
-  setAccountAppEnabled, launchAccountApp,
-} from '@/lib/apps/client';
+import { loadAccountApps, installAccountApp, removeAccountApp, setAccountAppEnabled, openAccountApp } from '@/lib/apps-account';
 import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
 import {
   projectStudioShellAppearance,
@@ -16,7 +13,7 @@ import {
   writeStudioAppearanceCache,
   clearStudioAppearanceCache,
 } from '../../shared/shell-appearance.mjs';
-import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp, Target, Plug, SquareTerminal, MonitorPlay, FileCode } from "lucide-react";
+import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -104,15 +101,13 @@ function HostedCompanionHeader({ state }: { state: 'idle' | 'working' }) {
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
 export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
-  useEffect(()=>{
+  useEffect(() => {
     setAppsInstallerAdapter({
-      loadApps:listAccountApps,installApp:installAccountApp,
-      removeApp:removeAccountApp,updateApp:setAccountAppEnabled,
-      onOpenApp:launchAccountApp,
+      loadApps: loadAccountApps, installApp: installAccountApp, removeApp: removeAccountApp,
+      updateApp: setAccountAppEnabled, onOpenApp: openAccountApp,
     });
-    return ()=>setAppsInstallerAdapter(null);
-  },[]);
-
+    return () => setAppsInstallerAdapter(null);
+  }, []);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });
@@ -169,6 +164,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     return () => controller.abort();
   }, [user?.id]);
   const chat = state.chats.find((item) => item.id === state.activeChatId);
+  // The store can hold a placeholder New chat before the user sends a message.
+  const hasStartedConversation = Boolean(chat?.messages.some(message => message.role === 'user'));
   const conversationOutputFiles = chat
     ? [...(chat.files ?? []), ...((state.projects.find(item => item.id === state.activeProjectId)?.files ?? [])
         .filter(file => file.chatId === chat.id))]
@@ -484,7 +481,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     })(),
     mode, onModeChange: setMode, pathname: navPathname,
     project: project ? { id: project.id, name: project.name } : undefined,
-    conversation: chat ? { id: chat.id, title: chat.title, pinned: chat.pinned, projectId: chat.workProjectId } : undefined,
+    conversation: hasStartedConversation && chat ? { id: chat.id, title: chat.title, pinned: chat.pinned, projectId: chat.workProjectId } : undefined,
     pinnedResources,
     onOpenResource: item => {
       if(item.open && (item.open.startsWith('/') && !item.open.startsWith('//') || item.open.startsWith('https://'))) {
@@ -606,22 +603,12 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'home', label: 'Project home', icon: <Folder />, onSelect: () => go('/admin/projects') },
       { id: 'files', label: 'Project files', icon: <Files />, onSelect: () => state.openSideTab('files') },
     ],
-    conversationActions: chat ? [
-      { id: 'plugins', label: 'Plugins', icon: <Plug />, onSelect: () => go('/settings/integrations') },
-      { id: 'files', label: 'View files in conversation', icon: <Files />, separatorBefore: true, onSelect: () => { state.openSideTab('files'); state.setSideOpen(true); } },
+    // Conversation actions are about the conversation, not a second app or panel launcher.
+    // Installed apps and native Side Stage surfaces live in the Side Stage + menu.
+    conversationActions: hasStartedConversation && chat ? [
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map(item => item.role + '\n' + item.content).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
-      { id: 'living-goals', label: 'Goals', icon: <Target />, onSelect: () => { state.openSideTab('goal', { ephemeral: false }); state.setSideOpen(true); } },
-      // Installed applications are the launch surface, not arbitrary panel
-      // preferences. Built-in utilities remain accessible in the Side Stage +.
-      { id: 'installed-apps', label: 'Apps', icon: <Layers3 />, children: [
-        ...(navigation.apps || []).filter(item => item.href?.startsWith('/') && !item.href.startsWith('//')).map(item => {
-          const Icon = navigationIcons[item.icon as keyof typeof navigationIcons] || Layers3;
-          return { id: 'open-app-' + item.id, label: item.label, icon: <Icon />, onSelect: () => go(item.href!) };
-        }),
-        { id: 'all-apps', label: 'Install or manage apps', icon: <Plug />, separatorBefore: true, onSelect: openAppsInstaller },
-      ] },
     ] : [],
-    pinnedSummary: chat ? {
+    pinnedSummary: hasStartedConversation && chat ? {
       subagents: state.sideTabs.filter(tab => tab.kind === 'chat' && tab.parentChatId === chat.id).map(tab => ({
         id: tab.id, label: tab.title || 'Co-worker',
         status: state.streamingIds.includes(tab.id) ? 'Working' : 'Idle',

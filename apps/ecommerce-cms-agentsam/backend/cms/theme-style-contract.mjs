@@ -6,6 +6,18 @@
 const COLORS = ["canvas", "ink", "accent", "accentSoft", "paper", "muted"];
 const COLOR = /^#[0-9a-f]{6}$/i;
 const FONTS = new Set(["theme", "system-ui", "Arial", "Georgia", "Inter"]);
+const FONT_ROLES = ["Body", "Subheading", "Heading", "Accent"];
+const FONT_ID = /^(?=.{1,80}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const FONT_FAMILY = /^[\p{L}\p{N}][\p{L}\p{N} ._'&+()\-]{0,99}$/u;
+const FONT_CSS_ENDPOINT = "https://themes.inneranimalmedia.com/fonts/css";
+
+/** Keep asset delivery with Theme Store; CMS stores only selected family IDs and names. */
+export function themeFontCssHref(settings) {
+  if (!settings || !validateThemeSettings(settings).ok) return null;
+  const ids = [...new Set(FONT_ROLES.map(role => settings.fontRoles?.[role]?.id).filter(Boolean))].sort();
+  return ids.length ? FONT_CSS_ENDPOINT + "?families=" + ids.join(",") : null;
+}
+
 const CONTROL_GROUPS = new Set(["style","brand","palette","type","page","motion","badges",
   "buttons","cart","drawers","icons","inputs","overlays","prices","cards","search",
   "swatches","variants","css"]);
@@ -35,8 +47,16 @@ export function renderThemeSettings(settings) {
     return "--h-color-" + name + ":" + value;
   });
   if (tokens.length) rules.push(":root{" + tokens.join(";") + "}");
-  if (settings.font && settings.font !== "theme")
+  const fontRoles = settings.fontRoles || {};
+  const fontTokens = FONT_ROLES.filter(role => fontRoles[role]).map(role =>
+    "--cms-font-" + role.toLowerCase() + ":" + JSON.stringify(fontRoles[role].family));
+  if (fontTokens.length) rules.push(":root{" + fontTokens.join(";") + "}");
+  if (fontRoles.Body) rules.push("body{font-family:var(--cms-font-body),sans-serif}");
+  else if (settings.font && settings.font !== "theme")
     rules.push("body{font-family:" + JSON.stringify(settings.font) + ",sans-serif}");
+  if (fontRoles.Heading) rules.push("h1,h2,h3,h4,h5,h6{font-family:var(--cms-font-heading),serif}");
+  if (fontRoles.Subheading) rules.push("h5,h6,.cms-subheading,[data-cms-type=subheading]{font-family:var(--cms-font-subheading),sans-serif}");
+  if (fontRoles.Accent) rules.push(".cms-accent,[data-cms-type=accent]{font-family:var(--cms-font-accent),sans-serif}");
   if (settings.buttonRadius !== undefined)
     rules.push("button,.h-button,.btn,[data-cms-button]{border-radius:" + settings.buttonRadius + "px}");
   const design = settings.designDraft || {};
@@ -89,12 +109,28 @@ export function renderThemeSettings(settings) {
     if (r) rules.push(selector + "{border-radius:" + r + "}");
   }
   const headingFont = controls["type.font.Heading"];
-  if (FONTS.has(headingFont) && headingFont !== "theme")
+  if (!fontRoles.Heading && FONTS.has(headingFont) && headingFont !== "theme")
     rules.push("h1,h2,h3,h4,h5,h6{font-family:" + JSON.stringify(headingFont) + ",serif}");
+  const lineHeights = {Tight:"1.1",Normal:"1.35",Loose:"1.65"};
+  const letterSpacing = {Tight:"-.025em",Normal:"normal",Wide:".035em"};
+  const paragraph = [];
+  if (/^(?:12|14|16|18|20|24|28|32|40|48|56|64)px$/.test(String(controls["type.p.size"] || "")))
+    paragraph.push("font-size:"+controls["type.p.size"]);
+  if (lineHeights[controls["type.p.line"]]) paragraph.push("line-height:"+lineHeights[controls["type.p.line"]]);
+  if (paragraph.length) rules.push("p,[data-cms-type=paragraph]{"+paragraph.join(";")+"}");
   for (let i = 1; i <= 6; i++) {
-    const size = controls["type.h"+i+".size"];
+    const key = "type.h"+i;
+    const parts = [];
+    const role = controls[key+".font"];
+    if (FONT_ROLES.includes(role) && fontRoles[role])
+      parts.push("font-family:var(--cms-font-"+role.toLowerCase()+")");
+    const size = controls[key+".size"];
     if (/^(?:12|14|16|18|20|24|28|32|40|48|56|64)px$/.test(String(size || "")))
-      rules.push("h"+i+"{font-size:"+size+"}");
+      parts.push("font-size:"+size);
+    if (lineHeights[controls[key+".line"]]) parts.push("line-height:"+lineHeights[controls[key+".line"]]);
+    if (letterSpacing[controls[key+".spacing"]]) parts.push("letter-spacing:"+letterSpacing[controls[key+".spacing"]]);
+    if (controls[key+".case"] === "Uppercase") parts.push("text-transform:uppercase");
+    if (parts.length) rules.push("h"+i+"{"+parts.join(";")+"}");
   }
   if (settings.customCss) rules.push(settings.customCss);
   return rules.join("\n");
@@ -121,7 +157,7 @@ export function validateThemeCss(input) {
 export function validateThemeSettings(settings) {
   if (!settings || typeof settings !== "object" || Array.isArray(settings))
     return {ok:false,error:"Theme settings must be an object"};
-  const allowed = new Set(["colors","font","buttonRadius","customCss","designDraft","controls","paletteLinks"]);
+  const allowed = new Set(["colors","font","fontRoles","buttonRadius","customCss","designDraft","controls","paletteLinks"]);
   if (Object.keys(settings).some(key => !allowed.has(key)))
     return {ok:false,error:"Unknown theme setting"};
   if (settings.colors !== undefined) {
@@ -134,6 +170,20 @@ export function validateThemeSettings(settings) {
   }
   if (settings.font !== undefined && !FONTS.has(settings.font))
     return {ok:false,error:"Unknown theme font"};
+  if (settings.fontRoles !== undefined) {
+    const roles = settings.fontRoles;
+    if (!roles || typeof roles !== "object" || Array.isArray(roles) ||
+        Object.keys(roles).length > FONT_ROLES.length)
+      return {ok:false,error:"Invalid theme font roles"};
+    for (const [role, selection] of Object.entries(roles)) {
+      if (!FONT_ROLES.includes(role) || !selection || typeof selection !== "object" ||
+          Array.isArray(selection) || Object.keys(selection).length !== 2 ||
+          typeof selection.id !== "string" || typeof selection.family !== "string" ||
+          !FONT_ID.test(selection.id) || !FONT_FAMILY.test(selection.family) ||
+          !Object.hasOwn(selection, "id") || !Object.hasOwn(selection, "family"))
+        return {ok:false,error:"Invalid theme font role: " + role};
+    }
+  }
   if (settings.buttonRadius !== undefined &&
       (!Number.isFinite(settings.buttonRadius) || settings.buttonRadius < 0 || settings.buttonRadius > 60))
     return {ok:false,error:"Button radius must be between 0 and 60"};

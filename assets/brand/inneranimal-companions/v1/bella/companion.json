@@ -1,0 +1,317 @@
+{
+  "id": "bella",
+  "name": "Bella",
+  "animal": "Chocolate Labrador Retriever",
+  "version": "1.1.0",
+  "status": "production-review-candidate",
+  "description": "A gentle, steady companion with a warm presence. Bella brings curiosity, encouragement, and a little joy to the moments in between.",
+  "role": "Everyday companion · encouragement & presence",
+  "personality": [
+    "gentle",
+    "loyal",
+    "curious",
+    "patient",
+    "playful",
+    "comforting"
+  ],
+  "signatureAction": "A happy, unhurried tail wag.",
+  "visualIdentity": {
+    "coat": "rich chocolate brown",
+    "eyes": "warm amber",
+    "markings": "soft cream chest blaze and a lightly silvered muzzle",
+    "style": "warm, detailed, expressive 3D storybook realism",
+    "consistencyNotes": "Keep the same chocolate Labrador identity, amber eyes, cream chest blaze, and facial proportions across every state."
+  },
+  "provenance": "Source poses and character identity are preserved from the user-provided Bella state-sheet package. Each transparent 256×256 keyframe is rendered into an 8-frame APNG using restrained whole-character micro-motion; this is not a skeletal limb rig.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "states": {
+    "idle": {
+      "src": "animations/bella-idle.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-idle.png",
+      "motion": "Slow breathing and a gentle vertical rise."
+    },
+    "blinking": {
+      "src": "animations/bella-blink.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-blink.png",
+      "motion": "Soft, relaxed micro-motion on the eyes-closed pose."
+    },
+    "thinking": {
+      "src": "animations/bella-thinking.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-thinking.png",
+      "motion": "Quiet thoughtful sway."
+    },
+    "working": {
+      "src": "animations/bella-working.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-working.png",
+      "motion": "Focused forward-and-back breathing motion."
+    },
+    "waiting": {
+      "src": "animations/bella-waiting.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-waiting.png",
+      "motion": "Patient breathing pulse."
+    },
+    "attention": {
+      "src": "animations/bella-attentive.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-attentive.png",
+      "motion": "Small alert posture shift."
+    },
+    "success": {
+      "src": "animations/bella-success.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": false,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-success.png",
+      "motion": "A single gentle celebratory bounce."
+    },
+    "error": {
+      "src": "animations/bella-alert-error.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-alert-error.png",
+      "motion": "A restrained attention pulse."
+    },
+    "resting": {
+      "src": "animations/bella-resting.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-resting.png",
+      "motion": "Slow resting breath."
+    },
+    "signature": {
+      "src": "animations/bella-tail-wag.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "sourceKeyframe": "keyframes/bella-tail-wag.png",
+      "motion": "Light whole-character sway around the tail-wag pose."
+    }
+  },
+  "galleryStates": [
+    {
+      "id": "idle",
+      "label": "Idle",
+      "description": "Default, calm presence",
+      "src": "animations/bella-idle.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Slow breathing and a gentle vertical rise."
+    },
+    {
+      "id": "attentive",
+      "label": "Attentive",
+      "description": "Focused and ready",
+      "src": "animations/bella-attentive.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Small alert posture shift."
+    },
+    {
+      "id": "blink",
+      "label": "Blink",
+      "description": "Natural, relaxed blink",
+      "src": "animations/bella-blink.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Soft, relaxed micro-motion on the eyes-closed pose."
+    },
+    {
+      "id": "curious",
+      "label": "Curious",
+      "description": "Observant and interested",
+      "src": "animations/bella-curious.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Gentle inquisitive sway."
+    },
+    {
+      "id": "head-tilt",
+      "label": "Head Tilt",
+      "description": "Wondering, intrigued",
+      "src": "animations/bella-head-tilt.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Subtle rocking around the tilted pose."
+    },
+    {
+      "id": "asking",
+      "label": "Asking",
+      "description": "Seeking input or guidance",
+      "src": "animations/bella-asking.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Small hopeful lift around the raised-paw pose."
+    },
+    {
+      "id": "thinking",
+      "label": "Thinking",
+      "description": "Considering, problem solving",
+      "src": "animations/bella-thinking.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Quiet thoughtful sway."
+    },
+    {
+      "id": "waiting",
+      "label": "Waiting",
+      "description": "Processing, in progress",
+      "src": "animations/bella-waiting.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Patient breathing pulse."
+    },
+    {
+      "id": "voice-headset",
+      "label": "Voice / Headset",
+      "description": "Listening in voice chat",
+      "src": "animations/bella-voice-headset.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Gentle listening nod."
+    },
+    {
+      "id": "working",
+      "label": "Working",
+      "description": "Focused on a task",
+      "src": "animations/bella-working.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Focused forward-and-back breathing motion."
+    },
+    {
+      "id": "tail-wag",
+      "label": "Tail Wag",
+      "description": "Happy, engaged progress",
+      "src": "animations/bella-tail-wag.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Light whole-character sway around the tail-wag pose."
+    },
+    {
+      "id": "success",
+      "label": "Success",
+      "description": "Task complete, happy",
+      "src": "animations/bella-success.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": false,
+      "kind": "apng",
+      "motion": "A single gentle celebratory bounce."
+    },
+    {
+      "id": "welcome",
+      "label": "Welcome",
+      "description": "Friendly greeting",
+      "src": "animations/bella-welcome.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": false,
+      "kind": "apng",
+      "motion": "A friendly one-shot greeting sway."
+    },
+    {
+      "id": "alert-error",
+      "label": "Alert / Error",
+      "description": "Needs attention",
+      "src": "animations/bella-alert-error.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "A restrained attention pulse."
+    },
+    {
+      "id": "resting",
+      "label": "Resting",
+      "description": "Relaxed, taking a break",
+      "src": "animations/bella-resting.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Slow resting breath."
+    },
+    {
+      "id": "sleeping",
+      "label": "Sleeping",
+      "description": "Deep rest, offline",
+      "src": "animations/bella-sleeping.png",
+      "frames": 8,
+      "fps": 6,
+      "loop": true,
+      "kind": "apng",
+      "motion": "Very slow sleeping breath."
+    }
+  ],
+  "atlas": "animations/bella-state-atlas-4x4.png",
+  "avatar": "avatars/bella-avatar-128.png",
+  "icon": "avatars/bella-icon-64.png",
+  "portrait": "avatars/bella-portrait-256.png",
+  "visualApproval": "pending",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "Motion is derived from each source still pose using subtle whole-character transforms; articulated tail, paw and facial rigs are not included."
+    ]
+  },
+  "sourcePackage": "InnerAnimal-Bella-v1.0.0.zip",
+  "sourceArchiveSha256": "aa4201f7e387321dc3cd628cb6449e063cbd053b76a45639df83e0158e9ae902",
+  "animationFrameCount": 128,
+  "runtimeStateCount": 10,
+  "releasePackage": "InnerAnimal-Bella-v1.1.0.zip"
+}

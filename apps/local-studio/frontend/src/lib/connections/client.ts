@@ -3,7 +3,7 @@ import {
   isPackagedDesktop,
   openExternalUrl,
   resolveDesktopStudioAccountId,
-} from "@/lib/desktop/tauri";
+} from "../desktop/tauri.ts";
 
 export type LocalStudioConnectionRecord = {
   id?: string;

@@ -9,7 +9,6 @@ import { studioNavigationProjection } from './studio-navigation.mjs';
 
 test('platform routes resolve to the real Ecommerce application bundle', () => {
   for (const [path, file] of [
-    ['/admin/store', 'store.html'],
     ['/admin/pages', 'pages.html'],
     ['/admin/theme-editor', 'theme-editor.html'],
     ['/admin/css/console.css', 'css/console.css'],
@@ -18,6 +17,7 @@ test('platform routes resolve to the real Ecommerce application bundle', () => {
     ['/admin/analytics/overview', '_spa/index.html'],
   ]) assert.equal(resolveConsoleFile(path), file, path);
   assert.equal(resolveConsoleFile('/admin/home'), null, 'Studio owns the top-level home entry');
+  assert.equal(resolveConsoleFile('/admin/store'), null, 'Studio owns the canonical store route');
   assert.equal(resolveConsoleFile('/admin/home', { allowEmbeddedHome: true }), 'home.html', 'only the installed-app frame may request the packaged home');
   for (const path of ['/sites', '/api/admin/me', '/admin/../../secret', '/admin/unknown']) {
     assert.equal(resolveConsoleFile(path), null, path);
@@ -79,7 +79,7 @@ test('immutable product sources and packaged shell are the authority', () => {
   const workerFirstMatch = cloudflare.match(/"run_worker_first":\s*(\[[^\]]+\])/);
   assert.ok(workerFirstMatch, 'run_worker_first missing');
   const runWorkerFirst = JSON.parse(workerFirstMatch[1]);
-  for (const route of ['/admin/*', '/sites', '/samsketch', '/projects', '/projects/*']) {
+  for (const route of ['/admin', '/admin/*', '/sites', '/samsketch', '/projects', '/projects/*']) {
     assert.ok(runWorkerFirst.includes(route), 'Worker must own route: ' + route);
   }
 

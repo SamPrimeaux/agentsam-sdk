@@ -35,7 +35,7 @@ test("Legacy Content paths fold into Media destinations", () => {
 
 test("Navigation projection points Media at the library tree", () => {
   const nav = read("../scripts/studio-navigation.mjs");
-  assert.match(nav, /id:'media',label:'Media',href:'\/media'/);
+  assert.match(nav, /id:'media',label:'Library',href:'\/media'/);
   assert.match(nav, /href:'\/media\/images'/);
   assert.match(nav, /href:'\/media\/videos'/);
   assert.match(nav, /agentsam-copro-studio': \{ href: '\/admin\/moviemode'/);

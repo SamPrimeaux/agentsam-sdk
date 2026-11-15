@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
 import { useWorkStore } from "@/lib/work/store";
 
-type CanvasSearch = { canvas?: string; host?: string; site_id?: string; template?: string };
+type CanvasSearch = { canvas?: string; host?: string; site_id?: string; template?: string; library?: "sources" };
 const identifier = /^[A-Za-z0-9_-]{1,160}$/;
 
 export const Route = createFileRoute("/(apps)/canvas")({
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/(apps)/canvas")({
     host: typeof search.host === "string" && identifier.test(search.host) ? search.host : undefined,
     site_id: typeof search.site_id === "string" && identifier.test(search.site_id) ? search.site_id : undefined,
     template: typeof search.template === "string" && identifier.test(search.template) ? search.template : undefined,
+    library: search.library === "sources" ? "sources" : undefined,
   }),
   component: CanvasPage,
 });
@@ -31,6 +32,7 @@ function CanvasPage() {
     if (search.host) query.set("host", search.host);
     if (search.site_id) query.set("site_id", search.site_id);
     if (search.template) query.set("template", search.template);
+    if (search.library) query.set("library", search.library);
     const id = useWorkStore.getState().openSideTab("design", {
       title: "Canvas", ephemeral: false, url: "/canvas" + (query.size ? "?" + query : ""),
     });

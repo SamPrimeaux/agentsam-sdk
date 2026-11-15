@@ -223,6 +223,14 @@
   }
 }
 
+/* Focused Work has no chat column: override tablet/desktop split width floors. */
+.agentsam-page-layout[data-work-remaster="true"] .agentsam-workspace.is-work-focused .agentsam-side-panel {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .work-files-stage[data-surface="code"] .work-files-tree {
   display: none;
 }

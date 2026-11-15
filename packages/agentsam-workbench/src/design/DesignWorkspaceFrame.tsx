@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { DesignWorkspaceSnapshot } from "@inneranimalmedia/agentsam-contracts";
 import { ResizableStageHandle } from "../shell/ResizableStage";
 
@@ -40,6 +40,28 @@ export function DesignWorkspaceFrame({
   const [explorerWidth, setExplorerWidth] = useState(228);
   const [inspectorWidth, setInspectorWidth] = useState(268);
   const [assistantWidth, setAssistantWidth] = useState(336);
+  const [widthsReady, setWidthsReady] = useState(false);
+  // Per-app settings: the same packaged frame serves standalone apps and embeds.
+  const widthsKey = "agentsam.design-workspace.widths.v1." + snapshot.resource.appId;
+  useEffect(() => {
+    setWidthsReady(false);
+    try {
+      const raw = window.localStorage.getItem(widthsKey);
+      if (raw) {
+        const value = JSON.parse(raw) as Record<string, unknown>;
+        if (typeof value.explorer === "number") setExplorerWidth(clamp(value.explorer, 164, 400));
+        if (typeof value.inspector === "number") setInspectorWidth(clamp(value.inspector, 204, 460));
+        if (typeof value.assistant === "number") setAssistantWidth(clamp(value.assistant, 270, 560));
+      }
+    } catch { /* private mode or invalid old settings: use safe defaults */ }
+    setWidthsReady(true);
+  }, [widthsKey]);
+  useEffect(() => {
+    if (!widthsReady) return;
+    try { window.localStorage.setItem(widthsKey, JSON.stringify({
+      explorer:explorerWidth,inspector:inspectorWidth,assistant:assistantWidth,
+    })); } catch { /* UI still works without persistence */ }
+  }, [widthsKey,widthsReady,explorerWidth,inspectorWidth,assistantWidth]);
   const visible =
     Boolean(assistant) && (assistantOpen ?? internalAssistantOpen);
   const toggleAssistant = (open: boolean) => {

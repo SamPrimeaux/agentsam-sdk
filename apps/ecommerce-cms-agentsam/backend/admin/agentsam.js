@@ -922,7 +922,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
   });
 }
 
-export async function agentsamStatus(env, userId = null) {
+export async function agentsamStatus(env, userId = null, accountId = null) {
   let skillCount = 0;
   let workflowCount = 0;
   try {
@@ -941,10 +941,10 @@ export async function agentsamStatus(env, userId = null) {
   const mcpServers = await listMcpServersForUi(env, userId);
   const bridgeProbe = bridgeConfigured(env) ? await probeBridge(env) : null;
   const github = await probeGitHubConnection(env, userId);
-  const aiRegistry = await getAIRegistryStatus(env);
-  const analyticsStatus = await getAgentSamAnalyticsStatus(env);
+  const aiRegistry = await getAIRegistryStatus(env, accountId);
+  const analyticsStatus = await getAgentSamAnalyticsStatus(env, accountId);
   const toolsRegistry = await getToolsRegistryStatus(env);
-  const compaction = await getCompactionStatus(env, { limit: 3 });
+  const compaction = await getCompactionStatus(env, { limit: 3, account_id: accountId });
 
   return json({
     ok: true,

@@ -461,7 +461,7 @@ export async function summarizeAgentSamAnalytics(env, options = {}) {
   }
 }
 
-export async function getAgentSamAnalyticsStatus(env) {
+export async function getAgentSamAnalyticsStatus(env, accountId = null) {
   const today = new Date().toISOString().slice(0, 10);
 
   if (!env?.DB) {
@@ -489,7 +489,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        WHERE account_id = ?
          AND date_key = ?`
     )
-      .bind(requireApplicationAccountId(), today)
+      .bind((accountId || requireApplicationAccountId()), today)
       .first();
 
     const topModel = await env.DB.prepare(
@@ -500,7 +500,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        ORDER BY n DESC
        LIMIT 1`
     )
-      .bind(requireApplicationAccountId(), today)
+      .bind((accountId || requireApplicationAccountId()), today)
       .first();
 
     const topWorkflow = await env.DB.prepare(
@@ -511,7 +511,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        ORDER BY n DESC
        LIMIT 1`
     )
-      .bind(requireApplicationAccountId(), today)
+      .bind((accountId || requireApplicationAccountId()), today)
       .first();
 
     const chats = totals?.chats ?? 0;

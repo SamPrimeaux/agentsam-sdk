@@ -89,6 +89,68 @@ test("theme project and theme catalog APIs refuse implicit default-site fallback
   } finally { sqlite.close(); }
 });
 
+
+test("Theme Studio drafts are account-owned and fully editable without creating a CMS site", async () => {
+  const sqlite = createCmsTestDb();
+  const env = environment(sqlite);
+  try {
+    sqlite.exec("INSERT INTO accounts(id) VALUES ('acct-a'),('acct-other')");
+    const created = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects?scope=studio', 'POST', { project: project('Studio draft') }),
+      env, new URL('https://cms.test/api/admin/cms/theme-projects?scope=studio'), { accountId: 'acct-a' },
+    );
+    assert.equal(created.status, 201);
+    const createdData = await created.json();
+    assert.equal(createdData.ok, true);
+    assert.equal(createdData.project.revision, 1);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_sites').get().n, 0);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_globals').get().n, 0);
+    const row = sqlite.prepare("SELECT * FROM cms_theme_studio_projects WHERE account_id='acct-a'").get();
+    assert.ok(row.content_object_key.includes('/studio/theme-projects/theme_resolve/'));
+    assert.equal(row.content_version, 1);
+
+    const listed = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects?scope=studio'), env,
+      new URL('https://cms.test/api/admin/cms/theme-projects?scope=studio'), { accountId: 'acct-a' },
+    );
+    assert.equal((await listed.json()).projects[0].id, 'theme_resolve');
+
+    const detail = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects/theme_resolve?scope=studio'), env,
+      new URL('https://cms.test/api/admin/cms/theme-projects/theme_resolve?scope=studio'), { accountId: 'acct-a' },
+    );
+    assert.equal((await detail.json()).project.name, 'Studio draft');
+
+    const changed = project('Edited before a site exists');
+    const saved = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects/theme_resolve?scope=studio', 'PUT', {
+        project: changed, expected_version: 1, scope: 'studio',
+      }), env, new URL('https://cms.test/api/admin/cms/theme-projects/theme_resolve?scope=studio'), { accountId: 'acct-a' },
+    );
+    assert.equal(saved.status, 200);
+    assert.equal((await saved.json()).project.revision, 2);
+
+    const history = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects/theme_resolve/history?scope=studio'), env,
+      new URL('https://cms.test/api/admin/cms/theme-projects/theme_resolve/history?scope=studio'), { accountId: 'acct-a' },
+    );
+    assert.deepEqual((await history.json()).revisions.map(item => Number(item.id)), [2, 1]);
+
+    const crossAccount = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects/theme_resolve?scope=studio'), env,
+      new URL('https://cms.test/api/admin/cms/theme-projects/theme_resolve?scope=studio'), { accountId: 'acct-other' },
+    );
+    assert.equal(crossAccount.status, 404);
+    const ambiguous = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects?scope=studio&site_id=site-a'), env,
+      new URL('https://cms.test/api/admin/cms/theme-projects?scope=studio&site_id=site-a'), { accountId: 'acct-a' },
+    );
+    assert.equal(ambiguous.status, 400);
+    assert.equal((await ambiguous.json()).error, 'theme_project_scope_conflict');
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_sites').get().n, 0);
+  } finally { sqlite.close(); }
+});
+
 test("theme projects and theme selections are isolated by CMS site", async () => {
   const sqlite = createCmsTestDb();
   const env = environment(sqlite);

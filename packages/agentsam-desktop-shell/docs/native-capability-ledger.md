@@ -41,6 +41,11 @@ packaged build (hand-maintained `LIVE` map; "not verified" is the default and is
 | `open_external_url` | `src-tauri/src/commands/system.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | none | not verified |
 | `focus_main_window` | `src-tauri/src/commands/system.rs` | `apps/local-studio/frontend/src/components/desktop/AgentSamPetWindow.tsx` | none | not verified |
 | `open_agent_browser` | `src-tauri/src/commands/chrome_browser.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | Rust tests in module (not per-command) | not verified |
+| `embedded_browser_sync` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/embedded-browser-viewport.tsx` | Rust tests in module (not per-command) | not verified |
+| `embedded_browser_resize` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/embedded-browser-viewport.tsx` | Rust tests in module (not per-command) | not verified |
+| `embedded_browser_hide` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/embedded-browser-viewport.tsx` | Rust tests in module (not per-command) | not verified |
+| `embedded_browser_action` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/browser.tsx` | Rust tests in module (not per-command) | not verified |
+| `embedded_browser_close` | `src-tauri/src/commands/embedded_browser.rs` | `apps/local-studio/frontend/src/components/workbench/side-stage.tsx` | Rust tests in module (not per-command) | not verified |
 | `desktop_workspace_context` | `src-tauri/src/commands/system.rs` | `apps/local-studio/frontend/src/lib/desktop/tauri.ts` | none | not verified |
 | `autorag_workflow_bridge` | `src-tauri/src/commands/autorag.rs` | `apps/local-studio/frontend/src/lib/knowledge/autorag-host.ts` | Rust tests in module (not per-command) | not verified |
 | `autorag_choose_repository` | `src-tauri/src/commands/autorag.rs` | `apps/local-studio/frontend/src/lib/knowledge/autorag-host.ts` | Rust tests in module (not per-command) | not verified |

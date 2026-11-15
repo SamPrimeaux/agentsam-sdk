@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Canvas library</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif}
+a{text-decoration:none}
+button{font-family:inherit}
+input::placeholder{color:var(--dim)}
+</style>
+</helmet>
+<div style="{{rootStyle}}">
+
+<div style="height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: var(--panel); border-bottom: 1px solid var(--line)">
+<div style="font-size: 14px; line-height: 18px; font-weight: 500">Library</div>
+<a href="CanvasEditor.dc.html" style="height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink); font-size: 14px; font-weight: 500; display: flex; align-items: center">Back to canvas</a>
+</div>
+
+<div style="flex: 1 1 auto; min-height: 0; display: flex">
+
+<div style="flex: none; width: 240px; box-sizing: border-box; background: var(--panel); border-right: 1px solid var(--line); padding: 20px 12px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 12px; line-height: 16px; color: var(--dim); padding: 0 10px 6px">Type</div>
+<sc-for list="{{typeItems}}" as="ti" hint-placeholder-count="5">
+<button aria-pressed="{{ti.on}}" onClick="{{ti.pick}}" style="height: 40px; padding: 0 10px; border: 0; border-radius: 10px; background: {{ti.bg}}; color: {{ti.fg}}; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: space-between; cursor: pointer">{{ti.label}}<span style="font-size: 12px; font-weight: 400; color: var(--muted)">{{ti.count}}</span></button>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 12px; line-height: 16px; color: var(--dim); padding: 0 10px 6px">Status</div>
+<sc-for list="{{statusItems}}" as="si" hint-placeholder-count="4">
+<button aria-pressed="{{si.on}}" onClick="{{si.pick}}" style="height: 40px; padding: 0 10px; border: 0; border-radius: 10px; background: {{si.bg}}; color: {{si.fg}}; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: space-between; cursor: pointer">{{si.label}}<span style="font-size: 12px; font-weight: 400; color: var(--muted)">{{si.count}}</span></button>
+</sc-for>
+</div>
+</div>
+
+<div style="flex: 1 1 auto; min-width: 0; box-sizing: border-box; padding: 28px 32px 0; display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden">
+
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 500; letter-spacing: -0.02em">Library</h1>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--muted)">Everything you've made on canvases. Shortlist what you like, then store it to reuse.</p>
+</div>
+<div style="width: 280px; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2px">
+<label for="q" style="font-size: 12px; line-height: 16px; color: var(--dim)">Search</label>
+<input id="q" placeholder="Hero, pricing, footer" onChange="{{onQuery}}" style="border: 0; outline: 0; padding: 0; background: transparent; color: var(--ink); font: inherit; font-size: 14px; line-height: 20px; width: 100%">
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px; overflow: hidden; align-content: flex-start">
+<sc-for list="{{cards}}" as="c" hint-placeholder-count="8">
+<div style="flex: 0 0 calc(25% - 12px); min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px">
+<div style="position: relative; height: 168px; border: 1px solid {{c.border}}; outline: {{c.outline}}; outline-offset: 2px; border-radius: 10px; background: var(--frame); overflow: hidden">
+<sc-for list="{{c.blocks}}" as="b" hint-placeholder-count="10">
+<span style="position: absolute; {{b.style}}"></span>
+</sc-for>
+<button role="checkbox" aria-checked="{{c.picked}}" aria-label="Select {{c.name}}" onClick="{{c.togglePick}}" style="position: absolute; left: 0; top: 0; width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><span style="width: 20px; height: 20px; box-sizing: border-box; border-radius: 6px; border: 1.5px solid var(--ink); background: {{c.checkBg}}; color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1">{{c.checkMark}}</span></button>
+<button aria-pressed="{{c.short}}" aria-label="Shortlist {{c.name}}" onClick="{{c.toggleShort}}" style="position: absolute; right: 0; top: 0; width: 44px; height: 44px; border: 0; background: transparent; color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="{{c.shortFill}}" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"/></svg></button>
+</div>
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+<div style="font-size: 14px; line-height: 20px; font-weight: 500; min-width: 0">{{c.name}}</div>
+<div style="flex: none; font-size: 12px; line-height: 16px; color: var(--muted)">{{c.kind}} · {{c.status}}</div>
+</div>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{hasSel}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 20px; box-shadow: 0 12px 32px rgba(0,0,0,0.35)">
+<div style="font-size: 14px; line-height: 20px; color: var(--ink); padding-right: 8px">{{selCount}} selected</div>
+<button onClick="{{clearSel}}" style="height: 40px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer">Clear</button>
+<a href="StoreToLibrary.dc.html" style="height: 40px; padding: 0 20px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 500; display: flex; align-items: center">Store selected</a>
+</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { type: 'All', status: 'All', q: '', picked: { c3: true, c9: true }, short: { c2: true, c9: true, c7: true }, stored: { c1: true, c5: true, c6: true, c12: true } };
+}
+renderVals() {
+const s = this.state;
+const light = this.props.theme === 'light';
+const T = light
+? { bg: '#F4F4F5', panel: '#FFFFFF', panel2: '#EDEDEF', line: '#E4E4E7', ink: '#0A0A0A', muted: '#52525B', dim: '#6B6B73', frame: '#FFFFFF', wi: '#27272A', wl: '#D4D4D8', ws: '#F4F4F5' }
+: { bg: '#0B0C0D', panel: '#111315', panel2: '#1B1E20', line: '#26292C', ink: '#F4F4F5', muted: '#A1A1AA', dim: '#8B8B94', frame: '#101214', wi: '#D4D4D8', wl: '#3A3D41', ws: '#1E2124' };
+const rootStyle = '--bg:' + T.bg + ';--panel:' + T.panel + ';--panel2:' + T.panel2 + ';--line:' + T.line + ';--ink:' + T.ink + ';--muted:' + T.muted + ';--dim:' + T.dim + ';--frame:' + T.frame + ';--wi:' + T.wi + ';--wl:' + T.wl + ';--ws:' + T.ws + ';width:1440px;height:900px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink)';
+const B = (x, y, w, h, t, r) => ({ x, y, w, h, t, r });
+const style = (b) => 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%;border-radius:' + (b.r || '3px') + ';background:' + (b.t === 'i' ? 'var(--wi)' : b.t === 'l' ? 'var(--wl)' : 'var(--ws)');
+const hero = [B(5,6,12,5,'i'),B(60,6,8,4,'l'),B(72,6,8,4,'l'),B(84,6,11,5,'i','999px'),B(5,28,50,9,'i'),B(5,42,38,9,'i'),B(5,58,45,3,'l'),B(5,64,40,3,'l'),B(5,76,16,8,'i','999px'),B(60,26,35,56,'s','6px')];
+const features = [B(30,8,40,7,'i'),B(36,20,28,3,'l'),B(6,38,27,50,'s','6px'),B(36.5,38,27,50,'s','6px'),B(67,38,27,50,'s','6px'),B(9,44,6,9,'i','999px'),B(39.5,44,6,9,'i','999px'),B(70,44,6,9,'i','999px')];
+const pricing = [B(32,8,36,7,'i')];
+[4, 27.5, 51, 74.5].forEach((x) => { pricing.push(B(x,28,21.5,62,'s','6px'), B(x+2,34,10,4,'i'), B(x+2,44,8,7,'i'), B(x+2,78,17.5,7,'i','999px')); });
+const form = [B(8,10,34,8,'i'),B(8,32,38,9,'s','6px'),B(8,46,38,9,'s','6px'),B(8,60,38,18,'s','6px'),B(8,84,14,7,'i','999px'),B(58,10,34,80,'s','6px')];
+const footer = [B(6,16,14,5,'i'),B(6,78,88,0.6,'l','0'),B(6,86,30,3,'l')];
+[38, 56, 74].forEach((x) => { footer.push(B(x,20,12,3,'l'), B(x,30,10,3,'l'), B(x,40,12,3,'l')); });
+const header = [B(4,10,10,10,'i'),B(50,13,8,4,'l'),B(62,13,8,4,'l'),B(74,13,8,4,'l'),B(86,10,10,10,'i','999px'),B(4,34,92,56,'s','6px')];
+const quote = [B(20,22,60,8,'i'),B(26,36,48,8,'i'),B(40,62,6,10,'i','999px'),B(48,63,14,3,'i'),B(48,70,10,3,'l')];
+const faq = [B(8,10,30,8,'i')];
+[30, 46, 62, 78].forEach((y) => { faq.push(B(8,y,84,12,'s','6px'), B(12,y+4.5,40,3,'i')); });
+const cta = [B(6,18,88,64,'s','10px'),B(28,32,44,9,'i'),B(36,48,28,3,'l'),B(41,62,18,9,'i','999px')];
+const logos = [B(30,14,40,6,'i')];
+[0, 1, 2, 3, 4].forEach((i) => logos.push(B(6 + i * 18.5, 44, 15, 14, 's', '6px')));
+const grid = [];
+[4, 27.5, 51, 74.5].forEach((x) => grid.push(B(x,14,21.5,56,'s','6px'), B(x,76,14,4,'i'), B(x,84,8,3,'l')));
+const page = [B(4,4,10,4,'i'),B(70,4,26,4,'l'),B(6,16,44,8,'i'),B(6,28,34,8,'i'),B(6,42,30,3,'l'),B(56,14,38,30,'s','6px'),B(6,54,27,26,'s','6px'),B(36.5,54,27,26,'s','6px'),B(67,54,27,26,'s','6px'),B(6,88,88,0.6,'l','0')];
+const defs = [
+{ id: 'c1', name: 'Hero, split image', kind: 'Section', blocks: hero },
+{ id: 'c2', name: 'Feature grid', kind: 'Section', blocks: features },
+{ id: 'c3', name: 'Pricing plans', kind: 'Section', blocks: pricing },
+{ id: 'c4', name: 'Contact form', kind: 'Block', blocks: form },
+{ id: 'c5', name: 'Site footer', kind: 'Section', blocks: footer },
+{ id: 'c6', name: 'Site header', kind: 'Section', blocks: header },
+{ id: 'c7', name: 'Testimonial', kind: 'Block', blocks: quote },
+{ id: 'c8', name: 'FAQ list', kind: 'Section', blocks: faq },
+{ id: 'c9', name: 'Call to action band', kind: 'Section', blocks: cta },
+{ id: 'c10', name: 'Logo strip', kind: 'Block', blocks: logos },
+{ id: 'c11', name: 'Product grid', kind: 'Section', blocks: grid },
+{ id: 'c12', name: 'Pricing page', kind: 'Page', blocks: page }
+];
+const statusOf = (d) => (s.stored[d.id] ? 'Stored' : s.short[d.id] ? 'Shortlisted' : 'Draft');
+const q = s.q.trim().toLowerCase();
+const visible = defs.filter((d) => (s.type === 'All' || d.kind === s.type) && (s.status === 'All' || statusOf(d) === s.status) && (!q || d.name.toLowerCase().indexOf(q) >= 0));
+const cards = visible.map((d) => {
+const picked = !!s.picked[d.id];
+const short = !!s.short[d.id] || !!s.stored[d.id];
+return {
+name: d.name, kind: d.kind, status: statusOf(d), picked, short,
+border: picked ? 'var(--ink)' : 'var(--line)', outline: picked ? '1.5px solid var(--ink)' : 'none',
+checkBg: picked ? 'var(--ink)' : 'transparent', checkMark: picked ? '✓' : '',
+shortFill: short ? 'currentColor' : 'none',
+togglePick: () => this.setState({ picked: { ...s.picked, [d.id]: !picked } }),
+toggleShort: () => this.setState({ short: { ...s.short, [d.id]: !s.short[d.id] } }),
+blocks: d.blocks.map((b) => ({ style: style(b) }))
+};
+});
+const typeItems = ['All', 'Page', 'Section', 'Block'].map((label) => {
+const on = s.type === label;
+const count = label === 'All' ? defs.length : defs.filter((d) => d.kind === label).length;
+return { label: label === 'All' ? 'All' : label + 's', count, on, bg: on ? 'var(--panel2)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--muted)', pick: () => this.setState({ type: label }) };
+});
+const statusItems = ['All', 'Draft', 'Shortlisted', 'Stored'].map((label) => {
+const on = s.status === label;
+const count = label === 'All' ? defs.length : defs.filter((d) => statusOf(d) === label).length;
+return { label, count, on, bg: on ? 'var(--panel2)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--muted)', pick: () => this.setState({ status: label }) };
+});
+const selCount = Object.keys(s.picked).filter((k) => s.picked[k]).length;
+return {
+rootStyle, cards, typeItems, statusItems, selCount, hasSel: selCount > 0,
+onQuery: (e) => this.setState({ q: e.target.value }),
+clearSel: () => this.setState({ picked: {} })
+};
+}
+}
+</script>
+</body>
+</html>

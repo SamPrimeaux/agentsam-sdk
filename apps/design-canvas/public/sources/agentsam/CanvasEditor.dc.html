@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Canvas editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif}
+a{text-decoration:none}
+button{font-family:inherit}
+input::placeholder{color:var(--dim)}
+.dots{background-image:radial-gradient(var(--dot) 1px, transparent 1px);background-size:20px 20px}
+.ib{width:36px;height:36px;border:0;border-radius:8px;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.ib:hover{background:var(--panel2);color:var(--ink)}
+.menu{position:absolute;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-direction:column;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:30}
+.mi{height:36px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:13px;text-align:left;display:flex;align-items:center;gap:10px;cursor:pointer;width:100%;box-sizing:border-box}
+.mi:hover{background:var(--panel2)}
+.sep{height:1px;background:var(--line);margin:6px 4px}
+.fld{height:36px;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font-size:13px;padding:0 10px;width:100%;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.lbl{font-size:12px;color:var(--dim);width:64px;flex:none}
+.rw{display:flex;align-items:center;gap:8px;min-height:40px}
+.sec{border-top:1px solid var(--line);padding:12px 0;display:flex;flex-direction:column;gap:2px}
+.sech{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:var(--ink);height:32px}
+.seg{display:flex;background:var(--bg);border-radius:8px;padding:2px;gap:2px;flex:1 1 auto}
+.seg button{flex:1 1 0;height:32px;border:0;border-radius:6px;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
+</style>
+</helmet>
+<div style="{{rootStyle}}">
+
+<div style="height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: var(--panel); border-bottom: 1px solid var(--line); position: relative">
+<div style="display: flex; align-items: center; gap: 4px; min-width: 0">
+<button class="ib" aria-label="Toggle sidebar" style="width: 44px; height: 44px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
+<button onClick="{{toggleDoc}}" aria-haspopup="menu" aria-expanded="{{docMenu}}" style="height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; cursor: pointer">Inner Animal Media: Onboarding and offers<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 4px">
+<button style="height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v6h14v-6"/></svg>Share</button>
+<button class="ib" aria-label="Comments"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14v11H10l-5 4z"/></svg></button>
+<button class="ib" aria-label="Expand to full window"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>
+<a href="StoreToLibrary.dc.html" style="height: 40px; padding: 0 18px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 500; display: flex; align-items: center; margin-left: 4px">Save to library</a>
+</div>
+
+<sc-if value="{{docMenu}}" hint-placeholder-val="{{ false }}">
+<div class="menu" role="menu" style="left: 56px; top: 50px; width: 240px">
+<div style="padding: 8px 10px; font-size: 12px; color: var(--dim)">Updated just now</div>
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v6h14v-6"/></svg>Share</button>
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/></svg>Export</button>
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 10l3 2-3 2M13 15h4"/></svg>Hand off to AgentSam</button>
+<div class="sep"></div>
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7"/></svg>Pin</button>
+
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1-4L16 5l3 3L8 19z"/></svg>Rename</button>
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>Duplicate</button>
+<button class="mi" role="menuitem" onClick="{{toggleTurn}}" aria-haspopup="menu" aria-expanded="{{turnOpen}}" style="justify-content: space-between"><span style="display: flex; align-items: center; gap: 10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="2"/><rect x="11" y="11" width="10" height="10" rx="2"/></svg>Turn into</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 11-3-6.2M20 4v5h-5"/></svg>Refresh</button>
+<button class="mi" role="menuitem" style="justify-content: space-between"><span style="display: flex; align-items: center; gap: 10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3 3 7 3s7-1.3 7-3"/></svg>Storage</span><span style="color: var(--dim); font-size: 12px">7 files</span></button>
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Permissions</button>
+<button class="mi" role="menuitem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14v11H10l-5 4z"/></svg>Give feedback</button>
+<div class="sep"></div>
+<button class="mi" role="menuitem" style="color: var(--ink)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>Delete</button>
+</div>
+</sc-if>
+
+<sc-if value="{{turnOpen}}" hint-placeholder-val="{{ false }}">
+<div class="menu" role="menu" style="left: 304px; top: 262px; width: 300px">
+<div style="padding: 8px 10px; font-size: 12px; line-height: 16px; color: var(--dim)">Choose what this artboard becomes. Nothing is stored until you save it.</div>
+<sc-for list="{{turnItems}}" as="ti" hint-placeholder-count="5">
+<a href="StoreToLibrary.dc.html" class="mi" role="menuitem" style="flex-direction: column; align-items: flex-start; justify-content: center; height: 52px; gap: 0"><span style="font-size: 13px; line-height: 18px">{{ti.label}}</span><span style="font-size: 12px; line-height: 16px; color: var(--dim)">{{ti.note}}</span></a>
+</sc-for>
+</div>
+</sc-if>
+</div>
+
+<div style="flex: 1 1 auto; min-height: 0; display: flex">
+
+<div class="dots" style="flex: 1 1 auto; min-width: 0; position: relative; overflow: hidden; background-color: var(--canvas)">
+
+<button onClick="{{togglePage}}" aria-haspopup="menu" aria-expanded="{{pageMenu}}" style="position: absolute; left: 12px; top: 12px; z-index: 5; height: 40px; padding: 0 14px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer"><span style="width: 18px; height: 18px; border-radius: 5px; background: var(--panel2); font-size: 11px; display: flex; align-items: center; justify-content: center">1</span>Onboarding and offers<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+
+<sc-if value="{{pageMenu}}" hint-placeholder-val="{{ false }}">
+<div class="menu" role="menu" style="left: 12px; top: 58px; width: 260px">
+<div class="mi" style="justify-content: space-between"><span>Onboarding and offers</span><span style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span style="letter-spacing: 1px">···</span></span></div>
+<div class="mi" style="justify-content: space-between"><span>Dashboard canvas</span><span style="letter-spacing: 1px">···</span></div>
+<div class="sep"></div>
+<div class="mi">New page</div>
+</div>
+</sc-if>
+
+<div style="position: absolute; left: 0; top: 0; width: 1104px; height: 788px; transform-origin: 0 0; transform: {{stageScale}}">
+<div style="position: absolute; left: 84px; top: 110px; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); white-space: nowrap">Onboarding and offers: baseline flow</div>
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="3">
+<div style="position: absolute; left: {{f.x}}px; top: {{f.y}}px; width: 280px; height: 175px">
+<div style="position: absolute; left: 0; right: 0; top: -28px; height: 24px; display: flex; align-items: center; justify-content: space-between">
+<span style="font-size: 12px; line-height: 16px; white-space: nowrap; color: {{f.labelColor}}">{{f.name}}</span>
+<sc-if value="{{f.selected}}" hint-placeholder-val="{{ false }}"><span style="display: flex; gap: 8px; color: var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Expand to full window"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Download"><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/></svg></span></sc-if>
+</div>
+<button aria-label="Select {{f.name}}" aria-pressed="{{f.selected}}" onClick="{{f.pick}}" style="position: absolute; left: 0; top: 0; width: 280px; height: 175px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: {{f.bg}}; overflow: hidden; cursor: pointer; outline: {{f.outline}}; outline-offset: 2px">
+<sc-for list="{{f.blocks}}" as="b" hint-placeholder-count="10">
+<span style="position: absolute; {{b.style}}"></span>
+</sc-for>
+</button>
+<sc-if value="{{f.selected}}" hint-placeholder-val="{{ false }}">
+<span style="position: absolute; left: -6px; top: -6px; width: 8px; height: 8px; background: var(--ink); border: 1px solid var(--bg); pointer-events: none"></span>
+<span style="position: absolute; right: -6px; bottom: -6px; width: 8px; height: 8px; background: var(--ink); border: 1px solid var(--bg); pointer-events: none"></span>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<div style="position: absolute; top: 12px; right: 12px; z-index: 5; display: flex; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px">
+<button class="ib" aria-label="Play"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg></button>
+<button class="ib" aria-label="Canvas settings" style="background: var(--panel2); color: var(--ink)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2"/><circle cx="8" cy="16" r="2"/></svg></button>
+<button onClick="{{toggleZoom}}" aria-haspopup="menu" aria-expanded="{{zoomOpen}}" style="height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 4px; cursor: pointer">{{zoomLabel}}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+</div>
+
+<sc-if value="{{zoomOpen}}" hint-placeholder-val="{{ false }}">
+<div class="menu" role="menu" style="top: 58px; right: 12px; width: 220px">
+<button class="mi" role="menuitem" onClick="{{zoomIn}}" style="justify-content: space-between">Zoom in<span style="color: var(--dim); font-size: 12px">⌘+</span></button>
+<button class="mi" role="menuitem" onClick="{{zoomOut}}" style="justify-content: space-between">Zoom out<span style="color: var(--dim); font-size: 12px">⌘−</span></button>
+<button class="mi" role="menuitem" onClick="{{zoomFit}}" style="justify-content: space-between">Fit artboards<span style="color: var(--dim); font-size: 12px">⇧1</span></button>
+<button class="mi" role="menuitem" style="justify-content: space-between; color: var(--dim)" aria-disabled="true">Zoom to selection<span style="font-size: 12px">⇧2</span></button>
+<div class="sep"></div>
+<sc-for list="{{zoomLevels}}" as="z" hint-placeholder-count="6">
+<button class="mi" role="menuitemradio" aria-checked="{{z.on}}" onClick="{{z.pick}}" style="justify-content: space-between">{{z.label}}<span style="font-size: 12px">{{z.mark}}</span></button>
+</sc-for>
+<div class="sep"></div>
+<div class="mi" style="justify-content: space-between">Layout guides<span style="font-size: 12px">✓ &nbsp;⇧G</span></div>
+<div class="mi" style="justify-content: space-between; color: var(--dim)">Undo<span style="font-size: 12px">⌘Z</span></div>
+<div class="mi" style="justify-content: space-between; color: var(--dim)">Redo<span style="font-size: 12px">⇧⌘Z</span></div>
+</div>
+</sc-if>
+
+<sc-if value="{{askOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); width: 520px; box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.35); z-index: 10">
+<div style="display: flex; gap: 6px; flex-wrap: wrap">
+<span style="font-size: 12px; line-height: 16px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted)">Make this a reusable section</span>
+<span style="font-size: 12px; line-height: 16px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted)">Swap the payment button</span>
+<span style="font-size: 12px; line-height: 16px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted)">Match the style of the plans page</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<label for="ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Describe a change</label>
+<input id="ask" placeholder="Describe a change" style="flex: 1 1 auto; min-width: 0; height: 40px; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 14px">
+<button aria-label="Send" style="flex: none; width: 40px; height: 40px; border: 0; border-radius: 999px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+</div>
+</div>
+</sc-if>
+
+<div style="position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 6px">
+<sc-for list="{{tools}}" as="t" hint-placeholder-count="8">
+<button aria-label="{{t.label}}" aria-pressed="{{t.on}}" onClick="{{t.pick}}" style="width: 40px; height: 40px; border: 0; border-radius: 10px; background: {{t.bg}}; color: {{t.fg}}; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.d}}"/></svg></button>
+</sc-for>
+<div style="width: 1px; height: 24px; background: var(--line); margin: 0 6px"></div>
+<button onClick="{{toggleAsk}}" aria-pressed="{{askOpen}}" style="height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--panel2); color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer">Ask AgentSam</button>
+</div>
+
+</div>
+
+<div style="flex: none; width: 336px; box-sizing: border-box; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0">
+
+<div style="flex: none; display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--line)">
+<div role="tablist" style="display: flex; gap: 2px">
+<sc-for list="{{tabs}}" as="tab" hint-placeholder-count="3">
+<button role="tab" aria-selected="{{tab.on}}" onClick="{{tab.pick}}" style="height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: {{tab.bg}}; color: {{tab.fg}}; font-size: 13px; font-weight: 500; cursor: pointer">{{tab.label}}</button>
+</sc-for>
+</div>
+<button class="ib" aria-label="Close panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+
+<sc-if value="{{tabProps}}" hint-placeholder-val="{{ true }}">
+<div style="flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column">
+
+<div style="flex: none; max-height: 232px; overflow: hidden; padding: 8px 8px 4px; display: flex; flex-direction: column; gap: 1px">
+<sc-for list="{{layers}}" as="ly" hint-placeholder-count="9">
+<button aria-pressed="{{ly.on}}" onClick="{{ly.pick}}" style="height: 28px; flex: none; border: 0; border-radius: 6px; background: {{ly.bg}}; color: {{ly.fg}}; font-size: 12px; text-align: left; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 {{ly.pad}}px; cursor: pointer; white-space: nowrap; overflow: hidden"><span style="width: 12px; color: var(--dim); font-size: 10px">{{ly.chev}}</span><span style="width: 14px; color: var(--dim); font-size: 11px; text-align: center">{{ly.icon}}</span><span style="overflow: hidden; text-overflow: ellipsis"><span style="color: var(--dim)">{{ly.kind}}</span> “{{ly.name}}”</span></button>
+</sc-for>
+</div>
+
+<div style="flex: none; display: flex; justify-content: space-between; padding: 6px 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted)">
+<button class="ib" aria-label="Align left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 4v16M8 8h12M8 14h7"/></svg></button>
+<button class="ib" aria-label="Align center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 4v16M6 8h12M8 14h8"/></svg></button>
+<button class="ib" aria-label="Align right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M20 4v16M4 8h12M9 14h7"/></svg></button>
+<button class="ib" aria-label="Align top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 4h16M8 8v12M14 8v7"/></svg></button>
+<button class="ib" aria-label="Align middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16M8 6v12M14 8v8"/></svg></button>
+<button class="ib" aria-label="Align bottom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 20h16M8 4v12M14 9v7"/></svg></button>
+</div>
+
+<div style="flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0 16px">
+
+<div class="sec" style="border-top: 0">
+<div class="sech">Size<span style="color: var(--muted)">+</span></div>
+<div class="rw"><span class="lbl">Width</span><div class="fld" style="flex: 1 1 0">{{p.w}}</div><div class="fld" style="flex: 0 0 96px">{{p.wm}}<span style="color: var(--dim)">⌄</span></div></div>
+<div class="rw"><span class="lbl">Height</span><div class="fld" style="flex: 1 1 0">{{p.h}}</div><div class="fld" style="flex: 0 0 96px">{{p.hm}}<span style="color: var(--dim)">⌄</span></div></div>
+<div class="rw"><span class="lbl">Position</span><div class="fld">{{p.pos}}<span style="color: var(--dim)">⌄</span></div></div>
+<div class="rw"><span class="lbl">Grow</span><div class="fld">{{p.grow}}</div></div>
+</div>
+
+<div class="sec">
+<div class="sech">Layout<span style="color: var(--muted)">+</span></div>
+<div class="rw"><span class="lbl">Layout</span><div class="fld">{{p.layout}}<span style="color: var(--dim)">⌄</span></div></div>
+<div class="rw"><span class="lbl">Direction</span>
+<div class="seg">
+<button aria-label="Row" aria-pressed="{{dirRow}}" onClick="{{setRow}}" style="background: {{rowBg}}; color: {{rowFg}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button>
+<button aria-label="Column" aria-pressed="{{dirCol}}" onClick="{{setCol}}" style="background: {{colBg}}; color: {{colFg}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M6 14l6 6 6-6"/></svg></button>
+</div></div>
+<div class="rw"><span class="lbl">Gap</span><div class="fld">{{p.gap}}<span style="color: var(--dim)">px</span></div></div>
+<div class="rw"><span class="lbl">Padding</span><div class="fld">{{p.pad}}<span style="color: var(--dim)">px</span></div></div>
+</div>
+
+<div class="sec">
+<div class="sech">Appearance</div>
+<div class="rw"><span class="lbl">Fill</span><div class="fld" style="justify-content: flex-start"><span style="width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line); background: {{p.fill}}"></span>{{p.fill}}<span style="margin-left: auto; font-size: 11px; color: var(--dim)">{{p.token}}</span></div></div>
+<div class="rw"><span class="lbl">Opacity</span><div class="fld">{{p.opacity}}</div></div>
+<div class="rw"><span class="lbl">Radius</span><div class="fld">{{p.radius}}<span style="color: var(--dim)">px</span></div></div>
+<div class="rw"><span class="lbl">Border</span>
+<div class="seg">
+<button aria-label="None" aria-pressed="{{bNone}}" onClick="{{setBNone}}" style="background: {{bNoneBg}}; color: var(--ink)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 6.5l11 11"/></svg></button>
+<button aria-label="Solid" aria-pressed="{{bSolid}}" onClick="{{setBSolid}}" style="background: {{bSolidBg}}; color: var(--ink)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16"/></svg></button>
+<button aria-label="Dashed" aria-pressed="{{bDash}}" onClick="{{setBDash}}" style="background: {{bDashBg}}; color: var(--ink)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 12h4M10 12h4M17 12h4"/></svg></button>
+<button aria-label="Dotted" aria-pressed="{{bDot}}" onClick="{{setBDot}}" style="background: {{bDotBg}}; color: var(--ink)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h.01M9 12h.01M14 12h.01M19 12h.01"/></svg></button>
+</div></div>
+<div class="rw"><span class="lbl">Color</span><div class="fld" style="justify-content: flex-start"><span style="width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line); background: {{p.bcolor}}"></span>{{p.bcolor}}</div></div>
+<div class="rw"><span class="lbl">Width</span><div class="fld">{{p.bwidth}}<span style="color: var(--dim)">px</span></div></div>
+</div>
+
+<div class="sec">
+<div class="sech">Effects<span style="color: var(--muted)">+</span></div>
+</div>
+
+<div class="sec">
+<div class="sech">Link</div>
+<div class="rw"><span class="lbl">Destination</span><div class="fld" style="color: var(--muted)">{{p.link}}</div></div>
+</div>
+
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{tabCode}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column">
+<div style="flex: none; padding: 12px 8px 8px; display: flex; flex-direction: column; gap: 1px; border-bottom: 1px solid var(--line)">
+<div style="padding: 0 8px 6px; font-size: 12px; color: var(--dim)">project</div>
+<sc-for list="{{files}}" as="fl" hint-placeholder-count="7">
+<button aria-pressed="{{fl.on}}" onClick="{{fl.pick}}" style="height: 30px; border: 0; border-radius: 6px; background: {{fl.bg}}; color: {{fl.fg}}; font-size: 12px; text-align: left; padding: 0 8px 0 18px; cursor: pointer; display: flex; align-items: center; gap: 8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l5 5v13H6zM14 3v5h5"/></svg>{{fl.name}}</button>
+</sc-for>
+</div>
+<div style="flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 10px 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; line-height: 18px">
+<sc-for list="{{code}}" as="ln" hint-placeholder-count="20">
+<div style="display: flex; gap: 12px; padding: 0 12px; white-space: pre; color: var(--ink)"><span style="width: 18px; flex: none; text-align: right; color: var(--dim)">{{ln.n}}</span><span style="overflow: hidden; text-overflow: ellipsis">{{ln.text}}</span></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{tabTweaks}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column">
+<div style="font-size: 13px; font-weight: 600; padding-bottom: 4px">Editors can change</div>
+<div style="font-size: 12px; line-height: 18px; color: var(--muted); padding-bottom: 8px">Only what you turn on here shows up for the person editing this page. Everything else stays locked.</div>
+<sc-for list="{{open}}" as="sw" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; border-top: 1px solid var(--line)">
+<div style="font-size: 13px; line-height: 18px">{{sw.label}}</div>
+<button role="switch" aria-checked="{{sw.on}}" aria-label="{{sw.label}}" onClick="{{sw.pick}}" style="flex: none; width: 44px; height: 26px; border: 0; border-radius: 999px; background: {{sw.track}}; padding: 3px; display: flex; justify-content: {{sw.align}}; cursor: pointer"><span style="width: 20px; height: 20px; border-radius: 999px; background: {{sw.knob}}"></span></button>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column">
+<div style="font-size: 13px; font-weight: 600; padding-bottom: 4px">Locked to brand</div>
+<div style="font-size: 12px; line-height: 18px; color: var(--muted); padding-bottom: 8px">Set once for the whole site in brand styles.</div>
+<sc-for list="{{locked}}" as="lk" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; border-top: 1px solid var(--line); font-size: 13px"><span>{{lk.label}}</span><span style="color: var(--dim); font-size: 12px">{{lk.token}}</span></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tool: 'select', sel: 'f1', layer: 'l1', tab: 'props', zoomOpen: false, zoom: 50, askOpen: false, docMenu: false, turnOpen: false, pageMenu: false, file: 'Checkout.dc.html', edit: {}, open: { headline: true, trial: true, price: false, button: true, skip: false } };
+}
+renderVals() {
+const s = this.state;
+const light = this.props.theme === 'light';
+const T = light
+? { bg: '#f4f5fa', panel: '#ffffff', panel2: '#f1f2f8', line: '#e3e5ef', ink: '#14161f', muted: '#5b6075', dim: '#6b7085', canvas: '#fbfbfe', dot: '#d9dce8', frame: '#ffffff', wi: '#c9ccdb', wl: '#e3e5ef', ws: '#f1f2f8' }
+: { bg: '#191919', panel: '#262626', panel2: '#2a2a2a', line: '#313131', ink: '#ececec', muted: '#ababab', dim: '#8a8a8a', canvas: '#141414', dot: '#2a2a2a', frame: '#262626', wi: '#4a4a4a', wl: '#3a3a3a', ws: '#303030' };
+const rootStyle = '--bg:' + T.bg + ';--panel:' + T.panel + ';--panel2:' + T.panel2 + ';--line:' + T.line + ';--ink:' + T.ink + ';--muted:' + T.muted + ';--dim:' + T.dim + ';--canvas:' + T.canvas + ';--dot:' + T.dot + ';--frame:' + T.frame + ';--wi:' + T.wi + ';--wl:' + T.wl + ';--ws:' + T.ws + ';width:1440px;height:900px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink);position:relative;overflow:hidden';
+const B = (x, y, w, h, t, r) => ({ x, y, w, h, t, r });
+const bstyle = (b) => 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%;border-radius:' + (b.r || '3px') + ';background:' + (b.t === 'i' ? 'var(--wi)' : b.t === 'l' ? 'var(--wl)' : 'var(--ws)');
+const f1 = [B(17,12,66,76,'s','8px'),B(22,24,26,9,'i'),B(22,40,26,4,'l'),B(22,52,26,4,'l'),B(54,22,24,10,'i','999px'),B(54,38,24,16,'l','6px'),B(54,70,24,10,'i','999px')];
+const f2 = [B(30,12,40,8,'i'),B(34,24,32,4,'l'),B(22,40,56,50,'s','8px'),B(26,48,14,10,'l','999px'),B(44,48,14,10,'i','999px'),B(26,64,18,10,'l','999px'),B(48,64,18,10,'l','999px'),B(30,80,40,8,'i','999px')];
+const f3 = [B(26,14,48,72,'s','8px'),B(30,22,40,2,'i'),B(32,32,30,6,'i'),B(32,44,36,16,'l','6px'),B(60,74,10,8,'i','999px')];
+const defs = [
+{ id: 'f1', name: '2 · Start trial (checkout)', x: 84, y: 230, blocks: f1 },
+{ id: 'f2', name: '3 · What can we help you do', x: 412, y: 230, blocks: f2 },
+{ id: 'f3', name: '4 · Workspace setup', x: 740, y: 230, blocks: f3 }
+];
+const frames = defs.map((d) => { const on = d.id === s.sel; return { x: d.x, y: d.y, name: d.name, selected: on, bg: 'var(--frame)', labelColor: on ? 'var(--ink)' : 'var(--dim)', outline: on ? '1.5px solid var(--ink)' : 'none', pick: () => this.setState({ sel: d.id, layer: 'l1' }), blocks: d.blocks.map((b) => ({ style: bstyle(b) })) }; });
+const base = { w: '960', wm: 'Fixed', h: '528', hm: 'Fixed', pos: 'Inline', grow: '0', layout: 'Stack', dir: 'row', gap: '8', pad: '8', fill: '#262626', token: 'surface-raised', opacity: '1', radius: '28', bstyle: 'solid', bcolor: '#313131', bwidth: '1', link: 'https://…' };
+const L = (id, depth, kind, name, icon, chev, p) => ({ id, depth, kind, name, icon, chev, p: { ...base, ...p } });
+const trees = {
+f1: [
+L('l0', 0, 'Frame', '2 · Start trial (checkout)', '#', '⌄', { w: '1440', h: '900', fill: '#191919', token: 'surface-dark', radius: '0', bstyle: 'none', pad: '0', gap: '0' }),
+L('l1', 1, 'Row', 'IAM Start your Solo trial', '≡', '⌄', {}),
+L('l2', 2, 'Column', 'Summary panel', '≡', '⌄', { w: 'Fill', wm: 'Fill', h: 'Fill', hm: 'Fill', dir: 'column', gap: '44', pad: '40 32', fill: 'none', token: 'none', radius: '0', bstyle: 'none' }),
+L('l3', 3, 'Text', 'Start free, stay for $29', 'T', '', { w: 'Hug', wm: 'Hug', h: 'Hug', hm: 'Hug', fill: 'none', token: 'text-primary', radius: '0', bstyle: 'none', pad: '0', gap: '0' }),
+L('l4', 3, 'Row', 'Today · 14 days free', '≡', '›', { w: 'Fill', wm: 'Fill', h: 'Hug', hm: 'Hug', pad: '18 0', gap: '16', fill: 'none', token: 'none', radius: '0', bstyle: 'none' }),
+L('l5', 3, 'Row', 'Nov 24 · $29/mo', '≡', '›', { w: 'Fill', wm: 'Fill', h: 'Hug', hm: 'Hug', pad: '18 0', gap: '16', fill: 'none', token: 'none', radius: '0', bstyle: 'none' }),
+L('l6', 2, 'Column', 'Payment panel', '≡', '⌄', { w: 'Fill', wm: 'Fill', h: 'Fill', hm: 'Fill', dir: 'column', gap: '16', pad: '32', fill: '#303030', token: 'surface-light', radius: '22', bstyle: 'none' }),
+L('l7', 3, 'Button', 'Express checkout', '▭', '', { w: 'Fill', wm: 'Fill', h: '52', fill: '#238552', token: 'action', radius: '999', bstyle: 'none', pad: '0', gap: '8' }),
+L('l8', 3, 'Group', 'Card fields', '▢', '›', { w: 'Fill', wm: 'Fill', h: 'Hug', hm: 'Hug', dir: 'column', gap: '0', pad: '0', fill: 'none', token: 'none', radius: '12', bcolor: '#3A3A3A' }),
+L('l9', 3, 'Link', 'Start free trial', '↗', '', { w: 'Fill', wm: 'Fill', h: '52', fill: '#238552', token: 'action', radius: '999', bstyle: 'none', pad: '0', gap: '0', link: 'SetupGoals.dc.html' })
+],
+f2: [
+L('l0', 0, 'Frame', '3 · What can we help you do', '#', '⌄', { w: '1440', h: '900', fill: '#191919', token: 'surface-dark', radius: '0', bstyle: 'none', pad: '0', gap: '0' }),
+L('l1', 1, 'Column', 'Choice card', '≡', '⌄', { w: '640', h: 'Hug', hm: 'Hug', dir: 'column', gap: '28', pad: '32', fill: '#303030', token: 'surface-light', radius: '28', bstyle: 'none' }),
+L('l2', 2, 'Group', 'Goal chips', '▢', '›', { w: 'Fill', wm: 'Fill', h: 'Hug', hm: 'Hug', gap: '12', pad: '0', fill: 'none', token: 'none', radius: '0', bstyle: 'none' }),
+L('l3', 2, 'Link', 'Continue', '↗', '', { w: 'Fill', wm: 'Fill', h: '56', fill: '#238552', token: 'action', radius: '999', bstyle: 'none', pad: '0', gap: '0', link: 'Onboarding.dc.html' })
+],
+f3: [
+L('l0', 0, 'Frame', '4 · Workspace setup', '#', '⌄', { w: '1440', h: '900', fill: '#191919', token: 'surface', radius: '0', bstyle: 'none', pad: '0', gap: '0' }),
+L('l1', 1, 'Column', 'Step card', '≡', '⌄', { w: '560', h: 'Hug', hm: 'Hug', dir: 'column', gap: '28', pad: '40', fill: '#303030', token: 'surface-light', radius: '20', bcolor: '#E4E4E7' }),
+L('l2', 2, 'Group', 'Progress bars', '▢', '›', { w: 'Fill', wm: 'Fill', h: '4', gap: '6', pad: '0', fill: 'none', token: 'none', radius: '2', bstyle: 'none' }),
+L('l3', 2, 'Text', 'Name your workspace', 'T', '', { w: 'Hug', wm: 'Hug', h: 'Hug', hm: 'Hug', fill: 'none', token: 'text-primary', radius: '0', bstyle: 'none', pad: '0', gap: '0' }),
+L('l4', 2, 'Field', 'Workspace name', '▭', '', { w: 'Fill', wm: 'Fill', h: '56', fill: 'none', token: 'none', radius: '12', bcolor: '#3A3A3A', pad: '8 16', gap: '2' })
+]
+};
+const tree = trees[s.sel];
+const cur = tree.find((l) => l.id === s.layer) || tree[0];
+const ov = s.edit[s.sel + ':' + cur.id] || {};
+const p = { ...cur.p, dir: ov.dir || cur.p.dir, bstyle: ov.bstyle || cur.p.bstyle };
+const layers = tree.map((l) => { const on = l.id === cur.id; return { name: l.name, kind: l.kind, icon: l.icon, chev: l.chev, pad: 8 + l.depth * 14, on, bg: on ? 'var(--panel2)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--muted)', pick: () => this.setState({ layer: l.id }) }; });
+const setEdit = (k, v) => this.setState({ edit: { ...s.edit, [s.sel + ':' + cur.id]: { ...ov, [k]: v } } });
+const seg = (on) => (on ? 'var(--panel2)' : 'transparent');
+const toolDefs = [
+{ id: 'select', label: 'Select', d: 'M5 3l14 7-6 2-2 6z' },
+{ id: 'hand', label: 'Hand', d: 'M8 12V6a1.5 1.5 0 013 0v5m0-6a1.5 1.5 0 013 0v6m0-4a1.5 1.5 0 013 0v7a6 6 0 01-6 6h-1a6 6 0 01-5-3l-3-5a1.5 1.5 0 012.5-1.5L8 14' },
+{ id: 'text', label: 'Text', d: 'M5 6V4h14v2M12 4v16M9 20h6' },
+{ id: 'frame', label: 'Artboard', d: 'M9 4L7 20M17 4l-2 16M4 9h16M3.5 15h16' },
+{ id: 'note', label: 'Note', d: 'M5 4h14v10l-6 6H5zM13 20v-6h6' },
+{ id: 'pencil', label: 'Pencil and pen', d: 'M4 20l1-4L16 5l3 3L8 19zM14 7l3 3' },
+{ id: 'shape', label: 'Rectangle, oval, arrow, line', d: 'M5 5h14v14H5z' },
+{ id: 'comment', label: 'Comment', d: 'M5 5h14v11H10l-5 4z' }
+];
+const tools = toolDefs.map((t) => { const on = s.tool === t.id; return { ...t, on, bg: on ? 'var(--panel2)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--muted)', pick: () => this.setState({ tool: t.id }) }; });
+const tabs = [['props', 'Properties'], ['code', 'Code'], ['tweaks', 'Tweaks']].map(([id, label]) => { const on = s.tab === id; return { label, on, bg: on ? 'var(--panel2)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--muted)', pick: () => this.setState({ tab: id }) }; });
+const clamp = (z) => Math.max(25, Math.min(100, z));
+const zoomLevels = [25, 50, 75, 100].map((z) => { const on = s.zoom === z; return { label: z + '%', on, mark: on ? '✓' : '', pick: () => this.setState({ zoom: z, zoomOpen: false }) }; });
+const fileNames = ['canvas.json', 'Main.dc.html', 'Checkout.dc.html', 'SetupGoals.dc.html', 'Onboarding.dc.html', 'WelcomeHome.dc.html', 'StyleSpec.dc.html'];
+const files = fileNames.map((name) => { const on = s.file === name; return { name, on, bg: on ? 'var(--panel2)' : 'transparent', fg: on ? 'var(--ink)' : 'var(--muted)', pick: () => this.setState({ file: name }) }; });
+const stem = s.file.replace('.dc.html', '');
+const codeLines = s.file === 'canvas.json'
+? ['{', '  "v": 3,', '  "title": "Inner Animal Media: Onboarding and offers",', '  "pages": [', '    { "id": "onb", "name": "Onboarding and offers" },', '    { "id": "dash", "name": "Dashboard canvas" }', '  ],', '  "boards": {', '    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 2200 },', '    "Checkout.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 900 }', '  },', '  "order": [ "Main.dc.html", "Checkout.dc.html" ]', '}']
+: ['‹!doctype html>', '‹html lang="en">', '‹head>', '‹meta charset="utf-8">', '‹title>' + stem + '‹/title>', '‹script src="./support.js">‹/script>', '‹/head>', '‹body>', '‹x-dc>', '‹helmet>', '  ‹style>body{margin:0}‹/style>', '‹/helmet>', '‹div style="width: 1440px; height: 900px;', '  display: flex; background: #060808">', '  ...', '‹/div>', '‹/x-dc>', '‹script type="text/x-dc" data-dc-script>', 'class Component extends DCLogic {', '  renderVals() { return {}; }', '}', '‹/script>'];
+const code = codeLines.map((text, i) => ({ n: i + 1, text: text.split('‹').join(String.fromCharCode(60)) }));
+const openDefs = [['headline', 'Headline text'], ['trial', 'Trial length'], ['price', 'Plan price'], ['button', 'Button label and link'], ['skip', 'Show the Skip button']];
+const open = openDefs.map(([id, label]) => { const on = !!s.open[id]; return { label, on, track: on ? 'var(--ink)' : 'var(--line)', knob: on ? 'var(--bg)' : 'var(--muted)', align: on ? 'flex-end' : 'flex-start', pick: () => this.setState({ open: { ...s.open, [id]: !on } }) }; });
+const locked = [{ label: 'Fill colors', token: 'brand colors' }, { label: 'Corner radius', token: 'brand shape' }, { label: 'Typeface and sizes', token: 'brand type' }, { label: 'Spacing', token: 'brand spacing' }];
+const turnItems = [{ label: 'Page template', note: 'A whole page people can start from' }, { label: 'Section', note: 'Reusable block of a page, like a hero' }, { label: 'Block', note: 'A smaller piece inside a section' }, { label: 'Component with its own code', note: 'Only if it needs custom behavior, like checkout' }, { label: 'Keep as a design file', note: 'Stays on the canvas, not in the library' }];
+return {
+rootStyle, frames, tools, tabs, layers, zoomLevels, files, code, open, locked, turnItems, p,
+tabProps: s.tab === 'props', tabCode: s.tab === 'code', tabTweaks: s.tab === 'tweaks',
+dirRow: p.dir === 'row', dirCol: p.dir === 'column', rowBg: seg(p.dir === 'row'), colBg: seg(p.dir === 'column'), rowFg: p.dir === 'row' ? 'var(--ink)' : 'var(--muted)', colFg: p.dir === 'column' ? 'var(--ink)' : 'var(--muted)',
+setRow: () => setEdit('dir', 'row'), setCol: () => setEdit('dir', 'column'),
+bNone: p.bstyle === 'none', bSolid: p.bstyle === 'solid', bDash: p.bstyle === 'dashed', bDot: p.bstyle === 'dotted',
+bNoneBg: seg(p.bstyle === 'none'), bSolidBg: seg(p.bstyle === 'solid'), bDashBg: seg(p.bstyle === 'dashed'), bDotBg: seg(p.bstyle === 'dotted'),
+setBNone: () => setEdit('bstyle', 'none'), setBSolid: () => setEdit('bstyle', 'solid'), setBDash: () => setEdit('bstyle', 'dashed'), setBDot: () => setEdit('bstyle', 'dotted'),
+stageScale: 'scale(' + s.zoom / 50 + ')', zoomLabel: s.zoom + '%', zoomOpen: s.zoomOpen, askOpen: s.askOpen, docMenu: s.docMenu, turnOpen: s.turnOpen, pageMenu: s.pageMenu,
+toggleZoom: () => this.setState({ zoomOpen: !s.zoomOpen, docMenu: false, pageMenu: false, turnOpen: false }),
+toggleAsk: () => this.setState({ askOpen: !s.askOpen }),
+toggleDoc: () => this.setState({ docMenu: !s.docMenu, turnOpen: false, pageMenu: false, zoomOpen: false }),
+toggleTurn: () => this.setState({ turnOpen: !s.turnOpen }),
+togglePage: () => this.setState({ pageMenu: !s.pageMenu, docMenu: false, turnOpen: false, zoomOpen: false }),
+zoomIn: () => this.setState({ zoom: clamp(s.zoom + 25), zoomOpen: false }),
+zoomOut: () => this.setState({ zoom: clamp(s.zoom - 25), zoomOpen: false }),
+zoomFit: () => this.setState({ zoom: 50, zoomOpen: false })
+};
+}
+}
+</script>
+</body>
+</html>

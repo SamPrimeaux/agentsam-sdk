@@ -1,11 +1,11 @@
 {
   "name": "@inneranimalmedia/agentsam-campaign",
-  "version": "2.6.14",
+  "version": "2.6.15",
   "description": "Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchandising, audience targeting, conversion, brand consistency, and evidence-backed campaign evaluation.",
   "type": "module",
   "license": "FSL-1.1-MIT",
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22"
   },
   "main": "./src/index.js",
   "exports": {

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Choose a plan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:#191919}
+a{color:#ECECEC}a:hover{color:#ABABAB}
+.plans{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+@media(max-width:1060px){.plans{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.plans{grid-template-columns:minmax(0,1fr)}}
+</style>
+</helmet>
+<div style="box-sizing: border-box; background: #191919; font-family: 'Inter', system-ui, sans-serif; color: #ECECEC; display: flex; flex-direction: column">
+
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: #262626; border-bottom: 1px solid #313131">
+<div style="font-size: 14px; line-height: 20px; color: #ECECEC">Select plan</div>
+<button aria-label="Close" style="width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #ECECEC"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"></path></svg></button>
+</div>
+
+<div style="width: 100%; max-width: 1280px; margin: 0 auto; box-sizing: border-box; padding: clamp(32px, 6vw, 64px) clamp(16px, 4vw, 40px) 0; display: flex; flex-direction: column; gap: 32px">
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: clamp(26px, 5vw, 32px); line-height: 1.25; font-weight: 500; letter-spacing: -0.02em">Choose your plan</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #ABABAB">Start free for 14 days. Change or cancel anytime.</p>
+</div>
+
+<div class="plans">
+
+<div style="flex: 1 1 240px; min-width: 0; box-sizing: border-box; background: #262626; border: 1px solid #313131; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><div style="font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em; color: #ECECEC; font-family: 'Inter', system-ui, sans-serif">Solo</div><div style="font-size: 12px; line-height: 16px; font-weight: 500; padding: 4px 10px; border-radius: 999px; background: #2A2A2A">14-day trial</div></div>
+<div style="font-size: 15px; line-height: 22px; color: #ABABAB">For one builder</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px"><div style="display: flex; align-items: baseline; gap: 4px"><span style="font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">$29</span><span style="font-size: 14px; color: #ABABAB">/mo</span></div><div style="font-size: 13px; line-height: 18px; color: #ABABAB">after your free trial</div></div>
+<a href="Checkout.dc.html" style="display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 999px; background: #238552; color: #FFFFFF; font-size: 14px; font-weight: 500; text-decoration: none">Try Solo</a>
+<div style="display: flex; flex-direction: column">
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Agent Sam AI assistant</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Inner Animal Media API access</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">1 workspace, 1 seat</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Hosted on a global edge network</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Email support</div>
+</div>
+</div>
+
+<div style="flex: 1 1 240px; min-width: 0; box-sizing: border-box; background: #262626; border: 1px solid #313131; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><div style="font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em">Team</div><div style="font-size: 12px; line-height: 16px; font-weight: 500; padding: 4px 10px; border-radius: 999px; background: #2A2A2A">14-day trial</div></div>
+<div style="font-size: 15px; line-height: 22px; color: #ABABAB">For small teams</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px"><div style="display: flex; align-items: baseline; gap: 4px"><span style="font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">$79</span><span style="font-size: 14px; color: #ABABAB">/mo</span></div><div style="font-size: 13px; line-height: 18px; color: #ABABAB">after your free trial</div></div>
+<a href="Checkout.dc.html" style="display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 999px; background: #238552; color: #FFFFFF; font-size: 14px; font-weight: 500; text-decoration: none">Try Team</a>
+<div style="display: flex; flex-direction: column">
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Everything in Solo</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Up to 5 seats</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Autonomous subagents</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Bring your own cloud account</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Email support</div>
+</div>
+</div>
+
+<div style="flex: 1 1 240px; min-width: 0; box-sizing: border-box; background: #262626; border: 1px solid #313131; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><div style="font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em">Studio</div><div style="font-size: 12px; line-height: 16px; font-weight: 500; padding: 4px 10px; border-radius: 999px; background: #2A2A2A">14-day trial</div></div>
+<div style="font-size: 15px; line-height: 22px; color: #ABABAB">For agencies and client work</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px"><div style="display: flex; align-items: baseline; gap: 4px"><span style="font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">$249</span><span style="font-size: 14px; color: #ABABAB">/mo</span></div><div style="font-size: 13px; line-height: 18px; color: #ABABAB">after your free trial</div></div>
+<a href="Checkout.dc.html" style="display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 999px; background: #238552; color: #FFFFFF; font-size: 14px; font-weight: 500; text-decoration: none">Try Studio</a>
+<div style="display: flex; flex-direction: column">
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Everything in Team</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Up to 15 seats</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">White-label client dashboards</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Higher API rate limits</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Priority support</div>
+</div>
+</div>
+
+<div style="flex: 1 1 240px; min-width: 0; box-sizing: border-box; background: #262626; border: 1px solid #313131; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><div style="font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em">Enterprise</div><div style="font-size: 12px; line-height: 16px; font-weight: 500; padding: 4px 10px; border-radius: 999px; background: #2A2A2A">Custom</div></div>
+<div style="font-size: 15px; line-height: 22px; color: #ABABAB">For custom deployments</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px"><div style="display: flex; align-items: baseline; gap: 4px"><span style="font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">Let's talk</span></div><div style="font-size: 13px; line-height: 18px; color: #ABABAB">priced to your deployment</div></div>
+<a href="#contact" style="display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 999px; background: #262626; border: 1px solid #3DBA7A; box-sizing: border-box; color: #ECECEC; font-size: 14px; font-weight: 500; text-decoration: none">Contact us</a>
+<div style="display: flex; flex-direction: column">
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Everything in Studio</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Unlimited seats</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Dedicated deployment</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Custom limits and terms</div>
+<div style="padding: 14px 0; border-top: 1px solid #313131; font-size: 14px; line-height: 20px">Dedicated support</div>
+</div>
+</div>
+
+</div>
+
+<div style="margin-top: 48px; overflow-x: auto">
+<div style="min-width: 760px; display: flex; flex-direction: column">
+<div style="display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr)); align-items: end; padding-bottom: 20px; border-bottom: 1px solid #3DBA7A">
+<h2 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 500; letter-spacing: -0.02em">Compare plans</h2>
+<div style="text-align: center; font-size: 16px; line-height: 24px; font-weight: 500">Solo</div>
+<div style="text-align: center; font-size: 16px; line-height: 24px; font-weight: 500">Team</div>
+<div style="text-align: center; font-size: 16px; line-height: 24px; font-weight: 500">Studio</div>
+<div style="text-align: center; font-size: 16px; line-height: 24px; font-weight: 500">Enterprise</div>
+</div>
+<sc-for list="{{sections}}" as="section" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column">
+<div style="padding: 32px 0 14px; font-size: 15px; line-height: 22px; font-weight: 600; border-bottom: 1px solid #313131">{{section.title}}</div>
+<sc-for list="{{section.rows}}" as="row" hint-placeholder-count="4">
+<div style="display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr)); align-items: center; min-height: 52px; border-bottom: 1px solid #313131; font-size: 14px; line-height: 20px">
+<div style="padding: 12px 16px 12px 0">{{row.label}}</div>
+<sc-for list="{{row.cells}}" as="cell" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; justify-content: center; padding: 12px 4px; text-align: center">
+<sc-if value="{{cell.isCheck}}" hint-placeholder-val="{{ true }}"><svg width="22" height="22" viewBox="0 0 22 22" role="img" aria-label="Included"><circle cx="11" cy="11" r="11" fill="#ECECEC"></circle><path d="M6.5 11.4l3 3 6-6.4" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+<sc-if value="{{cell.isDash}}" hint-placeholder-val="{{ false }}"><span aria-label="Not included" style="color: #8A8A8A">—</span></sc-if>
+<sc-if value="{{cell.isText}}" hint-placeholder-val="{{ false }}"><span>{{cell.text}}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div id="contact" style="margin-top: 48px; padding: 24px 0 64px; border-top: 1px solid #313131; font-size: 12px; line-height: 18px; color: #ABABAB; max-width: 720px">Prices in USD, billed monthly unless noted. Cloudflare is a trademark of Cloudflare, Inc. Inner Animal Media is an independent product and is not affiliated with or endorsed by Cloudflare.</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2200}}'>
+class Component extends DCLogic {
+renderVals() {
+const c = (v) => (v === true ? { isCheck: true, isDash: false, isText: false, text: '' } : v === false ? { isCheck: false, isDash: true, isText: false, text: '' } : { isCheck: false, isDash: false, isText: true, text: v });
+const row = (label, vals) => ({ label, cells: vals.map(c) });
+return {
+sections: [
+{ title: 'Pricing', rows: [
+row('Pay monthly', ['$29/mo', '$79/mo', '$249/mo', 'Custom']),
+row('Pay yearly', ['$24/mo', '$65/mo', '$209/mo', 'Custom'])
+] },
+{ title: 'Platform', rows: [
+row('Agent Sam AI assistant', [true, true, true, true]),
+row('Workspaces', ['1', '3', '10', 'Unlimited']),
+row('Team seats', ['1', '5', '15', 'Unlimited']),
+row('Workflow canvas', [true, true, true, true]),
+row('Autonomous subagents', [false, true, true, true]),
+row('White-label client dashboards', [false, false, true, true])
+] },
+{ title: 'Build and API', rows: [
+row('Inner Animal Media API', [true, true, true, true]),
+row('Agent Sam SDK on npm', [true, true, true, true]),
+row('MCP tools', [true, true, true, true]),
+row('API rate limits', ['Standard', 'Standard', 'Higher', 'Custom'])
+] },
+{ title: 'Hosting', rows: [
+row('Global edge hosting', [true, true, true, true]),
+row('Custom domains', ['1', '5', '25', 'Unlimited']),
+row('Free SSL certificates', [true, true, true, true]),
+row('Bring your own Cloudflare account', [false, true, true, true])
+] },
+{ title: 'Support', rows: [
+row('Support level', ['Email', 'Email', 'Priority', 'Dedicated'])
+] }
+]
+};
+}
+}
+</script>
+</body>
+</html>

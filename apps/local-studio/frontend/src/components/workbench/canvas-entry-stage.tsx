@@ -1,6 +1,6 @@
 import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, ChevronDown, Component, ExternalLink, Frame, Hand, History, Image, Layers, Maximize2, Minimize2, MousePointer2, PanelLeft, PanelRight, Plus, Redo2, RefreshCw, Save, Settings2, Square, Type, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Component, ExternalLink, FileCode2, Frame, Hand, History, Image, Layers, Maximize2, Minimize2, MousePointer2, PanelLeft, PanelRight, Plus, Redo2, RefreshCw, Save, Settings2, Square, Type, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { DesignWorkspaceFrame } from "@inneranimalmedia/agentsam-workbench/design";
 import "@inneranimalmedia/agentsam-workbench/design/design-workspace.css";
 import type { DesignWorkspaceSnapshot } from "@inneranimalmedia/agentsam-contracts";
@@ -12,6 +12,7 @@ import { ModelSelect } from "@/components/workbench/model-select";
 import { CanvasStage } from "./canvas/stage";
 import { CanvasInspector, CanvasLayers } from "./canvas/panels";
 import { CanvasCmsHandoff } from "./canvas/cms-handoff";
+import { SourceArtboardLibrary, type ImportedSource } from "./canvas/source-library";
 import { API, CanvasApiError, blankDocument, canvasBounds, canvasRequest, cloneNode, copy, editNode, insertNode, locateNode, makeId, removeNode, terminalRun, withStarterPages, type Artboard, type CanvasDocument, type CanvasEvent, type CanvasMeta, type CanvasNode, type CanvasResponse, type CanvasRun, type Direction } from "./canvas/model";
 import "./canvas/canvas.css";
 
@@ -61,6 +62,9 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
  const [future,setFuture]=useState<CanvasDocument[]>([]);
  const [showCms,setShowCms]=useState(false);
  const [showLibrary,setShowLibrary]=useState(false);
+ const [showSources,setShowSources]=useState(()=>{
+  try{return new URL(tab.url||location.href,location.origin).searchParams.get('library')==='sources';}catch{return false;}
+ });
  const [library,setLibrary]=useState<CanvasMeta[]>([]);
  const [boot,setBoot]=useState(0);
  const [context,setContext]=useState("");
@@ -173,10 +177,10 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
   finally{setPreparing(false);}
  }
  useEffect(()=>{
-  if(!canvas||!document||document.artboards.length||directions.length||!model.model_id||preparing)return;
+  if(!canvas||!document||document.artboards.length||directions.length||!model.model_id||preparing||showSources)return;
   if(directionRequested.current===canvas.id)return;
   directionRequested.current=canvas.id;void prepareDirections();
- },[canvas?.id,model.provider,model.model_id,loading]);
+ },[canvas?.id,model.provider,model.model_id,loading,showSources,document?.artboards.length]);
  async function save():Promise<CanvasMeta|null> {
   const state=current.current;
   if(!state.canvas||!state.document)return null;
@@ -250,13 +254,27 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
  function undo(){if(!document||!past.length)return;setFuture(items=>[copy(document),...items]);setDocument(past[past.length-1]);setPast(items=>items.slice(0,-1));}
  function redo(){if(!document||!future.length)return;setPast(items=>[...items,copy(document)]);setDocument(future[0]);setFuture(items=>items.slice(1));}
  function select(id:string,board:string){setSelection(id);setBoardId(board);}
+ function importSource({board,html,sourceBase}:ImportedSource) {
+  if(!document)return;
+  const next=copy(document),bounds=canvasBounds(next.artboards);
+  const id=makeId('artboard'),nodeId=makeId('node');
+  const width=Math.max(320,Math.min(2560,Number(board.width)||1200));
+  const height=Math.max(320,Math.min(2560,Number(board.height)||900));
+  next.artboards.push({id,name:board.title.slice(0,160),width,height,
+    x:next.artboards.length?bounds.x+bounds.width+80:0,y:0,background:'#ffffff',
+    nodes:[{id:nodeId,type:'html',name:board.filename.slice(0,160),x:0,y:0,width,height,sourceHtml:html,sourceBase}],
+  });
+  next.provenance={...next.provenance, sourceArtboards:[...(Array.isArray(next.provenance.sourceArtboards)?next.provenance.sourceArtboards:[]),
+    {id,sourceId:board.id,family:board.family,filename:board.filename,importedAt:new Date().toISOString()}]};
+  change(next);setBoardId(id);setSelection(nodeId);setFitToken(value=>value+1);
+ }
  function addBoard() {
   if(!document)return;
   const next=copy(document),bounds=canvasBounds(next.artboards),id=makeId("artboard");
   next.artboards.push({id,name:"Page "+(next.artboards.length+1),width:1200,height:900,x:next.artboards.length?bounds.x+bounds.width+80:0,y:0,background:"#ffffff",nodes:[]});
   change(next);setBoardId(id);setSelection("");setFitToken(n=>n+1);
  }
- function insert(type:CanvasNode["type"]) {
+ function insert(type:Exclude<CanvasNode["type"],"html">) {
   if(!document||!boardId)return;
   const node:CanvasNode={id:makeId("node"),type,name:{frame:"Frame",text:"Text",button:"Button",image:"Image",input:"Input",link:"Link"}[type],x:48,y:48,width:type==="frame"?400:type==="image"?320:200,height:type==="frame"?280:type==="image"?220:type==="text"?60:44,
    ...(type==="text"?{text:"Add your text"}:type==="button"?{text:"Button"}:type==="input"?{text:"Enter a value"}:type==="link"?{text:"Link"}:{}),
@@ -326,6 +344,7 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
     onSubmit={async({text,attachments})=>{await startRun(text,undefined,attachments);}}/>
  </div>;
  const commands=<>
+   <IconAction className="cv-icon-button" hint="Import source artboards" label="Source artboards" onClick={()=>setShowSources(true)}><FileCode2 size={15}/></IconAction>
    <IconAction className="cv-icon-button" hint="Saved Canvases" label="Saved Canvases" onClick={()=>void showCanvases()}><History size={15}/></IconAction>
    <IconAction className="cv-icon-button" hint="New Canvas" label="New Canvas" onClick={newDocument}><Plus size={15}/></IconAction>
    <span className="cv-command-divider"/>
@@ -366,6 +385,7 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
   </div>}
   {assistantMode==="expanded"&&<div className="cv-expanded-assistant"><header><strong>AgentSam</strong><IconAction onClick={()=>setAssistantMode("docked")} label="Restore docked assistant"><Minimize2 size={16}/></IconAction></header>{assistant}</div>}
   {showCms&&<CanvasCmsHandoff canvas={canvas} onRepair={repairForCms} onClose={()=>setShowCms(false)}/>}
+  <SourceArtboardLibrary open={showSources} onClose={()=>setShowSources(false)} onImport={importSource}/>
   {showLibrary&&<div className="cv-modal-backdrop"><section className="cv-modal" role="dialog" aria-modal="true" aria-labelledby="canvas-library-title"><header><h2 id="canvas-library-title">Your Canvases</h2><IconAction label="Close saved Canvases" onClick={()=>setShowLibrary(false)}><X size={18}/></IconAction></header><div className="cv-document-list">{library.map(item=><button key={item.id} onClick={()=>switchDocument(item.id)}><Frame size={16}/><span className="sr-only" aria-hidden="true">Open Canvas</span><span><strong>{item.name}</strong><small>Revision {item.revision}</small></span><ArrowRight size={14}/></button>)}{!library.length&&<p>No saved Canvases were returned.</p>}</div></section></div>}
  </div>;
 }

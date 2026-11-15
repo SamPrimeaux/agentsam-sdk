@@ -1,0 +1,213 @@
+{
+  "id": "bella",
+  "name": "Bella",
+  "animal": "Chocolate Labrador Retriever",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "description": "A gentle, steady companion with a warm presence. Bella brings curiosity, encouragement, and a little joy to the moments in between.",
+  "role": "Everyday companion \u00b7 encouragement & presence",
+  "personality": [
+    "gentle",
+    "loyal",
+    "curious",
+    "patient",
+    "playful",
+    "comforting"
+  ],
+  "signatureAction": "A happy, unhurried tail wag.",
+  "visualIdentity": {
+    "coat": "rich chocolate brown",
+    "eyes": "warm amber",
+    "markings": "soft cream chest blaze and a lightly silvered muzzle",
+    "style": "warm, detailed, expressive 3D storybook realism",
+    "consistencyNotes": "Keep the same chocolate Labrador identity, amber eyes, cream chest blaze, and facial proportions across every state."
+  },
+  "provenance": "Generated from the user's Bella companion state-sheet reference; extracted into deterministic transparent 256x256 keyframe assets.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "states": {
+    "idle": {
+      "src": "animations/bella-idle.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "blinking": {
+      "src": "animations/bella-blink.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "thinking": {
+      "src": "animations/bella-thinking.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "working": {
+      "src": "animations/bella-working.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "waiting": {
+      "src": "animations/bella-waiting.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "attention": {
+      "src": "animations/bella-attentive.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "success": {
+      "src": "animations/bella-success.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "error": {
+      "src": "animations/bella-alert-error.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "resting": {
+      "src": "animations/bella-resting.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    },
+    "signature": {
+      "src": "animations/bella-tail-wag.png",
+      "fps": 1,
+      "loop": false,
+      "frames": 1,
+      "kind": "keyframe"
+    }
+  },
+  "galleryStates": [
+    {
+      "id": "idle",
+      "label": "Idle",
+      "description": "Default, calm presence",
+      "src": "animations/bella-idle.png"
+    },
+    {
+      "id": "attentive",
+      "label": "Attentive",
+      "description": "Focused and ready",
+      "src": "animations/bella-attentive.png"
+    },
+    {
+      "id": "blink",
+      "label": "Blink",
+      "description": "Natural, relaxed blink",
+      "src": "animations/bella-blink.png"
+    },
+    {
+      "id": "curious",
+      "label": "Curious",
+      "description": "Observant and interested",
+      "src": "animations/bella-curious.png"
+    },
+    {
+      "id": "head-tilt",
+      "label": "Head Tilt",
+      "description": "Wondering, intrigued",
+      "src": "animations/bella-head-tilt.png"
+    },
+    {
+      "id": "asking",
+      "label": "Asking",
+      "description": "Seeking input or guidance",
+      "src": "animations/bella-asking.png"
+    },
+    {
+      "id": "thinking",
+      "label": "Thinking",
+      "description": "Considering, problem solving",
+      "src": "animations/bella-thinking.png"
+    },
+    {
+      "id": "waiting",
+      "label": "Waiting",
+      "description": "Processing, in progress",
+      "src": "animations/bella-waiting.png"
+    },
+    {
+      "id": "voice-headset",
+      "label": "Voice / Headset",
+      "description": "Listening in voice chat",
+      "src": "animations/bella-voice-headset.png"
+    },
+    {
+      "id": "working",
+      "label": "Working",
+      "description": "Focused on a task",
+      "src": "animations/bella-working.png"
+    },
+    {
+      "id": "tail-wag",
+      "label": "Tail Wag",
+      "description": "Happy, engaged progress",
+      "src": "animations/bella-tail-wag.png"
+    },
+    {
+      "id": "success",
+      "label": "Success",
+      "description": "Task complete, happy",
+      "src": "animations/bella-success.png"
+    },
+    {
+      "id": "welcome",
+      "label": "Welcome",
+      "description": "Friendly greeting",
+      "src": "animations/bella-welcome.png"
+    },
+    {
+      "id": "alert-error",
+      "label": "Alert / Error",
+      "description": "Needs attention",
+      "src": "animations/bella-alert-error.png"
+    },
+    {
+      "id": "resting",
+      "label": "Resting",
+      "description": "Relaxed, taking a break",
+      "src": "animations/bella-resting.png"
+    },
+    {
+      "id": "sleeping",
+      "label": "Sleeping",
+      "description": "Deep rest, offline",
+      "src": "animations/bella-sleeping.png"
+    }
+  ],
+  "atlas": "animations/bella-state-atlas-4x4.png",
+  "avatar": "avatars/bella-avatar-128.png",
+  "icon": "avatars/bella-icon-64.png",
+  "portrait": "avatars/bella-portrait-256.png",
+  "visualApproval": "pending",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "The 16 state illustrations are still keyframes; continuous multi-frame APNG animation strips are not yet authored."
+    ]
+  },
+  "sourcePackage": "InnerAnimal-Bella-v1.0.0.zip"
+}

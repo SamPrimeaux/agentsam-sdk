@@ -80,10 +80,10 @@ test('navigation settings enforce safe same-origin paths, field limits and CSRF'
 });
 
 
-const catalogRecord = (key, {enabled = 1, installed = 1, href = '/admin/apps/' + key, surfaces = ['admin-nav'], label = key} = {}) => ({
-  plugin_key: key, display_name: label,
-  metadata_json: JSON.stringify({app:{surfaces,nav:{href,label}}}),
-  installed, enabled, setup_status: enabled ? 'connected' : 'unconfigured',
+// Rows as the `apps` + `agentsam_app_installations` join returns them.
+const catalogRecord = (key, {enabled = 1, installed = 1, href = '/admin/apps/' + key, label = key} = {}) => ({
+  id: key, name: label, description: '', icon_url: null, app_icon: null, launch_url: href,
+  install_id: installed ? 'inst_' + key : null, enabled,
 });
 
 test('installed account plugins flow into the canonical shared navigation, not a second shell', async () => {
@@ -91,7 +91,6 @@ test('installed account plugins flow into the canonical shared navigation, not a
     catalogRecord('campaign', {label:'AgentSam Campaign'}),
     catalogRecord('disabled', {enabled:0}),
     catalogRecord('not-installed', {installed:0,enabled:0}),
-    catalogRecord('widget', {surfaces:['add-apps']}),
     catalogRecord('duplicate', {href:'/admin/cad'}),
     catalogRecord('malicious', {href:'//evil.example'}),
   ]);
@@ -118,7 +117,7 @@ test('removed app overrides are filtered at read time and do not re-create an un
   const original = env.DB.prepare;
   env.DB.prepare = sql => {
     const statement = original(sql);
-    if (sql.includes('FROM agentsam_plugins')) {
+    if (sql.includes('FROM apps a')) {
       statement.bind = () => ({all:async()=>({results:[]})});
     }
     return statement;

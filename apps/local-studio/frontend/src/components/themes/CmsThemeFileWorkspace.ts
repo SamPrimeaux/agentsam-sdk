@@ -74,10 +74,12 @@ const entries=(project:ThemeProject):WorkspaceEntry[]=>{
   ];
 };
 
-export function createCmsThemeFileWorkspace(projectId:string,siteId:string):FileWorkspace{
-  if(!validId.test(projectId)||!validId.test(siteId))throw Error('Select an authorized website and theme.');
+export function createCmsThemeFileWorkspace(projectId:string,siteId?:string,scope:'site'|'studio'='site'):FileWorkspace{
+  const studio=scope==='studio';
+  if(!validId.test(projectId)||(!studio&&!validId.test(siteId||'')))throw Error('Select an authorized theme workspace.');
   const base='/api/admin/cms/theme-projects/'+encodeURIComponent(projectId);
-  const site='site_id='+encodeURIComponent(siteId);
+  const query=studio?'scope=studio':'site_id='+encodeURIComponent(siteId||'');
+  const scopeBody=studio?{scope:'studio'}:{site_id:siteId};
   const request=async(url:string,init:RequestInit={}):Promise<Record<string,any>>=>{
     const response=await fetch(url,{credentials:'include',cache:'no-store',...init});
     const result=await response.json().catch(()=>({}));
@@ -88,13 +90,13 @@ export function createCmsThemeFileWorkspace(projectId:string,siteId:string):File
     return result;
   };
   const get=async():Promise<ThemeProject>=>{
-    const payload=await request(base+'?'+site);
+    const payload=await request(base+'?'+query);
     return payload.project as ThemeProject;
   };
   const commit=async(project:ThemeProject):Promise<ThemeProject>=>{
-    const payload=await request(base+'?'+site,{
+    const payload=await request(base+'?'+query,{
       method:'PUT',headers:{'content-type':'application/json'},
-      body:JSON.stringify({site_id:siteId,project,expected_version:project.revision}),
+      body:JSON.stringify({...scopeBody,project,expected_version:project.revision}),
     });
     return payload.project as ThemeProject;
   };
@@ -199,7 +201,7 @@ export function createCmsThemeFileWorkspace(projectId:string,siteId:string):File
     },
     async history(path){
       normalizeWorkspacePath(path);
-      const result=await request(base+'/history?'+site);
+      const result=await request(base+'/history?'+query);
       return(result.revisions||[]).map((entry:{id:string;version:string;created_at:string;kind:string})=>({
         id:entry.id,path,version:entry.version,createdAt:entry.created_at,label:'Revision '+entry.id,
       }));
@@ -207,7 +209,7 @@ export function createCmsThemeFileWorkspace(projectId:string,siteId:string):File
     async restore(path,revisionId,expectedVersion){
       path=normalizeWorkspacePath(path);
       if(!/^\d{1,10}$/.test(revisionId))return{ok:false,code:'validation',message:'Invalid revision.'};
-      const snapshot=await request(base+'/history/'+revisionId+'?'+site);
+      const snapshot=await request(base+'/history/'+revisionId+'?'+query);
       const text=fileContent(snapshot.project as ThemeProject,path);
       if(text===undefined)return{ok:false,code:'unavailable',message:'This file did not exist in that revision.'};
       return write(path,text,expectedVersion);

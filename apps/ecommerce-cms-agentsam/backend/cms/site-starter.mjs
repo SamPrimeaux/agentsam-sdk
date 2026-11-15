@@ -3,7 +3,7 @@
  * its D1 + immutable R2 revisions. Every theme can supply the same preset
  * contract; the platform default merely selects one packaged preset.
  */
-import { heuristicStarterPreset } from '../../../../packages/heuristic-theme/src/starter.js';
+import { heuristicStarterPreset } from '@inneranimalmedia/theme-heuristic/commerce/starter';
 import { materializeStarterProject } from '../../frontend/theme-editor/starter-project.mjs';
 import { listThemeProjects, installThemeDraft } from './theme-project-store.mjs';
 import { resolveCmsSite } from './site-context.mjs';

@@ -88,7 +88,7 @@ test('active conversation has one shared Chat Actions trigger beside public link
       conversation, projects: [{ id: 'project-1', name: 'Studio project' }],
       onPinConversation: () => {}, onRenameConversation: () => {}, onArchiveConversation: () => {},
       onDeleteConversation: () => {}, onAssignConversationToProject: () => {},
-      onShare: () => {}, pinnedSummary: { outputs: [], sources: [] },
+      onShare: () => {}, pinnedSummary: { outputs: [{id:'output-1',label:'Created file'}], sources: [] },
     },
   }, React.createElement(Nav.Topbar)));
   assert.match(html, /title="Editable thread title"/);
@@ -104,9 +104,21 @@ test('active conversation has one shared Chat Actions trigger beside public link
   assert.match(source, /ConfirmDeleteDialog/);
 });
 
+test('blank conversation has no overflow or empty Sources & Outputs control', () => {
+  const html = renderToString(React.createElement(Nav.Provider, {
+    value: { pinnedSummary: { outputs: [], sources: [] } },
+  }, React.createElement(Nav.Topbar)));
+  assert.doesNotMatch(html, /aria-label="Conversation options"/);
+  assert.doesNotMatch(html, /aria-label="Toggle pinned summary"/);
+  const withConversation = renderToString(React.createElement(Nav.Provider, {
+    value: { conversation: { id: 'chat-1', title: 'Started thread' }, pinnedSummary: { outputs: [], sources: [] } },
+  }, React.createElement(Nav.PinnedSummary)));
+  assert.doesNotMatch(withConversation, /aria-label="Toggle pinned summary"/);
+});
+
 test('resource summary offers host-configured plus actions without installing a registry', () => {
   const html = renderToString(React.createElement(Nav.Provider, {
-    value: { pinnedSummary: { outputs: [{id:'doc',label:'Existing document'}], sources: [],
+    value: { conversation: { id: 'chat-1', title: 'Active thread' }, pinnedSummary: { outputs: [{id:'doc',label:'Existing document'}], sources: [],
       outputActions: [{id:'create-site',label:'Create site',onSelect:()=>{}}],
       sourceActions: [{id:'browse-files',label:'Browse files',onSelect:()=>{}}] } },
   }, React.createElement(Nav.PinnedSummary)));

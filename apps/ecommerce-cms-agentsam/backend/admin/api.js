@@ -934,7 +934,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null, tru
   if (toolCallMatch && method === "GET") return agentsamToolCallGet(env, toolCallMatch[1]);
   if (path === "/api/admin/agentsam/status" && method === "GET") {
     try {
-      return await agentsamStatus(env, user?.id || null);
+      return await agentsamStatus(env, user?.id || null, user?.account_id || null);
     } catch (err) {
       console.error("[agentsam/status]", err);
       return json({ ok: false, error: err?.message || "Status unavailable" }, { status: 500 });

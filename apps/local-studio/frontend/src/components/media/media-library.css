@@ -322,3 +322,130 @@
 
 
 .agentsam-media-upload-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+
+/* Platform-aligned media presentation: compact controls, readable metadata, and
+ * two-column touch galleries. Uses shell tokens and preserves source/action flows. */
+.agentsam-media-search__refresh {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: .45rem;
+  color: var(--ml-muted);
+  background: transparent;
+  cursor: pointer;
+}
+.agentsam-media-search__refresh:hover { color: var(--foreground); background: var(--ml-hover); }
+.agentsam-media-search__refresh:focus-visible { outline: 2px solid var(--ml-accent); outline-offset: 1px; }
+.agentsam-media-search__refresh:disabled { opacity: .45; cursor: default; }
+.agentsam-media-add { height: 2.25rem; border-radius: .55rem; flex: 0 0 auto; }
+.agentsam-media-item__meta strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  min-height: 2.7em;
+}
+.agentsam-media-thumb.is-video { aspect-ratio: 16 / 9; }
+.agentsam-media-thumb.is-video img { object-fit: cover; }
+.agentsam-media-thumb__play {
+  position: absolute;
+  bottom: .55rem;
+  left: .55rem;
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  color: #fff;
+  background: rgb(0 0 0 / .62);
+  pointer-events: none;
+}
+.agentsam-media-thumb__duration {
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.agentsam-media-list .agentsam-media-item__meta strong {
+  min-height: 0;
+  display: block;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .agentsam-media-header { padding: .8rem .8rem .45rem; gap: .5rem; }
+  .agentsam-media-header__titles h1 { font-size: 1.1rem; }
+  .agentsam-media-header__titles p { display: none; }
+  .agentsam-media-header__actions { flex: 0 1 auto; min-width: 0; gap: .45rem; }
+  .agentsam-media-header__actions .agentsam-media-btn { height: 2.1rem; }
+  .agentsam-media-status__pill {
+    max-width: min(100%, 13.8rem);
+    height: 2.1rem;
+    padding-inline: .65rem;
+    font-size: .75rem;
+  }
+  .agentsam-media-status__pill > span:last-child {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .agentsam-media-toolbar {
+    padding: .4rem .8rem .7rem;
+    gap: .55rem .45rem;
+    align-content: flex-start;
+  }
+  .agentsam-media-search {
+    order: 0;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+    height: 2.7rem;
+    box-sizing: border-box;
+  }
+  .agentsam-media-tabs {
+    order: 1;
+    min-width: 0;
+    flex: 0 1 auto;
+    max-width: calc(100% - 5.25rem);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    white-space: nowrap;
+    scroll-snap-type: x proximity;
+  }
+  .agentsam-media-tabs::-webkit-scrollbar { display: none; }
+  .agentsam-media-tabs button { flex: 0 0 auto; scroll-snap-align: start; }
+  .agentsam-media-tabs button, .agentsam-media-segment button { min-height: 2.15rem; }
+  .agentsam-media-add { order: 2; min-height: 2.4rem; }
+  .agentsam-media-local-controls, .agentsam-media-picker { order: 2; min-width: 0; max-width: 100%; }
+  .agentsam-media-toolbar__spacer { display: none; }
+  .agentsam-media-sort { order: 3; min-height: 2.2rem; }
+  .agentsam-media-segment { order: 4; }
+  .agentsam-media-body { padding: .75rem .8rem max(6rem, env(safe-area-inset-bottom)); }
+  .agentsam-media-count { margin-bottom: .6rem; }
+  .agentsam-media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+  }
+  .agentsam-media-item { min-width: 0; border-radius: .75rem; }
+  .agentsam-media-item__meta { padding: .55rem .6rem .7rem; gap: .3rem; }
+  .agentsam-media-item__meta strong { font-size: .79rem; }
+  .agentsam-media-item__meta span { font-size: .72rem; }
+  .agentsam-media-item__more { width: 2rem; height: 2rem; top: .4rem; right: .4rem; }
+  .agentsam-media-item__check { opacity: 1; }
+  .agentsam-media-thumb__play { width: 1.55rem; height: 1.55rem; bottom: .4rem; left: .4rem; }
+  .agentsam-media-list .agentsam-media-item__meta strong { font-size: .82rem; }
+}
+@media (max-width: 360px) {
+  .agentsam-media-header { padding-inline: .65rem; }
+  .agentsam-media-toolbar { padding-inline: .65rem; gap: .4rem; }
+  .agentsam-media-body { padding-inline: .65rem; }
+  .agentsam-media-grid { gap: .5rem; }
+  .agentsam-media-item__meta { padding: .45rem .5rem .6rem; }
+  .agentsam-media-tabs { max-width: calc(100% - 4.7rem); }
+}

@@ -22,7 +22,7 @@ test("MovieMode remains one runnable application with a reusable Work host", () 
 
 test("Media replaces Content while Work can still focus MovieMode", () => {
   const shell = read("../frontend/agentsam/AgentSamShell.tsx");
-  assert.match(read("../scripts/studio-navigation.mjs"), /id:'media',label:'Media',href:'\/media'/);
+  assert.match(read("../scripts/studio-navigation.mjs"), /id:'media',label:'Library',href:'\/media'/);
   assert.doesNotMatch(shell, /id: 'utilities'/);
   assert.match(read("../frontend/agentsam/side-stage-actions.ts"), /"media", "database", "terminal"/);
   assert.match(read("../frontend/src/components/workbench/side-stage.tsx"), /MovieModeSurface workPane/);

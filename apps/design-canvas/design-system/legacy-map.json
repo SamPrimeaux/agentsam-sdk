@@ -1,0 +1,100 @@
+{
+ "note": "Old CSS custom property to new token. Longest names first so prefixes never clobber.",
+ "map": [
+  {
+   "from": "--composer-mode-accent-strong",
+   "to": "--assistant-shared-composer-mode-accent-strong",
+   "group": "composer"
+  },
+  {
+   "from": "--composer-send-disabled-bg",
+   "to": "--assistant-shared-composer-send-disabled-background",
+   "group": "composer"
+  },
+  {
+   "from": "--composer-send-disabled-fg",
+   "to": "--assistant-shared-composer-send-disabled-foreground",
+   "group": "composer"
+  },
+  {
+   "from": "--composer-control-hover",
+   "to": "--assistant-shared-composer-control-hover",
+   "group": "composer"
+  },
+  {
+   "from": "--composer-mode-accent",
+   "to": "--assistant-shared-composer-mode-accent",
+   "group": "composer"
+  },
+  {
+   "from": "--mini-surface-raised",
+   "to": "--assistant-mini-container-raised",
+   "group": "mini"
+  },
+  {
+   "from": "--agentsam-mark-color",
+   "to": "--assistant-shared-brand-foreground",
+   "group": "shell"
+  },
+  {
+   "from": "--mini-accent-strong",
+   "to": "--semantic-action-primary",
+   "group": "mini"
+  },
+  {
+   "from": "--composer-send-bg",
+   "to": "--assistant-shared-composer-send-background",
+   "group": "composer"
+  },
+  {
+   "from": "--composer-send-fg",
+   "to": "--assistant-shared-composer-send-foreground",
+   "group": "composer"
+  },
+  {
+   "from": "--mini-surface",
+   "to": "--assistant-mini-container-surface",
+   "group": "mini"
+  },
+  {
+   "from": "--mini-border",
+   "to": "--semantic-border-default",
+   "group": "mini"
+  },
+  {
+   "from": "--mini-accent",
+   "to": "--semantic-accent-primary",
+   "group": "mini"
+  },
+  {
+   "from": "--nav-surface",
+   "to": "--semantic-surface-navigation",
+   "group": "shell"
+  },
+  {
+   "from": "--mini-muted",
+   "to": "--semantic-text-muted",
+   "group": "mini"
+  },
+  {
+   "from": "--nav-accent",
+   "to": "--semantic-action-primary",
+   "group": "shell"
+  },
+  {
+   "from": "--mini-text",
+   "to": "--semantic-text-primary",
+   "group": "mini"
+  },
+  {
+   "from": "--nav-muted",
+   "to": "--semantic-text-muted",
+   "group": "shell"
+  },
+  {
+   "from": "--nav-text",
+   "to": "--semantic-text-primary",
+   "group": "shell"
+  }
+ ]
+}

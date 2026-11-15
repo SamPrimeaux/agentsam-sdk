@@ -105,6 +105,9 @@ test("optional plugins enter only with an active authorized installation", async
   sqlite.prepare(`INSERT INTO agentsam_plugin_installations
     (account_id,plugin_id,instance_key,enabled,setup_status)
     VALUES (?,?,?,?,?)`).run("one",id,"catalog-v1",1,"connected");
+  sqlite.prepare(`INSERT INTO agentsam_plugin_installations
+    (account_id,plugin_id,instance_key,enabled,setup_status)
+    VALUES (?,?,?,?,?)`).run("one",id,"side-stage-v1",1,"configured");
   const one = await listAccountSideStages(db, "one");
   assert.equal(one.find(s => s.id === "addon-studio").renderer, "embed");
   assert.equal(one.find(s => s.id === "addon-studio").href, "https://catalog.example/studio");

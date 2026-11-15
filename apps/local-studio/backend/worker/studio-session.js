@@ -36,3 +36,26 @@ export async function guardStudioDocumentSession(request, { resolveUser, loginPa
   login.searchParams.set('next', url.pathname + url.search);
   return new Response(null, {status:302,headers:{location:login.toString(),'cache-control':'private, no-store'}});
 }
+
+/**
+ * Every /admin document, asset or mutation belongs to the authenticated host.
+ * A website theme can be authored without a site, never without an account.
+ * Public discovery, signup and login live outside this boundary.
+ */
+export async function guardStudioAdminBoundary(request, { resolveUser, loginPath }) {
+  const url = new URL(request.url);
+  if (url.pathname !== '/admin' && !url.pathname.startsWith('/admin/')) return null;
+  if (/^\/admin\/login(?:\.html)?\/?$/.test(url.pathname)) {
+    return new Response(null, { status: 302, headers: {
+      location: new URL(loginPath + url.search, url.origin).toString(),
+      'cache-control': 'private, no-store',
+    } });
+  }
+  const denied = await guardStudioDocumentSession(request, { resolveUser, loginPath });
+  if (denied?.status === 302 && !['GET', 'HEAD'].includes(request.method)) {
+    return Response.json({ ok: false, error: 'unauthorized' }, {
+      status: 401, headers: { 'cache-control': 'private, no-store' },
+    });
+  }
+  return denied;
+}

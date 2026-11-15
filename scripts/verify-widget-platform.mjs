@@ -2,6 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
+import { firstPack } from './lib/npm-pack-json.mjs';
+
+// Child npm calls must really pack/install even when the outer command is
+// `npm publish --dry-run`, which exports npm_config_dry_run to children.
+const cleanNpmEnv = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([key]) => !["npm_config_allow_scripts", "npm_config_dry_run"].includes(key.toLowerCase()),
+  ),
+);
 
 const root = process.cwd();
 const pkgPath = path.join(root, "packages/agentsam-workbench/package.json");
@@ -81,7 +90,7 @@ const dryRun = JSON.parse(
   ),
 );
 
-const files = new Set((dryRun[0]?.files || []).map((entry) => entry.path));
+const files = new Set((firstPack(dryRun)?.files || []).map((entry) => entry.path));
 
 for (const rel of [
   "dist/widgets/index.js",
@@ -141,10 +150,10 @@ for (const name of closure) {
     execFileSync(
       "npm",
       ["pack", "--json", "--pack-destination", tempRoot],
-      { cwd: record.dir, encoding: "utf8" },
+      { cwd: record.dir, encoding: "utf8", env: cleanNpmEnv },
     ),
   );
-  const filename = packedJson[0]?.filename;
+  const filename = firstPack(packedJson)?.filename;
   if (!filename) {
     fail("npm pack did not return a tarball filename for " + name);
     continue;
@@ -161,11 +170,6 @@ fs.writeFileSync(
   JSON.stringify({ name: "agentsam-widget-pack-smoke", private: true, type: "module" }, null, 2) + "\n",
 );
 
-const cleanNpmEnv = Object.fromEntries(
-  Object.entries(process.env).filter(
-    ([key]) => key.toLowerCase() !== "npm_config_allow_scripts",
-  ),
-);
 
 execFileSync(
   "npm",

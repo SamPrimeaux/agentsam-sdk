@@ -27,7 +27,12 @@ assert.match(service, /deleteBlock/);
 assert.match(service, /website\.binding\.put/);
 assert.match(service, /website\.binding\.delete/);
 
-assert.match(route, /\/apps\/ecommerce-cms-agentsam/);
+// /cms stays an alias, but now targets the cleaner installed-product entry.
+// The product frame is still owned by the existing Ecommerce CMS host.
+assert.match(route, /to="\/admin\/store"/);
+const storeRoute = await read('../frontend/src/routes/(apps)/admin/store.tsx');
+assert.match(storeRoute, /EcommerceAppView/);
+assert.match(storeRoute, /forcePackagedAsset/);
 assert.doesNotMatch(route, /client-cms-editor/);
 assert.match(service, /handleCmsSourceRequest/);
 assert.match(source, /resolveWebsiteAssets/);

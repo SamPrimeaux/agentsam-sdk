@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveConsoleFile, shouldServeProductCatalogView } from "./packaged-console.js";
 
-test("the canonical ecommerce store is served at /admin/store", () => {
-  assert.equal(resolveConsoleFile("/admin/store"), "store.html");
+test("the canonical store route is Studio-owned, not packaged HTML", () => {
+  assert.equal(resolveConsoleFile("/admin/store"), null);
 });
 
 test("the legacy /sites URL no longer serves a second store page", () => {

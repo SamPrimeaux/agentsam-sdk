@@ -1,5 +1,5 @@
 import { collectionScope, listCmsCollections, getCmsCollection } from '../cms/collection-store.mjs';
-import { normalizeCollectionRules, resolveCollectionMembers } from '../../../../packages/agentsam-merch/src/collection-planning.js';
+import { normalizeCollectionRules, resolveCollectionMembers } from '@inneranimalmedia/agentsam-merch/collection-planning';
 
 async function publicScope(env,url) {
   if(!url)throw new Error('storefront_host_required');

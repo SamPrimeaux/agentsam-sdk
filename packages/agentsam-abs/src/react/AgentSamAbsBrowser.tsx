@@ -55,6 +55,8 @@ export interface AgentSamAbsBrowserProps {
   defaultMode?: AbsBrowserMode;
   onModeChange?: (mode: AbsBrowserMode) => void;
   exploreLinks?: AbsQuickLink[];
+  /** Host-supplied pet or welcome artwork, shown only on the empty Explore page. */
+  exploreHomeExtra?: ReactNode;
   /** Optional host-managed browse viewport (native WebView, remote browser stream, etc.). */
   exploreSurface?: ReactNode;
   exploreUrl?: string;
@@ -96,6 +98,7 @@ export function AgentSamAbsBrowser({
   defaultMode = 'explore',
   onModeChange,
   exploreLinks = DEFAULT_EXPLORE_LINKS,
+  exploreHomeExtra,
   exploreSurface,
   exploreUrl: controlledExploreUrl,
   exploreCanBack: controlledExploreCanBack,
@@ -337,6 +340,7 @@ export function AgentSamAbsBrowser({
           ) : (
             <div className="abs-explore-home">
               <div className="abs-explore-home-inner">
+                {exploreHomeExtra}
                 <div className="abs-explore-kicker">AgentSam Browser</div>
                 <h2>Explore the web</h2>
                 <p>

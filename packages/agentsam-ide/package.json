@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-ide",
-  "version": "2.6.14",
+  "version": "2.6.15",
   "description": "AgentSam IDE packages — Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
   "type": "module",
   "main": "./dist/index.js",

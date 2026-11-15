@@ -37,7 +37,7 @@ function eligibilityLabel(reason?: string | null) {
   return "Chat capability not reported";
 }
 
-export function ModelSelect({ compact = false }: { compact?: boolean }) {
+export function ModelSelect({ compact = false, workStyle = false }: { compact?: boolean; workStyle?: boolean }) {
   const selection = useWorkStore((s) => s.modelSelection);
   const selectionMode = useWorkStore((s) => s.modelSelectionMode);
   const setModelSelection = useWorkStore((s) => s.setModelSelection);
@@ -135,6 +135,7 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
           className={cn(
             "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground",
             compact && "size-8 shrink-0 justify-center p-0",
+            workStyle && "max-w-[170px] rounded-lg bg-muted/50 text-foreground/90 hover:bg-muted/80",
           )}
           aria-label={`Select model: ${triggerLabel}`}
           title={`Model: ${triggerLabel}. Click to choose.`}
@@ -142,7 +143,7 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
           {compact ? <Cpu className="size-4" aria-hidden="true" /> : <><span className="max-w-40 truncate">{triggerLabel}</span><ChevronDown className="size-3 opacity-70" /></>}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-[420px] w-80 overflow-y-auto p-1.5">
+      <DropdownMenuContent align={workStyle ? 'end' : 'start'} className={cn("max-h-[420px] w-80 overflow-y-auto p-1.5", workStyle && "w-72 rounded-xl border-border/70 bg-popover/95 shadow-xl backdrop-blur-xl")}>
         <div className="flex items-center justify-between px-2 py-1">
           <DropdownMenuLabel className="p-0">Model</DropdownMenuLabel>
           <button
@@ -235,7 +236,7 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
                     <span className="truncate text-[12px]">{item.label}</span>
                     <span className="truncate text-[10px] text-muted-foreground">
                       {item.model_id}
-                      {item.context_window ? ` · ctx ${Math.round(Number(item.context_window) / 1000)}k` : ""}
+                      {!workStyle && item.context_window ? ` · ctx ${Math.round(Number(item.context_window) / 1000)}k` : ""}
                     </span>
                   </span>
                   {selected ? <Check className="size-3.5 shrink-0" /> : null}

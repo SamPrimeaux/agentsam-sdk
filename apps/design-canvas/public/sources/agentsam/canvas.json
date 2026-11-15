@@ -1,0 +1,612 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Shell.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "shell",
+      "title": "1 \u00b7 Global shell and panels",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "ShellThreadMenu.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "shell",
+      "title": "2 \u00b7 Thread menu open",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "ShellModelMenu.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "shell",
+      "title": "3 \u00b7 Model picker open",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "ShellCollapsed.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "shell",
+      "title": "4 \u00b7 Sidenav and details collapsed",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "AppInstall.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "page": "apps",
+      "title": "2 \u00b7 Install and permissions",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "AppInstalled.dc.html": {
+      "h": 1320,
+      "is_interactive": true,
+      "page": "apps",
+      "title": "3 \u00b7 Installed app page",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "AppListing.dc.html": {
+      "h": 1240,
+      "page": "apps",
+      "title": "1 \u00b7 App listing",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Artboard-32pk.dc.html": {
+      "h": 600,
+      "handmade": true,
+      "page": "page-qa9vsh",
+      "title": "Artboard 1",
+      "w": 800,
+      "x": 0,
+      "y": 0
+    },
+    "CanvasEditor.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "page": "dash",
+      "title": "1 \u00b7 Canvas editor",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "CanvasLibrary.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "page": "dash",
+      "title": "2 \u00b7 Library (curate)",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Checkout.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "title": "2 \u00b7 Start trial (checkout)",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "EditorEmbeds.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "page": "apps",
+      "title": "4 \u00b7 Editor: Add menu and app embeds",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 2450,
+      "title": "1 \u00b7 Choose a plan",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Onboarding.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "4 \u00b7 Workspace setup",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "SetupGoals.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "3 \u00b7 What can we help you do",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "StoreToLibrary.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "page": "dash",
+      "title": "3 \u00b7 Save to library",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "StyleSpec.dc.html": {
+      "expand": "fill",
+      "h": 1700,
+      "title": "Style spec \u00b7 charcoal green",
+      "w": 1440,
+      "x": 0,
+      "y": 0,
+      "page": "tokens"
+    },
+    "WelcomeHome.dc.html": {
+      "expand": "fill",
+      "h": 1500,
+      "title": "5 \u00b7 First-run home",
+      "w": 1440,
+      "x": 6080,
+      "y": 0
+    },
+    "ShellLight.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dl",
+      "title": "3 \u00b7 App shell",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "DesignCanvas.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dcanvas",
+      "title": "1 \u00b7 Dev dark (default)",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "DesignCanvasLight.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dl",
+      "title": "4 \u00b7 Design canvas",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "DesignCanvasJump.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dcanvas",
+      "title": "3 \u00b7 Jump to\u2026 menu",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "DesignCanvasSizes.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dcanvas",
+      "title": "4 \u00b7 Screen sizes (light)",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "DesignCanvasSettings.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dcanvas",
+      "title": "5 \u00b7 Theme settings",
+      "w": 1440,
+      "x": 0,
+      "y": 1000
+    },
+    "DesignCanvasPublish.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dcanvas",
+      "title": "6 \u00b7 Publish popover",
+      "w": 1440,
+      "x": 1520,
+      "y": 1000
+    },
+    "DesignCanvasPlay.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dcanvas",
+      "title": "7 \u00b7 Play-through (light)",
+      "w": 1440,
+      "x": 3040,
+      "y": 1000
+    },
+    "MiniAgentSam.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "mini",
+      "title": "1 \u00b7 Compact, on a selected block",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "MiniAgentSamSettings.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "mini",
+      "title": "2 \u00b7 Expanded: block settings, scope, suggestions",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "MiniAgentSamLight.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dl",
+      "title": "2 \u00b7 miniAgentSam",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "MiniAgentSamPublish.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "status",
+      "title": "1 \u00b7 Confirmation",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "ButtonVariants.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "btn",
+      "title": "1 \u00b7 Rounded vs glass (dev dark)",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "ButtonVariantsLight.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "page": "dl",
+      "title": "5 \u00b7 Buttons",
+      "w": 1440,
+      "x": 0,
+      "y": 1000
+    },
+    "SideAssistant.dc.html": {
+      "expand": "fill",
+      "w": 1440,
+      "h": 900,
+      "is_interactive": true,
+      "page": "side",
+      "title": "1 \u00b7 Docked, resizable",
+      "x": 0,
+      "y": 0
+    },
+    "SideAssistantCollapsed.dc.html": {
+      "expand": "fill",
+      "w": 1440,
+      "h": 900,
+      "is_interactive": true,
+      "page": "side",
+      "title": "2 \u00b7 Collapsed to launcher",
+      "x": 1520,
+      "y": 0
+    },
+    "SideAssistantWorkspace.dc.html": {
+      "expand": "fill",
+      "w": 1440,
+      "h": 900,
+      "is_interactive": true,
+      "page": "side",
+      "title": "3 \u00b7 Agent workspace (expanded)",
+      "x": 3040,
+      "y": 0
+    },
+    "SideAssistantMobile.dc.html": {
+      "expand": "fill",
+      "w": 1440,
+      "h": 900,
+      "is_interactive": true,
+      "page": "resp",
+      "title": "1 \u00b7 Mobile sheet",
+      "x": 0,
+      "y": 0
+    },
+    "SideAssistantLight.dc.html": {
+      "expand": "fill",
+      "w": 1440,
+      "h": 900,
+      "is_interactive": true,
+      "page": "dl",
+      "title": "1 \u00b7 Side Assistant",
+      "x": 0,
+      "y": 0
+    },
+    "ComponentSourceMap.dc.html": {
+      "expand": "fill",
+      "w": 1440,
+      "h": 1100,
+      "is_interactive": true,
+      "page": "map",
+      "title": "1 \u00b7 Old names to new tokens",
+      "x": 0,
+      "y": 0
+    },
+    "ComponentSourceMapLight.dc.html": {
+      "expand": "fill",
+      "w": 1440,
+      "h": 1100,
+      "is_interactive": true,
+      "page": "map",
+      "title": "2 \u00b7 Light",
+      "x": 1520,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-10T19:30:00Z",
+    "v": 1
+  },
+  "designSystems": [
+    {
+      "title": "Agent Sam Design Canvas",
+      "namespace": "theme-agentsam-design-canvas",
+      "artifact": "https://claude.ai/artifact/TxaDvQ2HsxSxSofiXLrHCo",
+      "version": null,
+      "copiedAt": "2026-11-12T16:25:10Z"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "shelltitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "shell",
+      "text": "App shell: header, thread menu, side panels, composer",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "appstitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "apps",
+      "text": "App store: install an app, use it in the editor",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "dashtitle": {
+      "kind": "title1",
+      "maxW": 4480,
+      "page": "dash",
+      "text": "Dashboard: canvas, library, save",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "flowtitle": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Onboarding & offers: baseline flow",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "dcanvastitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "dcanvas",
+      "text": "Design canvas editor: Jump to, screen sizes, play-through, publish, agent panel",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "minititle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "mini",
+      "text": "miniAgentSam: compact and expanded",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "btntitle": {
+      "kind": "title1",
+      "maxW": 3000,
+      "page": "btn",
+      "text": "Shared components: buttons",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "sidetitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "side",
+      "text": "Side Assistant: dock, resize, collapse, workspace",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "maptitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "map",
+      "text": "Component-to-source map and migration",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "tokentitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "tokens",
+      "text": "Foundations and semantic tokens",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "dltitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "dl",
+      "text": "Dark and light: same components, two themes",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "statustitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "status",
+      "text": "miniAgentSam: status and confirmation",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    },
+    "resptitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "page": "resp",
+      "text": "Assistant: coexistence and responsive",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Checkout.dc.html",
+    "SetupGoals.dc.html",
+    "Onboarding.dc.html",
+    "WelcomeHome.dc.html",
+    "StyleSpec.dc.html",
+    "CanvasEditor.dc.html",
+    "CanvasLibrary.dc.html",
+    "StoreToLibrary.dc.html",
+    "AppListing.dc.html",
+    "AppInstall.dc.html",
+    "AppInstalled.dc.html",
+    "EditorEmbeds.dc.html",
+    "Artboard-32pk.dc.html",
+    "Shell.dc.html",
+    "ShellThreadMenu.dc.html",
+    "ShellModelMenu.dc.html",
+    "ShellCollapsed.dc.html",
+    "ShellLight.dc.html",
+    "DesignCanvas.dc.html",
+    "DesignCanvasLight.dc.html",
+    "DesignCanvasJump.dc.html",
+    "DesignCanvasSizes.dc.html",
+    "DesignCanvasSettings.dc.html",
+    "DesignCanvasPublish.dc.html",
+    "DesignCanvasPlay.dc.html",
+    "MiniAgentSam.dc.html",
+    "MiniAgentSamSettings.dc.html",
+    "MiniAgentSamLight.dc.html",
+    "MiniAgentSamPublish.dc.html",
+    "ButtonVariants.dc.html",
+    "ButtonVariantsLight.dc.html",
+    "SideAssistant.dc.html",
+    "SideAssistantCollapsed.dc.html",
+    "SideAssistantWorkspace.dc.html",
+    "SideAssistantMobile.dc.html",
+    "SideAssistantLight.dc.html",
+    "ComponentSourceMap.dc.html",
+    "ComponentSourceMapLight.dc.html"
+  ],
+  "pages": [
+    {
+      "id": "onb",
+      "name": "Onboarding and offers"
+    },
+    {
+      "id": "dash",
+      "name": "Dashboard canvas"
+    },
+    {
+      "id": "apps",
+      "name": "App store"
+    },
+    {
+      "id": "page-qa9vsh",
+      "name": "Page 4"
+    },
+    {
+      "id": "shell",
+      "name": "App shell"
+    },
+    {
+      "id": "dcanvas",
+      "name": "Assistant / Design Canvas"
+    },
+    {
+      "id": "mini",
+      "name": "miniAgentSam / Compact & Expanded"
+    },
+    {
+      "id": "btn",
+      "name": "AgentSam / Shared Assistant Components"
+    },
+    {
+      "id": "tokens",
+      "name": "AgentSam / Foundations & Semantic Tokens"
+    },
+    {
+      "id": "status",
+      "name": "miniAgentSam / Status & Feedback"
+    },
+    {
+      "id": "dl",
+      "name": "AgentSam / Dark & Light"
+    },
+    {
+      "id": "side",
+      "name": "Side Assistant / Dock & Resize"
+    },
+    {
+      "id": "resp",
+      "name": "Assistant / Coexistence & Responsive"
+    },
+    {
+      "id": "map",
+      "name": "AgentSam / Component-to-Source Map"
+    }
+  ],
+  "title": "Inner Animal Media: Onboarding & Offers"
+}

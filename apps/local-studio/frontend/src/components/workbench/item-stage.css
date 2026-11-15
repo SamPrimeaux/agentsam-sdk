@@ -1,0 +1,9 @@
+/* Connection-issue state: everything scales from the stage itself (container query units). */
+.as-item-issue { container-type: size; width: 100%; height: 100%; }
+.as-item-issue__body { display: grid; height: 100%; place-items: center; padding-inline: 1.5rem; }
+.as-item-issue__stack {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: clamp(0.75rem, 3cqmin, 1.5rem);
+}
+.as-item-issue__mascot { width: clamp(6rem, 34cqmin, 22rem); height: auto; }
+.as-item-issue__title { font-size: clamp(1.125rem, 4.4cqmin, 2rem); font-weight: 600; }

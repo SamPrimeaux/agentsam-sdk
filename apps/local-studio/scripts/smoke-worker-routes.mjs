@@ -64,61 +64,59 @@ try {
     await pause(500);
   }
   if (!ready) throw new Error('local_worker_not_ready');
-  for (const { pathname, allowed, redirectTo, redirectNext, bodyContains } of [
-    { pathname: '/admin/cad', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/cad' },
-    { pathname: '/admin/agentsam', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/agentsam' },
-    { pathname: '/admin/products', allowed: [200], bodyContains: 'Store Products' },
-    { pathname: '/admin/products?view=collections', allowed: [200], bodyContains: 'Store Products' },
-    { pathname: '/admin/products?view=platform', allowed: [200], bodyContains: 'Store Products' },
-    { pathname: '/admin/products/create', allowed: [200] },
-    { pathname: '/admin/inventory', allowed: [200] },
-    { pathname: '/admin/orders', allowed: [200] },
-    { pathname: '/admin/discounts', allowed: [200] },
-    // Agent 2: legacy Content Studio redirects into first-party Media Library.
-    { pathname: '/admin/content', allowed: [302], redirectTo: '/media' },
-    { pathname: '/admin/content?kind=image', allowed: [302], redirectTo: '/media/images' },
-    { pathname: '/admin/content?kind=video', allowed: [302], redirectTo: '/media/videos' },
-    { pathname: '/media', allowed: [200, 302] },
-    { pathname: '/media/images', allowed: [200, 302] },
-    { pathname: '/media/videos', allowed: [200, 302] },
-    { pathname: '/admin/moviemode', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/moviemode' },
-    { pathname: '/admin/moviemode/edit', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/moviemode/edit' },
-    { pathname: '/admin/moviemode/edit?project=smoke', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/moviemode/edit?project=smoke' },
-    { pathname: '/admin/store', allowed: [200] },
-    { pathname: '/admin/pages', allowed: [200] },
-    { pathname: '/admin/theme-editor?slug=home', allowed: [200] },
-    { pathname: '/admin/preferences', allowed: [200] },
-    { pathname: '/admin/subscribers', allowed: [200] },
-    { pathname: '/admin/products.html', allowed: [302], redirectTo: '/admin/products' },
-    { pathname: '/sites?showcase=resolve', allowed: [302], redirectTo: '/auth/login', redirectNext: '/sites?showcase=resolve' },
-  ]) {
-    const response = await request(pathname);
-    const payload = await response.text();
-    const target = response.status === 302
-      ? new URL(response.headers.get('location') || '/', base) : null;
-    if (!allowed.includes(response.status) ||
-        (response.status === 200 && !payload.toLowerCase().includes('<!doctype html')) ||
-        (bodyContains && !payload.includes(bodyContains)) ||
-        (target && redirectTo && target.pathname !== redirectTo) ||
-        (target && redirectNext && target.searchParams.get('next') !== redirectNext)) {
-      throw new Error(pathname + ' returned ' + response.status + ', location=' +
-        (target?.pathname || 'none') + ': ' + payload.slice(0, 350));
-    }
-    console.log('PASS ' + pathname + ': ' + response.status +
-      (target ? ' -> ' + target.pathname : ''));
-  }
-  // Exercise the complete installed-editor module graph through the asset mount.
-  for (const pathname of [
+  // Every anonymous /admin document AND /admin script is identity-gated.
+  // A redirect is the expected success case; serving HTML or JS anonymously
+  // would expose the admin boundary and must fail the deployment smoke test.
+  const protectedAdminRoutes = [
+    '/admin', '/admin/', '/admin/cad', '/admin/agentsam',
+    '/admin/products', '/admin/products?view=collections',
+    '/admin/products?view=platform', '/admin/products/create',
+    '/admin/inventory', '/admin/orders', '/admin/discounts',
+    '/admin/content', '/admin/content?kind=image', '/admin/content?kind=video',
+    '/admin/moviemode', '/admin/moviemode/edit',
+    '/admin/moviemode/edit?project=smoke',
+    '/admin/store', '/admin/pages', '/admin/theme-editor?slug=home',
+    '/admin/preferences', '/admin/subscribers', '/admin/products.html',
+    '/admin/theme-project-editor?scope=studio&project=theme_plain-jane',
+    '/admin/theme-code-editor?scope=studio&project=theme_plain-jane',
     '/admin/js/theme-project-editor-bootstrap.mjs',
+    '/admin/js/agentsam-nav.js', '/admin/host-config.js',
+  ];
+  for (const pathname of protectedAdminRoutes) {
+    const response = await request(pathname);
+    const destination = response.headers.get('location');
+    const target = destination ? new URL(destination, base) : null;
+    if (response.status !== 302 || target?.pathname !== '/auth/login' ||
+        target.searchParams.get('next') !== pathname ||
+        response.headers.get('cache-control') !== 'private, no-store') {
+      throw new Error(pathname + ' must require verified Identity before returning the shell or assets; got ' +
+        response.status + ' -> ' + (destination || 'none'));
+    }
+    console.log('PASS ' + pathname + ': anonymous -> identity login');
+  }
+  // Site-free development does not make a private application public.
+  for (const pathname of ['/sites?showcase=resolve','/media','/media/images','/media/videos']) {
+    const response = await request(pathname);
+    const destination = response.headers.get('location');
+    const target = destination ? new URL(destination,base) : null;
+    if (response.status !== 302 || target?.pathname !== '/auth/login' ||
+        target.searchParams.get('next') !== pathname) {
+      throw new Error(pathname + ' must redirect anonymous visitors to login, got ' + response.status);
+    }
+    console.log('PASS ' + pathname + ': anonymous -> identity login');
+  }
+  // The editor modules remain deployed, but admin entry modules are not
+  // allowed to be fetched until a verified account session exists.
+  for (const pathname of [
     '/theme-editor/project.mjs', '/theme-editor/bridge.mjs', '/theme-editor/mount.mjs',
-    '/theme-editor/starter-project.mjs', '/theme-editor/starter-products.mjs', '/theme-editor/starter-chrome.mjs',
-    '/theme-editor/system-template-registry.mjs',
+    '/theme-editor/starter-project.mjs', '/theme-editor/starter-products.mjs',
+    '/theme-editor/starter-chrome.mjs', '/theme-editor/system-template-registry.mjs',
   ]) {
     const response = await request(pathname);
     const type = response.headers.get('content-type') || '';
     if (response.status !== 200 || !/javascript/.test(type))
-      throw new Error(`${pathname} expected JavaScript 200, got ${response.status}: ${type}`);
-    console.log(`PASS ${pathname}: executable module`);
+      throw new Error(`${pathname} expected public executable editor runtime, got ${response.status}: ${type}`);
+    console.log(`PASS ${pathname}: installed editor runtime`);
   }
   // Protected Completeful routes must reach the JSON API, never fall through
   // to a static HTML page or an unhandled Worker exception.
@@ -127,6 +125,8 @@ try {
     '/api/admin/completeful/catalog?category=apparel',
     '/api/settings/companions',
     '/api/apps/launcher',
+    '/api/browser/history',
+    '/api/settings/browser',
     '/api/work/canvases',
     '/api/work/canvases/canvas_aaaaaaaaaaaa',
     '/api/work/canvases/canvas_aaaaaaaaaaaa/directions',
@@ -154,11 +154,9 @@ try {
   if (installProbe.status !== 401 || !(installProbe.headers.get('content-type')||'').includes('application/json'))
     throw new Error('/api/apps/install expected authenticated JSON 401, got ' + installProbe.status);
   console.log('PASS /api/apps/install: unauthenticated installation rejected');
-  const navAsset = await request('/admin/js/agentsam-nav.js');
-  const navText = await navAsset.text();
-  if (navAsset.status !== 200 || !navText.includes('openAppsInstaller'))
-    throw new Error('Canonical navigation Apps picker not included in hosted build');
-  console.log('PASS /admin/js/agentsam-nav.js: shared Apps picker bundled');
+  // An anonymous request must not fetch the Apps picker implementation.
+  // Packaged artifact presence is checked by the build pipeline; its network
+  // access is protected by the /admin boundary above.
   // The platform must never serve the embedded customer's legacy login
   // or send AgentSam credentials to /api/admin/login.
   for (const legacyLogin of [

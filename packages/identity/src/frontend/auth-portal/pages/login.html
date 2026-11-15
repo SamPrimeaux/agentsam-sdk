@@ -474,6 +474,12 @@
     } else if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
         oauthDest = nextParam;
     }
+    // Preserve the account-owned workspace destination when a visitor signs up
+    // instead of signing in. Never forward arbitrary external redirect URLs.
+    var signupSwitch = document.querySelector('.signup-prompt a[href="/auth/signup"]');
+    if (signupSwitch && nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+        signupSwitch.href = '/auth/signup?next=' + encodeURIComponent(nextParam);
+    }
     var googleLink = document.getElementById('googleSignIn');
     if (googleLink) {
         googleLink.href = '/api/oauth/google/start?login=1&return_to=' + encodeURIComponent(oauthDest);

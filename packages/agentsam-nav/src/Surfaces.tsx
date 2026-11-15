@@ -157,6 +157,8 @@ export function NavPinnedSummary() {
         : <p className="as-nav-activity-empty">No {title.toLowerCase()} yet</p>}
       {more(group, entries.length)}
     </section>;
+  // A blank conversation must not advertise an empty sources/outputs panel.
+  if (!data.conversation || (!outputs.length && !sources.length)) return null;
   return <Menu.Root open={open} onOpenChange={next => { setOpen(next); if (!next) { setExpandedGroups({}); setActiveAdd(null); } }}>
     <Menu.Trigger asChild><button type="button" className="as-nav-button as-nav-activity-trigger"
       aria-label="Toggle pinned summary" title="Sources and outputs" aria-expanded={open} aria-pressed={open}>

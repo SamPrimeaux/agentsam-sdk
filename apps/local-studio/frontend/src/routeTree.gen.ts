@@ -24,6 +24,7 @@ import { Route as appsContentRouteImport } from './routes/(apps)/content'
 import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
 import { Route as appsDocsRouteImport } from './routes/(apps)/docs'
 import { Route as appsFilesRouteImport } from './routes/(apps)/files'
+import { Route as appsFormsRouteImport } from './routes/(apps)/forms'
 import { Route as appsGoalguruRouteImport } from './routes/(apps)/goalguru'
 import { Route as appsIdeasRouteImport } from './routes/(apps)/ideas'
 import { Route as appsLibraryRouteImport } from './routes/(apps)/library'
@@ -44,7 +45,9 @@ import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as appsAdminAgentsamRouteImport } from './routes/(apps)/admin/agentsam'
 import { Route as appsAdminCadRouteImport } from './routes/(apps)/admin/cad'
 import { Route as appsAdminMoviemodeRouteImport } from './routes/(apps)/admin/moviemode'
+import { Route as appsAdminOnboardingPreviewRouteImport } from './routes/(apps)/admin/onboarding-preview'
 import { Route as appsAdminProjectsRouteImport } from './routes/(apps)/admin/projects'
+import { Route as appsAdminStoreRouteImport } from './routes/(apps)/admin/store'
 import { Route as appsAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/apps/ecommerce-cms-agentsam'
 import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
 import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
@@ -150,6 +153,11 @@ const appsFilesRoute = appsFilesRouteImport.update({
   path: '/files',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsFormsRoute = appsFormsRouteImport.update({
+  id: '/(apps)/forms',
+  path: '/forms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsGoalguruRoute = appsGoalguruRouteImport.update({
   id: '/(apps)/goalguru',
   path: '/goalguru',
@@ -250,9 +258,20 @@ const appsAdminMoviemodeRoute = appsAdminMoviemodeRouteImport.update({
   path: '/admin/moviemode',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminOnboardingPreviewRoute =
+  appsAdminOnboardingPreviewRouteImport.update({
+    id: '/(apps)/admin/onboarding-preview',
+    path: '/admin/onboarding-preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const appsAdminProjectsRoute = appsAdminProjectsRouteImport.update({
   id: '/(apps)/admin/projects',
   path: '/admin/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsAdminStoreRoute = appsAdminStoreRouteImport.update({
+  id: '/(apps)/admin/store',
+  path: '/admin/store',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsAppsEcommerceCmsAgentsamRoute =
@@ -422,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/database': typeof appsDatabaseRoute
   '/docs': typeof appsDocsRoute
   '/files': typeof appsFilesRoute
+  '/forms': typeof appsFormsRoute
   '/goalguru': typeof appsGoalguruRoute
   '/ideas': typeof appsIdeasRoute
   '/library': typeof appsLibraryRoute
@@ -442,7 +462,9 @@ export interface FileRoutesByFullPath {
   '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/admin/cad': typeof appsAdminCadRoute
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
+  '/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/admin/projects': typeof appsAdminProjectsRouteWithChildren
+  '/admin/store': typeof appsAdminStoreRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/chats/$chatId': typeof appsChatsChatIdRoute
@@ -488,6 +510,7 @@ export interface FileRoutesByTo {
   '/database': typeof appsDatabaseRoute
   '/docs': typeof appsDocsRoute
   '/files': typeof appsFilesRoute
+  '/forms': typeof appsFormsRoute
   '/goalguru': typeof appsGoalguruRoute
   '/ideas': typeof appsIdeasRoute
   '/library': typeof appsLibraryRoute
@@ -506,6 +529,8 @@ export interface FileRoutesByTo {
   '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/admin/cad': typeof appsAdminCadRoute
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
+  '/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
+  '/admin/store': typeof appsAdminStoreRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
   '/help/cms': typeof appsHelpCmsRoute
@@ -552,6 +577,7 @@ export interface FileRoutesById {
   '/(apps)/database': typeof appsDatabaseRoute
   '/(apps)/docs': typeof appsDocsRoute
   '/(apps)/files': typeof appsFilesRoute
+  '/(apps)/forms': typeof appsFormsRoute
   '/(apps)/goalguru': typeof appsGoalguruRoute
   '/(apps)/ideas': typeof appsIdeasRoute
   '/(apps)/library': typeof appsLibraryRoute
@@ -572,7 +598,9 @@ export interface FileRoutesById {
   '/(apps)/admin/agentsam': typeof appsAdminAgentsamRoute
   '/(apps)/admin/cad': typeof appsAdminCadRoute
   '/(apps)/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
+  '/(apps)/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/(apps)/admin/projects': typeof appsAdminProjectsRouteWithChildren
+  '/(apps)/admin/store': typeof appsAdminStoreRoute
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
@@ -621,6 +649,7 @@ export interface FileRouteTypes {
     | '/database'
     | '/docs'
     | '/files'
+    | '/forms'
     | '/goalguru'
     | '/ideas'
     | '/library'
@@ -641,7 +670,9 @@ export interface FileRouteTypes {
     | '/admin/agentsam'
     | '/admin/cad'
     | '/admin/moviemode'
+    | '/admin/onboarding-preview'
     | '/admin/projects'
+    | '/admin/store'
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
     | '/chats/$chatId'
@@ -687,6 +718,7 @@ export interface FileRouteTypes {
     | '/database'
     | '/docs'
     | '/files'
+    | '/forms'
     | '/goalguru'
     | '/ideas'
     | '/library'
@@ -705,6 +737,8 @@ export interface FileRouteTypes {
     | '/admin/agentsam'
     | '/admin/cad'
     | '/admin/moviemode'
+    | '/admin/onboarding-preview'
+    | '/admin/store'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
     | '/help/cms'
@@ -750,6 +784,7 @@ export interface FileRouteTypes {
     | '/(apps)/database'
     | '/(apps)/docs'
     | '/(apps)/files'
+    | '/(apps)/forms'
     | '/(apps)/goalguru'
     | '/(apps)/ideas'
     | '/(apps)/library'
@@ -770,7 +805,9 @@ export interface FileRouteTypes {
     | '/(apps)/admin/agentsam'
     | '/(apps)/admin/cad'
     | '/(apps)/admin/moviemode'
+    | '/(apps)/admin/onboarding-preview'
     | '/(apps)/admin/projects'
+    | '/(apps)/admin/store'
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
     | '/(apps)/chats/$chatId'
@@ -818,6 +855,7 @@ export interface RootRouteChildren {
   appsDatabaseRoute: typeof appsDatabaseRoute
   appsDocsRoute: typeof appsDocsRoute
   appsFilesRoute: typeof appsFilesRoute
+  appsFormsRoute: typeof appsFormsRoute
   appsGoalguruRoute: typeof appsGoalguruRoute
   appsIdeasRoute: typeof appsIdeasRoute
   appsLibraryRoute: typeof appsLibraryRoute
@@ -838,7 +876,9 @@ export interface RootRouteChildren {
   appsAdminAgentsamRoute: typeof appsAdminAgentsamRoute
   appsAdminCadRoute: typeof appsAdminCadRoute
   appsAdminMoviemodeRoute: typeof appsAdminMoviemodeRouteWithChildren
+  appsAdminOnboardingPreviewRoute: typeof appsAdminOnboardingPreviewRoute
   appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
+  appsAdminStoreRoute: typeof appsAdminStoreRoute
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
   appsChatsChatIdRoute: typeof appsChatsChatIdRoute
   appsHelpCmsRoute: typeof appsHelpCmsRoute
@@ -954,6 +994,13 @@ declare module '@tanstack/react-router' {
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof appsFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/forms': {
+      id: '/(apps)/forms'
+      path: '/forms'
+      fullPath: '/forms'
+      preLoaderRoute: typeof appsFormsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/goalguru': {
@@ -1096,11 +1143,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsAdminMoviemodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/admin/onboarding-preview': {
+      id: '/(apps)/admin/onboarding-preview'
+      path: '/admin/onboarding-preview'
+      fullPath: '/admin/onboarding-preview'
+      preLoaderRoute: typeof appsAdminOnboardingPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/admin/projects': {
       id: '/(apps)/admin/projects'
       path: '/admin/projects'
       fullPath: '/admin/projects'
       preLoaderRoute: typeof appsAdminProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin/store': {
+      id: '/(apps)/admin/store'
+      path: '/admin/store'
+      fullPath: '/admin/store'
+      preLoaderRoute: typeof appsAdminStoreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/apps/ecommerce-cms-agentsam': {
@@ -1444,6 +1505,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsDatabaseRoute: appsDatabaseRoute,
   appsDocsRoute: appsDocsRoute,
   appsFilesRoute: appsFilesRoute,
+  appsFormsRoute: appsFormsRoute,
   appsGoalguruRoute: appsGoalguruRoute,
   appsIdeasRoute: appsIdeasRoute,
   appsLibraryRoute: appsLibraryRoute,
@@ -1464,7 +1526,9 @@ const rootRouteChildren: RootRouteChildren = {
   appsAdminAgentsamRoute: appsAdminAgentsamRoute,
   appsAdminCadRoute: appsAdminCadRoute,
   appsAdminMoviemodeRoute: appsAdminMoviemodeRouteWithChildren,
+  appsAdminOnboardingPreviewRoute: appsAdminOnboardingPreviewRoute,
   appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
+  appsAdminStoreRoute: appsAdminStoreRoute,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,
   appsChatsChatIdRoute: appsChatsChatIdRoute,
   appsHelpCmsRoute: appsHelpCmsRoute,

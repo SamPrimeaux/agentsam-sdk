@@ -8,7 +8,7 @@ import CollectionProducts from "./CollectionProducts";
 import CollectionPresentation from "./CollectionPresentation";
 import type { Collection, CollectionForm, CollectionStatus, CollectionTab, MediaAsset, Product } from "./model";
 import { collectionHref, initialCollection, parseCollection, safeMediaUrl, slugify } from "./model";
-import { normalizeCollectionRules, resolveCollectionMembers } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
+import { normalizeCollectionRules, resolveCollectionMembers } from "@inneranimalmedia/agentsam-merch/collection-planning";
 import CollectionRules from "./CollectionRules";
 
 const TABS: {id:CollectionTab;label:string;hint:string}[] = [

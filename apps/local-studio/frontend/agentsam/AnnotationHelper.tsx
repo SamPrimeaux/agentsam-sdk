@@ -6,11 +6,18 @@ import { useWorkStore } from '@/lib/work/store';
 import { PluginPicker } from './PluginPicker';
 
 export function AnnotationToggle() {
-  return <button type="button" className="as-nav-button" data-annotation-control="" aria-label="Annotate page" title="Annotate page" onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))}><MousePointer2 size={18} /></button>;
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const update = (event: Event) => setActive(Boolean((event as CustomEvent<{ selecting: boolean }>).detail?.selecting));
+    window.addEventListener('agentsam:annotation-state', update);
+    return () => window.removeEventListener('agentsam:annotation-state', update);
+  }, []);
+  return <button type="button" className="as-nav-button" data-annotation-control="" data-active={active ? 'true' : 'false'} aria-pressed={active} aria-label={active ? 'Stop annotating' : 'Annotate page'} title={active ? 'Stop annotating (Esc)' : 'Annotate page'} onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))}><MousePointer2 size={18} /></button>;
 }
 export function AnnotationHelper() {
   const [selecting, setSelecting] = useState(false);
   useEffect(() => { const toggle = () => setSelecting((value) => !value); window.addEventListener('agentsam:annotate', toggle); return () => window.removeEventListener('agentsam:annotate', toggle); }, []);
+  useEffect(() => { window.dispatchEvent(new CustomEvent('agentsam:annotation-state', { detail: { selecting } })); }, [selecting]);
   return <MiniAgentSam selecting={selecting} onSelectingChange={setSelecting} onSubmit={async (prompt, selection) => {
     const store = useWorkStore.getState();
     const id = store.activeChatId;

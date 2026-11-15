@@ -17,6 +17,8 @@ test('release plan lists packages without publishing', () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /AGENTSAM_STABLE_RELEASE/);
   assert.match(result.stdout, /@inneranimalmedia\/agentsam-sdk@/);
+  assert.doesNotMatch(result.stdout, /@inneranimalmedia\/agentsam-design-canvas@/,
+    'independently versioned installable apps must not enter the SDK coordinated train');
 });
 
 test('manual publishing refuses a noninteractive terminal before accessing npm', () => {

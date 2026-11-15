@@ -14,18 +14,20 @@ test('selection survives /sites and the authenticated CMS iframe',()=>{
   for(const name of ['theme_sku','theme_version','action'])
     assert.match(host,new RegExp("resolved\\.searchParams\\.set\\('"+name+"'"),'iframe dropped '+name);
 });
-test('Try theme uses a focused installer and returns to Online Store, not another catalog',()=>{
+test('Try theme opens its account-owned Theme Studio workspace, not a synthetic draft site',()=>{
   const browser=read('../ecommerce-cms-agentsam/frontend/static/js/website-theme-browser.js');
   const store=read('../ecommerce-cms-agentsam/frontend/static/js/store.js');
   assert.match(browser,/if \(installIntent && selectedSlug\)/);
   assert.match(browser,/showInstallStage\(\)/);
   assert.match(browser,/trustedHandoff/);
-  assert.match(browser,/async function createPrivateDraft\(theme,button,container\)/);
+  assert.match(browser,/async function openStudioWorkspace\(theme,button,container,\{copy=false\}=\{\}\)/);
   assert.match(browser,/api\/admin\/website-themes\/.*\/install/);
   assert.match(browser,/version:theme\.version/);
   assert.doesNotMatch(browser,/preferredSiteId\(\)/);
   assert.match(browser,/Your existing sites have not been changed/);
-  assert.match(browser,/\/admin\/store\?site_id=/);
+  assert.match(browser,/\/admin\/theme-project-editor/);
+  assert.match(browser,/searchParams\.get\('scope'\)!=='studio'/);
+  assert.doesNotMatch(browser,/\/admin\/store\?site_id=/);
   assert.match(browser,/target\.location\.assign\(route\)/);
   assert.match(store,/id="browse-themes-shortcut">Visit Theme Store/);
   assert.match(store,/destination\.searchParams\.set\('site_id'/);
@@ -33,6 +35,7 @@ test('Try theme uses a focused installer and returns to Online Store, not anothe
 test('installing is not a publish or active theme replacement',()=>{
   const install=read('backend/worker/studio-website-theme-install.js');
   assert.match(install,/installThemeDraft/);
+  assert.match(install,/installThemeStudioDraft/);
   assert.match(install,/resolveCmsSite/);
   assert.doesNotMatch(install,/publishTheme|activateTheme/);
 });
@@ -57,6 +60,8 @@ test('real Theme Store selection is accepted, malformed or forged handoffs are i
 
 test('Try Theme always posts a site-free install body even after browsing a production site',()=>{
   const browser=read('../ecommerce-cms-agentsam/frontend/static/js/website-theme-browser.js');
-  assert.ok(browser.includes('body:JSON.stringify({version:theme.version})'));
+  assert.ok(browser.includes('body:JSON.stringify({version:theme.version,...(copy?{copy:true}:{})})'));
+  assert.ok(!browser.includes('site_id:preferredSiteId'));
+  assert.match(browser,/Make a copy/);
   assert.ok(!browser.includes('preferredSiteId()'));
 });

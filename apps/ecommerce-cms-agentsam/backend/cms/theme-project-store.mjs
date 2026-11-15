@@ -3,6 +3,7 @@
  * D1 holds identity/version pointers; immutable project snapshots live in R2.
  * No local-only theme project table or parallel theme database is introduced.
  */
+import "../../packages/theme-contract/runtime/platform-stock-sections.js";
 import { validateThemeProject } from "../../frontend/theme-editor/project.mjs";
 import { validateThemeSettings } from "./theme-style-contract.mjs";
 import { fillMissingThemeChrome } from "../../frontend/theme-editor/starter-chrome.mjs";
@@ -65,6 +66,18 @@ export function validateThemeProjectPayload(value) {
     }
     if (!Array.isArray(page.sections) || page.sections.length > 120) {
       throw new Error("theme_project_sections_invalid");
+    }
+    for (const section of page.sections) {
+      // Validate stock content at the trusted API boundary, even if a caller
+      // bypasses the browser and sends a forged theme-project revision.
+      const template = String(section?.sourceTemplateKey ||
+        section?.content?.__editor?.templateKey || "");
+      if (!template.startsWith("stock-")) continue;
+      const id = "platform/" + template.slice("stock-".length);
+      const content = structuredClone(section.content || {});
+      content.__editor = {...(content.__editor || {}),templateKey:"portable",themePreset:id};
+      const valid = globalThis.ThemePlatformStock?.validate(id,content);
+      if (!valid?.ok) throw new Error("theme_stock_content_invalid");
     }
   }
   // Extra workspace files are JSON data in the site's immutable project

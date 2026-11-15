@@ -25,6 +25,7 @@ fn main() {
         .manage(local_lsp::LocalLspState::default())
         .manage(local_content::LocalContentState::default())
         .manage(deep_link::DeepLinkState::default())
+        .manage(system::WorkspaceOpenState::default())
         .manage(tray::NotificationState::default())
         .manage(keychain::IdentityPendingState::default())
         .manage(keychain::IdentitySessionState::default())
@@ -88,6 +89,7 @@ fn main() {
             embedded_browser::embedded_browser_action,
             embedded_browser::embedded_browser_close,
             system::desktop_workspace_context,
+            system::desktop_open_workspace,
             commands::autorag::autorag_workflow_bridge,
             commands::autorag::autorag_choose_repository,
             google_desktop_identity::google_desktop_identity_login,

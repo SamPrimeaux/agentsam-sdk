@@ -19,7 +19,42 @@ const group=label=>({type:"group",label});
 const help=label=>({type:"help",label});
 const roles=["Body","Subheading","Heading","Accent"];
 const cases=["Default","Uppercase"];
-const fonts=["Inter","Arial","Georgia","System sans-serif"];
+// Font binaries and their manifest are owned by the public Theme Store.
+const FONT_MANIFEST_URL="https://themes.inneranimalmedia.com/fonts/manifest.json";
+const FONT_CSS_URL="https://themes.inneranimalmedia.com/fonts/css";
+const FONT_ID=/^(?=.{1,80}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const FONT_FAMILY=/^[A-Za-z0-9][A-Za-z0-9 ._'&+()-]{0,99}$/;
+let fontCatalog=new Map();
+let fonts=["theme","Inter","Arial","Georgia","system-ui"];
+const fontLabel=id=>id==="theme"?"Theme default":id==="system-ui"?"System sans-serif":fontCatalog.get(id)?.family||id;
+const fontPreviewName=id=>id==="theme"?"inherit":JSON.stringify(fontLabel(id));
+function loadFontCatalog(){
+ const fetcher=window.fetch?.bind(window);
+ if(!fetcher)return;
+ fetcher(FONT_MANIFEST_URL,{mode:"cors",credentials:"omit"}).then(async response=>{
+  if(!response.ok)throw new Error("Font catalog unavailable");
+  return response.json();
+ }).then(manifest=>{
+  if(!Array.isArray(manifest?.families))throw new Error("Invalid font catalog");
+  const valid=manifest.families.filter(f=>FONT_ID.test(f?.id||"")&&
+    FONT_FAMILY.test(f?.family||"")&&Array.isArray(f?.files)&&f.files.length>0);
+  if(!valid.length)throw new Error("Empty font catalog");
+  fontCatalog=new Map(valid.map(f=>[f.id,{family:f.family,weights:f.weights||[],category:f.category||""}]));
+  fonts=["theme",...fontCatalog.keys(),"Arial","Georgia","system-ui"];
+  for(const role of roles){
+   const key="type.font."+role,field=fieldMap.get(key);
+   if(state[key]==="Inter"&&fontCatalog.has("inter"))state[key]="inter";
+   if(state[key]==="System sans-serif")state[key]="system-ui";
+   if(field)field.options=[...new Set([...fonts,state[key]])];
+  }
+  if(category==="type")renderFields();
+  updatePreview();
+ }).catch(()=>{
+  // Keep the existing local/system choices usable when the catalog is offline.
+  if(category==="type"&&reviewNote())
+   reviewNote().textContent="Font catalog unavailable. Existing font choices remain editable.";
+ });
+}
 const sizeOpts=["12px","14px","16px","18px","20px","24px","28px","32px","40px","48px","56px","64px"];
 const btn=(prefix,title,bg,fg,border,borderW,radius)=>[
  group(title),co(prefix+".bg","Background",bg),co(prefix+".text","Text",fg),
@@ -39,7 +74,7 @@ brand:[
 palette:[f("palette.colors","Palette","palette",null)],
 type:[
  group("Colors"),co("type.text","Text"),help("Default for theme sections. Custom backgrounds use this color only when contrast is sufficient."),
- group("Fonts"),...roles.map(x=>se("type.font."+x,x,fonts,"Inter")),
+ group("Fonts"),...roles.map(x=>se("type.font."+x,x,fonts,"theme")),
  group("Text presets"),help("Sizes automatically scale for all screen sizes"),
  group("Paragraph"),se("type.p.size","Size",sizeOpts,"14px"),se("type.p.line","Line height",["Tight","Normal","Loose"],"Loose"),
  ...[56,48,32,24,14,12].flatMap((size,i)=>{
@@ -167,12 +202,27 @@ function save(changedKey){
   if(typeof value==="string"&&value.length>2000&&changedKey!=="css.source"){
    const notice=reviewNote();if(notice)notice.textContent="Choose a smaller asset or an existing media-library URL.";
   }else{
-   current.controls={...(current.controls||{}),[changedKey]:value};
+   if(changedKey.startsWith("type.font.")&&roles.includes(changedKey.slice(10))){
+    const role=changedKey.slice(10),chosen=fontCatalog.get(value);
+    if(value==="theme"||chosen){
+     const nextRoles={...(current.fontRoles||{})};
+     if(chosen)nextRoles[role]={id:value,family:chosen.family};
+     else delete nextRoles[role];
+     if(Object.keys(nextRoles).length)current.fontRoles=nextRoles;
+     else delete current.fontRoles;
+     current.controls={...(current.controls||{})};
+     delete current.controls[changedKey];
+     if(role==="Body")delete current.font;
+    }else{
+     current.controls={...(current.controls||{}),[changedKey]:value};
+     if(current.fontRoles){delete current.fontRoles[role];if(!Object.keys(current.fontRoles).length)delete current.fontRoles;}
+     if(role==="Body")current.font=value==="System sans-serif"?"system-ui":value;
+    }
+   }else current.controls={...(current.controls||{}),[changedKey]:value};
    current.paletteLinks=Object.fromEntries(Object.entries(paletteLinks).filter(([,index])=>Number.isInteger(index)));
    const colors={"page.bg":"canvas","type.text":"ink","palette.0":"paper","palette.1":"ink","palette.2":"accent"};
    if(colors[changedKey]&&/^#[0-9a-f]{6}$/i.test(String(value)))
      current.colors={...(current.colors||{}),[colors[changedKey]]:String(value)};
-   if(changedKey==="type.font.Body")current.font=value==="System sans-serif"?"system-ui":value;
    if(changedKey==="buttons.primary.radius")current.buttonRadius=Math.min(60,Number(value));
    if(changedKey==="css.source")current.customCss=String(value);
    if(changedKey==="page.width")current.designDraft={...(current.designDraft||{}),
@@ -213,7 +263,7 @@ function inputFor(d){
  if(d.type==="collection"||d.type==="link")return `<div class="ts-field"><label>${label}</label>${button(v(d.key)||"Select",`class="ts-select ts-resource" data-ts-action="${d.type}" data-ts-key="${k}" aria-label="${label}"`)}</div>`;
  let control="";
  if(d.type==="switch")control=`<button type="button" class="ts-switch" role="switch" aria-label="${label}" aria-checked="${!!v(d.key)}" data-ts-key="${k}" title="${label}: ${v(d.key)?"On":"Off"}"><span></span></button>`;
- if(d.type==="select")control=`<select data-ts-key="${k}" class="ts-select" aria-label="${label}">${d.options.map(x=>`<option value="${esc(x)}" ${v(d.key)===x?"selected":""}>${esc(x)}</option>`).join("")}</select>`;
+ if(d.type==="select")control=`<select data-ts-key="${k}" class="ts-select" aria-label="${label}">${d.options.map(x=>`<option value="${esc(x)}" ${v(d.key)===x?"selected":""}>${esc(d.key.startsWith("type.font.")?fontLabel(x):x)}</option>`).join("")}</select>`;
  if(d.type==="segment")control=`<div class="ts-segment" role="group" aria-label="${label}">${d.options.map(x=>button(x,`data-ts-key="${k}" data-ts-value="${esc(x)}" aria-pressed="${v(d.key)===x}" class="${v(d.key)===x?"is-selected":""}"`)).join("")}</div>`;
  if(d.type==="range")control=`<div class="ts-range"><input type="range" data-ts-key="${k}" aria-label="${label}" value="${v(d.key)}" min="${d.min}" max="${d.max}"><div class="ts-numeric"><input type="number" data-ts-key="${k}" aria-label="${label} numeric value" value="${v(d.key)}" min="${d.min}" max="${d.max}"><span>${d.unit}</span></div></div>`;
  if(d.type==="color"){
@@ -356,7 +406,7 @@ function demo(cat){
  switch(cat){
  case "brand":return `<strong>${esc(brandName)}</strong><p>Asset previews appear in their own fields above.</p>`;
  case "palette":return `<div class="ts-demo-colors">${Array.from({length:paletteCount},(_,i)=>i).map(i=>`<span style="background:${hex(v("palette."+i))}"></span>`).join("")}</div>`;
- case "type":return `<h2 style="font-family:${esc(v("type.font.Heading"))},sans-serif;font-size:clamp(22px,5vw,${parseInt(v("type.h1.size"))}px);text-transform:${v("type.h1.case")==="Uppercase"?"uppercase":"none"};color:${hex(v("type.text"))};line-height:${{Tight:1.1,Normal:1.35,Loose:1.65}[v("type.h1.line")]}">Designed for living</h2><p style="font-family:${esc(v("type.font.Body"))},sans-serif;font-size:${esc(v("type.p.size"))};line-height:${{Tight:1.1,Normal:1.4,Loose:1.7}[v("type.p.line")]}">Typography preview, with responsive sizing.</p>`;
+ case "type":return `<h2 style="font-family:${esc(fontPreviewName(v("type.font.Heading")))},sans-serif;font-size:clamp(22px,5vw,${parseInt(v("type.h1.size"))}px);text-transform:${v("type.h1.case")==="Uppercase"?"uppercase":"none"};color:${hex(v("type.text"))};line-height:${{Tight:1.1,Normal:1.35,Loose:1.65}[v("type.h1.line")]}">Designed for living</h2><p style="font-family:${esc(fontPreviewName(v("type.font.Body")))},sans-serif;font-size:${esc(v("type.p.size"))};line-height:${{Tight:1.1,Normal:1.4,Loose:1.7}[v("type.p.line")]}">Typography preview, with responsive sizing.</p>`;
  case "page":return `<div class="ts-page-example" style="background:${hex(v("page.bg"))}"><div style="width:${{Narrow:"48%",Standard:"64%",Wide:"83%","Full width":"100%"}[v("page.width")]}">Content width</div></div>`;
  case "motion":return `<div tabindex="0" class="ts-motion-card ${v("motion.hover").toLowerCase().replace(/ /g,"-")}">Hover or focus for the chosen effect</div><div class="ts-demo-lines ts-motion-status"><div>Page transition <strong>${v("motion.page")?"On":"Off"}</strong></div><div>Product transition <strong>${v("motion.product")?"On":"Off"}</strong></div><div>Add-to-cart animation <strong>${v("motion.cart")?"On":"Off"}</strong></div></div>${button("Play transition","data-ts-action=\"motionDemo\"")}`;
  case "badges":return `<div class="ts-badge-example"><span style="background:${hex(v("badges.saleBg"))};color:${hex(v("badges.saleText"))};border-radius:${v("badges.radius")}px;text-transform:${v("badges.case")==="Uppercase"?"uppercase":"none"}">${esc(v("badges.position"))}: SALE</span><span style="background:${hex(v("badges.soldBg"))};color:${hex(v("badges.soldText"))}">SOLD OUT</span></div>`;
@@ -376,6 +426,14 @@ function demo(cat){
  }
 }
 function updatePreview(){
+ // Load immutable font faces for the inspector samples, without styling editor chrome.
+ let link=document.getElementById("ts-font-catalog-preview");
+ const ids=[...new Set(roles.map(role=>v("type.font."+role)).filter(id=>fontCatalog.has(id)))].sort();
+ if(ids.length){
+  if(!link){link=document.createElement("link");link.id="ts-font-catalog-preview";link.rel="stylesheet";document.head.appendChild(link);}
+  const href=FONT_CSS_URL+"?families="+ids.join(",");
+  if(link.href!==href)link.href=href;
+ }else link?.remove();
  const place=root?.querySelector("[data-ts-demo-content]");
  if(place)place.innerHTML=demo(category);
 }
@@ -481,16 +539,19 @@ function mount(){
   if(workingSettings && JSON.stringify(workingSettings)!==JSON.stringify(current))return;
   workingSettings=structuredClone(current);
   state={...defaults,...(current.controls||{})};
+  for(const role of roles)if(current.fontRoles?.[role]?.id)
+   state["type.font."+role]=current.fontRoles[role].id;
   paletteCount=Math.max(4,...Object.keys(current.controls||{}).filter(key=>/^palette\.[0-9]+$/.test(key)).map(key=>Number(key.split(".")[1])+1));
   paletteLinks={...(current.paletteLinks||{})};
   if(typeof state["brand.name"]==="string")brandName=state["brand.name"];
   if(reviewNote())reviewNote().textContent="Editing this site's draft. Publish is a separate action.";
   for(const [key,value] of Object.entries({
    "page.bg":current.colors?.canvas,"type.text":current.colors?.ink,"palette.2":current.colors?.accent,
-   "type.font.Body":current.font==="system-ui"?"System sans-serif":current.font,
+   "type.font.Body":current.font==="system-ui"?"system-ui":current.font,
    "buttons.primary.radius":current.buttonRadius,"css.source":current.customCss,
    "inputs.radius":current.designDraft?.["inputs.radius"]
-  }))if(value!==undefined && !(current.controls && key in current.controls))state[key]=value;
+  }))if(value!==undefined && !(current.controls && key in current.controls) &&
+    !(key.startsWith("type.font.")&&current.fontRoles?.[key.slice(10)]))state[key]=value;
   if(category)renderFields();
  };
  document.addEventListener('theme-editor:global-settings-ready',hydrateCmsSettings);
@@ -498,6 +559,7 @@ function mount(){
    if(reviewNote())reviewNote().textContent="Site draft save failed. Review the editor's error message.";
  });
  hydrateCmsSettings();
+ loadFontCatalog();
  window.ThemeSettingsPanel={open:openCategory,close:()=>{if(category)openCategory(category);},refresh:updatePreview,
    getState:()=>({category,values:{...state},links:{...paletteLinks},
      storage:window.CmsThemeSettings?.read?.()?"cms-draft":"sessionStorage",published:false})};

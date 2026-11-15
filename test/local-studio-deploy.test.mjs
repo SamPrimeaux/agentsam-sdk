@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   DEPLOY_INPUT_GLOBS,
+  computeDeployFingerprint,
   loadOptionalCloudflareEnv,
   resolveLocalStudioDeployable,
   wranglerDeployCommand,
@@ -33,6 +34,20 @@ describe('local-studio deploy resolver', () => {
   it('fingerprints the cloudflare connector package', () => {
     assert.equal(DEPLOY_INPUT_GLOBS.includes('packages/connectors/cfoa'), true);
     assert.equal(DEPLOY_INPUT_GLOBS.includes('apps/local-studio'), true);
+  });
+
+  it('skips a vanished optional build input without masking other I/O errors', () => {
+    if (process.platform === 'win32') return;
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-deploy-race-'));
+    try {
+      const dir = path.join(temp, 'apps/local-studio');
+      fs.mkdirSync(dir, { recursive: true });
+      const baseline = computeDeployFingerprint(temp);
+      fs.symlinkSync('deleted-optional-target', path.join(dir, '.env.cloudflare'));
+      assert.equal(computeDeployFingerprint(temp), baseline);
+      fs.writeFileSync(path.join(dir, 'real.js'), 'export const ok = true;');
+      assert.notEqual(computeDeployFingerprint(temp), baseline);
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
   });
 
   it('treats missing .env.cloudflare as optional', () => {

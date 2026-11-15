@@ -20,18 +20,16 @@ export function collectNpmDependencies(projectRoot = process.cwd(), options = {}
   const unsupported = ['pnpm-lock.yaml', 'yarn.lock', 'bun.lock', 'bun.lockb'].filter(file => fs.existsSync(path.join(root, file)));
   if (manifest.packageManager && !manifest.packageManager.startsWith('npm@')) issues.push('Selected package manager is not npm; this adapter cannot prove its dependency graph.');
   else if (unsupported.length && !manifest.packageManager) issues.push('Multiple/unsupported package-manager lockfiles; select npm explicitly with packageManager or scan in the owning manager.');
-  const releaseCandidate = options.releaseCandidate || null;
+  // Packages being released in the same train may resolve from local tarballs.
+  const releaseCandidates = [].concat(options.releaseCandidate || []);
   const add = (name, pkg, location, direct) => {
     if (pkg.link) { skipped.push({ path: location, reason: 'workspace/link (dependencies scanned from lock graph)' }); return; }
     const resolved = String(pkg.resolved || '');
     const isLocalTarball = /^file:/i.test(resolved);
-    const allowedReleaseCandidate = Boolean(
-      isLocalTarball
-      && releaseCandidate
-      && releaseCandidate.name === name
-      && releaseCandidate.version === pkg.version
-      && releaseCandidate.location === location
-    );
+    const allowedReleaseCandidate = isLocalTarball && releaseCandidates.some(candidate =>
+      candidate.name === name
+      && candidate.version === pkg.version
+      && candidate.location === location);
     if (!packageName(name) || !exactVersion(pkg.version) || (/^(?:file:|link:|git[+:]|https?:\/\/.*\.git)/i.test(resolved) && !allowedReleaseCandidate)) {
       issues.push('Unresolved or non-registry dependency at ' + location);
       return;

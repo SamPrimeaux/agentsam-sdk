@@ -73,3 +73,34 @@ test('isolated read lists disabled panels without requiring provider probes',asy
     await assert.rejects(readAccountSideStageCatalog(db,''),/side_stage_account_required/);
   } finally { sqlite.close(); }
 });
+
+test('installed first-party design app exposes a user-controlled Side Stage embed without cross-account leakage',async()=>{
+  const {sqlite,db}=fixture();
+  try {
+    const id='plg_bbbbbbbbbbbbbbbb';
+    const metadata=JSON.stringify({
+      source:'https://agentsam.inneranimalmedia.com/catalog/plugins',
+      app:{surfaces:['admin-nav','add-apps'],nav:{href:'/design-canvas/'}},
+      side_stage:{version:1,id:'design-canvas',renderer:'embed',href:'https://agentsam.inneranimalmedia.com/design-canvas/'}
+    });
+    sqlite.prepare('INSERT INTO agentsam_plugins VALUES (?,?,?,?,?,?,?,?,?)')
+      .run(id,'agentsam-design-canvas','apps','native','Design Canvas','Source-backed design',null,metadata,66);
+    assert.deepEqual((await listAccountSideStages(db,'alice')).map(x=>x.id),['agentsam-stage-files']);
+    sqlite.prepare('INSERT INTO agentsam_plugin_installations (account_id,plugin_id,instance_key,enabled,setup_status) VALUES (?,?,?,?,?)')
+      .run('alice',id,'default',1,'configured');
+    sqlite.prepare('INSERT INTO agentsam_plugin_installations (account_id,plugin_id,instance_key,enabled,setup_status) VALUES (?,?,?,?,?)')
+      .run('alice',id,'side-stage-v1',1,'configured');
+    const alice=await listAccountSideStages(db,'alice');
+    const app=alice.find(x=>x.id==='agentsam-design-canvas');
+    assert.equal(app.renderer,'embed');
+    assert.equal(app.href,'https://agentsam.inneranimalmedia.com/design-canvas/');
+    assert.equal((await listAccountSideStages(db,'bob')).some(x=>x.id==='agentsam-design-canvas'),false);
+    await updateAccountSideStage(db,'alice',id,false);
+    assert.equal((await listAccountSideStages(db,'alice')).some(x=>x.id==='agentsam-design-canvas'),false);
+    assert.equal(sqlite.prepare("SELECT enabled FROM agentsam_plugin_installations WHERE account_id='alice' AND plugin_id=? AND instance_key='default'").get(id).enabled,1);
+    await updateAccountSideStage(db,'alice',id,true);
+    assert.equal((await listAccountSideStages(db,'alice')).some(x=>x.id==='agentsam-design-canvas'),true);
+    sqlite.prepare("UPDATE agentsam_plugin_installations SET enabled=0 WHERE account_id='alice' AND plugin_id=? AND instance_key='default'").run(id);
+    assert.equal((await listAccountSideStages(db,'alice')).some(x=>x.id==='agentsam-design-canvas'),false);
+  }finally{sqlite.close();}
+});

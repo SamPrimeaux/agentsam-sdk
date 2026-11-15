@@ -2,13 +2,14 @@
  * Authoritative website-theme installation transaction.
  *
  * The Theme Store owns released packages. This Worker verifies its published
- * checksum against an immutable source-rendered project bundled with the SDK,
- * resolves the authenticated owner's site, then delegates persistence to
- * canonical CMS cms_globals + cms_revisions + R2 theme-projects.
- * No cms_themes appearance presets and no parallel install table.
+ * checksum against an immutable source-rendered project owned by the Theme Store,
+ * resolves an optional explicit site, then delegates persistence to either
+ * the account-scoped Theme Studio store or the canonical site CMS store.
+ * Site-free authoring never creates cms_sites or uses cms_globals as a proxy.
  */
-import { resolveCmsSite, ensureThemePreviewDraftSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
+import { resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
 import { installThemeDraft } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
+import { installThemeStudioDraft, createStudioThemeProject } from '../../../ecommerce-cms-agentsam/backend/cms/theme-studio-store.mjs';
 
 const STORE = 'https://themes.inneranimalmedia.com';
 const INDEX = '/ecommerce-cms-agentsam/admin/data/site-theme-projects/index.json';
@@ -90,16 +91,17 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
   let body;
   try { body=await request.json(); } catch { return json({ok:false,error:'invalid_json'},400); }
   if(!body||typeof body!=='object'||Array.isArray(body) ||
-    Object.keys(body).some(key=>!['site_id','version'].includes(key)) ||
+    Object.keys(body).some(key=>!['site_id','version','copy'].includes(key)) ||
+    (body.copy !== undefined && typeof body.copy !== 'boolean') ||
     (body.site_id != null && !SAFE_ID.test(body.site_id)) || !/^\d+\.\d+\.\d+$/.test(body.version||'')) {
     return json({ok:false,error:'package_version_or_site_id_invalid'},400);
   }
 
   try {
     if(!env.DB||!env.WEBSITE_ASSETS)return json({ok:false,error:'cms_storage_unavailable'},503);
-    // Validate the released artifact *before* creating a draft site.
-    // An omitted site_id is intentional: marketplace Try creates an isolated
-    // private draft, not a mutation of the user's default/production website.
+    // Validate the released artifact before persisting any customer data.
+    // Without an explicit site_id, Try creates an account-owned Theme Studio
+    // workspace only. It does not create or select a CMS site.
     const packages=await getWebsiteThemeInstallIndex(request,env);
     const ready=packages.find(p=>p.slug===slug && p.version===body.version);
     if(!ready)return json({ok:false,error:'theme_release_not_installer_ready'},409);
@@ -111,7 +113,19 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
       listing.release.storageKey!=='releases/'+slug+'/'+body.version+'/'+ready.sha256+'.zip')
       return json({ok:false,error:'theme_release_does_not_match_verified_package'},409);
     const project=await getVerifiedInstallProject(request,env,ready);
-    const base=STORE+'/theme-packages/'+slug+'/'+body.version+'/preview/';
+    // The Theme Store, not SDK deployment config, owns each product's public
+    // preview alias. Validate its authoritative catalog URL before importing.
+    const base = String(listing.previewUrl || '');
+    const preview = new URL(base, STORE);
+    const accepted = preview.origin === STORE && !preview.username && !preview.password &&
+      !preview.search && !preview.hash &&
+      (preview.pathname.startsWith('/theme-packages/'+slug+'/'+body.version+'/preview/') ||
+       preview.pathname.startsWith('/themes/'+slug+'/presets/'+slug+'/demo/') ||
+       (typeof listing.previewAlias === 'string' &&
+        /^[a-z][a-z0-9-]{1,63}$/.test(listing.previewAlias) &&
+        !['admin','api','auth','media','themes','apps','settings'].includes(listing.previewAlias) &&
+        preview.pathname === '/' + listing.previewAlias + '/'));
+    if (!accepted) return json({ok:false,error:'theme_preview_url_not_verified'},409);
     if(project?.schema!=='agentsam.theme-project.v1' ||
       project.id!=='theme_'+slug || project.sourceThemeId!==slug ||
       project.sourcePackage!=='@inneranimalmedia/theme-'+slug ||
@@ -124,22 +138,37 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
 
     const site=body.site_id
       ? await resolveCmsSite(env.DB,{accountId,siteId:body.site_id})
-      : await ensureThemePreviewDraftSite(env.DB,accountId,{
-          slug,version:body.version,name:listing.name,
-        });
-    const result=await installThemeDraft(env,accountId,slug,{
+      : null;
+    const installPayload={
       project,
       package_name:project.sourcePackage,
       package_version:body.version,
       preview_url:base,
-    },site.id);
+    };
+    // Every authenticated account can curate multiple genuinely independent
+    // canvases. Copy always imports the verified project; it never touches a
+    // live site, the shared stock package or someone else's draft.
+    if (body.copy === true && site)
+      return json({ok:false,error:'site_free_copy_requires_studio_scope'},400);
+    const result=body.copy === true
+      ? await createStudioThemeProject(env,accountId,{
+          ...structuredClone(project),
+          id:'copy_'+crypto.randomUUID().replaceAll('-','').slice(0,12),
+          name:project.name+' — Copy', revision:0,
+          createdAt:null,updatedAt:null,clonedFromThemeProject:project.id,
+        })
+      : site
+        ? await installThemeDraft(env,accountId,slug,installPayload,site.id)
+        : await installThemeStudioDraft(env,accountId,slug,installPayload);
     if(!result.ok)return json(result,result.status||503);
     const projectId=result.project.id;
     const editor='/admin/theme-project-editor?project='+encodeURIComponent(projectId)+
-      '&site_id='+encodeURIComponent(site.id);
+      (site ? '&site_id='+encodeURIComponent(site.id) : '&scope=studio');
     return json({
       ok:true,installed:true,unchanged:result.unchanged===true,
-      site_id:site.id, site_name:site.name, site_status:site.status, project_id:projectId,
+      scope:site?'site':'studio',
+      ...(site ? {site_id:site.id,site_name:site.name,site_status:site.status} : {}),
+      project_id:projectId,
       page_count:result.project.pages.length,
       source_release_sha256:ready.sha256,
       revision:result.project.revision,

@@ -17,5 +17,5 @@ test('side-stage menu remains account registry driven, not a personal hard-coded
   const stage = source('src/components/workbench/side-stage.tsx');
   assert.match(actions, /listLocalStudioConnections\(\)/);
   assert.match(actions, /payload\.side_stages \?\? \[\]/);
-  assert.match(stage, /stages\.map\(\(stage\)/);
+  assert.match(stage, /stages\.filter\([^)]*\)\.map\(\(stage\)/);
 });

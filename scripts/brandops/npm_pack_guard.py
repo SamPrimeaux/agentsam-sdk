@@ -53,10 +53,11 @@ def npm_pack_listing(package_dir: Path) -> List[str]:
         )
 
     data = json.loads(p.stdout)
-    if not data:
+    entries = data if isinstance(data, list) else list(data.values())
+    if not entries:
         raise SystemExit("npm pack returned no package data.")
 
-    files = data[0].get("files", [])
+    files = entries[0].get("files", [])
     return [str(x.get("path", "")) for x in files if x.get("path")]
 
 

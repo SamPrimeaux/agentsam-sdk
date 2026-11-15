@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Style spec</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:#191919}
+.sw{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.sh{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+.cp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px}
+@media(max-width:900px){.sw{grid-template-columns:repeat(4,minmax(0,1fr))}.sh{grid-template-columns:repeat(2,minmax(0,1fr))}.cp{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.sw{grid-template-columns:repeat(2,minmax(0,1fr))}.sh{grid-template-columns:minmax(0,1fr)}}
+</style>
+</helmet>
+<div style="box-sizing: border-box; background: #262626; font-family: 'Inter', system-ui, sans-serif; color: #ECECEC; padding: clamp(32px, 6vw, 64px) clamp(16px, 5vw, 80px)">
+<div style="width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px">
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">Charcoal green</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #ABABAB; max-width: 720px">Charcoal neutrals with one green accent. Hierarchy comes from size, weight and hairlines; green marks the primary action and selection. One typeface (Inter). Every value on this page is used by the three flow screens.</p>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-size: 15px; line-height: 22px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #3DBA7A">Color tokens</div>
+<div class="sw">
+<sc-for list="{{swatches}}" as="sw" hint-placeholder-count="12">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="height: 64px; border-radius: 12px; border: 1px solid #3A3A3A; background: {{sw.hex}}"></div>
+<div style="font-size: 13px; line-height: 18px; font-weight: 500">{{sw.name}}</div>
+<div style="font-size: 12px; line-height: 16px; color: #ABABAB">{{sw.hex}} · {{sw.use}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 15px; line-height: 22px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #3DBA7A; margin-bottom: 12px">Type scale · Inter, sizes in px as size / line-height</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: baseline; gap: 8px 24px; padding: 10px 0; border-bottom: 1px solid #313131"><div style="font-size: 13px; color: #ABABAB">Display</div><div style="font-size: 36px; line-height: 42px; font-weight: 400; letter-spacing: -0.02em">Start your Solo trial</div><div style="font-size: 12px; color: #ABABAB">36/42 · 400 · -0.02em · dark modal headline</div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: baseline; gap: 8px 24px; padding: 10px 0; border-bottom: 1px solid #313131"><div style="font-size: 13px; color: #ABABAB">Page title / price</div><div style="font-size: 32px; line-height: 40px; font-weight: 500; letter-spacing: -0.02em">Choose your plan</div><div style="font-size: 12px; color: #ABABAB">32/40 · 500 · -0.02em</div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: baseline; gap: 8px 24px; padding: 10px 0; border-bottom: 1px solid #313131"><div style="font-size: 13px; color: #ABABAB">Section title</div><div style="font-size: 28px; line-height: 36px; font-weight: 500; letter-spacing: -0.02em">Compare plans</div><div style="font-size: 12px; color: #ABABAB">28/36 · 500 · -0.02em</div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: baseline; gap: 8px 24px; padding: 10px 0; border-bottom: 1px solid #313131"><div style="font-size: 13px; color: #ABABAB">Card title</div><div style="font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em">Team</div><div style="font-size: 12px; color: #ABABAB">24/32 · 500 · -0.01em</div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: baseline; gap: 8px 24px; padding: 10px 0; border-bottom: 1px solid #313131"><div style="font-size: 13px; color: #ABABAB">Body large</div><div style="font-size: 18px; line-height: 26px; color: #ABABAB">14 days free, then $29/mo.</div><div style="font-size: 12px; color: #ABABAB">18/26 · 400 · muted</div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: baseline; gap: 8px 24px; padding: 10px 0; border-bottom: 1px solid #313131"><div style="font-size: 13px; color: #ABABAB">Body</div><div style="font-size: 16px; line-height: 24px; color: #ABABAB">Start free for 14 days. Change or cancel anytime.</div><div style="font-size: 12px; color: #ABABAB">16/24 · 400 · muted</div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: baseline; gap: 8px 24px; padding: 10px 0; border-bottom: 1px solid #313131"><div style="font-size: 13px; color: #ABABAB">UI / table row</div><div style="font-size: 14px; line-height: 20px; font-weight: 500">Agent Sam AI assistant</div><div style="font-size: 12px; color: #ABABAB">14/20 · 400 rows, 500 buttons</div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: baseline; gap: 8px 24px; padding: 10px 0; border-bottom: 1px solid #313131"><div style="font-size: 13px; color: #ABABAB">Caption / legal</div><div style="font-size: 12px; line-height: 18px; color: #ABABAB">Cancel anytime in Settings.</div><div style="font-size: 12px; color: #ABABAB">12/18 and 13/18 · 400 · muted</div></div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-size: 15px; line-height: 22px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #3DBA7A">Shape and spacing</div>
+<div class="sh">
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border: 1px solid #3DBA7A; border-radius: 28px"></div><div style="font-size: 13px; font-weight: 500">Modal shell · 28</div><div style="font-size: 12px; color: #ABABAB">Inner panel 22, padding 8 between</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border: 1px solid #3DBA7A; border-radius: 20px"></div><div style="font-size: 13px; font-weight: 500">Card · 20</div><div style="font-size: 12px; color: #ABABAB">Padding 24, 1px #ECECEC</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border: 1px solid #3DBA7A; border-radius: 12px"></div><div style="font-size: 13px; font-weight: 500">Field and small button · 12</div><div style="font-size: 12px; color: #ABABAB">Field height 56, border #ECECEC</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border: 1px solid #3DBA7A; border-radius: 999px"></div><div style="font-size: 13px; font-weight: 500">Pill · 999</div><div style="font-size: 12px; color: #ABABAB">Buttons 44 or 48 high, badges, chips</div></div>
+</div>
+<div style="font-size: 13px; line-height: 20px; color: #ABABAB">Spacing steps: 4, 8, 12, 16, 20, 24, 32, 40, 48, 64. Layout is fluid: no fixed root widths. Content max-width 1280 on pages, 640 on setup steps, modal up to 1040 wide and stacking under 700. Grids use equal columns that step down (plans 4, 2, 1; cards 3, 2, 1). Gaps between cards 16.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-size: 15px; line-height: 22px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #3DBA7A">Components</div>
+<div class="cp">
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; align-items: center; justify-content: center; height: 44px; padding: 0 24px; border-radius: 999px; background: #238552; color: #FFFFFF; font-size: 14px; font-weight: 500">Primary</div>
+<div style="display: flex; align-items: center; justify-content: center; height: 44px; padding: 0 24px; border-radius: 999px; background: #262626; border: 1px solid #3DBA7A; box-sizing: border-box; font-size: 14px; font-weight: 500">Outline</div>
+<div style="display: flex; align-items: center; justify-content: center; height: 44px; padding: 0 24px; border-radius: 999px; background: #2A2A2A; font-size: 14px; font-weight: 500">Quiet</div>
+</div>
+<div style="font-size: 13px; font-weight: 500">Pill button</div>
+<div style="font-size: 12px; line-height: 18px; color: #ABABAB">Height 44 (48 for the main action in a form). Full width inside cards. Text 14/500. One primary per screen region. Dev dark: primary is #238552 with white text. Light theme swaps primary to blue and agent actions to purple (see the design system).</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="border: 1px solid #3A3A3A; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; background: #262626">
+<div style="padding: 8px 16px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2px"><div style="font-size: 12px; line-height: 16px; color: #ABABAB">Card number</div><div style="font-size: 15px; line-height: 20px; color: #8A8A8A">1234 1234 1234 1234</div></div>
+<div style="display: flex; border-top: 1px solid #3A3A3A"><div style="flex: 1 1 0; padding: 8px 16px; height: 56px; box-sizing: border-box; border-right: 1px solid #3A3A3A; display: flex; flex-direction: column; justify-content: center; gap: 2px"><div style="font-size: 12px; line-height: 16px; color: #ABABAB">Expiry</div><div style="font-size: 15px; line-height: 20px; color: #8A8A8A">MM / YY</div></div><div style="flex: 1 1 0; padding: 8px 16px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2px"><div style="font-size: 12px; line-height: 16px; color: #ABABAB">CVC</div><div style="font-size: 15px; line-height: 20px; color: #8A8A8A">123</div></div></div>
+</div>
+<div style="font-size: 13px; font-weight: 500">Grouped field</div>
+<div style="font-size: 12px; line-height: 18px; color: #ABABAB">One bordered shell, internal 1px dividers, label (12/16 muted) sits above the value (15/20) inside the cell. Real label plus input in markup. Standalone fields use the same cell with their own border.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; border-top: 1px solid #3DBA7A">
+<div style="display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); align-items: center; min-height: 52px; border-bottom: 1px solid #313131; font-size: 14px"><div>Workspaces</div><div style="text-align: center">1</div><div style="text-align: center">3</div></div>
+<div style="display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); align-items: center; min-height: 52px; border-bottom: 1px solid #313131; font-size: 14px"><div>Workflow canvas</div><div style="display: flex; justify-content: center"><svg width="22" height="22" viewBox="0 0 22 22" role="img" aria-label="Included"><circle cx="11" cy="11" r="11" fill="#ECECEC"></circle><path d="M6.5 11.4l3 3 6-6.4" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></div><div style="text-align: center; color: #8A8A8A">—</div></div>
+</div>
+<div style="font-size: 13px; font-weight: 500">Compare row</div>
+<div style="font-size: 12px; line-height: 18px; color: #ABABAB">Min height 52, 1px #ECECEC divider, first column 1.6fr then equal columns. Included = 22px green circle with white check. Not included = em dash in #8A8A8A. Section titles 15/600 with a divider; the table header rule is #ECECEC.</div>
+</div>
+
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+swatches: [
+{ name: 'Ink', hex: '#ECECEC', use: 'text' },
+{ name: 'Page', hex: '#191919', use: 'page background' },
+{ name: 'Card', hex: '#262626', use: 'cards, panels, menus' },
+{ name: 'Input', hex: '#303030', use: 'fields, composer' },
+{ name: 'Line', hex: '#313131', use: 'hairlines' },
+{ name: 'Line strong', hex: '#3A3A3A', use: 'outline buttons, field borders' },
+{ name: 'Muted', hex: '#ABABAB', use: 'secondary text' },
+{ name: 'Faint', hex: '#8A8A8A', use: 'placeholders, hints' },
+{ name: 'Green', hex: '#238552', use: 'primary button, brand mark' },
+{ name: 'Green text', hex: '#3DBA7A', use: 'links, focus, selected' },
+{ name: 'Green tint', hex: '#162A20', use: 'selected fill' },
+{ name: 'Green line', hex: '#2A5A40', use: 'selected border' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

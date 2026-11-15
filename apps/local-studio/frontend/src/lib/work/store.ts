@@ -99,9 +99,16 @@ const SIDE_TITLES: Record<SideKind, string> = {
   media: "MovieMode",
   goal: "Edit goal",
   database: "Database",
+  newtab: "New tab",
+  item: "Item",
   design: "Canvas",
   plugin: "Plugin",
 };
+
+/** Tools that keep one tab; opening them again focuses the existing tab. */
+const SINGLETON_SIDE_KINDS = new Set<SideKind>([
+  "files", "artifacts", "deploy", "goal", "terminal", "database", "design", "plugin",
+]);
 
 function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {
   return {
@@ -118,6 +125,8 @@ function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {
     history: [],
     historyIndex: -1,
     reportToLead: kind === "chat",
+    icon: null,
+    item: null,
     ...extra,
   };
 }
@@ -243,6 +252,8 @@ type WorkState = {
   selectFile: (fileId: string) => void;
   addReceipt: (file: Artifact) => void;
   openSideTab: (kind: SideKind, extra?: Partial<SideTab>) => string;
+  /** Turn an existing (New) tab into another tool or item in place, so the page never navigates. */
+  convertSideTab: (id: string, kind: SideKind, extra?: Partial<SideTab>) => string;
   closeSideTab: (id: string, force?: boolean) => void;
   setActiveSideTab: (id: string) => void;
   setTabUrl: (id: string, url: string) => void;
@@ -333,7 +344,8 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
     modelSelectionMode: raw?.modelSelectionMode === "manual" ? "manual" : "auto",
     runModes: normalizedRunModes(raw?.runModes),
     sideTabs: (raw?.sideTabs ?? []).filter((t) => t.kind !== "deploy").map((t) => {
-      const tab = t as SideTab;
+      const legacy = (t as { kind: string }).kind === "apps";
+      const tab = (legacy ? { ...t, kind: "newtab", title: "New tab" } : t) as SideTab;
       return {
         ...tab,
         ephemeral: tab.ephemeral ?? false,
@@ -903,14 +915,7 @@ export const useWorkStore = create<WorkState>()(
       },
       openSideTab: (kind, extra) => {
         const existing =
-          kind === "files" ||
-          kind === "artifacts" ||
-          kind === "deploy" ||
-          kind === "goal" ||
-          kind === "terminal" ||
-          kind === "database" ||
-          kind === "design" ||
-          kind === "plugin"
+          SINGLETON_SIDE_KINDS.has(kind)
             ? get().sideTabs.find((t) => t.kind === kind &&
                 (kind !== "plugin" || (t.pluginId === extra?.pluginId && t.stageId === extra?.stageId)))
             : undefined;
@@ -936,6 +941,48 @@ export const useWorkStore = create<WorkState>()(
           activeSideTabId: tab.id,
         }));
         return tab.id;
+      },
+      convertSideTab: (id, kind, extra) => {
+        const state = get();
+        const current = state.sideTabs.find((t) => t.id === id);
+        if (!current) return get().openSideTab(kind, extra);
+        const sameItem = (a?: SideTab["item"], b?: SideTab["item"]) => Boolean(a && b) && JSON.stringify(a) === JSON.stringify(b);
+        const existing = state.sideTabs.find((t) => t.id !== id && t.kind === kind && (
+          kind === "item" ? sameItem(t.item, extra?.item)
+            : kind === "plugin" ? t.pluginId === extra?.pluginId && t.stageId === extra?.stageId
+              : SINGLETON_SIDE_KINDS.has(kind)));
+        if (existing) {
+          set((s) => ({
+            sideOpen: true,
+            activeSideTabId: existing.id,
+            sideTabs: s.sideTabs.filter((t) => t.id !== id).map((t) => (t.id === existing.id ? { ...t, ...extra } : t)),
+          }));
+          return existing.id;
+        }
+        const parentChatId = kind === "chat" || kind === "goal" ? state.activeChatId : extra?.parentChatId ?? null;
+        const parent = kind === "chat" ? state.chats.find((c) => c.id === parentChatId) : undefined;
+        set((s) => ({
+          sideOpen: true,
+          activeSideTabId: id,
+          sideTabs: s.sideTabs.map((t) => (t.id === id ? {
+            ...t,
+            kind,
+            title: extra?.title ?? (parent ? `Co-worker · ${parent.title}` : SIDE_TITLES[kind]),
+            icon: null,
+            item: null,
+            url: "",
+            srcdoc: null,
+            history: [],
+            historyIndex: -1,
+            messages: [],
+            keptChatId: null,
+            fileId: null,
+            reportToLead: kind === "chat",
+            ...extra,
+            parentChatId,
+          } : t)),
+        }));
+        return id;
       },
       closeSideTab: (id, force = false) => {
         const tab = get().sideTabs.find((t) => t.id === id);

@@ -14,7 +14,7 @@ const permitted = new Set([
 const result = JSON.parse(execFileSync('npm', [
   'pack', '--json', '--dry-run', '--ignore-scripts',
 ], { cwd, encoding: 'utf8' }));
-const files = result?.[0]?.files?.map(item => item.path) || [];
+const files = (Array.isArray(result) ? result : Object.values(result || {}))[0]?.files?.map(item => item.path) || [];
 if (!files.length) throw new Error('campaign_public_package_empty');
 const unapproved = files.filter(file => !permitted.has(file));
 const missing = [...permitted].filter(file => !files.includes(file));

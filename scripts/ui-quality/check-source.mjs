@@ -4,6 +4,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { auditUiSource } from './source-audit.mjs';
+import { isImmutableDesignReference } from './immutable-reference.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const argv = process.argv.slice(2);
@@ -36,6 +37,7 @@ if (base) {
 }
 const findings = [];
 for (const name of files) {
+  if (isImmutableDesignReference(name)) continue;
   if (!/\.(tsx|jsx|html?)$/i.test(name)) continue;
   const full = path.resolve(root, name);
   if (!full.startsWith(root + path.sep) || !fs.existsSync(full)) continue;

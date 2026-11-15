@@ -496,7 +496,7 @@ export async function refreshThreadSummaries(env, { limit = RETENTION.summaryRef
   return { ok: true, refreshed };
 }
 
-export async function getCompactionStatus(env, { limit = 10 } = {}) {
+export async function getCompactionStatus(env, { limit = 10, account_id = null } = {}) {
   if (!env?.DB) {
     return { ok: false, runs: [], retention: RETENTION };
   }
@@ -512,7 +512,7 @@ export async function getCompactionStatus(env, { limit = 10 } = {}) {
        ORDER BY started_at DESC
        LIMIT ?`
     )
-      .bind(requireApplicationAccountId(), limit)
+      .bind((account_id || requireApplicationAccountId()), limit)
       .all();
 
     const totals = await env.DB.prepare(
@@ -525,12 +525,12 @@ export async function getCompactionStatus(env, { limit = 10 } = {}) {
          (SELECT COUNT(*) FROM agentsam_tool_call_daily WHERE account_id = ?) AS tool_call_daily`
     )
       .bind(
-        requireApplicationAccountId(),
-        requireApplicationAccountId(),
-        requireApplicationAccountId(),
-        requireApplicationAccountId(),
-        requireApplicationAccountId(),
-        requireApplicationAccountId()
+        (account_id || requireApplicationAccountId()),
+        (account_id || requireApplicationAccountId()),
+        (account_id || requireApplicationAccountId()),
+        (account_id || requireApplicationAccountId()),
+        (account_id || requireApplicationAccountId()),
+        (account_id || requireApplicationAccountId())
       )
       .first()
       .catch(() => null);

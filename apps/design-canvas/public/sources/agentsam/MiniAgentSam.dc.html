@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mini AgentSam on canvas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:#191919}
+button{font-family:inherit;color:inherit}
+input::placeholder{color:var(--text-faint)}
+.hv:hover{background:var(--surface-2)}
+.hv:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite}
+</style>
+</helmet>
+<div style="{{themeVars}} height: 100vh; min-height: 700px; box-sizing: border-box; position: relative; overflow: hidden; background-color: var(--canvas); background-image: radial-gradient(var(--canvas-dot) 1.2px, transparent 1.4px); background-size: 16px 16px; color: var(--text); font-family: 'Inter', system-ui, sans-serif; display: flex; justify-content: center; padding: 24px clamp(12px, 3vw, 32px); overflow-y: auto">
+
+<div style="width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 0; position: relative">
+
+<div style="position: relative; border-radius: 8px 8px 0 0; overflow: hidden; background: var(--chrome); border: 1px solid var(--line-strong); border-bottom: 0">
+<div style="padding: clamp(24px, 6vw, 56px) clamp(16px, 4vw, 40px); background: radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--agent) 35%, transparent), transparent 50%), var(--chrome); display: flex; flex-direction: column; gap: 14px; min-height: 280px; justify-content: flex-end">
+<div style="font-size: clamp(26px, 5vw, 44px); line-height: 1.1; font-weight: 500; letter-spacing: -0.02em; max-width: 520px">Software for the studio you actually work in.</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap"><span style="height: 44px; padding: 0 22px; border-radius: 999px; background: var(--action); color: var(--on-action); font-size: 14px; font-weight: 500; display: flex; align-items: center">Explore the apps</span><span style="height: 44px; padding: 0 22px; border-radius: 999px; border: 1px solid var(--line-strong); font-size: 14px; display: flex; align-items: center">See what we build</span></div>
+</div>
+
+<div style="position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%); z-index: 20; width: calc(100% - 24px); max-width: 560px; display: flex; flex-direction: column; gap: 6px">
+<div style="background: var(--surface); border: 1px solid var(--line-strong); border-radius: 22px; box-shadow: 0 16px 40px rgba(0,0,0,.35); overflow: hidden">
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 12px">
+<span style="flex: none; width: 28px; height: 28px; border-radius: 999px; background: var(--agent); color: var(--on-agent); display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"></path></svg></span>
+<input aria-label="Work with AgentSam" placeholder="{{placeholder}}" value="{{prompt}}" onInput="{{onPrompt}}" onKeyDown="{{onKey}}" style="flex: 1 1 auto; min-width: 0; height: 40px; border: 0; outline: 0; background: transparent; font: inherit; font-size: 15px; color: var(--text)">
+<button class="hv" aria-label="Add context" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<button class="hv" aria-label="Dictate" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0014 0M12 18v3"></path></svg></button>
+<button aria-label="Send" onClick="{{send}}" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 999px; background: var(--agent); color: var(--on-agent); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 12px 10px">
+<nav aria-label="Selection" style="display: flex; align-items: center; gap: 2px; font-size: 12px">
+<sc-for list="{{crumbs}}" as="c" hint-placeholder-count="3"><button class="hv" onClick="{{c.pick}}" style="min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: {{c.bg}}; color: {{c.fg}}; font-size: 12px; cursor: pointer">{{c.label}}</button><sc-if value="{{c.sep}}" hint-placeholder-val="{{ true }}"><span style="color: var(--text-faint)">›</span></sc-if></sc-for>
+</nav>
+<span style="flex: 1 1 8px"></span>
+<div role="group" aria-label="Scope" style="display: flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--surface-2)">
+<sc-for list="{{scopes}}" as="sc" hint-placeholder-count="3"><button aria-pressed="{{sc.on}}" onClick="{{sc.pick}}" style="height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: {{sc.bg}}; color: {{sc.fg}}; font-size: 12px; cursor: pointer">{{sc.label}}</button></sc-for>
+</div>
+<button class="hv" aria-expanded="{{open}}" onClick="{{toggle}}" aria-label="Block settings" style="width: 44px; height: 32px; border: 0; border-radius: 8px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{chev}}"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+
+<sc-if value="{{working}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; align-items: center; gap: 10px; padding: 12px; border-top: 1px solid var(--line); background: var(--agent-tint); color: var(--agent-text); font-size: 13px"><svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 019 9"></path></svg>{{workingText}}</div>
+</sc-if>
+<sc-if value="{{applied}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 13px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--agent-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.500l4.500 4.500L19 7.500"></path></svg><span style="flex: 1 1 auto; min-width: 0">{{appliedText}}</span><button class="hv" onClick="{{undo}}" style="height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--link); font-size: 13px; font-weight: 500; cursor: pointer">Undo</button></div>
+</sc-if>
+
+<sc-if value="{{open}}" hint-placeholder-val="{{ true }}">
+<div style="border-top: 1px solid var(--line); padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 14px">
+<div style="font-size: 11px; letter-spacing: .08em; color: var(--text-muted); font-weight: 600">BLOCK SETTINGS</div>
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px"><span style="font-size: 14px; padding-top: 10px">Fill</span>
+<div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end; width: 62%"><div role="group" aria-label="Fill" style="display: flex; gap: 2px; padding: 2px; border-radius: 12px; background: var(--surface-2); width: 100%; box-sizing: border-box">
+<sc-for list="{{fills}}" as="f" hint-placeholder-count="3"><button aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="flex: 1 1 0; height: 40px; border: 0; border-radius: 10px; background: {{f.bg}}; color: {{f.fg}}; font-size: 13px; cursor: pointer">{{f.label}}</button></sc-for></div>
+<span style="font-size: 12px; color: var(--text-muted); text-align: right">{{fillNote}}</span></div></div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 14px">Background</span>
+<button class="hv" onClick="{{cycleBg}}" style="width: 62%; height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: transparent; display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer"><span style="width: 22px; height: 22px; border-radius: 999px; border: 1px solid var(--line-strong); background: {{bgSwatch}}"></span>{{bgName}}</button></div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 14px">Padding</span>
+<button class="hv" onClick="{{cyclePad}}" style="width: 62%; height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: transparent; display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer">{{padName}}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button></div>
+<div style="height: 1px; background: var(--line)"></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="font-size: 11px; letter-spacing: .08em; color: var(--text-muted); font-weight: 600">SUGGESTED FOR THIS BLOCK</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ideas}}" as="i" hint-placeholder-count="4"><button class="hv" onClick="{{i.run}}" style="min-height: 44px; padding: 0 14px; border: 1px solid var(--agent-line); border-radius: 999px; background: var(--agent-tint); color: var(--agent-text); font-size: 13px; cursor: pointer">{{i.label}}</button></sc-for></div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="font-size: 11px; letter-spacing: .08em; color: var(--text-muted); font-weight: 600">CONTEXT AGENTSAM IS USING</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{ctx}}" as="x" hint-placeholder-count="4"><span style="height: 28px; padding: 0 10px; border-radius: 999px; background: var(--surface-2); font-size: 12px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 999px; background: var(--brand)"></span>{{x.label}}</span></sc-for></div></div>
+</div>
+</sc-if>
+</div>
+<div style="text-align: center; font-size: 12px; color: var(--text-faint)">AgentSam is AI and can make mistakes. Please double-check responses.</div>
+</div>
+</div>
+
+<div style="position: relative; background: {{padBg}}; padding: {{padPx}} clamp(16px, 4vw, 40px); border: 1px solid var(--line-strong); border-top: 2px solid var(--action); display: flex; flex-direction: column; gap: 18px">
+<span style="position: absolute; left: -1px; top: -26px; height: 24px; padding: 0 10px; background: var(--action); color: var(--on-action); font-size: 12px; font-weight: 500; display: flex; align-items: center; border-radius: 6px 6px 0 0">Container</span>
+<div style="height: {{gapTop}}"></div>
+<div style="font-size: clamp(24px, 4vw, 36px); font-weight: 500; letter-spacing: -0.02em">Find the tool for the job</div>
+<div style="font-size: 15px; line-height: 22px; color: var(--text-muted); max-width: 460px">Every app is built to stand alone or plug straight into your AgentSam admin.</div>
+<div style="display: flex; flex-direction: column"><sc-for list="{{rows}}" as="r" hint-placeholder-count="3"><div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line)"><span style="font-size: 12px; color: var(--link)">{{r.n}}</span><span style="flex: 1 1 auto; font-size: 18px">{{r.t}}</span><span style="color: var(--text-muted)">→</span></div></sc-for></div>
+</div>
+
+<sc-if value="{{publishing}}" hint-placeholder-val="{{ false }}">
+<div role="dialog" aria-modal="true" aria-label="Publish" style="position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 50; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: 16px">
+<div style="width: 100%; max-width: 640px; box-sizing: border-box; background: var(--surface); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.4); max-height: 100%; overflow-y: auto">
+<div style="display: flex; align-items: center; justify-content: space-between"><h2 style="margin: 0; font-size: 17px; font-weight: 600">Publish Agent Sam canvas?</h2><button class="hv" aria-label="Close" onClick="{{cancelPub}}" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--text-muted)">This will replace Loud and Bright as your current theme. Your store will remain private.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; padding: 16px; border-radius: 16px; background: var(--surface-2)">
+<sc-for list="{{pubCards}}" as="p" hint-placeholder-count="2"><div style="display: flex; flex-direction: column; gap: 8px"><span style="align-self: flex-start; height: 22px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 500; display: flex; align-items: center; background: {{p.tagBg}}; color: {{p.tagFg}}">{{p.tag}}</span>
+<div style="aspect-ratio: 4 / 3; border-radius: 10px; border: 1px solid var(--line-strong); background: {{p.bg}}; padding: 12px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px"><span style="height: 8px; width: 70%; border-radius: 4px; background: {{p.ink}}"></span><span style="height: 8px; width: 45%; border-radius: 4px; background: {{p.ink}}; opacity: .6"></span><span style="height: 16px; width: 30%; border-radius: 8px; background: {{p.cta}}"></span></div>
+<span style="font-size: 13px">{{p.name}}</span></div></sc-for>
+</div>
+<div style="display: flex; justify-content: flex-end; gap: 8px"><button class="hv" onClick="{{cancelPub}}" style="height: 44px; padding: 0 20px; border: 1px solid var(--line-strong); border-radius: 999px; background: transparent; font-size: 14px; cursor: pointer">Cancel</button><button onClick="{{confirmPub}}" style="height: 44px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--action); color: var(--on-action); font-size: 14px; font-weight: 500; cursor: pointer">Publish</button></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{toast}}" hint-placeholder-val="{{ false }}"><div role="status" style="position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; padding: 12px 18px; border-radius: 999px; background: var(--text); color: var(--bg); font-size: 14px">{{toast}}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dev","light"],"default":"dev","section":"Theme"},"demo":{"editor":"enum","options":["collapsed","settings","publish"],"default":"collapsed","section":"Open state"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+const demo = (props && props.demo) || 'collapsed';
+this.state = { open: demo === 'settings', publishing: demo === 'publish', sel: 'container', scope: 'block', fill: 'auto', bg: 0, pad: 2, prompt: '', working: '', applied: '', prev: null, toast: '' };
+}
+renderVals() {
+const s = this.state;
+const set = (o) => this.setState(o);
+const THEMES = {"dev": "--bg:#191919;--canvas:#141414;--canvas-dot:#2a2a2a;--chrome:#191919;--surface:#262626;--surface-2:#2a2a2a;--input:#303030;--line:#313131;--line-strong:#3a3a3a;--text:#ececec;--text-muted:#ababab;--text-faint:#8a8a8a;--brand:#238552;--brand-hover:#1f7a4b;--on-brand:#ffffff;--brand-text:#3dba7a;--brand-tint:#162a20;--brand-line:#2a5a40;--action:#238552;--action-hover:#1f7a4b;--on-action:#ffffff;--link:#3dba7a;--focus:#3dba7a;--select-tint:#162a20;--select-line:#2a5a40;--agent:#238552;--agent-hover:#1f7a4b;--on-agent:#ffffff;--agent-text:#3dba7a;--agent-tint:#162a20;--agent-line:#2a5a40;--danger:#ff8a80;--scrim:rgba(0,0,0,0.55)", "light": "--bg:#f4f5fa;--canvas:#fbfbfe;--canvas-dot:#d9dce8;--chrome:#ffffff;--surface:#ffffff;--surface-2:#f1f2f8;--input:#f1f2f8;--line:#e3e5ef;--line-strong:#c9ccdb;--text:#14161f;--text-muted:#5b6075;--text-faint:#6b7085;--brand:#238552;--brand-hover:#1d6f45;--on-brand:#ffffff;--brand-text:#1a7a49;--brand-tint:#e6f4ec;--brand-line:#a9d6bb;--action:#2f5bea;--action-hover:#2447c9;--on-action:#ffffff;--link:#2447c9;--focus:#2f5bea;--select-tint:#e8eeff;--select-line:#9db4f8;--agent:#6d4ae8;--agent-hover:#5b35d5;--on-agent:#ffffff;--agent-text:#5b35d5;--agent-tint:#f1ecff;--agent-line:#c9b9fa;--danger:#c62828;--scrim:rgba(20,22,31,0.35)"};
+const themeVars = THEMES[(this.props && this.props.theme) === 'light' ? 'light' : 'dev'];
+const flash = (m) => { set({ toast: m }); setTimeout(() => this.setState({ toast: '' }), 1800); };
+const bgs = [['None', 'transparent', 'transparent'], ['Surface', 'var(--surface)', 'var(--surface)'], ['Brand tint', 'var(--brand-tint)', 'var(--brand-tint)'], ['Agent tint', 'var(--agent-tint)', 'var(--agent-tint)']];
+const pads = [['None', '0px'], ['Small', '16px'], ['Medium', '32px'], ['Large', '56px']];
+const snap = () => ({ fill: s.fill, bg: s.bg, pad: s.pad });
+const apply = (o, text, label) => { set({ ...o, prev: snap(), applied: text, working: '' }); };
+const run = (text, o, done) => { set({ working: text, applied: '' }); setTimeout(() => this.setState({ ...o, prev: snap(), working: '', applied: done }), 900); };
+const selDefs = { section: 'Section', container: 'Container', heading: 'Heading' };
+const order = ['section', 'container', 'heading'];
+const ideasBy = {
+section: [['Tighten vertical rhythm', { pad: 1 }, 'Padding set to Small'], ['Match the hero background', { bg: 3 }, 'Background set to Agent tint']],
+container: [['Use a surface background', { bg: 1 }, 'Background set to Surface'], ['More breathing room', { pad: 3 }, 'Padding set to Large'], ['Make rows a 3-up grid', {}, 'Rows laid out as a 3-column grid'], ['Rewrite the intro shorter', {}, 'Intro shortened to one line']],
+heading: [['Shorten the heading', {}, 'Heading shortened'], ['Try three alternatives', {}, 'Three alternatives ready to compare']]
+};
+const ctxBy = { section: ['Page: Home', 'Theme tokens', '3 child blocks'], container: ['Page: Home', 'Theme tokens', 'Block above: Hero', 'Block below: Footer'], heading: ['Page: Home', 'Type scale', 'Brand voice'] };
+const placeholders = { section: 'Ask about this section', container: 'Work with AgentSam on this container', heading: 'Ask about this heading' };
+const sendIt = () => { const t = s.prompt.trim(); if (!t) return; run('Working on: ' + t, { prompt: '' }, 'Done: ' + t); };
+return {
+themeVars,
+placeholder: placeholders[s.sel], prompt: s.prompt,
+onPrompt: (e) => set({ prompt: e.target.value }),
+onKey: (e) => { if (e.key === 'Enter') sendIt(); },
+send: sendIt,
+crumbs: order.map((id, i) => { const on = id === s.sel; return { label: selDefs[id], sep: i < order.length - 1, bg: on ? 'var(--select-tint)' : 'transparent', fg: on ? 'var(--link)' : 'var(--text-muted)', pick: () => set({ sel: id }) }; }),
+scopes: [['block', 'Block'], ['section', 'Section'], ['page', 'Page']].map(([id, label]) => { const on = s.scope === id; return { label, on, bg: on ? 'var(--surface)' : 'transparent', fg: on ? 'var(--text)' : 'var(--text-muted)', pick: () => set({ scope: id }) }; }),
+open: s.open, toggle: () => set({ open: !s.open }), chev: s.open ? 'transform: rotate(180deg)' : '',
+working: !!s.working, workingText: s.working,
+applied: !!s.applied, appliedText: s.applied,
+undo: () => { if (s.prev) set({ ...s.prev, prev: null, applied: '' }); else set({ applied: '' }); },
+fills: [['auto', 'Automatic'], ['color', 'Color'], ['image', 'Image']].map(([id, label]) => { const on = s.fill === id; return { label, on, bg: on ? 'var(--surface)' : 'transparent', fg: on ? 'var(--text)' : 'var(--text-muted)', pick: () => set({ fill: id }) }; }),
+fillNote: s.fill === 'auto' ? 'Automatic keeps the existing background.' : s.fill === 'color' ? 'Pick a theme color. Raw hex values are not used.' : 'Choose an image from your library.',
+bgName: bgs[s.bg][0], bgSwatch: bgs[s.bg][1],
+cycleBg: () => set({ bg: (s.bg + 1) % bgs.length, fill: s.bg === 3 ? 'auto' : 'color' }),
+padName: pads[s.pad][0], cyclePad: () => set({ pad: (s.pad + 1) % pads.length }),
+ideas: ideasBy[s.sel].map(([label, o, done]) => ({ label, run: () => run('Working on: ' + label, o, done) })),
+ctx: ctxBy[s.sel].map((label) => ({ label })),
+padBg: s.fill === 'auto' ? 'var(--chrome)' : bgs[s.bg][2] === 'transparent' ? 'var(--chrome)' : bgs[s.bg][2],
+padPx: pads[s.pad][1] === '0px' ? '8px' : pads[s.pad][1], gapTop: '120px',
+rows: [['01', 'Store design'], ['02', 'Marketing and conversions'], ['03', 'Store management']].map(([n, t]) => ({ n, t })),
+publishing: s.publishing,
+cancelPub: () => set({ publishing: false }),
+confirmPub: () => { set({ publishing: false }); flash('Published'); },
+pubCards: [
+{ tag: 'Current', tagBg: 'var(--danger-tint, rgba(255,138,128,.18))', tagFg: 'var(--danger)', name: 'Loud and Bright', bg: '#14161f', ink: '#ffffff', cta: '#6d4ae8' },
+{ tag: 'New', tagBg: 'var(--brand-tint)', tagFg: 'var(--brand-text)', name: 'Agent Sam canvas', bg: 'var(--chrome)', ink: 'var(--text)', cta: 'var(--action)' }
+],
+toast: s.toast
+};
+}
+}
+</script>
+</body>
+</html>

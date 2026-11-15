@@ -214,12 +214,12 @@ export async function attachAttributionToOrder(env, orderId, attribution) {
   }
 }
 
-export async function getAttributionMetrics(env) {
+export async function getAttributionMetrics(env, accountId = null) {
   const [visits, channels, revenue, conversions] = await Promise.all([
     env.DB.prepare(
       `SELECT COUNT(*) AS n FROM attribution_visits WHERE account_id = ?`
     )
-      .bind(requireApplicationAccountId())
+      .bind((accountId || requireApplicationAccountId()))
       .first()
       .catch(() => ({ n: 0 })),
     env.DB.prepare(
@@ -231,14 +231,14 @@ export async function getAttributionMetrics(env) {
        GROUP BY COALESCE(utm_source, channel, 'direct')
        ORDER BY sessions DESC`
     )
-      .bind(requireApplicationAccountId())
+      .bind((accountId || requireApplicationAccountId()))
       .all()
       .catch(() => ({ results: [] })),
     env.DB.prepare(
       `SELECT COALESCE(SUM(attributed_revenue_cents), 0) AS cents
        FROM growth_campaigns WHERE account_id = ?`
     )
-      .bind(requireApplicationAccountId())
+      .bind((accountId || requireApplicationAccountId()))
       .first()
       .catch(() => ({ cents: 0 })),
     env.DB.prepare(

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif}
+a{text-decoration:none}
+button{font-family:inherit}
+input::placeholder{color:#71717A}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1400px; box-sizing: border-box; display: flex; background: #F4F4F5; font-family: 'Inter', system-ui, sans-serif; color: #0A0A0A">
+
+<div style="flex: none; width: 248px; box-sizing: border-box; padding: 16px 12px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px 0 8px; height: 40px">
+<div style="width: 28px; height: 28px; border-radius: 8px; background: #0A0A0A; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center" aria-hidden="true">IAM</div>
+<button aria-label="Collapse sidebar" style="width: 44px; height: 44px; border: 0; background: transparent; color: #52525B; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M9 5v14"/></svg></button>
+</div>
+<div style="height: 44px; box-sizing: border-box; border: 1px solid #D4D4D8; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; color: #52525B; font-size: 14px"><span style="display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg>Search</span><span style="font-size: 12px">⌘K</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="7">
+<a href="#" style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid {{n.border}}; background: {{n.bg}}; color: #0A0A0A; font-size: 14px; display: flex; align-items: center; gap: 10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.d}}"/></svg>{{n.label}}</a>
+</sc-for>
+</div>
+<div style="padding: 12px 10px 0; font-size: 13px; color: #52525B">Sites</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{sites}}" as="n" hint-placeholder-count="3">
+<a href="#" style="height: 40px; padding: 0 10px; border-radius: 10px; color: #0A0A0A; font-size: 14px; display: flex; align-items: center; gap: 10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.d}}"/></svg>{{n.label}}</a>
+</sc-for>
+</div>
+<div style="padding: 12px 10px 0; font-size: 13px; color: #52525B">Apps</div>
+<a href="#" style="height: 40px; padding: 0 10px; border-radius: 10px; color: #0A0A0A; font-size: 14px; display: flex; align-items: center; gap: 10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add</a>
+<div style="flex: 1 1 auto"></div>
+<a href="#" style="height: 40px; padding: 0 10px; border-radius: 10px; color: #0A0A0A; font-size: 14px; display: flex; align-items: center; gap: 10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Settings</a>
+<div style="height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 6px 0 10px"><span style="display: flex; align-items: center; gap: 10px; font-size: 14px"><span style="width: 24px; height: 24px; border-radius: 6px; background: #0A0A0A; color: #FFFFFF; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center">MW</span>My Workspace</span><button aria-label="Notifications" style="width: 44px; height: 44px; border: 0; background: transparent; color: #52525B; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4"/></svg></button></div>
+<div style="padding: 4px 10px 0; font-size: 13px; color: #52525B">Trial ends in 14 days</div>
+<a href="Main.dc.html" style="height: 44px; border-radius: 12px; background: #FFFFFF; border: 1px solid #D4D4D8; color: #0A0A0A; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center">Subscribe</a>
+</div>
+
+<div style="flex: 1 1 auto; min-width: 0; margin: 8px 8px 8px 0; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E4E4E7; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden">
+
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; font-size: 14px; line-height: 20px">
+<span style="display: flex; align-items: center; gap: 10px; color: #0A0A0A"><span style="width: 8px; height: 8px; border-radius: 999px; background: #71717A"></span>Trial ends in 14 days</span>
+<span style="color: #52525B">Questions? <a href="#" style="color: #0A0A0A; text-decoration: underline">Talk to us</a></span>
+</div>
+
+<div style="width: 100%; max-width: 760px; margin: 0 auto; box-sizing: border-box; padding: 72px 24px 0; display: flex; flex-direction: column; align-items: center; gap: 32px">
+<h1 style="margin: 0; text-align: center; font-size: 40px; line-height: 48px; font-weight: 500; letter-spacing: -0.02em">Welcome to Inner Animal Media<br>Let's set up <span style="text-decoration: underline dotted; text-underline-offset: 6px">My Workspace</span></h1>
+
+<div style="width: 100%; box-sizing: border-box; border: 1px solid #D4D4D8; border-radius: 20px; padding: 16px 20px; display: flex; flex-direction: column; gap: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.04)">
+<label for="ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Work with AgentSam</label>
+<input id="ask" placeholder="Work with AgentSam" style="border: 0; outline: 0; padding: 0; font: inherit; font-size: 16px; line-height: 24px; color: #0A0A0A; background: transparent; width: 100%">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span style="width: 28px; height: 28px; border-radius: 999px; background: #0A0A0A; color: #FFFFFF; display: flex; align-items: center; justify-content: center" aria-label="AgentSam" role="img"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg></span>
+<div style="display: flex; align-items: center; gap: 4px; font-size: 14px">
+<button style="height: 44px; padding: 0 12px; border: 0; background: transparent; color: #0A0A0A; font: inherit; font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v4h4M12 8v4l3 2"/></svg>Recents</button>
+<span style="width: 1px; height: 20px; background: #D4D4D8"></span>
+<button aria-label="Add" style="width: 44px; height: 44px; border: 0; background: transparent; color: #0A0A0A; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<button aria-label="Dictate" style="width: 44px; height: 44px; border: 0; background: transparent; color: #0A0A0A; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></button>
+</div>
+</div>
+</div>
+
+<div style="width: 100%; box-sizing: border-box; padding: 0 16px; display: flex; flex-direction: column">
+<sc-for list="{{suggestions}}" as="sg" hint-placeholder-count="6">
+<a href="#" style="height: 40px; display: flex; align-items: center; gap: 14px; color: #0A0A0A; font-size: 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>{{sg.label}}</a>
+</sc-for>
+</div>
+</div>
+
+<div style="width: 100%; max-width: 1040px; margin: 0 auto; box-sizing: border-box; padding: 56px 24px 64px; display: flex; flex-wrap: wrap; gap: 16px">
+<sc-for list="{{cards}}" as="c" hint-placeholder-count="6">
+<div style="flex: 1 1 280px; min-width: 0; box-sizing: border-box; border: 1px solid #E4E4E7; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 16px; min-height: 340px">
+<div style="position: relative; height: 168px; border-radius: 12px; background: #F4F4F5; overflow: hidden">
+<sc-for list="{{c.blocks}}" as="b" hint-placeholder-count="8">
+<span style="position: absolute; {{b.style}}"></span>
+</sc-for>
+</div>
+<div style="padding: 0 8px; display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto">
+<div style="font-size: 18px; line-height: 26px; font-weight: 500">{{c.title}}</div>
+<div style="font-size: 14px; line-height: 20px; color: #52525B">{{c.text}}</div>
+</div>
+<div style="padding: 0 8px 8px"><a href="#" style="display: inline-flex; align-items: center; height: 44px; padding: 0 20px; border: 1px solid #0A0A0A; border-radius: 999px; color: #0A0A0A; font-size: 14px; font-weight: 500">{{c.cta}}</a></div>
+</div>
+</sc-for>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+renderVals() {
+const B = (x, y, w, h, t, r) => ({ x, y, w, h, t, r });
+const style = (b) => 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%;border-radius:' + (b.r || '4px') + ';background:' + (b.t === 'i' ? '#27272A' : b.t === 'l' ? '#D4D4D8' : '#FFFFFF');
+const mk = (arr) => arr.map((b) => ({ style: style(b) }));
+const theme = [B(8,12,40,9,'i'),B(8,28,30,9,'i'),B(8,46,34,4,'l'),B(8,56,26,4,'l'),B(8,72,16,12,'i','999px'),B(56,14,36,70,'s','8px')];
+const product = [B(8,14,40,66,'s','8px'),B(54,18,30,7,'i'),B(54,32,20,4,'l'),B(54,42,34,4,'l'),B(54,64,18,14,'i','999px')];
+const template = [B(6,10,88,10,'s','6px'),B(6,28,28,56,'s','8px'),B(36,28,28,56,'s','8px'),B(66,28,28,56,'s','8px'),B(10,34,8,12,'i','999px'),B(40,34,8,12,'i','999px'),B(70,34,8,12,'i','999px')];
+const pay = [B(10,18,80,16,'s','8px'),B(10,42,80,16,'s','8px'),B(10,66,36,14,'i','999px'),B(16,24,30,5,'l'),B(16,48,22,5,'l')];
+const domain = [B(8,36,84,28,'s','999px'),B(14,47,40,6,'l'),B(70,45,16,8,'i')];
+const team = [B(18,30,22,40,'s','999px'),B(39,30,22,40,'i','999px'),B(60,30,22,40,'s','999px')];
+return {
+nav: [['Home', 'M4 11l8-7 8 7v9H4z'], ['Projects', 'M3 7h6l2 2h10v10H3z'], ['Canvas', 'M4 4h16v16H4zM9 4v16'], ['Library', 'M5 4h4v16H5zM11 4h4v16h-4zM17 6l3 1-3 13-3-1'], ['Products', 'M5 8l7-4 7 4v8l-7 4-7-4z'], ['Customers', 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0'], ['Analytics', 'M5 20V10M12 20V4M19 20v-7']].map(([label, d], i) => ({ label, d, bg: i === 0 ? '#FFFFFF' : 'transparent', border: i === 0 ? '#D4D4D8' : 'transparent' })),
+sites: [['Website', 'M3 5h18v14H3zM3 9h18'], ['Online store', 'M4 9l1-5h14l1 5M5 9v11h14V9'], ['AgentSam', 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z']].map(([label, d]) => ({ label, d })),
+suggestions: ['Plan my homepage', 'Add a product', 'Create a section', 'Connect my domain', 'Write a product description', 'Help me get started'].map((label) => ({ label })),
+cards: [
+{ title: 'Customize your theme', text: 'Edit pages, sections and brand settings.', cta: 'Open Theme Studio', blocks: mk(theme) },
+{ title: 'Add your first product', text: 'Sell apparel, templates or downloadable products.', cta: 'Add product', blocks: mk(product) },
+{ title: 'Start from a template', text: 'Pick a starting point, then make it yours.', cta: 'Browse templates', blocks: mk(template) },
+{ title: 'Connect payments', text: 'Review settings to accept payments and add a payout account.', cta: 'Set up payments', blocks: mk(pay) },
+{ title: 'Connect a domain', text: 'Give your site a branded address that is easy to remember.', cta: 'Set up domain', blocks: mk(domain) },
+{ title: 'Invite your team', text: 'Add teammates and choose what they can edit.', cta: 'Invite team', blocks: mk(team) }
+]
+};
+}
+}
+</script>
+</body>
+</html>

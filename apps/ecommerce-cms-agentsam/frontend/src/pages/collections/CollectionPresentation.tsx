@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import StudioIcon from "../products/StudioIcon";
 import type { CollectionForm, MerchHero, Product } from "./model";
 import { PRESETS } from "./model";
-import { renderMerchHero } from "../../../../../../packages/agentsam-merch/src/merch-hero.js";
-import "../../../../../../packages/agentsam-merch/src/merch-hero.css";
-import { renderMerchCollectionShowcase } from "../../../../../../packages/agentsam-merch/src/collection-showcase.js";
-import "../../../../../../packages/agentsam-merch/src/collection-showcase.css";
+import { renderMerchHero } from "@inneranimalmedia/agentsam-merch/merch-hero";
+import "@inneranimalmedia/agentsam-merch/merch-hero.css";
+import { renderMerchCollectionShowcase } from "@inneranimalmedia/agentsam-merch/collection-showcase";
+import "@inneranimalmedia/agentsam-merch/collection-showcase.css";
 
 const CTAS = [
   { value: "#collection-products", label: "Products in this collection" },

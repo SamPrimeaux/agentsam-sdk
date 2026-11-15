@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 
 export interface AbsBuildHomeProps {
   onCreatePage: (prompt: string) => void;
+  mascot?: ReactNode;
   title?: string;
   subtitle?: string;
 }
@@ -15,6 +16,7 @@ const STARTERS = [
 
 export function AbsBuildHome({
   onCreatePage,
+  mascot,
   title = 'AgentSam Build',
   subtitle = 'Imagine any website, generated in real-time by AgentSam',
 }: AbsBuildHomeProps) {
@@ -30,6 +32,7 @@ export function AbsBuildHome({
   return (
     <div className="abs-build-home">
       <div className="abs-build-home-inner">
+        {mascot}
         <div className="abs-build-kicker">AgentSam Auto Browser</div>
         <h1>{title}</h1>
         <p>{subtitle}</p>

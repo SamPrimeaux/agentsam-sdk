@@ -1,4 +1,4 @@
-import { ArrowUp, Maximize2, Minimize2, X } from 'lucide-react';
+import { ArrowUp, Maximize2, Minimize2, MousePointer2, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 
 export interface AnnotationSelection {
@@ -29,6 +29,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
   const lastTouch = useRef(0);
   const target = useRef<Element | null>(null);
   const panel = useRef<HTMLElement>(null);
+  const cursorHint = useRef<HTMLDivElement>(null);
   const [panelHeight, setPanelHeight] = useState(200);
   useEffect(() => {
     if (!selecting) return;
@@ -40,26 +41,37 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
       if (!(event.target instanceof Element)) return;
       const element = event.target;
       if (ignored(element)) return;
-      target.current = element;
-      setBounds(element.getBoundingClientRect());
+      const focus = element.closest('button, a, input, textarea, select, [role="button"], [data-annotation-target]') || element;
+      target.current = focus;
+      setBounds(focus.getBoundingClientRect());
+    };
+    const move = (event: PointerEvent) => {
+      const hint = cursorHint.current;
+      if (!hint) return;
+      hint.style.left = `${Math.max(8, Math.min(event.clientX + 14, window.innerWidth - hint.offsetWidth - 8))}px`;
+      hint.style.top = `${Math.max(8, event.clientY + hint.offsetHeight + 16 > window.innerHeight ? event.clientY - hint.offsetHeight - 12 : event.clientY + 15)}px`;
     };
     const click = (event: MouseEvent) => {
       if (!(event.target instanceof Element)) return;
       const element = event.target;
       if (ignored(element)) return;
       event.preventDefault(); event.stopPropagation();
-      const resource = element.closest('[data-agentsam-resource]') || element;
+      const selected = element.closest('button, a, input, textarea, select, [role="button"], [data-annotation-target]') || element;
+      const resource = selected.closest('[data-agentsam-resource]') || selected;
       const clean = (text: string | null, max = 180) => (text || '').replace(/\s+/g, ' ').trim().slice(0, max);
       const editableSelector = 'input,textarea,select,[contenteditable]:not([contenteditable="false"])';
-      const editable = element.matches(editableSelector)
-        || Boolean(element.closest(editableSelector))
-        || resource.matches(editableSelector)
-        || Boolean(resource.querySelector(editableSelector));
-      setSelection({ id: clean(resource.getAttribute('data-agentsam-resource') || resource.id || resource.tagName), label: clean(resource.getAttribute('aria-label') || resource.getAttribute('alt') || (editable ? 'Input field' : resource.textContent)), page: location.pathname, tag: resource.tagName.toLowerCase(), text: editable ? '[field value withheld]' : clean(resource.textContent, 300) });
-      target.current = resource; setBounds(resource.getBoundingClientRect()); onSelectingChange(false);
+      const editable = selected.matches(editableSelector) || Boolean(selected.closest(editableSelector));
+      setSelection({
+        id: clean(resource.getAttribute('data-agentsam-resource') || resource.id || resource.tagName),
+        label: clean(selected.getAttribute('aria-label') || selected.getAttribute('alt') || (editable ? 'Input field' : selected.textContent) || resource.getAttribute('aria-label')),
+        page: location.pathname,
+        tag: selected.tagName.toLowerCase(),
+        text: editable ? '[field value withheld]' : clean(selected.textContent, 300),
+      });
+      target.current = selected; setBounds(selected.getBoundingClientRect()); onSelectingChange(false);
     };
-    root.addEventListener('pointerover', over, true); root.addEventListener('click', click, true);
-    return () => { root.removeAttribute('data-annotation-selecting'); root.removeEventListener('pointerover', over, true); root.removeEventListener('click', click, true); };
+    root.addEventListener('pointerover', over, true); root.addEventListener('pointermove', move, true); root.addEventListener('click', click, true);
+    return () => { root.removeAttribute('data-annotation-selecting'); root.removeEventListener('pointerover', over, true); root.removeEventListener('pointermove', move, true); root.removeEventListener('click', click, true); };
   }, [selecting, scope, onSelectingChange]);
   useEffect(() => {
     const update = () => { if (target.current?.isConnected) setBounds(target.current.getBoundingClientRect()); else { setSelection(null); setBounds(null); } };
@@ -94,7 +106,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
   }
   const style: CSSProperties = bounds && typeof window !== 'undefined' ? { left: Math.max(12, Math.min(window.innerWidth - 372, bounds.left + bounds.width / 2 - 180)), top: Math.max(64, Math.min(window.innerHeight - panelHeight - 12, bounds.bottom + 12 + panelHeight < window.innerHeight ? bounds.bottom + 12 : bounds.top - panelHeight - 12)) } : {};
   return <div data-mini-agentsam="" style={{ pointerEvents: 'none' }}>
-    {selecting && <div className="mini-agentsam-hint" role="status">Select an element to annotate · Esc to cancel</div>}
+    {selecting && <div ref={cursorHint} className="mini-agentsam-hint" role="status"><MousePointer2 size={14} aria-hidden="true" /> Select to annotate <kbd>Esc</kbd></div>}
     {bounds && (selecting || selection) && <div className="mini-agentsam-outline" style={{ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height }} />}
     {selection && expanded && <div className="mini-agentsam-review-backdrop" onClick={() => setExpanded(false)} />}
     {selection && <section ref={panel} className="mini-agentsam-panel" data-expanded={expanded ? 'true' : 'false'} role={expanded ? 'dialog' : undefined} aria-modal={expanded ? true : undefined} aria-label={expanded ? 'Review annotation message' : 'miniAgentSam'} style={expanded ? undefined : style}

@@ -1,5 +1,5 @@
 import { resolveCmsSite } from './site-context.mjs';
-import { normalizeCollectionRules } from '../../../../packages/agentsam-merch/src/collection-planning.js';
+import { normalizeCollectionRules } from '@inneranimalmedia/agentsam-merch/collection-planning';
 
 const TYPES = new Set(['product','asset','content','page']);
 const fail = (code,status=400) => { const error=new Error(code); error.status=status; throw error; };

@@ -1,7 +1,7 @@
 import {
   MERCH_ASSORTMENT_RECIPES, assortmentSearchTerms,
-} from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
-import type { MerchCollectionRules } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
+} from "@inneranimalmedia/agentsam-merch/collection-planning";
+import type { MerchCollectionRules } from "@inneranimalmedia/agentsam-merch/collection-planning";
 export type { MerchCollectionRules };
 export type CollectionStatus = "draft" | "active" | "archived";
 export type CollectionTab = "overview" | "products" | "presentation" | "rules" | "seo";

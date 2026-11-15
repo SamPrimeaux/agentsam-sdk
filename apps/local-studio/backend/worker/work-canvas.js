@@ -9,7 +9,7 @@ const EXECUTION = 'canvas-generation';
 const MAX_BYTES = 2_000_000;
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
 const RUN_ID = /^run_[a-z0-9-]{12,80}$/;
-const TYPES = new Set(['frame', 'text', 'button', 'image', 'input', 'link']);
+const TYPES = new Set(['frame', 'text', 'button', 'image', 'input', 'link', 'html']);
 const STYLE = new Set(['color','background','backgroundColor','fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','textAlign','textDecoration','border','borderColor','borderWidth','borderStyle','borderRadius','boxShadow','opacity','padding','paddingTop','paddingRight','paddingBottom','paddingLeft','display','alignItems','justifyContent','flexDirection','gap','overflow','objectFit','whiteSpace']);
 const clean = v => typeof v === 'string' ? v.trim() : '';
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
@@ -43,6 +43,10 @@ export function validateCanvasDocument(doc){
    ids.add(n.id);
    if(n.style!==undefined&&!validStyle(n.style))return false;
    if(n.text!==undefined&&(typeof n.text!=='string'||n.text.length>50000))return false;
+   // HTML remains an explicitly sandboxed Canvas object. Never silently convert it into CMS markup.
+   if(n.sourceHtml!==undefined&&(n.type!=='html'||typeof n.sourceHtml!=='string'||n.sourceHtml.length>200000||!n.sourceHtml.trim()))return false;
+   if(n.type==='html'&&!n.sourceHtml)return false;
+   if(n.sourceBase!==undefined&&(n.type!=='html'||typeof n.sourceBase!=='string'||!/^\/design-canvas\/sources\/[a-z0-9-]+\/$/.test(n.sourceBase)))return false;
    if(n.src!==undefined&&!safeUrl(n.src))return false;
    if(n.action!==undefined&&(!obj(n.action)||!['navigate','toggle','submit'].includes(n.action.type)||typeof n.action.target!=='string'||n.action.target.length>2048||(n.action.type==='navigate'&&!safeUrl(n.action.target))))return false;
    if(n.responsive!==undefined){

@@ -1,6 +1,7 @@
 import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { Bot, Box, Database, FileCode, Film, Globe, Layers, Plug, Plus, ShieldCheck, Sparkles, SquareTerminal, Target, Upload, Users, Wrench, X } from 'lucide-react';
+import { Bot, Box, Check, Database, FileCode, Film, Folder, Globe, ImagePlus, Layers, Plug, Plus, Search, ShieldCheck, Sparkles, SquareTerminal, Target, Upload, Users, Wrench, X } from 'lucide-react';
+import type { AgentRunMode } from '@inneranimalmedia/agentsam-contracts';
 import { filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
 import { loadComposerCatalog } from './plugins';
 import { sideStageComposerWidgets, sideStageRegistrySnapshot } from './side-stage-actions';
@@ -8,10 +9,20 @@ import { useWorkStore } from '@/lib/work/store';
 import { SETTINGS_CATALOG_CHANGED_EVENT } from '@/lib/desktop/connection-deep-link';
 
 /** A single compact capability/context picker for both + and typed @. */
-export function PluginPicker({ value, onChange, onAttach, contextLabel, children }: {
+function PlusMenuRow({ icon, title, hint, onClick }: { icon: ReactNode; title: string; hint: string; onClick: () => void }) {
+  return <button type="button" className="agentsam-plugin-row" onClick={onClick}>{icon}<span><strong>{title}</strong><small>{hint}</small></span></button>;
+}
+
+export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, onWebSearch, onProject, activeMode, onModeChange, contextLabel, children }: {
   value: string;
   onChange: (value: string) => void;
   onAttach?: () => void;
+  onLibrary?: () => void;
+  onImage?: () => void;
+  onWebSearch?: () => void;
+  onProject?: () => void;
+  activeMode?: AgentRunMode;
+  onModeChange?: (mode: AgentRunMode) => void;
   contextLabel?: string;
   children: (controls: {
     trigger: ReactNode;
@@ -30,7 +41,7 @@ export function PluginPicker({ value, onChange, onAttach, contextLabel, children
   const [cursor,setCursor] = useState(value.length);
   const [active,setActive] = useState(0);
   const [revision,setRevision] = useState(0);
-  const [section,setSection] = useState<'root'|'mention'|'skills'|'apps'>('root');
+  const [section,setSection] = useState<'root'|'mention'|'skills'|'apps'|'modes'>('root');
   const [query,setQuery] = useState('');
   const [skills,setSkills] = useState<Array<{id:string;name:string;trigger:string;description?:string}>>([]);
   const [skillsError,setSkillsError] = useState('');
@@ -126,7 +137,7 @@ export function PluginPicker({ value, onChange, onAttach, contextLabel, children
   }
   function onKeyDown(event:KeyboardEvent<HTMLTextAreaElement>) {
     if(!open)return;
-    if(section==='root'||section==='skills') { if(event.key==='Escape'){event.preventDefault();setOpen(false);} return; }
+    if(section==='root'||section==='skills'||section==='modes') { if(event.key==='Escape'){event.preventDefault();setOpen(false);} return; }
     if(event.key==='Escape'){
       event.preventDefault();event.stopPropagation();setOpen(false);
     } else if(event.key==='ArrowDown'||event.key==='ArrowUp'){
@@ -171,15 +182,27 @@ export function PluginPicker({ value, onChange, onAttach, contextLabel, children
     {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message">
       <div className="agentsam-plugin-heading">
         {section!=='root'&&<button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');}}>Back</button>}
-        <strong>{section==='root'?'Add to your message':section==='skills'?'Skills':section==='apps'?'Apps':'Mention'}</strong>
-        <button type="button" className="as-nav-button" aria-label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></button>
+        <strong>{section==='root'?'Add to your message':section==='skills'?'Skills':section==='apps'?'Apps':section==='modes'?'Agent mode':'Mention'}</strong>
+        <IconAction type="button" className="as-nav-button" label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></IconAction>
       </div>
-      {section==='root' ? <div className="agentsam-plugin-sections">
+      {section==='root' && onModeChange ? <div className="agentsam-plugin-sections" data-work-plus-menu="">
+        {onAttach&&<PlusMenuRow icon={<Upload size={17}/>} title="Add photos & files" hint="Upload from computer" onClick={()=>{setOpen(false);onAttach();}}/>}
+        {onLibrary&&<PlusMenuRow icon={<Folder size={17}/>} title="Add from library" hint="Browse saved media and files" onClick={()=>{setOpen(false);onLibrary();}}/>}
+        {onImage&&<PlusMenuRow icon={<ImagePlus size={17}/>} title="Create image" hint="Generate an image with AgentSam" onClick={()=>{setOpen(false);onImage();}}/>}
+        {onWebSearch&&<PlusMenuRow icon={<Globe size={17}/>} title="Web search" hint="Research in AgentSam Browser" onClick={()=>{setOpen(false);onWebSearch();}}/>}
+        {onProject&&<PlusMenuRow icon={<Folder size={17}/>} title="Work in a project" hint="Connect this conversation to a project" onClick={()=>{setOpen(false);onProject();}}/>}
+        <div className="agentsam-plugin-section-divider" />
+        <PlusMenuRow icon={<Bot size={17}/>} title={`Mode · ${(activeMode||'agent').replace(/^./,letter=>letter.toUpperCase())}`} hint="Agent, Plan, Debug, Multitask or Ask" onClick={()=>setSection('modes')}/>
+        <PlusMenuRow icon={<Plug size={17}/>} title="Plugins & apps" hint="Installed connected capabilities" onClick={()=>setSection('apps')}/>
+        <PlusMenuRow icon={<Sparkles size={17}/>} title="Skills" hint="Private instructions and knowledge" onClick={()=>setSection('skills')}/>
+      </div> : section==='root' ? <div className="agentsam-plugin-sections">
         {onAttach&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onAttach();}}><Upload size={17}/><span className="sr-only" aria-hidden="true">Files</span><span><strong>Files</strong><small>Attach images and references</small></span></button>}
         <button type="button" className="agentsam-plugin-row" disabled={!contextLabel} onClick={()=>{onChange(value+(value?'\n':'')+'Target: '+contextLabel);setOpen(false);}}><Target size={17}/><span className="sr-only" aria-hidden="true">Target</span><span><strong>Target</strong><small>{contextLabel||'Select an element in your workspace'}</small></span></button>
         <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('mention')}><Users size={17}/><span className="sr-only" aria-hidden="true">Mention</span><span><strong>Mention</strong><small>Reference an available capability</small></span></button>
         <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('skills')}><Sparkles size={17}/><span className="sr-only" aria-hidden="true">Skills</span><span><strong>Skills</strong><small>Your private instructions and knowledge</small></span></button>
         <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('apps')}><Plug size={17}/><span className="sr-only" aria-hidden="true">Apps</span><span><strong>Apps</strong><small>Connected tools and creative workspaces</small></span></button>
+      </div> : section==='modes' ? <div className="agentsam-plugin-sections" data-work-plus-menu="">
+        {([['agent','Execute and open surfaces'],['plan','Design technical plans'],['debug','Inspect, prove and fix'],['multitask','Coordinate managed workflows'],['ask','Answer questions']] as const).map(([mode,description])=><button key={mode} type="button" className="agentsam-plugin-row" aria-pressed={activeMode===mode} onClick={()=>{onModeChange?.(mode);setOpen(false);}}><Bot size={16}/><span><strong>{mode[0].toUpperCase()+mode.slice(1)}</strong><small>{description}</small></span>{activeMode===mode?<Check size={16}/>:null}</button>)}
       </div> : <>
       <input type="search" aria-label={'Search '+section} placeholder={'Search '+section+'…'} value={query} onChange={event=>{setQuery(event.target.value);setActive(0);}} className="agentsam-plugin-search"/>
       {section==='skills' ? <>

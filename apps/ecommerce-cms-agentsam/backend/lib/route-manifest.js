@@ -84,6 +84,7 @@ export const ADMIN_ROUTE_MANIFEST = [
   coreAdmin({ id: "admin.scene-lab", path: "/admin/scene-lab", handler: "admin-html", page: "scene-lab", context: "cms.scene", legacy: ["/admin/scene-lab.html"] }),
   coreAdmin({ id: "admin.bridge-fly-preview", path: "/admin/bridge-fly-preview", handler: "admin-html", page: "bridge-fly-preview", context: "cms.preview", legacy: ["/admin/bridge-fly-preview.html"] }),
   coreAdmin({ id: "admin.store", path: "/admin/store", handler: "admin-html", page: "store", context: "store.settings", legacy: ["/admin/store.html"] }),
+  coreAdmin({ id: "admin.onboarding-preview", path: "/admin/onboarding-preview", handler: "admin-html", page: "onboarding-preview", context: "commerce.checkout-preview", legacy: ["/admin/onboarding-preview.html"] }),
   coreAdmin({ id: "admin.preferences", path: "/admin/preferences", handler: "admin-html", page: "preferences", context: "store.preferences", legacy: ["/admin/preferences.html"] }),
   appAdmin("resend", {
     id: "admin.email",

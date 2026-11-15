@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { openAppsInstaller } from "@inneranimalmedia/agentsam-nav/browser";
-import type { AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
-import { listAccountApps } from "@/lib/apps/client";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
+import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +16,9 @@ import { MessageList } from "@/components/workbench/thread";
 import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
+import { NewTabStage } from "@/components/workbench/new-tab-stage";
+import { ItemStage } from "@/components/workbench/item-stage";
+import { StageIcon, TabItemIcon } from "@/components/workbench/stage-icons";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
 import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
 import { PluginSideStage } from "@/components/workbench/plugin-side-stage";
@@ -32,7 +33,8 @@ import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistant
 import { consumePendingCadAssistantContext } from "@/lib/cad/assistantContext";
 import { reloadSideStageRegistry, useSideStageRegistry } from "../../../agentsam/side-stage-actions";
 
-function TabIcon({ kind }: { kind: string }) {
+function TabIcon({ kind, icon }: { kind: string; icon?: string | null }) {
+  if (icon) return <TabItemIcon icon={icon} className="size-3.5 rounded-sm object-contain" />;
   if (kind === "chat") return <Users className="size-3.5" />;
   if (kind === "browser") return <Globe className="size-3.5" />;
   if (kind === "artifacts") return <Box className="size-3.5" />;
@@ -40,6 +42,7 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "media") return <Film className="size-3.5" />;
   if (kind === "goal") return <Target className="size-3.5" />;
   if (kind === "database") return <Database className="size-3.5" />;
+  if (kind === "newtab") return <LayoutGrid className="size-3.5" />;
   if (kind === "terminal") return <SquareTerminal className="size-3.5" />;
   return <FileCode className="size-3.5" />;
 }
@@ -55,36 +58,16 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
   const setConfirmDiscard = useWorkStore((s) => s.setConfirmDiscard);
   const keepSideChat = useWorkStore((s) => s.keepSideChat);
   const registry = useSideStageRegistry();
-  const [installedApps,setInstalledApps]=useState<AdminInstallableApp[]>([]);
-  const [availableApps,setAvailableApps]=useState<AdminInstallableApp[]>([]);
-  const [appsFailed,setAppsFailed]=useState(false);
-  useEffect(()=>{
-    let cancelled=false;
-    const refresh=async()=>{
-      try{
-        const apps=await listAccountApps();
-        if(!cancelled){
-          setAvailableApps(apps);
-          setInstalledApps(apps.filter((app:AdminInstallableApp)=>
-            app.kind==="app"&&app.installed&&app.enabled&&typeof app.href==="string"&&
-            /^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(app.href)));
-          setAppsFailed(false);
-        }
-      }catch{
-        if(!cancelled){setInstalledApps([]);setAvailableApps([]);setAppsFailed(true);}
-      }
-    };
-    void refresh();
-    window.addEventListener("agentsam:navigation-changed",refresh);
-    return ()=>{cancelled=true;window.removeEventListener("agentsam:navigation-changed",refresh);};
-  },[]);
-  const stages = registry.actions.filter(stage=>{
-    const app=availableApps.find(item=>item.plugin_id===stage.pluginId);
-    return !app || (app.installed&&app.enabled);
-  });
-  const registered = (item: (typeof tabs)[number]) => item.pluginId
-    ? stages.some(stage => stage.pluginId === item.pluginId && stage.stageId === item.stageId)
-    : stages.some(stage => stage.renderer === "builtin" && stage.tabKind === item.kind);
+  const stages = registry.actions;
+  const registered = (item: (typeof tabs)[number]) => item.kind !== 'plugin'
+    || stages.some(stage => stage.pluginId === item.pluginId && stage.stageId === item.stageId);
+  const removeTab = (item: (typeof tabs)[number]) => {
+    if (item.kind === 'browser') {
+      const invoke = getTauriInvoke();
+      if (invoke) void invoke('embedded_browser_close', { sessionId: item.id }).catch(() => undefined);
+    }
+    closeSideTab(item.id);
+  };
   // Account disabling and plugin uninstalling remove the visual entry, but
   // preserve cached tab state, draft text and conversations for re-enabling.
   const visibleTabs = registry.loaded && !registry.error ? tabs.filter(registered) : tabs;
@@ -103,8 +86,10 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
             <div
               key={item.id}
               className={cn(
-                "flex h-8 shrink-0 items-center rounded-full pl-2.5",
-                item.id === activeId ? "bg-muted text-foreground" : "text-muted-foreground",
+                "flex h-8 shrink-0 items-center rounded-[7px] border pl-2.5 backdrop-blur-md transition-colors",
+                item.id === activeId
+                  ? "border-border bg-muted/80 text-foreground shadow-sm"
+                  : "border-transparent bg-background/30 text-muted-foreground hover:border-border/60 hover:bg-muted/40",
               )}
             >
               <button
@@ -112,63 +97,47 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 onClick={() => setActiveSideTab(item.id)}
                 className="flex items-center gap-1.5 py-1 text-xs"
               >
-                <TabIcon kind={item.kind} />
-                <span className="max-w-28 truncate">{item.title}</span>
+                <TabIcon kind={item.kind} icon={item.icon} />
+                <span className="max-w-28 truncate" title={item.title}>{item.title}</span>
               </button>
-              <button
+              <IconAction
                 type="button"
-                aria-label={`Close ${item.title}`}
-                className="rounded-full p-1.5 hover:bg-background hover:text-foreground"
-                onClick={() => {
-                  if (item.kind === 'browser') {
-                    const invoke = getTauriInvoke();
-                    if (invoke) void invoke('embedded_browser_close', { sessionId: item.id }).catch(() => undefined);
-                  }
-                  closeSideTab(item.id);
-                }}
+                variant="ghost"
+                label={`Close ${item.title}`}
+                hint={`Close ${item.title} Side Stage tab`}
+                className="rounded-md p-1.5 hover:bg-background hover:text-foreground"
+                onClick={() => removeTab(item)}
               >
                 <X className="size-3" />
-              </button>
+              </IconAction>
             </div>
           ))}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" size="icon-sm" variant="ghost" aria-label="Add Side Panel tab">
+              <IconAction type="button" variant="ghost" label="Add Side Stage tab" hint="Choose an available Side Stage tool">
                 <Plus className="size-4" />
-              </Button>
+              </IconAction>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {!registry.loaded && <div role="status" className="px-3 py-2 text-xs text-muted-foreground">Loading additions…</div>}
-              {registry.error && <DropdownMenuItem onSelect={() => {
-                void reloadSideStageRegistry();
-              }}>Retry loading additions</DropdownMenuItem>}
-              {registry.loaded && !registry.error && !stages.length &&
-                <div role="status" className="px-3 py-2 text-xs text-muted-foreground">No additions enabled</div>}
-              {installedApps.length>0&&<div role="presentation" className="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Installed apps</div>}
-              {installedApps.map(app=>{
-                const stage=registry.actions.find(item=>
-                  item.pluginId===app.plugin_id&&app.surfaces?.includes("side-stage"));
-                return <DropdownMenuItem key={"app:"+app.key} onSelect={()=>{
-                  if(stage){
-                    openSideTab(stage.tabKind as Parameters<typeof openSideTab>[0],{
-                      title:app.label,pluginId:stage.pluginId,stageId:stage.stageId,ephemeral:false,
-                    });
-                    setSideOpen(true);
-                  }else if(app.href){
-                    window.dispatchEvent(new CustomEvent("agentsam:navigate",{detail:{to:app.href}}));
-                  }
+              <DropdownMenuItem onSelect={() => { openSideTab("newtab", { ephemeral: false }); setSideOpen(true); }}>
+                <Plus className="size-3.5" />New tab
+              </DropdownMenuItem>
+              <div className="border-t border-border px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Built-in tools</div>
+              {!registry.loaded && <div role="status" className="px-3 py-2 text-xs text-muted-foreground">Loading tools…</div>}
+              {registry.loaded && !registry.error && stages.filter(stage => stage.renderer === 'builtin').map((stage) => (
+                <DropdownMenuItem key={stage.id} onSelect={() => {
+                  openSideTab(stage.tabKind as Parameters<typeof openSideTab>[0], { title: stage.label, ephemeral: false });
+                  setSideOpen(true);
                 }}>
-                  {app.icon_url&&/^(https:\/\/|\/)/.test(app.icon_url)
-                    ? <img src={app.icon_url} alt="" className="mr-2 size-3.5 object-contain"/>
-                    : <Layers className="mr-2 size-3.5"/>}
-                  {app.label}{stage?<span className="ml-auto text-[10px] text-muted-foreground">Side Stage</span>:<ExternalLink className="ml-auto size-3 text-muted-foreground"/>}
-                </DropdownMenuItem>;
-              })}
-              {appsFailed&&<div role="status" className="px-3 py-2 text-xs text-muted-foreground">App installations unavailable</div>}
-              <DropdownMenuItem onSelect={openAppsInstaller}><Plus className="mr-2 size-3.5"/>Install or manage apps</DropdownMenuItem>
-              {stages.length>0&&<div role="presentation" className="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Tools</div>}
-              {stages.filter(stage=>!installedApps.some(app=>
-                app.plugin_id===stage.pluginId&&app.surfaces?.includes("side-stage"))).map((stage) => {
+                  <StageIcon stage={stage} className="size-3.5" />{stage.label}
+                </DropdownMenuItem>
+              ))}
+              <div className="border-t border-border px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Installed additions</div>
+              {!registry.loaded && <div role="status" className="px-3 py-2 text-xs text-muted-foreground">Loading additions…</div>}
+              {registry.error && <DropdownMenuItem onSelect={() => { void reloadSideStageRegistry(); }}>Additions unavailable · Retry</DropdownMenuItem>}
+              {registry.loaded && !registry.error && !stages.some(stage => stage.renderer !== 'builtin') &&
+                <div role="status" className="px-3 py-2 text-xs text-muted-foreground">No installed additions</div>}
+              {stages.filter(stage => stage.renderer !== 'builtin').map((stage) => {
                 const Icon = {
                   target: Target, users: Users, globe: Globe, "file-code": FileCode,
                   box: Box, layers: Layers, layout: Layers, film: Film,
@@ -194,33 +163,45 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
               })}
             </DropdownMenuContent>
           </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <IconAction type="button" variant="ghost" label="Manage Side Stage tabs" hint="Remove open tabs without uninstalling apps">
+                <MoreHorizontal className="size-4" />
+              </IconAction>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {visibleTabs.length ? visibleTabs.map(item => (
+                <DropdownMenuItem key={item.id} onSelect={() => removeTab(item)}>
+                  <X className="mr-2 size-3.5" />Remove {item.title}
+                </DropdownMenuItem>
+              )) : <div className="px-3 py-2 text-xs text-muted-foreground">No open tabs</div>}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        {tab?.kind === "media" && <Button
+        {tab?.kind === "media" && <IconAction
           type="button"
-          size="icon-sm"
           variant="ghost"
-          aria-label="Open Media workspace"
-          title="Open Media full screen"
+          label="Open Media workspace"
+          hint="Open Media in its dedicated workspace"
           onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/media" } }))}
-        ><ExternalLink className="size-4" /></Button>}
-        {onFocusToggle && <Button
+        ><ExternalLink className="size-4" /></IconAction>}
+        {onFocusToggle && <IconAction
           type="button"
-          size="icon-sm"
           variant="ghost"
-          aria-label={workFocused ? "Restore split conversation and Work" : "Focus Work panel"}
-          title={workFocused ? "Restore split view" : "Focus Work"}
+          label={workFocused ? "Restore split conversation and Work" : "Focus Work panel"}
+          hint={workFocused ? "Restore split view" : "Expand Work within the current window"}
           onClick={onFocusToggle}
-        >{workFocused ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</Button>}
-        <Button
+        >{workFocused ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</IconAction>}
+        <IconAction
           type="button"
-          size="icon-sm"
           variant="ghost"
           className="ml-auto"
-          aria-label="Close Side Panel"
+          label="Close Side Stage"
+          hint="Hide the Side Stage without closing its tabs"
           onClick={() => setSideOpen(false)}
         >
           <X className="size-4" />
-        </Button>
+        </IconAction>
       </div>
 
       <div className="min-h-0 flex-1">
@@ -233,13 +214,11 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
         {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId && stage.stageId === tab.stageId)} /> : null}
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
+        {tab?.kind === "newtab" ? <NewTabStage tab={tab} /> : null}
+        {tab?.kind === "item" ? <ItemStage tab={tab} /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}
         {tab?.kind === "goal" ? <GoalEditor chatId={tab.parentChatId ?? undefined} /> : null}
-        {!tab ? (
-          <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-            <p className="text-sm text-muted-foreground">Open a co-worker, browser, files, or CLI pane.</p>
-          </div>
-        ) : null}
+        {!tab ? <NewTabStage /> : null}
       </div>
 
       <Dialog open={Boolean(confirmId)} onOpenChange={(open) => !open && setConfirmDiscard(null)}>

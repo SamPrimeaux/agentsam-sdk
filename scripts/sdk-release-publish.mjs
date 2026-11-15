@@ -33,6 +33,9 @@ function scan(dir){
  }
 }
 scan(path.join(root,'packages'));scan(path.join(root,'apps'));
+// Respect the canonical per-package independent release policy instead of
+// maintaining another manual list as first-party apps become installable.
+for (const item of entries) if (item.manifest.releaseTrain === 'independent') independent.add(item.name);
 const all=new Map(entries.map(x=>[x.name,x]));
 if(all.size!==entries.length)throw Error('duplicate_first_party_package');
 all.set(sdk.name,{name:sdk.name,manifest:sdk,cwd:root,rel:'package.json'});

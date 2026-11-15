@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 
 export type CanvasNode = {
-  id: string; type: "frame" | "text" | "button" | "image" | "input" | "link";
+  id: string; type: "frame" | "text" | "button" | "image" | "input" | "link" | "html";
   name: string; x: number; y: number; width: number; height: number;
-  text?: string; src?: string; style?: Record<string, string | number>;
+  text?: string; src?: string; sourceHtml?: string; sourceBase?: string; style?: Record<string, string | number>;
   children?: CanvasNode[]; componentId?: string;
   action?: { type: "navigate" | "toggle" | "submit"; target: string };
   binding?: Record<string, unknown>;

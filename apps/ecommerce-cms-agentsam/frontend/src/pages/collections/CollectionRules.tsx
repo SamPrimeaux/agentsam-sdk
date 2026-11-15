@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import StudioIcon from "../products/StudioIcon";
 import type { MerchCollectionRules, Product } from "./model";
-import { resolveCollectionMembers } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
+import { resolveCollectionMembers } from "@inneranimalmedia/agentsam-merch/collection-planning";
 
 const modes=[
   {id:"manual",label:"Manual",hint:"You choose each product"},

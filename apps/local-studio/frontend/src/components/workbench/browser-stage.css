@@ -51,3 +51,12 @@
   .as-work-browser-shell .abs-toolbar .abs-omnibar { flex-basis: 100%; }
   .as-work-browser-status { display: none; }
 }
+
+/* Browser welcome artwork follows the selected companion, not a separate mascot catalog. */
+.as-browser-ready-pet { display:block; width:clamp(76px,9vw,110px); height:clamp(76px,9vw,110px); object-fit:contain; margin:0 auto 12px; }
+@media (max-width:640px) { .as-browser-ready-pet { width:78px; height:78px; } }
+.as-work-browser-shell{position:relative}
+.as-browser-build-activity {position:absolute;right:12px;bottom:12px;z-index:8;width:min(460px,calc(100% - 24px));max-height:50%;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--nav-border);border-radius:12px;background:color-mix(in srgb,var(--nav-popover) 96%,transparent);box-shadow:0 16px 55px #0007;backdrop-filter:blur(18px);color:var(--nav-text)}
+.as-browser-build-activity[data-open="false"]{width:auto;min-width:230px}
+.as-browser-build-activity header{display:flex;align-items:center;gap:7px;padding:9px 11px;border-bottom:1px solid var(--nav-border);font-size:12px}.as-browser-build-activity header strong{flex:1}.as-browser-build-activity header button{display:grid;place-items:center;border-radius:6px;padding:5px}.as-browser-build-activity header button:hover{background:var(--nav-hover)}
+.as-browser-build-details{min-height:0;overflow:auto;padding:12px}.as-browser-build-details p{font-size:12px;color:var(--nav-muted)}.as-browser-build-details pre{font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:190px;overflow:auto;color:var(--nav-muted)}.as-browser-build-details button{padding:7px 10px;border-radius:7px;background:var(--nav-selected);font-size:12px}

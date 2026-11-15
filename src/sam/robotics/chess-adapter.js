@@ -10,5 +10,11 @@ export function moveToGoals(move) {
   // en passant: captured pawn is not on `to` square — captured_square carries it.
   return { environment: 'chess', execution: 'simulation', goals };
 }
-export const ORNATE_BAROQUE_BASE = 'https://assets.inneranimalmedia.com/glb/chess/baroque';
-export const ornatePieceUrl = (kind, color) => `${ORNATE_BAROQUE_BASE}/baroque_${kind}_${color}_opt.glb`; // preserved source assets, never regenerated here
+// Same-origin default only. The consuming host supplies a CDN origin when needed.
+// Never encode an operator's domain into the portable SAM robotics adapter.
+export const ORNATE_BAROQUE_BASE = '/glb/chess/baroque';
+export function ornatePieceUrl(kind, color, { baseUrl = ORNATE_BAROQUE_BASE } = {}) {
+  const base = String(baseUrl).replace(/\/+$/, '');
+  if (!base) throw new Error('ornate_asset_base_required');
+  return `${base}/baroque_${kind}_${color}_opt.glb`; // source GLBs remain owned/preserved by the host
+}

@@ -221,6 +221,13 @@ export async function getDesktopWorkspaceContext(): Promise<DesktopWorkspaceCont
   }
 }
 
+/** Native re-validates the path (absolute, real directory) and owns the opened workspace. Throws the native reason on rejection. */
+export async function openDesktopWorkspace(path: string): Promise<DesktopWorkspaceContext> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("tauri_unavailable");
+  return (await invoke("desktop_open_workspace", { path })) as DesktopWorkspaceContext;
+}
+
 export async function openExternalUrl(url: string): Promise<void> {
   if (!/^https?:\/\//i.test(url)) throw new Error("external_url_scheme_not_allowed");
   const invoke = getTauriInvoke();

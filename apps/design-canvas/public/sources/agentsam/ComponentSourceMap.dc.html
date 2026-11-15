@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component to source map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:#191919}
+code{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:12px}
+.row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.5fr) 72px;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+@media(max-width:720px){.row{grid-template-columns:minmax(0,1fr) 56px}.row .to{grid-column:1 / -1;grid-row:2}}
+</style>
+</helmet>
+<div style="{{themeVars}} min-height: 900px; box-sizing: border-box; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; padding: clamp(16px, 4vw, 40px); display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 6px"><h1 style="margin: 0; font-size: clamp(24px, 4vw, 32px); font-weight: 500; letter-spacing: -0.02em">Component to source map</h1><p style="margin: 0; font-size: 15px; line-height: 22px; color: var(--text-muted); max-width: 720px">Every old miniAgentSam, composer and shell identifier, the token that replaces it, and how often it appears in the current checkout. Counts include built copies, so the real number to migrate is lower.</p></div>
+
+<section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="3"><div style="border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 16px; display: flex; flex-direction: column; gap: 8px"><span style="width: 28px; height: 28px; border-radius: 999px; background: var(--agent); color: var(--on-agent); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center">{{s.n}}</span><div style="font-size: 15px; font-weight: 600">{{s.title}}</div><div style="font-size: 13px; line-height: 19px; color: var(--text-muted)">{{s.body}}</div></div></sc-for>
+</section>
+
+<section style="border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4"><button aria-pressed="{{g.on}}" onClick="{{g.pick}}" style="height: 44px; padding: 0 16px; border: 1px solid {{g.line}}; border-radius: 999px; background: {{g.bg}}; color: {{g.fg}}; font-size: 13px; cursor: pointer">{{g.label}}</button></sc-for>
+</div>
+<div class="row" style="font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--line)"><span>Old name</span><span class="to">New token</span><span style="text-align: right">Uses</span></div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="8"><div class="row" style="font-size: 14px"><code>{{r.from}}</code><code class="to" style="color: var(--agent-text)">{{r.to}}</code><span style="text-align: right; color: var(--text-muted)">{{r.n}}</span></div></sc-for>
+</section>
+
+<section style="border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px; font-weight: 600">Where the old names live today</div>
+<sc-for list="{{files}}" as="f" hint-placeholder-count="6"><div style="display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px"><code style="flex: 1 1 320px; min-width: 0; word-break: break-all">{{f.path}}</code><span style="color: var(--text-muted)">{{f.note}}</span></div></sc-for>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dev","light"],"default":"dev","section":"Theme"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { group: 'all' }; }
+renderVals() {
+const s = this.state;
+const THEMES = {"dev": "--bg:#191919;--canvas:#141414;--canvas-dot:#2a2a2a;--chrome:#191919;--surface:#262626;--surface-2:#2a2a2a;--input:#303030;--line:#313131;--line-strong:#3a3a3a;--text:#ececec;--text-muted:#ababab;--text-faint:#8a8a8a;--brand:#238552;--brand-hover:#1f7a4b;--on-brand:#ffffff;--brand-text:#3dba7a;--brand-tint:#162a20;--brand-line:#2a5a40;--action:#238552;--action-hover:#1f7a4b;--on-action:#ffffff;--link:#3dba7a;--focus:#3dba7a;--select-tint:#162a20;--select-line:#2a5a40;--agent:#238552;--agent-hover:#1f7a4b;--on-agent:#ffffff;--agent-text:#3dba7a;--agent-tint:#162a20;--agent-line:#2a5a40;--danger:#ff8a80;--scrim:rgba(0,0,0,0.55);--semantic-surface-navigation:#191919;--semantic-text-primary:#ececec;--semantic-text-muted:#ababab;--semantic-border-default:#313131;--semantic-accent-primary:#238552;--semantic-action-primary:#238552;--assistant-shared-brand-foreground:#ececec;--assistant-shared-composer-send-background:#238552;--assistant-shared-composer-send-foreground:#ffffff;--assistant-shared-composer-send-disabled-background:#3a3a3a;--assistant-shared-composer-send-disabled-foreground:#8a8a8a;--assistant-shared-composer-control-hover:#1f7a4b;--assistant-shared-composer-mode-agent-accent:#3dba7a;--assistant-shared-composer-mode-agent-strong:#238552;--assistant-shared-composer-mode-plan-accent:#8aa8f0;--assistant-shared-composer-mode-plan-strong:#3f6fd1;--assistant-shared-composer-mode-debug-accent:#e0b255;--assistant-shared-composer-mode-debug-strong:#9a6208;--assistant-shared-composer-mode-ask-accent:#4fc3c8;--assistant-shared-composer-mode-ask-strong:#0f7f84;--assistant-shared-composer-mode-multitask-accent:#a58cf0;--assistant-shared-composer-mode-multitask-strong:#6d4ae8;--assistant-shared-composer-mode-accent:#3dba7a;--assistant-shared-composer-mode-accent-strong:#238552;--assistant-mini-container-surface:#262626;--assistant-mini-container-raised:#2a2a2a;--assistant-mini-container-border:#3a3a3a;--assistant-mini-outline:#238552;--assistant-mini-breadcrumb-selected:#162a20;--assistant-mini-scope-selected:#262626;--assistant-mini-hint-background:#162a20;--assistant-mini-hint-border:#2a5a40;--assistant-mini-status-working:#162a20;--assistant-side-panel-surface:#191919;--assistant-side-panel-border:#313131;--assistant-side-thread-surface:#191919;--assistant-side-header-border:#313131;--assistant-side-composer-surface:#303030;--assistant-side-resize-hover:#2a5a40;--assistant-side-activity-done:#3dba7a;--assistant-workspace-canvas:#141414;--editor-assistant-target-line:#238552;--editor-assistant-target-tint:#162a20;--editor-assistant-overlay:rgba(0,0,0,0.55);--state-working:#238552;--state-success:#3dba7a;--state-error:#ff8a80;--state-listening:#238552;--state-selected:#162a20", "light": "--bg:#f4f5fa;--canvas:#fbfbfe;--canvas-dot:#d9dce8;--chrome:#ffffff;--surface:#ffffff;--surface-2:#f1f2f8;--input:#f1f2f8;--line:#e3e5ef;--line-strong:#c9ccdb;--text:#14161f;--text-muted:#5b6075;--text-faint:#6b7085;--brand:#238552;--brand-hover:#1d6f45;--on-brand:#ffffff;--brand-text:#1a7a49;--brand-tint:#e6f4ec;--brand-line:#a9d6bb;--action:#2f5bea;--action-hover:#2447c9;--on-action:#ffffff;--link:#2447c9;--focus:#2f5bea;--select-tint:#e8eeff;--select-line:#9db4f8;--agent:#6d4ae8;--agent-hover:#5b35d5;--on-agent:#ffffff;--agent-text:#5b35d5;--agent-tint:#f1ecff;--agent-line:#c9b9fa;--danger:#c62828;--scrim:rgba(20,22,31,0.35);--semantic-surface-navigation:#ffffff;--semantic-text-primary:#14161f;--semantic-text-muted:#5b6075;--semantic-border-default:#e3e5ef;--semantic-accent-primary:#6d4ae8;--semantic-action-primary:#2f5bea;--assistant-shared-brand-foreground:#14161f;--assistant-shared-composer-send-background:#6d4ae8;--assistant-shared-composer-send-foreground:#ffffff;--assistant-shared-composer-send-disabled-background:#e3e5ef;--assistant-shared-composer-send-disabled-foreground:#6b7085;--assistant-shared-composer-control-hover:#5b35d5;--assistant-shared-composer-mode-agent-accent:#5b35d5;--assistant-shared-composer-mode-agent-strong:#6d4ae8;--assistant-shared-composer-mode-plan-accent:#2f5bea;--assistant-shared-composer-mode-plan-strong:#3f6fd1;--assistant-shared-composer-mode-debug-accent:#8a5a06;--assistant-shared-composer-mode-debug-strong:#9a6208;--assistant-shared-composer-mode-ask-accent:#0b6f74;--assistant-shared-composer-mode-ask-strong:#0f7f84;--assistant-shared-composer-mode-multitask-accent:#5b35d5;--assistant-shared-composer-mode-multitask-strong:#6d4ae8;--assistant-shared-composer-mode-accent:#5b35d5;--assistant-shared-composer-mode-accent-strong:#6d4ae8;--assistant-mini-container-surface:#ffffff;--assistant-mini-container-raised:#f1f2f8;--assistant-mini-container-border:#c9ccdb;--assistant-mini-outline:#6d4ae8;--assistant-mini-breadcrumb-selected:#e8eeff;--assistant-mini-scope-selected:#ffffff;--assistant-mini-hint-background:#f1ecff;--assistant-mini-hint-border:#c9b9fa;--assistant-mini-status-working:#f1ecff;--assistant-side-panel-surface:#ffffff;--assistant-side-panel-border:#e3e5ef;--assistant-side-thread-surface:#f4f5fa;--assistant-side-header-border:#e3e5ef;--assistant-side-composer-surface:#f1f2f8;--assistant-side-resize-hover:#c9b9fa;--assistant-side-activity-done:#5b35d5;--assistant-workspace-canvas:#fbfbfe;--editor-assistant-target-line:#6d4ae8;--editor-assistant-target-tint:#f1ecff;--editor-assistant-overlay:rgba(20,22,31,0.35);--state-working:#6d4ae8;--state-success:#1a7a49;--state-error:#c62828;--state-listening:#2f5bea;--state-selected:#e8eeff"};
+const themeVars = THEMES[(this.props && this.props.theme) === 'light' ? 'light' : 'dev'];
+const all = [
+['--composer-mode-accent', '--assistant-shared-composer-mode-accent', 139, 'composer'],
+['--composer-mode-accent-strong', '--assistant-shared-composer-mode-accent-strong', 52, 'composer'],
+['--composer-control-hover', '--assistant-shared-composer-control-hover', 28, 'composer'],
+['--composer-send-bg', '--assistant-shared-composer-send-background', 27, 'composer'],
+['--composer-send-fg', '--assistant-shared-composer-send-foreground', 22, 'composer'],
+['--composer-send-disabled-bg', '--assistant-shared-composer-send-disabled-background', 10, 'composer'],
+['--composer-send-disabled-fg', '--assistant-shared-composer-send-disabled-foreground', 10, 'composer'],
+['--mini-text', '--semantic-text-primary', 72, 'mini'],
+['--mini-surface', '--assistant-mini-container-surface', 60, 'mini'],
+['--mini-muted', '--semantic-text-muted', 60, 'mini'],
+['--mini-border', '--semantic-border-default', 60, 'mini'],
+['--mini-accent', '--semantic-accent-primary', 60, 'mini'],
+['--mini-surface-raised', '--assistant-mini-container-raised', 24, 'mini'],
+['--mini-accent-strong', '--semantic-action-primary', 24, 'mini'],
+['--nav-surface', '--semantic-surface-navigation', '', 'shell'],
+['--nav-accent', '--semantic-action-primary', '', 'shell'],
+['--nav-text', '--semantic-text-primary', '', 'shell'],
+['--nav-muted', '--semantic-text-muted', '', 'shell'],
+['--agentsam-mark-color', '--assistant-shared-brand-foreground', '', 'shell']
+];
+const defs = [['all', 'All'], ['mini', 'miniAgentSam'], ['composer', 'Composer'], ['shell', 'Shell']];
+const rows = all.filter((r) => s.group === 'all' || r[3] === s.group).map(([from, to, n]) => ({ from, to, n: n === '' ? 'in use' : String(n) }));
+return {
+themeVars,
+steps: [
+{ n: 1, title: 'Load the tokens', body: 'Add tokens.css once at the app root, then legacy-aliases.css. Old names keep working and now resolve to the new tokens.' },
+{ n: 2, title: 'Rename in source', body: 'Run the migration script on a clean git tree. It is a dry run until you pass --write, and git is the backup.' },
+{ n: 3, title: 'Retire the aliases', body: 'Delete lines from legacy-aliases.css as their uses reach zero. When the file is empty, remove it.' }
+],
+groups: defs.map(([id, label]) => { const on = s.group === id; return { label, on, bg: on ? 'var(--select-tint)' : 'transparent', fg: on ? 'var(--link)' : 'var(--text-muted)', line: on ? 'var(--select-line)' : 'var(--line-strong)', pick: () => this.setState({ group: id }) }; }),
+rows,
+files: [
+{ path: 'apps/local-studio/frontend/agentsam/shell.css', note: 'Composer send, control hover and mode accents are defined here.' },
+{ path: 'apps/local-studio/frontend/public/admin/css/agentsam.css', note: 'Shell and composer styles. A built copy exists under desktop-dist.' },
+{ path: 'apps/local-studio/frontend/src/components/workbench/work-layout.css', note: 'Work layout uses the same identifiers.' },
+{ path: 'apps/local-studio/frontend/src/routes/platform-home.css', note: 'Home uses composer and mini identifiers.' },
+{ path: 'apps/cad-creator/frontend/src/index.css', note: 'CAD Creator carries its own copy of the identifiers.' },
+{ path: 'apps/samsketch/src/embedded.css', note: 'SamSketch embedded styles.' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

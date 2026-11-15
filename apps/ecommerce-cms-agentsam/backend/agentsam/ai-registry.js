@@ -296,7 +296,7 @@ export async function selectAIModel(env, routing = {}) {
   return chain[0] || null;
 }
 
-export async function getDefaultModelId(env, taskType, lane) {
+export async function getDefaultModelId(env, taskType, lane, accountId = null) {
   if (!env.DB) return null;
   try {
     const row = await env.DB.prepare(
@@ -310,7 +310,7 @@ export async function getDefaultModelId(env, taskType, lane) {
        ORDER BY priority ASC
        LIMIT 1`
     )
-      .bind(requireApplicationAccountId(), taskType, lane)
+      .bind((accountId || requireApplicationAccountId()), taskType, lane)
       .first();
     return row?.model_id || null;
   } catch {
@@ -318,7 +318,7 @@ export async function getDefaultModelId(env, taskType, lane) {
   }
 }
 
-export async function getAIRegistryStatus(env) {
+export async function getAIRegistryStatus(env, accountId = null) {
   const bindingConfigured = Boolean(env.AGENTSAM_WAI?.run);
 
   let aiRegistryCount = 0;
@@ -330,18 +330,18 @@ export async function getAIRegistryStatus(env) {
       const total = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status IN ('active','experimental')`
       )
-        .bind(requireApplicationAccountId())
+        .bind((accountId || requireApplicationAccountId()))
         .first();
       aiRegistryCount = total?.n ?? 0;
       const openAiModels = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND provider = 'openai' AND status IN ('active','experimental')`
-      ).bind(requireApplicationAccountId()).first();
+      ).bind((accountId || requireApplicationAccountId())).first();
       openAiRegisteredCount = openAiModels?.n ?? 0;
 
       const disabled = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status = 'disabled'`
       )
-        .bind(requireApplicationAccountId())
+        .bind((accountId || requireApplicationAccountId()))
         .first();
       disabledModelCount = disabled?.n ?? 0;
     }
@@ -355,10 +355,10 @@ export async function getAIRegistryStatus(env) {
     defaultImageModel,
     defaultVisionModel,
   ] = await Promise.all([
-    getDefaultModelId(env, "text_generation", "general"),
-    getDefaultModelId(env, "code_generation", "code"),
-    getDefaultModelId(env, "image_generation", "image"),
-    getDefaultModelId(env, "image_to_text", "vision"),
+    getDefaultModelId(env, "text_generation", "general", accountId),
+    getDefaultModelId(env, "code_generation", "code", accountId),
+    getDefaultModelId(env, "image_generation", "image", accountId),
+    getDefaultModelId(env, "image_to_text", "vision", accountId),
   ]);
 
   return {

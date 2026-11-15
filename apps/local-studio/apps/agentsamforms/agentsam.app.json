@@ -1,0 +1,53 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "agentsamforms",
+  "name": "AgentSamForms",
+  "kind": "app",
+  "version": "2.6.15",
+  "category": "forms",
+  "status": "bundled",
+  "description": "Merchant-installed storefront forms with site-owned CMS drafts and stored submissions.",
+  "routes": {
+    "home": "/forms",
+    "embed": "/forms/embed/:id",
+    "api": "/api/forms"
+  },
+  "surfaces": [
+    "admin-nav",
+    "merchant-storefront",
+    "standalone"
+  ],
+  "requires": [
+    "account.authenticated",
+    "cms.site",
+    "storage.sql"
+  ],
+  "provides": [
+    "forms.read",
+    "forms.edit",
+    "forms.publish",
+    "forms.submissions"
+  ],
+  "install": {
+    "supported": true,
+    "registry_key": "agentsamforms",
+    "authority": "agentsam_app_installations",
+    "seed": "five-site-scoped-cms-global-drafts",
+    "new_accounts": "not-installed"
+  },
+  "implementation": {
+    "frontend": "frontend/src/components/forms/AgentSamFormsPage.tsx",
+    "backend": "backend/worker/agentsam-forms.js",
+    "migration": "backend/migrations/1365_agentsamforms_cms_site_and_submissions.sql",
+    "content_store": "cms_globals",
+    "revisions": "cms_revisions",
+    "submissions": "cms_form_submissions"
+  },
+  "safety": {
+    "public_routes": "published-only",
+    "published_edit": "explicit-unpublish",
+    "automatic_emails": false,
+    "automatic_orders": false,
+    "automatic_checkout": false
+  }
+}

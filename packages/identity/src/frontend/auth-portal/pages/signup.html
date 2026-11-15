@@ -497,6 +497,12 @@
 <script>
 (function() {
     var nextParam = new URLSearchParams(window.location.search).get('next');
+    // Both sign-in and sign-up must return to the selected theme after
+    // verified authentication, without permitting external redirect origins.
+    var loginSwitch = document.querySelector('.signup-prompt a[href="/auth/login"]');
+    if (loginSwitch && nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+        loginSwitch.href = '/auth/login?next=' + encodeURIComponent(nextParam);
+    }
     var googleLink = document.getElementById('googleSignIn');
     if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') && googleLink) {
         googleLink.href = '/api/oauth/google/start?next=' + encodeURIComponent(nextParam);

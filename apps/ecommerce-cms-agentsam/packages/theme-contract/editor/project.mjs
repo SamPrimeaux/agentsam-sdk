@@ -290,7 +290,15 @@ export function sourceSectionTemplateKey(pageSlug, sectionKey) {
 
 function installSourceTemplates(state, inherited = {}) {
   const catalog = Object.fromEntries(Object.entries(inherited || {}).filter(([key]) =>
-    key.startsWith('source-') || key.startsWith('custom-')));
+    key.startsWith('source-') || key.startsWith('custom-') || key.startsWith('stock-')));
+  // System-provided components are a derived read-only definition catalog.
+  // Their drafts use the same section instances, project revision and R2 store
+  // as donor content. Never persist a second registry or modify a donor theme.
+  const stock = globalThis.ThemePlatformStock;
+  for (const item of stock?.catalog?.() || []) {
+    const template = stock.sourceTemplate(item.id);
+    if (template?.key && !catalog[template.key]) catalog[template.key] = template;
+  }
   for (const page of state.pages) {
     for (const section of page.sections) {
       // A duplicated/inserted instance points back to its source module;
@@ -484,6 +492,19 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       } }])) }),
     resolvePreview: async (slug, draft) => { const p = withSharedChrome(draft || get(slug)); return { html: renderThemePage(p, state.tokens, { baseUrl: p.assetBase ? await resolveAssetBase(p.assetBase) : undefined }) }; },
     async saveDraft(slug, key, content, expectedVersion) {
+      // A stock component stays a versioned declaration, not arbitrary HTML.
+      // A manually edited URL/color in its source inspector must not bypass
+      // the same constraints enforced by canonical site-owned D1/R2 API.
+      const declared = section(slug,key);
+      const stockKey = String(declared.sourceTemplateKey || declared.content?.__editor?.templateKey || "");
+      if (stockKey.startsWith("stock-")) {
+        const id = "platform/" + stockKey.slice("stock-".length);
+        const copy = clone(content);
+        copy.__editor = {...(copy.__editor||{}), templateKey:"portable", themePreset:id};
+        const validator = globalThis.ThemePlatformStock?.validate;
+        const gate = validator?.(id,copy);
+        if (!gate?.ok) throw new Error("theme_stock_content_invalid:"+ (gate?.error||"stock_runtime_unavailable"));
+      }
       const latest = await store.get(state.id);
       if (latest) { const templates = state.sectionTemplates;
         state = validateThemeProject(latest);
@@ -505,7 +526,22 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       s.schema.key = key;
       s.sourceKind = source.sourceKind || 'content-section';
       s.version = 0;
-      get(slug).sections.splice(toIndex, 0, s);
+      const destination = get(slug);
+      const index = Number.isInteger(toIndex)
+        ? Math.max(0, Math.min(toIndex, destination.sections.length))
+        : destination.sections.length;
+      destination.sections.splice(index, 0, s);
+      // An intentionally blank new theme has no source markers. Without
+      // materializing a template slot, Add section previously saved a draft
+      // which appeared completely empty in preview and on publication.
+      if (!/<!--theme-section:[^>]+-->/.test(destination.template)) {
+        const marker = '<!--theme-section:' + s.key + '-->';
+        if (/<\/main>/i.test(destination.template))
+          destination.template = destination.template.replace(/<\/main>/i, marker+'</main>');
+        else if (/<\/body>/i.test(destination.template))
+          destination.template = destination.template.replace(/<\/body>/i, '<main>'+marker+'</main></body>');
+        else destination.template += '<main>'+marker+'</main>';
+      }
       await persist(); return { section_key: s.key };
     },
     async duplicateSection(slug, key) {
