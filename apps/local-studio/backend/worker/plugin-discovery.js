@@ -6,6 +6,7 @@
 import { installPlugin, updatePluginPreferences } from '@inneranimalmedia/agentsam-sdk/plugins';
 import { loadPluginRegistry } from './plugin-registry.js';
 import { normalizeCatalogSideStage } from './plugin-side-stages.js';
+import { ENTERTAINMENT_PLUGIN_KEYS, installFirstPartyEntertainment, removeFirstPartyEntertainment } from './first-party-entertainment.js';
 
 /**
  * Provider-neutral public plugin catalog source validation and projection.
@@ -259,6 +260,7 @@ export async function installFirstPartyDocker(env,accountId) {
 }
 
 export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) {
+  if(ENTERTAINMENT_PLUGIN_KEYS.includes(pluginKey))return installFirstPartyEntertainment(env,accountId,pluginKey);
   if(pluginKey==='agentsam-docker-engine')return installFirstPartyDocker(env,accountId);
   if (!isCatalogPluginKey(pluginKey)) throw new Error('plugin_catalog_key_invalid');
   const catalog = await discoverPublicPlugins(env,fetcher);
@@ -324,6 +326,9 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
 export async function removeCatalogInstallation(env,accountId,pluginId) {
   if (!/^plg_[a-z0-9]+$/i.test(pluginId)) throw new Error('plugin_id_invalid');
   const definition=await env.DB.prepare('SELECT plugin_key FROM agentsam_plugins WHERE id=? LIMIT 1').bind(pluginId).first();
+  if(ENTERTAINMENT_PLUGIN_KEYS.includes(definition?.plugin_key)){
+    return removeFirstPartyEntertainment(env,accountId,pluginId);
+  }
   const installKey=definition?.plugin_key==='agentsam-docker-engine'?'docker-v1':'catalog-v1';
   const row = await env.DB.prepare(
     'SELECT id FROM agentsam_plugin_installations WHERE plugin_id = ? AND account_id = ? AND instance_key = ? LIMIT 1'
