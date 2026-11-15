@@ -7,6 +7,8 @@ import {
   type IDESourceDiscovery,
 } from '@/lib/work/remote-ide-workspace';
 import { beginLocalStudioConnectorOAuth, startLocalStudioProviderConnection } from '@/lib/connections/client';
+import { DockerConnectionPanel } from '@/components/runtime/DockerConnectionPanel';
+import { createDockerIDEWorkspace, type DockerSelection } from '@/lib/work/docker-ide-workspace';
 const WorkspaceEditor=lazy(()=>import('@inneranimalmedia/agentsam-ide/surface').then(mod=>({default:mod.WorkspaceEditor})));
 const empty:IDESourceDiscovery={ok:true,googleDrive:[],github:[],cloudflare:[]};
 const info:Record<IDEFileSourceId,string>={
@@ -40,6 +42,7 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
   const [repos,setRepos]=useState<Array<{fullName:string;defaultBranch:string;private:boolean;canPush:boolean}>>([]);
   const [repository,setRepository]=useState('');
   const [apps,setApps]=useState<Array<{id:string;name:string;instances?:unknown}>>([]);
+  const [dockerSelection,setDockerSelection]=useState<DockerSelection|null>(null);
   const refresh=useCallback(async()=>{
     setLoading(true);setError('');
     try{setCatalog(await discoverIDESources());}
@@ -47,10 +50,11 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
     finally{setLoading(false);}
   },[]);
   useEffect(()=>{void refresh();},[refresh]);
-  useEffect(()=>{setAccount('');setBucket('');setBuckets([]);setRepos([]);setRepository('');setApps([]);setError('');},[source]);
+  useEffect(()=>{setAccount('');setBucket('');setBuckets([]);setRepos([]);setRepository('');setApps([]);setDockerSelection(null);setError('');},[source]);
   const accounts=source==='drive'?catalog.googleDrive:source==='github'?catalog.github:catalog.cloudflare;
   const selected=accounts.some(a=>a.account===account);
   const remote=useMemo(()=>{
+    if(source==='docker')return dockerSelection?createDockerIDEWorkspace(dockerSelection):null;
     if(!selected)return null;
     if(source==='drive')return createRemoteIDEWorkspace({source:'drive',account});
     if(source==='github'){
@@ -59,15 +63,15 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
     }
     if(source==='r2'&&bucket&&buckets.some(item=>item.name===bucket))return createRemoteIDEWorkspace({source:'r2',account,bucket,jurisdiction:buckets.find(item=>item.name===bucket)?.jurisdiction});
     return null;
-  },[source,account,bucket,buckets,repos,repository,selected]);
+  },[source,account,bucket,buckets,repos,repository,selected,dockerSelection]);
   const sources=useMemo<IDEFileSource[]>(()=>[
     {id:'local',label:'Local',state:hostConnected?'connected':'disconnected',detail:info.local},
     {id:'github',label:'GitHub',state:catalog.github?.length?'connected':'disconnected',detail:info.github},
     {id:'r2',label:'Cloudflare R2',state:catalog.cloudflare.some(c=>c.scopes.some(s=>s==='workers-r2.read'||s==='workers-r2-bucket-item.read'))?'connected':'disconnected',detail:info.r2},
     {id:'drive',label:'Drive',state:catalog.googleDrive.length?'connected':'disconnected',detail:info.drive},
     {id:'container',label:'Cloudflare containers',state:catalog.cloudflare.some(c=>c.scopes.includes('containers.read'))?'connected':'disconnected',detail:info.container},
-    {id:'docker',label:'Docker',state:'disconnected',detail:info.docker},
-  ],[hostConnected,catalog]);
+    {id:'docker',label:'Docker',state:dockerSelection?'connected':'disconnected',detail:info.docker},
+  ],[hostConnected,catalog,dockerSelection]);
   const connect=async()=>{
     setError('');
     try{
@@ -113,16 +117,16 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
       {!monacoReady&&!monacoFailure?<p className="p-3 text-xs text-muted-foreground">Initializing Monaco language workers…</p>:null}
       {monacoReady&&!monacoFailure?<>
       <Suspense fallback={<p className="p-4 text-xs">Loading IDE…</p>}>
-        <WorkspaceEditor key={source+':'+account+':'+bucket} workspace={remote}
-          workspaceId={source+':'+account+':'+bucket} palette={palette}
-          label={source==='drive'?'Google Drive · '+account:source==='github'?'GitHub · '+repository:'R2 · '+bucket}
+        <WorkspaceEditor key={source==='docker'&&dockerSelection?'docker:'+dockerSelection.context+':'+dockerSelection.container+':'+dockerSelection.root:source+':'+account+':'+bucket} workspace={remote}
+          workspaceId={source==='docker'&&dockerSelection?'docker:'+dockerSelection.context+':'+dockerSelection.container+':'+dockerSelection.root:source+':'+account+':'+bucket} palette={palette}
+          label={source==='docker'?'Docker · '+dockerSelection?.container:source==='drive'?'Google Drive · '+account:source==='github'?'GitHub · '+repository:'R2 · '+bucket}
           sources={sources} sourceId={source} onSourceSelect={onSelect}/>
       </Suspense></>:null}
     </div>:<div className="min-h-0 flex-1 overflow-y-auto p-4 text-xs">
       <div className="mx-auto flex max-w-lg flex-col gap-4">
         <div><h2 className="text-base font-semibold">{sources.find(s=>s.id===source)?.label}</h2>
           <p className="mt-1 text-muted-foreground">{info[source]}</p></div>
-        {(source==='drive'||source==='r2'||source==='container'||source==='github')?<>
+        {source==='docker'?<DockerConnectionPanel onOpenWorkspace={setDockerSelection}/>:(source==='drive'||source==='r2'||source==='container'||source==='github')?<>
           <div className="flex gap-2">
             <select aria-label="Connected provider account" className="min-w-0 flex-1 rounded border border-border bg-background p-2"
               value={selected?account:''} onChange={e=>{setAccount(e.target.value);setBucket('');setBuckets([]);setRepos([]);setRepository('');setApps([]);}}>
