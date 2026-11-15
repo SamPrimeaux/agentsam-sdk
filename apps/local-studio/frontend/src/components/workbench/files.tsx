@@ -11,6 +11,9 @@ import { NativeLspTransport } from '@/lib/desktop/native-lsp';
 import { readTheme, type StoredTheme } from '@/lib/work/theme';
 const WorkspaceEditor = lazy(()=>import('@inneranimalmedia/agentsam-ide/surface').then(mod=>({default:mod.WorkspaceEditor})));
 import '@inneranimalmedia/agentsam-ide/surface/workspace-editor.css';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+const renderIDEWorkspaceMarkdown = (content:string) => <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>;
 import { useActiveProject, useWorkStore } from '@/lib/work/store';
 import { isAuthorizedHostProject, isSampleProject, projectNeedsConnection } from '@/lib/work/workspace-restore';
 import { createRuntimeIDEWorkspace, createTutorialIDEWorkspace } from '@/lib/work/ide-workspace';
@@ -119,7 +122,7 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
       {monacoFailure?<p role="alert" className="p-4 text-sm text-destructive">Monaco unavailable: {monacoFailure}</p>
         :!monacoReady?<p role="status" className="p-4 text-xs text-muted-foreground">Initializing Monaco…</p>
         :<Suspense fallback={<p className="p-4 text-xs">Loading IDE…</p>}>
-          <WorkspaceEditor workspace={browserWorkspace} key={browserWorkspaceKey} workspaceId={browserWorkspaceKey}
+          <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} workspace={browserWorkspace} key={browserWorkspaceKey} workspaceId={browserWorkspaceKey}
             label={browserWorkspaceName} palette={palette} sources={sources} sourceId="local"
             onSourceSelect={setSource} showHostModes/>
         </Suspense>}
@@ -149,7 +152,7 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
       <button type="button" className="ml-3 underline" onClick={()=>setSourceNotice('')}>Dismiss</button></div> : null}
     <div className="min-h-0 flex-1">
       <Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading AgentSam IDE…</p>}>
-      <WorkspaceEditor key={project.id} workspace={workspace} workspaceId={project.id}
+      <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} key={project.id} workspace={workspace} workspaceId={project.id}
         label={project.name} palette={palette} lsp={lsp} showHostModes sources={sources} sourceId="local"
         onSourceSelect={id => setSource(id)}/>
       </Suspense>
