@@ -99,22 +99,31 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
     const project=await getVerifiedInstallProject(request,env,ready);
     // The Theme Store, not SDK deployment config, owns each product's public
     // preview alias. Validate its authoritative catalog URL before importing.
+    // The signed editor project records the immutable package preview. The Theme
+    // Store may publish a separate site-facing preview alias for the same release.
+    // Verify BOTH URLs against the same trusted Theme Store origin and slug/version
+    // instead of rejecting a genuine package because its public alias differs.
     const base = String(listing.previewUrl || '');
-    const preview = new URL(base, STORE);
-    const accepted = preview.origin === STORE && !preview.username && !preview.password &&
-      !preview.search && !preview.hash &&
-      (preview.pathname.startsWith('/theme-packages/'+slug+'/'+body.version+'/preview/') ||
-       preview.pathname.startsWith('/themes/'+slug+'/presets/'+slug+'/demo/') ||
-       (typeof listing.previewAlias === 'string' &&
-        /^[a-z][a-z0-9-]{1,63}$/.test(listing.previewAlias) &&
-        !['admin','api','auth','media','themes','apps','settings'].includes(listing.previewAlias) &&
-        preview.pathname === '/' + listing.previewAlias + '/'));
-    if (!accepted) return json({ok:false,error:'theme_preview_url_not_verified'},409);
+    const isVerifiedPreview = (candidate) => {
+      if(typeof candidate!=='string' || !candidate) return false;
+      let preview;
+      try { preview = new URL(candidate, STORE); } catch { return false; }
+      return preview.origin === STORE && !preview.username && !preview.password &&
+        !preview.search && !preview.hash &&
+        (preview.pathname.startsWith('/theme-packages/'+slug+'/'+body.version+'/preview/') ||
+         preview.pathname.startsWith('/themes/'+slug+'/presets/'+slug+'/demo/') ||
+         (typeof listing.previewAlias === 'string' &&
+          /^[a-z][a-z0-9-]{1,63}$/.test(listing.previewAlias) &&
+          !['admin','api','auth','media','themes','apps','settings'].includes(listing.previewAlias) &&
+          preview.pathname === '/' + listing.previewAlias + '/'));
+    };
+    if (!isVerifiedPreview(base) || !isVerifiedPreview(project?.sourcePreviewUrl))
+      return json({ok:false,error:'theme_preview_url_not_verified'},409);
     if(project?.schema!=='agentsam.theme-project.v1' ||
       project.id!=='theme_'+slug || project.sourceThemeId!==slug ||
       project.sourcePackage!=='@inneranimalmedia/theme-'+slug ||
       project.sourcePackageVersion!==body.version ||
-      project.sourcePreviewUrl!==base || project.sourceReleaseSha256!==ready.sha256 ||
+      project.sourceReleaseSha256!==ready.sha256 ||
       !Array.isArray(project.pages) || project.pages.length!==ready.page_count ||
       project.pages.length<1) {
       return json({ok:false,error:'theme_installer_artifact_invalid'},503);
