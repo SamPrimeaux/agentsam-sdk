@@ -100,3 +100,16 @@ test("per-pane companion presentation survives duplication without affecting adj
   assert.notEqual(copy?.id, first);
   assert.notEqual(copy?.ptySlot, sessions.find((session) => session.id === first)?.ptySlot);
 });
+
+test("saved scenes can be assigned independently of companion animations in each terminal", () => {
+  const a = store.getState().createSession();
+  const b = store.getState().createSession();
+  store.getState().patchSession(a, { sceneId: 'scene_a', companionId: undefined, animationStateId: undefined });
+  store.getState().patchSession(b, { companionId: 'geaux', animationStateId: 'idle' });
+  const duplicate = store.getState().duplicateSession(a);
+  assert.equal(store.getState().sessions.find((item) => item.id === duplicate)?.sceneId, 'scene_a');
+  assert.equal(store.getState().sessions.find((item) => item.id === b)?.sceneId, undefined);
+  assert.equal(store.getState().sessions.find((item) => item.id === b)?.companionId, 'geaux');
+  store.getState().patchSession(a, { sceneId: undefined, companionId: 'bella', animationStateId: 'thinking' });
+  assert.equal(store.getState().sessions.find((item) => item.id === duplicate)?.sceneId, 'scene_a');
+});

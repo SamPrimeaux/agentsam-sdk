@@ -10,31 +10,50 @@ import { attachSharedTerminal, detachSharedTerminal, getSharedTerminalRun } from
 import { useTerminalSessionStore } from "@/lib/work/terminal-sessions";
 import { useSessionAppearance } from "@/lib/work/terminal-appearance";
 import { useTerminalUiStore } from "@/lib/work/terminal-commands";
-import { useActiveCompanion } from "../../../agentsam/CompanionContext";
-import { INNERANIMAL_COMPANIONS, COMPANION_STATE_LABELS, companionStateAsset } from "../../../agentsam/companions";
+import { useActiveCompanion, useCompanionLibrarySettings } from "../../../agentsam/CompanionContext";
+import { INNERANIMAL_COMPANIONS, COMPANION_STATE_LABELS, companionStateAsset, resolveCompanion, extendBuiltInCompanion } from "../../../agentsam/companions";
 
 /** A presentation-only animation picker. One selection per persisted PTY session. */
 function SessionCompanionPicker({ sessionId }: { sessionId: string }) {
   const activeCompanion = useActiveCompanion();
+  const library = useCompanionLibrarySettings();
+  const scenes = library.scenes || [];
   const session = useTerminalSessionStore((s) => s.sessions.find((item) => item.id === sessionId));
   const patchSession = useTerminalSessionStore((s) => s.patchSession);
   const companions = [
-    ...INNERANIMAL_COMPANIONS.filter((item) => item.selectable),
-    ...(activeCompanion.custom ? [activeCompanion] : []),
+    ...INNERANIMAL_COMPANIONS.filter((item) => item.selectable).map((item) => extendBuiltInCompanion(item, library.builtInAnimations)),
+    ...library.customCompanions.map((item) => resolveCompanion(item.id, library.customCompanions)),
   ];
   const selected = companions.find((item) => item.id === session?.companionId) || companions[0];
   const stateId = session?.animationStateId || 'idle';
   const selectedGallery = selected.galleryStates?.find((item) => item.id === stateId);
   const src = selectedGallery?.src || companionStateAsset(selected, stateId);
-  const selectedValue = selected.id + ':' + (selectedGallery || selected.states[stateId] ? stateId : 'idle');
-  return <div className="flex shrink-0 items-center gap-1" aria-label="Terminal companion animation">
-    {src ? <img src={src} alt="" aria-hidden="true" className="size-5 shrink-0 object-contain" /> : null}
-    <select aria-label="Companion animation for this terminal" value={selectedValue}
+  const selectedScene = scenes.find((item) => item.id === session?.sceneId);
+  const selectedValue = selectedScene ? 'scene:' + selectedScene.id :
+    selected.id + ':' + (selectedGallery || selected.states[stateId] ? stateId : 'idle');
+  return <div className="flex shrink-0 items-center gap-1" aria-label="Terminal companion scene">
+    {selectedScene ? <div className="relative size-6 shrink-0 overflow-hidden rounded border border-border bg-muted/30"
+      style={selectedScene.backgroundUrl ? { backgroundImage: 'url(' + JSON.stringify(selectedScene.backgroundUrl) + ')', backgroundSize: 'cover' } : undefined}>
+      {selectedScene.layers.map((layer) => {
+        const profile = companions.find((item) => item.id === layer.companionId) || selected;
+        const image = profile.galleryStates?.find((item) => item.id === layer.stateId)?.src || companionStateAsset(profile, layer.stateId);
+        return image ? <img key={layer.id} src={image} alt="" aria-hidden="true" className="pointer-events-none absolute object-contain"
+          style={{ left: layer.x + '%', top: layer.y + '%', width: (45 * layer.scale) + '%', transform: 'translate(-50%,-50%)' }} /> : null;
+      })}
+    </div> : src ? <img src={src} alt="" aria-hidden="true" className="size-5 shrink-0 object-contain" /> : null}
+    <select aria-label="Companion or scene for this terminal" value={selectedValue}
       onChange={(event) => {
-        const [companionId, animationStateId] = event.target.value.split(':');
-        patchSession(sessionId, { companionId, animationStateId });
+        if (event.target.value.startsWith('scene:')) {
+          patchSession(sessionId, { sceneId: event.target.value.slice(6) });
+        } else {
+          const [companionId, animationStateId] = event.target.value.split(':');
+          patchSession(sessionId, { sceneId: undefined, companionId, animationStateId });
+        }
       }}
       className="w-24 min-w-0 truncate rounded border border-border bg-background px-1 py-1 text-[10px] text-foreground focus-visible:outline-primary">
+      {scenes.length > 0 ? <optgroup label="Scenes">
+        {scenes.map((scene) => <option key={scene.id} value={'scene:' + scene.id}>{scene.name}</option>)}
+      </optgroup> : null}
       {companions.map((companion) => {
         const states = companion.galleryStates?.map((state) => ({ id: state.id, label: state.label })) ||
           [...new Set([...COMPANION_STATE_LABELS.map((state) => state.id), ...Object.keys(companion.states)])]

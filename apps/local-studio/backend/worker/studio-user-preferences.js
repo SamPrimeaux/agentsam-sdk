@@ -1,3 +1,4 @@
+import companionCatalog from '../../../../assets/brand/inneranimal-companions/v1/catalog.json' with { type: 'json' };
 /** Existing agentsam_user_ui_preferences account SSOT. No new settings tables. */
 const answer=(payload,status=200)=>Response.json(payload,{status,headers:{"cache-control":"no-store"}});
 const defaults={openLastProject:false,showRuntimeReceipts:false};
@@ -84,9 +85,10 @@ export async function handleStudioAccountAvatar(request, env, userId) {
 }
 
 
-const BUILT_IN_COMPANION_IDS = new Set([
- "geaux", "meaux", "coder", "architect", "engineer", "py", "bella", "roux", "bruneaux", "nyra", "toro",
-]);
+// The versioned source catalog, not a hand-maintained worker allowlist, declares runtime companions.
+const BUILT_IN_COMPANION_IDS = new Set(companionCatalog.companions
+ .filter((item) => item.assetStatus === "runtime-ready")
+ .map((item) => item.id));
 const DEFAULT_COMPANION_SETTINGS = Object.freeze({ activeId: "geaux", secondaryId: null, desktopBuddyEnabled: false, onboarding: null, customCompanions: [] });
 // Core states are recommendations, not a closed enum. A safe slug can name any state.
 const COMPANION_STATE_SLUG = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -99,24 +101,11 @@ function boundedText(value, max, required = false) {
  return text;
 }
 
-function normalizeCustomCompanion(value) {
- if (!value || typeof value !== "object" || Array.isArray(value)) return null;
- const id = typeof value.id === "string" && /^custom_[a-z0-9-]{8,64}$/.test(value.id) ? value.id : null;
- const name = boundedText(value.name, 48, true);
- const animal = boundedText(value.animal, 48, true);
- const role = boundedText(value.role, 80, true);
- const description = boundedText(value.description, 280, true);
- const personality = boundedText(value.personality, 180);
- const visualNotes = boundedText(value.visualNotes, 400);
- const signatureAction = boundedText(value.signatureAction, 180);
- const brandName = boundedText(value.brandName, 80);
- const commissioningMode = value.commissioningMode === "agency" ? "agency" : "personal";
- const imageUrl = normalizeAccountAvatar(value.imageUrl);
+function normalizeAnimationStates(value) {
+ if (!Array.isArray(value)) return null;
  const animations = [];
- if (value.animations != null) {
-  if (!Array.isArray(value.animations)) return null;
   const seenStates = new Set();
-  for (const item of value.animations) {
+  for (const item of value) {
    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
    const animationId = boundedText(item.id, 64, true);
    const label = boundedText(item.label, 64, true);
@@ -135,7 +124,24 @@ function normalizeCustomCompanion(value) {
    seenStates.add(animationId);
    animations.push({ id: animationId, label, description, src, fps, frames, loop: item.loop !== false, kind });
   }
- }
+ return animations;
+}
+
+function normalizeCustomCompanion(value) {
+ if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+ const id = typeof value.id === "string" && /^custom_[a-z0-9-]{8,64}$/.test(value.id) ? value.id : null;
+ const name = boundedText(value.name, 48, true);
+ const animal = boundedText(value.animal, 48, true);
+ const role = boundedText(value.role, 80, true);
+ const description = boundedText(value.description, 280, true);
+ const personality = boundedText(value.personality, 180);
+ const visualNotes = boundedText(value.visualNotes, 400);
+ const signatureAction = boundedText(value.signatureAction, 180);
+ const brandName = boundedText(value.brandName, 80);
+ const commissioningMode = value.commissioningMode === "agency" ? "agency" : "personal";
+ const imageUrl = normalizeAccountAvatar(value.imageUrl);
+ const animations = value.animations == null ? null : normalizeAnimationStates(value.animations);
+ if (value.animations != null && !animations) return null;
  const stateAssets = {};
  if (value.stateAssets != null) {
   if (typeof value.stateAssets !== "object" || Array.isArray(value.stateAssets)) return null;
@@ -150,7 +156,52 @@ function normalizeCustomCompanion(value) {
  if (!id || !name || !animal || !role || !description || personality === undefined ||
      visualNotes === undefined || signatureAction === undefined || brandName === undefined || imageUrl === undefined) return null;
  return { id, name, animal, role, description, personality, visualNotes, signatureAction, imageUrl, stateAssets, brandName, commissioningMode,
-  ...(value.animations != null ? { animations } : {}) };
+  ...(animations != null ? { animations } : {}) };
+}
+
+/** Account-owned additional animations can extend built-ins without editing packaged art. */
+function normalizeBuiltInAnimations(value) {
+ if (!Array.isArray(value)) return null;
+ const seen = new Set();
+ const items = [];
+ for (const record of value) {
+  const companionId = record?.companionId;
+  if (!BUILT_IN_COMPANION_IDS.has(companionId) || seen.has(companionId)) return null;
+  const animations = normalizeAnimationStates(record.animations);
+  if (!animations) return null;
+  seen.add(companionId);
+  items.push({ companionId, animations });
+ }
+ return items;
+}
+
+/** Layout presets reference companion art; never use a scene as a source of authorization. */
+function normalizeCompanionScene(value, validCompanionIds) {
+ if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+ const id = boundedText(value.id, 76, true);
+ const name = boundedText(value.name, 64, true);
+ const description = boundedText(value.description, 240);
+ const backgroundUrl = normalizeAccountAvatar(value.backgroundUrl);
+ if (!id || !/^scene_[a-z0-9-]{8,64}$/.test(id) || !name ||
+     description === undefined || backgroundUrl === undefined ||
+     !Array.isArray(value.layers) || !value.layers.length) return null;
+ const layers = [];
+ const seen = new Set();
+ for (const layer of value.layers) {
+  if (!layer || typeof layer !== "object" || Array.isArray(layer)) return null;
+  const layerId = boundedText(layer.id, 76, true);
+  const stateId = boundedText(layer.stateId, 64, true);
+  if (!layerId || !/^layer_[a-z0-9-]{8,64}$/.test(layerId) || seen.has(layerId) ||
+      typeof layer.companionId !== "string" || !validCompanionIds.has(layer.companionId) ||
+      !stateId || !COMPANION_STATE_SLUG.test(stateId) ||
+      !Number.isFinite(layer.x) || layer.x < 0 || layer.x > 100 ||
+      !Number.isFinite(layer.y) || layer.y < 0 || layer.y > 100 ||
+      !Number.isFinite(layer.scale) || layer.scale < 0.1 || layer.scale > 3) return null;
+  seen.add(layerId);
+  layers.push({ id: layerId, companionId: layer.companionId, stateId,
+   x: layer.x, y: layer.y, scale: layer.scale });
+ }
+ return { id, name, description, backgroundUrl, layers };
 }
 
 function normalizeCompanionSettings(value) {
@@ -186,7 +237,21 @@ function normalizeCompanionSettings(value) {
    onboarding = { version: "1", completedAt, recommendedId, answers };
   }
  }
- return { activeId, secondaryId, desktopBuddyEnabled, onboarding, customCompanions };
+ const builtInAnimations = value.builtInAnimations == null ? null : normalizeBuiltInAnimations(value.builtInAnimations);
+ const validCompanionIds = new Set([...BUILT_IN_COMPANION_IDS, ...customCompanions.map(item => item.id)]);
+ const scenes = [];
+ if (Array.isArray(value.scenes)) {
+  const seenSceneIds = new Set();
+  for (const candidate of value.scenes) {
+   const scene = normalizeCompanionScene(candidate, validCompanionIds);
+   if (!scene || seenSceneIds.has(scene.id)) continue;
+   seenSceneIds.add(scene.id);
+   scenes.push(scene);
+  }
+ }
+ return { activeId, secondaryId, desktopBuddyEnabled, onboarding, customCompanions,
+  ...(value.scenes != null ? { scenes } : {}),
+  ...(builtInAnimations != null ? { builtInAnimations } : {}) };
 }
 
 /** Account-scoped InnerAnimal companion selection and creation briefs.
@@ -221,6 +286,19 @@ export async function handleStudioCompanionSettings(request, env, accountId) {
  const activeId = input.activeId;
  if (!BUILT_IN_COMPANION_IDS.has(activeId) && !customCompanions.some(item => item.id === activeId)) {
   return answer({ ok: false, error: "active_companion_invalid" }, 400);
+ }
+ if (input.builtInAnimations != null && !normalizeBuiltInAnimations(input.builtInAnimations)) {
+  return answer({ ok: false, error: "companion_animations_invalid" }, 400);
+ }
+ if (input.scenes != null) {
+  if (!Array.isArray(input.scenes)) return answer({ ok: false, error: "companion_scenes_invalid" }, 400);
+  const allowed = new Set([...BUILT_IN_COMPANION_IDS, ...customCompanions.map(item => item.id)]);
+  const seenScenes = new Set();
+  for (const candidate of input.scenes) {
+   const scene = normalizeCompanionScene(candidate, allowed);
+   if (!scene || seenScenes.has(scene.id)) return answer({ ok: false, error: "companion_scene_invalid" }, 400);
+   seenScenes.add(scene.id);
+  }
  }
  const settings = normalizeCompanionSettings({ ...input, activeId, customCompanions });
  const next = { ...existing, inneranimal_companions: settings };

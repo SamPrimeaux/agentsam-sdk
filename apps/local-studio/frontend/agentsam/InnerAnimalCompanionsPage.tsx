@@ -5,6 +5,8 @@ import { useWorkStore } from '@/lib/work/store';
 import { useCompanionSettings } from './CompanionContext';
 import { COMPANION_COMMISSIONING, COMPANION_COSTUME_PACKS, COMPANION_DUO_DYNAMICS, COMPANION_HABITATS, COMPANION_MILESTONE_UNLOCKS } from './companion-ecosystem';
 import { emitCompanionHandoff } from './companion-events';
+import { CompanionScenesPanel } from './CompanionScenesPanel';
+import { CompanionAnimationExtensions } from './CompanionAnimationExtensions';
 import {
   COMPANION_STATE_LABELS,
   INNERANIMAL_COMPANIONS,
@@ -15,7 +17,7 @@ import {
   type CustomCompanion,
 } from './companions';
 
-type CompanionView = 'library' | 'animations' | 'create';
+type CompanionView = 'library' | 'animations' | 'scenes' | 'habitats' | 'create';
 type CompanionDraft = Omit<CustomCompanion, 'id' | 'imageUrl'> & { imageUrl: string };
 
 const emptyDraft: CompanionDraft = {
@@ -222,6 +224,8 @@ export function InnerAnimalCompanionsPage() {
   const tabs: Array<{ id: CompanionView; label: string }> = [
     { id: 'library', label: 'Library' },
     { id: 'animations', label: 'Animations' },
+    { id: 'scenes', label: 'Scenes' },
+    { id: 'habitats', label: 'Habitats & packs' },
     { id: 'create', label: 'Create a companion' },
   ];
 
@@ -348,10 +352,31 @@ export function InnerAnimalCompanionsPage() {
         </aside>
       </section>
 
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-2">
+          <h3 className="text-sm font-semibold">Your companion library</h3>
+          <button type="button" onClick={() => setView('habitats')} className="text-[11px] text-muted-foreground hover:text-foreground">Explore habitats</button>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+          {allCompanions.filter((item) => item.selectable).map((item) => <button key={item.id} type="button" onClick={() => void choose(item.id)}
+            disabled={saving || loading || Boolean(error)} aria-pressed={item.id === settings.activeId}
+            className={'flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left hover:bg-muted/30 ' +
+              (item.id === settings.activeId ? 'border-primary/50 bg-primary/5' : 'border-border/70')}>
+            <Portrait companion={item} />
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-semibold">{item.name}</span>
+              <span className="block truncate text-[10px] text-muted-foreground">{item.animal}</span>
+            </span>
+          </button>)}
+        </div>
+      </section>
+    </> : null}
+
+    {view === 'habitats' ? <>
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div><h3 className="text-sm font-semibold">Explore the habitats</h3><p className="mt-1 text-[10px] text-muted-foreground">Companions are organized by the work they help make possible, not as a flat mascot list.</p></div>
-          <span className="text-[9px] text-muted-foreground">7 existing profiles · 12 expansion profiles</span>
+          <span className="text-[9px] text-muted-foreground">{allCompanions.filter((item) => item.selectable).length} selectable · {allCompanions.filter((item) => !item.selectable).length} drafts</span>
         </div>
         {COMPANION_HABITATS.map((habitat) => {
           const habitatCompanions = habitat.companionIds.map((id) => allCompanions.find((item) => item.id === id)).filter((item): item is CompanionProfile => Boolean(item));
@@ -362,7 +387,7 @@ export function InnerAnimalCompanionsPage() {
                 <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-emerald-400/15 bg-emerald-400/[.06] text-emerald-200"><HabitatIcon className="size-4" /></span>
                 <div className="min-w-0"><h4 className="text-[12px] font-semibold">{habitat.name}</h4><p className="text-[9px] font-medium uppercase tracking-[.12em] text-muted-foreground">{habitat.subtitle}</p><p className="mt-1 max-w-2xl text-[10px] leading-4 text-muted-foreground">{habitat.description}</p></div>
               </div>
-              <span className="flex shrink-0 flex-wrap justify-end gap-1"><span className={`rounded-full border px-2 py-1 text-[8px] ${habitat.status === 'established' ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200' : 'border-border text-muted-foreground'}`}>{habitat.status === 'established' ? 'Established' : habitat.status === 'planned' ? 'Coming soon' : 'Expansion'}</span><span className="rounded-full border border-border/70 px-2 py-1 text-[8px] text-muted-foreground">{habitat.accessMode === 'included' ? 'Included' : 'Collectible pack'}</span></span>
+              <span className="flex shrink-0 flex-wrap justify-end gap-1"><span className={`rounded-full border px-2 py-1 text-[8px] ${habitat.status === 'established' ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200' : 'border-border text-muted-foreground'}`}>{habitat.status === 'established' ? 'Established' : habitat.status === 'planned' ? 'Draft' : 'Expansion'}</span><span className="rounded-full border border-border/70 px-2 py-1 text-[8px] text-muted-foreground">{habitat.accessMode === 'included' ? 'Included' : 'Collectible pack'}</span></span>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {habitatCompanions.map((companion) => {
@@ -426,6 +451,8 @@ export function InnerAnimalCompanionsPage() {
       </section>
     </> : null}
 
+    {view === 'scenes' ? <CompanionScenesPanel /> : null}
+
     {view === 'animations' ? <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -442,6 +469,7 @@ export function InnerAnimalCompanionsPage() {
         <p className="text-[9px] font-semibold uppercase tracking-[.16em] text-muted-foreground">State description</p>
         <h4 className="mt-2 text-sm font-semibold">{selectedPreviewState?.label || 'Idle'}</h4>
         <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{selectedPreviewState?.description || 'At rest and ready for the next task.'}</p>
+        {activeCompanion.builtIn ? <CompanionAnimationExtensions companion={activeCompanion} onCreated={setPreviewState} /> : null}
         {!activeCompanion.builtIn ? <p className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-[10px] leading-5 text-amber-100/80">This custom companion has a profile only. Build its transparent animation package in Work to activate these states.</p> : null}
         <button type="button" onClick={() => setView('library')} className="mt-4 h-8 rounded-lg border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted">Back to library</button>
       </aside>

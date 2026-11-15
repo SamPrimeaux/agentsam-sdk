@@ -52,12 +52,31 @@ export type CompanionOnboardingResult = {
   answers: Record<string, string>;
 };
 
+export type CompanionSceneLayer = {
+  id: string;
+  companionId: string;
+  stateId: string;
+  x: number;
+  y: number;
+  scale: number;
+};
+
+export type CompanionScene = {
+  id: string;
+  name: string;
+  description: string;
+  backgroundUrl: string | null;
+  layers: CompanionSceneLayer[];
+};
+
 export type CompanionSettings = {
   activeId: string;
   secondaryId: string | null;
   desktopBuddyEnabled: boolean;
   onboarding: CompanionOnboardingResult | null;
   customCompanions: CustomCompanion[];
+  scenes?: CompanionScene[];
+  builtInAnimations?: Array<{ companionId: string; animations: CompanionAnimation[] }>;
 };
 
 export type CompanionGalleryState = {
@@ -306,6 +325,32 @@ export const INNERANIMAL_COMPANIONS: CompanionProfile[] = [
     }),
 
 ];
+
+/** Extend a packaged character with account-owned animations, without modifying its source package. */
+export function extendBuiltInCompanion(
+  profile: CompanionProfile,
+  records: CompanionSettings['builtInAnimations'] = [],
+): CompanionProfile {
+  if (!profile.builtIn) return profile;
+  const added = records?.find((item) => item.companionId === profile.id)?.animations || [];
+  if (!added.length) return profile;
+  const states = { ...profile.states, ...Object.fromEntries(added.filter((item) => item.src).map((item) => [item.id, item.src!])) };
+  const existing = profile.galleryStates || COMPANION_STATE_LABELS.map((state) => ({
+    ...state, src: companionStateAsset(profile, state.id) || '',
+  }));
+  const replaced = new Set(added.map((item) => item.id));
+  return {
+    ...profile, states,
+    galleryStates: [
+      ...existing.filter((item) => !replaced.has(item.id)),
+      ...added.map((item) => ({
+        id: item.id, label: item.label, description: item.description,
+        src: item.src || companionStateAsset(profile, item.id) || '',
+        fps: item.fps, frames: item.frames, loop: item.loop,
+      })),
+    ],
+  };
+}
 
 export function resolveCompanion(id: string | undefined, customCompanions: CustomCompanion[] = []): CompanionProfile {
   const builtInProfile = INNERANIMAL_COMPANIONS.find((item) => item.id === id);

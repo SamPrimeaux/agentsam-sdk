@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INNERANIMAL_COMPANIONS } from './companions.ts';
+import { INNERANIMAL_COMPANIONS, extendBuiltInCompanion, companionStateAsset } from './companions.ts';
 import { COMPANION_COSTUME_PACKS, COMPANION_DUO_DYNAMICS, COMPANION_HABITATS, COMPANION_QUIZ_QUESTIONS, recommendCompanionFromQuiz } from './companion-ecosystem.ts';
 
 test('habitats reference canonical companion identities without creating duplicates', () => {
@@ -66,4 +66,18 @@ test('PrimeTechPy is a ten-direction costume pack on the existing Py identity', 
   assert.equal(pack.costumeDirections.length, 10);
   assert.ok(pack.costumeDirections.every((item) => item.visualEnhancement && item.signatureMotion));
   assert.equal(INNERANIMAL_COMPANIONS.filter((item) => item.id === 'py').length, 1);
+});
+
+test('built-in character overlay extends animation gallery without modifying packaged source', () => {
+  const source = INNERANIMAL_COMPANIONS.find((item) => item.id === 'bella')!;
+  const before = source.galleryStates?.length;
+  const extended = extendBuiltInCompanion(source, [{
+    companionId: 'bella',
+    animations: [{ id: 'celebrating', label: 'Celebrating', description: '',
+      src: '/brand/custom/bella-celebrating.png', fps: 8, frames: 12, loop: true, kind: 'apng' }],
+  }]);
+  assert.equal(source.galleryStates?.length, before);
+  assert.equal(extended.galleryStates?.length, (before || 0) + 1);
+  assert.equal(extended.galleryStates?.at(-1)?.id, 'celebrating');
+  assert.equal(companionStateAsset(extended, 'celebrating'), '/brand/custom/bella-celebrating.png');
 });

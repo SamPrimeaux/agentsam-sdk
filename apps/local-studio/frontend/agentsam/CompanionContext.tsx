@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { DEFAULT_COMPANION_SETTINGS, resolveCompanion, type CompanionProfile, type CompanionSettings } from './companions';
+import { DEFAULT_COMPANION_SETTINGS, resolveCompanion, extendBuiltInCompanion, type CompanionProfile, type CompanionSettings } from './companions';
 import { broadcastCompanionSettings, loadCompanionSettings, saveCompanionSettings } from './companion-client';
 
 type CompanionContextValue = {
@@ -65,7 +65,7 @@ export function CompanionProvider({ children, accountKey = 'anonymous' }: { chil
 
   const value = useMemo<CompanionContextValue>(() => ({
     settings,
-    activeCompanion: resolveCompanion(settings.activeId, settings.customCompanions),
+    activeCompanion: extendBuiltInCompanion(resolveCompanion(settings.activeId, settings.customCompanions), settings.builtInAnimations),
     loading,
     saving,
     error,
@@ -85,4 +85,10 @@ export function useCompanionSettings(): CompanionContextValue {
 export function useActiveCompanion(): CompanionProfile {
   const value = useContext(CompanionContext);
   return value?.activeCompanion || resolveCompanion('geaux');
+}
+
+/** Optional read surface for embedded terminal panes, which can mount outside the full studio provider. */
+export function useCompanionLibrarySettings(): CompanionSettings {
+  const value = useContext(CompanionContext);
+  return value?.settings || DEFAULT_COMPANION_SETTINGS;
 }

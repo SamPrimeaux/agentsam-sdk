@@ -148,3 +148,70 @@ test('companion settings persist draft animation metadata before media is attach
   );
   assert.equal(badSource.status, 400);
 });
+
+test('account-owned scenes compose multiple companions and survive edit, reload, and delete', async () => {
+  const db = memoryDb();
+  const scene = {
+    id: 'scene_12345678-1234-4234-8234-123456789abc',
+    name: 'Morning briefing', description: 'Companions review the new work',
+    backgroundUrl: '/brand/scenes/office.png',
+    layers: [
+      { id: 'layer_11111111-1234-4234-8234-123456789abc', companionId: 'geaux', stateId: 'thinking', x: 25, y: 65, scale: 1.25 },
+      { id: 'layer_22222222-1234-4234-8234-123456789abc', companionId: custom.id, stateId: 'celebrating', x: 76, y: 65, scale: 0.9 },
+    ],
+  };
+  const input = { activeId: custom.id, customCompanions: [custom], scenes: [scene] };
+  const created = await handleStudioCompanionSettings(request('PUT', input), { DB: db }, 'acct-scenes');
+  assert.equal(created.status, 200);
+  assert.deepEqual((await created.json()).settings.scenes, [scene]);
+  const loaded = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-scenes');
+  assert.deepEqual((await loaded.json()).settings.scenes, [scene]);
+  const other = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-other');
+  assert.deepEqual((await other.json()).settings, defaults);
+  const changed = { ...scene, name: 'Afternoon briefing' };
+  const updated = await handleStudioCompanionSettings(request('PUT', { ...input, scenes: [changed] }), { DB: db }, 'acct-scenes');
+  assert.equal(updated.status, 200);
+  assert.equal((await updated.json()).settings.scenes[0].name, 'Afternoon briefing');
+  const removed = await handleStudioCompanionSettings(request('PUT', { ...input, scenes: [] }), { DB: db }, 'acct-scenes');
+  assert.equal(removed.status, 200);
+  assert.deepEqual((await removed.json()).settings.scenes, []);
+});
+
+test('companion scene validation rejects unsafe backgrounds, invalid positions, and unknown actors', async () => {
+  const db = memoryDb();
+  const scene = {
+    id: 'scene_12345678-1234-4234-8234-123456789abc',
+    name: 'Night shift', description: '', backgroundUrl: null,
+    layers: [{ id: 'layer_12345678-1234-4234-8234-123456789abc', companionId: 'geaux', stateId: 'idle', x: 50, y: 60, scale: 1 }],
+  };
+  for (const bad of [
+    { ...scene, backgroundUrl: 'javascript:alert(1)' },
+    { ...scene, layers: [{ ...scene.layers[0], x: 999 }] },
+    { ...scene, layers: [{ ...scene.layers[0], companionId: 'not-a-companion' }] },
+    { ...scene, layers: [{ ...scene.layers[0], stateId: 'bad state' }] },
+  ]) {
+    const response = await handleStudioCompanionSettings(request('PUT', { activeId: 'geaux', customCompanions: [], scenes: [bad] }), { DB: db }, 'acct-scene-invalid');
+    assert.equal(response.status, 400);
+  }
+  assert.equal(db.rows.size, 0);
+});
+
+test('built-in companions can gain open animation states without overwriting official packages', async () => {
+  const db = memoryDb();
+  const animation = { id: 'celebrating', label: 'Celebrating', description: 'Milestone', src: null, fps: 8, frames: 12, loop: true, kind: 'apng' };
+  const records = [{ companionId: 'geaux', animations: [animation] }, { companionId: 'bella', animations: [{ ...animation, id: 'head-turn', label: 'Head turn' }] }];
+  const input = { activeId: 'geaux', customCompanions: [], builtInAnimations: records };
+  const saved = await handleStudioCompanionSettings(request('PUT', input), { DB: db }, 'acct-builtin');
+  assert.equal(saved.status, 200);
+  assert.deepEqual((await saved.json()).settings.builtInAnimations, records);
+  const loaded = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-builtin');
+  assert.deepEqual((await loaded.json()).settings.builtInAnimations, records);
+  const invalid = await handleStudioCompanionSettings(request('PUT', {
+    ...input, builtInAnimations: [{ companionId: 'rogue', animations: [animation] }],
+  }), { DB: db }, 'acct-builtin');
+  assert.equal(invalid.status, 400);
+  const duplicate = await handleStudioCompanionSettings(request('PUT', {
+    ...input, builtInAnimations: [records[0], records[0]],
+  }), { DB: db }, 'acct-builtin');
+  assert.equal(duplicate.status, 400);
+});
