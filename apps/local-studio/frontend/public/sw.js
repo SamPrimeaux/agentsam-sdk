@@ -1,51 +1,22 @@
-/* AgentSam Work — offline shell cache for CLI-on-the-go */
-const CACHE = "agentsam-work-shell-v1";
-const PRECACHE = ["/", "/chats", "/agentsam", "/projects", "/artifacts", "/files", "/ship", "/favicon.svg"];
-
+/* AgentSam Local Studio — retire the pre-release offline shell.
+ *
+ * The current hosted/desktop products do not ship an authenticated offline
+ * CMS/API contract. The old v1 worker cached entire navigations and left
+ * stale asset references after deployments (404 on hashed JS chunks).
+ * Remove only our own legacy caches; do not touch unrelated registrations.
+ */
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE).catch(() => undefined))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim()),
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((name) => name.startsWith("agentsam-work-shell-"))
+      .map((name) => caches.delete(name)));
+    await self.registration.unregister();
+  })());
 });
 
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  if (request.method !== "GET") return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/")) return;
-
-  event.respondWith(
-    (async () => {
-      try {
-        const fresh = await fetch(request);
-        if (fresh.ok && (request.mode === "navigate" || url.pathname.match(/\.(js|css|svg|png|woff2?)$/))) {
-          const cache = await caches.open(CACHE);
-          void cache.put(request, fresh.clone());
-        }
-        return fresh;
-      } catch {
-        const cached = await caches.match(request);
-        if (cached) return cached;
-        if (request.mode === "navigate") {
-          const fallback = (await caches.match("/chats")) || (await caches.match("/agentsam")) || (await caches.match("/"));
-          if (fallback) return fallback;
-        }
-        return new Response("Offline", { status: 503, statusText: "Offline" });
-      }
-    })(),
-  );
-});
+// No fetch interception. Current document/JS/CSS and authorized APIs remain
+// network-authoritative until an offline mode with real data reconciliation ships.
