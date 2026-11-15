@@ -74,12 +74,11 @@ const entries=(project:ThemeProject):WorkspaceEntry[]=>{
   ];
 };
 
-export function createCmsThemeFileWorkspace(projectId:string,siteId?:string,scope:'site'|'studio'='site'):FileWorkspace{
-  const studio=scope==='studio';
-  if(!validId.test(projectId)||(!studio&&!validId.test(siteId||'')))throw Error('Select an authorized theme workspace.');
+export function createCmsThemeFileWorkspace(projectId:string,siteId:string):FileWorkspace{
+  if(!validId.test(projectId)||!validId.test(siteId))throw Error('Select an authorized theme workspace.');
   const base='/api/admin/cms/theme-projects/'+encodeURIComponent(projectId);
-  const query=studio?'scope=studio':'site_id='+encodeURIComponent(siteId||'');
-  const scopeBody=studio?{scope:'studio'}:{site_id:siteId};
+  const query='site_id='+encodeURIComponent(siteId);
+  const scopeBody={site_id:siteId};
   const request=async(url:string,init:RequestInit={}):Promise<Record<string,any>>=>{
     const response=await fetch(url,{credentials:'include',cache:'no-store',...init});
     const result=await response.json().catch(()=>({}));

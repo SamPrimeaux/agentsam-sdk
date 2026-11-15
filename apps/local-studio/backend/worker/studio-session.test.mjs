@@ -40,10 +40,10 @@ test('only a verified principal permits the document and unrelated failures stil
   await assert.rejects(guardStudioDocumentSession(request(),{resolveUser:async()=>{throw Error('unexpected');},loginPath:'/auth/login'}));
 });
 
-test('an anonymous user cannot cross any admin route, including site-free Theme Studio', async () => {
-  const next = '/admin/theme-project-editor?scope=studio&project=theme_plain-jane';
+test('an anonymous user cannot cross any admin route, including site-owned theme drafts', async () => {
+  const next = '/admin/theme-project-editor?site_id=site-a&project=theme_plain-jane';
   for (const route of ['/admin', '/admin/', '/admin/store?theme_sku=iam.theme.plain-jane&action=try',
-    next, '/admin/theme-code-editor?scope=studio&project=theme_plain-jane',
+    next, '/admin/theme-code-editor?site_id=site-a&project=theme_plain-jane',
     '/admin/host-config.js', '/admin/custom-random-route']) {
     const denied = await guardStudioAdminBoundary(new Request('https://studio.example' + route), {
       resolveUser: async () => null, loginPath: '/auth/login',
@@ -68,7 +68,7 @@ test('admin mutations require a real account, not an untrusted client identity',
 });
 
 test('admin routing requires verified identity and fails closed when identity is unavailable', async () => {
-  const request = new Request('https://studio.example/admin/theme-project-editor?scope=studio');
+  const request = new Request('https://studio.example/admin/theme-project-editor?site_id=site-a');
   assert.equal(await guardStudioAdminBoundary(request, {
     resolveUser: async () => ({ id: 'real-session-account' }), loginPath: '/auth/login',
   }), null);

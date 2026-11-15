@@ -101,7 +101,8 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1&project=other&site_id=site-a'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1&new=1&site_id=site-a'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?project=theme_heuristic&site_id=site-a&previewMode=unknown'), null);
-  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?project=theme_plain-jane&scope=studio'), '/admin/theme-project-editor?project=theme_plain-jane&scope=studio');
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?project=theme_plain-jane&scope=studio'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?project=theme_plain-jane&site_id=site-a'), '/admin/theme-project-editor?project=theme_plain-jane&site_id=site-a');
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?project=theme_plain-jane&scope=studio&site_id=site-a'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?scope=site&project=theme_plain-jane'), null);
 
