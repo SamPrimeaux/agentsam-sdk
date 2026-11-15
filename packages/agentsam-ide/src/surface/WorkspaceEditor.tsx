@@ -1,9 +1,7 @@
 import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from './WorkspaceSourceRail.js';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { mediaKindForPath, isMarkdownPath, isHtmlPath } from '../workspace/media.js';
 import { WorkspaceTreeView } from './WorkspaceTreeView.js';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AgentSamMonacoEditor, type AgentSamEditorPalette, type AgentSamMonacoEditorProps } from '../monaco/editor.js';
 import { WorkspaceSaveQueue, type SaveStatus } from '../workspace/save-queue.js';
 import { visibleWorkspaceTree, workspaceParents } from '../workspace/tree.js';
@@ -23,13 +21,15 @@ export type WorkspaceEditorProps = {
   sourceId?: IDEFileSourceId;
   onSourceSelect?: (source: IDEFileSourceId) => void;
   showHostModes?: boolean;
+  /** Host-owned full Markdown renderer; avoids bundling an untrusted parser into the portable IDE. */
+  renderMarkdown?: (content:string) => ReactNode;
   onExit?: () => void;
   agent?: { label: string; propose(input: {path: string; content: string; version: string}): Promise<{content: string; explanation: string}> };
 };
 type Tab = WorkspaceFile & { value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string; preview?: WorkspacePreview };
 type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'Changes' | 'Snapshot' | 'References' | 'Dependencies';
 
-export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false}: WorkspaceEditorProps) {
+export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown}: WorkspaceEditorProps) {
   const [tree,setTree]=useState<WorkspaceEntry[]>([]);
   const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
   const [tabs,setTabs]=useState<Tab[]>([]);
@@ -277,7 +277,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         {preview.kind==='binary'?<p>Binary asset cannot be edited as text.</p>:null}
       </div>;
     }
-    if(isMarkdownPath(tab.path))return <article className="asi-document-preview"><ReactMarkdown remarkPlugins={[remarkGfm]}>{tab.value}</ReactMarkdown></article>;
+    if(isMarkdownPath(tab.path))return <article className="asi-document-preview">{renderMarkdown?renderMarkdown(tab.value):<pre>{tab.value}</pre>}</article>;
     if(isHtmlPath(tab.path))return <iframe className="asi-html-preview" title={tab.path+' preview'} sandbox="" srcDoc={tab.value}/>;
     return rendered(tab);
   };
