@@ -88,9 +88,8 @@ const BUILT_IN_COMPANION_IDS = new Set([
  "geaux", "meaux", "coder", "architect", "engineer", "py", "bella", "roux", "bruneaux", "nyra", "toro",
 ]);
 const DEFAULT_COMPANION_SETTINGS = Object.freeze({ activeId: "geaux", secondaryId: null, desktopBuddyEnabled: false, onboarding: null, customCompanions: [] });
-const COMPANION_STATES = new Set([
- "idle", "working", "thinking", "attention", "success", "signature", "waiting", "error", "resting", "blinking",
-]);
+// Core states are recommendations, not a closed enum. A safe slug can name any state.
+const COMPANION_STATE_SLUG = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 function boundedText(value, max, required = false) {
  if (typeof value !== "string") return required ? undefined : "";
@@ -113,11 +112,36 @@ function normalizeCustomCompanion(value) {
  const brandName = boundedText(value.brandName, 80);
  const commissioningMode = value.commissioningMode === "agency" ? "agency" : "personal";
  const imageUrl = normalizeAccountAvatar(value.imageUrl);
+ const animations = [];
+ if (value.animations != null) {
+  if (!Array.isArray(value.animations)) return null;
+  const seenStates = new Set();
+  for (const item of value.animations) {
+   if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+   const animationId = boundedText(item.id, 64, true);
+   const label = boundedText(item.label, 64, true);
+   const description = boundedText(item.description, 200);
+   const src = normalizeAccountAvatar(item.src);
+   const fps = item.fps === undefined ? 6 : item.fps;
+   const frames = item.frames === undefined ? 1 : item.frames;
+   const kind = item.kind || "apng";
+   if (!animationId || !COMPANION_STATE_SLUG.test(animationId) ||
+       ["constructor", "prototype", "tostring"].includes(animationId.toLowerCase()) ||
+       seenStates.has(animationId) || !label || description === undefined || src === undefined ||
+       !Number.isInteger(fps) || fps < 1 || fps > 60 ||
+       !Number.isInteger(frames) || frames < 1 || frames > 10000 ||
+       !["apng", "gif", "spritesheet", "frames", "static"].includes(kind) ||
+       (item.loop != null && typeof item.loop !== "boolean")) return null;
+   seenStates.add(animationId);
+   animations.push({ id: animationId, label, description, src, fps, frames, loop: item.loop !== false, kind });
+  }
+ }
  const stateAssets = {};
  if (value.stateAssets != null) {
   if (typeof value.stateAssets !== "object" || Array.isArray(value.stateAssets)) return null;
   for (const [state, assetValue] of Object.entries(value.stateAssets)) {
-   if (!COMPANION_STATES.has(state)) return null;
+   if (state.length > 64 || !COMPANION_STATE_SLUG.test(state) ||
+       ["constructor", "prototype", "tostring"].includes(state.toLowerCase())) return null;
    const asset = normalizeAccountAvatar(assetValue);
    if (asset === undefined) return null;
    if (asset) stateAssets[state] = asset;
@@ -125,7 +149,8 @@ function normalizeCustomCompanion(value) {
  }
  if (!id || !name || !animal || !role || !description || personality === undefined ||
      visualNotes === undefined || signatureAction === undefined || brandName === undefined || imageUrl === undefined) return null;
- return { id, name, animal, role, description, personality, visualNotes, signatureAction, imageUrl, stateAssets, brandName, commissioningMode };
+ return { id, name, animal, role, description, personality, visualNotes, signatureAction, imageUrl, stateAssets, brandName, commissioningMode,
+  ...(value.animations != null ? { animations } : {}) };
 }
 
 function normalizeCompanionSettings(value) {
@@ -133,7 +158,7 @@ function normalizeCompanionSettings(value) {
  const customCompanions = [];
  const seen = new Set();
  if (Array.isArray(value.customCompanions)) {
-  for (const candidate of value.customCompanions.slice(0, 24)) {
+  for (const candidate of value.customCompanions) {
    const companion = normalizeCustomCompanion(candidate);
    if (!companion || seen.has(companion.id)) continue;
    seen.add(companion.id);
@@ -182,7 +207,7 @@ export async function handleStudioCompanionSettings(request, env, accountId) {
  if (request.method === "GET") return answer({ ok: true, settings: current });
  const input = await request.json().catch(() => null);
  if (!input || typeof input !== "object" || Array.isArray(input) ||
-     typeof input.activeId !== "string" || !Array.isArray(input.customCompanions) || input.customCompanions.length > 24) {
+     typeof input.activeId !== "string" || !Array.isArray(input.customCompanions)) {
   return answer({ ok: false, error: "companion_settings_invalid" }, 400);
  }
  const customCompanions = [];

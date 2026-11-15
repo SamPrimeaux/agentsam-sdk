@@ -73,7 +73,7 @@ test('companion settings reject unknown active pets and malformed custom records
   assert.equal(unknown.status, 400);
   const malformed = await handleStudioCompanionSettings(request('PUT', { activeId: 'geaux', customCompanions: [{ ...custom, imageUrl: 'javascript:alert(1)' }] }), { DB: db }, 'acct-1');
   assert.equal(malformed.status, 400);
-  const invalidState = await handleStudioCompanionSettings(request('PUT', { activeId: 'geaux', customCompanions: [{ ...custom, stateAssets: { launch: '/brand/launch.png' } }] }), { DB: db }, 'acct-1');
+  const invalidState = await handleStudioCompanionSettings(request('PUT', { activeId: 'geaux', customCompanions: [{ ...custom, stateAssets: { 'bad state': '/brand/launch.png' } }] }), { DB: db }, 'acct-1');
   assert.equal(invalidState.status, 400);
   const unsafeAsset = await handleStudioCompanionSettings(request('PUT', { activeId: 'geaux', customCompanions: [{ ...custom, stateAssets: { working: 'javascript:alert(1)' } }] }), { DB: db }, 'acct-1');
   assert.equal(unsafeAsset.status, 400);
@@ -97,4 +97,54 @@ test('companion selection and custom profiles never cross account boundaries', a
   assert.equal(saved.status, 200);
   const otherAccount = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-other');
   assert.deepEqual((await otherAccount.json()).settings, defaults);
+});
+
+test('companion settings accept additional animation names and more than 24 custom companions', async () => {
+  const db = memoryDb();
+  const extraStates = Object.fromEntries(
+    Array.from({ length: 16 }, (_, index) => ['action-' + index, '/brand/animations/action-' + index + '.png']),
+  );
+  const companions = Array.from({ length: 26 }, (_, index) => ({
+    ...custom,
+    id: 'custom_extra-' + String(index).padStart(8, '0'),
+    name: 'Animal ' + index,
+    stateAssets: { ...custom.stateAssets, ...extraStates, celebrating: '/brand/animations/celebrating.png' },
+  }));
+  const saved = await handleStudioCompanionSettings(
+    request('PUT', { activeId: companions[25].id, customCompanions: companions }),
+    { DB: db }, 'acct-large',
+  );
+  assert.equal(saved.status, 200);
+  const result = (await saved.json()).settings;
+  assert.equal(result.customCompanions.length, 26);
+  assert.equal(Object.keys(result.customCompanions[0].stateAssets).length, 19);
+  assert.equal(result.customCompanions[0].stateAssets.celebrating, '/brand/animations/celebrating.png');
+  const reloaded = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-large');
+  assert.deepEqual((await reloaded.json()).settings, result);
+});
+
+test('companion settings persist draft animation metadata before media is attached', async () => {
+  const db = memoryDb();
+  const animation = {
+    id: 'celebrating', label: 'Celebrating', description: 'A joyful milestone animation',
+    src: null, fps: 8, frames: 8, loop: true, kind: 'apng',
+  };
+  const input = { activeId: custom.id, customCompanions: [{ ...custom, animations: [animation] }] };
+  const saved = await handleStudioCompanionSettings(request('PUT', input), { DB: db }, 'acct-animation');
+  assert.equal(saved.status, 200);
+  const payload = (await saved.json()).settings;
+  assert.deepEqual(payload.customCompanions[0].animations, [animation]);
+  const reloaded = await handleStudioCompanionSettings(request(), { DB: db }, 'acct-animation');
+  assert.deepEqual((await reloaded.json()).settings, payload);
+
+  const invalid = await handleStudioCompanionSettings(
+    request('PUT', { ...input, customCompanions: [{ ...custom, animations: [{ ...animation, fps: 0 }] }] }),
+    { DB: db }, 'acct-animation',
+  );
+  assert.equal(invalid.status, 400);
+  const badSource = await handleStudioCompanionSettings(
+    request('PUT', { ...input, customCompanions: [{ ...custom, animations: [{ ...animation, src: 'javascript:alert(1)' }] }] }),
+    { DB: db }, 'acct-animation',
+  );
+  assert.equal(badSource.status, 400);
 });

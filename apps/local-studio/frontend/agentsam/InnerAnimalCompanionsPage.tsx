@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Check, Compass, Image as ImageIcon, Leaf, Moon, Plus, Sparkles, WandSparkles } from 'lucide-react';
+import { ArrowRight, Check, Compass, Image as ImageIcon, Leaf, Moon, Plus, Sparkles, WandSparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkStore } from '@/lib/work/store';
 import { useCompanionSettings } from './CompanionContext';
@@ -20,7 +20,7 @@ type CompanionDraft = Omit<CustomCompanion, 'id' | 'imageUrl'> & { imageUrl: str
 
 const emptyDraft: CompanionDraft = {
   name: '', animal: '', role: '', description: '', personality: '',
-  visualNotes: '', signatureAction: '', imageUrl: '', stateAssets: {}, brandName: '', commissioningMode: 'personal',
+  visualNotes: '', signatureAction: '', imageUrl: '', stateAssets: {}, animations: [], brandName: '', commissioningMode: 'personal',
 };
 
 function openWorkWithBrief(companion: CustomCompanion | CompanionProfile) {
@@ -41,7 +41,7 @@ function openWorkWithBrief(companion: CustomCompanion | CompanionProfile) {
     personality ? `Personality: ${personality}` : '',
     visualNotes ? `Visual direction: ${visualNotes}` : '',
     signatureAction ? `Signature action: ${signatureAction}` : '',
-    commissioningMode === 'agency' ? `Agency / B2B commission for: ${brandName || 'Brand name to be confirmed'}. Include brand-aligned identity, icon/avatar/portrait exports, 10 runtime states, transparent frame atlases, APNG runtime assets, a manifest, previews, and usage/licensing notes.` : '',
+    commissioningMode === 'agency' ? `Agency / B2B commission for: ${brandName || 'Brand name to be confirmed'}. Include brand-aligned identity, icon/avatar/portrait exports, ten starter actions and any requested custom states, transparent frame atlases, APNG runtime assets, a manifest, previews, and usage/licensing notes.` : '',
     'Use the existing InnerAnimal v0.1 package contract: transparent 256×256 character frames, idle/blinking/thinking/working/waiting/attention/success/error/resting/signature states, APNG exports, animation metadata, atlas, contact sheet and previews.',
     'Place the runtime APNGs under assets/brand/inneranimal-companions/v1/custom/<slug>/animations/<slug>-<state>.png. Keep every frame and state independently reviewable, and return the exact /brand/inneranimal-companions/v1/custom/<slug>/animations/<slug>-<state>.png paths so they can be registered in the companion profile.',
     'Preserve original source art, do not overwrite or silently replace an existing character package, and present the finished character for visual approval before calling it production-ready.',
@@ -78,13 +78,36 @@ export function InnerAnimalCompanionsPage() {
   const [editingCompanionId, setEditingCompanionId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [newAnimationId, setNewAnimationId] = useState('');
   const allCompanions = useMemo(() => [
     ...INNERANIMAL_COMPANIONS,
     ...settings.customCompanions.map((item) => resolveCompanion(item.id, settings.customCompanions)),
   ], [settings.customCompanions]);
+  const coreStateIds = new Set(COMPANION_STATE_LABELS.map((state) => state.id));
   const previewStates = activeCompanion.galleryStates?.length
     ? activeCompanion.galleryStates
-    : COMPANION_STATE_LABELS.map((state) => ({ ...state, src: companionStateAsset(activeCompanion, state.id) || '' }));
+    : [
+      ...COMPANION_STATE_LABELS.map((state) => ({ ...state, src: companionStateAsset(activeCompanion, state.id) || '' })),
+      ...(activeCompanion.custom?.animations || []).map((item) => ({
+        id: item.id, label: item.label, description: item.description || 'Custom animation',
+        src: item.src || activeCompanion.states[item.id] || '',
+        fps: item.fps, frames: item.frames, loop: item.loop,
+      })),
+      ...Object.entries(activeCompanion.states)
+        .filter(([id]) => !coreStateIds.has(id) && !activeCompanion.custom?.animations?.some((item) => item.id === id))
+        .map(([id, src]) => ({
+          id, label: id.replace(/-/g, ' '), description: 'Custom animation state',
+          src: src || '',
+        })),
+    ];
+  const draftAnimationStates = [
+    ...COMPANION_STATE_LABELS,
+    ...(draft.animations || []).filter((item) => !coreStateIds.has(item.id))
+      .map((item) => ({ id: item.id, label: item.label, description: item.description })),
+    ...Object.keys(draft.stateAssets)
+      .filter((id) => !coreStateIds.has(id) && !draft.animations?.some((item) => item.id === id))
+      .map((id) => ({ id, label: id.replace(/-/g, ' '), description: 'Custom animation state' })),
+  ];
   const selectedPreviewState = previewStates.find((state) => state.id === previewState) || previewStates[0];
 
   async function choose(companionId: string) {
@@ -101,10 +124,34 @@ export function InnerAnimalCompanionsPage() {
   }
 
   function editCompanion(companion: CustomCompanion) {
+    setNewAnimationId('');
     setEditingCompanionId(companion.id);
-    setDraft({ ...companion, imageUrl: companion.imageUrl || '', stateAssets: companion.stateAssets || {} });
+    setDraft({ ...companion, imageUrl: companion.imageUrl || '', stateAssets: companion.stateAssets || {}, animations: companion.animations || [] });
     setFormError('');
     setView('create');
+  }
+
+  function addAnimationState() {
+    const id = newAnimationId.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(id) || id.length > 64) {
+      setFormError('Use a short animation name with letters, numbers and hyphens.');
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(draft.stateAssets, id) || draft.animations?.some((item) => item.id === id) || coreStateIds.has(id) ||
+        ['constructor', 'prototype', 'tostring'].includes(id)) {
+      setFormError('This animation name is already in use. Choose another name.');
+      return;
+    }
+    setDraft((current) => ({
+      ...current,
+      stateAssets: { ...current.stateAssets, [id]: '' },
+      animations: [...(current.animations || []), {
+        id, label: id.replace(/-/g, ' '), description: '', src: null,
+        fps: 6, frames: 1, loop: true, kind: 'apng' as const,
+      }],
+    }));
+    setNewAnimationId('');
+    setFormError('');
   }
 
   async function createCompanion(buildInWork: boolean) {
@@ -133,6 +180,9 @@ export function InnerAnimalCompanionsPage() {
       brandName: draft.brandName?.trim() || '',
       commissioningMode: draft.commissioningMode || 'personal',
       stateAssets: Object.fromEntries(Object.entries(draft.stateAssets).map(([state, url]) => [state, url.trim()]).filter(([, url]) => url)),
+      animations: (draft.animations || []).map((item) => ({
+        ...item, src: draft.stateAssets[item.id]?.trim() || null,
+      })),
     };
     setCreating(true);
     try {
@@ -217,11 +267,40 @@ export function InnerAnimalCompanionsPage() {
         <label className="block"><span className="mb-1.5 block text-[10px] font-medium">Commission type</span><select value={draft.commissioningMode || 'personal'} onChange={(event) => setDraft((current) => ({ ...current, commissioningMode: event.target.value === 'agency' ? 'agency' : 'personal' }))} className="h-9 w-full rounded-lg border border-border bg-background/60 px-3 text-xs"><option value="personal">Personal / team companion</option><option value="agency">Agency / B2B brand mascot</option></select></label>
         <label className="block"><span className="mb-1.5 block text-[10px] font-medium">Brand / agency name (optional)</span><input value={draft.brandName || ''} onChange={(event) => setDraft((current) => ({ ...current, brandName: event.target.value }))} maxLength={80} placeholder="Brand or client name" className="h-9 w-full rounded-lg border border-border bg-background/60 px-3 text-xs outline-none focus:border-cyan-400/50" /></label>
         <label className="block md:col-span-2"><span className="mb-1.5 block text-[10px] font-medium">Portrait image URL (optional)</span><input value={draft.imageUrl} onChange={(event) => setDraft((current) => ({ ...current, imageUrl: event.target.value }))} placeholder="/brand/... or https://…" className="h-9 w-full rounded-lg border border-border bg-background/60 px-3 text-xs outline-none focus:border-cyan-400/50" /></label>
-        <details className="rounded-xl border border-border/70 bg-background/30 p-3 md:col-span-2">
-          <summary className="cursor-pointer text-[11px] font-medium">Animation state assets <span className="font-normal text-muted-foreground">· optional, 10 states</span></summary>
+        <details open={Boolean(editingCompanionId)} className="rounded-xl border border-border/70 bg-background/30 p-3 md:col-span-2">
+          <summary className="cursor-pointer text-[11px] font-medium">Animations <span className="font-normal text-muted-foreground">· ten starter actions, plus your own</span></summary>
           <p className="mt-2 text-[10px] leading-4 text-muted-foreground">Paste the public path for each transparent APNG. Any missing state falls back to the idle animation or portrait.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {COMPANION_STATE_LABELS.map((state) => <label key={state.id} className="block min-w-0"><span className="mb-1 block text-[9px] text-muted-foreground">{state.label}</span><input value={draft.stateAssets[state.id] || ''} onChange={(event) => setDraft((current) => ({ ...current, stateAssets: { ...current.stateAssets, [state.id]: event.target.value } }))} placeholder={`/brand/.../${state.id}.png`} className="h-8 w-full rounded-md border border-border bg-background/60 px-2 text-[10px] outline-none focus:border-cyan-400/50" /></label>)}
+            {draftAnimationStates.map((state) => <div key={state.id} className="min-w-0">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] capitalize text-muted-foreground">{state.label}</span>
+                {!coreStateIds.has(state.id) ? <button type="button" className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setDraft((current) => {
+                  const next = { ...current.stateAssets }; delete next[state.id];
+                  return { ...current, stateAssets: next, animations: current.animations?.filter((item) => item.id !== state.id) };
+                })}><X className="size-3" /> Remove</button> : null}
+              </div>
+              <input aria-label={state.label + ' animation asset'} value={draft.stateAssets[state.id] || ''} onChange={(event) => setDraft((current) => ({ ...current, stateAssets: { ...current.stateAssets, [state.id]: event.target.value } }))} placeholder={'/brand/.../' + state.id + '.png'} className="h-8 w-full rounded-md border border-border bg-background/60 px-2 text-[10px] outline-none focus:border-primary/50" />
+              {!coreStateIds.has(state.id) && draft.animations?.some((item) => item.id === state.id) ? <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+                <label className="block text-muted-foreground">FPS
+                  <input type="number" min={1} max={60} value={draft.animations?.find((item) => item.id === state.id)?.fps || 6}
+                    onChange={(event) => setDraft((current) => ({ ...current, animations: current.animations?.map((item) => item.id === state.id ? { ...item, fps: Number(event.target.value) } : item) }))}
+                    className="mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-xs text-foreground" />
+                </label>
+                <label className="block text-muted-foreground">Frames
+                  <input type="number" min={1} max={10000} value={draft.animations?.find((item) => item.id === state.id)?.frames || 1}
+                    onChange={(event) => setDraft((current) => ({ ...current, animations: current.animations?.map((item) => item.id === state.id ? { ...item, frames: Number(event.target.value) } : item) }))}
+                    className="mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-xs text-foreground" />
+                </label>
+                <label className="col-span-2 flex items-center gap-2 text-muted-foreground"><input type="checkbox" checked={draft.animations?.find((item) => item.id === state.id)?.loop ?? true}
+                  onChange={(event) => setDraft((current) => ({ ...current, animations: current.animations?.map((item) => item.id === state.id ? { ...item, loop: event.target.checked } : item) }))} />
+                  Loop animation
+                </label>
+              </div> : null}
+            </div>)}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input aria-label="New animation name" value={newAnimationId} onChange={(event) => setNewAnimationId(event.target.value)} maxLength={64} placeholder="New action, e.g. celebrating" className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
+            <button type="button" onClick={addAnimationState} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted"><Plus className="size-3.5" /> Add animation</button>
           </div>
         </details>
         {formError ? <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-[11px] text-red-200 md:col-span-2">{formError}</p> : null}
@@ -293,7 +372,7 @@ export function InnerAnimalCompanionsPage() {
                   className={`group flex min-w-0 items-center gap-3 rounded-xl border p-2.5 text-left transition-colors ${selected ? 'border-emerald-400/45 bg-emerald-400/[.07]' : available ? 'border-border/70 bg-background/30 hover:border-border hover:bg-muted/30' : 'cursor-not-allowed border-border/50 bg-background/15 opacity-80'}`}>
                   <Portrait companion={companion} />
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2"><strong className="truncate text-[11px] font-semibold">{companion.name}</strong>{selected ? <span className="rounded-full bg-emerald-400/10 px-1.5 py-0.5 text-[8px] text-emerald-200">Active</span> : !available ? <span className="rounded-full border border-border px-1.5 py-0.5 text-[8px] text-muted-foreground">Coming soon</span> : null}</span>
+                    <span className="flex items-center gap-2"><strong className="truncate text-[11px] font-semibold">{companion.name}</strong>{selected ? <span className="rounded-full bg-emerald-400/10 px-1.5 py-0.5 text-[8px] text-emerald-200">Active</span> : !available ? <span className="rounded-full border border-border px-1.5 py-0.5 text-[8px] text-muted-foreground">Draft</span> : null}</span>
                     <span className="mt-1 block truncate text-[9px] text-muted-foreground">{companion.animal}</span>
                     <span className="mt-1 block line-clamp-2 text-[9px] leading-4 text-muted-foreground/80">{companion.role}</span>
                   </span>
@@ -349,7 +428,10 @@ export function InnerAnimalCompanionsPage() {
 
     {view === 'animations' ? <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-3">
-        <div><h3 className="text-sm font-semibold">{activeCompanion.name} · animation states</h3><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Preview each transparent APNG state at its native frame rate.</p></div>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div><h3 className="text-sm font-semibold">{activeCompanion.name} · animations</h3><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Review core actions and character-specific animations.</p></div>
+          {activeCompanion.custom ? <button type="button" onClick={() => editCompanion(activeCompanion.custom!)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted"><Plus className="size-3.5" /> Add animation</button> : null}
+        </div>
         <Preview companion={activeCompanion} state={selectedPreviewState?.label || previewState} srcOverride={selectedPreviewState?.src} />
         <div className="flex flex-wrap gap-2">
           {previewStates.map((state) => <button key={state.id} type="button" onClick={() => setPreviewState(state.id)} aria-pressed={previewState === state.id}

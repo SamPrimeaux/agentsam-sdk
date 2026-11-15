@@ -7,14 +7,23 @@ import { fileURLToPath } from 'node:url';
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = path.resolve(appRoot, '../../assets/brand/inneranimal-companions/v1');
 const publicRoot = path.join(appRoot, 'frontend/public/brand/inneranimal-companions/v1');
-const expected = ['geaux', 'meaux', 'coder', 'architect', 'engineer', 'py', 'bella', 'roux', 'bruneaux', 'nyra', 'toro'];
 const catalogPath = path.join(sourceRoot, 'catalog.json');
 if (!existsSync(catalogPath)) throw new Error('InnerAnimal companion source catalog is missing: ' + catalogPath);
 const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'));
 if (catalog.defaultCompanionId !== 'geaux' || !Array.isArray(catalog.companions)) {
   throw new Error('InnerAnimal companion catalog contract is invalid');
 }
-const found = new Set(catalog.companions.map((item) => item.id));
+const found = new Set();
+for (const item of catalog.companions) {
+  if (!/^[a-z][a-z0-9-]{0,63}$/.test(item.id) || found.has(item.id)) {
+    throw new Error('Companion ids must be unique safe slugs: ' + item.id);
+  }
+  found.add(item.id);
+}
+const expected = catalog.companions.filter((item) => item.assetStatus === 'runtime-ready').map((item) => item.id);
+if (!expected.length || !expected.includes(catalog.defaultCompanionId)) {
+  throw new Error('Companion catalog must contain a runtime-ready default companion');
+}
 const habitatsPath = path.join(sourceRoot, 'habitats.json');
 if (!existsSync(habitatsPath)) throw new Error('InnerAnimal habitat manifest is missing: ' + habitatsPath);
 const habitatManifest = JSON.parse(readFileSync(habitatsPath, 'utf8'));
@@ -54,16 +63,16 @@ for (const id of expected) {
   for (const asset of [manifest.avatar, manifest.icon, manifest.portrait]) {
     if (!asset || !existsSync(path.join(folder, asset))) throw new Error('Companion portrait asset missing: ' + id);
   }
-  if (id === 'bella') {
-    if (!Array.isArray(manifest.galleryStates) || manifest.galleryStates.length !== 16) throw new Error('Bella must expose all 16 gallery states.');
+  if (Array.isArray(manifest.galleryStates)) {
     for (const state of manifest.galleryStates) {
-      const assetPath = path.join(folder, state.src);
-      if (!existsSync(assetPath) || apngFrameCount(assetPath) !== state.frames || state.frames !== 8) {
-        throw new Error(`Bella gallery state ${state.id} is not a valid 8-frame APNG.`);
+      const assetPath = path.join(folder, state.src || '');
+      if (!state.id || !state.src || !existsSync(assetPath) || apngFrameCount(assetPath) !== state.frames) {
+        throw new Error('Companion gallery state has invalid art: ' + id + '/' + state.id);
       }
     }
-    if (manifest.animationFrameCount !== 128 || Object.keys(manifest.states).length !== 10) {
-      throw new Error('Bella runtime/gallery state contract is invalid.');
+    if (Number.isInteger(manifest.animationFrameCount) &&
+        manifest.galleryStates.reduce((count, state) => count + state.frames, 0) !== manifest.animationFrameCount) {
+      throw new Error('Companion gallery frame-count mismatch: ' + id);
     }
   }
 }

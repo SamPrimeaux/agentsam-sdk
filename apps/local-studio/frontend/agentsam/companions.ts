@@ -2,7 +2,8 @@ export const COMPANION_STATE_IDS = [
   'idle', 'working', 'thinking', 'attention', 'success', 'signature', 'waiting', 'error', 'resting', 'blinking',
 ] as const;
 
-export type CompanionState = typeof COMPANION_STATE_IDS[number];
+/** Core states remain suggested defaults, while character-specific states are open slugs. */
+export type CompanionState = string;
 
 export const COMPANION_STATE_LABELS: Array<{ id: CompanionState; label: string; description: string }> = [
   { id: 'idle', label: 'Idle', description: 'At rest and ready for the next task.' },
@@ -17,6 +18,17 @@ export const COMPANION_STATE_LABELS: Array<{ id: CompanionState; label: string; 
   { id: 'blinking', label: 'Blinking', description: 'A small idle expression.' },
 ];
 
+export type CompanionAnimation = {
+  id: string;
+  label: string;
+  description: string;
+  src: string | null;
+  fps: number;
+  frames: number;
+  loop: boolean;
+  kind: 'apng' | 'gif' | 'spritesheet' | 'frames' | 'static';
+};
+
 export type CustomCompanion = {
   id: string;
   name: string;
@@ -27,7 +39,8 @@ export type CustomCompanion = {
   visualNotes: string;
   signatureAction: string;
   imageUrl: string | null;
-  stateAssets: Partial<Record<CompanionState, string>>;
+  stateAssets: Record<CompanionState, string>;
+  animations?: CompanionAnimation[];
   brandName?: string;
   commissioningMode?: 'personal' | 'agency';
 };

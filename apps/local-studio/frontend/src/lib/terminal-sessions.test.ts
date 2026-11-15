@@ -83,3 +83,20 @@ test("tile size preferences are bounded and independent of window dimensions", (
   assert.equal(store.getState().gridColumnFraction, 0.78);
   assert.equal(store.getState().gridFirstRowFraction, 0.2);
 });
+
+test("per-pane companion presentation survives duplication without affecting adjacent PTYs", () => {
+  const first = store.getState().createSession();
+  const second = store.getState().createSession();
+  store.getState().patchSession(first, { companionId: "geaux", animationStateId: "thinking" });
+  store.getState().patchSession(second, { companionId: "nyra", animationStateId: "working" });
+  const cloned = store.getState().duplicateSession(first);
+  const sessions = store.getState().sessions;
+  const copy = sessions.find((session) => session.id === cloned);
+  const other = sessions.find((session) => session.id === second);
+  assert.equal(copy?.companionId, "geaux");
+  assert.equal(copy?.animationStateId, "thinking");
+  assert.equal(other?.companionId, "nyra");
+  assert.equal(other?.animationStateId, "working");
+  assert.notEqual(copy?.id, first);
+  assert.notEqual(copy?.ptySlot, sessions.find((session) => session.id === first)?.ptySlot);
+});

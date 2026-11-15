@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.ansi-art.v1",
+  "companionId": "geaux",
+  "source": "geaux/avatars/geaux-avatar-128.png",
+  "width": 24,
+  "height": 16,
+  "grid": [
+    "........................",
+    "........................",
+    "............dmm.........",
+    "..........mdddmm........",
+    "........hmdddddmd.......",
+    "......dmmmddmmdmmmd.....",
+    ".....ddddddddmmddddd....",
+    "....ddddddddddmdddddd...",
+    ".....ddddddmmdmmmdddd...",
+    "....hdddmddmmmmmddddd...",
+    "...hhddmddddmmdddddmd...",
+    "...mmddmddddddmddddmd...",
+    "...ddddddddddddmddddd...",
+    "...dddddddddddddddddd...",
+    "........................",
+    "........................"
+  ]
+}

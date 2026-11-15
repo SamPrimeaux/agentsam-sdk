@@ -46,4 +46,4 @@ version = { attr = "agentsam_sdk.__version__" }
 include = ["agentsam_sdk*"]
 
 [tool.setuptools.package-data]
-agentsam_sdk = ["py.typed"]
+agentsam_sdk = ["py.typed", "assets/*.json"]

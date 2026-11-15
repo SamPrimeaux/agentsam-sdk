@@ -1,11 +1,8 @@
 import path from 'node:path';
 import pc from 'picocolors';
+import pkg from '../../package.json' with { type: 'json' };
+import { brandedTerminalHeader } from './companion-art.js';
 
-const FRAMES = ['◔', '◑', '◕', '●'];
-const CLEAR_LINE = '\x1b[2K';
-const HIDE_CURSOR = '\x1b[?25l';
-const SHOW_CURSOR = '\x1b[?25h';
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function compactHome(value) {
   const home = process.env.HOME || process.env.USERPROFILE || '';
@@ -36,19 +33,23 @@ export function renderBootSummary({ identity, preferences }) {
   ].join('\n');
 }
 
-export async function runBootScene({ identity, preferences, animate = true, write = process.stdout.write.bind(process.stdout) }) {
-  const interactive = Boolean(animate && process.stdout.isTTY);
-  if (!interactive) { write(renderBootSummary({ identity, preferences })); return; }
-  write(HIDE_CURSOR);
-  try {
-    write(`\n  ${pc.bold('Agent Sam')}\n  ${pc.cyan(identity.project)}${identity.branch ? ` · ${pc.cyan(identity.branch)}` : ''}\n  ${pc.white(modelLine(preferences))}\n\n`);
-    for (const label of ['directory trust', 'runtime', 'model policy']) {
-      for (let i = 0; i < FRAMES.length; i += 1) {
-        write(`\r${CLEAR_LINE}  ${pc.cyan(FRAMES[i])} ${pc.dim(`checking ${label}`)}`);
-        await sleep(i === FRAMES.length - 1 ? 45 : 55);
-      }
-      write(`\r${CLEAR_LINE}  ${pc.green('✓')} ${pc.dim(label)}\n`);
-    }
-    write(`\n  ${pc.green('●')} ${pc.bold('ready')}  ${pc.dim(compactHome(identity.root))}\n  ${pc.dim('Type / and press Enter for the scrollable command menu.')}\n\n`);
-  } finally { write(SHOW_CURSOR); }
+export async function runBootScene({
+  identity, preferences,
+  write = process.stderr.write.bind(process.stderr),
+}) {
+  // Presentation belongs on stderr and never pollutes data-oriented stdout.
+  if (!process.stderr.isTTY || process.env.CI) return;
+  const useColor = !process.env.NO_COLOR && process.env.TERM !== 'dumb';
+  const heading = brandedTerminalHeader({
+    project: identity.project + (identity.branch ? ' · ' + identity.branch : ''),
+    model: modelLine(preferences),
+    cwd: compactHome(identity.root),
+    version: pkg.version,
+    width: process.stderr.columns || 80,
+    color: useColor,
+  });
+  write('\n' + heading + '\n');
+  write('  ' + (preferences.runtime || 'local') + ' · ' +
+    (preferences.terminal || path.basename(process.env.SHELL || '') || 'shell') + '\n');
+  write('  Type / and press Enter for the command menu.\n\n');
 }
