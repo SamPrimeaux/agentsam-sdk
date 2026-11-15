@@ -24,8 +24,8 @@ assert.ok(fs.existsSync(assetsDir) && fs.statSync(assetsDir).isDirectory(), ".ou
 const retiredServiceWorker = path.join(assetsDir, "sw.js");
 assert.ok(fs.existsSync(retiredServiceWorker), "legacy service worker cleanup must be deployed");
 const retiredSource = fs.readFileSync(retiredServiceWorker, "utf8");
-assert.match(retiredSource, /registration\\.unregister\\(/, "old service worker must unregister");
-assert.doesNotMatch(retiredSource, /addEventListener\\(["']fetch["']/, "no navigation cache on hosted Studio");
+assert.ok(retiredSource.includes("self.registration.unregister("), "old service worker must unregister");
+assert.ok(!retiredSource.includes("addEventListener(\"fetch\""), "no navigation cache on hosted Studio");
 assert.ok(fs.existsSync(localStudioWorkPage), "LocalStudioWorkPage.tsx is required");
 assert.ok(fs.existsSync(localStudioRootRoute), "Local Studio root route is required");
 assert.ok(fs.existsSync(localStudioTicketsRoute), "Local Studio /tickets route is required");
