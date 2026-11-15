@@ -9,7 +9,7 @@ use std::{process::{Command,Stdio},io::Write};
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
 pub struct DockerRequest {
-  action:String,context:Option<String>,container:Option<String>,
+  action:String,context:Option<String>,container:Option<String>,endpoint:Option<String>,
   root:Option<String>,path:Option<String>,destination:Option<String>,
   content:Option<String>,expected_version:Option<String>,approved:Option<bool>,
 }
@@ -82,6 +82,17 @@ fn run(r:DockerRequest)->Result<Value,String>{
     let rows=lines(&docker(&["context","ls","--format","{{json .}}"],None)?)?;
     let contexts=rows.iter().map(|c|json!({"name":c.get("Name"),"current":c.get("Current"),"description":c.get("Description")})).collect::<Vec<_>>();
     return Ok(json!({"ok":true,"contexts":contexts}));
+  }
+  if r.action=="createContext" {
+    if r.approved!=Some(true){return Err("docker_approval_required".into());}
+    let context=name(r.context.as_deref())?;
+    let endpoint=r.endpoint.as_deref().ok_or("docker_ssh_endpoint_required")?;
+    if !endpoint.starts_with("ssh://")||endpoint.len()>240||!endpoint.contains('@')||
+      !endpoint["ssh://".len()..].bytes().all(|b|b.is_ascii_alphanumeric()||b"@._-:".contains(&b)) {
+      return Err("docker_ssh_endpoint_invalid".into());
+    }
+    docker(&["context","create",&context,"--docker",&format!("host={}",endpoint)],None)?;
+    return Ok(json!({"ok":true,"context":context}));
   }
   let ctx=name(r.context.as_deref())?;
   if r.action=="health"{
