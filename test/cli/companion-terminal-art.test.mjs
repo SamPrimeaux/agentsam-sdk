@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import pkg from '../package.json' with { type: 'json' };
-import { brandedTerminalHeader, companionTerminalArt, renderCompanionTerminalArt } from '../src/ui/companion-art.js';
+import pkg from '../../package.json' with { type: 'json' };
+import { brandedTerminalHeader, companionTerminalArt, renderCompanionTerminalArt } from '../../src/ui/companion-art.js';
 
 test('generated Geaux art is present and renders safely in monochrome', () => {
   const art = companionTerminalArt();
