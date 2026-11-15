@@ -1173,7 +1173,15 @@ function PluginCustomizeView({
                       <p>{plugin.description || "Registered capability awaiting a complete product description."}</p>
                       <p>Key: <code className="text-foreground">{plugin.pluginKey}</code> · Version: {plugin.version} · {plugin.readiness==='tools_registered'?"Tools registered":"Definition only — tool execution not verified"}</p>
                       {plugin.capabilities.length?<p>Declared: {plugin.capabilities.join(', ')}</p>:null}
-                      <p>{plugin.surface==='app'?"Open Apps to install or manage this application.":plugin.surface==='side_stage'?"Choose whether this tool appears in Settings → Apps → Tools; independent app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
+                      <p>{plugin.category==='entertainment' && plugin.provider==='inneranimalmedia'?"Install this first-party game to add its web view to Side Stage. No device-control permissions are granted.":plugin.surface==='app'?"Open Apps to install or manage this application.":plugin.surface==='side_stage'?"Choose whether this tool appears in Settings → Apps → Tools; independent app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
+                      {plugin.category==='entertainment' && plugin.provider==='inneranimalmedia' &&
+                        ['inneranimalmedia-meauxgames','inneranimalmedia-wizard-chess-3d'].includes(plugin.pluginKey) &&
+                        !plugin.installed && host.installPluginFromCatalog ? (
+                          <button type="button" disabled={busy} onClick={()=>void run(()=>host.installPluginFromCatalog!(plugin.pluginKey))}
+                            className="inline-flex min-h-9 items-center rounded-lg border border-border px-3 text-xs font-medium text-foreground hover:bg-muted/25 disabled:opacity-50">
+                            Install {plugin.name}
+                          </button>
+                        ):null}
                     </div>
                   </details>)}
                 </div>:<p className="text-[11px] text-muted-foreground">{catalog?"No platform capabilities match this search.":"Loading registered platform capabilities…"}</p>}
