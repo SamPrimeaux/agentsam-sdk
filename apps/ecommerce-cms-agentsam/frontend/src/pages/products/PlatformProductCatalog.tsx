@@ -206,14 +206,15 @@ export default function PlatformProductCatalog({
         ))}
       </div>
       {matchingCandidates.length > 0 && <>
-        <div className="ps-catalog-heading" style={{ marginTop: 28, marginBottom: 12 }}>
-          <div><span className="ps-eyebrow">SOURCE LIBRARY · LOCAL PREVIEW</span><h3 style={{ margin: 0 }}>Ready to curate</h3></div>
+        <div className="ps-catalog-heading mt-7 mb-3">
+          <div><span className="ps-eyebrow">SOURCE LIBRARY · LOCAL PREVIEW</span><h3 className="m-0">Ready to curate</h3></div>
         </div>
         <p className="ps-platform-description">These packages and workflows were discovered from real source files on this Mac. They are not products in your account, and they have not been uploaded, priced or published.</p>
         <div className="ps-catalog-grid">
           {matchingCandidates.map((candidate) => (
             <button type="button" className="ps-product-card ps-platform-card" key={candidate.id}
               onClick={() => setSelectedCandidate(candidate)} aria-label={`Inspect source candidate ${candidate.name}`}>
+              <span className="sr-only">Inspect source candidate</span>
               <div className="ps-product-photo">
                 <span className="ps-platform-initials" aria-hidden="true">{candidate.name.split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase()}</span>
                 <span className="ps-card-arrow" aria-hidden="true">↗</span>

@@ -32,13 +32,13 @@ function SessionCompanionPicker({ sessionId }: { sessionId: string }) {
   const selectedValue = selectedScene ? 'scene:' + selectedScene.id :
     selected.id + ':' + (selectedGallery || selected.states[stateId] ? stateId : 'idle');
   return <div className="flex shrink-0 items-center gap-1" aria-label="Terminal companion scene">
-    {selectedScene ? <div className="relative size-6 shrink-0 overflow-hidden rounded border border-border bg-muted/30"
-      style={selectedScene.backgroundUrl ? { backgroundImage: 'url(' + JSON.stringify(selectedScene.backgroundUrl) + ')', backgroundSize: 'cover' } : undefined}>
+    {selectedScene ? <div className="relative size-6 shrink-0 overflow-hidden rounded border border-border bg-muted/30 bg-[image:var(--terminal-scene-background)] bg-cover"
+      style={{ '--terminal-scene-background': selectedScene.backgroundUrl ? 'url(' + JSON.stringify(selectedScene.backgroundUrl) + ')' : 'none' } as CSSProperties}>
       {selectedScene.layers.map((layer) => {
         const profile = companions.find((item) => item.id === layer.companionId) || selected;
         const image = profile.galleryStates?.find((item) => item.id === layer.stateId)?.src || companionStateAsset(profile, layer.stateId);
-        return image ? <img key={layer.id} src={image} alt="" aria-hidden="true" className="pointer-events-none absolute object-contain"
-          style={{ left: layer.x + '%', top: layer.y + '%', width: (45 * layer.scale) + '%', transform: 'translate(-50%,-50%)' }} /> : null;
+        return image ? <img key={layer.id} src={image} alt="" aria-hidden="true" className="pointer-events-none absolute left-[var(--terminal-layer-left)] top-[var(--terminal-layer-top)] w-[var(--terminal-layer-width)] -translate-x-1/2 -translate-y-1/2 object-contain"
+          style={{ '--terminal-layer-left': layer.x + '%', '--terminal-layer-top': layer.y + '%', '--terminal-layer-width': (45 * layer.scale) + '%' } as CSSProperties} /> : null;
       })}
     </div> : src ? <img src={src} alt="" aria-hidden="true" className="size-5 shrink-0 object-contain" /> : null}
     <select aria-label="Companion or scene for this terminal" value={selectedValue}

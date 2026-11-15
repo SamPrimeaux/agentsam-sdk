@@ -362,6 +362,7 @@ export function InnerAnimalCompanionsPage() {
             disabled={saving || loading || Boolean(error)} aria-pressed={item.id === settings.activeId}
             className={'flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left hover:bg-muted/30 ' +
               (item.id === settings.activeId ? 'border-primary/50 bg-primary/5' : 'border-border/70')}>
+            <span className="sr-only">Choose companion {item.name}</span>
             <Portrait companion={item} />
             <span className="min-w-0">
               <span className="block truncate text-xs font-semibold">{item.name}</span>

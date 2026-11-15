@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
+import { IconAction } from '@/components/ui/icon-action';
 import { Check, Image as ImageIcon, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCompanionSettings } from './CompanionContext';
@@ -95,28 +96,28 @@ export function CompanionScenesPanel() {
             <span className="block truncate text-xs font-medium">{scene.name}</span>
             <span className="block text-[10px] text-muted-foreground">{scene.layers.length} layers</span>
           </button>
-          <button type="button" aria-label={'Remove scene ' + scene.name} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => void removeScene(scene.id)} disabled={saving}><Trash2 className="size-3.5" /></button>
+          <IconAction type="button" label={'Remove scene ' + scene.name} variant="ghost" className="text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => void removeScene(scene.id)} disabled={saving}><Trash2 className="size-3.5" /></IconAction>
         </div>) : <p className="rounded-lg border border-dashed border-border/70 p-3 text-xs leading-5 text-muted-foreground">Create a scene to combine companion actions into one reusable visual.</p>}
     </aside>
     {draft ? <div className="min-w-0 space-y-3">
       <div className="flex items-center gap-2">
         <input aria-label="Scene name" className={inputClass} value={draft.name} maxLength={64}
           placeholder="Scene name, e.g. Morning briefing" onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
-        <button type="button" className={actionClass} aria-label="Close scene editor" onClick={() => setDraft(null)}><X className="size-4" /></button>
+        <IconAction type="button" variant="ghost" label="Close scene editor" onClick={() => setDraft(null)}><X className="size-4" /></IconAction>
       </div>
       <input aria-label="Scene description" className={inputClass} value={draft.description} maxLength={240}
         placeholder="What happens in this scene?" onChange={(event) => setDraft({ ...draft, description: event.target.value })} />
-      <div className="relative aspect-video min-h-[210px] overflow-hidden rounded-xl border border-border/70 bg-muted/40"
-        style={draft.backgroundUrl && safeAsset(draft.backgroundUrl) ? { backgroundImage: 'url(' + JSON.stringify(draft.backgroundUrl) + ')', backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+      <div className="relative aspect-video min-h-[210px] overflow-hidden rounded-xl border border-border/70 bg-muted/40 bg-[image:var(--companion-scene-background)] bg-cover bg-center"
+        style={{ '--companion-scene-background': draft.backgroundUrl && safeAsset(draft.backgroundUrl) ? 'url(' + JSON.stringify(draft.backgroundUrl) + ')' : 'none' } as CSSProperties}>
         {draft.layers.map((layer) => {
           const profile = character(layer.companionId);
           const src = profile.galleryStates?.find((state) => state.id === layer.stateId)?.src ||
             companionStateAsset(profile, layer.stateId);
-          const position = { left: layer.x + '%', top: layer.y + '%', width: (32 * layer.scale) + '%', transform: 'translate(-50%,-50%)' };
+          const position = { '--scene-left': layer.x + '%', '--scene-top': layer.y + '%', '--scene-width': (32 * layer.scale) + '%' } as CSSProperties;
           return src ? <img key={layer.id} alt={profile.name + ' · ' + layer.stateId} src={src}
-            className="pointer-events-none absolute max-h-full object-contain" style={position} /> :
-            <div key={layer.id} style={position} className="pointer-events-none absolute rounded-lg border border-border/70 bg-card/75 px-2 py-2 text-center text-xs text-muted-foreground">
+            className="pointer-events-none absolute left-[var(--scene-left)] top-[var(--scene-top)] w-[var(--scene-width)] -translate-x-1/2 -translate-y-1/2 max-h-full object-contain" style={position} /> :
+            <div key={layer.id} style={position} className="pointer-events-none absolute left-[var(--scene-left)] top-[var(--scene-top)] w-[var(--scene-width)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border/70 bg-card/75 px-2 py-2 text-center text-xs text-muted-foreground">
               {profile.name} · artwork not yet assigned
             </div>;
         })}
@@ -154,7 +155,7 @@ export function CompanionScenesPanel() {
               <input aria-label={'Layer ' + (index + 1) + ' ' + label} type="number" min={min} max={max} step={step}
                 value={layer[key]} className={'mt-1 ' + inputClass} onChange={(event) => updateLayer(layer.id, { [key]: Number(event.target.value) })} />
             </label>)}
-            <button type="button" aria-label={'Remove layer ' + (index + 1)} className="self-end rounded p-2 text-muted-foreground hover:bg-muted" onClick={() => setDraft({ ...draft, layers: draft.layers.filter((item) => item.id !== layer.id) })}><Trash2 className="size-4" /></button>
+            <IconAction type="button" label={'Remove layer ' + (index + 1)} variant="ghost" className="self-end text-muted-foreground hover:bg-muted" onClick={() => setDraft({ ...draft, layers: draft.layers.filter((item) => item.id !== layer.id) })}><Trash2 className="size-4" /></IconAction>
           </div>;
         })}
       </div>

@@ -1,3 +1,4 @@
+import { IconAction } from "@/components/ui/icon-action";
 import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -78,8 +79,8 @@ export function CompanionAnimationExtensions({ companion, onCreated }: {
         <strong className="block truncate text-[10px]">{item.label}</strong>
         <span className="text-[9px] text-muted-foreground">{item.frames} frames · {item.fps} fps{item.src ? '' : ' · draft'}</span>
       </div>
-      <button type="button" disabled={disabled} className="rounded p-1 text-muted-foreground hover:bg-muted" aria-label={'Remove ' + item.label}
-        onClick={() => void remove(item.id)}><Trash2 className="size-3.5" /></button>
+      <IconAction type="button" label={'Remove ' + item.label} disabled={disabled} size="icon-sm" variant="ghost" className="text-muted-foreground hover:bg-muted"
+        onClick={() => void remove(item.id)}><Trash2 className="size-3.5" /></IconAction>
     </div>)}
     {editing ? <div className="space-y-2 rounded-lg border border-border/70 p-3">
       <label className="block text-[10px] text-muted-foreground">Animation name
