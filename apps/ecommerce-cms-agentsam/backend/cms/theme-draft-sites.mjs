@@ -170,7 +170,7 @@ export async function listThemeDraftSites(env, accountId) {
 }
 
 /** Archive an owned draft (never a live/active site). Snapshots stay in R2. */
-export async function archiveThemeDraftSite(env, accountId, siteId) {
+export async function archiveThemeDraftSite(env, accountId, siteId, projectId) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
   const site = await env.DB.prepare(
     "SELECT id,status,settings_json FROM cms_sites WHERE id=? AND account_id=? LIMIT 1"
@@ -178,6 +178,17 @@ export async function archiveThemeDraftSite(env, accountId, siteId) {
   if (!site) return { ok: false, status: 404, error: "theme_draft_not_found" };
   if (site.status !== "draft" || parse(site.settings_json).kind !== DRAFT_SITE_KIND)
     return { ok: false, status: 409, error: "theme_draft_not_deletable" };
+  // Never archive a whole draft site through a forged/wrong project ID, or
+  // when several independent theme projects share the same draft site.
+  const inventory = await env.DB.prepare(`
+    SELECT COUNT(*) AS total,
+      SUM(CASE WHEN json_extract(metadata_json,'$.project_id')=? THEN 1 ELSE 0 END) AS matches
+    FROM cms_site_themes WHERE account_id=? AND site_id=? AND status='ready'
+  `).bind(projectId, accountId, siteId).first();
+  if (!inventory?.matches) return { ok: false, status: 404, error: "theme_draft_not_found" };
+  if (Number(inventory.total) !== 1)
+    return { ok: false, status: 409, error: "theme_draft_has_multiple_projects" };
+
   const live = await env.DB.prepare(
     "SELECT 1 AS x FROM cms_site_themes WHERE account_id=? AND site_id=? AND is_live=1 LIMIT 1"
   ).bind(accountId, siteId).first();

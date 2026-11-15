@@ -3,9 +3,8 @@
  *
  * The Theme Store owns released packages. This Worker verifies its published
  * checksum against an immutable source-rendered project owned by the Theme Store,
- * resolves an optional explicit site, then delegates persistence to either
- * the account-scoped Theme Studio store or the canonical site CMS store.
- * Site-free authoring never creates cms_sites or uses cms_globals as a proxy.
+ * installs into an explicitly selected owned site, or automatically creates
+ * an isolated draft cms_sites + cms_site_themes pair for site-free Try.
  */
 import { resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
 import { installThemeDraft } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';

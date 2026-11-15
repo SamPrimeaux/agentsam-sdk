@@ -2863,7 +2863,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     if (!context.accountId) return json({ok:false,error:'account_required'},{status:403});
     const selectedSite = url.searchParams.get("site_id") || null;
     if (!selectedSite) return json({ok:false,error:'site_id_required'},{status:400});
-    const result = await archiveThemeDraftSite(env, context.accountId, selectedSite);
+    const result = await archiveThemeDraftSite(env, context.accountId, selectedSite, themeProjectMatch[1]);
     return json(result,{status:result.status || (result.ok?200:400)});
   }
   const themeInstallMatch = path.match(/^\/api\/admin\/cms\/themes\/([a-z][a-z0-9-]{0,63})\/install$/);

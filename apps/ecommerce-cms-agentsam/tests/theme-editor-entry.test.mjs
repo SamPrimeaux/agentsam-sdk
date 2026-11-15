@@ -80,6 +80,12 @@ test('Theme Studio gives every draft an account-owned site route instead of the 
   assert.match(workspace,/api\/admin\/cms\/theme-projects/);
   assert.match(workspace,/Array\.isArray\(data\.drafts\)/);
   assert.match(workspace,/site_id: draft\.site_id/);
+  const editor=readFileSync(new URL('../frontend/static/js/theme-project-editor-bootstrap.mjs',import.meta.url),'utf8');
+  assert.match(editor,/async onDuplicate\(\)/);
+  assert.match(editor,/destination\.searchParams\.set\('site_id',result\.site_id\)/);
+  assert.match(editor,/async onDelete\(\)/);
+  assert.match(editor,/result\.archived !== true/);
+  assert.doesNotMatch(editor,/studioMode|scope=studio/);
   assert.doesNotMatch(workspace,/scope=studio/);
   assert.match(store,/id="my-theme-studio-btn" href="\/admin\/theme-workspace"/);
 });

@@ -130,6 +130,9 @@ test("each duplicate is its own draft site with a cms_site_themes row; saves syn
 
     assert.equal((await call(`/api/admin/cms/theme-projects/${first.project.id}?site_id=${first.site_id}`, "GET", undefined, "acct-other")).status, 404);
     assert.equal((await call(`/api/admin/cms/theme-projects/x?site_id=site-live`, "DELETE")).status, 409);
+    // A URL forged with another project ID cannot archive this entire site.
+    assert.equal((await call(`/api/admin/cms/theme-projects/not_this_project?site_id=${first.site_id}`, "DELETE")).status, 404);
+    assert.equal(sqlite.prepare("SELECT status FROM cms_sites WHERE id=?").get(first.site_id).status, "draft");
     assert.equal((await call(`/api/admin/cms/theme-projects/${first.project.id}?site_id=${first.site_id}`, "DELETE")).status, 200);
     assert.equal(sqlite.prepare("SELECT status FROM cms_sites WHERE id=?").get(first.site_id).status, "archived");
     assert.equal(sqlite.prepare("SELECT status FROM cms_sites WHERE id='site-live'").get().status, "active");

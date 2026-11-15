@@ -1,6 +1,6 @@
 /* Source-owned, released website packages for both hosted Online Store surfaces.
- * A Try opens an account-owned Theme Studio workspace; a CMS site is optional
- * and is created only later when the customer chooses a publish destination. */
+ * A Try opens an account-owned editable theme in an automatically created
+ * draft CMS site. The customer never needs to select a site or domain first. */
 (() => {
   const API = window.__AGENTSAM_WEBSITE_THEMES_ENDPOINT;
   if (!API) return;

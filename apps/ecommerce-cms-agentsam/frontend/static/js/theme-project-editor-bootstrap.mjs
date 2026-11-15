@@ -8,18 +8,14 @@ const frame = document.getElementById('theme-project-editor-frame');
 const parameters = new URLSearchParams(location.search);
 let projectId = parameters.get('project');
 let siteId = parameters.get('site_id');
-const studioMode = parameters.get('scope') === 'studio';
 const pageSlug = parameters.get('page');
 const API = '/api/admin/cms/theme-projects';
-const scoped = path => {
-  const query = studioMode ? 'scope=studio' : siteId ? 'site_id=' + encodeURIComponent(siteId) : '';
-  return query ? path + (path.includes('?') ? '&' : '?') + query : path;
-};
+const scoped = path => path + (path.includes('?') ? '&' : '?') + 'site_id=' + encodeURIComponent(siteId);
 
 // A verified document identity travels back to the optional AgentSam Side
 // Stage host. It only receives route/selection state, never auth credentials.
 function publishCanvasRoute() {
-  if (studioMode || !siteId || !projectId || window.parent === window) return;
+  if (!siteId || !projectId || window.parent === window) return;
   const canonical = new URL(location.href);
   if (canonical.pathname !== '/admin/theme-project-editor' ||
       canonical.searchParams.get('site_id') !== siteId ||
@@ -34,9 +30,7 @@ function publishCanvasRoute() {
 
 function showError(error) {
   errorNode.hidden = false;
-  errorNode.textContent = studioMode
-    ? 'Your Theme Studio workspace could not be opened. Please return to Theme Studio and try again.'
-    : 'Your theme could not be opened. Please return to Online Store and try again.';
+  errorNode.textContent = 'Your theme could not be opened. Return to Theme Studio and try again.';
   console.error('theme_project_open_failed',error);
 }
 
@@ -81,7 +75,7 @@ const store = {
   async save(project, options = {}) {
     const expectedVersion = Number(options.expectedVersion || 0);
     const updating = expectedVersion > 0;
-    const scopeBody = studioMode ? { scope:'studio' } : { site_id:siteId };
+    const scopeBody = { site_id:siteId };
     const data = await jsonRequest(scoped(updating ? `${API}/${encodeURIComponent(project.id)}` : API), {
       method: updating ? 'PUT' : 'POST',
       headers: { 'content-type': 'application/json' },
@@ -94,13 +88,12 @@ const store = {
 };
 
 async function boot() {
-  // A site-scoped project requires its authorized site ID. Account-scoped
-  // Theme Studio projects deliberately have no site identity.
-  if (!studioMode && (!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)))
+  // The server verifies an account-owned draft site before any project is opened.
+  if (!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId))
     throw new Error('theme_project_site_required');
   if (projectId && !/^[A-Za-z0-9_-]{1,160}$/.test(projectId))
     throw new Error('theme_project_id_invalid');
-  if(parameters.get('new')==='1' && !studioMode){
+  if(parameters.get('new')==='1'){
     // The historical three-field wizard was a dead-end, blank CMS theme.
     // New creation is owned by independent AgentSam Canvas, not by a CMS
     // theme draft. Verify the merchant context before offering its hint;
@@ -115,7 +108,7 @@ async function boot() {
     else location.replace(target.href);
     return;
   }
-  // List only projects in the selected account or site scope before accepting a URL hint.
+  // List only projects in the authorized site scope before accepting a URL hint.
   const listing=await jsonRequest(scoped(API));
   const projects=Array.isArray(listing.projects)?listing.projects:[];
   // Never substitute another project for an explicit deep link.
@@ -123,17 +116,12 @@ async function boot() {
     ? projects.find(item=>item.id===projectId)
     : (projects.length===1 ? projects[0] : null);
   if (!selected) throw new Error(projectId
-    ? (studioMode ? 'theme_studio_project_not_found' : 'theme_project_not_found_for_site')
+    ? 'theme_project_not_found_for_site'
     : 'theme_project_selection_required');
   projectId=selected.id;
   const canonical=new URL(location.href);
-  if (studioMode) {
-    canonical.searchParams.set('scope','studio');
-    canonical.searchParams.delete('site_id');
-  } else {
-    canonical.searchParams.set('site_id',siteId);
-    canonical.searchParams.delete('scope');
-  }
+  canonical.searchParams.set('site_id',siteId);
+  canonical.searchParams.delete('scope');
   canonical.searchParams.set('project',projectId);
   history.replaceState(history.state,'',canonical.pathname+canonical.search);
   let project = await store.get(projectId);
@@ -192,17 +180,17 @@ async function boot() {
         version: project.sourcePackageVersion || project.version || null,
         developer: project.sourcePackage?.split('/')?.[0]?.replace(/^@/, '') || null,
       },
-      ...(studioMode ? {
-        async onDuplicate() {
+      async onDuplicate() {
           try {
             const result = await jsonRequest(scoped(`${API}/${encodeURIComponent(projectId)}/duplicate`), {
               method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({}),
             });
-            if (!result.ok || !result.project?.id) throw Error('theme_duplicate_failed');
+            if (!result.ok || !/^[A-Za-z0-9_-]{1,160}$/.test(result.project?.id || '') ||
+                !/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id || '')) throw Error('theme_duplicate_failed');
             const destination=new URL(location.href);
             destination.searchParams.set('project',result.project.id);
-            destination.searchParams.set('scope','studio');
-            destination.searchParams.delete('site_id');
+            destination.searchParams.set('site_id',result.site_id);
+            destination.searchParams.delete('scope');
             destination.searchParams.delete('page');
             location.assign(destination.pathname+destination.search);
           } catch(error) { showError(error); }
@@ -215,15 +203,13 @@ async function boot() {
               method:'DELETE', headers:{'content-type':'application/json'},
               body:JSON.stringify({expected_version:current.revision}),
             });
-            if (result.deleted !== true) throw Error('theme_delete_failed');
-            location.assign('/admin/store');
+            if (result.archived !== true) throw Error('theme_archive_failed');
+            location.assign('/admin/theme-workspace');
           } catch(error) { showError(error); }
         },
-      } : {}),
       onEditCode() {
         const codeParams = new URLSearchParams({ page:'/admin/theme-code-editor', project:projectId });
-        if (studioMode) codeParams.set('scope','studio');
-        else codeParams.set('site_id',siteId);
+        codeParams.set('site_id',siteId);
         const route='/apps/ecommerce-cms-agentsam?'+codeParams.toString();
         const target=window.top||window;
         if(target.__AGENTSAM_DESKTOP__ || target.__TAURI_INTERNALS__)
