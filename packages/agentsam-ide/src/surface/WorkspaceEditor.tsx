@@ -1,11 +1,14 @@
 import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from './WorkspaceSourceRail.js';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { mediaKindForPath, isMarkdownPath, isHtmlPath } from '../workspace/media.js';
 import { WorkspaceTreeView } from './WorkspaceTreeView.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AgentSamMonacoEditor, type AgentSamEditorPalette, type AgentSamMonacoEditorProps } from '../monaco/editor.js';
 import { WorkspaceSaveQueue, type SaveStatus } from '../workspace/save-queue.js';
 import { visibleWorkspaceTree, workspaceParents } from '../workspace/tree.js';
 import { DEFAULT_EDITOR_APPEARANCE, EDITOR_FONTS, normalizeEditorAppearance, type EditorAppearance, type EditorFontId } from './editor-appearance.js';
-import { assertWorkspaceFile, normalizeWorkspacePath, type FileWorkspace, type WorkspaceDiagnostic, type WorkspaceEntry, type WorkspaceFile, type WorkspaceRevision, type WorkspaceSearchHit } from '../workspace/files.js';
+import { assertWorkspaceFile, normalizeWorkspacePath, type FileWorkspace, type WorkspaceDiagnostic, type WorkspaceEntry, type WorkspaceFile, type WorkspaceRevision, type WorkspaceSearchHit, type WorkspacePreview } from '../workspace/files.js';
 
 export type WorkspaceEditorProps = {
   workspace: FileWorkspace;
@@ -23,7 +26,7 @@ export type WorkspaceEditorProps = {
   onExit?: () => void;
   agent?: { label: string; propose(input: {path: string; content: string; version: string}): Promise<{content: string; explanation: string}> };
 };
-type Tab = WorkspaceFile & { value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string };
+type Tab = WorkspaceFile & { value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string; preview?: WorkspacePreview };
 type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'Changes' | 'Snapshot' | 'References' | 'Dependencies';
 
 export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false}: WorkspaceEditorProps) {
@@ -41,6 +44,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const [paletteQuery,setPaletteQuery]=useState('');
   const [contextMenu,setContextMenu]=useState<{path:string;x:number;y:number}|null>(null);
   const [split,setSplit]=useState(false);
+  const [previewOnly,setPreviewOnly]=useState(false);
   const [appearance,setAppearance]=useState<EditorAppearance>(DEFAULT_EDITOR_APPEARANCE);
   const [appearanceReady,setAppearanceReady]=useState(false);
   const [appearanceOpen,setAppearanceOpen]=useState(false);
@@ -109,6 +113,15 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     setExpanded(prev=>new Set([...prev,...workspaceParents(path)]));
     if(latestTabs.current.some(tab=>tab.path===path)){setActive(path);return;}
     try{
+      if (workspace.preview && mediaKindForPath(path)) {
+        const preview=await workspace.preview(path);
+        if(preview) {
+          const asset:Tab={path,content:'',value:'',version:preview.version||'media-preview',readonly:true,
+            status:'saved',diagnostics:[],editorDiagnostics:[],preview};
+          setTabs(prev=>prev.some(tab=>tab.path===path)?prev:[...prev,asset]);
+          setActive(path);setMessage('');return;
+        }
+      }
       const file=assertWorkspaceFile(await workspace.read(path));
       queue.acceptDiskVersion(file.path,file.version);
       setTabs(prev=>prev.some(tab=>tab.path===file.path)?prev:[...prev,{...file,value:file.content,status:'saved',diagnostics:[],editorDiagnostics:[]}]);
@@ -158,9 +171,11 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     return()=>window.removeEventListener('keydown',keydown);
   },[save]);
 
+  useEffect(()=>()=>{latestTabs.current.forEach(tab=>tab.preview?.release?.());},[]);
   const closeTab=(path:string)=>{
     const tab=latestTabs.current.find(t=>t.path===path);
     if(tab?.status!=='saved'){setMessage('Save this file before closing. Unsaved edits remain in the buffer.');return;}
+    tab?.preview?.release?.();
     setTabs(prev=>prev.filter(t=>t.path!==path));
     if(latestActive.current===path)setActive(latestTabs.current.find(t=>t.path!==path)?.path||'');
   };
@@ -251,6 +266,21 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     savedVersion={tab.version} lsp={lsp} onNavigate={onNavigate} onApplyWorkspaceEdit={onApplyWorkspaceEdit} onSelectionChange={s=>setCursor({line:s.startLine,column:s.startColumn})}
     options={{fontFamily:EDITOR_FONTS.find(font=>font.id===appearance.fontId)!.family,fontSize:appearance.fontSize,
       minimap:{enabled:appearance.minimap},wordWrap:appearance.wordWrap?'on':'off'}} height="100%"/>;
+  const previewed=(tab:Tab)=>{
+    if(tab.preview){
+      const preview=tab.preview;
+      return <div className="asi-media-preview">
+        {preview.kind==='image'?<img src={preview.url} alt={tab.path} />:null}
+        {preview.kind==='video'?<video src={preview.url} controls preload="metadata" />:null}
+        {preview.kind==='audio'?<audio src={preview.url} controls preload="metadata" />:null}
+        {preview.kind==='pdf'?<iframe src={preview.url} title={tab.path} />:null}
+        {preview.kind==='binary'?<p>Binary asset cannot be edited as text.</p>:null}
+      </div>;
+    }
+    if(isMarkdownPath(tab.path))return <article className="asi-document-preview"><ReactMarkdown remarkPlugins={[remarkGfm]}>{tab.value}</ReactMarkdown></article>;
+    if(isHtmlPath(tab.path))return <iframe className="asi-html-preview" title={tab.path+' preview'} sandbox="" srcDoc={tab.value}/>;
+    return rendered(tab);
+  };
   const availablePanels:Panel[]=['Explorer','Search','Timeline','Problems',...(showHostModes?['Changes' as const,'Snapshot' as const]:[]),...(workspace.configuration?.references?.length?['References' as const]:[]),...(workspace.configuration?.dependencies?.length?['Dependencies' as const]:[])];
   const problems=tabs.flatMap(tab=>[...tab.diagnostics,...tab.editorDiagnostics].map(item=>({...item,path:tab.path})));
   const dirty=current&&current.status!=='saved';
@@ -260,7 +290,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       <nav aria-label="Editor actions">
         <button type="button" onClick={()=>setPaletteMode('file')}>Open file</button>
         <button type="button" onClick={()=>{setPaletteMode('command');setPaletteQuery('');}}>Commands</button>
-        <button type="button" disabled={!current} onClick={()=>setSplit(!split)}>{split?'Close split':'Split'}</button>
+        <button type="button" disabled={!current} onClick={()=>{setSplit(!split);setPreviewOnly(false);}}>{split?'Close split':'Split'}</button>
+        <button type="button" disabled={!current||(!current.preview&&!isMarkdownPath(current.path)&&!isHtmlPath(current.path))}
+          onClick={()=>{setPreviewOnly(!previewOnly);setSplit(false);}}>{previewOnly?'Source':'Preview'}</button>
         <button type="button" disabled={!current} onClick={()=>void showHistory()}>History</button>
         <button type="button" aria-label="Editor appearance" aria-expanded={appearanceOpen} onClick={()=>setAppearanceOpen(value=>!value)}>Font</button>
         <button type="button" disabled={!current||current.readonly||readonly} onClick={()=>current&&void save(current.path)}>{current?.status==='saving'?'Saving…':'Save'}</button>
@@ -306,7 +338,10 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       <section className="asi-center" aria-label="Code editor">
         <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
         {current?<><div className="asi-breadcrumb">{current.displayName||current.path.split('/').join(' › ')}<div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={readonly||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>void remove()} disabled={readonly||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
-        <div className={'asi-editors'+(split?' asi-split':'')}><div>{rendered(current)}</div>{split&&<div>{rendered(current)}</div>}</div>
+        <div className={'asi-editors'+(split?' asi-split':'')}>
+          {!current.preview&&(!previewOnly||split)?<div>{rendered(current)}</div>:null}
+          {(current.preview||previewOnly||split)?<div>{previewed(current)}</div>:null}
+        </div>
         {current.status==='conflict'&&<div className="asi-alert" role="alert"><strong>File changed elsewhere. Your edits are preserved.</strong><button type="button" onClick={()=>void reload()}>Reload theirs</button><button type="button" onClick={()=>{if(window.confirm('Overwrite the currently saved content? This may replace another writer’s changes. Version history is only available when the provider supports it.'))void save(current.path,true);}}>Overwrite</button><button type="button" onClick={async()=>{try{setTheirs((await workspace.read(current.path)).content);}catch(e){setMessage(String(e));}}}>Compare</button></div>}
         {current.status==='error'&&<div className="asi-alert" role="alert"><strong>Save failed. Your changes remain available.</strong><button type="button" onClick={()=>void save(current.path)}>Retry</button></div>}
         {theirs!==null&&<div className="asi-diff"><div><strong>Saved version</strong><pre>{theirs}</pre></div><div><strong>Your changes</strong><pre>{current.value}</pre></div><button type="button" onClick={()=>setTheirs(null)}>Close comparison</button></div>}
