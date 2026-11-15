@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "gator",
+  "name": "Gator",
+  "animal": "American alligator",
+  "version": "0.1.0",
+  "status": "planned",
+  "availability": "coming-soon",
+  "assetStatus": "brief-only",
+  "visualApproval": "pending",
+  "role": "Security \u00b7 perimeter monitoring & protection",
+  "description": "The quiet guardian. Watches access boundaries, notices unusual activity, and protects the workspace without creating noise.",
+  "habitatIds": [
+    "bayou-gulf"
+  ],
+  "capabilities": [
+    "security",
+    "access-monitoring",
+    "threat-detection",
+    "policy-guardrails"
+  ],
+  "personality": [
+    "calm",
+    "protective",
+    "watchful"
+  ],
+  "visualNotes": "A deep-olive alligator with a sturdy security vest, shield-shaped IA insignia, and warm amber eyes; reassuring rather than aggressive.",
+  "signatureAction": "A low, steady perimeter sweep followed by a calm protective tail curl.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns \u00d7 10 rows"
+  },
+  "states": {},
+  "avatar": null,
+  "icon": null,
+  "portrait": null,
+  "creativeBrief": {
+    "characterDirection": "A deep-olive alligator with a sturdy security vest, shield-shaped IA insignia, and warm amber eyes; reassuring rather than aggressive.",
+    "motionDirection": "A low, steady perimeter sweep followed by a calm protective tail curl."
+  }
+}

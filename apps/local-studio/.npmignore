@@ -1,0 +1,55 @@
+# Never ship local credentials, Wrangler state, caches, or database files.
+.env
+.env.*
+**/.env
+**/.env.*
+.dev.vars
+**/.dev.vars
+wrangler.toml
+**/wrangler.toml
+.wrangler/
+**/.wrangler/
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/node_modules/
+node_modules/
+.output/
+**/.output/
+.vercel/
+**/.vercel/
+screenshots/
+**/screenshots/
+tmp/
+**/tmp/
+
+# Build-only sibling app payloads are staged into desktop-dist instead.
+frontend/public/cad-creator/
+frontend/public/ecommerce-cms-agentsam/
+frontend/public/moviemode/
+frontend/public/samsketch/
+frontend/public/design-canvas/
+desktop-dist/design-canvas/
+
+# Local workspace metadata.
+.project_id
+.github_repo
+.DS_Store
+**/.DS_Store
+
+# Explicit workspace-local cache paths (npm pack does not apply nested .gitignore files).
+backend/.wrangler
+backend/.wrangler/**
+frontend/.wrangler
+frontend/.wrangler/**
+shared/.wrangler
+shared/.wrangler/**
+frontend/node_modules
+frontend/node_modules/**
+backend/node_modules
+backend/node_modules/**
+shared/agentsam/node_modules
+shared/agentsam/node_modules/**

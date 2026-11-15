@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "id": "primetechpy",
+  "name": "PrimeTechPy",
+  "companionId": "py",
+  "version": "1.0.0",
+  "packType": "add-on asset pack",
+  "assetStatus": "reference-sheet-awaiting-ingest",
+  "visualApproval": "pending-review",
+  "description": "A scientist and creative-tooling expansion for the existing Py identity: same Python companion, ten distinct uniforms and animation directions.",
+  "costumeDirections": [
+    {
+      "id": "lab-coat-idle",
+      "name": "Lab Coat Idle",
+      "focus": "Scientific exploration",
+      "states": [
+        "idle",
+        "breathe",
+        "look",
+        "blink"
+      ],
+      "visualEnhancement": "White lab coat, amber safety goggles, compact flask holster, and a small IA patch.",
+      "signatureMotion": "A calm breath, a quick instrument check, and a confident look up."
+    },
+    {
+      "id": "data-diver",
+      "name": "Data Diver",
+      "focus": "Data inspection and analysis",
+      "states": [
+        "idle",
+        "scan",
+        "dive",
+        "pop"
+      ],
+      "visualEnhancement": "Teal data visor, compact air tank, and floating chart-bubble details.",
+      "signatureMotion": "Dives into a data stream and surfaces with a useful insight."
+    },
+    {
+      "id": "code-swimmer",
+      "name": "Code Swimmer",
+      "focus": "Writing and refactoring code",
+      "states": [
+        "type",
+        "think",
+        "code",
+        "ship"
+      ],
+      "visualEnhancement": "Developer headphones, a dark field laptop, and flowing syntax ribbons.",
+      "signatureMotion": "Swims through a current of code, edits a line, and ships the fix."
+    },
+    {
+      "id": "circuit-scout",
+      "name": "Circuit Scout",
+      "focus": "Tracing systems and connections",
+      "states": [
+        "scout",
+        "scan",
+        "alert",
+        "look"
+      ],
+      "visualEnhancement": "Compact scanner backpack, headlamp, and a glowing microchip badge.",
+      "signatureMotion": "Sweeps a circuit path and lights up the next connection."
+    },
+    {
+      "id": "debug-detective",
+      "name": "Debug Detective",
+      "focus": "Reproducing and resolving defects",
+      "states": [
+        "search",
+        "inspect",
+        "clue",
+        "resolve"
+      ],
+      "visualEnhancement": "Small detective cap, magnifier, and a compact clue notebook.",
+      "signatureMotion": "Finds a clue, magnifies the defect, and marks the resolution."
+    },
+    {
+      "id": "research-presenter",
+      "name": "Research Presenter",
+      "focus": "Explaining and presenting findings",
+      "states": [
+        "present",
+        "explain",
+        "discuss",
+        "highlight"
+      ],
+      "visualEnhancement": "Portable presentation board, stacked research books, and a pointer.",
+      "signatureMotion": "Presents a chart and highlights the finding that matters."
+    },
+    {
+      "id": "sketch-coder",
+      "name": "Sketch Coder",
+      "focus": "Wireframes and creative prototypes",
+      "states": [
+        "sketch",
+        "draw",
+        "proto",
+        "code"
+      ],
+      "visualEnhancement": "Knit cap, stylus, sketch tablet, and a small blueprint notebook.",
+      "signatureMotion": "Sketches a quick line that transforms into a working prototype."
+    },
+    {
+      "id": "success-spark",
+      "name": "Success Spark",
+      "focus": "Celebrating completed work",
+      "states": [
+        "success",
+        "celebrate",
+        "complete",
+        "cheer"
+      ],
+      "visualEnhancement": "Bright lime spark details, a check badge, and a celebratory accessory.",
+      "signatureMotion": "A bright sparkle burst, a happy nod, and a compact victory pose."
+    },
+    {
+      "id": "thoughtful-coil",
+      "name": "Thoughtful Coil",
+      "focus": "Planning and reflective work",
+      "states": [
+        "think",
+        "pause",
+        "focus",
+        "reflect"
+      ],
+      "visualEnhancement": "Soft field scarf, pocket notebook, and a subtle thought marker.",
+      "signatureMotion": "A gentle coil, a deliberate pause, then a small resolved nod."
+    },
+    {
+      "id": "ocean-of-syntax",
+      "name": "Ocean of Syntax",
+      "focus": "Immersive code and syntax flow",
+      "states": [
+        "flow",
+        "syntax",
+        "loop",
+        "create"
+      ],
+      "visualEnhancement": "Deep-blue syntax current, luminous code fragments, and a flowing circular wave.",
+      "signatureMotion": "Glides through an ocean of syntax and brings a clean pattern to the surface."
+    }
+  ],
+  "animationPlan": {
+    "directions": 10,
+    "sameCompanionIdentity": true,
+    "costumeVariants": true,
+    "runtimeStates": "Map direction actions onto the shared Py runtime state contract; do not create a second pet identity."
+  },
+  "ingestNote": "The PrimeTechPy concept sheet exists in the conversation design history. Copy the approved source sheet into this package and slice its 10 directions into runtime-ready transparent frames before publishing."
+}

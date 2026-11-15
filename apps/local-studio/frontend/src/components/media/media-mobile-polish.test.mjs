@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const base = new URL(".", import.meta.url);
+/** @param {string} path */
 const read = (path) => readFileSync(new URL(path, base), "utf8");
 
 test("Mobile media controls preserve Upload and source wiring", () => {

@@ -10,6 +10,61 @@ import { attachSharedTerminal, detachSharedTerminal, getSharedTerminalRun } from
 import { useTerminalSessionStore } from "@/lib/work/terminal-sessions";
 import { useSessionAppearance } from "@/lib/work/terminal-appearance";
 import { useTerminalUiStore } from "@/lib/work/terminal-commands";
+import { useActiveCompanion, useCompanionLibrarySettings } from "../../../agentsam/CompanionContext";
+import { INNERANIMAL_COMPANIONS, COMPANION_STATE_LABELS, companionStateAsset, resolveCompanion, extendBuiltInCompanion } from "../../../agentsam/companions";
+
+/** A presentation-only animation picker. One selection per persisted PTY session. */
+function SessionCompanionPicker({ sessionId }: { sessionId: string }) {
+  const activeCompanion = useActiveCompanion();
+  const library = useCompanionLibrarySettings();
+  const scenes = library.scenes || [];
+  const session = useTerminalSessionStore((s) => s.sessions.find((item) => item.id === sessionId));
+  const patchSession = useTerminalSessionStore((s) => s.patchSession);
+  const companions = [
+    ...INNERANIMAL_COMPANIONS.filter((item) => item.selectable).map((item) => extendBuiltInCompanion(item, library.builtInAnimations)),
+    ...library.customCompanions.map((item) => resolveCompanion(item.id, library.customCompanions)),
+  ];
+  const selected = companions.find((item) => item.id === session?.companionId) || companions[0];
+  const stateId = session?.animationStateId || 'idle';
+  const selectedGallery = selected.galleryStates?.find((item) => item.id === stateId);
+  const src = selectedGallery?.src || companionStateAsset(selected, stateId);
+  const selectedScene = scenes.find((item) => item.id === session?.sceneId);
+  const selectedValue = selectedScene ? 'scene:' + selectedScene.id :
+    selected.id + ':' + (selectedGallery || selected.states[stateId] ? stateId : 'idle');
+  return <div className="flex shrink-0 items-center gap-1" aria-label="Terminal companion scene">
+    {selectedScene ? <div className="relative size-6 shrink-0 overflow-hidden rounded border border-border bg-muted/30 bg-[image:var(--terminal-scene-background)] bg-cover"
+      style={{ '--terminal-scene-background': selectedScene.backgroundUrl ? 'url(' + JSON.stringify(selectedScene.backgroundUrl) + ')' : 'none' } as CSSProperties}>
+      {selectedScene.layers.map((layer) => {
+        const profile = companions.find((item) => item.id === layer.companionId) || selected;
+        const image = profile.galleryStates?.find((item) => item.id === layer.stateId)?.src || companionStateAsset(profile, layer.stateId);
+        return image ? <img key={layer.id} src={image} alt="" aria-hidden="true" className="pointer-events-none absolute left-[var(--terminal-layer-left)] top-[var(--terminal-layer-top)] w-[var(--terminal-layer-width)] -translate-x-1/2 -translate-y-1/2 object-contain"
+          style={{ '--terminal-layer-left': layer.x + '%', '--terminal-layer-top': layer.y + '%', '--terminal-layer-width': (45 * layer.scale) + '%' } as CSSProperties} /> : null;
+      })}
+    </div> : src ? <img src={src} alt="" aria-hidden="true" className="size-5 shrink-0 object-contain" /> : null}
+    <select aria-label="Companion or scene for this terminal" value={selectedValue}
+      onChange={(event) => {
+        if (event.target.value.startsWith('scene:')) {
+          patchSession(sessionId, { sceneId: event.target.value.slice(6) });
+        } else {
+          const [companionId, animationStateId] = event.target.value.split(':');
+          patchSession(sessionId, { sceneId: undefined, companionId, animationStateId });
+        }
+      }}
+      className="w-24 min-w-0 truncate rounded border border-border bg-background px-1 py-1 text-[10px] text-foreground focus-visible:outline-primary">
+      {scenes.length > 0 ? <optgroup label="Scenes">
+        {scenes.map((scene) => <option key={scene.id} value={'scene:' + scene.id}>{scene.name}</option>)}
+      </optgroup> : null}
+      {companions.map((companion) => {
+        const states = companion.galleryStates?.map((state) => ({ id: state.id, label: state.label })) ||
+          [...new Set([...COMPANION_STATE_LABELS.map((state) => state.id), ...Object.keys(companion.states)])]
+            .map((id) => ({ id, label: COMPANION_STATE_LABELS.find((state) => state.id === id)?.label || id.replace(/-/g, ' ') }));
+        return <optgroup key={companion.id} label={companion.name}>
+          {states.map((state) => <option key={state.id} value={companion.id + ':' + state.id}>{companion.name} · {state.label}</option>)}
+        </optgroup>;
+      })}
+    </select>
+  </div>;
+}
 
 /**
  * Identifies a terminal by text, not color alone: profile name (when not the theme
@@ -121,6 +176,7 @@ export function TerminalPane({
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Terminal appearance" title="Colors, font size, and line height for this terminal" onClick={() => useTerminalUiStore.getState().open({ kind: "appearance", sessionId: resolvedSessionId })}>
           <Palette className="size-3.5" />
         </Button>
+        <SessionCompanionPicker sessionId={resolvedSessionId} />
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <IconAction size="icon-sm" variant="ghost" label="Single terminal" hint="Focus on the selected terminal" aria-pressed={!splitView && !gridView} onClick={() => { setGridView(false); setSplitView(false); }}>
             <PanelTop className="size-3.5" />
@@ -187,6 +243,7 @@ export function TerminalPane({
                       <span className="size-1.5 rounded-full bg-muted-foreground data-[state=connected]:bg-primary" data-state={session.state} />
                       <span className="truncate">{session.title}</span>
                     </button>
+                    <SessionCompanionPicker sessionId={id} />
                     <select aria-label={'Terminal ' + (index + 1) + ' session'} className="ml-auto max-w-[44%] truncate rounded bg-transparent text-[11px] text-muted-foreground" value={id} onChange={(event) => setGridSession(index, event.target.value)}>
                       {sessions.filter((s) => s.id === id || !visibleIds.includes(s.id)).map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
                     </select>
@@ -230,6 +287,7 @@ export function TerminalPane({
               <section className="terminal-adjacent min-h-0 min-w-0" aria-label="Adjacent terminal">
                 <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/60 px-2">
                   <span className="font-mono text-[11px] text-muted-foreground">Adjacent PTY</span>
+                  <SessionCompanionPicker sessionId={secondarySession.id} />
                   <select aria-label="Choose adjacent terminal session" className="ml-auto min-w-0 max-w-[60%] rounded bg-transparent px-1 text-xs text-foreground outline-offset-2" value={secondarySession.id} onChange={(event) => setSecondarySession(event.target.value)}>
                     {sessions.filter((s) => s.id !== resolvedSessionId).map((s) => <option key={s.id} value={s.id}>{s.title} · {s.state}</option>)}
                   </select>

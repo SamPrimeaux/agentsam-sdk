@@ -22,6 +22,13 @@ type PlatformProduct = {
 
 type ProductEdit = Pick<PlatformProduct, "name" | "description" | "collection" | "thumbnail_url">;
 
+/** Localhost-only candidates built from real source manifests, not database products. */
+type ProductCandidate = {
+  id: string; name: string; category: "templates" | "automations";
+  kind: string; version?: string; package_name?: string; description: string;
+  source_path: string; registry_status: string;
+};
+
 const productMatches = (p: PlatformProduct, category: "applications" | "automations" | "templates") => {
   const value = [p.name, p.slug, p.kind, p.package_name].join(" ").toLowerCase();
   if (category === "automations") return /automation|workflow|agent-flow/.test(value) || p.kind === "script";
@@ -39,6 +46,8 @@ export default function PlatformProductCatalog({
 }) {
   const navigate = useNavigate();
   const [products, setProducts] = useState<PlatformProduct[]>([]);
+  const [sourceCandidates, setSourceCandidates] = useState<ProductCandidate[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState<ProductCandidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<PlatformProduct | null>(null);
@@ -72,6 +81,24 @@ export default function PlatformProductCatalog({
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [refresh, retry, productId]);
+
+  useEffect(() => {
+    if (!["localhost", "127.0.0.1"].includes(window.location.hostname)) return;
+    const controller = new AbortController();
+    void fetch("/api/dev/product-intake", { signal: controller.signal, credentials: "same-origin" })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((body) => {
+        if (!controller.signal.aborted && body?.local_only === true && Array.isArray(body.candidates)) {
+          setSourceCandidates(body.candidates);
+        }
+      }).catch(() => { /* Deployed catalogs never use this optional source. */ });
+    return () => controller.abort();
+  }, [refresh, retry]);
+
+  const matchingCandidates = useMemo(() => sourceCandidates.filter((p) => p.category === kind)
+    .filter((p) => !search || [p.name, p.description, p.kind, p.package_name, p.source_path]
+      .some((v) => String(v || "").toLowerCase().includes(search.toLowerCase())))
+    .sort((a, b) => a.name.localeCompare(b.name)), [sourceCandidates, kind, search]);
 
   const visible = useMemo(() => products.filter((p) => productMatches(p, kind))
     .filter((p) => showInternal || p.catalog_visibility !== "internal")
@@ -151,9 +178,16 @@ export default function PlatformProductCatalog({
         <div className="ps-catalog-actions">{products.some(p => p.catalog_visibility === "internal") && <button type="button" aria-pressed={showInternal} className="ps-button" onClick={() => setShowInternal(v => !v)}>{showInternal ? "Hide internal packages" : "Show internal packages"}</button>}<button type="button" className="ps-button" onClick={() => { setLoading(true); setRetry((v) => v + 1); }}>Refresh products</button></div>
       </div>
       <p className="ps-platform-description">Explore and manage products you own in the existing AgentSam product registry.</p>
-      <p className="ps-result-count" aria-live="polite">{loading ? "Loading products…" : visible.length + " products"}</p>
-      {error && <div className="ps-feedback" role="alert"><strong>Product registry unavailable</strong><p>{error}</p></div>}
-      {!loading && !error && visible.length === 0 && <div className="ps-empty">
+      <p className="ps-result-count" aria-live="polite">{loading ? "Loading registered products…" : `${visible.length} registered products${matchingCandidates.length ? ` · ${matchingCandidates.length} local source candidates` : ""}`}</p>
+      {error && <div className="ps-feedback" role="alert">
+        <strong>{sourceCandidates.length && ["localhost", "127.0.0.1"].includes(window.location.hostname)
+          ? "Account product registry is not connected in this local preview"
+          : "Product registry unavailable"}</strong>
+        <p>{sourceCandidates.length && ["localhost", "127.0.0.1"].includes(window.location.hostname)
+          ? "Registered products still require the authenticated platform API. The source-backed previews below remain available for review, but are not sellable products."
+          : error}</p>
+      </div>}
+      {!loading && !error && visible.length === 0 && matchingCandidates.length === 0 && <div className="ps-empty">
         <h3>No matching products</h3><p>Try another category or search to browse your registered products.</p>
       </div>}
       <div className="ps-catalog-grid">
@@ -171,6 +205,35 @@ export default function PlatformProductCatalog({
           </button>
         ))}
       </div>
+      {matchingCandidates.length > 0 && <>
+        <div className="ps-catalog-heading mt-7 mb-3">
+          <div><span className="ps-eyebrow">SOURCE LIBRARY · LOCAL PREVIEW</span><h3 className="m-0">Ready to curate</h3></div>
+        </div>
+        <p className="ps-platform-description">These packages and workflows were discovered from real source files on this Mac. They are not products in your account, and they have not been uploaded, priced or published.</p>
+        <div className="ps-catalog-grid">
+          {matchingCandidates.map((candidate) => (
+            <button type="button" className="ps-product-card ps-platform-card" key={candidate.id}
+              onClick={() => setSelectedCandidate(candidate)} aria-label={`Inspect source candidate ${candidate.name}`}>
+              <span className="sr-only">Inspect source candidate</span>
+              <div className="ps-product-photo">
+                <span className="ps-platform-initials" aria-hidden="true">{candidate.name.split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase()}</span>
+                <span className="ps-card-arrow" aria-hidden="true">↗</span>
+              </div>
+              <div className="ps-product-copy"><small>{candidate.kind} · local candidate</small><h3>{candidate.name}</h3>
+                <div><span>{candidate.version || "Local"}</span><span>Not published</span></div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </>}
+      {selectedCandidate && <div className="ps-platform-inspector" role="region" aria-label="Source candidate details">
+        <div className="ps-platform-inspector-head"><div><span className="ps-eyebrow">LOCAL SOURCE · NOT A PRODUCT</span><h3>{selectedCandidate.name}</h3></div>
+          <button className="ps-button" type="button" onClick={() => setSelectedCandidate(null)}>Close</button>
+        </div>
+        <p>{selectedCandidate.description}</p>
+        <p><strong>Source:</strong> <code>{selectedCandidate.source_path}</code></p>
+        <p><strong>Status:</strong> {selectedCandidate.registry_status} · No pricing, registration or publish action has been performed.</p>
+      </div>}
 
     </section>
   );

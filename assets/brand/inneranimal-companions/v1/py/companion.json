@@ -82,5 +82,38 @@
     "warnings": []
   },
   "sourcePackage": "InnerAnimal-Py-v0.1.0.zip",
-  "sourceArchiveSha256": "5d073899a6b3788ae6ea85902bd54ae92c3315616201cc75972947c4e3a5a270"
+  "sourceArchiveSha256": "5d073899a6b3788ae6ea85902bd54ae92c3315616201cc75972947c4e3a5a270",
+  "costumePacks": [
+    {
+      "id": "primetechpy",
+      "name": "PrimeTechPy",
+      "manifest": "costume-packs/primetechpy/pack.json",
+      "status": "reference-sheet-awaiting-ingest",
+      "directionCount": 10,
+      "directionIds": [
+        "lab-coat-idle",
+        "data-diver",
+        "code-swimmer",
+        "circuit-scout",
+        "debug-detective",
+        "research-presenter",
+        "sketch-coder",
+        "success-spark",
+        "thoughtful-coil",
+        "ocean-of-syntax"
+      ],
+      "directionNames": [
+        "Lab Coat Idle",
+        "Data Diver",
+        "Code Swimmer",
+        "Circuit Scout",
+        "Debug Detective",
+        "Research Presenter",
+        "Sketch Coder",
+        "Success Spark",
+        "Thoughtful Coil",
+        "Ocean of Syntax"
+      ]
+    }
+  ]
 }

@@ -2,7 +2,8 @@ export const COMPANION_STATE_IDS = [
   'idle', 'working', 'thinking', 'attention', 'success', 'signature', 'waiting', 'error', 'resting', 'blinking',
 ] as const;
 
-export type CompanionState = typeof COMPANION_STATE_IDS[number];
+/** Core states remain suggested defaults, while character-specific states are open slugs. */
+export type CompanionState = string;
 
 export const COMPANION_STATE_LABELS: Array<{ id: CompanionState; label: string; description: string }> = [
   { id: 'idle', label: 'Idle', description: 'At rest and ready for the next task.' },
@@ -17,6 +18,17 @@ export const COMPANION_STATE_LABELS: Array<{ id: CompanionState; label: string; 
   { id: 'blinking', label: 'Blinking', description: 'A small idle expression.' },
 ];
 
+export type CompanionAnimation = {
+  id: string;
+  label: string;
+  description: string;
+  src: string | null;
+  fps: number;
+  frames: number;
+  loop: boolean;
+  kind: 'apng' | 'gif' | 'spritesheet' | 'frames' | 'static';
+};
+
 export type CustomCompanion = {
   id: string;
   name: string;
@@ -27,12 +39,44 @@ export type CustomCompanion = {
   visualNotes: string;
   signatureAction: string;
   imageUrl: string | null;
-  stateAssets: Partial<Record<CompanionState, string>>;
+  stateAssets: Record<CompanionState, string>;
+  animations?: CompanionAnimation[];
+  brandName?: string;
+  commissioningMode?: 'personal' | 'agency';
+};
+
+export type CompanionOnboardingResult = {
+  version: '1';
+  completedAt: string;
+  recommendedId: string;
+  answers: Record<string, string>;
+};
+
+export type CompanionSceneLayer = {
+  id: string;
+  companionId: string;
+  stateId: string;
+  x: number;
+  y: number;
+  scale: number;
+};
+
+export type CompanionScene = {
+  id: string;
+  name: string;
+  description: string;
+  backgroundUrl: string | null;
+  layers: CompanionSceneLayer[];
 };
 
 export type CompanionSettings = {
   activeId: string;
+  secondaryId: string | null;
+  desktopBuddyEnabled: boolean;
+  onboarding: CompanionOnboardingResult | null;
   customCompanions: CustomCompanion[];
+  scenes?: CompanionScene[];
+  builtInAnimations?: Array<{ companionId: string; animations: CompanionAnimation[] }>;
 };
 
 export type CompanionGalleryState = {
@@ -52,6 +96,8 @@ export type CompanionVisualIdentity = {
   style: string;
 };
 
+export type CompanionArtworkStatus = 'runtime-ready' | 'generated-awaiting-ingest' | 'brief-only' | 'custom';
+
 export type CompanionProfile = {
   id: string;
   name: string;
@@ -59,7 +105,11 @@ export type CompanionProfile = {
   role: string;
   description: string;
   builtIn: boolean;
-  status: 'production-review-candidate' | 'custom';
+  status: 'production-review-candidate' | 'planned' | 'custom';
+  selectable: boolean;
+  artworkStatus: CompanionArtworkStatus;
+  habitatIds: string[];
+  capabilities: string[];
   avatarUrl: string | null;
   portraitUrl: string | null;
   states: Partial<Record<CompanionState, string>>;
@@ -70,12 +120,17 @@ export type CompanionProfile = {
   personality?: string[];
   signatureAction?: string;
   visualIdentity?: CompanionVisualIdentity;
+  visualNotes?: string;
+  sourceArtwork?: string[];
   galleryStates?: CompanionGalleryState[];
   custom?: CustomCompanion;
 };
 
 export const DEFAULT_COMPANION_SETTINGS: CompanionSettings = {
   activeId: 'geaux',
+  secondaryId: null,
+  desktopBuddyEnabled: false,
+  onboarding: null,
   customCompanions: [],
 };
 
@@ -84,10 +139,14 @@ const runtimeBase = '/brand/inneranimal-companions/v1';
 type BuiltInCompanionOptions = {
   version?: string;
   releasePackage?: string;
+  visualApproval?: 'pending' | 'approved';
   stateFiles?: Partial<Record<CompanionState, string>>;
   personality?: string[];
   signatureAction?: string;
   visualIdentity?: CompanionVisualIdentity;
+  visualNotes?: string;
+  habitatIds?: string[];
+  capabilities?: string[];
   galleryStates?: Array<Omit<CompanionGalleryState, 'src'> & { asset: string; frames?: number; fps?: number; loop?: boolean }>;
 };
 
@@ -107,45 +166,82 @@ function builtIn(
   ])) as Record<CompanionState, string>;
   return {
     id, name, animal, role, description, builtIn: true,
-    status: 'production-review-candidate',
+    status: 'production-review-candidate', selectable: true, artworkStatus: 'runtime-ready',
+    habitatIds: options.habitatIds || ['founding-family'], capabilities: options.capabilities || [],
     avatarUrl: `${base}/avatars/${id}-avatar-128.png`,
     portraitUrl: `${base}/avatars/${id}-portrait-256.png`,
     states,
     sourcePackage,
     ...(options.version ? { version: options.version } : {}),
     ...(options.releasePackage ? { releasePackage: options.releasePackage } : {}),
-    visualApproval: 'pending',
+    visualApproval: options.visualApproval || 'pending',
     ...(options.personality ? { personality: options.personality } : {}),
     ...(options.signatureAction ? { signatureAction: options.signatureAction } : {}),
     ...(options.visualIdentity ? { visualIdentity: options.visualIdentity } : {}),
+    ...(options.visualNotes ? { visualNotes: options.visualNotes } : {}),
     ...(options.galleryStates ? { galleryStates: options.galleryStates.map(({ asset, ...state }) => ({ ...state, src: `${base}/animations/${asset}.png` })) } : {}),
   };
 }
 
-/** Runtime projections of the six founding characters plus Bella. */
+function planned(
+  id: string,
+  name: string,
+  animal: string,
+  role: string,
+  description: string,
+  habitatIds: string[],
+  capabilities: string[],
+  visualNotes: string,
+  signatureAction: string,
+  artworkStatus: Extract<CompanionArtworkStatus, 'brief-only' | 'generated-awaiting-ingest'> = 'brief-only',
+  sourceArtwork?: string[],
+  personality: string[] = ['curious', 'capable', 'approachable'],
+  visualApproval: 'pending' | 'approved' = 'pending',
+): CompanionProfile {
+  return {
+    id, name, animal, role, description, builtIn: true, status: 'planned', selectable: false,
+    artworkStatus, habitatIds, capabilities, avatarUrl: null, portraitUrl: null, states: {},
+    version: '0.1.0', visualApproval, personality, visualNotes, signatureAction,
+    ...(sourceArtwork ? { sourceArtwork } : {}),
+  };
+}
+
+/** Runtime projections of the eleven runtime characters plus the planned habitat expansion. */
 export const INNERANIMAL_COMPANIONS: CompanionProfile[] = [
   builtIn('geaux', 'Geaux', 'Silverback gorilla', 'Founder · leadership & resilience',
-    'The Original. Founder, leadership and resilience; grounded strength, deliberate review and the drive to keep going.', 'InnerAnimal-Geaux-v0.1.0.zip'),
+    'The Original. Founder, leadership and resilience; grounded strength, deliberate review and the drive to keep going.', 'InnerAnimal-Geaux-v0.1.0.zip', {
+      habitatIds: ['founding-family', 'bayou-gulf'], capabilities: ['leadership', 'strategy', 'resilience', 'review'],
+    }),
   builtIn('meaux', 'Meaux', 'Raccoon', 'Creative collaborator · ideas & storytelling',
-    'The creative coworker. Curious, inventive and generous with ideas; turns possibilities into something you can hold.', 'InnerAnimal-Meaux-v0.1.0.zip'),
+    'The creative coworker. Curious, inventive and generous with ideas; turns possibilities into something you can hold.', 'InnerAnimal-Meaux-v0.1.0.zip', {
+      habitatIds: ['founding-family', 'bayou-gulf'], capabilities: ['ideation', 'creative-research', 'storytelling', 'prototyping'],
+    }),
   builtIn('coder', 'Coder', 'Fox', 'Software engineering · debugging & problem solving',
-    'A focused problem solver. Quick to notice a detail, patient with a difficult bug, delighted when the pieces click.', 'InnerAnimal-Coder-v0.1.0.zip'),
+    'A focused problem solver. Quick to notice a detail, patient with a difficult bug, delighted when the pieces click.', 'InnerAnimal-Coder-v0.1.0.zip', {
+      habitatIds: ['founding-family'], capabilities: ['coding', 'debugging', 'refactoring', 'code-review'],
+    }),
   builtIn('architect', 'Architect', 'Great horned owl', 'Systems thinking · structure & composition',
-    'The spatial thinker. Observant and deliberate; studies proportion, tests the composition and sees the whole.', 'InnerAnimal-Architect-v0.1.0.zip'),
+    'The spatial thinker. Observant and deliberate; studies proportion, tests the composition and sees the whole.', 'InnerAnimal-Architect-v0.1.0.zip', {
+      habitatIds: ['founding-family', 'night-shift'], capabilities: ['architecture', 'systems-design', 'planning', 'orchestration'],
+    }),
   builtIn('engineer', 'Engineer', 'Beaver', 'Practical building · tools & implementation',
-    'The practical inventor. Measures carefully, tests the connection and keeps adjusting until the idea works.', 'InnerAnimal-Engineer-v0.1.0.zip'),
+    'The practical inventor. Measures carefully, tests the connection and keeps adjusting until the idea works.', 'InnerAnimal-Engineer-v0.1.0.zip', {
+      habitatIds: ['founding-family'], capabilities: ['implementation', 'prototyping', 'integration', 'construction'],
+    }),
   builtIn('py', 'Py', 'Python snake', 'Automation · scripting & data',
-    'The automation companion. Fluid, attentive and quietly persistent; follows a pattern and uncoils the next possibility.', 'InnerAnimal-Py-v0.1.0.zip'),
+    'The automation companion. Fluid, attentive and quietly persistent; follows a pattern and uncoils the next possibility.', 'InnerAnimal-Py-v0.1.0.zip', {
+      habitatIds: ['founding-family'], capabilities: ['python', 'automation', 'machine-learning', 'data-tooling'],
+    }),
   builtIn('bella', 'Bella', 'Chocolate Labrador Retriever', 'Everyday companion · encouragement & presence',
     'A gentle, steady companion with a warm presence. Bella brings curiosity, encouragement, and a little joy to the moments in between.',
     'InnerAnimal-Bella-v1.0.0.zip', {
-      version: '1.1.0',
-      releasePackage: 'InnerAnimal-Bella-v1.1.0.zip',
+      version: '1.1.0', releasePackage: 'InnerAnimal-Bella-v1.1.0.zip', habitatIds: ['founding-family', 'bayou-gulf'],
       stateFiles: {
         idle: 'idle', working: 'working', thinking: 'thinking', attention: 'attentive', success: 'success',
         signature: 'tail-wag', waiting: 'waiting', error: 'alert-error', resting: 'resting', blinking: 'blink',
       },
       personality: ['gentle', 'loyal', 'curious', 'patient', 'playful', 'comforting'],
+      capabilities: ['encouragement', 'voice-presence', 'status-companion', 'handoff-support'],
       signatureAction: 'A happy, unhurried tail wag.',
       visualIdentity: {
         coat: 'Rich chocolate brown', eyes: 'Warm amber',
@@ -171,7 +267,90 @@ export const INNERANIMAL_COMPANIONS: CompanionProfile[] = [
         { id: 'sleeping', label: 'Sleeping', description: 'Deep rest, offline', asset: 'bella-sleeping', frames: 8, fps: 6, loop: true },
       ],
     }),
+  planned('pelican', 'Pelican', 'Brown pelican', 'Data transport · pipelines & storage',
+    'The payload carrier. Moves large datasets and media safely through pipelines, keeping transfers visible and organized.',
+    ['bayou-gulf'], ['data-pipelines', 'payload-routing', 'storage', 'media-transfer'],
+    'A Gulf Coast brown pelican with a clean field-utility harness and a reinforced data pouch; friendly, capable, and unmistakably coastal.',
+    'A pouch-load swoop that gathers a payload and delivers it to the right destination.'),
+  planned('crawfish', 'Crawfish', 'Louisiana crawfish', 'Debugging · bug triage & repair',
+    'The bug catcher. Finds small defects, isolates the cause, and pinches troublesome bugs out of the codebase.',
+    ['bayou-gulf'], ['debugging', 'issue-triage', 'repair', 'regression-hunting'],
+    'A bright Louisiana crawfish with expressive claws, a compact utility belt, and a small inspection lens; playful but precise.',
+    'A quick double-pinch that catches a bug and flicks it into a tiny evidence jar.'),
+  planned('gator', 'Gator', 'American alligator', 'Security · perimeter monitoring & protection',
+    'The quiet guardian. Watches access boundaries, notices unusual activity, and protects the workspace without creating noise.',
+    ['bayou-gulf'], ['security', 'access-monitoring', 'threat-detection', 'policy-guardrails'],
+    'A deep-olive alligator with a sturdy security vest, shield-shaped IA insignia, and warm amber eyes; reassuring rather than aggressive.',
+    'A low, steady perimeter sweep followed by a calm protective tail curl.'),
+  planned('chameleon', 'Chameleon', 'Veiled chameleon', 'Brand & design · adaptive visual systems',
+    'The visual adapter. Explores palettes, theme tokens, CSS systems, and responsive design variations while keeping a brand coherent.',
+    ['deep-canopy'], ['brand-design', 'color-systems', 'theme-tokens', 'css-adaptation'],
+    'A friendly veiled chameleon with a subtle crest and a modular color-shifting pattern; polished, flat-clay accents with controlled gradients.',
+    'A slow palette-shift from one coordinated brand color family to another.'),
+  planned('lyrebird', 'Lyrebird', 'Superb lyrebird', 'Copywriting & voice · tone and narrative',
+    'The voice specialist. Studies a brand’s language and produces consistent copy, narration, and voice direction across channels.',
+    ['deep-canopy'], ['copywriting', 'brand-voice', 'narration', 'content-editing'],
+    'An elegant lyrebird with a refined fan tail, small field notebook, and a few sound-wave motifs; editorial and expressive.',
+    'A fan-tail flourish that shifts through a few distinct voice-note gestures.'),
+  planned('tree-frog', 'Tree Frog', 'Green tree frog', 'Rapid prototyping · experiments & iteration',
+    'The rapid prototyper. Leaps between ideas, builds quick proofs, and turns early concepts into something testable.',
+    ['deep-canopy'], ['rapid-prototyping', 'experimentation', 'wireframing', 'iteration'],
+    'A bright green tree frog with rounded, friendly proportions, a tiny sketch kit, and springy feet; playful and highly readable at small sizes.',
+    'A compact leap from one idea marker to the next, landing on a working prototype.'),
+  planned('bat', 'Bat', 'Free-tailed bat', 'Network diagnostics · sonar & connectivity',
+    'The signal scout. Uses sonar-like sweeps to map routes, spot latency, and notice network interruptions during overnight operations.',
+    ['night-shift'], ['network-diagnostics', 'latency-analysis', 'connectivity', 'route-mapping'],
+    'A small free-tailed bat with a dark technical flight jacket, soft teal sonar accents, and a compact diagnostic headset; alert, not spooky.',
+    'A pair of sonar pulses that map a route and resolve into a clean signal.'),
+  planned('badger', 'Badger', 'American badger', 'QA & stress testing · relentless verification',
+    'The relentless tester. Repeats checks, probes edge cases, and keeps pressure on a build until it is dependable.',
+    ['night-shift'], ['quality-assurance', 'stress-testing', 'test-automation', 'regression-testing'],
+    'A sturdy American badger with a practical testing vest, reinforced gloves, and a compact test rig; determined and dependable.',
+    'A focused inspection loop that checks, stamps, and confirms a build.'),
+  builtIn('roux', "Roux", "Wolf", "Field guidance · scouting & navigation",
+    "The pathfinder. Reads the terrain, spots useful routes, and keeps complex work moving in the right direction.", 'InnerAnimal-Field-Operations-v1.0.0.zip', {
+      version: '1.0.0', visualApproval: 'approved', habitatIds: ['field-operations'], capabilities: ["scouting", "navigation", "research", "coordination"], personality: ["loyal", "observant", "steady", "resourceful"], signatureAction: "A proud guidance howl framed by a soft green arc.", visualNotes: "Gray-and-cream wolf with amber eyes, brass goggles, olive IA field scarf, hiking harness, rolled bedroll, and compass medallion.",
+    }),
+  builtIn('bruneaux', "Bruneaux", "Bear", "Forge guardian · systems building & resilience",
+    "The forge guardian. Carries the heavy work, builds durable systems, and stays steady when a project needs endurance.", 'InnerAnimal-Field-Operations-v1.0.0.zip', {
+      version: '1.0.0', visualApproval: 'approved', habitatIds: ['field-operations'], capabilities: ["systems-building", "infrastructure", "resilience", "implementation"], personality: ["dependable", "patient", "strong", "protective"], signatureAction: "A warm forge-ring gesture that signals a durable build is ready.", visualNotes: "A powerful brown bear with brass goggles, olive IA scarf, heavy utility harness, lantern canister, and anvil-like shoulder emblem.",
+    }),
+  builtIn('nyra', "Nyra", "Panther", "Precision · stealth diagnostics & focus",
+    "The precision scout. Moves quietly through complex systems, catches subtle anomalies, and keeps attention on the critical detail.", 'InnerAnimal-Field-Operations-v1.0.0.zip', {
+      version: '1.0.0', visualApproval: 'approved', habitatIds: ['field-operations'], capabilities: ["precision", "diagnostics", "anomaly-detection", "focused-research"], personality: ["focused", "agile", "discerning", "calm"], signatureAction: "A shadow-leap with a clean green energy arc.", visualNotes: "Sleek black panther with luminous yellow-green eyes, bronze goggles, dark IA scarf, utility harness, and a compass medallion.",
+    }),
+  builtIn('toro', "Toro", "Bull", "Momentum · operations & execution",
+    "The momentum keeper. Turns decisions into forward motion, carries operational load, and helps teams finish what they start.", 'InnerAnimal-Field-Operations-v1.0.0.zip', {
+      version: '1.0.0', visualApproval: 'approved', habitatIds: ['field-operations'], capabilities: ["operations", "execution", "delivery", "momentum"], personality: ["determined", "reliable", "confident", "persistent"], signatureAction: "A grounded momentum surge that ends in a confident braced stance.", visualNotes: "Muscular brown bull with cream horns, brass goggles, olive IA scarf, heavy field backpack, and a strong chest medallion.",
+    }),
+
 ];
+
+/** Extend a packaged character with account-owned animations, without modifying its source package. */
+export function extendBuiltInCompanion(
+  profile: CompanionProfile,
+  records: CompanionSettings['builtInAnimations'] = [],
+): CompanionProfile {
+  if (!profile.builtIn) return profile;
+  const added = records?.find((item) => item.companionId === profile.id)?.animations || [];
+  if (!added.length) return profile;
+  const states = { ...profile.states, ...Object.fromEntries(added.filter((item) => item.src).map((item) => [item.id, item.src!])) };
+  const existing = profile.galleryStates || COMPANION_STATE_LABELS.map((state) => ({
+    ...state, src: companionStateAsset(profile, state.id) || '',
+  }));
+  const replaced = new Set(added.map((item) => item.id));
+  return {
+    ...profile, states,
+    galleryStates: [
+      ...existing.filter((item) => !replaced.has(item.id)),
+      ...added.map((item) => ({
+        id: item.id, label: item.label, description: item.description,
+        src: item.src || companionStateAsset(profile, item.id) || '',
+        fps: item.fps, frames: item.frames, loop: item.loop,
+      })),
+    ],
+  };
+}
 
 export function resolveCompanion(id: string | undefined, customCompanions: CustomCompanion[] = []): CompanionProfile {
   const builtInProfile = INNERANIMAL_COMPANIONS.find((item) => item.id === id);
@@ -186,7 +365,7 @@ export function resolveCompanion(id: string | undefined, customCompanions: Custo
       role: custom.role,
       description: custom.description,
       builtIn: false,
-      status: 'custom',
+      status: 'custom', selectable: true, artworkStatus: 'custom', habitatIds: [], capabilities: [],
       avatarUrl: image,
       portraitUrl: image,
       states: custom.stateAssets || {},
@@ -197,6 +376,6 @@ export function resolveCompanion(id: string | undefined, customCompanions: Custo
 }
 
 export function companionStateAsset(companion: CompanionProfile, state: CompanionState): string | null {
-  if (companion.builtIn) return companion.states[state] || companion.states.idle || companion.avatarUrl;
-  return companion.states[state] || companion.states.idle || companion.custom?.imageUrl || companion.avatarUrl;
+  if (companion.builtIn) return companion.states[state] || companion.states.idle || companion.avatarUrl || null;
+  return companion.states[state] || companion.states.idle || companion.custom?.imageUrl || companion.avatarUrl || null;
 }

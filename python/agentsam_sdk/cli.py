@@ -273,7 +273,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args_list = sys.argv[1:] if argv is None else argv
+    if not args_list:
+        from .terminal_art import run_home
+        return run_home(parser)
+    args = parser.parse_args(args_list)
     return args.func(args)
 
 

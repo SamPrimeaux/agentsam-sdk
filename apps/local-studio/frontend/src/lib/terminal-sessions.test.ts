@@ -83,3 +83,33 @@ test("tile size preferences are bounded and independent of window dimensions", (
   assert.equal(store.getState().gridColumnFraction, 0.78);
   assert.equal(store.getState().gridFirstRowFraction, 0.2);
 });
+
+test("per-pane companion presentation survives duplication without affecting adjacent PTYs", () => {
+  const first = store.getState().createSession();
+  const second = store.getState().createSession();
+  store.getState().patchSession(first, { companionId: "geaux", animationStateId: "thinking" });
+  store.getState().patchSession(second, { companionId: "nyra", animationStateId: "working" });
+  const cloned = store.getState().duplicateSession(first);
+  const sessions = store.getState().sessions;
+  const copy = sessions.find((session) => session.id === cloned);
+  const other = sessions.find((session) => session.id === second);
+  assert.equal(copy?.companionId, "geaux");
+  assert.equal(copy?.animationStateId, "thinking");
+  assert.equal(other?.companionId, "nyra");
+  assert.equal(other?.animationStateId, "working");
+  assert.notEqual(copy?.id, first);
+  assert.notEqual(copy?.ptySlot, sessions.find((session) => session.id === first)?.ptySlot);
+});
+
+test("saved scenes can be assigned independently of companion animations in each terminal", () => {
+  const a = store.getState().createSession();
+  const b = store.getState().createSession();
+  store.getState().patchSession(a, { sceneId: 'scene_a', companionId: undefined, animationStateId: undefined });
+  store.getState().patchSession(b, { companionId: 'geaux', animationStateId: 'idle' });
+  const duplicate = store.getState().duplicateSession(a);
+  assert.equal(store.getState().sessions.find((item) => item.id === duplicate)?.sceneId, 'scene_a');
+  assert.equal(store.getState().sessions.find((item) => item.id === b)?.sceneId, undefined);
+  assert.equal(store.getState().sessions.find((item) => item.id === b)?.companionId, 'geaux');
+  store.getState().patchSession(a, { sceneId: undefined, companionId: 'bella', animationStateId: 'thinking' });
+  assert.equal(store.getState().sessions.find((item) => item.id === duplicate)?.sceneId, 'scene_a');
+});

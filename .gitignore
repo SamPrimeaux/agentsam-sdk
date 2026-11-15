@@ -89,3 +89,6 @@ apps/agentsam-go-worker/runtime/.agentsam-build-source
 
 # Generated Local Studio compiled theme previews (source stays in packages/)
 apps/local-studio/frontend/public/themes/
+
+# Mac-only creative media inventory, never shipped or committed
+apps/local-studio/.local-media-intake/

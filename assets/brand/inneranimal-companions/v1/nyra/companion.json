@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "id": "nyra",
+  "name": "Nyra",
+  "animal": "Panther",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "availability": "preview",
+  "assetStatus": "runtime-ready",
+  "visualApproval": "approved",
+  "role": "Precision · stealth diagnostics & focus",
+  "description": "The precision scout. Moves quietly through complex systems, catches subtle anomalies, and keeps attention on the critical detail.",
+  "habitatIds": [
+    "field-operations"
+  ],
+  "capabilities": [
+    "precision",
+    "diagnostics",
+    "anomaly-detection",
+    "focused-research"
+  ],
+  "personality": [
+    "focused",
+    "agile",
+    "discerning",
+    "calm"
+  ],
+  "visualNotes": "Sleek black panther with luminous yellow-green eyes, bronze goggles, dark IA scarf, utility harness, and a compass medallion.",
+  "signatureAction": "A shadow-leap with a clean green energy arc.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns × 10 rows"
+  },
+  "states": {
+    "idle": {
+      "src": "animations/nyra-idle.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "working": {
+      "src": "animations/nyra-working.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "thinking": {
+      "src": "animations/nyra-thinking.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "attention": {
+      "src": "animations/nyra-attention.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "success": {
+      "src": "animations/nyra-success.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "signature": {
+      "src": "animations/nyra-signature.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "waiting": {
+      "src": "animations/nyra-waiting.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "error": {
+      "src": "animations/nyra-error.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "resting": {
+      "src": "animations/nyra-resting.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "blinking": {
+      "src": "animations/nyra-blinking.png",
+      "frames": 4,
+      "fps": 6.25,
+      "loop": true
+    }
+  },
+  "avatar": "avatars/nyra-avatar-128.png",
+  "icon": "avatars/nyra-icon-64.png",
+  "portrait": "avatars/nyra-portrait-256.png",
+  "creativeBrief": {
+    "characterDirection": "Sleek black panther with luminous yellow-green eyes, bronze goggles, dark IA scarf, utility harness, and a compass medallion.",
+    "motionDirection": "A shadow-leap with a clean green energy arc."
+  },
+  "sourceArtwork": [
+    "a_clean_high_detail_sprite_atlas_illustration_on_3_batch_3.png"
+  ],
+  "ingestNote": "Imported, validated APNG runtime art from the approved Field Operations package. Local preview only until release approval.",
+  "sourcePackage": "InnerAnimal-Field-Operations-v1.0.0.zip",
+  "sourceSha256": "cc21fde4b510e32e453423b1fd27a7001ca5635f23acac45a0654e19dbe7673f",
+  "frameCount": 40,
+  "runtimeStateCount": 10,
+  "animationFrameCount": 40,
+  "atlas": "atlases/nyra-sprite-atlas-4x10.png",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "4-frame transparent APNG for each runtime state; independent character rigging is not certified."
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "bat",
+  "name": "Bat",
+  "animal": "Free-tailed bat",
+  "version": "0.1.0",
+  "status": "planned",
+  "availability": "coming-soon",
+  "assetStatus": "brief-only",
+  "visualApproval": "pending",
+  "role": "Network diagnostics \u00b7 sonar & connectivity",
+  "description": "The signal scout. Uses sonar-like sweeps to map routes, spot latency, and notice network interruptions during overnight operations.",
+  "habitatIds": [
+    "night-shift"
+  ],
+  "capabilities": [
+    "network-diagnostics",
+    "latency-analysis",
+    "connectivity",
+    "route-mapping"
+  ],
+  "personality": [
+    "alert",
+    "quiet",
+    "analytical"
+  ],
+  "visualNotes": "A small free-tailed bat with a dark technical flight jacket, soft teal sonar accents, and a compact diagnostic headset; alert, not spooky.",
+  "signatureAction": "A pair of sonar pulses that map a route and resolve into a clean signal.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "animationPlan": {
+    "runtimeStates": [
+      "idle",
+      "working",
+      "thinking",
+      "attention",
+      "success",
+      "signature",
+      "waiting",
+      "error",
+      "resting",
+      "blinking"
+    ],
+    "minimumFramesPerState": 4,
+    "preferredFramesPerState": 8,
+    "format": "transparent APNG",
+    "atlasLayout": "4 columns \u00d7 10 rows"
+  },
+  "states": {},
+  "avatar": null,
+  "icon": null,
+  "portrait": null,
+  "creativeBrief": {
+    "characterDirection": "A small free-tailed bat with a dark technical flight jacket, soft teal sonar accents, and a compact diagnostic headset; alert, not spooky.",
+    "motionDirection": "A pair of sonar pulses that map a route and resolve into a clean signal."
+  }
+}

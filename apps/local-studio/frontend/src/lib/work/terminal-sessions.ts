@@ -12,6 +12,10 @@ export type StudioTerminalSession = {
   state: "connecting" | "connected" | "exited" | "disconnected" | "error" | "degraded";
   shell?: string;
   runtimeLabel?: string;
+  /** Presentation-only selection. Never written into the PTY stream. */
+  companionId?: string;
+  animationStateId?: string;
+  sceneId?: string;
   error?: string;
 };
 
@@ -31,7 +35,7 @@ type TerminalSessionState = {
   setGridSession(slot: number, id: string): void;
   setSplitView(enabled: boolean): void;
   setSecondarySession(id: string | null): void;
-  createSession(input?: Partial<Pick<StudioTerminalSession, "title" | "cwd" | "connectionId" | "instanceId" | "lane" | "runtimeLabel">>): string;
+  createSession(input?: Partial<Pick<StudioTerminalSession, "title" | "cwd" | "connectionId" | "instanceId" | "lane" | "runtimeLabel" | "companionId" | "animationStateId" | "sceneId">>): string;
   closeSession(id: string): void;
   renameSession(id: string, title: string): void;
   duplicateSession(id: string): string;
@@ -121,6 +125,9 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
           ptySlot: slot,
           state: "connecting",
           runtimeLabel: input.runtimeLabel || "Resolving runtime",
+          companionId: input.companionId,
+          animationStateId: input.animationStateId,
+          sceneId: input.sceneId,
         };
         set((state) => {
           const gridSessionIds = state.gridView
@@ -161,6 +168,9 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
           instanceId: source?.instanceId,
           lane: source?.lane,
           runtimeLabel: source?.runtimeLabel,
+          companionId: source?.companionId,
+          animationStateId: source?.animationStateId,
+          sceneId: source?.sceneId,
         });
       },
       setActiveSession(id) {

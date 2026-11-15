@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "id": "bruneaux",
+  "name": "Bruneaux",
+  "animal": "Bear",
+  "version": "1.0.0",
+  "status": "production-review-candidate",
+  "availability": "approved-awaiting-ingest",
+  "visualApproval": "approved",
+  "assetStatus": "sprite-package-generated",
+  "habitatIds": [
+    "field-operations"
+  ],
+  "role": "Forge guardian · systems building & resilience",
+  "description": "The forge guardian. Carries the heavy work, builds durable systems, and stays steady when a project needs endurance.",
+  "personality": [
+    "dependable",
+    "patient",
+    "strong",
+    "protective"
+  ],
+  "capabilities": [
+    "systems-building",
+    "infrastructure",
+    "resilience",
+    "implementation"
+  ],
+  "signatureAction": "A warm forge-ring gesture that signals a durable build is ready.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "frameCount": 40,
+  "atlas": "atlases/bruneaux-sprite-atlas-4x10.png",
+  "avatar": "avatars/bruneaux-avatar-128.png",
+  "portrait": "avatars/bruneaux-portrait-256.png",
+  "icon": "avatars/bruneaux-icon-64.png",
+  "animationOrder": [
+    "idle",
+    "working",
+    "thinking",
+    "attention",
+    "success",
+    "signature",
+    "waiting",
+    "error",
+    "resting",
+    "blinking"
+  ],
+  "states": {
+    "idle": {
+      "atlasRow": 0,
+      "frames": [
+        "frames/idle/bruneaux-idle-01.png",
+        "frames/idle/bruneaux-idle-02.png",
+        "frames/idle/bruneaux-idle-03.png",
+        "frames/idle/bruneaux-idle-04.png"
+      ],
+      "animation": "animations/bruneaux-idle.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "working": {
+      "atlasRow": 1,
+      "frames": [
+        "frames/working/bruneaux-working-01.png",
+        "frames/working/bruneaux-working-02.png",
+        "frames/working/bruneaux-working-03.png",
+        "frames/working/bruneaux-working-04.png"
+      ],
+      "animation": "animations/bruneaux-working.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "thinking": {
+      "atlasRow": 2,
+      "frames": [
+        "frames/thinking/bruneaux-thinking-01.png",
+        "frames/thinking/bruneaux-thinking-02.png",
+        "frames/thinking/bruneaux-thinking-03.png",
+        "frames/thinking/bruneaux-thinking-04.png"
+      ],
+      "animation": "animations/bruneaux-thinking.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "attention": {
+      "atlasRow": 3,
+      "frames": [
+        "frames/attention/bruneaux-attention-01.png",
+        "frames/attention/bruneaux-attention-02.png",
+        "frames/attention/bruneaux-attention-03.png",
+        "frames/attention/bruneaux-attention-04.png"
+      ],
+      "animation": "animations/bruneaux-attention.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "success": {
+      "atlasRow": 4,
+      "frames": [
+        "frames/success/bruneaux-success-01.png",
+        "frames/success/bruneaux-success-02.png",
+        "frames/success/bruneaux-success-03.png",
+        "frames/success/bruneaux-success-04.png"
+      ],
+      "animation": "animations/bruneaux-success.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "signature": {
+      "atlasRow": 5,
+      "frames": [
+        "frames/signature/bruneaux-signature-01.png",
+        "frames/signature/bruneaux-signature-02.png",
+        "frames/signature/bruneaux-signature-03.png",
+        "frames/signature/bruneaux-signature-04.png"
+      ],
+      "animation": "animations/bruneaux-signature.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "waiting": {
+      "atlasRow": 6,
+      "frames": [
+        "frames/waiting/bruneaux-waiting-01.png",
+        "frames/waiting/bruneaux-waiting-02.png",
+        "frames/waiting/bruneaux-waiting-03.png",
+        "frames/waiting/bruneaux-waiting-04.png"
+      ],
+      "animation": "animations/bruneaux-waiting.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "error": {
+      "atlasRow": 7,
+      "frames": [
+        "frames/error/bruneaux-error-01.png",
+        "frames/error/bruneaux-error-02.png",
+        "frames/error/bruneaux-error-03.png",
+        "frames/error/bruneaux-error-04.png"
+      ],
+      "animation": "animations/bruneaux-error.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": false
+    },
+    "resting": {
+      "atlasRow": 8,
+      "frames": [
+        "frames/resting/bruneaux-resting-01.png",
+        "frames/resting/bruneaux-resting-02.png",
+        "frames/resting/bruneaux-resting-03.png",
+        "frames/resting/bruneaux-resting-04.png"
+      ],
+      "animation": "animations/bruneaux-resting.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    },
+    "blinking": {
+      "atlasRow": 9,
+      "frames": [
+        "frames/blinking/bruneaux-blinking-01.png",
+        "frames/blinking/bruneaux-blinking-02.png",
+        "frames/blinking/bruneaux-blinking-03.png",
+        "frames/blinking/bruneaux-blinking-04.png"
+      ],
+      "animation": "animations/bruneaux-blinking.png",
+      "frameCount": 4,
+      "fps": 6.25,
+      "loop": true
+    }
+  },
+  "sourceArtwork": "a_clean_spritesheet_illustration_on_a_transparent_2_batch_2.png",
+  "sourceDimensions": [
+    793,
+    1983
+  ],
+  "qualityNote": "Best-effort alpha cleanup was applied to pale atlas backgrounds. Inspect edge matte and motion continuity before marking this profile runtime-ready."
+}

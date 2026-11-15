@@ -79,12 +79,16 @@ function checkApp(app) {
   const files = pkg.files || [];
   for (const forbidden of ['reference', 'attachments', 'node_modules']) if (files.some((entry) => entry === forbidden || entry.startsWith(forbidden + '/'))) errors.push(app.id + ': package files allowlist must not include ' + forbidden);
   if (pack) {
-    const result = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: app.dir, encoding: 'utf8' });
+    const result = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: app.dir, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
     if (result.status !== 0) { errors.push(app.id + ': npm pack dry-run failed: ' + String(result.stderr || result.stdout).trim()); return; }
     let payload; try { payload = firstPack(JSON.parse(result.stdout)); } catch { errors.push(app.id + ': npm pack returned invalid JSON'); return; }
     if (payload.name !== pkg.name) errors.push(app.id + ': npm pack name mismatch');
     for (const file of payload.files || []) {
       if (/^(reference|attachments|node_modules)(\/|$)/.test(file.path)) errors.push(app.id + ': forbidden packed path: ' + file.path);
+      const envTemplate = /(^|\/)\.env(?:\.cloudflare)?\.example$/.test(file.path);
+      if (/(^|\/)\.wrangler(\/|$)|(^|\/)\.dev\.vars$|(^|\/)\.env$|(^|\/)\.env\.[^/]+$|\.(?:sqlite|sqlite-shm|sqlite-wal|db|db-shm|db-wal)$/.test(file.path) && !envTemplate) {
+        errors.push(app.id + ': local state or credential file must not be packed: ' + file.path);
+      }
     }
     if (!payload.files?.some((file) => file.path === 'package.json')) errors.push(app.id + ': package.json missing from npm pack');
   }

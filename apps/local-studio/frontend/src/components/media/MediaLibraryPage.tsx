@@ -102,6 +102,9 @@ export function MediaLibraryPage() {
 
 function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurface; accountId: string; returnTo: string }) {
   const [source, setSource] = useState<MediaSource>(surface.source);
+  const [intakeReady, setIntakeReady] = useState(false);
+  const [intakeCounts, setIntakeCounts] = useState<Record<string, number>>({});
+  const [intakeCollection, setIntakeCollection] = useState("all");
   const localHost = useMemo(() => createLocalStudioContentHostBridge(), []);
   const [localRoot, setLocalRoot] = useState<string | null>(null);
   const [localFolders, setLocalFolders] = useState<Array<{ ref: string; name: string }>>([]);
@@ -166,8 +169,18 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   // Route changes must not reset the authorized account or chosen provider.
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("source");
-    setSource(requested === "local" && surface.kind === "all" ? "local" : surface.source);
-  }, [surface.source, surface.kind]);
+    setSource(requested === "local" && surface.kind === "all" ? "local" : intakeReady && (requested === "intake" || !requested) ? "intake" : surface.source);
+  }, [surface.source, surface.kind, intakeReady]);
+  useEffect(() => {
+    if (!["localhost", "127.0.0.1"].includes(window.location.hostname)) return;
+    let alive = true;
+    void getJson("/api/dev/media-intake?page_size=1").then(({ res, body }) => {
+      if (!alive || !res.ok || body?.local_only !== true) return;
+      setIntakeReady(true);
+      setIntakeCounts(body.counts || {});
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     const preferredAccount = mediaPreference(accountId, "account");
     setCfAccountId(preferredAccount);
@@ -272,6 +285,24 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
         if (local.truncated) setNotice("Showing the first 500 entries in this folder.");
         return;
       }
+      if (source === "intake") {
+        const nextPage = append ? pageRef.current + 1 : 1;
+        const qs = new URLSearchParams({ page: String(nextPage), page_size: String(PAGE_SIZE),
+          kind: surface.kind === "file" ? "all" : surface.kind, q: query.trim(), collection: intakeCollection });
+        const { res, body } = await getJson(`/api/dev/media-intake?${qs}`);
+        if (ticket !== requestRef.current) return;
+        if (!res.ok) {
+          setError({ kind: "generic", message: "The local media intake is unavailable. Run the dev:media-intake preview command." });
+          if (!append) setAssets([]);
+          return;
+        }
+        const rows = rowsFrom(body);
+        setAssets((prev) => append ? mergeById(prev, rows) : rows);
+        pageRef.current = nextPage;
+        setTotal(typeof body?.total === "number" ? body.total : null);
+        setHasMore(Boolean(body?.pagination?.has_next));
+        return;
+      }
       if (source === "r2") {
         if (!activeBucket) {
           setAssets([]); setTotal(null); setHasMore(false);
@@ -334,7 +365,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     } finally {
       if (ticket === requestRef.current) { setLoading(false); setLoadingMore(false); }
     }
-  }, [source, activeBucket, accountQs, localHost, localDirectory]);
+  }, [source, activeBucket, accountQs, localHost, localDirectory, surface.kind, query, intakeCollection]);
 
   useEffect(() => {
     if (!preferencesReady) return;
@@ -357,7 +388,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const viewerIndex = visible.findIndex((a) => a.id === viewerId);
   const viewing = viewerIndex >= 0 ? visible[viewerIndex] : null;
   const connectUrl = mediaConnectUrl(resources?.connect_url || resources?.reconnect_url, returnTo);
-  const notConnected = source !== "local" && (resources?.status === "not_connected" || error?.kind === "reconnect");
+  const notConnected = source !== "local" && source !== "intake" && (resources?.status === "not_connected" || error?.kind === "reconnect");
 
   const counts = {
     cf_images: resources?.images?.count ?? null,
@@ -369,6 +400,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     { id: "stream", label: "Videos", count: counts.stream },
     { id: "r2", label: "R2 buckets", count: counts.r2 },
     { id: "local", label: "Local", count: source === "local" ? total : null },
+    ...(intakeReady ? [{ id: "intake" as MediaSource, label: "Mac intake", count: intakeCounts[surface.kind] ?? (surface.kind === "all" ? Object.values(intakeCounts).reduce((a, b) => a + b, 0) : null) }] : []),
   ];
 
   /* ---- actions ---- */
@@ -390,7 +422,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     const failed: string[] = [];
     const removed = new Set<string>();
     for (const asset of list) {
-      if (asset.source === "local") {
+      if (asset.source === "local" || asset.source === "intake") {
         failed.push(asset.filename);
         continue;
       }
@@ -425,7 +457,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
 
   const copyAssetLink = async (asset: MediaAsset) => {
     const link = previewUrl(asset);
-    if (!link || asset.source === "local" || asset.meta?.require_signed_urls) {
+    if (!link || ["local", "intake"].includes(String(asset.source)) || asset.meta?.require_signed_urls) {
       setNotice("This asset has no public URL to copy.");
       return;
     }
@@ -538,7 +570,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     }
     showAsset(id);
   };
-  const subtitle = surface.kind === "all"
+  const subtitle = source === "intake" ? "Private Mac media index · read-only preview · nothing uploaded or published." : surface.kind === "all"
     ? "Browse connected Cloudflare media or your local device—without copying files to the cloud."
     : `Your Cloudflare ${surface.title.toLowerCase()}.`;
   const countLabel = total != null ? `${formatCount(total)} total` : `${formatCount(visible.length) ?? 0} shown`;
@@ -551,7 +583,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
           <p>{subtitle}</p>
         </div>
         <div className="agentsam-media-header__actions">
-          {source === "local" ? <span className="agentsam-media-local-status"><FolderOpen size={14} /> Local device</span>
+          {source === "local" || source === "intake" ? <span className="agentsam-media-local-status"><FolderOpen size={14} /> {source === "intake" ? "Mac intake · local only" : "Local device"}</span>
             : <ConnectionStatus resources={resources} bucketCount={buckets.length} connectUrl={connectUrl} />}
           {accountChoices.length > 1 ? (
             <select
@@ -626,7 +658,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                 <TooltipContent>Refresh media</TooltipContent>
               </Tooltip>
             </div>
-            {surface.kind === "all" ? (
+            {(surface.kind === "all" || intakeReady) ? (
             <div className="agentsam-media-tabs" role="tablist" aria-label="Source">
               {tabs.map((tab) => (
                 <button
@@ -680,6 +712,17 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                 onTogglePin={togglePin}
               />
             ) : null}
+            {source === "intake" ? (
+              <select className="agentsam-media-select" aria-label="Media collection"
+                value={intakeCollection} onChange={(event) => setIntakeCollection(event.target.value)}>
+                <option value="all">All collections</option>
+                <option value="companions">Companions & sprites</option>
+                <option value="brand">Icons & logos</option>
+                <option value="scenes">Scenes & creative</option>
+                <option value="models">3D models</option>
+                <option value="other">Other assets</option>
+              </select>
+            ) : null}
             <span className="agentsam-media-toolbar__spacer" />
             <select className="agentsam-media-select agentsam-media-sort" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
               <option value="recent">Recent</option>
@@ -692,7 +735,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
             </div>
           </div>
 
-          {connectionError && source !== "local" ? (
+          {connectionError && source !== "local" && source !== "intake" ? (
             <div className="agentsam-media-banner is-error" role="status">
               <span>Cloudflare status could not be verified: {connectionError}. Your account authorization has not been cleared.</span>
               <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Retry</button>
@@ -796,7 +839,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
           >
             Copy links
           </button>
-          {source === "local" ? <span className="agentsam-media-local-note">Local files are read-only here</span> : confirmBatch ? (
+          {source === "local" || source === "intake" ? <span className="agentsam-media-local-note">Local preview · read-only · not published</span> : confirmBatch ? (
             <>
               <button
                 type="button"

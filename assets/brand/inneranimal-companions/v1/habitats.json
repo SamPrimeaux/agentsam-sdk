@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "habitats": [
+    {
+      "id": "founding-family",
+      "name": "Founding Family",
+      "subtitle": "The original InnerAnimal crew",
+      "description": "The established companions that anchor the InnerAnimal identity and first AgentSam experience.",
+      "companionIds": [
+        "geaux",
+        "meaux",
+        "coder",
+        "architect",
+        "engineer",
+        "py",
+        "bella"
+      ],
+      "status": "established",
+      "accessMode": "included",
+      "collectionKey": "inneranimal.habitat.founding-family"
+    },
+    {
+      "id": "bayou-gulf",
+      "name": "Bayou & Gulf",
+      "subtitle": "Rooted in brand heritage",
+      "description": "A Gulf Coast habitat for leadership, creative collaboration, data movement, debugging, security, and dependable execution.",
+      "companionIds": [
+        "geaux",
+        "meaux",
+        "bella",
+        "pelican",
+        "crawfish",
+        "gator"
+      ],
+      "status": "expansion",
+      "accessMode": "collectible",
+      "collectionKey": "inneranimal.habitat.bayou-gulf"
+    },
+    {
+      "id": "deep-canopy",
+      "name": "Deep Canopy",
+      "subtitle": "Creative & strategy",
+      "description": "A living creative department for visual systems, brand voice, storytelling, and rapid experimentation.",
+      "companionIds": [
+        "chameleon",
+        "lyrebird",
+        "tree-frog"
+      ],
+      "status": "planned",
+      "accessMode": "collectible",
+      "collectionKey": "inneranimal.habitat.deep-canopy"
+    },
+    {
+      "id": "night-shift",
+      "name": "Night Shift",
+      "subtitle": "Automation & background jobs",
+      "description": "The overnight crew for orchestration, network diagnostics, scheduled work, QA, and resilient operations. Architect reuses the existing great horned owl identity.",
+      "companionIds": [
+        "architect",
+        "bat",
+        "badger"
+      ],
+      "status": "planned",
+      "accessMode": "collectible",
+      "collectionKey": "inneranimal.habitat.night-shift"
+    },
+    {
+      "id": "field-operations",
+      "name": "Field Operations",
+      "subtitle": "Approved character expansion",
+      "description": "Four approved field companions for navigation, durable building, precision diagnostics, and forward momentum.",
+      "companionIds": [
+        "roux",
+        "bruneaux",
+        "nyra",
+        "toro"
+      ],
+      "status": "expansion",
+      "accessMode": "collectible",
+      "collectionKey": "inneranimal.habitat.field-operations"
+    }
+  ]
+}

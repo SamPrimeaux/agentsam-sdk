@@ -16,6 +16,7 @@ import { MessageList } from "@/components/workbench/thread";
 import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
+import { AppLibraryStage } from "@/components/workbench/app-library-stage";
 import { NewTabStage } from "@/components/workbench/new-tab-stage";
 import { ItemStage } from "@/components/workbench/item-stage";
 import { StageIcon, TabItemIcon } from "@/components/workbench/stage-icons";
@@ -42,6 +43,7 @@ function TabIcon({ kind, icon }: { kind: string; icon?: string | null }) {
   if (kind === "media") return <Film className="size-3.5" />;
   if (kind === "goal") return <Target className="size-3.5" />;
   if (kind === "database") return <Database className="size-3.5" />;
+  if (kind === "apps") return <LayoutGrid className="size-3.5" />;
   if (kind === "newtab") return <LayoutGrid className="size-3.5" />;
   if (kind === "terminal") return <SquareTerminal className="size-3.5" />;
   return <FileCode className="size-3.5" />;
@@ -214,6 +216,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
         {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId && stage.stageId === tab.stageId)} /> : null}
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
+        {tab?.kind === "apps" ? <AppLibraryStage /> : null}
         {tab?.kind === "newtab" ? <NewTabStage tab={tab} /> : null}
         {tab?.kind === "item" ? <ItemStage tab={tab} /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}

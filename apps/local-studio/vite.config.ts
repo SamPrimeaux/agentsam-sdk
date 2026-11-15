@@ -13,6 +13,8 @@ import { agentsamPwaPlugin } from "./scripts/agentsam-pwa-plugin.mjs";
 import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 import { themeSurfacesPlugin } from "./scripts/theme-surfaces-plugin.mjs";
 import { consoleDevPlugin } from "./scripts/console-dev-plugin.mjs";
+// @ts-expect-error Dev-only JS plugin; never part of the deployment bundle.
+import { localMediaIntakePlugin } from "./scripts/local-media-intake-plugin.mjs";
 import { isMigrationFile } from "./scripts/migration-plan.mjs";
 
 // The CMS frontend is linked from a sibling application. With
@@ -549,6 +551,7 @@ export default defineConfig(({ command, isPreview }) => ({
   },
   plugins: [
     consoleDevPlugin(),
+    localMediaIntakePlugin(),
     themeSurfacesPlugin(),
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.

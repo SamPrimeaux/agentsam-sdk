@@ -1,0 +1,13 @@
+.wrangler/
+**/.wrangler/
+node_modules/
+**/node_modules/
+.dev.vars
+.env
+.env.*
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
+**/*.db
+**/*.db-shm
+**/*.db-wal

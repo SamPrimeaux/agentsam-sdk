@@ -99,6 +99,7 @@ const SIDE_TITLES: Record<SideKind, string> = {
   media: "MovieMode",
   goal: "Edit goal",
   database: "Database",
+  apps: "Apps",
   newtab: "New tab",
   item: "Item",
   design: "Canvas",
@@ -107,7 +108,7 @@ const SIDE_TITLES: Record<SideKind, string> = {
 
 /** Tools that keep one tab; opening them again focuses the existing tab. */
 const SINGLETON_SIDE_KINDS = new Set<SideKind>([
-  "files", "artifacts", "deploy", "goal", "terminal", "database", "design", "plugin",
+  "files", "artifacts", "deploy", "goal", "terminal", "database", "apps", "design", "plugin",
 ]);
 
 function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {
