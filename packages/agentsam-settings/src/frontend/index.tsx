@@ -1,5 +1,6 @@
 import { useShellAppearance } from "../appearance";
 import { SettingsBillingPanel } from "./billing";
+import { SettingsAccountPanel } from "./account";
 import { SettingsStoragePanel } from "./storage";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
@@ -2103,7 +2104,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
             <span className="block text-[10px] text-muted-foreground">{desc}</span></span>
             <input type="checkbox" checked={policy[key]}
               onChange={event=>setPolicy(current=>({...current,[key]:event.target.checked}))}
-              className="size-4 accent-violet-500"/>
+              className="size-4 accent-primary"/>
           </label>
         ))}
         <label className="block space-y-2 text-[12px]">
@@ -2249,7 +2250,7 @@ function GeneralView({snapshot,host,onChanged}:{
   catch(e){setError(e instanceof Error?e.message:"Unable to save preferences");}
   finally{setBusy(false);}
  }
- return (
+ const context=(
    <>
      <Section title="Product context" description="Current authenticated account and runtime, resolved by the host.">
        <div className="rounded-lg border border-border/70 px-3">
@@ -2287,13 +2288,15 @@ function GeneralView({snapshot,host,onChanged}:{
          ))}
          {error?<p role="alert" className="text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
          <button type="button" disabled={busy||!!snapshot.general.preferencesError||!host.updateGeneralPreferences}
-           onClick={()=>void save()} className="rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100">
+           onClick={()=>void save()} className="rounded-lg bg-primary px-4 py-2 text-[11px] font-medium text-primary-foreground disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100">
            Save preferences
          </button>
        </div>
      </Section>
    </>
  );
+ // Hosts with an account authority get full self-service; others keep the read-only context.
+ return host.account ? <SettingsAccountPanel host={host.account} footer={context}/> : context;
 }
 
 export { readShellAppearancePreference, type ShellAppearancePreference } from "../appearance";
@@ -2992,3 +2995,5 @@ export function SettingsProductPage({
   );
 }
 
+
+export { SettingsAccountPanel } from "./account";

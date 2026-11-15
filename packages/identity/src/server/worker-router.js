@@ -14,6 +14,15 @@ import { IDENTITY_ROUTE_IDS } from '../contracts/route-ids.js';
 import { IdentityRoutingError } from '../contracts/identity-store.js';
 import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
 import {
+  AccountCapabilityError,
+  BACKUP_CODE_COUNT,
+  backupCodeCandidateHashes,
+  generateBackupCodes,
+  hashBackupCode,
+  publicSession,
+  validateProfilePatch,
+} from '../core/account-security.js';
+import {
   GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH,
   handleGoogleDesktopExchangeRequest,
   handleGoogleDesktopLoginExchangeRequest,
@@ -67,12 +76,13 @@ function buildPasswordResetService(env, adapter, options = {}) {
       await adapter.updateUserPassword(userId, hashHex, saltHex);
     },
     sendResetEmail: async ({ email, name, code }) => {
-      if (!env?.RESEND_API_KEY) {
+      const company = await adapter.getDefaultCompany().catch(() => null);
+      const apiKey = await resolveTransactionalEmailKey(env, company, options);
+      if (!apiKey) {
         const err = new Error('email_not_configured');
         err.code = 'email_not_configured';
         throw err;
       }
-      const company = await adapter.getDefaultCompany().catch(() => null);
       const brand = company?.name || 'Your App';
       const fromEmail = company?.supportEmail;
       if (!fromEmail) {
@@ -85,7 +95,7 @@ function buildPasswordResetService(env, adapter, options = {}) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           from: `${brand} <${fromEmail}>`,
@@ -100,6 +110,42 @@ function buildPasswordResetService(env, adapter, options = {}) {
       }
     },
   });
+}
+
+
+/**
+ * Transactional email credential. The host injects `resolveCredential` (vault-backed,
+ * e.g. @inneranimalmedia/agentsam-vault createCredentialResolver) and the company row
+ * names WHICH account's vault holds the key via meta.credentials.transactional_email.
+ * The env var remains a last-resort compatibility lane, never the product path.
+ */
+async function resolveTransactionalEmailKey(env, company, options) {
+  const ref = company?.meta?.credentials?.transactional_email || null;
+  const provider = String(ref?.provider || 'resend').toLowerCase();
+  if (typeof options.resolveCredential === 'function') {
+    const resolved = await options.resolveCredential({
+      provider,
+      capability: 'email.transactional',
+      accountId: ref?.vault_account_id || null,
+      company,
+    }).catch((err) => {
+      console.error('[identity] credential_resolve_failed', String(err?.message || err).slice(0, 160));
+      return null;
+    });
+    if (resolved?.value) return resolved.value;
+  }
+  return provider === 'resend' && env?.RESEND_API_KEY ? env.RESEND_API_KEY : null;
+}
+
+function accountError(err) {
+  if (err instanceof AccountCapabilityError || err?.name === 'AccountCapabilityError') {
+    return jsonResponse({ ok: false, error: err.code }, 501);
+  }
+  throw err;
+}
+
+function hasLocalPassword(user) {
+  return Boolean(user?.password_hash && user?.salt && user.password_hash !== 'oauth');
 }
 
 /**
@@ -279,6 +325,13 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   if (path === '/api/company' && method === 'PATCH') {
     const ctx = await identity.sessionFromRequest(request);
     if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
+    // Company branding is installation-wide: only its owner may change it.
+    const canManage = typeof options.authorizeCompanyWrite === 'function'
+      ? await options.authorizeCompanyWrite(ctx)
+      : typeof adapter.canManageCompany === 'function'
+        ? await adapter.canManageCompany(ctx.user.id)
+        : false;
+    if (!canManage) return jsonResponse({ ok: false, error: 'company_write_forbidden' }, 403);
     const body = await request.json().catch(() => ({}));
     const company = await adapter.upsertCompany({
       name: body.name,
@@ -296,7 +349,137 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   }
 
   if (path === '/api/auth/backup-code' && method === 'POST') {
-    return jsonResponse({ ok: false, error: 'backup_code_not_configured' }, 501);
+    if (typeof adapter.consumeBackupCode !== 'function') {
+      return jsonResponse({ ok: false, error: 'backup_code_not_supported' }, 501);
+    }
+    const body = await request.json().catch(() => ({}));
+    const email = String(body.email || '').trim().toLowerCase();
+    const code = String(body.code || '');
+    if (!email || !code.trim()) {
+      return jsonResponse({ ok: false, error: 'email_and_code_required' }, 400);
+    }
+    try {
+      const user = await adapter.findUserByEmail(email);
+      const consumed = user && String(user.status || 'active') === 'active'
+        ? await adapter.consumeBackupCode(user.id, await backupCodeCandidateHashes(code))
+        : false;
+      if (!consumed) {
+        await adapter.logAuthEvent?.({
+          userId: user?.id, eventType: 'login', status: 'failed', provider: 'backup_code', request,
+        });
+        return jsonResponse({ ok: false, error: 'invalid_backup_code' }, 401);
+      }
+      const session = await adapter.createSession({
+        userId: user.id,
+        email: user.email,
+        displayName: user.display_name,
+        provider: 'backup_code',
+        type: identity.isNativeSessionRequest?.(request) ? 'desktop' : undefined,
+      });
+      await adapter.logAuthEvent?.({
+        userId: user.id, eventType: 'login', status: 'ok', provider: 'backup_code', request,
+      });
+      const result = { ok: true, user, session, sessionId: session.id };
+      if (identity.isNativeSessionRequest?.(request)) {
+        return identity.buildNativeLoginSuccessResponse(result, body.next);
+      }
+      return identity.buildLoginSuccessResponse(request, session.id, body.next);
+    } catch (err) {
+      return accountError(err);
+    }
+  }
+
+  // ── API: self-service account (profile, sessions, backup codes) ─────────
+  if (path === '/api/account' || path.startsWith('/api/account/')) {
+    const ctx = await identity.sessionFromRequest(request);
+    if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
+    if (!adapter.accountSecurity) {
+      return jsonResponse({ ok: false, error: 'account_api_not_supported' }, 501);
+    }
+    const userId = ctx.user.id;
+    const currentSessionId = ctx.sessionId || ctx.session?.id || null;
+    try {
+      if (path === '/api/account' && method === 'GET') {
+        const [profile, backupCodes, sessions] = await Promise.all([
+          adapter.getAccountProfile(userId),
+          adapter.getBackupCodeStatus(userId),
+          adapter.listUserSessions(userId),
+        ]);
+        return jsonResponse({
+          ok: true,
+          account: {
+            profile,
+            security: {
+              hasPassword: hasLocalPassword(ctx.user),
+              backupCodes,
+              activeSessions: sessions.length,
+            },
+            capabilities: {
+              canManageCompany: await adapter.canManageCompany(userId),
+              passwordReset: Boolean(passwordReset),
+            },
+          },
+        });
+      }
+
+      if (path === '/api/account/profile' && method === 'PATCH') {
+        const body = await request.json().catch(() => ({}));
+        const checked = validateProfilePatch(body);
+        if (!checked.ok) return jsonResponse({ ok: false, error: checked.error, field: checked.field }, 400);
+        const profile = await adapter.updateAccountProfile(userId, checked.patch);
+        await adapter.logAuthEvent?.({ userId, eventType: 'profile_update', status: 'ok', request });
+        return jsonResponse({ ok: true, profile });
+      }
+
+      if (path === '/api/account/sessions' && method === 'GET') {
+        const rows = await adapter.listUserSessions(userId);
+        return jsonResponse({ ok: true, sessions: rows.map((row) => publicSession(row, currentSessionId)) });
+      }
+
+      if (path === '/api/account/sessions/revoke-others' && method === 'POST') {
+        if (!currentSessionId) return jsonResponse({ ok: false, error: 'current_session_unknown' }, 400);
+        const result = await adapter.revokeOtherUserSessions(userId, currentSessionId);
+        await adapter.logAuthEvent?.({ userId, eventType: 'session_revoke_others', status: 'ok', request });
+        return jsonResponse({ ok: true, revoked: result.revoked });
+      }
+
+      const sessionMatch = path.match(/^\/api\/account\/sessions\/([^/]+)$/);
+      if (sessionMatch && method === 'DELETE') {
+        const sessionId = decodeURIComponent(sessionMatch[1]);
+        if (sessionId === currentSessionId) {
+          return jsonResponse({ ok: false, error: 'use_logout_for_current_session' }, 400);
+        }
+        const result = await adapter.revokeUserSession(userId, sessionId);
+        if (!result.ok) return jsonResponse({ ok: false, error: 'session_not_found' }, 404);
+        await adapter.logAuthEvent?.({ userId, eventType: 'session_revoke', status: 'ok', request });
+        return jsonResponse({ ok: true });
+      }
+
+      if (path === '/api/account/backup-codes' && method === 'GET') {
+        return jsonResponse({ ok: true, backupCodes: await adapter.getBackupCodeStatus(userId) });
+      }
+
+      if (path === '/api/account/backup-codes' && method === 'POST') {
+        const body = await request.json().catch(() => ({}));
+        // Regenerating invalidates every prior code; require proof of the password
+        // when the account has one (a stolen session alone must not mint recovery).
+        if (hasLocalPassword(ctx.user)) {
+          const current = String(body.current_password ?? body.currentPassword ?? '');
+          if (!current) return jsonResponse({ ok: false, error: 'current_password_required' }, 400);
+          const valid = await verifyPassword(current, ctx.user.salt, ctx.user.password_hash);
+          if (!valid) return jsonResponse({ ok: false, error: 'current_password_invalid' }, 403);
+        }
+        const codes = generateBackupCodes(BACKUP_CODE_COUNT);
+        const hashes = await Promise.all(codes.map(hashBackupCode));
+        const status = await adapter.replaceBackupCodes(userId, hashes);
+        await adapter.logAuthEvent?.({ userId, eventType: 'backup_codes_generated', status: 'ok', request });
+        return jsonResponse({ ok: true, codes, backupCodes: status });
+      }
+
+      return jsonResponse({ ok: false, error: 'not_found' }, 404);
+    } catch (err) {
+      return accountError(err);
+    }
   }
 
   if (path === '/api/auth/password-reset/request' && method === 'POST') {

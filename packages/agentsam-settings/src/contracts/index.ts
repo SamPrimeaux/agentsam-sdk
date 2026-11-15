@@ -481,6 +481,8 @@ export type SettingsMintResult = {
 
 export interface SettingsHost {
   documentationHref?: string;
+  /** Self-service account (profile, password, sessions, backup codes). */
+  account?: import("./account").SettingsAccountHost;
   capabilities(): Promise<SettingsCapabilities>;
   snapshot(): Promise<SettingsSnapshot>;
   listCredentials?(): Promise<SettingsCredential[]>;
@@ -531,3 +533,5 @@ export function defineSettingsManifest(manifest: SettingsManifest): SettingsMani
   return manifest;
 }
 
+
+export * from "./account";
