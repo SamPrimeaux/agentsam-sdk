@@ -1,0 +1,42 @@
+/* Static spec-sheet styling. Brand values remain runtime CSS variables. */
+.spec-style-1.spec-style-1 { border-bottom: 1px solid var(--spec-accentText); }
+.spec-style-2.spec-style-2 { color: var(--settings-warning-ink); }
+.spec-style-3.spec-style-3 { background: var(--spec-card); color: var(--spec-ink); font-family: var(--spec-dyn-2-font-family, inherit); }
+.spec-style-4.spec-style-4 { color: var(--spec-muted); }
+.spec-style-5.spec-style-5 { color: var(--spec-faint); }
+.spec-style-6.spec-style-6 { background: var(--spec-dyn-5-background, transparent); border: 1px solid var(--spec-lineStrong); }
+.spec-style-7.spec-style-7 { color: var(--spec-muted); }
+.spec-style-8.spec-style-8 { border-bottom: 1px solid var(--spec-line); }
+.spec-style-9.spec-style-9 { color: var(--spec-muted); }
+.spec-style-10.spec-style-10 { font-size: var(--spec-dyn-9-font-size, inherit); line-height: var(--spec-dyn-9-line-height, normal); font-weight: var(--spec-dyn-9-font-weight, inherit); letter-spacing: var(--spec-dyn-9-letter-spacing, normal); color: var(--spec-dyn-9-color, inherit); }
+.spec-style-11.spec-style-11 { color: var(--spec-muted); }
+.spec-style-12.spec-style-12 { border: 1px solid var(--spec-accentText); border-radius: var(--spec-dyn-11-border-radius, 0); }
+.spec-style-13.spec-style-13 { color: var(--spec-muted); }
+.spec-style-14.spec-style-14 { width: var(--spec-dyn-13-width, auto); height: var(--spec-dyn-13-height, auto); background: var(--spec-accentTint); border: 1px solid var(--spec-accentLine); }
+.spec-style-15.spec-style-15 { color: var(--spec-muted); }
+.spec-style-16.spec-style-16 { background: var(--spec-button-background, transparent); border: var(--spec-button-border, 0); color: var(--spec-button-color, var(--spec-ink)); }
+.spec-style-17.spec-style-17 { color: var(--spec-muted); }
+.spec-style-18.spec-style-18 { border: 1px solid var(--spec-lineStrong); background: var(--spec-card); }
+.spec-style-19.spec-style-19 { color: var(--spec-muted); }
+.spec-style-20.spec-style-20 { color: var(--spec-ink); }
+.spec-style-21.spec-style-21 { border-top: 1px solid var(--spec-lineStrong); }
+.spec-style-22.spec-style-22 { border-right: 1px solid var(--spec-lineStrong); }
+.spec-style-23.spec-style-23 { color: var(--spec-muted); }
+.spec-style-24.spec-style-24 { color: var(--spec-ink); }
+.spec-style-25.spec-style-25 { color: var(--spec-muted); }
+.spec-style-26.spec-style-26 { color: var(--spec-ink); }
+.spec-style-27.spec-style-27 { color: var(--spec-muted); }
+.spec-style-28.spec-style-28 { border-top: 1px solid var(--spec-accentText); }
+.spec-style-29.spec-style-29 { grid-template-columns: minmax(0,1.6fr) repeat(2,minmax(0,1fr)); border-bottom: 1px solid var(--spec-line); }
+.spec-style-30.spec-style-30 { color: var(--spec-faint); }
+.spec-style-31.spec-style-31 { color: var(--spec-muted); }
+.spec-style-32.spec-style-32 { background: var(--spec-page); border: 1px solid var(--spec-line); }
+.spec-style-33.spec-style-33 { color: var(--spec-muted); }
+.spec-style-34.spec-style-34 { border: 1px solid var(--spec-lineStrong); background: var(--spec-input); }
+.spec-style-35.spec-style-35 { color: var(--spec-muted); }
+.spec-style-36.spec-style-36 { color: var(--spec-faint); }
+.spec-style-37.spec-style-37 { border: 1px solid var(--spec-accentLine); background: var(--spec-accentTint); }
+.spec-style-38.spec-style-38 { color: var(--spec-accentText); }
+.spec-style-39.spec-style-39 { background: var(--spec-primary); color: var(--spec-onPrimary); }
+.spec-style-40.spec-style-40 { color: var(--spec-muted); }
+.spec-style-41.spec-style-41 { color: var(--spec-accentText); }

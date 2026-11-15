@@ -439,7 +439,7 @@
             </span>
         </div>
         <div class="input-group">
-            <input type="text" id="backupCode" class="input-field" placeholder="Backup code (e.g. A1B2C3D4)" required autocomplete="one-time-code" inputmode="text" maxlength="20">
+            <input type="text" id="backupCode" class="input-field" placeholder="Backup code (XXXX-XXXX-XXXX)" required autocomplete="one-time-code" inputmode="text" maxlength="20">
         </div>
         <button type="submit" id="backupCodeBtn" class="btn-primary">Sign in with backup code</button>
         <p style="margin-top: 12px; font-size: 13px; color: #94A3B8;">
@@ -651,7 +651,13 @@
                 }
                 return;
             }
-            errEl.textContent = data.error || 'Invalid or already used backup code';
+            var backupMessages = {
+                invalid_backup_code: 'That code is invalid or has already been used.',
+                email_and_code_required: 'Enter your email and one backup code.',
+                backup_code_not_supported: 'Backup codes are not enabled for this sign-in portal.',
+                account_security_migration_required: 'Backup codes are not enabled for this sign-in portal.'
+            };
+            errEl.textContent = backupMessages[data.error] || 'That code is invalid or has already been used.';
             errEl.style.color = '#FF3B30';
             errEl.classList.add('visible');
         } catch (err) {

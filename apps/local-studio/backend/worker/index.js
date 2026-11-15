@@ -25,6 +25,7 @@ import {
   decryptVaultSecret,
   last4 as vaultLast4,
   createProviderRegistry,
+  createCredentialResolver,
 } from "../../../../packages/agentsam-vault/src/index.js";
 import {
   collectCredentialScopedInventory,
@@ -128,7 +129,9 @@ function isIdentityPath(pathname) {
   return (
     IDENTITY_EXACT_PATHS.has(pathname) ||
     pathname.startsWith("/api/auth/") ||
-    pathname.startsWith("/api/oauth/")
+    pathname.startsWith("/api/oauth/") ||
+    pathname === "/api/account" ||
+    pathname.startsWith("/api/account/")
   );
 }
 
@@ -542,6 +545,54 @@ async function handleDelete(env, accountId, secretId) {
   });
 
   return json({ ok: true, id: secretId, revoked: true });
+}
+
+/**
+ * Server-side vault resolution for identity-owned outbound capabilities
+ * (transactional email). The company row names WHICH account's vault holds the
+ * credential (meta.credentials.<purpose>.vault_account_id); this host only
+ * decrypts that account's active row for the requested provider. Precedence and
+ * the env compatibility lane come from @inneranimalmedia/agentsam-vault.
+ */
+function createIdentityCredentialResolver(env) {
+  return async function resolveCredential({ provider, accountId }) {
+    const resolver = createCredentialResolver({
+      env,
+      envMap: { resend: "RESEND_API_KEY" },
+      async lookupVaultMeta({ provider: service }) {
+        if (!accountId || !env.DB) return null;
+        const row = await env.DB.prepare(
+          `SELECT id, metadata_json FROM user_secrets
+           WHERE account_id = ? AND service_name = ? AND is_active = 1
+           ORDER BY updated_at DESC LIMIT 1`,
+        ).bind(accountId, service).first();
+        if (!row?.id) return null;
+        let meta = {};
+        try { meta = JSON.parse(row.metadata_json || "{}"); } catch { meta = {}; }
+        return { ref: row.id, last4: meta.last4 };
+      },
+      async unwrap(ref) {
+        const row = await env.DB.prepare(
+          `SELECT id, account_id, secret_name, service_name, secret_value_encrypted
+           FROM user_secrets WHERE id = ? AND account_id = ? AND is_active = 1`,
+        ).bind(ref, accountId).first();
+        if (!row) return null;
+        const value = await decryptSecret(env, row.secret_value_encrypted, `${row.account_id}:${row.service_name}:${row.secret_name}`);
+        await env.DB.prepare(
+          `UPDATE user_secrets SET last_used_at = unixepoch(), usage_count = COALESCE(usage_count,0) + 1 WHERE id = ?`,
+        ).bind(row.id).run();
+        await audit(env, {
+          secret_id: row.id,
+          account_id: row.account_id,
+          event_type: "decrypted_for_use",
+          new_last4: last4(value),
+          notes: "identity:email.transactional",
+        });
+        return value;
+      },
+    });
+    return resolver.resolve({ provider });
+  };
 }
 
 /** Internal decrypt-for-use — never expose via public docs as a browser API. */
@@ -1121,6 +1172,7 @@ export default {
       return handleIdentityWorkerRequest(request, env, {
         app: APP,
         routeRegistry: ROUTE_REGISTRY,
+        resolveCredential: createIdentityCredentialResolver(env),
       });
     }
 

@@ -2,7 +2,9 @@
   "name": "@inneranimalmedia/agentsam-settings",
   "version": "2.6.15",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -24,7 +26,8 @@
     "./fixtures": {
       "types": "./dist/fixtures/index.d.ts",
       "import": "./dist/fixtures/index.js"
-    }
+    },
+    "./frontend/styles.css": "./dist/frontend/index.css"
   },
   "peerDependencies": {
     "lucide-react": "^0.510.0",

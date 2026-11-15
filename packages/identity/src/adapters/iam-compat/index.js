@@ -3,6 +3,7 @@ import { NATIVE_HANDOFF_TTL_SECONDS, SESSION_TYPES } from '../../core/session-po
 import { IdentitySchemaError } from '../../contracts/identity-store.js';
 import { IDENTITY_STORE_SCHEMA_VERSION } from '../../contracts/identity-store.js';
 import { newAccountIdentityId, newAuthUserId, newSessionId, newAuthEventId, nowUnix } from '../cloudflare-d1/ids.js';
+import { createAccountSecurityStore } from '../account-security-store.js';
 import { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from '../../contracts/company.js';
 
 
@@ -533,6 +534,18 @@ export function createIamCompatIdentityAdapter(db, options = {}) {
         updated_at: row.updated_at,
       };
     },
+
+    // Self-service account security over hosted IAM tables. Company branding
+    // authority is the platform superadmin flag — never "any signed-in user".
+    ...createAccountSecurityStore(db, {
+      layout: 'iam-compat',
+      async canManageCompany(userId) {
+        const row = await db.prepare(
+          `SELECT is_superadmin, role FROM auth_users WHERE id = ? LIMIT 1`,
+        ).bind(userId).first();
+        return Number(row?.is_superadmin || 0) === 1 || ['owner', 'superadmin'].includes(String(row?.role || ''));
+      },
+    }),
   });
 }
 

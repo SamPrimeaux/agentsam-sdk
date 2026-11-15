@@ -1,3 +1,4 @@
+import "@inneranimalmedia/agentsam-settings/frontend/styles.css";
 import { useEffect, useState } from "react";
 import "@inneranimalmedia/agentsam-workbench/widgets/widgets.css";
 import { toast } from "sonner";
