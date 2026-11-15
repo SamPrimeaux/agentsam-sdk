@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
-const dir=process.env.INSTALL_PROJECT_DIR || join(root,'apps/ecommerce-cms-agentsam/frontend/static/data/site-theme-projects');
+const dir=process.env.INSTALL_PROJECT_DIR || join(root,'apps/ecommerce-cms-agentsam/tests/fixtures/site-theme-projects');
 const index=JSON.parse(await readFile(join(dir,'index.json'),'utf8'));
 assert.equal(index.schema,'agentsam.website-theme-install-index.v1');
 assert.ok(index.packages?.length>0,'No reviewed CMS install projects found');

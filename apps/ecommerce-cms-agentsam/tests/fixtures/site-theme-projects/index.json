@@ -7,7 +7,9 @@
       "sha256": "c5a1c9c26050c706652d6aad2d1aa184c5b91350975dfc9fa3fe717c1ae90203",
       "page_count": 5,
       "manifest_page_count": 9,
-      "project_asset": "/ecommerce-cms-agentsam/admin/data/site-theme-projects/plain-jane-0.1.0.json"
+      "project_sha256": "d0fb2939331b10eb640345cde50834557a62984147da4d0cbb1773926dc66f47",
+      "project_key": "install-projects/plain-jane/0.1.0/d0fb2939331b10eb640345cde50834557a62984147da4d0cbb1773926dc66f47.json",
+      "project_url": "/api/themes/plain-jane/0.1.0/project"
     }
   ]
 }
