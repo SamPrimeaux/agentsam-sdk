@@ -159,7 +159,9 @@ function safePreviewUrl(value, slug, version) {
     const url = new URL(value, 'https://theme.invalid');
     const local = url.origin === 'https://theme.invalid' && url.pathname.startsWith(`/themes/${slug}/`);
     const released = url.origin === 'https://themes.inneranimalmedia.com' &&
-      url.pathname.startsWith(`/theme-packages/${slug}/${version}/preview/`);
+      (url.pathname.startsWith(`/theme-packages/${slug}/${version}/preview/`) ||
+       (/^\/[a-z][a-z0-9-]{1,63}\/$/.test(url.pathname) &&
+        !['/admin/','/api/','/auth/','/themes/','/apps/','/settings/'].includes(url.pathname)));
     if ((!local && !released) || url.pathname.split('/').includes('..') ||
         url.username || url.password || url.search || url.hash) return null;
     return released ? url.href : url.pathname;
@@ -210,6 +212,56 @@ export async function installThemeStudioDraft(env, accountId, slug, payload = {}
     return saved;
   }
   return { ok: true, installed: true, unchanged: false, project };
+}
+
+/**
+ * DELETE owns only the authenticated account's independent Theme Studio draft.
+ * D1 ON DELETE CASCADE removes its revision records; old R2 snapshots are
+ * independently purged where supported. No CMS site or published product moves.
+ */
+export async function deleteStudioThemeProject(env, accountId, projectId, expectedVersion) {
+  if (!accountId) return { ok:false, status:403, error:'account_required' };
+  if (!env?.DB || !env?.WEBSITE_ASSETS) return { ok:false, status:503, error:'cms_storage_unavailable' };
+  if (typeof projectId !== 'string' || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId))
+    return { ok:false, status:400, error:'theme_project_id_invalid' };
+  const row = await studioRow(env, accountId, projectId);
+  if (!row) return { ok:false, status:404, error:'theme_studio_project_not_found' };
+  const currentVersion = Number(row.content_version || 0);
+  if (!Number.isSafeInteger(Number(expectedVersion)) || Number(expectedVersion) !== currentVersion)
+    return { ok:false, status:409, error:'theme_studio_version_conflict', current_version:currentVersion };
+  const revisions = await env.DB.prepare(`
+    SELECT content_object_key FROM cms_theme_studio_revisions
+    WHERE account_id=? AND project_row_id=?
+  `).bind(accountId, row.id).all();
+  const keys = [...new Set([row.content_object_key, ...(revisions.results || []).map(r=>r.content_object_key)].filter(Boolean))];
+  const deleted = await env.DB.prepare(`
+    DELETE FROM cms_theme_studio_projects
+    WHERE id=? AND account_id=? AND project_id=? AND content_version=?
+  `).bind(row.id, accountId, projectId, currentVersion).run();
+  if (changes(deleted) !== 1) return { ok:false, status:409, error:'theme_studio_version_conflict' };
+  // A storage cleanup failure never recreates a deleted customer draft. Report
+  // it so the provider can reconcile orphaned blobs, instead of hiding it.
+  const outcomes = await Promise.allSettled(keys.map(key=>env.WEBSITE_ASSETS.delete?.(key)));
+  const cleanup_pending = typeof env.WEBSITE_ASSETS.delete !== 'function' ||
+    outcomes.some(outcome=>outcome.status==='rejected');
+  return { ok:true, deleted:true, project_id:projectId,
+    snapshots_removed:cleanup_pending ? null : keys.length, cleanup_pending };
+}
+
+/** Duplicate an authored copy without a CMS site, domain, or store. */
+export async function duplicateStudioThemeProject(env, accountId, projectId, name = null) {
+  const found = await getStudioThemeProject(env, accountId, projectId);
+  if (!found.ok) return found;
+  const original = found.project;
+  const suffix = crypto.randomUUID().replaceAll('-','').slice(0,12);
+  const candidate = {
+    ...structuredClone(original),
+    id:('copy_'+suffix),
+    name:typeof name === 'string' && name.trim() ? name.trim() : original.name + ' — Copy',
+    createdAt:null, updatedAt:null, revision:0,
+    clonedFromThemeProject:original.id,
+  };
+  return createStudioThemeProject(env, accountId, candidate);
 }
 
 export async function createStudioThemeProject(env, accountId, value) {
