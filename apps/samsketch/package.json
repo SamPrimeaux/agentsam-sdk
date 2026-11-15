@@ -8,7 +8,8 @@
     "dev": "vite --host 127.0.0.1 --port 4340",
     "build": "node scripts/verify-assets.mjs && tsc --noEmit && vite build",
     "check": "node scripts/verify-assets.mjs && tsc --noEmit",
-    "test": "node scripts/verify-assets.mjs && node --test test/*.test.mjs"
+    "test": "node scripts/verify-assets.mjs && node --test test/*.test.mjs",
+    "prebuild": "npm --prefix ../../packages/agentsam-occt run build"
   },
   "dependencies": {
     "fflate": "^0.8.2",
