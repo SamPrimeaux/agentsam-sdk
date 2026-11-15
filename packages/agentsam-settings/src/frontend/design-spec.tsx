@@ -1,3 +1,4 @@
+import "./design-spec.css";
 import { useId, useMemo, useState, type CSSProperties } from "react";
 import type { SettingsTheme, SettingsThemeSpec } from "../contracts";
 
@@ -77,8 +78,8 @@ function hasStructure(theme: SettingsTheme) {
 
 function Heading({ children }: { children: string }) {
   return (
-    <div className="pb-3 text-[15px] font-semibold leading-[22px]"
-      style={{ borderBottom: "1px solid var(--spec-accentText)" }}>{children}</div>
+    <div className="pb-3 text-[15px] font-semibold leading-[22px] spec-style-1"
+      >{children}</div>
   );
 }
 
@@ -123,9 +124,6 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
     ? (spec.components!.swatches as Array<[string, Role, string]>)
     : DEFAULT_SWATCHES;
   const family = spec.typography?.family;
-  const vars = Object.fromEntries(
-    (Object.entries(palette) as Array<[Role, string | null]>).map(([role, v]) => [`--spec-${role}`, v || "transparent"]),
-  ) as CSSProperties;
   const inkOnPage = contrast(palette.ink, palette.page);
   const mutedOnCard = contrast(palette.muted, palette.card);
   const onPrimary = contrast(palette.onPrimary, palette.primary);
@@ -142,21 +140,20 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
           className="h-9 rounded-lg border border-border px-3 text-[12px] hover:bg-muted">Manage themes →</button>}
       </div>
       {missing.length > 0 && (
-        <p className="text-[11px]" style={{ color: "var(--settings-warning-ink)" }}>
+        <p className="text-[11px] spec-style-2" >
           {colors?.name} doesn't define: {missing.join(", ")}. Those samples show as empty.
         </p>
       )}
 
-      <div data-spec-sheet={colors?.slug || colors?.id} className="overflow-hidden rounded-2xl border border-border"
-        style={{ ...vars, background: "var(--spec-card)", color: "var(--spec-ink)",
-          fontFamily: family ? `'${family}', ui-sans-serif, system-ui, sans-serif` : undefined }}>
+      <div data-spec-sheet={colors?.slug || colors?.id} className="overflow-hidden rounded-2xl border border-border spec-style-3"
+        style={{ "--spec-page": palette.page || "transparent", "--spec-card": palette.card || "transparent", "--spec-input": palette.input || "transparent", "--spec-line": palette.line || "transparent", "--spec-lineStrong": palette.lineStrong || "transparent", "--spec-ink": palette.ink || "transparent", "--spec-muted": palette.muted || "transparent", "--spec-faint": palette.faint || "transparent", "--spec-primary": palette.primary || "transparent", "--spec-onPrimary": palette.onPrimary || "transparent", "--spec-accentText": palette.accentText || "transparent", "--spec-accentTint": palette.accentTint || "transparent", "--spec-accentLine": palette.accentLine || "transparent", "--spec-dyn-2-font-family": family ? `'${family}', ui-sans-serif, system-ui, sans-serif` : undefined } as CSSProperties}>
         <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-4 py-8 sm:px-10 sm:py-12">
           <div className="flex flex-col gap-2">
             <h3 className="m-0 text-[28px] font-medium leading-9 tracking-[-0.02em] sm:text-[32px] sm:leading-10">{colors?.name}</h3>
-            <p className="m-0 max-w-[720px] text-[15px] leading-6" style={{ color: "var(--spec-muted)" }}>
+            <p className="m-0 max-w-[720px] text-[15px] leading-6 spec-style-4" >
               {String(colors?.spec?.brand?.description || structure?.spec?.brand?.description || "Color tokens resolved from this theme, shown on the selected structure.")}
             </p>
-            <p className="m-0 text-[12px]" style={{ color: "var(--spec-faint)" }}>
+            <p className="m-0 text-[12px] spec-style-5" >
               Contrast: ink on page {inkOnPage ? inkOnPage.toFixed(1) : "—"}:1 · muted on card {mutedOnCard ? mutedOnCard.toFixed(1) : "—"}:1 · text on primary {onPrimary ? onPrimary.toFixed(1) : "—"}:1
               {onPrimary !== null && onPrimary < 4.5 ? " (below AA for body text)" : ""}
             </p>
@@ -167,9 +164,9 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
               {swatches.map(([name, role, use]) => (
                 <div key={name} className="flex flex-col gap-2">
-                  <div className="h-16 rounded-xl" style={{ background: palette[role] || "transparent", border: "1px solid var(--spec-lineStrong)" }}/>
+                  <div className="h-16 rounded-xl spec-style-6" style={{ "--spec-dyn-5-background": palette[role] || "transparent" } as CSSProperties}/>
                   <div className="text-[13px] font-medium leading-[18px]">{name}</div>
-                  <div className="text-[12px] leading-4" style={{ color: "var(--spec-muted)" }}>{palette[role] || "not set"} · {use}</div>
+                  <div className="text-[12px] leading-4 spec-style-7" >{palette[role] || "not set"} · {use}</div>
                 </div>
               ))}
             </div>
@@ -179,15 +176,11 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
             <section className="flex flex-col">
               <div className="mb-3"><Heading>{`Type scale${family ? ` · ${family}` : ""} · size / line-height`}</Heading></div>
               {scale.map((row) => (
-                <div key={row.role} className="grid items-baseline gap-x-6 gap-y-2 py-2.5 sm:grid-cols-[160px_minmax(0,1fr)_220px]"
-                  style={{ borderBottom: "1px solid var(--spec-line)" }}>
-                  <div className="text-[13px]" style={{ color: "var(--spec-muted)" }}>{row.label}</div>
-                  <div className="min-w-0 break-words" style={{
-                    fontSize: `clamp(${Math.min(row.size, 22)}px, ${row.size / 14}vw, ${row.size}px)`,
-                    lineHeight: `${row.line / row.size}`, fontWeight: row.weight,
-                    letterSpacing: row.tracking, color: row.tone === "muted" ? "var(--spec-muted)" : undefined,
-                  }}>{row.sample}</div>
-                  <div className="text-[12px]" style={{ color: "var(--spec-muted)" }}>
+                <div key={row.role} className="grid items-baseline gap-x-6 gap-y-2 py-2.5 sm:grid-cols-[160px_minmax(0,1fr)_220px] spec-style-8"
+                  >
+                  <div className="text-[13px] spec-style-9" >{row.label}</div>
+                  <div className="min-w-0 break-words spec-style-10" style={{ "--spec-dyn-9-font-size": `clamp(${Math.min(row.size, 22)}px, ${row.size / 14}vw, ${row.size}px)`, "--spec-dyn-9-line-height": `${row.line / row.size}`, "--spec-dyn-9-font-weight": row.weight, "--spec-dyn-9-letter-spacing": row.tracking, "--spec-dyn-9-color": row.tone === "muted" ? "var(--spec-muted)" : undefined } as CSSProperties}>{row.sample}</div>
+                  <div className="text-[12px] spec-style-11" >
                     {row.size}/{row.line} · {row.weight}{row.tracking ? ` · ${row.tracking}` : ""}{row.note ? ` · ${row.note}` : ""}
                   </div>
                 </div>
@@ -201,9 +194,9 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {radii.map((r) => (
                   <div key={r.label} className="flex flex-col gap-2">
-                    <div className="h-[72px]" style={{ border: "1px solid var(--spec-accentText)", borderRadius: r.value }}/>
+                    <div className="h-[72px] spec-style-12" style={{ "--spec-dyn-11-border-radius": r.value } as CSSProperties}/>
                     <div className="text-[13px] font-medium">{r.label} · {r.value}</div>
-                    {r.note && <div className="text-[12px]" style={{ color: "var(--spec-muted)" }}>{r.note}</div>}
+                    {r.note && <div className="text-[12px] spec-style-13" >{r.note}</div>}
                   </div>
                 ))}
               </div>
@@ -211,8 +204,8 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
                 <div className="flex flex-wrap items-end gap-3">
                   {spacing.map((step) => (
                     <div key={step} className="flex flex-col items-center gap-1">
-                      <div style={{ width: step, height: step, background: "var(--spec-accentTint)", border: "1px solid var(--spec-accentLine)" }}/>
-                      <span className="text-[11px]" style={{ color: "var(--spec-muted)" }}>{step}</span>
+                      <div className="spec-style-14" style={{ "--spec-dyn-13-width": step, "--spec-dyn-13-height": step } as CSSProperties}/>
+                      <span className="text-[11px] spec-style-15" >{step}</span>
                     </div>
                   ))}
                 </div>
@@ -231,45 +224,45 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
                     ["Quiet", { background: "var(--spec-input)" }],
                   ].map(([label, style]) => (
                     <button key={label as string} type="button"
-                      className="inline-flex h-11 items-center justify-center rounded-full px-6 text-[14px] font-medium"
-                      style={{ color: "var(--spec-ink)", ...(style as CSSProperties) }}>{label as string}</button>
+                      className="inline-flex h-11 items-center justify-center rounded-full px-6 text-[14px] font-medium spec-style-16"
+                      style={{ "--spec-button-background": (style as CSSProperties).background, "--spec-button-border": (style as CSSProperties).border, "--spec-button-color": (style as CSSProperties).color || "var(--spec-ink)" } as CSSProperties}>{label as string}</button>
                   ))}
                 </div>
                 <div className="text-[13px] font-medium">Pill button</div>
-                <div className="text-[12px] leading-[18px]" style={{ color: "var(--spec-muted)" }}>
+                <div className="text-[12px] leading-[18px] spec-style-17" >
                   {String((spec.components?.button as { rule?: string } | undefined)?.rule || "One primary per screen region.")}
                 </div>
               </div>
 
               <div className="flex flex-col gap-3">
-                <div className="flex flex-col overflow-hidden rounded-xl" style={{ border: "1px solid var(--spec-lineStrong)", background: "var(--spec-card)" }}>
+                <div className="flex flex-col overflow-hidden rounded-xl spec-style-18" >
                   <label className="flex h-14 flex-col justify-center gap-0.5 px-4">
-                    <span className="text-[12px] leading-4" style={{ color: "var(--spec-muted)" }}>Email address</span>
-                    <input type="email" placeholder="you@company.com" className="bg-transparent text-[15px] leading-5 outline-none"
-                      style={{ color: "var(--spec-ink)" }}/>
+                    <span className="text-[12px] leading-4 spec-style-19" >Email address</span>
+                    <input type="email" placeholder="you@company.com" className="bg-transparent text-[15px] leading-5 outline-none spec-style-20"
+                      />
                   </label>
-                  <div className="flex" style={{ borderTop: "1px solid var(--spec-lineStrong)" }}>
-                    <label className="flex h-14 flex-1 flex-col justify-center gap-0.5 px-4" style={{ borderRight: "1px solid var(--spec-lineStrong)" }}>
-                      <span className="text-[12px] leading-4" style={{ color: "var(--spec-muted)" }}>Display name</span>
-                      <input placeholder="Your name" className="w-full bg-transparent text-[15px] leading-5 outline-none" style={{ color: "var(--spec-ink)" }}/>
+                  <div className="flex spec-style-21" >
+                    <label className="flex h-14 flex-1 flex-col justify-center gap-0.5 px-4 spec-style-22" >
+                      <span className="text-[12px] leading-4 spec-style-23" >Display name</span>
+                      <input placeholder="Your name" className="w-full bg-transparent text-[15px] leading-5 outline-none spec-style-24" />
                     </label>
                     <label className="flex h-14 flex-1 flex-col justify-center gap-0.5 px-4">
-                      <span className="text-[12px] leading-4" style={{ color: "var(--spec-muted)" }}>Time zone</span>
-                      <input placeholder="Region/City" className="w-full bg-transparent text-[15px] leading-5 outline-none" style={{ color: "var(--spec-ink)" }}/>
+                      <span className="text-[12px] leading-4 spec-style-25" >Time zone</span>
+                      <input placeholder="Region/City" className="w-full bg-transparent text-[15px] leading-5 outline-none spec-style-26" />
                     </label>
                   </div>
                 </div>
                 <div className="text-[13px] font-medium">Grouped field</div>
-                <div className="text-[12px] leading-[18px]" style={{ color: "var(--spec-muted)" }}>
+                <div className="text-[12px] leading-[18px] spec-style-27" >
                   {String((spec.components?.groupedField as { rule?: string } | undefined)?.rule || "Label above value inside one bordered shell.")}
                 </div>
               </div>
 
               <div className="flex flex-col gap-3">
-                <div className="flex flex-col" style={{ borderTop: "1px solid var(--spec-accentText)" }}>
+                <div className="flex flex-col spec-style-28" >
                   {[["Workspaces", "1", "3"], ["Backup codes", true, true], ["Custom domain", false, true]].map(([label, a, b]) => (
-                    <div key={label as string} className="grid min-h-[52px] items-center text-[14px]"
-                      style={{ gridTemplateColumns: "minmax(0,1.6fr) repeat(2,minmax(0,1fr))", borderBottom: "1px solid var(--spec-line)" }}>
+                    <div key={label as string} className="grid min-h-[52px] items-center text-[14px] spec-style-29"
+                      >
                       <div>{label as string}</div>
                       {[a, b].map((cell, i) => (
                         <div key={i} className="flex justify-center">
@@ -278,14 +271,14 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
                                 <circle cx="11" cy="11" r="11" fill="var(--spec-primary)"/>
                                 <path d="M6.5 11.4l3 3 6-6.4" fill="none" stroke="var(--spec-onPrimary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                               </svg>
-                            : <span aria-label="Not included" style={{ color: "var(--spec-faint)" }}>—</span>}
+                            : <span aria-label="Not included" className="spec-style-30">—</span>}
                         </div>
                       ))}
                     </div>
                   ))}
                 </div>
                 <div className="text-[13px] font-medium">Compare row</div>
-                <div className="text-[12px] leading-[18px]" style={{ color: "var(--spec-muted)" }}>
+                <div className="text-[12px] leading-[18px] spec-style-31" >
                   Min height 52, first column 1.6fr then equal columns.
                 </div>
               </div>
@@ -294,22 +287,22 @@ export function SettingsDesignSpecSheet({ themes, onOpenThemes }: {
 
           <section className="flex flex-col gap-5">
             <Heading>In context · sign-in card</Heading>
-            <div className="mx-auto w-full max-w-[400px] rounded-[20px] p-6"
-              style={{ background: "var(--spec-page)", border: "1px solid var(--spec-line)" }}>
+            <div className="mx-auto w-full max-w-[400px] rounded-[20px] p-6 spec-style-32"
+              >
               <div className="text-[24px] font-medium leading-8 tracking-[-0.01em]">Welcome back</div>
-              <p className="mb-5 mt-1 text-[14px]" style={{ color: "var(--spec-muted)" }}>Sign in to your portal.</p>
-              <div className="mb-3 flex h-14 flex-col justify-center rounded-xl px-4" style={{ border: "1px solid var(--spec-lineStrong)", background: "var(--spec-input)" }}>
-                <span className="text-[12px]" style={{ color: "var(--spec-muted)" }}>Email</span>
-                <span className="text-[15px]" style={{ color: "var(--spec-faint)" }}>you@company.com</span>
+              <p className="mb-5 mt-1 text-[14px] spec-style-33" >Sign in to your portal.</p>
+              <div className="mb-3 flex h-14 flex-col justify-center rounded-xl px-4 spec-style-34" >
+                <span className="text-[12px] spec-style-35" >Email</span>
+                <span className="text-[15px] spec-style-36" >you@company.com</span>
               </div>
-              <div className="mb-5 flex h-14 flex-col justify-center rounded-xl px-4" style={{ border: "1px solid var(--spec-accentLine)", background: "var(--spec-accentTint)" }}>
-                <span className="text-[12px]" style={{ color: "var(--spec-accentText)" }}>Password · focused</span>
+              <div className="mb-5 flex h-14 flex-col justify-center rounded-xl px-4 spec-style-37" >
+                <span className="text-[12px] spec-style-38" >Password · focused</span>
                 <span className="text-[15px]">••••••••••</span>
               </div>
-              <div className="flex h-12 items-center justify-center rounded-full text-[14px] font-medium"
-                style={{ background: "var(--spec-primary)", color: "var(--spec-onPrimary)" }}>Sign in</div>
-              <p className="mt-4 text-center text-[13px]" style={{ color: "var(--spec-muted)" }}>
-                Lost access? <span style={{ color: "var(--spec-accentText)" }}>Use a backup code</span>
+              <div className="flex h-12 items-center justify-center rounded-full text-[14px] font-medium spec-style-39"
+                >Sign in</div>
+              <p className="mt-4 text-center text-[13px] spec-style-40" >
+                Lost access? <span className="spec-style-41">Use a backup code</span>
               </p>
             </div>
           </section>

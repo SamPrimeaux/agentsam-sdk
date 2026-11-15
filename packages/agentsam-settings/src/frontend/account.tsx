@@ -95,8 +95,7 @@ const secondaryButton =
 function Notice({ tone, children }: { tone: "error" | "success"; children: ReactNode }) {
   return (
     <p role={tone === "error" ? "alert" : "status"}
-      className="text-[11px]"
-      style={{ color: tone === "error" ? "var(--settings-danger-ink)" : "var(--settings-success-ink)" }}>
+      className={tone === "error" ? "text-[11px] text-[var(--settings-danger-ink)]" : "text-[11px] text-[var(--settings-success-ink)]"}>
       {children}
     </p>
   );
@@ -291,7 +290,7 @@ function BackupCodes({ host, overview, onSaved }: {
       <div className="space-y-3 rounded-xl border border-border/70 p-4">
         <p className="text-[12px]">{status}</p>
         {backupCodes.total > 0 && backupCodes.remaining <= 2 && !codes && (
-          <p className="text-[11px]" style={{ color: "var(--settings-warning-ink)" }}>
+          <p className="text-[11px] text-[var(--settings-warning-ink)]">
             You're running low. Generate a new set.
           </p>
         )}
@@ -313,7 +312,7 @@ function BackupCodes({ host, overview, onSaved }: {
         )}
         {codes && (
           <div className="space-y-3">
-            <p className="text-[11px]" style={{ color: "var(--settings-warning-ink)" }}>
+            <p className="text-[11px] text-[var(--settings-warning-ink)]">
               Save these now. They won't be shown again.
             </p>
             <ol className="grid grid-cols-1 gap-2 rounded-lg border border-border/70 bg-muted/40 p-3 font-mono text-[13px] sm:grid-cols-2">
