@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Container, RefreshCw, ShieldCheck, HardDrive, Server, ExternalLink } from 'lucide-react';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
+import { listLocalStudioConnections, installLocalStudioPublicPlugin } from '@/lib/connections/client';
 import {
   dockerBridge, dockerEngineHealth, listDockerContexts, listDockerContainers,
   dockerContainerAction, dockerContainerLogs, type DockerContext,
@@ -11,6 +12,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
   onOpenWorkspace?:(selection:DockerSelection)=>void;
 }) {
   const [contexts,setContexts]=useState<DockerContext[]>([]);
+  const [installation,setInstallation]=useState<'checking'|'installed'|'not_installed'|'disabled'|'error'>('checking');
   const [context,setContext]=useState('');
   const [containers,setContainers]=useState<DockerContainer[]>([]);
   const [container,setContainer]=useState('');
@@ -25,6 +27,26 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
   const [remoteName,setRemoteName]=useState('');
   const [remoteEndpoint,setRemoteEndpoint]=useState('');
   const desktop=isPackagedDesktop();
+  const refreshInstall=useCallback(async()=>{
+    setInstallation('checking');
+    try {
+      const registry=await listLocalStudioConnections();
+      const installed=registry.plugins?.find(row=>row.plugin_key==='agentsam-docker-engine');
+      setInstallation(!installed?'not_installed':installed.is_enabled?'installed':'disabled');
+    } catch {
+      setInstallation('error');
+    }
+  },[]);
+  useEffect(()=>{void refreshInstall();},[refreshInstall]);
+  const install=async()=>{
+    setLoading(true);setError('');
+    try {
+      await installLocalStudioPublicPlugin('agentsam-docker-engine');
+      await refreshInstall();
+      setNotice('Docker integration installed. Engine authorization is a separate step.');
+    }catch(e){setError(e instanceof Error?e.message:String(e));}
+    finally{setLoading(false);}
+  };
 
   const refresh=useCallback(async()=>{
     if(!desktop)return;
@@ -74,6 +96,20 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
     if(allowWrites&&!window.confirm('Allow AgentSam to change files under '+root+' in '+container+'? Container permissions remain enforced by Docker.'))return;
     onOpenWorkspace?.({context,container,root,allowWrites});
   };
+
+  if(installation!=='installed')return <section className="space-y-3 rounded-lg border border-border bg-card p-4 text-sm" aria-label="Docker plugin installation">
+    <div className="flex items-center gap-2"><Container size={17}/><strong>Docker integration</strong></div>
+    {error&&<p role="alert" className="text-xs text-destructive">{error}</p>}
+    {installation==='checking'?<p role="status" className="text-muted-foreground">Checking your account's installed plugins…</p>:
+      installation==='error'?<p role="alert" className="text-muted-foreground">Plugin status could not be verified. Docker access has not been granted.</p>:
+      installation==='disabled'?<p className="text-muted-foreground">Docker is installed but disabled for this account. Enable it in Plugins to use your engines.</p>:
+      <p className="text-muted-foreground">Install Docker for this account. Installation does not connect to an engine or grant host access.</p>}
+    <div className="flex gap-2">
+      {installation==='not_installed'?<button type="button" className="rounded-md border border-border px-3 py-2 hover:bg-muted" disabled={loading} onClick={()=>void install()}>Install Docker plugin</button>:null}
+      <a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/settings/customize?view=plugins">Manage plugins</a>
+      {installation==='error'?<button type="button" onClick={()=>void refreshInstall()} className="rounded-md border border-border px-3 py-2">Retry</button>:null}
+    </div>
+  </section>;
 
   if(!desktop)return <section className="space-y-3 rounded-lg border border-border bg-card p-4 text-sm">
     <div className="flex items-center gap-2"><Container size={17}/><strong>Docker Engine</strong></div>
