@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Kingdom — InnerAnimal Companions</title>
+<meta name="description" content="Explore the living InnerAnimal companion kingdom: its habitats, characters, animations, artwork and source editions.">
+<style>
+:root{color-scheme:dark;--bg:#111513;--panel:#1d2420;--panel2:#252e27;--line:#39483b;--text:#e8efe6;--muted:#a3b3a8;--accent:#a3d86a;--max:1400px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}button{cursor:pointer}a{color:inherit}a:hover{color:var(--accent)}.container{width:min(calc(100% - 48px),var(--max));margin:auto}
+header{height:70px;border-bottom:1px solid var(--line);background:#131a16;position:sticky;top:0;z-index:10}
+header .container{height:100%;display:flex;gap:20px;justify-content:space-between;align-items:center}
+.brand{font-size:14px;font-weight:750;letter-spacing:.08em;display:flex;align-items:center;gap:11px}.mark{width:30px;height:30px;background:var(--accent);color:#122014;border-radius:9px;display:grid;place-items:center;font-weight:800}
+.crumb{color:var(--muted);font-size:12px}.top-right{display:flex;gap:12px;align-items:center}.status{font-size:11px;border:1px solid var(--line);border-radius:30px;padding:5px 10px;color:var(--muted)}.status b{color:var(--accent)}
+.hero{padding:77px 0 43px;border-bottom:1px solid var(--line);background:radial-gradient(ellipse at 90% 0%,#273d2c 0%,transparent 43%)}
+.eyebrow{font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--accent);font-size:11px;margin:0 0 18px}
+h1{font-size:clamp(37px,5.2vw,74px);line-height:1.06;letter-spacing:-.05em;margin:0 0 19px;font-weight:640;max-width:790px}
+.hero p{font-size:16px;color:var(--muted);max-width:620px;margin:0}.counts{display:flex;gap:38px;flex-wrap:wrap;margin-top:42px}
+.count strong{display:block;font-size:27px;letter-spacing:-.03em;font-weight:650}.count span{color:var(--muted);font-size:12px}
+section{padding-top:40px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:18px}
+h2{font-size:23px;font-weight:620;letter-spacing:-.02em;margin:0}.hint{color:var(--muted);font-size:12px;margin:3px 0 0}
+.habitats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.habitat{min-height:145px;border:1px solid var(--line);background:var(--panel);text-align:left;padding:17px;border-radius:13px;color:var(--text);transition:background .15s,border-color .15s}
+.habitat:hover,.habitat[aria-pressed=true]{border-color:#8fba70;background:#26372a}.habitat[aria-pressed=true] .habitat-name{color:var(--accent)}
+.habitat-index{font-size:11px;color:var(--muted)}.habitat-name{display:block;font-weight:650;font-size:15px;margin:20px 0 6px}.habitat-desc{color:var(--muted);font-size:11px;line-height:1.5;display:block}
+.characters{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}.character{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:12px;text-align:left;padding:12px;min-height:210px}
+.character:hover,.character[aria-pressed=true]{border-color:#8fba70}.character[aria-pressed=true]{background:#25382a}.char-cover{height:122px;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#15201a;background-image:linear-gradient(45deg,#18251c 25%,transparent 25%),linear-gradient(-45deg,#18251c 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#18251c 75%),linear-gradient(-45deg,transparent 75%,#18251c 75%);background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}
+.char-cover img{width:100%;height:100%;object-fit:contain}.char-name{font-weight:650;font-size:13px;display:block;margin-top:11px}.char-animal{color:var(--muted);font-size:11px}.char-placeholder{font-size:32px;opacity:.65}
+.detail{margin-top:16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);display:grid;grid-template-columns:minmax(0,240px) 1fr;gap:26px;padding:20px}
+.detail-art{border-radius:12px;background:#121c16;min-height:235px;display:grid;place-items:center;overflow:hidden}.detail-art img{max-width:100%;max-height:290px;object-fit:contain}
+.detail h3{font-size:30px;letter-spacing:-.04em;margin:5px 0}.detail p{color:var(--muted);max-width:690px}.detail .meta{font-size:11px;color:var(--accent);font-weight:650;letter-spacing:.06em;text-transform:uppercase}
+.pills{display:flex;gap:7px;flex-wrap:wrap}.pill{border:1px solid var(--line);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--muted)}
+.detail-side{display:flex;flex-direction:column;justify-content:center}.detail-bottom{display:flex;gap:18px;flex-wrap:wrap;margin-top:17px;color:var(--muted);font-size:12px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.search{flex:1;min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:var(--text);outline:none}
+.search:focus{border-color:var(--accent)}.segments{display:flex;gap:6px;flex-wrap:wrap}.segment{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:9px;padding:9px 11px;font-size:12px}.segment[aria-pressed=true]{background:#2c402f;border-color:#759963;color:#d8f4c7}
+.gallery{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.tile{border:1px solid var(--line);background:var(--panel);border-radius:12px;overflow:hidden;text-decoration:none;transition:border-color .15s}.tile:hover{border-color:var(--accent);color:inherit}
+.tile-cover{height:160px;display:grid;place-items:center;background:#142018;overflow:hidden;background-image:linear-gradient(45deg,#1b2920 25%,transparent 25%),linear-gradient(-45deg,#1b2920 25%,transparent 25%);background-size:18px 18px}
+.tile-cover img{width:100%;height:100%;object-fit:contain}.tile-title{display:block;padding:10px 11px 0;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tile-meta{display:block;padding:2px 11px 12px;color:var(--muted);font-size:10px}
+.button{background:transparent;border:1px solid var(--line);border-radius:9px;color:var(--text);padding:10px 18px}.button:hover{border-color:var(--accent)}.button.primary{color:#122018;background:var(--accent);border-color:var(--accent)}
+.center{text-align:center;margin:24px auto 0}.empty{padding:40px;border:1px dashed var(--line);color:var(--muted);border-radius:12px;text-align:center}
+.story{border-top:1px solid var(--line);padding-bottom:68px;margin-top:55px}.story-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:19px}.story-card{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:20px}.story-card h3{font-size:14px;margin:0 0 8px}.story-card p{margin:0;color:var(--muted);font-size:12px}
+footer{padding:24px 0;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:20px}
+@media(max-width:1150px){.habitats{grid-template-columns:repeat(3,1fr)}.gallery{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:760px){.container{width:min(calc(100% - 28px),var(--max))}.hero{padding:48px 0 32px}.counts{gap:23px}.habitats{grid-template-columns:repeat(2,1fr)}.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.detail{grid-template-columns:1fr;padding:15px;gap:12px}.detail-art{min-height:190px}.story-grid{grid-template-columns:1fr}.top-right .crumb{display:none}}
+@media(max-width:390px){.habitats{grid-template-columns:1fr}.gallery{gap:8px}.tile-cover{height:135px}.status{display:none}}
+</style>
+</head>
+<body>
+<header><div class="container">
+<div class="brand"><span class="mark">IA</span><span>INNERANIMAL <span style="color:var(--muted);font-weight:400">/ The Kingdom</span></span></div>
+<div class="top-right"><span class="crumb">Companions / Habitat explorer</span><span class="status"><b>●</b> Public collection</span></div>
+</div></header>
+<main>
+<div class="hero"><div class="container">
+<p class="eyebrow">An evolving character universe</p><h1>A kingdom, not a starter pack.</h1>
+<p>Every companion belongs to a world. Their personalities, abilities, poses, editions, and relationships form a growing story—not a fixed row of animations.</p>
+<div class="counts"><div class="count"><strong id="countCharacters">—</strong><span>Character profiles</span></div><div class="count"><strong id="countAssets">—</strong><span>Distinct media assets</span></div><div class="count"><strong id="countHabitats">—</strong><span>Living habitats</span></div><div class="count"><strong id="countEdits">—</strong><span>Historic source editions</span></div></div>
+</div></div>
+<div class="container">
+<section aria-labelledby="habitatsTitle">
+<div class="section-head"><div><h2 id="habitatsTitle">Explore by habitat</h2><p class="hint">Habitats connect characters to the worlds and jobs they inhabit.</p></div></div>
+<div id="habitats" class="habitats"></div>
+</section>
+<section aria-labelledby="charactersTitle">
+<div class="section-head"><div><h2 id="charactersTitle">Companions</h2><p class="hint" id="charactersSub">Characters tied to the selected habitat.</p></div><button class="button" id="showLineages" type="button">Browse archive lineages</button></div>
+<div id="characters" class="characters"></div>
+<div id="detail"></div>
+</section>
+<section id="assetSection" aria-labelledby="assetTitle">
+<div class="section-head"><div><h2 id="assetTitle">Media & source editions</h2><p class="hint" id="assetSub">Every distinct frame, preview, pose, and concept is independently addressable.</p></div><a class="button" href="./assets.json" target="_blank" rel="noopener">Full asset index</a></div>
+<div class="toolbar"><input class="search" id="search" placeholder="Search names, states, editions, formats…" aria-label="Search media"><div class="segments" id="filters"></div></div>
+<div id="gallery" class="gallery"></div><div class="center"><button id="loadMore" type="button" class="button">Load more</button></div>
+</section>
+<section class="story" aria-labelledby="storyTitle"><h2 id="storyTitle">The story behind the system</h2><p class="hint">The cast grows through experiences, not arbitrary animation limits.</p><div id="storyGrid" class="story-grid"></div></section>
+</div>
+</main>
+<div class="container"><footer><span>© InnerAnimalMedia · Public viewing does not grant redistribution rights.</span><span>Source of truth: companion catalog · <a href="./index.json">catalog</a> · <a href="./catalog-source.json">source</a></span></footer></div>
+<script>
+(async()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const [catalog,assets]=await Promise.all(['./index.json','./assets.json'].map(u=>fetch(u).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()})));
+const all=[...catalog.characters];
+const habitatById=new Map(catalog.habitats.map(h=>[h.id,h]));
+const byChar=new Map();
+for(const a of assets){for(const id of (a.relatedCharacterIds?.length?a.relatedCharacterIds:[a.characterId])){if(!byChar.has(id))byChar.set(id,[]);byChar.get(id).push(a)}}
+const legacyIds=['kingdom-story','studio-gorilla','legacy-gorilla','unassigned-pet-art','field-operations'];
+const state={habitat:catalog.habitats[0]?.id??'founding-family',character:all[0]?.id??'',filter:'All',search:'',visible:60,lineages:false};
+const categories=['All','Animations','Frames','Atlases','Avatars','Editions','Concepts','3D','Other'];
+function kind(a){if(a.type==='model')return '3D';const f=(a.family||'').toLowerCase();if(f.startsWith('edition-'))return 'Editions';if(/frame|keyframe/.test(f))return 'Frames';if(/atlas/.test(f))return 'Atlases';if(/avatar/.test(f))return 'Avatars';if(/animation/.test(f))return 'Animations';if(/storyboard|concept|archetype|scene|exploration|reference/.test(f))return 'Concepts';return 'Other'}
+function cover(id){const arr=byChar.get(id)||[];return [...arr].sort((a,b)=>{const score=x=>(x.family==='avatars'?100:0)+(x.family==='animations'?50:0)+(x.state==='idle'?30:0)+(x.type==='image'?10:0)-(x.family?.startsWith('edition-')?15:0);return score(b)-score(a)}).find(x=>x.type==='image'&&x.contentType!=='image/x-icon'&&x.contentType!=='image/icns')?.publicUrl}
+const img=(url,alt)=>url?'<img src="'+safe(url)+'" alt="'+safe(alt)+'" loading="lazy" onerror="this.remove()">':'<span class="char-placeholder">◇</span>';
+function profiles(){return state.lineages?legacyIds.map(id=>({id,name:id.replaceAll('-',' ').replace(/\b\w/g,c=>c.toUpperCase()),animal:'Source lineage / story archive',description:'Historical editions, exploration artwork and concept references.',status:'archived'})):all.filter(c=>(habitatById.get(state.habitat)?.companionIds||[]).includes(c.id))}
+function renderHabitats(){
+$('habitats').innerHTML=catalog.habitats.map((h,i)=>'<button class="habitat" data-habitat="'+safe(h.id)+'" aria-pressed="'+(state.habitat===h.id&&!state.lineages)+'"><span class="habitat-index">0'+(i+1)+' / '+safe(h.status||'habitat')+'</span><span class="habitat-name">'+safe(h.name)+'</span><span class="habitat-desc">'+safe(h.subtitle||h.description||'')+'</span></button>').join('');
+}
+function renderProfiles(){
+const people=profiles();if(!people.some(p=>p.id===state.character))state.character=people[0]?.id??'';
+$('charactersSub').textContent=state.lineages?'Historical source lineages and story explorations.':(habitatById.get(state.habitat)?.description??'');
+$('showLineages').textContent=state.lineages?'Return to habitats':'Browse archive lineages';
+$('characters').innerHTML=people.map(c=>'<button class="character" data-character="'+safe(c.id)+'" aria-pressed="'+(state.character===c.id)+'"><span class="char-cover">'+img(cover(c.id),c.name)+'</span><span class="char-name">'+safe(c.name)+'</span><span class="char-animal">'+safe(c.animal??c.role??c.status??'Companion')+'</span></button>').join('');
+const c=people.find(p=>p.id===state.character);
+if(!c){$('detail').innerHTML='';return}
+const arr=byChar.get(c.id)||[];const assetState=c.assetStatus==='brief-only'?'Brief / planned':c.status==='production-review-candidate'?'Production review':c.status==='archived'?'Historical lineage':c.status||'Developing';
+$('detail').innerHTML='<div class="detail"><div class="detail-art">'+img(cover(c.id),c.name)+'</div><div class="detail-side"><span class="meta">'+safe(assetState)+'</span><h3>'+safe(c.name)+'</h3><p>'+safe(c.description??'Preserved source artwork, concepts, animation editions and experiments that contribute to the Kingdom.')+'</p><div class="pills">'+(c.capabilities||[]).slice(0,8).map(x=>'<span class="pill">'+safe(x)+'</span>').join('')+'</div><div class="detail-bottom"><span>'+arr.length+' matching media</span><span>'+safe(c.animal||c.role||'')+'</span><span>'+safe((c.habitatIds||[]).join(' · '))+'</span></div></div></div>';
+}
+function galleryAssets(){
+let arr=(byChar.get(state.character)||[]);
+if(state.filter!=='All')arr=arr.filter(a=>kind(a)===state.filter);
+if(state.search){const q=state.search.toLowerCase();arr=arr.filter(a=>[a.name,a.family,a.state,a.edition,a.contentType,a.classification].some(v=>String(v||'').toLowerCase().includes(q)))}
+return arr;
+}
+function renderMedia(){
+$('filters').innerHTML=categories.map(c=>'<button type="button" class="segment" data-filter="'+c+'" aria-pressed="'+(state.filter===c)+'">'+c+'</button>').join('');
+const arr=galleryAssets(),shown=arr.slice(0,state.visible);
+$('assetSub').textContent=arr.length+' matching assets · Original frames, previews, models and editions remain individually accessible';
+$('gallery').innerHTML=shown.length?shown.map(a=>'<a class="tile" href="'+safe(a.publicUrl)+'" target="_blank" rel="noopener" title="Open public original"><span class="tile-cover">'+(a.type==='image'?img(a.publicUrl,a.name):'<span class="char-placeholder">3D</span>')+'</span><span class="tile-title">'+safe(a.name)+'</span><span class="tile-meta">'+safe(a.state||kind(a))+' · '+(a.bytes/1024).toFixed(1)+' KB'+(a.edition?' · '+safe(a.edition):'')+'</span></a>').join(''):'<div class="empty" style="grid-column:1/-1">No matching artwork. This may be a planned character or an empty media category.</div>';
+$('loadMore').style.display=arr.length>state.visible?'':'none';
+}
+function renderStory(){
+const duos=catalog.duoDynamics||[],milestones=catalog.milestoneUnlocks||[],costumes=catalog.costumePacks||[];
+const cards=[
+ ['Characters interact',duos.map(d=>(d.fromId||'')+' → '+(d.toId||'')+': '+(d.description||'')).join(' ')||'Companions are connected through shared activities and stories.'],
+ ['Actions become milestones',milestones.map(m=>(m.companionId||'')+' · '+(m.animationId||'')).join(' / ')||'New events and animations grow with the platform.'],
+ ['Editions keep evolving',costumes.map(c=>c.name+' · '+(c.directionCount||0)+' directions').join(' / ')||'Story packs and costume variants remain independently versioned.']
+];
+$('storyGrid').innerHTML=cards.map(c=>'<div class="story-card"><h3>'+safe(c[0])+'</h3><p>'+safe(c[1])+'</p></div>').join('');
+}
+function render(){renderHabitats();renderProfiles();renderMedia()}
+$('countCharacters').textContent=all.length;$('countAssets').textContent=assets.length.toLocaleString();$('countHabitats').textContent=catalog.habitats.length;
+$('countEdits').textContent=new Set(assets.map(a=>a.edition).filter(Boolean)).size;
+$('habitats').addEventListener('click',e=>{const b=e.target.closest('[data-habitat]');if(!b)return;state.habitat=b.dataset.habitat;state.lineages=false;state.filter='All';state.visible=60;render()});
+$('showLineages').addEventListener('click',()=>{state.lineages=!state.lineages;state.filter='All';state.visible=60;render()});
+$('characters').addEventListener('click',e=>{const b=e.target.closest('[data-character]');if(!b)return;state.character=b.dataset.character;state.filter='All';state.visible=60;render()});
+$('filters').addEventListener('click',e=>{const b=e.target.closest('[data-filter]');if(!b)return;state.filter=b.dataset.filter;state.visible=60;renderMedia()});
+$('search').addEventListener('input',e=>{state.search=e.target.value.trim();state.visible=60;renderMedia()});
+$('loadMore').addEventListener('click',()=>{state.visible+=60;renderMedia()});
+renderStory();render();
+})().catch(err=>{document.getElementById('habitats').innerHTML='<div class="empty">The public catalog could not be loaded. '+String(err.message||err).replace(/[<>]/g,'')+'</div>';console.error(err)});
+</script>
+</body></html>

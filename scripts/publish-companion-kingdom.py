@@ -18,7 +18,6 @@ import sys
 import shutil
 import zipfile
 from pathlib import Path
-from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 V1 = ROOT / "assets/brand/inneranimal-companions/v1"
@@ -123,7 +122,7 @@ def archive_candidates():
                                      "archive_edition":edition,"collection":"companions"})
     return archived
 
-def build():
+def build(existing_assets=None):
     catalog=json.loads((V1/"catalog.json").read_text())
     CHARACTERS.update(c["id"] for c in catalog["companions"])
     index=json.loads(INTAKE.read_text())
@@ -195,6 +194,24 @@ def build():
            "_upload_path":str(p)
         }
         source_counts[owner]+=1
+    # Cloud is the durable archive of past public editions. Re-publishing on a
+    # different machine never removes historic objects missing from its Downloads.
+    cloud_only=0
+    for old in existing_assets or []:
+        digest=old.get("sha256")
+        if not digest: continue
+        if digest in by_sha:
+            current=by_sha[digest]
+            current["objectKey"]=old["objectKey"]
+            current["publicUrl"]=old["publicUrl"]
+            if not current.get("edition"):current["edition"]=old.get("edition")
+            for key in ("sourceAliases","relatedCharacterIds"):
+                for item in old.get(key,[]):
+                    if item not in current[key]:current[key].append(item)
+        else:
+            by_sha[digest]={**old,"_upload_path":None}
+            cloud_only+=1
+            source_counts[old.get("characterId","unassigned")]+=1
     assets=sorted(by_sha.values(),key=lambda x:(x["characterId"],x["family"],x["name"],x["sha256"]))
     now=dt.datetime.now(dt.timezone.utc).isoformat()
     public_assets=[{k:v for k,v in a.items() if k!="_upload_path"} for a in assets]
@@ -212,7 +229,7 @@ def build():
     master={
        "schemaVersion":"inneranimal.companion-kingdom.v1","generatedAt":now,
        "visibility":"public","rights":"InnerAnimalMedia proprietary brand assets; public view access is not a reuse license",
-       "bucket":BUCKET,"publicBaseUrl":ORIGIN+"/"+PREFIX,
+       "bucket":BUCKET,"publicBaseUrl":ORIGIN+"/"+PREFIX,"exploreUrl":ORIGIN+"/"+PREFIX+"/explore.html",
        "sourceCatalogVersion":catalog.get("schemaVersion"),"characterCount":len(catalog["companions"]),
        "uniqueMediaCount":len(public_assets),"totalBytes":sum(a["bytes"] for a in assets),
        "characters":catalog["companions"],"habitats":habitat_docs,
@@ -250,7 +267,7 @@ def build():
               "assets":group,"public":True}
     summary={"generatedAt":now,"intakeRecords":len(intake),
         "intakeCompanionRecords":sum(a.get("collection")=="companions" for a in intake),
-        "uniquePublicMedia":len(assets),"mediaBytes":sum(a["bytes"] for a in assets),
+        "uniquePublicMedia":len(assets),"cloudOnlyPreserved":cloud_only,"mediaBytes":sum(a["bytes"] for a in assets),
         "byCharacter":dict(source_counts),"skipped":dict(skipped),
         "metadataObjects":len(deliver),
         "releasePrefix":PREFIX,"targetBucket":BUCKET}
@@ -277,6 +294,12 @@ def publish(args,deliver,summary):
     def push(a):
         key=a["objectKey"]
         if done.get(key)==a["sha256"]: return "cached",key,None
+        if a.get("_upload_path") is None:
+            try:
+                head=s.head_object(Bucket=BUCKET,Key=key)
+                if head["ContentLength"]==a["bytes"]:return "preserved",key,None
+                return "failed",key,"R2 historic object size mismatch"
+            except Exception as e:return "failed",key,"R2 historic object unavailable: "+str(e)[:180]
         try:
             with open(a["_upload_path"],"rb") as f:
                 s.put_object(Bucket=BUCKET,Key=key,Body=f,ContentType=a["contentType"],
@@ -305,9 +328,13 @@ def publish(args,deliver,summary):
         payload=json.dumps(body,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
         s.put_object(Bucket=BUCKET,Key=key,Body=payload,ContentType="application/json",
                      CacheControl="public, max-age=120")
+    explorer=V1/"explore.html"
+    if explorer.exists():
+        s.put_object(Bucket=BUCKET,Key=PREFIX+"/explore.html",Body=explorer.read_bytes(),
+                     ContentType="text/html; charset=utf-8",CacheControl="public, max-age=120")
     latest={"schemaVersion":"inneranimal.companion-kingdom-pointer.v1",
             "version":"v1","url":ORIGIN+"/"+PREFIX+"/index.json",
-            "assetsUrl":ORIGIN+"/"+PREFIX+"/assets.json",
+            "assetsUrl":ORIGIN+"/"+PREFIX+"/assets.json","exploreUrl":ORIGIN+"/"+PREFIX+"/explore.html",
             "generatedAt":summary["generatedAt"],"mediaCount":summary["uniquePublicMedia"]}
     s.put_object(Bucket=BUCKET,Key="companions/kingdom/latest.json",
                  Body=json.dumps(latest,indent=2).encode(),ContentType="application/json",
@@ -338,11 +365,17 @@ def main():
     p.add_argument("--publish",action="store_true")
     opts=p.parse_args()
     OUT.mkdir(parents=True,exist_ok=True)
-    assets,deliver,summary=build()
+    existing=None
+    if opts.publish:
+        s=client()
+        try:
+            existing=json.loads(s.get_object(Bucket=BUCKET,Key=PREFIX+"/assets.json")["Body"].read())
+        except s.exceptions.NoSuchKey:
+            existing=[]
+    assets,deliver,summary=build(existing)
     (OUT/"plan.json").write_text(json.dumps(summary,indent=2))
     (OUT/"assets.json").write_text(json.dumps([{k:v for k,v in a.items() if k!="_upload_path"} for a in assets],indent=2))
     print("KINGDOM_DRY_RUN" if not opts.publish else "KINGDOM_PUBLISH_PLAN",json.dumps(summary,indent=2),flush=True)
     if opts.publish: return publish(assets,deliver,summary)
     return 0
 if __name__=="__main__":sys.exit(main())
-
