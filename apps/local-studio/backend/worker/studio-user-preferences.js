@@ -24,7 +24,7 @@ export async function handleStudioUserPreferences(request,env,accountId){
     return answer({ok:false,error:"json_content_type_required"},415);
  }
  const row=await env.DB.prepare(`SELECT ui_preferences_json FROM agentsam_user_ui_preferences
-  WHERE workspace_id='' AND user_id=? LIMIT 1`).bind(accountId).first();
+  WHERE account_id=? LIMIT 1`).bind(accountId).first();
  const existing=decode(row?.ui_preferences_json);
  if(request.method==="GET")
    return answer({ok:true,preferences:normalize(existing.settings_general||defaults)});
@@ -34,10 +34,10 @@ export async function handleStudioUserPreferences(request,env,accountId){
    return answer({ok:false,error:"preferences_invalid"},400);
  const next={...existing,settings_general:normalize(input)};
  await env.DB.prepare(`INSERT INTO agentsam_user_ui_preferences
-   (workspace_id,user_id,ui_preferences_json,updated_at_unix)
-   VALUES ('',?,?,unixepoch())
-   ON CONFLICT(workspace_id,user_id) DO UPDATE SET
-   ui_preferences_json=excluded.ui_preferences_json,updated_at_unix=unixepoch()`)
+   (account_id,ui_preferences_json,updated_at)
+   VALUES (?,?,unixepoch())
+   ON CONFLICT(account_id) DO UPDATE SET
+   ui_preferences_json=excluded.ui_preferences_json,updated_at=unixepoch()`)
   .bind(accountId,JSON.stringify(next)).run();
  return answer({ok:true,preferences:next.settings_general});
 }
@@ -65,7 +65,7 @@ export async function handleStudioAccountAvatar(request, env, userId) {
   if(!request.headers.get("content-type")?.startsWith("application/json")) return answer({ok:false,error:"json_content_type_required"},415);
  }
  const row=await env.DB.prepare(`SELECT ui_preferences_json FROM agentsam_user_ui_preferences
-  WHERE workspace_id='' AND user_id=? LIMIT 1`).bind(userId).first();
+  WHERE account_id=? LIMIT 1`).bind(userId).first();
  const existing=decode(row?.ui_preferences_json);
  if(request.method==="GET") return answer({ok:true,avatar_url:normalizeAccountAvatar(existing.account_avatar_url) ?? null});
  const input=await request.json().catch(()=>null);
@@ -75,10 +75,10 @@ export async function handleStudioAccountAvatar(request, env, userId) {
  if(avatar===undefined) return answer({ok:false,error:"avatar_invalid"},400);
  const next={...existing,account_avatar_url:avatar};
  await env.DB.prepare(`INSERT INTO agentsam_user_ui_preferences
-  (workspace_id,user_id,ui_preferences_json,updated_at_unix)
-  VALUES ('',?,?,unixepoch())
-  ON CONFLICT(workspace_id,user_id) DO UPDATE SET
-  ui_preferences_json=excluded.ui_preferences_json,updated_at_unix=unixepoch()`)
+  (account_id,ui_preferences_json,updated_at)
+  VALUES (?,?,unixepoch())
+  ON CONFLICT(account_id) DO UPDATE SET
+  ui_preferences_json=excluded.ui_preferences_json,updated_at=unixepoch()`)
   .bind(userId,JSON.stringify(next)).run();
  return answer({ok:true,avatar_url:avatar});
 }
@@ -156,7 +156,7 @@ export async function handleStudioCompanionSettings(request, env, accountId) {
   if (!request.headers.get("content-type")?.startsWith("application/json")) return answer({ ok: false, error: "json_content_type_required" }, 415);
  }
  const row = await env.DB.prepare(`SELECT ui_preferences_json FROM agentsam_user_ui_preferences
-  WHERE workspace_id='' AND user_id=? LIMIT 1`).bind(accountId).first();
+  WHERE account_id=? LIMIT 1`).bind(accountId).first();
  const existing = decode(row?.ui_preferences_json);
  const current = normalizeCompanionSettings(existing.inneranimal_companions);
  if (request.method === "GET") return answer({ ok: true, settings: current });
@@ -180,10 +180,10 @@ export async function handleStudioCompanionSettings(request, env, accountId) {
  const settings = { activeId, customCompanions };
  const next = { ...existing, inneranimal_companions: settings };
  await env.DB.prepare(`INSERT INTO agentsam_user_ui_preferences
-  (workspace_id,user_id,ui_preferences_json,updated_at_unix)
-  VALUES ('',?,?,unixepoch())
-  ON CONFLICT(workspace_id,user_id) DO UPDATE SET
-  ui_preferences_json=excluded.ui_preferences_json,updated_at_unix=unixepoch()`)
+  (account_id,ui_preferences_json,updated_at)
+  VALUES (?,?,unixepoch())
+  ON CONFLICT(account_id) DO UPDATE SET
+  ui_preferences_json=excluded.ui_preferences_json,updated_at=unixepoch()`)
   .bind(accountId, JSON.stringify(next)).run();
  return answer({ ok: true, settings });
 }
