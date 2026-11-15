@@ -14,7 +14,7 @@ INSERT OR IGNORE INTO agentsam_plugins (
   '["docker.discover","docker.containers.read","docker.files.read","docker.files.write","docker.lifecycle.manage"]',
   '["local","remote"]',
   '{"app":{"nav":{"label":"Docker","href":"/settings/runtime","icon":"container"},"surfaces":["side-stage"],"skills":[]},"side_stage":{"version":1,"id":"docker","renderer":"workspace","icon":"box","default_visible":false},"setup":{"requires":"authorized_host","credentials":"host_only","oauth":false}}',
-  65, 0, 1, 'native_probe'
+  65, 0, 1, 'adapter'
 );
 -- No account-wide automatic installation or enabled status. A new customer
 -- explicitly installs it; multiple engine contexts are choices inside that install.
