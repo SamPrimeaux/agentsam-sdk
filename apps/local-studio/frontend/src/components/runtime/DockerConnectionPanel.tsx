@@ -121,7 +121,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2"><Container size={17}/><div><h3 className="font-semibold">Docker Engine</h3>
         <p className="text-xs text-muted-foreground">Local socket or existing SSH/TLS Docker context</p></div></div>
-      <button type="button" disabled={loading} onClick={()=>void refresh()} className="rounded-md border border-border p-2 hover:bg-muted" aria-label="Refresh Docker contexts"><RefreshCw size={14}/></button>
+      <button type="button" disabled={loading} onClick={()=>void refresh()} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 hover:bg-muted" aria-label="Refresh Docker contexts"><RefreshCw size={14}/><span>Refresh</span></button>
     </div>
     {error&&<p role="alert" className="rounded-md border border-destructive p-2 text-xs text-destructive">{error}</p>}
     {notice&&<p role="status" className="text-xs text-muted-foreground">{notice}</p>}
