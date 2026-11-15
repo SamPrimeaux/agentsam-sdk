@@ -76,10 +76,10 @@
     message.setAttribute('role','alert');
     container.append(message);
   };
-  // A Try action creates (or resumes) an account-owned authoring workspace.
-  // It does not create a CMS site or select a customer's existing website.
-  // An explicit site_id remains available for deliberate site-bound installs.
-  async function openStudioWorkspace(theme,button,container,{copy=false}={}) {
+  // Every Try creates a new private draft site (cms_sites + cms_site_themes) so
+  // people can sandbox as many themes and variations as they like. It never
+  // touches an existing live website.
+  async function openStudioWorkspace(theme,button,container) {
     if(button.disabled) return;
     button.disabled=true;
     const previous=button.textContent;
@@ -90,14 +90,13 @@
       const result=await requestJSON(
         '/api/admin/website-themes/'+encodeURIComponent(theme.slug)+'/install',
         {method:'POST',headers:{'content-type':'application/json'},
-          body:JSON.stringify({version:theme.version,...(copy?{copy:true}:{})})});
-      if(typeof result.editor_url!=='string' || !['studio','site'].includes(result.scope))
+          body:JSON.stringify({version:theme.version})});
+      if(typeof result.editor_url!=='string' || result.scope!=='site')
         throw Error('The installer did not return an owned Theme Studio workspace');
       const editor=new URL(result.editor_url,location.origin);
       if(editor.origin!==location.origin || editor.pathname!=='/admin/theme-project-editor' ||
         editor.searchParams.get('project')!==result.project_id ||
-        (result.scope==='studio' && (editor.searchParams.get('scope')!=='studio' || editor.searchParams.has('site_id'))) ||
-        (result.scope==='site' && (!/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id||'') || editor.searchParams.get('site_id')!==result.site_id)))
+        !/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id||'') || editor.searchParams.get('site_id')!==result.site_id)
         throw Error('The installer returned an invalid editor destination');
       if(message)message.textContent=result.unchanged
         ? 'Opening your saved Theme Studio workspace…'
@@ -105,8 +104,7 @@
       const embedded=window.parent&&window.parent!==window;
       const target=embedded?window.parent:window;
       const appRoute=new URLSearchParams({page:editor.pathname,project:result.project_id});
-      if(result.scope==='studio') appRoute.set('scope','studio');
-      else appRoute.set('site_id',result.site_id);
+      appRoute.set('site_id',result.site_id);
       const route=embedded
         ? '/apps/ecommerce-cms-agentsam?'+appRoute.toString()
         : editor.pathname+editor.search;
@@ -218,11 +216,7 @@
         install.dataset.installTheme=theme.slug;
         install.setAttribute('aria-label', 'Add ' + theme.name);
         install.addEventListener('click',()=>void openStudioWorkspace(theme,install,item));
-        const copy = node('button','btn ghost small theme-marketplace-copy','Make a copy');
-        copy.type='button';
-        copy.setAttribute('aria-label','Create another independent copy of '+theme.name);
-        copy.addEventListener('click',()=>void openStudioWorkspace(theme,copy,item,{copy:true}));
-        body.append(identity,install,copy);
+        body.append(identity,install);
       } else {
         const detail = trusted(theme.detail_url, '/themes/' + theme.slug + '/');
         const view = detail && link('View theme', detail);

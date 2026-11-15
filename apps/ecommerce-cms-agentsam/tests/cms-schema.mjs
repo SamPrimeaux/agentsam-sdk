@@ -18,8 +18,4 @@ export const siteThemesMigration = readFileSync(
   new URL("../db/migrations/005_cms_site_themes.sql", import.meta.url), "utf8",
 );
 
-export const themeStudioMigration = readFileSync(
-  new URL("../db/migrations/007_account_scoped_theme_studio.sql", import.meta.url), "utf8",
-);
-
-export const schema = [preSiteSchema, siteFirstMigration, siteThemesMigration, themeStudioMigration].join("\n\n");
+export const schema = [preSiteSchema, siteFirstMigration, siteThemesMigration].join("\n\n");

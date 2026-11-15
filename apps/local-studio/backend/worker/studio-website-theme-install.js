@@ -9,25 +9,15 @@
  */
 import { resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
 import { installThemeDraft } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
-import { installThemeStudioDraft, createStudioThemeProject } from '../../../ecommerce-cms-agentsam/backend/cms/theme-studio-store.mjs';
+import { installThemeDraftSite } from '../../../ecommerce-cms-agentsam/backend/cms/theme-draft-sites.mjs';
 
 const STORE = 'https://themes.inneranimalmedia.com';
-const INDEX = '/ecommerce-cms-agentsam/admin/data/site-theme-projects/index.json';
 const SAFE_SLUG = /^[a-z][a-z0-9-]{0,63}$/;
 const SAFE_ID = /^[a-zA-Z0-9_-]{1,160}$/;
 const HASH = /^[0-9a-f]{64}$/;
 const json = (body, status=200) => Response.json(body, {
   status, headers: { 'cache-control':'private, no-store', 'x-content-type-options':'nosniff' },
 });
-const getAsset = async (request, env, path) => {
-  if (!env.ASSETS) throw Error('theme_release_assets_unavailable');
-  const url = new URL(request.url);
-  url.pathname = path;
-  url.search = '';
-  const response = await env.ASSETS.fetch(new Request(url,{ method:'GET' }));
-  if (!response.ok) throw Error('theme_release_assets_unavailable');
-  return response.json();
-};
 async function remoteInstallIndex() {
   const reply = await fetch(STORE+'/api/install-index',{
     headers:{accept:'application/json'}, signal:AbortSignal.timeout(7000),
@@ -38,27 +28,23 @@ async function remoteInstallIndex() {
      !Array.isArray(data.packages))throw Error('theme_install_index_invalid');
   return data;
 }
-export async function getWebsiteThemeInstallIndex(request, env) {
-  // The immutable theme release owns its project/index. SDK deployment must
-  // never be required every time someone publishes a new website starter.
-  // Bundled index is retained only for backwards-compatible rollouts.
-  let data;
-  try {data=await remoteInstallIndex();}
-  catch {data=await getAsset(request,env,INDEX);}
-  if(data?.schema!=='agentsam.website-theme-install-index.v1' || !Array.isArray(data.packages))
-    throw Error('theme_install_index_invalid');
-  return data.packages.filter(p=>{
-    if(!SAFE_SLUG.test(p.slug||'')||!/^\d+\.\d+\.\d+$/.test(p.version||'')||
-      !HASH.test(p.sha256||'')||!Number.isInteger(p.page_count)||p.page_count<1||p.page_count>80)
-      return false;
-    if (p.project_sha256) return HASH.test(p.project_sha256) &&
-      p.project_key === 'install-projects/'+p.slug+'/'+p.version+'/'+p.project_sha256+'.json' &&
-      p.project_url === '/api/themes/'+p.slug+'/'+p.version+'/project';
-    return p.project_asset === '/ecommerce-cms-agentsam/admin/data/site-theme-projects/'+p.slug+'-'+p.version+'.json';
-  });
+export async function getWebsiteThemeInstallIndex(_request, _env) {
+  // The Theme Store is the SOLE release/package authority. SDK Workers must
+  // never fall back to copied stock-theme JSON in their own static assets.
+  // A release may be installed only after the signed ZIP and checksum-addressed
+  // editor project have both been verified and indexed by Theme Store R2.
+  const data=await remoteInstallIndex();
+  return data.packages.filter(p=>
+    SAFE_SLUG.test(p.slug||'') && /^\d+\.\d+\.\d+$/.test(p.version||'') &&
+    HASH.test(p.sha256||'') &&
+    Number.isInteger(p.page_count) && p.page_count>=1 && p.page_count<=80 &&
+    HASH.test(p.project_sha256||'') &&
+    p.project_key==='install-projects/'+p.slug+'/'+p.version+'/'+p.project_sha256+'.json' &&
+    p.project_url==='/api/themes/'+p.slug+'/'+p.version+'/project'
+  );
 }
-async function getVerifiedInstallProject(request,env,release) {
-  if(!release.project_sha256) return getAsset(request,env,release.project_asset);
+async function getVerifiedInstallProject(_request,_env,release) {
+  if(!HASH.test(release.project_sha256||''))throw Error('theme_verified_project_required');
   const path=STORE+'/api/themes/'+release.slug+'/'+release.version+'/project';
   const reply=await fetch(path,{headers:{accept:'application/json'},signal:AbortSignal.timeout(9000)});
   if(!reply.ok)throw Error('installer_project_unavailable');
@@ -91,8 +77,7 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
   let body;
   try { body=await request.json(); } catch { return json({ok:false,error:'invalid_json'},400); }
   if(!body||typeof body!=='object'||Array.isArray(body) ||
-    Object.keys(body).some(key=>!['site_id','version','copy'].includes(key)) ||
-    (body.copy !== undefined && typeof body.copy !== 'boolean') ||
+    Object.keys(body).some(key=>!['site_id','version'].includes(key)) ||
     (body.site_id != null && !SAFE_ID.test(body.site_id)) || !/^\d+\.\d+\.\d+$/.test(body.version||'')) {
     return json({ok:false,error:'package_version_or_site_id_invalid'},400);
   }
@@ -145,29 +130,22 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
       package_version:body.version,
       preview_url:base,
     };
-    // Every authenticated account can curate multiple genuinely independent
-    // canvases. Copy always imports the verified project; it never touches a
-    // live site, the shared stock package or someone else's draft.
-    if (body.copy === true && site)
-      return json({ok:false,error:'site_free_copy_requires_studio_scope'},400);
-    const result=body.copy === true
-      ? await createStudioThemeProject(env,accountId,{
-          ...structuredClone(project),
-          id:'copy_'+crypto.randomUUID().replaceAll('-','').slice(0,12),
-          name:project.name+' — Copy', revision:0,
-          createdAt:null,updatedAt:null,clonedFromThemeProject:project.id,
-        })
-      : site
-        ? await installThemeDraft(env,accountId,slug,installPayload,site.id)
-        : await installThemeStudioDraft(env,accountId,slug,installPayload);
+    // Every "try" without an explicit site gets its own draft site, so any
+    // authenticated account can sandbox as many themes/copies as it likes. An
+    // explicit site_id installs into that owned site instead.
+    const result=site
+      ? await installThemeDraft(env,accountId,slug,installPayload,site.id)
+      : await installThemeDraftSite(env,accountId,slug,installPayload);
     if(!result.ok)return json(result,result.status||503);
     const projectId=result.project.id;
+    const siteId=site ? site.id : result.site_id;
     const editor='/admin/theme-project-editor?project='+encodeURIComponent(projectId)+
-      (site ? '&site_id='+encodeURIComponent(site.id) : '&scope=studio');
+      '&site_id='+encodeURIComponent(siteId);
     return json({
       ok:true,installed:true,unchanged:result.unchanged===true,
-      scope:site?'site':'studio',
-      ...(site ? {site_id:site.id,site_name:site.name,site_status:site.status} : {}),
+      scope:'site',
+      site_id:siteId,site_name:site?site.name:result.site_name,
+      ...(site ? {site_status:site.status} : {site_status:'draft',theme_id:result.theme_id}),
       project_id:projectId,
       page_count:result.project.pages.length,
       source_release_sha256:ready.sha256,
@@ -180,6 +158,7 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
     if(/site_not_found|cms_site_not_found|site_access_denied|account_required/.test(message))
       return json({ok:false,error:'site_not_found_or_unauthorized'},404);
     console.error('website_theme_install_failed',slug,message);
-    return json({ok:false,error:'theme_install_failed'},503);
+    const reason=/^[a-z][a-z0-9_]{2,80}$/.test(message)?message:undefined;
+    return json({ok:false,error:'theme_install_failed',...(reason?{reason}:{})},503);
   }
 }

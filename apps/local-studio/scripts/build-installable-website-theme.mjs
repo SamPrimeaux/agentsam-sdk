@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 /**
- * Build an editable, site-owned CMS project from any reviewed website release.
+ * Build an editable CMS project from a reviewed Theme Store release.
+ * This is a reusable authoring utility, NOT a platform package registry.
+ * Theme Store is the sole owner of all generated distributable projects.
  *
  * No theme-specific source manifests or hard-coded page lists. All content is
  * extracted from the *real rendered release*. Static HTML routes are read from
  * the immutable ZIP; dynamic routes are discovered from links in the preview.
  *
  * Usage:
- *   node scripts/build-installable-website-theme.mjs revise
- *   node scripts/build-installable-website-theme.mjs revise --staged /path/to/staged-releases.json
+ *   node scripts/build-installable-website-theme.mjs revise --output /path/to/inneranimalmedia-theme-store/packages/theme-revise
+ *   node scripts/build-installable-website-theme.mjs revise --output /path/to/inneranimalmedia-theme-store/packages/theme-revise --staged /path/to/staged-releases.json
  *
  * --staged is for release QA before catalog activation; ordinary rebuilds
  * consume the published manifest/download through the Theme Store API.
@@ -26,6 +28,14 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const slug=process.argv[2];
 if(!/^[a-z][a-z0-9-]{0,63}$/.test(slug||''))throw Error('Usage: build-installable-website-theme.mjs <slug> [--staged /path/to/staged-releases.json]');
 const origin='https://themes.inneranimalmedia.com';
+const outputAt=process.argv.indexOf('--output');
+if(outputAt<0 || !process.argv[outputAt+1])
+  throw Error('theme_store_output_required: use --output /path/to/inneranimalmedia-theme-store/packages/theme-'+slug);
+const destination=resolve(process.argv[outputAt+1]);
+const sdkAssets=join(root,'apps/ecommerce-cms-agentsam/frontend/static');
+if(destination===sdkAssets || destination.startsWith(sdkAssets+'/') ||
+   !/\/packages\/theme-[a-z][a-z0-9-]{0,63}$/.test(destination))
+  throw Error('theme_store_package_destination_required: theme distributions must never be baked into the SDK');
 const stageAt=process.argv.indexOf('--staged');
 const stageFile=stageAt>=0?process.argv[stageAt+1]:null;
 if(stageAt>=0&&!stageFile)throw Error('stage_file_required');
@@ -315,18 +325,11 @@ try {
    portability.errors.map(x=>x.code+'='+x.detail).join('|'));
  const output=Buffer.from(JSON.stringify(project,null,2)+'\n');
  if(output.length>8*1024*1024)throw Error('theme_project_too_large:'+slug+':'+output.length);
- const destination=join(root,'apps/ecommerce-cms-agentsam/frontend/static/data/site-theme-projects');
  await mkdir(destination,{recursive:true});
- const filename=slug+'-'+release.version+'.json';
+ const filename='install-project.json';
  await writeFile(join(destination,filename),output);
- const indexPath=join(destination,'index.json');
- let prior=[];
- try {const old=JSON.parse(await readFile(indexPath,'utf8'));if(old.schema==='agentsam.website-theme-install-index.v1')prior=old.packages;} catch{}
- const ready={slug,version:release.version,sha256:release.sha256,page_count:pages.length,
-   manifest_page_count:project.sourceManifestPageCount,
-   project_asset:'/ecommerce-cms-agentsam/admin/data/site-theme-projects/'+filename};
- await writeFile(indexPath,JSON.stringify({schema:'agentsam.website-theme-install-index.v1',
-   packages:[...prior.filter(p=>p.slug!==slug),ready].sort((a,b)=>a.slug.localeCompare(b.slug))},null,2)+'\n');
+ // Theme Store generates/publishes its own immutable ZIP, R2 project object,
+ // install-index and catalog receipt. Never write a release index into SDK.
  console.log('[project-ready]',JSON.stringify({slug,version:release.version,sha256:release.sha256,page_count:pages.length,
    section_count:pages.reduce((n,p)=>n+p.sections.length,0),bytes:output.length,missing,failedAssets:[...failedAssets]}));
 } finally {await browser?.close();await rm(temp,{recursive:true,force:true});}

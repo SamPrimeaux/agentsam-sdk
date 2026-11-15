@@ -447,3 +447,8 @@ export async function saveThemeProject(env, accountId, id, value, expectedVersio
   if (!saved.ok) return { ok: false, status: saved.status || 503, error: saved.code || "theme_project_save_failed" };
   return { ok: true, project };
 }
+
+/** Pointer row for a project's current immutable snapshot (inventory sync). */
+export async function themeProjectPointer(env, accountId, id, siteId) {
+  return projectRow(env, accountId, id, siteId);
+}
