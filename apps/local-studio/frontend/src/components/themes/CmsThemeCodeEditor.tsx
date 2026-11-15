@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { WorkspaceEditor } from '@inneranimalmedia/agentsam-ide/surface';
 import '@inneranimalmedia/agentsam-ide/surface/workspace-editor.css';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+const renderIDEWorkspaceMarkdown = (content:string) => <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>;
 import { createCmsThemeFileWorkspace } from './CmsThemeFileWorkspace';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
 
@@ -36,7 +39,7 @@ export function CmsThemeCodeEditor({ projectId, siteId }: { projectId:string; si
     else window.location.assign(route);
   };
   return <div className="h-full min-h-0 w-full" data-theme-code-editor>
-    <WorkspaceEditor workspace={workspace} workspaceId={siteId+':'+projectId} label={name}
+    <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} workspace={workspace} workspaceId={siteId+':'+projectId} label={name}
       onExit={goBack}/>
   </div>;
 }
