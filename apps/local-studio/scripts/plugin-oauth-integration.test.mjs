@@ -17,7 +17,7 @@ const callbackUrl='https://agentsam.inneranimalmedia.com/api/plugins/oauth/callb
 test('OAuth success returns directly to the D1-selected plugin in Studio, not a timer page',()=>{
   const destination=new URL(pluginOAuthReturnUrl(callbackUrl+'?code=secret&state=opaque','agentsam-brand'));
   assert.equal(destination.origin,'https://agentsam.inneranimalmedia.com');
-  assert.equal(destination.pathname,'/settings/customize');
+  assert.equal(destination.pathname,'/admin/settings/customize');
   assert.equal(destination.searchParams.get('view'),'plugins');
   assert.equal(destination.searchParams.get('connected'),'agentsam-brand');
   assert.equal(destination.searchParams.has('code'),false);
