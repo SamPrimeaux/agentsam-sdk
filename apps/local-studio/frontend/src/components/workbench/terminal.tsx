@@ -97,7 +97,7 @@ export function TerminalPane({
   const sessions = useTerminalSessionStore((s) => s.sessions);
   const splitView = useTerminalSessionStore((s) => s.splitView);
   const gridView = useTerminalSessionStore((s) => s.gridView);
-  const gridSessionIds = useTerminalSessionStore((s) => s.gridSessionIds ?? []);
+  const gridSessionIds = useTerminalSessionStore((s) => s.gridSessionIds) ?? [];
   const gridColumnFraction = useTerminalSessionStore((s) => s.gridColumnFraction ?? 0.5);
   const gridFirstRowFraction = useTerminalSessionStore((s) => s.gridFirstRowFraction ?? 1 / 3);
   const setGridColumnFraction = useTerminalSessionStore((s) => s.setGridColumnFraction);

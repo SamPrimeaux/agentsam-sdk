@@ -51,7 +51,7 @@ function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
 
 function WorkOutputCards({ files }: {files: Artifact[]}) {
   const openSideTab = useWorkStore(state => state.openSideTab);
-  const projectFiles = useWorkStore(state => state.projects.find(project => project.id === state.activeProjectId)?.files ?? []);
+  const projectFiles = useWorkStore(state => state.projects.find(project => project.id === state.activeProjectId)?.files) ?? [];
   if (!files.length) return null;
   function open(file: Artifact) {
     const inProject = projectFiles.find(item=>item.path===file.path);
@@ -154,8 +154,8 @@ export function MessageList({
   streaming: boolean;
   readingMode?: boolean;
 }) {
-  const chatFiles = useWorkStore(s => s.chats.find(chat=>chat.id===chatId)?.files ?? []);
-  const projectFiles = useWorkStore(s => s.projects.find(project=>project.id===s.activeProjectId)?.files ?? []);
+  const chatFiles = useWorkStore(s => s.chats.find(chat => chat.id === chatId)?.files) ?? [];
+  const projectFiles = useWorkStore(s => s.projects.find(project => project.id === s.activeProjectId)?.files) ?? [];
   const documents = [...chatFiles,...projectFiles.filter(file=>file.chatId===chatId)]
     .filter((file,index,rows)=>rows.findIndex(other=>other.path===file.path)===index)
     .filter(file => /\\.(md|txt|markdown|agentdoc\\.html)$/.test(file.path));
