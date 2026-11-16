@@ -133,6 +133,7 @@ export function DesignWorkspaceFrame({
           ))}
       </nav>
       <div className="dw-layout">
+        {mobilePane !== "stage" && <button type="button" className="dw-mobile-scrim" aria-label="Close design panel" onClick={() => setMobilePane("stage")} />}
         {explorer && (
           <>
             <aside
