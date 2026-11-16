@@ -265,6 +265,10 @@ packages:
       name: "@inneranimalmedia/fnf-theme"
       path: "packages/fnf-theme"
       readiness: unverified
+    - id: "iamscene"
+      name: "@inneranimalmedia/iamscene"
+      path: "packages/iamscene"
+      readiness: unverified
     - id: "primetech-procedures"
       name: "@inneranimalmedia/primetech-procedures"
       path: "packages/primetech-procedures"

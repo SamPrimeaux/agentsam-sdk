@@ -30,6 +30,7 @@
     "Replacing canonical CAD project history or CAD Creator project authority",
     "Using a rendered GLB as the only editable source for a scene"
   ],
+  "commands": [],
   "topics": ["3d", "scene-graph", "animation", "gltf", "occt", "threejs", "authoring", "visualization"],
   "evidence": {
     "directory": "packages/iamscene",
