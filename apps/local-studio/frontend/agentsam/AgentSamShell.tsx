@@ -262,11 +262,11 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       return;
     }
     if (pathOnly === '/docs' || pathOnly.startsWith('/docs/')) {
-      go('/settings/docs');
+      go('/admin/settings/docs');
       return;
     }
     if (pathOnly === '/admin/products/help/artwork' || pathOnly.startsWith('/admin/products/help/artwork')) {
-      go('/settings/docs?topic=artwork');
+      go('/admin/settings/docs?topic=artwork');
       return;
     }
     if (pathOnly.startsWith('/admin/') && !isStudioAdminPath(pathOnly)) {
