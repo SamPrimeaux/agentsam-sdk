@@ -5,7 +5,7 @@ export const Route = createFileRoute('/(apps)/admin/docs')({
   beforeLoad: ({ location }) => {
     const topic = new URLSearchParams(location.searchStr).get('topic');
     throw redirect({
-      to: '/settings/docs' as never,
+      to: '/admin/settings/docs' as never,
       search: topic ? { topic } : undefined,
     } as never);
   },
