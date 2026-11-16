@@ -3359,35 +3359,39 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio-toolbar .te-page-trigger__content>svg {display:none;}
 }
 
-/* Safari browser-first: don't double-clamp 100dvh to visualViewport.height.
-   The native Safari address bar is separate; the editor itself must end at
-   the browser content bottom without inserting a gray spacer. */
+/* Mobile editor: the storefront owns the viewport. Sections and settings
+   remain the SAME existing draggable sheets, opened by the existing toolbar
+   Sections control or selecting a canvas element. Do not reserve an always-on
+   navigation strip above Safari's own browser toolbar. */
 @media (max-width:900px) {
   .theme-studio {
-    --te-mobile-tabs-height: max(61px, calc(56px + env(safe-area-inset-bottom, 0px)));
-    height: 100dvh;
-    max-height: 100dvh;
-    min-height: 0;
+    height:100dvh;
+    max-height:100dvh;
+    min-height:0;
+    min-width:0;
+    overflow:hidden;
   }
   .theme-studio .theme-studio-workspace,
   .theme-studio[data-editor-drawer="closed"] .theme-studio-workspace {
-    grid-template-rows: minmax(0, 1fr) var(--te-mobile-tabs-height);
+    grid-template-rows:minmax(0,1fr);
+    min-width:0;
+    height:100%;
+    overflow:hidden;
   }
   .theme-studio .te-mobile-pane-switch {
-    box-sizing: border-box; /* padding and border must fit INSIDE the grid row */
-    height: var(--te-mobile-tabs-height);
-    min-height: var(--te-mobile-tabs-height);
-    padding-bottom: max(5px, env(safe-area-inset-bottom, 0px));
+    display:none!important;
   }
   .theme-studio .theme-studio-tree,
   .theme-studio .theme-editor-panel {
-    bottom: var(--te-mobile-tabs-height);
+    bottom:0;
+    max-width:100%;
+    min-width:0;
   }
   .theme-studio .te-mobile-selection-bar {
-    bottom: calc(var(--te-mobile-tabs-height) + 7px);
+    bottom:max(8px, env(safe-area-inset-bottom, 0px));
   }
   .theme-studio #te-block-panel[data-panel-state] {
-    bottom: calc(var(--te-mobile-tabs-height) + 12px)!important;
+    bottom:calc(12px + env(safe-area-inset-bottom, 0px))!important;
   }
 }
 
