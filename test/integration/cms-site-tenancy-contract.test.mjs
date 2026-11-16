@@ -117,7 +117,7 @@ test('Local Studio /cms is a route alias, not a second CMS editor', () => {
   assert.doesNotMatch(routeContent, /slug:\s*["']agentsam-sdk["']/);
 
   const navRail = read('apps', 'local-studio', 'frontend', 'src', 'components', 'shell', 'nav-rail.tsx');
-  assert.match(navRail, /to:\s*"\/cms"/);
+  assert.match(navRail, /to:\s*"\/admin\/cms"/, "CMS navigation uses the canonical admin namespace");
   assert.match(navRail, /label:\s*"CMS"/);
 });
 
