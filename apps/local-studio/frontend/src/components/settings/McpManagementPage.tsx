@@ -129,7 +129,7 @@ export function McpManagementPage(){
           <span className="text-[11px] text-muted-foreground">{server.enabled?"Active":"Not connected"}</span>
           <IconAction label={"Edit "+server.name} variant="ghost" disabled={busy} onClick={()=>setDraft({id:server.id,name:server.name,url:server.url||""})}><Pencil className="size-4"/></IconAction>
           {confirmDelete===server.id?<span className="flex items-center gap-1"><button type="button" disabled={busy} className="text-xs text-destructive" onClick={()=>void mutate("DELETE",server.id)}>Confirm delete</button><button type="button" className="text-xs" onClick={()=>setConfirmDelete(null)}>Cancel</button></span>:<IconAction label={"Delete "+server.name} variant="ghost" disabled={busy} onClick={()=>setConfirmDelete(server.id)}><Trash2 className="size-4"/></IconAction>}
-        </div>:<a href="/settings/customize?view=plugins" className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-2 text-xs hover:bg-muted">Plugins <ExternalLink size={12}/></a>}
+        </div>:<a href="/admin/settings/customize?view=plugins" className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-2 text-xs hover:bg-muted">Plugins <ExternalLink size={12}/></a>}
       </div>)}
     </div>
   </section>;
