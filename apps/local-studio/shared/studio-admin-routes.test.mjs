@@ -10,6 +10,7 @@ test('legacy dashboard document paths canonicalize under /admin', () => {
   const cases = [
     ['/admin', '/admin/home'],
     ['/media', '/admin/media'],
+    ['/analytics/overview', '/admin/analytics/overview'],
     ['/media/images', '/admin/media/images'],
     ['/chats/chat_123', '/admin/chats/chat_123'],
     ['/forms', '/admin/forms'],
@@ -46,6 +47,8 @@ test('Studio route ownership does not swallow Ecommerce-owned admin routes', () 
   assert.equal(isStudioAdminPath('/admin/media/images'), true);
   assert.equal(isStudioAdminPath('/admin/settings/general'), true);
   assert.equal(isStudioAdminPath('/admin/chats/chat_123'), true);
+  assert.equal(isStudioAdminPath('/admin/analytics'), true);
+  assert.equal(isStudioAdminPath('/admin/analytics/overview'), false);
   assert.equal(isStudioAdminPath('/admin/products'), false);
   assert.equal(isStudioAdminPath('/admin/orders'), false);
   assert.equal(isStudioAdminPath('/admin/pages'), false);
