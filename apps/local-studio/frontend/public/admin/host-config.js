@@ -497,8 +497,8 @@
         "/admin/themes", "/admin/tickets", "/admin/widgets",
         "/admin/apps/ecommerce-cms-agentsam",
       ];
-      const isStudioAdminDestination = studioAdminMounts.some((mount) =>
-        path === mount || path.startsWith(mount + "/"));
+      const isStudioAdminDestination = !path.startsWith("/admin/analytics/") &&
+        studioAdminMounts.some((mount) => path === mount || path.startsWith(mount + "/"));
       const destination = path.startsWith("/admin/") && isStudioAdminDestination ? path
         : path.startsWith("/admin/")
           ? "/admin/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
