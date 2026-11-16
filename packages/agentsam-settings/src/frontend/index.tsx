@@ -722,7 +722,7 @@ function PluginDetailPage({open,title,description,onBack,children,agentProfile=f
     <div className={agentProfile ? "agent-profile-lead space-y-3" : "space-y-6"}>
       <nav aria-label={agentProfile ? "Agent profile navigation" : "Plugin breadcrumb"} className="flex items-center gap-2 text-[12px] text-muted-foreground">
         {agentProfile
-          ? <button type="button" onClick={onBack} aria-label="Back to agents" className="agent-profile-back"><ChevronLeft className="size-5"/></button>
+          ? <button type="button" onClick={onBack} className="agent-profile-back"><ChevronLeft className="size-5" aria-hidden="true"/><span className="text-sm font-medium">Back to agents</span></button>
           : <button type="button" onClick={onBack} className="min-h-9 rounded-lg px-2 transition hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30">Plugins</button>}
         {!agentProfile && <ChevronRight className="size-3.5"/>}
         <span className="truncate text-foreground">{agentProfile ? "Agents" : title}</span>
