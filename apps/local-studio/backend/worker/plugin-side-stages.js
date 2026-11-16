@@ -86,7 +86,7 @@ export function projectSideStageContribution(row) {
   const id = String(row.plugin_key || "");
   const pluginId = String(row.id || "");
   if (!TOKEN.test(id) || !/^plg_[a-f0-9]{8,}$/i.test(pluginId)) return null;
-  const label = String(row.display_name || "").trim().slice(0, LABEL_LIMIT);
+  const label = (nativeCanvas ? "Canvas" : String(row.display_name || "").trim()).slice(0, LABEL_LIMIT);
   if (!label) return null;
   return {
     id,
