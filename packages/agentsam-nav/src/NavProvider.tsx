@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type PropsWithChildren } from 'react';
 import type { NavTheme, NavValue, NavTokens } from './contracts.js';
 import { resolveNavDestinations, navBreadcrumbs } from './utils.js';
-import { createNavState, type NavStateStore } from './state.js';
+import { createNavState, stabilizeNavStateStore, type NavStateStore } from './state.js';
 
 export type NavContextValue = {
   data: NavValue;
@@ -64,7 +64,9 @@ export function NavProvider({
   const [ownedStore] = useState(() => createNavState({
     desktopOpen: defaultOpen && (typeof window === 'undefined' || window.innerWidth >= 1024),
   }));
-  const stateStore = suppliedStore ?? ownedStore;
+  // Hosted Ecommerce navigation is a separately bundled React root. Normalize
+  // external snapshots once per store identity before subscribing to them.
+  const stateStore = useMemo(() => suppliedStore ? stabilizeNavStateStore(suppliedStore) : ownedStore, [suppliedStore, ownedStore]);
   const { menu, desktopOpen, mobileOpen, isMobile, isPeeking, width } = useSyncExternalStore(stateStore.subscribe, stateStore.getSnapshot, stateStore.getSnapshot);
   const setMenu = useCallback((menu: string | null) => stateStore.setState({ menu }), [stateStore]);
   const setPeeking = useCallback((isPeeking: boolean) => stateStore.setState({ isPeeking }), [stateStore]);
