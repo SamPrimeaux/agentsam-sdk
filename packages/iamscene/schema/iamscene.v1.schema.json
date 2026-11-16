@@ -1,0 +1,744 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/iamscene/v1/scene.schema.json",
+  "title": "InnerAnimalMedia Scene Document",
+  "description": "Portable editable scene document. Geometry source, presentation assets and animation remain independently addressable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "format",
+    "formatVersion",
+    "metadata",
+    "coordinateSystem",
+    "assets",
+    "materials",
+    "scene",
+    "camera",
+    "environment",
+    "animations",
+    "interactions",
+    "extensionsUsed",
+    "extensionsRequired"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "format": {
+      "const": "iamscene"
+    },
+    "formatVersion": {
+      "const": "1.0.0"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "author": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "modifiedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "assetBaseUri": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 48
+          },
+          "uniqueItems": true
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "coordinateSystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handedness",
+        "upAxis",
+        "distanceUnit"
+      ],
+      "properties": {
+        "handedness": {
+          "const": "right"
+        },
+        "upAxis": {
+          "enum": [
+            "Y",
+            "Z"
+          ]
+        },
+        "distanceUnit": {
+          "enum": [
+            "m",
+            "cm",
+            "mm"
+          ]
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
+    },
+    "materials": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/material"
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rootNodeIds",
+        "nodes"
+      ],
+      "properties": {
+        "rootNodeIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projection",
+        "position",
+        "target",
+        "fov",
+        "near",
+        "far"
+      ],
+      "properties": {
+        "projection": {
+          "const": "perspective"
+        },
+        "position": {
+          "$ref": "#/$defs/vec3"
+        },
+        "target": {
+          "$ref": "#/$defs/vec3"
+        },
+        "fov": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 180
+        },
+        "near": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "far": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "background",
+        "ambientIntensity",
+        "lights"
+      ],
+      "properties": {
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "fog": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "color",
+            "near",
+            "far"
+          ],
+          "properties": {
+            "color": {
+              "type": "string"
+            },
+            "near": {
+              "type": "number",
+              "minimum": 0
+            },
+            "far": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "ambientIntensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "lights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "type",
+              "color",
+              "intensity",
+              "position"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "type": {
+                "enum": [
+                  "directional",
+                  "point"
+                ]
+              },
+              "color": {
+                "type": "string"
+              },
+              "intensity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "position": {
+                "$ref": "#/$defs/vec3"
+              }
+            }
+          }
+        }
+      }
+    },
+    "animations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/animation"
+      }
+    },
+    "interactions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/interaction"
+      }
+    },
+    "extensionsUsed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "extensionsRequired": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$"
+    },
+    "vec3": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "quat": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/vec3"
+        },
+        "rotation": {
+          "$ref": "#/$defs/quat"
+        },
+        "scale": {
+          "$ref": "#/$defs/vec3"
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "uri",
+        "mediaType"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "role": {
+          "enum": [
+            "presentation",
+            "geometry-source",
+            "texture",
+            "environment",
+            "audio",
+            "reference"
+          ]
+        },
+        "sourceNodeId": {
+          "$ref": "#/$defs/id"
+        },
+        "units": {
+          "enum": [
+            "m",
+            "cm",
+            "mm"
+          ]
+        }
+      }
+    },
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "baseColor"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "baseColor": {
+          "type": "string"
+        },
+        "emissive": {
+          "type": "string"
+        },
+        "emissiveIntensity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "metalness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "roughness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "transparent": {
+          "type": "boolean"
+        },
+        "additive": {
+          "type": "boolean"
+        },
+        "depthWrite": {
+          "type": "boolean"
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "transform",
+        "visible"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "kind": {
+          "enum": [
+            "group",
+            "mesh",
+            "path",
+            "pulse",
+            "light",
+            "text"
+          ]
+        },
+        "parentId": {
+          "$ref": "#/$defs/id"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "assetRef": {
+          "$ref": "#/$defs/id"
+        },
+        "materialRef": {
+          "$ref": "#/$defs/id"
+        },
+        "pathRef": {
+          "$ref": "#/$defs/id"
+        },
+        "geometry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "occt",
+                "polyline",
+                "sphere"
+              ]
+            },
+            "units": {
+              "enum": [
+                "mm",
+                "m"
+              ]
+            },
+            "operations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "type"
+                ],
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "enum": [
+                      "union",
+                      "subtract",
+                      "intersect",
+                      "extrude",
+                      "revolve",
+                      "sweep",
+                      "fillet",
+                      "chamfer",
+                      "shell",
+                      "offset"
+                    ]
+                  },
+                  "operands": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "minItems": 2
+                  },
+                  "source": {
+                    "type": "string",
+                    "maxLength": 80
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "points": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/vec3"
+              }
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "closed": {
+              "type": "boolean"
+            },
+            "segments": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "radialSegments": {
+              "type": "integer",
+              "minimum": 3
+            }
+          }
+        },
+        "renderOrder": {
+          "type": "integer"
+        },
+        "userData": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "text": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value"
+          ],
+          "properties": {
+            "value": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "fontFamily": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "renderFontFallback": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "fontSize": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "lineHeight": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "letterSpacing": {
+              "type": "number"
+            },
+            "depth": {
+              "type": "number",
+              "minimum": 0
+            },
+            "horizontalAlign": {
+              "type": "integer"
+            },
+            "verticalAlign": {
+              "type": "integer"
+            },
+            "editable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "animation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "duration",
+        "loop",
+        "tracks"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "targetId",
+              "property",
+              "keyframes"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "targetId": {
+                "$ref": "#/$defs/id"
+              },
+              "property": {
+                "type": "string"
+              },
+              "interpolation": {
+                "enum": [
+                  "linear",
+                  "step"
+                ]
+              },
+              "keyframes": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "time",
+                    "value"
+                  ],
+                  "properties": {
+                    "time": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "value": {},
+                    "easing": {
+                      "enum": [
+                        "linear",
+                        "sineInOut",
+                        "cubicInOut"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "interaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "targetId",
+        "event",
+        "action"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "targetId": {
+          "$ref": "#/$defs/id"
+        },
+        "event": {
+          "enum": [
+            "pointerenter",
+            "pointerleave",
+            "click"
+          ]
+        },
+        "action": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "animationId"
+          ],
+          "properties": {
+            "type": {
+              "const": "playAnimation"
+            },
+            "animationId": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      }
+    }
+  }
+}

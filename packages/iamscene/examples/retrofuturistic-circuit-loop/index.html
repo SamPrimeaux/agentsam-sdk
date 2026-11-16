@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#01050a" />
+    <title>Retrofuturistic Circuit Loop · InnerAnimalMedia</title>
+    <style>
+      :root { color-scheme: dark; background: #01050a; }
+      * { box-sizing: border-box; }
+      html, body, #scene { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #01050a; }
+      body { overscroll-behavior: none; }
+      #scene { position: fixed; inset: 0; }
+      #scene canvas { display: block; width: 100%; height: 100%; outline: none; }
+      #scene-status { position: fixed; left: 18px; bottom: 16px; color: rgba(160, 221, 235, .42); font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .16em; text-transform: uppercase; pointer-events: none; }
+      #scene-status[data-state="error"] { color: #ff8d8d; }
+    </style>
+  </head>
+  <body>
+    <main id="scene" aria-label="Animated retrofuturistic circuit scene"></main>
+    <div id="scene-status" role="status">INNERANIMALMEDIA · SCENE RUNTIME</div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

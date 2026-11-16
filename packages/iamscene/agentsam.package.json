@@ -1,0 +1,45 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "iamscene",
+  "name": "@inneranimalmedia/iamscene",
+  "version": "0.1.0",
+  "class": "package",
+  "status": "in-development",
+  "catalog_status": "needs-review",
+  "languages": ["typescript", "javascript", "json"],
+  "execution_domains": ["browser", "node", "desktop", "web", "headless"],
+  "purpose": "Portable editable .iamscene.json format, deterministic scene authoring and animation runtime, Three.js presentation, and required AgentSam OCCT geometry pipeline.",
+  "install": [
+    {
+      "type": "npm",
+      "package": "@inneranimalmedia/iamscene",
+      "command": "npm install @inneranimalmedia/iamscene"
+    }
+  ],
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/iamscene",
+    "public_claim": true
+  },
+  "use_when": [
+    "Creating, editing, validating, versioning, animating and showcasing portable 3D scenes in any supported JavaScript application",
+    "Using .iamscene.json as the editable source of truth and GLTF/GLB as interchange or presentation assets",
+    "Building precise scene geometry through the canonical @inneranimalmedia/agentsam-occt engine"
+  ],
+  "avoid_when": [
+    "Replacing canonical CAD project history or CAD Creator project authority",
+    "Using a rendered GLB as the only editable source for a scene"
+  ],
+  "topics": ["3d", "scene-graph", "animation", "gltf", "occt", "threejs", "authoring", "visualization"],
+  "evidence": {
+    "directory": "packages/iamscene",
+    "schema": "packages/iamscene/schema/iamscene.v1.schema.json",
+    "reference_scene": "packages/iamscene/examples/retrofuturistic-circuit-loop/retrofuturistic-circuit-loop.iamscene.json",
+    "tests": [
+      "packages/iamscene/test/document.test.mjs",
+      "packages/iamscene/test/editor.test.mjs",
+      "packages/iamscene/test/animation.test.mjs",
+      "packages/iamscene/test/occt.test.mjs"
+    ]
+  }
+}

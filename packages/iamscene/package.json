@@ -1,0 +1,55 @@
+{
+  "name": "@inneranimalmedia/iamscene",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Portable editable 3D scene format, authoring API, animation runtime, Three.js presentation and AgentSam OCCT geometry pipeline.",
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "public"
+  },
+  "releaseTrain": "independent",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./node": {
+      "types": "./dist/src/node.d.ts",
+      "import": "./dist/src/node.js"
+    },
+    "./schema": "./schema/iamscene.v1.schema.json",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "iamscene": "./bin/iamscene.mjs"
+  },
+  "files": [
+    "dist/",
+    "schema/",
+    "examples/",
+    "bin/",
+    "README.md",
+    "agentsam.package.json"
+  ],
+  "bundledDependencies": [
+    "@inneranimalmedia/agentsam-occt",
+    "@inneranimalmedia/agentsam-3d-viewer"
+  ],
+  "dependencies": {
+    "@inneranimalmedia/agentsam-occt": "2.6.15",
+    "@inneranimalmedia/agentsam-3d-viewer": "2.6.15",
+    "ajv": "^8.20.0",
+    "three": "^0.187.0",
+    "@types/three": "^0.187.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "engines": {
+    "node": ">=22 <27"
+  }
+}
