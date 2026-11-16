@@ -138,8 +138,25 @@ export function EcommerceAppView({ search }: {
     })()
     : null;
 
+  // iOS Safari can terminate a deeply nested editor document while it loads.
+  // On a phone, launch the same packaged CMS editor asset as the top-level
+  // document instead of wrapping its srcdoc editor + storefront preview in an
+  // additional Local Studio iframe. The product still owns this editor,
+  // authorization and draft persistence; desktop embedding remains unchanged.
+  const standalonePhoneEditor = typeof window !== 'undefined'
+    && !isPackagedDesktop()
+    && page?.split('?')[0] === '/admin/theme-project-editor'
+    && window.matchMedia('(max-width: 900px)').matches;
+  useEffect(() => {
+    if (!standalonePhoneEditor || !url || !bridgeReady || authPending || (!user && !localPreview)) return;
+    const target = new URL(url, window.location.origin);
+    target.searchParams.delete('__agentsamEmbedded');
+    window.location.replace(target.pathname + target.search + target.hash);
+  }, [standalonePhoneEditor, url, bridgeReady, authPending, user, localPreview]);
+
   if (!bridgeReady || authPending) return <p className="p-8 text-muted-foreground">Loading AgentSam account…</p>;
   if (!user && !localPreview) return <RedirectToSignIn />;
+  if (standalonePhoneEditor) return <p role="status" className="p-5 text-sm text-muted-foreground">Opening Theme Studio…</p>;
 
   // Compatibility for saved CMS navigation links created before Design Canvas
   // was unified. Do not try to mount it as a packaged ecommerce route.
