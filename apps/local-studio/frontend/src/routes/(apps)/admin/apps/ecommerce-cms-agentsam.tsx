@@ -87,9 +87,8 @@ function EcommerceAppHost() {
  * /apps/... wrapper intentionally share this one component and product routes.
  * The clean mount frames the packaged asset to avoid an iframe self-loop.
  */
-export function EcommerceAppView({ search, forcePackagedAsset = false }: {
+export function EcommerceAppView({ search }: {
   search: Search;
-  forcePackagedAsset?: boolean;
 }) {
   const [bridgeReady, setBridgeReady] = useState(!isPackagedDesktop());
   useEffect(() => {
@@ -104,12 +103,16 @@ export function EcommerceAppView({ search, forcePackagedAsset = false }: {
   const localPreview = localHost && search.preview === 'local';
   const isCodeEditor = search.page === '/admin/theme-code-editor';
   const page = isCodeEditor ? '/admin/theme-code-editor' : resolveEcommerceAdminPath(search.page || '/admin/store');
-  const assetPath = page && !isCodeEditor && ((isPackagedDesktop() || forcePackagedAsset) ? resolveEcommerceAssetPath(page) : page);
+  // Embedded product content must resolve to the packaged asset, never another
+  // /admin route that could recursively mount Local Studio's outer shell.
+  const assetPath = page && !isCodeEditor ? resolveEcommerceAssetPath(page) : null;
   const url = assetPath
     ? (() => {
       // The iframe URL is origin-relative so server and client render the same markup.
       const resolved = new URL(assetPath, 'https://agentsam.local');
-      if (!isPackagedDesktop() && page === '/admin/home') resolved.searchParams.set('__agentsamEmbedded', '1');
+      // The host already owns global navigation, search, assistant and dock.
+      // Standalone CMS routes remain unchanged; only this iframe is chrome-free.
+      resolved.searchParams.set('__agentsamEmbedded', '1');
       if (search.site_id && /^[A-Za-z0-9_-]{1,120}$/.test(search.site_id) && page?.startsWith('/admin/')) {
         resolved.searchParams.set('site_id', search.site_id);
       }
