@@ -4,6 +4,7 @@ import { themeProjectStore, THEME_PROJECTS_CHANGED } from '@/lib/themes/projects
 import { createThemeDraft } from '@/lib/themes/inventory';
 import { studioCmsFetch } from '@/lib/cms/transport';
 import { useNavigate } from '@tanstack/react-router';
+import { IconAction } from '@/components/ui/icon-action';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 
@@ -57,7 +58,7 @@ export function SitesWorkspace() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div><div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">CMS / Websites</div><h1 className="mt-2 text-3xl font-semibold tracking-tight">Sites</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Build and edit complete multipage theme projects using the packaged Site Editor. Local drafts are saved on this installation, not published to the internet.</p></div>
         <div className="flex items-center gap-2">
-          <button type="button" className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-card hover:bg-muted" onClick={() => go('/admin/help/cms')} title="CMS documentation" aria-label="CMS documentation"><CircleHelp size={18}/></button>
+          <IconAction label="CMS documentation" hint="Open CMS documentation" className="size-10 rounded-xl border border-border bg-card hover:bg-muted" onClick={() => go('/admin/help/cms')}><CircleHelp size={18}/></IconAction>
           <button className={control} onClick={() => go('/admin/themes')}><LayoutTemplate size={16}/> Explore themes <ArrowUpRight size={14}/></button>
         </div>
       </header>
