@@ -14,6 +14,8 @@ import { mountSettingsDrawer } from "./settings-drawer";
 import { mountProgressiveStudio } from "./progressive";
 import { mountSketchGallery, type SketchProjectCategory } from "./gallery";
 import { listScenes, openScene, createScene, updateScene, removeScene, type SceneSummary } from "./scene-api";
+import { mountNativeSceneEditor, type NativeSceneEditorHandle } from "./native-scene-editor";
+import type { SceneDocument as NativeSceneDocument } from "../../../packages/iamscene/src/types";
 import { resolveSceneHit, exactSelectionRoot } from "./scene-selection";
 import { createSamSketchDesignAdapter } from "./design-adapter";
 import { installDesignWorkspaceGuest, resolveHostedDesignScope } from "../../../packages/agentsam-contracts/src/design-workspace-bridge";
@@ -77,6 +79,7 @@ let showGrid=false,wireframe=false,inspectorOpen=false,layersOpen=false,mode:"or
 let autoPlay:number|null=null;
 let progressive:ReturnType<typeof mountProgressiveStudio>|null=null;
 let gallery:ReturnType<typeof mountSketchGallery>|null=null;
+let nativeSceneEditor:NativeSceneEditorHandle|null=null;
 const history:string[]=[],future:string[]=[];
 function snapshot(){history.push(JSON.stringify(doc)); if(history.length>40)history.shift(); future.length=0;}
 function store(){
@@ -137,7 +140,7 @@ const settingsApi=mountSettingsDrawer(settingsHost);
 const bootParams=new URLSearchParams(location.search);
 if(bootParams.get("presentation")==="embedded") appFrame.classList.add("is-embedded");
 function enterStudio(){gallery?.hide();shell.dataset.ssSurface="studio";announce("Editing · "+doc.name);sendHostMessage("surface",{surface:"studio"});sendHostMessage("selection",{selection:studioContext()});}
-function showGallery(){settingsApi.close();gallery?.show();sendHostMessage("surface",{surface:"gallery"});announce("SamSketch gallery");}
+function showGallery(){nativeSceneEditor?.dispose();nativeSceneEditor=null;settingsApi.close();gallery?.show();sendHostMessage("surface",{surface:"gallery"});announce("SamSketch gallery");}
 function loadDocument(next:Document){
  stopStoryPlayback();
  mode="select";transformMode="off";storyTransition=null;toggleTimeline(true);
@@ -242,6 +245,19 @@ gallery=mountSketchGallery({
     if(run!==sceneGeneration)return;
     activeSceneId=null;activeSceneHash=null;lastCloudDocument=null;
     localStorage.removeItem(activeKey);localStorage.removeItem(hashKey);
+    if((result.document as NativeSceneDocument)?.format==='iamscene'){
+     const native=result.document as NativeSceneDocument;
+     nativeSceneEditor?.dispose();
+     gallery?.hide();
+     nativeSceneEditor=mountNativeSceneEditor({
+      host:shell,sceneId:result.scene.id,document:native,contentHash:result.scene.contentHash,
+      onBack:()=>showGallery(),
+      onSaved:()=>{void refreshHostedScenes();gallery?.refresh();},
+     });
+     sendHostMessage("surface",{surface:"studio"});
+     cloudState("Native scene · account owned");
+     return;
+    }
     loadDocument(result.document as Document);
     activeSceneId=result.scene.id;activeSceneHash=result.scene.contentHash;
     lastCloudDocument=JSON.stringify(doc);

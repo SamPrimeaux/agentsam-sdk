@@ -25,3 +25,10 @@ export const updateScene=(id:string,hash:string,document:unknown,preview?:string
  method:"PUT",headers:{"content-type":"application/json","if-match":'"'+hash+'"'},body:JSON.stringify({document,preview}),
 });
 export const removeScene=(id:string)=>requestJson<{ok:true}>(endpoint+"/"+encodeURIComponent(id),{method:"DELETE"});
+
+export const sceneAssetUrl=(sceneId:string,assetId:string)=>endpoint+"/"+encodeURIComponent(sceneId)+"/assets/"+encodeURIComponent(assetId);
+export async function uploadSceneAsset(sceneId:string,assetId:string,blob:Blob):Promise<void>{
+ const response=await fetch(sceneAssetUrl(sceneId,assetId),{method:"PUT",credentials:"same-origin",headers:{"content-type":"model/gltf-binary"},body:blob});
+ const body=await response.json().catch(()=>null) as {ok?:boolean;error?:string}|null;
+ if(!response.ok||!body?.ok)throw new Error(body?.error||"SamSketch scene asset upload failed.");
+}

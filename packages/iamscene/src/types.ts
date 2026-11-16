@@ -1,6 +1,6 @@
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number];
-export type SceneNodeKind = 'group' | 'mesh' | 'path' | 'pulse' | 'light';
+export type SceneNodeKind = 'group' | 'mesh' | 'path' | 'pulse' | 'light' | 'text';
 export type SceneAssetRole = 'presentation' | 'geometry-source' | 'texture' | 'environment' | 'audio' | 'reference';
 
 export interface SceneMetadata {

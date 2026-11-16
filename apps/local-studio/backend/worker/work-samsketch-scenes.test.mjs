@@ -39,7 +39,7 @@ function harness(){
   async get(key){
    if(brokenReads)return null;
    const bytes=objects.get(key);
-   return bytes?{arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)}:null;
+   return bytes?{arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),body:new Blob([bytes]).stream()}:null;
   },
   async delete(key){objects.delete(key);},
  };
@@ -130,4 +130,39 @@ test('concurrent duplicate create requests resolve to one stable owner-owned sce
  ]);
  assert.deepEqual(results.map(result=>result.status).sort(),[200,201]);
  assert.equal(h.rows.size,1);
+});
+
+const nativeId='sketch_native-scene-aaaa';
+const nativeAssetId='art_native_glb_01';
+const nativeSource=async(bytes)=>{
+ const sha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');
+ return {format:'iamscene',formatVersion:'1.0.0',metadata:{id:nativeId,name:'Imported icon scene'},
+  assets:[{id:nativeAssetId,uri:'assets/import.glb',mediaType:'model/gltf-binary',sha256,role:'presentation'}],
+  materials:[],scene:{rootNodeIds:['scene-root'],nodes:[{id:'scene-root',name:'Scene',kind:'group',transform:{position:[0,0,0],scale:[1,1,1],rotation:[0,0,0,1]},visible:true}]},
+  camera:{projection:'perspective',position:[0,2,5],target:[0,0,0],fov:45,near:0.01,far:100},
+  environment:{background:'#ffffff',ambientIntensity:0.5,lights:[]},animations:[],interactions:[]};
+};
+test('native I.AM Scene and GLB assets are owner-scoped, hash-verified and reloadable',async()=>{
+ const h=harness();const glb=new Uint8Array(24);glb.set([0x67,0x6c,0x54,0x46]);
+ const document=await nativeSource(glb);
+ assert.equal(validateSamSketchDocument(document),true);
+ assert.equal(validateSamSketchDocument({...document,assets:[{...document.assets[0],uri:'../../other.glb'}]}),false);
+ const create=await handleSamSketchSceneRequest(req('POST','',{id:nativeId,document}),h.env,'owner_one');
+ assert.equal(create.status,201,JSON.stringify(await create.clone().json()));
+ assert.equal((await create.json()).scene.itemCount,1);
+ const assetPath='/'+nativeId+'/assets/'+nativeAssetId;
+ assert.equal(isSamSketchSceneRequest(url(assetPath).replace('https://studio.example','')),true);
+ const binary=(owner,bytes)=>handleSamSketchSceneRequest(new Request(url(assetPath),{
+  method:'PUT',headers:{'content-type':'model/gltf-binary'},body:bytes}),h.env,owner);
+ assert.equal((await binary('owner_two',glb)).status,404);
+ const wrong=glb.slice();wrong[5]=42;
+ assert.equal((await binary('owner_one',wrong)).status,400);
+ assert.equal((await binary('owner_one',glb)).status,201);
+ const denied=await handleSamSketchSceneRequest(req('GET',assetPath),h.env,'owner_two');
+ assert.equal(denied.status,404);
+ const get=await handleSamSketchSceneRequest(req('GET',assetPath),h.env,'owner_one');
+ assert.equal(get.status,200);assert.equal(get.headers.get('content-type'),'model/gltf-binary');
+ assert.deepEqual(new Uint8Array(await get.arrayBuffer()),glb);
+ const reopen=await handleSamSketchSceneRequest(req('GET','/'+nativeId),h.env,'owner_one');
+ assert.deepEqual((await reopen.json()).document,document);
 });

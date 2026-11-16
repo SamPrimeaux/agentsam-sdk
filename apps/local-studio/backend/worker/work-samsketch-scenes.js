@@ -3,11 +3,12 @@
  * Every request is passed a verified auth_users.id by work-service.
  * The requested scene id and R2 path are never an authorization boundary.
  */
-const BASE = /^\/api\/work\/samsketch\/scenes(?:\/(sketch_[a-z0-9-]{12,80}))?$/;
+const BASE = /^\/api\/work\/samsketch\/scenes(?:\/(sketch_[a-z0-9-]{12,80})(?:\/assets\/([a-z0-9_-]{6,100}))?)?$/;
 const respond = (body,status=200,headers={}) => Response.json(body,{
   status,headers:{'cache-control':'private, no-store',...headers},
 });
 const MAX_DOCUMENT_BYTES=1_500_000;
+const MAX_SCENE_ASSET_BYTES=25_000_000;
 const KIND=new Set(['desktop','phone','panel','orb','box','ring','cad','template']);
 const vec=v=>Array.isArray(v)&&v.length===3&&v.every(x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<=100000);
 const color=v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v);
@@ -15,7 +16,38 @@ const clean=v=>typeof v==='string'?v.trim():'';
 const sha=async bytes=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');
 
 export const isSamSketchSceneRequest=path=>BASE.test(path);
+function validateNativeSceneDocument(doc){
+ if(!doc||doc.format!=='iamscene'||doc.formatVersion!=='1.0.0'
+   ||!doc.metadata||typeof doc.metadata.name!=='string'||!doc.metadata.name.trim()||doc.metadata.name.length>120
+   ||!doc.scene||!Array.isArray(doc.scene.nodes)||doc.scene.nodes.length>5000||!Array.isArray(doc.scene.rootNodeIds)
+   ||!Array.isArray(doc.assets)||doc.assets.length>100||!Array.isArray(doc.materials)
+   ||!doc.camera||!doc.environment||!Array.isArray(doc.animations)||!Array.isArray(doc.interactions))return false;
+ const ids=new Set(),assetIds=new Set();
+ for(const asset of doc.assets){
+  if(!asset||typeof asset.id!=='string'||!/^[a-z0-9_-]{6,100}$/.test(asset.id)||assetIds.has(asset.id)
+    ||asset.mediaType!=='model/gltf-binary'||!/^assets\/[a-z0-9_.-]+\.glb$/i.test(asset.uri)
+    ||typeof asset.sha256!=='string'||! /^[0-9a-f]{64}$/i.test(asset.sha256))return false;
+  assetIds.add(asset.id);
+ }
+ for(const node of doc.scene.nodes){
+  if(!node||typeof node.id!=='string'||node.id.length>128||!node.id||ids.has(node.id)
+    ||typeof node.name!=='string'||node.name.length>160
+    ||!['group','mesh','text','light','path','pulse'].includes(node.kind)||typeof node.visible!=='boolean'
+    ||!node.transform||typeof node.transform!=='object')return false;
+  ids.add(node.id);
+  if(node.transform.position!==undefined&&!vec(node.transform.position))return false;
+  if(node.transform.scale!==undefined&&!vec(node.transform.scale))return false;
+  const rotation=node.transform.rotation;
+  if(rotation!==undefined&&(!Array.isArray(rotation)||rotation.length!==4||!rotation.every(n=>typeof n==='number'&&Number.isFinite(n))))return false;
+ }
+ if(doc.scene.rootNodeIds.length<1||doc.scene.rootNodeIds.some(id=>!ids.has(id)))return false;
+ for(const node of doc.scene.nodes)if(node.parentId&&!ids.has(node.parentId))return false;
+ return true;
+}
+const sceneName=doc=>doc?.format==='iamscene'?doc.metadata.name:doc.name;
+const sceneCount=doc=>doc?.format==='iamscene'?doc.scene.nodes.length:doc.items.length;
 export function validateSamSketchDocument(doc) {
+ if(doc?.format==='iamscene')return validateNativeSceneDocument(doc);
   if(!doc||typeof doc!=='object'||doc.version!==1||!Array.isArray(doc.items)
     ||doc.items.length>2500||!clean(doc.name)||doc.name.length>120
     ||!['agentsam','inneranimalmedia'].includes(doc.brand)
@@ -55,6 +87,7 @@ const summary=row=>({
  contentHash:row.content_hash,
  preview:row.thumbnail_r2_key?'/api/work/library/artifacts/'+encodeURIComponent(row.id)+'/file?preview=1':null,
 });
+const assetObjectKey=(owner,id,asset)=>'samsketch/'+encodeURIComponent(owner)+'/'+encodeURIComponent(id)+'/assets/'+asset.id+'-'+asset.sha256+'.glb';
 const recordQuery="SELECT id,user_id,name,r2_key,content_hash,updated_at,metadata_json,thumbnail_r2_key FROM agentsam_artifacts WHERE id=? AND user_id=? AND artifact_type='samsketch-scene' AND archived_at IS NULL";
 const objectKey=(owner,id,rev)=>'samsketch/'+encodeURIComponent(owner)+'/'+encodeURIComponent(id)+'/rev-'+rev+'-'+crypto.randomUUID()+'.json';
 const toBytes=string=>new TextEncoder().encode(string);
@@ -93,7 +126,7 @@ export async function handleSamSketchSceneRequest(request,env,owner){
  if(!owner)return respond({ok:false,error:'unauthorized'},401);
  if(!env.DB?.prepare||!env.ARTIFACTS?.get||!env.ARTIFACTS?.put)
    return respond({ok:false,error:'storage_unavailable'},503);
- const id=match[1],method=request.method.toUpperCase(),bucket=env.ARTIFACTS;
+ const id=match[1],assetId=match[2],method=request.method.toUpperCase(),bucket=env.ARTIFACTS;
  const db=env.DB;
  try{
   if(!id&&method==='GET'){
@@ -122,7 +155,7 @@ export async function handleSamSketchSceneRequest(request,env,owner){
      const user=await db.prepare("SELECT default_account_id FROM auth_users WHERE id=?").bind(owner).first();
      const tenant=clean(user?.default_account_id)||owner;
      const result=await db.prepare("INSERT OR IGNORE INTO agentsam_artifacts (id,user_id,tenant_id,name,artifact_type,r2_key,source,file_size_bytes,content_hash,r2_bucket,scope,visibility,artifact_status,validation_status,mime_type,thumbnail_r2_key,metadata_json) VALUES (?,?,?,?,'samsketch-scene',?,'samsketch.editor',?,?,'artifacts','user','private','draft','asset-verified','application/json',?,?)")
-       .bind(sceneId,owner,tenant,document.name,key,bytes.byteLength,digest,previewKey,JSON.stringify({revision:1,itemCount:document.items.length})).run();
+       .bind(sceneId,owner,tenant,sceneName(document),key,bytes.byteLength,digest,previewKey,JSON.stringify({revision:1,itemCount:sceneCount(document),format:document.format||'samsketch-v1'})).run();
      if(result.meta?.changes!==1){
        await bucket.delete?.(key);if(previewKey)await bucket.delete?.(previewKey);
        const current=await db.prepare(recordQuery).bind(sceneId,owner).first();
@@ -140,6 +173,29 @@ export async function handleSamSketchSceneRequest(request,env,owner){
   if(!id)return respond({ok:false,error:'method_not_allowed'},405);
   const row=await db.prepare(recordQuery).bind(id,owner).first();
   if(!row)return respond({ok:false,error:'scene_not_found'},404);
+  if(assetId){
+   if(!['GET','HEAD','PUT'].includes(method))return respond({ok:false,error:'method_not_allowed'},405);
+   const document=await readDocument(row,bucket);
+   if(!document||document.format!=='iamscene')return respond({ok:false,error:'scene_asset_missing_or_invalid'},424);
+   const asset=document.assets.find(candidate=>candidate.id===assetId);
+   if(!asset)return respond({ok:false,error:'scene_asset_not_found'},404);
+   const key=assetObjectKey(owner,id,asset);
+   if(method==='PUT'){
+    if(Number(request.headers.get('content-length')||0)>MAX_SCENE_ASSET_BYTES)return respond({ok:false,error:'asset_too_large'},413);
+    if(request.headers.get('content-type')?.split(';')[0]!=='model/gltf-binary')return respond({ok:false,error:'invalid_asset_type'},415);
+    const bytes=await request.arrayBuffer();
+    if(bytes.byteLength<20||bytes.byteLength>MAX_SCENE_ASSET_BYTES)return respond({ok:false,error:'asset_too_large'},413);
+    if(await sha(bytes)!==asset.sha256)return respond({ok:false,error:'asset_hash_mismatch'},400);
+    await bucket.put(key,bytes,{httpMetadata:{contentType:'model/gltf-binary'}});
+    const check=await bucket.get(key);
+    if(!check||await sha(await check.arrayBuffer())!==asset.sha256){await bucket.delete?.(key);return respond({ok:false,error:'scene_asset_write_unverified'},502);}
+    return respond({ok:true,assetId,sha256:asset.sha256,bytes:bytes.byteLength},201);
+   }
+   const obj=await bucket.get(key);
+   if(!obj)return respond({ok:false,error:'scene_asset_not_found'},404);
+   const headers={'cache-control':'private, max-age=300','content-type':'model/gltf-binary','x-content-type-options':'nosniff','etag':'"'+asset.sha256+'"'};
+   return new Response(method==='HEAD'?null:obj.body,{status:200,headers});
+  }
   if(method==='GET'){
    const document=await readDocument(row,bucket);
    if(!document)return respond({ok:false,error:'scene_asset_missing_or_invalid'},424);
@@ -161,9 +217,9 @@ export async function handleSamSketchSceneRequest(request,env,owner){
    let previewKey=null;
    try{
      previewKey=await thumbnail(data.preview,bucket,owner,id,revision);
-     const metadata={...safeMeta(row),revision,itemCount:document.items.length};
+     const metadata={...safeMeta(row),revision,itemCount:sceneCount(document),format:document.format||'samsketch-v1'};
      const result=await db.prepare("UPDATE agentsam_artifacts SET name=?,r2_key=?,file_size_bytes=?,content_hash=?,thumbnail_r2_key=?,metadata_json=?,updated_at=unixepoch() WHERE id=? AND user_id=? AND artifact_type='samsketch-scene' AND archived_at IS NULL AND content_hash=?")
-       .bind(document.name,key,bytes.byteLength,digest,previewKey||row.thumbnail_r2_key,JSON.stringify(metadata),id,owner,row.content_hash).run();
+       .bind(sceneName(document),key,bytes.byteLength,digest,previewKey||row.thumbnail_r2_key,JSON.stringify(metadata),id,owner,row.content_hash).run();
      if(result.meta?.changes!==1){
        await bucket.delete?.(key);if(previewKey)await bucket.delete?.(previewKey);
        return respond({ok:false,error:'revision_conflict'},409);
