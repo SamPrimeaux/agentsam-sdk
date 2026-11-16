@@ -172,3 +172,13 @@ test('desktop host validates product destinations before navigation and leaves t
     delete globalThis.__agentsamTestRouteErrors;
   }
 });
+
+
+test('Ecommerce iframe always uses packaged product assets and one host-owned navigation shell', () => {
+  const host = fs.readFileSync(path.join(studio, 'frontend/src/routes/(apps)/admin/apps/ecommerce-cms-agentsam.tsx'), 'utf8');
+  const store = fs.readFileSync(path.join(studio, 'frontend/src/routes/(apps)/admin/store.tsx'), 'utf8');
+  assert.match(host, /const assetPath = page && !isCodeEditor \? resolveEcommerceAssetPath\(page\) : null/);
+  assert.match(host, /resolved\.searchParams\.set\('__agentsamEmbedded', '1'\)/);
+  assert.doesNotMatch(host, /forcePackagedAsset/, 'there must not be separate iframe ownership paths');
+  assert.doesNotMatch(store, /forcePackagedAsset/);
+});
