@@ -36,7 +36,19 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"
+          # grpc-tools fetches its native protoc binary during installation.
+          # Retry only actual network failures; never retry lockfile, auth,
+          # registry-version, or deterministic package-script failures.
+          for attempt in 1 2 3; do
+            if npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]] || ! grep -Eq 'ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND' "$RUNNER_TEMP/npm-ci.log"; then
+              exit 1
+            fi
+            echo "Transient npm download failure; clean-install retry $((attempt + 1))/3"
+            sleep "$((attempt * 5))"
+          done
 
       # Root-only installs must resolve Worker imports before nested app installs
       # can accidentally hide missing SDK/package dependency boundaries.
