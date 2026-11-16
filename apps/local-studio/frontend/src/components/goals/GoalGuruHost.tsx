@@ -23,7 +23,7 @@ export function GoalGuruHost({ legacyGoal, onLegacyImported, mode = "panel" }: {
     state.setSideOpen(false);
     state.setWorkSurface("chat");
     window.dispatchEvent(new CustomEvent("agentsam:navigate", {
-      detail: { to: "/chats/$chatId", params: { chatId: id } },
+      detail: { to: "/admin/chats/$chatId", params: { chatId: id } },
     }));
   };
   return <GoalGuruPanel request={request} mode={mode} onContinue={continueInWork}
