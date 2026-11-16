@@ -53,7 +53,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   // client-side route transitions without repainting the sidebar or losing the portal.
   useEffect(() => {
     if (!target) return;
-    const activePath = pathname.startsWith('/chats') ? '/admin/agentsam' : pathname;
+    const activePath = pathname.startsWith('/admin/chats') ? '/admin/agentsam' : pathname;
     window.dispatchEvent(new CustomEvent('agentsam:navigation', { detail: { pathname: activePath + searchStr } }));
     document.querySelectorAll<HTMLAnchorElement>('#console-app .console-sidenav a.console-nav-item, #console-app .console-sidenav a.console-nav-child')
       .forEach((link) => {
