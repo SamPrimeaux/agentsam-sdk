@@ -25,7 +25,23 @@
 .theme-studio-empty h2{font-size:19px;font-weight:650;margin:0 0 8px}
 .theme-studio-empty p{max-width:520px;margin:0 auto 18px;color:var(--text-secondary,#777);font-size:13px;line-height:1.65}
 .theme-studio-status{padding:22px;border:1px solid var(--border,#ddd);border-radius:12px;color:var(--text-secondary,#777);background:var(--surface,#fff)}
-@media(max-width:640px){.theme-studio-home{padding:18px}.theme-studio-hero{align-items:flex-start}}
+/* Phone: the workspaces are the primary content, not a desktop hero and
+   oversized project cards squeezed between Safari and the app navigation. */
+@media(max-width:640px){
+  .theme-studio-home{width:100%;max-width:100%;box-sizing:border-box;padding:16px}
+  .theme-studio-hero{align-items:flex-start;gap:14px;margin-bottom:20px}
+  .theme-studio-kicker{font-size:10px;letter-spacing:.1em}
+  .theme-studio-title{font-size:30px;line-height:1.15;margin:4px 0 8px}
+  .theme-studio-description{max-width:100%;font-size:13px;line-height:1.55}
+  .theme-studio-hero>.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .theme-studio-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+  .theme-studio-card{padding:16px;gap:10px}
+  .theme-studio-card h2{font-size:17px;line-height:1.35}
+  .theme-studio-meta{font-size:12px;line-height:1.5}
+  .theme-studio-card-footer{flex-wrap:wrap;gap:10px}
+  .theme-studio-card-footer .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .theme-studio-status{font-size:13px;padding:16px}
+}
 </style>
 </head>
 <body>
