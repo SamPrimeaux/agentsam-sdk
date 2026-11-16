@@ -16,7 +16,10 @@
     "./node": {
       "types": "./src/node.d.ts",
       "import": "./src/node.js"
-    }
+    },
+    "./account-context": "./src/account-context.js",
+    "./site-settings": "./src/site-settings-contract.js",
+    "./site-nav-defaults": "./src/site-nav-defaults.js"
   },
   "engines": {
     "node": ">=22"

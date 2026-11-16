@@ -30,7 +30,7 @@ Use `createThreeViewport(container, runtime, { autoRender: false })` when a prod
 
 The package reads GLB/GLTF/STL. Precision geometry, Boolean operations, and STEP authoring belong to `@inneranimalmedia/agentsam-occt`; viewer and engine remain separate so marketing pages can display a model without loading the OCCT WebAssembly kernel.
 
-This workspace package remains private until public-site consumption and cross-browser WebGL QA are complete.
+This package is designed for standalone npm distribution as `@inneranimalmedia/agentsam-3d-viewer`. The repository remains the canonical source and the host provides its own Three.js runtime.
 
 ## Shared engineering viewport (v0.2)
 

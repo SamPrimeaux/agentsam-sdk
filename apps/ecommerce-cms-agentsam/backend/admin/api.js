@@ -1050,3 +1050,6 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
 
   return json({ error: "Not found" }, { status: 404 });
 }
+
+// CMS owns starter provisioning; Local Studio injects this packaged capability.
+export { ensureCmsSiteStarter } from '../cms/site-starter.mjs';

@@ -3,22 +3,8 @@
  * Customer brand (logo/colors) comes from company + per-site CMS settings overlays.
  */
 
-export const DEFAULT_NAV_ITEMS = [
-  { id: "home", label: "Home", href: "/", matchPrefixes: ["/", "/index.html"] },
-  {
-    id: "shop",
-    label: "Shop",
-    href: "/shop",
-    matchPrefixes: ["/shop", "/products/", "/collections/"],
-  },
-  { id: "about", label: "About", href: "/about", matchPrefixes: ["/about"] },
-  {
-    id: "community",
-    label: "Community",
-    href: "/community",
-    matchPrefixes: ["/community"],
-  },
-];
+import { DEFAULT_NAV_ITEMS } from '@inneranimalmedia/agentsam-cms/site-nav-defaults';
+export { DEFAULT_NAV_ITEMS };
 
 /** @deprecated No package logo — resolve from company / per-site CMS settings */
 export const DEFAULT_LOGO_URL = "";

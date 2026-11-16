@@ -20,6 +20,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
+      - name: Install workspace package boundaries
+        # Security tests import the canonical CMS package from this checkout.
+        # Scripts are not needed; avoid downloading grpc-tools native binaries.
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Syntax checks
         run: |
           node --check apps/local-studio/backend/worker/cms-authority.js

@@ -34,7 +34,7 @@ generated/
 # Canonical checked-in registry inventory; unlike build output it is CI evidence.
 !src/registry/generated/
 !src/registry/generated/inventory.json
-work/
+/work/
 
 # Generated theme gallery mounts (scripts/stage-themes-to-site.mjs via site:sync)
 apps/frontend/public/site/themes/

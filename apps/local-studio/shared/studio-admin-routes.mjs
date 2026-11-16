@@ -1,4 +1,4 @@
-import { canonicalLocalStudioEcommercePath, isLocalStudioEcommerceAdminPath } from './ecommerce-admin-routes.mjs';
+import { canonicalLocalStudioEcommercePath, isLocalStudioEcommerceAdminPath, isLocalStudioEcommerceDocumentPath } from './ecommerce-admin-routes.mjs';
 
 /**
  * Local Studio owns canonical dashboard routes, account/site identity and
@@ -90,10 +90,24 @@ export function canonicalStudioPath(pathname) {
   return null;
 }
 
-/** @param {string} pathname */
+/**
+ * The host owns the full admin URL namespace (including installed app pages).
+ * This is route authority, not a request to render every page in the shell.
+ * @param {string} pathname
+ */
 export function isStudioAdminPath(pathname) {
-  return isLocalStudioEcommerceAdminPath(pathname) || STUDIO_ADMIN_MOUNTS.some(({ canonical }) =>
-    pathname === canonical || pathname.startsWith(canonical + '/'));
+  return isLocalStudioEcommerceAdminPath(pathname) || STUDIO_ADMIN_MOUNTS.some(({ canonical, exactOnly }) =>
+    pathname === canonical || (!exactOnly && pathname.startsWith(canonical + '/')));
+}
+
+/**
+ * Shell-rendered routes exclude packaged Ecommerce documents so the existing
+ * document handler can serve those assets without a duplicate shell.
+ * @param {string} pathname
+ */
+export function isStudioShellAdminPath(pathname) {
+  return !isLocalStudioEcommerceDocumentPath(pathname) && STUDIO_ADMIN_MOUNTS.some(({ canonical, exactOnly }) =>
+    pathname === canonical || (!exactOnly && pathname.startsWith(canonical + '/')));
 }
 
 /** @param {string} pathname @param {URLSearchParams | null | undefined} search */

@@ -7,8 +7,7 @@
 
 import { createCmsDbClient } from './cms-db.js';
 import { listAuthorizedCmsSites, resolveCmsSiteAccess, createAuthorizedCmsSite, cmsActorRequired, configuredCmsWorkers } from './cms-authority.js';
-import { ensureCmsSiteStarter } from '../../../ecommerce-cms-agentsam/backend/cms/site-starter.mjs';
-import { withLocalStudioCmsContext } from '../../../ecommerce-cms-agentsam/backend/lib/account-context.js';
+import { withLocalStudioCmsContext } from '@inneranimalmedia/agentsam-cms/account-context';
 import { handleRemoteCmsRequest } from './cms-remote.js';
 import { fetchSitePartial, putSitePartial, injectSitePartials } from './site-partials.js';
 import { handleCmsSourceRequest } from './cms-source.js';
@@ -68,7 +67,7 @@ function resolveSiteSlug(url, body = {}) {
   return trimmed || null;
 }
 
-export async function handleCmsWorkerRequest(request, env, actorUserId) {
+export async function handleCmsWorkerRequest(request, env, actorUserId, { ensureCmsSiteStarter }) {
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
 
