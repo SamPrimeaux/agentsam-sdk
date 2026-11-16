@@ -26,7 +26,9 @@ test('persisted plugin tabs migrate to the current builtin renderer', () => {
 
 test('full-stage Canvas is the only mounted editor and reuses the current document', () => {
   assert.match(shell, /!isConversation && !isCanvasRoute && state\.sideOpen/);
+  assert.match(shell, /data-assistant-focused=\{!isConversation && !isCanvasRoute/);
   assert.match(canvasRoute, /existing && !hasExplicitDocumentTarget/);
+  assert.match(canvasRoute, /work\.setActiveSideTab\(existing\.id\)/);
   assert.match(canvasRoute, /openSources=\{search\.library === "sources"\}/);
   assert.match(canvasStage, /if\(openSources\)setShowSources\(true\)/);
 });
