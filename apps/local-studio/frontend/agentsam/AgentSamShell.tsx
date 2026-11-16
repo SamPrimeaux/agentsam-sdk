@@ -271,13 +271,13 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     }
     if (pathOnly.startsWith('/admin/') && !isStudioAdminPath(pathOnly)) {
       if (isPackagedDesktop()) {
-        window.location.hash = '#/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
+        window.location.hash = '#/admin/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
         return;
       }
       // Keep the real registered SPA route in the address bar. Replacing it
       // with an unregistered /admin/* URL makes TanStack render Not Found on
       // subsequent navigation despite a valid packaged server-side document.
-      void navigate({ to: '/apps/ecommerce-cms-agentsam', search: { page: to } } as never);
+      void navigate({ to: '/admin/apps/ecommerce-cms-agentsam', search: { page: to } } as never);
       return;
     }
     if (isPackagedDesktop()) {
@@ -599,7 +599,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     onShare: shareableChat ? () => setSharing(true) : undefined,
     accountActions: [
       {id:'profile-image',label:'Profile image',icon:<PawPrint />,onSelect:() => { setAvatarDraft(accountAvatarUrl || user?.profileImageUrl || ''); setAvatarDialogOpen(true); }},
-      {id:'settings',label:'Settings',icon:<Settings />,onSelect:() => go('/settings/general')},
+      {id:'settings',label:'Settings',icon:<Settings />,onSelect:() => go('/admin/settings/general')},
       ...(isPackagedDesktop() ? [{id:'desktop-pet',label:'Desktop pet',icon:<PawPrint />,onSelect:() => { void toggleAgentSamPet().then((visible) => toast.success(visible ? 'AgentSam pet is on your desktop' : 'AgentSam pet hidden')).catch(() => toast.error('Desktop pet could not be opened')); }}] : []),
       ...(!user || user.isDevFallback ? [{id:'sign-in',label:'Sign in',icon:<LogIn />,onSelect:() => isPackagedDesktop() ? setIdentityOpen(true) : go('/auth/login')}] : hasGateSessionMarker() ? [] : [{id:'sign-out',label:'Sign out',icon:<LogOut />,onSelect:() => {void signOut().catch(() => toast.error('Sign out could not be completed. Please try again.'));}}]),
     ],
