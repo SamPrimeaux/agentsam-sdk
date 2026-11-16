@@ -23,7 +23,7 @@ export function AgentSamLaunchDock() {
   return <Nav.LaunchDock items={[
     {
       id: 'chats', label: 'Chats', icon: <MessageCircle />,
-      active: open || path === '/agentsam' || path === '/admin/agentsam' || path.startsWith('/chats'),
+      active: open || path === '/admin/agentsam' || path === '/admin/agentsam' || path.startsWith('/admin/chats'),
       onSelect: () => setOpen(!open),
     },
     {
@@ -34,18 +34,18 @@ export function AgentSamLaunchDock() {
     },
     {
       id: 'ideas', label: 'Ideas', icon: <Lightbulb />,
-      active: path === '/ideas',
-      onSelect: () => showPage('/ideas'),
+      active: path === '/admin/ideas',
+      onSelect: () => showPage('/admin/ideas'),
     },
     {
       id: 'goals', label: 'Goals', icon: <SquareCheckBig />,
-      active: path === '/goalguru',
-      onSelect: () => showPage('/goalguru'),
+      active: path === '/admin/goalguru',
+      onSelect: () => showPage('/admin/goalguru'),
     },
     {
       id: 'library', label: 'Library', icon: <BookOpen />,
-      active: path === '/library' || path === '/media' || path.startsWith('/media/') || path === '/artifacts',
-      onSelect: () => showPage('/library'),
+      active: path === '/admin/library' || path === '/admin/media' || path.startsWith('/admin/media/') || path === '/admin/artifacts',
+      onSelect: () => showPage('/admin/library'),
     },
   ]} />;
 }
