@@ -21,7 +21,7 @@ export function DatabaseStage() {
       onOpenConnections={() => {
         window.dispatchEvent(
           new CustomEvent("agentsam:navigate", {
-            detail: { to: "/settings/integrations" },
+            detail: { to: "/admin/settings/integrations" },
           }),
         );
       }}
