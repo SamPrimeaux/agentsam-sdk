@@ -3234,13 +3234,19 @@
             const rect = frame?.getBoundingClientRect();
             const pane = canvas?.getBoundingClientRect();
             const tabs = byId('te-mobile-pane-switch');
+            // On phones the canvas is primary and its Sections/Edit panels are
+            // opened via the existing toolbar and selection sheet, not fixed
+            // bottom mode tabs. A hidden tab row has top=0 in Safari and must
+            // never collapse the mini assistant's allowed canvas bounds.
+            const tabTop = tabs && getComputedStyle(tabs).display !== 'none'
+              ? tabs.getBoundingClientRect().top : rect?.bottom;
             if (!rect || !pane || rect.width < 100 || rect.height < 80) return null;
             return {
               left: Math.max(rect.left, pane.left) + 7,
               top: Math.max(rect.top, pane.top) + 7,
               right: Math.min(rect.right, pane.right) - 7,
               bottom: Math.min(rect.bottom, pane.bottom,
-                isPhoneEditor() ? (tabs?.getBoundingClientRect().top ?? rect.bottom) : rect.bottom) - 7,
+                isPhoneEditor() ? (tabTop ?? rect.bottom) : rect.bottom) - 7,
             };
           },
         }); })
