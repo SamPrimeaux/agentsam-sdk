@@ -902,12 +902,12 @@ export default {
         });
       }
       if (url.pathname === '/docs' || url.pathname === '/docs/') {
-        const target = new URL('/settings/docs', request.url);
+        const target = new URL('/admin/settings/docs', request.url);
         target.search = url.search;
         return Response.redirect(target, 302);
       }
       if (url.pathname === '/admin/products/help/artwork' || url.pathname === '/admin/products/help/artwork/') {
-        const target = new URL('/settings/docs', request.url);
+        const target = new URL('/admin/settings/docs', request.url);
         target.searchParams.set('topic', 'artwork');
         return Response.redirect(target, 302);
       }
@@ -1544,7 +1544,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
 
     if (isPluginOAuthCallback) {
       if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
-      const nav='/settings/customize?view=plugins';
+      const nav='/admin/settings/customize?view=plugins';
       try {
         const result=await completePluginOAuth(env,request);
         const desktop=result.source_client==='desktop';

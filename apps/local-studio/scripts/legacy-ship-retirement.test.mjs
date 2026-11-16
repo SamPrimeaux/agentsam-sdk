@@ -16,7 +16,7 @@ test('obsolete Ship UI cannot be opened from navigation, palette, or side-stage 
 test('legacy /ship routes redirect to the supported secrets page', () => {
   for (const file of ['src/routes/_app/ship.tsx', 'src/routes/(apps)/ship.tsx']) {
     const route = source(file);
-    assert.match(route, /<Navigate to="\/settings\/keys" replace \/>/);
+    assert.match(route, /<Navigate to="\/admin\/settings\/keys"(?: search=\{true\})? replace \/>/);
     assert.doesNotMatch(route, /DeployStage/);
   }
   assert.match(source('src/lib/work/store.ts'), /filter\(\(t\) => t\.kind !== "deploy"\)/);

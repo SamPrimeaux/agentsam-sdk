@@ -278,7 +278,7 @@ export async function beginGmailOAuth(request, env, userId) {
   const challenge = b64url(createHash("sha256").update(verifier).digest());
   const state = "gmail_" + b64url(randomBytes(18));
   const body = request.method === "POST" ? await request.json().catch(() => ({})) : {};
-  const returnTo = safeReturnTo(body.return_to || "/mail");
+  const returnTo = safeReturnTo(body.return_to || "/admin/mail");
   await saveOauthState(env, { state, userId, verifier, returnTo });
 
   const url = new URL(request.url);

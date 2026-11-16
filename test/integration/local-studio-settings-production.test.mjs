@@ -26,8 +26,8 @@ test('production Settings never mounts fixture data', () => {
 });
 
 test('Settings route stays in the shared platform shell and activates Settings navigation', () => {
-  assert.match(shell, /const isSettings = pathname === ['"]\/settings['"] \|\| pathname\.startsWith\(['"]\/settings\/['"]\)/);
-  assert.match(shell, /id:\s*['"]settings['"],[^\n]+onSelect:\s*\(\)\s*=>\s*go\(['"]\/settings\/general['"]\)/);
+  assert.match(shell, /const isSettings = pathname === ['"]\/admin\/settings['"] \|\| pathname\.startsWith\(['"]\/admin\/settings\/['"]\)/);
+  assert.match(shell, /id:\s*['"]settings['"],[^\n]+onSelect:\s*\(\)\s*=>\s*go\(['"]\/admin\/settings\/general['"]\)/);
   assert.match(shell, /!embedded \? <Nav\.Sidenav \/> : null/);
 });
 
