@@ -75,7 +75,7 @@ for (const [key, authHost, cb, prefix] of [
 ]) {
   test(`${key}: start -> callback persists encrypted grant and installation`, async (t) => {
     const e = env();
-    const res = await beginConnectorOAuth(post(`/api/work/connect/${key}/start`, { return_to: "/settings/customize?view=plugins" }), e, "au_test", key);
+    const res = await beginConnectorOAuth(post(`/api/work/connect/${key}/start`, { return_to: "/admin/settings/customize?view=plugins" }), e, "au_test", key);
     const { authorize_url } = await res.json();
     const auth = new URL(authorize_url);
     assert.equal(auth.host, authHost);
@@ -98,7 +98,7 @@ for (const [key, authHost, cb, prefix] of [
     const done = await completeConnectorOAuth(callback, e);
     assert.equal(done.status, 302);
     const loc = new URL(done.headers.get("location"));
-    assert.equal(loc.pathname, "/settings/customize");
+    assert.equal(loc.pathname, "/admin/settings/customize");
     assert.equal(loc.searchParams.get("provider"), key);
 
     const upsert = e.DB.log.find((l) => /INSERT INTO user_oauth_tokens/.test(l.sql));
