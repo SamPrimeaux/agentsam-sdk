@@ -53,7 +53,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   // client-side route transitions without repainting the sidebar or losing the portal.
   useEffect(() => {
     if (!target) return;
-    const activePath = pathname.startsWith('/chats') ? '/admin/agentsam' : pathname;
+    const activePath = pathname.startsWith('/admin/chats') ? '/admin/agentsam' : pathname;
     window.dispatchEvent(new CustomEvent('agentsam:navigation', { detail: { pathname: activePath + searchStr } }));
     document.querySelectorAll<HTMLAnchorElement>('#console-app .console-sidenav a.console-nav-item, #console-app .console-sidenav a.console-nav-child')
       .forEach((link) => {
@@ -67,7 +67,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   // The Ecommerce shell owns the navigation. The conversation page supplies its
   // own centered mode switch; do not stack a second global topbar above it.
   useEffect(() => {
-    document.body.classList.toggle('agentsam-conversation-route', (pathname === '/admin/agentsam' || pathname.startsWith('/chats')));
+    document.body.classList.toggle('agentsam-conversation-route', (pathname === '/admin/agentsam' || pathname.startsWith('/admin/chats')));
     return () => document.body.classList.remove('agentsam-conversation-route');
   }, [pathname]);
   useEffect(() => {

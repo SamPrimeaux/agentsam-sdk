@@ -109,7 +109,7 @@ export function AppShellFrame() {
       }
       if (meta && event.key.toLowerCase() === "b") {
         event.preventDefault();
-        void navigate({ to: "/chats" });
+        void navigate({ to: "/admin/chats" });
       }
     }
     window.addEventListener("keydown", onKey);
@@ -122,7 +122,7 @@ export function AppShellFrame() {
   useEffect(() => {
     if (!settingsOpen) return;
     setSettingsOpen(false);
-    void navigate({ to: "/settings/general" as never });
+    void navigate({ to: "/admin/settings/general" as never });
   }, [settingsOpen, setSettingsOpen, navigate]);
 
   return (

@@ -1,7 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { WidgetUtilitiesPage } from "@/components/widgets/WidgetUtilitiesPage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
-// The utility presentation is real; widget configuration remains owned by Settings.
 export const Route = createFileRoute("/(apps)/widgets")({
-  component: WidgetUtilitiesPage,
+  component: () => <Navigate to="/admin/widgets" search={true} replace />,
 });

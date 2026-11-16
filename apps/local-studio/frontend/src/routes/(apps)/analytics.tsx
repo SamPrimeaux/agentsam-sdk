@@ -1,11 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AgentSamAnalyticsPage } from "@inneranimalmedia/agentsam-analytics/frontend";
-import "@inneranimalmedia/agentsam-analytics/theme.css";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/analytics")({
-  component: AnalyticsPage,
+  component: () => <Navigate to="/admin/analytics" search={true} replace />,
 });
-
-function AnalyticsPage() {
-  return <AgentSamAnalyticsPage />;
-}

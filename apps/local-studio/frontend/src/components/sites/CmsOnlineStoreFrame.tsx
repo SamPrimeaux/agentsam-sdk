@@ -77,7 +77,7 @@ export function CmsOnlineStoreFrame({
       try {
         dispose = await mountOnlineStore(iframe, {
           baseUrl: window.location.origin,
-          canvasUrl: '/canvas?host=online-store',
+          canvasUrl: '/admin/canvas?host=online-store',
           onCreateCanvas: (href: string) => { window.location.assign(href); },
           storefrontUrl,
           async loadStore() {

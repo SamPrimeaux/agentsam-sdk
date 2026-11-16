@@ -81,6 +81,11 @@ try {
     '/admin/theme-code-editor?site_id=site-a&project=theme_plain-jane',
     '/admin/js/theme-project-editor-bootstrap.mjs',
     '/admin/js/agentsam-nav.js', '/admin/host-config.js',
+    '/admin/media', '/admin/media/images', '/admin/media/videos',
+    '/admin/forms', '/admin/chats', '/admin/settings/general',
+    '/admin/analytics', '/admin/themes', '/admin/projects',
+    '/admin/library', '/admin/samsketch',
+    '/admin/apps/ecommerce-cms-agentsam',
   ];
   for (const pathname of protectedAdminRoutes) {
     const response = await request(pathname);
@@ -94,17 +99,46 @@ try {
     }
     console.log('PASS ' + pathname + ': anonymous -> identity login');
   }
-  // Site-free development does not make a private application public.
-  for (const pathname of ['/sites?showcase=resolve','/media','/media/images','/media/videos']) {
-    const response = await request(pathname);
+  // Flat dashboard URLs are permanent compatibility redirects, then the
+  // canonical /admin destination must enforce the same identity boundary.
+  const legacyAdminRedirects = [
+    ['/sites?showcase=resolve', '/admin/sites?showcase=resolve'],
+    ['/media', '/admin/media'],
+    ['/media/images', '/admin/media/images'],
+    ['/media/videos', '/admin/media/videos'],
+    ['/chats', '/admin/chats'],
+    ['/forms', '/admin/forms'],
+    ['/settings/general', '/admin/settings/general'],
+    ['/cad', '/admin/cad'],
+    ['/projects?view=active', '/admin/projects?view=active'],
+    ['/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth', '/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth'],
+  ];
+  for (const [legacyPath, canonicalPath] of legacyAdminRedirects) {
+    const response = await request(legacyPath);
     const destination = response.headers.get('location');
-    const target = destination ? new URL(destination,base) : null;
-    if (response.status !== 302 || target?.pathname !== '/auth/login' ||
-        target.searchParams.get('next') !== pathname) {
-      throw new Error(pathname + ' must redirect anonymous visitors to login, got ' + response.status);
+    const target = destination ? new URL(destination, base) : null;
+    const expected = new URL(canonicalPath, base);
+    if (response.status !== 301 || target?.pathname !== expected.pathname ||
+        target?.search !== expected.search) {
+      throw new Error(legacyPath + ' must canonicalize to ' + canonicalPath + ', got ' +
+        response.status + ' -> ' + (destination || 'none'));
     }
-    console.log('PASS ' + pathname + ': anonymous -> identity login');
+    const protectedResponse = await request(target.pathname + target.search);
+    const protectedTarget = protectedResponse.headers.get('location');
+    const login = protectedTarget ? new URL(protectedTarget, base) : null;
+    if (protectedResponse.status !== 302 || login?.pathname !== '/auth/login' ||
+        login.searchParams.get('next') !== target.pathname + target.search) {
+      throw new Error(canonicalPath + ' must require identity after canonicalization, got ' +
+        protectedResponse.status + ' -> ' + (protectedTarget || 'none'));
+    }
+    console.log('PASS ' + legacyPath + ' -> ' + canonicalPath + ' -> identity login');
   }
+  const publicForm = await request('/forms/embed/form-smoke');
+  if (publicForm.status === 301 ||
+      (publicForm.headers.get('location') || '').includes('/admin/forms')) {
+    throw new Error('published form embed must remain outside the admin namespace');
+  }
+  console.log('PASS /forms/embed/: public embed remains outside admin redirects');
   // The editor modules remain deployed, but admin entry modules are not
   // allowed to be fetched until a verified account session exists.
   for (const pathname of [

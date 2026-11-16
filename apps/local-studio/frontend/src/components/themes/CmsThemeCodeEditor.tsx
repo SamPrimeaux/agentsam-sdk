@@ -34,7 +34,7 @@ export function CmsThemeCodeEditor({ projectId, siteId }: { projectId:string; si
       project:projectId,
       site_id:siteId,
     });
-    const route='/apps/ecommerce-cms-agentsam?'+query.toString();
+    const route='/admin/apps/ecommerce-cms-agentsam?'+query.toString();
     if (isPackagedDesktop()) window.location.hash='#'+route;
     else window.location.assign(route);
   };

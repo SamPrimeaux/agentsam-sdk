@@ -8,11 +8,11 @@ const root = path.resolve(localStudio, '../..');
 
 // Host route composition only. Product identity and inclusion come from the existing manifests.
 const mounts = {
-  'local-studio': { href: '/admin/agentsam', icon: 'messageSquare', label: 'AgentSam', aliases: ['/agentsam', '/chats'] },
-  'cad-creator': { href: '/admin/cad', icon: 'box', label: 'CAD Creator', aliases: ['/cad'] },
+  'local-studio': { href: '/admin/agentsam', icon: 'messageSquare', label: 'AgentSam', aliases: ['/admin/agentsam', '/admin/chats'] },
+  'cad-creator': { href: '/admin/cad', icon: 'box', label: 'CAD Creator', aliases: ['/admin/cad'] },
   // MovieMode is Apps-only. Never alias /media — Media Library owns that tree.
   'agentsam-copro-studio': { href: '/admin/moviemode', icon: 'film', label: 'MovieMode', aliases: [] },
-  'samsketch': { href: '/samsketch', icon: 'layers', label: 'SamSketch', aliases: [] },
+  'samsketch': { href: '/admin/samsketch', icon: 'layers', label: 'SamSketch', aliases: [] },
   // SamSculpt is Creative Department Batch 1+. Include only when apps/samsculpt (or packaged
   // agentsam-3d-studio) is listed in included_apps — mount stays dormant until then.
   'samsculpt': { href: '/samsculpt', icon: 'box', label: 'SamSculpt', aliases: [] },
@@ -62,17 +62,17 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
   return {
     primary: [
       {id:'home',label:'Home',href:'/admin/home',icon:'home'},
-      {id:'media',label:'Library',href:'/media',icon:'library',children:[
-        {id:'images',label:'Images',href:'/media/images'},
-        {id:'videos',label:'Videos',href:'/media/videos'},
-        {id:'models',label:'Models',href:'/media/models'},
-        {id:'files',label:'All files',href:'/media/files'},
+      {id:'media',label:'Library',href:'/admin/media',icon:'library',children:[
+        {id:'images',label:'Images',href:'/admin/media/images'},
+        {id:'videos',label:'Videos',href:'/admin/media/videos'},
+        {id:'models',label:'Models',href:'/admin/media/models'},
+        {id:'files',label:'All files',href:'/admin/media/files'},
       ]},
       {id:'analytics',label:'Analytics',href:'/admin/analytics/overview',icon:'analytics',children:[
         {id:'finance',label:'Finance',href:'/admin/analytics/finance'},
         {id:'health',label:'Health',href:'/admin/analytics/health'},
       ]},
-      {id:'tickets',label:'Tickets',href:'/tickets',icon:'tickets'},
+      {id:'tickets',label:'Tickets',href:'/admin/tickets',icon:'tickets'},
     ],
     channels: commerce ? [
       {id:'online-store',label:'Online Store',href:'/admin/store',icon:'store',children:[
@@ -91,7 +91,7 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
         {id:'growth',label:'Growth',href:growthNav.href},
       ] : []},
     ] : [],
-    // Settings owns Documentation at /settings/docs. Artwork Help redirects there.
+    // Settings owns Documentation at /admin/settings/docs. Artwork Help redirects there.
     utilities: [],
     schema: 'agentsam.host-navigation.v1',
     hostAppId: host.app_id,

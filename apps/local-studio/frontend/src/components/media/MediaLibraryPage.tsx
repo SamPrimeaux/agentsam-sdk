@@ -200,7 +200,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     let cancelled = false;
     (async () => {
       try {
-        const qs = accountQs("connection_id", new URLSearchParams({ per_page: "200", return_to: "/media" }));
+        const qs = accountQs("connection_id", new URLSearchParams({ per_page: "200", return_to: "/admin/media" }));
         const first = await getJson(`/api/connections/cloudflare/resources?${qs}`);
         if (cancelled) return;
         if (!first.res.ok) {
@@ -217,7 +217,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
         let cursor: string | null = first.body?.r2?.cursor || null;
         // Follow cursors so the picker offers every bucket, not just the first page.
         for (let i = 0; i < 8 && cursor && first.body?.r2?.truncated !== false; i += 1) {
-          const next = accountQs("connection_id", new URLSearchParams({ per_page: "200", return_to: "/media", cursor }));
+          const next = accountQs("connection_id", new URLSearchParams({ per_page: "200", return_to: "/admin/media", cursor }));
           const page = await getJson(`/api/connections/cloudflare/resources?${next}`);
           if (cancelled) return;
           const more: R2Bucket[] = Array.isArray(page.body?.r2?.buckets) ? page.body.r2.buckets : [];
@@ -632,8 +632,8 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
               </button>
             </div>
             <div className="agentsam-media-settings-links">
-              <a href="/settings/storage">Storage settings</a>
-              <a href="/settings/customize?view=plugins">Plugins</a>
+              <a href="/admin/settings/storage">Storage settings</a>
+              <a href="/admin/settings/customize?view=plugins">Plugins</a>
             </div>
           </div>
         </div>

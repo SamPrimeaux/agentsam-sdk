@@ -205,7 +205,7 @@ export function TerminalPane({
             hint="Monitor up to five independent agents, shells, and servers"
             onClick={() => setGridView(!gridView)}
           ><Grid2X2 className="size-3.5" /></IconAction>
-          {variant !== "page" && <IconAction size="icon-sm" variant="ghost" label="Open full terminal workspace" hint="Expand tiled terminals to their own workspace" onClick={() => navigateApp("/cli")}>
+          {variant !== "page" && <IconAction size="icon-sm" variant="ghost" label="Open full terminal workspace" hint="Expand tiled terminals to their own workspace" onClick={() => navigateApp("/admin/cli")}>
             <Maximize2 className="size-3.5" />
           </IconAction>}
           <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Reconnect terminal" onClick={() => window.location.reload()}>
@@ -326,7 +326,7 @@ function TerminalViewport({ sessionId }: { sessionId: string }) {
   return <div
     ref={hostRef}
     data-terminal-viewport={sessionId}
-    style={{ backgroundColor: appearance.theme.background }}
+    style={{ "--color-background": appearance.theme.background } as CSSProperties}
     className="terminal-host min-h-0 min-w-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]"
     onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
     onDrop={(event) => {
@@ -335,7 +335,7 @@ function TerminalViewport({ sessionId }: { sessionId: string }) {
       event.stopPropagation();
       const chatId = useWorkStore.getState().activeChatId;
       queueChatImages(chatId, Array.from(event.dataTransfer.files));
-      navigateApp("/agentsam");
+      navigateApp("/admin/agentsam");
       toast("Opening Chat to attach screenshot — no terminal input sent.");
     }}
   />;

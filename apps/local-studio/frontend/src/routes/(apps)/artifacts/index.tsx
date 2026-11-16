@@ -1,10 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { LocalStudioWorkPage } from "@/components/work/LocalStudioWorkPage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/artifacts/")({
-  component: ArtifactsRoute,
+  component: () => <Navigate to="/admin/artifacts" search={true} replace />,
 });
-
-function ArtifactsRoute() {
-  return <LocalStudioWorkPage surface="artifacts" />;
-}

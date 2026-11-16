@@ -76,11 +76,11 @@
   renderSideNav = function (active, userNav, options) {
     return originalSideNav(active, userNav, options)
       .replace('<strong>Fuel &amp; Free Time</strong>', '<strong data-profile-name>Account</strong>')
-      .replace('href="/admin/account"', 'href="/settings/general"')
-      .replace('href="/admin/preferences" class="console-menu-item"', 'href="/settings/integrations" class="console-menu-item"')
+      .replace('href="/admin/account"', 'href="/admin/settings/general"')
+      .replace('href="/admin/preferences" class="console-menu-item"', 'href="/admin/settings/integrations" class="console-menu-item"')
       .replace('Store preferences</a>', 'Integrations</a>')
       .replace('Account &amp; password</a>', 'Account settings</a>')
-      .replace('<button class="admin-logout-btn" type="button">Log out</button>', '<a href="/settings/general" class="admin-logout-btn">Account settings</a>')
+      .replace('<button class="admin-logout-btn" type="button">Log out</button>', '<a href="/admin/settings/general" class="admin-logout-btn">Account settings</a>')
       .replaceAll("https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail", "/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif");
   };
   // The hosted Ecommerce Console and React Local Studio must read the same
@@ -239,7 +239,7 @@
       projects:registeredProjects.map(item=>{const updatedAt=Date.parse(item.updatedAt || '');return {id:item.id,name:item.name,pinned:item.starred,updatedAt:Number.isFinite(updatedAt)?updatedAt:undefined};}),
       conversations:chats.filter(item=>item.id!=='chat-studio'||item.messages?.some(message=>message.role==='user')).map(item=>({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
       historyStatus:projectHistoryStatus,onRetryHistory:refreshWorkspaceProjects,
-      onSelectConversation:id=>navigateHost('/chats/'+encodeURIComponent(id)),
+      onSelectConversation:id=>navigateHost('/admin/chats/'+encodeURIComponent(id)),
       onSelectProject:id=>navigateHost('/admin/projects/'+encodeURIComponent(id)),
       onPinConversation:id=>{
         if (!updateStoredChat(id, chat=>({...chat,pinned:!chat.pinned}))) window.alert('Conversation pin could not be saved. Please retry.');
@@ -280,10 +280,10 @@
       ? window.AgentSamNav?.navIcon?.(({messageSquare:'agentsam',box:'cad',film:'moviemode',layers:'apps'})[activeApp.icon] || activeApp.icon)
       : undefined;
     return {
-      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/settings/docs?topic=artwork' : sharedNavPath, showHistory: true, showSidebarHeader: false,
+      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/admin/settings/docs?topic=artwork' : sharedNavPath, showHistory: true, showSidebarHeader: false,
       ...workspaceNavigation(),
-      ...(sharedNavPath.startsWith('/settings') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'}]} : {}),
-      ...(sharedNavPath.startsWith('/admin/products/help/artwork') || sharedNavPath.startsWith('/settings/docs') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'},{id:'docs',label:'Documentation',href:'/settings/docs'},...(sharedNavPath.includes('artwork')?[{id:'artwork-guide',label:'Artwork Help'}]:[])]} : {}),
+      ...(sharedNavPath.startsWith('/admin/settings') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/admin/settings/general'}]} : {}),
+      ...(sharedNavPath.startsWith('/admin/products/help/artwork') || sharedNavPath.startsWith('/admin/settings/docs') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/admin/settings/general'},{id:'docs',label:'Documentation',href:'/admin/settings/docs'},...(sharedNavPath.includes('artwork')?[{id:'artwork-guide',label:'Artwork Help'}]:[])]} : {}),
       brand: { name: activeApp?.label || 'InnerAnimalMedia', icon: appIcon,
         logo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg',
         lightLogo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', home: '/admin/home' },
@@ -292,8 +292,8 @@
       account: { id: profile.id || 'local', name: profile.id ? profile.display_name || profile.email || 'Account' : 'Local account',
         avatar: safeAvatarUrl(profile.avatar_url) || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', plan: profile.id ? profile.email || 'Personal workspace' : 'Sign in required' },
       accountActions: [
-        { id:'account',label:'Account',onSelect:() => navigateHost('/settings/general') },
-        { id:'settings',label:'Settings',onSelect:() => navigateHost('/settings/general') },
+        { id:'account',label:'Account',onSelect:() => navigateHost('/admin/settings/general') },
+        { id:'settings',label:'Settings',onSelect:() => navigateHost('/admin/settings/general') },
         ...(!profile.id ? [{id:'sign-in',label:'Sign in',onSelect:() => navigateHost('/auth/login')}] : profile.can_sign_out === false ? [] : [{
           id:'sign-out',label:'Sign out',separatorBefore:true,onSelect:async () => {
             if (window.__agentsamSignOut) { await window.__agentsamSignOut(); return; }
@@ -482,11 +482,26 @@
       const path = link.getAttribute("href");
       if (!path || !path.startsWith("/") || path.startsWith("//")) return;
       event.preventDefault();
-      // Desktop keeps the ecommerce console inside Local Studio's own route
-      // host; never send these paths to a separately installed site Worker.
-      const destination = path.startsWith("/admin/") && ["/admin/agentsam", "/admin/projects", "/admin/cad", "/admin/moviemode"].some((mount) => path === mount || path.startsWith(mount + "/")) ? path
+      // First-party dashboard tools stay on their canonical Studio routes.
+      // Ecommerce-owned resources (/admin/products, orders, pages, etc.) stay
+      // inside the installed Ecommerce app, not the Studio route tree.
+      const studioAdminMounts = [
+        "/admin/home", "/admin/agentsam", "/admin/chats", "/admin/analytics",
+        "/admin/artifacts", "/admin/browse", "/admin/cad", "/admin/campaigns",
+        "/admin/canvas", "/admin/cli", "/admin/cms", "/admin/collaborate",
+        "/admin/content", "/admin/database", "/admin/docs", "/admin/files",
+        "/admin/forms", "/admin/goalguru", "/admin/help/cms", "/admin/ideas",
+        "/admin/library", "/admin/mail", "/admin/media", "/admin/moviemode",
+        "/admin/onboarding-preview", "/admin/projects", "/admin/samsketch",
+        "/admin/settings", "/admin/ship", "/admin/sites", "/admin/store",
+        "/admin/themes", "/admin/tickets", "/admin/widgets",
+        "/admin/apps/ecommerce-cms-agentsam",
+      ];
+      const isStudioAdminDestination = !path.startsWith("/admin/analytics/") &&
+        studioAdminMounts.some((mount) => path === mount || path.startsWith(mount + "/"));
+      const destination = path.startsWith("/admin/") && isStudioAdminDestination ? path
         : path.startsWith("/admin/")
-          ? "/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
+          ? "/admin/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
           : path;
       if (desktopHost) desktopHost.navigate(destination);
       else window.location.hash = "#" + destination;

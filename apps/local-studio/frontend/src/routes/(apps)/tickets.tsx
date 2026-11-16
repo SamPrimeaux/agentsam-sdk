@@ -1,10 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { LocalStudioWorkPage } from "@/components/work/LocalStudioWorkPage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/tickets")({
-  component: TicketsRoute,
+  component: () => <Navigate to="/admin/tickets" search={true} replace />,
 });
-
-function TicketsRoute() {
-  return <LocalStudioWorkPage surface="tickets" />;
-}

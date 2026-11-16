@@ -1,7 +1,5 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/settings/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/settings/general" as never });
-  },
+  component: () => <Navigate to="/admin/settings" search={true} replace />,
 });

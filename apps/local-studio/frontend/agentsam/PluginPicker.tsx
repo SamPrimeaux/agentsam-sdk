@@ -117,7 +117,7 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
       );
       replaceMention(entry,false);
     } else if(entry.action.type==='setup'||!entry.ready){
-      window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/settings/integrations' } }));
+      window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/admin/settings/integrations' } }));
       replaceMention(entry,false);
     } else {
       const start=match?cursor-match[1].length-1:value.length;
@@ -210,7 +210,7 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
         {skillsError&&<p role="alert" className="agentsam-plugin-notice">{skillsError} <button type="button" onClick={()=>setRevision(n=>n+1)}>Retry</button></p>}
         {!skillsLoading&&!skillsError&&!skills.length&&<p className="agentsam-plugin-notice">No private skills yet. Create one in Settings.</p>}
         {skills.filter(skill=>(skill.name+' '+skill.description+' '+skill.trigger).toLowerCase().includes(query.toLowerCase())).map(skill=><button type="button" key={skill.id} className="agentsam-plugin-row" onClick={()=>{onChange(value+(value?' ':'')+'[skill:'+skill.id+'] '+skill.trigger+' ');setOpen(false);}}><Sparkles size={17}/><span className="sr-only" aria-hidden="true">Skill</span><span><strong>{skill.name}</strong><small>{skill.description||skill.trigger}</small></span></button>)}
-        <a className="agentsam-plugin-row" href="/settings/skills"><Wrench size={17}/><span><strong>Manage skills</strong></span></a>
+        <a className="agentsam-plugin-row" href="/admin/settings/skills"><Wrench size={17}/><span><strong>Manage skills</strong></span></a>
       </> : <>
       {error&&<p role="status" className="agentsam-plugin-notice">Some connected services couldn't be loaded. Available tools are still shown.</p>}
       {loading&&<p role="status" className="agentsam-plugin-notice">Loading your plugins and tools…</p>}

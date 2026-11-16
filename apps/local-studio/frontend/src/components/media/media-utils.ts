@@ -64,7 +64,7 @@ export function resolveMediaSurface(pathname: string): MediaSurface {
 }
 
 /** Keep OAuth return on Media Library even if discovery supplies Settings. */
-export function mediaConnectUrl(raw?: string | null, returnTo = "/media") {
+export function mediaConnectUrl(raw?: string | null, returnTo = "/admin/media") {
   const fallback = `/api/connections/cloudflare/start?packs=media,data&return_to=${encodeURIComponent(returnTo)}`;
   if (!raw) return fallback;
   try {

@@ -22,7 +22,7 @@ test('a verified expired session is absent; missing DB and lookup failures are u
   await assert.rejects(resolveStudioSessionUser(request(),{DB},options(async()=>{throw Error('private database detail');})),StudioIdentityUnavailableError);
 });
 test('all document paths preserve their requested destination on verified absence', async () => {
-  for(const path of ['/admin/home','/admin/agentsam','/admin/cad','/admin/moviemode','/settings/themes?filter=mine','/artifacts','/collaborate']) {
+  for(const path of ['/admin/home','/admin/agentsam','/admin/cad','/admin/moviemode','/admin/settings/themes?filter=mine','/admin/artifacts','/admin/collaborate']) {
     const response=await guardStudioDocumentSession(request(path),{resolveUser:async()=>null,loginPath:'/auth/login'});
     assert.equal(response.status,302);const target=new URL(response.headers.get('location'));
     assert.equal(target.pathname,'/auth/login');assert.equal(target.searchParams.get('next'),path);

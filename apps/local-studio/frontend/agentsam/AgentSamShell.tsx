@@ -211,11 +211,11 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     window.addEventListener('agentsam:projects-changed',refresh);
     return () => {cancelled=true;window.removeEventListener('agentsam:projects-changed',refresh);};
   },[historyRevision,user?.id]);
-  const isConversation = pathname === '/agentsam' || pathname === '/admin/agentsam' || pathname.startsWith('/chats');
-  const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/') || pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
-  const isSamSketchRoute = pathname === '/samsketch' || pathname.startsWith('/samsketch/');
+  const isConversation = pathname === '/admin/agentsam' || pathname.startsWith('/admin/chats');
+  const isCadRoute = pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
+  const isSamSketchRoute = pathname === '/admin/samsketch' || pathname.startsWith('/admin/samsketch/');
   const isSamSculptRoute = pathname === '/samsculpt' || pathname.startsWith('/samsculpt/');
-  const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
+  const isSettings = pathname === '/admin/settings' || pathname.startsWith('/admin/settings/');
   const [navigation, setNavigation] = useState<StudioNavigationProjection>({});
   useEffect(() => {
     const controller = new AbortController();
@@ -261,23 +261,23 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       go(legacyMedia);
       return;
     }
-    if (pathOnly === '/docs' || pathOnly.startsWith('/docs/')) {
-      go('/settings/docs');
+    if (pathOnly === '/docs' || pathOnly.startsWith('/docs/') || pathOnly === '/admin/docs' || pathOnly.startsWith('/admin/docs/')) {
+      go('/admin/settings/docs');
       return;
     }
     if (pathOnly === '/admin/products/help/artwork' || pathOnly.startsWith('/admin/products/help/artwork')) {
-      go('/settings/docs?topic=artwork');
+      go('/admin/settings/docs?topic=artwork');
       return;
     }
     if (pathOnly.startsWith('/admin/') && !isStudioAdminPath(pathOnly)) {
       if (isPackagedDesktop()) {
-        window.location.hash = '#/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
+        window.location.hash = '#/admin/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
         return;
       }
       // Keep the real registered SPA route in the address bar. Replacing it
       // with an unregistered /admin/* URL makes TanStack render Not Found on
       // subsequent navigation despite a valid packaged server-side document.
-      void navigate({ to: '/apps/ecommerce-cms-agentsam', search: { page: to } } as never);
+      void navigate({ to: '/admin/apps/ecommerce-cms-agentsam', search: { page: to } } as never);
       return;
     }
     if (isPackagedDesktop()) {
@@ -340,7 +340,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // activate the existing composer without navigating away from the active work.
   useEffect(() => {
     const activate = () => {
-      if (pathname === '/admin/agentsam' || pathname.startsWith('/chats')) {
+      if (pathname === '/admin/agentsam' || pathname.startsWith('/admin/chats')) {
         window.requestAnimationFrame(() =>
           document.querySelector<HTMLTextAreaElement>('.agentsam-conversation-dock textarea')?.focus());
         return;
@@ -468,10 +468,10 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   useEffect(() => {
     if (!state.settingsOpen) return;
     state.setSettingsOpen(false);
-    void navigate({ to: '/settings/general' as never });
+    void navigate({ to: '/admin/settings/general' as never });
   }, [state.settingsOpen, state, navigate]);
 
-  const navPathname = pathname === '/apps/ecommerce-cms-agentsam'
+  const navPathname = pathname === '/admin/apps/ecommerce-cms-agentsam'
     ? new URLSearchParams(searchStr).get('page') || pathname
     : pathname + searchStr;
   const value: NavValue = {
@@ -490,7 +490,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     onOpenResource: item => {
       if(item.open && (item.open.startsWith('/') && !item.open.startsWith('//') || item.open.startsWith('https://'))) {
         window.open(item.open,'_blank','noopener,noreferrer');
-      } else go('/artifacts?view=starred');
+      } else go('/admin/artifacts?view=starred');
     },
     projects: workProjects.map(item => ({id:item.id,name:item.name,pinned:item.starred,updatedAt:item.updatedAt ? Date.parse(item.updatedAt) : undefined})),
     historyStatus,onRetryHistory:()=>setHistoryRevision(value=>value+1),
@@ -521,7 +521,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     onCreateConversation: () => { state.startChat(); go('/admin/agentsam'); },
     onSelectConversation: (id) => {
       if (state.chats.some(item => item.id === id)) state.setActiveChat(id);
-      go('/chats/' + encodeURIComponent(id));
+      go('/admin/chats/' + encodeURIComponent(id));
     },
     onSelectProject: (id) => go('/admin/projects/'+encodeURIComponent(id)),
     onPinProject: (id) => {
@@ -565,7 +565,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           if (state.chats.some(item => item.id === id)) state.deleteChat(id);
           setChatRevision(value => value + 1);
           toast.success('Conversation archived');
-          go('/chats');
+          go('/admin/chats');
         })
         .catch(() => toast.error('Could not archive conversation.'));
     } : undefined,
@@ -599,7 +599,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     onShare: shareableChat ? () => setSharing(true) : undefined,
     accountActions: [
       {id:'profile-image',label:'Profile image',icon:<PawPrint />,onSelect:() => { setAvatarDraft(accountAvatarUrl || user?.profileImageUrl || ''); setAvatarDialogOpen(true); }},
-      {id:'settings',label:'Settings',icon:<Settings />,onSelect:() => go('/settings/general')},
+      {id:'settings',label:'Settings',icon:<Settings />,onSelect:() => go('/admin/settings/general')},
       ...(isPackagedDesktop() ? [{id:'desktop-pet',label:'Desktop pet',icon:<PawPrint />,onSelect:() => { void toggleAgentSamPet().then((visible) => toast.success(visible ? 'AgentSam pet is on your desktop' : 'AgentSam pet hidden')).catch(() => toast.error('Desktop pet could not be opened')); }}] : []),
       ...(!user || user.isDevFallback ? [{id:'sign-in',label:'Sign in',icon:<LogIn />,onSelect:() => isPackagedDesktop() ? setIdentityOpen(true) : go('/auth/login')}] : hasGateSessionMarker() ? [] : [{id:'sign-out',label:'Sign out',icon:<LogOut />,onSelect:() => {void signOut().catch(() => toast.error('Sign out could not be completed. Please try again.'));}}]),
     ],
@@ -633,17 +633,17 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       }))),
       outputActions: [
         { id: 'open-artifacts', label: 'Open artifacts', icon: <BookOpen />, onSelect: () => { state.openSideTab('artifacts', { ephemeral: false }); state.setSideOpen(true); } },
-        { id: 'edit-site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/sites') },
+        { id: 'edit-site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/admin/sites') },
       ],
       sourceActions: [
         { id: 'browse-files', label: 'Browse files', icon: <Files />, onSelect: () => { state.openSideTab('files', { ephemeral: false }); state.setSideOpen(true); } },
-        { id: 'open-files-library', label: 'Open file library', icon: <Folder />, onSelect: () => go('/files') },
+        { id: 'open-files-library', label: 'Open file library', icon: <Folder />, onSelect: () => go('/admin/files') },
       ],
     } : undefined,
     resourceActions: [
       { id: 'outputs', label: 'Outputs', icon: <BookOpen />, onSelect: () => state.openSideTab('artifacts') },
       { id: 'files', label: 'Files & sources', icon: <Files />, onSelect: () => state.openSideTab('files') },
-      { id: 'site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/cms') },
+      { id: 'site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/admin/cms') },
     ],
   };
   useEffect(() => {

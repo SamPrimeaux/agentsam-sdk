@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { EcommerceAppView } from '../apps/ecommerce-cms-agentsam';
+import { EcommerceAppView } from './apps/ecommerce-cms-agentsam';
 
 /**
  * First customer journey is owned by the existing Ecommerce CMS product.

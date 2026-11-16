@@ -185,7 +185,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
           variant="ghost"
           label="Open Media workspace"
           hint="Open Media in its dedicated workspace"
-          onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/media" } }))}
+          onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/admin/media" } }))}
         ><ExternalLink className="size-4" /></IconAction>}
         {onFocusToggle && <IconAction
           type="button"

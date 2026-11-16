@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { MediaLibraryPage } from "@/components/media/MediaLibraryPage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/media/images")({
-  component: MediaLibraryPage,
+  component: () => <Navigate to="/admin/media/images" search={true} replace />,
 });

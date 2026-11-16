@@ -59,7 +59,7 @@ export function CommandPalette() {
           <Command.Item
             onSelect={() => {
               createProject();
-              void navigate({ to: "/projects" });
+              void navigate({ to: "/admin/projects" });
               setOpen(false);
             }}
           >
@@ -108,7 +108,7 @@ export function CommandPalette() {
           </Command.Item>
           <Command.Item
             onSelect={() => {
-              void navigate({ to: "/artifacts" });
+              void navigate({ to: "/admin/artifacts" });
               setOpen(false);
             }}
           >
@@ -117,7 +117,7 @@ export function CommandPalette() {
           </Command.Item>
           <Command.Item
             onSelect={() => {
-              void navigate({ to: "/chats" });
+              void navigate({ to: "/admin/chats" });
               setOpen(false);
             }}
           >
@@ -148,7 +148,7 @@ export function CommandPalette() {
               value={`project ${project.name}`}
               onSelect={() => {
                 setActiveProject(project.id);
-                void navigate({ to: "/chats" });
+                void navigate({ to: "/admin/chats" });
                 setOpen(false);
               }}
             >
@@ -163,7 +163,7 @@ export function CommandPalette() {
               value={chat.title}
               onSelect={() => {
                 setActiveChat(chat.id);
-                void navigate({ to: "/chats/$chatId", params: { chatId: chat.id } });
+                void navigate({ to: "/admin/chats/$chatId", params: { chatId: chat.id } });
                 setOpen(false);
               }}
             >

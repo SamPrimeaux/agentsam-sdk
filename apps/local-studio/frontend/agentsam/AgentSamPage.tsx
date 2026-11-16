@@ -89,13 +89,13 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     if (!id) return;
     visitedThreads.index = nextIndex;
     setThreadHistory({ index: nextIndex, total: visitedThreads.ids.length });
-    void navigate({ to: '/chats/$chatId', params: { chatId: id } });
+    void navigate({ to: '/admin/chats/$chatId', params: { chatId: id } });
   };
   useEffect(() => { if (conversationId && state.chats.some((item) => item.id === conversationId)) state.setActiveChat(conversationId); }, [conversationId, state.setActiveChat, state.chats]);
 
   const startNewChat = () => {
     const id = state.startChat();
-    void navigate({ to: '/chats/$chatId', params: { chatId: id } });
+    void navigate({ to: '/admin/chats/$chatId', params: { chatId: id } });
   };
   const openBrowserTab = (fullView: boolean) => {
     state.openSideTab('browser', { ephemeral: false });

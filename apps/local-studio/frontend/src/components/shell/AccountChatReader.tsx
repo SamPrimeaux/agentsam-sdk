@@ -31,7 +31,7 @@ export function AccountChatReader({ id }: { id: string }) {
   },[id,revision]);
   return <div className="flex h-full min-h-0 flex-col bg-background" data-chat-reader="account">
     <header className="flex min-h-14 items-center gap-3 border-b border-border px-4 sm:px-7">
-      <Link to="/chats" aria-label="Back to Chats" className="grid size-8 place-items-center rounded-md hover:bg-muted"><ArrowLeft size={17}/></Link>
+      <Link to="/admin/chats" aria-label="Back to Chats" className="grid size-8 place-items-center rounded-md hover:bg-muted"><ArrowLeft size={17}/></Link>
       <MessageSquare size={17} className="shrink-0 text-muted-foreground"/>
       <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{name}</h1>
       <span className="hidden text-xs text-muted-foreground sm:inline">Account history</span>

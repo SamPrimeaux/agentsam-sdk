@@ -36,7 +36,7 @@ export type StorageSettingsResponse = {
   };
 };
 
-const MANAGE_PLUGINS="/settings/customize?view=plugins";
+const MANAGE_PLUGINS="/admin/settings/customize?view=plugins";
 function familyHealth(family: StorageFamily | undefined): HealthState {
   if (!family) return "unknown";
   if (["needs_scope","not_connected","unavailable"].includes(family.status||"")) return "attention";
@@ -114,7 +114,7 @@ export function projectSettingsStorageTargets(
       access:recorded?"authorization_recorded":
         (!settings || hints?.cloudAvailable===false || hints?.oauthAvailable===false)?"unverified":
         saved?"unverified":"not_configured",
-      actionHref:["s3","supabase"].includes(spec.pref)?"/settings/keys":MANAGE_PLUGINS,
+      actionHref:["s3","supabase"].includes(spec.pref)?"/admin/settings/keys":MANAGE_PLUGINS,
       actionLabel:["s3","supabase"].includes(spec.pref)?"Keys & Secrets":"Manage authorization",
     },spec.pref);
   });

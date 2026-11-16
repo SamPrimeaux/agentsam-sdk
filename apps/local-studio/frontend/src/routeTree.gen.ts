@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as appsAdminRouteRouteImport } from './routes/(apps)/admin/route'
 import { Route as appsAgentsamRouteImport } from './routes/(apps)/agentsam'
 import { Route as appsAnalyticsRouteImport } from './routes/(apps)/analytics'
 import { Route as appsArtifactsRouteImport } from './routes/(apps)/artifacts'
@@ -43,12 +44,39 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as OnboardingCompanionRouteImport } from './routes/onboarding/companion'
+import { Route as appsAdminIndexRouteImport } from './routes/(apps)/admin/index'
 import { Route as appsAdminAgentsamRouteImport } from './routes/(apps)/admin/agentsam'
+import { Route as appsAdminAnalyticsRouteImport } from './routes/(apps)/admin/analytics'
+import { Route as appsAdminArtifactsRouteImport } from './routes/(apps)/admin/artifacts'
+import { Route as appsAdminBrowseRouteImport } from './routes/(apps)/admin/browse'
 import { Route as appsAdminCadRouteImport } from './routes/(apps)/admin/cad'
+import { Route as appsAdminCampaignsRouteImport } from './routes/(apps)/admin/campaigns'
+import { Route as appsAdminCanvasRouteImport } from './routes/(apps)/admin/canvas'
+import { Route as appsAdminCliRouteImport } from './routes/(apps)/admin/cli'
+import { Route as appsAdminCmsRouteImport } from './routes/(apps)/admin/cms'
+import { Route as appsAdminCollaborateRouteImport } from './routes/(apps)/admin/collaborate'
+import { Route as appsAdminContentRouteImport } from './routes/(apps)/admin/content'
+import { Route as appsAdminDatabaseRouteImport } from './routes/(apps)/admin/database'
+import { Route as appsAdminDocsRouteImport } from './routes/(apps)/admin/docs'
+import { Route as appsAdminFilesRouteImport } from './routes/(apps)/admin/files'
+import { Route as appsAdminFormsRouteImport } from './routes/(apps)/admin/forms'
+import { Route as appsAdminGoalguruRouteImport } from './routes/(apps)/admin/goalguru'
+import { Route as appsAdminHomeRouteImport } from './routes/(apps)/admin/home'
+import { Route as appsAdminIdeasRouteImport } from './routes/(apps)/admin/ideas'
+import { Route as appsAdminLibraryRouteImport } from './routes/(apps)/admin/library'
+import { Route as appsAdminMailRouteImport } from './routes/(apps)/admin/mail'
+import { Route as appsAdminMediaRouteImport } from './routes/(apps)/admin/media'
 import { Route as appsAdminMoviemodeRouteImport } from './routes/(apps)/admin/moviemode'
 import { Route as appsAdminOnboardingPreviewRouteImport } from './routes/(apps)/admin/onboarding-preview'
 import { Route as appsAdminProjectsRouteImport } from './routes/(apps)/admin/projects'
+import { Route as appsAdminSamsketchRouteImport } from './routes/(apps)/admin/samsketch'
+import { Route as appsAdminSettingsRouteImport } from './routes/(apps)/admin/settings'
+import { Route as appsAdminShipRouteImport } from './routes/(apps)/admin/ship'
+import { Route as appsAdminSitesRouteImport } from './routes/(apps)/admin/sites'
 import { Route as appsAdminStoreRouteImport } from './routes/(apps)/admin/store'
+import { Route as appsAdminThemesRouteImport } from './routes/(apps)/admin/themes'
+import { Route as appsAdminTicketsRouteImport } from './routes/(apps)/admin/tickets'
+import { Route as appsAdminWidgetsRouteImport } from './routes/(apps)/admin/widgets'
 import { Route as appsAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/apps/ecommerce-cms-agentsam'
 import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
 import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
@@ -70,18 +98,42 @@ import { Route as appsSettingsRuntimeRouteImport } from './routes/(apps)/setting
 import { Route as appsSettingsThemesRouteImport } from './routes/(apps)/settings/themes'
 import { Route as ApiContentOptimizeRouteImport } from './routes/api/content.optimize'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
+import { Route as appsAdminAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/admin/apps/ecommerce-cms-agentsam'
+import { Route as appsAdminArtifactsIndexRouteImport } from './routes/(apps)/admin/artifacts/index'
+import { Route as appsAdminArtifactsTicketsRouteImport } from './routes/(apps)/admin/artifacts/tickets'
+import { Route as appsAdminChatsIndexRouteImport } from './routes/(apps)/admin/chats/index'
+import { Route as appsAdminChatsChatIdRouteImport } from './routes/(apps)/admin/chats/$chatId'
+import { Route as appsAdminHelpCmsRouteImport } from './routes/(apps)/admin/help/cms'
+import { Route as appsAdminMediaEditRouteImport } from './routes/(apps)/admin/media.edit'
+import { Route as appsAdminMediaFilesRouteImport } from './routes/(apps)/admin/media.files'
+import { Route as appsAdminMediaImagesRouteImport } from './routes/(apps)/admin/media.images'
+import { Route as appsAdminMediaModelsRouteImport } from './routes/(apps)/admin/media.models'
+import { Route as appsAdminMediaVideosRouteImport } from './routes/(apps)/admin/media.videos'
 import { Route as appsAdminMoviemodeEditRouteImport } from './routes/(apps)/admin/moviemode.edit'
 import { Route as appsAdminProjectsIndexRouteImport } from './routes/(apps)/admin/projects/index'
 import { Route as appsAdminProjectsProjectIdRouteImport } from './routes/(apps)/admin/projects/$projectId'
+import { Route as appsAdminSettingsIndexRouteImport } from './routes/(apps)/admin/settings/index'
+import { Route as appsAdminSettingsUnitRouteImport } from './routes/(apps)/admin/settings/$unit'
+import { Route as appsAdminSettingsIntegrationsRouteImport } from './routes/(apps)/admin/settings/integrations'
+import { Route as appsAdminSettingsKeysRouteImport } from './routes/(apps)/admin/settings/keys'
+import { Route as appsAdminSettingsRuntimeRouteImport } from './routes/(apps)/admin/settings/runtime'
+import { Route as appsAdminSettingsThemesRouteImport } from './routes/(apps)/admin/settings/themes'
 import { Route as appsAgentsamAppsCadRouteImport } from './routes/(apps)/agentsam.apps.cad'
 import { Route as appsArtifactsTicketsIndexRouteImport } from './routes/(apps)/artifacts/tickets/index'
 import { Route as appsArtifactsTicketsTicketIdRouteImport } from './routes/(apps)/artifacts/tickets/$ticketId'
 import { Route as ApiContentLocalBridgeRouteImport } from './routes/api/content.local.bridge'
 import { Route as ApiDatabaseLocalBridgeRouteImport } from './routes/api/database.local.bridge'
+import { Route as appsAdminArtifactsTicketsIndexRouteImport } from './routes/(apps)/admin/artifacts/tickets/index'
+import { Route as appsAdminArtifactsTicketsTicketIdRouteImport } from './routes/(apps)/admin/artifacts/tickets/$ticketId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsAdminRouteRoute = appsAdminRouteRouteImport.update({
+  id: '/(apps)/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsAgentsamRoute = appsAgentsamRouteImport.update({
@@ -249,36 +301,171 @@ const OnboardingCompanionRoute = OnboardingCompanionRouteImport.update({
   path: '/onboarding/companion',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminIndexRoute = appsAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
 const appsAdminAgentsamRoute = appsAdminAgentsamRouteImport.update({
-  id: '/(apps)/admin/agentsam',
-  path: '/admin/agentsam',
-  getParentRoute: () => rootRouteImport,
+  id: '/agentsam',
+  path: '/agentsam',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminAnalyticsRoute = appsAdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminArtifactsRoute = appsAdminArtifactsRouteImport.update({
+  id: '/artifacts',
+  path: '/artifacts',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminBrowseRoute = appsAdminBrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
+  getParentRoute: () => appsAdminRouteRoute,
 } as any)
 const appsAdminCadRoute = appsAdminCadRouteImport.update({
-  id: '/(apps)/admin/cad',
-  path: '/admin/cad',
-  getParentRoute: () => rootRouteImport,
+  id: '/cad',
+  path: '/cad',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminCampaignsRoute = appsAdminCampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminCanvasRoute = appsAdminCanvasRouteImport.update({
+  id: '/canvas',
+  path: '/canvas',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminCliRoute = appsAdminCliRouteImport.update({
+  id: '/cli',
+  path: '/cli',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminCmsRoute = appsAdminCmsRouteImport.update({
+  id: '/cms',
+  path: '/cms',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminCollaborateRoute = appsAdminCollaborateRouteImport.update({
+  id: '/collaborate',
+  path: '/collaborate',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminContentRoute = appsAdminContentRouteImport.update({
+  id: '/content',
+  path: '/content',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminDatabaseRoute = appsAdminDatabaseRouteImport.update({
+  id: '/database',
+  path: '/database',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminDocsRoute = appsAdminDocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminFilesRoute = appsAdminFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminFormsRoute = appsAdminFormsRouteImport.update({
+  id: '/forms',
+  path: '/forms',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminGoalguruRoute = appsAdminGoalguruRouteImport.update({
+  id: '/goalguru',
+  path: '/goalguru',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminHomeRoute = appsAdminHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminIdeasRoute = appsAdminIdeasRouteImport.update({
+  id: '/ideas',
+  path: '/ideas',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminLibraryRoute = appsAdminLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminMailRoute = appsAdminMailRouteImport.update({
+  id: '/mail',
+  path: '/mail',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminMediaRoute = appsAdminMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
+  getParentRoute: () => appsAdminRouteRoute,
 } as any)
 const appsAdminMoviemodeRoute = appsAdminMoviemodeRouteImport.update({
-  id: '/(apps)/admin/moviemode',
-  path: '/admin/moviemode',
-  getParentRoute: () => rootRouteImport,
+  id: '/moviemode',
+  path: '/moviemode',
+  getParentRoute: () => appsAdminRouteRoute,
 } as any)
 const appsAdminOnboardingPreviewRoute =
   appsAdminOnboardingPreviewRouteImport.update({
-    id: '/(apps)/admin/onboarding-preview',
-    path: '/admin/onboarding-preview',
-    getParentRoute: () => rootRouteImport,
+    id: '/onboarding-preview',
+    path: '/onboarding-preview',
+    getParentRoute: () => appsAdminRouteRoute,
   } as any)
 const appsAdminProjectsRoute = appsAdminProjectsRouteImport.update({
-  id: '/(apps)/admin/projects',
-  path: '/admin/projects',
-  getParentRoute: () => rootRouteImport,
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminSamsketchRoute = appsAdminSamsketchRouteImport.update({
+  id: '/samsketch',
+  path: '/samsketch',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminSettingsRoute = appsAdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminShipRoute = appsAdminShipRouteImport.update({
+  id: '/ship',
+  path: '/ship',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminSitesRoute = appsAdminSitesRouteImport.update({
+  id: '/sites',
+  path: '/sites',
+  getParentRoute: () => appsAdminRouteRoute,
 } as any)
 const appsAdminStoreRoute = appsAdminStoreRouteImport.update({
-  id: '/(apps)/admin/store',
-  path: '/admin/store',
-  getParentRoute: () => rootRouteImport,
+  id: '/store',
+  path: '/store',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminThemesRoute = appsAdminThemesRouteImport.update({
+  id: '/themes',
+  path: '/themes',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminTicketsRoute = appsAdminTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminWidgetsRoute = appsAdminWidgetsRouteImport.update({
+  id: '/widgets',
+  path: '/widgets',
+  getParentRoute: () => appsAdminRouteRoute,
 } as any)
 const appsAppsEcommerceCmsAgentsamRoute =
   appsAppsEcommerceCmsAgentsamRouteImport.update({
@@ -387,6 +574,63 @@ const ApiLlmInventoryRoute = ApiLlmInventoryRouteImport.update({
   path: '/api/llm/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminAppsEcommerceCmsAgentsamRoute =
+  appsAdminAppsEcommerceCmsAgentsamRouteImport.update({
+    id: '/apps/ecommerce-cms-agentsam',
+    path: '/apps/ecommerce-cms-agentsam',
+    getParentRoute: () => appsAdminRouteRoute,
+  } as any)
+const appsAdminArtifactsIndexRoute = appsAdminArtifactsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsAdminArtifactsRoute,
+} as any)
+const appsAdminArtifactsTicketsRoute =
+  appsAdminArtifactsTicketsRouteImport.update({
+    id: '/tickets',
+    path: '/tickets',
+    getParentRoute: () => appsAdminArtifactsRoute,
+  } as any)
+const appsAdminChatsIndexRoute = appsAdminChatsIndexRouteImport.update({
+  id: '/chats/',
+  path: '/chats/',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminChatsChatIdRoute = appsAdminChatsChatIdRouteImport.update({
+  id: '/chats/$chatId',
+  path: '/chats/$chatId',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminHelpCmsRoute = appsAdminHelpCmsRouteImport.update({
+  id: '/help/cms',
+  path: '/help/cms',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminMediaEditRoute = appsAdminMediaEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => appsAdminMediaRoute,
+} as any)
+const appsAdminMediaFilesRoute = appsAdminMediaFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => appsAdminMediaRoute,
+} as any)
+const appsAdminMediaImagesRoute = appsAdminMediaImagesRouteImport.update({
+  id: '/images',
+  path: '/images',
+  getParentRoute: () => appsAdminMediaRoute,
+} as any)
+const appsAdminMediaModelsRoute = appsAdminMediaModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => appsAdminMediaRoute,
+} as any)
+const appsAdminMediaVideosRoute = appsAdminMediaVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
+  getParentRoute: () => appsAdminMediaRoute,
+} as any)
 const appsAdminMoviemodeEditRoute = appsAdminMoviemodeEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -403,6 +647,38 @@ const appsAdminProjectsProjectIdRoute =
     path: '/$projectId',
     getParentRoute: () => appsAdminProjectsRoute,
   } as any)
+const appsAdminSettingsIndexRoute = appsAdminSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsAdminSettingsRoute,
+} as any)
+const appsAdminSettingsUnitRoute = appsAdminSettingsUnitRouteImport.update({
+  id: '/$unit',
+  path: '/$unit',
+  getParentRoute: () => appsAdminSettingsRoute,
+} as any)
+const appsAdminSettingsIntegrationsRoute =
+  appsAdminSettingsIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => appsAdminSettingsRoute,
+  } as any)
+const appsAdminSettingsKeysRoute = appsAdminSettingsKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => appsAdminSettingsRoute,
+} as any)
+const appsAdminSettingsRuntimeRoute =
+  appsAdminSettingsRuntimeRouteImport.update({
+    id: '/runtime',
+    path: '/runtime',
+    getParentRoute: () => appsAdminSettingsRoute,
+  } as any)
+const appsAdminSettingsThemesRoute = appsAdminSettingsThemesRouteImport.update({
+  id: '/themes',
+  path: '/themes',
+  getParentRoute: () => appsAdminSettingsRoute,
+} as any)
 const appsAgentsamAppsCadRoute = appsAgentsamAppsCadRouteImport.update({
   id: '/apps/cad',
   path: '/apps/cad',
@@ -430,9 +706,22 @@ const ApiDatabaseLocalBridgeRoute = ApiDatabaseLocalBridgeRouteImport.update({
   path: '/api/database/local/bridge',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminArtifactsTicketsIndexRoute =
+  appsAdminArtifactsTicketsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => appsAdminArtifactsTicketsRoute,
+  } as any)
+const appsAdminArtifactsTicketsTicketIdRoute =
+  appsAdminArtifactsTicketsTicketIdRouteImport.update({
+    id: '/$ticketId',
+    path: '/$ticketId',
+    getParentRoute: () => appsAdminArtifactsTicketsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof appsAdminRouteRouteWithChildren
   '/agentsam': typeof appsAgentsamRouteWithChildren
   '/analytics': typeof appsAnalyticsRoute
   '/artifacts': typeof appsArtifactsRouteWithChildren
@@ -467,11 +756,37 @@ export interface FileRoutesByFullPath {
   '/api/github': typeof ApiGithubRoute
   '/onboarding/companion': typeof OnboardingCompanionRoute
   '/admin/agentsam': typeof appsAdminAgentsamRoute
+  '/admin/analytics': typeof appsAdminAnalyticsRoute
+  '/admin/artifacts': typeof appsAdminArtifactsRouteWithChildren
+  '/admin/browse': typeof appsAdminBrowseRoute
   '/admin/cad': typeof appsAdminCadRoute
+  '/admin/campaigns': typeof appsAdminCampaignsRoute
+  '/admin/canvas': typeof appsAdminCanvasRoute
+  '/admin/cli': typeof appsAdminCliRoute
+  '/admin/cms': typeof appsAdminCmsRoute
+  '/admin/collaborate': typeof appsAdminCollaborateRoute
+  '/admin/content': typeof appsAdminContentRoute
+  '/admin/database': typeof appsAdminDatabaseRoute
+  '/admin/docs': typeof appsAdminDocsRoute
+  '/admin/files': typeof appsAdminFilesRoute
+  '/admin/forms': typeof appsAdminFormsRoute
+  '/admin/goalguru': typeof appsAdminGoalguruRoute
+  '/admin/home': typeof appsAdminHomeRoute
+  '/admin/ideas': typeof appsAdminIdeasRoute
+  '/admin/library': typeof appsAdminLibraryRoute
+  '/admin/mail': typeof appsAdminMailRoute
+  '/admin/media': typeof appsAdminMediaRouteWithChildren
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/admin/projects': typeof appsAdminProjectsRouteWithChildren
+  '/admin/samsketch': typeof appsAdminSamsketchRoute
+  '/admin/settings': typeof appsAdminSettingsRouteWithChildren
+  '/admin/ship': typeof appsAdminShipRoute
+  '/admin/sites': typeof appsAdminSitesRoute
   '/admin/store': typeof appsAdminStoreRoute
+  '/admin/themes': typeof appsAdminThemesRoute
+  '/admin/tickets': typeof appsAdminTicketsRoute
+  '/admin/widgets': typeof appsAdminWidgetsRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/chats/$chatId': typeof appsChatsChatIdRoute
@@ -489,18 +804,38 @@ export interface FileRoutesByFullPath {
   '/settings/themes': typeof appsSettingsThemesRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/admin/': typeof appsAdminIndexRoute
   '/artifacts/': typeof appsArtifactsIndexRoute
   '/chats/': typeof appsChatsIndexRoute
   '/projects/': typeof appsProjectsIndexRoute
   '/settings/': typeof appsSettingsIndexRoute
+  '/admin/apps/ecommerce-cms-agentsam': typeof appsAdminAppsEcommerceCmsAgentsamRoute
+  '/admin/artifacts/tickets': typeof appsAdminArtifactsTicketsRouteWithChildren
+  '/admin/chats/$chatId': typeof appsAdminChatsChatIdRoute
+  '/admin/help/cms': typeof appsAdminHelpCmsRoute
+  '/admin/media/edit': typeof appsAdminMediaEditRoute
+  '/admin/media/files': typeof appsAdminMediaFilesRoute
+  '/admin/media/images': typeof appsAdminMediaImagesRoute
+  '/admin/media/models': typeof appsAdminMediaModelsRoute
+  '/admin/media/videos': typeof appsAdminMediaVideosRoute
   '/admin/moviemode/edit': typeof appsAdminMoviemodeEditRoute
   '/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
+  '/admin/settings/$unit': typeof appsAdminSettingsUnitRoute
+  '/admin/settings/integrations': typeof appsAdminSettingsIntegrationsRoute
+  '/admin/settings/keys': typeof appsAdminSettingsKeysRoute
+  '/admin/settings/runtime': typeof appsAdminSettingsRuntimeRoute
+  '/admin/settings/themes': typeof appsAdminSettingsThemesRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/admin/artifacts/': typeof appsAdminArtifactsIndexRoute
+  '/admin/chats/': typeof appsAdminChatsIndexRoute
   '/admin/projects/': typeof appsAdminProjectsIndexRoute
+  '/admin/settings/': typeof appsAdminSettingsIndexRoute
   '/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
+  '/admin/artifacts/tickets/$ticketId': typeof appsAdminArtifactsTicketsTicketIdRoute
+  '/admin/artifacts/tickets/': typeof appsAdminArtifactsTicketsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -535,10 +870,34 @@ export interface FileRoutesByTo {
   '/api/github': typeof ApiGithubRoute
   '/onboarding/companion': typeof OnboardingCompanionRoute
   '/admin/agentsam': typeof appsAdminAgentsamRoute
+  '/admin/analytics': typeof appsAdminAnalyticsRoute
+  '/admin/browse': typeof appsAdminBrowseRoute
   '/admin/cad': typeof appsAdminCadRoute
+  '/admin/campaigns': typeof appsAdminCampaignsRoute
+  '/admin/canvas': typeof appsAdminCanvasRoute
+  '/admin/cli': typeof appsAdminCliRoute
+  '/admin/cms': typeof appsAdminCmsRoute
+  '/admin/collaborate': typeof appsAdminCollaborateRoute
+  '/admin/content': typeof appsAdminContentRoute
+  '/admin/database': typeof appsAdminDatabaseRoute
+  '/admin/docs': typeof appsAdminDocsRoute
+  '/admin/files': typeof appsAdminFilesRoute
+  '/admin/forms': typeof appsAdminFormsRoute
+  '/admin/goalguru': typeof appsAdminGoalguruRoute
+  '/admin/home': typeof appsAdminHomeRoute
+  '/admin/ideas': typeof appsAdminIdeasRoute
+  '/admin/library': typeof appsAdminLibraryRoute
+  '/admin/mail': typeof appsAdminMailRoute
+  '/admin/media': typeof appsAdminMediaRouteWithChildren
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
+  '/admin/samsketch': typeof appsAdminSamsketchRoute
+  '/admin/ship': typeof appsAdminShipRoute
+  '/admin/sites': typeof appsAdminSitesRoute
   '/admin/store': typeof appsAdminStoreRoute
+  '/admin/themes': typeof appsAdminThemesRoute
+  '/admin/tickets': typeof appsAdminTicketsRoute
+  '/admin/widgets': typeof appsAdminWidgetsRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
   '/help/cms': typeof appsHelpCmsRoute
@@ -555,22 +914,42 @@ export interface FileRoutesByTo {
   '/settings/themes': typeof appsSettingsThemesRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/admin': typeof appsAdminIndexRoute
   '/artifacts': typeof appsArtifactsIndexRoute
   '/chats': typeof appsChatsIndexRoute
   '/projects': typeof appsProjectsIndexRoute
   '/settings': typeof appsSettingsIndexRoute
+  '/admin/apps/ecommerce-cms-agentsam': typeof appsAdminAppsEcommerceCmsAgentsamRoute
+  '/admin/chats/$chatId': typeof appsAdminChatsChatIdRoute
+  '/admin/help/cms': typeof appsAdminHelpCmsRoute
+  '/admin/media/edit': typeof appsAdminMediaEditRoute
+  '/admin/media/files': typeof appsAdminMediaFilesRoute
+  '/admin/media/images': typeof appsAdminMediaImagesRoute
+  '/admin/media/models': typeof appsAdminMediaModelsRoute
+  '/admin/media/videos': typeof appsAdminMediaVideosRoute
   '/admin/moviemode/edit': typeof appsAdminMoviemodeEditRoute
   '/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
+  '/admin/settings/$unit': typeof appsAdminSettingsUnitRoute
+  '/admin/settings/integrations': typeof appsAdminSettingsIntegrationsRoute
+  '/admin/settings/keys': typeof appsAdminSettingsKeysRoute
+  '/admin/settings/runtime': typeof appsAdminSettingsRuntimeRoute
+  '/admin/settings/themes': typeof appsAdminSettingsThemesRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/admin/artifacts': typeof appsAdminArtifactsIndexRoute
+  '/admin/chats': typeof appsAdminChatsIndexRoute
   '/admin/projects': typeof appsAdminProjectsIndexRoute
+  '/admin/settings': typeof appsAdminSettingsIndexRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsIndexRoute
+  '/admin/artifacts/tickets/$ticketId': typeof appsAdminArtifactsTicketsTicketIdRoute
+  '/admin/artifacts/tickets': typeof appsAdminArtifactsTicketsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/(apps)/admin': typeof appsAdminRouteRouteWithChildren
   '/(apps)/agentsam': typeof appsAgentsamRouteWithChildren
   '/(apps)/analytics': typeof appsAnalyticsRoute
   '/(apps)/artifacts': typeof appsArtifactsRouteWithChildren
@@ -605,11 +984,37 @@ export interface FileRoutesById {
   '/api/github': typeof ApiGithubRoute
   '/onboarding/companion': typeof OnboardingCompanionRoute
   '/(apps)/admin/agentsam': typeof appsAdminAgentsamRoute
+  '/(apps)/admin/analytics': typeof appsAdminAnalyticsRoute
+  '/(apps)/admin/artifacts': typeof appsAdminArtifactsRouteWithChildren
+  '/(apps)/admin/browse': typeof appsAdminBrowseRoute
   '/(apps)/admin/cad': typeof appsAdminCadRoute
+  '/(apps)/admin/campaigns': typeof appsAdminCampaignsRoute
+  '/(apps)/admin/canvas': typeof appsAdminCanvasRoute
+  '/(apps)/admin/cli': typeof appsAdminCliRoute
+  '/(apps)/admin/cms': typeof appsAdminCmsRoute
+  '/(apps)/admin/collaborate': typeof appsAdminCollaborateRoute
+  '/(apps)/admin/content': typeof appsAdminContentRoute
+  '/(apps)/admin/database': typeof appsAdminDatabaseRoute
+  '/(apps)/admin/docs': typeof appsAdminDocsRoute
+  '/(apps)/admin/files': typeof appsAdminFilesRoute
+  '/(apps)/admin/forms': typeof appsAdminFormsRoute
+  '/(apps)/admin/goalguru': typeof appsAdminGoalguruRoute
+  '/(apps)/admin/home': typeof appsAdminHomeRoute
+  '/(apps)/admin/ideas': typeof appsAdminIdeasRoute
+  '/(apps)/admin/library': typeof appsAdminLibraryRoute
+  '/(apps)/admin/mail': typeof appsAdminMailRoute
+  '/(apps)/admin/media': typeof appsAdminMediaRouteWithChildren
   '/(apps)/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/(apps)/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/(apps)/admin/projects': typeof appsAdminProjectsRouteWithChildren
+  '/(apps)/admin/samsketch': typeof appsAdminSamsketchRoute
+  '/(apps)/admin/settings': typeof appsAdminSettingsRouteWithChildren
+  '/(apps)/admin/ship': typeof appsAdminShipRoute
+  '/(apps)/admin/sites': typeof appsAdminSitesRoute
   '/(apps)/admin/store': typeof appsAdminStoreRoute
+  '/(apps)/admin/themes': typeof appsAdminThemesRoute
+  '/(apps)/admin/tickets': typeof appsAdminTicketsRoute
+  '/(apps)/admin/widgets': typeof appsAdminWidgetsRoute
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
@@ -627,23 +1032,44 @@ export interface FileRoutesById {
   '/(apps)/settings/themes': typeof appsSettingsThemesRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/(apps)/admin/': typeof appsAdminIndexRoute
   '/(apps)/artifacts/': typeof appsArtifactsIndexRoute
   '/(apps)/chats/': typeof appsChatsIndexRoute
   '/(apps)/projects/': typeof appsProjectsIndexRoute
   '/(apps)/settings/': typeof appsSettingsIndexRoute
+  '/(apps)/admin/apps/ecommerce-cms-agentsam': typeof appsAdminAppsEcommerceCmsAgentsamRoute
+  '/(apps)/admin/artifacts/tickets': typeof appsAdminArtifactsTicketsRouteWithChildren
+  '/(apps)/admin/chats/$chatId': typeof appsAdminChatsChatIdRoute
+  '/(apps)/admin/help/cms': typeof appsAdminHelpCmsRoute
+  '/(apps)/admin/media/edit': typeof appsAdminMediaEditRoute
+  '/(apps)/admin/media/files': typeof appsAdminMediaFilesRoute
+  '/(apps)/admin/media/images': typeof appsAdminMediaImagesRoute
+  '/(apps)/admin/media/models': typeof appsAdminMediaModelsRoute
+  '/(apps)/admin/media/videos': typeof appsAdminMediaVideosRoute
   '/(apps)/admin/moviemode/edit': typeof appsAdminMoviemodeEditRoute
   '/(apps)/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
+  '/(apps)/admin/settings/$unit': typeof appsAdminSettingsUnitRoute
+  '/(apps)/admin/settings/integrations': typeof appsAdminSettingsIntegrationsRoute
+  '/(apps)/admin/settings/keys': typeof appsAdminSettingsKeysRoute
+  '/(apps)/admin/settings/runtime': typeof appsAdminSettingsRuntimeRoute
+  '/(apps)/admin/settings/themes': typeof appsAdminSettingsThemesRoute
   '/(apps)/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/(apps)/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/(apps)/admin/artifacts/': typeof appsAdminArtifactsIndexRoute
+  '/(apps)/admin/chats/': typeof appsAdminChatsIndexRoute
   '/(apps)/admin/projects/': typeof appsAdminProjectsIndexRoute
+  '/(apps)/admin/settings/': typeof appsAdminSettingsIndexRoute
   '/(apps)/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
+  '/(apps)/admin/artifacts/tickets/$ticketId': typeof appsAdminArtifactsTicketsTicketIdRoute
+  '/(apps)/admin/artifacts/tickets/': typeof appsAdminArtifactsTicketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/agentsam'
     | '/analytics'
     | '/artifacts'
@@ -678,11 +1104,37 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/onboarding/companion'
     | '/admin/agentsam'
+    | '/admin/analytics'
+    | '/admin/artifacts'
+    | '/admin/browse'
     | '/admin/cad'
+    | '/admin/campaigns'
+    | '/admin/canvas'
+    | '/admin/cli'
+    | '/admin/cms'
+    | '/admin/collaborate'
+    | '/admin/content'
+    | '/admin/database'
+    | '/admin/docs'
+    | '/admin/files'
+    | '/admin/forms'
+    | '/admin/goalguru'
+    | '/admin/home'
+    | '/admin/ideas'
+    | '/admin/library'
+    | '/admin/mail'
+    | '/admin/media'
     | '/admin/moviemode'
     | '/admin/onboarding-preview'
     | '/admin/projects'
+    | '/admin/samsketch'
+    | '/admin/settings'
+    | '/admin/ship'
+    | '/admin/sites'
     | '/admin/store'
+    | '/admin/themes'
+    | '/admin/tickets'
+    | '/admin/widgets'
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
     | '/chats/$chatId'
@@ -700,18 +1152,38 @@ export interface FileRouteTypes {
     | '/settings/themes'
     | '/api/content/optimize'
     | '/api/llm/inventory'
+    | '/admin/'
     | '/artifacts/'
     | '/chats/'
     | '/projects/'
     | '/settings/'
+    | '/admin/apps/ecommerce-cms-agentsam'
+    | '/admin/artifacts/tickets'
+    | '/admin/chats/$chatId'
+    | '/admin/help/cms'
+    | '/admin/media/edit'
+    | '/admin/media/files'
+    | '/admin/media/images'
+    | '/admin/media/models'
+    | '/admin/media/videos'
     | '/admin/moviemode/edit'
     | '/admin/projects/$projectId'
+    | '/admin/settings/$unit'
+    | '/admin/settings/integrations'
+    | '/admin/settings/keys'
+    | '/admin/settings/runtime'
+    | '/admin/settings/themes'
     | '/agentsam/apps/cad'
     | '/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/admin/artifacts/'
+    | '/admin/chats/'
     | '/admin/projects/'
+    | '/admin/settings/'
     | '/artifacts/tickets/'
+    | '/admin/artifacts/tickets/$ticketId'
+    | '/admin/artifacts/tickets/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -746,10 +1218,34 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/onboarding/companion'
     | '/admin/agentsam'
+    | '/admin/analytics'
+    | '/admin/browse'
     | '/admin/cad'
+    | '/admin/campaigns'
+    | '/admin/canvas'
+    | '/admin/cli'
+    | '/admin/cms'
+    | '/admin/collaborate'
+    | '/admin/content'
+    | '/admin/database'
+    | '/admin/docs'
+    | '/admin/files'
+    | '/admin/forms'
+    | '/admin/goalguru'
+    | '/admin/home'
+    | '/admin/ideas'
+    | '/admin/library'
+    | '/admin/mail'
+    | '/admin/media'
     | '/admin/moviemode'
     | '/admin/onboarding-preview'
+    | '/admin/samsketch'
+    | '/admin/ship'
+    | '/admin/sites'
     | '/admin/store'
+    | '/admin/themes'
+    | '/admin/tickets'
+    | '/admin/widgets'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
     | '/help/cms'
@@ -766,21 +1262,41 @@ export interface FileRouteTypes {
     | '/settings/themes'
     | '/api/content/optimize'
     | '/api/llm/inventory'
+    | '/admin'
     | '/artifacts'
     | '/chats'
     | '/projects'
     | '/settings'
+    | '/admin/apps/ecommerce-cms-agentsam'
+    | '/admin/chats/$chatId'
+    | '/admin/help/cms'
+    | '/admin/media/edit'
+    | '/admin/media/files'
+    | '/admin/media/images'
+    | '/admin/media/models'
+    | '/admin/media/videos'
     | '/admin/moviemode/edit'
     | '/admin/projects/$projectId'
+    | '/admin/settings/$unit'
+    | '/admin/settings/integrations'
+    | '/admin/settings/keys'
+    | '/admin/settings/runtime'
+    | '/admin/settings/themes'
     | '/agentsam/apps/cad'
     | '/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/admin/artifacts'
+    | '/admin/chats'
     | '/admin/projects'
+    | '/admin/settings'
     | '/artifacts/tickets'
+    | '/admin/artifacts/tickets/$ticketId'
+    | '/admin/artifacts/tickets'
   id:
     | '__root__'
     | '/'
+    | '/(apps)/admin'
     | '/(apps)/agentsam'
     | '/(apps)/analytics'
     | '/(apps)/artifacts'
@@ -815,11 +1331,37 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/onboarding/companion'
     | '/(apps)/admin/agentsam'
+    | '/(apps)/admin/analytics'
+    | '/(apps)/admin/artifacts'
+    | '/(apps)/admin/browse'
     | '/(apps)/admin/cad'
+    | '/(apps)/admin/campaigns'
+    | '/(apps)/admin/canvas'
+    | '/(apps)/admin/cli'
+    | '/(apps)/admin/cms'
+    | '/(apps)/admin/collaborate'
+    | '/(apps)/admin/content'
+    | '/(apps)/admin/database'
+    | '/(apps)/admin/docs'
+    | '/(apps)/admin/files'
+    | '/(apps)/admin/forms'
+    | '/(apps)/admin/goalguru'
+    | '/(apps)/admin/home'
+    | '/(apps)/admin/ideas'
+    | '/(apps)/admin/library'
+    | '/(apps)/admin/mail'
+    | '/(apps)/admin/media'
     | '/(apps)/admin/moviemode'
     | '/(apps)/admin/onboarding-preview'
     | '/(apps)/admin/projects'
+    | '/(apps)/admin/samsketch'
+    | '/(apps)/admin/settings'
+    | '/(apps)/admin/ship'
+    | '/(apps)/admin/sites'
     | '/(apps)/admin/store'
+    | '/(apps)/admin/themes'
+    | '/(apps)/admin/tickets'
+    | '/(apps)/admin/widgets'
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
     | '/(apps)/chats/$chatId'
@@ -837,22 +1379,43 @@ export interface FileRouteTypes {
     | '/(apps)/settings/themes'
     | '/api/content/optimize'
     | '/api/llm/inventory'
+    | '/(apps)/admin/'
     | '/(apps)/artifacts/'
     | '/(apps)/chats/'
     | '/(apps)/projects/'
     | '/(apps)/settings/'
+    | '/(apps)/admin/apps/ecommerce-cms-agentsam'
+    | '/(apps)/admin/artifacts/tickets'
+    | '/(apps)/admin/chats/$chatId'
+    | '/(apps)/admin/help/cms'
+    | '/(apps)/admin/media/edit'
+    | '/(apps)/admin/media/files'
+    | '/(apps)/admin/media/images'
+    | '/(apps)/admin/media/models'
+    | '/(apps)/admin/media/videos'
     | '/(apps)/admin/moviemode/edit'
     | '/(apps)/admin/projects/$projectId'
+    | '/(apps)/admin/settings/$unit'
+    | '/(apps)/admin/settings/integrations'
+    | '/(apps)/admin/settings/keys'
+    | '/(apps)/admin/settings/runtime'
+    | '/(apps)/admin/settings/themes'
     | '/(apps)/agentsam/apps/cad'
     | '/(apps)/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/(apps)/admin/artifacts/'
+    | '/(apps)/admin/chats/'
     | '/(apps)/admin/projects/'
+    | '/(apps)/admin/settings/'
     | '/(apps)/artifacts/tickets/'
+    | '/(apps)/admin/artifacts/tickets/$ticketId'
+    | '/(apps)/admin/artifacts/tickets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  appsAdminRouteRoute: typeof appsAdminRouteRouteWithChildren
   appsAgentsamRoute: typeof appsAgentsamRouteWithChildren
   appsAnalyticsRoute: typeof appsAnalyticsRoute
   appsArtifactsRoute: typeof appsArtifactsRouteWithChildren
@@ -886,12 +1449,6 @@ export interface RootRouteChildren {
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
   OnboardingCompanionRoute: typeof OnboardingCompanionRoute
-  appsAdminAgentsamRoute: typeof appsAdminAgentsamRoute
-  appsAdminCadRoute: typeof appsAdminCadRoute
-  appsAdminMoviemodeRoute: typeof appsAdminMoviemodeRouteWithChildren
-  appsAdminOnboardingPreviewRoute: typeof appsAdminOnboardingPreviewRoute
-  appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
-  appsAdminStoreRoute: typeof appsAdminStoreRoute
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
   appsChatsChatIdRoute: typeof appsChatsChatIdRoute
   appsHelpCmsRoute: typeof appsHelpCmsRoute
@@ -909,6 +1466,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin': {
+      id: '/(apps)/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof appsAdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/agentsam': {
@@ -1142,47 +1706,236 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingCompanionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/admin/': {
+      id: '/(apps)/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof appsAdminIndexRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
     '/(apps)/admin/agentsam': {
       id: '/(apps)/admin/agentsam'
-      path: '/admin/agentsam'
+      path: '/agentsam'
       fullPath: '/admin/agentsam'
       preLoaderRoute: typeof appsAdminAgentsamRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/analytics': {
+      id: '/(apps)/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof appsAdminAnalyticsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/artifacts': {
+      id: '/(apps)/admin/artifacts'
+      path: '/artifacts'
+      fullPath: '/admin/artifacts'
+      preLoaderRoute: typeof appsAdminArtifactsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/browse': {
+      id: '/(apps)/admin/browse'
+      path: '/browse'
+      fullPath: '/admin/browse'
+      preLoaderRoute: typeof appsAdminBrowseRouteImport
+      parentRoute: typeof appsAdminRouteRoute
     }
     '/(apps)/admin/cad': {
       id: '/(apps)/admin/cad'
-      path: '/admin/cad'
+      path: '/cad'
       fullPath: '/admin/cad'
       preLoaderRoute: typeof appsAdminCadRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/campaigns': {
+      id: '/(apps)/admin/campaigns'
+      path: '/campaigns'
+      fullPath: '/admin/campaigns'
+      preLoaderRoute: typeof appsAdminCampaignsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/canvas': {
+      id: '/(apps)/admin/canvas'
+      path: '/canvas'
+      fullPath: '/admin/canvas'
+      preLoaderRoute: typeof appsAdminCanvasRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/cli': {
+      id: '/(apps)/admin/cli'
+      path: '/cli'
+      fullPath: '/admin/cli'
+      preLoaderRoute: typeof appsAdminCliRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/cms': {
+      id: '/(apps)/admin/cms'
+      path: '/cms'
+      fullPath: '/admin/cms'
+      preLoaderRoute: typeof appsAdminCmsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/collaborate': {
+      id: '/(apps)/admin/collaborate'
+      path: '/collaborate'
+      fullPath: '/admin/collaborate'
+      preLoaderRoute: typeof appsAdminCollaborateRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/content': {
+      id: '/(apps)/admin/content'
+      path: '/content'
+      fullPath: '/admin/content'
+      preLoaderRoute: typeof appsAdminContentRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/database': {
+      id: '/(apps)/admin/database'
+      path: '/database'
+      fullPath: '/admin/database'
+      preLoaderRoute: typeof appsAdminDatabaseRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/docs': {
+      id: '/(apps)/admin/docs'
+      path: '/docs'
+      fullPath: '/admin/docs'
+      preLoaderRoute: typeof appsAdminDocsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/files': {
+      id: '/(apps)/admin/files'
+      path: '/files'
+      fullPath: '/admin/files'
+      preLoaderRoute: typeof appsAdminFilesRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/forms': {
+      id: '/(apps)/admin/forms'
+      path: '/forms'
+      fullPath: '/admin/forms'
+      preLoaderRoute: typeof appsAdminFormsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/goalguru': {
+      id: '/(apps)/admin/goalguru'
+      path: '/goalguru'
+      fullPath: '/admin/goalguru'
+      preLoaderRoute: typeof appsAdminGoalguruRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/home': {
+      id: '/(apps)/admin/home'
+      path: '/home'
+      fullPath: '/admin/home'
+      preLoaderRoute: typeof appsAdminHomeRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/ideas': {
+      id: '/(apps)/admin/ideas'
+      path: '/ideas'
+      fullPath: '/admin/ideas'
+      preLoaderRoute: typeof appsAdminIdeasRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/library': {
+      id: '/(apps)/admin/library'
+      path: '/library'
+      fullPath: '/admin/library'
+      preLoaderRoute: typeof appsAdminLibraryRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/mail': {
+      id: '/(apps)/admin/mail'
+      path: '/mail'
+      fullPath: '/admin/mail'
+      preLoaderRoute: typeof appsAdminMailRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/media': {
+      id: '/(apps)/admin/media'
+      path: '/media'
+      fullPath: '/admin/media'
+      preLoaderRoute: typeof appsAdminMediaRouteImport
+      parentRoute: typeof appsAdminRouteRoute
     }
     '/(apps)/admin/moviemode': {
       id: '/(apps)/admin/moviemode'
-      path: '/admin/moviemode'
+      path: '/moviemode'
       fullPath: '/admin/moviemode'
       preLoaderRoute: typeof appsAdminMoviemodeRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof appsAdminRouteRoute
     }
     '/(apps)/admin/onboarding-preview': {
       id: '/(apps)/admin/onboarding-preview'
-      path: '/admin/onboarding-preview'
+      path: '/onboarding-preview'
       fullPath: '/admin/onboarding-preview'
       preLoaderRoute: typeof appsAdminOnboardingPreviewRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof appsAdminRouteRoute
     }
     '/(apps)/admin/projects': {
       id: '/(apps)/admin/projects'
-      path: '/admin/projects'
+      path: '/projects'
       fullPath: '/admin/projects'
       preLoaderRoute: typeof appsAdminProjectsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/samsketch': {
+      id: '/(apps)/admin/samsketch'
+      path: '/samsketch'
+      fullPath: '/admin/samsketch'
+      preLoaderRoute: typeof appsAdminSamsketchRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/settings': {
+      id: '/(apps)/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof appsAdminSettingsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/ship': {
+      id: '/(apps)/admin/ship'
+      path: '/ship'
+      fullPath: '/admin/ship'
+      preLoaderRoute: typeof appsAdminShipRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/sites': {
+      id: '/(apps)/admin/sites'
+      path: '/sites'
+      fullPath: '/admin/sites'
+      preLoaderRoute: typeof appsAdminSitesRouteImport
+      parentRoute: typeof appsAdminRouteRoute
     }
     '/(apps)/admin/store': {
       id: '/(apps)/admin/store'
-      path: '/admin/store'
+      path: '/store'
       fullPath: '/admin/store'
       preLoaderRoute: typeof appsAdminStoreRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/themes': {
+      id: '/(apps)/admin/themes'
+      path: '/themes'
+      fullPath: '/admin/themes'
+      preLoaderRoute: typeof appsAdminThemesRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/tickets': {
+      id: '/(apps)/admin/tickets'
+      path: '/tickets'
+      fullPath: '/admin/tickets'
+      preLoaderRoute: typeof appsAdminTicketsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/widgets': {
+      id: '/(apps)/admin/widgets'
+      path: '/widgets'
+      fullPath: '/admin/widgets'
+      preLoaderRoute: typeof appsAdminWidgetsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
     }
     '/(apps)/apps/ecommerce-cms-agentsam': {
       id: '/(apps)/apps/ecommerce-cms-agentsam'
@@ -1331,6 +2084,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLlmInventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/admin/apps/ecommerce-cms-agentsam': {
+      id: '/(apps)/admin/apps/ecommerce-cms-agentsam'
+      path: '/apps/ecommerce-cms-agentsam'
+      fullPath: '/admin/apps/ecommerce-cms-agentsam'
+      preLoaderRoute: typeof appsAdminAppsEcommerceCmsAgentsamRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/artifacts/': {
+      id: '/(apps)/admin/artifacts/'
+      path: '/'
+      fullPath: '/admin/artifacts/'
+      preLoaderRoute: typeof appsAdminArtifactsIndexRouteImport
+      parentRoute: typeof appsAdminArtifactsRoute
+    }
+    '/(apps)/admin/artifacts/tickets': {
+      id: '/(apps)/admin/artifacts/tickets'
+      path: '/tickets'
+      fullPath: '/admin/artifacts/tickets'
+      preLoaderRoute: typeof appsAdminArtifactsTicketsRouteImport
+      parentRoute: typeof appsAdminArtifactsRoute
+    }
+    '/(apps)/admin/chats/': {
+      id: '/(apps)/admin/chats/'
+      path: '/chats'
+      fullPath: '/admin/chats/'
+      preLoaderRoute: typeof appsAdminChatsIndexRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/chats/$chatId': {
+      id: '/(apps)/admin/chats/$chatId'
+      path: '/chats/$chatId'
+      fullPath: '/admin/chats/$chatId'
+      preLoaderRoute: typeof appsAdminChatsChatIdRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/help/cms': {
+      id: '/(apps)/admin/help/cms'
+      path: '/help/cms'
+      fullPath: '/admin/help/cms'
+      preLoaderRoute: typeof appsAdminHelpCmsRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/media/edit': {
+      id: '/(apps)/admin/media/edit'
+      path: '/edit'
+      fullPath: '/admin/media/edit'
+      preLoaderRoute: typeof appsAdminMediaEditRouteImport
+      parentRoute: typeof appsAdminMediaRoute
+    }
+    '/(apps)/admin/media/files': {
+      id: '/(apps)/admin/media/files'
+      path: '/files'
+      fullPath: '/admin/media/files'
+      preLoaderRoute: typeof appsAdminMediaFilesRouteImport
+      parentRoute: typeof appsAdminMediaRoute
+    }
+    '/(apps)/admin/media/images': {
+      id: '/(apps)/admin/media/images'
+      path: '/images'
+      fullPath: '/admin/media/images'
+      preLoaderRoute: typeof appsAdminMediaImagesRouteImport
+      parentRoute: typeof appsAdminMediaRoute
+    }
+    '/(apps)/admin/media/models': {
+      id: '/(apps)/admin/media/models'
+      path: '/models'
+      fullPath: '/admin/media/models'
+      preLoaderRoute: typeof appsAdminMediaModelsRouteImport
+      parentRoute: typeof appsAdminMediaRoute
+    }
+    '/(apps)/admin/media/videos': {
+      id: '/(apps)/admin/media/videos'
+      path: '/videos'
+      fullPath: '/admin/media/videos'
+      preLoaderRoute: typeof appsAdminMediaVideosRouteImport
+      parentRoute: typeof appsAdminMediaRoute
+    }
     '/(apps)/admin/moviemode/edit': {
       id: '/(apps)/admin/moviemode/edit'
       path: '/edit'
@@ -1351,6 +2181,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/projects/$projectId'
       preLoaderRoute: typeof appsAdminProjectsProjectIdRouteImport
       parentRoute: typeof appsAdminProjectsRoute
+    }
+    '/(apps)/admin/settings/': {
+      id: '/(apps)/admin/settings/'
+      path: '/'
+      fullPath: '/admin/settings/'
+      preLoaderRoute: typeof appsAdminSettingsIndexRouteImport
+      parentRoute: typeof appsAdminSettingsRoute
+    }
+    '/(apps)/admin/settings/$unit': {
+      id: '/(apps)/admin/settings/$unit'
+      path: '/$unit'
+      fullPath: '/admin/settings/$unit'
+      preLoaderRoute: typeof appsAdminSettingsUnitRouteImport
+      parentRoute: typeof appsAdminSettingsRoute
+    }
+    '/(apps)/admin/settings/integrations': {
+      id: '/(apps)/admin/settings/integrations'
+      path: '/integrations'
+      fullPath: '/admin/settings/integrations'
+      preLoaderRoute: typeof appsAdminSettingsIntegrationsRouteImport
+      parentRoute: typeof appsAdminSettingsRoute
+    }
+    '/(apps)/admin/settings/keys': {
+      id: '/(apps)/admin/settings/keys'
+      path: '/keys'
+      fullPath: '/admin/settings/keys'
+      preLoaderRoute: typeof appsAdminSettingsKeysRouteImport
+      parentRoute: typeof appsAdminSettingsRoute
+    }
+    '/(apps)/admin/settings/runtime': {
+      id: '/(apps)/admin/settings/runtime'
+      path: '/runtime'
+      fullPath: '/admin/settings/runtime'
+      preLoaderRoute: typeof appsAdminSettingsRuntimeRouteImport
+      parentRoute: typeof appsAdminSettingsRoute
+    }
+    '/(apps)/admin/settings/themes': {
+      id: '/(apps)/admin/settings/themes'
+      path: '/themes'
+      fullPath: '/admin/settings/themes'
+      preLoaderRoute: typeof appsAdminSettingsThemesRouteImport
+      parentRoute: typeof appsAdminSettingsRoute
     }
     '/(apps)/agentsam/apps/cad': {
       id: '/(apps)/agentsam/apps/cad'
@@ -1387,8 +2259,202 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDatabaseLocalBridgeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/admin/artifacts/tickets/': {
+      id: '/(apps)/admin/artifacts/tickets/'
+      path: '/'
+      fullPath: '/admin/artifacts/tickets/'
+      preLoaderRoute: typeof appsAdminArtifactsTicketsIndexRouteImport
+      parentRoute: typeof appsAdminArtifactsTicketsRoute
+    }
+    '/(apps)/admin/artifacts/tickets/$ticketId': {
+      id: '/(apps)/admin/artifacts/tickets/$ticketId'
+      path: '/$ticketId'
+      fullPath: '/admin/artifacts/tickets/$ticketId'
+      preLoaderRoute: typeof appsAdminArtifactsTicketsTicketIdRouteImport
+      parentRoute: typeof appsAdminArtifactsTicketsRoute
+    }
   }
 }
+
+interface appsAdminArtifactsTicketsRouteChildren {
+  appsAdminArtifactsTicketsTicketIdRoute: typeof appsAdminArtifactsTicketsTicketIdRoute
+  appsAdminArtifactsTicketsIndexRoute: typeof appsAdminArtifactsTicketsIndexRoute
+}
+
+const appsAdminArtifactsTicketsRouteChildren: appsAdminArtifactsTicketsRouteChildren =
+  {
+    appsAdminArtifactsTicketsTicketIdRoute:
+      appsAdminArtifactsTicketsTicketIdRoute,
+    appsAdminArtifactsTicketsIndexRoute: appsAdminArtifactsTicketsIndexRoute,
+  }
+
+const appsAdminArtifactsTicketsRouteWithChildren =
+  appsAdminArtifactsTicketsRoute._addFileChildren(
+    appsAdminArtifactsTicketsRouteChildren,
+  )
+
+interface appsAdminArtifactsRouteChildren {
+  appsAdminArtifactsTicketsRoute: typeof appsAdminArtifactsTicketsRouteWithChildren
+  appsAdminArtifactsIndexRoute: typeof appsAdminArtifactsIndexRoute
+}
+
+const appsAdminArtifactsRouteChildren: appsAdminArtifactsRouteChildren = {
+  appsAdminArtifactsTicketsRoute: appsAdminArtifactsTicketsRouteWithChildren,
+  appsAdminArtifactsIndexRoute: appsAdminArtifactsIndexRoute,
+}
+
+const appsAdminArtifactsRouteWithChildren =
+  appsAdminArtifactsRoute._addFileChildren(appsAdminArtifactsRouteChildren)
+
+interface appsAdminMediaRouteChildren {
+  appsAdminMediaEditRoute: typeof appsAdminMediaEditRoute
+  appsAdminMediaFilesRoute: typeof appsAdminMediaFilesRoute
+  appsAdminMediaImagesRoute: typeof appsAdminMediaImagesRoute
+  appsAdminMediaModelsRoute: typeof appsAdminMediaModelsRoute
+  appsAdminMediaVideosRoute: typeof appsAdminMediaVideosRoute
+}
+
+const appsAdminMediaRouteChildren: appsAdminMediaRouteChildren = {
+  appsAdminMediaEditRoute: appsAdminMediaEditRoute,
+  appsAdminMediaFilesRoute: appsAdminMediaFilesRoute,
+  appsAdminMediaImagesRoute: appsAdminMediaImagesRoute,
+  appsAdminMediaModelsRoute: appsAdminMediaModelsRoute,
+  appsAdminMediaVideosRoute: appsAdminMediaVideosRoute,
+}
+
+const appsAdminMediaRouteWithChildren = appsAdminMediaRoute._addFileChildren(
+  appsAdminMediaRouteChildren,
+)
+
+interface appsAdminMoviemodeRouteChildren {
+  appsAdminMoviemodeEditRoute: typeof appsAdminMoviemodeEditRoute
+}
+
+const appsAdminMoviemodeRouteChildren: appsAdminMoviemodeRouteChildren = {
+  appsAdminMoviemodeEditRoute: appsAdminMoviemodeEditRoute,
+}
+
+const appsAdminMoviemodeRouteWithChildren =
+  appsAdminMoviemodeRoute._addFileChildren(appsAdminMoviemodeRouteChildren)
+
+interface appsAdminProjectsRouteChildren {
+  appsAdminProjectsProjectIdRoute: typeof appsAdminProjectsProjectIdRoute
+  appsAdminProjectsIndexRoute: typeof appsAdminProjectsIndexRoute
+}
+
+const appsAdminProjectsRouteChildren: appsAdminProjectsRouteChildren = {
+  appsAdminProjectsProjectIdRoute: appsAdminProjectsProjectIdRoute,
+  appsAdminProjectsIndexRoute: appsAdminProjectsIndexRoute,
+}
+
+const appsAdminProjectsRouteWithChildren =
+  appsAdminProjectsRoute._addFileChildren(appsAdminProjectsRouteChildren)
+
+interface appsAdminSettingsRouteChildren {
+  appsAdminSettingsUnitRoute: typeof appsAdminSettingsUnitRoute
+  appsAdminSettingsIntegrationsRoute: typeof appsAdminSettingsIntegrationsRoute
+  appsAdminSettingsKeysRoute: typeof appsAdminSettingsKeysRoute
+  appsAdminSettingsRuntimeRoute: typeof appsAdminSettingsRuntimeRoute
+  appsAdminSettingsThemesRoute: typeof appsAdminSettingsThemesRoute
+  appsAdminSettingsIndexRoute: typeof appsAdminSettingsIndexRoute
+}
+
+const appsAdminSettingsRouteChildren: appsAdminSettingsRouteChildren = {
+  appsAdminSettingsUnitRoute: appsAdminSettingsUnitRoute,
+  appsAdminSettingsIntegrationsRoute: appsAdminSettingsIntegrationsRoute,
+  appsAdminSettingsKeysRoute: appsAdminSettingsKeysRoute,
+  appsAdminSettingsRuntimeRoute: appsAdminSettingsRuntimeRoute,
+  appsAdminSettingsThemesRoute: appsAdminSettingsThemesRoute,
+  appsAdminSettingsIndexRoute: appsAdminSettingsIndexRoute,
+}
+
+const appsAdminSettingsRouteWithChildren =
+  appsAdminSettingsRoute._addFileChildren(appsAdminSettingsRouteChildren)
+
+interface appsAdminRouteRouteChildren {
+  appsAdminAgentsamRoute: typeof appsAdminAgentsamRoute
+  appsAdminAnalyticsRoute: typeof appsAdminAnalyticsRoute
+  appsAdminArtifactsRoute: typeof appsAdminArtifactsRouteWithChildren
+  appsAdminBrowseRoute: typeof appsAdminBrowseRoute
+  appsAdminCadRoute: typeof appsAdminCadRoute
+  appsAdminCampaignsRoute: typeof appsAdminCampaignsRoute
+  appsAdminCanvasRoute: typeof appsAdminCanvasRoute
+  appsAdminCliRoute: typeof appsAdminCliRoute
+  appsAdminCmsRoute: typeof appsAdminCmsRoute
+  appsAdminCollaborateRoute: typeof appsAdminCollaborateRoute
+  appsAdminContentRoute: typeof appsAdminContentRoute
+  appsAdminDatabaseRoute: typeof appsAdminDatabaseRoute
+  appsAdminDocsRoute: typeof appsAdminDocsRoute
+  appsAdminFilesRoute: typeof appsAdminFilesRoute
+  appsAdminFormsRoute: typeof appsAdminFormsRoute
+  appsAdminGoalguruRoute: typeof appsAdminGoalguruRoute
+  appsAdminHomeRoute: typeof appsAdminHomeRoute
+  appsAdminIdeasRoute: typeof appsAdminIdeasRoute
+  appsAdminLibraryRoute: typeof appsAdminLibraryRoute
+  appsAdminMailRoute: typeof appsAdminMailRoute
+  appsAdminMediaRoute: typeof appsAdminMediaRouteWithChildren
+  appsAdminMoviemodeRoute: typeof appsAdminMoviemodeRouteWithChildren
+  appsAdminOnboardingPreviewRoute: typeof appsAdminOnboardingPreviewRoute
+  appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
+  appsAdminSamsketchRoute: typeof appsAdminSamsketchRoute
+  appsAdminSettingsRoute: typeof appsAdminSettingsRouteWithChildren
+  appsAdminShipRoute: typeof appsAdminShipRoute
+  appsAdminSitesRoute: typeof appsAdminSitesRoute
+  appsAdminStoreRoute: typeof appsAdminStoreRoute
+  appsAdminThemesRoute: typeof appsAdminThemesRoute
+  appsAdminTicketsRoute: typeof appsAdminTicketsRoute
+  appsAdminWidgetsRoute: typeof appsAdminWidgetsRoute
+  appsAdminIndexRoute: typeof appsAdminIndexRoute
+  appsAdminAppsEcommerceCmsAgentsamRoute: typeof appsAdminAppsEcommerceCmsAgentsamRoute
+  appsAdminChatsChatIdRoute: typeof appsAdminChatsChatIdRoute
+  appsAdminHelpCmsRoute: typeof appsAdminHelpCmsRoute
+  appsAdminChatsIndexRoute: typeof appsAdminChatsIndexRoute
+}
+
+const appsAdminRouteRouteChildren: appsAdminRouteRouteChildren = {
+  appsAdminAgentsamRoute: appsAdminAgentsamRoute,
+  appsAdminAnalyticsRoute: appsAdminAnalyticsRoute,
+  appsAdminArtifactsRoute: appsAdminArtifactsRouteWithChildren,
+  appsAdminBrowseRoute: appsAdminBrowseRoute,
+  appsAdminCadRoute: appsAdminCadRoute,
+  appsAdminCampaignsRoute: appsAdminCampaignsRoute,
+  appsAdminCanvasRoute: appsAdminCanvasRoute,
+  appsAdminCliRoute: appsAdminCliRoute,
+  appsAdminCmsRoute: appsAdminCmsRoute,
+  appsAdminCollaborateRoute: appsAdminCollaborateRoute,
+  appsAdminContentRoute: appsAdminContentRoute,
+  appsAdminDatabaseRoute: appsAdminDatabaseRoute,
+  appsAdminDocsRoute: appsAdminDocsRoute,
+  appsAdminFilesRoute: appsAdminFilesRoute,
+  appsAdminFormsRoute: appsAdminFormsRoute,
+  appsAdminGoalguruRoute: appsAdminGoalguruRoute,
+  appsAdminHomeRoute: appsAdminHomeRoute,
+  appsAdminIdeasRoute: appsAdminIdeasRoute,
+  appsAdminLibraryRoute: appsAdminLibraryRoute,
+  appsAdminMailRoute: appsAdminMailRoute,
+  appsAdminMediaRoute: appsAdminMediaRouteWithChildren,
+  appsAdminMoviemodeRoute: appsAdminMoviemodeRouteWithChildren,
+  appsAdminOnboardingPreviewRoute: appsAdminOnboardingPreviewRoute,
+  appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
+  appsAdminSamsketchRoute: appsAdminSamsketchRoute,
+  appsAdminSettingsRoute: appsAdminSettingsRouteWithChildren,
+  appsAdminShipRoute: appsAdminShipRoute,
+  appsAdminSitesRoute: appsAdminSitesRoute,
+  appsAdminStoreRoute: appsAdminStoreRoute,
+  appsAdminThemesRoute: appsAdminThemesRoute,
+  appsAdminTicketsRoute: appsAdminTicketsRoute,
+  appsAdminWidgetsRoute: appsAdminWidgetsRoute,
+  appsAdminIndexRoute: appsAdminIndexRoute,
+  appsAdminAppsEcommerceCmsAgentsamRoute:
+    appsAdminAppsEcommerceCmsAgentsamRoute,
+  appsAdminChatsChatIdRoute: appsAdminChatsChatIdRoute,
+  appsAdminHelpCmsRoute: appsAdminHelpCmsRoute,
+  appsAdminChatsIndexRoute: appsAdminChatsIndexRoute,
+}
+
+const appsAdminRouteRouteWithChildren = appsAdminRouteRoute._addFileChildren(
+  appsAdminRouteRouteChildren,
+)
 
 interface appsAgentsamRouteChildren {
   appsAgentsamAppsCadRoute: typeof appsAgentsamAppsCadRoute
@@ -1485,32 +2551,9 @@ const appsSettingsRouteWithChildren = appsSettingsRoute._addFileChildren(
   appsSettingsRouteChildren,
 )
 
-interface appsAdminMoviemodeRouteChildren {
-  appsAdminMoviemodeEditRoute: typeof appsAdminMoviemodeEditRoute
-}
-
-const appsAdminMoviemodeRouteChildren: appsAdminMoviemodeRouteChildren = {
-  appsAdminMoviemodeEditRoute: appsAdminMoviemodeEditRoute,
-}
-
-const appsAdminMoviemodeRouteWithChildren =
-  appsAdminMoviemodeRoute._addFileChildren(appsAdminMoviemodeRouteChildren)
-
-interface appsAdminProjectsRouteChildren {
-  appsAdminProjectsProjectIdRoute: typeof appsAdminProjectsProjectIdRoute
-  appsAdminProjectsIndexRoute: typeof appsAdminProjectsIndexRoute
-}
-
-const appsAdminProjectsRouteChildren: appsAdminProjectsRouteChildren = {
-  appsAdminProjectsProjectIdRoute: appsAdminProjectsProjectIdRoute,
-  appsAdminProjectsIndexRoute: appsAdminProjectsIndexRoute,
-}
-
-const appsAdminProjectsRouteWithChildren =
-  appsAdminProjectsRoute._addFileChildren(appsAdminProjectsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  appsAdminRouteRoute: appsAdminRouteRouteWithChildren,
   appsAgentsamRoute: appsAgentsamRouteWithChildren,
   appsAnalyticsRoute: appsAnalyticsRoute,
   appsArtifactsRoute: appsArtifactsRouteWithChildren,
@@ -1544,12 +2587,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
   OnboardingCompanionRoute: OnboardingCompanionRoute,
-  appsAdminAgentsamRoute: appsAdminAgentsamRoute,
-  appsAdminCadRoute: appsAdminCadRoute,
-  appsAdminMoviemodeRoute: appsAdminMoviemodeRouteWithChildren,
-  appsAdminOnboardingPreviewRoute: appsAdminOnboardingPreviewRoute,
-  appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
-  appsAdminStoreRoute: appsAdminStoreRoute,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,
   appsChatsChatIdRoute: appsChatsChatIdRoute,
   appsHelpCmsRoute: appsHelpCmsRoute,

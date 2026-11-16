@@ -16,11 +16,11 @@ import { handleIdeSourceRequest, isIdeSourceRequest } from './ide-source-service
 import { beginGmailOAuth, disconnectGmail, listGmailConnections, loadGmailMessages, mutateGmailMessage, sendGmailMessage } from './gmail-service.js';
 
 const DEFAULT_NAV = Object.freeze([
-  { id: 'calendar', label: 'Calendar', href: '/collaborate', group: 'work' },
-  { id: 'tickets', label: 'Tickets', href: '/tickets', group: 'work' },
-  { id: 'mail', label: 'Mail', href: '/mail', group: 'work' },
-  { id: 'projects', label: 'Projects', href: '/projects', group: 'work' },
-  { id: 'artifacts', label: 'Library', href: '/artifacts', group: 'files' },
+  { id: 'calendar', label: 'Calendar', href: '/admin/collaborate', group: 'work' },
+  { id: 'tickets', label: 'Tickets', href: '/admin/tickets', group: 'work' },
+  { id: 'mail', label: 'Mail', href: '/admin/mail', group: 'work' },
+  { id: 'projects', label: 'Projects', href: '/admin/projects', group: 'work' },
+  { id: 'artifacts', label: 'Library', href: '/admin/artifacts', group: 'files' },
 ]);
 
 const WORK_CAPABILITIES = Object.freeze({

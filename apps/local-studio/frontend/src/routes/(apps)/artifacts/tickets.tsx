@@ -1,9 +1,9 @@
-import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/(apps)/artifacts/tickets")({
-  component: ArtifactTicketsLayout,
-});
+export const Route = createFileRoute("/(apps)/artifacts/tickets")({ component: LegacyArtifactTicketsRoute });
 
-function ArtifactTicketsLayout() {
+function LegacyArtifactTicketsRoute() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname === "/artifacts/tickets" || pathname === "/artifacts/tickets/") return <Navigate to="/admin/artifacts/tickets" search={true} replace />;
   return <Outlet />;
 }

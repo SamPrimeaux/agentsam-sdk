@@ -172,7 +172,7 @@ export function CampaignStudio({ accountId }: { accountId: string }) {
         <p className="text-xs text-muted-foreground">Plan, compose, review, and export campaigns across your brands and channels.</p>
       </div>
       <div className="flex gap-2">
-        <button className={action} onClick={() => navigate('/media')}><Images size={15}/> Media library <ArrowUpRight size={14}/></button>
+        <button className={action} onClick={() => navigate('/admin/media')}><Images size={15}/> Media library <ArrowUpRight size={14}/></button>
         <button className={primary} onClick={save} disabled={!draft || busy || !dirty}><Save size={15}/> Save draft</button>
       </div>
     </header>

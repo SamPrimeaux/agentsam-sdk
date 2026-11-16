@@ -92,7 +92,7 @@ export function RuntimeManagerPage() {
       </header>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
         <div><h2 className="text-sm font-semibold">Execution environments</h2><p className="mt-1 text-xs text-muted-foreground">Session health is taken from the actual runtime, not from plugin installation status.</p></div>
-        <a className="inline-flex min-h-9 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted" href="/settings/customize?view=plugins">Manage connected providers</a>
+        <a className="inline-flex min-h-9 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted" href="/admin/settings/customize?view=plugins">Manage connected providers</a>
       </div>
       <div className="grid gap-3">
         {runtimes.map((runtime) => {
@@ -136,7 +136,7 @@ export function RuntimeManagerPage() {
                     <TerminalSquare className="size-4" /> Open local CLI
                   </Button>
                 ) : runtime.id === "gcp" || runtime.id.startsWith("cf-") ? (
-                  <a className="inline-flex min-h-9 items-center rounded-md border border-border px-3 text-xs hover:bg-muted" href="/settings/customize?view=plugins">Provider settings</a>
+                  <a className="inline-flex min-h-9 items-center rounded-md border border-border px-3 text-xs hover:bg-muted" href="/admin/settings/customize?view=plugins">Provider settings</a>
                 ) : null}
               </div>
               {expandedRuntime === runtime.id ? (

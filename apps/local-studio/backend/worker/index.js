@@ -1223,13 +1223,13 @@ export default {
     // isolates Cloudflare's Settings-only Nitro SSR failure without creating
     // a separate editor, storing fake preferences or exposing account data.
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/settings" || url.pathname.startsWith("/settings/"))) {
-      const unit=url.pathname.split("/").filter(Boolean)[1] || "general";
+        (url.pathname === "/admin/settings" || url.pathname.startsWith("/admin/settings/"))) {
+      const unit=url.pathname.split("/").filter(Boolean)[2] || "general";
       const allowed=new Set(["general","agents","customize","design","git-prs",
         "codebase","network","runtime","themes","storage","keys","usage",
-        "notifications","docs","integrations"]);
-      if(url.pathname === "/settings" || !allowed.has(unit))
-        return Response.redirect(new URL("/settings/general",request.url),302);
+        "notifications","docs","integrations","skills"]);
+      if(url.pathname === "/admin/settings" || !allowed.has(unit))
+        return Response.redirect(new URL("/admin/settings/general",request.url),302);
       const denied = await guardStudioDocument(request, env);
       if (denied) return denied;
       const assetUrl=new URL(request.url);

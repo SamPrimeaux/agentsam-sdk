@@ -214,7 +214,7 @@ export function IntegrationsGrid() {
           </div>
         </div>
         <Button asChild type="button" variant="secondary" size="sm">
-          <Link to="/settings/keys">Manage keys</Link>
+          <Link to="/admin/settings/keys">Manage keys</Link>
         </Button>
       </aside>
 

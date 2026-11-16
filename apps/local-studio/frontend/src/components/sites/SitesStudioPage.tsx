@@ -4,6 +4,7 @@ import { themeProjectStore, THEME_PROJECTS_CHANGED } from '@/lib/themes/projects
 import { createThemeDraft } from '@/lib/themes/inventory';
 import { studioCmsFetch } from '@/lib/cms/transport';
 import { useNavigate } from '@tanstack/react-router';
+import { IconAction } from '@/components/ui/icon-action';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 
@@ -18,7 +19,7 @@ export function SitesStudioPage() {
 }
 export function SitesWorkspace() {
   const navigate = useNavigate();
-  const openEditor = (id: string) => { void navigate({ to: '/cms', search: { view: 'editor', theme_project: id } }); };
+  const openEditor = (id: string) => { void navigate({ to: '/admin/cms', search: { view: 'editor', theme_project: id } }); };
   const [projects, setProjects] = useState<any[]>([]);
   const [hostedSites, setHostedSites] = useState<any[]>([]);
   const [hostedLoading, setHostedLoading] = useState(true);
@@ -57,8 +58,8 @@ export function SitesWorkspace() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div><div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">CMS / Websites</div><h1 className="mt-2 text-3xl font-semibold tracking-tight">Sites</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Build and edit complete multipage theme projects using the packaged Site Editor. Local drafts are saved on this installation, not published to the internet.</p></div>
         <div className="flex items-center gap-2">
-          <button type="button" className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-card hover:bg-muted" onClick={() => go('/help/cms')} title="CMS documentation" aria-label="CMS documentation"><CircleHelp size={18}/></button>
-          <button className={control} onClick={() => go('/themes')}><LayoutTemplate size={16}/> Explore themes <ArrowUpRight size={14}/></button>
+          <IconAction label="CMS documentation" hint="Open CMS documentation" className="size-10 rounded-xl border border-border bg-card hover:bg-muted" onClick={() => go('/admin/help/cms')}><CircleHelp size={18}/></IconAction>
+          <button className={control} onClick={() => go('/admin/themes')}><LayoutTemplate size={16}/> Explore themes <ArrowUpRight size={14}/></button>
         </div>
       </header>
       <section className="flex flex-wrap gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -78,11 +79,11 @@ export function SitesWorkspace() {
             <div className="mt-auto flex items-center justify-between pt-5"><span className="text-xs capitalize text-muted-foreground">{site.role} · {site.can_edit ? 'Editor access' : 'View only'}</span>
               <div className="flex flex-wrap gap-2">
                 {site.source === 'worker' && site.can_edit && <button className={control} onClick={() => {
-                  window.location.assign('/apps/ecommerce-cms-agentsam?site=' + encodeURIComponent(site.slug));
+                  window.location.assign('/admin/apps/ecommerce-cms-agentsam?site=' + encodeURIComponent(site.slug));
                 }}>
                   <ArrowUpRight size={14}/> Open Ecommerce
                 </button>}
-                <button className={control} disabled={!site.can_edit} onClick={() => { void navigate({ to: '/cms', search: { site: site.slug, view: 'editor' } }); }}>
+                <button className={control} disabled={!site.can_edit} onClick={() => { void navigate({ to: '/admin/cms', search: { site: site.slug, view: 'editor' } }); }}>
                   <Pencil size={14}/> Edit website
                 </button>
               </div>
@@ -91,7 +92,7 @@ export function SitesWorkspace() {
         </div>
       </section>
       <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Saved website drafts</h2><span className="text-xs text-muted-foreground">{projects.length} local draft{projects.length === 1 ? '' : 's'}</span></div>
-      {!projects.length && <div className="rounded-2xl border border-dashed border-border p-8 text-center sm:p-10"><Globe2 size={28} className="mx-auto text-muted-foreground"/><h3 className="mt-3 font-medium">No local theme drafts yet</h3><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">{hostedSites.length ? 'Your connected websites are listed above. Create a separate local draft when you want to experiment without changing a live site.' : 'Create a site draft or start from a packaged theme. Drafts stay on this installation until you deliberately connect and publish them.'}</p><button className={control + ' mt-4'} onClick={() => go('/themes')}><FilePlus2 size={15}/> Start from a theme</button></div>}
+      {!projects.length && <div className="rounded-2xl border border-dashed border-border p-8 text-center sm:p-10"><Globe2 size={28} className="mx-auto text-muted-foreground"/><h3 className="mt-3 font-medium">No local theme drafts yet</h3><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">{hostedSites.length ? 'Your connected websites are listed above. Create a separate local draft when you want to experiment without changing a live site.' : 'Create a site draft or start from a packaged theme. Drafts stay on this installation until you deliberately connect and publish them.'}</p><button className={control + ' mt-4'} onClick={() => go('/admin/themes')}><FilePlus2 size={15}/> Start from a theme</button></div>}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {projects.map((project) => <article key={project.id} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between gap-2"><span className="rounded-md bg-muted p-2"><Globe2 size={18}/></span><span className="text-[11px] text-muted-foreground">Local draft</span></div>
@@ -103,9 +104,9 @@ export function SitesWorkspace() {
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         {[
-          { title: 'Media Library', to: '/media', description: 'Import, inspect, prepare, and organize creative assets.', icon: Images },
-          { title: 'Campaign Studio', to: '/campaigns', description: 'Create linked marketing plans, messages, and channel drafts.', icon: Megaphone },
-          { title: 'Themes', to: '/themes', description: 'Review packaged website templates and create site revisions.', icon: LayoutTemplate },
+          { title: 'Media Library', to: '/admin/media', description: 'Import, inspect, prepare, and organize creative assets.', icon: Images },
+          { title: 'Campaign Studio', to: '/admin/campaigns', description: 'Create linked marketing plans, messages, and channel drafts.', icon: Megaphone },
+          { title: 'Themes', to: '/admin/themes', description: 'Review packaged website templates and create site revisions.', icon: LayoutTemplate },
         ].map((link) => <button key={link.to} className="rounded-2xl border border-border p-5 text-left transition hover:bg-card" onClick={() => go(link.to)}><link.icon size={18}/><h3 className="mt-3 font-semibold">{link.title}</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">{link.description}</p></button>)}
       </div>
     </div>

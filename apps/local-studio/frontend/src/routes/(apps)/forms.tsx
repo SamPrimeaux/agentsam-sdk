@@ -1,7 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AgentSamFormsPage } from "@/components/forms/AgentSamFormsPage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
-/** First-party installable Forms app, with account-owned draft and submission storage. */
 export const Route = createFileRoute("/(apps)/forms")({
-  component: AgentSamFormsPage,
+  component: () => <Navigate to="/admin/forms" search={true} replace />,
 });

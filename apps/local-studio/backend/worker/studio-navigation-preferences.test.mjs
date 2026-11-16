@@ -49,6 +49,19 @@ test('navigation overrides retain the installed manifest as the authoritative ca
   assert.throws(()=>normalizeNavigationOverrides({'primary/home':{href:'https://example.com'}},defaults),/navigation_href_invalid/);
   assert.throws(()=>normalizeNavigationOverrides({'primary/home':{icon:'<svg>'}},defaults),/navigation_icon_invalid/);
 });
+test('navigation API canonicalizes legacy dashboard destinations before exposing them', async () => {
+  const env = fakeEnv();
+  const response = await handleStudioNavigation(request(), env, 'account-1');
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.primary.find(item => item.id === 'media').href, '/admin/media');
+  assert.equal(data.primary.find(item => item.id === 'media').children[0].href, '/admin/media/images');
+  const overrides = normalizeNavigationOverrides({
+    'primary/media': { href: '/media/images?sort=recent#grid' },
+  }, defaults);
+  assert.equal(overrides['primary/media'].href, '/admin/media/images?sort=recent#grid');
+});
+
 test('authenticated navigation settings save, read and reject stale writes',async()=>{
   const env=fakeEnv();
   assert.equal((await handleStudioNavigation(request(),env,null)).status,401);
