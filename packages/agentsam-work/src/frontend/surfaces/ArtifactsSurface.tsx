@@ -1,5 +1,5 @@
 import {
-  Archive, Box, Columns3, Copy, ExternalLink, FileArchive, FileAudio2, FileCode2, FileImage, FileText,
+  Archive, ArrowLeft, Box, Columns3, Copy, ExternalLink, FileArchive, FileAudio2, FileCode2, FileImage, FileText,
   FileVideo2, Folder, Grid2X2, LayoutGrid, List, MoreHorizontal, Palette, Pencil,
   Presentation, RotateCcw, SlidersHorizontal, Star, StickyNote, Table2,
 } from "lucide-react";
@@ -50,6 +50,8 @@ export function ArtifactsSurface({
   const [layout, setLayout] = useState<"grid" | "list" | "masonry">(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? "list" : "grid");
   const [showFilters, setShowFilters] = useState(false);
   const [failedPreviews, setFailedPreviews] = useState<Set<string>>(() => new Set());
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const focusedArtifact = artifacts.find((artifact) => artifact.id === focusedId);
   const [source, setSource] = useState<WorkArtifact["source"] | "all">(initialSource);
   const [kind, setKind] = useState<WorkArtifact["kind"] | "all">("all");
   const [view, setView] = useState(initialView);
@@ -123,7 +125,23 @@ export function ArtifactsSurface({
   ];
 
   return <div className="agentsam-work-artifacts agentsam-library">
-    <div className="agentsam-work-artifacts__content">
+    {focusedArtifact ? <section className="agentsam-library__focused-view" aria-label={"Viewing "+focusedArtifact.name}>
+      <header className="agentsam-library__focused-header">
+        <button type="button" className="agentsam-library__focus-back" onClick={()=>setFocusedId(null)}><ArrowLeft size={18} aria-hidden="true"/> Library</button>
+        <div className="agentsam-library__focused-heading"><strong>{focusedArtifact.name}</strong><span>{focusedArtifact.sourceLabel||sourceLabels[focusedArtifact.source]}{focusedArtifact.updatedLabel?" · "+focusedArtifact.updatedLabel:""}</span></div>
+        {focusedArtifact.open || (focusedArtifact.source==="local" && onOpenArtifact) ? <button type="button" className="agentsam-library__focus-open" onClick={()=>openArtifact(focusedArtifact)}><ExternalLink size={16} aria-hidden="true"/> Open original</button> : null}
+      </header>
+      <div className="agentsam-library__focused-stage">
+        {focusedArtifact.mime?.startsWith("video/") && focusedArtifact.open ?
+          <video controls preload="metadata" poster={focusedArtifact.preview||undefined} src={focusedArtifact.open} aria-label={focusedArtifact.name}/> :
+        focusedArtifact.mime==="application/pdf" && (focusedArtifact.open||focusedArtifact.preview) ?
+          <iframe title={focusedArtifact.name} src={focusedArtifact.open||focusedArtifact.preview||undefined} referrerPolicy="no-referrer" /> :
+        (focusedArtifact.preview || (focusedArtifact.kind==="image" && focusedArtifact.open)) && !failedPreviews.has(focusedArtifact.id) ?
+          <img src={focusedArtifact.preview||focusedArtifact.open||undefined} alt={focusedArtifact.name} onError={()=>setFailedPreviews(prev=>new Set(prev).add(focusedArtifact.id))}/> :
+          <div className="agentsam-library__focus-unavailable"><FileText size={36} strokeWidth={1.4} aria-hidden="true"/><p>No visual preview is stored for this resource.</p><span>Its original is preserved in the connected Library source.</span></div>}
+      </div>
+      <footer className="agentsam-library__focused-meta"><span>{focusedArtifact.kind}</span>{focusedArtifact.sizeLabel?<span>{focusedArtifact.sizeLabel}</span>:null}</footer>
+    </section> : <div className="agentsam-work-artifacts__content">
       <div className="agentsam-work-artifacts__heading">
         <div><h1>{title}</h1><p className="agentsam-library__description">Everything you create, save, and bring into your workspace.</p></div>
         <div className="agentsam-work-artifacts__spacer"/>
@@ -178,7 +196,7 @@ export function ArtifactsSurface({
           const visual=Boolean(artifact.preview && !failedPreviews.has(artifact.id) && (["image","video","design","website","product","document"].includes(artifact.kind) || artifact.mime==="application/pdf"));
           return <article key={artifact.id} className="agentsam-work-artifacts__item"
               data-kind={artifact.kind} data-preview={visual?"image":"symbol"} data-busy={isBusy||undefined}>
-            <button type="button" className="agentsam-work-artifacts__preview" aria-label={"Open "+artifact.name} disabled={!hasDestination} onClick={()=>openArtifact(artifact)}>
+            <button type="button" className="agentsam-work-artifacts__preview" aria-label={"View "+artifact.name} onClick={()=>setFocusedId(artifact.id)}>
               {visual && artifact.preview ? (
                 artifact.mime==="application/pdf"
                   ? <iframe title={artifact.name+" preview"} src={artifact.preview+"#toolbar=0&navpanes=0"} loading="lazy" tabIndex={-1}/>
@@ -199,7 +217,7 @@ export function ArtifactsSurface({
                     onChange={event=>setNewName(event.target.value)} onKeyDown={event=>{if(event.key==="Escape")setRenaming(null);}}/>
                   <button type="submit" disabled={!newName.trim()||isBusy}>Save</button>
                 </form>:<button type="button" title={artifact.name} className="agentsam-library__item-name"
-                  disabled={!hasDestination} onClick={()=>openArtifact(artifact)}>{artifact.name}</button>}
+                  onClick={()=>setFocusedId(artifact.id)}>{artifact.name}</button>}
                 <div className="agentsam-library__item-meta">{artifact.sourceLabel||sourceLabels[artifact.source]}
                   {artifact.updatedLabel?" · "+artifact.updatedLabel:""}{artifact.sizeLabel?" · "+artifact.sizeLabel:""}
                 </div>
@@ -229,6 +247,6 @@ export function ArtifactsSurface({
           </article>;
         })}
       </div>
-    </div>
+    </div>}
   </div>;
 }
