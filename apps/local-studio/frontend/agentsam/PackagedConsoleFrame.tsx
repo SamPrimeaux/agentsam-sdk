@@ -67,7 +67,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   // The Ecommerce shell owns the navigation. The conversation page supplies its
   // own centered mode switch; do not stack a second global topbar above it.
   useEffect(() => {
-    document.body.classList.toggle('agentsam-conversation-route', (pathname === '/admin/agentsam' || pathname.startsWith('/chats')));
+    document.body.classList.toggle('agentsam-conversation-route', (pathname === '/admin/agentsam' || pathname.startsWith('/admin/chats')));
     return () => document.body.classList.remove('agentsam-conversation-route');
   }, [pathname]);
   useEffect(() => {
