@@ -26,7 +26,7 @@ export function DatabasePage() {
       localHost={client.localHost}
       onOpenConnections={() => {
         window.dispatchEvent(
-          new CustomEvent("agentsam:navigate", { detail: { to: "/settings/integrations" } }),
+          new CustomEvent("agentsam:navigate", { detail: { to: "/admin/settings/integrations" } }),
         );
       }}
       onAuthenticate={() => {
