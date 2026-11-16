@@ -8,6 +8,8 @@ import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
 import { openBrowserSideStage } from "@/lib/work/open-browser-side-stage";
 import type { Artifact, SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { ArtifactDocumentEditor, isEditableDocument } from "./document-editor";
+import { NewTabStage } from "./new-tab-stage";
+import { projectNeedsConnection } from "@/lib/work/workspace-restore";
 import { RuntimeFilesystemAdapter } from "@/lib/work/workspace-fs";
 import "./document-editor.css";
 import { cn } from "@/lib/utils";
@@ -44,7 +46,7 @@ export function ArtifactsStage({tab}: {tab?:SideTab}) {
     try {
       if (project.kind === 'filesystem') {
         if (!project.runtimeBaseUrl || !project.runtimeCapability)
-          throw new Error('Connect the authorized file source to create this document.');
+          throw new Error('Documents can be created once this project is connected.');
         const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl,project.runtimeCapability);
         const result = await adapter.create(path,content);
         if (!result.ok) throw new Error('Could not create a document in this project.');
@@ -56,6 +58,10 @@ export function ArtifactsStage({tab}: {tab?:SideTab}) {
       setCreateError(error instanceof Error ? error.message : 'Could not create document.');
     } finally {setCreating(false);}
   }
+  // Nothing connected and nothing captured: the New tab is the default surface.
+  if (!project || (projectNeedsConnection(project) && files.length === 0))
+    return <NewTabStage tab={tab} omitKinds={["artifacts"]} />;
+  const canCreate = project.kind !== "filesystem" || Boolean(project.runtimeBaseUrl && project.runtimeCapability);
   const supportsDocumentPreview = (file:Artifact) => isEditableDocument(file.path) || /\.(md|markdown|txt)$/.test(file.path);
   if (project && selectedDocument && supportsDocumentPreview(selectedDocument)) {
     return <ArtifactDocumentEditor file={selectedDocument} project={project} chatId={chatId}
@@ -67,7 +73,7 @@ export function ArtifactsStage({tab}: {tab?:SideTab}) {
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-medium">Outputs</h2>
-          {project ? <Button type="button" size="sm" variant="outline" disabled={creating}
+          {canCreate ? <Button type="button" size="sm" variant="outline" disabled={creating}
             aria-label="Create document" onClick={()=>void createDocument()}>
             <Plus className="size-4" /> Document
           </Button> : null}

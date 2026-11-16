@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminAppMark, type AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
-import { ChevronDown, Globe, LayoutGrid, Pin, PinOff, Plug, X } from "lucide-react";
+import { ChevronDown, FolderGit2, FolderOpen, Globe, LayoutGrid, Pin, PinOff, Plug, X } from "lucide-react";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
@@ -73,7 +73,13 @@ function SuggestedIcon({ entry, apps }: { entry: BrowserHistoryEntry; apps: Admi
  * pick up where you left off. Opening anything turns THIS tab into that item, so the
  * page address never changes. Installing and removing apps lives in Settings → Apps.
  */
-export function NewTabStage({ tab }: { tab?: SideTab }) {
+export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolder }: {
+  tab?: SideTab;
+  /** Tool kinds to leave out because the host panel IS that tool (Files/Artifacts fallback). */
+  omitKinds?: string[];
+  onConnectProject?: () => void;
+  onOpenFolder?: () => void;
+}) {
   const greeting = useGreeting();
   const user = useCurrentUser();
   const openSideTab = useWorkStore((s) => s.openSideTab);
@@ -87,8 +93,8 @@ export function NewTabStage({ tab }: { tab?: SideTab }) {
   useEffect(() => { void loadBrowserHistory(8).then(setHistory); }, []);
 
   const tools = useMemo(
-    () => orderTools(registry.actions.filter((stage) => stage.renderer === "builtin" && stage.enabled !== false), usage),
-    [registry.actions, usage],
+    () => orderTools(registry.actions.filter((stage) => stage.renderer === "builtin" && stage.enabled !== false && !omitKinds.includes(stage.tabKind)), usage),
+    [registry.actions, usage, omitKinds.join("|")],
   );
 
   const become = (kind: Parameters<typeof openSideTab>[0], extra: Partial<SideTab>) => {
@@ -174,8 +180,14 @@ export function NewTabStage({ tab }: { tab?: SideTab }) {
               Couldn’t load your tools.
               <Button type="button" size="sm" variant="outline" onClick={() => void reloadSideStageRegistry()}>Retry</Button>
             </div>
-          ) : tools.length ? (
+          ) : tools.length || onConnectProject || onOpenFolder ? (
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-2">
+              {onConnectProject ? <li><button type="button" onClick={onConnectProject}
+                className="flex w-full items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/60">
+                <FolderGit2 className="size-4 shrink-0 text-muted-foreground" /><span className="truncate">Connect project</span></button></li> : null}
+              {onOpenFolder ? <li><button type="button" onClick={onOpenFolder}
+                className="flex w-full items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/60">
+                <FolderOpen className="size-4 shrink-0 text-muted-foreground" /><span className="truncate">Open folder</span></button></li> : null}
               {tools.map((stage) => {
                 const pinned = usage.pinned.includes(stage.id);
                 return (

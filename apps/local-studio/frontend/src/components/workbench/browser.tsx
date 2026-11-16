@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Globe, Puzzle, Square, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ExternalLink, Puzzle, Square, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { AgentSamAbsBrowser, AbsBuildHome } from '@inneranimalmedia/agentsam-abs/react';
 import type { AbsBrowserMode, BrowserTabState } from '@inneranimalmedia/agentsam-abs';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
 import { useWorkStore } from '@/lib/work/store';
 import { getTauriInvoke, isPackagedDesktop, listenTauriEvent, openAgentBrowser } from '@/lib/desktop/tauri';
 import { EmbeddedBrowserViewport } from './embedded-browser-viewport';
+import { WebBrowserViewport } from './web-browser-viewport';
 import { toast } from 'sonner';
 import { IconAction } from '@/components/ui/icon-action';
 import { useActiveCompanion } from '../../../agentsam/CompanionContext';
@@ -144,14 +145,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         onExploreBack={() => nativeAction('back')}
         onExploreForward={() => nativeAction('forward')}
         onExploreRefresh={() => nativeAction('reload')}
-        exploreSurface={native ? <EmbeddedBrowserViewport key={`${tab.id}-${reloadKey}`} sessionId={tab.id} url={tab.url} /> : (
-          <div className="as-browser-no-iframe" role="status">
-            <Globe className="size-7" />
-            <strong>Use the native browser in AgentSam Local Studio</strong>
-            <p>Web pages that block embedding need the installed desktop browser engine. This web surface does not fake a live browser with an iframe.</p>
-            <button type="button" onClick={() => openExternally()}>Open in an external browser</button>
-          </div>
-        )}
+        exploreSurface={native ? <EmbeddedBrowserViewport key={`${tab.id}-${reloadKey}`} sessionId={tab.id} url={tab.url} /> : <WebBrowserViewport key={`${tab.id}-${reloadKey}`} tabId={tab.id} url={tab.url} />}
         onNavigate={(intent, prompt) => { void runBrowserBuild(intent,prompt); }}
         onBack={() => nativeAction('back')}
         onForward={() => nativeAction('forward')}
@@ -161,7 +155,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         onNewTab={() => openSideTab('browser', { ephemeral: false })}
         onCloseTab={() => undefined}
         onSwitchTab={() => undefined}
-        statusSlot={<span className="as-work-browser-status">{native ? 'In-app browser' : 'Web preview'}</span>}
+        statusSlot={<span className="as-work-browser-status">In-app browser</span>}
         toolbarActions={<div className="as-work-browser-actions">
           {native && <IconAction type="button" variant="ghost" label="Chrome extensions" hint="Open Chrome extensions in your separate browser profile" onClick={() => {
             void openAgentBrowser('chrome://extensions/').catch((error) => toast.error(String(error)));

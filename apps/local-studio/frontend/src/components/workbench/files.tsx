@@ -19,6 +19,8 @@ import { isAuthorizedHostProject, isSampleProject, projectNeedsConnection } from
 import { createRuntimeIDEWorkspace, createTutorialIDEWorkspace } from '@/lib/work/ide-workspace';
 import { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, type FileWorkspace } from '@inneranimalmedia/agentsam-ide/workspace';
 import { WorkspaceGate } from '@/components/workbench/workspace-gate';
+import { NewTabStage } from '@/components/workbench/new-tab-stage';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { RemoteFilesSource } from '@/components/workbench/remote-files-source';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
 
@@ -31,7 +33,7 @@ const descriptions: Record<IDEFileSourceId, string> = {
   docker: 'Docker — requires an authorized host Docker engine',
 };
 
-export function FilesStage({ tab: _tab }: { tab: SideTab }) {
+export function FilesStage({ tab }: { tab: SideTab }) {
   const project = useActiveProject();
   const projects = useWorkStore(state => state.projects);
   const selectProject = useWorkStore(state => state.setActiveProject);
@@ -72,6 +74,8 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
     keyword:theme.tokens.foreground,
   }),[theme]);
   const ready = Boolean(project && (isAuthorizedHostProject(project) || isSampleProject(project)));
+  // A successful connection closes the opt-in connect dialog.
+  useEffect(()=>{ if(ready) setConnectOpen(false); },[ready,project?.id]);
   const workspace = useMemo(() => {
     if (!project || !ready) return null;
     if (project.kind === 'filesystem' && project.runtimeBaseUrl)
@@ -128,11 +132,19 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
         </Suspense>}
     </div>
   </section>;
-  if (!project || projectNeedsConnection(project) || !ready || connectOpen)
+  const connectDialog = <Dialog open={connectOpen} onOpenChange={setConnectOpen}>
+    <DialogContent>
+      <DialogTitle className="sr-only">Connect a project</DialogTitle>
+      <DialogDescription className="sr-only">Connect an authorized project or open a folder.</DialogDescription>
+      <WorkspaceGate project={project} force onOpenBrowserFolder={browserFsaReady?openBrowserFolder:undefined} />
+    </DialogContent>
+  </Dialog>;
+  // No connection: the New tab is the default surface. The connector only appears on request.
+  if (!project || projectNeedsConnection(project) || !ready)
     return <div className="h-full overflow-y-auto"><WorkspaceSourceRail sources={sources} sourceId="local" onSelect={setSource}/>
       {sourceNotice?<p role="alert" className="p-3 text-xs text-destructive">{sourceNotice}</p>:null}
-      <WorkspaceGate project={project} force={connectOpen || !project} onOpenBrowserFolder={browserFsaReady?openBrowserFolder:undefined} />
-      {connectOpen ? <button className="m-3 rounded border px-3 py-2 text-xs" type="button" onClick={()=>setConnectOpen(false)}>Back to editor</button> : null}
+      <NewTabStage tab={tab} omitKinds={['files']} onConnectProject={()=>setConnectOpen(true)} onOpenFolder={browserFsaReady?openBrowserFolder:undefined} />
+      {connectDialog}
     </div>;
 
   if (!workspace) return <p role="alert">No authorized workspace is available.</p>;
@@ -157,5 +169,6 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
         onSourceSelect={id => setSource(id)}/>
       </Suspense>
     </div>
+    {connectDialog}
   </section>;
 }
