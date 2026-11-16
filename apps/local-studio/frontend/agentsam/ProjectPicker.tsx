@@ -11,7 +11,7 @@ import { IconAction } from '@/components/ui/icon-action';
  * The chat's existing workProjectId stores its association; never replace
  * its local projectId, conversation ID, messages, or draft.
  */
-export function ProjectPicker({ chatId }: { chatId: string }) {
+export function ProjectPicker({ chatId, showTrigger = true }: { chatId: string; showTrigger?: boolean }) {
   const {theme,accentColor} = useNav();
   const chats = useWorkStore(state => state.chats);
   const [revision,setRevision] = useState(0);
@@ -103,7 +103,9 @@ export function ProjectPicker({ chatId }: { chatId: string }) {
 
   return <Dialog.Root modal={false} open={open} onOpenChange={setOpen}><div className="agentsam-project-picker" ref={root}><Dialog.Trigger asChild>
     <button type="button" className="agentsam-project-trigger" aria-label="Choose project" aria-expanded={open}
-      aria-haspopup="dialog" onClick={() => { setOpen((value) => !value); setCreating(false); }}>
+      aria-haspopup="dialog" aria-hidden={!showTrigger} tabIndex={showTrigger ? undefined : -1}
+      style={showTrigger ? undefined : {position:"absolute",width:1,height:1,padding:0,overflow:"hidden",opacity:0,pointerEvents:"none"}}
+      onClick={() => { setOpen((value) => !value); setCreating(false); }}>
       <Folder size={14} /><span>{active?.name || (projectId ? (loading ? 'Loading project…' : 'Project unavailable') : 'Choose project')}</span><ChevronDown size={13} />
     </button></Dialog.Trigger>
     <Dialog.Portal><Dialog.Content data-nav-theme={theme} className="as-nav-scope agentsam-project-menu" aria-describedby={undefined}
