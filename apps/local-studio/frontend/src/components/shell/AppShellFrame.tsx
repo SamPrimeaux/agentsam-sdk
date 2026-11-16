@@ -122,7 +122,7 @@ export function AppShellFrame() {
   useEffect(() => {
     if (!settingsOpen) return;
     setSettingsOpen(false);
-    void navigate({ to: "/settings/general" as never });
+    void navigate({ to: "/admin/settings/general" as never });
   }, [settingsOpen, setSettingsOpen, navigate]);
 
   return (
