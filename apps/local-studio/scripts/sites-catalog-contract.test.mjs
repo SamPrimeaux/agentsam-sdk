@@ -17,7 +17,7 @@ test('hosted Sites uses packaged Ecommerce UI and truthful missing-theme states'
  // /admin/store now owns the authenticated installed shell; the iframe
  // consumes the same product's packaged store.html asset, never this route.
  assert.equal(resolveConsoleFile('/admin/store'),null);
- assert.match(read('frontend/src/routes/(apps)/admin/store.tsx'), /forcePackagedAsset/);
+ assert.doesNotMatch(read('frontend/src/routes/(apps)/admin/store.tsx'), /forcePackagedAsset/);
  assert.match(read('frontend/src/routes/(apps)/apps/ecommerce-cms-agentsam.tsx'), /resolveEcommerceAssetPath\(page\)/);
  assert.match(read('scripts/stage-settings-shell.mjs'), /studioApps=\['store'/);
  assert.equal(resolveConsoleFile('/sites'),null);

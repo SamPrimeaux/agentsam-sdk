@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/cms")({
-  component: () => <Navigate to="/admin/cms" search={true} replace />,
+  component: () => <Navigate to="/admin/store" search={true} replace />,
 });

@@ -14,6 +14,6 @@ export const Route = createFileRoute('/(apps)/admin/onboarding-preview')({
   }),
   component: function CheckoutExperiencePreview() {
     const search=Route.useSearch();
-    return <EcommerceAppView search={{...search,page:'/admin/onboarding-preview'}} forcePackagedAsset />;
+    return <EcommerceAppView search={{...search,page:'/admin/onboarding-preview'}} />;
   },
 });

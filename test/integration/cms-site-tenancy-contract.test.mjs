@@ -92,7 +92,9 @@ test('Local Studio /cms delegates to the canonical Ecommerce Online Store', () =
   assert.match(route, /createFileRoute\(['"]\/\(apps\)\/cms['"]\)/);
   assert.match(route, /<Navigate/);
   assert.match(route, /to="\/admin\/store"/);
-  assert.match(read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'admin', 'store.tsx'), /forcePackagedAsset/);
+  const onlineStoreRoute = read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'admin', 'store.tsx');
+  assert.match(onlineStoreRoute, /EcommerceAppView/);
+  assert.doesNotMatch(onlineStoreRoute, /forcePackagedAsset/, 'only one packaged Ecommerce app mount should exist');
   assert.match(route, /replace/);
   assert.doesNotMatch(route, /client-cms-editor|CmsHomePage|CmsOnlineStoreFrame|ThemeProjectEditor|ThemeEditorFrame|ContentStudioPage|studioCmsFetch/);
 });
