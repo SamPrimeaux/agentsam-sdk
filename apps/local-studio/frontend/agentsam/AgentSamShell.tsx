@@ -666,7 +666,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           <NotificationsMenu />
         </Nav.Topbar> : null}
         <OfflineBanner />
-        <div className="platform-console-stage" data-assistant-focused={!isConversation && globalAssistantFocused && state.sideOpen ? "true" : "false"}>
+        <div className="platform-console-stage" data-assistant-focused={!isConversation && !isCanvasRoute && globalAssistantFocused && state.sideOpen ? "true" : "false"}>
           <main className="agentsam-route">{pathname === '/admin/home'
             ? <iframe title="AgentSam admin home" src="/ecommerce-cms-agentsam/admin/home.html?__agentsamEmbedded=1"
                 className="h-full min-h-0 w-full flex-1 border-0" />
