@@ -118,6 +118,7 @@ const EDITOR_RETURN_KEY = "agentsam.editorReturn";
 const SHELL_MODES = {
   admin: { id: "admin", hideAdminNav: false, shortcuts: [], exitFallback: "/admin/store", exitRoutes: ADMIN_EXIT_ROUTES },
   "embedded-home": { id: "embedded-home", hideAdminNav: true, shortcuts: [], exitFallback: "/admin/home", exitRoutes: ADMIN_EXIT_ROUTES },
+  "embedded-app": { id: "embedded-app", hideAdminNav: true, shortcuts: [], exitFallback: "/admin/store", exitRoutes: ADMIN_EXIT_ROUTES },
   "theme-editor": {
     id: "theme-editor",
     hideAdminNav: true,
@@ -133,7 +134,12 @@ const SHELL_MODES = {
 
 function resolveShellMode(options = {}) {
   const requested = options.shellMode;
-  return (requested && SHELL_MODES[requested]) || SHELL_MODES.admin;
+  if (requested && SHELL_MODES[requested]) return SHELL_MODES[requested];
+  // The hosting app owns all global chrome. An explicit iframe-only flag keeps
+  // standalone installs and direct product routes on their normal admin shell.
+  const embedded = typeof window !== "undefined" && window.parent && window.parent !== window
+    && new URLSearchParams(window.location?.search || "").get("__agentsamEmbedded") === "1";
+  return embedded ? SHELL_MODES["embedded-app"] : SHELL_MODES.admin;
 }
 
 function decodeExitPath(value) {
@@ -842,7 +848,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
 
   if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
   // Full-bleed tool pages own the whole viewport and have not reserved dock clearance; hide the dock there.
-  document.body.classList.toggle("admin-dock-off", fullBleed);
+  document.body.classList.toggle("admin-dock-off", fullBleed || shellMode.id === "embedded-app");
 
   bindConsoleGlobalHandlers();
   import('/admin/profile-popup/index.js')
@@ -888,10 +894,12 @@ function renderShell(activeHref, mainHtml, options = {}) {
     script.src = "/admin/js/inspector.js";
     document.head.appendChild(script);
   }
-  initAgentsamShell();
-  wireAgentsamTriggers();
+  if (shellMode.id !== "embedded-app") {
+    initAgentsamShell();
+    wireAgentsamTriggers();
+    mountShellDock();
+  }
   stabilizeShellDrawers();
-  mountShellDock();
 
   document.querySelectorAll("[data-agentsam-open]").forEach((el) => {
     el.addEventListener("click", (e) => {
