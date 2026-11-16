@@ -12,7 +12,7 @@ export function AgentSamLaunchDock() {
   if (!isMobile) return null;
 
   const [path, routeSearch = ''] = (data.pathname ?? '').split('?');
-  const installedAdminPage = path === '/apps/ecommerce-cms-agentsam' ? new URLSearchParams(routeSearch).get('page') : null;
+  const installedAdminPage = path === '/admin/apps/ecommerce-cms-agentsam' ? new URLSearchParams(routeSearch).get('page') : null;
   const showPage = (path: string) => {
     setOpen(false);
     // A dedicated route must not open a second SideStage over itself.
@@ -23,7 +23,7 @@ export function AgentSamLaunchDock() {
   return <Nav.LaunchDock items={[
     {
       id: 'chats', label: 'Chats', icon: <MessageCircle />,
-      active: open || path === '/admin/agentsam' || path === '/admin/agentsam' || path.startsWith('/admin/chats'),
+      active: open || path === '/admin/agentsam' || path.startsWith('/admin/chats'),
       onSelect: () => setOpen(!open),
     },
     {
