@@ -106,7 +106,7 @@ export async function beginConnectorOAuth(request, env, userId, key) {
   const challenge = b64url(createHash("sha256").update(verifier).digest());
   const state = def.statePrefix + b64url(randomBytes(18));
   const body = request.method === "POST" ? await request.json().catch(() => ({})) : {};
-  const returnTo = safeReturnTo(body.return_to || "/settings/customize?view=plugins");
+  const returnTo = safeReturnTo(body.return_to || "/admin/settings/customize?view=plugins");
   await saveOauthState(env, {
     state, userId, verifier, returnTo,
     provider: stateProvider(def), resource: def.provider,
