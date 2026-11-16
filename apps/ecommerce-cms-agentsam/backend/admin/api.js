@@ -105,6 +105,7 @@ import { handleProductStudioAdminApi } from "./product-studio.js";
 import { readProductSupplierSelection } from "./product-selling-selection.js";
 import { getBrandWorkspace, patchBrandWorkspace, searchBrandAssets } from "./brand.js";
 import { getStoreSearchDiscovery } from "./search-discovery.js";
+import { withApplicationAccount } from "../lib/account-context.js";
 import { handleGenerateBlockRequest } from "./generate-block-stream.js";
 import { handleWorkersAiCodeProvider } from "./code-provider-workers-ai.js";
 
@@ -672,6 +673,23 @@ export async function handleAdminApi(request, env, url, executionCtx = null, tru
   const user = trustedSessionUser || await getSessionUser(request, env);
   if (!user) return json({ error: "Unauthorized" }, { status: 401 });
 
+  // The trusted user is provided by either the signed-in Studio host or this
+  // CMS installation's own session. Every downstream read/write/tool now sees
+  // the same validated account, including helpers with only a sync accessor.
+  try {
+    return await withApplicationAccount(env, user.account_id, () =>
+      handleAuthenticatedAdminApi(request, env, url, executionCtx, user));
+  } catch (error) {
+    if (error?.message === "application_account_not_configured") {
+      return json({ ok: false, error: "application_account_unavailable" }, { status: 403 });
+    }
+    throw error;
+  }
+}
+
+async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user) {
+  const path = url.pathname;
+  const method = request.method;
   if (path === "/api/admin/logout" && method === "POST") return logout(request, env);
   if (path === "/api/admin/me" && method === "GET") return me(request, env, user);
   if (path === "/api/admin/account/password" && method === "POST") {
