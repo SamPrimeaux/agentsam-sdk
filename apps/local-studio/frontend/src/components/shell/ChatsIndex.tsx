@@ -139,7 +139,7 @@ export function ChatsIndex() {
     setSelected(new Set());
     setSelectMode(false);
   };
-  const open = (id:string)=>void navigate({to:"/chats/$chatId",params:{chatId:id}});
+  const open = (id:string)=>void navigate({to:"/admin/chats/$chatId",params:{chatId:id}});
   const requestMore = useCallback(()=>{
     if (!loadingRef.current && hasMore && !failure) setOffset(value=>value+60);
   },[hasMore,failure]);
