@@ -1,130 +1,135 @@
 import { listStudioThemeDrafts } from './studio-theme-drafts.js';
-import { resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
 import { listThemeProjects } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
-/**
- * Studio Sites read-model. Hosted Studio D1 is not the legacy Ecommerce
- * customer pages/page_sections schema. Use account-scoped CMS tables.
- */
-const response = data => Response.json(data,{headers:{'cache-control':'private, no-store'}});
-const emptyPerformance = {period_days:30,lcp_ms:null,inp_ms:null,cls:null,sessions_desktop:null,sessions_mobile:null};
-export async function handleStudioSitesOverview(request, env, accountId) {
-  if (!accountId) return Response.json({ok:false,error:'unauthorized'},{status:401});
-  if (!env.DB) return Response.json({ok:false,error:'cms_database_unavailable'},{status:503});
+import { listAuthorizedCmsSites, resolveCmsSiteAccess, configuredCmsWorkers } from './cms-authority.js';
+
+/** Local Studio-owned site picker and Online Store read model. */
+const response = data => Response.json(data, { headers: { 'cache-control': 'private, no-store' } });
+const emptyPerformance = { period_days: 30, lcp_ms: null, inp_ms: null, cls: null, sessions_desktop: null, sessions_mobile: null };
+
+export async function handleStudioSitesOverview(request, env, actorUserId) {
+  if (!actorUserId) return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  if (!env?.DB) return Response.json({ ok: false, error: 'cms_database_unavailable' }, { status: 503 });
+
   let cmsConnected = false;
   try {
-    // Verifies schema only; owner/site resolution happens during the
-    // explicit site-link workflow. Never list other tenants' sites.
-    await env.DB.prepare("SELECT id FROM cms_sites LIMIT 1").first();
+    await env.DB.prepare('SELECT id FROM cms_sites LIMIT 1').first();
     cmsConnected = true;
-  } catch {}
-  const requestUrl=new URL(request.url);
-  const siteId=requestUrl.searchParams.get('site_id');
-  const hostname=requestUrl.hostname.toLowerCase();
-  // A storefront always opens with a real, account-owned site. Explicit
-  // selection wins, then this origin's owned domain, then account default,
-  // then an established site with actual authored pages. The switcher
-  // changes context; it is never a prerequisite for seeing an editor.
-  let sites=[];
+  } catch { /* The site directory remains unavailable until its schema exists. */ }
+
+  const url = new URL(request.url);
+  const requestedSite = url.searchParams.get('site_id') || url.searchParams.get('site');
+  const hostname = url.hostname.toLowerCase();
+  let sites = [];
   try {
-    const rows=await env.DB.prepare(`
-      SELECT s.id,s.name,s.slug,s.primary_domain,s.domain_aliases_json,
-        s.is_default,s.status,s.updated_at,
-        (SELECT COUNT(*) FROM cms_pages p WHERE p.site_id=s.id) AS page_count
-      FROM cms_sites s
-      WHERE s.account_id=? AND s.status!='archived'
-      ORDER BY s.is_default DESC,s.updated_at DESC,s.name ASC
-    `).bind(accountId).all();
-    sites=rows.results||[];
-  } catch { /* Site directory stays unavailable until the CMS schema exists. */ }
-  // A read-only Online Store visit must not create a merchant site. Site
-  // creation/linking is an explicit action; otherwise keep setup_required true.
-  let selectedSite=null;
-  if(siteId) {
-    try {selectedSite=await resolveCmsSite(env.DB,{accountId,siteId});}
-    catch {return Response.json({ok:false,error:'site_not_found_or_unauthorized'},{status:404});}
-  } else if(sites.length) {
-    // The account's designated primary website wins inside Local Studio.
-    // Hostnames are useful only if the account has no selected default.
-    const hostnameMatch=site=>String(site.primary_domain||'').toLowerCase()===hostname ||
-      (()=>{try{return JSON.parse(site.domain_aliases_json||'[]').some(
-        domain=>String(domain).toLowerCase()===hostname);}
-      catch{return false;}})();
-    const atOrigin=sites.find(hostnameMatch);
-    const designated=sites.find(site=>Number(site.is_default)===1);
-    const established=[...sites].sort((a,b)=>
-      Number(b.status==='active')-Number(a.status==='active') ||
-      Number(b.page_count||0)-Number(a.page_count||0) ||
-      String(b.updated_at||'').localeCompare(String(a.updated_at||'')) ||
-      String(a.name).localeCompare(String(b.name)));
-    selectedSite=designated||atOrigin||established[0];
+    sites = await listAuthorizedCmsSites(env.DB, actorUserId, { remoteWorkerNames: configuredCmsWorkers(env) });
+  } catch {
+    return Response.json({ ok: false, error: 'cms_site_inventory_unavailable' }, { status: 503 });
   }
-  let provisioned=null;
-  if(selectedSite) {
-    // A library read never installs a different theme into an authored site.
-    // Empty sites go directly to discovery; Add is the installation action.
-    provisioned=await listThemeProjects(env,accountId,selectedSite.id);
+
+  let selectedSite = null;
+  if (requestedSite) {
+    const access = await resolveCmsSiteAccess(env.DB, actorUserId, requestedSite, 'read', {
+      remoteWorkerNames: configuredCmsWorkers(env),
+    });
+    if (!access.ok) return Response.json({ ok: false, error: access.error }, { status: access.status });
+    selectedSite = access.site;
+  } else {
+    const defaults = sites.filter(site => site.is_default === true || site.is_default === 1 || site.is_default === '1');
+    const hostnameMatches = sites.filter(site => {
+      if (String(site.primary_domain || site.domain || '').toLowerCase() === hostname) return true;
+      try {
+        const aliases = typeof site.domain_aliases_json === 'string'
+          ? JSON.parse(site.domain_aliases_json || '[]') : site.domain_aliases_json || [];
+        return Array.isArray(aliases) && aliases.some(domain => String(domain).toLowerCase() === hostname);
+      } catch { return false; }
+    });
+    if (defaults.length === 1) selectedSite = defaults[0];
+    else if (defaults.length > 1) selectedSite = null;
+    else if (hostnameMatches.length === 1) selectedSite = hostnameMatches[0];
+    else if (sites.length === 1) selectedSite = sites[0];
+    // Multiple sites without a designated default require an explicit choice.
+    // Never pick the first or most recently updated site on the user's behalf.
   }
-  let drafts=[];
-  try { drafts=await listStudioThemeDrafts(env,accountId); }
-  catch { /* A failed optional draft read does not impersonate a published site. */ }
-  // Never put the first draft from an unrelated site into the active preview.
-  const installed=selectedSite
-    ? drafts.find(theme=>theme.installed===true&&theme.site_id===selectedSite.id&&theme.edit_href)
+
+  const siteAccountId = selectedSite?.account_id || actorUserId;
+  let provisioned = null;
+  if (selectedSite?.source === 'shared-d1') {
+    provisioned = await listThemeProjects(env, siteAccountId, selectedSite.id);
+  }
+
+  let drafts = [];
+  if (selectedSite) {
+    try { drafts = await listStudioThemeDrafts(env, siteAccountId); }
+    catch { /* An optional draft inventory failure does not impersonate a published site. */ }
+  }
+  const installed = selectedSite
+    ? drafts.find(theme => theme.installed === true && theme.site_id === selectedSite.id && theme.edit_href)
     : null;
-  // Provisioning has already verified the saved CMS project. A legacy draft
-  // list failure must not turn a usable installed site back into an empty UI.
-  const saved=provisioned?.projects?.[0]||null;
-  const currentTheme=installed || (saved ? {
-    id:saved.id,name:saved.name,preview_url:saved.sourcePreviewUrl||null,
-    edit_href:'/admin/theme-project-editor?project='+encodeURIComponent(saved.id)+'&site_id='+encodeURIComponent(selectedSite.id),
-  }:null);
-  // Existing sites already own authored CMS pages. Never make a newly
-  // provisioned template the only way to edit a real published homepage.
-  let homePage=null;
-  if(selectedSite) {
+  const saved = provisioned?.projects?.[0] || null;
+  const currentTheme = installed || (saved ? {
+    id: saved.id,
+    name: saved.name,
+    preview_url: saved.sourcePreviewUrl || null,
+    edit_href: '/admin/theme-project-editor?' + new URLSearchParams({
+      project: saved.id, site_id: selectedSite.id,
+    }).toString(),
+  } : null);
+
+  let homePage = null;
+  if (selectedSite?.source === 'shared-d1') {
     try {
-      homePage=await env.DB.prepare(`
-        SELECT id,slug,title,status,route_path FROM cms_pages
-        WHERE site_id=? AND (route_path='/' OR slug='home')
-          AND status NOT IN ('archived','removed')
-        ORDER BY (route_path='/') DESC,(status='published') DESC LIMIT 1
+      homePage = await env.DB.prepare(`
+        SELECT id, slug, title, status, route_path FROM cms_pages
+        WHERE site_id = ? AND (route_path = '/' OR slug = 'home')
+          AND status NOT IN ('archived', 'removed')
+        ORDER BY (route_path = '/') DESC, (status = 'published') DESC LIMIT 1
       `).bind(selectedSite.id).first();
-    } catch { /* Theme projects remain available for new websites. */ }
+    } catch { /* Theme projects remain available even when legacy page reads are absent. */ }
   }
-  const domain=String(selectedSite?.primary_domain||'').trim().toLowerCase();
-  const externalPreview=homePage?.status==='published' &&
-    selectedSite?.status==='active' &&
+
+  const domain = String(selectedSite?.primary_domain || selectedSite?.domain || '').trim().toLowerCase();
+  const externalPreview = homePage?.status === 'published' && selectedSite?.status === 'active' &&
     /^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/.test(domain)
-      ? 'https://'+domain+(homePage.route_path||'/') : null;
-  const siteEditHref=homePage
-    ? '/admin/theme-editor?'+new URLSearchParams({
-      site_id:selectedSite.id,slug:homePage.slug,page_id:homePage.id,
-    }).toString()
-    : null;
+      ? 'https://' + domain + (homePage.route_path || '/') : null;
+  const siteEditHref = homePage ? '/admin/theme-editor?' + new URLSearchParams({
+    site_id: selectedSite.id, slug: homePage.slug, page_id: homePage.id,
+  }).toString() : null;
+
   return response({
-    ok:true,source:'studio_cms_site_read_model',
-    canvas_url:'/canvas?host=online-store',
-    store:{visibility:'unpublished',url:null,domain:null,company_name:null},
-    site_preview:homePage?{
-      title:homePage.title,site_id:selectedSite.id,
-      page_id:homePage.id,status:homePage.status,
-      url:externalPreview,edit_href:siteEditHref,
-    }:null,
-    performance:emptyPerformance,active_theme:null,
-    draft_themes:drafts.filter(draft=>draft.site_linked ? draft.site_id===selectedSite?.id : true),
-    // A project preview is never proof that its site is published.
-    preview_theme:currentTheme?{
-      id:currentTheme.id,name:currentTheme.name,preview_href:null,
-      last_saved:currentTheme.updated_at||saved?.updatedAt||currentTheme.created_at||saved?.createdAt||null,
-      source_preview_href:currentTheme.preview_url,
-      edit_href:currentTheme.edit_href,verified:false,installed:true
-    }:null,
-    pages:[],cms_connected:cmsConnected,setup_required:!selectedSite,
-    available_sites:sites.map(({id,name,slug,primary_domain,is_default,status,page_count})=>({
-      id,name,slug,primary_domain,is_default,status,page_count,
+    ok: true,
+    source: 'studio_cms_site_read_model',
+    canvas_url: '/admin/canvas?host=online-store',
+    store: { visibility: 'unpublished', url: null, domain: null, company_name: null },
+    site_preview: homePage ? {
+      title: homePage.title,
+      site_id: selectedSite.id,
+      page_id: homePage.id,
+      status: homePage.status,
+      url: externalPreview,
+      edit_href: siteEditHref,
+    } : null,
+    performance: emptyPerformance,
+    active_theme: null,
+    draft_themes: selectedSite ? drafts.filter(draft => draft.site_id === selectedSite.id) : [],
+    preview_theme: currentTheme ? {
+      id: currentTheme.id,
+      name: currentTheme.name,
+      preview_href: null,
+      last_saved: currentTheme.updated_at || saved?.updatedAt || currentTheme.created_at || saved?.createdAt || null,
+      source_preview_href: currentTheme.preview_url,
+      edit_href: currentTheme.edit_href,
+      verified: false,
+      installed: true,
+    } : null,
+    pages: [],
+    cms_connected: cmsConnected,
+    setup_required: sites.length === 0,
+    available_sites: sites.map(({ id, name, slug, primary_domain, domain, is_default, status, page_count, role, can_edit, can_publish }) => ({
+      id, name, slug, primary_domain: primary_domain || domain || null,
+      is_default: Boolean(is_default), status, page_count, role, can_edit, can_publish,
     })),
-    site_selection_required:false,
-    selected_site_id:selectedSite?.id||null,
-    selected_site_name:selectedSite?.name||null,
+    site_selection_required: !selectedSite && sites.length > 1,
+    selected_site_id: selectedSite?.id || null,
+    selected_site_name: selectedSite?.name || null,
   });
 }

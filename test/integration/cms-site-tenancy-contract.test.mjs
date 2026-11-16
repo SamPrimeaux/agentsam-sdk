@@ -128,7 +128,11 @@ test('Local Studio Worker dispatches /api/cms/* with strict tenant isolation', (
 
   const cmsService = read('apps', 'local-studio', 'backend', 'worker', 'cms-service.js');
   // Worker requests must name their tenant explicitly; the UI may choose its own default.
-  assert.match(cmsService, /site_required/);
+  const cmsAuthority = read('apps', 'local-studio', 'backend', 'worker', 'cms-authority.js');
+  assert.match(cmsAuthority, /cms_site_required/);
+  const siteSelector = cmsService.match(/function resolveSiteSlug\([\s\S]*?\n}\n/);
+  assert.ok(siteSelector, 'CMS site selector is explicit');
+  assert.doesNotMatch(siteSelector[0], /project_slug|project_id/);
   assert.doesNotMatch(cmsService, /['"]agentsam-sdk['"]/);
   assert.match(cmsService, /createCmsDbClient\(env\.DB,\s*ownedSite\)/);
 });

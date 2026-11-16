@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 /**
  * Scoped to the current authenticated request, never an isolate-global mutable
- * current tenant. The owner is validated against accounts before entering this
- * context; the stored value can then be used by synchronous model helpers.
+ * current tenant. Standalone installs validate accounts here; hosted Local
+ * Studio supplies an already-authenticated account/site context.
  */
 const requestAccountScope = new AsyncLocalStorage();
 
@@ -13,9 +13,43 @@ const requestAccountScope = new AsyncLocalStorage();
  */
 export async function withApplicationAccount(env, accountId, work) {
   if (typeof work !== "function") throw new TypeError("application_account_work_required");
+  const current = requestAccountScope.getStore() || {};
+  if (current.authority === 'local-studio') {
+    const requested = String(accountId || current.accountId || '').trim();
+    if (!current.accountId || requested !== String(current.accountId)) {
+      throw new Error('application_account_scope_mismatch');
+    }
+    // Local Studio already authenticated the actor and authorized this site.
+    // Do not revalidate tenant ownership against a second CMS accounts table.
+    return requestAccountScope.run({ ...current, accountId: String(current.accountId) }, work);
+  }
   const id = await resolveApplicationAccountId(env, accountId);
   if (!id) throw new Error("application_account_not_configured");
-  return requestAccountScope.run({ accountId: id }, work);
+  return requestAccountScope.run({ ...current, accountId: id }, work);
+}
+
+/**
+ * Enter a request context whose account and site were already authorized by
+ * Local Studio. This is a context carrier, not an authentication mechanism.
+ * Only the trusted Local Studio Worker should call it.
+ */
+export function withLocalStudioCmsContext(accountId, site, work, actorUserId = accountId) {
+  const account = String(accountId || '').trim();
+  if (!account) throw new Error('local_studio_cms_account_required');
+  if (typeof work !== 'function') throw new TypeError('application_account_work_required');
+  if (site && (!site.id || String(site.account_id || '') !== account)) {
+    throw new Error('local_studio_cms_site_account_mismatch');
+  }
+  return requestAccountScope.run({
+    accountId: account,
+    authority: 'local-studio',
+    actorUserId: String(actorUserId || account),
+    site: site ? { ...site } : null,
+  }, work);
+}
+
+export function getApplicationAccountContext() {
+  return requestAccountScope.getStore() || null;
 }
 
 /**

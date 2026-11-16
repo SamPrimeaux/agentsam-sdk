@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { listAuthorizedCmsSites, requireCmsSiteAccess } from "./cms-authority.js";
+import { listAuthorizedCmsSites, requireCmsSiteAccess, resolveCmsSiteAccess, readCmsSiteSelector, createAuthorizedCmsSite } from "./cms-authority.js";
 
 const OWNER = "au_siteowner56789";
 const OTHER = "au_otheractor123";
@@ -75,8 +75,9 @@ test("cross-account sites and unconfigured remote sites are not exposed", async 
   assert.deepEqual(await listAuthorizedCmsSites(db, OTHER), [
     {
       id: "site_private", account_id: OTHER, slug: "other-business", name: "Private customer",
-      domain: null, worker_id: null, source: "shared-d1",
-      role: "owner", can_edit: true, can_publish: true,
+      domain: null, primary_domain: null, domain_aliases_json: null, settings_json: null,
+      worker_id: null, status: "active", is_default: false, updated_at: null, page_count: 0,
+      source: "shared-d1", role: "owner", can_edit: true, can_publish: true,
     },
   ]);
   assert.equal((await requireCmsSiteAccess(db, OTHER, "agentsam-sdk")).status, 404);
@@ -97,4 +98,53 @@ test("configured signed Worker source wins over an archived local projection", a
   assert.equal(fuel.source, "worker");
   assert.equal(fuel.project_id, "proj_fuelnfreetime");
   assert.equal(fuel.can_publish, true);
+});
+
+
+test("site-scoped operations require an explicit authorized site; project IDs are not site selectors", async () => {
+  const db = fixture();
+  assert.deepEqual(await resolveCmsSiteAccess(db, OWNER, null, 'read'), {
+    ok: false, status: 400, error: 'cms_site_required',
+  });
+  assert.equal((await resolveCmsSiteAccess(db, OWNER, 'site_sdk', 'read')).site.id, 'site_sdk');
+  assert.equal((await resolveCmsSiteAccess(db, OWNER, 'project_sdk', 'read')).status, 404);
+  const request = new Request('https://studio.example/api/cms/pages?project_id=site_sdk&project_slug=agentsam-sdk');
+  assert.equal(await readCmsSiteSelector(request), null);
+});
+
+
+test('Local Studio creates the site row under its authenticated account and shared settings contract', async () => {
+  const account = OWNER;
+  const captured = { insert: null, defaultUpdate: null };
+  const row = {
+    id: 'cmssite_created12345678', account_id: account, name: 'New customer site',
+    slug: 'new-customer-site', primary_domain: 'example.com', domain_aliases_json: '[]',
+    status: 'draft', is_default: 0, created_at: 'now', updated_at: 'now',
+  };
+  const db = {
+    prepare(sql) {
+      return {
+        bind(...values) {
+          if (/SELECT id FROM cms_sites WHERE account_id/.test(sql)) return { first: async () => null };
+          if (/INSERT INTO cms_sites/.test(sql)) return { run: async () => { captured.insert = values; } };
+          if (/UPDATE cms_sites SET is_default/.test(sql)) return { run: async () => { captured.defaultUpdate = values; } };
+          if (/FROM cms_sites WHERE id/.test(sql)) return { first: async () => row };
+          throw new Error('Unexpected create query: ' + sql);
+        },
+      };
+    },
+  };
+  const created = await createAuthorizedCmsSite(db, account, {
+    name: row.name, slug: row.slug, primary_domain: row.primary_domain,
+    status: 'draft', is_default: false, settings: { store: { homeTitle: 'A real site' } },
+  });
+  assert.equal(created.id, row.id);
+  assert.equal(captured.insert[1], account, 'tenant comes from the authenticated actor');
+  assert.equal(captured.insert[3], row.slug);
+  assert.equal(captured.insert[7], 'draft');
+  assert.equal(captured.insert[8], 0);
+  const settings = JSON.parse(captured.insert[6]);
+  assert.equal(settings.store.homeTitle, 'A real site');
+  assert.equal(settings.store.navigationAuthority, 'cms');
+  assert.equal(captured.defaultUpdate, null, 'an explicitly non-default draft cannot replace the current default');
 });

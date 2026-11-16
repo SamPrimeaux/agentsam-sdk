@@ -1,5 +1,8 @@
 /** Monaco UI adapters for live LSP sessions; no filesystem or process authority. */
-import type * as Monaco from 'monaco-editor';
+// Use the exact Monaco API type exposed by the installed React editor peer.
+// The full monaco-editor barrel includes unrelated namespaces and can differ
+// from the editor instance's public OnMount type across workspace installs.
+import type * as Monaco from 'monaco-editor/editor/editor.api';
 import type { LspClient, LspDiagnostics } from './client.js';
 
 export type LspLocation = { uri: string; range: { start: {line:number;character:number}; end:{line:number;character:number} } };

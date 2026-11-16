@@ -8,16 +8,16 @@ import { mountRequiresAuth } from '../../../packages/identity/src/server/mount-p
 const source = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('canonical Projects owns one host-neutral Work UI; old flat paths redirect without leaks', () => {
-  assert.deepEqual(STUDIO_ADMIN_MOUNTS.map((mount) => mount.canonical), [
-    '/admin/projects', '/admin/home', '/admin/store', '/admin/onboarding-preview', '/admin/agentsam', '/admin/cad', '/admin/moviemode',
-  ]);
-  assert.equal(canonicalStudioPath('/samsketch'), null, 'SamSketch owns /samsketch; never redirect into CAD');
-  assert.equal(canonicalStudioPath('/media'), null, 'Media Library owns /media; MovieMode is Apps-only');
+  for (const canonical of ['/admin/projects', '/admin/home', '/admin/store', '/admin/agentsam', '/admin/cad', '/admin/moviemode']) {
+    assert.ok(STUDIO_ADMIN_MOUNTS.some((mount) => mount.canonical === canonical), canonical + ' remains mounted');
+  }
+  assert.equal(canonicalStudioPath('/samsketch'), '/admin/samsketch', 'SamSketch redirects to its own canonical admin route, never CAD');
+  assert.equal(canonicalStudioPath('/media'), '/admin/media', 'Media Library uses the canonical admin namespace');
   assert.equal(canonicalStudioPath('/projects'), '/admin/projects');
   assert.equal(canonicalStudioPath('/projects/proj_123'), '/admin/projects/proj_123');
   assert.equal(canonicalStudioPath('/admin/home'), null, 'canonical commerce home must not redirect to itself');
   assert.equal(canonicalStudioPath('/admin/moviemode/edit'), null, 'canonical MovieMode editor deep link must never self-redirect');
-  assert.equal(canonicalStudioPath('/admin/moviemode/edit/'), '/admin/moviemode/edit', 'editor deep-link slash normalized once');
+  assert.equal(canonicalStudioPath('/admin/moviemode/edit/'), null, 'unregistered app child paths are not promoted into host routes');
   assert.equal(canonicalStudioPath('/admin/moviemode/'), '/admin/moviemode', 'canonical app slash normalized once');
   assert.equal(canonicalStudioPath('/admin/cad/edit'), null, 'canonical CAD child must never self-redirect');
   assert.equal(canonicalStudioPath('/admin/home/'), '/admin/home', 'canonical commerce home tolerates a trailing slash');
@@ -33,7 +33,7 @@ test('canonical Projects owns one host-neutral Work UI; old flat paths redirect 
   assert.equal(isStudioAdminPath('/admin/agentsam'), true);
   assert.equal(isStudioAdminPath('/admin/cad'), true);
   assert.equal(isStudioAdminPath('/admin/moviemode'), true);
-  assert.equal(isStudioAdminPath('/admin/products'), false);
+  assert.equal(isStudioAdminPath('/admin/products'), true);
 });
 test('AgentSam canonical route requires authentication and preserves legacy child routes', () => {
   const manifest = JSON.parse(source('agentsam.app.json'));
@@ -41,17 +41,20 @@ test('AgentSam canonical route requires authentication and preserves legacy chil
   assert.equal(mountRequiresAuth('/admin/agentsam', manifest), true);
   assert.equal(mountRequiresAuth('/admin/agentsam/new', manifest), true);
   assert.equal(canonicalStudioPath('/agentsam'), '/admin/agentsam');
-  assert.equal(canonicalStudioPath('/agentsam/apps/cad'), null);
+  assert.equal(canonicalStudioPath('/agentsam/apps/cad'), '/admin/cad');
   assert.equal(resolveConsoleFile('/admin/agentsam'), null);
   assert.match(source('frontend/src/routes/(apps)/admin/agentsam.tsx'), /component: AgentSamPage/);
 });
-test('Studio owns the authenticated home entry while installed Ecommerce pages keep their product owner', () => {
+test('Local Studio owns canonical Ecommerce routes while the package supplies page assets', () => {
   assert.equal(resolveConsoleFile('/admin/projects'), null);
   assert.equal(resolveConsoleFile('/admin/agentsam'), null);
   assert.equal(resolveConsoleFile('/admin/projects/proj_123'), null);
   assert.equal(resolveConsoleFile('/admin/home'), null);
   assert.equal(resolveConsoleFile('/admin/home', { allowEmbeddedHome: true }), 'home.html');
   assert.equal(resolveConsoleFile('/admin/pages'), 'pages.html');
+  assert.equal(isStudioAdminPath('/admin/products'), true);
+  assert.equal(resolveConsoleFile('/admin/products'), 'products.html');
+  assert.equal(resolveConsoleFile('/admin/theme-editor'), 'theme-editor.html');
   assert.equal(resolveConsoleFile('/admin/growth'), 'growth.html');
 });
 test('Projects route uses the existing Work product and authenticated HTTP snapshot, not bundled fixtures', () => {

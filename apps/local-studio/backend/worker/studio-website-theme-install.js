@@ -6,14 +6,26 @@
  * installs into an explicitly selected owned site, or automatically creates
  * an isolated draft cms_sites + cms_site_themes pair for site-free Try.
  */
-import { resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
 import { installThemeDraft } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
-import { installThemeDraftSite } from '../../../ecommerce-cms-agentsam/backend/cms/theme-draft-sites.mjs';
+import { DRAFT_SITE_KIND, installThemeDraftSite, discardThemeDraftSite } from '../../../ecommerce-cms-agentsam/backend/cms/theme-draft-sites.mjs';
+import { withLocalStudioCmsContext } from '../../../ecommerce-cms-agentsam/backend/lib/account-context.js';
+import { requireCmsSiteAccess, createAuthorizedCmsSite, configuredCmsWorkers } from './cms-authority.js';
 
 const STORE = 'https://themes.inneranimalmedia.com';
 const SAFE_SLUG = /^[a-z][a-z0-9-]{0,63}$/;
 const SAFE_ID = /^[a-zA-Z0-9_-]{1,160}$/;
 const HASH = /^[0-9a-f]{64}$/;
+const dash = value => String(value || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+async function uniqueDraftSiteSlug(db, accountId, base) {
+  const root = base.slice(0, 70);
+  for (let n = 1; n <= 200; n += 1) {
+    const candidate = n === 1 ? root : `${root}-${n}`;
+    const hit = await db.prepare('SELECT 1 AS x FROM cms_sites WHERE account_id=? AND slug=? LIMIT 1')
+      .bind(accountId, candidate).first();
+    if (!hit) return candidate;
+  }
+  return `${root}-${crypto.randomUUID().replaceAll('-', '').slice(0, 8)}`;
+}
 const json = (body, status=200) => Response.json(body, {
   status, headers: { 'cache-control':'private, no-store', 'x-content-type-options':'nosniff' },
 });
@@ -129,31 +141,56 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
       return json({ok:false,error:'theme_installer_artifact_invalid'},503);
     }
 
-    const site=body.site_id
-      ? await resolveCmsSite(env.DB,{accountId,siteId:body.site_id})
-      : null;
     const installPayload={
       project,
       package_name:project.sourcePackage,
       package_version:body.version,
       preview_url:base,
     };
-    // Every "try" without an explicit site gets its own draft site, so any
-    // authenticated account can sandbox as many themes/copies as it likes. An
-    // explicit site_id installs into that owned site instead.
-    const result=site
-      ? await installThemeDraft(env,accountId,slug,installPayload,site.id)
-      : await installThemeDraftSite(env,accountId,slug,installPayload);
+    let site = null;
+    let result;
+    if (body.site_id) {
+      const access = await requireCmsSiteAccess(env.DB, accountId, body.site_id, 'write', {
+        remoteWorkerNames: configuredCmsWorkers(env),
+      });
+      if (!access.ok) return json({ ok: false, error: access.error }, access.status);
+      site = access.site;
+      if (site.source !== 'shared-d1') return json({ ok: false, error: 'site_requires_remote_cms_adapter' }, 409);
+      result = await withLocalStudioCmsContext(site.account_id, site,
+        () => installThemeDraft(env, site.account_id, slug, installPayload, site.id), accountId);
+    } else {
+      // Local Studio explicitly creates the isolated draft site. The CMS helper
+      // receives that verified site and only performs the theme data operation.
+      const display = String(project?.name || slug).trim() || slug;
+      const siteSlug = await uniqueDraftSiteSlug(env.DB, accountId,
+        `theme-draft-${dash(slug)}-${dash(body.version)}`);
+      const created = await createAuthorizedCmsSite(env.DB, accountId, {
+        name: `${display} — Draft`, slug: siteSlug, status: 'draft', is_default: false,
+        settings: { kind: DRAFT_SITE_KIND, source_theme_slug: slug, source_release_version: body.version },
+      });
+      site = { ...created, source: 'shared-d1', role: 'owner', can_edit: true, can_publish: true };
+      try {
+        result = await withLocalStudioCmsContext(site.account_id, site,
+          () => installThemeDraftSite(env, site.account_id, slug, installPayload, { site }), accountId);
+      } catch (error) {
+        await discardThemeDraftSite(env.DB, site.account_id, site.id);
+        throw error;
+      }
+      if (!result.ok) {
+        await discardThemeDraftSite(env.DB, site.account_id, site.id);
+        return json(result, result.status || 503);
+      }
+    }
     if(!result.ok)return json(result,result.status||503);
     const projectId=result.project.id;
-    const siteId=site ? site.id : result.site_id;
+    const siteId=site.id;
     const editor='/admin/theme-project-editor?project='+encodeURIComponent(projectId)+
       '&site_id='+encodeURIComponent(siteId);
     return json({
       ok:true,installed:true,unchanged:result.unchanged===true,
       scope:'site',
-      site_id:siteId,site_name:site?site.name:result.site_name,
-      ...(site ? {site_status:site.status} : {site_status:'draft',theme_id:result.theme_id}),
+      site_id:siteId,site_name:site.name,site_status:site.status,
+      ...(result.theme_id ? {theme_id:result.theme_id} : {}),
       project_id:projectId,
       page_count:result.project.pages.length,
       source_release_sha256:ready.sha256,

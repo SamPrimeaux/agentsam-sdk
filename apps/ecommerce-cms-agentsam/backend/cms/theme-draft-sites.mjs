@@ -41,7 +41,7 @@ async function createDraftSite(db, accountId, { name, slug, settings }) {
   return id;
 }
 
-async function discardDraftSite(db, accountId, siteId) {
+export async function discardThemeDraftSite(db, accountId, siteId) {
   // Used only to roll back a draft site created moments ago by a failed try.
   try {
     await db.prepare("DELETE FROM cms_site_themes WHERE account_id=? AND site_id=?").bind(accountId, siteId).run();
@@ -87,27 +87,44 @@ function editorUrl(projectId, siteId) {
 }
 
 /** "Try theme": new draft site + verified theme project + cms_site_themes row. */
-export async function installThemeDraftSite(env, accountId, slug, payload) {
+export async function installThemeDraftSite(env, accountId, slug, payload, { site: providedSite = null } = {}) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
   const version = String(payload?.package_version || "");
   const display = String(payload?.project?.name || slug).trim() || slug;
-  const siteSlug = await uniqueDraftSlug(env.DB, accountId, `theme-draft-${dash(slug)}-${dash(version)}`);
-  const siteId = await createDraftSite(env.DB, accountId, {
-    name: `${display} — Draft`, slug: siteSlug,
-    settings: { source_theme_slug: slug, source_release_version: version },
-  });
+  const createdHere = !providedSite;
+  let siteId = providedSite?.id || null;
+  let siteName = providedSite?.name || `${display} — Draft`;
+  if (providedSite) {
+    if (String(providedSite.account_id || '') !== String(accountId) || providedSite.status !== 'draft' || !siteId)
+      return { ok: false, status: 409, error: 'local_studio_draft_site_context_invalid' };
+  } else {
+    const siteSlug = await uniqueDraftSlug(env.DB, accountId, `theme-draft-${dash(slug)}-${dash(version)}`);
+    siteId = await createDraftSite(env.DB, accountId, {
+      name: siteName, slug: siteSlug,
+      settings: { source_theme_slug: slug, source_release_version: version },
+    });
+  }
   let result;
   try { result = await installThemeDraft(env, accountId, slug, payload, siteId); }
-  catch (error) { await discardDraftSite(env.DB, accountId, siteId); throw error; }
-  if (!result.ok) { await discardDraftSite(env.DB, accountId, siteId); return result; }
+  catch (error) {
+    if (createdHere) await discardThemeDraftSite(env.DB, accountId, siteId);
+    throw error;
+  }
+  if (!result.ok) {
+    if (createdHere) await discardThemeDraftSite(env.DB, accountId, siteId);
+    return result;
+  }
   let themeId;
   try {
     themeId = await insertSiteTheme(env, accountId, siteId, result.project,
       { kind: "catalog", ref: null, name: display });
-  } catch (error) { await discardDraftSite(env.DB, accountId, siteId); throw error; }
+  } catch (error) {
+    if (createdHere) await discardThemeDraftSite(env.DB, accountId, siteId);
+    throw error;
+  }
   return {
     ok: true, installed: true, unchanged: false, project: result.project,
-    site_id: siteId, site_name: `${display} — Draft`, theme_id: themeId,
+    site_id: siteId, site_name: siteName, theme_id: themeId,
     editor_url: editorUrl(result.project.id, siteId),
   };
 }
@@ -131,12 +148,12 @@ export async function duplicateThemeDraftSite(env, accountId, siteId, projectId,
     revision: 0, createdAt: null, updatedAt: null, clonedFromThemeProject: found.project.id,
   };
   const created = await createThemeProject(env, accountId, copy, newSiteId);
-  if (!created.ok) { await discardDraftSite(env.DB, accountId, newSiteId); return created; }
+  if (!created.ok) { await discardThemeDraftSite(env.DB, accountId, newSiteId); return created; }
   let themeId;
   try {
     themeId = await insertSiteTheme(env, accountId, newSiteId, created.project,
       { kind: "canvas", ref: `${siteId}:${projectId}`, name: copyName });
-  } catch (error) { await discardDraftSite(env.DB, accountId, newSiteId); throw error; }
+  } catch (error) { await discardThemeDraftSite(env.DB, accountId, newSiteId); throw error; }
   return {
     ok: true, project: created.project, site_id: newSiteId, theme_id: themeId,
     editor_url: editorUrl(created.project.id, newSiteId),

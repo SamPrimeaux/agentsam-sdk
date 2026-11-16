@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
+import { isLocalStudioEcommerceDocumentPath } from "../../shared/ecommerce-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
 import { openAppsInstaller, setAppsInstallerAdapter } from '@inneranimalmedia/agentsam-nav/browser';
@@ -252,9 +253,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       workspace.setSideOpen(false);
     }
   }, [pathname, isCadRoute, isMovieModeRoute, isSamSketchRoute, isSamSculptRoute]);
-  // Keep first-party Media and Studio mounts in the SPA. Product /admin pages
-  // stay readable: navigate the installed Ecommerce host, then mirror the
-  // canonical /admin/... URL in history so refresh/session stay coherent.
+  // Local Studio owns canonical /admin paths. Packaged Ecommerce documents
+  // are top-level documents, not a nested ?page= app route or an extra iframe.
   const go = (to: string) => {
     const [pathOnly, query = ''] = to.split('?');
     const legacyMedia = resolveLegacyContentMediaPath(pathOnly, new URLSearchParams(query));
@@ -268,6 +268,11 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     }
     if (pathOnly === '/admin/products/help/artwork' || pathOnly.startsWith('/admin/products/help/artwork')) {
       go('/admin/settings/docs?topic=artwork');
+      return;
+    }
+    if (isLocalStudioEcommerceDocumentPath(pathOnly)) {
+      if (isPackagedDesktop()) window.location.hash = '#' + to;
+      else window.location.assign(to);
       return;
     }
     if (pathOnly.startsWith('/admin/') && !isStudioAdminPath(pathOnly)) {

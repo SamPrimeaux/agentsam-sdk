@@ -1,9 +1,9 @@
+import { canonicalLocalStudioEcommercePath, isLocalStudioEcommerceAdminPath } from './ecommerce-admin-routes.mjs';
+
 /**
- * Local Studio-owned dashboard routes. These mounts are an explicit allowlist:
- * Ecommerce-owned commerce routes such as /admin/products, /admin/orders,
- * /admin/pages and /admin/inventory remain owned by the installed CMS.
- *
- * Every first-party Studio dashboard experience has a canonical /admin path.
+ * Local Studio owns canonical dashboard routes, account/site identity and
+ * route dispatch. Installed apps contribute capabilities and packaged assets,
+ * never a competing top-level /admin route authority.
  * Flat paths are retained only as compatibility redirects.
  */
 export const STUDIO_ADMIN_MOUNTS = Object.freeze([
@@ -68,6 +68,8 @@ export const LEGACY_CONTENT_MEDIA_REDIRECTS = Object.freeze({
 /** @param {string} pathname */
 export function canonicalStudioPath(pathname) {
   if (pathname === '/admin' || pathname === '/admin/') return '/admin/home';
+  const ecommerceCanonical = canonicalLocalStudioEcommercePath(pathname);
+  if (ecommerceCanonical) return ecommerceCanonical;
   // Published forms are public documents, not the account-owned Forms app.
   if (pathname === '/forms/embed' || pathname.startsWith('/forms/embed/')) return null;
 
@@ -90,10 +92,7 @@ export function canonicalStudioPath(pathname) {
 
 /** @param {string} pathname */
 export function isStudioAdminPath(pathname) {
-  // Analytics overview/finance/health are existing Ecommerce-owned routes.
-  // Only the Studio analytics landing page at /admin/analytics belongs here.
-  if (pathname.startsWith('/admin/analytics/')) return false;
-  return STUDIO_ADMIN_MOUNTS.some(({ canonical }) =>
+  return isLocalStudioEcommerceAdminPath(pathname) || STUDIO_ADMIN_MOUNTS.some(({ canonical }) =>
     pathname === canonical || pathname.startsWith(canonical + '/'));
 }
 

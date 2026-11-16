@@ -123,3 +123,16 @@ test('marketplace intent reaches the authorized page editor with catalog install
   assert.equal(destination.to,
     '/admin/theme-editor?slug=home&site_id=site_a&page_id=cmsp_home_a&marketplace_kind=cms_embed&marketplace_key=announcement_bar');
 });
+
+
+test('site-owned Theme Editor previews resolve canonical route_path on the selected public domain', () => {
+  const editor = readFileSync(new URL('../frontend/static/js/theme-editor.js', import.meta.url), 'utf8');
+  const start = editor.indexOf('function pageRoute(pageSlug)');
+  const end = editor.indexOf('function ownerSections(ownerSlug)', start);
+  assert.ok(start >= 0 && end > start, 'pageRoute helper is present');
+  const route = editor.slice(start, end);
+  assert.match(route, /owned\.route_path \|\| owned\.route \|\| owned\.live_route/);
+  assert.match(route, /cmsEditorStorefrontUrl/);
+  assert.doesNotMatch(route, /activeCmsSite\?\.id !== ["']app-store["']/,
+    'ordinary sites must not fall back to an admin-origin relative live_route');
+});

@@ -23,7 +23,7 @@ function UnavailableProductRoute({ requested }: { requested?: string }) {
     } catch { return 'The destination could not be parsed.'; }
   })();
   const openProducts = () => {
-    const route = '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent('/admin/products');
+    const route = '/admin/products';
     if (isPackagedDesktop()) window.location.hash = '#' + route;
     else window.location.assign(route);
   };
@@ -73,13 +73,13 @@ export const Route = createFileRoute('/(apps)/admin/apps/ecommerce-cms-agentsam'
 });
 
 /**
- * Local Studio owns its installed ecommerce routes and data. Embed the
- * packaged console from this origin so its UI and /api/admin requests stay on
- * the Local Studio Worker and its DB binding. The browser retains the registered /apps/ecommerce-cms-agentsam route
- * and its page search parameter. The Worker separately serves direct /admin/* URLs.
+ * Compatibility entry for old /admin/apps/ecommerce-cms-agentsam?page=... links.
+ * Local Studio redirects them to the canonical top-level /admin/... URL; it no
+ * longer nests CMS pages inside a second application route.
  */
 function EcommerceAppHost() {
-  return <EcommerceAppView search={Route.useSearch()} />;
+  const search = Route.useSearch();
+  return <EcommerceAppView search={search} redirectOnly={search.page !== '/admin/theme-code-editor'} />;
 }
 
 /**
@@ -87,8 +87,9 @@ function EcommerceAppHost() {
  * /apps/... wrapper intentionally share this one component and product routes.
  * The clean mount frames the packaged asset to avoid an iframe self-loop.
  */
-export function EcommerceAppView({ search }: {
+export function EcommerceAppView({ search, redirectOnly = false }: {
   search: Search;
+  redirectOnly?: boolean;
 }) {
   const [bridgeReady, setBridgeReady] = useState(!isPackagedDesktop());
   useEffect(() => {
@@ -106,6 +107,34 @@ export function EcommerceAppView({ search }: {
   // Embedded product content must resolve to the packaged asset, never another
   // /admin route that could recursively mount Local Studio's outer shell.
   const assetPath = page && !isCodeEditor ? resolveEcommerceAssetPath(page) : null;
+  const redirectTarget = page && typeof window !== 'undefined'
+    ? (() => {
+      const resolved = new URL(page, window.location.origin);
+      const siteScoped = ['/admin/store','/admin/pages','/admin/theme-editor','/admin/page-edit',
+        '/admin/theme-project-editor','/admin/product-edit','/admin/products','/admin/collections',
+        '/admin/collections/new','/admin/inventory','/admin/onboarding-preview','/admin/products/create'];
+      if (search.site_id && siteScoped.some(path => resolved.pathname === path || resolved.pathname.startsWith(path + '/')) && !resolved.searchParams.has('site_id'))
+        resolved.searchParams.set('site_id', search.site_id);
+      if (resolved.pathname === '/admin/theme-project-editor' && search.project && !resolved.searchParams.has('project'))
+        resolved.searchParams.set('project', search.project);
+      if (resolved.pathname === '/admin/onboarding-preview' && search.preview_id && !resolved.searchParams.has('preview_id'))
+        resolved.searchParams.set('preview_id', search.preview_id);
+      const trySelection = resolved.pathname === '/admin/store' ? themeStoreTrySelection(search) : null;
+      if (trySelection) {
+        resolved.searchParams.set('theme_sku', trySelection.theme_sku);
+        resolved.searchParams.set('theme_version', trySelection.theme_version);
+        resolved.searchParams.set('action', trySelection.action);
+      }
+      if (search.stock && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock)) resolved.searchParams.set('stock', search.stock);
+      return resolved.pathname + resolved.search + resolved.hash;
+    })()
+    : null;
+  useEffect(() => {
+    if (!redirectOnly || localPreview || !redirectTarget || !bridgeReady || authPending || !user) return;
+    if (isPackagedDesktop()) window.location.hash = '#' + redirectTarget;
+    else window.location.replace(redirectTarget);
+  }, [redirectOnly, localPreview, redirectTarget, bridgeReady, authPending, user]);
+
   const url = assetPath
     ? (() => {
       // The iframe URL is origin-relative so server and client render the same markup.
@@ -163,6 +192,11 @@ export function EcommerceAppView({ search }: {
   const legacyDesignCanvas = legacyPage === "/admin/design-canvas" || legacyPage === "/admin/design-canvas/";
   if (legacyDesignCanvas) {
     return <Navigate to="/admin/canvas" search={{ library: "sources" }} replace />;
+  }
+  if (redirectOnly && !localPreview) {
+    return redirectTarget
+      ? <p className="p-8 text-muted-foreground">Opening the requested Local Studio page…</p>
+      : <UnavailableProductRoute requested={search.page} />;
   }
 
   return <section className="flex h-full min-h-0 w-full flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">

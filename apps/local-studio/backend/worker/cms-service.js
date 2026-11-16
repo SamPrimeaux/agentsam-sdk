@@ -6,7 +6,9 @@
  */
 
 import { createCmsDbClient } from './cms-db.js';
-import { listAuthorizedCmsSites, requireCmsSiteAccess, cmsActorRequired, configuredCmsWorkers } from './cms-authority.js';
+import { listAuthorizedCmsSites, resolveCmsSiteAccess, createAuthorizedCmsSite, cmsActorRequired, configuredCmsWorkers } from './cms-authority.js';
+import { ensureCmsSiteStarter } from '../../../ecommerce-cms-agentsam/backend/cms/site-starter.mjs';
+import { withLocalStudioCmsContext } from '../../../ecommerce-cms-agentsam/backend/lib/account-context.js';
 import { handleRemoteCmsRequest } from './cms-remote.js';
 import { fetchSitePartial, putSitePartial, injectSitePartials } from './site-partials.js';
 import { handleCmsSourceRequest } from './cms-source.js';
@@ -56,12 +58,11 @@ function resolveSiteSlug(url, body = {}) {
   const slug =
     url.searchParams.get('site_id') ||
     url.searchParams.get('site') ||
-    url.searchParams.get('project_slug') ||
-    url.searchParams.get('project') ||
-    url.searchParams.get('project_id')?.replace(/^proj_/, '') ||
+    url.searchParams.get('site_slug') ||
+    body?.site_id ||
+    body?.siteId ||
     body?.site ||
-    body?.project_slug ||
-    body?.project_id?.replace(/^proj_/, '');
+    body?.site_slug;
 
   const trimmed = slug && String(slug).trim() ? String(slug).trim() : '';
   return trimmed || null;
@@ -85,7 +86,17 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   }
   if (url.pathname === '/api/cms/sites' && method === 'GET') {
     const sites = await listAuthorizedCmsSites(env.DB, actorUserId, { remoteWorkerNames: configuredCmsWorkers(env) });
-    return json({ ok: true, sites });
+    const defaults = sites.filter((site) => site.is_default === true || site.is_default === 1 || site.is_default === '1');
+    const requested = url.searchParams.get('site_id') || url.searchParams.get('site');
+    const selected = requested
+      ? sites.find((site) => site.id === requested || site.slug === requested)
+      : defaults.length === 1 ? defaults[0] : sites.length === 1 ? sites[0] : null;
+    return json({
+      ok: true,
+      sites,
+      default_site_id: defaults.length === 1 ? defaults[0].id : null,
+      selected_site_id: selected?.id || null,
+    });
   }
 
   let body = null;
@@ -107,12 +118,32 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
     }
   }
 
-  const siteSelector = resolveSiteSlug(url, body);
-  if (!siteSelector) {
-    return json({ ok: false, error: 'site_required', detail: 'Pass ?site_id= or ?site= — no hardcoded default site.' }, 400);
+  if (url.pathname === '/api/cms/sites' && method === 'POST') {
+    let created;
+    try {
+      created = await createAuthorizedCmsSite(env.DB, actorUserId, body || {});
+    } catch (error) {
+      const code = String(error?.message || error);
+      const status = /invalid|required/.test(code) ? 400 : /unique|constraint|already/.test(code) ? 409 : 500;
+      return json({ ok: false, error: code }, status);
+    }
+    const sites = await listAuthorizedCmsSites(env.DB, actorUserId, { remoteWorkerNames: configuredCmsWorkers(env) });
+    const site = sites.find((candidate) => candidate.id === created?.id);
+    if (!site) return json({ ok: false, error: 'cms_site_created_but_not_authorized' }, 500);
+    let starter;
+    try {
+      starter = await withLocalStudioCmsContext(site.account_id, site,
+        () => ensureCmsSiteStarter(env, site.account_id, site.id), actorUserId);
+    } catch (error) {
+      return json({ ok: false, error: 'cms_site_starter_failed', detail: String(error?.message || error), site_id: site.id, retryable: true }, 503);
+    }
+    if (!starter?.ok) return json({ ok: false, error: starter?.error || 'cms_site_starter_failed', site_id: site.id, retryable: true, starter }, starter?.status || 503);
+    return json({ ok: true, site, starter }, 201);
   }
-  const access = /\/(?:publish|rollback)$/.test(url.pathname) ? 'publish' : method === 'GET' ? 'read' : 'write';
-  const authorization = await requireCmsSiteAccess(env.DB, actorUserId, siteSelector, access, {
+
+  const siteSelector = resolveSiteSlug(url, body);
+  const access = /\/(?:publish|rollback)$/.test(url.pathname) ? 'publish' : method === 'GET' || method === 'HEAD' ? 'read' : 'write';
+  const authorization = await resolveCmsSiteAccess(env.DB, actorUserId, siteSelector, access, {
     remoteWorkerNames: configuredCmsWorkers(env),
   });
   if (!authorization.ok) return json({ ok: false, error: authorization.error }, authorization.status);

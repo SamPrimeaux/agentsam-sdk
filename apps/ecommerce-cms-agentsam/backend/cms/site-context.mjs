@@ -1,10 +1,29 @@
 import { DEFAULT_SITE_STORE_SETTINGS } from "./site-settings-contract.mjs";
+import { getApplicationAccountContext } from "../lib/account-context.js";
+
+
+function hostOwnedSite(accountId = null, siteId = null) {
+  const scope = getApplicationAccountContext();
+  if (scope?.authority !== 'local-studio') return null;
+  const account = String(accountId || scope.accountId || '').trim();
+  if (!account || account !== String(scope.accountId || '')) throw new Error('cms_site_context_account_mismatch');
+  const site = scope.site;
+  if (!site?.id || String(site.account_id || '') !== account) throw new Error('cms_site_context_required');
+  if (siteId && String(siteId) !== String(site.id) && String(siteId) !== String(site.slug || '')) {
+    throw new Error('cms_site_context_mismatch');
+  }
+  return { ...site, account_id: account };
+}
 
 /**
- * Resolve a CMS site without exposing or duplicating AgentSam provider registries.
- * Account ownership is enforced at the CMS boundary; site IDs are never trusted alone.
+ * Resolve a standalone CMS site or carry the already-authorized Local Studio
+ * site through the CMS data layer. Hosted ownership and site selection belong
+ * exclusively to Local Studio; this module cannot infer or create a host site.
  */
 export async function ensureDefaultCmsSite(db, accountId, { name = "Default site" } = {}) {
+  const hosted = hostOwnedSite(accountId);
+  if (hosted) return hosted;
+  if (getApplicationAccountContext()?.authority === 'local-studio') throw new Error('cms_site_context_required');
   if (!accountId) throw new Error("cms_site_account_required");
   // Only a genuinely empty merchant account gets a starter site. An
   // existing merchant's sites are never replaced by a platform/default brand.
@@ -38,6 +57,9 @@ export async function ensureDefaultCmsSite(db, accountId, { name = "Default site
 }
 
 export async function listCmsSites(db, accountId) {
+  const hosted = hostOwnedSite(accountId);
+  if (hosted) return [hosted];
+  if (getApplicationAccountContext()?.authority === 'local-studio') return [];
   if (!accountId) throw new Error("cms_site_account_required");
   // This GET is an inventory, not a setup transaction. Opening an editor
   // must never create a site or silently promote an existing site to default.
@@ -50,6 +72,9 @@ export async function listCmsSites(db, accountId) {
 }
 
 export async function createCmsSite(db, accountId, input = {}) {
+  if (getApplicationAccountContext()?.authority === 'local-studio') {
+    throw new Error('cms_site_creation_owned_by_local_studio');
+  }
   if (!accountId) throw new Error("cms_site_account_required");
   const name = String(input.name || "").trim();
   const slug = String(input.slug || "").trim().toLowerCase();
@@ -77,8 +102,7 @@ export async function createCmsSite(db, accountId, input = {}) {
     INSERT INTO cms_sites (id, account_id, name, slug, primary_domain, domain_aliases_json, settings_json, status, is_default)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)
   `).bind(id, accountId, name, slug, primaryDomain, JSON.stringify(aliases),
-    JSON.stringify(settings),
-    existing ? 0 : 1).run();
+    JSON.stringify(settings), existing ? 0 : 1).run();
   return db.prepare(`
     SELECT id, account_id, name, slug, primary_domain, domain_aliases_json, status, is_default, created_at, updated_at
     FROM cms_sites WHERE id = ? AND account_id = ?
@@ -86,6 +110,9 @@ export async function createCmsSite(db, accountId, input = {}) {
 }
 
 export async function resolveCmsSite(db, { accountId = null, siteId = null, hostname = null, createDefault = false } = {}) {
+  const hosted = hostOwnedSite(accountId, siteId);
+  if (hosted) return hosted;
+  if (getApplicationAccountContext()?.authority === 'local-studio') throw new Error('cms_site_context_required');
   if (siteId) {
     const row = await db.prepare(`
       SELECT id, account_id, name, slug, primary_domain, status, is_default

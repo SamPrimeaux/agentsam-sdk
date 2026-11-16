@@ -2,7 +2,8 @@
  * Optional Canvas handoff to the existing CMS project/revision owner.
  * No publication, site creation, copied website store, or model-authored code.
  */
-import { resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
+import { withLocalStudioCmsContext } from '../../../ecommerce-cms-agentsam/backend/lib/account-context.js';
+import { requireCmsSiteAccess, configuredCmsWorkers } from './cms-authority.js';
 import { createThemeProject, getThemeProject, validateThemeProjectPayload } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,160}$/;
@@ -246,30 +247,31 @@ export function canvasToThemeProject(document, source, projectId) {
   });
 }
 
-export async function createCanvasCmsDraft(env, actor, snapshot, siteId) {
-  const site = await resolveCmsSite(env.DB, { accountId: actor, siteId });
-  if (site.status === 'archived') throw failure('site_not_found_or_unauthorized', 404);
-  const source = { id: snapshot.canvas.id, revision: snapshot.canvas.revision, content_hash: snapshot.canvas.contentHash };
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(
-    [source.id, source.revision, source.content_hash].join(':')));
-  const suffix = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 24);
-  const projectId = 'canvas_' + suffix;
-  const project = canvasToThemeProject(snapshot.document, source, projectId);
-  const prior = await getThemeProject(env, actor, projectId, site.id);
-  let result = prior;
-  if (!prior.ok) {
-    if (prior.status !== 404) throw failure(prior.error, prior.status || 503);
-    result = await createThemeProject(env, actor, project, site.id);
-    if (!result.ok && result.error === 'theme_project_exists')
-      result = await getThemeProject(env, actor, projectId, site.id);
-  }
-  if (!result.ok) throw failure(result.error || 'cms_draft_create_failed', result.status || 503);
-  const actual = result.project.sourceCanvas;
-  if (actual?.id !== source.id || actual.revision !== source.revision || actual.content_hash !== source.content_hash)
-    throw failure('canvas_cms_conversion_conflict', 409);
-  return { ok: true, site_id: site.id, project_id: projectId, revision: result.project.revision,
-    editor_url: '/admin/theme-project-editor?project=' + projectId + '&site_id=' + encodeURIComponent(site.id),
-    source, published: false, unchanged: prior.ok || result.unchanged === true };
+export async function createCanvasCmsDraft(env, actor, snapshot, site) {
+  if (!site?.id || !site.account_id || site.source !== 'shared-d1') throw failure('site_not_found_or_unauthorized', 404);
+  return withLocalStudioCmsContext(site.account_id, site, async () => {
+    const source = { id: snapshot.canvas.id, revision: snapshot.canvas.revision, content_hash: snapshot.canvas.contentHash };
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(
+      [source.id, source.revision, source.content_hash].join(':')));
+    const suffix = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 24);
+    const projectId = 'canvas_' + suffix;
+    const project = canvasToThemeProject(snapshot.document, source, projectId);
+    const prior = await getThemeProject(env, site.account_id, projectId, site.id);
+    let result = prior;
+    if (!prior.ok) {
+      if (prior.status !== 404) throw failure(prior.error, prior.status || 503);
+      result = await createThemeProject(env, site.account_id, project, site.id);
+      if (!result.ok && result.error === 'theme_project_exists')
+        result = await getThemeProject(env, site.account_id, projectId, site.id);
+    }
+    if (!result.ok) throw failure(result.error || 'cms_draft_create_failed', result.status || 503);
+    const actual = result.project.sourceCanvas;
+    if (actual?.id !== source.id || actual.revision !== source.revision || actual.content_hash !== source.content_hash)
+      throw failure('canvas_cms_conversion_conflict', 409);
+    return { ok: true, site_id: site.id, project_id: projectId, revision: result.project.revision,
+      editor_url: '/admin/theme-project-editor?project=' + projectId + '&site_id=' + encodeURIComponent(site.id),
+      source, published: false, unchanged: prior.ok || result.unchanged === true };
+  }, actor);
 }
 
 export async function handleCanvasCms(request, env, actor, canvasId, action) {
@@ -292,13 +294,17 @@ export async function handleCanvasCms(request, env, actor, canvasId, action) {
     if (!snapshot) throw failure('canvas_not_found', 404);
     if (snapshot.canvas.revision !== body.expected_revision)
       return json({ ok: false, error: 'canvas_revision_conflict', revision: snapshot.canvas.revision }, 409);
-    const site = await resolveCmsSite(env.DB, { accountId: actor, siteId: body.site_id });
-    if (site.status === 'archived') throw failure('site_not_found_or_unauthorized', 404);
+    const access = await requireCmsSiteAccess(env.DB, actor, body.site_id, action === 'validate' ? 'read' : 'write', {
+      remoteWorkerNames: configuredCmsWorkers(env),
+    });
+    if (!access.ok) throw failure(access.error || 'site_not_found_or_unauthorized', access.status || 404);
+    const site = access.site;
+    if (site.source !== 'shared-d1') throw failure('site_requires_remote_cms_adapter', 409);
     const validation = inspectCanvasCmsCompatibility(snapshot.document);
     const source = { id: canvasId, revision: snapshot.canvas.revision, content_hash: snapshot.canvas.contentHash };
     if (action === 'validate') return json({ ok: true, ...validation, source });
     if (!validation.compatible) return json({ ok: false, error: 'canvas_cms_incompatible', ...validation, source }, 422);
-    const result = await createCanvasCmsDraft(env, actor, snapshot, site.id);
+    const result = await createCanvasCmsDraft(env, actor, snapshot, site);
     return json(result, result.unchanged ? 200 : 201);
   } catch (error) {
     const message = String(error?.message || error);

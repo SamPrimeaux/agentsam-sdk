@@ -35,15 +35,16 @@ test('Sites distinguishes content-only records from connected storefronts and lo
 test('global and contextual help icons lead to real documentation routes', () => {
   // Documentation was consolidated under Settings; the removed global /docs
   // utility must not be reintroduced just to satisfy an obsolete test.
-  assert.match(navigationProjection, /Settings owns Documentation at \/settings\/docs/);
+  assert.match(navigationProjection, /Settings owns Documentation at \/admin\/settings\/docs/);
   assert.match(navigationProjection, /utilities: \[\]/);
   assert.match(globalShell, /help:CircleHelp/);
   assert.match(globalShell, /onNavigate: go/);
   assert.match(cmsRoute, /<Navigate[\s\S]*to="\/admin\/store"[\s\S]*replace/);
-  assert.match(docsHome, /createFileRoute\('\/\(apps\)\/docs'\)/);
-  assert.match(sitesPage, /go\('\/help\/cms'\)/);
-  assert.match(cmsGuide, /createFileRoute\('\/\(apps\)\/help\/cms'\)/);
-  assert.match(cmsGuide, /From theme to a verified storefront/);
+  assert.match(docsHome, /createFileRoute\(["']\/\(apps\)\/docs["']\)/);
+  assert.match(sitesPage, /go\('\/admin\/help\/cms'\)/);
+  assert.match(cmsGuide, /createFileRoute\(["']\/\(apps\)\/help\/cms["']\)/);
+  assert.match(cmsGuide, /<Navigate[\s\S]*to="\/admin\/help\/cms"[\s\S]*replace/);
+  assert.match(read('frontend/src/routes/(apps)/admin/help/cms.tsx'), /From theme to a verified storefront/);
   assert.match(routeTree, /path: '\/docs'/);
   assert.match(routeTree, /path: '\/help\/cms'/);
 });

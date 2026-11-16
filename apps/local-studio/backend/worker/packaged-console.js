@@ -2,22 +2,23 @@
  * Host-only asset mount for the existing Ecommerce Console.
  * No customer Worker or customer account resources are involved.
  */
-import { adminRouteForPath } from "../../../ecommerce-cms-agentsam/backend/lib/route-manifest.js";
-import { isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
+import { resolveLocalStudioEcommerceAdminRoute } from "../../shared/ecommerce-admin-routes.mjs";
 import { FIRST_PAINT_BOOTSTRAP_SCRIPT } from "../../shared/shell-appearance.mjs";
 
 const prefix = "/ecommerce-cms-agentsam/admin/";
 const filePattern = /^\/admin\/(?:css|js|partials|brand|assets|dock|profile-popup|media-kit|workbench|theme-previews|_spa|analytics)\/[\w./-]+$/;
 
 export function resolveConsoleFile(pathname, { allowEmbeddedHome = false } = {}) {
-  // Studio-owned authenticated app paths must reach Nitro, not legacy Ecommerce HTML.
-  // The installed-app iframe may explicitly request the packaged Ecommerce home.
-  if (isStudioAdminPath(pathname) && !(allowEmbeddedHome && pathname === '/admin/home')) return null;
   if (pathname === "/admin/host-config.js") return null;
   if (pathname === "/admin/theme-editor/embed-catalog.json") return "theme-editor/embed-catalog.json";
-  const match = adminRouteForPath(pathname);
-  if (match?.handler === "admin-html") return (match.asset || "/admin/" + match.page + ".html").replace(/^\/admin\//, "");
-  if (match?.handler === "admin-spa") return "_spa/index.html";
+  const route = resolveLocalStudioEcommerceAdminRoute(pathname);
+  if (route) {
+    // Canonical paths are owned by Local Studio. Only document surfaces are
+    // served as top-level packaged documents; Home is the one explicit embed.
+    if (route.surface === 'host' && !(allowEmbeddedHome && route.id === 'admin.home')) return null;
+    if (route.surface !== 'document' && !(allowEmbeddedHome && route.id === 'admin.home')) return null;
+    return route.asset || null;
+  }
   if (filePattern.test(pathname) && !pathname.includes("..")) return pathname.slice("/admin/".length);
   return null;
 }

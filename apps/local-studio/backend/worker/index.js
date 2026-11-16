@@ -34,6 +34,8 @@ import {
 import { runStudioCmsAssistant } from "./studio-cms-assistant.js";
 import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
+import { resolveCmsSiteAccess, readCmsSiteSelector, configuredCmsWorkers } from "./cms-authority.js";
+import { withLocalStudioCmsContext } from "../../../ecommerce-cms-agentsam/backend/lib/account-context.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, publicSitePathForRequest, servePublicSitePage } from "./public-site.js";
 import { handlePublicConfigRequest } from "./public-config.js";
@@ -50,6 +52,7 @@ import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { handleStudioChatHistory } from "./studio-chat-history.js";
 import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
 import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES } from "../../shared/studio-admin-routes.mjs";
+import { isLocalStudioEcommerceDocumentPath } from "../../shared/ecommerce-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
 import { completeConnectorOAuth, isConnectorOAuthCallbackRequest } from "./connector-oauth.js";
@@ -139,6 +142,19 @@ function isIdentityPath(pathname) {
 
 function isProtectedAppPath(pathname) {
   return mountRequiresAuth(pathname, APP);
+}
+
+function isSiteScopedCmsAdminApi(pathname) {
+  const globalCmsRoutes = new Set([
+    "/api/admin/cms/registry",
+    "/api/admin/cms/embed-catalog",
+    "/api/admin/cms/resolve-portal/templates",
+    "/api/admin/cms/checkout-previews/offers",
+  ]);
+  if (globalCmsRoutes.has(pathname) || pathname === "/api/admin/cms/sites") return false;
+  return pathname.startsWith("/api/admin/theme-editor/")
+    || pathname.startsWith("/api/admin/store/themes/")
+    || pathname.startsWith("/api/admin/cms/");
 }
 
 function isLocalStudioCommerceApi(pathname) {
@@ -932,9 +948,9 @@ export default {
       return Response.redirect(target,302);
     }
 
-    // Ecommerce's existing product catalog owns /admin/products. Keep the
-    // richer Product Studio on /admin/products/create; never redirect the
-    // Products parent into creation. Normalize obsolete or invalid view URLs.
+    // Local Studio owns /admin/products and dispatches its catalog capability.
+    // Keep Product Studio on /admin/products/create; never redirect the parent
+    // into creation. Normalize obsolete or invalid view URLs.
     if ((request.method === "GET" || request.method === "HEAD") &&
         (url.pathname === "/admin/products.html" ||
          (url.pathname === "/admin/products" && !shouldServeProductCatalogView(url)))) {
@@ -943,8 +959,8 @@ export default {
       return Response.redirect(target, 302);
     }
 
-    // /sites is a legacy entry URL. The ecommerce CMS owns the canonical
-    // store route; keep auth and query state, then send users to that existing UI.
+    // /sites is a legacy entry URL. Local Studio owns the canonical Store route;
+    // keep auth and query state, then send users to that existing UI.
     if ((request.method === "GET" || request.method === "HEAD") &&
         url.pathname === "/sites") {
       const denied = await guardStudioDocument(request, env);
@@ -972,7 +988,7 @@ export default {
     const embeddedEcommerceHome = url.pathname === "/admin/home"
       && url.searchParams.get("__agentsamEmbedded") === "1";
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname.startsWith("/admin/") && (!isStudioAdminPath(url.pathname) || embeddedEcommerceHome))) {
+        (url.pathname.startsWith("/admin/") && (isLocalStudioEcommerceDocumentPath(url.pathname) || !isStudioAdminPath(url.pathname) || embeddedEcommerceHome))) {
       if (url.pathname === "/admin/theme-editor" && url.searchParams.has("marketplace_kind")) {
         const denied = await guardStudioDocument(request, env);
         if (denied) return denied;
@@ -1072,7 +1088,32 @@ export default {
           (url.pathname === "/api/admin/media" || /^\/api\/admin\/media\/[^/]+$/.test(url.pathname))) {
         return handlePlatformMediaRead(request, env, url, principal);
       }
-      const studioUser = { ...principal, id: principal.id, account_id: principal.id, role: "owner" };
+      const studioUser = { ...principal, id: principal.id, account_id: principal.id, role: "owner", authority: "local-studio" };
+      if (url.pathname === "/api/admin/cms/sites") {
+        const hostUrl = new URL(request.url);
+        hostUrl.pathname = "/api/cms/sites";
+        return handleCmsWorkerRequest(new Request(hostUrl, request), env, principal.id);
+      }
+      let cmsSite = null;
+      if (isSiteScopedCmsAdminApi(url.pathname)) {
+        const selector = await readCmsSiteSelector(request);
+        const access = await resolveCmsSiteAccess(env.DB, principal.id, selector,
+          /\/(?:publish|rollback)$/.test(url.pathname) ? "publish" : ["GET", "HEAD"].includes(request.method) ? "read" : "write",
+          { remoteWorkerNames: configuredCmsWorkers(env) });
+        if (!access.ok) return json({ ok: false, error: access.error }, access.status || 404);
+        cmsSite = access.site;
+        if (cmsSite.source === "worker") {
+          if (!url.pathname.startsWith("/api/admin/cms/"))
+            return json({ ok: false, error: "remote_site_operation_not_supported_by_this_editor" }, 409);
+          const remoteUrl = new URL(request.url);
+          remoteUrl.pathname = "/api/cms/remote/" + url.pathname.slice("/api/admin/cms/".length);
+          return handleCmsWorkerRequest(new Request(remoteUrl, request), env, principal.id);
+        }
+        studioUser.account_id = cmsSite.account_id;
+        studioUser.role = cmsSite.role || "owner";
+        studioUser.site_id = cmsSite.id;
+        studioUser.site = cmsSite;
+      }
       if (url.pathname === "/api/admin/me") {
         try {
           const preference = await handleStudioAccountAvatar(new Request(request.url), env, principal.id);
@@ -1108,13 +1149,13 @@ export default {
           },
         });
         try {
-          return await handleEcommerceAdminApi(request, { ...commerceEnv, CMS_ASSISTANT_INFERENCE }, url, context, studioUser);
+          return await withLocalStudioCmsContext(studioUser.account_id, cmsSite, () => handleEcommerceAdminApi(request, { ...commerceEnv, CMS_ASSISTANT_INFERENCE }, url, context, studioUser), principal.id);
         } catch (error) {
           console.error("studio_cms_assistant_error", error?.message);
           return json({ ok: false, error: "AgentSam could not load the editor conversation. Try again." }, 503);
         }
       }
-      return handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser);
+      return withLocalStudioCmsContext(studioUser.account_id, cmsSite, () => handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser), principal.id);
     }
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)

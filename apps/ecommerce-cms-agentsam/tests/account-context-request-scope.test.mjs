@@ -5,6 +5,8 @@ import {
   requireApplicationAccountId,
   resolveApplicationAccountId,
   withApplicationAccount,
+  withLocalStudioCmsContext,
+  getApplicationAccountContext,
 } from "../backend/lib/account-context.js";
 
 function multiAccountEnv(ids = ["acct_a", "acct_b"]) {
@@ -83,4 +85,22 @@ test("a missing or disabled account cannot establish a tenant scope", async () =
 test("unscoped multi-tenant discovery still fails closed", async () => {
   __setApplicationAccountId(null);
   await assert.rejects(resolveApplicationAccountId(multiAccountEnv()), /application_account_ambiguous/);
+});
+
+
+test('Local Studio request authority is preserved without a second CMS accounts lookup', async () => {
+  const account = 'au_siteowner56789';
+  const site = { id: 'site_sdk', account_id: account, slug: 'agentsam-sdk' };
+  const env = { DB: { prepare() { throw new Error('CMS accounts table must not be queried for a hosted request'); } } };
+  const result = await withLocalStudioCmsContext(account, site, () =>
+    withApplicationAccount(env, account, async () => {
+      assert.equal(requireApplicationAccountId(), account);
+      assert.equal(getApplicationAccountContext().authority, 'local-studio');
+      assert.equal(getApplicationAccountContext().site.id, 'site_sdk');
+      return 'authorized';
+    }), account);
+  assert.equal(result, 'authorized');
+  await assert.rejects(withLocalStudioCmsContext(account, site, () =>
+    withApplicationAccount(env, 'au_otheractor123', async () => 'unreachable'), account),
+    /application_account_scope_mismatch/);
 });

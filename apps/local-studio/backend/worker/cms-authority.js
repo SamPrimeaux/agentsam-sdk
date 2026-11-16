@@ -1,3 +1,5 @@
+import { mergeSiteSettings } from '../../../ecommerce-cms-agentsam/backend/cms/site-settings-contract.mjs';
+
 /**
  * Authorized site inventory for the Local Studio CMS.
  *
@@ -27,6 +29,52 @@ function asJson(value) {
   catch { return {}; }
 }
 
+
+
+/** Create a website only inside the authenticated Local Studio account. */
+export async function createAuthorizedCmsSite(db, actorUserId, input = {}) {
+  const accountId = cmsActorRequired(actorUserId);
+  if (!db?.prepare) throw new Error('cms_db_binding_unavailable');
+  const name = String(input.name || '').trim();
+  const slug = String(input.slug || '').trim().toLowerCase();
+  if (!name || name.length > 120) throw new Error('cms_site_name_invalid');
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80) throw new Error('cms_site_slug_invalid');
+  const primaryDomain = input.primary_domain == null || input.primary_domain === ''
+    ? null : String(input.primary_domain).trim().toLowerCase();
+  const aliases = Array.isArray(input.domain_aliases)
+    ? [...new Set(input.domain_aliases.map(value => String(value).trim().toLowerCase()).filter(Boolean))]
+    : [];
+  const validDomain = value => value.length <= 253 &&
+    /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value);
+  if (primaryDomain && !validDomain(primaryDomain)) throw new Error('cms_site_domain_invalid');
+  if (aliases.some(value => !validDomain(value))) throw new Error('cms_site_domain_alias_invalid');
+  const existing = await db.prepare('SELECT id FROM cms_sites WHERE account_id = ? LIMIT 1')
+    .bind(accountId).first();
+  const id = String(input.id || `cmssite_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`);
+  if (!/^[A-Za-z0-9_-]{1,120}$/.test(id)) throw new Error('cms_site_id_invalid');
+  const settings = mergeSiteSettings(input.settings || {});
+  const status = input.status === 'draft' ? 'draft' : 'active';
+  const isDefault = input.is_default === true ? 1 : input.is_default === false ? 0 : (existing ? 0 : 1);
+  await db.prepare(`
+    INSERT INTO cms_sites (
+      id, account_id, name, slug, primary_domain, domain_aliases_json,
+      settings_json, status, is_default
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(id, accountId, name, slug, primaryDomain, JSON.stringify(aliases),
+    JSON.stringify(settings), status, isDefault).run();
+  if (isDefault) {
+    await db.prepare('UPDATE cms_sites SET is_default = 0 WHERE account_id = ? AND id <> ?')
+      .bind(accountId, id).run();
+  }
+  const site = await db.prepare(`
+    SELECT id, account_id, name, slug, primary_domain, domain_aliases_json,
+      settings_json, status, is_default, created_at, updated_at
+    FROM cms_sites WHERE id = ? AND account_id = ?
+  `).bind(id, accountId).first();
+  if (!site) throw new Error('cms_site_create_failed');
+  return site;
+}
+
 /**
  * External Worker sites are discovered from registered projects. Local/shared
  * CMS sites are discovered from cms_sites. Page rows are never used to infer
@@ -38,7 +86,7 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
   if (!db?.prepare) throw new Error('cms_db_binding_unavailable');
   const result = await db.prepare(`
     SELECT p.id AS project_id, p.name, p.domain, p.worker_id, p.metadata_json,
-           p.tenant_id, t.workspace_id,
+           p.tenant_id, t.workspace_id, t.owner_account_id AS account_id,
            CASE
              WHEN t.owner_account_id = ? THEN 'owner'
              WHEN EXISTS (
@@ -94,9 +142,16 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
     const domain = meta.target_domain || meta.site || row.domain || null;
     return {
       id: row.project_id,
+      account_id: row.account_id,
       slug,
       name: row.name,
       domain: typeof domain === 'string' ? domain : null,
+      primary_domain: typeof domain === 'string' ? domain : null,
+      domain_aliases_json: meta.domain_aliases_json || null,
+      settings_json: meta.settings_json ? JSON.stringify(meta.settings_json) : null,
+      status: 'active',
+      is_default: false,
+      page_count: null,
       project_id: row.project_id,
       tenant_id: row.tenant_id,
       workspace_id: row.workspace_id,
@@ -120,7 +175,9 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
   try {
     ({ results: ownedRows = [] } = await db.prepare(`
       SELECT s.id, s.account_id, s.slug, s.name, s.primary_domain,
-        s.worker_id, s.status,
+        s.domain_aliases_json, s.settings_json, s.worker_id, s.status, s.is_default, s.updated_at,
+        (SELECT COUNT(*) FROM cms_pages cp
+          WHERE cp.site_id = s.id AND cp.status <> 'archived') AS page_count,
         EXISTS(
           SELECT 1 FROM cms_pages cp
           WHERE cp.site_id = s.id AND cp.status <> 'archived'
@@ -149,7 +206,14 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
       slug: row.slug,
       name: row.name,
       domain: row.primary_domain || null,
+      primary_domain: row.primary_domain || null,
+      domain_aliases_json: row.domain_aliases_json || null,
+      settings_json: row.settings_json || null,
       worker_id: row.worker_id || null,
+      status: row.status || 'active',
+      is_default: row.is_default === true || row.is_default === 1 || row.is_default === '1',
+      updated_at: row.updated_at || null,
+      page_count: Number(row.page_count || 0),
       source: 'shared-d1',
       role: 'owner',
       can_edit: true,
@@ -186,4 +250,33 @@ export async function requireCmsSiteAccess(db, actorUserId, siteSlug, access = '
     return { ok: false, status: 403, error: 'cms_site_publish_forbidden' };
   }
   return { ok: true, site };
+}
+
+
+/** Resolve only an explicitly selected, authorized Local Studio site. */
+export async function resolveCmsSiteAccess(db, actorUserId, selector = null, access = 'read', opts = {}) {
+  if (!selector) return { ok: false, status: 400, error: 'cms_site_required' };
+  const key = assertCmsSlug(selector);
+  return requireCmsSiteAccess(db, actorUserId, key, access, opts);
+}
+
+/** Read only an explicit site selector; generic page/project slugs are ignored. */
+export async function readCmsSiteSelector(request) {
+  const url = new URL(request.url);
+  const fromUrl = url.searchParams.get('site_id') || url.searchParams.get('site') || url.searchParams.get('site_slug');
+  if (fromUrl) return fromUrl;
+  if (['GET', 'HEAD'].includes(request.method)) return null;
+  const contentType = request.headers.get('content-type') || '';
+  try {
+    const clone = request.clone();
+    if (contentType.includes('application/json')) {
+      const body = await clone.json();
+      return body?.site_id || body?.siteId || body?.site_slug || body?.siteSlug || null;
+    }
+    if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+      const body = await clone.formData();
+      return body.get('site_id') || body.get('siteId') || body.get('site_slug') || body.get('siteSlug') || null;
+    }
+  } catch { /* The original request remains available to its handler. */ }
+  return null;
 }

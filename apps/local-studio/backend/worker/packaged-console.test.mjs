@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveConsoleFile, shouldServeProductCatalogView } from "./packaged-console.js";
+import { isLocalStudioEcommerceDocumentPath, resolveLocalStudioEcommerceAdminRoute } from "../../shared/ecommerce-admin-routes.mjs";
+import { canonicalStudioPath, isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
 
 test("the canonical store route is Studio-owned, not packaged HTML", () => {
   assert.equal(resolveConsoleFile("/admin/store"), null);
@@ -24,4 +26,28 @@ test('canonical Products opens the existing Ecommerce catalog; Product Studio re
   assert.equal(shouldServeProductCatalogView(new URL('https://agentsam.example/admin/products')), true);
   assert.equal(resolveConsoleFile('/admin/products/create'), '_spa/index.html');
   assert.equal(shouldServeProductCatalogView(new URL('https://agentsam.example/admin/products?view=unknown')), false);
+});
+
+
+test('Local Studio is the sole canonical route authority for installed Ecommerce pages', () => {
+  for (const [path, asset] of [
+    ['/admin/pages', 'pages.html'],
+    ['/admin/theme-editor', 'theme-editor.html'],
+    ['/admin/theme-project-editor', 'theme-project-editor.html'],
+    ['/admin/products', 'products.html'],
+    ['/admin/orders', 'orders.html'],
+    ['/admin/inventory', 'inventory.html'],
+    ['/admin/preferences', 'preferences.html'],
+  ]) {
+    const route = resolveLocalStudioEcommerceAdminRoute(path);
+    assert.equal(route?.authority, 'local-studio', path + ' has Local Studio route authority');
+    assert.equal(resolveConsoleFile(path), asset, path + ' serves its packaged capability');
+    assert.equal(isStudioAdminPath(path), true, path + ' belongs to the canonical admin namespace');
+  }
+  assert.equal(isLocalStudioEcommerceDocumentPath('/admin/theme-editor'), true);
+  assert.equal(isLocalStudioEcommerceDocumentPath('/admin/store'), false);
+  assert.equal(resolveConsoleFile('/admin/store'), null, 'the Store host route must not recursively serve itself');
+  assert.equal(canonicalStudioPath('/admin/theme-editor/'), '/admin/theme-editor');
+  assert.equal(canonicalStudioPath('/admin/theme-editor.html'), '/admin/theme-editor');
+  assert.equal(resolveLocalStudioEcommerceAdminRoute('/admin/not-a-real-cms-page'), null);
 });
