@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowUpRight, Globe2, Images, LayoutTemplate, Megaphone, PanelsTopLeft, Pencil } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { themeProjectStore, THEME_PROJECTS_CHANGED } from '@/lib/themes/projects';
 
 function go(to: string) { window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to } })); }
@@ -42,9 +43,14 @@ export function CmsHomePage() {
         <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">Recent site drafts</h2><p className="mt-1 text-xs text-muted-foreground">Saved on this browser or desktop installation; no hidden production deployment.</p></div><button className="rounded-xl border border-border px-4 py-2 text-sm hover:bg-muted" onClick={() => go('/admin/sites')}>All websites <ArrowUpRight className="ml-1 inline" size={14}/></button></div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {!recent.length ? <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-8"><p className="font-medium">No saved website projects yet</p><p className="mt-1 text-sm text-muted-foreground">Begin with an original site, or revise one of the packaged themes.</p><div className="mt-4 flex gap-2"><button onClick={() => go('/admin/sites')} className="rounded-xl bg-foreground px-4 py-2 text-sm font-medium text-background">Create website</button><button onClick={() => go('/admin/themes')} className="rounded-xl border border-border px-4 py-2 text-sm">Browse themes</button></div></div> :
-          <div className="grid gap-3 md:grid-cols-2">{recent.map((project) => <button key={project.id} aria-label={`Open ${project.name} in the site editor`} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:bg-muted/50" onClick={() => { void navigate({ to: '/admin/cms', search: { view: 'editor', theme_project: project.id } }); }}>
-            <span className="rounded-xl bg-muted p-3"><Globe2 size={19}/></span><div className="min-w-0 flex-1"><h3 className="truncate font-medium">{project.name}</h3><p className="mt-0.5 text-xs text-muted-foreground">{project.pages?.length || 0} page(s) · Local draft</p></div><Pencil size={15} className="text-muted-foreground"/>
-          </button>)}</div>}
+          <div className="grid gap-3 md:grid-cols-2">{recent.map((project) => <Tooltip key={project.id}>
+            <TooltipTrigger asChild>
+              <button aria-label={"Open " + project.name + " in the site editor"} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:bg-muted/50" onClick={() => { void navigate({ to: '/admin/cms', search: { view: 'editor', theme_project: project.id } }); }}>
+                <span className="rounded-xl bg-muted p-3"><Globe2 size={19}/></span><div className="min-w-0 flex-1"><h3 className="truncate font-medium">{project.name}</h3><p className="mt-0.5 text-xs text-muted-foreground">{project.pages?.length || 0} page(s) · Local draft</p></div><Pencil size={15} className="text-muted-foreground"/>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Open {project.name} in the site editor</TooltipContent>
+          </Tooltip>)}</div>}
       </section>
     </div>
   </div>;
