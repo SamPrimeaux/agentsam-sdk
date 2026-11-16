@@ -15,11 +15,13 @@ test('release train check enforces public package versions and exact public inte
   assert.match(output, /PASS all public release packages and dependency pins aligned/);
 });
 
-test('private source workspaces keep independent versions and local dependency links', () => {
+test('viewer is publicly packageable while native OCCT and SamSketch remain private source workspaces', () => {
   const viewer = JSON.parse(readFileSync(path.join(root, 'packages/agentsam-3d-viewer/package.json'), 'utf8'));
   const occt = JSON.parse(readFileSync(path.join(root, 'packages/agentsam-occt/package.json'), 'utf8'));
   const samsketch = JSON.parse(readFileSync(path.join(root, 'apps/samsketch/package.json'), 'utf8'));
-  assert.equal(viewer.private, true);
+  assert.notEqual(viewer.private, true);
+  assert.equal(viewer.publishConfig?.access, 'public');
+  assert.equal(viewer.license, 'FSL-1.1-MIT');
   assert.equal(occt.private, true);
   assert.equal(samsketch.private, true);
   assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-occt'], 'file:../../packages/agentsam-occt');
