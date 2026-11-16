@@ -1,12 +1,12 @@
 import { useCallback } from "react";
 import { AdminAppsDirectory } from "@inneranimalmedia/agentsam-nav";
 import { ToolsPreferences } from "./ToolsPreferences";
-import { installAccountApp, isSafeAppHref, loadAccountApps, removeAccountApp, setAccountAppEnabled } from "@/lib/apps-account";
+import { installAccountApp, loadAccountApps, openAccountApp, removeAccountApp, setAccountAppEnabled } from "@/lib/apps-account";
 
 export function AppsManagementPage(){
   const onChanged=useCallback(()=>{window.dispatchEvent(new Event("agentsam:navigation-changed"));},[]);
   const onOpen=useCallback((href:string)=>{
-    if(isSafeAppHref(href))window.location.assign(href);
+    openAccountApp(href);
   },[]);
   const selectedTheme=typeof document==='undefined'?'system':document.documentElement.dataset.theme;
   const navTheme=selectedTheme==='light'||selectedTheme==='dark'?selectedTheme:'system';

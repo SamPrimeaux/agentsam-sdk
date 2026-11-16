@@ -2101,13 +2101,25 @@ function AgentsView({snapshot,view,host,onChanged}:{
     </Section>;
   }
   if(view==="cloud"){
-    return <Section title="Cloud agent execution" description="Connected remote agent runners and supported execution lanes.">
-      {snapshot.cloudAgents.length?<Catalog items={snapshot.cloudAgents}/>:
-      <EmptyState title="No verified cloud agents in the current runtime."/>}
+    return <Section title="Cloud agent execution" description="Remote runners are separate from saved agent profiles and connected provider accounts.">
+      {snapshot.cloudAgents.length ? <Catalog items={snapshot.cloudAgents} /> : (
+        <div className="rounded-xl border border-dashed border-border/70 p-5">
+          <p className="text-[13px] font-medium">No remote runner is connected yet.</p>
+          <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
+            Your saved agent profiles and local runtime remain available. Connect a machine or hosted execution lane before expecting work to run remotely.
+          </p>
+          {host.openSettingsUnit ? <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={() => host.openSettingsUnit?.("runtime")}
+              className="rounded-lg border border-border px-3 py-2 text-[11px] hover:bg-muted">Configure machines &amp; runtimes</button>
+            <button type="button" onClick={() => host.openSettingsUnit?.("customize")}
+              className="rounded-lg border border-border px-3 py-2 text-[11px] hover:bg-muted">Manage provider connections</button>
+          </div> : null}
+        </div>
+      )}
     </Section>;
   }
   if(view==="policy"){
-    return <Section title="Agent execution policy" description="Stored for your account in the existing agentsam_user_policy registry.">
+    return <Section title="Agent execution policy" description="Control when AgentSam can delegate work, run in parallel, and call connected MCP tools.">
       {snapshot.agentError?<p role="alert" className="text-[12px] text-[var(--settings-warning-ink)]">{snapshot.agentError}</p>:null}
       <div className="space-y-4 rounded-xl border border-border/70 p-4">
         {([
@@ -2540,11 +2552,10 @@ function CodebaseView({ snapshot }: { snapshot: SettingsSnapshot }) {
           <MetricCard label="Dependencies" value={snapshot.codebase.dependencies} detail="Graph edges" />
         </div>
       </Section>
-      <Section title="Indexing policy">
+      <Section title="Indexing status" description="Repository indexing settings are reported by the connected codebase service; this screen does not invent or change an index policy.">
         <div className="rounded-lg border border-border/70 px-3">
           <PreferenceRow label="Current branch" description="Repository ref used for deterministic inspection." value={snapshot.codebase.branch} />
-          <PreferenceRow label="Semantic projection" description="Embeddings augment structural retrieval; they are not source authority." value="Enabled" />
-          <PreferenceRow label="Generated files" description="Exclude build output and dependency folders." trailing={<Toggle enabled />} />
+          <PreferenceRow label="Indexing policy" description="Latest policy state reported by the repository host." value={snapshot.codebase.policy} />
         </div>
       </Section>
     </>
@@ -2794,10 +2805,10 @@ function DocsView({host}: {host:SettingsHost}) {
         <a href="/help/cms" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
           <BookOpen className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Sites, themes, and CMS</span><span className="block text-xs text-muted-foreground">Connected websites, content-only records, drafts, and publish checks</span></span><ChevronRight className="size-4" />
         </a>
-        <a href="/settings/docs?topic=artwork" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
+        <a href="/admin/settings/docs?topic=artwork" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
           <ImageIcon className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Artwork Help</span><span className="block text-xs text-muted-foreground">File formats, print resolution, color, and production guidelines</span></span><ChevronRight className="size-4" />
         </a>
-        <a href="/media" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
+        <a href="/admin/media" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
           <FolderOpen className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Media Library</span><span className="block text-xs text-muted-foreground">Images, videos, models, and files</span></span><ChevronRight className="size-4" />
         </a>
       </div>

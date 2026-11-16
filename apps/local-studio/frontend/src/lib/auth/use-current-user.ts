@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { authEnabled, getBearerToken } from "./client";
 import { createBrowserSessionStore, PENDING_BROWSER_SESSION } from "./browser-session";
-import { getTauriInvoke, invokeIdentity, isPackagedDesktop } from "@/lib/desktop/tauri";
+import { getDesktopIdentityStatus, getTauriInvoke, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 /** Normalized user shape used across the app, auth on or off. */
 export type AppUser = {
@@ -77,7 +77,7 @@ function startDesktopIdentityRestore() {
   // Restore the session only after the packaged shell is visible. On ad-hoc
   // signed macOS builds this can request Keychain consent, so it must not race
   // the initial window paint or interrupt a blank/partial startup surface.
-  void invokeIdentity({ op: 'status' }).then((raw) => {
+  void getDesktopIdentityStatus(true).then((raw) => {
     const status = raw as DesktopIdentityMessage;
     publishDesktopUser(status.authenticated ? normalizeDesktopUser(status.user) : null);
   }).catch(() => publishDesktopUser(null));

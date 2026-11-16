@@ -1,6 +1,8 @@
 import {
   getIdentityRuntimeConfig,
   getTauriInvoke,
+  getDesktopIdentityStatus,
+  invalidateDesktopIdentityStatus,
   invokeIdentity,
   listenDeepLinks,
   openExternalUrl,
@@ -169,6 +171,8 @@ async function acceptDesktopIdentity(
   if (response.ok === false || response.authenticated !== true) {
     throw new Error(response.error || "desktop_identity_session_missing");
   }
+  // Native Google login may bypass identity_bridge; invalidate the shared status cache.
+  invalidateDesktopIdentityStatus();
   notifyDesktopIdentity(true, response.user || null);
   return response;
 }
@@ -245,7 +249,7 @@ export async function exchangeNativeHandoff(callbackUrl: string): Promise<Native
 }
 
 export async function restoreNativeSession(): Promise<NativeIdentityStatus> {
-  const status = (await invokeIdentity({ op: "status" })) as NativeIdentityStatus;
+  const status = (await getDesktopIdentityStatus(true)) as NativeIdentityStatus;
   if (!status.authenticated) notifyDesktopIdentity(false, null);
   return status;
 }

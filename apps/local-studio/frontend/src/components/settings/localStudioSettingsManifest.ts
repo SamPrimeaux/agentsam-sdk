@@ -81,6 +81,10 @@ export const localStudioSettingsManifest = defineSettingsManifest({
       label: "Themes",
       description: "Browse installed visual projections and the active product theme.",
       icon: "theme",
+      views: [
+        { id: "themes", label: "Themes" },
+        { id: "navigation", label: "Navigation" },
+      ],
     },
     {
       id: "storage",
@@ -94,6 +98,10 @@ export const localStudioSettingsManifest = defineSettingsManifest({
       description:
         "Account-scoped BYOK for Studio chat, providers, and terminal. You name each secret — no project scope.",
       icon: "key",
+      views: [
+        { id: "credentials", label: "AgentSam keys" },
+        { id: "secrets", label: "Provider secrets" },
+      ],
     },
     {
       id: "usage",

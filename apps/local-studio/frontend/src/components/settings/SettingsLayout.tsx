@@ -10,15 +10,17 @@ export function SettingsLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const navigate = useNavigate();
   const activeChatId = useWorkStore((state) => state.activeChatId);
-  const segment = pathname.split("/").filter(Boolean)[1];
-  const activeUnit = normalizeSettingsUnit(segment);
+  const segments = pathname.split("/").filter(Boolean);
+  const activeUnit = normalizeSettingsUnit(
+    segments[0] === "admin" && segments[1] === "settings" ? segments[2] : undefined,
+  );
 
   return (
     <SettingsShell
       manifest={localStudioSettingsManifest}
       activeUnit={activeUnit}
       onNavigate={(unit: SettingsUnitId) => {
-        void navigate({ to: `/settings/${unit}` as never });
+        void navigate({ to: `/admin/settings/${unit}` as never });
       }}
       rootLabel="Studio"
       onExit={() => {
