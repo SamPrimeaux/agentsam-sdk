@@ -407,7 +407,7 @@ export async function handleAnalyticsQueryRequest(request: Request, ctx: Analyti
   }
 
   const url = new URL(request.url);
-  const section = url.pathname.split("/").filter(Boolean).pop();
+  const section = url.pathname.split("/").filter(Boolean).pop() ?? "";
   const range = url.searchParams.get("range") || "30d";
 
   try {

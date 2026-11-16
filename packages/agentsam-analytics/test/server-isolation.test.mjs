@@ -80,3 +80,15 @@ test("unrecognized sections cannot execute arbitrary SQL", async () => {
   assert.equal(result.status, 404);
   assert.equal(statements.length, 0);
 });
+
+
+test("empty path is rejected without querying another account's data", async () => {
+  const { db, statements } = harness();
+  const result = await handleAnalyticsQueryRequest(
+    new Request("https://localhost/"),
+    { db, accountId: "account_A" },
+  );
+  assert.equal(result.status, 404);
+  assert.equal(result.body.error, "analytics_section_not_found");
+  assert.equal(statements.length, 0);
+});
