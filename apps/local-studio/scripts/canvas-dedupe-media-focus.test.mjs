@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const sideStage = read('../frontend/src/components/workbench/side-stage.tsx');
+const pluginPicker = read('../frontend/agentsam/PluginPicker.tsx');
 const cmsHost = read('../frontend/src/routes/(apps)/admin/apps/ecommerce-cms-agentsam.tsx');
 const mediaPage = read('../frontend/src/components/media/MediaLibraryPage.tsx');
 const mediaViewer = read('../frontend/src/components/media/MediaViewer.tsx');
@@ -13,6 +14,9 @@ test('persisted plugin tabs migrate to the current builtin renderer', () => {
   assert.match(sideStage, /convertSideTab/);
   assert.match(sideStage, /stage\?\.renderer !== "builtin"/);
   assert.match(sideStage, /nativeAlreadyOpen/);
+  assert.match(sideStage, /pluginId: undefined/);
+  assert.match(pluginPicker, /kind === "design" && !existing/);
+  assert.match(pluginPicker, /url: "\/canvas\?library=sources"/);
   assert.match(sideStage, /candidate\.kind === kind/);
   assert.match(sideStage, /\/canvas\?library=sources/);
 });
