@@ -235,6 +235,11 @@ jobs:
         run: npm run cf:verify-output --prefix apps/local-studio
       - name: Smoke-test hosted Worker routes
         run: npm run cf:smoke:worker --prefix apps/local-studio
+      - name: Install Chromium for hosted shell regression
+        working-directory: apps/local-studio
+        run: npx playwright install --with-deps chromium
+      - name: Verify hosted shell with restored co-worker
+        run: node apps/local-studio/scripts/smoke-restored-admin-shell.mjs
       - name: Preserve verified Local Studio deploy bundle
         uses: actions/upload-artifact@v4
         with:
