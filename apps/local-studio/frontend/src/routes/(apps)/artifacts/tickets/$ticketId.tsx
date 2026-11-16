@@ -4,5 +4,5 @@ export const Route = createFileRoute("/(apps)/artifacts/tickets/$ticketId")({ co
 
 function LegacyTicketRoute() {
   const { ticketId } = Route.useParams();
-  return <Navigate to="/admin/artifacts/tickets/$ticketId" params={{ ticketId }} replace />;
+  return <Navigate to="/admin/artifacts/tickets/$ticketId" params={{ ticketId }} search={true} replace />;
 }

@@ -4,6 +4,6 @@ export const Route = createFileRoute("/(apps)/artifacts")({ component: LegacyArt
 
 function LegacyArtifactsRoute() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  if (pathname === "/artifacts" || pathname === "/artifacts/") return <Navigate to="/admin/artifacts" replace />;
+  if (pathname === "/artifacts" || pathname === "/artifacts/") return <Navigate to="/admin/artifacts" search={true} replace />;
   return <Outlet />;
 }

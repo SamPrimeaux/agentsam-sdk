@@ -4,5 +4,5 @@ export const Route = createFileRoute("/(apps)/settings/$unit")({ component: Lega
 
 function LegacySettingsUnitRoute() {
   const { unit } = Route.useParams();
-  return <Navigate to="/admin/settings/$unit" params={{ unit }} replace />;
+  return <Navigate to="/admin/settings/$unit" params={{ unit }} search={true} replace />;
 }

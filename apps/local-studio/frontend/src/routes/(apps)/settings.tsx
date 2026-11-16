@@ -4,6 +4,6 @@ export const Route = createFileRoute("/(apps)/settings")({ component: LegacySett
 
 function LegacySettingsRoute() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  if (pathname === "/settings" || pathname === "/settings/") return <Navigate to="/admin/settings" replace />;
+  if (pathname === "/settings" || pathname === "/settings/") return <Navigate to="/admin/settings" search={true} replace />;
   return <Outlet />;
 }

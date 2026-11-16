@@ -4,6 +4,6 @@ export const Route = createFileRoute("/(apps)/media")({ component: LegacyMediaRo
 
 function LegacyMediaRoute() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  if (pathname === "/media" || pathname === "/media/") return <Navigate to="/admin/media" replace />;
+  if (pathname === "/media" || pathname === "/media/") return <Navigate to="/admin/media" search={true} replace />;
   return <Outlet />;
 }

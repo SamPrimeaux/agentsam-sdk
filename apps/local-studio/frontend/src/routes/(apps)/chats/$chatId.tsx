@@ -4,5 +4,5 @@ export const Route = createFileRoute("/(apps)/chats/$chatId")({ component: Legac
 
 function LegacyChatRoute() {
   const { chatId } = Route.useParams();
-  return <Navigate to="/admin/chats/$chatId" params={{ chatId }} replace />;
+  return <Navigate to="/admin/chats/$chatId" params={{ chatId }} search={true} replace />;
 }

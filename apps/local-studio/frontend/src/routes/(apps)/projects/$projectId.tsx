@@ -5,6 +5,7 @@ export const Route = createFileRoute("/(apps)/projects/$projectId")({
   beforeLoad: ({ params }) => { throw redirect({
     to: "/admin/projects/$projectId",
     params: { projectId: params.projectId },
+    search: true,
     replace: true,
   }); },
   component: ProjectDetailRoute,

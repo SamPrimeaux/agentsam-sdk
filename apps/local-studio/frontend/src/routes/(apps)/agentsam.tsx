@@ -5,6 +5,6 @@ export const Route = createFileRoute("/(apps)/agentsam")({ component: LegacyAgen
 
 function LegacyAgentSamRoute() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  if (pathname === "/agentsam") return <Navigate to="/admin/agentsam" replace />;
+  if (pathname === "/agentsam") return <Navigate to="/admin/agentsam" search={true} replace />;
   return <Outlet />;
 }
