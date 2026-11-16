@@ -49,6 +49,7 @@ export function ArtifactsSurface({
   const [query, setQuery] = useState("");
   const [layout, setLayout] = useState<"grid" | "list" | "masonry">(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? "list" : "grid");
   const [showFilters, setShowFilters] = useState(false);
+  const [failedPreviews, setFailedPreviews] = useState<Set<string>>(() => new Set());
   const [source, setSource] = useState<WorkArtifact["source"] | "all">(initialSource);
   const [kind, setKind] = useState<WorkArtifact["kind"] | "all">("all");
   const [view, setView] = useState(initialView);
@@ -56,6 +57,7 @@ export function ArtifactsSurface({
   const [newName, setNewName] = useState("");
   const [mutating, setMutating] = useState<string | null>(null);
   const [error, setError] = useState("");
+  useEffect(() => setFailedPreviews(new Set()), [artifacts]);
   useEffect(() => setView(initialView), [initialView]);
   useEffect(() => setSource(initialSource), [initialSource]);
   const sources = useMemo(
@@ -173,14 +175,14 @@ export function ArtifactsSurface({
           const hasDestination=Boolean(artifact.open || artifact.preview || (artifact.source==="local" && onOpenArtifact));
           const isRenaming=renaming===artifact.id;
           const isBusy=mutating===artifact.id;
-          const visual=Boolean(artifact.preview && (artifact.kind==="image" || artifact.kind==="video" || artifact.mime==="application/pdf"));
+          const visual=Boolean(artifact.preview && !failedPreviews.has(artifact.id) && (["image","video","design","website","product","document"].includes(artifact.kind) || artifact.mime==="application/pdf"));
           return <article key={artifact.id} className="agentsam-work-artifacts__item"
               data-kind={artifact.kind} data-preview={visual?"image":"symbol"} data-busy={isBusy||undefined}>
             <button type="button" className="agentsam-work-artifacts__preview" aria-label={"Open "+artifact.name} disabled={!hasDestination} onClick={()=>openArtifact(artifact)}>
               {visual && artifact.preview ? (
                 artifact.mime==="application/pdf"
                   ? <iframe title={artifact.name+" preview"} src={artifact.preview+"#toolbar=0&navpanes=0"} loading="lazy" tabIndex={-1}/>
-                  : <img src={artifact.preview} alt="" loading="lazy" decoding="async"/>
+                  : <img src={artifact.preview} alt="" loading="lazy" decoding="async" onError={()=>setFailedPreviews(prev=>new Set(prev).add(artifact.id))}/>
               ) : <div className="agentsam-library__symbol">
                 <div className="agentsam-library__symbol-icon"><Icon size={34} strokeWidth={1.35}/></div>
                 <span>{artifact.kind==="design"?"Design":artifact.kind==="model"?"3D model":artifact.kind==="note"?"Note":artifact.kind==="spreadsheet"?"Spreadsheet":artifact.kind==="presentation"?"Presentation":artifact.kind==="folder"?"Folder":artifact.kind==="document"?"Document":artifact.kind==="code"?"Code":artifact.kind==="archive"?"Archive":artifact.kind.charAt(0).toUpperCase()+artifact.kind.slice(1)}</span>
