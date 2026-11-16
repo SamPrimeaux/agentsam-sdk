@@ -24,12 +24,12 @@ export function SettingsLayout() {
       onExit={() => {
         if (activeChatId) {
           void navigate({
-            to: "/chats/$chatId",
+            to: "/admin/chats/$chatId",
             params: { chatId: activeChatId },
           } as never);
           return;
         }
-        void navigate({ to: "/chats" as never });
+        void navigate({ to: "/admin/chats" as never });
       }}
     >
       <Outlet />
