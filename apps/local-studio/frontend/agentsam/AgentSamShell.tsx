@@ -261,7 +261,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       go(legacyMedia);
       return;
     }
-    if (pathOnly === '/docs' || pathOnly.startsWith('/docs/')) {
+    if (pathOnly === '/docs' || pathOnly.startsWith('/docs/') || pathOnly === '/admin/docs' || pathOnly.startsWith('/admin/docs/')) {
       go('/admin/settings/docs');
       return;
     }
@@ -490,7 +490,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     onOpenResource: item => {
       if(item.open && (item.open.startsWith('/') && !item.open.startsWith('//') || item.open.startsWith('https://'))) {
         window.open(item.open,'_blank','noopener,noreferrer');
-      } else go('/artifacts?view=starred');
+      } else go('/admin/artifacts?view=starred');
     },
     projects: workProjects.map(item => ({id:item.id,name:item.name,pinned:item.starred,updatedAt:item.updatedAt ? Date.parse(item.updatedAt) : undefined})),
     historyStatus,onRetryHistory:()=>setHistoryRevision(value=>value+1),
@@ -521,7 +521,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     onCreateConversation: () => { state.startChat(); go('/admin/agentsam'); },
     onSelectConversation: (id) => {
       if (state.chats.some(item => item.id === id)) state.setActiveChat(id);
-      go('/chats/' + encodeURIComponent(id));
+      go('/admin/chats/' + encodeURIComponent(id));
     },
     onSelectProject: (id) => go('/admin/projects/'+encodeURIComponent(id)),
     onPinProject: (id) => {
@@ -565,7 +565,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           if (state.chats.some(item => item.id === id)) state.deleteChat(id);
           setChatRevision(value => value + 1);
           toast.success('Conversation archived');
-          go('/chats');
+          go('/admin/chats');
         })
         .catch(() => toast.error('Could not archive conversation.'));
     } : undefined,
@@ -633,17 +633,17 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       }))),
       outputActions: [
         { id: 'open-artifacts', label: 'Open artifacts', icon: <BookOpen />, onSelect: () => { state.openSideTab('artifacts', { ephemeral: false }); state.setSideOpen(true); } },
-        { id: 'edit-site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/sites') },
+        { id: 'edit-site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/admin/sites') },
       ],
       sourceActions: [
         { id: 'browse-files', label: 'Browse files', icon: <Files />, onSelect: () => { state.openSideTab('files', { ephemeral: false }); state.setSideOpen(true); } },
-        { id: 'open-files-library', label: 'Open file library', icon: <Folder />, onSelect: () => go('/files') },
+        { id: 'open-files-library', label: 'Open file library', icon: <Folder />, onSelect: () => go('/admin/files') },
       ],
     } : undefined,
     resourceActions: [
       { id: 'outputs', label: 'Outputs', icon: <BookOpen />, onSelect: () => state.openSideTab('artifacts') },
       { id: 'files', label: 'Files & sources', icon: <Files />, onSelect: () => state.openSideTab('files') },
-      { id: 'site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/cms') },
+      { id: 'site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/admin/cms') },
     ],
   };
   useEffect(() => {
