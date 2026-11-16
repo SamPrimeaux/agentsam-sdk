@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Compass, Maximize2, Minimize2, PanelLeft, Plus, MessageSquarePlus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Compass, Maximize2, Minimize2, Plus, MessageSquarePlus } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { IconAction } from '@/components/ui/icon-action';
@@ -116,10 +116,8 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
     <IconAction label="Previous thread" hint="Previous visited conversation" disabled={threadHistory.index <= 0} onClick={() => visitThread(-1)}><ArrowLeft size={17} /></IconAction>
     <IconAction label="Next thread" hint="Next visited conversation" disabled={threadHistory.index >= threadHistory.total - 1} onClick={() => visitThread(1)}><ArrowRight size={17} /></IconAction>
-    {hostLeadingSlot ? <IconAction label="Toggle global navigation" hint="Show or hide sidebar" onClick={() => {
-      const trigger = document.querySelector<HTMLButtonElement>('[data-console-nav-toggle]') || document.getElementById('admin-menu-toggle') as HTMLButtonElement | null;
-      trigger?.click();
-    }}><PanelLeft size={18} /></IconAction> : <Nav.Trigger aria-label="Toggle global navigation" />}
+    {/* The hosted topbar already owns the one global menu bubble. */}
+    {!hostLeadingSlot ? <Nav.Trigger aria-label="Toggle global navigation" /> : null}
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
   const headerActions = <div className="agentsam-header-utilities">
