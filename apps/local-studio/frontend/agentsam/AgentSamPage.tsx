@@ -114,8 +114,10 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const leadComposer = <Composer workMode={data.mode === 'work'} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
   // One set of controls is portalled into hosted chrome or rendered locally.
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
-    <IconAction label="Previous thread" hint="Previous visited conversation" disabled={threadHistory.index <= 0} onClick={() => visitThread(-1)}><ArrowLeft size={17} /></IconAction>
-    <IconAction label="Next thread" hint="Next visited conversation" disabled={threadHistory.index >= threadHistory.total - 1} onClick={() => visitThread(1)}><ArrowRight size={17} /></IconAction>
+    {!isMobile ? <>
+      <IconAction label="Previous thread" hint="Previous visited conversation" disabled={threadHistory.index <= 0} onClick={() => visitThread(-1)}><ArrowLeft size={17} /></IconAction>
+      <IconAction label="Next thread" hint="Next visited conversation" disabled={threadHistory.index >= threadHistory.total - 1} onClick={() => visitThread(1)}><ArrowRight size={17} /></IconAction>
+    </> : null}
     {/* The hosted topbar already owns the one global menu bubble. */}
     {!hostLeadingSlot ? <Nav.Trigger aria-label="Toggle global navigation" /> : null}
   </div>;
