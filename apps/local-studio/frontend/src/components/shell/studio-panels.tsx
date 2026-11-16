@@ -63,7 +63,7 @@ function ChatRow({
         type="button"
         onClick={() => {
           setActiveChat(chat.id);
-          void navigate({ to: "/chats/$chatId", params: { chatId: chat.id } });
+          void navigate({ to: "/admin/chats/$chatId", params: { chatId: chat.id } });
         }}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left md:min-h-0"
       >
@@ -93,7 +93,7 @@ function ChatRow({
             className="text-destructive"
             onSelect={() => {
               deleteChat(chat.id);
-              if (active) void navigate({ to: "/chats" });
+              if (active) void navigate({ to: "/admin/chats" });
             }}
           >
             <Trash2 className="size-3.5" />
@@ -169,7 +169,7 @@ export function ChatsPanel({
           aria-label="New chat"
           onClick={() => {
             const id = startChat();
-            void navigate({ to: "/chats/$chatId", params: { chatId: id } });
+            void navigate({ to: "/admin/chats/$chatId", params: { chatId: id } });
           }}
         >
           <Plus className="size-4" />
@@ -283,7 +283,7 @@ export function ProjectsPanel() {
               className="flex min-h-11 min-w-0 flex-1 flex-col px-2.5 py-2 text-left md:min-h-0"
               onClick={() => {
                 setActiveProject(item.id);
-                void navigate({ to: "/chats" });
+                void navigate({ to: "/admin/chats" });
               }}
             >
               <span className="truncate text-sm">{item.name}</span>
@@ -353,7 +353,7 @@ export function ProjectsPanel() {
                 onClick={() => {
                   const id = createSampleProject(name || "Sample tutorial");
                   setNewOpen(false);
-                  void navigate({ to: "/chats" });
+                  void navigate({ to: "/admin/chats" });
                   void id;
                 }}
               >
