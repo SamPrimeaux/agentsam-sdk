@@ -138,8 +138,24 @@ export function EcommerceAppView({ search }: {
     })()
     : null;
 
+  // The web CMS editor uses one route for every viewport width. A top-level
+  // editor document avoids an unnecessary Local Studio iframe around its own
+  // srcdoc workbench and storefront preview. Breakpoints affect layout only,
+  // never which editor runs. Packaged desktop navigation is intentionally
+  // handled by its native app host; it mounts the same CMS editor product.
+  const standaloneWebEditor = typeof window !== 'undefined'
+    && !isPackagedDesktop()
+    && page?.split('?')[0] === '/admin/theme-project-editor';
+  useEffect(() => {
+    if (!standaloneWebEditor || !url || !bridgeReady || authPending || (!user && !localPreview)) return;
+    const target = new URL(url, window.location.origin);
+    target.searchParams.delete('__agentsamEmbedded');
+    window.location.replace(target.pathname + target.search + target.hash);
+  }, [standaloneWebEditor, url, bridgeReady, authPending, user, localPreview]);
+
   if (!bridgeReady || authPending) return <p className="p-8 text-muted-foreground">Loading AgentSam account…</p>;
   if (!user && !localPreview) return <RedirectToSignIn />;
+  if (standaloneWebEditor) return <p role="status" className="p-5 text-sm text-muted-foreground">Opening Theme Studio…</p>;
 
   // Compatibility for saved CMS navigation links created before Design Canvas
   // was unified. Do not try to mount it as a packaged ecommerce route.

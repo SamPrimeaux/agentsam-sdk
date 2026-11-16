@@ -3291,13 +3291,20 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio { grid-template-rows:52px minmax(0,1fr); }
   .theme-studio-toolbar {
     height:52px;min-height:52px;max-height:52px;
-    display:grid;grid-template-columns:28px minmax(0,1fr) auto;
+    display:grid;grid-template-columns:68px minmax(0,1fr) auto;
     grid-template-rows:52px;grid-template-areas:"left center actions";
     column-gap:4px;row-gap:0;padding:0 6px;overflow:visible;
   }
-  .theme-studio-toolbar__left {grid-area:left;width:28px;min-width:0;gap:0;overflow:visible;}
-  .theme-studio-toolbar__left [data-drawer-mode] {display:none;}
-  .theme-studio-toolbar__left #te-exit {width:28px;height:34px;padding:0;}
+  .theme-studio-toolbar__left {grid-area:left;width:68px;min-width:0;gap:4px;overflow:visible;}
+  .theme-studio-toolbar__left [data-drawer-mode="theme-settings"],
+  .theme-studio-toolbar__left [data-drawer-mode="app-embeds"] {display:none;}
+  /* One top-left Sections control replaces the always-on mobile mode bar. */
+  .theme-studio-toolbar__left [data-drawer-mode="sections"] {
+    display:inline-flex;flex:0 0 34px;width:34px;height:34px;
+    min-width:34px;padding:0;align-items:center;justify-content:center;
+    border-radius:9px;
+  }
+  .theme-studio-toolbar__left #te-exit {width:30px;height:34px;padding:0;}
   .theme-studio-toolbar__center {
     grid-area:center;display:flex;justify-content:stretch;
     min-width:0;width:100%;height:52px;gap:0;border:0;
@@ -3359,35 +3366,39 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio-toolbar .te-page-trigger__content>svg {display:none;}
 }
 
-/* Safari browser-first: don't double-clamp 100dvh to visualViewport.height.
-   The native Safari address bar is separate; the editor itself must end at
-   the browser content bottom without inserting a gray spacer. */
+/* Mobile editor: the storefront owns the viewport. Sections and settings
+   remain the SAME existing draggable sheets, opened by the existing toolbar
+   Sections control or selecting a canvas element. Do not reserve an always-on
+   navigation strip above Safari's own browser toolbar. */
 @media (max-width:900px) {
   .theme-studio {
-    --te-mobile-tabs-height: max(61px, calc(56px + env(safe-area-inset-bottom, 0px)));
-    height: 100dvh;
-    max-height: 100dvh;
-    min-height: 0;
+    height:100dvh;
+    max-height:100dvh;
+    min-height:0;
+    min-width:0;
+    overflow:hidden;
   }
   .theme-studio .theme-studio-workspace,
   .theme-studio[data-editor-drawer="closed"] .theme-studio-workspace {
-    grid-template-rows: minmax(0, 1fr) var(--te-mobile-tabs-height);
+    grid-template-rows:minmax(0,1fr);
+    min-width:0;
+    height:100%;
+    overflow:hidden;
   }
   .theme-studio .te-mobile-pane-switch {
-    box-sizing: border-box; /* padding and border must fit INSIDE the grid row */
-    height: var(--te-mobile-tabs-height);
-    min-height: var(--te-mobile-tabs-height);
-    padding-bottom: max(5px, env(safe-area-inset-bottom, 0px));
+    display:none!important;
   }
   .theme-studio .theme-studio-tree,
   .theme-studio .theme-editor-panel {
-    bottom: var(--te-mobile-tabs-height);
+    bottom:0;
+    max-width:100%;
+    min-width:0;
   }
   .theme-studio .te-mobile-selection-bar {
-    bottom: calc(var(--te-mobile-tabs-height) + 7px);
+    bottom:max(8px, env(safe-area-inset-bottom, 0px));
   }
   .theme-studio #te-block-panel[data-panel-state] {
-    bottom: calc(var(--te-mobile-tabs-height) + 12px)!important;
+    bottom:calc(12px + env(safe-area-inset-bottom, 0px))!important;
   }
 }
 
