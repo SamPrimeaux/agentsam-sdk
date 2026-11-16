@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   canonicalStudioPath,
   isStudioAdminPath,
+  isStudioShellAdminPath,
   resolveLegacyContentMediaPath,
 } from './studio-admin-routes.mjs';
 
@@ -43,15 +44,17 @@ test('canonical paths and public endpoints are not redirected', () => {
   }
 });
 
-test('Studio route ownership does not swallow Ecommerce-owned admin routes', () => {
-  assert.equal(isStudioAdminPath('/admin/media/images'), true);
-  assert.equal(isStudioAdminPath('/admin/settings/general'), true);
-  assert.equal(isStudioAdminPath('/admin/chats/chat_123'), true);
-  assert.equal(isStudioAdminPath('/admin/analytics'), true);
-  assert.equal(isStudioAdminPath('/admin/analytics/overview'), false);
-  assert.equal(isStudioAdminPath('/admin/products'), false);
-  assert.equal(isStudioAdminPath('/admin/orders'), false);
-  assert.equal(isStudioAdminPath('/admin/pages'), false);
+test('Local Studio owns all admin URLs, while Ecommerce documents render outside the shell', () => {
+  for (const pathname of ['/admin/media/images', '/admin/settings/general', '/admin/chats/chat_123',
+    '/admin/analytics', '/admin/analytics/overview', '/admin/products', '/admin/orders', '/admin/pages']) {
+    assert.equal(isStudioAdminPath(pathname), true, `host URL authority: ${pathname}`);
+  }
+  for (const pathname of ['/admin/media/images', '/admin/settings/general', '/admin/chats/chat_123', '/admin/analytics']) {
+    assert.equal(isStudioShellAdminPath(pathname), true, `Studio shell: ${pathname}`);
+  }
+  for (const pathname of ['/admin/analytics/overview', '/admin/products', '/admin/orders', '/admin/pages']) {
+    assert.equal(isStudioShellAdminPath(pathname), false, `packaged Ecommerce document: ${pathname}`);
+  }
 });
 
 test('legacy Content kind redirects remain inside the admin Media Library', () => {

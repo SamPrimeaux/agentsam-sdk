@@ -8,7 +8,7 @@ import { ConnectionDeepLinkBridge } from "@/components/desktop/ConnectionDeepLin
 import { OpenWorkspaceDeepLinkBridge } from "@/components/desktop/OpenWorkspaceDeepLinkBridge";
 import { NativeCommandBridge } from "@/components/desktop/NativeCommandBridge";
 import appCss from "../styles.css?url";
-import { isStudioAdminPath } from "../../../shared/studio-admin-routes.mjs";
+import { isStudioShellAdminPath } from "../../../shared/studio-admin-routes.mjs";
 import { FIRST_PAINT_BOOTSTRAP_SCRIPT } from "../../../shared/shell-appearance.mjs";
 
 const APP_NAME = "AgentSam";
@@ -97,5 +97,5 @@ function ApplicationOutlet() {
   // the product owns its one visible console frame.
   if (pathname === '/admin/apps/ecommerce-cms-agentsam') return <AgentSamShell embedded />;
   const isApp = pathname === "/" || /^\/(agentsam|chats|cms|sites|store|content|media|cad|samsketch|samsculpt|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|goalguru|ideas|library|settings|docs|help)(\/|$)/.test(pathname);
-  return (isApp || isStudioAdminPath(pathname)) ? <PackagedConsoleFrame><AgentSamShell embedded /></PackagedConsoleFrame> : <Outlet />;
+  return (isApp || isStudioShellAdminPath(pathname)) ? <PackagedConsoleFrame><AgentSamShell embedded /></PackagedConsoleFrame> : <Outlet />;
 }
