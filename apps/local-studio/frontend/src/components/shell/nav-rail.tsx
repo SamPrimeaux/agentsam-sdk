@@ -28,16 +28,16 @@ function SamSketchIcon({ className }: {className?: string; 'aria-hidden'?: boole
 }
 
 const ITEMS = [
-  { to: "/chats", label: "Chats", icon: MessageSquare, match: (p: string) => p === "/agentsam" || p.startsWith("/chats") },
-  { to: "/cms", label: "CMS", icon: LayoutTemplate, match: (p: string) => p.startsWith("/cms") },
-  { to: "/sites", label: "Sites", icon: Globe, match: (p: string) => p.startsWith("/sites") },
-  { to: "/media", label: "Media", icon: Images, match: (p: string) => p.startsWith("/media") || p.startsWith("/content") },
-  { to: "/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth", label: "Growth", icon: Megaphone, match: (p: string) => p === "/campaigns" || (p.startsWith("/apps/ecommerce-cms-agentsam") && new URLSearchParams(window.location.search).get("page") === "/admin/growth") },
-  { to: "/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/database") },
-  { to: "/collaborate", label: "Work", icon: CalendarDays, match: (p: string) => p.startsWith("/collaborate") || p.startsWith("/mail") },
-  { to: "/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/projects") },
-  { to: "/artifacts", label: "Artifacts", icon: Box, match: (p: string) => p.startsWith("/artifacts") },
-  { to: "/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/analytics") },
+  { to: "/admin/chats", label: "Chats", icon: MessageSquare, match: (p: string) => p === "/admin/agentsam" || p.startsWith("/admin/chats") },
+  { to: "/admin/cms", label: "CMS", icon: LayoutTemplate, match: (p: string) => p.startsWith("/admin/cms") },
+  { to: "/admin/sites", label: "Sites", icon: Globe, match: (p: string) => p.startsWith("/admin/sites") },
+  { to: "/admin/media", label: "Media", icon: Images, match: (p: string) => p.startsWith("/admin/media") || p.startsWith("/admin/content") },
+  { to: "/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth", label: "Growth", icon: Megaphone, match: (p: string) => p === "/admin/campaigns" || (p.startsWith("/admin/apps/ecommerce-cms-agentsam") && new URLSearchParams(window.location.search).get("page") === "/admin/growth") },
+  { to: "/admin/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/admin/database") },
+  { to: "/admin/collaborate", label: "Work", icon: CalendarDays, match: (p: string) => p.startsWith("/admin/collaborate") || p.startsWith("/admin/mail") },
+  { to: "/admin/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/admin/projects") },
+  { to: "/admin/artifacts", label: "Artifacts", icon: Box, match: (p: string) => p.startsWith("/admin/artifacts") },
+  { to: "/admin/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/admin/analytics") },
 ] as const;
 
 export function NavRail() {
@@ -55,7 +55,7 @@ export function NavRail() {
   return (
     <Nav>
       <Nav.Header className="flex items-center justify-between">
-        <button type="button" aria-label="Studio home" className="flex size-10 items-center justify-center rounded-xl text-accent" onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/agentsam" } }))}>
+        <button type="button" aria-label="Studio home" className="flex size-10 items-center justify-center rounded-xl text-accent" onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/admin/agentsam" } }))}>
           <StudioMark className="size-7" />
         </button>
         <Nav.Trigger className="hidden md:inline-grid" />
@@ -88,12 +88,12 @@ export function NavRail() {
           <Nav.GroupLabel>Apps</Nav.GroupLabel>
           <Nav.Menu>
             <Nav.MenuItem>
-              <Nav.Collapsible defaultOpen={pathname.startsWith("/cad") || pathname.startsWith("/samsketch") || pathname.startsWith("/apps/")}>
-                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Blocks} active={pathname.startsWith("/cad") || pathname.startsWith("/samsketch") || pathname.startsWith("/apps/")}>Installed apps <Nav.MenuChevron /></Nav.MenuButton>} />
+              <Nav.Collapsible defaultOpen={pathname.startsWith("/admin/cad") || pathname.startsWith("/admin/samsketch") || pathname.startsWith("/admin/apps/")}>
+                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Blocks} active={pathname.startsWith("/admin/cad") || pathname.startsWith("/admin/samsketch") || pathname.startsWith("/admin/apps/")}>Installed apps <Nav.MenuChevron /></Nav.MenuButton>} />
                 <Nav.CollapsibleContent>
                   <Nav.MenuSub>
-                    <li><Nav.MenuSubButton href="/samsketch" active={pathname.startsWith("/samsketch")}><span className="inline-flex items-center gap-2"><SamSketchIcon className="size-4" />SamSketch</span></Nav.MenuSubButton></li>
-                    <li><Nav.MenuSubButton href="/cad" active={pathname.startsWith("/cad")}><span className="inline-flex items-center gap-2"><Box className="size-4" />CAD Creator</span></Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/admin/samsketch" active={pathname.startsWith("/admin/samsketch")}><span className="inline-flex items-center gap-2"><SamSketchIcon className="size-4" />SamSketch</span></Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/admin/cad" active={pathname.startsWith("/admin/cad")}><span className="inline-flex items-center gap-2"><Box className="size-4" />CAD Creator</span></Nav.MenuSubButton></li>
                     <li><Nav.MenuSubButton href="/apps/ecommerce-cms-agentsam" active={pathname.startsWith("/apps/ecommerce-cms-agentsam")}>Commerce CMS</Nav.MenuSubButton></li>
                   </Nav.MenuSub>
                 </Nav.CollapsibleContent>
@@ -105,14 +105,14 @@ export function NavRail() {
           <Nav.GroupLabel>Workspace</Nav.GroupLabel>
           <Nav.Menu>
             <Nav.MenuItem>
-              <Nav.Collapsible defaultOpen={pathname.startsWith("/settings")}>
-                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Settings} active={pathname.startsWith("/settings")}>Settings <Nav.MenuChevron /></Nav.MenuButton>} />
+              <Nav.Collapsible defaultOpen={pathname.startsWith("/admin/settings")}>
+                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Settings} active={pathname.startsWith("/admin/settings")}>Settings <Nav.MenuChevron /></Nav.MenuButton>} />
                 <Nav.CollapsibleContent>
                   <Nav.MenuSub>
-                    <li><Nav.MenuSubButton href="/settings/general" active={pathname === "/settings/general" || pathname === "/settings"}>Account</Nav.MenuSubButton></li>
-                    <li><Nav.MenuSubButton href="/settings/keys" active={pathname.startsWith("/settings/keys")}>Keys & secrets</Nav.MenuSubButton></li>
-                    <li><Nav.MenuSubButton href="/settings/themes" active={pathname === "/settings/themes"}>Themes</Nav.MenuSubButton></li>
-                    <li><Nav.MenuSubButton href="/settings/integrations" active={pathname === "/settings/integrations"}>Integrations</Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/admin/settings/general" active={pathname === "/admin/settings/general" || pathname === "/admin/settings"}>Account</Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/admin/settings/keys" active={pathname.startsWith("/admin/settings/keys")}>Keys & secrets</Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/admin/settings/themes" active={pathname === "/admin/settings/themes"}>Themes</Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/admin/settings/integrations" active={pathname === "/admin/settings/integrations"}>Integrations</Nav.MenuSubButton></li>
                   </Nav.MenuSub>
                 </Nav.CollapsibleContent>
               </Nav.Collapsible>
@@ -120,9 +120,9 @@ export function NavRail() {
             <Nav.MenuItem>
               <Nav.MenuButton
                 icon={Palette}
-                active={pathname.startsWith("/settings/themes") || pathname.startsWith("/themes")}
+                active={pathname.startsWith("/admin/settings/themes") || pathname.startsWith("/admin/themes")}
                 itemId="themes"
-                onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/settings/themes" } }))}
+                onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/admin/settings/themes" } }))}
               >
                 Themes
               </Nav.MenuButton>
