@@ -1,5 +1,6 @@
 import { listLauncherApps } from './apps-launcher.js';
 import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
+import { canonicalStudioPath } from '../../shared/studio-admin-routes.mjs';
 
 /**
  * Account-owned, runtime-editable presentation of the installed app navigation.
@@ -18,6 +19,33 @@ const json = (data, status = 200) => Response.json(data, {
   status, headers: { 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' },
 });
 const clientError = (message) => Object.assign(new Error(message), { status: 400 });
+
+/** Canonicalize first-party dashboard links without changing query/hash state. */
+function canonicalizeStudioHref(href) {
+  if (typeof href !== 'string' || !href.startsWith('/')) return href;
+  const target = new URL(href, 'https://agentsam.local');
+  const canonical = canonicalStudioPath(target.pathname);
+  if (canonical) target.pathname = canonical;
+  return target.pathname + target.search + target.hash;
+}
+
+function canonicalizeNavigationTree(nodes) {
+  return (Array.isArray(nodes) ? nodes : []).map(item => ({
+    ...item,
+    ...(typeof item.href === 'string' ? { href: canonicalizeStudioHref(item.href) } : {}),
+    ...(Array.isArray(item.aliases) ? { aliases: item.aliases.map(canonicalizeStudioHref) } : {}),
+    ...(Array.isArray(item.children) ? { children: canonicalizeNavigationTree(item.children) } : {}),
+  }));
+}
+
+function canonicalizeNavigation(data) {
+  return {
+    ...data,
+    ...Object.fromEntries(['primary', 'channels', 'apps', 'utilities'].map(section => [
+      section, canonicalizeNavigationTree(data?.[section]),
+    ])),
+  };
+}
 
 export function listNavigationEntries(base) {
   const items = [];
@@ -62,7 +90,7 @@ export function normalizeNavigationOverrides(value, base) {
       if (typeof href !== 'string' || href.length > 240 || !/^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(href) || /[\\\u0000-\u001f]/.test(href)) {
         throw clientError('navigation_href_invalid');
       }
-      out.href = href;
+      out.href = canonicalizeStudioHref(href);
     }
     if ('hidden' in row) {
       if (typeof row.hidden !== 'boolean') throw clientError('navigation_hidden_invalid');
@@ -178,7 +206,7 @@ export async function handleStudioNavigation(request, env, accountId) {
     // The account's installation registry is the only source of optional
     // app destinations. Failure must never invent installed apps.
     const installed = await listLauncherApps(env.DB, accountId);
-    const defaults = withInstalledApps(hostDefaults, installed);
+    const defaults = canonicalizeNavigation(withInstalledApps(hostDefaults, installed));
     let row = await loadRow(env, accountId);
     if (request.method === 'PATCH') {
       const raw = await request.text();
