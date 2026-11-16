@@ -393,6 +393,7 @@
     "cad:registry:check": "node scripts/cad-registry.mjs --check",
     "app:validate": "node bin/agentsam app validate --all",
     "app:packaging": "node scripts/verify-app-packaging.mjs --pack",
+    "app:boundaries": "node scripts/verify-app-boundaries.mjs",
     "guard:apps": "npm run app:validate && npm run app:packaging",
     "test:providers": "node --test packages/providers/completeful/test/*.test.mjs",
     "test:themes": "npm --prefix packages/heuristic-theme test && npm --prefix packages/theme-cypress test && npm --prefix packages/theme-violet test && npm --prefix packages/theme-grove test && npm --prefix packages/theme-ember test && npm --prefix packages/theme-forge test && npm --prefix packages/theme-harbor test && npm --prefix packages/theme-summit test && npm --prefix packages/theme-resolve test && npm --prefix packages/theme-scenes test",

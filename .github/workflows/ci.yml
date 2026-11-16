@@ -89,6 +89,8 @@ jobs:
 
       - name: Verify AgentSam registry and CLI contract
         run: npm run verify:registry
+      - name: App boundaries
+        run: npm run app:boundaries
 
       - name: Dependency health
         run: node src/security/cli.mjs check --log "$RUNNER_TEMP/npm-ci.log" --json > "$RUNNER_TEMP/dependency-health.json"

@@ -1,0 +1,76 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "samspeaks",
+  "name": "SamSpeaks",
+  "kind": "app",
+  "package": "@inneranimalmedia/samspeaks",
+  "version": "0.1.0",
+  "entrypoints": {
+    "frontend": "./",
+    "backend": "./server.ts"
+  },
+  "capabilities": [
+    "voice-direction",
+    "scene-direction",
+    "creativity-flow",
+    "tts"
+  ],
+  "provides": [
+    "workspace.panel",
+    "preview",
+    "scene.authoring"
+  ],
+  "surfaces": [
+    "inspo",
+    "compose",
+    "stage",
+    "direct",
+    "flow-canvas",
+    "lighting"
+  ],
+  "auth": {
+    "required": false,
+    "entry": {
+      "authenticated": "app.authenticated",
+      "login": "identity.login",
+      "failure": "identity.recovery"
+    }
+  },
+  "routes": {
+    "app.authenticated": {
+      "path": "/samspeaks",
+      "auth": "optional",
+      "spa": true
+    },
+    "app.home": {
+      "path": "/samspeaks"
+    },
+    "entry": "/samspeaks",
+    "mounts": [
+      {
+        "path": "/samspeaks",
+        "auth": "optional",
+        "spa": true,
+        "shell": "dist/index.html"
+      }
+    ]
+  },
+  "preview": {
+    "kind": "web",
+    "entry": "/",
+    "dashboard_route": "/samspeaks"
+  },
+  "runtime": {
+    "local_preview": "ready",
+    "source_scaffold": "ready",
+    "cloudflare": "unsupported",
+    "type": "spa",
+    "assetRoot": "dist",
+    "shell": "index.html"
+  },
+  "secrets": {
+    "server_only": [
+      "GEMINI_API_KEY"
+    ]
+  }
+}
