@@ -3,6 +3,7 @@ import {existsSync,readFileSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import test from 'node:test';
+import { STUDIO_ADMIN_PRERENDERED_ROUTES } from '../shared/studio-admin-routes.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const units=['general','agents','customize','design','git-prs','codebase',
   'network','runtime','themes','storage','keys','usage','notifications','docs','integrations'];
@@ -35,20 +36,25 @@ test('Settings shell host is session-gated, read-only and stays on the current a
 });
 
 test('AgentSam Work, CAD and MovieMode use authenticated canonical React shells',()=>{
- const routes=['agentsam','cad','moviemode','moviemode/edit','projects','mail','artifacts','artifacts/tickets','tickets','themes'];
- for(const route of routes){
+ const routes=[...STUDIO_ADMIN_PRERENDERED_ROUTES, '/mail','/artifacts','/artifacts/tickets','/tickets','/themes'];
+ for(const pathname of routes){
+  const route = pathname.replace(/^\/(?:admin\/)?/, '');
   const source=path.join(root,'.output/public/studio-app-shell',route,'index.html');
   assert.ok(existsSync(source),'missing Studio mount: '+route);
   const html=readFileSync(source,'utf8');
   assert.match(html,/^<!DOCTYPE html>/i);
   assert.ok(html.includes('/assets/'));
   assert.doesNotMatch(html,/password_hash|client_secret/i);
+  if (pathname === '/admin/store' || pathname.startsWith('/admin/media')) {
+    assert.ok(html.includes('/(apps)' + pathname), 'wrong router match for ' + pathname);
+  }
  }
  const worker=readFileSync(path.join(root,'backend/worker/index.js'),'utf8');
  const begin=worker.indexOf('    // Canonical React app mounts are served');
  const end=worker.indexOf('    // Settings are served as build-generated',begin);
  assert.ok(begin>0 && end>begin);
  const section=worker.slice(begin,end);
+ assert.match(section,/STUDIO_ADMIN_PRERENDERED_ROUTES.includes/);
  assert.match(section,/guardStudioDocument\(request, env\)/);
  assert.match(section,/studio-app-shell/);
  assert.match(section,/cache-control","private, no-store"/);

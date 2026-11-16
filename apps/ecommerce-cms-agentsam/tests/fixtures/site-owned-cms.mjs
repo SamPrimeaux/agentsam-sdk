@@ -15,6 +15,8 @@ export function createSiteOwnedFixture(){
       section_type TEXT,section_name TEXT,section_data TEXT,sort_order INTEGER,
       is_visible INTEGER,r2_bucket TEXT,draft_r2_key TEXT,published_r2_key TEXT,
       content_hash TEXT,updated_at TEXT);
+    CREATE TABLE cms_section_blocks(account_id TEXT,section_id TEXT,block_key TEXT,
+      block_type TEXT,status TEXT,content_json TEXT,metadata_json TEXT);
     CREATE TABLE cms_revisions(account_id TEXT,site_id TEXT,entity_type TEXT,
       entity_id TEXT,revision_number INTEGER,revision_kind TEXT,
       content_object_key TEXT,content_hash TEXT,snapshot_json TEXT,metadata_json TEXT);
@@ -35,7 +37,18 @@ export function createSiteOwnedFixture(){
     ['cms/sections/publications/home/hero.json',JSON.stringify({headline:'Published headline'})],
   ]);
   const env={
-    DB:{prepare(sql){
+    DB:{async batch(statements) {
+      db.exec("BEGIN");
+      try {
+        const results = [];
+        for (const statement of statements) results.push(await statement.run());
+        db.exec("COMMIT");
+        return results;
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
+    }, prepare(sql){
       let params=[];
       const statement={
         bind(...args){params=args;return statement;},

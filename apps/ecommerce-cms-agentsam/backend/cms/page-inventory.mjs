@@ -58,7 +58,7 @@ export async function listCanonicalPageRows(db, accountId, siteId = null) {
           ORDER BY sec.sort_order, sec.id LIMIT 1) AS preview_json
       FROM cms_pages p
       INNER JOIN cms_sites owner ON owner.id=p.site_id
-      WHERE owner.account_id=? AND p.site_id=? ${notArchived}
+      WHERE owner.account_id=? AND p.site_id=? AND p.slug <> 'site' ${notArchived}
       ORDER BY p.sort_order ASC, p.title ASC
     `).bind(accountId, site.id).all();
     return results;

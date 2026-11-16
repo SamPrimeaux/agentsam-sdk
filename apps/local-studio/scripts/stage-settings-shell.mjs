@@ -10,6 +10,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { STUDIO_ADMIN_PRERENDERED_ROUTES } from '../shared/studio-admin-routes.mjs';
 
 const studio=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const nitro=(await import(path.join(studio,'.output/server/index.mjs'))).default;
@@ -34,10 +35,13 @@ for(const unit of units){
 // Keep the REAL React AgentSam/Work, CAD and MovieMode mounts hydrated by
 // their canonical router. These modules fail only when Cloudflare's Nitro SSR
 // runs them at request time, just as Settings previously did.
-const studioApps=['store','onboarding-preview','agentsam','cad','moviemode','moviemode/edit','projects','mail','artifacts','artifacts/tickets','tickets','themes','media','media/images','media/videos','media/models','media/files'];
-const topLevelStudioApps=new Set(['mail','artifacts','artifacts/tickets','tickets','themes','media','media/images','media/videos','media/models','media/files']);
-for(const route of studioApps){
-  const url='https://agentsam.inneranimalmedia.com/'+(topLevelStudioApps.has(route) ? route : 'admin/'+route);
+const studioApps = [
+  ...STUDIO_ADMIN_PRERENDERED_ROUTES,
+  '/mail', '/artifacts', '/artifacts/tickets', '/tickets', '/themes',
+];
+for (const pathname of studioApps) {
+  const route = pathname.replace(/^\/(?:admin\/)?/, '');
+  const url = 'https://agentsam.inneranimalmedia.com' + pathname;
   const rendered=await nitro.fetch(new Request(url),{},{
     waitUntil(){},passThroughOnException(){},
   });
