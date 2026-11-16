@@ -206,7 +206,7 @@ try{
     const dialogWidth=await detail.evaluate(el=>el.getBoundingClientRect().width);
     const controlsContrast=await checkControlsContrast(page);
     await page.keyboard.press('Tab');
-    const backButton=detail.getByRole('button',{name:'Back to agents',exact:true});
+    const backButton=detail.getByRole('navigation',{name:'Agent profile navigation'}).getByRole('button',{name:'Back to agents',exact:true});
     const backFocused=await backButton.evaluate(el=>el===document.activeElement);
     await page.keyboard.press('Enter');
     await detail.waitFor({state:'hidden'});
