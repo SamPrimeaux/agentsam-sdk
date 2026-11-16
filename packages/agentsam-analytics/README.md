@@ -9,8 +9,40 @@ Owns:
 - health
 - versioned score families
 
-Does not own D1, Basin, authentication, routing, or Cloudflare credentials.
-Hosts provide a query API matching the package read-model contract.
+Owns the portable, account-scoped D1 and Basin **read-query contracts** in
+`@inneranimalmedia/agentsam-analytics/server`. It does **not** own the D1
+database binding, Basin catalog, identity provider, OAuth token store or routes.
+Hosts mount the package and supply the verified session account, scoped D1
+binding and (if connected) a Cloudflare Basin executor.
+
+No account or Cloudflare resource IDs are embedded into the npm artifact:
+install the package once; each user signs in and optionally connects their
+own Cloudflare account at runtime. A Cloudflare **sign-in** alone is not a
+Basin SQL grant. The Cloudflare connector must resolve an explicit user-owned
+grant with Basin SQL, Basin Catalog and R2 read permissions, and reject missing
+or mismatched account credentials. Never silently use a deployment-wide token.
+
+```ts
+import { handleAnalyticsQueryRequest } from "@inneranimalmedia/agentsam-analytics/server";
+// The host must resolve accountId from a VERIFIED login session.
+const result = await handleAnalyticsQueryRequest(request, {
+  db: env.DB,
+  accountId: verifiedSession.accountId,
+});
+// Return result.status and result.body as an authenticated, no-store response.
+```
+
+`queryScopedBasinActivity` only issues fixed SELECT aggregations with a
+required internal account ID. Its `execute` callback is supplied by the
+Cloudflare connector after resolving **that same user's** authorized catalog
+and credential. This module does not fetch or accept provider credentials
+from the browser. Never allow browser-supplied SQL, account IDs, catalog names,
+or an `authMode: "auto"` environment-token fallback into this path.
+
+These server contracts protect reads; they are not evidence that an actual
+agent/tool/deploy emitter has been installed, that the Basin stream has rows,
+or that any host has mounted the new exported entrypoint. Verify those
+individually before claiming a live analytics feature.
 
 Commerce remains independently first-class in
 `@inneranimalmedia/commerce-analytics`.
