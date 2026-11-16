@@ -411,11 +411,11 @@ export default defineConfig(({ command, isPreview }) => ({
       // module as AgentSamShell. Do not let a second package entrypoint
       // instantiate a different React context in the composer chunk.
       {
-        find: /^@inneranimalmedia\\/agentsam-nav$/,
+        find: /^@inneranimalmedia\/agentsam-nav$/,
         replacement: resolvePath(navSource, "index.ts"),
       },
       {
-        find: /^@inneranimalmedia\\/agentsam-nav\\/browser$/,
+        find: /^@inneranimalmedia\/agentsam-nav\/browser$/,
         replacement: resolvePath(navSource, "browser.tsx"),
       },
       {
