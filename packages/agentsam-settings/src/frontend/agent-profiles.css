@@ -24,14 +24,21 @@
 }
 .agent-profiles .agent-profile-lead :is(h2, nav span) { color: var(--profile-ink); }
 .agent-profiles .agent-profile-back {
-  display: inline-grid;
-  width: 48px;
-  height: 48px;
-  place-items: center;
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px 0 12px;
   border: 1px solid var(--profile-outline);
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--profile-nav);
   color: var(--profile-ink);
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.agent-profiles .agent-profile-back:hover {
+  background: var(--profile-surface);
+  border-color: var(--profile-accent);
 }
 .agent-profiles .agent-profile-grid {
   display: grid;
