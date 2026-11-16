@@ -135,9 +135,9 @@ export function ArtifactsSurface({
         {focusedArtifact.mime?.startsWith("video/") && focusedArtifact.open ?
           <video controls preload="metadata" poster={focusedArtifact.preview||undefined} src={focusedArtifact.open} aria-label={focusedArtifact.name}/> :
         focusedArtifact.mime==="application/pdf" && (focusedArtifact.open||focusedArtifact.preview) ?
-          <iframe title={focusedArtifact.name} src={focusedArtifact.open||focusedArtifact.preview||undefined} referrerPolicy="no-referrer" /> :
+          <iframe title={focusedArtifact.name} src={focusedArtifact.open||focusedArtifact.preview||undefined} sandbox="allow-same-origin" referrerPolicy="no-referrer" /> :
         (focusedArtifact.preview || (focusedArtifact.kind==="image" && focusedArtifact.open)) && !failedPreviews.has(focusedArtifact.id) ?
-          <img src={focusedArtifact.preview||focusedArtifact.open||undefined} alt={focusedArtifact.name} onError={()=>setFailedPreviews(prev=>new Set(prev).add(focusedArtifact.id))}/> :
+          <img src={(focusedArtifact.kind==="image" ? focusedArtifact.open||focusedArtifact.preview : focusedArtifact.preview)||undefined} alt={focusedArtifact.name} onError={()=>setFailedPreviews(prev=>new Set(prev).add(focusedArtifact.id))}/> :
           <div className="agentsam-library__focus-unavailable"><FileText size={36} strokeWidth={1.4} aria-hidden="true"/><p>No visual preview is stored for this resource.</p><span>Its original is preserved in the connected Library source.</span></div>}
       </div>
       <footer className="agentsam-library__focused-meta"><span>{focusedArtifact.kind}</span>{focusedArtifact.sizeLabel?<span>{focusedArtifact.sizeLabel}</span>:null}</footer>
