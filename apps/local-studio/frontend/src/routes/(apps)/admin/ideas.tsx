@@ -5,6 +5,7 @@ import type { WorkTicket } from '@inneranimalmedia/agentsam-work/contracts';
 import { sharedLiveWorkHost } from '@/components/work/LocalStudioWorkPage';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
+import { IconAction } from '@/components/ui/icon-action';
 
 export const Route = createFileRoute('/(apps)/admin/ideas')({ component: IdeasPage });
 
@@ -58,7 +59,7 @@ function IdeasPage() {
   if (!user) return <RedirectToSignIn />;
   return <main className="agentsam-personal-surface" data-studio-product="ideas">
     <header className="agentsam-personal-heading"><div><h1>Ideas</h1><p>Save a thought before it becomes a task or a goal.</p></div>
-      <button type="button" onClick={()=>void load()} aria-label="Refresh ideas" title="Refresh ideas"><RefreshCw size={17}/></button>
+      <IconAction label="Refresh ideas" hint="Reload saved ideas" onClick={()=>void load()}><RefreshCw size={17}/></IconAction>
     </header>
     <form className="agentsam-idea-capture" onSubmit={(event)=>void capture(event)}>
       <label htmlFor="agentsam-idea-title" className="sr-only">New idea</label>
@@ -77,8 +78,7 @@ function IdeasPage() {
       : ideas.length ? <ul className="agentsam-idea-list">{ideas.map(idea=><li key={idea.id}>
         <Lightbulb size={18} aria-hidden="true"/>
         <div><strong>{idea.title}</strong>{idea.description ? <p>{idea.description}</p> : null}</div>
-        <button type="button" aria-label={'Open '+idea.title+' in Work'} title="Open in Work"
-          onClick={()=>void navigate({to:'/tickets'})}><ArrowUpRight size={17}/></button>
+        <IconAction label={'Open '+idea.title+' in Work'} hint="Open this idea in Work tickets" onClick={()=>void navigate({to:'/admin/tickets'})}><ArrowUpRight size={17}/></IconAction>
       </li>)}</ul>
       : <p className="agentsam-personal-state">No saved ideas here yet. Capture one above, or continue an existing conversation.</p>}
   </main>;
