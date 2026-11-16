@@ -1,3 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { ThemeStorePage } from '@/components/themes/ThemeStorePage';
-export const Route = createFileRoute('/(apps)/store')({ component: ThemeStorePage });
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/(apps)/store")({
+  component: () => <Navigate to="/admin/themes" replace />,
+});

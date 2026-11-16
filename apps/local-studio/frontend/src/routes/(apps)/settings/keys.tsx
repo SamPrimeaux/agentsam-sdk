@@ -1,20 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { LocalStudioSettingsPage } from "@/components/settings/LocalStudioSettingsPage";
-
-type SettingsSearch = {
-  view?: string;
-  fixture?: string;
-};
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/settings/keys")({
-  validateSearch: (search: Record<string, unknown>): SettingsSearch => ({
-    view: typeof search.view === "string" ? search.view : undefined,
-    fixture: typeof search.fixture === "string" ? search.fixture : undefined,
-  }),
-  component: KeysSettingsPage,
+  component: () => <Navigate to="/admin/settings/keys" replace />,
 });
-
-function KeysSettingsPage() {
-  const { view } = Route.useSearch();
-  return <LocalStudioSettingsPage unitId="keys" requestedView={view} />;
-}

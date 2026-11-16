@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { DatabasePage } from "@/components/database/DatabasePage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/database")({
-  component: DatabasePage,
+  component: () => <Navigate to="/admin/database" replace />,
 });

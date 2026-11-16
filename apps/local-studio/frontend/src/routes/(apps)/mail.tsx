@@ -1,10 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { LocalStudioWorkPage } from "@/components/work/LocalStudioWorkPage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/mail")({
-  component: MailRoute,
+  component: () => <Navigate to="/admin/mail" replace />,
 });
-
-function MailRoute() {
-  return <LocalStudioWorkPage surface="mail" />;
-}

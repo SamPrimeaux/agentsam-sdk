@@ -1,11 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { LocalStudioWorkPage } from "@/components/work/LocalStudioWorkPage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/(apps)/artifacts/tickets/$ticketId")({
-  component: ArtifactTicketDetailRoute,
-});
+export const Route = createFileRoute("/(apps)/artifacts/tickets/$ticketId")({ component: LegacyTicketRoute });
 
-function ArtifactTicketDetailRoute() {
+function LegacyTicketRoute() {
   const { ticketId } = Route.useParams();
-  return <LocalStudioWorkPage surface="artifact-tickets" ticketId={ticketId} />;
+  return <Navigate to="/admin/artifacts/tickets/$ticketId" params={{ ticketId }} replace />;
 }

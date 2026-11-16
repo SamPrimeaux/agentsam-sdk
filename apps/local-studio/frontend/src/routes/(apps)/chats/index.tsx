@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ChatsIndex } from "@/components/shell/ChatsIndex";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/(apps)/chats/")({ component: ChatsIndex });
+export const Route = createFileRoute("/(apps)/chats/")({
+  component: () => <Navigate to="/admin/chats" replace />,
+});

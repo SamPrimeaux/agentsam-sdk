@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { MediaLibraryPage } from "@/components/media/MediaLibraryPage";
+import { createFileRoute, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 
-/** Canonical Media Library. MovieMode lives only at /admin/moviemode. */
-export const Route = createFileRoute("/(apps)/media")({
-  component: MediaLibraryPage,
-});
+export const Route = createFileRoute("/(apps)/media")({ component: LegacyMediaRoute });
+
+function LegacyMediaRoute() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname === "/media" || pathname === "/media/") return <Navigate to="/admin/media" replace />;
+  return <Outlet />;
+}

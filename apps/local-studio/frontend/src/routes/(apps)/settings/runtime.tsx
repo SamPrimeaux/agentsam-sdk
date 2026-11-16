@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RuntimeManagerPage } from "@/components/runtime/RuntimeManagerPage";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/(apps)/settings/runtime")({ component: RuntimeManagerPage });
+export const Route = createFileRoute("/(apps)/settings/runtime")({
+  component: () => <Navigate to="/admin/settings/runtime" replace />,
+});
