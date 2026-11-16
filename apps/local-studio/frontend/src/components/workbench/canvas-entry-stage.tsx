@@ -87,9 +87,9 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
   setBoardId(id=>result.document.artboards.some(b=>b.id===id)?id:result.document.artboards[0]?.id||"");
  }
  function route(id:string) {
-  const next="/canvas?canvas="+encodeURIComponent(id);
+  const next="/admin/canvas?canvas="+encodeURIComponent(id);
   setTabUrl(tab.id,next);
-  if(location.pathname==="/canvas")history.replaceState(history.state,"",next);
+  if(location.pathname==="/admin/canvas")history.replaceState(history.state,"",next);
  }
  useEffect(()=>{
   let active=true;const abort=new AbortController();
@@ -320,7 +320,7 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
  }
  function switchDocument(id:string) {
   if(dirty&&!window.confirm("Leave unsaved changes? A recovery copy will stay in this browser."))return;
-  setShowLibrary(false);setRecovery(null);route(id);setTabUrl(tab.id,"/canvas?canvas="+encodeURIComponent(id));setBoot(n=>n+1);
+  setShowLibrary(false);setRecovery(null);route(id);setTabUrl(tab.id,"/admin/canvas?canvas="+encodeURIComponent(id));setBoot(n=>n+1);
  }
  function newDocument() {
   if(dirty&&!window.confirm("Create another Canvas? Your unsaved changes stay recoverable in this browser."))return;
@@ -330,7 +330,7 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
  if(loading)return <div className="cv-loading" role="status"><span className="cv-loading-mark"/><strong>Opening your Canvas</strong><span>A little room for your next idea.</span></div>;
  if(!canvas||!document)return <div className="cv-loading"><strong>Canvas couldn't open</strong><p role="alert">{error}</p><button className="cv-primary" onClick={()=>setBoot(n=>n+1)}>Try again</button></div>;
  const selectedNode=locateNode(document,selection)?.node;
- const snapshot:DesignWorkspaceSnapshot={contract:"agentsam.design-workspace.v1",resource:{id:canvas.id,kind:"design",appId:"agentsam-local-studio",title:document.name,href:"/canvas?canvas="+canvas.id,accountId:user?.id||""},capabilities:["create","open","select","inspect","modify","preview","save","undo","redo","generate"],revision:String(canvas.revision),savedRevision:String(canvas.revision),dirty,selection:selection?[{id:selection,kind:selectedNode?.type||"element"}]:[],status:"ready",...(busy?{activeRunId:run!.id}:{})};
+ const snapshot:DesignWorkspaceSnapshot={contract:"agentsam.design-workspace.v1",resource:{id:canvas.id,kind:"design",appId:"agentsam-local-studio",title:document.name,href:"/admin/canvas?canvas="+canvas.id,accountId:user?.id||""},capabilities:["create","open","select","inspect","modify","preview","save","undo","redo","generate"],revision:String(canvas.revision),savedRevision:String(canvas.revision),dirty,selection:selection?[{id:selection,kind:selectedNode?.type||"element"}]:[],status:"ready",...(busy?{activeRunId:run!.id}:{})};
  const assistant=<div className={"cv-assistant-body "+assistantMode}>
    <div className="cv-assistant-modes"><span>{selectedNode?"Target: "+selectedNode.name:"Document context"}</span><IconAction hint="Mini AgentSam" label="Mini AgentSam" onClick={()=>setAssistantMode("mini")}><Minimize2 size={13}/></IconAction><IconAction hint="Dock AgentSam" label="Dock AgentSam" onClick={()=>setAssistantMode("docked")}><PanelRight size={13}/></IconAction><IconAction hint="Expand AgentSam" label="Expand AgentSam" onClick={()=>setAssistantMode("expanded")}><Maximize2 size={13}/></IconAction></div>
    {assistantMode!=="mini"&&<div className="cv-activity" aria-label="AgentSam execution history">
