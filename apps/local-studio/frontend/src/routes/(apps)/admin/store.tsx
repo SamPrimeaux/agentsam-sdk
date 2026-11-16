@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { EcommerceAppView } from '../apps/ecommerce-cms-agentsam';
+import { EcommerceAppView } from './apps/ecommerce-cms-agentsam';
 
 /**
  * Online Store is the existing installed Ecommerce CMS, mounted at a clean
