@@ -9,9 +9,14 @@ import { useWorkStore } from '@/lib/work/store';
 export function AgentSamLaunchDock() {
   const { data, isMobile, open, setOpen } = useNav();
   const setSideOpen = useWorkStore((state) => state.setSideOpen);
-  if (!isMobile) return null;
-
   const [path, routeSearch = ''] = (data.pathname ?? '').split('?');
+  // The launch dock is navigation for primary destinations, not editor chrome.
+  // Focused tools (Canvas, Library, CMS, Media, Settings, etc.) own their stage.
+  // Chats reserves the bottom edge for its single composer, as do focused tools.
+  // Keep quick destinations only on lightweight landing pages.
+  const launchRoute = path === '/admin/home' || path === '/admin/ideas' || path === '/admin/goalguru' || path === '/goalguru';
+  // A modal navigation drawer takes precedence over the dock and underlying stage.
+  if (!isMobile || open || !launchRoute) return null;
   const installedAdminPage = path === '/admin/apps/ecommerce-cms-agentsam' ? new URLSearchParams(routeSearch).get('page') : null;
   const showPage = (path: string) => {
     setOpen(false);
@@ -23,8 +28,8 @@ export function AgentSamLaunchDock() {
   return <Nav.LaunchDock items={[
     {
       id: 'chats', label: 'Chats', icon: <MessageCircle />,
-      active: open || path === '/admin/agentsam' || path.startsWith('/admin/chats'),
-      onSelect: () => setOpen(!open),
+      active: path === '/admin/agentsam' || path.startsWith('/admin/chats'),
+      onSelect: () => showPage('/admin/agentsam'),
     },
     {
       id: 'home', label: 'Home', icon: <House />,

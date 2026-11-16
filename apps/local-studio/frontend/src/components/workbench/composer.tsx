@@ -220,32 +220,7 @@ export function Composer({
     finally { setSubmitting(false); }
   }
 
-  const attachControl = (
-    <>
-      <input
-        ref={fileRef}
-        type="file"
-        className="hidden"
-        suppressHydrationWarning
-        multiple
-        accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json,.html,.xml"
-        onChange={(event) => {
-          void onFiles(event.target.files);
-          event.target.value = "";
-        }}
-      />
-      <IconAction
-        size="icon-sm"
-        variant="ghost"
-        label="Attach images"
-        hint="Attach images or reference text files"
-        onClick={() => fileRef.current?.click()}
-      >
-        <Paperclip className="size-4" />
-      </IconAction>
-      {!workMode ? <><RunModeSelect value={runMode} onChange={(mode) => setRunMode(targetId, mode)} compact /><ModelSelect compact /></> : null}
-    </>
-  );
+  const attachControl = !workMode ? <><RunModeSelect value={runMode} onChange={(mode) => setRunMode(targetId, mode)} compact /><ModelSelect compact /></> : null;
 
   const attachmentPreview = pendingAttachments.length ? (
     <div className="px-2 pt-2 pb-1" role="group" aria-label="Attached images">
@@ -300,6 +275,18 @@ export function Composer({
     <div className="agentsam-composer-shell w-full min-w-0 px-[clamp(.4rem,1.2cqi,1rem)] pb-[max(.75rem,env(safe-area-inset-bottom))]"
       onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
       onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void onFiles(event.dataTransfer.files); } }}>
+      <input
+        ref={fileRef}
+        type="file"
+        className="hidden"
+        suppressHydrationWarning
+        multiple
+        accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json,.html,.xml"
+        onChange={(event) => {
+          void onFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
       {goal ? (
         <GoalStatusStrip
           className="mx-auto mb-2 w-full max-w-6xl rounded-xl bg-card/70 px-3 py-2 text-foreground shadow-hairline backdrop-blur"
@@ -339,12 +326,12 @@ export function Composer({
         />
       ) : null}
       <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()}
-        onLibrary={workMode ? () => setLibraryOpen(true) : undefined}
-        onImage={workMode ? () => setImageMode(true) : undefined}
-        onWebSearch={workMode ? webSearch : undefined}
-        onProject={workMode && targetKind === 'chat' ? openProject : undefined}
-        activeMode={workMode ? runMode : undefined}
-        onModeChange={workMode ? mode => setRunMode(targetId,mode) : undefined}
+        onLibrary={() => setLibraryOpen(true)}
+        onImage={() => setImageMode(true)}
+        onWebSearch={webSearch}
+        onProject={targetKind === 'chat' ? openProject : undefined}
+        activeMode={runMode}
+        onModeChange={mode => setRunMode(targetId,mode)}
         contextLabel={contextLabel}>{({ trigger, onKeyDown, onSelect }) => <><AgentComposer
         value={value}
         runMode={runMode}
@@ -353,7 +340,7 @@ export function Composer({
         onCancel={cancel}
         streaming={streaming}
         placeholder={imageMode ? 'Describe the image to create…' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
-        toolbarStart={<>{trigger}{!workMode && targetKind === 'chat' ? <ProjectPicker chatId={targetId} /> : null}{!workMode ? attachControl : <>
+        toolbarStart={<>{trigger}{!workMode ? attachControl : <>
           <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title={imageMode ? 'Leave image creation mode' : 'Select active mode from the + menu'}>{imageMode ? <><ImagePlus size={14}/> Image creation <X size={13}/></> : <>Mode: {runMode[0].toUpperCase() + runMode.slice(1)}</>}</button>
         </>}</>}
         toolbarEnd={workMode ? <><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></> : null}
@@ -379,7 +366,7 @@ export function Composer({
           },
         }}
       />
-        {workMode && targetKind === 'chat' ? <div className="as-work-composer-under"><ProjectPicker chatId={targetId}/></div> : null}
+        {targetKind === 'chat' ? <ProjectPicker chatId={targetId} showTrigger={false} /> : null}
       </>}</PluginPicker>
       <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async file => { await onFiles([file]); }} />
       <VoiceSession open={voiceOpen} onClose={() => setVoiceOpen(false)} targetId={targetId} targetKind={targetKind} />

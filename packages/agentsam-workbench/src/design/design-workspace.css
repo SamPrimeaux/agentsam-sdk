@@ -221,6 +221,45 @@
     z-index: 1;
   }
 }
+/* Design uses local slide-in structure and sheet inspectors.
+   Global navigation remains owned by the host's top-left trigger. */
+.dw-mobile-scrim {display:none;}
+.dw-mobile-scrim-label {position:absolute;top:10px;right:10px;color:var(--dw-foreground);font:500 11px/1.4 system-ui,sans-serif;}
+@container (max-width:690px) {
+  .agentsam-design-workspace[data-design-kind="design"] .dw-stage {
+    visibility:visible;pointer-events:auto;
+  }
+  .agentsam-design-workspace[data-design-kind="design"][data-mobile-pane]:not([data-mobile-pane="stage"]) .dw-stage {
+    pointer-events:none;
+  }
+  .agentsam-design-workspace[data-design-kind="design"][data-mobile-pane]:not([data-mobile-pane="stage"]) .dw-mobile-scrim {
+    display:block;position:absolute;inset:0;z-index:2;width:100%;height:100%;
+    padding:0;border:0;background:#0009;cursor:pointer;
+  }
+  .agentsam-design-workspace[data-design-kind="design"] .dw-explorer,
+  .agentsam-design-workspace[data-design-kind="design"] .dw-inspector,
+  .agentsam-design-workspace[data-design-kind="design"] .dw-assistant {
+    z-index:3;max-width:none;box-shadow:0 18px 42px #0007;
+  }
+  .agentsam-design-workspace[data-design-kind="design"][data-mobile-pane="explorer"] .dw-explorer {
+    right:auto;width:min(320px,86%);height:100%;border-right:1px solid var(--dw-border);
+    animation:dw-drawer-enter 180ms ease-out both;
+  }
+  .agentsam-design-workspace[data-design-kind="design"][data-mobile-pane="inspector"] .dw-inspector,
+  .agentsam-design-workspace[data-design-kind="design"][data-mobile-pane="assistant"] .dw-assistant {
+    top:auto;bottom:0;width:100%;height:min(72dvh,660px);
+    border-top:1px solid var(--dw-border);border-radius:20px 20px 0 0;
+    animation:dw-sheet-enter 220ms ease-out both;
+  }
+}
+@keyframes dw-drawer-enter {from{transform:translateX(-16px);opacity:.72;}to{transform:translateX(0);opacity:1;}}
+@keyframes dw-sheet-enter {from{transform:translateY(22px);opacity:.78;}to{transform:translateY(0);opacity:1;}}
+@media (prefers-reduced-motion: reduce) {
+  .agentsam-design-workspace[data-design-kind="design"] .dw-explorer,
+  .agentsam-design-workspace[data-design-kind="design"] .dw-inspector,
+  .agentsam-design-workspace[data-design-kind="design"] .dw-assistant {animation:none!important;}
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dw-resize-handle {
     transition: none;

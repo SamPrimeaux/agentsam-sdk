@@ -738,3 +738,10 @@
 .agentsam-plugin-section-divider {height:1px;margin:5px 6px;background:var(--nav-border)}
 .agentsam-page-layout[data-composer-mode="work"] .agentsam-composer-actions > span[style*="flex"] {flex:1;min-width:3px}
 @media(max-width:550px){.as-work-mode-indicator{max-width:85px;font-size:10px}.agentsam-page-layout[data-composer-mode="work"] .as-work-composer-surface{padding:8px}.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row small{display:block;margin-left:0}}
+
+/* Project chooser remains mounted for the unified composer + action, but
+   offers no duplicate visible row below the message input. */
+.agentsam-project-picker .agentsam-project-trigger[data-hidden-trigger="true"] {
+  position:absolute;width:1px;height:1px;min-width:0;min-height:0;padding:0;
+  margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;
+}

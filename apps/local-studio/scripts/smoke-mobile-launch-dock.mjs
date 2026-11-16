@@ -35,7 +35,7 @@ try {
   page.setDefaultTimeout(6000);
   const errors = [];
   page.on('pageerror', (error) => errors.push(String(error)));
-  await page.goto('http://127.0.0.1:' + server.address().port + '/#/admin/agentsam', {
+  await page.goto('http://127.0.0.1:' + server.address().port + '/#/admin/home', {
     waitUntil: 'domcontentloaded',
   });
   const dock = page.getByRole('navigation', { name: 'Quick navigation' });
@@ -44,6 +44,10 @@ try {
     ['Chats', 'Home', 'Ideas', 'Goals', 'Library']);
   assert.equal(await page.locator('.console-sidenav.admin-sidebar').evaluate((element) => getComputedStyle(element).display), 'none');
   await dock.getByRole('button', { name: 'Chats' }).click();
+  // Chats is a focused conversation. Only the header bubble opens navigation.
+  await dock.waitFor({state:'hidden'});
+  const navToggle = page.locator('[data-shared-nav-toggle], .agentsam-topbar-leading [aria-label="Toggle global navigation"]').first();
+  await navToggle.click();
   const drawer = page.getByRole('dialog', { name: 'Navigation' });
   assert.equal(await drawer.isVisible(), true);
   assert.equal(await page.locator('.as-nav-mobile-drawer').count(), 1);
@@ -57,7 +61,7 @@ try {
   await drawer.waitFor({ state: 'hidden' });
   assert.equal(await page.evaluate(() => getComputedStyle(document.body).pointerEvents), 'auto',
     'closing Chats must restore touch interaction');
-  await dock.getByRole('button', { name: 'Home' }).click();
+  await page.goto('http://127.0.0.1:' + server.address().port + '/#/admin/home', {waitUntil:'domcontentloaded'});
   assert.equal(await page.evaluate(() => location.hash.split('?')[0]), '#/admin/home');
   await page.getByTitle('AgentSam admin home').waitFor({ state: 'visible' });
   await page.frameLocator('iframe[title="AgentSam admin home"]')
@@ -74,10 +78,11 @@ try {
   await page.waitForURL(/#\/goalguru/);
   await dock.getByRole('button', { name: 'Library' }).click();
   await page.getByRole('tablist', { name: 'Library content' }).waitFor({ state: 'visible' });
+  assert.equal(await dock.isVisible(), false, 'Library is a focused destination without the launch dock');
   await page.getByRole('tab', { name: 'Media', exact: true }).click();
   await page.locator('[data-agentsam-media-library]').waitFor({ state: 'visible' });
   assert.deepEqual(errors, [], 'the mobile path must not throw page errors');
-  console.log('[mobile-launch-smoke] PASS 390x844: five destinations, one Chats drawer, Home route, Ideas, Goals, Library/Media');
+  console.log('[mobile-launch-smoke] PASS 390x844: chat without dock, one header drawer, scoped Home/Ideas/Goals dock, focused Library/Media');
 } finally {
   await browser?.close();
   await new Promise((done) => server.close(done));

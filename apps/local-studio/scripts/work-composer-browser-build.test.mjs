@@ -29,14 +29,15 @@ test('browser Build uses the same tab and actual agent send, never drafts to lea
  assert.match(source,/onStop=\{\(\) => stop\(tab\.id\)\}/);
 });
 
-test('Work composer uses one + picker, separate project row and real speech controls',()=>{
+test('Chat and Work share one + picker, project chooser and real speech controls',()=>{
  const composer=read('../frontend/src/components/workbench/composer.tsx');
  const picker=read('../frontend/agentsam/PluginPicker.tsx');
  const voice=read('../frontend/src/components/workbench/voice-session.tsx');
- assert.match(composer,/workMode && targetKind === 'chat' \? <div className="as-work-composer-under"/);
- assert.match(composer,/onWebSearch=\{workMode \? webSearch/);
- assert.match(composer,/onImage=\{workMode \? \(\) => setImageMode\(true\)/);
- assert.match(composer,/onModeChange=\{workMode \? mode => setRunMode\(targetId,mode\)/);
+ assert.match(composer,/<ProjectPicker chatId=\{targetId\} showTrigger=\{false\}/);
+ assert.doesNotMatch(composer,/as-work-composer-under/);
+ assert.match(composer,/onWebSearch=\{webSearch\}/);
+ assert.match(composer,/onImage=\{\(\) => setImageMode\(true\)\}/);
+ assert.match(composer,/onModeChange=\{mode => setRunMode\(targetId,mode\)\}/);
  assert.match(picker,/Add photos & files/);
  assert.match(picker,/Add from library/);
  assert.match(picker,/Work in a project/);
