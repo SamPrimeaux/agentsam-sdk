@@ -102,9 +102,8 @@ export function ProjectPicker({ chatId, showTrigger = true }: { chatId: string; 
   }, [chatId]);
 
   return <Dialog.Root modal={false} open={open} onOpenChange={setOpen}><div className="agentsam-project-picker" ref={root}><Dialog.Trigger asChild>
-    <button type="button" className="agentsam-project-trigger" aria-label="Choose project" aria-expanded={open}
+    <button type="button" className="agentsam-project-trigger" data-hidden-trigger={!showTrigger} aria-label="Choose project" aria-expanded={open}
       aria-haspopup="dialog" aria-hidden={!showTrigger} tabIndex={showTrigger ? undefined : -1}
-      style={showTrigger ? undefined : {position:"absolute",width:1,height:1,padding:0,overflow:"hidden",opacity:0,pointerEvents:"none"}}
       onClick={() => { setOpen((value) => !value); setCreating(false); }}>
       <Folder size={14} /><span>{active?.name || (projectId ? (loading ? 'Loading project…' : 'Project unavailable') : 'Choose project')}</span><ChevronDown size={13} />
     </button></Dialog.Trigger>
