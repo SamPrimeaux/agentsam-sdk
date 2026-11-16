@@ -486,7 +486,7 @@
       // host; never send these paths to a separately installed site Worker.
       const destination = path.startsWith("/admin/") && ["/admin/agentsam", "/admin/projects", "/admin/cad", "/admin/moviemode"].some((mount) => path === mount || path.startsWith(mount + "/")) ? path
         : path.startsWith("/admin/")
-          ? "/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
+          ? "/admin/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
           : path;
       if (desktopHost) desktopHost.navigate(destination);
       else window.location.hash = "#" + destination;
