@@ -90,7 +90,7 @@ export function PluginSideStage({ stage }: Props) {
         <IconAction label="Manage plugin connection" hint="Review installed plugin settings"
           variant="outline" className="rounded p-1.5"
           onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", {
-            detail: { to: "/settings/customize?view=plugins" },
+            detail: { to: "/admin/settings/customize?view=plugins" },
           }))}>
           <Settings2 size={14}/>
         </IconAction>
