@@ -1756,3 +1756,28 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
   .agentsam-library .agentsam-work-artifacts__heading h1 {font-size:22px;}
 }
 @media(prefers-reduced-motion:reduce){.agentsam-library .agentsam-work-artifacts__item {transition:none;}}
+
+/* The gallery drills into a focused artifact reader, not an unrelated route
+   or right-edge cart. Original bytes remain with the authorized provider. */
+.agentsam-unified-library:has(.agentsam-library__focused-view) .agentsam-library-switch {display:none;}
+.agentsam-library__focused-view {display:flex;flex-direction:column;gap:14px;width:100%;min-height:calc(100dvh - 120px);padding:clamp(12px,2vw,24px);background:var(--agentsam-work-canvas);color:var(--agentsam-work-text);}
+.agentsam-library__focused-header {display:flex;align-items:center;gap:16px;min-width:0;flex-wrap:wrap;}
+.agentsam-library__focus-back,.agentsam-library__focus-open {display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;min-height:44px;border:1px solid var(--agentsam-work-border);border-radius:11px;padding:9px 13px;background:var(--agentsam-work-panel);color:var(--agentsam-work-text);font:inherit;font-size:13px;cursor:pointer;}
+.agentsam-library__focus-back:hover,.agentsam-library__focus-open:hover {background:var(--agentsam-work-panel-subtle);}
+.agentsam-library__focused-heading {display:flex;flex:1;flex-direction:column;min-width:0;gap:4px;}
+.agentsam-library__focused-heading strong {font-size:clamp(16px,1.7vw,22px);line-height:1.3;font-weight:620;overflow-wrap:anywhere;}
+.agentsam-library__focused-heading span,.agentsam-library__focused-meta {color:var(--agentsam-work-muted);font-size:12px;}
+.agentsam-library__focused-stage {display:grid;place-items:center;flex:1;min-width:0;min-height:300px;max-height:calc(100dvh - 210px);padding:12px;overflow:auto;border:1px solid var(--agentsam-work-border);border-radius:16px;background:var(--agentsam-work-panel-subtle);}
+.agentsam-library__focused-stage img,.agentsam-library__focused-stage video,.agentsam-library__focused-stage iframe {display:block;max-width:100%;width:auto;max-height:100%;height:auto;object-fit:contain;border:0;border-radius:7px;}
+.agentsam-library__focused-stage iframe {width:100%;height:100%;min-height:300px;background:var(--agentsam-work-panel);}
+.agentsam-library__focus-unavailable {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;max-width:360px;text-align:center;color:var(--agentsam-work-muted);}
+.agentsam-library__focus-unavailable p {margin:0;color:var(--agentsam-work-text);font-size:15px;}
+.agentsam-library__focus-unavailable span {font-size:12px;}
+.agentsam-library__focused-meta {display:flex;gap:16px;text-transform:capitalize;}
+@media(max-width:767px) {
+  .agentsam-library__focused-view {gap:12px;min-height:calc(100dvh - 90px);padding:12px;}
+  .agentsam-library__focused-header {gap:9px;}
+  .agentsam-library__focused-heading {order:3;flex:1 0 100%;}
+  .agentsam-library__focus-open {margin-left:auto;}
+  .agentsam-library__focused-stage {max-height:calc(100dvh - 225px);min-height:280px;padding:7px;}
+}
