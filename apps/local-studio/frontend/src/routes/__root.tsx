@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@
 import { AgentSamShell } from "../../agentsam/AgentSamShell";
 import { PackagedConsoleFrame } from "../../agentsam/PackagedConsoleFrame";
 import { AuthProvider } from "@/lib/auth/provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { ConnectionDeepLinkBridge } from "@/components/desktop/ConnectionDeepLinkBridge";
 import { OpenWorkspaceDeepLinkBridge } from "@/components/desktop/OpenWorkspaceDeepLinkBridge";
@@ -49,8 +50,11 @@ export const Route = createRootRoute({
 });
 
 function RootDocument() {
+  // Top-level providers must cover route-level bridges as well as the
+  // AgentSamShell. Nested and independently mounted routes may render tooltip
+  // controls before the shell has committed.
   const content = (
-    <>
+    <TooltipProvider>
       <PreviewHostBridge />
       <ConnectionDeepLinkBridge />
       <OpenWorkspaceDeepLinkBridge />
@@ -58,7 +62,7 @@ function RootDocument() {
       <AuthProvider>
         <ApplicationOutlet />
       </AuthProvider>
-    </>
+    </TooltipProvider>
   );
   const desktop =
     typeof window !== "undefined" &&
