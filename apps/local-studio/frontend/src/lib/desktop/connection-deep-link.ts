@@ -16,15 +16,22 @@ export type ConnectionDeepLink = {
   to: string;
 };
 
-function isSettingsTarget(value: string): boolean {
-  return SETTINGS_TARGET.test(value) && !value.includes("//");
+function normalizeSettingsTarget(value: string): string {
+  if (!SETTINGS_TARGET.test(value) || value.includes("//")) return "";
+  const target = new URL(value, "https://app.invalid");
+  if (target.pathname === "/settings" || target.pathname.startsWith("/settings/")) {
+    target.pathname = "/admin" + target.pathname;
+  }
+  return target.pathname === "/admin/settings" || target.pathname.startsWith("/admin/settings/")
+    ? target.pathname + target.search
+    : "";
 }
 
 /** The return_to a desktop connect sends, so the callback lands back in the app instead of the web. */
 export function buildConnectionReturnUrl(provider: string, to?: string): string {
   const url = new URL(CONNECTION_CALLBACK_BASE);
   url.searchParams.set("provider", provider);
-  if (to && isSettingsTarget(to)) url.searchParams.set("to", to);
+  const returnTo = to ? normalizeSettingsTarget(to) : "";\n  if (returnTo) url.searchParams.set("to", returnTo);
   return url.toString();
 }
 
