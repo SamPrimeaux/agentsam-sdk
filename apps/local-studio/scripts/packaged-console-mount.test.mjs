@@ -336,7 +336,7 @@ test('hosted AgentSam renders Chat/Work in its single packaged Console header', 
 
 test('CAD inherits the full hosted canvas height without another global sidebar', () => {
   const css = readFileSync(new URL('../frontend/agentsam/packaged-console-frame.css', import.meta.url), 'utf8');
-  const frame = readFileSync(new URL('../frontend/src/routes/(apps)/cad.tsx', import.meta.url), 'utf8');
+  const frame = readFileSync(new URL('../frontend/src/routes/(apps)/admin/cad.tsx', import.meta.url), 'utf8');
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
   assert.match(css, /\.agentsam-route:has\(\[data-cad-studio-host\]\) \{\s*position: relative/);
   assert.match(css, /\[data-cad-studio-host\] \{\s*position: absolute;\s*inset: 0/);
@@ -371,7 +371,7 @@ test('embedded desktop navigation reaches its parent and API requests use the na
     for(const handler of events) handler(event);
   };
   visit('/admin/agentsam');
-  visit('/mail');
+  visit('/admin/mail');
   visit('/admin/products?view=collections');
   visit('/admin/products','_blank');
   visit('https://other.example/admin/products');
