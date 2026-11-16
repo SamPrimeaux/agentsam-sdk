@@ -224,6 +224,7 @@
 /* Design uses local slide-in structure and sheet inspectors.
    Global navigation remains owned by the host's top-left trigger. */
 .dw-mobile-scrim {display:none;}
+.dw-mobile-scrim-label {position:absolute;top:10px;right:10px;color:var(--dw-foreground);font:500 11px/1.4 system-ui,sans-serif;}
 @container (max-width:690px) {
   .agentsam-design-workspace[data-design-kind="design"] .dw-stage {
     visibility:visible;pointer-events:auto;
