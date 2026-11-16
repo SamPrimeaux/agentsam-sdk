@@ -216,6 +216,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const isSamSketchRoute = pathname === '/admin/samsketch' || pathname.startsWith('/admin/samsketch/');
   const isSamSculptRoute = pathname === '/samsculpt' || pathname.startsWith('/samsculpt/');
   const isSettings = pathname === '/admin/settings' || pathname.startsWith('/admin/settings/');
+  const isCanvasRoute = pathname === '/admin/canvas' || pathname.startsWith('/admin/canvas/');
   const [navigation, setNavigation] = useState<StudioNavigationProjection>({});
   useEffect(() => {
     const controller = new AbortController();
@@ -670,7 +671,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
             ? <iframe title="AgentSam admin home" src="/ecommerce-cms-agentsam/admin/home.html?__agentsamEmbedded=1"
                 className="h-full min-h-0 w-full flex-1 border-0" />
             : <Outlet />}</main>
-          {!isConversation && state.sideOpen ? <>
+          {!isConversation && !isCanvasRoute && state.sideOpen ? <>
             {!globalAssistantFocused && <SplitHandle label="Resize AgentSam panel" onDrag={(delta) => setGlobalAssistantWidth((width) => Math.max(320, Math.min(720, width - delta)))} onDoubleClick={() => setGlobalAssistantWidth(390)} />}
             <aside className="platform-console-assistant" aria-label="AgentSam Side Assistant"
               style={{ "--platform-assistant-width": globalAssistantWidth + "px" } as CSSProperties}>
