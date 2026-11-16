@@ -671,110 +671,6 @@ body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-b
   box-shadow: 0 5px 28px color-mix(in srgb,var(--nav-ink) 12%,transparent);
 }
 :root[data-theme="dark"] .agentsam-head { background: var(--nav-surface); border-bottom-color: var(--nav-border); }
-:root[data-theme="dentsam-send{grid-area:send;width:35px;height:35px;border-radius:10px}
-.agentsam-compose .agentsam-plus{grid-area:plus;display:grid;place-items:center;width:33px;height:33px;border:0;border-radius:9px;background:#f5f4f6;color:#504b54;font:22px/1 var(--font,system-ui);cursor:pointer}
-.agentsam-compose .agentsam-plus:hover{background:#ebe9ee}
-.agentsam-attachment-list{grid-area:files;padding:0}
-/* Full focus is a real workspace mode, never a floating fixed-size modal. */
-body.agentsam-focus-mode .console-main{display:none}
-body.agentsam-focus-mode .agentsam-dock,
-body.agentsam-open.agentsam-focus-mode .agentsam-dock{position:static;display:flex;flex:1 1 auto;width:100%;height:100%;padding:0;border:0;box-shadow:none;background:#fff}
-body.agentsam-focus-mode .agentsam-drawer,
-body.agentsam-focus-mode .agentsam-dock .agentsam-drawer[data-expanded]{position:static;display:flex;flex:1 1 auto;width:100%;height:100%;max-height:none;inset:auto;top:auto;right:auto;border:0;border-radius:0;box-shadow:none;transform:none}
-body.agentsam-focus-mode .agentsam-head{padding:14px 20px;border-bottom:0;min-height:60px}
-body.agentsam-focus-mode .agentsam-messages{width:min(780px,calc(100% - 32px));align-self:center;flex:1 1 auto;padding:38px 12px 30px;gap:14px}
-body.agentsam-focus-mode .agentsam-compose{width:min(780px,calc(100% - 32px));align-self:center;border:1px solid #e4dfe8;border-radius:17px;margin:0 auto 20px;padding:12px;box-shadow:0 7px 28px #35204408}
-body.agentsam-focus-mode .agentsam-msg--assistant{max-width:100%;border:0;background:transparent}
-body.agentsam-focus-mode .agentsam-msg--user{max-width:75%;background:#f0eef1;color:#28262b;border-radius:13px;padding:10px 13px}
-body.agentsam-focus-mode .agentsam-mcp{max-width:min(780px,calc(100% - 32px));align-self:center}
-@media(max-width:900px){body.agentsam-open:not(.agentsam-focus-mode) .agentsam-dock{width:min(390px,100%);padding:7px}body.agentsam-focus-mode .agentsam-dock{position:static;box-shadow:none}}
-@media(max-width:640px){body.agentsam-focus-mode .agentsam-head{padding:10px 12px}body.agentsam-focus-mode .agentsam-messages{padding:14px 9px 20px}body.agentsam-focus-mode .agentsam-compose{margin-bottom:10px;width:calc(100% - 16px)}.agentsam-head [data-assistant-actions]{gap:2px}}
-@media(prefers-reduced-motion:reduce){.agentsam-dock,.agentsam-drawer{transition:none!important}}
-
-.asm-menu-row[hidden]{display:none!important}
-.asm-menu-search{display:block;width:calc(100% - 12px);height:32px;margin:6px;border:1px solid #e3e0e8;border-radius:8px;outline:0;padding:5px 9px;color:#29272d;background:#fff;font:11px/1.3 var(--font,system-ui);box-sizing:border-box}
-.asm-menu-search:focus{border-color:#9c83b5;box-shadow:0 0 0 2px #b79bd020}
-.asm-capability-popover svg{display:block;flex:none}
-
-/* Focus-mode entrance: move the existing chat, never remount the conversation. */
-@keyframes asm-focus-enter{from{opacity:.72;transform:translateX(15px)}to{opacity:1;transform:translateX(0)}}
-body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-bezier(.2,.8,.2,1) both}
-@media(prefers-reduced-motion:reduce){body.agentsam-focus-mode .agentsam-drawer{animation:none}}
-
-/* Safe structured assistant replies (the model text never becomes raw HTML). */
-.agentsam-msg-content{min-width:0;overflow-wrap:anywhere;line-height:1.55}
-.agentsam-msg-content p{margin:0 0 10px;white-space:pre-wrap}
-.agentsam-msg-content p:last-child{margin-bottom:0}
-.agentsam-msg-content h4{font:650 12px/1.45 var(--font,system-ui);margin:9px 0 5px;color:inherit}
-.agentsam-msg-content h4:first-child{margin-top:0}
-.agentsam-msg-content ul,.agentsam-msg-content ol{margin:6px 0 12px;padding-left:20px}
-.agentsam-msg-content li{padding-left:2px;margin:4px 0;white-space:normal}
-.agentsam-msg-content pre{box-sizing:border-box;max-width:100%;margin:6px 0 12px;padding:11px 12px;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #e8e5ed;border-radius:9px;background:#f8f7fa;color:#3f3846;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-.agentsam-msg-content :not(pre)>code{border-radius:4px;background:#f0eef4;padding:1px 4px;font:11px ui-monospace,SFMono-Regular,Menlo,monospace}
-
-/* AgentSam: shared compact send and attachment states for dock/focus composers. */
-.agentsam-compose .agentsam-send { border-radius: 999px; background: #7c3aed; color: #fff; }
-.agentsam-compose .agentsam-send:hover:not(:disabled) { background: #6d28d9; }
-.agentsam-compose .agentsam-send:focus-visible { outline: 2px solid #7c3aed; outline-offset: 3px; }
-.agentsam-send-arrow { display: block; font: 600 21px/1 system-ui; transform: translateY(-1px); }
-.asm-attachment-thumbnail { display: block; width: 34px; height: 34px; object-fit: cover; border-radius: 7px; flex: none; }
-.asm-attachment-chip { gap: 6px; max-width: 100%; }
-.asm-attachment-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.asm-attachment-notice { grid-column: 1 / -1; color: #a22f1e; font-size: 12px; padding: 2px 4px; }
-.agentsam-message-attachments { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.agentsam-compose.is-attachment-drop-target,
-.commerce-home-composer.is-attachment-drop-target { outline: 2px dashed var(--te-accent, currentColor); outline-offset: -3px; background: var(--te-surface, #f7f2ff); }
-
-/* Shared action feedback: soft hover, deliberate press, visible keyboard focus. */
-.agentsam-close,
-.agentsam-head [data-assistant-action],
-.agentsam-compose .agentsam-plus,
-.agentsam-compose .agentsam-send,
-.asm-menu-row,
-.agentsam-action-card {
-  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .12s ease;
-}
-.agentsam-close:active,
-.agentsam-head [data-assistant-action]:active,
-.agentsam-compose .agentsam-plus:active,
-.agentsam-compose .agentsam-send:active:not(:disabled),
-.asm-menu-row:active:not(:disabled),
-.agentsam-action-card:active { transform: scale(.97); }
-.agentsam-close:focus-visible,
-.agentsam-head [data-assistant-action]:focus-visible,
-.agentsam-compose .agentsam-plus:focus-visible,
-.asm-menu-row:focus-visible,
-.agentsam-action-card:focus-visible {
-  outline: 2px solid #9c83c4;
-  outline-offset: 2px;
-}
-.agentsam-send.is-loading { position: relative; cursor: progress; }
-.agentsam-send.is-loading .agentsam-send-arrow { opacity: 0; }
-.agentsam-send.is-loading::after {
-  content: "";
-  position: absolute;
-  width: 13px;
-  height: 13px;
-  border: 2px solid rgba(255,255,255,.42);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: agentsam-send-spin .72s linear infinite;
-}
-@keyframes agentsam-send-spin { to { transform: rotate(360deg); } }
-
-/* The account CMS theme owns the assistant palette in both focus and dock modes.
-   The app supplies arrangement/context, never a separate hardcoded purple theme. */
-:root[data-theme="dark"] .agentsam-dock { background: var(--nav-canvas); border-left-color: var(--nav-border); }
-:root[data-theme="dark"] .agentsam-drawer,
-:root[data-theme="dark"] body.agentsam-open.agentsam-focus-mode .agentsam-dock,
-:root[data-theme="dark"] body.agentsam-open.agentsam-focus-mode .agentsam-drawer {
-  background: var(--nav-canvas); color: var(--nav-ink,var(--c-ink));
-}
-:root[data-theme="dark"] body.agentsam-open:not(.agentsam-focus-mode) .agentsam-dock .agentsam-drawer {
-  background: var(--nav-surface); border-color: var(--nav-border);
-  box-shadow: 0 5px 28px color-mix(in srgb,var(--nav-ink) 12%,transparent);
-}
-:root[data-theme="dark"] .agentsam-head { background: var(--nav-surface); border-bottom-color: var(--nav-border); }
 :root[data-theme="dark"] .agentsam-brand strong { color: var(--nav-ink,var(--c-ink)); }
 :root[data-theme="dark"] .agentsam-brand span { color: var(--nav-inkMuted,var(--c-muted)); }
 :root[data-theme="dark"] .agentsam-close,
@@ -917,4 +813,165 @@ body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-b
   background:var(--c-surface); color:var(--c-ink); padding:10px 11px;
   font:12px/1.5 var(--font,system-ui);
 }
-.asm-skill-field textarea { resize:vertical; min-height:1
+.asm-skill-field textarea { resize:vertical; min-height:155px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.asm-skill-field input:focus,.asm-skill-field textarea:focus {
+  border-color:var(--c-focus); outline:2px solid color-mix(in srgb,var(--c-focus) 32%,transparent); outline-offset:1px;
+}
+.asm-skill-error { color:var(--nav-danger,var(--c-ink)); font-size:11px; margin:0; min-height:0; }
+.asm-skill-error:empty { display:none; }
+.asm-skill-dialog footer { display:flex; justify-content:flex-end; gap:8px; padding-top:5px; }
+.asm-skill-dialog footer button {
+  min-height:36px; padding:8px 14px; border:1px solid var(--c-line);
+  border-radius:8px; background:var(--c-surface); color:var(--c-ink);
+  font:600 12px/1 var(--font,system-ui); cursor:pointer;
+}
+.asm-skill-dialog footer .asm-skill-save { color:var(--c-accent-ink); background:var(--c-accent); border-color:var(--c-accent); }
+.asm-skill-dialog footer .asm-skill-save:hover:not(:disabled) { background:color-mix(in srgb,var(--c-accent) 85%,var(--c-ink)); }
+.asm-skill-dialog footer button:disabled { opacity:.6; cursor:progress; }
+.asm-skill-dialog footer button:focus-visible { outline:2px solid var(--c-focus); outline-offset:2px; }
+@media (max-width: 640px) {
+  .asm-skill-dialog form { padding: 17px 16px; }
+  .asm-capability-popover { width: min(290px, calc(100vw - 16px)); max-height: min(490px, calc(100dvh - 16px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .asm-capability-popover,.asm-skill-dialog { transition: none !important; }
+  .asm-skill-dialog::backdrop { backdrop-filter: none; }
+}
+
+
+/* Sidekick identity and action colors inherit account chrome, not a fixed
+   violet persona. Site-theme colors stay isolated inside the preview iframe. */
+:root { --agentsam-sidekick-accent: var(--nav-accent, var(--te-accent, #238552)); }
+.agentsam-mark {
+  color: var(--agentsam-sidekick-accent);
+  background: color-mix(in srgb,var(--agentsam-sidekick-accent) 12%,transparent);
+  border-color: color-mix(in srgb,var(--agentsam-sidekick-accent) 25%,transparent);
+}
+.agentsam-proposal-actions button.is-primary {
+  background: var(--agentsam-sidekick-accent);
+  border-color: var(--agentsam-sidekick-accent);
+}
+.agentsam-msg-route { color: var(--agentsam-sidekick-accent); }
+.agentsam-proposal-actions button:focus-visible,
+.agentsam-close:focus-visible { outline:2px solid var(--agentsam-sidekick-accent); outline-offset:2px; }
+
+
+/* Installed Site Editor and Sidekick read identical account chrome tokens;
+   stock theme controls never recolor the merchant storefront iframe. */
+:root {
+  --agentsam-chrome-surface: var(--nav-surface,var(--te-panel,#fff));
+  --agentsam-chrome-ink: var(--nav-ink,var(--te-text,#20201f));
+  --agentsam-chrome-border: var(--nav-border,var(--te-border,#e3e3df));
+  --agentsam-chrome-popover: var(--nav-popover,var(--te-panel,#fff));
+  --agentsam-chrome-accent: var(--nav-accent,var(--te-accent,#238552));
+}
+.agentsam-drawer,.agentsam-head,.agentsam-compose,
+.asm-capability-popover,.asm-skill-dialog {
+  color: var(--agentsam-chrome-ink);
+  background: var(--agentsam-chrome-surface);
+  border-color: var(--agentsam-chrome-border);
+}
+.asm-capability-popover,.asm-skill-dialog {background:var(--agentsam-chrome-popover)}
+.agentsam-compose textarea {
+  background: var(--agentsam-chrome-popover);
+  color: var(--agentsam-chrome-ink);
+  border-color: var(--agentsam-chrome-border);
+}
+.agentsam-compose textarea:focus-visible,
+.agentsam-compose button:focus-visible,
+.asm-menu-row:focus-visible {outline:2px solid var(--agentsam-chrome-accent);outline-offset:2px}
+.agentsam-workflow.is-active,.agentsam-chip:hover {
+  border-color: color-mix(in srgb,var(--agentsam-chrome-accent) 35%,var(--agentsam-chrome-border));
+  color:var(--agentsam-chrome-ink);
+  background:color-mix(in srgb,var(--agentsam-chrome-accent) 10%,var(--agentsam-chrome-surface));
+}
+:root[data-te-shell-mode="dark"] .agentsam-msg--assistant,
+:root[data-te-shell-mode="dark"] .agentsam-chip,
+:root[data-te-shell-mode="dark"] .agentsam-workflow,
+:root[data-te-shell-mode="dark"] .agentsam-proposal-actions button:not(.is-primary){
+  color:var(--agentsam-chrome-ink);
+  background:var(--agentsam-chrome-popover);
+  border-color:var(--agentsam-chrome-border);
+}
+
+/* Status border keeps identical geometry before, during and after the request. */
+@property --agentsam-work-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes agentsam-work-orbit {
+  to { --agentsam-work-angle: 360deg; }
+}
+
+body[data-shell-mode="theme-editor"].agentsam-open .agentsam-dock .agentsam-drawer,
+body[data-shell-mode="theme-editor"] .agentsam-drawer {
+  --agentsam-chrome-surface: var(--te-panel);
+  --agentsam-chrome-ink: var(--te-text);
+  --agentsam-chrome-border: var(--te-border);
+  --agentsam-chrome-popover: var(--te-soft);
+  --agentsam-chrome-accent: var(--te-accent);
+  color: var(--te-text);
+  background: var(--te-panel);
+  border: 1px solid var(--te-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+body[data-shell-mode="theme-editor"] :is(.agentsam-empty,.agentsam-empty p) {
+  color: var(--te-muted);
+}
+body[data-shell-mode="theme-editor"] .agentsam-compose textarea::placeholder { color: var(--te-muted); }
+body[data-shell-mode="theme-editor"] .agentsam-empty strong { color: var(--te-text); }
+body[data-shell-mode="theme-editor"] :is(.agentsam-plus,.agentsam-close,[data-assistant-action]) {
+  background: var(--te-soft);
+  color: var(--te-text);
+  border-color: var(--te-border);
+}
+body[data-shell-mode="theme-editor"] :is(.agentsam-send,.agentsam-msg--user) {
+  background: var(--te-accent);
+  color: var(--te-accent-ink);
+}
+body[data-shell-mode="theme-editor"] .agentsam-msg {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+body[data-shell-mode="theme-editor"] .agentsam-compose {
+  min-width: 0;
+  border: 2px solid var(--te-border);
+  border-radius: 18px;
+  margin: 0 8px max(8px, env(safe-area-inset-bottom));
+  padding: 7px;
+  background: var(--te-panel);
+}
+body[data-shell-mode="theme-editor"]:not(:has([data-panel-state="generating"])) .agentsam-compose[aria-busy=true],
+.theme-studio #te-block-panel[data-panel-state="generating"] {
+  border: 2px solid transparent;
+  background: linear-gradient(var(--te-panel), var(--te-panel)) padding-box,
+    conic-gradient(from var(--agentsam-work-angle), var(--te-accent), #409cff, #7dd3fc, #bf5af2, var(--te-accent)) border-box;
+  animation: agentsam-work-orbit 4s linear infinite;
+}
+@media (max-width: 900px) {
+  body[data-shell-mode="theme-editor"] :is(.agentsam-plus,.agentsam-send,.agentsam-close,[data-assistant-action]) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-shell-mode="theme-editor"] .agentsam-compose[aria-busy=true],
+  .theme-studio #te-block-panel[data-panel-state="generating"] { animation: none; }
+}
+
+@media (min-width: 1051px) {
+  body.shell-mode-theme-editor.agentsam-open:not(.agentsam-focus-mode) .console-workspace > .agentsam-dock {
+    width: clamp(260px, 25vw, 380px);
+  }
+}
+@media (min-width: 901px) and (max-width: 1050px) {
+  body.shell-mode-theme-editor .console-workspace { position: relative; }
+  body.shell-mode-theme-editor.agentsam-open:not(.agentsam-focus-mode) .console-workspace > .agentsam-dock {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(390px, 100%);
+    z-index: 200;
+  }
+}

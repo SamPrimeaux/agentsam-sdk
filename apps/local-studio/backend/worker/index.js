@@ -947,7 +947,142 @@ export default {
     // store route; keep auth and query state, then send users to that existing UI.
     if ((request.method === "GET" || request.method === "HEAD") &&
         url.pathname === "/sites") {
-      const denied = await guardStudioDocument(rfulAccountEnvironment(env, principal.id)
+      const denied = await guardStudioDocument(request, env);
+      if (denied) return denied;
+      const target = new URL("/admin/store", request.url);
+      target.search = url.search;
+      return new Response(null, {
+        status: 302,
+        headers: { location: target.toString(), "cache-control": "private, no-store" },
+      });
+    }
+
+    // The canonical Studio Home entry reuses the real packaged Ecommerce
+    // dashboard surface, but requires a Local Studio session and receives the
+    // same host-owned shell projection as every other installed console page.
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/admin/home") {
+      const denied = await guardStudioDocument(request, env);
+      if (denied) return denied;
+      const home = await servePackagedConsole(request, env.ASSETS, { allowStudioHome: true });
+      return home || json({ ok: false, error: "studio_home_unavailable" }, 503);
+    }
+
+    // Existing Ecommerce console UI is served by the Local Studio Worker.
+    // The packaged UI and its APIs remain on this origin and use Local Studio D1.
+    const embeddedEcommerceHome = url.pathname === "/admin/home"
+      && url.searchParams.get("__agentsamEmbedded") === "1";
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (url.pathname.startsWith("/admin/") && (!isStudioAdminPath(url.pathname) || embeddedEcommerceHome))) {
+      if (url.pathname === "/admin/theme-editor" && url.searchParams.has("marketplace_kind")) {
+        const denied = await guardStudioDocument(request, env);
+        if (denied) return denied;
+      }
+      if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
+      let storeBootstrap=null;
+      if(url.pathname==='/admin/store' && request.method==='GET'){
+        const principal=await resolveSessionUser(request,env);
+        if(principal){
+          const overview=await handleStudioSitesOverview(request,env,principal.id);
+          if(overview.ok)storeBootstrap=await overview.json();
+        }
+      }
+      const mounted = await servePackagedConsole(request, env.ASSETS,{storeBootstrap});
+      if (mounted) return mounted;
+    }
+
+    // Completeful callbacks are public by design; the handler verifies the
+    // provider signature before recording events in this Local Studio D1.
+    if (url.pathname === "/api/webhooks/completeful") {
+      if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
+      return handleCompletefulWebhook(request, env);
+    }
+
+    // Account-scoped theme registry. Shared presets are read-only; every
+    // customization is cloned into a private cms_themes row for this account.
+    if (isQueueObservability) {
+      try {
+        const accountId = await resolveSessionUserId(request, env);
+        return await handleStudioQueueObservability(request, env, accountId);
+      } catch (error) {
+        console.warn('studio_queue_observability_unavailable', String(error?.message || error).slice(0, 140));
+        return json({ ok: false, error: 'queue_observability_unavailable' }, 503, { 'cache-control': 'private, no-store' });
+      }
+    }
+
+    if (url.pathname === '/api/notifications' || url.pathname.startsWith('/api/notifications/')) {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioNotifications(request, env, principal?.id || null);
+    }
+
+    if (url.pathname === '/api/studio/navigation') {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioNavigation(request, env, principal?.id || null);
+    }
+
+    if (url.pathname === '/api/studio/themes' || url.pathname.startsWith('/api/studio/themes/')) {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioThemes(request, env, principal?.id || null);
+    }
+
+    // Read-only packaged theme catalog for the authenticated Sites dashboard.
+    // No writes, entitlements, or theme activation may flow through this reader.
+    // Real website products come from the separately hosted Theme Store,
+    // never from cms_themes (dashboard appearance presets).
+    if (url.pathname === '/api/admin/website-themes') {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioWebsiteThemeCatalog(request, principal?.id || null, env);
+    }
+    const websiteThemeInstall = url.pathname.match(/^\/api\/admin\/website-themes\/([a-z][a-z0-9-]{0,63})\/install$/);
+    if (websiteThemeInstall) {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioWebsiteThemeInstall(request, env, principal?.id || null, websiteThemeInstall[1]);
+    }
+    if (url.pathname === '/api/admin/theme-products/drafts') {
+      const principal=await resolveSessionUser(request,env);
+      return handleStudioThemeDrafts(request,env,principal?.id||null);
+    }
+    if (url.pathname === '/api/admin/theme-products') {
+      if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
+      const principal = await resolveSessionUser(request, env);
+      if (!principal) return json({ok:false,error:'unauthorized'},401);
+      const assetURL = new URL(request.url);
+      assetURL.pathname = '/ecommerce-cms-agentsam/admin/data/theme-products.json';
+      assetURL.search = '';
+      const catalogAsset = await env.ASSETS.fetch(new Request(assetURL,request));
+      if (!catalogAsset.ok) return json({ok:false,error:'catalog_not_staged'},503);
+      const catalog = await catalogAsset.json().catch(()=>null);
+      if (!catalog?.ok || !Array.isArray(catalog.products))
+        return json({ok:false,error:'catalog_manifest_invalid'},503);
+      return json(catalog,200);
+    }
+
+    if (url.pathname === '/api/admin/platform/products' || url.pathname.startsWith('/api/admin/platform/products/')) {
+      return handleStudioPlatformProducts(request, env, await resolveSessionUserId(request, env));
+    }
+
+    // Resolve Local Studio identity for the packaged commerce API. Never proxy
+    // to the separately installed ecommerce Worker or trust client identities.
+    if (url.pathname.startsWith("/api/admin/") && isLocalStudioCommerceApi(url.pathname)) {
+      if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
+      const principal = await resolveSessionUser(request, env);
+      if (!principal) return json({ ok: false, error: "unauthorized" }, 401);
+      // IAM's registry has opaque asset IDs and a different schema from merchant D1.
+      // Read-only opt-in: keep all mutations owned by the existing media handler.
+      if (env.AGENTSAM_PLATFORM_MEDIA_REGISTRY === "preview" && request.method === "GET" &&
+          (url.pathname === "/api/admin/media" || /^\/api\/admin\/media\/[^/]+$/.test(url.pathname))) {
+        return handlePlatformMediaRead(request, env, url, principal);
+      }
+      const studioUser = { ...principal, id: principal.id, account_id: principal.id, role: "owner" };
+      if (url.pathname === "/api/admin/me") {
+        try {
+          const preference = await handleStudioAccountAvatar(new Request(request.url), env, principal.id);
+          if (preference.ok) studioUser.avatar_url = (await preference.json()).avatar_url || principal.avatar_url || null;
+        } catch { /* Identity remains usable when optional profile preferences are unavailable. */ }
+      }
+      if (["/api/admin/store/online", "/api/admin/overview"].includes(url.pathname) && request.method === "GET")
+        return handleStudioSitesOverview(request, env, principal.id);
+      const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
+        ? await completefulAccountEnvironment(env, principal.id)
         : env;
       const providerMediaResponse = await handleStudioContentMediaApi(request, env, studioUser, url, context);
       if (providerMediaResponse) return providerMediaResponse;
@@ -968,506 +1103,6 @@ export default {
               headers: { "content-type": "application/json", "x-user-id": principal.id },
               body: JSON.stringify(body),
               signal: request.signal,
-            });
-            return nitroWorker.fetch(chat, env, context);
-          },
-        });
-        try {
-          return await handleEcommerceAdminApi(request, { ...commerceEnv, CMS_ASSISTANT_INFERENCE }, url, context, studioUser);
-        } catch (error) {
-          console.error("studio_cms_assistant_error", error?.message);
-          return json({ ok: false, error: "AgentSam could not load the editor conversation. Try again." }, 503);
-        }
-      }
-      return handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser);
-    }
-
-    // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
-    const publicPath = publicSitePathForRequest(request);
-    if (request.method === "GET" && isPublicSitePath(publicPath)) {
-      const page = await servePublicSitePage(request, env, publicPath);
-      if (page) return page;
-      // Never substitute another site's homepage when the request hostname has
-      // no active cms_sites registration or the site has no published page.
-      return new Response("Published site page not found", {
-        status: 404,
-        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
-      });
-    }
-
-    if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
-      return serveInstallScript(url.pathname);
-    }
-
-    // Stock public OAuth / issuer config (no secrets) — CLI resolves desktop client from here.
-    if (url.pathname === "/api/public-config") {
-      return handlePublicConfigRequest(request, env);
-    }
-
-    // Gmail resource OAuth callback is public only long enough to redeem the one-time PKCE state.
-    if (isGmailOAuthCallbackRequest(request)) {
-      return completeGmailOAuth(request, env);
-    }
-
-    // Drive / Calendar / GitHub connector callbacks share the same one-time-state redemption.
-    if (isConnectorOAuthCallbackRequest(request)) {
-      return completeConnectorOAuth(request, env);
-    }
-
-    // CLI desktop PKCE token exchange broker (secrets stay on Worker).
-    if (url.pathname === "/api/oauth/google/desktop-exchange") {
-      return handleGoogleDesktopExchangeRequest(request, env);
-    }
-
-    // CLI Google Cloud via Studio Web client (reliable when Desktop PKCE is rejected).
-    // Callback shares /api/oauth/google/callback with identity when state is cli_*.
-    if (isGoogleCliCloudPath(url.pathname) || isGoogleCliCloudCallbackRequest(request)) {
-      return handleGoogleCliCloudRequest(request, env);
-    }
-
-    // Legacy canonical homepage path (assets missing for public-site router)
-    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-      return serveCanonicalHomepage(request, env);
-    }
-
-    // The checked-in Worker owns vault + health + llm inventory. Everything else belongs
-    // to the generated Nitro application handler.
-    if (isCfConnection) {
-      return handleCloudflareConnectionRequest(request, env, {
-        defaultCapabilities: LOCAL_STUDIO_CLOUDFLARE_CAPABILITIES,
-        app: APP,
-        routeRegistry: ROUTE_REGISTRY,
-        loginPath: LOGIN_PATH,
-      });
-    }
-
-    // Identity package owns auth pages, auth API, OAuth, and company branding.
-    if (isIdentityPath(url.pathname)) {
-      return handleIdentityWorkerRequest(request, env, {
-        app: APP,
-        routeRegistry: ROUTE_REGISTRY,
-        resolveCredential: createIdentityCredentialResolver(env),
-      });
-    }
-
-    // CMS is account- and site-scoped. These routes run before the generic
-    // Studio API gate, so they MUST resolve an IAM session themselves.
-    if (url.pathname.startsWith("/api/cms/")) {
-      if (request.method === "OPTIONS") return new Response(null, { status: 204 });
-      const cmsActorId = await resolveSessionUserId(request, env);
-      if (!cmsActorId) return json({ ok: false, error: "unauthorized" }, 401);
-      return handleCmsWorkerRequest(request, env, cmsActorId);
-    }
-
-    // Canonical React app mounts are served as data-free, pre-rendered
-    // document shells, never the Ecommerce's legacy /admin/agentsam.html.
-    // The packaged Workbench, CAD and MovieMode route chunks hydrate in-place.
-    // This also avoids the Cloudflare-only Nitro SSR 500 for these app routes.
-    if ((request.method === "GET" || request.method === "HEAD") &&
-        (STUDIO_ADMIN_PRERENDERED_ROUTES.includes(url.pathname) ||
-         url.pathname === "/mail" ||
-         url.pathname === "/artifacts" ||
-         url.pathname === "/artifacts/tickets" ||
-         url.pathname === "/tickets" ||
-         url.pathname === "/themes")) {
-      const denied = await guardStudioDocument(request, env);
-      if (denied) return denied;
-      const assetUrl=new URL(request.url);
-      // Both /admin/* mounts and Work package top-level routes hydrate the
-      // same canonical React app; no legacy HTML donor is introduced.
-      const shellRoute=url.pathname.startsWith("/admin/")
-        ? url.pathname.slice("/admin".length) : url.pathname;
-      assetUrl.pathname="/studio-app-shell"+shellRoute+"/";
-      assetUrl.search="";
-      const shell=await env.ASSETS.fetch(new Request(assetUrl,{method:"GET"}));
-      if(!shell.ok)return json({ok:false,error:"studio_app_shell_unavailable"},503);
-      const headers=new Headers(shell.headers);
-      headers.set("content-type","text/html; charset=utf-8");
-      headers.set("cache-control","private, no-store");
-      headers.delete("content-length");
-      return new Response(request.method==="HEAD"?null:shell.body,{status:200,headers});
-    }
-
-    // Settings are served as build-generated, canonical React route shells.
-    // The browser hydrates the installed Settings package normally. This
-    // isolates Cloudflare's Settings-only Nitro SSR failure without creating
-    // a separate editor, storing fake preferences or exposing account data.
-    if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/admin/settings" || url.pathname.startsWith("/admin/settings/"))) {
-      const unit=url.pathname.split("/").filter(Boolean)[2] || "general";
-      const allowed=new Set(["general","agents","customize","design","git-prs",
-        "codebase","network","runtime","themes","storage","keys","usage",
-        "notifications","docs","integrations","skills"]);
-      if(url.pathname === "/admin/settings" || !allowed.has(unit))
-        return Response.redirect(new URL("/admin/settings/general",request.url),302);
-      const denied = await guardStudioDocument(request, env);
-      if (denied) return denied;
-      const assetUrl=new URL(request.url);
-      assetUrl.pathname="/studio-settings-shell/"+unit+"/";
-      assetUrl.search="";
-      const shell=await env.ASSETS.fetch(new Request(assetUrl,{method:"GET"}));
-      if(!shell.ok)return json({ok:false,error:"settings_sheigin") !== url.origin) {
-          return json({ ok: false, error: "origin_not_allowed" }, 403);
-        }
-        const CMS_ASSISTANT_INFERENCE = input => runStudioCmsAssistant(input, {
-          workersAI: typeof env.AGENTSAM_WAI?.run === "function",
-          signal: request.signal,
-          async getInventory() {
-            const response = await handleLlmInventory(env, principal.id, request);
-            return (await response.json()).availableModels || [];
-          },
-          sendChat(body) {
-            const chat = new Request(new URL("/api/chat", url), {
-              method: "POST",
-              headers: { "content-type": "application/json", "x-user-id": principal.id },
-              body: JSON.stringify(body),
-              signal: request.signal,
-            });
-            return nitroWorker.fetch(chat, env, context);
-          },
-        });
-        try {
-          return await handleEcommerceAdminApi(request, { ...commerceEnv, CMS_ASSISTANT_INFERENCE }, url, context, studioUser);
-        } catch (error) {
-          console.error("studio_cms_assistant_error", error?.message);
-          return json({ ok: false, error: "AgentSam could not load the editor conversation. Try again." }, 503);
-        }
-      }
-      return handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser);
-    }
-
-    // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
-    const publicPath = publicSitePathForRequest(request);
-    if (request.method === "GET" && isPublicSitePath(publicPath)) {
-      const page = await servePublicSitePage(request, env, publicPath);
-      if (page) return page;
-      // Never substitute another site's homepage when the request hostname has
-      // no active cms_sites registration or the site has no published page.
-      return new Response("Published site page not found", {
-        status: 404,
-        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
-      });
-    }
-
-    if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
-      return serveInstallScript(url.pathname);
-    }
-
-    // Stock public OAuth / issuer config (no secrets) — CLI resolves desktop client from here.
-    if (url.pathname === "/api/public-config") {
-      return handlePublicConfigRequest(request, env);
-    }
-
-    // Gmail resource OAuth callback is public only long enough to redeem the one-time PKCE state.
-    if (isGmailOAuthCallbackRequest(request)) {
-      return completeGmailOAuth(request, env);
-    }
-
-    // Drive / Calendar / GitHub connector callbacks share the same one-time-state redemption.
-    if (isConnectorOAuthCallbackRequest(request)) {
-      return completeConnectorOAuth(request, env);
-    }
-
-    // CLI desktop PKCE token exchange broker (secrets stay on Worker).
-    if (url.pathname === "/api/oauth/google/desktop-exchange") {
-      return handleGoogleDesktopExchangeRequest(request, env);
-    }
-
-    // CLI Google Cloud via Studio Web client (reliable when Desktop PKCE is rejected).
-    // Callback shares /api/oauth/google/callback with identity when state is cli_*.
-    if (isGoogleCliCloudPath(url.pathname) || isGoogleCliCloudCallbackRequest(request)) {
-      return handleGoogleCliCloudRequest(request, env);
-    }
-
-    // Legacy canonical homepage path (assets missing for public-site router)
-    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-      return serveCanonicalHomepage(request, env);
-    }
-
-    // The checked-in Worker owns vault + health + llm inventory. Everything else belongs
-    // to the generated Nitro application handler.
-    if (isCfConnection) {
-      return handleCloudflareConnectionRequest(request, env, {
-        defaultCapabilities: LOCAL_STUDIO_CLOUDFLARE_CAPABILITIES,
-        app: APP,
-        routeRegistry: ROUTE_REGISTRY,
-        loginPath: LOGIN_PATH,
-      });
-    }
-
-    // Identity package owns auth pages, auth API, OAuth, and company branding.
-    if (isIdentityPath(url.pathname)) {
-      return handleIdentityWorkerRequest(request, env, {
-        app: APP,
-        routeRegistry: ROUTE_REGISTRY,
-        resolveCredential: createIdentityCredentialResolver(env),
-      });
-    }
-
-    // CMS is account- and site-scoped. These routes run before the generic
-    // Studio API gate, so they MUST resolve an IAM session themselves.
-    if (url.pathname.startsWith("/api/cms/")) {
-      if (request.method === "OPTIONS") return new Response(null, { status: 204 });
-      const cmsActorId = await resolveSessionUserId(request, env);
-      if (!cmsActorId) return json({ ok: false, error: "unauthorized" }, 401);
-      return handleCmsWorkerRequest(request, env, cmsActorId);
-    }
-
-    // Canonical React app mounts are served as data-free, pre-rendered
-    // document shells, never the Ecommerce's legacy /admin/agentsam.html.
-    // The packaged Workbench, CAD and MovieMode route chunks hydrate in-place.
-    // This also avoids the Cloudflare-only Nitro SSR 500 for these app routes.
-    if ((request.method === "GET" || request.method === "HEAD") &&
-        (STUDIO_ADMIN_PRERENDERED_ROUTES.includes(url.pathname) ||
-         url.pathname === "/mail" ||
-         url.pathname === "/artifacts" ||
-         url.pathname === "/artifacts/tickets" ||
-         url.pathname === "/tickets" ||
-         url.pathname === "/themes")) {
-      const denied = await guardStudioDocument(request, env);
-      if (denied) return denied;
-      const assetUrl=new URL(request.url);
-      // Both /admin/* mounts and Work package top-level routes hydrate the
-      // same canonical React app; no legacy HTML donor is introduced.
-      const shellRoute=url.pathname.startsWith("/admin/")
-        ? url.pathname.slice("/admin".length) : url.pathname;
-      assetUrl.pathname="/studio-app-shell"+shellRoute+"/";
-      assetUrl.search="";
-      const shell=await env.ASSETS.fetch(new Request(assetUrl,{method:"GET"}));
-      if(!shell.ok)return json({ok:false,error:"studio_app_shell_unavailable"},503);
-      const headers=new Headers(shell.headers);
-      headers.set("content-type","text/html; charset=utf-8");
-      headers.set("cache-control","private, no-store");
-      headers.delete("content-length");
-      return new Response(request.method==="HEAD"?null:shell.body,{status:200,headers});
-    }
-
-    // Settings are served as build-generated, canonical React route shells.
-    // The browser hydrates the installed Settings package normally. This
-    // isolates Cloudflare's Settings-only Nitro SSR failure without creating
-    // a separate editor, storing fake preferences or exposing account data.
-    if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/admin/settings" || url.pathname.startsWith("/admin/settings/"))) {
-      const unit=url.pathname.split("/").filter(Boolean)[2] || "general";
-      const allowed=new Set(["general","agents","customize","design","git-prs",
-        "codebase","network","runtime","themes","storage","keys","usage",
-        "notifications","docs","integrations","skills"]);
-      if(url.pathname === "/admin/settings" || !allowed.has(unit))
-        return Response.redirect(new URL("/admin/settings/general",request.url),302);
-      const denied = await guardStudioDocument(request, env);
-      if (denied) return denied;
-      const assetUrl=new URL(request.url);
-      assetUrl.pathname="/studio-settings-shell/"+unit+"/";
-      assetUrl.search="";
-      const shell=await env.ASSETS.fetch(new Request(assetUrl,{method:"GET"}));
-      if(!shell.ok)return json({ok:false,error:"settings_shell_unavailable"},503);
-      const headers=new Headers(shell.headers);
-      headers.set("content-type","text/html; charset=utf-8");
-      headers.set("cache-control","private, no-store");
-      headers.delete("content-length");
-      return new Response(request.method === "HEAD" ? null : shell.body,{
-        status:200,headers,
-      });
-    }
-
-    // Gate authenticated Studio app routes from the app manifest mounts.
-    if (request.method === "GET" && isProtectedAppPath(url.pathname)) {
-      const denied = await guardStudioDocument(request, env);
-      if (denied) return denied;
-    }
-
-    // Authenticated identity for Studio routes. Resolved lazily (single D1
-    // session lookup, skipped entirely when no Cookie header is present) so
-    // static-asset traffic through the Worker pays nothing.
-    let sessionUserId;
-    async function sessionUser() {
-      if (sessionUserId === undefined) sessionUserId = await resolveSessionUserId(request, env);
-      return sessionUserId;
-    }
-
-    if(workspaceMatch) {
-      if(request.method!=="GET")return json({ok:false,error:"method_not_allowed"},405);
-      const accountId=await sessionUser();
-      if(!accountId)return json({ok:false,error:"unauthorized"},401);
-      try{
-        const response=await readPluginWorkspace(env,accountId,workspaceMatch[1]);
-        return json({ok:true,...response},200,{"cache-control":"no-store"});
-      }catch(error){
-        const code=String(error?.message||"plugin_workspace_unavailable");
-        return json({ok:false,error:code.slice(0,120)},code.includes("not_connected")?409:400);
-      }
-    }
-    if(isStudioAccountAvatar) {
-      try{return await handleStudioAccountAvatar(request,env,await sessionUser());}
-      catch(error){
-        console.warn("studio_account_avatar_error",String(error?.message||error).slice(0,120));
-        return json({ok:false,error:"account_avatar_unavailable"},503);
-      }
-    }
-    if(isStudioCompanions) {
-      try{return await handleStudioCompanionSettings(request,env,await sessionUser());}
-      catch(error){
-        console.warn("studio_companion_settings_error",String(error?.message||error).slice(0,120));
-        return json({ok:false,error:"companion_settings_unavailable"},503);
-      }
-    }
-    if (url.pathname === "/api/studio/living-plan" || url.pathname.startsWith("/api/studio/living-plan/")) {
-      try {
-        const accountId = await sessionUser() || await resolveStudioGoalsCliAccount(request,env);
-        return await handleStudioLivingPlan(request,env,accountId);
-      }
-      catch (error) { console.warn("studio_living_plan_unavailable", String(error?.message || error).slice(0, 100));
-        return json({ ok: false, error: "living_plan_unavailable" }, 503); }
-    }
-    if (isStudioStorage) {
-      try { return await handleStudioStorageSettings(request, env, await sessionUser()); }
-      catch (error) { console.warn("studio_storage_settings_error", String(error?.message || error).slice(0, 120));
-        return json({ ok: false, error: "storage_settings_unavailable" }, 503); }
-    }
-    if(isStudioPreferences) {
-      try{return await handleStudioUserPreferences(request,env,await sessionUser());}
-      catch(error){
-        console.warn("studio_user_preferences_error",String(error?.message||error).slice(0,120));
-        return json({ok:false,error:"preferences_unavailable"},503);
-      }
-    }
-    if(isStudioNotifications) {
-      try{return await handleStudioNotificationSettings(request,env,await sessionUser());}
-      catch(error){
-        console.warn("studio_notification_settings_error",String(error?.message||error).slice(0,120));
-        return json({ok:false,error:"notifications_unavailable"},503);
-      }
-    }
-    if (isStudioAgentSettings) {
-      try {return await handleStudioAgentSettings(request,env,await sessionUser());}
-      catch(error){console.warn("studio_agent_settings_error",String(error?.message||error).slice(0,140));
-        return json({ok:false,error:"agent_settings_unavailable"},503);}
-    }
-    if (isStudioMcps) {
-      try {
-        return await handleStudioMcps(request,env,await sessionUser());
-      } catch(error) {
-        console.warn('studio_mcps_error',String(error?.message||error).slice(0,150));
-        return json({ok:false,error:'mcp_registry_unavailable'},503);
-      }
-    }
-
-    if (isStudioSkills) {
-      try {
-        return await handleStudioSkills(request,env,await sessionUser());
-      } catch(error) {
-        console.warn('studio_skills_error',String(error?.message||error).slice(0,150));
-        return json({ok:false,error:'skills_unavailable'},503);
-      }
-    }
-    if (isStudioRules) {
-      try {
-        return await handleStudioRules(request,env,await sessionUser());
-      } catch(error) {
-        console.warn('studio_rules_error',String(error?.message||error).slice(0,150));
-        return json({ok:false,error:'rules_unavailable'},503);
-      }
-    }
-    if (isTerminalConnect) {
-      if (request.method !== "POST") {
-        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "POST" });
-      }
-      const userId = await sessionUser();
-      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
-      if (!env.EXECOS?.fetch) {
-        return json({ ok: false, error: "execos_binding_unavailable" }, 503);
-      }
-      const bridgeKey = String(env.AGENTSAM_BRIDGE_KEY || "").trim();
-      if (!bridgeKey) {
-        return json({ ok: false, error: "execos_bridge_key_unavailable" }, 503);
-      }
-      const body = await request.json().catch(() => ({}));
-      try {
-        const upstream = await env.EXECOS.fetch("https://execos.internal/terminal/connect", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "x-bridge-key": bridgeKey,
-          },
-          body: JSON.stringify({ ...body, account_id: userId }),
-        });
-        const payload = await upstream.json().catch(() => ({
-          ok: false,
-          error: `execos_terminal_connect_http_${upstream.status}`,
-        }));
-        return json(payload, upstream.status);
-      } catch (error) {
-        console.error("execos_terminal_connect_error", String(error));
-        return json({ ok: false, error: "execos_terminal_connect_failed" }, 502);
-      }
-    }
-
-    if (isAnalyticsSmoke) {
-      if (request.method !== "POST") {
-        return json({ ok: false, error: "method_not_allowed" }, 405, {
-          allow: "POST",
-        });
-      }
-
-      const gate = await requireBridgeKey(request, env);
-      if (!gate.ok) {
-        return json(
-          { ok: false, error: gate.error || "unauthorized" },
-          gate.status || 401,
-        );
-      }
-
-      try {
-        const versionMetadata = env.CF_VERSION_METADATA || {};
-        const result = await emitAnalyticsFact(env, {
-          event_kind: "runtime",
-          domain: "analytics",
-          operation: "basin_smoke_test",
-          outcome: "passed",
-          repository_id: "github:samprimeaux/agentsam-sdk",
-          git_sha: versionMetadata.tag || null,
-          source_client: "operator_smoke",
-          duration_ms: 1,
-          attempt_count: 1,
-          dimensions: { source: "operator_smoke" },
-          metrics: { smoke: true },
-        });
-
-        return json({
-          ok: true,
-          operation: "basin_smoke_test",
-          analytics: result,
-        });
-      } catch (error) {
-        console.error("analytics_smoke_failed", String(error));
-        return json(
-          {
-            ok: false,
-            error: "analytics_smoke_failed",
-            detail: String(error?.message || error).slice(0, 200),
-          },
-          500,
-        );
-      }
-    }
-
-if (isAnalyticsApi && !isAnalyticsSmoke) {
-      const sid = await sessionUser();
-      const gate = await requireBridgeKey(request, env);
-
-      if (!sid && !gate.ok) {
-        return json(
-          { ok: false, error: gate.error || "unauthorized" },
-          gate.status || 401,
-        );
-      }
-
-      if(url.pathname==='/api/analytics/tool-usage'){
-        // A bridge key cannot supply arbitrary identity. Only a verified
-        // account session can access private operational metrics.
-        if(!sid)return json({ok:false,error:'authenticated_account_required'},401);
-        try{return json(await queryAccountToolUsage(env,sid,url.searchParams.get('range')||'30d'));}
-        catignal,
             });
             return nitroWorker.fetch(chat, env, context);
           },
@@ -1840,4 +1475,596 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
 
     if (isWorkApi) {
       const userId = await sessionUser();
-      if (!userId) return json({ ok: false, error: "unauthorized" }, 401)
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      // Resolve provider credentials lazily and only from this verified account.
+      let canvasCredentials;
+      return handleWorkRequest(request, env, userId, {
+        waitUntil: context?.waitUntil ? (task) => context.waitUntil(task) : undefined,
+        canvasRuntime: {
+          resolveCredential: async (providerId) => {
+            canvasCredentials ||= loadVaultCredentialsForAccount(env, userId);
+            return (await canvasCredentials).get(providerId) || null;
+          },
+        },
+      });
+    }
+
+    if(url.pathname==='/api/agentsam/openscad-libraries'||
+       url.pathname.startsWith('/api/agentsam/openscad-libraries/')){
+      const accountId=await sessionUser();
+      if(!accountId)return json({ok:false,error:'unauthorized'},401);
+      return handleOpenScadLibraries(request,env,{id:accountId});
+    }
+
+    if (sideStagePreferenceMatch) {
+      if (request.method !== 'POST') return json({ok:false,error:'method_not_allowed'},405,{allow:'POST'});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:'unauthorized'},401);
+      const origin = request.headers.get('origin');
+      if (origin && origin !== url.origin) return json({ok:false,error:'origin_not_allowed'},403);
+      if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+        return json({ok:false,error:'json_content_type_required'},415);
+      const body=await request.json().catch(()=>null);
+      if (!body || typeof body !== 'object' || Array.isArray(body) ||
+          Object.keys(body).length!==1 || typeof body.enabled!=='boolean')
+        return json({ok:false,error:'side_stage_request_invalid'},400);
+      try {
+        return json(await updateAccountSideStage(env.DB,userId,sideStagePreferenceMatch[1],body.enabled));
+      } catch(error) {
+        const code=String(error?.message||'side_stage_update_failed');
+        return json({ok:false,error:code.slice(0,100)},code==='side_stage_not_found'?404:400);
+      }
+    }
+
+    // Read native panel preferences directly from the existing plugin/install tables.
+    // This view must not depend on OAuth probes or plugin registration side effects.
+    if (isSideStageCatalog) {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (!env.DB) return json({ok:false,error:"panel_registry_unavailable"},503);
+      try {
+        return json(await readAccountSideStageCatalog(env.DB,userId));
+      } catch (err) {
+        console.error("side_stage_catalog_error",String(err));
+        return json({ok:false,error:"panel_registry_unavailable"},503);
+      }
+    }
+
+    if (isConnectionsRegistry) {
+      if (request.method !== "GET") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, {
+          allow: "GET",
+        });
+      }
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      try {
+        return json({ ok: true, ...(await loadConnectionsRegistry(env, userId)) });
+      } catch (err) {
+        console.error("connections_registry_error", String(err));
+        return json({ ok: false, error: "internal_error" }, 500);
+      }
+    }
+
+    if (isPluginOAuthCallback) {
+      if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
+      const nav='/admin/settings/customize?view=plugins';
+      try {
+        const result=await completePluginOAuth(env,request);
+        const desktop=result.source_client==='desktop';
+        // OAuth callback has already verified credentials, registered the tools,
+        // and committed the grant in the existing Studio plugin D1 registry.
+        // Redirect directly to that installed plugin. No timer, scripts or
+        // extra consent page; plugin_key is resolved from the D1 install.
+        if (!desktop) {
+          const destination=pluginOAuthReturnUrl(request.url,result.plugin_key);
+          return new Response(null,{status:303,headers:{
+            location:destination,'cache-control':'no-store',
+            'referrer-policy':'no-referrer','x-content-type-options':'nosniff',
+          }});
+        }
+        const notice=desktop
+          ? 'Your connection is ready. Return to the AgentSam desktop app to use this plugin.'
+          : 'Your permissions are saved. Returning you to the AgentSam Plugins workspace.';
+        const autoReturn=desktop?'':'<meta http-equiv="refresh" content="2;url='+nav+'">';
+        const content='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
+          +autoReturn+'<title>Plugin connected · AgentSam</title><style>'
+          +'body{min-height:100vh;margin:0;background:radial-gradient(ellipse at 50% 20%,#5232aa2a,transparent 65%),#090a10;display:grid;place-items:center;color:#f3f0fc;font:15px/1.6 system-ui;padding:20px}'
+          +'main{width:min(100%,430px);border:1px solid #3c344c;background:#17151f;border-radius:20px;padding:30px;text-align:center;box-shadow:0 20px 80px #0007}'
+          +'.mark{display:grid;place-items:center;margin:0 auto 20px;width:50px;height:50px;border-radius:16px;background:#392657;color:#bca0ff;font-size:28px}'
+          +'h1{font-size:23px;margin:0 0 6px}p{color:#b7b0c4;margin:0 0 20px}'
+          +'a{display:block;background:#8646e9;color:white;padding:11px;border-radius:10px;text-decoration:none;font-weight:650}'
+          +'</style></head><body><main><div class="mark" aria-hidden="true">✓</div><h1>Plugin connected</h1><p>'+notice+'</p>'
+          +'<a href="'+nav+'">Back to AgentSam Plugins →</a></main></body></html>';
+        return new Response(content,{
+          status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"},
+        });
+      } catch(error) {
+        console.warn('plugin_oauth_callback_failed',String(error?.code||error?.message||'error').slice(0,90));
+        return new Response('<!doctype html><html><body><h1>Connection was not completed</h1><p>Return to AgentSam and try connecting the plugin again.</p></body></html>',{
+          status:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'},
+        });
+      }
+    }
+    if (pluginOAuthMatch) {
+      if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405,{allow:'POST'});
+      const accountId=await sessionUser();
+      if(!accountId)return json({ok:false,error:'unauthorized'},401);
+      const origin=request.headers.get('origin');
+      if(origin&&origin!==url.origin)return json({ok:false,error:'origin_not_allowed'},403);
+      if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+        return json({ok:false,error:'json_content_type_required'},415);
+      const body=await request.json().catch(()=>null);
+      if(!body||typeof body!=='object'||Array.isArray(body))return json({ok:false,error:'request_invalid'},400);
+      try {
+        const result=pluginOAuthMatch[2]==='start'
+          ? await beginPluginOAuth(env,accountId,pluginOAuthMatch[1],{
+              allowWrites:body.allow_writes===true,desktop:body.desktop===true,
+              callbackUrl:new URL("/api/plugins/oauth/callback",request.url).toString(),
+            })
+          : await disconnectPublicPlugin(env,accountId,pluginOAuthMatch[1]);
+        return json({ok:true,...result});
+      } catch(error) {
+        const code=String(error?.code||error?.message||'plugin_oauth_failed').slice(0,120);
+        console.warn('plugin_oauth_action_failed',code);
+        return json({ok:false,error:code},code.includes('not_found')?404:code.includes('unavailable')?503:400);
+      }
+    }
+    if (url.pathname === "/api/forms" || url.pathname.startsWith("/api/forms/")) {
+      return handleAgentSamFormsApi(request, env, await sessionUser());
+    }
+    if (isAppsLauncher) {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try { return json({ok:true,apps:await listLauncherApps(env.DB,userId)}); }
+      catch (error) {
+        console.error("apps_launcher_error",String(error?.message||error));
+        return json({ok:false,error:"apps_launcher_unavailable"},503);
+      }
+    }
+    if (isAppsInstall) {
+      if (!["POST","DELETE","PATCH"].includes(request.method))
+        return json({ok:false,error:"method_not_allowed"},405,{allow:"POST, DELETE, PATCH"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+        return json({ok:false,error:"origin_not_allowed"},403);
+      if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
+        return json({ok:false,error:"json_content_type_required"},415);
+      const body = await request.json().catch(()=>null);
+      const patchField = request.method==="PATCH" && body && typeof body==="object" && "pinned" in body ? "pinned" : "enabled";
+      const allowed = request.method==="PATCH" ? ["key",patchField] : ["key"];
+      if (!body || typeof body !== "object" || Array.isArray(body) ||
+          Object.keys(body).length !== allowed.length ||
+          Object.keys(body).some(key=>!allowed.includes(key)) ||
+          typeof body.key !== "string" ||
+          (request.method==="PATCH" && typeof body[patchField] !== "boolean"))
+        return json({ok:false,error:"app_install_request_invalid"},400);
+      try {
+        const result = request.method==="POST" ? await installNativeAdminApp(env.DB,userId,body.key)
+          : request.method==="DELETE" ? await removeNativeAdminApp(env.DB,userId,body.key)
+          : patchField==="pinned" ? await setNativeAdminAppPinned(env.DB,userId,body.key,body.pinned)
+          : await setNativeAdminAppEnabled(env.DB,userId,body.key,body.enabled);
+        return json({ok:true,...result},request.method==="POST"?201:200);
+      } catch (error) {
+        const code=String(error?.message||"app_install_failed");
+        return json({ok:false,error:code.slice(0,120)},
+          code==="app_install_not_found"||code==="app_install_unavailable"||code==="app_not_installed"?404:
+          code==="app_install_not_supported"?409:
+          code==="app_install_key_invalid"||code==="app_enabled_invalid"||code==="app_pinned_invalid"?400:503);
+      }
+    }
+    if (isAppsOpen) {
+      if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+        return json({ok:false,error:"origin_not_allowed"},403);
+      const body = await request.json().catch(()=>null);
+      if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.key !== "string" ||
+          Object.keys(body).length !== 1)
+        return json({ok:false,error:"app_open_request_invalid"},400);
+      try { return json({ok:true,...await touchNativeAdminAppOpened(env.DB,userId,body.key)}); }
+      catch (error) {
+        const code=String(error?.message||"app_open_failed");
+        return json({ok:false,error:code.slice(0,120)},
+          code==="app_not_installed"?404:code==="app_install_key_invalid"?400:503);
+      }
+    }
+    if (isBrowserPage) return handleBrowserPage(request, await sessionUser());
+    if (isBrowserHistory) {
+      if (!["GET","POST","DELETE"].includes(request.method))
+        return json({ok:false,error:"method_not_allowed"},405,{allow:"GET, POST, DELETE"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        if (request.method === "GET") {
+          const limit = Number(url.searchParams.get("limit") || 12);
+          return json({ok:true,history:await listBrowserHistory(env.DB,userId,limit)});
+        }
+        if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+          return json({ok:false,error:"origin_not_allowed"},403);
+        const body = await request.json().catch(()=>null);
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.url !== "string")
+          return json({ok:false,error:"history_request_invalid"},400);
+        if (request.method === "POST") return json({ok:true,entry:await recordBrowserVisit(env.DB,userId,body)},201);
+        return json({ok:true,...await removeBrowserHistoryEntry(env.DB,userId,body.url)});
+      } catch (error) {
+        const code=String(error?.message||"history_unavailable");
+        return json({ok:false,error:code.slice(0,120)},code==="history_url_invalid"?400:503);
+      }
+    }
+    if (isBrowserSettings) {
+      if (!["GET","POST","DELETE"].includes(request.method))
+        return json({ok:false,error:"method_not_allowed"},405,{allow:"GET, POST, DELETE"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        if (request.method === "GET")
+          return json({ok:true,trusted_origins:await listTrustedOrigins(env.DB,userId),embed_policy:await listEmbedPolicy(env.DB)});
+        if (request.headers.get("origin") && request.headers.get("origin") !== url.origin)
+          return json({ok:false,error:"origin_not_allowed"},403);
+        const body = await request.json().catch(()=>null);
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.origin !== "string")
+          return json({ok:false,error:"browser_trust_request_invalid"},400);
+        if (request.method === "POST") return json({ok:true,...await trustOrigin(env.DB,userId,body)},201);
+        return json({ok:true,...await untrustOrigin(env.DB,userId,body.origin)});
+      } catch (error) {
+        const code=String(error?.message||"browser_trust_unavailable");
+        return json({ok:false,error:code.slice(0,120)},code==="trust_origin_invalid"||code==="trust_scope_invalid"?400:503);
+      }
+    }
+    if (isPluginCatalog) {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        const catalog = await listCatalogForAccount(env,userId);
+        return json({ok:true,...catalog});
+      } catch (error) {
+        console.error("plugin_catalog_error",String(error?.message||error));
+        return json({ok:false,error:"plugin_catalog_unavailable"},503);
+      }
+    }
+    if (isPluginInstall) {
+      if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+        return json({ok:false,error:"json_content_type_required"},415);
+      }
+      const origin = request.headers.get("origin");
+      if (origin && origin !== url.origin) return json({ok:false,error:"origin_not_allowed"},403);
+      const body = await request.json().catch(()=>null);
+      if (!body || typeof body !== "object" || Object.keys(body).some(key=>key!=="plugin_key")) {
+        return json({ok:false,error:"plugin_install_request_invalid"},400);
+      }
+      try {
+        const result = await installFromCatalog(env,userId,body.plugin_key);
+        return json({ok:true,...result},201);
+      } catch (error) {
+        const code = String(error?.message||'plugin_install_failed');
+        const status = code.includes('unavailable')?503:code.includes('not_found')?404:code.includes('conflict')||code.includes('requires_reconnect')?409:400;
+        return json({ok:false,error:code.slice(0,140)},status);
+      }
+    }
+    if (pluginSettingsMatch) {
+      if (request.method !== "PATCH" && request.method !== "DELETE") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "PATCH, DELETE" });
+      }
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      const pluginId = decodeURIComponent(pluginSettingsMatch[1] || "").trim();
+      if (!/^plg_[a-z0-9]+$/i.test(pluginId)) {
+        return json({ ok: false, error: "plugin_id_invalid" }, 400);
+      }
+      if (request.method === "DELETE") {
+        const origin = request.headers.get("origin");
+        if (origin && origin !== url.origin) return json({ok:false,error:"origin_not_allowed"},403);
+        try {
+          return json({ok:true,...(await removeCatalogInstallation(env,userId,pluginId))});
+        } catch(error) {
+          const code=String(error?.message||'plugin_remove_failed');
+          return json({ok:false,error:code.slice(0,120)},code.includes('not_found')?404:400);
+        }
+      }
+      const body = await request.json().catch(() => ({}));
+      const allowedKeys = new Set(["enabled", "composer_visible", "settings_visible"]);
+      if (Object.keys(body || {}).some((key) => !allowedKeys.has(key))) {
+        return json({ ok: false, error: "plugin_preference_field_invalid" }, 400);
+      }
+      try {
+        await updateLocalStudioPluginPreferences(env, userId, pluginId, body || {});
+        const registry = await loadPluginRegistry(env, userId, { includeDisabled: true });
+        const plugin = registry.plugins.find((row) => row.id === pluginId);
+        if (!plugin) return json({ ok: false, error: "plugin_not_found" }, 404);
+        return json({
+          ok: true,
+          plugin: safePluginSettingsRecord(plugin, registry.tools),
+        });
+      } catch (error) {
+        const code = String(error?.message || "plugin_update_failed");
+        const status = code === "plugin_not_found" ? 404 : 400;
+        return json({ ok: false, error: code.slice(0, 160) }, status);
+      }
+    }
+
+    if (isPluginToolExecute) {
+      if (request.method !== "POST") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "POST" });
+      }
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      const body = await request.json().catch(() => ({}));
+      const toolKey = String(body?.tool_key || "").trim();
+      if (!toolKey) return json({ ok: false, error: "tool_key_required" }, 400);
+      try {
+        const runtime = await createLocalStudioPluginRuntime(env, userId, {
+          authorizeTool: ({ tool }) => ({
+            // Registry rows are already account-scoped; the tool contract,
+            // not a hard-coded provider allowlist, decides which installed
+            // plugin may execute.
+            allowed: tool.account_id === userId && Boolean(tool.plugin_key),
+          }),
+          requireApproval: () => body?.approved === true,
+        });
+        const result = await runtime.execute(toolKey, body?.arguments || {}, {
+          accountId: userId,
+          agentRunId: body?.agent_run_id || null,
+          conversationId: body?.conversation_id || null,
+          callIndex: body?.call_index,
+          sourceClient: "local-studio",
+        });
+        return json({ ok: true, tool_key: toolKey, result });
+      } catch (error) {
+        const code = String(error?.code || error?.message || "plugin_tool_error");
+        const status = code === "AGENTSAM_TOOL_NOT_APPROVED" ? 409 : code.includes("not_found") ? 404 : 400;
+        return json({ ok: false, error: code.slice(0, 160) }, status);
+      }
+    }
+
+    if (!isVault && url.pathname !== "/health") {
+      // Nitro-bound Studio chat and model inventory run per-user vault BYOK downstream:
+      // bind the client-asserted user to the validated session when one exists.
+      if (
+        (url.pathname === "/api/chat" && request.method === "POST") ||
+        (url.pathname === "/api/llm/inventory" && request.method === "GET")
+      ) {
+        const sid = await sessionUser();
+        if (sid && (request.headers.get("x-user-id") || "").trim() !== sid) {
+          const bound = bindSessionUser(request, sid);
+          if (bound) request = bound;
+        }
+      }
+
+      if (!isLlmInventory) {
+        return nitroWorker.fetch(request, env, context);
+      }
+      // Inventory is served by the authenticated Worker owner below. Delegating
+      // first to Nitro loses the host binding and can report zero models even
+      // when AGENTSAM_WAI and the user's saved vault credentials are present.
+    }
+
+    const headers = isVault || isLlmInventory ? vaultCors(request) : {};
+
+    if (isVault && request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers });
+    }
+    if (isLlmInventory && request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers });
+    }
+
+    // Public liveness only — no DB/vault/OAuth diagnostics.
+    if (url.pathname === "/health") {
+      const versionMetadata = env.CF_VERSION_METADATA || {};
+      return json({
+        ok: true,
+        app: APP.id,
+        worker: "agentsam-sdk",
+        version: APP.version || null,
+        git_sha: versionMetadata.tag || null,
+        deployment_id: versionMetadata.id || null,
+      }, 200);
+    }
+
+    // Authenticated diagnostics (bridge or session).
+    if (url.pathname === "/api/health/diagnostics") {
+      const gate = await requireBridgeKey(request, env);
+      const sid = await sessionUser();
+      if (!gate.ok && !sid) {
+        return json({ ok: false, error: gate.error || "unauthorized" }, gate.status || 401);
+      }
+      let d1 = false;
+      try {
+        if (env.DB && typeof env.DB.prepare === "function") {
+          await env.DB.prepare("SELECT 1 AS ok").first();
+          d1 = true;
+        }
+      } catch {
+        d1 = false;
+      }
+      let vaultKey = false;
+      let vaultKeyError = null;
+      try {
+        await importVaultMasterKey(env.VAULT_MASTER_KEY);
+        vaultKey = true;
+      } catch (err) {
+        vaultKeyError = String(err?.message || err).slice(0, 120);
+      }
+      const inneranimalmedia = await probeInnerAnimalMediaOAuth(env);
+      return json({
+        ok: true,
+        app: APP.id,
+        worker: "agentsam-sdk",
+        d1,
+        /** Binding name on this Worker — not a separate env var. */
+        d1_binding: "DB",
+        database: "inneranimalmedia-business",
+        vault_key: vaultKey,
+        vault_key_error: vaultKeyError,
+        service_auth: {
+          agentsam_bridge: Boolean(env.AGENTSAM_BRIDGE_KEY),
+        },
+        identity: {
+          inneranimalmedia: inneranimalmedia.healthy,
+          oauth: inneranimalmedia,
+        },
+        connections: {
+          cloudflare: {
+            configured: resolveCloudflareOAuthClient(env).productionReady,
+          },
+        },
+      });
+    }
+
+    // GET /api/llm/inventory: session or AGENTSAM_BRIDGE_KEY. Session account wins.
+    if (isLlmInventory && request.method === "GET") {
+      const gate = await requireBridgeKey(request, env);
+      const sid = await sessionUser();
+      if (!gate.ok && !sid) return json({ ok: false, error: gate.error }, gate.status, headers);
+      const userId = sid || (request.headers.get("x-user-id") || "").trim();
+      if (!userId || userId.length < 3) {
+        return json({ ok: false, error: "account_id required (session or X-User-Id)" }, 400, headers);
+      }
+      try {
+        const res = await handleLlmInventory(env, userId, request);
+        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      } catch (err) {
+        console.error("studio_vault_error", String(err));
+        return json({ ok: false, error: "internal_error", detail: String(err).slice(0, 200) }, 500, headers);
+      }
+    }
+
+    // Vault + mint: session or bridge. Session account wins over X-User-Id.
+    const sessionId = await sessionUser();
+    const gate = await requireBridgeKey(request, env);
+    if (!sessionId && !gate.ok) {
+      return json({ ok: false, error: gate.error }, gate.status, headers);
+    }
+
+    const headerUser = (request.headers.get("x-user-id") || "").trim();
+    const userId = sessionId || headerUser;
+    if (!userId || userId.length < 3) {
+      return json({ ok: false, error: "account_id required (session or X-User-Id)" }, 400, headers);
+    }
+
+    try {
+      // The same D1 service registry that authorizes key creation drives
+      // the Settings provider picker. No parallel hardcoded provider list.
+      if (url.pathname === "/api/vault/services" && request.method === "GET") {
+        const rows = await env.DB.prepare(
+          "SELECT service_name, label, kind FROM agentsam_service_registry ORDER BY label, service_name"
+        ).all();
+        return json({ ok: true, services: rows.results || [] }, 200, headers);
+      }
+
+      if (url.pathname === "/api/vault/secrets" && request.method === "GET") {
+        const res = await handleList(env, userId);
+        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      }
+
+      if (url.pathname === "/api/vault/secrets" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const res = await handleCreate(env, userId, body);
+        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      }
+
+      if (url.pathname === "/api/vault/credentials" && request.method === "GET") {
+        const credentials = await listStudioCredentials(env, userId);
+        return json({ ok: true, count: credentials.length, credentials }, 200, headers);
+      }
+
+      if (url.pathname === "/api/vault/credentials" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const kind =
+          String(body.kind || body.owner || "").trim().toLowerCase() === "service"
+            ? "service"
+            : "account";
+        let expiresAtUnix = null;
+        const exp = String(body.expiration || body.expires || "").trim().toLowerCase();
+        if (exp === "30d" || exp === "30 days") expiresAtUnix = Math.floor(Date.now() / 1000) + 30 * 86400;
+        else if (exp === "90d" || exp === "90 days") expiresAtUnix = Math.floor(Date.now() / 1000) + 90 * 86400;
+        else if (exp === "1y" || exp === "1 year") expiresAtUnix = Math.floor(Date.now() / 1000) + 365 * 86400;
+        let minted;
+        try {
+          minted = await mintStudioCredential(env, {
+            accountId: userId,
+            kind,
+            name: body.name || body.label || "",
+            clientType: body.client_type || body.clientType,
+            expiresAtUnix,
+            scopes: Array.isArray(body.scopes) ? body.scopes : undefined,
+            permissions: body.permissions,
+            mintedBy: STUDIO_VAULT_ACTOR,
+          });
+        } catch (error) {
+          const message = String(error && error.message ? error.message : error);
+          if (/^(scopes_required|unknown_scopes:|no_read_only_capabilities)/.test(message)) {
+            return json({ ok: false, error: message.split(":")[0], detail: message }, 400, headers);
+          }
+          throw error;
+        }
+        return json(
+          {
+            ok: true,
+            credential: {
+              id: minted.id,
+              name: minted.name,
+              kind: minted.kind,
+              env: minted.env,
+              prefix: minted.prefix,
+              client_type: minted.client_type,
+              created_at_unix: minted.created_at_unix,
+              expires_at_unix: minted.expires_at_unix,
+              scopes: minted.scopes,
+            },
+            secret_once: minted.secret_once,
+            env: minted.env,
+          },
+          200,
+          headers,
+        );
+      }
+
+      if (url.pathname === "/api/vault/credentials/capabilities" && request.method === "GET") {
+        const { results } = await env.DB.prepare(
+          "SELECT capability_key, domain, verb, description, is_mutating FROM agentsam_capabilities WHERE is_active = 1 ORDER BY domain, verb",
+        ).all();
+        return json({ ok: true, capabilities: results || [] }, 200, headers);
+      }
+
+      const delCred = url.pathname.match(/^\/api\/vault\/credentials\/([^/]+)$/);
+      if (delCred && request.method === "DELETE") {
+        const result = await revokeStudioCredential(env, {
+          accountId: userId,
+          credentialId: decodeURIComponent(delCred[1]),
+        });
+        return json({ ok: result.ok, revoked_at_unix: result.revoked_at_unix }, result.ok ? 200 : 404, headers);
+      }
+
+      if (url.pathname === "/api/vault/unwrap" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const res = await handleUnwrap(env, userId, body);
+        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      }
+
+      const del = url.pathname.match(/^\/api\/vault\/secrets\/([^/]+)$/);
+      if (del && request.method === "DELETE") {
+        const res = await handleDelete(env, userId, decodeURIComponent(del[1]));
+        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      }
+
+      return json({ ok: false, error: "not_found" }, 404, headers);
+    } catch (err) {
+      console.error("studio_vault_error", String(err));
+      return json({ ok: false, error: "internal_error", detail: String(err).slice(0, 200) }, 500, headers);
+    }
+  },
+};

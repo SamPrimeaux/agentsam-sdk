@@ -692,253 +692,6 @@ function ExtensionTile({
       <div className="relative mx-auto size-16">
         <div className="flex size-16 items-center justify-center overflow-hidden rounded-[16px] border border-white/10 bg-gradient-to-br from-muted/90 via-muted/45 to-background shadow-[0_8px_26px_rgba(0,0,0,0.24)] ring-1 ring-black/10 transition-transform group-hover:-translate-y-0.5">
           {imageUrl ? (
-     round hover:bg-muted hover:text-foreground"
-          onClick={async () => {
-            await navigator.clipboard?.writeText(value).catch(() => undefined);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1200);
-          }}
-          aria-label="Copy sensitive value"
-        >
-          {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
-        </button>
-      </div>
-      {description && <span className="mt-1.5 block text-[10px] text-muted-foreground">{description}</span>}
-    </label>
-  );
-}
-
-function PageHeader({
-  unit,
-  snapshot,
-}: {
-  unit: SettingsUnitDefinition;
-  snapshot: SettingsSnapshot;
-}) {
-  const Icon = ICONS[unit.icon] ?? CircleDot;
-  return (
-    <header className="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/25">
-          <Icon className="size-4" strokeWidth={1.7} />
-        </div>
-        <div>
-          <h1 className="text-[21px] font-semibold tracking-[-0.025em]">{unit.label}</h1>
-          <p className="mt-1 max-w-2xl text-[12px] leading-5 text-muted-foreground">{unit.description}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-        <StatusPill status={snapshot.health} />
-        <span className="hidden sm:inline">{snapshot.repositoryLabel}</span>
-      </div>
-    </header>
-  );
-}
-
-function SegmentNav({
-  unit,
-  activeView,
-  onViewChange,
-}: {
-  unit: SettingsUnitDefinition;
-  activeView?: string;
-  onViewChange?: (view: string) => void;
-}) {
-  if (!unit.views?.length) return null;
-  const selected = activeView && unit.views.some((view) => view.id === activeView)
-    ? activeView
-    : unit.views[0]?.id;
-  return (
-    <div className="-mx-1 flex gap-1 overflow-x-auto px-1 py-4">
-      {unit.views.map((view) => (
-        <button
-          key={view.id}
-          type="button"
-          onClick={() => onViewChange?.(view.id)}
-          className={cx(
-            "shrink-0 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors",
-            view.id === selected
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-          )}
-        >
-          {view.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Section({
-  title,
-  description,
-  action,
-  children,
-}: {
-  title: string;
-  description?: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section className="py-5 first:pt-0">
-      <div className="mb-3 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-[14px] font-semibold">{title}</h2>
-          {description && <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{description}</p>}
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function PreferenceRow({
-  label,
-  description,
-  value,
-  trailing,
-}: {
-  label: string;
-  description: string;
-  value?: string;
-  trailing?: ReactNode;
-}) {
-  return (
-    <div className="flex min-h-[48px] items-center justify-between gap-4 border-b border-border/60 py-2.5 last:border-b-0">
-      <div className="min-w-0">
-        <div className="text-[12px] font-medium text-foreground">{label}</div>
-        <div className="mt-0.5 text-[10px] leading-4 text-muted-foreground">{description}</div>
-      </div>
-      <div className="shrink-0">
-        {trailing ?? <span className="text-[11px] text-muted-foreground">{value}</span>}
-      </div>
-    </div>
-  );
-}
-
-function Toggle({
-  enabled,
-  onChange,
-}: {
-  enabled: boolean;
-  onChange?: (enabled: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={enabled}
-      onClick={() => onChange?.(!enabled)}
-      className={cx(
-        "relative h-5 w-9 rounded-full border transition-colors",
-        enabled ? "border-foreground/20 bg-foreground" : "border-border bg-muted",
-      )}
-    >
-      <span
-        className={cx(
-          "absolute top-0.5 size-4 rounded-full transition-transform",
-          enabled ? "translate-x-[17px] bg-background" : "translate-x-0.5 bg-muted-foreground",
-        )}
-      />
-    </button>
-  );
-}
-
-function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="rounded-lg border border-border/70 bg-muted/15 p-4">
-      <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
-      <div className="mt-2 text-[22px] font-semibold tracking-[-0.03em]">{value}</div>
-      <div className="mt-1 text-[10px] text-muted-foreground">{detail}</div>
-    </div>
-  );
-}
-
-function Catalog({
-  items,
-  empty = "Nothing configured yet.",
-  onSelect,
-}: {
-  items: SettingsCatalogItem[];
-  empty?: string;
-  onSelect?: (item: SettingsCatalogItem) => void;
-}) {
-  if (!items.length) {
-    return <EmptyState title={empty} />;
-  }
-  return (
-    <div className="divide-y divide-border/60 rounded-lg border border-border/70">
-      {items.map((item) => {
-        const content = (
-          <>
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20">
-              <Boxes className="size-3.5 text-muted-foreground" />
-            </div>
-            <div className="min-w-0 flex-1 text-left">
-              <div className="truncate text-[12px] font-medium">{item.name}</div>
-              <div className="mt-0.5 truncate text-[10px] text-muted-foreground">{item.subtitle}</div>
-            </div>
-            <div className="hidden items-center gap-2 sm:flex">
-              {item.meta && <span className="text-[10px] text-muted-foreground">{item.meta}</span>}
-              <StatusPill status={item.status} />
-            </div>
-            {onSelect ? <ChevronRight className="size-3.5 text-muted-foreground" /> : null}
-          </>
-        );
-        return onSelect ? (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onSelect(item)}
-            className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/35"
-          >
-            {content}
-          </button>
-        ) : (
-          <div key={item.id} className="flex items-center gap-3 px-3 py-3">
-            {content}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ExtensionTile({
-  name,
-  subtitle,
-  imageUrl,
-  imageAlt,
-  imageFit = "contain",
-  icon,
-  badge,
-  muted = false,
-  onClick,
-}: {
-  name: string;
-  subtitle: string;
-  imageUrl?: string | null;
-  imageAlt?: string | null;
-  imageFit?: "contain" | "cover";
-  icon?: ReactNode;
-  badge?: ReactNode;
-  muted?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx(
-        "group min-w-0 rounded-2xl border border-transparent p-2.5 text-center transition",
-        "hover:border-border/80 hover:bg-muted/25 focus-visible:border-foreground/30 focus-visible:outline-none",
-        muted && "opacity-55",
-      )}
-    >
-      <div className="relative mx-auto size-16">
-        <div className="flex size-16 items-center justify-center overflow-hidden rounded-[16px] border border-white/10 bg-gradient-to-br from-muted/90 via-muted/45 to-background shadow-[0_8px_26px_rgba(0,0,0,0.24)] ring-1 ring-black/10 transition-transform group-hover:-translate-y-0.5">
-          {imageUrl ? (
             <img
               src={imageUrl}
               alt={imageAlt || ""}
@@ -1251,7 +1004,183 @@ function PluginCustomizeView({
                     </details>
                   </>
                 ) : (
-                  <p className="mt-3 rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-fort app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
+                  <p className="mt-3 rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">
+                    No BrandContract has been saved in this workspace. Run the Brand inspection and drafting tools with actual brand evidence, review the result, then explicitly approve a saved contract.
+                  </p>
+                )}
+              </article>
+            ) : (
+              <>
+                <section className="space-y-3" aria-label="Campaign briefs">
+                  <h3 className="text-[14px] font-semibold">Campaign briefs</h3>
+                  {briefs.length ? briefs.map((item,index)=>{
+                    const entry=(item && typeof item==="object")?item as Record<string,unknown>:{};
+                    const brief=(entry.brief && typeof entry.brief==="object")?entry.brief as Record<string,unknown>:{};
+                    return <details key={String(entry.id||index)} className="rounded-xl border border-border/70 bg-muted/10 p-4">
+                      <summary className="cursor-pointer text-[12px] font-semibold">{String(brief.title||brief.name||entry.id||"Untitled brief")} <span className="ml-2 text-[10px] text-muted-foreground">{String(entry.status||"draft")}</span></summary>
+                      {brief.objective ? <p className="mt-2 text-[11px] text-muted-foreground">{String(brief.objective)}</p>:null}
+                      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px]">{JSON.stringify(brief,null,2)}</pre>
+                    </details>;
+                  }):<p className="rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">No approved campaign briefs have been saved in this workspace.</p>}
+                </section>
+                <section className="space-y-3" aria-label="Campaign concepts">
+                  <h3 className="text-[14px] font-semibold">Campaign concepts</h3>
+                  {concepts.length ? concepts.map((item,index)=>{
+                    const entry=(item && typeof item==="object")?item as Record<string,unknown>:{};
+                    const concept=(entry.concept && typeof entry.concept==="object")?entry.concept as Record<string,unknown>:{};
+                    return <details key={String(entry.id||index)} className="rounded-xl border border-border/70 bg-muted/10 p-4">
+                      <summary className="cursor-pointer text-[12px] font-semibold">{String(concept.title||concept.name||entry.id||"Untitled concept")} <span className="ml-2 text-[10px] text-muted-foreground">{String(entry.status||"draft")}</span></summary>
+                      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px]">{JSON.stringify(concept,null,2)}</pre>
+                    </details>;
+                  }):<p className="rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">No campaign concepts have been saved yet.</p>}
+                </section>
+              </>
+            )}
+            <p className="text-[10px] text-muted-foreground">Source: {workspace.contextTool} via your authorized MCP connection. Workspace records are separate from chats and projects.</p>
+          </div>
+        ):null}
+      </section>
+    );
+  }
+
+  return (
+    <>
+      {!anySelected ? <section className="mx-auto w-full max-w-5xl space-y-7 pb-10" aria-label="Plugin directory">
+        <header className="space-y-1">
+          <h2 className="text-[22px] font-semibold tracking-[-0.035em] text-foreground">Plugins</h2>
+          <p className="text-[12px] text-muted-foreground">Connect the tools you use to your AgentSam workspace.</p>
+        </header>
+
+        <label className="relative block w-full">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/>
+          <input type="search" aria-label="Search plugins" value={searchTerm} onChange={event=>setSearchTerm(event.target.value)}
+            placeholder="Search plugins"
+            className="h-11 w-full rounded-xl border border-border bg-muted/15 pl-10 pr-4 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-foreground/40 focus-visible:ring-2 focus-visible:ring-foreground/10"/>
+        </label>
+
+        <section aria-label="Installed plugins" className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-[14px] font-semibold">Installed</h3>
+              <span className="text-[11px] text-muted-foreground">{pluginsError?"Not verified":plugins.length}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={()=>{setDirectoryTab("personal");setSearchTerm("");}}
+                className="min-h-9 rounded-lg px-3 text-[12px] text-muted-foreground transition hover:bg-muted/40 hover:text-foreground">Manage</button>
+              <button type="button" aria-label="Refresh installed plugins" disabled={loading}
+                onClick={()=>void (async()=>{await onChanged();await refresh();})()}
+                className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted/40 hover:text-foreground disabled:opacity-50">
+                <RefreshCw className={cx("size-4",loading && "animate-spin")}/>
+              </button>
+            </div>
+          </div>
+          {filteredInstalled.length ? (
+            <div className="flex flex-wrap gap-2.5" aria-label="Installed plugin shortcuts">
+              {filteredInstalled.map(plugin=>{
+                const matched = discovered.find(entry=>entry.pluginKey===plugin.pluginKey);
+                return (
+                  <button key={plugin.id} type="button" onClick={()=>selectPlugin(plugin.id)}
+                    title={plugin.name+" · "+installedState(plugin)}
+                    aria-label={"View "+plugin.name+" settings · "+installedState(plugin)}
+                    className="group relative flex size-12 shrink-0 items-center justify-center rounded-[13px] border border-border/80 bg-muted/15 text-foreground transition hover:-translate-y-0.5 hover:border-foreground/35 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40">
+                    {plugin.iconUrl ? <img src={plugin.iconUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true;}}
+                      className={cx("size-9",plugin.iconFit==="cover"?"rounded-md object-cover":"object-contain")}/>
+                      : iconFor(matched ?? plugin,"size-5")}
+                    <span aria-hidden="true" className={cx("absolute -bottom-1 -right-1 size-2.5 rounded-full border-2 border-background",
+                      isConnected(plugin)?"bg-emerald-500":"bg-amber-500")}/>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p role={pluginsError?"alert":"status"} className="rounded-xl border border-dashed border-border px-4 py-5 text-[12px] text-muted-foreground">
+              {pluginsError || (plugins.length ? "No installed plugins match your search." : "No plugins installed in this account yet. Explore the verified catalog below.")}
+            </p>
+          )}
+        </section>
+
+        <section className="space-y-4 border-t border-border/70 pt-5" aria-label="Browse plugin directory">
+          <div role="tablist" aria-label="Plugin directory" className="inline-flex items-center gap-1 rounded-xl bg-muted/30 p-1">
+            {(["public","personal"] as const).map(tab=>(
+              <button key={tab} type="button" role="tab" aria-selected={directoryTab===tab}
+                onClick={()=>setDirectoryTab(tab)}
+                className={cx("min-h-9 rounded-lg px-4 text-[12px] font-medium transition-colors",
+                  directoryTab===tab?"bg-background text-foreground shadow-sm ring-1 ring-border/70":"text-muted-foreground hover:text-foreground")}>
+                {tab==="public"?"Browse directory":"My plugins"}
+              </button>
+            ))}
+          </div>
+
+          {directoryTab === "public" ? (
+            <div role="tabpanel" className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-[15px] font-semibold">Discover plugins</h3>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Verified publishers and real catalog entries. {catalog ? String(catalog.configuredSources)+" catalog source(s)" : "Checking sources…"}</p>
+                </div>
+                {categories.length > 2 ? (
+                  <select aria-label="Filter public plugins by category" value={activeCategory}
+                    onChange={event=>setActiveCategory(event.target.value)}
+                    className="min-h-9 max-w-full rounded-lg border border-border bg-background px-3 text-[12px] text-foreground">
+                    {categories.map(category=><option key={category} value={category}>{category==="all"?"All categories":category}</option>)}
+                  </select>
+                ) : null}
+              </div>
+              {catalogError ? (
+                <div role="alert" className="flex gap-2 rounded-lg border border-amber-500/25 px-3 py-3 text-[12px] text-[var(--settings-warning-ink)]">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0"/>
+                  <span>{catalogError}{catalog?.errors?.length ? " Affected source(s): "+catalog.errors.map(error=>error.source).join(", ")+".":""}</span>
+                </div>
+              ) : null}
+              {loading && !catalog ? <p role="status" className="py-8 text-[12px] text-muted-foreground">Loading plugin directory…</p>
+                : filtered.length ? (
+                  <div className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+                    {filtered.map(plugin=>{
+                      const state=stateFor(plugin);
+                      return (
+                        <button type="button" key={plugin.pluginKey} onClick={()=>selectPlugin(plugin.pluginKey)}
+                          aria-label={"View "+plugin.name+" plugin"}
+                          className="group flex min-h-[80px] min-w-0 items-center gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-muted/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30">
+                          <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] border border-border/80 bg-muted/20">
+                            {plugin.iconUrl ? <img src={plugin.iconUrl} alt="" loading="lazy" className="size-9 object-contain"/>
+                              : plugin.publisherIconUrl ? <PublisherMark url={plugin.publisherIconUrl} className="size-6 text-foreground"/>
+                              : iconFor(plugin,"size-5")}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[13px] font-medium text-foreground">{plugin.name}</span>
+                            <span className="mt-1 block line-clamp-2 text-[11px] leading-4 text-muted-foreground">{plugin.subtitle || plugin.description}</span>
+                            <span className="mt-1 block truncate text-[10px] text-muted-foreground">{plugin.publisher}</span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
+                            <span className="hidden lg:inline">{state}</span><ChevronRight className="size-4"/>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-[12px] text-muted-foreground">
+                    {catalog?.plugins.length ? "No plugins match these filters." : "No external plugins are available; see registered platform defaults below."}
+                    {(searchTerm || activeCategory!=="all") ? <button type="button" onClick={()=>{setSearchTerm("");setActiveCategory("all");}} className="ml-2 underline underline-offset-4">Clear filters</button>:null}
+                  </p>
+                )}
+              <section className="mt-6 space-y-3 border-t border-border/70 pt-5" aria-label="Platform plugin defaults">
+                <div><h3 className="text-[15px] font-semibold">Platform defaults <span className="text-[11px] font-normal text-muted-foreground">({catalog?.platformPlugins?.length||0})</span></h3>
+                <p className="mt-1 text-[11px] leading-5 text-muted-foreground">Registered first-party capabilities, including unfinished integrations. Being listed does not install a plugin, grant permissions, or prove a tool works.</p></div>
+                {platformDefaults.length ? <div className="divide-y divide-border/65 overflow-hidden rounded-xl border border-border/70">
+                  {platformDefaults.map(plugin=><details key={plugin.pluginKey} className="group px-3.5 py-3 open:bg-muted/10">
+                    <summary className="flex cursor-pointer list-none items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/20">{iconFor({name:plugin.name},"size-4")}</span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-medium">{plugin.name}</span>
+                      <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{plugin.provider} · {plugin.kind} · {plugin.surface.replace('_',' ')}</span></span>
+                      <span className="text-[10px] text-muted-foreground">{plugin.surface==='side_stage'?(plugin.enabled?'Tool on':'Tool off'):plugin.installed?(plugin.enabled?'Installed':'Disabled'):'Not installed'}</span>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"/>
+                    </summary>
+                    <div className="ml-12 mt-3 space-y-2 text-[11px] leading-5 text-muted-foreground">
+                      <p>{plugin.description || "Registered capability awaiting a complete product description."}</p>
+                      <p>Key: <code className="text-foreground">{plugin.pluginKey}</code> · Version: {plugin.version} · {plugin.readiness==='tools_registered'?"Tools registered":"Definition only — tool execution not verified"}</p>
+                      {plugin.capabilities.length?<p>Declared: {plugin.capabilities.join(', ')}</p>:null}
+                      <p>{plugin.category==='entertainment' && plugin.provider==='inneranimalmedia'?"Install this first-party game to add its web view to Side Stage. No device-control permissions are granted.":plugin.surface==='app'?"Open Apps to install or manage this application.":plugin.surface==='side_stage'?"Choose whether this tool appears in Settings → Apps → Tools; independent app routes remain available where provided.":"Use the connected plugin flow when supported. A definition alone cannot authorize a connection."}</p>
                       {plugin.category==='entertainment' && plugin.provider==='inneranimalmedia' &&
                         ['inneranimalmedia-meauxgames','inneranimalmedia-wizard-chess-3d'].includes(plugin.pluginKey) &&
                         !plugin.installed && host.installPluginFromCatalog ? (
@@ -1355,16 +1284,21 @@ function PluginCustomizeView({
                     <h3 className="text-[14px] font-semibold">Repositories</h3>
                     <p className="mt-1 text-[11px] text-muted-foreground">Verify the GitHub grant with a real account-scoped repository read.</p>
                   </div>
-        =="public"?"Browse directory":"My plugins"}
-              </button>
-            ))}
-          </div>
-
-          {directoryTab === "public" ? (
-            <div role="tabpanel" className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-[15px] font-semibold">Discover plugins</h3>fullName}</span>
+                  <button type="button" disabled={gitRepositoriesBusy} onClick={()=>void readGitRepositories(installed.id)}
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 text-[11px] font-medium hover:bg-muted/30 disabled:opacity-50">
+                    <RefreshCw className={cx("size-3.5",gitRepositoriesBusy&&"animate-spin")}/>
+                    {gitRepositories?"Refresh":"Load repositories"}
+                  </button>
+                </div>
+                {gitRepositoriesError ? <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-[12px] text-[var(--settings-warning-ink)]">{gitRepositoriesError}</p>:null}
+                {gitRepositoriesBusy ? <p role="status" className="py-3 text-[12px] text-muted-foreground">Checking your GitHub repository access…</p>:null}
+                {gitRepositories && !gitRepositoriesBusy ? (
+                  gitRepositories.length ? <div className="divide-y divide-border/70 overflow-hidden rounded-xl border border-border/80">
+                    {gitRepositories.map(repo=><a key={repo.id} href={repo.htmlUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex min-h-[62px] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/25">
+                      <FolderOpen className="size-4 shrink-0 text-muted-foreground"/>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[12px] font-medium">{repo.fullName}</span>
                         <span className="mt-1 block truncate text-[10px] text-muted-foreground">{repo.private?"Private":"Public"} · {repo.defaultBranch||"No default branch"} · {repo.permissions.push?"Push access":repo.permissions.pull?"Read access":"Access level unavailable"}</span>
                       </span>
                       <ExternalLink className="size-3.5 shrink-0 text-muted-foreground"/>
@@ -1447,42 +1381,6 @@ function PluginCustomizeView({
               {selectedCatalog && plugins.some(plugin=>plugin.pluginKey===selectedCatalog.pluginKey && plugin.setupStatus!=="connected") ? (
                 <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-[11px] leading-relaxed text-muted-foreground">
                   <span className="font-medium text-[var(--settings-warning-ink)]">Installed · authorization required.</span> This plugin's MCP tools will not run in Studio until a supported OAuth connection and tool registration flow is completed.
-                </div>
-              ) : null}
-              {(installed?.setupUrl || installed?.kind === "oauth" || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
-                <button type="button" disabled={busy} onClick={()=>void run(()=>host.beginPluginSetup!(installed.id))}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-violet-600 text-[11px] font-semibold text-white hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:opacity-40">
-                  {installed.installationKey==="catalog-v1" ?        </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="relative block w-full sm:max-w-[280px]">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="search"
-                aria-label="Search widgets"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search widgets or capabilities"
-                className="h-10 w-full rounded-xl border border-border/80 bg-background/70 pl-10 pr-3 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-violet-400/70 focus:ring-2 focus:ring-violet-400/10"
-              />
-            </label>
-            <span className="text-[11px] text-muted-foreground">{filtered.length} of {widgets.length} widgets</span>
-          </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter widgets by category">
-            {categories.filter((category) => category.id === "all" || widgets.some((widget) => widget.category === category.id)).map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                aria-pressed={activeCategory === category.id}
-                onClick={() => setActiveCategory(category.id)}
-                className={cx(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                  activeCategory === category.id
-                    ? "border-foreground/80 bg-foreground text-background"
-                    : "border-border/75 bg-background/40 text-muted-foreground hover:border-foreground/25 hover:text-foreground"
-                )}d.</span> This plugin's MCP tools will not run in Studio until a supported OAuth connection and tool registration flow is completed.
                 </div>
               ) : null}
               {(installed?.setupUrl || installed?.kind === "oauth" || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
@@ -1607,95 +1505,146 @@ function WidgetCustomizeView({
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search widgets or capabilities"
-                className="h-10 w-full rounded-xl border border-border/80 bg-background/70 pl-10 pr-3 text-[12px] text-foreground outline-none transition-colors pfullName}</span>
-                        <span className="mt-1 block truncate text-[10px] text-muted-foreground">{repo.private?"Private":"Public"} · {repo.defaultBranch||"No default branch"} · {repo.permissions.push?"Push access":repo.permissions.pull?"Read access":"Access level unavailable"}</span>
-                      </span>
-                      <ExternalLink className="size-3.5 shrink-0 text-muted-foreground"/>
-                    </a>)}
-                  </div> : <p className="rounded-xl border border-dashed border-border px-4 py-6 text-[12px] text-muted-foreground">No repositories were returned by GitHub for this connection.</p>
-                ) : null}
-                {gitRepositoriesHasMore ? <p className="text-[11px] text-muted-foreground">Showing the first 100 repositories. More may be available in GitHub.</p>:null}
-              </section>
-            ):null}
-
-            {installed?.kind==="oauth" && installed.connectionRef ? (
-              <section className="space-y-2" aria-label="Connected accounts">
-                <h3 className="text-[14px] font-semibold">Connected account</h3>
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-border/80 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[12px] font-medium">{installed.connectionRef.split(":").slice(1).join(":") || installed.providerKey}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{installed.providerKey} · {installedState(installed)}</p>
-                  </div>
-                  <span className={cx("size-2 shrink-0 rounded-full",isConnected(installed)?"bg-emerald-500":"bg-amber-500")}/>
-                </div>
-              </section>
-            ) : null}
-
-            <section className="space-y-2" aria-label="Plugin information">
-              <h3 className="text-[14px] font-semibold">Information</h3>
-            <div className="overflow-hidden rounded-xl border border-border/80 px-3">
-              {selectedCatalog ? <>
-                <PreferenceRow label="Developer" description="Publisher of the plugin package." value={selectedCatalog.publisher}/>
-                <PreferenceRow label="Version" description="Published plugin manifest version." value={selectedCatalog.version}/>
-                <PreferenceRow label="Transport" description="Declared MCP transport protocol." value={selectedCatalog.transport}/>
-                <PreferenceRow label="Permissions" description="Connection and authorization requirements." value="OAuth authorization required"/>
-                <PreferenceRow label="Tools / skills" description="Tool declarations from the verified catalog; execution requires a valid grant and registered runtime tools." value={selectedCatalog.toolPermissions.length+" declared tools · "+selectedCatalog.skillCount+" packaged skills"}/>
-              </> : null}
-              {installed ? <>
-                <PreferenceRow label="Connection status" description="Recorded connection state for this account." value={installed.setupStatus}/>
-                <PreferenceRow label={installed.installationKey==="catalog-v1"?"Runtime health":"Credential health"}
-                  description={installed.installationKey==="catalog-v1"?"Remote tool health.":"Provider token state; not a repository workflow test."} value={installed.healthStatus}/>
-                {installed.installationKey==="catalog-v1" || installed.toolCount > 0 ?
-                  <PreferenceRow label="MCP tools registered" description="Executable MCP tools registered for this installation." value={String(installed.toolCount)}/>
-                  : <PreferenceRow label="Integration" description="Native/provider OAuth connections do not require MCP tool rows. Test an actual provider operation to verify functionality." value="Provider adapter"/>}
-                <PreferenceRow label="Authentication" description="Required credential type." value={installed.authType}/>
-                {!(installed.installationKey==="catalog-v1" && installed.setupStatus!=="connected") && host.setPluginEnabled ?
-                  <PreferenceRow label="Enabled" description="Controls participation in the active runtime."
-                    trailing={<Toggle enabled={installed.enabled} onChange={value=>void run(()=>host.setPluginEnabled!(installed.id,value))}/>} />
-                  : null}
-              </> : null}
-            </div>
-            </section>
-
-            {selectedCatalog ? (
-              <div className="flex flex-wrap gap-2 text-[11px]">
-                {([
-                  ["Website",selectedCatalog.websiteUrl],
-                  ["Privacy",selectedCatalog.privacyUrl],
-                  ["Terms",selectedCatalog.termsUrl],
-                  ["Support",selectedCatalog.supportUrl],
-                ] as const).filter(item=>Boolean(item[1])).map(([label,url])=>
-                  <a key={label} href={url || undefined} target="_blank" rel="noreferrer noopener"
-                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-muted-foreground hover:text-foreground">{label}<ExternalLink className="size-3"/></a>
+                className="h-10 w-full rounded-xl border border-border/80 bg-background/70 pl-10 pr-3 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-violet-400/70 focus:ring-2 focus:ring-violet-400/10"
+              />
+            </label>
+            <span className="text-[11px] text-muted-foreground">{filtered.length} of {widgets.length} widgets</span>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter widgets by category">
+            {categories.filter((category) => category.id === "all" || widgets.some((widget) => widget.category === category.id)).map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                aria-pressed={activeCategory === category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={cx(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                  activeCategory === category.id
+                    ? "border-foreground/80 bg-foreground text-background"
+                    : "border-border/75 bg-background/40 text-muted-foreground hover:border-foreground/25 hover:text-foreground"
                 )}
-              </div>
-            ) : null}
-            {actionError ? <div role="alert" className="rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-[11px] text-[var(--settings-danger-ink)]">{actionError}</div> : null}
-            {notice ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 p-3 text-[11px] text-[var(--settings-success-ink)]">{notice}</div> : null}
-
-            {installed && isRunnable(installed) && host.readPluginWorkspace ? (
-              <button type="button" onClick={()=>void openWorkspace(installed.id)}
-                className="mb-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 text-[12px] font-semibold text-white hover:bg-violet-500">
-                Open {installed.pluginKey==="agentsam-brand"?"Brand":installed.pluginKey==="agentsam-campaign"?"Campaign":"Plugin"} workspace
-                <ChevronRight className="size-4"/>
+              >
+                {category.label}
               </button>
-            ):null}
-            <div className="space-y-2 border-t border-border/70 pt-4">
-              {selectedCatalog && !plugins.some(plugin=>plugin.pluginKey===selectedCatalog.pluginKey) && host.installPluginFromCatalog ? (
-                <button type="button" disabled={busy} onClick={()=>void run(()=>host.installPluginFromCatalog!(selectedCatalog.pluginKey))}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground text-[12px] font-semibold text-background disabled:opacity-40">
-                  <Plus className="size-4"/> Add to Studio
+            ))}
+          </div>
+        </div>
+
+        {filtered.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {filtered.map((widget) => {
+              const demo = widget.availability === "demo";
+              return (
+                <button
+                  type="button"
+                  key={widget.id}
+                  onClick={() => setSelectedId(widget.id)}
+                  className="group min-w-0 overflow-hidden rounded-[19px] border border-border/75 bg-background/65 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_38px_-22px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                  aria-label={`Preview ${widget.name}${demo ? " concept" : " widget"}`}
+                >
+                  <div className="relative h-[158px] overflow-hidden border-b border-border/60 bg-gradient-to-br from-muted/50 via-muted/20 to-violet-400/[0.075] px-5 py-4">
+                    <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-violet-400/[0.07] blur-2xl" />
+                    <div className="relative h-full"><WidgetGalleryPreview id={widget.id} /></div>
+                  </div>
+                  <div className="space-y-2 p-4">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[12px] font-semibold tracking-[-0.015em] text-foreground">{widget.name}</p>
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">{categoryLabel(widget.category)}</p>
+                      </div>
+                      <span className={cx(
+                        "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium",
+                        demo ? "border-border bg-muted/45 text-muted-foreground" : "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
+                      )}>
+                        {demo ? "Concept" : "Ready"}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 min-h-[31px] text-[10px] leading-[1.55] text-muted-foreground">{widget.description}</p>
+                    <div className="flex items-center justify-between border-t border-border/60 pt-2.5">
+                      <span className="text-[10px] text-muted-foreground">{demo ? "Sample preview" : widget.visible ? "Visible in Utilities" : "Hidden in Utilities"}</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-foreground/80">
+                        Explore <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </div>
                 </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+            <Search className="mx-auto size-5 text-muted-foreground" />
+            <p className="mt-3 text-[12px] font-medium">No widgets match your search.</p>
+            <button type="button" className="mt-2 text-[11px] text-muted-foreground underline underline-offset-4" onClick={() => {setSearchTerm("");setActiveCategory("all");}}>Clear filters</button>
+          </div>
+        )}
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
+          Concept previews use sample artwork/data and do not connect to, control, or represent live AgentSam systems. They become installable after their package adapters and safety checks are completed.
+        </p>
+      </section>
+
+      <SettingsSheet
+        open={Boolean(selected)}
+        title={selected?.name || "Widget"}
+        description={selected?.description}
+        onClose={() => setSelectedId(null)}
+      >
+        {selected ? (
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/45 to-violet-400/[0.06] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{selected.availability === 'demo' ? 'Design preview' : 'Live widget'}</span>
+                <span className="rounded-full border border-border bg-background/75 px-2 py-0.5 text-[9px] text-muted-foreground">
+                  {selected.availability === "demo" ? "Concept · sample data" : "Packaged widget"}
+                </span>
+              </div>
+              <div className="mx-auto min-h-40 max-w-sm">{selected.availability === 'demo' ? <WidgetGalleryPreview id={selected.id} interactive /> : <div className="agentsam-widget"><BuiltinWidget widgetId={selected.id} /></div>}</div>
+            </div>
+            <div className="rounded-lg border border-border/70 px-3">
+              <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not yet installed" : "Ready to use"} />
+              <PreferenceRow label="Category" description="Widget library grouping." value={categoryLabel(selected.category)} />
+              {selected.ownerPackage ? <PreferenceRow label="Proposed owner" description="Target package authority for this widget." value={selected.ownerPackage} /> : null}
+              <PreferenceRow label="Sizes" description="Supported presentation sizes." value={selected.sizes.join(", ")} />
+              {selected.availability !== "demo" ? (
+                <>
+                  <PreferenceRow label="Preference scope" description="Where the current visibility choice is stored." value={selected.preferenceScope} />
+                  <PreferenceRow
+                    label="Visible"
+                    description="Show this widget in the Utilities surface."
+                    trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
+                  />
+                </>
+              ) : (
+                <p className="py-3 text-[11px] leading-relaxed text-muted-foreground">
+                  Preview only. This design will be enabled once its renderer, source adapter, and permissions are connected to a real package. No demo controls will mutate production data.
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
+              {selected.availability !== "demo" && host.openWidget ? (
+                <button type="button" onClick={() => host.openWidget?.(selected.id)} className="h-9 rounded-lg bg-foreground px-4 text-[11px] font-medium text-background">Open widget</button>
               ) : null}
-              {selectedCatalog && plugins.some(plugin=>plugin.pluginKey===selectedCatalog.pluginKey && plugin.setupStatus!=="connected") ? (
-                <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-[11px] leading-relaxed text-muted-foreground">
-                  <span className="font-medium text-[var(--settings-warning-ink)]">Installed · authorization required.</span> This plugin's MCP tools will not run in Studio until a supported OAuth connection and tool registration flow is completed.
-                </div>
+              {selected.availability !== "demo" && host.setWidgetVisible ? (
+                <button type="button" onClick={() => void setVisible(!selected.visible)} className="h-9 rounded-lg border border-border px-4 text-[11px] hover:bg-muted">{selected.visible ? "Hide widget" : "Show widget"}</button>
               ) : null}
-              {(installed?.setupUrl || installed?.kind === "oauth" || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
-                <button type="button" disabled={busy} onClick={()=>void run(()=>host.beginPluginSetup!(installed.id))}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-violet-600 text-[11px] font-semibold text-white hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:opacity-40">
-                  {installed.installationKey==="catalog-v1" ?
+              <button type="button" onClick={() => setSelectedId(null)} className="h-9 rounded-lg border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Close preview</button>
+            </div>
+          </div>
+        ) : null}
+      </SettingsSheet>
+    </>
+  );
+}
+
+function EmptyState({ title }: { title: string }) {
+  return (
+    <div className="flex min-h-28 items-center justify-center rounded-lg border border-dashed border-border bg-muted/10 px-6 text-center">
+      <div>
+        <Sparkles className="mx-auto size-4 text-muted-foreground" />
+        <p className="mt-2 text-[11px] text-muted-foreground">{title}</p>
+      </div>
+    </div>
+  );
 }
 
 function ModelTable({ models }: { models: SettingsModel[] }) {
@@ -1875,237 +1824,7 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
               className="h-9 w-full rounded-md bg-foreground text-[11px] font-medium text-background"
             >
               Done
-            </button>ame={cx(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                  activeCategory === category.id
-                    ? "border-foreground/80 bg-foreground text-background"
-                    : "border-border/75 bg-background/40 text-muted-foreground hover:border-foreground/25 hover:text-foreground"
-                )}
-              >
-                {category.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {filtered.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {filtered.map((widget) => {
-              const demo = widget.availability === "demo";
-              return (
-                <button
-                  type="button"
-                  key={widget.id}
-                  onClick={() => setSelectedId(widget.id)}
-                  className="group min-w-0 overflow-hidden rounded-[19px] border border-border/75 bg-background/65 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_38px_-22px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-                  aria-label={`Preview ${widget.name}${demo ? " concept" : " widget"}`}
-                >
-                  <div className="relative h-[158px] overflow-hidden border-b border-border/60 bg-gradient-to-br from-muted/50 via-muted/20 to-violet-400/[0.075] px-5 py-4">
-                    <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-violet-400/[0.07] blur-2xl" />
-                    <div className="relative h-full"><WidgetGalleryPreview id={widget.id} /></div>
-                  </div>
-                  <div className="space-y-2 p-4">
-                    <div className="flex min-w-0 items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-[12px] font-semibold tracking-[-0.015em] text-foreground">{widget.name}</p>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">{categoryLabel(widget.category)}</p>
-                      </div>
-                      <span className={cx(
-                        "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium",
-                        demo ? "border-border bg-muted/45 text-muted-foreground" : "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
-                      )}>
-                        {demo ? "Concept" : "Ready"}
-                      </span>
-                    </div>
-                    <p className="line-clamp-2 min-h-[31px] text-[10px] leading-[1.55] text-muted-foreground">{widget.description}</p>
-                    <div className="flex items-center justify-between border-t border-border/60 pt-2.5">
-                      <span className="text-[10px] text-muted-foreground">{demo ? "Sample preview" : widget.visible ? "Visible in Utilities" : "Hidden in Utilities"}</span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-foreground/80">
-                        Explore <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border p-12 text-center">
-            <Search className="mx-auto size-5 text-muted-foreground" />
-            <p className="mt-3 text-[12px] font-medium">No widgets match your search.</p>
-            <button type="button" className="mt-2 text-[11px] text-muted-foreground underline underline-offset-4" onClick={() => {setSearchTerm("");setActiveCategory("all");}}>Clear filters</button>
-          </div>
-        )}
-        <p className="text-[10px] leading-relaxed text-muted-foreground">
-          Concept previews use sample artwork/data and do not connect to, control, or represent live AgentSam systems. They become installable after their package adapters and safety checks are completed.
-        </p>
-      </section>
-
-      <SettingsSheet
-        open={Boolean(selected)}
-        title={selected?.name || "Widget"}
-        description={selected?.description}
-        onClose={() => setSelectedId(null)}
-      >
-        {selected ? (
-          <div className="space-y-5">
-            <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/45 to-violet-400/[0.06] p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{selected.availability === 'demo' ? 'Design preview' : 'Live widget'}</span>
-                <span className="rounded-full border border-border bg-background/75 px-2 py-0.5 text-[9px] text-muted-foreground">
-                  {selected.availability === "demo" ? "Concept · sample data" : "Packaged widget"}
-                </span>
-              </div>
-              <div className="mx-auto min-h-40 max-w-sm">{selected.availability === 'demo' ? <WidgetGalleryPreview id={selected.id} interactive /> : <div className="agentsam-widget"><BuiltinWidget widgetId={selected.id} /></div>}</div>
-            </div>
-            <div className="rounded-lg border border-border/70 px-3">
-              <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not yet installed" : "Ready to use"} />
-              <PreferenceRow label="Category" description="Widget library grouping." value={categoryLabel(selected.category)} />
-              {selected.ownerPackage ? <PreferenceRow label="Proposed owner" description="Target package authority for this widget." value={selected.ownerPackage} /> : null}
-              <PreferenceRow label="Sizes" description="Supported presentation sizes." value={selected.sizes.join(", ")} />
-              {selected.availability !== "demo" ? (
-                <>
-                  <PreferenceRow label="Preference scope" description="Where the current visibility choice is stored." value={selected.preferenceScope} />
-                  <PreferenceRow
-                    label="Visible"
-                    description="Show this widget in the Utilities surface."
-                    trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
-                  />
-                </>
-              ) : (
-                <p className="py-3 text-[11px] leading-relaxed text-muted-foreground">
-                  Preview only. This design will be enabled once its renderer, source adapter, and permissions are connected to a real package. No demo controls will mutate production data.
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
-              {selected.availability !== "demo" && host.openWidget ? (
-                <button type="button" onClick={() => host.openWidget?.(selected.id)} className="h-9 rounded-lg bg-foreground px-4 text-[11px] font-medium text-background">Open widget</button>
-              ) : null}
-              {selected.availability !== "demo" && host.setWidgetVisible ? (
-                <button type="button" onClick={() => void setVisible(!selected.visible)} className="h-9 rounded-lg border border-border px-4 text-[11px] hover:bg-muted">{selected.visible ? "Hide widget" : "Show widget"}</button>
-              ) : null}
-              <button type="button" onClick={() => setSelectedId(null)} className="h-9 rounded-lg border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Close preview</button>
-            </div>
-          </div>
-        ) : null}
-      </SettingsSheet>
-    </>
-  );
-}
-
-function EmptyState({ title }: { title: string }) {
-  return (
-    <div className="flex min-h-28 items-center justify-center rounded-lg border border-dashed border-border bg-muted/10 px-6 text-center">
-      <div>
-        <Sparkles className="mx-auto size-4 text-muted-foreground" />
-        <p className="mt-2 text-[11px] text-muted-foreground">{title}</p>
-      </div>
-    </div>
-  );async function savePolicy(){
-    if(!host.updateAgentPolicy)return;
-    setBusy(true);setError("");
-    try{await host.updateAgentPolicy(policy);await onChanged();}
-    catch(e){setError(e instanceof Error?e.message:"Could not update execution policy.");}
-    finally{setBusy(false);}
-  }
-  const hasUnsavedChanges = JSON.stringify(draft) !== JSON.stringify(initialEditorDraft.current);
-  function exitEditor() {
-    if (hasUnsavedChanges && !window.confirm("Discard unsaved agent changes?")) return;
-    setEditing(false);
-    setError("");
-  }
-  if (editing) return (
-      <PluginDetailPage agentProfile open={editing} title={selected?selected.name:"New agent"} description="Configure identity, tools, model, and execution rules for this account-owned agent."
-        onBack={exitEditor}>
-        <div className="space-y-5">
-          <div className="border-b border-border/70 pb-3"><h3 className="text-[13px] font-semibold">Identity</h3><p className="mt-1 text-[11px] text-muted-foreground">Choose the name and short identifier used throughout your workspace.</p></div>
-          <div className="grid gap-4 sm:grid-cols-2">
-          {field("Agent name",draft.name,value=>setDraft(current=>({...current,name:value})),"Brand researcher")}
-          {field("Slug",draft.slug,value=>setDraft(current=>({...current,slug:value.toLowerCase()})),"brand-researcher")}
-          </div>
-          {field("Description",draft.description,value=>setDraft(current=>({...current,description:value})),"What this agent does")}
-          <div className="border-b border-border/70 pb-3 pt-2"><h3 className="text-[13px] font-semibold">Instructions & execution</h3><p className="mt-1 text-[11px] text-muted-foreground">All permissions remain subject to your connected accounts and runtime approvals.</p></div>
-          <label className="block space-y-2">
-            <span className="text-[11px] font-medium">Execution model (verified inventory)</span>
-            <select className={formClass} value={draft.modelId} onChange={event=>setDraft(current=>({...current,modelId:event.target.value,reasoningEffort:"auto"}))}>
-              <option value="">No model selected</option>
-              {draft.modelId&&!selectedModel?<option value={draft.modelId}>{draft.modelId} (saved; not verified)</option>:null}
-              {availableModels.map(model=><option key={model.id} value={model.id}>{model.provider}: {model.name}</option>)}
-            </select>
-            {!availableModels.length?<p className="text-[10px] text-[var(--settings-warning-ink)]">No verified models discovered. You can save the agent, but cannot claim it is runnable yet.</p>:null}
-          </label>
-          <label className="block space-y-2">
-            <span className="text-[11px] font-medium">Agent instructions</span>
-            <textarea rows={11} value={draft.instructions}
-              onChange={event=>setDraft(current=>({...current,instructions:event.target.value}))}
-              className={cx(formClass,"min-h-[230px] resize-y leading-relaxed")} placeholder="Describe the role, task procedure and safeguards."/>
-          </label>
-          <label className="block space-y-2">
-            <span className="text-[11px] font-medium">Allowed tool patterns (one per line)</span>
-            <textarea rows={3} value={draft.allowedTools.join("\n")}
-              onChange={event=>setDraft(current=>({...current,allowedTools:event.target.value.split(/[,\n]/).map(t=>t.trim()).filter(Boolean)}))}
-              className={cx(formClass,"resize-y leading-relaxed")}/>
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-2 text-[11px] font-medium">Reasoning effort
-              <select className={formClass} value={draft.reasoningEffort} onChange={event=>setDraft(current=>({...current,reasoningEffort:event.target.value as SettingsAgentDraft["reasoningEffort"]}))}>
-                {draft.reasoningEffort&&!effortOptions.includes(draft.reasoningEffort)
-                  ?<option value={draft.reasoningEffort}>{draft.reasoningEffort} (saved; not verified)</option>:null}
-                {effortOptions.map(value=><option key={value} value={value}>{value==="auto"?"Model default":value}</option>)}
-              </select>
-            </label>
-            <label className="space-y-2 text-[11px] font-medium">Sandbox permissions
-              <select className={formClass} value={draft.sandboxMode} onChange={event=>setDraft(current=>({...current,sandboxMode:event.target.value as SettingsAgentDraft["sandboxMode"]}))}>
-                <option value="read-only">Read-only</option>
-                <option value="workspace-write">Workspace write (approval rules apply)</option>
-              </select>
-            </label>
-          </div>
-          <label className="flex items-center gap-2 text-[11px]">
-            <input type="checkbox" checked={draft.runInBackground} onChange={event=>setDraft(current=>({...current,runInBackground:event.target.checked}))}/>
-            Allow background execution where supported
-          </label>
-          <label className="flex items-center justify-between gap-3 text-[11px]">
-            <span>Maximum concurrent threads</span>
-            <select value={draft.maxConcurrentThreads} className="min-h-11 rounded-lg border border-foreground/60 bg-muted/20 px-2 py-1 focus-visible:outline-2 focus-visible:outline-violet-400" onChange={event=>setDraft(current=>({...current,maxConcurrentThreads:Number(event.target.value)}))}>
-              {[1,2,3,4,5,6,8,10,12].map(n=><option key={n} value={n}>{n}</option>)}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-[11px]">
-            <input type="checkbox" checked={draft.active} onChange={event=>setDraft(current=>({...current,active:event.target.checked}))}/>
-            Enabled
-          </label>
-          {error?<p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
-          <div className="flex justify-end gap-2 border-t border-border/70 pt-4 max-sm:flex-col-reverse">
-            <button type="button" className="agent-profile-action rounded-lg border border-border px-4 py-2 text-[14px]" onClick={exitEditor}>Back to agents</button>
-            <button type="button" disabled={busy||selected?.readOnly||!host.saveAgent} onClick={()=>void saveAgent()}
-              className="agent-profile-primary agent-profile-confirm px-5 py-2 text-[14px] font-semibold disabled:opacity-40">Save agent</button>
-          </div>
-        </div>
-      </PluginDetailPage>
-  );
-  if(view==="models"){
-    return <Section title="Verified model inventory" description="Discovered per credential. Missing credentials and unsupported models are never silently substituted.">
-      <ModelTable models={snapshot.models}/>
-    </Section>;
-  }
-  if(view==="cloud"){
-    return <Section title="Cloud agent execution" description="Connected remote agent runners and supported execution lanes.">
-      {snapshot.cloudAgents.length?<Catalog items={snapshot.cloudAgents}/>:
-      <EmptyState title="No verified cloud agents in the current runtime."/>}
-    </Section>;
-  }
-  if(view==="policy"){
-    return <Section title="Agent execution policy" description="Stored for your account in the existing agentsam_user_policy registry.">
-      {snapshot.agentError?<p role="alert" className="text-[12px] text-[var(--settings-warning-ink)]">{snapshot.agentError}</p>:null}
-      <div className="space-y-4 rounded-xl border border-border/70 p-4">
-        {([
-          ["allowSubagentSpawn","Allow subagent spawning","Permit approved agent profiles to delegate work."],
-          ["allowFanoutExecution","Allow parallel agent execution","Enable authorized fanout across eligible agent profiles."],
-          ["requireAllowlistForMcp","Require MCP allowlist","Only permit MCP tool calls through explicit registration/allowlist."],
-        ] as const).map(([key,title,desc])=>(
-          <labe
+            </button>
           </div>
         ) : (
           <form
@@ -2293,7 +2012,114 @@ function AgentsView({snapshot,view,host,onChanged}:{
     catch(e){setError(e instanceof Error?e.message:"Unable to archive agent.");}
     finally{setBusy(false);}
   }
-  rent=>({...current,[key]:event.target.checked}))}
+  async function savePolicy(){
+    if(!host.updateAgentPolicy)return;
+    setBusy(true);setError("");
+    try{await host.updateAgentPolicy(policy);await onChanged();}
+    catch(e){setError(e instanceof Error?e.message:"Could not update execution policy.");}
+    finally{setBusy(false);}
+  }
+  const hasUnsavedChanges = JSON.stringify(draft) !== JSON.stringify(initialEditorDraft.current);
+  function exitEditor() {
+    if (hasUnsavedChanges && !window.confirm("Discard unsaved agent changes?")) return;
+    setEditing(false);
+    setError("");
+  }
+  if (editing) return (
+      <PluginDetailPage agentProfile open={editing} title={selected?selected.name:"New agent"} description="Configure identity, tools, model, and execution rules for this account-owned agent."
+        onBack={exitEditor}>
+        <div className="space-y-5">
+          <div className="border-b border-border/70 pb-3"><h3 className="text-[13px] font-semibold">Identity</h3><p className="mt-1 text-[11px] text-muted-foreground">Choose the name and short identifier used throughout your workspace.</p></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+          {field("Agent name",draft.name,value=>setDraft(current=>({...current,name:value})),"Brand researcher")}
+          {field("Slug",draft.slug,value=>setDraft(current=>({...current,slug:value.toLowerCase()})),"brand-researcher")}
+          </div>
+          {field("Description",draft.description,value=>setDraft(current=>({...current,description:value})),"What this agent does")}
+          <div className="border-b border-border/70 pb-3 pt-2"><h3 className="text-[13px] font-semibold">Instructions & execution</h3><p className="mt-1 text-[11px] text-muted-foreground">All permissions remain subject to your connected accounts and runtime approvals.</p></div>
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Execution model (verified inventory)</span>
+            <select className={formClass} value={draft.modelId} onChange={event=>setDraft(current=>({...current,modelId:event.target.value,reasoningEffort:"auto"}))}>
+              <option value="">No model selected</option>
+              {draft.modelId&&!selectedModel?<option value={draft.modelId}>{draft.modelId} (saved; not verified)</option>:null}
+              {availableModels.map(model=><option key={model.id} value={model.id}>{model.provider}: {model.name}</option>)}
+            </select>
+            {!availableModels.length?<p className="text-[10px] text-[var(--settings-warning-ink)]">No verified models discovered. You can save the agent, but cannot claim it is runnable yet.</p>:null}
+          </label>
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Agent instructions</span>
+            <textarea rows={11} value={draft.instructions}
+              onChange={event=>setDraft(current=>({...current,instructions:event.target.value}))}
+              className={cx(formClass,"min-h-[230px] resize-y leading-relaxed")} placeholder="Describe the role, task procedure and safeguards."/>
+          </label>
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Allowed tool patterns (one per line)</span>
+            <textarea rows={3} value={draft.allowedTools.join("\n")}
+              onChange={event=>setDraft(current=>({...current,allowedTools:event.target.value.split(/[,\n]/).map(t=>t.trim()).filter(Boolean)}))}
+              className={cx(formClass,"resize-y leading-relaxed")}/>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-2 text-[11px] font-medium">Reasoning effort
+              <select className={formClass} value={draft.reasoningEffort} onChange={event=>setDraft(current=>({...current,reasoningEffort:event.target.value as SettingsAgentDraft["reasoningEffort"]}))}>
+                {draft.reasoningEffort&&!effortOptions.includes(draft.reasoningEffort)
+                  ?<option value={draft.reasoningEffort}>{draft.reasoningEffort} (saved; not verified)</option>:null}
+                {effortOptions.map(value=><option key={value} value={value}>{value==="auto"?"Model default":value}</option>)}
+              </select>
+            </label>
+            <label className="space-y-2 text-[11px] font-medium">Sandbox permissions
+              <select className={formClass} value={draft.sandboxMode} onChange={event=>setDraft(current=>({...current,sandboxMode:event.target.value as SettingsAgentDraft["sandboxMode"]}))}>
+                <option value="read-only">Read-only</option>
+                <option value="workspace-write">Workspace write (approval rules apply)</option>
+              </select>
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input type="checkbox" checked={draft.runInBackground} onChange={event=>setDraft(current=>({...current,runInBackground:event.target.checked}))}/>
+            Allow background execution where supported
+          </label>
+          <label className="flex items-center justify-between gap-3 text-[11px]">
+            <span>Maximum concurrent threads</span>
+            <select value={draft.maxConcurrentThreads} className="min-h-11 rounded-lg border border-foreground/60 bg-muted/20 px-2 py-1 focus-visible:outline-2 focus-visible:outline-violet-400" onChange={event=>setDraft(current=>({...current,maxConcurrentThreads:Number(event.target.value)}))}>
+              {[1,2,3,4,5,6,8,10,12].map(n=><option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input type="checkbox" checked={draft.active} onChange={event=>setDraft(current=>({...current,active:event.target.checked}))}/>
+            Enabled
+          </label>
+          {error?<p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
+          <div className="flex justify-end gap-2 border-t border-border/70 pt-4 max-sm:flex-col-reverse">
+            <button type="button" className="agent-profile-action rounded-lg border border-border px-4 py-2 text-[14px]" onClick={exitEditor}>Back to agents</button>
+            <button type="button" disabled={busy||selected?.readOnly||!host.saveAgent} onClick={()=>void saveAgent()}
+              className="agent-profile-primary agent-profile-confirm px-5 py-2 text-[14px] font-semibold disabled:opacity-40">Save agent</button>
+          </div>
+        </div>
+      </PluginDetailPage>
+  );
+  if(view==="models"){
+    return <Section title="Verified model inventory" description="Discovered per credential. Missing credentials and unsupported models are never silently substituted.">
+      <ModelTable models={snapshot.models}/>
+    </Section>;
+  }
+  if(view==="cloud"){
+    return <Section title="Cloud agent execution" description="Connected remote agent runners and supported execution lanes.">
+      {snapshot.cloudAgents.length?<Catalog items={snapshot.cloudAgents}/>:
+      <EmptyState title="No verified cloud agents in the current runtime."/>}
+    </Section>;
+  }
+  if(view==="policy"){
+    return <Section title="Agent execution policy" description="Stored for your account in the existing agentsam_user_policy registry.">
+      {snapshot.agentError?<p role="alert" className="text-[12px] text-[var(--settings-warning-ink)]">{snapshot.agentError}</p>:null}
+      <div className="space-y-4 rounded-xl border border-border/70 p-4">
+        {([
+          ["allowSubagentSpawn","Allow subagent spawning","Permit approved agent profiles to delegate work."],
+          ["allowFanoutExecution","Allow parallel agent execution","Enable authorized fanout across eligible agent profiles."],
+          ["requireAllowlistForMcp","Require MCP allowlist","Only permit MCP tool calls through explicit registration/allowlist."],
+        ] as const).map(([key,title,desc])=>(
+          <label key={key} className="flex cursor-pointer items-center justify-between gap-3 border-b border-border/60 py-2">
+            <span><span className="block text-[12px] font-medium">{title}</span>
+            <span className="block text-[10px] text-muted-foreground">{desc}</span></span>
+            <input type="checkbox" checked={policy[key]}
+              onChange={event=>setPolicy(current=>({...current,[key]:event.target.checked}))}
               className="size-4 accent-primary"/>
           </label>
         ))}
@@ -2445,4 +2271,750 @@ function GeneralView({snapshot,host,onChanged}:{
      <Section title="Product context" description="Current authenticated account and runtime, resolved by the host.">
        <div className="rounded-lg border border-border/70 px-3">
          <PreferenceRow label="Account" description="Account authority for saved preferences." value={snapshot.general.account}/>
-         <PreferenceRow label="Organization" description="Membership context, when availab
+         <PreferenceRow label="Organization" description="Membership context, when available." value={snapshot.general.organization}/>
+         <PreferenceRow label="Project" description="Current repository/project context." value={snapshot.general.project}/>
+         <PreferenceRow label="Runtime" description="Current execution host." value={snapshot.general.runtime}/>
+       </div>
+     </Section>
+     <Section title="Appearance" description="Shell appearance is controlled by your active registered theme. Storefront and CMS themes stay under Online Store.">
+       <div className="rounded-lg border border-border/70 px-3 py-3">
+         <p className="text-[11px] text-muted-foreground">
+           Dark/light accents no longer override the AgentSam shell. Open Themes to activate or customize the registered shell theme.
+         </p>
+         {host.openSettingsUnit ? <button type="button" onClick={() => host.openSettingsUnit?.("themes")}
+           className="mt-3 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Themes →</button> : null}
+       </div>
+     </Section>
+     <Section title="Application preferences" description="Saved under your account using the existing user UI preferences registry.">
+       {snapshot.general.preferencesError?<p role="alert" className="rounded-xl border border-amber-500/25 p-3 text-[11px] text-[var(--settings-warning-ink)]">
+         {snapshot.general.preferencesError}. Changes cannot be saved until the service is available.
+       </p>:null}
+       <div className="space-y-4 rounded-xl border border-border/70 p-4">
+         {([
+           ["openLastProject","Open last project","Restore the previously selected project on launch."],
+           ["showRuntimeReceipts","Show runtime receipts","Display execution and verification receipts when available."],
+         ] as const).map(([key,label,description])=>(
+           <label key={key} className="flex items-center justify-between gap-3">
+             <span><span className="block text-[12px] font-medium">{label}</span>
+             <span className="text-[10px] text-muted-foreground">{description}</span></span>
+             <input type="checkbox" checked={preferences[key]}
+               onChange={event=>setPreferences(current=>({...current,[key]:event.target.checked}))}
+               className="size-4 accent-violet-500"/>
+           </label>
+         ))}
+         {error?<p role="alert" className="text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
+         <button type="button" disabled={busy||!!snapshot.general.preferencesError||!host.updateGeneralPreferences}
+           onClick={()=>void save()} className="rounded-lg bg-primary px-4 py-2 text-[11px] font-medium text-primary-foreground disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100">
+           Save preferences
+         </button>
+       </div>
+     </Section>
+   </>
+ );
+ // Hosts with an account authority get full self-service; others keep the read-only context.
+ return host.account ? <SettingsAccountPanel host={host.account} footer={context}/> : context;
+}
+
+export { readShellAppearancePreference, type ShellAppearancePreference } from "../appearance";
+
+/** Brand identity is not a theme. Themes and editor appearance have separate Settings units. */
+function DesignView({snapshot,host}:{
+  snapshot:SettingsSnapshot;host:SettingsHost;onChanged:()=>Promise<void>;
+}) {
+  const brandPlugin=snapshot.plugins.find(plugin=>plugin.pluginKey==="agentsam-brand");
+  const connected=Boolean(brandPlugin?.setupStatus==="connected" && brandPlugin.enabled);
+  const [context,setContext]=useState<{pluginKey:string;contextTool:string;result:unknown}|null>(null);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  useEffect(()=>{
+    let cancelled=false;
+    setContext(null);
+    setError("");
+    if(!connected || !brandPlugin?.id || !host.readPluginWorkspace)return;
+    setLoading(true);
+    void host.readPluginWorkspace(brandPlugin.id).then(value=>{
+      if(!cancelled)setContext(value);
+    }).catch(reason=>{
+      if(!cancelled)setError(reason instanceof Error?reason.message:"Unable to read brand context.");
+    }).finally(()=>{if(!cancelled)setLoading(false);});
+    return()=>{cancelled=true;};
+  },[connected,brandPlugin?.id,host]);
+  const wrapped=context?.result&&typeof context.result==="object"&&!Array.isArray(context.result)
+    ? context.result as Record<string,unknown>:null;
+  const data=wrapped?.data&&typeof wrapped.data==="object"&&!Array.isArray(wrapped.data)
+    ? wrapped.data as Record<string,unknown>:wrapped;
+  const latest=data?.latestContract&&typeof data.latestContract==="object"
+    ? data.latestContract as Record<string,unknown>:null;
+  const contract=latest?.contract&&typeof latest.contract==="object"&&!Array.isArray(latest.contract)
+    ? latest.contract as Record<string,unknown>:null;
+  const identitySections=[
+    ["Purpose",contract?.purpose],
+    ["Mission",contract?.mission],
+    ["Positioning",contract?.positioning],
+    ["Audience",contract?.audience],
+    ["Voice",contract?.voice],
+    ["Values",contract?.values],
+  ].filter((entry):entry is [string,unknown]=>entry[1]!==null&&entry[1]!==undefined&&entry[1]!=="");
+  const sourceCount=Array.isArray(data?.connections)?data.connections.length:0;
+  return (
+    <div className="space-y-5">
+      <Section title="Brand identity" description="Your approved purpose, positioning, voice and identity decisions—not storefront themes or Studio appearance.">
+        {snapshot.pluginsError?(
+          <div role="alert" className="rounded-xl border border-border/70 p-5">
+            <p className="text-[13px] font-medium">Brand connection status unavailable</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">{snapshot.pluginsError}</p>
+          </div>
+        ):!connected?(
+          <div className="rounded-xl border border-border/70 p-5">
+            <p className="text-[13px] font-medium">Brand identity is not connected</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              Connect AgentSam Brand to inspect the authorized brand workspace and approved identity. A theme cannot substitute for a BrandContract.
+            </p>
+            {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
+              className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open plugin connections →</button>:null}
+          </div>
+        ):loading?<p role="status" className="text-[12px] text-muted-foreground">Loading your authorized brand identity…</p>
+        :error?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">{error}</p>
+        :!latest?<div className="rounded-xl border border-dashed border-border/70 p-5">
+          <p className="text-[13px] font-medium">No approved BrandContract saved</p>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            Your Brand plugin is connected, but the identity has not been defined and approved. Inspect actual brand evidence, draft the contract, review it, and explicitly save the approved version.
+          </p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Connected evidence sources: {sourceCount}. No identity attributes have been invented.</p>
+          {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
+            className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Brand workspace →</button>:null}
+        </div>
+        :<div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 p-4">
+            <div>
+              <p className="text-[13px] font-semibold">Approved BrandContract</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Status: {String(latest.status||"unknown")} · version: {String(latest.schema_version||"unspecified")}
+              </p>
+            </div>
+            <span className="text-[11px] text-muted-foreground">{sourceCount} evidence source{sourceCount===1?"":"s"}</span>
+          </div>
+          {identitySections.length?(
+            <div className="grid gap-3 sm:grid-cols-2">
+              {identitySections.map(([label,value])=>(
+                <article key={label} className="min-w-0 rounded-xl border border-border/70 bg-muted/10 p-4">
+                  <h3 className="text-[11px] font-semibold">{label}</h3>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-[12px] text-muted-foreground">
+                    {typeof value==="string"?value:JSON.stringify(value,null,2)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ):<p className="text-[12px] text-muted-foreground">This approved contract uses custom fields; inspect the complete contract below.</p>}
+          <details className="rounded-xl border border-border/70 p-4">
+            <summary className="cursor-pointer text-[12px] font-medium">Inspect full BrandContract and evidence</summary>
+            <pre className="mt-3 max-h-[460px] overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed">{JSON.stringify(latest,null,2)}</pre>
+          </details>
+          <p className="text-[10px] text-muted-foreground">Source: {context?.contextTool} · approved contract in the authorized Brand workspace.</p>
+        </div>}
+      </Section>
+      <Section title="Brand implementation" description="Logo and media assets, design tokens, application themes and campaign materials express the identity; they do not define it.">
+        <p className="text-[12px] text-muted-foreground">
+          Visual implementation belongs to its associated assets and applications. Theme installation and appearance settings remain under Themes—not Brand &amp; Design.
+        </p>
+        {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("themes")}
+          className="mt-3 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">View themes separately →</button>:null}
+      </Section>
+      <Section title="Design spec sheet" description="Every token, type size, radius and component rule for a theme. Pair any brand's colors with any spec's structure to check it before you ship it.">
+        <SettingsDesignSpecSheet themes={snapshot.themes}
+          onOpenThemes={host.openSettingsUnit?()=>host.openSettingsUnit?.("themes"):undefined}/>
+      </Section>
+    </div>
+  );
+}
+
+function GitView({snapshot,host}:{snapshot:SettingsSnapshot;host:SettingsHost}) {
+  const data=snapshot.integrationStatus;
+  const github=data?.providers.find(provider=>provider.provider==="github");
+  const connection=snapshot.plugins.find(plugin=>
+    plugin.providerKey==="github" && plugin.kind==="oauth" && Boolean(plugin.connectionRef)
+  );
+  const [verification,setVerification]=useState<"idle"|"checking"|"verified"|"failed">("idle");
+  const [verifiedRepoCount,setVerifiedRepoCount]=useState(0);
+  const [verifiedHasMore,setVerifiedHasMore]=useState(false);
+  const [verificationError,setVerificationError]=useState("");
+
+  const verifyAccess=async()=>{
+    if (!connection || !host.listPluginRepositories) return;
+    setVerification("checking");
+    setVerificationError("");
+    try {
+      const result=await host.listPluginRepositories(connection.id);
+      setVerifiedRepoCount(result.repositories.length);
+      setVerifiedHasMore(result.hasMore);
+      setVerification("verified");
+    } catch (error) {
+      const code=error instanceof Error?error.message:"";
+      setVerificationError(
+        code==="github_repositories_unreachable"
+          ? "AgentSam could not reach GitHub from its Worker. The stored grant has not been verified; inspect Worker connectivity and retry."
+          : code==="github_repository_access_denied"
+          ? "GitHub rejected the saved authorization. Reconnect the GitHub plugin, then verify again."
+          : "A live GitHub repository read failed. Check your connected GitHub account and retry."
+      );
+      setVerifiedRepoCount(0);
+      setVerifiedHasMore(false);
+      setVerification("failed");
+    }
+  };
+
+  return (
+    <>
+      <Section title="GitHub authorization" description="A recorded OAuth grant and a successful live repository read are separate states.">
+        {!data?.available ? (
+          <p role="status" className="rounded-xl border border-amber-500/25 p-4 text-[12px] text-foreground">
+            OAuth connection status is unavailable. No disconnected state is inferred.
+          </p>
+        ) : (
+          <div className="rounded-xl border border-border/70 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[13px] font-medium">GitHub</span>
+              <StatusPill status={verification==="verified"?"healthy":verification==="failed"?"attention":"unknown"}
+                label={verification==="verified"?"Repository read verified":verification==="failed"?"Verification failed":github?.activeCount?"OAuth grant recorded · unverified":"No active grant recorded"}/>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+              {verification==="verified"
+                ? `Live GitHub API read succeeded for ${verifiedRepoCount} repositor${verifiedRepoCount===1?"y":"ies"}${verifiedHasMore?" (first 100 returned)":""}. This does not grant new write permissions.`
+                : github?.activeCount
+                  ? "A GitHub OAuth record exists. Token refresh, live API authorization and repository access are not established until verification succeeds."
+                  : "No active GitHub OAuth grant was found in the current account. Connect GitHub through Customize → Plugins."}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {connection && host.listPluginRepositories ? (
+                <button type="button" disabled={verification==="checking"} onClick={()=>void verifyAccess()}
+                  className="rounded-lg border border-border px-3 py-2 text-[12px] font-medium hover:bg-muted disabled:opacity-50">
+                  {verification==="checking"?"Checking GitHub…":verification==="verified"?"Recheck GitHub access":"Verify GitHub access"}
+                </button>
+              ) : null}
+              {host.openSettingsUnit ? (
+                <button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
+                  className="rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">
+                  Manage GitHub plugin
+                </button>
+              ) : null}
+            </div>
+            {verificationError ? (
+              <p role="alert" className="mt-3 text-[12px] text-[var(--settings-warning-ink)]">{verificationError}</p>
+            ) : null}
+          </div>
+        )}
+      </Section>
+      <Section title="Registered repositories" description="Account-owned references from code_repositories. These are not live GitHub API results.">
+        {!data?.repositoriesAvailable ? (
+          <p className="text-[12px] text-muted-foreground">Repository registry unavailable.</p>
+        ) : data.repositories.length ? (
+          <div className="divide-y divide-border/70 rounded-xl border border-border/70">
+            {data.repositories.map(repo=>(
+              <div key={repo.id} className="flex flex-wrap justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="break-words text-[12px] font-medium">{repo.fullName||repo.name}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{repo.provider} · branch {repo.defaultBranch||"unspecified"}</p>
+                </div>
+                <span className="text-[10px] text-muted-foreground">Registered</span>
+              </div>
+            ))}
+          </div>
+        ) : <p className="rounded-xl border border-dashed border-border/70 p-5 text-[12px] text-muted-foreground">
+          No repositories are registered to this account.
+        </p>}
+      </Section>
+      <p className="text-[11px] text-muted-foreground">
+        Repository verification is read-only. PR enforcement and repository mutation require their existing host-owned authorization and policy checks.
+      </p>
+    </>
+  );
+}
+
+function CodebaseView({ snapshot }: { snapshot: SettingsSnapshot }) {
+  return (
+    <>
+      <Section title="Repository intelligence" description={snapshot.codebase.policy}>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <MetricCard label="Indexed files" value={snapshot.codebase.indexedFiles} detail="Current code index" />
+          <MetricCard label="Symbols" value={snapshot.codebase.symbols} detail="AST nodes" />
+          <MetricCard label="Dependencies" value={snapshot.codebase.dependencies} detail="Graph edges" />
+        </div>
+      </Section>
+      <Section title="Indexing policy">
+        <div className="rounded-lg border border-border/70 px-3">
+          <PreferenceRow label="Current branch" description="Repository ref used for deterministic inspection." value={snapshot.codebase.branch} />
+          <PreferenceRow label="Semantic projection" description="Embeddings augment structural retrieval; they are not source authority." value="Enabled" />
+          <PreferenceRow label="Generated files" description="Exclude build output and dependency folders." trailing={<Toggle enabled />} />
+        </div>
+      </Section>
+    </>
+  );
+}
+
+function NetworkView({ snapshot }: { snapshot: SettingsSnapshot }) {
+  return (
+    <Section title="Browser & network capabilities" description="Local, OAuth and tunnel state are separate capabilities.">
+      <div className="rounded-lg border border-border/70 px-3">
+        <PreferenceRow label="Browser runtime" description="Browser automation availability." value={snapshot.network.browser} />
+        <PreferenceRow label="Device tunnel" description="Local machine reachability." value={snapshot.network.tunnel} />
+        <PreferenceRow label="Cloudflare OAuth" description="Connected infrastructure account." value={snapshot.network.oauth} />
+        <PreferenceRow label="Network health" description="Aggregate display only; individual capabilities retain their own status." trailing={<StatusPill status={snapshot.network.health} />} />
+      </div>
+    </Section>
+  );
+}
+
+function StorageView({ snapshot, host, onChanged }: {
+  snapshot:SettingsSnapshot;host:SettingsHost;onChanged:()=>Promise<void>;
+}) {
+  return <SettingsStoragePanel snapshot={snapshot} host={host} onChanged={onChanged}/>;
+}
+
+function UsageView({ snapshot, host }: { snapshot: SettingsSnapshot; host: SettingsHost }) {
+  return (
+    <>
+      <SettingsBillingPanel host={host} />
+      <Section title="Measured platform usage" description="Usage estimates are separate from invoiced charges.">
+        <p className="mb-3 text-xs text-muted-foreground">Recorded tool call costs are not the same as complete model, infrastructure, or invoice spending.</p>
+        {snapshot.usage.length ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {snapshot.usage.map((metric) => <MetricCard key={metric.label} {...metric} />)}
+        </div> : <p className="text-xs text-muted-foreground">No verified account-scoped usage measurements are available from this host.</p>}
+      </Section>
+    </>
+  );
+}
+
+const CHANNEL_ROWS: Array<{
+  id: keyof SettingsNotificationChannels;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "in_app",
+    label: "In-app inbox",
+    description: "Show notices in AgentSam for this account.",
+  },
+  {
+    id: "email",
+    label: "Email",
+    description: "Deliver through the notification email on this account.",
+  },
+  {
+    id: "push",
+    label: "Web push",
+    description: "Browser or device push when a hook endpoint is registered.",
+  },
+  {
+    id: "imessage",
+    label: "iMessage / SMS",
+    description: "Route to the phone number saved below when the host adapter is available.",
+  },
+];
+
+function defaultNotificationProfile(snapshot: SettingsSnapshot): SettingsNotificationProfile {
+  if (snapshot.notificationProfile) return snapshot.notificationProfile;
+  return {
+    email: "",
+    phone: "",
+    loginEmail: null,
+    channels: { email: true, push: false, imessage: false, in_app: true },
+    events: snapshot.notifications,
+  };
+}
+
+function NotificationsView({
+  snapshot,
+  host,
+  onChanged,
+}: {
+  snapshot: SettingsSnapshot;
+  host: SettingsHost;
+  onChanged: () => Promise<void>;
+}) {
+  const [profile, setProfile] = useState<SettingsNotificationProfile>(() =>
+    defaultNotificationProfile(snapshot),
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setProfile(defaultNotificationProfile(snapshot));
+  }, [snapshot.notificationProfile, snapshot.notifications, snapshot.notificationProfileError]);
+
+  async function save() {
+    if (!host.updateNotificationSettings) return;
+    setBusy(true);
+    setError("");
+    try {
+      await host.updateNotificationSettings({
+        email: profile.email,
+        phone: profile.phone,
+        channels: profile.channels,
+        events: profile.events.map(({ id, enabled }) => ({ id, enabled })),
+      });
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save notification settings");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const canSave = !!host.updateNotificationSettings && !snapshot.notificationProfileError;
+
+  return (
+    <>
+      <Section
+        title="Contact"
+        description="Where this account should receive email and phone deliveries. Login identity stays separate."
+      >
+        {snapshot.notificationProfileError ? (
+          <p
+            role="alert"
+            className="mb-3 rounded-xl border border-amber-500/25 p-3 text-[11px] text-[var(--settings-warning-ink)]"
+          >
+            {snapshot.notificationProfileError}. Changes cannot be saved until the service is available.
+          </p>
+        ) : null}
+        <div className="space-y-3 rounded-xl border border-border/70 p-4">
+          {profile.loginEmail ? (
+            <PreferenceRow
+              label="Login email"
+              description="Account identity used to sign in. Not overwritten by notification email."
+              value={profile.loginEmail}
+            />
+          ) : null}
+          <label className="block space-y-1.5">
+            <span className="text-[12px] font-medium">Notification email</span>
+            <span className="block text-[10px] text-muted-foreground">
+              Stored on accounts.notification_email for outbox delivery.
+            </span>
+            <input
+              type="email"
+              autoComplete="email"
+              value={profile.email}
+              disabled={!canSave}
+              onChange={(event) =>
+                setProfile((current) => ({ ...current, email: event.target.value }))
+              }
+              placeholder="you@company.com"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[12px] outline-none focus:border-foreground/40 disabled:opacity-60"
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-[12px] font-medium">Phone / iMessage handle</span>
+            <span className="block text-[10px] text-muted-foreground">
+              Saved on accounts.meta_json.notifications for SMS or Messages adapters.
+            </span>
+            <input
+              type="tel"
+              autoComplete="tel"
+              value={profile.phone}
+              disabled={!canSave}
+              onChange={(event) =>
+                setProfile((current) => ({ ...current, phone: event.target.value }))
+              }
+              placeholder="+1 337 555 0100"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[12px] outline-none focus:border-foreground/40 disabled:opacity-60"
+            />
+          </label>
+        </div>
+      </Section>
+
+      <Section title="Channels" description="Choose which transports may deliver for this account.">
+        <div className="rounded-lg border border-border/70 px-3">
+          {CHANNEL_ROWS.map((row) => (
+            <PreferenceRow
+              key={row.id}
+              label={row.label}
+              description={row.description}
+              trailing={
+                <Toggle
+                  enabled={profile.channels[row.id]}
+                  onChange={(enabled) =>
+                    setProfile((current) => ({
+                      ...current,
+                      channels: { ...current.channels, [row.id]: enabled },
+                    }))
+                  }
+                />
+              }
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Events" description="Only actionable changes should interrupt the user.">
+        <div className="rounded-lg border border-border/70 px-3">
+          {profile.events.map((item) => (
+            <PreferenceRow
+              key={item.id}
+              label={item.label}
+              description={item.description}
+              trailing={
+                <Toggle
+                  enabled={item.enabled}
+                  onChange={(enabled) =>
+                    setProfile((current) => ({
+                      ...current,
+                      events: current.events.map((candidate) =>
+                        candidate.id === item.id ? { ...candidate, enabled } : candidate,
+                      ),
+                    }))
+                  }
+                />
+              }
+            />
+          ))}
+        </div>
+        {error ? (
+          <p role="alert" className="mt-3 text-[11px] text-[var(--settings-danger-ink)]">
+            {error}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          disabled={busy || !canSave}
+          onClick={() => void save()}
+          className="mt-4 rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+        >
+          Save notification settings
+        </button>
+      </Section>
+    </>
+  );
+}
+
+function DocsView({host}: {host:SettingsHost}) {
+  const topic = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("topic")
+    : null;
+  return <>
+    <Section title="Documentation" description="Guides for AgentSam workflows. Contextual help links land here.">
+      <div className="space-y-3">
+        <a href="/help/cms" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
+          <BookOpen className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Sites, themes, and CMS</span><span className="block text-xs text-muted-foreground">Connected websites, content-only records, drafts, and publish checks</span></span><ChevronRight className="size-4" />
+        </a>
+        <a href="/settings/docs?topic=artwork" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
+          <ImageIcon className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Artwork Help</span><span className="block text-xs text-muted-foreground">File formats, print resolution, color, and production guidelines</span></span><ChevronRight className="size-4" />
+        </a>
+        <a href="/media" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
+          <FolderOpen className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Media Library</span><span className="block text-xs text-muted-foreground">Images, videos, models, and files</span></span><ChevronRight className="size-4" />
+        </a>
+      </div>
+    </Section>
+    {topic === "artwork" ? (
+      <Section title="Artwork Help" description="Production guidance formerly under Products → Artwork Help.">
+        <div className="space-y-3 rounded-lg border border-border/70 p-4 text-sm leading-6 text-muted-foreground">
+          <p>Use print-ready artwork at the product’s required resolution. Prefer vector or high-resolution PNG/TIFF sources; keep color profiles consistent with the fulfillment partner.</p>
+          <p>Open Product Studio when you need to attach artwork to a catalog item. MovieMode stays under Apps for timeline editing.</p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <a href="/admin/products" className="rounded-lg border border-border px-3 py-2 text-xs text-foreground hover:bg-muted">Store Products</a>
+            <a href="/admin/products/create" className="rounded-lg border border-border px-3 py-2 text-xs text-foreground hover:bg-muted">Product Studio</a>
+            {host.openSettingsUnit ? <button type="button" onClick={() => host.openSettingsUnit?.("docs")} className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted">All docs</button> : null}
+          </div>
+        </div>
+      </Section>
+    ) : null}
+  </>;
+}
+
+function KeysSubView({ view, snapshot }: { view: string; snapshot: SettingsSnapshot }) {
+  if (view === "credentials") return <KeysView snapshot={snapshot} />;
+
+  if (view === "secrets") {
+    return (
+      <Section title="Personal secrets" description="BYOK provider values are encrypted at rest and revealed only when the product explicitly permits it.">
+        <div className="space-y-3">
+          <SensitiveInput label="OpenAI" value="sk-demo-not-a-real-key" description="Fixture only · service=openai · type=api_key" />
+          <SensitiveInput label="Cloudflare" value="cf-demo-not-a-real-token" description="Fixture only · service=cloudflare · type=token" />
+        </div>
+      </Section>
+    );
+  }
+
+  if (view === "sessions") {
+    return (
+      <Section title="Sessions & security" description="Active product sessions and security evidence live beside credential management, not inside the credential table.">
+        <div className="rounded-lg border border-border/70 px-3">
+          <PreferenceRow label="Local Studio · browser" description="Current authenticated web session." value="Active now" />
+          <PreferenceRow label="Dev machine · CLI" description="Native CLI authorization." value="18 min ago" />
+          <PreferenceRow label="Revoke other sessions" description="Keep the current session and invalidate the rest." value="Review" />
+        </div>
+      </Section>
+    );
+  }
+
+  return (
+    <Section title="Security audit" description="Credential events should be attributable without logging plaintext values.">
+      <div className="divide-y divide-border/60 rounded-lg border border-border/70">
+        {[
+          ["API key used", "Dev machine · CLI", "2 min ago"],
+          ["Provider secret updated", "OpenAI · default", "Yesterday"],
+          ["Service credential rotated", "Local Studio prod", "Sep 24"],
+        ].map(([action, target, time]) => (
+          <div key={action + target} className="grid grid-cols-[1fr_auto] gap-4 px-3 py-3">
+            <div>
+              <div className="text-[11px] font-medium">{action}</div>
+              <div className="mt-0.5 text-[10px] text-muted-foreground">{target}</div>
+            </div>
+            <div className="text-[10px] text-muted-foreground">{time}</div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function renderUnit(
+  unit: SettingsUnitId,
+  snapshot: SettingsSnapshot,
+  view: string,
+  host: SettingsHost,
+  onChanged: () => Promise<void>,
+) {
+  switch (unit) {
+    case "general":
+      return <GeneralView snapshot={snapshot} host={host} onChanged={onChanged}/>;
+    case "agents":
+      return <AgentsView snapshot={snapshot} view={view} host={host} onChanged={onChanged}/>;
+    case "customize":
+      return <CustomizeView snapshot={snapshot} view={view} host={host} onChanged={onChanged} />;
+    case "design":
+      return <DesignView snapshot={snapshot} host={host} onChanged={onChanged}/>;
+    case "git-prs":
+      return <GitView snapshot={snapshot} host={host} />;
+    case "codebase":
+      return <CodebaseView snapshot={snapshot} />;
+    case "network":
+      return <NetworkView snapshot={snapshot} />;
+    case "themes":
+      return <ThemesView themes={snapshot.themes} host={host} onChanged={onChanged} />;
+    case "storage":
+      return <StorageView snapshot={snapshot} host={host} onChanged={onChanged} />;
+    case "keys":
+      return <KeysSubView snapshot={snapshot} view={view} />;
+    case "usage":
+      return <UsageView snapshot={snapshot} host={host} />;
+    case "notifications":
+      return <NotificationsView snapshot={snapshot} host={host} onChanged={onChanged} />;
+    case "docs":
+      return <DocsView host={host} />;
+    default:
+      return null;
+  }
+}
+
+export function SettingsProductPage({
+  manifest,
+  host,
+  unitId,
+  requestedView,
+  onViewChange,
+  renderCustomView,
+}: {
+  manifest: SettingsManifest;
+  host: SettingsHost;
+  unitId: SettingsUnitId;
+  requestedView?: string;
+  onViewChange?: (view: string) => void;
+  /** Optional host-owned extension surfaces for verified first-party settings views. */
+  renderCustomView?: (unitId: SettingsUnitId, view: string) => ReactNode | null;
+}) {
+  const unit = manifest.units.find((candidate) => candidate.id === unitId) ?? manifest.units[0];
+  const defaultView = unit?.views?.[0]?.id ?? "";
+  const [activeView, setActiveView] = useState(requestedView || defaultView);
+  const [snapshot, setSnapshot] = useState<SettingsSnapshot | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      void host.snapshot().then((next) => {
+        if (!cancelled) {
+          setSnapshot(next);
+          setLoadError(false);
+        }
+      }).catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    };
+    refresh();
+    const unsubscribe = host.subscribe?.(unitId, refresh);
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [host, unitId, retryKey]);
+
+  useEffect(() => {
+    setActiveView(requestedView || defaultView);
+  }, [requestedView, defaultView, unitId]);
+
+  const validView = useMemo(() => {
+    if (!unit?.views?.length) return "";
+    return unit.views.some((candidate) => candidate.id === activeView)
+      ? activeView
+      : defaultView;
+  }, [activeView, defaultView, unit]);
+
+  if (!unit) return null;
+
+  const customView = renderCustomView?.(unit.id, validView) ?? null;
+  if (!snapshot && customView !== null) {
+    // Host-owned first-party views can render independently of the settings
+    // snapshot, so a plugin registry outage cannot blank Companion Studio.
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto w-full max-w-[1180px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+          <SegmentNav
+            unit={unit}
+            activeView={validView}
+            onViewChange={(view) => {
+              setActiveView(view);
+              onViewChange?.(view);
+            }}
+          />
+          {customView}
+        </div>
+      </div>
+    );
+  }
+
+  if (!snapshot) {
+    return (
+      <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 px-5 text-center">
+        <h1 className="text-base font-semibold text-foreground">Settings</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {loadError ? "Your settings could not be loaded. No preferences were changed." : "Loading settings…"}
+        </p>
+        {loadError ? <button type="button" className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground" onClick={() => { setLoadError(false); setRetryKey(value => value + 1); }}>Retry settings</button> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto w-full max-w-[1180px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+        <PageHeader unit={unit} snapshot={snapshot} />
+        <SegmentNav
+          unit={unit}
+          activeView={validView}
+          onViewChange={(view) => {
+            setActiveView(view);
+            onViewChange?.(view);
+          }}
+        />
+        <div className={unit.views?.length ? "" : "pt-5"}>
+          {customView ?? renderUnit(unit.id, snapshot, validView, host, async () => {
+            setSnapshot(await host.snapshot());
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+export { SettingsAccountPanel } from "./account";
+export { SettingsDesignSpecSheet } from "./design-spec";

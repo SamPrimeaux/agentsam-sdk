@@ -580,195 +580,6 @@ function bindAgentsamStaticHandlers() {
     }
   });
 
-  dococation.search).get("slug") || undefined,
-    ...window.__agentsamPageContext,
-    ...extra,
-  };
-  if (
-    location.pathname === "/admin/content" &&
-    typeof window.getSelectedMediaAssetIds === "function" &&
-    !extra.selected_resource
-  ) {
-    const ids = window.getSelectedMediaAssetIds();
-    if (Array.isArray(ids) && ids.length) {
-      ctx.selected_resource = {
-        type: "media_selection",
-        surface: "content-library",
-        ids: ids.slice(0, 100),
-      };
-    }
-  }
-  return ctx;
-}
-
-let drawerRequestActive = false;
-let drawerConversationId = null;
-async function sendAgentsamMessage(text, options = {}) {
-  if (drawerRequestActive) throw new Error("AgentSam is already responding");
-  const message = (text || "").trim();
-  const draft = window.AgentSamDraft || { attachments: [], selected_resource: null };
-  if (!message && !draft.attachments?.length && !options.attachments?.length) return;
-  drawerRequestActive = true;
-  setBusy(true);
-  let attachments;
-  try {
-    attachments = Array.isArray(options.attachments) && options.attachments.every(item => item.attachment_id)
-      ? options.attachments
-      : await (window.AgentSamComposerMenu?.readyAttachments?.() || Promise.resolve([]));
-    if (!message && !attachments.length) {
-      drawerRequestActive = false;
-      setBusy(false);
-      return;
-    }
-  } catch (error) {
-    drawerRequestActive = false;
-    setBusy(false);
-    throw error;
-  }
-  appendMessage("user", message || "Attached " + attachments.length + " file(s)", null, attachments);
-
-  const typing = document.createElement("div");
-  typing.className = "agentsam-msg agentsam-msg--assistant agentsam-msg--typing";
-  typing.textContent = "Thinking…";
-  document.getElementById("agentsam-messages")?.appendChild(typing);
-
-  try {
-    const res = await fetch("/api/admin/agentsam/chat", {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      credentials: "include",
-      signal: options.signal,
-      body: JSON.stringify({
-        message,
-        conversation_id: drawerConversationId,
-        context: buildAgentsamContext({
-          ...(draft.selected_resource ? { selected_resource: draft.selected_resource } : {}),
-          ...(options.context || {})
-        }),
-        attachments
-      }),
-    });
-    const { readAgentSamReply } = await import("/admin/js/agentsam-response.mjs");
-    const data = await readAgentSamReply(res);
-    drawerConversationId = data.conversation_id || drawerConversationId;
-    appendMessage("assistant", data.reply, data.routing);
-    if (window.AgentSamComposerMenu && !options.preserveAttachments) window.AgentSamComposerMenu.clearFiles(attachments);
-
-    if (data.routing?.workflow?.ui_label) {
-      updateStatusLine(`${data.routing.workflow.ui_label} · ${data.routing.classification?.source || "routed"}`);
-    }
-    if (data.stub) updateStatusLine("Stub mode — bind Workers AI");
-    return data;
-  } catch (err) {
-    appendMessage("assistant", err.message || "Something went wrong.");
-    if (options.propagateError) throw err;
-  } finally {
-    typing.remove();
-    drawerRequestActive = false;
-    setBusy(false);
-    if (document.body.classList.contains("agentsam-open")) {
-      document.getElementById("agentsam-input")?.focus();
-    }
-  }
-}
-
-// Open-state is a UI preference, not conversation history. Do not let a shared
-// Studio host persist one customer's drawer state into another installation.
-function agentsamOpenStateKey() {
-  const ctx = window.__agentsamPageContext || {};
-  const instance = String(ctx.installation_id || ctx.installationId ||
-    ctx.site_id || ctx.siteId || document.body?.dataset?.agentsamInstallationId || "").trim();
-  if (!instance) return null;
-  return `agentsam.ecommerce.side-assistant.open.v1:${encodeURIComponent(instance)}`;
-}
-
-function openAgentsamDrawer() {
-  document.body.classList.add("agentsam-open");
-  document.getElementById("agentsam-drawer")?.setAttribute("aria-hidden", "false");
-  document.getElementById("agentsam-backdrop")?.setAttribute("aria-hidden", "false");
-  document.getElementById("agentsam-dock")?.setAttribute("aria-hidden", "false");
-  document.getElementById("agentsam-toggle")?.setAttribute("aria-expanded", "true");
-  document.getElementById("agentsam-toggle")?.classList.add("is-agentsam-active");
-  try {
-    const key = agentsamOpenStateKey();
-    if (key) sessionStorage.setItem(key, "1");
-  } catch {
-    /* ignore */
-  }
-  document.getElementById("agentsam-input")?.focus();
-}
-
-function closeAgentsamDrawer() {
-  setAgentsamFocus(false);
-  document.body.classList.remove("agentsam-open");
-  document.getElementById("agentsam-drawer")?.setAttribute("aria-hidden", "true");
-  document.getElementById("agentsam-backdrop")?.setAttribute("aria-hidden", "true");
-  document.getElementById("agentsam-dock")?.setAttribute("aria-hidden", "true");
-  document.getElementById("agentsam-toggle")?.setAttribute("aria-expanded", "false");
-  document.getElementById("agentsam-toggle")?.classList.remove("is-agentsam-active");
-  try {
-    const key = agentsamOpenStateKey();
-    if (key) sessionStorage.setItem(key, "0");
-  } catch {
-    /* ignore */
-  }
-}
-
-function bindAgentsamToggle() {
-  const toggle = document.getElementById("agentsam-toggle");
-  if (!toggle || toggle.dataset.agentsamBound) return;
-  toggle.dataset.agentsamBound = "1";
-  toggle.addEventListener("click", () => {
-    if (document.body.classList.contains("agentsam-open")) closeAgentsamDrawer();
-    else openAgentsamDrawer();
-  });
-}
-
-function bindAgentsamStaticHandlers() {
-  if (window.__agentsamStaticHandlers) return;
-  window.__agentsamStaticHandlers = true;
-
-  document.getElementById("agentsam-close")?.addEventListener("click", closeAgentsamDrawer);
-  document.getElementById("agentsam-backdrop")?.addEventListener("click", closeAgentsamDrawer);
-  document.getElementById("agentsam-drawer")?.addEventListener("click", event => {
-    const target = event.target.closest?.("[data-assistant-action]");
-    if (!target) return;
-    const action = target.getAttribute("data-assistant-action");
-    if (action === "New chat") {
-      drawerConversationId = null;
-      const messages = document.getElementById("agentsam-messages");
-      messages?.replaceChildren();
-      renderAgentsamEmptyState();
-      document.getElementById("agentsam-input")?.focus();
-    } else if (action === "Expand" || action === "Collapse") {
-      setAgentsamFocus(!document.body.classList.contains("agentsam-focus-mode"));
-    }
-  });
-
-  document.getElementById("agentsam-input")?.addEventListener("input", () => setBusy(drawerRequestActive));
-  document.addEventListener("agentsam:attachments-updated", () => setBusy(drawerRequestActive));
-  setBusy(false);
-
-  document.getElementById("agentsam-input")?.addEventListener("keydown", event => {
-    if (event.key !== "Enter" || event.shiftKey || event.isComposing || event.keyCode === 229 ||
-        event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
-    event.preventDefault();
-    if (!drawerRequestActive) document.getElementById("agentsam-form")?.requestSubmit();
-  });
-
-  document.getElementById("agentsam-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const input = document.getElementById("agentsam-input");
-    const val = input?.value || "";
-    try {
-      await sendAgentsamMessage(val, { propagateError: true });
-      if (input?.value === val) input.value = "";
-      setBusy(false);
-    } catch {
-      // Preserve draft and attachments for retry; the chat already displays the error.
-    }
-  });
-
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && document.body.classList.contains("agentsam-focus-mode")) {
       setAgentsamFocus(false);
@@ -780,4 +591,46 @@ function bindAgentsamStaticHandlers() {
 
 async function loadAgentsamMeta() {
   try {
-    const
+    const statusRes = await fetch("/api/admin/agentsam/status", { credentials: "include" });
+    const status = await statusRes.json().catch(() => ({}));
+
+    if (status.ok) {
+      renderMcpBanner(status);
+      if (status.bound) updateStatusLine();
+    }
+
+  } catch {
+    /* offline */
+  }
+}
+
+function initAgentsamDrawer() {
+  renderAgentsamShell();
+  bindAgentsamToggle();
+
+  renderAgentsamEmptyState();
+
+  bindAgentsamStaticHandlers();
+  mountAgentSamCapabilityMenu();
+  loadAgentsamMeta();
+
+  try {
+    const key = agentsamOpenStateKey();
+    if (key && sessionStorage.getItem(key) === "1") openAgentsamDrawer();
+  } catch {
+    /* ignore */
+  }
+}
+
+function setAgentsamPageContext(ctx) {
+  window.__agentsamPageContext = { ...(window.__agentsamPageContext || {}), ...ctx };
+}
+
+window.openAgentsamDrawer = openAgentsamDrawer;
+window.focusAgentsamDrawer = focusAgentsamDrawer;
+window.dockAgentsamDrawer = () => setAgentsamFocus(false);
+window.closeAgentsamDrawer = closeAgentsamDrawer;
+window.sendAgentsamMessage = sendAgentsamMessage;
+window.presentAgentsamProposal = presentAgentsamProposal;
+window.initAgentsamDrawer = initAgentsamDrawer;
+window.setAgentsamPageContext = setAgentsamPageContext;
