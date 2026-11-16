@@ -22,8 +22,8 @@ function TerminalShortcut() {
       if (existing) state.setActiveSideTab(existing.id);
       else state.openSideTab("terminal", { ephemeral: false });
       state.setSideOpen(true);
-      if (isPackagedDesktop()) window.location.hash = "#/agentsam";
-      else void navigate({ to: "/agentsam", replace: true });
+      if (isPackagedDesktop()) window.location.hash = "#/admin/agentsam";
+      else void navigate({ to: "/admin/agentsam", replace: true });
     };
     if (useWorkStore.persist.hasHydrated()) openTerminal();
     else void Promise.resolve(useWorkStore.persist.rehydrate()).then(openTerminal);
