@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Portable editable 3D scene format, authoring API, animation runtime, Three.js presentation and AgentSam OCCT geometry pipeline.",
-  "license": "UNLICENSED",
+  "license": "FSL-1.1-MIT",
   "publishConfig": {
     "access": "public"
   },
