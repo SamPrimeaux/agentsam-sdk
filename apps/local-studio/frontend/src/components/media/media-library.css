@@ -283,16 +283,6 @@
 .agentsam-media-item__menu [role="separator"] { height: 1px; margin: .3rem; background: var(--ml-border, var(--border, #30343b)); }
 .agentsam-media-item.is-inspected { border-color: var(--ml-accent); }
 
-@media (max-width: 900px) {
-  .agentsam-media-library.is-inspecting .agentsam-media-header,
-  .agentsam-media-library.is-inspecting .agentsam-media-toolbar,
-  .agentsam-media-library.is-inspecting .agentsam-media-body { margin-right: 0; }
-  .agentsam-media-viewer {
-    width: 100%; top: auto; height: min(84dvh, 47rem);
-    border-left: 0; border-top: 1px solid var(--ml-border); border-radius: .85rem .85rem 0 0;
-    box-shadow: 0 -16px 45px rgb(0 0 0 / .55);
-  }
-}
 @media (max-width: 720px) {
   .agentsam-media-header, .agentsam-media-toolbar, .agentsam-media-body { padding-left: 1rem; padding-right: 1rem; }
 }
