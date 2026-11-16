@@ -7,6 +7,7 @@
   --profile-accent: #77b2c7;
   --profile-positive: #273318;
   --profile-outline: #474849;
+  --profile-field-outline: #858c92;
   min-width: 0;
   background: var(--profile-canvas);
   color: var(--profile-ink);
@@ -55,7 +56,7 @@
   border: 1px solid var(--profile-outline);
   border-radius: 12px;
 }
-.agent-profiles .agent-profile-field { min-height: 48px; font-size: 16px; }
+.agent-profiles .agent-profile-field { min-height: 48px; font-size: 16px; border-color: var(--profile-field-outline); }
 .agent-profiles .agent-profile-action {
   min-height: 44px;
   color: var(--profile-accent);
