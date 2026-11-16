@@ -31,7 +31,8 @@ function normalizeSettingsTarget(value: string): string {
 export function buildConnectionReturnUrl(provider: string, to?: string): string {
   const url = new URL(CONNECTION_CALLBACK_BASE);
   url.searchParams.set("provider", provider);
-  const returnTo = to ? normalizeSettingsTarget(to) : "";\n  if (returnTo) url.searchParams.set("to", returnTo);
+  const returnTo = to ? normalizeSettingsTarget(to) : "";
+  if (returnTo) url.searchParams.set("to", returnTo);
   return url.toString();
 }
 
