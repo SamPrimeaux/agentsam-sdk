@@ -44,6 +44,9 @@ try {
     ['Chats', 'Home', 'Ideas', 'Goals', 'Library']);
   assert.equal(await page.locator('.console-sidenav.admin-sidebar').evaluate((element) => getComputedStyle(element).display), 'none');
   await dock.getByRole('button', { name: 'Chats' }).click();
+  // Chats is a destination. The single global header bubble owns the drawer.
+  const navToggle = page.locator('[data-shared-nav-toggle], .agentsam-topbar-leading [aria-label="Toggle global navigation"]').first();
+  await navToggle.click();
   const drawer = page.getByRole('dialog', { name: 'Navigation' });
   assert.equal(await drawer.isVisible(), true);
   assert.equal(await page.locator('.as-nav-mobile-drawer').count(), 1);
@@ -74,10 +77,11 @@ try {
   await page.waitForURL(/#\/goalguru/);
   await dock.getByRole('button', { name: 'Library' }).click();
   await page.getByRole('tablist', { name: 'Library content' }).waitFor({ state: 'visible' });
+  assert.equal(await dock.isVisible(), false, 'Library is a focused destination without the launch dock');
   await page.getByRole('tab', { name: 'Media', exact: true }).click();
   await page.locator('[data-agentsam-media-library]').waitFor({ state: 'visible' });
   assert.deepEqual(errors, [], 'the mobile path must not throw page errors');
-  console.log('[mobile-launch-smoke] PASS 390x844: five destinations, one Chats drawer, Home route, Ideas, Goals, Library/Media');
+  console.log('[mobile-launch-smoke] PASS 390x844: scoped launch dock, one header drawer, Home, Ideas, Goals, focused Library/Media');
 } finally {
   await browser?.close();
   await new Promise((done) => server.close(done));
