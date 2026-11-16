@@ -466,3 +466,13 @@ test('CMS product shell remains standalone but removes its own chrome only in an
   assert.match(source, /if \(shellMode\.id !== "embedded-app"\) \{[\s\S]*?mountShellDock\(\)/);
   assert.match(source, /"admin-dock-off", fullBleed \|\| shellMode\.id === "embedded-app"/);
 });
+
+
+test('nested Media routes mount exactly one library through the router Outlet', () => {
+  const parent = readFileSync(new URL('../frontend/src/routes/(apps)/admin/media.tsx', import.meta.url), 'utf8');
+  assert.match(parent, /return atIndex \? <MediaLibraryPage \/> : <Outlet \/>/);
+  for (const child of ['images', 'videos', 'models', 'files']) {
+    const source = readFileSync(new URL('../frontend/src/routes/(apps)/admin/media.' + child + '.tsx', import.meta.url), 'utf8');
+    assert.match(source, /component: MediaLibraryPage/);
+  }
+});
