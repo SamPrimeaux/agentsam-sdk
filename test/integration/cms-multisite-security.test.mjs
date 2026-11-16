@@ -33,7 +33,7 @@ function fakeDb(rows) {
 }
 function returnedSite() {
   return {
-    project_id: PROJECT, name: site.name, domain: 'fuelnfreetime.com',
+    project_id: PROJECT, account_id: ACCOUNT, name: site.name, domain: 'fuelnfreetime.com',
     worker_id: 'fuelnfreetime', metadata_json: '{}', tenant_id: 'tenant_test',
     workspace_id: 'ws_test', role: 'owner', cms_slug: null,
   };
@@ -52,7 +52,11 @@ test('CMS site discovery returns real Worker authority and prevents slug-based i
   assert.deepEqual(await listAuthorizedCmsSites(fakeDb([returnedSite()]), ACCOUNT), [], 'no unconfigured workers in catalog');
   const owned = await listAuthorizedCmsSites(fakeDb([returnedSite()]), ACCOUNT, opts);
   assert.equal(owned.length, 1);
-  assert.deepEqual(owned[0], { ...site, domain:'fuelnfreetime.com', workspace_id: 'ws_test' });
+  assert.deepEqual(owned[0], {
+    ...site, account_id: ACCOUNT, domain: 'fuelnfreetime.com', workspace_id: 'ws_test',
+    primary_domain: 'fuelnfreetime.com', domain_aliases_json: null,
+    settings_json: null, status: 'active', is_default: false, page_count: null,
+  }, 'authenticated Worker site carries the full site-first contract');
   assert.equal((await requireCmsSiteAccess(fakeDb([]), ACCOUNT, 'fuelnfreetime')).status, 404);
   assert.equal((await requireCmsSiteAccess(fakeDb([returnedSite()]), ACCOUNT, 'someone-else', 'read', opts)).status, 404);
   assert.equal((await requireCmsSiteAccess(fakeDb([{ ...returnedSite(), role: 'viewer' }]), ACCOUNT, 'fuelnfreetime', 'write', opts)).status, 403);
