@@ -1,54 +1,77 @@
 /**
- * Local Studio's owned admin mount registry. Public product/admin console
- * routes retain their existing handlers until their ownership is reconciled.
+ * Local Studio-owned dashboard routes. These mounts are an explicit allowlist:
+ * Ecommerce-owned commerce routes such as /admin/products, /admin/orders,
+ * /admin/pages and /admin/inventory remain owned by the installed CMS.
  *
- * This is intentionally an allowlist, not a blanket /admin/* rewrite:
- * /admin/pages, /admin/content and other installed-commerce routes remain
- * product-owned. AgentSam/CAD/MovieMode are owned by Local Studio only when
- * that host is installed, never by the standalone Ecommerce customer Worker.
- *
- * Media Library owns /media/* as a first-party Studio surface. MovieMode is
- * only mounted at /admin/moviemode — never aliased from /media.
+ * Every first-party Studio dashboard experience has a canonical /admin path.
+ * Flat paths are retained only as compatibility redirects.
  */
 export const STUDIO_ADMIN_MOUNTS = Object.freeze([
-  Object.freeze({ id: 'work.projects', flat: '/projects', canonical: '/admin/projects' }),
+  Object.freeze({ id: 'dashboard.root', flat: '/admin', canonical: '/admin/home', exactOnly: true }),
   Object.freeze({ id: 'commerce.home', flat: '/admin/home', canonical: '/admin/home', exactOnly: true }),
-  // Canonical Online Store uses the same installed Ecommerce component as the
-  // legacy /apps/ecommerce-cms-agentsam?page=/admin/store launch surface.
   Object.freeze({ id: 'commerce.store', flat: '/admin/store', canonical: '/admin/store', exactOnly: true }),
   Object.freeze({ id: 'commerce.checkout-preview', flat: '/admin/onboarding-preview', canonical: '/admin/onboarding-preview', exactOnly: true }),
+  Object.freeze({ id: 'creative.moviemode', flat: '/admin/moviemode', canonical: '/admin/moviemode', exactOnly: true }),
+  Object.freeze({ id: 'agent.cad-compat', flat: '/agentsam/apps/cad', canonical: '/admin/cad' }),
+  Object.freeze({ id: 'ecommerce.compat', flat: '/apps/ecommerce-cms-agentsam', canonical: '/admin/apps/ecommerce-cms-agentsam' }),
+  Object.freeze({ id: 'help.cms', flat: '/help/cms', canonical: '/admin/help/cms' }),
   Object.freeze({ id: 'agent.chat', flat: '/agentsam', canonical: '/admin/agentsam', exactOnly: true }),
+  Object.freeze({ id: 'agent.chats', flat: '/chats', canonical: '/admin/chats' }),
+  Object.freeze({ id: 'analytics', flat: '/analytics', canonical: '/admin/analytics' }),
+  Object.freeze({ id: 'artifacts', flat: '/artifacts', canonical: '/admin/artifacts' }),
+  Object.freeze({ id: 'browser', flat: '/browse', canonical: '/admin/browse' }),
   Object.freeze({ id: 'cad.studio', flat: '/cad', canonical: '/admin/cad' }),
-  // SamSketch owns /samsketch as an included app route — do not redirect it into CAD.
-  Object.freeze({ id: 'creative.moviemode', flat: '/admin/moviemode', canonical: '/admin/moviemode' }),
+  Object.freeze({ id: 'campaigns', flat: '/campaigns', canonical: '/admin/campaigns' }),
+  Object.freeze({ id: 'canvas', flat: '/canvas', canonical: '/admin/canvas' }),
+  Object.freeze({ id: 'cli', flat: '/cli', canonical: '/admin/cli' }),
+  Object.freeze({ id: 'cms', flat: '/cms', canonical: '/admin/cms' }),
+  Object.freeze({ id: 'collaborate', flat: '/collaborate', canonical: '/admin/collaborate' }),
+  Object.freeze({ id: 'content', flat: '/content', canonical: '/admin/content' }),
+  Object.freeze({ id: 'database', flat: '/database', canonical: '/admin/database' }),
+  Object.freeze({ id: 'docs', flat: '/docs', canonical: '/admin/docs' }),
+  Object.freeze({ id: 'files', flat: '/files', canonical: '/admin/files' }),
+  Object.freeze({ id: 'forms', flat: '/forms', canonical: '/admin/forms' }),
+  Object.freeze({ id: 'goals', flat: '/goalguru', canonical: '/admin/goalguru' }),
+  Object.freeze({ id: 'ideas', flat: '/ideas', canonical: '/admin/ideas' }),
+  Object.freeze({ id: 'library', flat: '/library', canonical: '/admin/library' }),
+  Object.freeze({ id: 'mail', flat: '/mail', canonical: '/admin/mail' }),
+  Object.freeze({ id: 'media', flat: '/media', canonical: '/admin/media' }),
+  Object.freeze({ id: 'projects', flat: '/projects', canonical: '/admin/projects' }),
+  Object.freeze({ id: 'samsketch', flat: '/samsketch', canonical: '/admin/samsketch' }),
+  Object.freeze({ id: 'settings', flat: '/settings', canonical: '/admin/settings' }),
+  Object.freeze({ id: 'ship', flat: '/ship', canonical: '/admin/ship' }),
+  Object.freeze({ id: 'sites', flat: '/sites', canonical: '/admin/sites' }),
+  Object.freeze({ id: 'theme-store', flat: '/store', canonical: '/admin/themes' }),
+  Object.freeze({ id: 'themes', flat: '/themes', canonical: '/admin/themes' }),
+  Object.freeze({ id: 'tickets', flat: '/tickets', canonical: '/admin/tickets' }),
+  Object.freeze({ id: 'widgets', flat: '/widgets', canonical: '/admin/widgets' }),
 ]);
 
-/** Legacy Content → Media Library destinations (no MovieMode, no ecommerce logout). */
+/** Legacy Content → Media Library destinations. */
 export const LEGACY_CONTENT_MEDIA_REDIRECTS = Object.freeze({
-  '/admin/content': '/media',
-  image: '/media/images',
-  video: '/media/videos',
-  model: '/media/models',
-  file: '/media/files',
+  '/admin/content': '/admin/media',
+  image: '/admin/media/images',
+  video: '/admin/media/videos',
+  model: '/admin/media/models',
+  file: '/admin/media/files',
 });
 
 /** @param {string} pathname */
 export function canonicalStudioPath(pathname) {
+  if (pathname === '/admin' || pathname === '/admin/') return '/admin/home';
+  // Published forms are public documents, not the account-owned Forms app.
+  if (pathname === '/forms/embed' || pathname.startsWith('/forms/embed/')) return null;
+
   for (const mount of STUDIO_ADMIN_MOUNTS) {
     const exactOnly = 'exactOnly' in mount && mount.exactOnly;
     if (pathname === mount.flat) {
-      // Canonical mounts must never redirect to themselves.
       return pathname === mount.canonical ? null : mount.canonical;
     }
-    // Normalize a trailing slash on an exact canonical document route without
-    // turning it into a self-redirect or claiming arbitrary child routes.
     if (exactOnly && mount.flat === mount.canonical && pathname === mount.canonical + '/') {
       return mount.canonical;
     }
     if (!exactOnly && pathname.startsWith(mount.flat + '/')) {
       const target = mount.canonical + pathname.slice(mount.flat.length);
-      // Descendant URLs of an already canonical mount are real app routes,
-      // not legacy aliases. Redirecting them to themselves loops on Cloudflare.
       if (target === pathname) return pathname.endsWith('/') ? pathname.slice(0, -1) : null;
       return target;
     }
