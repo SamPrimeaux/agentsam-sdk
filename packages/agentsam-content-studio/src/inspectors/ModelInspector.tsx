@@ -18,7 +18,7 @@ const DEFAULT_PLACEMENT = {
 };
 
 /**
- * Generic 3D asset inspector contract — harvested from the Fuel & Free
+ * Generic 3D asset inspector contract — 
  * Time GLB editor. Camera (theta/phi/radius/FOV) and placement controls
  * are canonical; the actual Three.js viewport is host-injected via
  * renderViewport so the package carries no 3D engine dependency.
