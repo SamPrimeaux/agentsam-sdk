@@ -104,3 +104,20 @@ test('installed first-party design app exposes a user-controlled Side Stage embe
     assert.equal((await listAccountSideStages(db,'alice')).some(x=>x.id==='agentsam-design-canvas'),false);
   }finally{sqlite.close();}
 });
+
+test('unified Design Canvas projects as the single canonical Canvas host tab',()=>{
+  const stage=projectSideStageContribution({
+    id:pluginId,
+    plugin_key:'agentsam-design-canvas',
+    family_key:'build',
+    plugin_kind:'native',
+    display_name:'Design Canvas',
+    description:'Source-backed design library',
+    metadata_json:JSON.stringify({
+      side_stage:{version:1,id:'design-canvas',renderer:'builtin',tab_kind:'design',icon:'layout'}
+    }),
+  });
+  assert.equal(stage.label,'Canvas');
+  assert.equal(stage.tabKind,'design');
+  assert.equal(stage.renderer,'builtin');
+});

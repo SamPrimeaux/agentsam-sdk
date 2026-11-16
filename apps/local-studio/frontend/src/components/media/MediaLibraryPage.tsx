@@ -576,7 +576,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const countLabel = total != null ? `${formatCount(total)} total` : `${formatCount(visible.length) ?? 0} shown`;
 
   return (
-    <div className={viewing ? "agentsam-media-library is-inspecting" : "agentsam-media-library"} data-agentsam-media-library={surface.kind}>
+    <div className={viewing ? "agentsam-media-library is-inspecting is-focused" : "agentsam-media-library"} data-agentsam-media-library={surface.kind}>
       <header className="agentsam-media-header">
         <div className="agentsam-media-header__titles">
           <h1>{surface.title}</h1>

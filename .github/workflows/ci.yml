@@ -118,6 +118,9 @@ jobs:
       - name: Install Studio runtime dependencies for SDK integration tests
         run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
 
+      - name: Verify Canvas unification and focused Media behavior
+        run: node --test apps/local-studio/scripts/canvas-dedupe-media-focus.test.mjs apps/local-studio/backend/worker/plugin-side-stages.test.mjs apps/local-studio/backend/worker/design-canvas-unified.test.mjs
+
       - name: Verify SDK
         run: npm run verify
 

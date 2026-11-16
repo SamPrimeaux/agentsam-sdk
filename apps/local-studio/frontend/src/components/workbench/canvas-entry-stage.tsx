@@ -25,12 +25,12 @@ function eventLabel(event:CanvasEvent) {
  const payload=event.payload||{};
  return String(event.message||payload.message||payload.title||payload.skill_id||payload.name||event.type.replaceAll("."," · ").replaceAll("_"," "));
 }
-export function CanvasEntryStage({tab}:{tab:SideTab}) {
+export function CanvasEntryStage({tab,openSources=false}:{tab:SideTab;openSources?:boolean}) {
  if(tab.url?.startsWith("/admin/theme-project-editor?"))return <ExistingThemeCanvas tab={tab}/>;
- return <IndependentCanvas key={tab.id} tab={tab}/>;
+ return <IndependentCanvas key={tab.id} tab={tab} openSources={openSources}/>;
 }
 
-function IndependentCanvas({tab}:{tab:SideTab}) {
+function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boolean}) {
  const setTabUrl=useWorkStore(s=>s.setTabUrl);
  const model=useWorkStore(s=>s.modelSelection);
  const activeProject=useWorkStore(s=>s.projects.find(p=>p.id===s.activeProjectId));
@@ -65,6 +65,7 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
  const [showSources,setShowSources]=useState(()=>{
   try{return new URL(tab.url||location.href,location.origin).searchParams.get('library')==='sources';}catch{return false;}
  });
+ useEffect(()=>{if(openSources)setShowSources(true);},[openSources]);
  const [library,setLibrary]=useState<CanvasMeta[]>([]);
  const [boot,setBoot]=useState(0);
  const [context,setContext]=useState("");

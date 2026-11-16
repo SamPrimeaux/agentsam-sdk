@@ -33,12 +33,21 @@ function CanvasPage() {
     if (search.site_id) query.set("site_id", search.site_id);
     if (search.template) query.set("template", search.template);
     if (search.library) query.set("library", search.library);
-    const id = useWorkStore.getState().openSideTab("design", {
-      title: "Canvas", ephemeral: false, url: "/canvas" + (query.size ? "?" + query : ""),
-    });
+    const work = useWorkStore.getState();
+    const existing = work.sideTabs.find(item => item.kind === "design");
+    const hasExplicitDocumentTarget = Boolean(search.canvas || search.host || search.site_id || search.template);
+    const id = existing && !hasExplicitDocumentTarget
+      ? existing.id
+      : work.openSideTab("design", {
+          title: "Canvas", ephemeral: false, url: "/canvas" + (query.size ? "?" + query : ""),
+        });
+    if (existing && !hasExplicitDocumentTarget) {
+      work.setActiveSideTab(existing.id);
+      work.setSideOpen(true);
+    }
     setTabId(id);
   }, [hydrated, search]);
   return <div className="h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-background" data-design-workspace="canvas">
-    {tab ? <CanvasEntryStage tab={tab} /> : <div role="status" className="grid h-full place-items-center text-sm text-muted-foreground">Opening Canvas…</div>}
+    {tab ? <CanvasEntryStage tab={tab} openSources={search.library === "sources"} /> : <div role="status" className="grid h-full place-items-center text-sm text-muted-foreground">Opening Canvas…</div>}
   </div>;
 }

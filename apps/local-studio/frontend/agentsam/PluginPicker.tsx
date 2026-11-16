@@ -109,12 +109,17 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
       // An @ reference cannot manufacture a stage that the authenticated
       // runtime catalog has not actually registered.
       if (!stage) { setOpen(false); return; }
-      useWorkStore.getState().openSideTab(
-        stage.tabKind as Parameters<ReturnType<typeof useWorkStore.getState>['openSideTab']>[0],
-        { title: stage.label, pluginId: stage.pluginId, stageId: stage.stageId,
-          parentChatId: stage.tabKind==='goal' ? useWorkStore.getState().activeChatId : null,
-          ephemeral:false },
-      );
+      const work = useWorkStore.getState();
+      const kind = stage.tabKind as Parameters<typeof work.openSideTab>[0];
+      const existing = work.sideTabs.find(item => item.kind === kind);
+      work.openSideTab(kind, {
+        title: stage.label,
+        pluginId: stage.renderer === "builtin" ? undefined : stage.pluginId,
+        stageId: stage.renderer === "builtin" ? undefined : stage.stageId,
+        ...(kind === "design" && !existing ? { url: "/canvas?library=sources" } : {}),
+        parentChatId: kind === "goal" ? work.activeChatId : null,
+        ephemeral: false,
+      });
       replaceMention(entry,false);
     } else if(entry.action.type==='setup'||!entry.ready){
       window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/admin/settings/integrations' } }));

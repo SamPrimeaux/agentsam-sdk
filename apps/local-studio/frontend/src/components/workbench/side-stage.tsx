@@ -55,6 +55,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
   const setActiveSideTab = useWorkStore((s) => s.setActiveSideTab);
   const closeSideTab = useWorkStore((s) => s.closeSideTab);
   const openSideTab = useWorkStore((s) => s.openSideTab);
+  const convertSideTab = useWorkStore((s) => s.convertSideTab);
   const setSideOpen = useWorkStore((s) => s.setSideOpen);
   const confirmId = useWorkStore((s) => s.confirmDiscardId);
   const setConfirmDiscard = useWorkStore((s) => s.setConfirmDiscard);
@@ -74,6 +75,32 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
   // preserve cached tab state, draft text and conversations for re-enabling.
   const visibleTabs = registry.loaded && !registry.error ? tabs.filter(registered) : tabs;
   const tab = visibleTabs.find(item => item.id === activeId) ?? visibleTabs[0] ?? null;
+
+  // Persisted plugin tabs can outlive a registry migration. When an installed
+  // app becomes a host-owned renderer, upgrade its old tab in place instead
+  // of leaving the obsolete plugin workspace mounted forever.
+  useEffect(() => {
+    if (!registry.loaded || registry.error) return;
+    for (const item of tabs) {
+      if (item.kind !== "plugin") continue;
+      const stage = stages.find(candidate =>
+        candidate.pluginId === item.pluginId && candidate.stageId === item.stageId);
+      if (stage?.renderer !== "builtin" || !stage.tabKind) continue;
+      const kind = stage.tabKind as Parameters<typeof convertSideTab>[1];
+      const liveTabs = useWorkStore.getState().sideTabs;
+      const nativeAlreadyOpen = liveTabs.some(candidate =>
+        candidate.id !== item.id && candidate.kind === kind);
+      convertSideTab(item.id, kind, nativeAlreadyOpen ? undefined : {
+        title: stage.label,
+        icon: stage.icon,
+        pluginId: undefined,
+        stageId: undefined,
+        url: kind === "design" ? "/canvas?library=sources" : "",
+        ephemeral: false,
+      });
+    }
+  }, [registry.loaded, registry.error, stages, tabs, convertSideTab]);
+
   useEffect(() => {
     if (!registry.loaded || registry.error || !visibleTabs.length) return;
     if (!visibleTabs.some(item => item.id === activeId))
