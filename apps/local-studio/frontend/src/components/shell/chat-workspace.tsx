@@ -94,7 +94,7 @@ export function ChatWorkspace({ chat }: { chat: Chat }) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex min-h-12 shrink-0 items-center gap-1 border-b border-border px-2">
           <Button asChild size="icon" variant="ghost" className="size-11 text-foreground md:hidden md:size-8">
-            <Link to="/chats" aria-label="Back to chats">
+            <Link to="/admin/chats" aria-label="Back to chats">
               <ArrowLeft className="size-4" />
             </Link>
           </Button>
