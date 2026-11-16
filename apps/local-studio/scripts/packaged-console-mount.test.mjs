@@ -443,3 +443,26 @@ test('legacy R2 HTML source editor mounts only when explicitly selected', async 
   assert.equal(source.status, 200);
   assert.match(await source.text(), /studio-cms-source-host\.js/);
 });
+
+
+test('CMS product shell remains standalone but removes its own chrome only in an explicit host iframe', () => {
+  const source = readFileSync(new URL('../../ecommerce-cms-agentsam/frontend/shell.js', import.meta.url), 'utf8');
+  const match = source.match(/const SHELL_MODES = \{[\s\S]*?\n\};\n\nfunction resolveShellMode\(options = \{\}\) \{[\s\S]*?\n\}/);
+  assert.ok(match, 'product shell mode selection must remain testable');
+  const mode = (search, inFrame, options = '{}') => {
+    const browser = { location: { search } };
+    browser.parent = inFrame ? {} : browser;
+    return runInNewContext(match[0] + '\nresolveShellMode(' + options + ').id', {
+      window: browser,
+      URLSearchParams,
+      ADMIN_EXIT_ROUTES: [],
+    });
+  };
+  assert.equal(mode('', false), 'admin', 'standalone CMS keeps its complete navigation');
+  assert.equal(mode('?__agentsamEmbedded=1', false), 'admin', 'query flag alone must not hide standalone navigation');
+  assert.equal(mode('', true), 'admin', 'unflagged iframe remains a standalone product');
+  assert.equal(mode('?__agentsamEmbedded=1', true), 'embedded-app', 'host owns navigation and Side Stage');
+  assert.equal(mode('?__agentsamEmbedded=1', true, "{shellMode:'theme-editor'}"), 'theme-editor', 'focused editor keeps its native mode');
+  assert.match(source, /if \(shellMode\.id !== "embedded-app"\) \{[\s\S]*?mountShellDock\(\)/);
+  assert.match(source, /"admin-dock-off", fullBleed \|\| shellMode\.id === "embedded-app"/);
+});
