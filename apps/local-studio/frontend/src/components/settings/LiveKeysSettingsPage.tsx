@@ -93,6 +93,10 @@ export function LiveKeysSettingsPage({
           <section className="rounded-2xl bg-card px-5 py-4 shadow-hairline">
             <h2 className="text-base font-medium text-foreground">Account vault</h2>
             <p className="mt-1 text-sm text-muted-foreground">This device is not connected to an AgentSam account. Sign in to manage synchronized account credentials.</p>
+            <button type="button" className="mt-3 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+              onClick={() => window.dispatchEvent(new CustomEvent("agentsam:identity-open"))}>
+              Connect account
+            </button>
           </section>
         ) : null}
 

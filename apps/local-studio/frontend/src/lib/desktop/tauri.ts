@@ -18,6 +18,11 @@ export function getTauriInvoke(): TauriInvoke | null {
 let desktopIdentityStatusCache: Record<string, unknown> | null = null;
 let desktopIdentityStatusInFlight: Promise<Record<string, unknown>> | null = null;
 
+export function invalidateDesktopIdentityStatus(): void {
+  desktopIdentityStatusCache = null;
+  desktopIdentityStatusInFlight = null;
+}
+
 type TauriEvent<T = unknown> = { event: string; id: number; payload: T };
 type TauriEventBridge = {
   event?: {
@@ -155,19 +160,13 @@ export async function invokeIdentity(payload: Record<string, unknown>): Promise<
   })) as string;
   const result = JSON.parse(raw) as Record<string, unknown>;
   if (payload.op === "status") desktopIdentityStatusCache = result;
-  else {
-    desktopIdentityStatusCache = null;
-    desktopIdentityStatusInFlight = null;
-  }
+  else invalidateDesktopIdentityStatus();
   return result;
 }
 
 /** Read the native identity once and share the verified result across consumers. */
 export async function getDesktopIdentityStatus(forceRefresh = false): Promise<Record<string, unknown>> {
-  if (forceRefresh) {
-    desktopIdentityStatusCache = null;
-    desktopIdentityStatusInFlight = null;
-  }
+  if (forceRefresh) invalidateDesktopIdentityStatus();
   if (desktopIdentityStatusCache) return desktopIdentityStatusCache;
   if (!desktopIdentityStatusInFlight) {
     desktopIdentityStatusInFlight = invokeIdentity({ op: "status" }).finally(() => {
