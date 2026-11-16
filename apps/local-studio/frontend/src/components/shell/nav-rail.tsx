@@ -94,7 +94,7 @@ export function NavRail() {
                   <Nav.MenuSub>
                     <li><Nav.MenuSubButton href="/admin/samsketch" active={pathname.startsWith("/admin/samsketch")}><span className="inline-flex items-center gap-2"><SamSketchIcon className="size-4" />SamSketch</span></Nav.MenuSubButton></li>
                     <li><Nav.MenuSubButton href="/admin/cad" active={pathname.startsWith("/admin/cad")}><span className="inline-flex items-center gap-2"><Box className="size-4" />CAD Creator</span></Nav.MenuSubButton></li>
-                    <li><Nav.MenuSubButton href="/apps/ecommerce-cms-agentsam" active={pathname.startsWith("/apps/ecommerce-cms-agentsam")}>Commerce CMS</Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/admin/apps/ecommerce-cms-agentsam" active={pathname.startsWith("/admin/apps/ecommerce-cms-agentsam")}>Commerce CMS</Nav.MenuSubButton></li>
                   </Nav.MenuSub>
                 </Nav.CollapsibleContent>
               </Nav.Collapsible>
