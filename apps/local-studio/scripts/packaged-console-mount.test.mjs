@@ -265,7 +265,7 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
     assert.equal(prevented, true);
     return context.window.location.hash;
   };
-  assert.equal(visit('/admin/home'), '#/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fhome');
+  assert.equal(visit('/admin/home'), '#/admin/home');
   assert.equal(visit('/admin/agentsam'), '#/admin/agentsam');
   assert.equal(visit('/admin/cad'), '#/admin/cad');
   assert.equal(visit('/admin/moviemode'), '#/admin/moviemode');
