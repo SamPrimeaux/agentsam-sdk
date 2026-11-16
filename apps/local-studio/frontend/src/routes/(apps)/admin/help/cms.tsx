@@ -24,7 +24,7 @@ function CmsHelpPage() {
   return (
     <main className="h-full overflow-auto bg-background text-foreground" data-studio-product="cms-help">
       <div className="mx-auto max-w-6xl space-y-8 p-6 lg:p-10">
-        <button type="button" onClick={() => void navigate({ to: '/cms' })} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+        <button type="button" onClick={() => void navigate({ to: '/admin/cms' })} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft size={16} /> Back to Sites & CMS
         </button>
 
@@ -75,7 +75,7 @@ function CmsHelpPage() {
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold">Choose a starting theme</h3>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">Explore packaged themes, then create a draft for the intended site. A catalog entry is a starting point—not a claim that it is already installed.</p>
-                <button type="button" className={action + ' mt-4'} onClick={() => void navigate({ to: '/themes' })}>Browse themes <ArrowRight size={15} /></button>
+                <button type="button" className={action + ' mt-4'} onClick={() => void navigate({ to: '/admin/themes' })}>Browse themes <ArrowRight size={15} /></button>
               </div>
             </li>
             <li className="flex gap-4 p-5 sm:p-6">
@@ -83,7 +83,7 @@ function CmsHelpPage() {
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold">Edit structured content</h3>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">Edit page copy, sections, and blocks in the editor. Changes remain drafts until a supported publication flow confirms they are live.</p>
-                <button type="button" className={action + ' mt-4'} onClick={() => void navigate({ to: '/cms' })}>Open CMS <ArrowRight size={15} /></button>
+                <button type="button" className={action + ' mt-4'} onClick={() => void navigate({ to: '/admin/cms' })}>Open CMS <ArrowRight size={15} /></button>
               </div>
             </li>
             <li className="flex gap-4 p-5 sm:p-6">
@@ -98,7 +98,7 @@ function CmsHelpPage() {
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold">Publish deliberately</h3>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">Publish only after the destination is verified and the theme is marked ready. Local drafts, CMS records, and a public website are different states.</p>
-                <button type="button" className={action + ' mt-4'} onClick={() => void navigate({ to: '/sites' })}>Manage sites <ArrowRight size={15} /></button>
+                <button type="button" className={action + ' mt-4'} onClick={() => void navigate({ to: '/admin/sites' })}>Manage sites <ArrowRight size={15} /></button>
               </div>
             </li>
           </ol>
@@ -126,7 +126,7 @@ function CmsHelpPage() {
             <span className="flex size-10 items-center justify-center rounded-xl bg-muted"><Store size={19} /></span>
             <h2 className="mt-4 text-lg font-semibold">Need the Online Store view?</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">For a connected ecommerce installation, the Online Store workspace presents the real desktop/mobile storefront previews, theme drafts, and publication state. The CMS does not invent those details for an unconnected project.</p>
-            <button type="button" className={action + ' mt-5 w-full'} onClick={() => void navigate({ to: '/sites' })}>Open Sites <ArrowRight size={15} /></button>
+            <button type="button" className={action + ' mt-5 w-full'} onClick={() => void navigate({ to: '/admin/sites' })}>Open Sites <ArrowRight size={15} /></button>
           </aside>
         </section>
       </div>
