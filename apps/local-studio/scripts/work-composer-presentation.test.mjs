@@ -49,5 +49,6 @@ test('image attachments expand the composer above the draft and keep controls be
   assert.match(composer, /attachmentPreview=\{attachmentPreview\}/);
   assert.match(styles, /\.agentsam-composer-surface \.agentsam-composer-attachments \{ display: flex; width: 100%;/);
   assert.match(styles, /\.agentsam-composer-surface:has\(\.agentsam-composer-attachments\) \{\s*flex-direction: column/s);
-  assert.match(composer, /<ProjectPicker chatId=\{targetId\} \/>/);
+  assert.match(composer, /<ProjectPicker chatId=\{targetId\} showTrigger=\{false\} \/>/);
+  assert.doesNotMatch(composer, /as-work-composer-under/);
 });
