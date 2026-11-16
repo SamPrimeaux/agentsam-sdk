@@ -86,6 +86,7 @@ import { handleStudioNavigation } from "./studio-navigation-preferences.js";
 import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled, setNativeAdminAppPinned, touchNativeAdminAppOpened } from "./apps-launcher.js";
 import { listBrowserHistory, recordBrowserVisit, removeBrowserHistoryEntry } from "./browser-history.js";
 import { listEmbedPolicy, listTrustedOrigins, trustOrigin, untrustOrigin } from "./browser-trust.js";
+import { handleBrowserPage } from "./browser-page.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
@@ -866,6 +867,7 @@ export default {
     const isAppsInstall = url.pathname === "/api/apps/install";
     const isAppsOpen = url.pathname === "/api/apps/open";
     const isBrowserHistory = url.pathname === "/api/browser/history";
+    const isBrowserPage = url.pathname === "/api/browser/page";
     const isBrowserSettings = url.pathname === "/api/settings/browser";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
@@ -1642,6 +1644,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
           code==="app_not_installed"?404:code==="app_install_key_invalid"?400:503);
       }
     }
+    if (isBrowserPage) return handleBrowserPage(request, await sessionUser());
     if (isBrowserHistory) {
       if (!["GET","POST","DELETE"].includes(request.method))
         return json({ok:false,error:"method_not_allowed"},405,{allow:"GET, POST, DELETE"});

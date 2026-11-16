@@ -60,3 +60,9 @@
 .as-browser-build-activity[data-open="false"]{width:auto;min-width:230px}
 .as-browser-build-activity header{display:flex;align-items:center;gap:7px;padding:9px 11px;border-bottom:1px solid var(--nav-border);font-size:12px}.as-browser-build-activity header strong{flex:1}.as-browser-build-activity header button{display:grid;place-items:center;border-radius:6px;padding:5px}.as-browser-build-activity header button:hover{background:var(--nav-hover)}
 .as-browser-build-details{min-height:0;overflow:auto;padding:12px}.as-browser-build-details p{font-size:12px;color:var(--nav-muted)}.as-browser-build-details pre{font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:190px;overflow:auto;color:var(--nav-muted)}.as-browser-build-details button{padding:7px 10px;border-radius:7px;background:var(--nav-selected);font-size:12px}
+
+.as-web-browser-viewport { position: relative; height: 100%; width: 100%; min-height: 0; background: var(--app-bg, transparent); }
+.as-web-browser-frame { display: block; height: 100%; width: 100%; border: 0; background: #fff; }
+.as-web-browser-progress { position: absolute; inset: 0 0 auto 0; height: 2px; z-index: 1; overflow: hidden; background: transparent; }
+.as-web-browser-progress::after { content: ""; display: block; height: 100%; width: 35%; background: var(--app-accent, currentColor); animation: as-web-browser-load 1s ease-in-out infinite; }
+@keyframes as-web-browser-load { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
