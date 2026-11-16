@@ -78,6 +78,26 @@ async function withCatalog(callback,listed=sample){
   };
   try {return await callback();}finally{globalThis.fetch=before;}
 }
+test('catalog preview alias may differ from the checksum-verified package preview',async()=>{
+  const {sqlite,env}=fixture();
+  try {await withCatalog(async()=>{
+    const response=await handleStudioWebsiteThemeInstall(install(),env,'a',slug);
+    assert.equal(response.status,201,JSON.stringify(await response.clone().json()));
+    const stored=await getThemeProject(env,'a','theme_plain-jane','a-blog');
+    assert.equal(stored.ok,true);
+    // The theme remains installable and editable; the persistence layer may
+    // intentionally normalize release provenance into separately stored metadata.
+    assert.equal(stored.project.pages.length,project.pages.length);
+  },{...sample,previewUrl:'https://themes.inneranimalmedia.com/iapj/',previewAlias:'iapj'});} finally {sqlite.close();}
+});
+test('rejects a catalog preview alias outside the authorized Theme Store routes',async()=>{
+  const {sqlite,env}=fixture();
+  try {await withCatalog(async()=>{
+    const response=await handleStudioWebsiteThemeInstall(install(),env,'a',slug);
+    assert.equal(response.status,409);
+    assert.equal((await response.json()).error,'theme_preview_url_not_verified');
+  },{...sample,previewUrl:'https://attacker.invalid/theme/'});} finally {sqlite.close();}
+});
 test('published original installs into chosen authorized CMS site with D1 pointer, immutable R2 revision, and usable editor URL',async()=>{
   const {sqlite,env,objects}=fixture();
   try {await withCatalog(async()=>{

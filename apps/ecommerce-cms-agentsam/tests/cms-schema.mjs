@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-export const stub = "CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY);\n";
+export const stub = "CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'active');\n";
 
 // Tests consume the same ordered schema/migration chain as the product.
 // Do not maintain a second embedded CMS schema in the test harness.

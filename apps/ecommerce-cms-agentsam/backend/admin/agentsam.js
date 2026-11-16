@@ -938,13 +938,37 @@ export async function agentsamStatus(env, userId = null, accountId = null) {
     /* tables may not exist yet */
   }
 
-  const mcpServers = await listMcpServersForUi(env, userId);
-  const bridgeProbe = bridgeConfigured(env) ? await probeBridge(env) : null;
-  const github = await probeGitHubConnection(env, userId);
-  const aiRegistry = await getAIRegistryStatus(env, accountId);
-  const analyticsStatus = await getAgentSamAnalyticsStatus(env, accountId);
-  const toolsRegistry = await getToolsRegistryStatus(env);
-  const compaction = await getCompactionStatus(env, { limit: 3, account_id: accountId });
+  // AgentSam status is a composed health view, not an atomic transaction.
+  // A transient MCP, model registry or analytics failure must not take down
+  // the entire CMS admin shell and its page editor.
+  const optional = [
+    ['mcp_servers', () => listMcpServersForUi(env, userId), []],
+    ['bridge', () => bridgeConfigured(env) ? probeBridge(env) : null, null],
+    ['github', () => probeGitHubConnection(env, userId), { connected: false, status: 'unavailable' }],
+    ['ai_registry', () => getAIRegistryStatus(env, accountId), { ai_binding_configured: false, ai_registry_count: 0 }],
+    ['analytics', () => getAgentSamAnalyticsStatus(env, accountId), { analytics_enabled: false }],
+    ['tools', () => getToolsRegistryStatus(env), { tools_registry_count: 0, mcp_servers_registered: 0, tool_policy_keys_count: 0 }],
+    ['compaction', () => getCompactionStatus(env, { limit: 3, account_id: accountId }), { ok: false, runs: [], totals: {}, error: 'compaction_unavailable' }],
+    ['connect_urls', () => mcpConnectUrls(env), { ok: false, error: 'connection_endpoints_unavailable' }],
+  ];
+  const settled = await Promise.allSettled(optional.map(([, work]) => work()));
+  const unavailableSections = [];
+  const read = (index) => {
+    const outcome = settled[index];
+    if (outcome.status === 'fulfilled') return outcome.value;
+    const [name,, fallback] = optional[index];
+    unavailableSections.push(name);
+    console.warn('[agentsam/status] optional_section_unavailable', name);
+    return fallback;
+  };
+  const mcpServers = read(0);
+  const bridgeProbe = read(1);
+  const github = read(2);
+  const aiRegistry = read(3);
+  const analyticsStatus = read(4);
+  const toolsRegistry = read(5);
+  const compaction = read(6);
+  const connectUrls = read(7);
 
   return json({
     ok: true,
@@ -958,7 +982,9 @@ export async function agentsamStatus(env, userId = null, accountId = null) {
     bridge_ready: bridgeProbe?.ok ?? false,
     github,
     mcp_servers: mcpServers,
-    connect_urls: await mcpConnectUrls(env),
+    connect_urls: connectUrls,
+    partial: unavailableSections.length > 0,
+    unavailable_sections: unavailableSections,
     ...aiRegistry,
     analytics: analyticsStatus,
     tools: toolsRegistry,
