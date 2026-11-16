@@ -237,8 +237,8 @@ export async function agentsamConversationGet(env, id) {
   return json({ ok: true, conversation, messages });
 }
 
-export async function agentsamConversationCreate(request, env) {
-  const user = await getSessionUser(request, env);
+export async function agentsamConversationCreate(request, env, sessionUser = null) {
+  const user = sessionUser || await getSessionUser(request, env);
   let body = null;
   try {
     body = await request.json();

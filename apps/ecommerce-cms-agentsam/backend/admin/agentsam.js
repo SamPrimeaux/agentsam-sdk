@@ -1,4 +1,4 @@
-import { ensureConversation } from "../agentsam/conversations.js";
+import { agentsamConversationGet, ensureConversation } from "../agentsam/conversations.js";
 import { resolveSelectedResource } from "../agentsam/selected-resource.js";
 import { formatAttachmentsForPrompt } from "../agentsam/attachments.js";
 import { hydrateAttachmentsForChat } from "../agentsam/files.js";
@@ -212,14 +212,22 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
   };
 }
 
-export async function agentsamChat(request, env, executionCtx = null) {
+export async function agentsamChat(request, env, executionCtx = null, sessionUser = null) {
   const chatStarted = Date.now();
   const body = await readJson(request);
   const rawContext = body?.context || {};
-  const user = await getSessionUser(request, env);
+  const user = sessionUser || await getSessionUser(request, env);
+  if (!user) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!body || typeof body !== "object" || (body.message != null && typeof body.message !== "string")) {
+    return json({ error: "Invalid message." }, { status: 400 });
+  }
 
   if (rawContext.selected_resource) {
-    if (!user) return json({error:'Unauthorized'}, {status:401});
+    // Legacy media selectors lack an account column. Hosted requests must
+    // use scoped attachment IDs or the canonical site/section selector.
+    if (env.CMS_ASSISTANT_INFERENCE && rawContext.selected_resource.type !== "section") {
+      return json({ error: "Attach a file or choose a section in the editor." }, { status: 400 });
+    }
     try { rawContext.selected_resource = await resolveSelectedResource(env, rawContext.selected_resource); }
     catch(error) { return json({error:error.message}, {status:400}); }
   }
@@ -229,11 +237,12 @@ export async function agentsamChat(request, env, executionCtx = null) {
 
   let hydrated;
   try {
-    hydrated = await hydrateAttachmentsForChat(
-      env,
-      body?.attachments || rawContext.attachments || [],
-      request.url
-    );
+    const supplied = body.attachments || rawContext.attachments || [];
+    if (env.CMS_ASSISTANT_INFERENCE && (!Array.isArray(supplied) ||
+        supplied.some(item => typeof item?.attachment_id !== "string"))) {
+      return json({ error: "Use the composer to upload attachments before sending." }, { status: 400 });
+    }
+    hydrated = await hydrateAttachmentsForChat(env, supplied, request.url);
   } catch (error) {
     return json({ error: error?.message || "Invalid or inaccessible attachment." }, { status: 400 });
   }
@@ -275,6 +284,28 @@ export async function agentsamChat(request, env, executionCtx = null) {
     if (!update?.meta?.changes) {
       return json({ error: "Attachment belongs to another conversation or is unavailable." }, { status: 400 });
     }
+  }
+
+  if (env.CMS_ASSISTANT_INFERENCE) {
+    const previous = body.conversation_id === conversationId && conversationId
+      ? await agentsamConversationGet(env, conversationId).then(response => response.json())
+      : null;
+    const result = await env.CMS_ASSISTANT_INFERENCE({
+      message,
+      history: previous?.messages || [],
+      selection: context.selected_resource || context.annotation,
+      attachments,
+    });
+    if (!result.ok) return json({ error: result.error }, { status: result.status });
+    await persistChatExchange(env, {
+      conversationId,
+      messageId: crypto.randomUUID(),
+      userMessage: message,
+      assistantReply: result.reply,
+      attachments,
+      ai: { selected_model: result.model },
+    });
+    return json({ ok: true, conversation_id: conversationId, reply: result.reply });
   }
 
   const ids = createAnalyticsIds(
@@ -430,246 +461,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
           entity_type: "workflow",
           entity_id: routing.workflow.id,
           entity_label: routing.workflow.name,
-          metadata: { intent: routing.classification.intent },
-        },
-        trackBase
-      );
-    }
-  }
-
-  const githubStarted = Date.now();
-  const githubResult = await fetchGithubContextForChat(env, message, user?.id || null, {
-    ...trackBase,
-    ctx: executionCtx,
-  });
-  const mcpContext = githubResult.context;
-  const githubMeta = githubResult.meta;
-  const toolCalls = [];
-  const githubTrace = buildToolCallFromGithubMeta(githubMeta, ids);
-  if (githubTrace) {
-    githubTrace.tool_call_id = githubMeta?.tool_call_id || githubTrace.tool_call_id;
-    toolCalls.push(githubTrace);
-  }
-
-  if (githubMeta) {
-    await trackAgentSamEvent(
-      env,
-      {
-        event_type: githubMeta.mcp_tool ? "mcp" : "github",
-        event_name: githubMeta.mcp_tool ? "mcp_tool_called" : "github_context_loaded",
-        status: githubMeta.success ? "success" : "failed",
-        github_repo: githubMeta.github_repo || null,
-        github_operation: githubMeta.github_operation,
-        mcp_server: githubMeta.mcp_server,
-        mcp_tool: githubMeta.mcp_tool,
-        mcp_success: githubMeta.mcp_success,
-        mcp_latency_ms: githubMeta.mcp_latency_ms ?? Date.now() - githubStarted,
-        error_code: githubMeta.error || null,
-      },
-      trackBase
-    );
-  }
-
-  const connectUrls = await mcpConnectUrls(env);
-
-  const assembled = await assembleSystemPrompt(
-    env,
-    routing,
-    { ...context, conversation_id: conversationId },
-    message,
-    attachments,
-    mcpContext,
-    request
-  );
-  const systemPrompt = assembled.systemPrompt;
-  const promptPack = assembled.promptPack;
-  const contextPack = assembled.contextPack;
-
-  await trackAgentSamEvent(
-    env,
-    {
-      event_type: "system",
-      event_name: promptPack.cache_hit ? "prompt_cache_hit" : "prompt_cache_miss",
-      status: "success",
-      workflow_key: workflowKey,
-      task_type: aiRouting.task_type,
-      route_lane: aiRouting.lane || aiRouting.model_lane,
-      metadata: {
-        prompt_cache_key: promptPack.cache_key,
-        fragment_keys: promptPack.fragmentKeys,
-        estimated_prompt_tokens: promptPack.estimatedTokens,
-      },
-    },
-    trackBase
-  );
-
-  await trackAgentSamEvent(
-    env,
-    {
-      event_type: "system",
-      event_name: contextPack.cache_hit ? "context_cache_hit" : "context_cache_miss",
-      status: "success",
-      workflow_key: workflowKey,
-      metadata: {
-        context_cache_key: contextPack.cache_key,
-        estimated_context_tokens: contextPack.estimatedTokens,
-      },
-    },
-    trackBase
-  );
-
-  if (!promptPack.cache_hit) {
-    await trackAgentSamEvent(
-      env,
-      { event_type: "system", event_name: "prompt_pack_built", status: "success", workflow_key: workflowKey },
-      trackBase
-    );
-  }
-  if (!contextPack.cache_hit) {
-    await trackAgentSamEvent(
-      env,
-      { event_type: "system", event_name: "context_pack_built", status: "success", workflow_key: workflowKey },
-      trackBase
-    );
-  }
-
-  const savedTokens =
-    (promptPack.cache_hit ? promptPack.estimatedTokens : 0) +
-    (contextPack.cache_hit ? contextPack.estimatedTokens : 0);
-
-  const logUsageBase = {
-    conversation_id: conversationId,
-    message_id: ids.message_id,
-    run_id: ids.run_id,
-    workflow_key: workflowKey,
-    route_lane: aiRouting.lane || aiRouting.model_lane,
-    task_type: aiRouting.task_type,
-    prompt_cache_key: promptPack.cache_key,
-    context_cache_key: contextPack.cache_key,
-    prompt_cache_hit: promptPack.cache_hit,
-    context_cache_hit: contextPack.cache_hit,
-    prompt_tokens_estimated: promptPack.estimatedTokens,
-    context_tokens_estimated: contextPack.estimatedTokens,
-    build_duration_ms: assembled.buildDurationMs,
-    cache_lookup_ms: (promptPack.cache_lookup_ms || 0) + (contextPack.cache_lookup_ms || 0),
-    saved_tokens_estimated: savedTokens,
-  };
-
-  if (aiRouting.task_type === "image_generation") {
-    await trackAgentSamEvent(
-      env,
-      {
-        event_type: "image",
-        event_name: "image_generation_requested",
-        status: "started",
-        workflow_key: workflowKey,
-        task_type: aiRouting.task_type,
-        entity_type: "workflow",
-        entity_id: routing.workflow?.id || workflowKey,
-        entity_label: routing.workflow?.name || workflowKey,
-        prompt_text: message,
-      },
-      trackBase
-    );
-  }
-
-  const callableTools = (routing.tools || []).filter(isAgentSamToolExecutable);
-  const toolDefinitions = toolsForWorkersAi(callableTools);
-
-  let ai = await runAgentSamAi(env, systemPrompt, message, {
-    ...aiRouting,
-    tool_definitions: toolDefinitions,
-    has_image: aiRouting.has_image || context.has_image,
-    image_base64: aiRouting.image_base64 || context.image_base64,
-    image_url: aiRouting.image_url || context.image_url,
-    image_options: context.image_options || {},
-    image_mime_type:
-      aiRouting.image_mime_type ||
-      attachments.find((a) => a.mime_type?.startsWith("image/"))?.mime_type ||
-      null,
-    workflow_key: workflowKey,
-    intent: routing.classification.intent,
-    prompt_meta: {
-      prompt_cache_hit: promptPack.cache_hit,
-      context_cache_hit: contextPack.cache_hit,
-      prompt_cache_key: promptPack.cache_key,
-      context_cache_key: contextPack.cache_key,
-      fragment_keys: promptPack.fragmentKeys,
-      estimated_prompt_tokens: promptPack.estimatedTokens + contextPack.estimatedTokens,
-    },
-    analytics: {
-      execution_ctx: executionCtx,
-      ...ids,
-      workflow_key: workflowKey,
-      workflow_id: routing.workflow?.id || null,
-      user_id: user?.id || null,
-      admin_user_id: user?.id || null,
-      user_email: user?.email || null,
-      intent: routing.classification.intent,
-    },
-  });
-
-  if (ai.ok && Array.isArray(ai.tool_calls) && ai.tool_calls.length) {
-    const selectedByKey = new Map(callableTools.map((tool) => [tool.tool_key, tool]));
-    const toolResults = [];
-
-    for (const call of ai.tool_calls.slice(0, 4)) {
-      const tool = selectedByKey.get(call.name);
-      if (!tool) {
-        toolResults.push({
-          tool_key: call.name,
-          ok: false,
-          error: "tool_not_selected_for_request",
-        });
-        continue;
-      }
-
-      const started = Date.now();
-      const result = await executeAgentSamTool(env, tool.tool_key, call.arguments || {}, {
-        user,
-        request,
-        approved: false,
-        confirmed: false,
-      });
-      const durationMs = Date.now() - started;
-      const trace = buildToolCallTrace(
-        tool,
-        call.arguments || {},
-        result,
-        ids,
-        durationMs,
-      );
-      toolCalls.push(trace);
-      toolResults.push({
-        tool_key: tool.tool_key,
-        capability_key: tool.capability_key,
-        result,
-      });
-
-      await logToolCall(
-        env,
-        {
-          id: trace.id,
-          session_id: ids.session_id,
-          conversation_id: conversationId,
-          message_id: ids.message_id,
-          run_id: ids.run_id,
-          user_id: user?.id || null,
-          tool_name: tool.tool_name || tool.tool_key,
-          tool_key: tool.tool_key,
-          agentsam_tools_id: tool.id,
-          tool_category: tool.tool_category,
-          mcp_server_key: tool.mcp_server_key,
-          handler_type: tool.handler_type,
-          status:
-            result?.ok === true
-              ? "success"
-              : result?.approval_required || result?.confirmation_required
-                ? "approval_required"
-                : "failed",
-          duration_ms: durationMs,
-          error_message: result?.error || null,
-          input_summary: JSON.stringify(call.arguments || {}),
+ngify(call.arguments || {}),
           output_summary: JSON.stringify(result || {}),
         },
         {
@@ -938,241 +730,265 @@ export async function agentsamStatus(env, userId = null, accountId = null) {
     /* tables may not exist yet */
   }
 
+  // AgentSam stlts
+      .map(
+        (entry) =>
+          `TOOL ${entry.tool_key} (${entry.capability_key || "unknown"}):\n${JSON.stringify(entry.result)}`,
+      )
+      .join("\n\n");
+
+    const finalSystemPrompt =
+      `${systemPrompt}\n\nTOOL EXECUTION RESULTS:\n${toolResultBlock}\n\n` +
+      "Use these results as authority. Never claim a write occurred when a tool returned approval_required, confirmation_required, or an error.";
+
+    const finalAi = await runAgentSamAi(env, finalSystemPrompt, message, {
+      ...aiRouting,
+      workflow_key: workflowKey,
+      intent: routing.classification.intent,
+      tool_definitions: [],
+      analytics: {
+        execution_ctx: executionCtx,
+        ...ids,
+        workflow_key: workflowKey,
+        workflow_id: routing.workflow?.id || null,
+        user_id: user?.id || null,
+        admin_user_id: user?.id || null,
+        user_email: user?.email || null,
+        intent: routing.classification.intent,
+      },
+    });
+
+    if (finalAi?.ok) {
+      ai = {
+        ...finalAi,
+        tool_calls: ai.tool_calls,
+        tool_results: toolResults,
+        tool_model: ai.selected_model,
+      };
+    }
+  }
+
+  const totalLatencyMs = Date.now() - chatStarted;
+
+  if (ai.stub) {
+    return json({
+      ok: true,
+      reply:
+        "AgentSam cannot answer yet: this project needs either its Workers AI binding or its configured OpenAI API credential.",
+      stub: true,
+      routing,
+      mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
+      analytics: { session_id: ids.session_id, message_id: ids.message_id, tracked: true },
+    });
+  }
+
+  if (!ai.ok) {
+    const gracefulReply =
+      ai.user_reply ||
+      (ai.recoverable
+        ? "I couldn't complete that request right now. Please try again in a moment."
+        : null);
+
+    await trackAgentSamEvent(
+      env,
+      {
+        event_type: "error",
+        event_name: "agentsam_error",
+        status: "failed",
+        error_code: ai.error || "ai_failed",
+        error_message: ai.error,
+        error_stage: "chat_response",
+        workflow_key: workflowKey,
+        model_id: ai.selected_model,
+        task_type: ai.task_type,
+        total_latency_ms: totalLatencyMs,
+        ai_latency_ms: ai.ai_latency_ms,
+        attempted_models: ai.attempted_models,
+        prompt_text: message,
+        metadata: { recoverable: Boolean(ai.recoverable), graceful_reply: Boolean(gracefulReply) },
+      },
+      trackBase
+    );
+
+    logPromptUsage(
+      env,
+      {
+        ...logUsageBase,
+        model_id: ai.selected_model || ai.attempted_models?.slice(-1)?.[0]?.model_id || null,
+        status: "ai_failed",
+        error_message: ai.error || "ai_failed",
+        metadata: { attempted_models: ai.attempted_models },
+      },
+      trackBase
+    );
+
+    if (gracefulReply) {
+      persistChatExchange(env, {
+        conversationId,
+        messageId: ids.message_id,
+        userMessage: message,
+        assistantReply: gracefulReply,
+        attachments,
+        toolCalls,
+        routing,
+        ai: { ok: false, reply: gracefulReply },
+        ctx: executionCtx,
+      });
+
+      return json({
+        ok: true,
+        reply: gracefulReply,
+        conversation_id: conversationId,
+        ai_degraded: true,
+        route_chips: routeChipsFromRouting(routing, toolCalls),
+        tool_calls: toolCalls,
+        ai: {
+          selected_model: ai.selected_model,
+          attempted_models: ai.attempted_models,
+          task_type: ai.task_type,
+          recoverable: true,
+        },
+        routing,
+        mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
+        analytics: {
+          session_id: ids.session_id,
+          message_id: ids.message_id,
+          conversation_id: conversationId,
+          tracked: true,
+        },
+      });
+    }
+
+    console.error("agentsam chat ai failure", ai.error);
+    return json(
+      {
+        error: "AgentSam could not reach a configured AI model. Try again in a moment.",
+        detail: ai.error,
+        analytics: { session_id: ids.session_id, message_id: ids.message_id, tracked: true },
+      },
+      { status: 502 }
+    );
+  }
+
+  logPromptUsage(
+    env,
+    {
+      ...logUsageBase,
+      model_id: ai.selected_model,
+      input_tokens: ai.input_tokens,
+      output_tokens: ai.output_tokens,
+      total_tokens: ai.total_tokens,
+      status: promptPack.cache_hit && contextPack.cache_hit ? "success" : "miss",
+    },
+    trackBase
+  );
+
+  await trackAgentSamEvent(
+    env,
+    {
+      event_type: "chat",
+      event_name: "chat_response_completed",
+      status: "success",
+      intent: routing.classification.intent,
+      workflow_key: workflowKey,
+      task_type: ai.task_type,
+      model_id: ai.selected_model,
+      model_lane: ai.model_lane,
+      fallback_used: ai.fallback_used,
+      attempted_models: ai.attempted_models,
+      prompt_text: message,
+      response_text: ai.reply,
+      input_chars: message.length,
+      output_chars: ai.reply?.length || 0,
+      input_tokens: ai.input_tokens,
+      output_tokens: ai.output_tokens,
+      total_tokens: ai.total_tokens,
+      estimated_cost_usd: ai.estimated_cost_usd,
+      duration_ms: totalLatencyMs,
+      ai_latency_ms: ai.ai_latency_ms,
+      total_latency_ms: totalLatencyMs,
+      metadata: {
+        image_generated: Boolean(ai.image_base64),
+        registry: ai.registry,
+      },
+    },
+    trackBase
+  );
+
+  persistChatExchange(env, {
+    conversationId,
+    messageId: ids.message_id,
+    userMessage: message,
+    assistantReply: ai.reply,
+    attachments,
+    toolCalls,
+    routing,
+    ai,
+    ctx: executionCtx,
+  });
+
+  return json({
+    ok: true,
+    reply: ai.reply,
+    conversation_id: conversationId,
+    model: ai.model,
+    route_chips: routeChipsFromRouting(routing, toolCalls),
+    tool_calls: toolCalls,
+    ai: {
+      selected_model: ai.selected_model,
+      attempted_models: ai.attempted_models,
+      model_lane: ai.model_lane,
+      task_type: ai.task_type,
+      auxiliary_task_type: ai.auxiliary_task_type || null,
+      fallback_used: ai.fallback_used,
+      registry: ai.registry ?? true,
+      image_base64: ai.image_base64 || null,
+      mime_type: ai.mime_type || null,
+      error_code: ai.ok ? null : String(ai.error || "image_generation_failed").slice(0, 120),
+      input_tokens: ai.input_tokens,
+      output_tokens: ai.output_tokens,
+      estimated_cost_usd: ai.estimated_cost_usd,
+      ai_latency_ms: ai.ai_latency_ms,
+    },
+    routing,
+    mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
+    analytics: {
+      session_id: ids.session_id,
+      message_id: ids.message_id,
+      conversation_id: conversationId,
+      tracked: true,
+    },
+    prompt: {
+      cache_hit: Boolean(promptPack.cache_hit),
+      prompt_cache_key: promptPack.cache_key,
+      context_cache_hit: Boolean(contextPack.cache_hit),
+      context_cache_key: contextPack.cache_key,
+      estimated_prompt_tokens: (promptPack.estimatedTokens || 0) + (contextPack.estimatedTokens || 0),
+      fragment_keys: promptPack.fragmentKeys || [],
+    },
+  });
+}
+
+export async function agentsamStatus(env, userId = null, accountId = null) {
+  let skillCount = 0;
+  let workflowCount = 0;
+  try {
+    const skills = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM agentsam_skill WHERE is_active = 1`
+    ).first();
+    skillCount = skills?.n ?? 0;
+    const wfs = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM agentsam_workflows WHERE is_active = 1`
+    ).first();
+    workflowCount = wfs?.n ?? 0;
+  } catch {
+    /* tables may not exist yet */
+  }
+
   // AgentSam status is a composed health view, not an atomic transaction.
   // A transient MCP, model registry or analytics failure must not take down
   // the entire CMS admin shell and its page editor.
   const optional = [
     ['mcp_servers', () => listMcpServersForUi(env, userId), []],
     ['bridge', () => bridgeConfigured(env) ? probeBridge(env) : null, null],
-    ['github', () => probeGitHubConnection(env, userId), { connected: false, status: 'unavailable' }],
-    ['ai_registry', () => getAIRegistryStatus(env, accountId), { ai_binding_configured: false, ai_registry_count: 0 }],
-    ['analytics', () => getAgentSamAnalyticsStatus(env, accountId), { analytics_enabled: false }],
-    ['tools', () => getToolsRegistryStatus(env), { tools_registry_count: 0, mcp_servers_registered: 0, tool_policy_keys_count: 0 }],
-    ['compaction', () => getCompactionStatus(env, { limit: 3, account_id: accountId }), { ok: false, runs: [], totals: {}, error: 'compaction_unavailable' }],
-    ['connect_urls', () => mcpConnectUrls(env), { ok: false, error: 'connection_endpoints_unavailable' }],
-  ];
-  const settled = await Promise.allSettled(optional.map(([, work]) => work()));
-  const unavailableSections = [];
-  const read = (index) => {
-    const outcome = settled[index];
-    if (outcome.status === 'fulfilled') return outcome.value;
-    const [name,, fallback] = optional[index];
-    unavailableSections.push(name);
-    console.warn('[agentsam/status] optional_section_unavailable', name);
-    return fallback;
-  };
-  const mcpServers = read(0);
-  const bridgeProbe = read(1);
-  const github = read(2);
-  const aiRegistry = read(3);
-  const analyticsStatus = read(4);
-  const toolsRegistry = read(5);
-  const compaction = read(6);
-  const connectUrls = read(7);
-
-  return json({
-    ok: true,
-    bound: !!env.AGENTSAM_WAI,
-    name: "Agent Sam",
-    features: getAgentFeatures(),
-    skills_registered: skillCount,
-    workflows_registered: workflowCount,
-    skills_storage: "D1 agentsam_skill + R2 agentsam/skills/",
-    bridge_configured: bridgeConfigured(env),
-    bridge_ready: bridgeProbe?.ok ?? false,
-    github,
-    mcp_servers: mcpServers,
-    connect_urls: connectUrls,
-    partial: unavailableSections.length > 0,
-    unavailable_sections: unavailableSections,
-    ...aiRegistry,
-    analytics: analyticsStatus,
-    tools: toolsRegistry,
-    compaction,
-  });
-}
-
-export async function agentsamMcpStatus(env, userId = null) {
-  const bridge = bridgeConfigured(env);
-  const probe = bridge ? await probeBridge(env) : null;
-  const github = await probeGitHubConnection(env, userId);
-
-  return json({
-    ok: true,
-    ...(await mcpRuntimeConfig(env)),
-    bridge_ready: probe?.ok ?? false,
-    tool_count: probe?.tool_count ?? 0,
-    github,
-    connect_urls: await mcpConnectUrls(env),
-    mcp_servers: await listMcpServersForUi(env, userId),
-  });
-}
-
-export async function agentsamTools(env) {
-  const [workflows, drawerWorkflows, mcpServers, toolCatalog, uiConfig] = await Promise.all([
-    listStudioWorkflows(env),
-    listDrawerWorkflows(env),
-    listMcpServersForUi(env),
-    listToolsGrouped(env),
-    buildAgentsamUiConfig(env),
-  ]);
-
-  return json({
-    ok: true,
-    workflows,
-    drawer_workflows: drawerWorkflows,
-    mcp_servers: mcpServers,
-    tool_catalog: toolCatalog,
-    connect_urls: await mcpConnectUrls(env),
-    quick_actions: uiConfig.quick_actions,
-    plus_menu: uiConfig.plus_menu,
-    features: getAgentFeatures(),
-    iam_logo_url: uiConfig.iam_logo_url,
-  });
-}
-
-export async function agentsamWorkflowsList(env) {
-  const workflows = await listStudioWorkflows(env);
-  return json({ ok: true, workflows });
-}
-
-export async function agentsamDrawerWorkflowsList(env) {
-  const workflows = await listDrawerWorkflows(env);
-  return json({ ok: true, workflows });
-}
-
-export async function agentsamSkillsList(env, url) {
-  const hydrate = url.searchParams.get("hydrate") === "1";
-  const skills = await listAgentSamSkills(env, { hydrate });
-  return json({ ok: true, skills });
-}
-
-export async function agentsamSkillGet(env, slug, url) {
-  const includeReferences = url.searchParams.get("references") !== "0";
-  const skill = await getAgentSamSkill(env, slug, { includeReferences });
-  if (!skill) return json({ error: "Skill not found" }, { status: 404 });
-  return json({ ok: true, skill });
-}
-
-export async function agentsamAiModelsList(env) {
-  const { grouped, total } = await listAIModelsGrouped(env);
-  return json({ ok: true, grouped, total });
-}
-
-export async function agentsamToolsCatalog(env) {
-  const { grouped, total } = await listToolsGrouped(env);
-  return json({ ok: true, grouped, total, features: getAgentFeatures() });
-}
-
-export async function agentsamAnalyticsSummary(env, url) {
-  const range = url.searchParams.get("range") || "24h";
-  const summary = await summarizeAgentSamAnalytics(env, { range });
-  return json(summary);
-}
-
-export async function agentsamPromptsList(env) {
-  const [prompts, fragments] = await Promise.all([
-    listPromptTemplates(env),
-    listPromptFragments(env),
-  ]);
-  return json({ ok: true, prompts, fragments });
-}
-
-export async function agentsamPromptCacheSummary(env, accountId = null) {
-  const [prompt_cache, context_cache] = await Promise.all([
-    summarizePromptCache(env),
-    summarizeContextCache(env),
-  ]);
-
-  let top_workflows = [];
-  let top_fragments = [];
-  try {
-    const wf = await env.DB.prepare(
-      `SELECT workflow_key, COUNT(*) AS n, SUM(saved_tokens_estimated) AS saved
-       FROM agentsam_prompt_usage WHERE account_id = ? AND created_at_unix >= ?
-       GROUP BY workflow_key ORDER BY n DESC LIMIT 5`
-    )
-      .bind(await resolveApplicationAccountId(env, accountId), Math.floor(Date.now() / 1000) - 86400)
-      .all();
-    top_workflows = wf.results || [];
-
-    top_fragments = await listPromptFragments(env);
-  } catch {
-    /* non-blocking */
-  }
-
-  return json({
-    ok: true,
-    prompt_cache,
-    context_cache,
-    top_fragments: (top_fragments || []).slice(0, 7).map((f) => f.fragment_key),
-    top_workflows,
-  });
-}
-
-export async function agentsamSemanticSearch(request, env) {
-  let body = {};
-  try {
-    body = (await request.json()) || {};
-  } catch {
-    body = {};
-  }
-  const query = String(body.query || body.q || "").trim();
-  if (!query) return json({ error: "query required" }, { status: 400 });
-
-  const { executeAgentSamTool } = await import("../agentsam/tool-handlers.js");
-  const result = await executeAgentSamTool(env, "fnf_semantic_search", {
-    query,
-    top_k: body.top_k || body.limit || 8,
-    source_type: body.source_type || null,
-  });
-  return json(result);
-}
-
-export async function agentsamPromptCacheInvalidate(request, env) {
-  let body = {};
-  try {
-    body = (await request.json()) || {};
-  } catch {
-    body = {};
-  }
-  const prompt = await invalidatePromptCache(env, {
-    reason: body.reason || "admin_invalidate",
-    workflow_key: body.workflow_key,
-    cache_key: body.cache_key,
-  });
-  const { invalidateContextCache } = await import("../agentsam/context-cache.js");
-  const context = await invalidateContextCache(env, {
-    reason: body.reason || "admin_invalidate",
-    workflow_key: body.workflow_key,
-    cache_key: body.context_cache_key,
-  });
-  return json({ ok: true, prompt, context });
-}
-
-export async function agentsamCompactionStatus(env) {
-  const status = await getCompactionStatus(env);
-  return json(status);
-}
-
-export async function agentsamCompactionRun(request, env, executionCtx = null) {
-  let body = {};
-  try {
-    body = (await request.json()) || {};
-  } catch {
-    body = {};
-  }
-
-  const result = await runAgentsamCompaction(env, {
-    date_key: body.date_key,
-    force: body.force === true,
-    skip_trim: body.skip_trim === true,
-    trigger_source: "admin",
-  });
-
-  if (executionCtx?.waitUntil && result.ok) {
-    executionCtx.waitUntil(Promise.resolve());
-  }
-
-  return json(result);
-}
+    ['github', () => probeGitHub

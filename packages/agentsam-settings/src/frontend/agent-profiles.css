@@ -1,0 +1,71 @@
+.agent-profiles {
+  --profile-canvas: #0a0b0d;
+  --profile-surface: #1f2326;
+  --profile-nav: #292a2d;
+  --profile-ink: #fff;
+  --profile-muted: #a8aeb2;
+  --profile-accent: #77b2c7;
+  --profile-positive: #273318;
+  --profile-outline: #474849;
+  min-width: 0;
+  background: var(--profile-canvas);
+  color: var(--profile-ink);
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  border-radius: 12px;
+  padding: 16px;
+}
+.agent-profiles .agent-profile-lead {
+  margin: -16px -16px 0;
+  padding: 16px;
+  border-radius: 12px 12px 0 0;
+  background: radial-gradient(ellipse at 38% 0, #2e5574, #224563 56%, transparent),
+    linear-gradient(#2b4f6f, #091c2a);
+}
+.agent-profiles .agent-profile-lead :is(h2, nav span) { color: var(--profile-ink); }
+.agent-profiles .agent-profile-back {
+  display: inline-grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid var(--profile-outline);
+  border-radius: 50%;
+  background: var(--profile-nav);
+  color: var(--profile-ink);
+}
+.agent-profiles .agent-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 12px;
+}
+@media (min-width: 1200px) {
+  .agent-profiles .agent-profile-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.agent-profiles :is(.agent-profile-card,.agent-profile-field) {
+  min-width: 0;
+  background: var(--profile-surface);
+  color: var(--profile-ink);
+  border: 1px solid var(--profile-outline);
+  border-radius: 12px;
+}
+.agent-profiles .agent-profile-field { min-height: 48px; font-size: 16px; }
+.agent-profiles .agent-profile-action {
+  min-height: 44px;
+  color: var(--profile-accent);
+}
+.agent-profiles .agent-profile-primary {
+  min-height: 44px;
+  background: var(--profile-accent);
+  color: var(--profile-canvas);
+  border-radius: 999px;
+}
+.agent-profiles .agent-profile-confirm { min-height: 56px; }
+.agent-profiles .agent-profile-enabled {
+  background: var(--profile-positive);
+  color: var(--profile-ink);
+}
+.agent-profiles :is(.text-muted-foreground,.agent-profile-muted) { color: var(--profile-muted); }
+.agent-profiles :is(button,input,select,textarea):focus-visible {
+  outline: 2px solid var(--profile-accent);
+  outline-offset: 2px;
+}

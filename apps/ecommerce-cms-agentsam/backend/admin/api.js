@@ -85,7 +85,7 @@ import {
   agentsamConversationPatch,
   agentsamConversationsList,
 } from "../agentsam/conversations.js";
-import { agentsamFileDelete, agentsamFileGet, agentsamFileUpload } from "../agentsam/files.js";
+import { agentsamFileContent, agentsamFileDelete, agentsamFileGet, agentsamFileUpload } from "../agentsam/files.js";
 import { createAdminAgentSamSkill } from "../agentsam/skill-authoring.js";
 import { agentsamToolCallGet } from "../agentsam/tool-traces.js";
 import {
@@ -930,121 +930,10 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
     return handleGenerateBlockRequest(request);
   }
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
-    return agentsamChat(request, env, executionCtx);
+    return agentsamChat(request, env, executionCtx, user);
   }
   if (path === "/api/admin/agentsam/files/upload" && method === "POST") {
-    return agentsamFileUpload(request, env);
+    return agentsamFileUpload(request, env, user);
   }
-  let fileMatch = path.match(/^\/api\/admin\/agentsam\/files\/([a-z0-9_]+)$/);
-  if (fileMatch && method === "GET") return agentsamFileGet(env, fileMatch[1]);
-  if (fileMatch && method === "DELETE") return agentsamFileDelete(env, fileMatch[1]);
-  if (path === "/api/admin/agentsam/conversations" && method === "GET") {
-    return agentsamConversationsList(env);
-  }
-  if (path === "/api/admin/agentsam/conversations" && method === "POST") {
-    return agentsamConversationCreate(request, env);
-  }
-  let convMatch = path.match(/^\/api\/admin\/agentsam\/conversations\/([a-z0-9_]+)$/);
-  if (convMatch && method === "GET") return agentsamConversationGet(env, convMatch[1]);
-  if (convMatch && method === "PATCH") return agentsamConversationPatch(request, env, convMatch[1]);
-  if (convMatch && method === "DELETE") return agentsamConversationDelete(env, convMatch[1]);
-  let toolCallMatch = path.match(/^\/api\/admin\/agentsam\/tool-calls\/([a-z0-9_]+)$/);
-  if (toolCallMatch && method === "GET") return agentsamToolCallGet(env, toolCallMatch[1]);
-  if (path === "/api/admin/agentsam/status" && method === "GET") {
-    try {
-      return await agentsamStatus(env, user?.id || null, user?.account_id || null);
-    } catch (err) {
-      console.error("[agentsam/status]", err);
-      return json({ ok: false, error: err?.message || "Status unavailable" }, { status: 500 });
-    }
-  }
-  if (path === "/api/admin/agentsam/tools" && method === "GET") {
-    try {
-      return await agentsamTools(env);
-    } catch (err) {
-      console.error("[agentsam/tools]", err);
-      return json({ ok: false, error: err?.message || "Tools unavailable" }, { status: 500 });
-    }
-  }
-  if (path === "/api/admin/agentsam/prompts" && method === "GET") {
-    return agentsamPromptsList(env);
-  }
-  if (path === "/api/admin/agentsam/prompts/cache/summary" && method === "GET") {
-    return agentsamPromptCacheSummary(env, user?.account_id || null);
-  }
-  if (path === "/api/admin/agentsam/tools/semantic-search" && method === "POST") {
-    return agentsamSemanticSearch(request, env);
-  }
-  if (path === "/api/admin/agentsam/prompts/cache/invalidate" && method === "POST") {
-    return agentsamPromptCacheInvalidate(request, env);
-  }
-  if (path === "/api/admin/agentsam/ai/models" && method === "GET") {
-    return agentsamAiModelsList(env);
-  }
-  if (path === "/api/admin/agentsam/tools/catalog" && method === "GET") {
-    return agentsamToolsCatalog(env);
-  }
-  if (path === "/api/admin/agentsam/analytics/summary" && method === "GET") {
-    return agentsamAnalyticsSummary(env, url);
-  }
-  if (path === "/api/admin/agentsam/compaction/status" && method === "GET") {
-    return agentsamCompactionStatus(env);
-  }
-  if (path === "/api/admin/agentsam/compaction/run" && method === "POST") {
-    return agentsamCompactionRun(request, env, executionCtx);
-  }
-  if (path === "/api/admin/analytics/logs/recent" && method === "GET") {
-    // Production diagnostic traces contain privileged operational metadata.
-    // The same admin session gate applies; restrict to administrator roles.
-    if (!["admin","owner","super_admin"].includes(String(user.role||"").toLowerCase()))
-      return json({error:"logs_admin_permission_required"},{status:403,headers:{"cache-control":"no-store"}});
-    const result=await fetchCloudflareLiveLogs(env,{windowSeconds:url.searchParams.get("window")||180});
-    return json(result,{status:result.ok?200:result.status,headers:{"cache-control":"no-store"}});
-  }
-  if (path === "/api/admin/analytics/health" && method === "GET") {
-    return json(await getHealthAnalytics(env, url.searchParams.get("range") || "30d"));
-  }
-  if (path === "/api/admin/analytics/finance" && method === "GET") {
-    const range = url.searchParams.get("range") || "30d";
-    const data = await getFinanceAnalytics(env, range);
-    return json(data);
-  }
-  if (path === "/api/admin/agentsam/mcp/status" && method === "GET") {
-    const user = await getSessionUser(request, env);
-    return agentsamMcpStatus(env, user?.id || null);
-  }
-  if (path === "/api/admin/agentsam/github/start" && method === "GET") {
-    return agentsamGithubOAuthStart(request, env);
-  }
-  if (path === "/api/admin/agentsam/github/callback" && method === "GET") {
-    return agentsamGithubOAuthCallback(request, env);
-  }
-  if (path === "/api/admin/agentsam/github/status" && method === "GET") {
-    return agentsamGithubOAuthStatus(request, env);
-  }
-  if (path === "/api/admin/agentsam/github/disconnect" && method === "POST") {
-    return agentsamGithubOAuthDisconnect(request, env);
-  }
-  if (path === "/api/admin/agentsam/workflows" && method === "GET") {
-    return agentsamWorkflowsList(env);
-  }
-  if (path === "/api/admin/agentsam/workflows/drawer" && method === "GET") {
-    return agentsamDrawerWorkflowsList(env);
-  }
-  if (path === "/api/admin/agentsam/skills" && method === "GET") {
-    return agentsamSkillsList(env, url);
-  }
-  if (path === "/api/admin/agentsam/skills" && method === "POST") {
-    return createAdminAgentSamSkill(request, env, user);
-  }
-
-  let skillMatch = path.match(/^\/api\/admin\/agentsam\/skills\/([a-z0-9-]+)$/);
-  if (skillMatch && method === "GET") {
-    return agentsamSkillGet(env, skillMatch[1], url);
-  }
-
-  const cmsResponse = await handleAdminCmsApi(request, env, url, { accountId: user.account_id });
-  if (cmsResponse) return cmsResponse;
-
-  return json({ error: "Not found" }, { status: 404 });
-}
+  const attachment = path.match(/^\/api\/admin\/agentsam\/files\/([a-z0-9_]+)\/content$/);
+  if (attachment && method === "GET") return agentsamFileContent(en

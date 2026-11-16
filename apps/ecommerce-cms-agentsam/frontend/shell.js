@@ -542,6 +542,183 @@ function scopedAdminHref(href) {
   const url=new URL(href,location.origin);url.searchParams.set("site_id",siteId);
   return url.pathname+url.search;
 }
+function renderNavItem(item, activeHref)r": ["/admin/page-edit"],
+    "/admin/analytics/overview": [
+      "/admin/analytics/finance",
+      "/admin/analytics/health",
+    ],
+  };
+  for (const [key, list] of Object.entries(aliases)) {
+    if (baseHref === key && (baseActive === key || list.some((p) => baseActive.startsWith(p)))) {
+      return true;
+    }
+  }
+  if (baseActive.startsWith("/admin/scaffold") && baseHref.startsWith("/admin/scaffold")) {
+    return href === activeHref;
+  }
+  return false;
+}
+
+function groupOpen(id, activeHref, children, parentHref) {
+  if (id && navToggleState.has(id)) return navToggleState.get(id);
+  if (parentHref && navActive(parentHref, activeHref)) return true;
+  if (!children) return false;
+  return children.some((c) => navActive(c.href, activeHref));
+}
+
+function icon(name, size = 18, className = "console-icon") {
+  return `<svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" aria-hidden="true">${ICONS[name] || ""}</svg>`;
+}
+
+const CONSOLE_APPEARANCE_KEY = "agentsam-console-appearance";
+
+function readConsoleAppearance() {
+  try {
+    const saved = localStorage.getItem(CONSOLE_APPEARANCE_KEY);
+    return saved === "dark" || saved === "light" ? saved : "light";
+  } catch (error) {
+    return "light";
+  }
+}
+
+function applyConsoleAppearance(value) {
+  const appearance = value === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = appearance;
+  document.documentElement.style.colorScheme = appearance;
+  document.body.dataset.theme = appearance;
+  document.body.style.colorScheme = appearance;
+  document.querySelectorAll("[data-console-theme-toggle]").forEach((button) => {
+    const next = appearance === "dark" ? "light" : "dark";
+    button.innerHTML = icon(appearance === "dark" ? "sun" : "moon", 18);
+    button.setAttribute("aria-label", `Switch to ${next} mode`);
+    button.setAttribute("title", `Switch to ${next} mode`);
+    button.setAttribute("aria-pressed", String(appearance === "dark"));
+  });
+  return appearance;
+}
+
+let consoleSearchMatches = [];
+let consoleSearchActiveIndex = 0;
+
+function getConsoleSearchItems() {
+  const nav = buildUserNav(window.__shellUser || null);
+  const sections = [
+    { key: "main", label: "Workspace" },
+    { key: "channels", label: "Sales channels" },
+    { key: "apps", label: "Apps" },
+  ];
+  const items = [];
+  const seen = new Set();
+  const add = (label, href, group) => {
+    if (!label || !href) return;
+    const key = label + "\\u0000" + href;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({ label, href, group });
+  };
+  for (const section of sections) {
+    for (const item of nav[section.key] || []) {
+      if (item.href) add(item.label, item.href, section.label);
+      else if (item.id === "products") add(item.label, "/admin/products", section.label);
+      for (const child of item.children || []) add(child.label, child.href, item.label || section.label);
+    }
+  }
+  return items;
+}
+
+function renderConsoleSearchResults() {
+  const input = document.getElementById("console-search-input");
+  const results = document.getElementById("console-search-results");
+  if (!input || !results) return;
+  const query = input.value.trim().toLocaleLowerCase();
+  consoleSearchMatches = getConsoleSearchItems().filter((item) =>
+    !query || (item.label + " " + item.group + " " + item.href).toLocaleLowerCase().includes(query)
+  );
+  consoleSearchActiveIndex = consoleSearchMatches.length
+    ? Math.max(0, Math.min(consoleSearchActiveIndex, consoleSearchMatches.length - 1))
+    : 0;
+  results.replaceChildren();
+  if (!consoleSearchMatches.length) {
+    input.removeAttribute("aria-activedescendant");
+    const empty = document.createElement("p");
+    empty.className = "console-search-empty";
+    empty.setAttribute("role", "status");
+    empty.textContent = "No matches. Try another search.";
+    results.appendChild(empty);
+    return;
+  }
+  consoleSearchMatches.forEach((item, index) => {
+    const result = document.createElement("a");
+    result.className = "console-search-result";
+    result.id = "console-search-result-" + index;
+    result.href = item.href;
+    result.dataset.consoleSearchResult = "true";
+    result.dataset.searchIndex = String(index);
+    result.setAttribute("role", "option");
+    result.setAttribute("aria-selected", String(index === consoleSearchActiveIndex));
+    result.setAttribute("aria-label", item.label + ", " + item.group);
+    const copy = document.createElement("span");
+    copy.className = "console-search-result-copy";
+    const label = document.createElement("strong");
+    label.textContent = item.label;
+    const group = document.createElement("small");
+    group.textContent = item.group;
+    copy.append(label, group);
+    const enter = document.createElement("kbd");
+    enter.textContent = "↵";
+    enter.setAttribute("aria-hidden", "true");
+    result.append(copy, enter);
+    results.appendChild(result);
+  });
+  input.setAttribute("aria-activedescendant", "console-search-result-" + consoleSearchActiveIndex);
+}
+
+function openConsoleSearch() {
+  const backdrop = document.getElementById("console-search-backdrop");
+  const input = document.getElementById("console-search-input");
+  const trigger = document.getElementById("console-search-trigger");
+  if (!backdrop || !input) return;
+  backdrop.hidden = false;
+  trigger?.setAttribute("aria-expanded", "true");
+  input.value = "";
+  input.setAttribute("aria-expanded", "true");
+  consoleSearchActiveIndex = 0;
+  renderConsoleSearchResults();
+  input.focus();
+}
+
+function closeConsoleSearch(restoreFocus = true) {
+  const backdrop = document.getElementById("console-search-backdrop");
+  const trigger = document.getElementById("console-search-trigger");
+  if (!backdrop || backdrop.hidden) return;
+  backdrop.hidden = true;
+  trigger?.setAttribute("aria-expanded", "false");
+  document.getElementById("console-search-input")?.setAttribute("aria-expanded", "false");
+  if (restoreFocus) trigger?.focus();
+}
+
+function renderConsoleSearchDialog() {
+  return `
+    <div class="console-search-backdrop" id="console-search-backdrop" hidden>
+      <section class="console-search-dialog" id="console-search-dialog" role="dialog" aria-modal="true" aria-labelledby="console-search-title">
+        <h2 id="console-search-title" class="console-search-sr-only">Search pages and tools</h2>
+        <div class="console-search-input-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <input id="console-search-input" type="search" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="Search pages, products, and tools" autocomplete="off" aria-label="Search pages, products, and tools" aria-controls="console-search-results">
+          <kbd>Esc</kbd>
+        </div>
+        <div class="console-search-results" id="console-search-results" role="listbox" aria-label="Search results"></div>
+        <div class="console-search-hint"><span>Navigate with ↑ ↓</span><span><kbd>↵</kbd> Open <kbd>Esc</kbd> Close</span></div>
+      </section>
+    </div>`;
+}
+
+function scopedAdminHref(href) {
+  const siteId=new URLSearchParams(location.search).get("site_id");
+  if(!siteId||!/^\/admin\/(?:products|product-edit|inventory|store|pages|page-edit|theme)/.test(href))return href;
+  const url=new URL(href,location.origin);url.searchParams.set("site_id",siteId);
+  return url.pathname+url.search;
+}
 function renderNavItem(item, activeHref) {
   if (item.children) {
     const open = groupOpen(item.id, activeHref, item.children, item.href);
@@ -727,131 +904,7 @@ function hydrateShellNav(user, activeHref) {
   const navHtml = renderSideNav(activeHref, buildUserNav(user));
   const drawerNavHtml = renderSideNav(activeHref, buildUserNav(user), { drawer: true });
   document.querySelectorAll(".console-sidenav.admin-sidebar, .admin-nav--drawer").forEach((aside) => {
-    // Keep the footer/profile DOM island stable. Replacing the whole aside here
-    // used to make the profile and collapse control disappear during hydration.
-    const next = document.createElement("div");
-    next.innerHTML = aside.classList.contains("admin-nav--drawer") ? drawerNavHtml : navHtml;
-    const nextScroll = next.querySelector(".console-sidenav-scroll");
-    const currentScroll = aside.querySelector(".console-sidenav-scroll");
-    if (nextScroll && currentScroll) currentScroll.replaceWith(nextScroll);
-    else if (nextScroll) aside.prepend(nextScroll);
-    if (!aside.querySelector(".console-sidenav-profile")) {
-      const footer = next.querySelector(".console-sidenav-profile");
-      if (footer) aside.appendChild(footer);
-    }
-  });
-  syncPersistentNavState();
-  // Toggle click handling is wired ONCE, via delegation, in
-  // bindConsoleGlobalHandlers(). Re-rendering the nav here used to
-  // re-attach a fresh set of per-button listeners on top of whatever was
-  // already wired from the initial static render in renderShell(), which
-  // is what caused the double-toggle race / stuck chevron. navToggleState
-  // plus the delegated listener now survive this innerHTML swap untouched.
-}
-
-function ensureConsoleLayout() {
-  if (!document.getElementById("console-app")) {
-    const app = document.createElement("div");
-    app.id = "console-app";
-    document.body.appendChild(app);
-  }
-  if (!document.getElementById("console-overlay")) {
-    const overlay = document.createElement("div");
-    overlay.id = "console-overlay";
-    document.body.appendChild(overlay);
-  }
-}
-
-function stabilizeShellDrawers() {
-  requestAnimationFrame(() => {
-    document.querySelectorAll(".admin-drawer, .admin-drawer-backdrop, .agentsam-drawer, .agentsam-backdrop").forEach((el) => {
-      el.classList.add("drawer-mounted");
-      el.style.removeProperty("visibility");
-    });
-    document.body.classList.remove("console-shell-loading");
-  });
-}
-
-function renderShell(activeHref, mainHtml, options = {}) {
-  const { fullBleed = false, onReady, includeMobileDrawer = false } = options;
-  const shellMode = resolveShellMode(options);
-  ensureConsoleAssets();
-  ensureConsoleLayout();
-  applyConsoleAppearance(readConsoleAppearance());
-
-  document.body.dataset.shellMode = shellMode.id;
-  document.body.classList.toggle("shell-mode-theme-editor", shellMode.id === "theme-editor");
-  document.body.classList.remove("agentsam-open", "admin-nav-open", "console-body-bleed", "admin-body-bleed");
-  document.body.classList.add("console-shell-loading");
-
-  const mainClass = fullBleed
-    ? "console-main admin-main console-main--bleed admin-main--bleed"
-    : "console-main admin-main";
-
-  const mobileDrawerMarkup = includeMobileDrawer ? `
-        <div class="admin-drawer-backdrop" id="admin-drawer-backdrop" aria-hidden="true"></div>
-        <aside class="admin-drawer" id="admin-drawer" aria-hidden="true">
-          <div class="admin-drawer-head">
-            <span class="admin-drawer-title">Navigation</span>
-            <button type="button" class="admin-drawer-close" id="admin-drawer-close" aria-label="Close sidebar" title="Close sidebar">
-              ${icon("arrowLeftToLine", 20, "admin-drawer-close-icon")}
-            </button>
-          </div>
-          <nav class="console-sidenav admin-nav admin-nav--drawer" data-nav-package="mobile-glass-drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref, null, { drawer: true })}</nav>
-        </aside>` : "";
-  const navMorphIcon = `<span class="console-nav-morph" aria-hidden="true"><span></span><span></span><span></span></span>`;
-  const mobileDrawerTrigger = includeMobileDrawer ? `<button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
-          ${navMorphIcon}
-        </button>` : "";
-  const adminChrome = shellMode.hideAdminNav ? "" : `
-      <header class="console-topbar">
-        <div class="console-topbar-spacer" aria-hidden="true"></div>
-        <div class="console-topbar-leading" id="agentsam-console-leading-slot"></div>
-        <div class="console-topbar-center" id="agentsam-console-mode-slot"></div>
-        <div class="console-topbar-agent-actions" id="agentsam-console-actions-slot"></div>
-        <div class="console-topbar-actions">
-          <div class="console-search-wrap">
-            <button type="button" class="console-search console-search--icon" id="console-search-trigger" aria-label="Search pages and tools" title="Search pages and tools" aria-haspopup="dialog" aria-expanded="false" aria-controls="console-search-dialog">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </button>
-          </div>
-          <button type="button" class="console-icon-btn" id="agentsam-toggle" aria-label="Agent Sam" aria-expanded="false" title="Agent Sam">
-            <img src="${AGENT_TRIGGER_ICON}" alt="" width="22" height="22" aria-hidden="true" style="display:block;border-radius:50%;object-fit:cover">
-          </button>
-          <button type="button" class="console-icon-btn" id="console-notifications-trigger" aria-label="Notifications" title="Notifications" aria-expanded="false" aria-haspopup="dialog" aria-controls="console-notifications-menu">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5"/></svg>
-
-          </button>
-          <section id="console-notifications-menu" class="console-notifications-menu" role="dialog" aria-label="Notifications" hidden>
-            <strong>Notifications</strong>
-            <p>No notification feed is connected to this installation yet.</p>
-          </section>
-        </div>
-      </header>
-`;
-  document.getElementById("console-app").innerHTML = `
-    <div class="console-shell admin-shell${shellMode.id === "theme-editor" ? " is-editor-mode" : ""}" data-shell-mode="${shellMode.id}" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
-      ${adminChrome}
-      <div class="console-body">
-        ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>`}
-        ${shellMode.hideAdminNav ? "" : mobileDrawerTrigger}
-        ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">${navMorphIcon}</button>`}
-        ${shellMode.hideAdminNav ? "" : mobileDrawerMarkup}
-        <div class="console-workspace">
-          <main class="${mainClass}">${mainHtml}</main>
-          <aside id="agentsam-dock" class="agentsam-dock" aria-hidden="true"></aside>
-        </div>
-      </div>
-    </div>
-    ${shellMode.hideAdminNav ? "" : renderConsoleSearchDialog()}
-  `;
-
-  if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
-  // Full-bleed tool pages own the whole viewport and have not reserved dock clearance; hide the dock there.
-  document.body.classList.toggle("admin-dock-off", fullBleed || shellMode.id === "embedded-app");
-
-  bindConsoleGlobalHandlers();
-  import('/admin/profile-popup/index.js')
+    // Keep the footer/profile DOM island stable. Replacirofile-popup/index.js')
     .then(({ mountProfilePopups }) => mountProfilePopups(document))
     .catch(() => {});
 
@@ -859,6 +912,190 @@ function renderShell(activeHref, mainHtml, options = {}) {
   // wired both here (on the freshly-painted static markup) AND again inside
   // hydrateShellNav() once the async /api/admin/me call resolved and
   // replaced the sidebar's innerHTML. Whichever buttons survived ended up
+  // with stacked/duplicate listeners, and any click landing in the gap
+  // between this render and hydrateShellNav's innerHTML swap got its
+  // .is-open state silently discarded a moment later. That race produced
+  // the "stuck" chevron/focus box. The single delegated listener in
+  // bindConsoleGlobalHandlers() now handles every [data-toggle] click for
+  // the life of the page, across any number of innerHTML replacements.
+
+  if (!shellMode.hideAdminNav && window.__shellUser) hydrateShellProfile(window.__shellUser);
+
+  if (!shellMode.hideAdminNav) loadShellUser()
+    .then((d) => {
+      if (d) {
+        hydrateShellNav(d, activeHref);
+      } else {
+        hydrateShellProfile({
+          display_name: "Account",
+          email: "",
+          role: "member",
+          initials: "?",
+        });
+        document.querySelectorAll("[data-profile-role]").forEach((el) => {
+          el.textContent = "Sign in required";
+        });
+      }
+    });
+
+  if (!shellMode.hideAdminNav) initPersistentNav();
+  if (includeMobileDrawer) initMobileNav();
+  window.initEcommerceInspector?.();
+  if (!window.initEcommerceInspector && !document.getElementById("ecommerce-inspector-script")) {
+    const script = document.createElement("script");
+    script.id = "ecommerce-inspector-script";
+    script.src = "/admin/js/inspector.js";
+    document.head.appendChild(script);
+  }
+  if (shellMode.id !== "embedded-app") {
+    initAgentsamShell();
+    wireAgentsamTriggers();
+    mountShellDock();
+  }
+  stabilizeShellDrawers();
+
+  document.querySelectorAll("[data-agentsam-open]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.openAgentsamDrawer?.();
+    });
+  });
+
+  if (typeof onReady === "function") onReady();
+  window.wireAnalyticsNav?.();
+}
+
+function bindConsoleGlobalHandlers() {
+  if (window.__consoleGlobalHandlers) return;
+  window.__consoleGlobalHandlers = true;
+
+  document.addEventListener("click", (e) => {
+    const appsToggle = e.target.closest("[data-apps-add-toggle]");
+    const appsClose = e.target.closest("[data-apps-add-close]");
+    if (appsToggle || appsClose) {
+      e.preventDefault();
+      const currentMenu = appsToggle?.closest(".console-sidenav-scroll")?.querySelector("[data-apps-add-menu]");
+      const nextOpen = Boolean(appsToggle) && Boolean(currentMenu?.hidden);
+      document.querySelectorAll("[data-apps-add-menu]").forEach((menu) => { menu.hidden = !nextOpen; });
+      document.querySelectorAll("[data-apps-add-toggle]").forEach((button) => { button.setAttribute("aria-expanded", String(nextOpen)); });
+      return;
+    }
+    if (!e.target.closest("[data-apps-add-menu]")) {
+      document.querySelectorAll("[data-apps-add-menu]").forEach((menu) => { menu.hidden = true; });
+      document.querySelectorAll("[data-apps-add-toggle]").forEach((button) => { button.setAttribute("aria-expanded", "false"); });
+    }
+    const notificationsTrigger = e.target.closest("#console-notifications-trigger");
+    const notificationsMenu = document.getElementById("console-notifications-menu");
+    const notificationsButton = document.getElementById("console-notifications-trigger");
+    if (notificationsTrigger && notificationsMenu) {
+      e.preventDefault();
+      const opening = notificationsMenu.hidden;
+      notificationsMenu.hidden = !opening;
+      notificationsButton?.setAttribute("aria-expanded", String(opening));
+      return;
+    }
+    if (notificationsMenu && !notificationsMenu.hidden && !e.target.closest("#console-notifications-menu")) {
+      notificationsMenu.hidden = true;
+      notificationsButton?.setAttribute("aria-expanded", "false");
+    }
+    const searchTrigger = e.target.closest("#console-search-trigger");
+    if (searchTrigger) {
+      e.preventDefault();
+      openConsoleSearch();
+      return;
+    }
+    const searchResult = e.target.closest("[data-console-search-result]");
+    if (searchResult) {
+      closeConsoleSearch(false);
+      return;
+    }
+    const searchBackdrop = e.target.closest("#console-search-backdrop");
+    if (searchBackdrop && e.target === searchBackdrop) {
+      closeConsoleSearch();
+      return;
+    }
+    const logout = e.target.closest(".admin-logout-btn");
+    if (logout) {
+      e.preventDefault();
+      fetch("/api/admin/logout", { method: "POST" }).catch(() => {}).finally(() => {
+        window.location.href = "/admin/login";
+      });
+      return;
+    }
+    const navToggle = e.target.closest("[data-console-nav-toggle]");
+    if (navToggle) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (navToggle.closest(".admin-nav--drawer")) return;
+      setPersistentNav(document.body.classList.contains("console-nav-collapsed"));
+    }
+  });
+
+  // Single delegated handler for every collapsible nav group, for the
+  // lifetime of the page. Survives any number of aside.innerHTML swaps
+  // (hydrateShellNav) because it lives on document, not on the buttons
+  // themselves -- so there is exactly one listener per click, ever, and
+  // navToggleState is the only thing that decides open/closed.
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-toggle]");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = btn.getAttribute("data-toggle");
+    if (!id) return;
+    const currentlyOpen = navToggleState.has(id)
+      ? navToggleState.get(id)
+      : !!document.querySelector(`[data-group="${id}"]`)?.classList.contains("is-open");
+    const next = !currentlyOpen;
+    navToggleState.set(id, next);
+    document.querySelectorAll(`[data-group="${id}"]`).forEach((group) => {
+      group.classList.add("is-animating");
+      group.classList.toggle("is-open", next);
+    });
+    document.querySelectorAll(`[data-toggle="${id}"]`).forEach((toggleBtn) => {
+      toggleBtn.setAttribute("aria-expanded", String(next));
+      toggleBtn.classList.toggle("is-open", next);
+    });
+  });
+
+  document.addEventListener("input", (event) => {
+    if (event.target?.id !== "console-search-input") return;
+    consoleSearchActiveIndex = 0;
+    renderConsoleSearchResults();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      const notificationsMenu = document.getElementById("console-notifications-menu");
+      if (notificationsMenu && !notificationsMenu.hidden) {
+        notificationsMenu.hidden = true;
+        document.getElementById("console-notifications-trigger")?.setAttribute("aria-expanded", "false");
+        document.getElementById("console-notifications-trigger")?.focus();
+        event.preventDefault();
+        return;
+      }
+    }
+    if (document.getElementById("console-search-backdrop") && (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      openConsoleSearch();
+      return;
+    }
+    const backdrop = document.getElementById("console-search-backdrop");
+    if (!backdrop || backdrop.hidden) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeConsoleSearch();
+      return;
+    }
+    if (event.target?.id === "console-search-input" && consoleSearchMatches.length) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        consoleSearchActiveIndex = (consoleSearchActiveIndex + 1) % consoleSearchMatches.length;
+        renderConsoleSearchResults();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        consoleSearchActiveIndex = (consoleSearchActiveIndex - 1 + consoleSearchMatches.length) % consoleSearchMatches.length;
+      ever buttons survived ended up
   // with stacked/duplicate listeners, and any click landing in the gap
   // between this render and hydrateShellNav's innerHTML swap got its
   // .is-open state silently discarded a moment later. That race produced
@@ -1052,236 +1289,4 @@ function bindConsoleGlobalHandlers() {
       }
     }
     if (event.key === "Tab") {
-      const dialog = document.getElementById("console-search-dialog");
-      const focusable = [...(dialog?.querySelectorAll("input, a[href]") || [])];
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    }
-  });
-}
-
-function syncPersistentNavState() {
-  const collapsed = document.body.classList.contains("console-nav-collapsed");
-  document.querySelectorAll(".console-sidenav.admin-sidebar").forEach((aside) => aside.classList.toggle("is-collapsed", collapsed));
-  document.querySelectorAll("[data-console-nav-toggle]").forEach((button) => {
-    if (button.closest(".admin-nav--drawer")) return;
-    const label = collapsed ? "Show sidebar" : (window.matchMedia?.("(max-width: 900px)")?.matches ? "Close sidebar" : "Collapse sidebar");
-    button.setAttribute("aria-label", label);
-    button.setAttribute("title", label);
-    button.setAttribute("aria-expanded", String(!collapsed));
-    button.classList.toggle("is-expanded", !collapsed);
-  });
-}
-
-function setPersistentNav(open) {
-  document.body.classList.toggle("console-nav-collapsed", !open);
-  try { localStorage.setItem("agentsam.console.nav", open ? "open" : "collapsed"); } catch {}
-  syncPersistentNavState();
-}
-
-function initPersistentNav() {
-  let open = true;
-  try { open = (localStorage.getItem("agentsam.console.nav") ?? localStorage.getItem("fnf-console-nav")) !== "collapsed"; } catch {}
-  setPersistentNav(open);
-}
-
-/** Safe-area insets only resolve when the viewport opts in to full-bleed. Idempotent. */
-function ensureViewportCover() {
-  const meta = document.querySelector('meta[name="viewport"]');
-  if (!meta) return;
-  const content = meta.getAttribute("content") || "";
-  if (!/viewport-fit\s*=/.test(content)) {
-    meta.setAttribute("content", `${content}${content ? ", " : ""}viewport-fit=cover`);
-  }
-}
-
-/** Pages publish save state to the dock: publishDockEdit({ active, hint, dirty, canSave, saveLabel, onSave, discardHref }). */
-window.publishDockEdit = function publishDockEdit(detail) {
-  window.__adminDockEdit = detail;
-  document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail }));
-};
-
-/** Mobile/tablet dock. Config comes from the app manifest (built into dock.config.json). Non-fatal. */
-async function mountShellDock() {
-  try {
-    const [{ mountAdminDock }, config] = await Promise.all([
-      import("/admin/dock/index.js"),
-      fetch("/admin/dock/dock.config.json", { credentials: "include" }).then((res) => (res.ok ? res.json() : null)),
-    ]);
-    if (!config) return;
-    mountAdminDock({
-      config,
-      host: {
-        open: () => window.openAgentsamDrawer?.(),
-        send: (prompt, opts) => {
-          if (typeof window.sendAgentsamMessage !== "function") throw new Error("AgentSam is still loading. Try again in a moment.");
-          return window.sendAgentsamMessage(prompt, opts);
-        },
-        openNav: () => (document.getElementById("admin-menu-toggle") || document.querySelector("[data-console-nav-toggle]"))?.click(),
-      },
-    });
-  } catch (err) {
-    console.warn("[admin-dock] not mounted", err);
-  }
-}
-
-function initAgentsamShell() {
-  if (typeof window.initAgentsamDrawer === "function") {
-    window.initAgentsamDrawer();
-    return;
-  }
-  if (document.getElementById("agentsam-script")) return;
-  const script = document.createElement("script");
-  script.id = "agentsam-script";
-  script.src = "/admin/js/agentsam.js";
-  script.onload = () => {
-    window.initAgentsamDrawer?.();
-    wireAgentsamTriggers();
-  };
-  document.head.appendChild(script);
-}
-
-function wireAgentsamTriggers() {
-  document.querySelectorAll("[data-agentsam-prompt]").forEach((btn) => {
-    if (btn.dataset.agentsamWired) return;
-    btn.dataset.agentsamWired = "1";
-    btn.addEventListener("click", () => {
-      const prompt = btn.getAttribute("data-agentsam-prompt") || "";
-      window.openAgentsamDrawer?.();
-      if (prompt && window.sendAgentsamMessage) window.sendAgentsamMessage(prompt);
-    });
-  });
-}
-
-let mobileNavController;
-function initMobileNav() {
-  mobileNavController?.abort();
-  mobileNavController = new AbortController();
-  const signal = mobileNavController.signal;
-  const toggle = document.getElementById("admin-menu-toggle");
-  const drawer = document.getElementById("admin-drawer");
-  const backdrop = document.getElementById("admin-drawer-backdrop");
-  const closeBtn = document.getElementById("admin-drawer-close");
-  if (!toggle || !drawer) return;
-
-  const mq = window.matchMedia("(max-width: 900px)");
-
-  function setOpen(open) {
-    drawer.inert = !open;
-    const main = document.querySelector(".console-workspace");
-    if (main) main.inert = open;
-    if (open) closeBtn?.focus();
-    else if (drawer.contains(document.activeElement)) toggle.focus();
-    if (!mq.matches) {
-      document.body.classList.remove("admin-nav-open");
-      toggle.setAttribute("aria-expanded", "false");
-      drawer.setAttribute("aria-hidden", "true");
-      backdrop?.setAttribute("aria-hidden", "true");
-      return;
-    }
-    document.body.classList.toggle("admin-nav-open", open);
-    toggle.setAttribute("aria-expanded", String(open));
-    toggle.setAttribute("aria-label", open ? "Close sidebar" : "Show sidebar");
-    toggle.setAttribute("title", open ? "Close sidebar" : "Show sidebar");
-    drawer.setAttribute("aria-hidden", String(!open));
-    backdrop?.setAttribute("aria-hidden", String(!open));
-  }
-
-  function close() {
-    setOpen(false);
-  }
-
-  toggle.addEventListener("click", () => {
-    setOpen(!document.body.classList.contains("admin-nav-open"));
-  }, { signal });
-  closeBtn?.addEventListener("click", close, { signal });
-  backdrop?.addEventListener("click", close, { signal });
-  drawer.querySelectorAll("a.console-nav-item, a.console-nav-child, a.console-profile-card").forEach((link) => {
-    link.addEventListener("click", close);
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") close();
-    if (event.key === "Tab" && document.body.classList.contains("admin-nav-open")) {
-      const items = [...drawer.querySelectorAll("a[href], button:not([disabled])")].filter(el => el.getClientRects().length);
-      const first = items[0], last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    }
-  }, { signal });
-
-  mq.addEventListener("change", () => close(), { signal });
-  close();
-}
-
-window.hydrateShellProfile = hydrateShellProfile;
-window.hydrateShellNav = hydrateShellNav;
-window.loadShellUser = loadShellUser;
-window.AgentSamShell = { modes: SHELL_MODES, resolveShellMode, resolveExitTarget, rememberEditorReturn, bindShellShortcuts, unbindShellShortcuts };
-
-/**
- * Reuse the already-authoritative account-shell theme for installed editor
- * chrome and miniAgentSam, without touching the independently site-scoped
- * storefront preview or storing a second theme preference.
- *
- * The Ecommerce CMS is often framed by Local Studio. CSS custom properties
- * cannot cross iframe boundaries, so read only the computed semantic accent
- * and light/dark mode from our same-origin host root. Standalone CMS uses
- * existing local/fallback tokens. Changes from Theme Settings propagate.
- */
-(function synchronizeInstalledChromeTheme() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  let hostRoot;
-  try {
-    if (window.parent === window || window.parent.location.origin !== window.location.origin) return;
-    hostRoot = window.parent.document.documentElement;
-  } catch { return; }
-  if (!hostRoot || !window.MutationObserver) return;
-  const ownRoot = document.documentElement;
-  function applyHostChromeTheme() {
-    const hostStyles = window.parent.getComputedStyle(hostRoot);
-    // Copy the complete semantic chrome palette across the isolated CMS frame.
-    // CSS custom properties do not inherit across frames; copying only accent
-    // left Sidekick's popovers and inspector permanently white in dark mode.
-    const names = [
-      '--nav-accent','--nav-canvas','--nav-surface','--nav-popover',
-      '--nav-border','--nav-hover','--nav-ink','--nav-inkMuted',
-      '--nav-danger','--color-background','--color-card',
-      '--color-border','--color-foreground','--color-accent',
-    ];
-    for (const name of names) {
-      const value=String(hostStyles.getPropertyValue(name) || '').trim();
-      if (!value || value.length>=256 || /[;{}<>\0\r\n]/.test(value)) continue;
-      ownRoot.style.setProperty(name,value);
-    }
-    const accent = String(hostStyles.getPropertyValue('--nav-accent') ||
-      hostStyles.getPropertyValue('--color-accent') || '').trim();
-    if (accent && accent.length < 96 &&
-        (!window.CSS?.supports || window.CSS.supports('color', accent))) {
-      ownRoot.style.setProperty('--te-accent', accent);
-      ownRoot.style.setProperty('--agentsam-sidekick-accent', accent);
-    }
-    const declared = hostRoot.dataset.theme || hostRoot.dataset.teShellMode ||
-      (hostRoot.classList.contains('dark') ? 'dark' : '');
-    const surface = String(hostStyles.getPropertyValue('--nav-canvas') ||
-      hostStyles.getPropertyValue('--color-background') || '').trim();
-    const rgb = /^#([a-f0-9]{6})$/i.exec(surface);
-    const brightness = rgb ? [1,3,5].map(i=>parseInt(rgb[1].slice(i-1,i+1),16))
-      .reduce((sum,v)=>sum+v,0)/3 : null;
-    const mode = declared === 'dark' || declared === 'light' ? declared
-      : brightness == null ? 'light' : brightness < 145 ? 'dark' : 'light';
-    ownRoot.dataset.teShellMode = mode;
-    ownRoot.dataset.theme = mode;
-  }
-  applyHostChromeTheme();
-  const observer = new MutationObserver(applyHostChromeTheme);
-  observer.observe(hostRoot, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] });
-  window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
-})();
+      const dialog = document.getElementById("conso

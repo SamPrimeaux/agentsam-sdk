@@ -6,8 +6,8 @@ const json=async p=>JSON.parse(await readFile(new URL(p,base),'utf8'));
 test('all design sources are packaged and addressable',async()=>{
  const m=await json('public/sources/manifest.json');
  assert.equal(m.schema,'agentsam.design-source.v1');
- assert.equal(m.boards.length,77);
- assert.equal(m.boards.filter(b=>b.family==='stock').length,15);
+ assert.equal(m.boards.length,78);
+ assert.equal(m.boards.filter(b=>b.family==='stock').length,16);
  assert.ok(m.boards.filter(b=>b.category==='Desktop GPT shell').length>=4);
  for(const b of m.boards){
   assert.match(b.filename,b.family==='stock'?/^[a-z0-9-]+\/[\w-]+(?:\.dc)?\.html$/:/^[\w-]+(?:\.dc)?\.html$/);
@@ -45,12 +45,12 @@ test('published APP stays independently versioned and outside the SDK root works
  assert.equal(sdk.workspaces.some(name=>name.startsWith('apps/')),false);
 });
 
-test('all 13 stock source packages are intact, correctly hashed and safe',async()=>{
+test('all stock source packages are intact, correctly hashed and safe',async()=>{
  const catalog=await json('public/sources/stock/catalog.json');
  const m=await json('public/sources/manifest.json');
  assert.equal(catalog.schema,'agentsam.platform-stock.v1');
  assert.equal(catalog.storage,'theme-store');
- assert.equal(catalog.items.length,15);
+ assert.equal(catalog.items.length,16);
  const {createHash}=await import('node:crypto');
  const seen=new Set();
  for(const item of catalog.items){

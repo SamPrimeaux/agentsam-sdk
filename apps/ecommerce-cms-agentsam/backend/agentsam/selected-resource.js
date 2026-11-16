@@ -1,4 +1,6 @@
 import { mediaSourceFromRow } from "../media/provider-contract.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
+import { resolveCmsSite } from "../cms/site-context.mjs";
 import { slugForStorefrontPath } from "../cms/html-rewriter.js";
 
 function parseMeta(raw) {
@@ -148,10 +150,14 @@ export async function resolveSelectedResource(env, resource) {
     throw new Error("Invalid store selection");
   }
 
+  const accountId = requireApplicationAccountId();
+  const site = await resolveCmsSite(env.DB, { accountId, siteId: resource.site_id });
   const section = await env.DB.prepare(
-    "SELECT s.id,s.section_key,p.slug FROM page_sections s " +
-      "JOIN pages p ON p.id=s.page_id WHERE p.slug=? AND s.section_key=?"
-  ).bind(slug, resource.id).first();
+    "SELECT s.id,s.section_key,p.slug FROM cms_page_sections s " +
+      "JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id " +
+      "WHERE p.site_id=? AND p.account_id=? AND " +
+      "(p.route_path=? OR (p.route_path IS NULL AND p.slug=?)) AND s.section_key=?"
+  ).bind(site.id, accountId, resource.page, slug, resource.id).first();
 
   if (!section) throw new Error("Selected section does not belong to this store");
 

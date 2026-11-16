@@ -388,185 +388,7 @@
         {
           "path": "DesignCanvasSizes.dc.html",
           "sha256": "8dcaac1c0e39a646f3c6b0a2db518264f081bb33b54e5ca2d3922397a4f78b38",
-          "bytes": 4654,
-          "r2_key": "cms/design-stock/v1/design-screen-sizes/8dcaac1c0e39a646/DesignCanvasSizes.dc.html"
-        },
-        {
-          "path": "DesignCanvas.dc.html",
-          "sha256": "239712973f5fd2d71952f91ea9ccbf7b59087ec5d900defdbe3ee7b077f4377b",
-          "bytes": 34748,
-          "r2_key": "cms/design-stock/v1/design-screen-sizes/239712973f5fd2d7/DesignCanvas.dc.html"
-        },
-        {
-          "path": "support.js",
-          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
-          "bytes": 46105,
-          "r2_key": "cms/design-stock/v1/design-screen-sizes/85c4831871e1b2b2/support.js"
-        },
-        {
-          "path": "vendor/react.js",
-          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
-          "bytes": 10751,
-          "r2_key": "cms/design-stock/v1/design-screen-sizes/d949f1c3687aedad/vendor/react.js"
-        },
-        {
-          "path": "vendor/react-dom.js",
-          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
-          "bytes": 131835,
-          "r2_key": "cms/design-stock/v1/design-screen-sizes/35f4f974f4b2bcd4/vendor/react-dom.js"
-        },
-        {
-          "path": "README.md",
-          "sha256": "be4d9024bb01a0bcc33c2b7840c912836fc3069b17ca7383ffcb29699149ae97",
-          "bytes": 980,
-          "r2_key": "cms/design-stock/v1/design-screen-sizes/be4d9024bb01a0bc/README.md"
-        }
-      ],
-      "preview_path": "/design-canvas/sources/stock/design-screen-sizes/DesignCanvasSizes.dc.html",
-      "status": "bundled"
-    },
-    {
-      "id": "agentsam.stock.mini-expanded",
-      "slug": "mini-expanded",
-      "title": "Expanded block settings",
-      "kind": "assistant",
-      "source": "user-provided-export",
-      "source_zip": "2 · Expanded block settings, scope, suggestions-html.zip",
-      "main_html": "MiniAgentSamSettings.dc.html",
-      "main_sha256": "ad82a3b422bbab6e8458cb2df3910c70d95e1204da25695d024ce77f3fcbccf0",
-      "files": [
-        {
-          "path": "MiniAgentSamSettings.dc.html",
-          "sha256": "ad82a3b422bbab6e8458cb2df3910c70d95e1204da25695d024ce77f3fcbccf0",
-          "bytes": 4644,
-          "r2_key": "cms/design-stock/v1/mini-expanded/ad82a3b422bbab6e/MiniAgentSamSettings.dc.html"
-        },
-        {
-          "path": "MiniAgentSam.dc.html",
-          "sha256": "68baa154e5bb712fc35dc6971d22bff059cbda84d3ad76495a9b2eaa962fe86e",
-          "bytes": 22744,
-          "r2_key": "cms/design-stock/v1/mini-expanded/68baa154e5bb712f/MiniAgentSam.dc.html"
-        },
-        {
-          "path": "support.js",
-          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
-          "bytes": 46105,
-          "r2_key": "cms/design-stock/v1/mini-expanded/85c4831871e1b2b2/support.js"
-        },
-        {
-          "path": "vendor/react.js",
-          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
-          "bytes": 10751,
-          "r2_key": "cms/design-stock/v1/mini-expanded/d949f1c3687aedad/vendor/react.js"
-        },
-        {
-          "path": "vendor/react-dom.js",
-          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
-          "bytes": 131835,
-          "r2_key": "cms/design-stock/v1/mini-expanded/35f4f974f4b2bcd4/vendor/react-dom.js"
-        },
-        {
-          "path": "README.md",
-          "sha256": "30184167b7b973786d041e487bcee5da6364a3d42f94fd196ba5712e0a6091f3",
-          "bytes": 1009,
-          "r2_key": "cms/design-stock/v1/mini-expanded/30184167b7b97378/README.md"
-        }
-      ],
-      "preview_path": "/design-canvas/sources/stock/mini-expanded/MiniAgentSamSettings.dc.html",
-      "status": "bundled"
-    },
-    {
-      "id": "agentsam.stock.mini-compact",
-      "slug": "mini-compact",
-      "title": "Compact, on a selected block",
-      "kind": "assistant",
-      "source": "user-provided-export",
-      "source_zip": "1 · Compact, on a selected block-html.zip",
-      "main_html": "MiniAgentSam.dc.html",
-      "main_sha256": "a8b098552ef3c90900ddb2aa07e6bfe2539af96fc84654c485529723b48e9789",
-      "files": [
-        {
-          "path": "MiniAgentSam.dc.html",
-          "sha256": "a8b098552ef3c90900ddb2aa07e6bfe2539af96fc84654c485529723b48e9789",
-          "bytes": 26813,
-          "r2_key": "cms/design-stock/v1/mini-compact/a8b098552ef3c909/MiniAgentSam.dc.html"
-        },
-        {
-          "path": "support.js",
-          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
-          "bytes": 46105,
-          "r2_key": "cms/design-stock/v1/mini-compact/85c4831871e1b2b2/support.js"
-        },
-        {
-          "path": "vendor/react.js",
-          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
-          "bytes": 10751,
-          "r2_key": "cms/design-stock/v1/mini-compact/d949f1c3687aedad/vendor/react.js"
-        },
-        {
-          "path": "vendor/react-dom.js",
-          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
-          "bytes": 131835,
-          "r2_key": "cms/design-stock/v1/mini-compact/35f4f974f4b2bcd4/vendor/react-dom.js"
-        },
-        {
-          "path": "README.md",
-          "sha256": "592777710e7bd3b22d46d46d2c5cedc334e2de7902c984be6fa8d8abc2246f7f",
-          "bytes": 929,
-          "r2_key": "cms/design-stock/v1/mini-compact/592777710e7bd3b2/README.md"
-        }
-      ],
-      "preview_path": "/design-canvas/sources/stock/mini-compact/MiniAgentSam.dc.html",
-      "status": "bundled"
-    },
-    {
-      "id": "agentsam.stock.mini-confirmation",
-      "slug": "mini-confirmation",
-      "title": "Confirmation",
-      "kind": "assistant",
-      "source": "user-provided-export",
-      "source_zip": "1 · Confirmation-html.zip",
-      "main_html": "MiniAgentSamPublish.dc.html",
-      "main_sha256": "2e6608f2849b6235aad041819faf3c94b63d384ea52f60eb87535c5a0993bd47",
-      "files": [
-        {
-          "path": "MiniAgentSamPublish.dc.html",
-          "sha256": "2e6608f2849b6235aad041819faf3c94b63d384ea52f60eb87535c5a0993bd47",
-          "bytes": 4630,
-          "r2_key": "cms/design-stock/v1/mini-confirmation/2e6608f2849b6235/MiniAgentSamPublish.dc.html"
-        },
-        {
-          "path": "MiniAgentSam.dc.html",
-          "sha256": "26153240ef61511c997d265a3322fde6633247cfe46eb1c0fe1f3d174bd6f46e",
-          "bytes": 22750,
-          "r2_key": "cms/design-stock/v1/mini-confirmation/26153240ef61511c/MiniAgentSam.dc.html"
-        },
-        {
-          "path": "support.js",
-          "sha256": "85c4831871e1b2b26b96206a45514a2d25a7e6591d51014317f57031a4e258f2",
-          "bytes": 46105,
-          "r2_key": "cms/design-stock/v1/mini-confirmation/85c4831871e1b2b2/support.js"
-        },
-        {
-          "path": "vendor/react.js",
-          "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
-          "bytes": 10751,
-          "r2_key": "cms/design-stock/v1/mini-confirmation/d949f1c3687aedad/vendor/react.js"
-        },
-        {
-          "path": "vendor/react-dom.js",
-          "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
-          "bytes": 131835,
-          "r2_key": "cms/design-stock/v1/mini-confirmation/35f4f974f4b2bcd4/vendor/react-dom.js"
-        },
-        {
-          "path": "README.md",
-          "sha256": "7b358f83764b0d59e68ae653850594053da5c0870ed93be7233b441157e372ae",
-          "bytes": 976,
-          "r2_key": "cms/design-stock/v1/mini-confirmation/7b358f83764b0d59/README.md"
-        }
-      ],
-      "preview_path": "/design-canvas/sources/stock/mini-confirmation/MiniAgentSamPublish.dc.html",
+  ew_path": "/design-canvas/sources/stock/mini-confirmation/MiniAgentSamPublish.dc.html",
       "status": "bundled"
     },
     {
@@ -705,6 +527,25 @@
         }
       ],
       "preview_path": "/design-canvas/sources/stock/style-spec-bw/StyleSpec.dc.html",
+      "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.cms-editor-workspace",
+      "slug": "cms-editor-workspace",
+      "title": "CMS editor workspace",
+      "kind": "assistant",
+      "source": "platform-starter",
+      "main_html": "CmsEditorWorkspace.html",
+      "main_sha256": "7ba5bba3fe43b609a884d3a24c7fafc0a4b4bde7152d1e929adc66508cd87ca3",
+      "files": [
+        {
+          "path": "CmsEditorWorkspace.html",
+          "sha256": "7ba5bba3fe43b609a884d3a24c7fafc0a4b4bde7152d1e929adc66508cd87ca3",
+          "bytes": 2817,
+          "r2_key": "cms/design-stock/v1/cms-editor-workspace/7ba5bba3fe43b609/CmsEditorWorkspace.html"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/cms-editor-workspace/CmsEditorWorkspace.html",
       "status": "bundled"
     }
   ]
