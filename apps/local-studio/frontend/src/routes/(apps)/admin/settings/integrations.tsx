@@ -178,7 +178,7 @@ function IntegrationsSettingsPage() {
         connections={connections}
         onConnect={(provider) => {
           void startLocalStudioProviderConnection(provider, {
-            returnTo: "/settings/integrations",
+            returnTo: "/admin/settings/integrations",
           }).catch((caught) => {
             if (caught instanceof LocalStudioConnectionError && caught.status === 401) {
               window.dispatchEvent(new CustomEvent("agentsam:identity-open"));
