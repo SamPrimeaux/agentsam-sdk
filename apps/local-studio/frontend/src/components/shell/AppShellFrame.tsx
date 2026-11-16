@@ -109,7 +109,7 @@ export function AppShellFrame() {
       }
       if (meta && event.key.toLowerCase() === "b") {
         event.preventDefault();
-        void navigate({ to: "/chats" });
+        void navigate({ to: "/admin/chats" });
       }
     }
     window.addEventListener("keydown", onKey);
