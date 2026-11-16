@@ -150,20 +150,20 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   assert.equal(context.NAV.main.some((item) => item.href === '/agentsam'), false);
   assert.equal(context.NAV.apps.filter((item) => item.href === '/admin/agentsam').length, 1);
   assert.equal(context.NAV.apps.find((item) => item.href === '/admin/agentsam').label, 'AgentSam');
-  assert.equal(context.NAV.apps.some((item) => item.href === '/browse'), false);
-  assert.equal(context.NAV.apps.some((item) => item.href === '/media'), false, 'MovieMode must not claim /media');
-  assert.equal(context.NAV.apps.some((item) => item.id === 'samsketch' && item.href === '/samsketch'), true);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/admin/browse'), false);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/admin/media'), false, 'MovieMode must not claim /media');
+  assert.equal(context.NAV.apps.some((item) => item.id === 'samsketch' && item.href === '/admin/samsketch'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/moviemode'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cad'), true);
-  assert.equal(context.NAV.apps.some((item) => item.href === '/cli'), false);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cli'), false);
   assert.equal(context.NAV.apps.some((item) => item.id === 'ecommerce-cms-agentsam'), false);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/growth'), true);
   assert.equal(context.NAV.main.some((item) => item.id === 'products'), false, 'Products live under Sales channels');
   assert.equal(context.NAV.main.some((item) => item.id === 'library' || item.id === 'help'), false);
   const media = context.NAV.main.find((item) => item.id === 'media');
-  assert.equal(media.href, '/media');
+  assert.equal(media.href, '/admin/media');
   assert.deepEqual(Array.from(media.children, (entry) => entry.href), [
-    '/media/images', '/media/videos', '/media/models', '/media/files',
+    '/admin/media/images', '/admin/media/videos', '/admin/media/models', '/admin/media/files',
   ]);
   const analytics = context.NAV.main.find((item) => item.id === 'analytics');
   assert.equal(analytics.href, '/admin/analytics/overview');
@@ -188,11 +188,11 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   assert.deepEqual(Array.from(context.NAV.utilities), []);
   assert.match(source, /id:'account',label:'Account'/);
   assert.doesNotMatch(source, /id: 'appearance'|id: 'integrations'/);
-  const docs = readFileSync(new URL('../frontend/src/routes/(apps)/docs.tsx', import.meta.url), 'utf8');
-  assert.match(docs, /\/settings\/docs/);
+  const docs = readFileSync(new URL('../frontend/src/routes/(apps)/admin/docs.tsx', import.meta.url), 'utf8');
+  assert.match(docs, /\/admin\/settings\/docs/);
   // Curated discovery does not retire existing product/editor URLs.
   assert.equal(resolveConsoleFile('/admin/products/create'), '_spa/index.html');
-  assert.equal(context.NAV.apps.some((entry) => entry.id === 'work-mail' || entry.href === '/mail'), false);
+  assert.equal(context.NAV.apps.some((entry) => entry.id === 'work-mail' || entry.href === '/admin/mail'), false);
   const installedPaths = [
     ...context.NAV.main.flatMap((item) => [item.href, ...(item.children || []).map((entry) => entry.href)]),
     ...channelPaths,
@@ -208,9 +208,9 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
     ['/agentsam', '/admin/agentsam'],
     ['/cad', '/admin/cad'],
   ]) assert.equal(canonicalStudioPath(oldPath), currentPath);
-  assert.equal(canonicalStudioPath('/samsketch'), null, 'SamSketch owns /samsketch; never redirect into CAD');
+  assert.equal(canonicalStudioPath('/samsketch'), '/admin/samsketch', 'SamSketch receives its canonical admin mount');
   assert.equal(canonicalStudioPath('/samsculpt'), null, 'SamSculpt owns /samsculpt when installed');
-  assert.equal(canonicalStudioPath('/media'), null, '/media is Media Library, not MovieMode');
+  assert.equal(canonicalStudioPath('/media'), '/admin/media', '/media remains the Media Library under admin');
   assert.equal(canonicalStudioPath('/admin/moviemode'), null);
   for (const path of ['/admin/agentsam', '/admin/cad', '/admin/moviemode', '/admin/projects']) {
     assert.ok(isStudioAdminPath(path), path);
@@ -233,10 +233,10 @@ test('Growth appearance is a host-only, theme-token override', () => {
 });
 
 test('legacy /cli opens an existing AgentSam side-panel terminal', () => {
-  const source = readFileSync(new URL('../frontend/src/routes/(apps)/cli.tsx', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../frontend/src/routes/(apps)/admin/cli.tsx', import.meta.url), 'utf8');
   assert.match(source, /openSideTab\("terminal"/);
   assert.match(source, /setSideOpen\(true\)/);
-  assert.match(source, /"\/agentsam"/);
+  assert.match(source, /"\/admin\/agentsam"/);
   assert.doesNotMatch(source, /TerminalPane variant="page"/);
 });
 
@@ -265,13 +265,13 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
     assert.equal(prevented, true);
     return context.window.location.hash;
   };
-  assert.equal(visit('/admin/home'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fhome');
+  assert.equal(visit('/admin/home'), '#/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fhome');
   assert.equal(visit('/admin/agentsam'), '#/admin/agentsam');
   assert.equal(visit('/admin/cad'), '#/admin/cad');
   assert.equal(visit('/admin/moviemode'), '#/admin/moviemode');
   assert.equal(visit('/cad'), '#/cad');
-  assert.equal(visit('/admin/products'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');
-  assert.equal(visit('/admin/theme-editor?slug=home'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-editor%3Fslug%3Dhome');
+  assert.equal(visit('/admin/products'), '#/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');
+  assert.equal(visit('/admin/theme-editor?slug=home'), '#/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-editor%3Fslug%3Dhome');
 });
 
 
@@ -375,7 +375,7 @@ test('embedded desktop navigation reaches its parent and API requests use the na
   visit('/admin/products?view=collections');
   visit('/admin/products','_blank');
   visit('https://other.example/admin/products');
-  assert.deepEqual(destinations,['/admin/agentsam','/mail','/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts%3Fview%3Dcollections']);
+  assert.deepEqual(destinations,['/admin/agentsam','/admin/mail','/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts%3Fview%3Dcollections']);
   assert.equal(context.window.location.hash,'');
   assert.equal((await (await context.window.fetch('https://native.test/api/admin/products')).json()).ok,true);
   assert.deepEqual(requests,['https://native.test/api/admin/products']);
