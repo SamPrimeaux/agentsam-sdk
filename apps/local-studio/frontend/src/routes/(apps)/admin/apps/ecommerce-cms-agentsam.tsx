@@ -143,7 +143,8 @@ export function EcommerceAppView({ search }: {
 
   // Compatibility for saved CMS navigation links created before Design Canvas
   // was unified. Do not try to mount it as a packaged ecommerce route.
-  const legacyDesignCanvas = (search.page || "").split("?")[0].replace(/\\/+$/, "") === "/admin/design-canvas";
+  const legacyPage = (search.page || "").split("?")[0];
+  const legacyDesignCanvas = legacyPage === "/admin/design-canvas" || legacyPage === "/admin/design-canvas/";
   if (legacyDesignCanvas) {
     return <Navigate to="/admin/canvas" search={{ library: "sources" }} replace />;
   }
