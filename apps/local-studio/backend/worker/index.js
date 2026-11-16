@@ -1227,7 +1227,7 @@ export default {
       const unit=url.pathname.split("/").filter(Boolean)[2] || "general";
       const allowed=new Set(["general","agents","customize","design","git-prs",
         "codebase","network","runtime","themes","storage","keys","usage",
-        "notifications","docs","integrations"]);
+        "notifications","docs","integrations","skills"]);
       if(url.pathname === "/admin/settings" || !allowed.has(unit))
         return Response.redirect(new URL("/admin/settings/general",request.url),302);
       const denied = await guardStudioDocument(request, env);
