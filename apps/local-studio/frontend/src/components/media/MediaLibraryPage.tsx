@@ -632,8 +632,8 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
               </button>
             </div>
             <div className="agentsam-media-settings-links">
-              <a href="/settings/storage">Storage settings</a>
-              <a href="/settings/customize?view=plugins">Plugins</a>
+              <a href="/admin/settings/storage">Storage settings</a>
+              <a href="/admin/settings/customize?view=plugins">Plugins</a>
             </div>
           </div>
         </div>
