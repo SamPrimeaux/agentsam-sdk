@@ -1,4 +1,4 @@
-import { ensureConversation } from "../agentsam/conversations.js";
+import { agentsamConversationGet, ensureConversation } from "../agentsam/conversations.js";
 import { resolveSelectedResource } from "../agentsam/selected-resource.js";
 import { formatAttachmentsForPrompt } from "../agentsam/attachments.js";
 import { hydrateAttachmentsForChat } from "../agentsam/files.js";
@@ -212,14 +212,28 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
   };
 }
 
-export async function agentsamChat(request, env, executionCtx = null) {
+export async function agentsamChat(request, env, executionCtx = null, sessionUser = null) {
   const chatStarted = Date.now();
   const body = await readJson(request);
-  const rawContext = body?.context || {};
-  const user = await getSessionUser(request, env);
+  const rawContext = body?.context && typeof body.context === "object" && !Array.isArray(body.context)
+    ? { ...body.context } : {};
+  const user = sessionUser || await getSessionUser(request, env);
+  if (!user) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!body || typeof body !== "object" || (body.message != null && typeof body.message !== "string")) {
+    return json({ error: "Invalid message." }, { status: 400 });
+  }
 
+  if (env.CMS_ASSISTANT_INFERENCE && rawContext.selected_resource?.type === "admin_surface") {
+    const { label, path, surface } = rawContext.selected_resource;
+    rawContext.annotation = { label, page: path, surface };
+    delete rawContext.selected_resource;
+  }
   if (rawContext.selected_resource) {
-    if (!user) return json({error:'Unauthorized'}, {status:401});
+    // Legacy media selectors lack an account column. Hosted requests must
+    // use scoped attachment IDs or the canonical site/section selector.
+    if (env.CMS_ASSISTANT_INFERENCE && rawContext.selected_resource.type !== "section") {
+      return json({ error: "Attach a file or choose a section in the editor." }, { status: 400 });
+    }
     try { rawContext.selected_resource = await resolveSelectedResource(env, rawContext.selected_resource); }
     catch(error) { return json({error:error.message}, {status:400}); }
   }
@@ -229,11 +243,12 @@ export async function agentsamChat(request, env, executionCtx = null) {
 
   let hydrated;
   try {
-    hydrated = await hydrateAttachmentsForChat(
-      env,
-      body?.attachments || rawContext.attachments || [],
-      request.url
-    );
+    const supplied = body.attachments || rawContext.attachments || [];
+    if (env.CMS_ASSISTANT_INFERENCE && (!Array.isArray(supplied) ||
+        supplied.some(item => typeof item?.attachment_id !== "string"))) {
+      return json({ error: "Use the composer to upload attachments before sending." }, { status: 400 });
+    }
+    hydrated = await hydrateAttachmentsForChat(env, supplied, request.url);
   } catch (error) {
     return json({ error: error?.message || "Invalid or inaccessible attachment." }, { status: 400 });
   }
@@ -275,6 +290,28 @@ export async function agentsamChat(request, env, executionCtx = null) {
     if (!update?.meta?.changes) {
       return json({ error: "Attachment belongs to another conversation or is unavailable." }, { status: 400 });
     }
+  }
+
+  if (env.CMS_ASSISTANT_INFERENCE) {
+    const previous = body.conversation_id === conversationId && conversationId
+      ? await agentsamConversationGet(env, conversationId).then(response => response.json())
+      : null;
+    const result = await env.CMS_ASSISTANT_INFERENCE({
+      message,
+      history: previous?.messages || [],
+      selection: context.selected_resource || context.annotation,
+      attachments,
+    });
+    if (!result.ok) return json({ error: result.error }, { status: result.status });
+    await persistChatExchange(env, {
+      conversationId,
+      messageId: crypto.randomUUID(),
+      userMessage: message,
+      assistantReply: result.reply,
+      attachments,
+      ai: { selected_model: result.model },
+    });
+    return json({ ok: true, conversation_id: conversationId, reply: result.reply });
   }
 
   const ids = createAnalyticsIds(

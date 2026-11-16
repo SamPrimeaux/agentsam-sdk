@@ -13,6 +13,7 @@
      preview retains its own independent site-owned theme tokens. */
   --te-accent: var(--nav-accent, var(--iam-ui-accent, #238552));
   --te-accent-soft: color-mix(in srgb, var(--te-accent) 11%, var(--te-panel));
+  --te-accent-ink: var(--c-accent-ink, #fff);
   --te-success: #17844a;
   --te-danger: #b42318;
   /* Editor stage only. The storefront iframe keeps its own site theme. */
@@ -35,6 +36,8 @@
   --te-text: var(--nav-ink, #e7eae8);
   --te-muted: var(--nav-inkMuted, #a5aaa6);
   --te-soft: var(--nav-hover, #2d3430);
+  --te-success: #63d99b;
+  --te-danger: var(--nav-danger, #ff8b8b);
   color-scheme: dark;
 
   --te-stage-base: color-mix(in srgb, var(--te-canvas) 84%, #17251e);
@@ -4152,4 +4155,57 @@ dialog.te-section-menu :is(button,input):focus-visible {
 }
 @media (prefers-reduced-motion:reduce) {
   .te-catalog-tabs button,.te-catalog-add,.te-catalog-list-item { transition:none!important; }
+}
+
+/* Editor chrome is paired with its account foreground and surface. The
+   storefront and catalog iframe documents render their own separate palettes. */
+.theme-studio .theme-studio-toolbar,
+.theme-studio .theme-studio-tree,
+.theme-studio .theme-editor-panel,
+.theme-studio .te-panel-title,
+.theme-studio .te-inspector-head,
+.theme-studio #te-block-panel,
+.theme-studio .te-block-panel__head,
+.theme-studio :is(.te-page-popover,.te-theme-menu,.te-tree-actions__menu) {
+  background: var(--te-panel);
+  color: var(--te-text);
+  border-color: var(--te-border);
+}
+.theme-studio .theme-studio-toolbar :is(button,.te-device-switch,.te-save-actions),
+.theme-studio :is(.te-inspector-body,#te-block-panel,.te-page-popover) :is(input:not([type=color]),textarea,select,button),
+.theme-studio :is(.te-field-row,.te-block-row,.te-tree-row__main) {
+  color: var(--te-text);
+  border-color: var(--te-border);
+}
+.theme-studio .theme-studio-toolbar :is(button:not(.btn-primary),.te-device-switch,.te-save-actions),
+.theme-studio :is(.te-inspector-body,#te-block-panel,.te-page-popover) :is(input:not([type=color]),textarea,select) {
+  background: var(--te-soft);
+}
+.theme-studio :is(.te-tree-group,.te-block-list,.te-inspector-disclosure__body) { border-color: var(--te-border); }
+.theme-studio :is(.te-tree-group__label,.te-tree-row__icon,.te-field-label,.te-picker-copy small,#te-block-panel label) { color: var(--te-muted); }
+.theme-studio :is(.te-tree-row,.te-field-row,.te-block-row,.te-menu-row):hover { background: var(--te-soft); }
+.theme-studio :is(.te-tree-row,.te-field-row,.te-block-row).is-active,
+.theme-studio .theme-studio-toolbar button[aria-pressed=true] {
+  background: var(--te-accent-soft);
+  color: var(--te-text);
+  box-shadow: inset 0 0 0 1px var(--te-accent);
+}
+.theme-studio .te-tree-row.is-active :is(.te-tree-row__icon,.te-tree-expand,.te-tree-actions > summary) { color: var(--te-text); }
+.theme-studio #te-save:not(:disabled),
+.theme-studio .te-catalog-add:not(:disabled) {
+  background: var(--te-accent);
+  color: var(--te-accent-ink);
+  border-color: var(--te-accent);
+}
+.theme-studio .te-catalog-preview-stage > .te-catalog-visual {
+  width: 100%;
+  height: 100%;
+  transform: none;
+  min-height: 0;
+}
+.theme-studio { --te-tree-width: 248px; }
+@media (max-width: 900px) {
+  .theme-studio :is(.te-tree-row__main,.te-block-row__main,.te-field-row__main,#agentsam-toggle,#te-exit) {
+    min-height: 44px;
+  }
 }

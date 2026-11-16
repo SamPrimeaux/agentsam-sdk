@@ -1039,6 +1039,21 @@
       "interactive": true,
       "stock_asset_id": "agentsam.stock.style-spec-bw",
       "source_sha256": "b9d3a8ab28e58742689b04d05b6c528aec1ad1d4729236f09b9732d736f6b6ca"
+    },
+    {
+      "id": "stock:cms-editor-workspace/CmsEditorWorkspace.html",
+      "filename": "cms-editor-workspace/CmsEditorWorkspace.html",
+      "family": "stock",
+      "title": "CMS editor workspace",
+      "category": "Platform stock",
+      "page": "assistant",
+      "width": 1440,
+      "height": 900,
+      "x": 1680,
+      "y": 3920,
+      "interactive": true,
+      "stock_asset_id": "agentsam.stock.cms-editor-workspace",
+      "source_sha256": "7ba5bba3fe43b609a884d3a24c7fafc0a4b4bde7152d1e929adc66508cd87ca3"
     }
   ]
 }

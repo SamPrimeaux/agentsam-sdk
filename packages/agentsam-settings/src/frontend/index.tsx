@@ -1,3 +1,4 @@
+import "./agent-profiles.css";
 import { useShellAppearance } from "../appearance";
 import { SettingsBillingPanel } from "./billing";
 import { SettingsAccountPanel } from "./account";
@@ -18,6 +19,7 @@ import {
   Boxes,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   CircleDot,
   Clock3,
@@ -709,22 +711,27 @@ function ExtensionTile({
 
 
 /** Plugin detail lives in the Settings content area, not a second drawer over the workspace. */
-function PluginDetailPage({open,title,description,onBack,children}:{
-  open:boolean; title:string; description?:string; onBack:()=>void; children:ReactNode;
+function PluginDetailPage({open,title,description,onBack,children,agentProfile=false}:{
+  open:boolean; title:string; description?:string; onBack:()=>void; children:ReactNode; agentProfile?:boolean;
 }) {
   const pageRef=useRef<HTMLElement>(null);
   useEffect(()=>{if(open)pageRef.current?.focus();},[open]);
   if (!open) return null;
-  return <section ref={pageRef} tabIndex={-1} aria-label={"Plugin details: "+title} className="mx-auto w-full max-w-3xl space-y-6 pb-12">
-    <nav aria-label="Plugin breadcrumb" className="flex items-center gap-2 text-[12px] text-muted-foreground">
-      <button type="button" onClick={onBack} className="min-h-9 rounded-lg px-2 transition hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30">Plugins</button>
-      <ChevronRight className="size-3.5"/>
-      <span className="truncate text-foreground">{title}</span>
-    </nav>
-    <header className="border-b border-border/65 pb-4">
-      <h2 className="text-[21px] font-semibold tracking-[-0.03em] text-foreground">{title}</h2>
-      {description ? <p className="mt-1 text-[12px] leading-5 text-muted-foreground">{description}</p>:null}
-    </header>
+  return <section ref={pageRef} tabIndex={-1} aria-label={(agentProfile ? "Agent profile: " : "Plugin details: ") + title}
+    className={cx("mx-auto w-full max-w-3xl space-y-6 pb-12", agentProfile && "agent-profiles")}>
+    <div className={agentProfile ? "agent-profile-lead space-y-3" : "space-y-6"}>
+      <nav aria-label={agentProfile ? "Agent profile navigation" : "Plugin breadcrumb"} className="flex items-center gap-2 text-[12px] text-muted-foreground">
+        {agentProfile
+          ? <button type="button" onClick={onBack} aria-label="Back to agents" className="agent-profile-back"><ChevronLeft className="size-5"/></button>
+          : <button type="button" onClick={onBack} className="min-h-9 rounded-lg px-2 transition hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30">Plugins</button>}
+        {!agentProfile && <ChevronRight className="size-3.5"/>}
+        <span className="truncate text-foreground">{agentProfile ? "Agents" : title}</span>
+      </nav>
+      <header className={agentProfile ? "space-y-2" : "border-b border-border/65 pb-4"}>
+        <h2 className={cx("font-semibold tracking-[-0.03em] text-foreground", agentProfile ? "text-[31px]" : "text-[21px]")}>{title}</h2>
+        {description ? <p className="mt-1 text-[12px] leading-5 text-muted-foreground">{description}</p>:null}
+      </header>
+    </div>
     {children}
   </section>;
 }
@@ -1968,7 +1975,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
   const selectedModel=availableModels.some(model=>model.id===draft.modelId);
   const verifiedModel=availableModels.find(model=>model.id===draft.modelId);
   const effortOptions=["auto",...(verifiedModel?.reasoningEfforts||[])];
-  const formClass="w-full min-h-10 rounded-lg border border-foreground/50 bg-background px-3 py-2 text-[12px] text-foreground outline-none transition-colors focus:border-foreground/70 focus-visible:ring-2 focus-visible:ring-foreground/25";
+  const formClass="agent-profile-field w-full min-h-10 rounded-lg border border-foreground/50 bg-background px-3 py-2 text-[12px] text-foreground outline-none transition-colors focus:border-foreground/70 focus-visible:ring-2 focus-visible:ring-foreground/25";
   const field=(label:string,value:string,onChange:(next:string)=>void,placeholder="")=>(
     <label className="block space-y-1.5">
       <span className="text-[11px] font-medium">{label}</span>
@@ -2019,7 +2026,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
     setError("");
   }
   if (editing) return (
-      <PluginDetailPage open={editing} title={selected?selected.name:"New agent"} description="Configure identity, tools, model, and execution rules for this account-owned agent."
+      <PluginDetailPage agentProfile open={editing} title={selected?selected.name:"New agent"} description="Configure identity, tools, model, and execution rules for this account-owned agent."
         onBack={exitEditor}>
         <div className="space-y-5">
           <div className="border-b border-border/70 pb-3"><h3 className="text-[13px] font-semibold">Identity</h3><p className="mt-1 text-[11px] text-muted-foreground">Choose the name and short identifier used throughout your workspace.</p></div>
@@ -2080,10 +2087,10 @@ function AgentsView({snapshot,view,host,onChanged}:{
             Enabled
           </label>
           {error?<p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
-          <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
-            <button type="button" className="rounded-lg border border-border px-4 py-2 text-[11px]" onClick={exitEditor}>Back to agents</button>
+          <div className="flex justify-end gap-2 border-t border-border/70 pt-4 max-sm:flex-col-reverse">
+            <button type="button" className="agent-profile-action rounded-lg border border-border px-4 py-2 text-[14px]" onClick={exitEditor}>Back to agents</button>
             <button type="button" disabled={busy||selected?.readOnly||!host.saveAgent} onClick={()=>void saveAgent()}
-              className="rounded-lg bg-foreground px-4 py-2 text-[11px] font-medium text-background disabled:opacity-40">Save agent</button>
+              className="agent-profile-primary agent-profile-confirm px-5 py-2 text-[14px] font-semibold disabled:opacity-40">Save agent</button>
           </div>
         </div>
       </PluginDetailPage>
@@ -2132,36 +2139,36 @@ function AgentsView({snapshot,view,host,onChanged}:{
     </Section>;
   }
   return (
-    <div className="space-y-5">
-      <Section title="My agents" description="Persistent, account-owned agent definitions. Configuration is not proof of runtime execution."
+    <div className="agent-profiles space-y-5">
+      <Section title="My agents"
         action={<button type="button" onClick={()=>startNew()} disabled={!host.saveAgent}
-          className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-medium text-white disabled:opacity-50">
+          className="agent-profile-primary inline-flex items-center gap-2 px-4 py-2 text-[14px] font-semibold disabled:opacity-50">
           <Plus className="size-3.5"/> New agent
         </button>}>
         {snapshot.agentError?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">
           Failed to load account agent records: {snapshot.agentError}
         </p>:snapshot.agents.length?(
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="agent-profile-grid">
             {snapshot.agents.map(agent=>(
-              <article key={agent.id} className="rounded-xl border border-border/70 bg-muted/10 p-4">
+              <article key={agent.id} className="agent-profile-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <Bot className="size-5 shrink-0 text-muted-foreground"/>
                     <div className="min-w-0"><p className="truncate text-[13px] font-semibold">{agent.name}</p>
                     <p className="text-[10px] text-muted-foreground">/{agent.slug}</p></div>
                   </div>
-                  <span className={cx("rounded-full px-2 py-1 text-[10px]",agent.active?"bg-emerald-500/10 text-[var(--settings-success-ink)]":"bg-muted text-muted-foreground")}>
+                  <span className={cx("rounded-full px-2 py-1 text-[10px]",agent.active?"agent-profile-enabled":"bg-muted text-muted-foreground")}>
                     {agent.active?"Enabled":"Archived"}
                   </span>
                 </div>
                 <p className="mt-3 line-clamp-2 text-[11px] text-muted-foreground">{agent.description||"No description"}</p>
                 <p className="mt-2 truncate text-[10px] text-muted-foreground">Model: {agent.modelId||"Unassigned"}</p>
                 <div className="mt-4 flex gap-2 border-t border-border/70 pt-3">
-                  <button type="button" className="rounded-lg border border-border px-3 py-1.5 text-[11px] hover:bg-muted" onClick={()=>startEdit(agent)}>
+                  <button type="button" className="agent-profile-action rounded-lg border border-border px-3 py-1.5 text-[14px] hover:bg-muted" onClick={()=>startEdit(agent)}>
                     {agent.readOnly?"View":"Edit"} profile
                   </button>
                   {!agent.readOnly&&agent.active&&host.archiveAgent?
-                    <button type="button" disabled={busy} className="rounded-lg px-3 py-1.5 text-[11px] text-muted-foreground hover:text-[var(--settings-danger-ink)]" onClick={()=>void archive(agent)}>Archive</button>:null}
+                    <button type="button" disabled={busy} className="agent-profile-action rounded-lg px-3 py-1.5 text-[14px] text-muted-foreground hover:text-[var(--settings-danger-ink)]" onClick={()=>void archive(agent)}>Archive</button>:null}
                 </div>
               </article>
             ))}
@@ -2171,12 +2178,12 @@ function AgentsView({snapshot,view,host,onChanged}:{
         </p>}
       </Section>
       <Section title="Available templates" description="Existing platform agent profiles. Copy a template into your account before making changes.">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="agent-profile-grid">
           {(snapshot.agentTemplates||[]).map(agent=>(
-            <button type="button" key={agent.id} onClick={()=>startNew(agent)} className="rounded-lg border border-border/70 p-3 text-left hover:border-violet-400/50 hover:bg-muted/25">
+            <button type="button" key={agent.id} onClick={()=>startNew(agent)} className="agent-profile-card p-4 text-left hover:border-[var(--profile-accent)]">
               <p className="text-[12px] font-medium">{agent.name}</p>
               <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{agent.description||"Reusable agent template"}</p>
-              <p className="mt-2 text-[10px] text-violet-300">Create from template →</p>
+              <p className="mt-2 text-[14px] text-[var(--profile-accent)]">Create from template →</p>
             </button>
           ))}
         </div>

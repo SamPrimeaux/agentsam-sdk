@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CMS editor workspace</title>
+<style>
+  :root {
+    color-scheme: dark;
+    font: 15px/1.5 system-ui, sans-serif;
+    --canvas: #111113;
+    --sidebar: #171719;
+    --panel: #1e1e20;
+    --input: #2c2c2e;
+    --ink: #f5f5f7;
+    --muted: #a1a1a6;
+    --border: #2e2e30;
+    --accent: #0a84ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 12px; color: var(--ink); background: var(--canvas); }
+  h1, h2, p { margin: 0; }
+  h1, h2 { font-size: 15px; font-weight: 650; }
+  .workspace { display: grid; grid-template-columns: minmax(180px,248px) minmax(0,1fr) minmax(260px,360px); gap: 8px; min-height: calc(100dvh - 24px); }
+  .lane { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--border); border-radius: 16px; background: var(--sidebar); }
+  .lane-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .canvas { background: var(--panel); }
+  .empty { display: grid; place-items: center; text-align: center; flex: 1; padding: 20px 16px; color: var(--muted); }
+  .composer { margin: 8px 12px 12px; padding: 10px 10px 10px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--input); }
+  .composer textarea { display: block; width: 100%; min-height: 48px; resize: vertical; background: transparent; color: var(--ink); border: 0; font: inherit; padding: 4px; }
+  .composer textarea::placeholder { color: var(--muted); }
+  .composer a { display: flex; align-items: center; gap: .45em; min-height: 44px; width: fit-content; color: #7dd3fc; text-decoration: none; }
+  .composer a:hover { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media (max-width: 900px) {
+    .workspace { grid-template-columns: minmax(0,1fr); }
+    .canvas { min-height: 220px; }
+  }
+</style>
+</head>
+<body>
+<main class="workspace" aria-label="CMS editor workspace">
+  <aside class="lane" aria-label="Sections"><h2 class="lane-header">Sections</h2><p class="empty">Choose a page in Theme Studio.</p></aside>
+  <section class="lane canvas" aria-label="Draft preview"><h1 class="lane-header">Draft preview</h1><p class="empty">The selected page appears here.</p></section>
+  <aside class="lane" aria-label="AgentSam"><h2 class="lane-header">AgentSam</h2><div class="empty"></div>
+    <div class="composer">
+      <textarea aria-label="Draft a message" placeholder="Ask about the current draft…" rows="2"></textarea>
+      <a href="/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-editor" target="_blank" rel="noopener">Open Theme Studio to send <span aria-hidden="true">↗</span></a>
+    </div>
+  </aside>
+</main>
+</body>
+</html>

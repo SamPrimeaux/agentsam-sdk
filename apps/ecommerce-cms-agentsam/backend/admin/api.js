@@ -85,7 +85,7 @@ import {
   agentsamConversationPatch,
   agentsamConversationsList,
 } from "../agentsam/conversations.js";
-import { agentsamFileDelete, agentsamFileGet, agentsamFileUpload } from "../agentsam/files.js";
+import { agentsamFileContent, agentsamFileDelete, agentsamFileGet, agentsamFileUpload } from "../agentsam/files.js";
 import { createAdminAgentSamSkill } from "../agentsam/skill-authoring.js";
 import { agentsamToolCallGet } from "../agentsam/tool-traces.js";
 import {
@@ -930,11 +930,13 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
     return handleGenerateBlockRequest(request);
   }
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
-    return agentsamChat(request, env, executionCtx);
+    return agentsamChat(request, env, executionCtx, user);
   }
   if (path === "/api/admin/agentsam/files/upload" && method === "POST") {
-    return agentsamFileUpload(request, env);
+    return agentsamFileUpload(request, env, user);
   }
+  const attachment = path.match(/^\/api\/admin\/agentsam\/files\/([a-z0-9_]+)\/content$/);
+  if (attachment && method === "GET") return agentsamFileContent(env, attachment[1]);
   let fileMatch = path.match(/^\/api\/admin\/agentsam\/files\/([a-z0-9_]+)$/);
   if (fileMatch && method === "GET") return agentsamFileGet(env, fileMatch[1]);
   if (fileMatch && method === "DELETE") return agentsamFileDelete(env, fileMatch[1]);
@@ -942,7 +944,7 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
     return agentsamConversationsList(env);
   }
   if (path === "/api/admin/agentsam/conversations" && method === "POST") {
-    return agentsamConversationCreate(request, env);
+    return agentsamConversationCreate(request, env, user);
   }
   let convMatch = path.match(/^\/api\/admin\/agentsam\/conversations\/([a-z0-9_]+)$/);
   if (convMatch && method === "GET") return agentsamConversationGet(env, convMatch[1]);

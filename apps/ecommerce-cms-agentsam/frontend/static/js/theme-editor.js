@@ -3131,6 +3131,7 @@
     const owner = sectionOwner(section);
     return {
       type: 'section', id: section.key, sectionKey: section.key,
+      siteId: host?.siteId || window.cmsActiveSiteId || params.get('site_id'),
       ownerSlug: owner, page: pageRoute(slug) || '/' + slug,
       surface: 'theme-studio', label: (currentSectionSchema()?.label || humanize(section.key)),
       fieldKey: field?.key || null,
@@ -3171,11 +3172,11 @@
       context: {
         page: '/admin/theme-editor',
         slug,
-        selected_resource: {
-          type: field ? 'cms_field' : 'cms_section',
+        annotation: {
           id: proposal.selection.sectionKey,
-          section: proposal.selection.sectionKey,
-          field: proposal.selection.fieldKey || undefined,
+          label: proposal.selection.label,
+          page: proposal.selection.page,
+          text: proposal.selection.currentValue ?? '',
           surface: 'theme-studio',
         },
       },
@@ -4288,7 +4289,10 @@
   const updateEditorLayout=()=>{
     if(!editorRoot)return;
     const width=editorRoot.getBoundingClientRect().width;
-    editorRoot.dataset.editorLayout=width>=editorLayout.wide?'wide':width>editorLayout.compact?'stacked':'compact';
+    const assistantDocked = document.body.classList.contains('agentsam-open') &&
+      window.matchMedia('(min-width: 1051px)').matches;
+    editorRoot.dataset.editorLayout=assistantDocked?'stacked':
+      width>=editorLayout.wide?'wide':width>editorLayout.compact?'stacked':'compact';
   };
   const layoutObserver=typeof ResizeObserver==='function'?new ResizeObserver(updateEditorLayout):null;
   if(editorRoot)layoutObserver?.observe(editorRoot);

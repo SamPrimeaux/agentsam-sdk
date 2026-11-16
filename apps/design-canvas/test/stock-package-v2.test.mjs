@@ -10,11 +10,11 @@ import {
 const dir=new URL('../public/sources/stock/',import.meta.url);
 const catalog=JSON.parse(readFileSync(new URL('catalog.json',dir),'utf8'));
 
-test('v2 packages preserve human-stable identities, versioned manifests and all 82 source references',()=>{
+test('v2 packages preserve human-stable identities, versioned manifests and all source references',()=>{
   const packages=catalog.items.map(item=>createStockPackage(item));
   const index=createStockIndex(packages);
-  assert.equal(packages.length,15);
-  assert.equal(index.document.entries.length,15);
+  assert.equal(packages.length,16);
+  assert.equal(index.document.entries.length,16);
   assert.equal(STORAGE_BUCKET,'theme-store');
   assert.equal(index.document.schema,'inneranimalmedia.cms-component-index.v2');
   let fileCount=0;
@@ -39,18 +39,20 @@ test('v2 packages preserve human-stable identities, versioned manifests and all 
       assert.ok(!file.object_key.includes('.html')&&!file.object_key.includes('/vendor/'));
     }
   }
-  assert.equal(fileCount,82);
-  assert.equal(blobs.size,37);
-  assert.equal([...blobs.values()].reduce((n,b)=>n+b.length,0),482595);
+  assert.equal(fileCount,83);
+  assert.equal(blobs.size,38);
+  assert.equal([...blobs.values()].reduce((n,b)=>n+b.length,0),485412);
   const allFiles=catalog.items.flatMap(i=>i.files);
-  assert.equal(allFiles.reduce((n,f)=>n+f.bytes,0),3228513);
+  assert.equal(allFiles.reduce((n,f)=>n+f.bytes,0),3231330);
   assert.ok(index.key.startsWith('catalogs/cms-components/releases/'));
   assert.equal(index.key.split('/').pop(),index.sha256+'.json');
 });
 
 test('identical content gets one key regardless of component or filename',()=>{
  const packages=catalog.items.map(item=>createStockPackage(item));
- const shared=packages.map(p=>resolveStockObject(p.manifest,'vendor/react-dom.js'));
+ const shared=packages.filter(p=>p.manifest.files.some(file=>file.path==='vendor/react-dom.js'))
+   .map(p=>resolveStockObject(p.manifest,'vendor/react-dom.js'));
+ assert.ok(shared.length>1);
  assert.equal(new Set(shared.map(x=>x.object_key)).size,1);
  assert.equal(shared[0].sha256.length,64);
 });

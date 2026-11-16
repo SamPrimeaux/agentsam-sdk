@@ -34,7 +34,7 @@
   "assets": {
     "binding": "ASSETS",
     "directory": "../.output/public",
-    "run_worker_first": ["/", "/home", "/home/*", "/site/*", "/privacy", "/privacy/*", "/terms", "/terms/*", "/themes/*", "/admin", "/admin/*", "/ecommerce-cms-agentsam/admin/login*", "/sites", "/samsketch", "/projects", "/projects/*", "/learn", "/learn/*", "/docs", "/docs/*", "/packages/sdk/*"]
+    "run_worker_first": ["/", "/home", "/home/*", "/site/*", "/privacy", "/privacy/*", "/terms", "/terms/*", "/themes/*", "/admin", "/admin/*", "/api/admin/agentsam/*", "/ecommerce-cms-agentsam/admin/login*", "/sites", "/samsketch", "/projects", "/projects/*", "/learn", "/learn/*", "/docs", "/docs/*", "/packages/sdk/*"]
   },
   "vars": {
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",

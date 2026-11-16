@@ -4,6 +4,7 @@
 
 import { requireApplicationAccountId } from "../lib/account-context.js";
 import { isFeatureEnabled } from "./feature-gates.js";
+import { getConversation } from "./conversations.js";
 import { getSessionUser } from "../lib/auth.js";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -152,8 +153,8 @@ export async function hydrateAttachmentsForChat(env, attachments, requestUrl) {
   return { attachments: normalized, context };
 }
 
-export async function agentsamFileUpload(request, env) {
-  const user = await getSessionUser(request, env);
+export async function agentsamFileUpload(request, env, sessionUser = null) {
+  const user = sessionUser || await getSessionUser(request, env);
   if (!user) return json({ error: "Unauthorized" }, { status: 401 });
 
   let form;
@@ -187,29 +188,37 @@ export async function agentsamFileUpload(request, env) {
 
   const attachmentId = `att_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
   const r2Key = r2PathFor(attachmentId, fileName);
-  const previewUrl = `/media/${r2Key}`;
+  const previewUrl = `/api/admin/agentsam/files/${attachmentId}/content`;
   const conversationId = form.get("conversation_id") ? String(form.get("conversation_id")) : null;
 
+  if (conversationId && !(await getConversation(env, conversationId))) {
+    return json({ error: "Conversation is unavailable." }, { status: 404 });
+  }
   await env.WEBSITE_ASSETS.put(r2Key, buf, { httpMetadata: { contentType: mimeType } });
 
-  await env.DB.prepare(
-    `INSERT INTO agentsam_attachments (
-       id, account_id, conversation_id, uploaded_by,
-       file_name, mime_type, file_size_bytes, r2_key, preview_url, status
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready')`
-  )
-    .bind(
-      attachmentId,
-      requireApplicationAccountId(),
-      conversationId,
-      user.id || null,
-      fileName,
-      mimeType,
-      buf.byteLength,
-      r2Key,
-      previewUrl
+  try {
+    await env.DB.prepare(
+      `INSERT INTO agentsam_attachments (
+         id, account_id, conversation_id, uploaded_by,
+         file_name, mime_type, file_size_bytes, r2_key, preview_url, status
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready')`
     )
-    .run();
+      .bind(
+        attachmentId,
+        requireApplicationAccountId(),
+        conversationId,
+        user.id || null,
+        fileName,
+        mimeType,
+        buf.byteLength,
+        r2Key,
+        previewUrl
+      )
+      .run();
+  } catch (error) {
+    await env.WEBSITE_ASSETS.delete(r2Key).catch(() => {});
+    throw error;
+  }
 
   return json({
     ok: true,
@@ -250,4 +259,18 @@ export async function agentsamFileDelete(env, id) {
     .bind(id, requireApplicationAccountId())
     .run();
   return json({ ok: true, deleted: true });
+}
+
+export async function agentsamFileContent(env, id) {
+  const row = await getAttachmentById(env, id);
+  const object = row && await env.WEBSITE_ASSETS?.get(row.r2_key);
+  if (!object) return json({ error: "Not found" }, { status: 404 });
+  return new Response(object.body, {
+    headers: {
+      "content-type": ALLOWED_IMAGE.has(row.mime_type) ? row.mime_type : "text/plain; charset=utf-8",
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "default-src 'none'; sandbox",
+    },
+  });
 }

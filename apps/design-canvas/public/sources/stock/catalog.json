@@ -706,6 +706,25 @@
       ],
       "preview_path": "/design-canvas/sources/stock/style-spec-bw/StyleSpec.dc.html",
       "status": "bundled"
+    },
+    {
+      "id": "agentsam.stock.cms-editor-workspace",
+      "slug": "cms-editor-workspace",
+      "title": "CMS editor workspace",
+      "kind": "assistant",
+      "source": "platform-starter",
+      "main_html": "CmsEditorWorkspace.html",
+      "main_sha256": "7ba5bba3fe43b609a884d3a24c7fafc0a4b4bde7152d1e929adc66508cd87ca3",
+      "files": [
+        {
+          "path": "CmsEditorWorkspace.html",
+          "sha256": "7ba5bba3fe43b609a884d3a24c7fafc0a4b4bde7152d1e929adc66508cd87ca3",
+          "bytes": 2817,
+          "r2_key": "cms/design-stock/v1/cms-editor-workspace/7ba5bba3fe43b609/CmsEditorWorkspace.html"
+        }
+      ],
+      "preview_path": "/design-canvas/sources/stock/cms-editor-workspace/CmsEditorWorkspace.html",
+      "status": "bundled"
     }
   ]
 }

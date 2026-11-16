@@ -246,7 +246,7 @@ function renderAgentsamEmptyState() {
   empty.setAttribute("aria-label", "New AgentSam conversation");
   const mark = document.createElement("img");
   mark.className = "agentsam-empty-mark";
-  mark.src = "/admin/brand/agentsam-sidekick-symbol.svg";
+  mark.src = "/admin/brand/agentsam-gorilla-tiny.svg";
   mark.alt = "";
   const title = document.createElement("strong");
   title.textContent = "What would you like to build?";
@@ -373,6 +373,7 @@ function presentAgentsamProposal(options = {}) {
 
 function setBusy(busy) {
   const send = document.getElementById("agentsam-send");
+  document.getElementById("agentsam-form")?.setAttribute("aria-busy", String(busy));
   const input = document.getElementById("agentsam-input");
   const hasDraft = Boolean(input?.value.trim() || window.AgentSamDraft?.attachments?.length);
   if (send) {
@@ -445,7 +446,7 @@ async function sendAgentsamMessage(text, options = {}) {
   try {
     const res = await fetch("/api/admin/agentsam/chat", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", accept: "application/json" },
       credentials: "include",
       signal: options.signal,
       body: JSON.stringify({
@@ -458,9 +459,8 @@ async function sendAgentsamMessage(text, options = {}) {
         attachments
       }),
     });
-    const data = await res.json();
-    typing.remove();
-    if (!res.ok) throw new Error(data.error || "Request failed");
+    const { readAgentSamReply } = await import("/admin/js/agentsam-response.mjs");
+    const data = await readAgentSamReply(res);
     drawerConversationId = data.conversation_id || drawerConversationId;
     appendMessage("assistant", data.reply, data.routing);
     if (window.AgentSamComposerMenu && !options.preserveAttachments) window.AgentSamComposerMenu.clearFiles(attachments);
@@ -471,10 +471,10 @@ async function sendAgentsamMessage(text, options = {}) {
     if (data.stub) updateStatusLine("Stub mode — bind Workers AI");
     return data;
   } catch (err) {
-    typing.remove();
     appendMessage("assistant", err.message || "Something went wrong.");
     if (options.propagateError) throw err;
   } finally {
+    typing.remove();
     drawerRequestActive = false;
     setBusy(false);
     if (document.body.classList.contains("agentsam-open")) {

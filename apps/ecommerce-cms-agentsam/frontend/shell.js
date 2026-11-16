@@ -1246,19 +1246,23 @@ window.AgentSamShell = { modes: SHELL_MODES, resolveShellMode, resolveExitTarget
   if (!hostRoot || !window.MutationObserver) return;
   const ownRoot = document.documentElement;
   function applyHostChromeTheme() {
-    const hostStyles = window.parent.getComputedStyle(hostRoot);
+    const embeddingFrame = window.frameElement || hostRoot;
+    const hostStyles = window.parent.getComputedStyle(embeddingFrame);
     // Copy the complete semantic chrome palette across the isolated CMS frame.
     // CSS custom properties do not inherit across frames; copying only accent
     // left Sidekick's popovers and inspector permanently white in dark mode.
     const names = [
       '--nav-accent','--nav-canvas','--nav-surface','--nav-popover',
       '--nav-border','--nav-hover','--nav-ink','--nav-inkMuted',
-      '--nav-danger','--color-background','--color-card',
+      '--nav-danger','--c-accent-ink','--color-background','--color-card',
       '--color-border','--color-foreground','--color-accent',
     ];
     for (const name of names) {
       const value=String(hostStyles.getPropertyValue(name) || '').trim();
-      if (!value || value.length>=256 || /[;{}<>\0\r\n]/.test(value)) continue;
+      if (!value || value.length>=256 || /[;{}<>\0\r\n]/.test(value)) {
+        ownRoot.style.removeProperty(name);
+        continue;
+      }
       ownRoot.style.setProperty(name,value);
     }
     const accent = String(hostStyles.getPropertyValue('--nav-accent') ||

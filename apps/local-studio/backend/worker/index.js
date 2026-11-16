@@ -31,6 +31,7 @@ import {
   collectCredentialScopedInventory,
   sanitizeInventoryForClient,
 } from "@inneranimalmedia/agentsam-sdk/models/inventory";
+import { runStudioCmsAssistant } from "./studio-cms-assistant.js";
 import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
@@ -1085,6 +1086,34 @@ export default {
         : env;
       const providerMediaResponse = await handleStudioContentMediaApi(request, env, studioUser, url, context);
       if (providerMediaResponse) return providerMediaResponse;
+      if (url.pathname === "/api/admin/agentsam/chat" && request.method === "POST") {
+        if (request.headers.get("origin") && request.headers.get("origin") !== url.origin) {
+          return json({ ok: false, error: "origin_not_allowed" }, 403);
+        }
+        const CMS_ASSISTANT_INFERENCE = input => runStudioCmsAssistant(input, {
+          workersAI: typeof env.AGENTSAM_WAI?.run === "function",
+          signal: request.signal,
+          async getInventory() {
+            const response = await handleLlmInventory(env, principal.id, request);
+            return (await response.json()).availableModels || [];
+          },
+          sendChat(body) {
+            const chat = new Request(new URL("/api/chat", url), {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-user-id": principal.id },
+              body: JSON.stringify(body),
+              signal: request.signal,
+            });
+            return nitroWorker.fetch(chat, env, context);
+          },
+        });
+        try {
+          return await handleEcommerceAdminApi(request, { ...commerceEnv, CMS_ASSISTANT_INFERENCE }, url, context, studioUser);
+        } catch (error) {
+          console.error("studio_cms_assistant_error", error?.message);
+          return json({ ok: false, error: "AgentSam could not load the editor conversation. Try again." }, 503);
+        }
+      }
       return handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser);
     }
 
