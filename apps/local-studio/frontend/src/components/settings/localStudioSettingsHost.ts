@@ -575,7 +575,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
 }
 
 export const localStudioSettingsHost: SettingsHost = {
-  documentationHref: "/settings/docs",
+  documentationHref: "/admin/settings/docs",
   // Account self-service runs on the web session; the desktop bridge does not proxy it yet.
   account: isPackagedDesktop() ? undefined : studioAccountHost,
   ...themeManagement,
@@ -589,7 +589,7 @@ export const localStudioSettingsHost: SettingsHost = {
   },
   openSettingsUnit(unit) {
     if(typeof window!=="undefined")
-      window.dispatchEvent(new CustomEvent("agentsam:navigate",{detail:{to:"/settings/"+unit}}));
+      window.dispatchEvent(new CustomEvent("agentsam:navigate",{detail:{to:"/admin/settings/"+unit}}));
   },
   async updateGeneralPreferences(preferences:SettingsGeneralPreferences){
     await settingsRequest("/api/settings/preferences","PUT",preferences);
@@ -675,7 +675,7 @@ export const localStudioSettingsHost: SettingsHost = {
     // Cloudflare owns a dedicated PKCE + resource-account connection; route it BEFORE
     // the generic OAuth adapters, which intentionally support only Google/GitHub.
     if (plugin.providerKey === "cloudflare") {
-      const pluginsView = "/settings/customize?view=plugins";
+      const pluginsView = "/admin/settings/customize?view=plugins";
       await startLocalStudioProviderConnection("cloudflare", {
         returnTo: isPackagedDesktop()
           ? buildConnectionReturnUrl("cloudflare", pluginsView) : pluginsView,
@@ -686,10 +686,10 @@ export const localStudioSettingsHost: SettingsHost = {
     if (plugin.kind === "oauth") {
       // Provider-connection plugins use the host's existing connect routes.
       const returnTo = isPackagedDesktop()
-        ? buildConnectionReturnUrl(plugin.providerKey, "/settings/customize?view=plugins")
-        : "/settings/customize?view=plugins";
+        ? buildConnectionReturnUrl(plugin.providerKey, "/admin/settings/customize?view=plugins")
+        : "/admin/settings/customize?view=plugins";
       const response = plugin.providerKey === "google_gmail"
-        ? await beginLocalStudioGmailConnection("/settings/customize?view=plugins")
+        ? await beginLocalStudioGmailConnection("/admin/settings/customize?view=plugins")
         : await beginLocalStudioConnectorOAuth(plugin.providerKey, returnTo);
       if (!response?.authorize_url?.startsWith("https://")) throw new Error("plugin_oauth_url_invalid");
       await openExternalUrl(response.authorize_url);
