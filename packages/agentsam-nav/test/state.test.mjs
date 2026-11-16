@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { Nav, createNavState } from '../dist/index.js';
+import { Nav, createNavState, stabilizeNavStateStore } from '../dist/index.js';
 
 test('independent surfaces share one immutable navigation state without a browser singleton', () => {
   const stateStore = createNavState({desktopOpen:false});
@@ -42,4 +42,35 @@ test('a host can put Home before New chat without changing legacy consumers', ()
   assert.ok(configured.indexOf('title="Home"')<configured.indexOf('title="New chat"'));
   const legacy=render(value);
   assert.ok(legacy.indexOf('title="New chat"')<legacy.indexOf('title="Home"'));
+});
+
+test('a separately bundled host returning new objects cannot force a React snapshot loop', () => {
+  const listeners = new Set();
+  let current = { ...createNavState({ desktopOpen: false }).getSnapshot() };
+  const volatileHost = {
+    getSnapshot: () => ({ ...current }),
+    subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
+    setState(update) {
+      current = { ...current, ...(typeof update === 'function' ? update(current) : update) };
+      for (const listener of [...listeners]) listener();
+    },
+  };
+  const store = stabilizeNavStateStore(volatileHost);
+  const initial = store.getSnapshot();
+  assert.strictEqual(store.getSnapshot(), initial, 'identical data keeps the exact React snapshot reference');
+
+  const changes = [];
+  const unsubscribe = store.subscribe(() => changes.push(store.getSnapshot()));
+  store.setState({ desktopOpen: false });
+  assert.equal(changes.length, 0, 'redundant host notifications are ignored');
+  store.setState({ desktopOpen: true });
+  assert.equal(changes.length, 1);
+  assert.notStrictEqual(store.getSnapshot(), initial);
+  assert.strictEqual(store.getSnapshot(), store.getSnapshot());
+
+  const html = renderToString(React.createElement(Nav.Provider,
+    { stateStore: volatileHost, value: { showHistory: false } },
+    React.createElement(Nav.Sidenav)));
+  assert.match(html, /data-open="true"/);
+  unsubscribe();
 });

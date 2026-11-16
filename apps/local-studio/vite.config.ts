@@ -407,6 +407,17 @@ export default defineConfig(({ command, isPreview }) => ({
         find: "@inneranimalmedia/agentsam-workbench",
         replacement: workbenchSource,
       },
+      // Every lazy-loaded AgentSam route must resolve the same NavProvider
+      // module as AgentSamShell. Do not let a second package entrypoint
+      // instantiate a different React context in the composer chunk.
+      {
+        find: /^@inneranimalmedia\/agentsam-nav$/,
+        replacement: resolvePath(navSource, "index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-nav\/browser$/,
+        replacement: resolvePath(navSource, "browser.tsx"),
+      },
       {
         find: "@inneranimalmedia/agentsam-nav",
         replacement: navSource,

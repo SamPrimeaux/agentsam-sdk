@@ -15,6 +15,35 @@ export interface NavStateStore {
   setState: (update: Partial<NavState> | ((state: Readonly<NavState>) => Partial<NavState>)) => void;
 }
 
+/**
+ * A separately bundled plain-JS host may provide a store whose getSnapshot()
+ * allocates a fresh object on each read. React's useSyncExternalStore requires
+ * referentially stable snapshots; otherwise it can recurse with error #185.
+ * Cache only navigation primitives, not account/session data. Preserve writes
+ * and notifications from the authoritative host store.
+ */
+export function stabilizeNavStateStore(host: NavStateStore): NavStateStore {
+  const keys = ['desktopOpen', 'mobileOpen', 'isMobile', 'isPeeking', 'width', 'menu'] as const;
+  let snapshot: Readonly<NavState> = Object.freeze({ ...host.getSnapshot() });
+  const getSnapshot = () => {
+    const next = host.getSnapshot();
+    if (keys.some(key => next[key] !== snapshot[key])) {
+      snapshot = Object.freeze({ ...next });
+    }
+    return snapshot;
+  };
+  return {
+    getSnapshot,
+    subscribe(listener) {
+      return host.subscribe(() => {
+        const before = snapshot;
+        if (getSnapshot() !== before) listener();
+      });
+    },
+    setState(update) { host.setState(update); },
+  };
+}
+
 /** No browser globals or singleton: each installation chooses its own store. */
 export function createNavState(initial: Partial<NavState> = {}): NavStateStore {
   const listeners = new Set<() => void>();
