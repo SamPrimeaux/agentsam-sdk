@@ -226,7 +226,7 @@ export function MediaViewer({
                 <h3>Access & signing</h3>
                 <p>{privateDelivery ? "This image requires signed delivery. Signing secrets stay server-side." :
                   "Public variants can be delivered without a signing token."}</p>
-                <a className="agentsam-media-btn" href="/settings/storage">Storage & provider keys</a>
+                <a className="agentsam-media-btn" href="/admin/settings/storage">Storage & provider keys</a>
               </section>
             ) : null}
             {hosted && inspectorTab === "sourcing" ? (
@@ -237,7 +237,7 @@ export function MediaViewer({
                   onClick={() => void navigator.clipboard?.writeText(asset.cloudflare_image_id || asset.id)}>
                   Copy image ID
                 </button>
-                <a className="agentsam-media-btn" href="/settings/storage">Provider configuration</a>
+                <a className="agentsam-media-btn" href="/admin/settings/storage">Provider configuration</a>
               </section>
             ) : null}
             <div className="agentsam-media-viewer__actions">
