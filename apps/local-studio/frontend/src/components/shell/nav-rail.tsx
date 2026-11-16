@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { isPackagedDesktop, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { Nav } from "@inneranimalmedia/agentsam-nav";
 import { StudioMark } from "@/components/mark";
+import { IconAction } from "@/components/ui/icon-action";
 import { useWorkStore } from "@/lib/work/store";
 
 function SamSketchIcon({ className }: {className?: string; 'aria-hidden'?: boolean}) {
@@ -55,9 +56,9 @@ export function NavRail() {
   return (
     <Nav>
       <Nav.Header className="flex items-center justify-between">
-        <button type="button" aria-label="Studio home" className="flex size-10 items-center justify-center rounded-xl text-accent" onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/admin/agentsam" } }))}>
+        <IconAction label="Studio home" hint="Return to AgentSam home" className="flex size-10 items-center justify-center rounded-xl text-accent" onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/admin/agentsam" } }))}>
           <StudioMark className="size-7" />
-        </button>
+        </IconAction>
         <Nav.Trigger className="hidden md:inline-grid" />
       </Nav.Header>
       <Nav.Content>
