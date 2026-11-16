@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -161,19 +162,19 @@ export function ChatsPanel({
           <p className="truncate text-sm font-medium tracking-tight">{project.name}</p>
           <p className="text-[11px] text-muted-foreground">Chats</p>
         </div>
-        <Button
-          type="button"
+        <IconAction
+          label="New chat"
+          hint="Start a new chat"
           size="icon"
           variant="ghost"
           className="size-11 text-foreground md:size-8"
-          aria-label="New chat"
           onClick={() => {
             const id = startChat();
             void navigate({ to: "/admin/chats/$chatId", params: { chatId: id } });
           }}
         >
           <Plus className="size-4" />
-        </Button>
+        </IconAction>
       </div>
 
       <div className="px-3 pb-3">
