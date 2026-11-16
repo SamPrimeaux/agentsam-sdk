@@ -31,7 +31,9 @@ try {
     await page.addInitScript(() => {
       const coworker = {
         id: "smoke-coworker", kind: "chat", title: "Co-worker",
-        parentChatId: null, messages: [],
+        parentChatId: null, messages: [{
+          id: "smoke-message", role: "user", content: "Saved co-worker conversation", createdAt: Date.now(),
+        }],
       };
       localStorage.setItem("agentsam-work-v1", JSON.stringify({
         version: 5,
@@ -71,6 +73,7 @@ try {
     await page.goto(origin + pathname, { waitUntil: "domcontentloaded" });
     try {
       await page.getByPlaceholder("Brief the co-worker").waitFor({ timeout: 12000 });
+      await page.getByText("Saved co-worker conversation", { exact: true }).waitFor({ timeout: 12000 });
       const view = pathname === "/admin/store" ? page.frameLocator('iframe[title^="Ecommerce CMS"]') : page;
       await view.getByRole("heading", { name: heading, exact: true }).waitFor({ timeout: 12000 });
     } catch (error) {
