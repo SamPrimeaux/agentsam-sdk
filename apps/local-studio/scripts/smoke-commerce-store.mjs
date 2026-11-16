@@ -47,7 +47,7 @@ const server = createServer((req, res) => {
     req.on('end',()=>{
       receivedInstall=JSON.parse(body);
       res.writeHead(201,{'content-type':'application/json'}).end(JSON.stringify({
-        ok:true, installed:true,
+        ok:true, installed:true, scope:'site', project_id:'theme_plain-jane',
         site_id:'site-private-draft',
         site_status:'draft',
         editor_url:'/admin/theme-project-editor?project=theme_plain-jane&site_id=site-private-draft',
@@ -126,6 +126,7 @@ try {
   assert.equal(await merchant.locator('.online-store-title h1').innerText(), 'Online Store');
   assert.match(await merchant.locator('#store-visibility-label').innerText(), /(?:Unverified|Not published|Theme not published)/);
   assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Theme not published');
+  assert.equal(await merchant.locator('#test-customer-flow-btn').getAttribute('href'), '/admin/onboarding-preview?site_id=site-store', 'Embedded Store checkout preview uses the owning host origin rather than the srcdoc opaque origin');
   assert.equal(await merchant.locator('.online-store-starter').count(), 0, 'No fake storefront is presented as installed');
   assert.equal(await merchant.locator('.online-store-active').isHidden(), true, 'Uninstalled storefront must not show a fabricated theme preview');
   assert.equal(await merchant.locator('#import-theme-btn').isDisabled(), true, 'Unimplemented import cannot be clicked');
@@ -147,7 +148,7 @@ try {
   assert.equal(await merchant.locator('dialog.website-theme-install-dialog').count(),0,
     'The nested modal must never be used to pick an arbitrary production site');
   await Promise.all([
-    page.waitForURL(/\/apps\/ecommerce-cms-agentsam\?page=%2Fadmin%2Fstore&site_id=site-private-draft/),
+    page.waitForURL(/\/apps\/ecommerce-cms-agentsam\?page=%2Fadmin%2Ftheme-project-editor&project=theme_plain-jane&site_id=site-private-draft/),
     merchant.locator('[data-install-theme="plain-jane"]').click(),
   ]);
   assert.deepEqual(receivedInstall,{version:'0.1.0'},
