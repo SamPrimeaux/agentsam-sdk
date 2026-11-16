@@ -84,12 +84,12 @@ export function NativeCommandBridge() {
       },
       "project.new": () => {
         useWorkStore.getState().createProject();
-        navigateApp("/projects");
+        navigateApp("/admin/projects");
       },
       "folder.open_in_terminal": openFolderInTerminal,
-      "settings.open": () => navigateApp("/settings/general"),
-      "runtime.open": () => navigateApp("/settings/runtime"),
-      "runtime.open_status": () => navigateApp("/settings/runtime"),
+      "settings.open": () => navigateApp("/admin/settings/general"),
+      "runtime.open": () => navigateApp("/admin/settings/runtime"),
+      "runtime.open_status": () => navigateApp("/admin/settings/runtime"),
       "app.check_updates": checkForUpdates,
       "app.cache_deleted": () => void toast("Local cache deleted. Projects, files, sessions, and credentials were kept."),
       "app.cache_delete_failed": () => void toast.error("Local cache could not be deleted."),
@@ -102,7 +102,7 @@ export function NativeCommandBridge() {
       "shell.new_terminal": () => void shell.shellNewTerminal(),
       "shell.new_tab": () => void shell.shellNewTab(),
       "shell.new_command": shell.shellPromptCommand,
-      "shell.new_remote": () => navigateApp("/settings/runtime"),
+      "shell.new_remote": () => navigateApp("/admin/settings/runtime"),
       "shell.close_tab": shell.shellCloseTab,
       "shell.rename_tab": shell.shellRenameTab,
       "shell.prev_tab": () => shell.shellCycleTab(-1),
