@@ -11,7 +11,7 @@
 | `src/cli/command-catalog.js` | 79 | Registered top-level CLI command entries |
 | `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
-| `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 8 | APP manifests discoverable from this checkout |
+| `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
 | `packages/catalog/generated/packages.json` | 66 | Package inventory rows (not npm publication proof) |
 
 Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Host binding and approval remain separate.
@@ -212,6 +212,7 @@ Run `agentsam setup --list` for the current recipe catalog. `agentsam setup runt
 | `goalguru` | AgentSam GoalGuru | `@inneranimalmedia/agentsam-goalguru` | — |
 | `local-studio` | AgentSam Local Studio | `@inneranimalmedia/agentsam-local-studio` | `bin/agentsam-studio.mjs` |
 | `samsketch` | SamSketch | `@inneranimalmedia/samsketch` | — |
+| `samspeaks` | SamSpeaks | `@inneranimalmedia/samspeaks` | — |
 
 An APP definition is not a user-scoped installation. `agentsam app install <id>` currently prints distribution instructions; it does not persist an installed APP record or activate its runtime.
 
