@@ -110,7 +110,7 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.match(shell, /\{!embedded \? <Nav\.Sidenav \/> : null\}/);
   assert.doesNotMatch(shell, /id: 'cad', label: 'CAD Creator'/);
   assert.match(shell, /<SideStage workFocused=\{globalAssistantFocused\}/);
-  assert.match(shell, /!isConversation && state.sideOpen/);
+  assert.match(shell, /!isConversation && !isCanvasRoute && state\.sideOpen/);
   assert.match(shell, /<Nav\.Topbar className="platform-console-topbar">/);
 
   const css = readFileSync(new URL('../frontend/agentsam/platform-console.css', import.meta.url), 'utf8');
