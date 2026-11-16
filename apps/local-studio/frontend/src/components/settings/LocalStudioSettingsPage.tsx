@@ -1,14 +1,9 @@
 import "@inneranimalmedia/agentsam-settings/frontend/styles.css";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import "@inneranimalmedia/agentsam-workbench/widgets/widgets.css";
 import { toast } from "sonner";
-import {
-  SettingsProductPage,
-  type SettingsUnitId,
-} from "@inneranimalmedia/agentsam-settings";
-import { SettingsThemeGallery } from "@inneranimalmedia/agentsam-settings/frontend";
-import type { SettingsTheme } from "@inneranimalmedia/agentsam-settings/contracts";
-import { listStudioThemes } from "@/lib/themes/inventory";
+import { SettingsProductPage, type SettingsUnitId } from "@inneranimalmedia/agentsam-settings";
 import { localStudioSettingsManifest } from "./localStudioSettingsManifest";
 import { localStudioSettingsHost } from "./localStudioSettingsHost";
 import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
@@ -17,6 +12,7 @@ import { AppsManagementPage } from "./AppsManagementPage";
 import { BrowserSettings } from "./BrowserSettings";
 import { McpManagementPage } from "./McpManagementPage";
 import { PlatformNavigationSettings } from "./PlatformNavigationSettings";
+import { RuntimeManagerPage } from "@/components/runtime/RuntimeManagerPage";
 
 export function LocalStudioSettingsPage({
   unitId,
@@ -27,11 +23,13 @@ export function LocalStudioSettingsPage({
   unitId: SettingsUnitId;
   requestedView?: string;
   connectedPluginKey?: string;
-  /** Rendered inside a Side Stage tab: never reads or writes the page address. */
+  /** Embedded surfaces do not read or write the browser address. */
   embedded?: boolean;
 }) {
-  // The Side Stage tab was retired; its tool toggles now live in Customize → Apps.
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const requestedView = unitId === "customize" && requestedViewProp === "panels" ? "apps" : requestedViewProp;
+
   useEffect(() => {
     if (unitId !== "customize" || !connectedPluginKey) return;
     let cancelled = false;
@@ -49,22 +47,14 @@ export function LocalStudioSettingsPage({
       if (!cancelled) toast.error("Couldn't verify the plugin connection");
     }).finally(() => {
       if (cancelled || embedded) return;
-      const current = new URL(window.location.href);
-      current.searchParams.delete("connected");
-      window.history.replaceState(window.history.state, "", current);
+      void navigate({
+        to: pathname as never,
+        search: (previous: Record<string, unknown>) => ({ ...previous, connected: undefined }) as never,
+        replace: true,
+      } as never);
     });
     return () => { cancelled = true; };
-  }, [unitId, connectedPluginKey, embedded]);
-
-  if (unitId === "keys") {
-    return <LiveKeysSettingsPage />;
-  }
-
-  // Keep Theme Studio independent from unrelated settings providers. A failed
-  // model/plugin preference request must never blank the theme catalog.
-  if (unitId === "themes") {
-    return <LocalStudioThemeSettingsPage />;
-  }
+  }, [unitId, connectedPluginKey, embedded, navigate, pathname]);
 
   return (
     <SettingsProductPage
@@ -74,78 +64,22 @@ export function LocalStudioSettingsPage({
       requestedView={requestedView}
       onViewChange={(view) => {
         if (embedded || typeof window === "undefined") return;
-        const url = new URL(window.location.href);
-        url.searchParams.set("view", view);
-        window.history.replaceState(window.history.state, "", url);
+        void navigate({
+          to: pathname as never,
+          search: (previous: Record<string, unknown>) => ({ ...previous, view }) as never,
+          replace: true,
+        } as never);
       }}
-      renderCustomView={(unit, view) => unit === "customize" && view === "apps"
-        ? <AppsManagementPage />
-        : unit === "customize" && view === "mcps"
-        ? <McpManagementPage />
-        : unit === "customize" && view === "companions"
-        ? <InnerAnimalCompanionsPage />
-        : unit === "network" && view === "browser"
-          ? <BrowserSettings />
-          : null}
+      renderCustomView={(unit, view) => {
+        if (unit === "keys") return <LiveKeysSettingsPage view={view} embedded />;
+        if (unit === "runtime") return <RuntimeManagerPage embedded />;
+        if (unit === "themes" && view === "navigation") return <PlatformNavigationSettings />;
+        if (unit === "customize" && view === "apps") return <AppsManagementPage />;
+        if (unit === "customize" && view === "mcps") return <McpManagementPage />;
+        if (unit === "customize" && view === "companions") return <InnerAnimalCompanionsPage />;
+        if (unit === "network" && view === "browser") return <BrowserSettings />;
+        return null;
+      }}
     />
-  );
-}
-
-
-function LocalStudioThemeSettingsPage() {
-  const [view, setView] = useState<"themes" | "navigation">("themes");
-  const [themes, setThemes] = useState<SettingsTheme[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError("");
-    void listStudioThemes().then((next) => {
-      if (!cancelled) setThemes(next);
-    }).catch((caught) => {
-      if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
-    }).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [refreshKey]);
-
-  const refresh = async () => {
-    setRefreshKey(value => value + 1);
-  };
-
-  return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-[1440px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[.16em] text-muted-foreground">Settings / Appearance</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Appearance</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Customize account themes and the shared Admin navigation.</p>
-          </div>
-          {view === "themes" ? <button type="button" className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted" onClick={() => void refresh()} disabled={loading}>
-            {loading ? "Loading…" : "Refresh library"}
-          </button> : null}
-        </div>
-        <div className="mb-5 flex gap-2 border-b border-border pb-3" role="group" aria-label="Appearance editor">
-          <button type="button" className={"rounded-md px-3 py-2 text-sm " + (view === "themes" ? "bg-muted font-semibold" : "hover:bg-muted")} aria-pressed={view === "themes"} onClick={() => setView("themes")}>Themes</button>
-          <button type="button" className={"rounded-md px-3 py-2 text-sm " + (view === "navigation" ? "bg-muted font-semibold" : "hover:bg-muted")} aria-pressed={view === "navigation"} onClick={() => setView("navigation")}>Navigation</button>
-        </div>
-        {view === "navigation" ? <PlatformNavigationSettings /> : <>
-          {error && <p role="alert" className="mb-4 rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive">Theme library: {error}</p>}
-          {loading && !themes.length ? (
-            <div className="rounded-xl border border-border p-8 text-sm text-muted-foreground">Loading available themes…</div>
-          ) : (
-            <SettingsThemeGallery themes={themes} host={localStudioSettingsHost} onChanged={async () => {
-              const next = await listStudioThemes();
-              setThemes(next);
-            }} />
-          )}
-        </>}
-      </div>
-    </div>
   );
 }

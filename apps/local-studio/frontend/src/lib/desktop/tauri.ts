@@ -13,6 +13,11 @@ export function getTauriInvoke(): TauriInvoke | null {
   return window.__TAURI__?.core?.invoke || null;
 }
 
+// One native identity read is shared by the React identity store and every
+// account-scoped Settings/runtime adapter. Non-status identity operations invalidate it.
+let desktopIdentityStatusCache: Record<string, unknown> | null = null;
+let desktopIdentityStatusInFlight: Promise<Record<string, unknown>> | null = null;
+
 type TauriEvent<T = unknown> = { event: string; id: number; payload: T };
 type TauriEventBridge = {
   event?: {
@@ -49,9 +54,12 @@ export function isPackagedDesktop(): boolean {
 
 
 export async function identitySessionExists(): Promise<boolean> {
-  const invoke = getTauriInvoke();
-  if (!invoke) return false;
-  return Boolean(await invoke("identity_session_exists", {}));
+  try {
+    const status = await getDesktopIdentityStatus();
+    return status.authenticated === true;
+  } catch {
+    return false;
+  }
 }
 
 export type IdentityRuntimeConfig = {
@@ -145,7 +153,28 @@ export async function invokeIdentity(payload: Record<string, unknown>): Promise<
   const raw = (await invoke("identity_bridge", {
     requestJson: JSON.stringify(payload),
   })) as string;
-  return JSON.parse(raw) as Record<string, unknown>;
+  const result = JSON.parse(raw) as Record<string, unknown>;
+  if (payload.op === "status") desktopIdentityStatusCache = result;
+  else {
+    desktopIdentityStatusCache = null;
+    desktopIdentityStatusInFlight = null;
+  }
+  return result;
+}
+
+/** Read the native identity once and share the verified result across consumers. */
+export async function getDesktopIdentityStatus(forceRefresh = false): Promise<Record<string, unknown>> {
+  if (forceRefresh) {
+    desktopIdentityStatusCache = null;
+    desktopIdentityStatusInFlight = null;
+  }
+  if (desktopIdentityStatusCache) return desktopIdentityStatusCache;
+  if (!desktopIdentityStatusInFlight) {
+    desktopIdentityStatusInFlight = invokeIdentity({ op: "status" }).finally(() => {
+      desktopIdentityStatusInFlight = null;
+    });
+  }
+  return desktopIdentityStatusInFlight;
 }
 
 
@@ -193,7 +222,7 @@ export async function invokeStudioService(payload: {
 export async function resolveDesktopStudioAccountId(): Promise<string> {
   if (!isPackagedDesktop()) return "studio-local";
   try {
-    const status = await invokeIdentity({ op: "status" });
+    const status = await getDesktopIdentityStatus();
     if (status.authenticated !== true) return "studio-local";
     const user = status.user as { id?: unknown } | null | undefined;
     const id = typeof user?.id === "string" ? user.id.trim() : "";

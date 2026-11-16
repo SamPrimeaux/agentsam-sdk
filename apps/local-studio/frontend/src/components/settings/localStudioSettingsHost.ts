@@ -338,7 +338,7 @@ async function loadPluginSettings() {
  * A failed probe is unknown, never an empty bucket or healthy connection. */
 async function loadStorageTargets(): Promise<SettingsStorageTarget[]> {
   const indexedDbAvailable = typeof indexedDB !== "undefined";
-  const path = "/api/connections/cloudflare/resources?per_page=50&return_to=%2Fsettings%2Fstorage";
+  const path = "/api/connections/cloudflare/resources?per_page=50&return_to=%2Fadmin%2Fsettings%2Fstorage";
   let cloudflare: CloudflareStorageDiscovery | null = null;
   try {
     if (isPackagedDesktop()) {
@@ -473,7 +473,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     desktop ? identitySessionExists().catch(() => false) : Promise.resolve(false),
     desktop ? getDesktopWorkspaceContext().catch(() => null) : Promise.resolve(null),
     desktop ? Promise.resolve([]) : readAccountToolUsage(),
-    typeof window !== "undefined" && /^\/(?:dashboard\/)?settings\/storage(?:\/|$)/.test(window.location.pathname)
+    typeof window !== "undefined" && window.location.pathname.startsWith("/admin/settings/storage")
       ? loadStorageTargets() : Promise.resolve([] as SettingsStorageTarget[]),
   ]);
   snapshot.usage = usageMetrics;

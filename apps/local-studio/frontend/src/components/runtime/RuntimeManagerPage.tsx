@@ -29,7 +29,7 @@ const BASE_RUNTIMES: RuntimeCard[] = [
   { id: "cf-container", name: "Cloudflare Container", detail: "Hosted container workspace", adapter: "agentsamd", transport: "service_binding", state: "unknown", capabilities: ["exec", "filesystem"], icon: Cpu },
 ];
 
-export function RuntimeManagerPage() {
+export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [nativeStatus, setNativeStatus] = useState<{ online: boolean; dockerAvailable: boolean } | null>(null);
   const sessions = useTerminalSessionStore((state) => state.sessions);
@@ -79,8 +79,8 @@ export function RuntimeManagerPage() {
   const local = runtimes.find((item) => item.id === "local");
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
-      <header className="flex items-start gap-4">
+    <div className={embedded ? "space-y-6" : "mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 sm:p-6 lg:p-8"}>
+      {!embedded ? <header className="flex items-start gap-4">
         <div className="flex size-11 items-center justify-center rounded-xl border border-border bg-card"><Cpu className="size-5" /></div>
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold tracking-tight">Machines &amp; Runtimes</h1>
@@ -89,10 +89,15 @@ export function RuntimeManagerPage() {
         <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => void refresh()}>
           {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Refresh
         </Button>
-      </header>
+      </header> : null}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
         <div><h2 className="text-sm font-semibold">Execution environments</h2><p className="mt-1 text-xs text-muted-foreground">Session health is taken from the actual runtime, not from plugin installation status.</p></div>
-        <a className="inline-flex min-h-9 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted" href="/admin/settings/customize?view=plugins">Manage connected providers</a>
+        <div className="flex items-center gap-2">
+          {embedded ? <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => void refresh()}>
+            {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Refresh
+          </Button> : null}
+          <a className="inline-flex min-h-9 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted" href="/admin/settings/customize?view=plugins">Manage connected providers</a>
+        </div>
       </div>
       <div className="grid gap-3">
         {runtimes.map((runtime) => {
