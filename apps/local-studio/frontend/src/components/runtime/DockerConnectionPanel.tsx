@@ -106,7 +106,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
       <p className="text-muted-foreground">Install Docker for this account. Installation does not connect to an engine or grant host access.</p>}
     <div className="flex gap-2">
       {installation==='not_installed'?<button type="button" className="rounded-md border border-border px-3 py-2 hover:bg-muted" disabled={loading} onClick={()=>void install()}>Install Docker plugin</button>:null}
-      <a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/settings/customize?view=plugins">Manage plugins</a>
+      <a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/admin/settings/customize?view=plugins">Manage plugins</a>
       {installation==='error'?<button type="button" onClick={()=>void refreshInstall()} className="rounded-md border border-border px-3 py-2">Retry</button>:null}
     </div>
   </section>;
@@ -114,7 +114,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
   if(!desktop)return <section className="space-y-3 rounded-lg border border-border bg-card p-4 text-sm">
     <div className="flex items-center gap-2"><Container size={17}/><strong>Docker Engine</strong></div>
     <p className="text-muted-foreground">Docker is an installable integration, but this browser has no native Docker engine access. Use AgentSam Desktop with your own Docker installation or an enrolled host runtime. No engine is being reported as connected.</p>
-    <a href="/settings/network" className="inline-flex items-center gap-1 text-xs underline underline-offset-4">Manage device connection <ExternalLink size={12}/></a>
+    <a href="/admin/settings/network" className="inline-flex items-center gap-1 text-xs underline underline-offset-4">Manage device connection <ExternalLink size={12}/></a>
   </section>;
 
   return <section className="space-y-4 rounded-lg border border-border bg-card p-4 text-sm" aria-label="Docker Engine connection manager">
