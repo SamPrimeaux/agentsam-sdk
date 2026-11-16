@@ -81,6 +81,9 @@ export function canonicalStudioPath(pathname) {
 
 /** @param {string} pathname */
 export function isStudioAdminPath(pathname) {
+  // Analytics overview/finance/health are existing Ecommerce-owned routes.
+  // Only the Studio analytics landing page at /admin/analytics belongs here.
+  if (pathname.startsWith('/admin/analytics/')) return false;
   return STUDIO_ADMIN_MOUNTS.some(({ canonical }) =>
     pathname === canonical || pathname.startsWith(canonical + '/'));
 }
