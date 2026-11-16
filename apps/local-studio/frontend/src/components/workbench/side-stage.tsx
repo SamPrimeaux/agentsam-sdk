@@ -93,6 +93,8 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
       convertSideTab(item.id, kind, nativeAlreadyOpen ? undefined : {
         title: stage.label,
         icon: stage.icon,
+        pluginId: undefined,
+        stageId: undefined,
         url: kind === "design" ? "/canvas?library=sources" : "",
         ephemeral: false,
       });
