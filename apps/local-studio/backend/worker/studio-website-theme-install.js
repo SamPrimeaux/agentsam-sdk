@@ -8,7 +8,7 @@
  */
 import { installThemeDraft } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 import { DRAFT_SITE_KIND, installThemeDraftSite, discardThemeDraftSite } from '../../../ecommerce-cms-agentsam/backend/cms/theme-draft-sites.mjs';
-import { withLocalStudioCmsContext } from '../../../ecommerce-cms-agentsam/backend/lib/account-context.js';
+import { withLocalStudioCmsContext } from '@inneranimalmedia/agentsam-cms/account-context';
 import { requireCmsSiteAccess, createAuthorizedCmsSite, configuredCmsWorkers } from './cms-authority.js';
 
 const STORE = 'https://themes.inneranimalmedia.com';

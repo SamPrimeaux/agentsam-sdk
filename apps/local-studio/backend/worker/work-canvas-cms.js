@@ -2,7 +2,7 @@
  * Optional Canvas handoff to the existing CMS project/revision owner.
  * No publication, site creation, copied website store, or model-authored code.
  */
-import { withLocalStudioCmsContext } from '../../../ecommerce-cms-agentsam/backend/lib/account-context.js';
+import { withLocalStudioCmsContext } from '@inneranimalmedia/agentsam-cms/account-context';
 import { requireCmsSiteAccess, configuredCmsWorkers } from './cms-authority.js';
 import { createThemeProject, getThemeProject, validateThemeProjectPayload } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 

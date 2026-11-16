@@ -35,7 +35,7 @@ import { runStudioCmsAssistant } from "./studio-cms-assistant.js";
 import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { resolveCmsSiteAccess, readCmsSiteSelector, configuredCmsWorkers } from "./cms-authority.js";
-import { withLocalStudioCmsContext } from "../../../ecommerce-cms-agentsam/backend/lib/account-context.js";
+import { withLocalStudioCmsContext } from "@inneranimalmedia/agentsam-cms/account-context";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, publicSitePathForRequest, servePublicSitePage } from "./public-site.js";
 import { handlePublicConfigRequest } from "./public-config.js";
@@ -93,7 +93,7 @@ import { listEmbedPolicy, listTrustedOrigins, trustOrigin, untrustOrigin } from 
 import { handleBrowserPage } from "./browser-page.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
-import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
+import { handleAdminApi as handleEcommerceAdminApi, ensureCmsSiteStarter } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleStudioContentMediaApi } from "./content-media-api.js";
 import { handlePlatformMediaRead } from "./platform-media-library.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
@@ -1092,7 +1092,7 @@ export default {
       if (url.pathname === "/api/admin/cms/sites") {
         const hostUrl = new URL(request.url);
         hostUrl.pathname = "/api/cms/sites";
-        return handleCmsWorkerRequest(new Request(hostUrl, request), env, principal.id);
+        return handleCmsWorkerRequest(new Request(hostUrl, request), env, principal.id, { ensureCmsSiteStarter });
       }
       let cmsSite = null;
       if (isSiteScopedCmsAdminApi(url.pathname)) {
@@ -1107,7 +1107,7 @@ export default {
             return json({ ok: false, error: "remote_site_operation_not_supported_by_this_editor" }, 409);
           const remoteUrl = new URL(request.url);
           remoteUrl.pathname = "/api/cms/remote/" + url.pathname.slice("/api/admin/cms/".length);
-          return handleCmsWorkerRequest(new Request(remoteUrl, request), env, principal.id);
+          return handleCmsWorkerRequest(new Request(remoteUrl, request), env, principal.id, { ensureCmsSiteStarter });
         }
         studioUser.account_id = cmsSite.account_id;
         studioUser.role = cmsSite.role || "owner";
@@ -1232,7 +1232,7 @@ export default {
       if (request.method === "OPTIONS") return new Response(null, { status: 204 });
       const cmsActorId = await resolveSessionUserId(request, env);
       if (!cmsActorId) return json({ ok: false, error: "unauthorized" }, 401);
-      return handleCmsWorkerRequest(request, env, cmsActorId);
+      return handleCmsWorkerRequest(request, env, cmsActorId, { ensureCmsSiteStarter });
     }
 
     // Canonical React app mounts are served as data-free, pre-rendered

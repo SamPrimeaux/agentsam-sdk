@@ -1,4 +1,4 @@
-import { mergeSiteSettings } from '../../../ecommerce-cms-agentsam/backend/cms/site-settings-contract.mjs';
+import { mergeSiteSettings } from '@inneranimalmedia/agentsam-cms/site-settings';
 
 /**
  * Authorized site inventory for the Local Studio CMS.
