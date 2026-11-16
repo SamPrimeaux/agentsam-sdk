@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Maximize2, MessageSquareText, PanelRight, Pencil, Trash2 } from "lucide-react";
+import { IconAction } from "@/components/ui/icon-action";
 import { KindGlyph } from "./MediaGrid";
 import {
   classifyAsset,
@@ -94,7 +95,7 @@ export function MediaViewer({
   return (
     <section className="agentsam-media-viewer" role="region" aria-label={"Media preview and asset details: " + asset.filename}>
       <header className="agentsam-media-viewer__bar">
-        <button type="button" className="agentsam-media-icon" onClick={onClose} aria-label="Back to media library" title="Back to media library"><ArrowLeft size={16} /></button>
+        <IconAction label="Back to media library" hint="Return to your media gallery" variant="ghost" className="agentsam-media-icon" onClick={onClose}><ArrowLeft size={16} /></IconAction>
         <h2 title={asset.filename}>{asset.filename}</h2>
         <div className="agentsam-media-viewer__nav">
           <button type="button" className="agentsam-media-icon" aria-label="Open AgentSam beside this file"
