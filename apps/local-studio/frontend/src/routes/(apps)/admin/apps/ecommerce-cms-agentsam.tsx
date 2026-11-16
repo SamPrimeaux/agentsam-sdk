@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createDesktopConsoleHost } from '@/lib/apps/desktop-console-host';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Navigate } from '@tanstack/react-router';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from '@/lib/apps/ecommerce-routing';
@@ -140,6 +140,13 @@ export function EcommerceAppView({ search }: {
 
   if (!bridgeReady || authPending) return <p className="p-8 text-muted-foreground">Loading AgentSam account…</p>;
   if (!user && !localPreview) return <RedirectToSignIn />;
+
+  // Compatibility for saved CMS navigation links created before Design Canvas
+  // was unified. Do not try to mount it as a packaged ecommerce route.
+  const legacyDesignCanvas = (search.page || "").split("?")[0].replace(/\\/+$/, "") === "/admin/design-canvas";
+  if (legacyDesignCanvas) {
+    return <Navigate to="/admin/canvas" search={{ library: "sources" }} replace />;
+  }
 
   return <section className="flex h-full min-h-0 w-full flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">
     {!page ? <UnavailableProductRoute requested={search.page} />
