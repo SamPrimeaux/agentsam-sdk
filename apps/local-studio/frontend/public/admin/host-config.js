@@ -482,9 +482,24 @@
       const path = link.getAttribute("href");
       if (!path || !path.startsWith("/") || path.startsWith("//")) return;
       event.preventDefault();
-      // Desktop keeps the ecommerce console inside Local Studio's own route
-      // host; never send these paths to a separately installed site Worker.
-      const destination = path.startsWith("/admin/") && ["/admin/agentsam", "/admin/projects", "/admin/cad", "/admin/moviemode"].some((mount) => path === mount || path.startsWith(mount + "/")) ? path
+      // First-party dashboard tools stay on their canonical Studio routes.
+      // Ecommerce-owned resources (/admin/products, orders, pages, etc.) stay
+      // inside the installed Ecommerce app, not the Studio route tree.
+      const studioAdminMounts = [
+        "/admin/home", "/admin/agentsam", "/admin/chats", "/admin/analytics",
+        "/admin/artifacts", "/admin/browse", "/admin/cad", "/admin/campaigns",
+        "/admin/canvas", "/admin/cli", "/admin/cms", "/admin/collaborate",
+        "/admin/content", "/admin/database", "/admin/docs", "/admin/files",
+        "/admin/forms", "/admin/goalguru", "/admin/help/cms", "/admin/ideas",
+        "/admin/library", "/admin/mail", "/admin/media", "/admin/moviemode",
+        "/admin/onboarding-preview", "/admin/projects", "/admin/samsketch",
+        "/admin/settings", "/admin/ship", "/admin/sites", "/admin/store",
+        "/admin/themes", "/admin/tickets", "/admin/widgets",
+        "/admin/apps/ecommerce-cms-agentsam",
+      ];
+      const isStudioAdminDestination = studioAdminMounts.some((mount) =>
+        path === mount || path.startsWith(mount + "/"));
+      const destination = path.startsWith("/admin/") && isStudioAdminDestination ? path
         : path.startsWith("/admin/")
           ? "/admin/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
           : path;
