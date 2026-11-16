@@ -211,11 +211,11 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     window.addEventListener('agentsam:projects-changed',refresh);
     return () => {cancelled=true;window.removeEventListener('agentsam:projects-changed',refresh);};
   },[historyRevision,user?.id]);
-  const isConversation = pathname === '/agentsam' || pathname === '/admin/agentsam' || pathname.startsWith('/chats');
-  const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/') || pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
-  const isSamSketchRoute = pathname === '/samsketch' || pathname.startsWith('/samsketch/');
+  const isConversation = pathname === '/admin/agentsam' || pathname.startsWith('/admin/chats');
+  const isCadRoute = pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
+  const isSamSketchRoute = pathname === '/admin/samsketch' || pathname.startsWith('/admin/samsketch/');
   const isSamSculptRoute = pathname === '/samsculpt' || pathname.startsWith('/samsculpt/');
-  const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
+  const isSettings = pathname === '/admin/settings' || pathname.startsWith('/admin/settings/');
   const [navigation, setNavigation] = useState<StudioNavigationProjection>({});
   useEffect(() => {
     const controller = new AbortController();
@@ -340,7 +340,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // activate the existing composer without navigating away from the active work.
   useEffect(() => {
     const activate = () => {
-      if (pathname === '/admin/agentsam' || pathname.startsWith('/chats')) {
+      if (pathname === '/admin/agentsam' || pathname.startsWith('/admin/chats')) {
         window.requestAnimationFrame(() =>
           document.querySelector<HTMLTextAreaElement>('.agentsam-conversation-dock textarea')?.focus());
         return;
@@ -468,10 +468,10 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   useEffect(() => {
     if (!state.settingsOpen) return;
     state.setSettingsOpen(false);
-    void navigate({ to: '/settings/general' as never });
+    void navigate({ to: '/admin/settings/general' as never });
   }, [state.settingsOpen, state, navigate]);
 
-  const navPathname = pathname === '/apps/ecommerce-cms-agentsam'
+  const navPathname = pathname === '/admin/apps/ecommerce-cms-agentsam'
     ? new URLSearchParams(searchStr).get('page') || pathname
     : pathname + searchStr;
   const value: NavValue = {
