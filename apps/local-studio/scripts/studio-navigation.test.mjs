@@ -22,7 +22,7 @@ test('navigation exposes configured installations only and preserves product ide
     assert.equal(projection.apps[1].href, '/admin/cad');
     assert.deepEqual(projection.primary.map((item) => item.id), ['home', 'media', 'analytics', 'tickets']);
     assert.equal(projection.channels.length, 0, 'A host without Ecommerce must not advertise Online Store');
-    assert.equal(projection.primary.find((item) => item.id === 'media')?.href, '/media');
+    assert.equal(projection.primary.find((item) => item.id === 'media')?.href, '/admin/media');
     assert.deepEqual(projection.utilities, [], 'Utilities remain under Settings/account instead of global navigation');
     writeFileSync(host, JSON.stringify({ app_id: 'local-studio', included_apps: ['missing-app'] }));
     assert.throws(() => studioNavigationProjection({ repoRoot: root, manifestPath: host }), /has no manifest: missing-app/);
@@ -38,7 +38,7 @@ test('global React shell renders primary business destinations before sales chan
   assert.ok(channels > primary, 'sales channels must follow primary destinations');
   assert.ok(apps > channels, 'installed apps must follow sales channels');
   const projection = readFileSync(new URL('./studio-navigation.mjs', import.meta.url), 'utf8');
-  assert.match(projection, /id:'media',label:'Library',href:'\/media',icon:'library'/);
+  assert.match(projection, /id:'media',label:'Library',href:'\/admin\/media',icon:'library'/);
   // Settings owns Documentation; Help is not a global destination.
   assert.doesNotMatch(projection, /id:'help'/);
   assert.match(projection, /id:'inventory',label:'Inventory',href:'\/admin\/inventory'/);
