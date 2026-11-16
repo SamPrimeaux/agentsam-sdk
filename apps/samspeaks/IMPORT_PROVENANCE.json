@@ -1,0 +1,22 @@
+{
+  "kind": "agentsam-app-zip-import",
+  "app": "samspeaks",
+  "source_zip": "samspeaks.zip",
+  "source_sha256": "910b827607759c5a940fb16910df9d15884be41de490d1868e4261b13146c8aa",
+  "stripped_single_wrapper": null,
+  "imported_file_count": 32,
+  "policy": {
+    "skipped": [
+      ".DS_Store",
+      ".git",
+      ".output",
+      ".wrangler",
+      "__MACOSX",
+      "build",
+      "dist",
+      "node_modules"
+    ],
+    "dotenv": "real .env files excluded; .env.example allowed",
+    "normalization": "source preserved; agents solidify after import"
+  }
+}
