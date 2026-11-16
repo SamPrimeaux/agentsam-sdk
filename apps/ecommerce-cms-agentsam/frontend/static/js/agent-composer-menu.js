@@ -27,6 +27,19 @@
     back: '<path d="m14 5-7 7 7 7M7 12h14"/>',
     create: '<path d="M12 5v14M5 12h14"/><rect x="3" y="3" width="18" height="18" rx="3"/>'
   };
+  const designReferencePrompt = [
+    "Extract the design from the attached image for [screen or flow].",
+    "What I want to keep: [one detail].",
+    "",
+    "1. Layout — structure, spacing, and alignment",
+    "2. Color — hex values and how each color is used",
+    "3. Type — sizes, weights, and line heights",
+    "4. Components — buttons, cards, inputs, and visible states",
+    "5. Motion — triggers and timing where supported by the reference",
+    "6. Keep, change, or drop — map the pattern to our Muse palette",
+    "",
+    "Use our brand and copy. Flag estimates. End with one section proposal I can build and review in the draft.",
+  ].join("\n");
   function iconMarkup(name) {
     const paths = icons[name];
     return paths ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>' : '';
@@ -487,6 +500,13 @@
           sectionLabel("ADD TO MESSAGE"),
           row("Files", glyphs.files, () => navigate("files"), { hint: draft.attachments.length ? draft.attachments.length + " attached" : "Manage attachments", arrow: true }),
           row("Upload from device", glyphs.upload, () => { close(); fileInput.click(); }, { hint: "Images and text documents" }),
+          ...(document.body.dataset.shellMode === "theme-editor" ? [
+            row("Review a design reference", glyphs.create, () => {
+              input.setSelectionRange(input.value.length, input.value.length);
+              addMention(input, (input.value.trim() ? "\n\n" : "") + designReferencePrompt);
+              close();
+            }, { hint: "Insert a prompt for an attached image" }),
+          ] : []),
           divider(),
           sectionLabel("CONTEXT"),
           row("Target", glyphs.target, () => navigate("target"), { hint: "Select a resource to work on", arrow: true }),

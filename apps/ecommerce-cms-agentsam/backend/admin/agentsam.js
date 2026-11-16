@@ -215,13 +215,19 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
 export async function agentsamChat(request, env, executionCtx = null, sessionUser = null) {
   const chatStarted = Date.now();
   const body = await readJson(request);
-  const rawContext = body?.context || {};
+  const rawContext = body?.context && typeof body.context === "object" && !Array.isArray(body.context)
+    ? { ...body.context } : {};
   const user = sessionUser || await getSessionUser(request, env);
   if (!user) return json({ error: "Unauthorized" }, { status: 401 });
   if (!body || typeof body !== "object" || (body.message != null && typeof body.message !== "string")) {
     return json({ error: "Invalid message." }, { status: 400 });
   }
 
+  if (env.CMS_ASSISTANT_INFERENCE && rawContext.selected_resource?.type === "admin_surface") {
+    const { label, path, surface } = rawContext.selected_resource;
+    rawContext.annotation = { label, page: path, surface };
+    delete rawContext.selected_resource;
+  }
   if (rawContext.selected_resource) {
     // Legacy media selectors lack an account column. Hosted requests must
     // use scoped attachment IDs or the canonical site/section selector.
