@@ -39,3 +39,49 @@ test('existing published homepage reads authored R2 draft, saves a new private r
     assert.equal(await getSiteOwnedPage(env,'other','home','main','home').catch(()=>null),null);
   }finally{db.close();}
 });
+
+test("site-owned catalog resources install a private draft and refuse foreign page IDs", async () => {
+  const {db,env} = fixture();
+  const url = new URL("https://cms.test/api/admin/cms/pages/home/catalog-resources?site_id=main&page_id=home");
+  const request = (method, target = url, body) => handleAdminCmsApi(
+    new Request(target, {method, ...(body ? {body: JSON.stringify(body)} : {})}), env, target, {accountId:"merchant"},
+  );
+  try {
+    const empty = await request("GET");
+    assert.equal(empty.status, 200);
+    assert.deepEqual((await empty.json()).installed, []);
+
+    const result = await request("POST", url, {catalogKey:"announcement_bar", toIndex:0});
+    assert.equal(result.status, 201);
+    const added = await result.json();
+    const read = await (await request("GET")).json();
+    assert.deepEqual(read.installed.map(section => section.section_key), [added.section_key]);
+    assert.equal(read.installed[0].version, 1);
+    assert.equal(db.prepare("SELECT status FROM cms_pages WHERE id='home'").get().status, "published");
+    assert.equal(db.prepare("SELECT block_key FROM cms_section_blocks").get().block_key, "embed-root");
+    assert.equal(db.prepare("SELECT section_key FROM cms_page_sections ORDER BY sort_order").get().section_key, added.section_key);
+    const foreign = new URL(url);
+    foreign.searchParams.set("page_id", "otherhome");
+    assert.equal((await request("GET", foreign)).status, 404);
+    assert.equal((await request("POST", foreign, {catalogKey:"announcement_bar"})).status, 404);
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM cms_section_blocks").get().count, 1);
+  } finally { db.close(); }
+});
+
+test("the global CMS document is initialized once for its authorized site", async () => {
+  const {db,env} = fixture();
+  const url = new URL("https://cms.test/api/admin/cms/pages/site?site_id=main");
+  const read = target => handleAdminCmsApi(new Request(target), env, target, {accountId:"merchant"});
+  try {
+    const first = await read(url);
+    assert.equal(first.status, 200);
+    const document = (await first.json()).page;
+    assert.equal(document.page_type, "global");
+    assert.equal(document.nav_visible, false);
+    assert.equal((await (await read(url)).json()).page.id, document.id);
+    const foreign = new URL(url);
+    foreign.searchParams.set("site_id", "foreign");
+    assert.equal((await read(foreign)).status, 404);
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM cms_pages WHERE slug='site'").get().count, 1);
+  } finally { db.close(); }
+});

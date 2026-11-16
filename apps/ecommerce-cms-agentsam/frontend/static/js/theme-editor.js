@@ -4984,17 +4984,10 @@
 
   const generationApi = {
     detectProvenance: function() { return 'unknown'; },
-    scanSections: function() { return []; },
-    persistScanReport: function() { return Promise.resolve({ ok: false, fatal: false }); },
   };
   import('/admin/js/generation-namespace.mjs').then(function(mod) {
     Object.assign(generationApi, mod);
     renderTree();
-    const sections = ownerSections(slug).concat(ownerSections('site'));
-    const report = generationApi.scanSections(sections);
-    generationApi.persistScanReport(report, function(body) {
-      return editorRequest('/api/admin/theme-editor/provenance-scan', { method: 'POST', body: JSON.stringify({ report: body }) });
-    }).catch(function() { return { ok: false, fatal: false }; });
   }).catch(function() {});
 
   window.AgentSamEditorGeneration = {

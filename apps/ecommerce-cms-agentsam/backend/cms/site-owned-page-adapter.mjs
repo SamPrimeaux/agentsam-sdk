@@ -42,12 +42,12 @@ function resolvePageType(value, slug, routePath) {
 }
 const SYSTEM_TYPES = new Set(["auth", "portal", "dashboard", "sitemap"]);
 
-async function selectedSite(env, accountId, siteId) {
+export async function selectOwnedPageSite(env, accountId, siteId) {
   if (!accountId) throw new Error("cms_page_account_required");
   return resolveCmsSite(env.DB, { accountId, siteId, createDefault: !siteId });
 }
 
-async function findPage(env, site, slug, pageId = null) {
+export async function findSiteOwnedPage(env, site, slug, pageId = null) {
   const predicate = pageId ? "p.id = ?" : "p.slug = ?";
   return env.DB.prepare(`
     SELECT p.id, p.site_id, p.slug, p.route_path, p.page_type, p.title,
@@ -61,8 +61,22 @@ async function findPage(env, site, slug, pageId = null) {
 }
 
 export async function getSiteOwnedPage(env, accountId, slug, siteId, pageId = null) {
-  const site = await selectedSite(env, accountId, siteId);
-  const page = await findPage(env, site, slug, pageId);
+  const site = await selectOwnedPageSite(env, accountId, siteId);
+  let page = await findSiteOwnedPage(env, site, slug, pageId);
+  if (!page && slug === "site" && !pageId) {
+    // Match the portable CMS's lazy, per-site global document. The shared D1
+    // schema requires a route_path even for internal, non-navigable pages.
+    const id = "cmsp_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+    await env.DB.prepare(`
+      INSERT INTO cms_pages (
+        id, site_id, slug, route_path, page_type, title, status,
+        nav_visible, requires_auth, sort_order, seo_json, metadata_json, created_at, updated_at
+      ) SELECT ?, ?, 'site', '/__cms/global-settings', 'global', 'Global settings', 'draft',
+        0, 1, -100, '{}', '{}', unixepoch(), unixepoch()
+      WHERE NOT EXISTS (SELECT 1 FROM cms_pages WHERE site_id=? AND slug='site')
+    `).bind(id, site.id, site.id).run();
+    page = await findSiteOwnedPage(env, site, slug);
+  }
   if (!page) return null;
   const { results = [] } = await env.DB.prepare(`
     SELECT id, section_key, section_type, section_name, section_data,
@@ -154,7 +168,7 @@ export async function createSiteOwnedPage(env, accountId, siteId, body = {}) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80 || slug === "site") {
     return problem("Page URL handle is invalid or reserved", 400);
   }
-  const site = await selectedSite(env, accountId, siteId);
+  const site = await selectOwnedPageSite(env, accountId, siteId);
   const routePath = String(body.route_path || body.routePath || (slug === "home" ? "/" : "/" + slug));
   if (!/^\/(?:[a-z0-9][a-z0-9-]*(?:\/[a-z0-9][a-z0-9-]*)*)?\/?$/.test(routePath)) {
     return problem("Page route is invalid", 400);
@@ -206,8 +220,8 @@ export async function createSiteOwnedPage(env, accountId, siteId, body = {}) {
 }
 
 export async function updateSiteOwnedPage(env, accountId, slug, siteId, pageId, body = {}) {
-  const site = await selectedSite(env, accountId, siteId);
-  const existing = await findPage(env, site, slug, pageId);
+  const site = await selectOwnedPageSite(env, accountId, siteId);
+  const existing = await findSiteOwnedPage(env, site, slug, pageId);
   if (!existing) return problem("Page not found in selected site", 404);
   if (existing.status !== "draft") {
     return problem("This published page needs a versioned draft before editing", 409);
@@ -279,9 +293,9 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
   if (!accountId || !siteId) return problem("cms_site_required", 400);
   if (!env?.CMS_CONTENT) return problem("cms_section_bucket_unavailable", 503);
   let site;
-  try { site = await selectedSite(env, accountId, siteId); }
+  try { site = await selectOwnedPageSite(env, accountId, siteId); }
   catch { return problem("site_not_found_or_unauthorized", 404); }
-  const page = await findPage(env, site, slug, pageId);
+  const page = await findSiteOwnedPage(env, site, slug, pageId);
   if (!page) return problem("cms_page_not_found", 404);
   const section = await env.DB.prepare(`
     SELECT id, section_key, draft_r2_key, r2_bucket FROM cms_page_sections

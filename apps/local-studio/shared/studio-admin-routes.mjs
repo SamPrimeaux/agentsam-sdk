@@ -47,6 +47,15 @@ export const STUDIO_ADMIN_MOUNTS = Object.freeze([
   Object.freeze({ id: 'widgets', flat: '/widgets', canonical: '/admin/widgets' }),
 ]);
 
+// Build and serve the same route match. Hydrating HTML serialized for a flat
+// redirect or a parent route can leave TanStack Start with different matches.
+export const STUDIO_ADMIN_PRERENDERED_ROUTES = Object.freeze([
+  "/admin/store", "/admin/onboarding-preview", "/admin/agentsam", "/admin/cad",
+  "/admin/moviemode", "/admin/moviemode/edit", "/admin/projects",
+  "/admin/media", "/admin/media/images", "/admin/media/videos",
+  "/admin/media/models", "/admin/media/files",
+]);
+
 /** Legacy Content → Media Library destinations. */
 export const LEGACY_CONTENT_MEDIA_REDIRECTS = Object.freeze({
   '/admin/content': '/admin/media',

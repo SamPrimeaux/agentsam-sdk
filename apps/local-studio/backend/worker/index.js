@@ -48,7 +48,7 @@ import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js"
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { handleStudioChatHistory } from "./studio-chat-history.js";
 import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
-import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
+import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES } from "../../shared/studio-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
 import { completeConnectorOAuth, isConnectorOAuthCallbackRequest } from "./connector-oauth.js";
@@ -913,28 +913,6 @@ export default {
       }
     }
 
-    // Serve authenticated Media Library shells with the same React app hydrate path.
-    if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === '/media' || url.pathname.startsWith('/media/'))) {
-      if (url.pathname === '/media/edit' || url.pathname.startsWith('/media/edit/')) {
-        const target = new URL('/admin/moviemode/edit', request.url);
-        return Response.redirect(target, 302);
-      }
-      const denied = await guardStudioDocument(request, env);
-      if (denied) return denied;
-      const assetUrl = new URL(request.url);
-      assetUrl.pathname = '/studio-app-shell/media/';
-      assetUrl.search = '';
-      const shell = await env.ASSETS.fetch(new Request(assetUrl, { method: 'GET' }));
-      if (shell.ok) {
-        const headers = new Headers(shell.headers);
-        headers.set('content-type', 'text/html; charset=utf-8');
-        headers.set('cache-control', 'private, no-store');
-        headers.delete('content-length');
-        return new Response(request.method === 'HEAD' ? null : shell.body, { status: 200, headers });
-      }
-    }
-
     // Legacy Ecommerce email entry is only a compatibility link. The reusable
     // AgentSam Work Mail surface owns the inbox on this host.
     if (request.method === "GET" &&
@@ -1190,11 +1168,7 @@ export default {
     // The packaged Workbench, CAD and MovieMode route chunks hydrate in-place.
     // This also avoids the Cloudflare-only Nitro SSR 500 for these app routes.
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/admin/agentsam" ||
-         url.pathname === "/admin/cad" ||
-         url.pathname === "/admin/moviemode" ||
-         url.pathname === "/admin/moviemode/edit" ||
-         url.pathname === "/admin/projects" ||
+        (STUDIO_ADMIN_PRERENDERED_ROUTES.includes(url.pathname) ||
          url.pathname === "/mail" ||
          url.pathname === "/artifacts" ||
          url.pathname === "/artifacts/tickets" ||
