@@ -81,8 +81,11 @@ export async function listAccountLibraryResources(db, owner) {
       providerId:row.id,sizeLabel:readableSize(row.file_size_bytes),
       ...when(row.updated_at),
       deleted: Boolean(row.archived_at),
-      preview: (kind==='image'||kind==='video'||kind==='document') ?
-        (richPreview || (row.thumbnail_r2_key || row.preview_r2_key ? base+'?preview=1' : (kind==='image'?base:null))) : null,
+      // Render previews by verified stored thumbnail availability, not by the
+      // original artifact kind. A design or website document can have a
+      // generated preview while its source file remains JSON/HTML.
+      preview: richPreview || (row.thumbnail_r2_key || row.preview_r2_key
+        ? base+'?preview=1' : (kind==='image'?base:null)),
       open:staticPublic || base, resourceType:'artifact',
     };
   });
