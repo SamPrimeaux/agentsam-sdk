@@ -326,7 +326,7 @@ function TerminalViewport({ sessionId }: { sessionId: string }) {
   return <div
     ref={hostRef}
     data-terminal-viewport={sessionId}
-    style={{ backgroundColor: appearance.theme.background }}
+    style={{ "--color-background": appearance.theme.background } as CSSProperties}
     className="terminal-host min-h-0 min-w-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]"
     onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
     onDrop={(event) => {
