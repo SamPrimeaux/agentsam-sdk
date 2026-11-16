@@ -17,6 +17,6 @@ export const Route = createFileRoute('/(apps)/admin/store')({
   }),
   component: function InstalledOnlineStore() {
     const search = Route.useSearch();
-    return <EcommerceAppView search={{ ...search, page: '/admin/store' }} forcePackagedAsset />;
+    return <EcommerceAppView search={{ ...search, page: '/admin/store' }} />;
   },
 });
