@@ -142,3 +142,182 @@
   opacity: .5;
   cursor: not-allowed;
 }
+
+
+/* Analytics Health is built from the same page and data contracts at every
+   viewport; mobile changes presentation, never data identity or sources. */
+.analytics-health,
+.analytics-health .card,
+.analytics-health .grid { min-width: 0; max-width: 100%; }
+.analytics-health .health-metric {
+  min-width: 0;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+.analytics-health .health-metric-label {
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.analytics-health .health-metric-value {
+  font-size: clamp(22px, 2.3vw, 29px);
+  margin-top: 4px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.analytics-health .health-metric-source {
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  margin-top: auto;
+}
+.analytics-health .health-source-line {
+  margin-bottom: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.analytics-health .health-source-line a { text-decoration: underline; text-underline-offset: 3px; }
+.analytics-health .health-quality-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; }
+.analytics-health .health-table-scroll { overflow: auto; max-width: 100%; overscroll-behavior-x: contain; }
+.analytics-health .health-mobile-records { display: none; }
+.analytics-health .health-chart-panel .card-body { min-width: 0; }
+.analytics-health .health-chart-panel svg { max-width: 100%; }
+
+@media (max-width: 760px) {
+  .embed--light-shell { width: 100%; max-width: 100%; overflow-x: clip; }
+  .embed--light-shell .page {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    padding: 16px 14px max(36px, env(safe-area-inset-bottom, 0px));
+  }
+  .embed--light-shell .embed-bar--range-only {
+    justify-content: flex-start;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 10px 14px;
+    scrollbar-width: none;
+  }
+  .embed--light-shell .embed-bar--range-only::-webkit-scrollbar { display: none; }
+  .embed--light-shell .range-pill { flex: none; max-width: none; white-space: nowrap; }
+  .embed--light-shell .range-pill button { min-width: 42px; min-height: 38px; }
+  .analytics-health .health-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .analytics-health .health-head > div:first-child { min-width: 0; }
+  .analytics-health .health-head .page-title {
+    font-size: 24px;
+    line-height: 1.2;
+    margin-bottom: 5px;
+  }
+  .analytics-health .health-head .page-sub {
+    font-size: 12.5px;
+    line-height: 1.45;
+    max-width: 48ch;
+  }
+  .analytics-health .health-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .analytics-health .health-actions .pill {
+    margin-right: auto;
+    max-width: 100%;
+    font-size: 11px;
+  }
+  .analytics-health .health-actions .btn {
+    min-height: 40px;
+    justify-content: center;
+    font-size: 12px;
+  }
+  .analytics-health .health-metrics {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+  }
+  .analytics-health .health-metric { padding: 13px; min-height: 124px; gap: 7px; }
+  .analytics-health .health-metric-label { font-size: 10px; }
+  .analytics-health .health-metric-value { font-size: 24px; }
+  .analytics-health .health-metric-source {
+    font-size: 10.5px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+  .analytics-health .health-columns {
+    grid-template-columns: minmax(0,1fr);
+    gap: 12px;
+  }
+  .analytics-health .health-columns > .span-4,
+  .analytics-health .health-columns > .span-6,
+  .analytics-health .health-columns > .span-8,
+  .analytics-health .health-columns > .span-12 { grid-column: 1 / -1; }
+  .analytics-health .card-head { gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+  .analytics-health .card-title { font-size: 13px; line-height: 1.4; }
+  .analytics-health .card-sub { line-height: 1.45; }
+  .analytics-health .health-quality-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 10px;
+  }
+  .analytics-health .health-quality-grid > :last-child { grid-column: 1 / -1; }
+  .analytics-health .health-chart-panel .card-body { overflow-x: hidden; }
+  .analytics-health .health-table-scroll { display: none; }
+  .analytics-health .health-mobile-records { display: block; }
+  .analytics-health .health-mobile-record {
+    display: block;
+    padding: 13px 14px;
+    border-top: 1px solid var(--line-soft);
+    overflow-wrap: anywhere;
+  }
+  .analytics-health .health-mobile-record:first-child { border-top: 1px solid var(--line-soft); }
+  .analytics-health .health-record-title {
+    color: var(--fg);
+    font-size: 13px;
+    line-height: 1.45;
+    font-weight: 600;
+  }
+  .analytics-health .health-record-muted,
+  .analytics-health .health-record-time {
+    color: var(--fg-2);
+    font-size: 11px;
+    line-height: 1.5;
+    margin-top: 3px;
+  }
+  .analytics-health .health-record-stats {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .analytics-health .health-record-stats span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .analytics-health .health-record-stats strong {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-1);
+  }
+  .analytics-health .health-record-stats small {
+    font-size: 10px;
+    color: var(--fg-2);
+  }
+}
+
+@media (max-width: 350px) {
+  .embed--light-shell .page { padding-inline: 10px; }
+  .analytics-health .health-metric { padding: 11px; }
+  .analytics-health .health-metric-value { font-size: 22px; }
+  .analytics-health .health-actions .pill { flex-basis: 100%; }
+}
