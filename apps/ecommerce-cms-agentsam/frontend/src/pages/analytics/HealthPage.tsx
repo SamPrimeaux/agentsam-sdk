@@ -23,12 +23,12 @@ type HealthResponse={
 };
 const textOrDash=(value:number|null|undefined,digits=0)=>value==null||!Number.isFinite(value)?"—":value.toLocaleString(undefined,{maximumFractionDigits:digits});
 function SmallMetric({label,value,unit,source,muted=false}:{label:string;value:number|null|undefined;unit:string;source:string;muted?:boolean}){
- return <div className="card" style={{padding:15,minWidth:0}}>
-   <div className="muted text-xs" style={{letterSpacing:".05em",textTransform:"uppercase"}}>{label}</div>
-   <div className="mono fw-600" style={{fontSize:"clamp(22px,2.3vw,29px)",marginTop:10,color:muted?"var(--muted)":"inherit"}}>
+ return <div className="card health-metric">
+   <div className="muted text-xs health-metric-label">{label}</div>
+   <div className="mono fw-600 health-metric-value" style={{color:muted?"var(--muted)":"inherit"}}>
      {textOrDash(value,label==="Error rate"?2:label==="Operations latency"?1:label==="Estimated model cost"?4:0)}{value!=null&&<span className="muted text-xs" style={{paddingLeft:5}}>{unit}</span>}
    </div>
-   <div className="muted text-xs" style={{marginTop:12}}>{value==null?"Unavailable · "+source:source}</div>
+   <div className="muted text-xs health-metric-source">{value==null?"Unavailable · "+source:source}</div>
  </div>;
 }
 function NoSource({reason}:{reason:string}){
@@ -105,18 +105,18 @@ export default function HealthPage({range}:PageProps){
    "/api/analytics/logs/recent?window=180",{signal});
  },[]);
 
- return <>
-  <div className="page-head">
+ return <section className="analytics-health">
+  <div className="page-head health-head">
    <div><h1 className="page-title">Health</h1>
     <p className="page-sub">Account-scoped operations, Cloudflare traffic and repository quality · {range}</p></div>
-   <div className="page-actions">
+   <div className="page-actions health-actions">
     <Status ready={Boolean(data?.edge.available&&data?.app.available)} label={data?(data.edge.available&&data.app.available?"Sources connected":visibility?"Partial telemetry":"Telemetry unavailable"):"Loading sources"}/>
     <button type="button" className="btn" onClick={reload} disabled={loading}><Icon name="refresh" size={12}/> {loading?"Refreshing…":"Refresh"}</button>
     <button type="button" className="btn" aria-expanded={alertsOpen} onClick={()=>setAlertsOpen(v=>!v)}><Icon name="bell" size={12}/> Failures {failureCount!=null?"("+failureCount+")":""}</button>
    </div>
   </div>
   {error&&<div className="card" role="alert" style={{padding:14,color:"var(--bad)",marginBottom:14}}>{error}</div>}
-  {data&&<div className="muted text-xs" style={{marginBottom:13}}>
+  {data&&<div className="muted text-xs health-source-line">
     Sources: {data.edge.available?data.edge.source:
       ["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required","cloudflare_permission_denied"].includes(data.edge.reason||"")
         ?"Cloudflare needs reauthorization for HTTP Analytics and read-only Basin access"
@@ -131,14 +131,14 @@ export default function HealthPage({range}:PageProps){
     {" · "}refreshed {new Date(data.generatedAt).toLocaleTimeString()}
     <span>Recorded D1 events are not a continuous uptime guarantee.</span>
   </div>}
-  <div className="grid cols-4" style={{marginBottom:14}}>
+  <div className="grid cols-4 health-metrics" style={{marginBottom:14}}>
    <SmallMetric label="HTTP requests" value={data?.edge.requests} unit="" source="Cloudflare HTTP requests"/>
    <SmallMetric label="Error rate" value={data?.edge.errorRate} unit="%" source="Cloudflare HTTP 5xx / requests"/>
    <SmallMetric label="Throughput" value={data?.edge.rpm} unit="req/min" source="Cloudflare requests / window"/>
    <SmallMetric label="AgentSam operations" value={data?.app.totals?.events} unit="" source="Account-scoped D1 event and tool-call ledgers"/>
   </div>
-  <div className="grid cols-12" style={{marginBottom:14}}>
-   <div className="card span-8">
+  <div className="grid cols-12 health-columns health-columns--primary" style={{marginBottom:14}}>
+   <div className="card span-8 health-chart-panel">
     <div className="card-head"><div><div className="card-title">Operation history</div>
      <div className="card-sub">Observed D1 events and tool calls — never generated series</div></div>
      <Status ready={Boolean(data?.app.available)} label={data?.app.available?"D1 events":"No source"}/>
@@ -150,22 +150,22 @@ export default function HealthPage({range}:PageProps){
       <NoSource reason={data?.app.available?"Two or more observed date buckets are required for a trend.":"Account-scoped D1 event and tool-call ledgers are not accessible."}/>}
     </div>
    </div>
-   <div className="card span-4">
+   <div className="card span-4 health-quality-panel">
     <div className="card-head"><div><div className="card-title">Operation quality</div><div className="card-sub">Actual events in selected period</div></div></div>
-    <div className="card-body" style={{display:"grid",gap:14}}>
+    <div className="card-body health-quality-grid">
      <SmallMetric label="Failed operations" value={failureCount} unit="" source="D1 event and tool-call failures"/>
      <SmallMetric label="Operations latency" value={data?.app.totals?.avgDurationMs} unit="ms mean" source="D1 and tool-call measured duration"/>
      <SmallMetric label="Estimated model cost" value={data?.app.totals?.costUsd} unit="USD" source="D1 and tool-call recorded cost estimate"/>
     </div>
    </div>
   </div>
-  <div className="card" style={{marginBottom:14}}>
+  <div className="card health-operations-panel" style={{marginBottom:14}}>
    <div className="card-head"><div><div className="card-title">Operations · top activity</div><div className="card-sub">Successful and failed user/application actions</div></div></div>
    {operations.length?<div style={{overflowX:"auto"}}><table className="tbl"><thead><tr><th>Domain</th><th>Operation</th><th className="num">Samples</th><th className="num">Failures</th><th className="num">Avg duration</th></tr></thead>
     <tbody>{operations.map((o,i)=><tr key={i}><td>{o.domain}</td><td>{o.operation}</td><td className="num mono">{o.samples}</td><td className="num mono">{o.failures}</td><td className="num mono">{o.duration_ms==null?"—":Math.round(o.duration_ms)+"ms"}</td></tr>)}</tbody></table></div>:
     <NoSource reason="No operation records in the selected range."/>}
   </div>
-  <div className="grid cols-12" style={{marginBottom:14}}>
+  <div className="grid cols-12 health-columns health-columns--secondary" style={{marginBottom:14}}>
    <div className="card span-6">
     <div className="card-head"><div><div className="card-title">Repository quality · drift and contract errors</div>
       <div className="card-sub">GitHub/deployment events and classified schema/contract findings, if recorded</div></div></div>
@@ -193,5 +193,5 @@ export default function HealthPage({range}:PageProps){
   <LiveDiagnosticLogs range={range} poll={fetchLogs}
    onAsk={(selected,context)=>askAgentSamAboutLogs(selected,context as unknown as Record<string,unknown>)}/>
   </div>
- </>;
+ </section>;
 }
