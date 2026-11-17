@@ -533,8 +533,9 @@ function SidenavContents() {
 }
 
 export function NavSidenav() {
-  const { open, isMobile, isPeeking, peekable, setPeeking, setOpen, toggle, menu, theme, resizable, width, setWidth } = useNav();
-  const style = useNavStyle();
+  const { open, isMobile, isPeeking, peekable, setPeeking, toggle, menu, resizable, width, setWidth } = useNav();
+  const mobileDrawerRef = useRef<HTMLElement | null>(null);
+  const wasMobileOpen = useRef(false);
   const [hint, setHint] = useState<{label:string; top:number; left:number} | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hintRow = useRef<HTMLElement | null>(null);
@@ -584,7 +585,27 @@ export function NavSidenav() {
       document.removeEventListener('visibilitychange', dismiss);
     };
   }, []);
-  if (isMobile) return <Dialog.Root open={open} onOpenChange={setOpen}><Dialog.Portal><Dialog.Overlay className="as-nav-dialog-overlay" /><Dialog.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-mobile-drawer"><Dialog.Title className="as-nav-sr-only">Navigation</Dialog.Title><Dialog.Description className="as-nav-sr-only">Projects and conversations</Dialog.Description><SidenavContents /></Dialog.Content></Dialog.Portal></Dialog.Root>;
+  useEffect(() => {
+    if (!isMobile) { wasMobileOpen.current = false; return; }
+    const previouslyOpen = wasMobileOpen.current;
+    wasMobileOpen.current = open;
+    if (open) {
+      const frame = window.requestAnimationFrame(() =>
+        mobileDrawerRef.current?.querySelector<HTMLButtonElement>('.as-nav-work-brand-toggle')?.focus());
+      return () => window.cancelAnimationFrame(frame);
+    }
+    if (previouslyOpen) {
+      document.querySelector<HTMLElement>('[data-shared-nav-toggle]')?.focus();
+    }
+  }, [isMobile, open]);
+  // Inline, non-modal mobile drawer: no Radix overlay or focus trap. The host
+  // shifts its workspace beside this drawer, preserving one shared nav state.
+  if (isMobile) return <NavScope className="as-nav-mobile-push-shell" data-open={open}>
+    <aside ref={mobileDrawerRef} className="as-nav-mobile-drawer" data-open={open}
+      aria-label="Application navigation" aria-hidden={!open} inert={!open}>
+      <SidenavContents />
+    </aside>
+  </NavScope>;
   return <NavScope className="as-nav-sidenav-reserve" data-open={open}
     onMouseOver={(event) => showHint(event.target)} onMouseLeave={hideHint}
     onFocus={(event) => { showHint(event.target); if (peekable && !open) setPeeking(true); }}
