@@ -84,3 +84,30 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
     padding-inline: 12px;
   }
 }
+
+
+/* The shared nav owns mobile drawer presentation; the host owns the canvas
+   geometry. Slide the canvas aside instead of painting a modal overlay. */
+@media (max-width: 767px) {
+  body.agentsam-shared-navigation {
+    --agentsam-mobile-push-width: min(304px, calc(100dvw - 68px));
+    overflow-x: clip;
+  }
+  body.agentsam-shared-navigation .as-nav-mobile-push-shell {
+    --nav-mobile-drawer-top: var(--c-topbar-h, 56px);
+  }
+  body.agentsam-shared-navigation .console-body { overflow-x: clip; }
+  body.agentsam-shared-navigation .console-workspace {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 100%;
+    transform: translate3d(0,0,0);
+    transition: transform 230ms cubic-bezier(.2,.8,.2,1);
+  }
+  body.agentsam-shared-navigation:has(.as-nav-mobile-push-shell[data-open="true"]) .console-workspace {
+    transform: translate3d(var(--agentsam-mobile-push-width),0,0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.agentsam-shared-navigation .console-workspace { transition-duration: 0ms; }
+}
