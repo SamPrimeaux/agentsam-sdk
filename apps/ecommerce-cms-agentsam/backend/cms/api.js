@@ -3106,6 +3106,54 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json(result);
   }
 
+  // Page Editor is independent from Theme Studio. Review drafts are account/site
+  // scoped and never mutate live storefront HTML or publication pointers.
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/content-draft$/);
+  if (m && (method === "GET" || method === "PUT")) {
+    if (!context.accountId || !siteId) return json({ error: "cms_site_required" }, { status: 400 });
+    const data = await getPageAdminForSite(env, context.accountId, m[1], siteId, pageId)
+      .catch(() => null);
+    const ownedPage = data?.page;
+    if (!ownedPage?.id) return json({ error: "Page not found in the selected account site" }, { status: 404 });
+    const existing = await env.DB.prepare(
+      "SELECT draft_data, updated_at FROM cms_page_drafts WHERE page_id=? AND user_id=? LIMIT 1"
+    ).bind(ownedPage.id, context.accountId).first();
+    if (method === "GET") {
+      let draft = null;
+      try { draft = existing ? JSON.parse(existing.draft_data) : null; } catch {}
+      return json({ ok: true, draft, updated_at: existing?.updated_at || null });
+    }
+    let body;
+    try { body = await request.json(); } catch {
+      return json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return json({ error: "Invalid page draft" }, { status: 400 });
+    }
+    const allowed = ["title","body_html","visibility","template_sku","seo_title","seo_description","url_handle"];
+    if (Object.keys(body).some(k => !allowed.includes(k)) ||
+        allowed.some(k => body[k] != null && typeof body[k] !== "string")) {
+      return json({ error: "Unsupported page draft field" }, { status: 400 });
+    }
+    const title = String(body.title || "").trim();
+    if (!title || title.length > 200 ||
+        String(body.body_html || "").length > 120000 ||
+        String(body.seo_title || "").length > 200 ||
+        String(body.seo_description || "").length > 1000 ||
+        String(body.template_sku || "").length > 120 ||
+        !["visible","hidden"].includes(body.visibility) ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(body.url_handle || "") ||
+        body.url_handle.length > 80) {
+      return json({ error: "Invalid page draft content" }, { status: 400 });
+    }
+    const safe = Object.fromEntries(allowed.map(k => [k, String(body[k] || "")]));
+    await env.DB.prepare(
+      "INSERT INTO cms_page_drafts(page_id,user_id,draft_data) VALUES (?,?,?) " +
+      "ON CONFLICT(page_id,user_id) DO UPDATE SET draft_data=excluded.draft_data,updated_at=datetime('now')"
+    ).bind(ownedPage.id, context.accountId, JSON.stringify(safe)).run();
+    return json({ ok: true, saved: true, mode: "page-draft", publish_ready: false });
+  }
+
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/publish$/);
   if (m && method === "POST") {
     const mode = await pageMode(m[1]);
