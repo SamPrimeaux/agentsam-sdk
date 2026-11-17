@@ -21,12 +21,13 @@ renderShell("/admin/pages", `
       </div>
       <div class="pages-hub-actions">
         <span class="pages-site-context" id="pages-site-context" aria-live="polite"></span>
-        <button class="btn primary" type="button" id="add-page-btn">+ Add page</button>
+        <button class="btn primary" type="button" id="add-page-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add page</button>
       </div>
     </header>
 
     <div class="pages-card">
       <div class="pages-toolbar">
+        <select id="pages-visibility-filter" class="pages-visibility-filter" aria-label="Filter pages by visibility"><option value="all">All</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>
         <label class="pages-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <input type="search" id="pages-search" placeholder="Search pages" autocomplete="off">
@@ -143,13 +144,15 @@ function renderRows(pages) {
 }
 
 function filterPages(query) {
-  const q = query.trim().toLowerCase();
-  if (!q) return allPages;
-  return allPages.filter((p) =>
-    String(p.title || "").toLowerCase().includes(q) ||
-    String(p.slug || "").toLowerCase().includes(q) ||
-    String(p.preview || "").toLowerCase().includes(q)
-  );
+  const q = String(query || "").trim().toLowerCase();
+  const visibility = document.getElementById("pages-visibility-filter")?.value || "all";
+  return allPages.filter((p) => {
+    const matchesVisibility = visibility === "all" ||
+      (visibility === "visible" ? p.status === "published" : p.status !== "published");
+    const matchesQuery = !q || [p.title,p.slug,p.preview,p.route_path].some(value =>
+      String(value || "").toLowerCase().includes(q));
+    return matchesVisibility && matchesQuery;
+  });
 }
 
 function slugifyPageTitle(value) {
@@ -170,6 +173,9 @@ function closeAddPageDialog() {
 
 document.getElementById("pages-search")?.addEventListener("input", (event) => {
   renderRows(filterPages(event.target.value));
+});
+document.getElementById("pages-visibility-filter")?.addEventListener("change", () => {
+  renderRows(filterPages(document.getElementById("pages-search")?.value || ""));
 });
 document.getElementById("add-page-btn")?.addEventListener("click", () => {
   if (!selectedSiteId) return;
