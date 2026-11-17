@@ -111,3 +111,20 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
 @media (prefers-reduced-motion: reduce) {
   body.agentsam-shared-navigation .console-workspace { transition-duration: 0ms; }
 }
+
+/* Account-owned store creation belongs to the shared profile menu. */
+.as-store-create-dialog { width:min(420px,calc(100vw - 32px)); padding:24px;
+  border:1px solid var(--line,#444); border-radius:12px;
+  background:var(--surface,#252525); color:var(--text,#f3f3f3); box-shadow:0 20px 80px #0007; }
+.as-store-create-dialog::backdrop { background:rgba(0,0,0,.58); }
+.as-store-create-dialog form { display:grid;gap:16px; }
+.as-store-create-dialog h2 { margin:0;font-size:18px; }
+.as-store-create-dialog p { margin:0;color:var(--text-muted,#aaa);font-size:13px; }
+.as-store-create-dialog label { display:grid;gap:8px;font-size:13px; }
+.as-store-create-dialog input { width:100%;padding:10px;border:1px solid var(--line,#555);border-radius:6px;
+  background:var(--input,var(--surface-2,#303030));color:var(--text,#fff);font:inherit; }
+.as-store-create-dialog footer { display:flex;justify-content:flex-end;gap:8px; }
+.as-store-create-dialog button { border:1px solid var(--line,#555);padding:9px 12px;border-radius:7px;
+  background:var(--surface-2,#333);color:var(--text,#fff);cursor:pointer; }
+.as-store-create-dialog button[data-create] { background:var(--primary,var(--brand,#238552));color:var(--on-brand,#fff);border-color:transparent; }
+.as-store-create-dialog .as-store-create-error { color:var(--danger,#ff8a80); }
