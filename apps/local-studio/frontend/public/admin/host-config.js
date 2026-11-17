@@ -384,6 +384,11 @@
     if (revision !== navigationMountRevision || !aside.isConnected) return;
     sharedNavigation?.unmount();
     aside.replaceChildren(); aside.classList.remove('is-collapsed');
+    // The fallback rail starts inert on mobile. Restore interaction authority
+    // before the shared nav mounts its own independently managed drawer.
+    aside.inert = false;
+    const workspace = document.querySelector('.console-workspace');
+    if (workspace) workspace.inert = false;
     document.body.classList.add('agentsam-shared-navigation', 'admin-dock-off');
     const leading = document.querySelector('.console-topbar-spacer');
     if (leading) {
@@ -392,7 +397,7 @@
     }
     sharedNavigation = window.AgentSamNav.mountNav({
       breadcrumbs: leading?.querySelector('.console-route-label'),
-      sidenav: aside, value: navigationValue(), resizable: true,
+      sidenav: aside, value: navigationValue(), resizable: true, mobileBreakpoint: 901,
       stateStore: window.__agentsamNavigationStore,
       onStateChange: ({open}) => leading?.querySelector('[data-shared-nav-toggle]')?.setAttribute('aria-expanded', String(open)),
       storageKey: 'agentsam-nav:' + (window.__shellUser?.id || 'local'),

@@ -23,16 +23,16 @@ type HealthResponse={
 };
 const textOrDash=(value:number|null|undefined,digits=0)=>value==null||!Number.isFinite(value)?"—":value.toLocaleString(undefined,{maximumFractionDigits:digits});
 function SmallMetric({label,value,unit,source,muted=false}:{label:string;value:number|null|undefined;unit:string;source:string;muted?:boolean}){
- return <div className="card" style={{padding:15,minWidth:0}}>
-   <div className="muted text-xs" style={{letterSpacing:".05em",textTransform:"uppercase"}}>{label}</div>
-   <div className="mono fw-600" style={{fontSize:"clamp(22px,2.3vw,29px)",marginTop:10,color:muted?"var(--muted)":"inherit"}}>
-     {textOrDash(value,label==="Error rate"?2:label==="Operations latency"?1:label==="Estimated model cost"?4:0)}{value!=null&&<span className="muted text-xs" style={{paddingLeft:5}}>{unit}</span>}
+ return <div className="card health-metric">
+   <div className="muted text-xs health-metric-label">{label}</div>
+   <div className={"mono fw-600 health-metric-value"+(muted?" is-muted":"")}>
+     {textOrDash(value,label==="Error rate"?2:label==="Operations latency"?1:label==="Estimated model cost"?4:0)}{value!=null&&<span className="muted text-xs health-metric-unit">{unit}</span>}
    </div>
-   <div className="muted text-xs" style={{marginTop:12}}>{value==null?"Unavailable · "+source:source}</div>
+   <div className="muted text-xs health-metric-source">{value==null?"Unavailable · "+source:source}</div>
  </div>;
 }
 function NoSource({reason}:{reason:string}){
- return <div className="muted" style={{padding:"24px 16px",lineHeight:1.6}}>No verified telemetry for this panel. {reason}</div>;
+ return <div className="muted health-no-source">No verified telemetry for this panel. {reason}</div>;
 }
 function Status({ready,label}:{ready:boolean;label:string}){
  return <span className={ready?"pill good":"pill"}><span className={ready?"dot":"muted"} />{label}</span>;
@@ -105,18 +105,18 @@ export default function HealthPage({range}:PageProps){
    "/api/analytics/logs/recent?window=180",{signal});
  },[]);
 
- return <>
-  <div className="page-head">
+ return <section className="analytics-health">
+  <div className="page-head health-head">
    <div><h1 className="page-title">Health</h1>
     <p className="page-sub">Account-scoped operations, Cloudflare traffic and repository quality · {range}</p></div>
-   <div className="page-actions">
+   <div className="page-actions health-actions">
     <Status ready={Boolean(data?.edge.available&&data?.app.available)} label={data?(data.edge.available&&data.app.available?"Sources connected":visibility?"Partial telemetry":"Telemetry unavailable"):"Loading sources"}/>
     <button type="button" className="btn" onClick={reload} disabled={loading}><Icon name="refresh" size={12}/> {loading?"Refreshing…":"Refresh"}</button>
     <button type="button" className="btn" aria-expanded={alertsOpen} onClick={()=>setAlertsOpen(v=>!v)}><Icon name="bell" size={12}/> Failures {failureCount!=null?"("+failureCount+")":""}</button>
    </div>
   </div>
-  {error&&<div className="card" role="alert" style={{padding:14,color:"var(--bad)",marginBottom:14}}>{error}</div>}
-  {data&&<div className="muted text-xs" style={{marginBottom:13}}>
+  {error&&<div className="card health-error" role="alert">{error}</div>}
+  {data&&<div className="muted text-xs health-source-line">
     Sources: {data.edge.available?data.edge.source:
       ["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required","cloudflare_permission_denied"].includes(data.edge.reason||"")
         ?"Cloudflare needs reauthorization for HTTP Analytics and read-only Basin access"
@@ -131,14 +131,14 @@ export default function HealthPage({range}:PageProps){
     {" · "}refreshed {new Date(data.generatedAt).toLocaleTimeString()}
     <span>Recorded D1 events are not a continuous uptime guarantee.</span>
   </div>}
-  <div className="grid cols-4" style={{marginBottom:14}}>
+  <div className="grid cols-4 health-metrics health-section-space">
    <SmallMetric label="HTTP requests" value={data?.edge.requests} unit="" source="Cloudflare HTTP requests"/>
    <SmallMetric label="Error rate" value={data?.edge.errorRate} unit="%" source="Cloudflare HTTP 5xx / requests"/>
    <SmallMetric label="Throughput" value={data?.edge.rpm} unit="req/min" source="Cloudflare requests / window"/>
    <SmallMetric label="AgentSam operations" value={data?.app.totals?.events} unit="" source="Account-scoped D1 event and tool-call ledgers"/>
   </div>
-  <div className="grid cols-12" style={{marginBottom:14}}>
-   <div className="card span-8">
+  <div className="grid cols-12 health-columns health-columns--primary health-section-space">
+   <div className="card span-8 health-chart-panel">
     <div className="card-head"><div><div className="card-title">Operation history</div>
      <div className="card-sub">Observed D1 events and tool calls — never generated series</div></div>
      <Status ready={Boolean(data?.app.available)} label={data?.app.available?"D1 events":"No source"}/>
@@ -150,48 +150,84 @@ export default function HealthPage({range}:PageProps){
       <NoSource reason={data?.app.available?"Two or more observed date buckets are required for a trend.":"Account-scoped D1 event and tool-call ledgers are not accessible."}/>}
     </div>
    </div>
-   <div className="card span-4">
+   <div className="card span-4 health-quality-panel">
     <div className="card-head"><div><div className="card-title">Operation quality</div><div className="card-sub">Actual events in selected period</div></div></div>
-    <div className="card-body" style={{display:"grid",gap:14}}>
+    <div className="card-body health-quality-grid">
      <SmallMetric label="Failed operations" value={failureCount} unit="" source="D1 event and tool-call failures"/>
      <SmallMetric label="Operations latency" value={data?.app.totals?.avgDurationMs} unit="ms mean" source="D1 and tool-call measured duration"/>
      <SmallMetric label="Estimated model cost" value={data?.app.totals?.costUsd} unit="USD" source="D1 and tool-call recorded cost estimate"/>
     </div>
    </div>
   </div>
-  <div className="card" style={{marginBottom:14}}>
+  <div className="card health-operations-panel health-section-space">
    <div className="card-head"><div><div className="card-title">Operations · top activity</div><div className="card-sub">Successful and failed user/application actions</div></div></div>
-   {operations.length?<div style={{overflowX:"auto"}}><table className="tbl"><thead><tr><th>Domain</th><th>Operation</th><th className="num">Samples</th><th className="num">Failures</th><th className="num">Avg duration</th></tr></thead>
-    <tbody>{operations.map((o,i)=><tr key={i}><td>{o.domain}</td><td>{o.operation}</td><td className="num mono">{o.samples}</td><td className="num mono">{o.failures}</td><td className="num mono">{o.duration_ms==null?"—":Math.round(o.duration_ms)+"ms"}</td></tr>)}</tbody></table></div>:
-    <NoSource reason="No operation records in the selected range."/>}
+   {operations.length?<>
+    <div className="health-table-scroll" role="region" aria-label="Operations table" tabIndex={0}>
+     <table className="tbl"><thead><tr><th>Domain</th><th>Operation</th><th className="num">Samples</th><th className="num">Failures</th><th className="num">Avg duration</th></tr></thead>
+      <tbody>{operations.map((o,i)=><tr key={i}><td>{o.domain}</td><td>{o.operation}</td><td className="num mono">{o.samples}</td><td className="num mono">{o.failures}</td><td className="num mono">{o.duration_ms==null?"—":Math.round(o.duration_ms)+"ms"}</td></tr>)}</tbody>
+     </table>
+    </div>
+    <div className="health-mobile-records" role="list" aria-label="Operations">
+     {operations.map((o,i)=><article className="health-mobile-record" role="listitem" key={i}>
+       <div className="health-record-title">{o.operation}</div>
+       <div className="health-record-muted">{o.domain}</div>
+       <div className="health-record-stats">
+        <span><strong>{o.samples.toLocaleString()}</strong><small>Calls</small></span>
+        <span><strong>{o.failures.toLocaleString()}</strong><small>Failed</small></span>
+        <span><strong>{o.duration_ms==null?"—":Math.round(o.duration_ms)+"ms"}</strong><small>Avg time</small></span>
+       </div>
+      </article>)}
+    </div>
+   </>:<NoSource reason="No operation records in the selected range."/>}
   </div>
-  <div className="grid cols-12" style={{marginBottom:14}}>
+  <div className="grid cols-12 health-columns health-columns--secondary health-section-space">
    <div className="card span-6">
     <div className="card-head"><div><div className="card-title">Repository quality · drift and contract errors</div>
       <div className="card-sub">GitHub/deployment events and classified schema/contract findings, if recorded</div></div></div>
-    {repo.length?<div style={{overflowX:"auto"}}><table className="tbl"><thead><tr><th>Event</th><th>Code</th><th>Status</th></tr></thead>
-    <tbody>{repo.map((x,i)=><tr key={i}><td>{x.operation}</td><td className="mono">{x.error_code||"—"}</td><td>{x.status}</td></tr>)}</tbody></table></div>:
-    <NoSource reason="No repository-audit receipts ingested yet. CI package-authority findings will appear only after they are recorded as events."/>}
+    {repo.length?<>
+     <div className="health-table-scroll" role="region" aria-label="Repository quality table" tabIndex={0}>
+      <table className="tbl"><thead><tr><th>Event</th><th>Code</th><th>Status</th></tr></thead>
+       <tbody>{repo.map((x,i)=><tr key={i}><td>{x.operation}</td><td className="mono">{x.error_code||"—"}</td><td>{x.status}</td></tr>)}</tbody>
+      </table>
+     </div>
+     <div className="health-mobile-records" role="list" aria-label="Repository events">
+      {repo.map((x,i)=><article className="health-mobile-record" role="listitem" key={i}>
+       <div className="health-record-title">{x.operation}</div>
+       <div className="health-record-muted">{x.error_code||"No error code"} · {x.status}</div>
+      </article>)}
+     </div>
+    </>:<NoSource reason="No repository-audit receipts ingested yet. CI package-authority findings will appear only after they are recorded as events."/>}
     <div className="card-foot"><span>Observed drift-classified events: {repo.length?driftEvents.length:"Not collected"}</span></div>
    </div>
    <div className="card span-6">
     <div className="card-head"><div><div className="card-title">Recent failures</div><div className="card-sub">Recorded error codes, not synthetic incidents</div></div>
      <Status ready={Boolean(data?.app.available)} label="D1 ledger"/></div>
-    {failures.length?<div style={{overflowX:"auto"}}><table className="tbl"><thead><tr><th>Operation</th><th>Error code</th><th>When</th></tr></thead>
-    <tbody>{failures.slice(0,10).map((x,i)=><tr key={i}><td>{x.operation}</td><td className="mono">{x.error_code||"Unclassified"}</td><td className="muted text-xs">{new Date(x.occurred_at*1000).toLocaleString()}</td></tr>)}</tbody></table></div>:
-    <NoSource reason={data?.app.available?"No failures recorded in this period.":"No D1 event records available."}/>}
+    {failures.length?<>
+     <div className="health-table-scroll" role="region" aria-label="Recent failures table" tabIndex={0}>
+      <table className="tbl"><thead><tr><th>Operation</th><th>Error code</th><th>When</th></tr></thead>
+       <tbody>{failures.slice(0,10).map((x,i)=><tr key={i}><td>{x.operation}</td><td className="mono">{x.error_code||"Unclassified"}</td><td className="muted text-xs">{new Date(x.occurred_at*1000).toLocaleString()}</td></tr>)}</tbody>
+      </table>
+     </div>
+     <div className="health-mobile-records" role="list" aria-label="Recent failures">
+      {failures.slice(0,10).map((x,i)=><article className="health-mobile-record" role="listitem" key={i}>
+       <div className="health-record-title">{x.operation}</div>
+       <div className="health-record-muted">{x.error_code||"Unclassified"}</div>
+       <div className="health-record-time">{new Date(x.occurred_at*1000).toLocaleString()}</div>
+      </article>)}
+     </div>
+    </>:<NoSource reason={data?.app.available?"No failures recorded in this period.":"No D1 event records available."}/>}
    </div>
   </div>
   {data?.basin.enabled&&<BasinOverviewPanel basin={data.basin}/>}
-  {alertsOpen&&<section className="card" role="region" aria-label="Observed failures" style={{marginTop:14}}>
+  {alertsOpen&&<section className="card health-failure-details" role="region" aria-label="Observed failures">
    <div className="card-head"><div><div className="card-title">Failure details</div><div className="card-sub">Recent recorded failures · {range}</div></div></div>
-   {failures.length?failures.map((f,i)=><div key={i} style={{padding:"9px 15px",borderBottom:"1px solid var(--border)"}}>
+   {failures.length?failures.map((f,i)=><div key={i} className="health-failure-detail">
      <strong>{f.operation}</strong> <span className="muted">· {f.domain} · {f.error_code||"No error code"} · {new Date(f.occurred_at*1000).toLocaleString()}</span></div>):
     <NoSource reason="No failure details have been recorded."/>}
   </section>}
-  <div style={{marginTop:14}}>
+  <div className="health-logs">
   <LiveDiagnosticLogs range={range} poll={fetchLogs}
    onAsk={(selected,context)=>askAgentSamAboutLogs(selected,context as unknown as Record<string,unknown>)}/>
   </div>
- </>;
+ </section>;
 }

@@ -5,7 +5,7 @@ body.agentsam-shared-navigation .console-topbar-spacer { display:flex; align-ite
 body.agentsam-shared-navigation .console-route-label { font-size:13px; font-weight:500; color:var(--c-ink-2); white-space:nowrap; }
 body.agentsam-shared-navigation .console-nav-ghost-toggle, body.agentsam-shared-navigation .admin-drawer, body.agentsam-shared-navigation .admin-drawer-backdrop { display:none!important; }
 body.agentsam-shared-navigation .console-workspace { min-width:0; flex:1; }
-@media(max-width:767px) { body.agentsam-shared-navigation .console-sidenav.admin-sidebar { position:static!important; width:0!important; } body.agentsam-shared-navigation .console-route-label { display:none; } body.agentsam-shared-navigation .console-topbar-spacer { min-width:36px; } }
+@media(max-width:900px) { body.agentsam-shared-navigation .console-sidenav.admin-sidebar { position:static!important; width:0!important; } body.agentsam-shared-navigation .console-route-label { display:none; } body.agentsam-shared-navigation .console-topbar-spacer { min-width:36px; } }
 
 body.agentsam-shared-navigation .console-sidenav.admin-sidebar {height:calc(100dvh - var(--c-topbar-h,56px));min-height:0;}
 
@@ -42,7 +42,7 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
 
 /* Packaged Console owns the actual hosted header; Nav.Topbar is suppressed
    there. Keep mobile search in the shared navigation rather than this chrome. */
-@media (max-width: 767px) {
+@media (max-width: 900px) {
   /* Outrank the packaged Console's later, more specific
      .console-topbar:not(...) .console-topbar-actions .console-search-wrap. */
   body.agentsam-shared-navigation .console-topbar .console-topbar-actions .console-search-wrap {
@@ -83,4 +83,31 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
   body.agentsam-conversation-route .console-topbar {
     padding-inline: 12px;
   }
+}
+
+
+/* The shared nav owns mobile drawer presentation; the host owns the canvas
+   geometry. Slide the canvas aside instead of painting a modal overlay. */
+@media (max-width: 900px) {
+  body.agentsam-shared-navigation {
+    --agentsam-mobile-push-width: min(304px, calc(100dvw - 68px));
+    overflow-x: clip;
+  }
+  body.agentsam-shared-navigation .as-nav-mobile-push-shell {
+    --nav-mobile-drawer-top: var(--c-topbar-h, 56px);
+  }
+  body.agentsam-shared-navigation .console-body { overflow-x: clip; }
+  body.agentsam-shared-navigation .console-workspace {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 100%;
+    transform: translate3d(0,0,0);
+    transition: transform 230ms cubic-bezier(.2,.8,.2,1);
+  }
+  body.agentsam-shared-navigation:has(.as-nav-mobile-push-shell[data-open="true"]) .console-workspace {
+    transform: translate3d(var(--agentsam-mobile-push-width),0,0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.agentsam-shared-navigation .console-workspace { transition-duration: 0ms; }
 }

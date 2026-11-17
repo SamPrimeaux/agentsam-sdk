@@ -773,7 +773,7 @@ function stabilizeShellDrawers() {
 }
 
 function renderShell(activeHref, mainHtml, options = {}) {
-  const { fullBleed = false, onReady, includeMobileDrawer = false } = options;
+  const { fullBleed = false, onReady } = options;
   const shellMode = resolveShellMode(options);
   ensureConsoleAssets();
   ensureConsoleLayout();
@@ -788,21 +788,15 @@ function renderShell(activeHref, mainHtml, options = {}) {
     ? "console-main admin-main console-main--bleed admin-main--bleed"
     : "console-main admin-main";
 
-  const mobileDrawerMarkup = includeMobileDrawer ? `
-        <div class="admin-drawer-backdrop" id="admin-drawer-backdrop" aria-hidden="true"></div>
-        <aside class="admin-drawer" id="admin-drawer" aria-hidden="true">
-          <div class="admin-drawer-head">
-            <span class="admin-drawer-title">Navigation</span>
-            <button type="button" class="admin-drawer-close" id="admin-drawer-close" aria-label="Close sidebar" title="Close sidebar">
-              ${icon("arrowLeftToLine", 20, "admin-drawer-close-icon")}
-            </button>
-          </div>
-          <nav class="console-sidenav admin-nav admin-nav--drawer" data-nav-package="mobile-glass-drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref, null, { drawer: true })}</nav>
-        </aside>` : "";
+  // Mobile shares the persistent navigation spine; no second overlay.
   const navMorphIcon = `<span class="console-nav-morph" aria-hidden="true"><span></span><span></span><span></span></span>`;
-  const mobileDrawerTrigger = includeMobileDrawer ? `<button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
-          ${navMorphIcon}
-        </button>` : "";
+  const mobileNavHead = `<div class="console-mobile-nav-head">
+    <strong>Navigation</strong>
+    <button type="button" class="console-mobile-nav-close" data-console-nav-toggle
+      aria-label="Close navigation" title="Close navigation">
+      ${icon("arrowLeftToLine", 20)}
+    </button>
+  </div>`;
   const adminChrome = shellMode.hideAdminNav ? "" : `
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
@@ -830,13 +824,11 @@ function renderShell(activeHref, mainHtml, options = {}) {
       </header>
 `;
   document.getElementById("console-app").innerHTML = `
-    <div class="console-shell admin-shell${shellMode.id === "theme-editor" ? " is-editor-mode" : ""}" data-shell-mode="${shellMode.id}" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
+    <div class="console-shell admin-shell${shellMode.id === "theme-editor" ? " is-editor-mode" : ""}" data-shell-mode="${shellMode.id}" data-nav-packages="persistent-frosted-rail mobile-push-drawer">
       ${adminChrome}
       <div class="console-body">
-        ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>`}
-        ${shellMode.hideAdminNav ? "" : mobileDrawerTrigger}
-        ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">${navMorphIcon}</button>`}
-        ${shellMode.hideAdminNav ? "" : mobileDrawerMarkup}
+        ${shellMode.hideAdminNav ? "" : `<aside id="admin-primary-nav" class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail" aria-label="Primary navigation">${mobileNavHead}${renderSideNav(activeHref)}</aside>`}
+        ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-controls="admin-primary-nav" aria-label="Show sidebar" title="Show sidebar">${navMorphIcon}</button>`}
         <div class="console-workspace">
           <main class="${mainClass}">${mainHtml}</main>
           <aside id="agentsam-dock" class="agentsam-dock" aria-hidden="true"></aside>
@@ -886,7 +878,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
     });
 
   if (!shellMode.hideAdminNav) initPersistentNav();
-  if (includeMobileDrawer) initMobileNav();
+
   window.initEcommerceInspector?.();
   if (!window.initEcommerceInspector && !document.getElementById("ecommerce-inspector-script")) {
     const script = document.createElement("script");
@@ -1080,16 +1072,27 @@ function syncPersistentNavState() {
   });
 }
 
-function setPersistentNav(open) {
+function setPersistentNav(open, { persist = true } = {}) {
+  const mobile = window.matchMedia("(max-width: 900px)").matches;
+  const aside = document.getElementById("admin-primary-nav");
+  if (!open && aside?.contains(document.activeElement)) {
+    document.querySelector(".console-nav-ghost-toggle--persistent")?.focus();
+  }
   document.body.classList.toggle("console-nav-collapsed", !open);
-  try { localStorage.setItem("agentsam.console.nav", open ? "open" : "collapsed"); } catch {}
+  if (aside) aside.inert = !open;
+  const workspace = document.querySelector(".console-workspace");
+  if (workspace) workspace.inert = mobile && open;
+  if (persist && !mobile) {
+    try { localStorage.setItem("agentsam.console.nav", open ? "open" : "collapsed"); } catch {}
+  }
   syncPersistentNavState();
+  if (mobile && open) aside?.querySelector(".console-mobile-nav-close")?.focus();
 }
 
 function initPersistentNav() {
   let open = true;
   try { open = (localStorage.getItem("agentsam.console.nav") ?? localStorage.getItem("fnf-console-nav")) !== "collapsed"; } catch {}
-  setPersistentNav(open);
+  setPersistentNav(window.matchMedia("(max-width: 900px)").matches ? false : open, { persist: false });
 }
 
 /** Safe-area insets only resolve when the viewport opts in to full-bleed. Idempotent. */
@@ -1160,66 +1163,35 @@ function wireAgentsamTriggers() {
   });
 }
 
-let mobileNavController;
-function initMobileNav() {
-  mobileNavController?.abort();
-  mobileNavController = new AbortController();
-  const signal = mobileNavController.signal;
-  const toggle = document.getElementById("admin-menu-toggle");
-  const drawer = document.getElementById("admin-drawer");
-  const backdrop = document.getElementById("admin-drawer-backdrop");
-  const closeBtn = document.getElementById("admin-drawer-close");
-  if (!toggle || !drawer) return;
-
-  const mq = window.matchMedia("(max-width: 900px)");
-
-  function setOpen(open) {
-    drawer.inert = !open;
-    const main = document.querySelector(".console-workspace");
-    if (main) main.inert = open;
-    if (open) closeBtn?.focus();
-    else if (drawer.contains(document.activeElement)) toggle.focus();
-    if (!mq.matches) {
-      document.body.classList.remove("admin-nav-open");
-      toggle.setAttribute("aria-expanded", "false");
-      drawer.setAttribute("aria-hidden", "true");
-      backdrop?.setAttribute("aria-hidden", "true");
-      return;
-    }
-    document.body.classList.toggle("admin-nav-open", open);
-    toggle.setAttribute("aria-expanded", String(open));
-    toggle.setAttribute("aria-label", open ? "Close sidebar" : "Show sidebar");
-    toggle.setAttribute("title", open ? "Close sidebar" : "Show sidebar");
-    drawer.setAttribute("aria-hidden", String(!open));
-    backdrop?.setAttribute("aria-hidden", String(!open));
-  }
-
-  function close() {
-    setOpen(false);
-  }
-
-  toggle.addEventListener("click", () => {
-    setOpen(!document.body.classList.contains("admin-nav-open"));
-  }, { signal });
-  closeBtn?.addEventListener("click", close, { signal });
-  backdrop?.addEventListener("click", close, { signal });
-  drawer.querySelectorAll("a.console-nav-item, a.console-nav-child, a.console-profile-card").forEach((link) => {
-    link.addEventListener("click", close);
-  });
-
+// Mobile uses the same navigation element and state as desktop. A persistent
+// delegated close handler survives hydration and route changes.
+function installMobilePushDismiss() {
+  if (window.__consoleMobilePushDismiss) return;
+  window.__consoleMobilePushDismiss = true;
+  const mobile = window.matchMedia("(max-width: 900px)");
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") close();
-    if (event.key === "Tab" && document.body.classList.contains("admin-nav-open")) {
-      const items = [...drawer.querySelectorAll("a[href], button:not([disabled])")].filter(el => el.getClientRects().length);
-      const first = items[0], last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    if (event.key === "Escape" && mobile.matches &&
+        !document.body.classList.contains("console-nav-collapsed")) {
+      event.preventDefault();
+      setPersistentNav(false);
     }
-  }, { signal });
-
-  mq.addEventListener("change", () => close(), { signal });
-  close();
+  });
+  document.addEventListener("click", (event) => {
+    if (!mobile.matches || document.body.classList.contains("console-nav-collapsed")) return;
+    if (event.target.closest(".console-sidenav.admin-sidebar a[href]")) {
+      setPersistentNav(false);
+    }
+  }, { capture: true });
+  mobile.addEventListener?.("change", () => {
+    if (mobile.matches) setPersistentNav(false, { persist: false });
+    else {
+      let open = true;
+      try { open = localStorage.getItem("agentsam.console.nav") !== "collapsed"; } catch {}
+      setPersistentNav(open, { persist: false });
+    }
+  });
 }
+installMobilePushDismiss();
 
 window.hydrateShellProfile = hydrateShellProfile;
 window.hydrateShellNav = hydrateShellNav;

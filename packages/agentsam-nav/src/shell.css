@@ -447,3 +447,36 @@
 .as-apps-picker-refresh { margin-left:auto; }
 .as-apps-inline .as-apps-directory { min-height:300px; }
 @media (max-width:650px){ .as-apps-picker-item{flex-wrap:wrap}.as-apps-picker-actions{width:100%;justify-content:flex-end}.as-apps-picker-controls,.as-apps-picker-list{padding-left:14px;padding-right:14px} }
+
+
+/* Shared mobile navigation slides as an off-canvas, non-modal drawer.
+   Host shells can shift their workspace; no scrim or dialog focus lock. */
+.as-nav-mobile-push-shell {
+  width: 0;
+  min-width: 0;
+  height: 0;
+  flex: 0 0 0;
+}
+.as-nav-mobile-push-shell .as-nav-mobile-drawer {
+  box-sizing: border-box;
+  inset: 0 auto 0 0;
+  top: var(--nav-mobile-drawer-top, 0px);
+  bottom: 0;
+  z-index: 160;
+  width: min(304px, calc(100dvw - 68px));
+  max-width: min(304px, calc(100dvw - 68px));
+  height: auto;
+  overflow: hidden;
+  border-right: 1px solid var(--nav-border);
+  background: var(--nav-sidebar);
+  transform: translate3d(-105%,0,0);
+  pointer-events: none;
+  transition: transform 230ms cubic-bezier(.2,.8,.2,1);
+}
+.as-nav-mobile-push-shell .as-nav-mobile-drawer[data-open="true"] {
+  transform: translate3d(0,0,0);
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .as-nav-mobile-push-shell .as-nav-mobile-drawer { transition-duration: 0ms; }
+}
