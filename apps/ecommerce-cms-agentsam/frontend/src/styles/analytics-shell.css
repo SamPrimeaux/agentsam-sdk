@@ -157,6 +157,21 @@
   justify-content: space-between;
   gap: 8px;
 }
+.analytics-health .health-section-space { margin-bottom: 14px; }
+.analytics-health .health-metric-value.is-muted { color: var(--muted); }
+.analytics-health .health-metric-unit { padding-left: 5px; }
+.analytics-health .health-no-source { padding: 24px 16px; line-height: 1.6; }
+.analytics-health .health-error {
+  padding: 14px;
+  color: var(--bad);
+  margin-bottom: 14px;
+}
+.analytics-health .health-failure-details,
+.analytics-health .health-logs { margin-top: 14px; }
+.analytics-health .health-failure-detail {
+  padding: 9px 15px;
+  border-bottom: 1px solid var(--line-soft);
+}
 .analytics-health .health-metric-label {
   letter-spacing: .045em;
   text-transform: uppercase;
