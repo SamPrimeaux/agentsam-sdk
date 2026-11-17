@@ -36,6 +36,7 @@ test('installed site/editor entrypoints and programmatic page changes stay in Lo
   assert.match(adapter, /url\.pathname === '\/api\/projects'/);
   const pages = read('../../ecommerce-cms-agentsam/frontend/static/pages.html');
   const editor = read('../../ecommerce-cms-agentsam/frontend/static/page-edit.html');
+  const pageEditorJs = read('../../ecommerce-cms-agentsam/frontend/static/js/page-editor-review.js');
   const visual = read('../../ecommerce-cms-agentsam/frontend/static/js/theme-editor.js');
   const shared = read('../../ecommerce-cms-agentsam/frontend/static/js/pages-shared.js');
   assert.match(shared, /window\.cmsAdminNavigate/);
@@ -47,8 +48,9 @@ test('installed site/editor entrypoints and programmatic page changes stay in Lo
   assert.match(pages, /site_id/);
   assert.match(shared, /window\.cmsAdminFetch/);
   assert.match(shared, /page_id/);
-  assert.match(editor, /cmsAdminNavigate\(`\/admin\/page-edit/);
-  assert.match(editor, /cmsAdminFetch\(/);
+  assert.match(editor, /page-editor-review\.js/);
+  assert.match(pageEditorJs, /window\.cmsAdminNavigate\("\/admin\/page-edit/);
+  assert.match(pageEditorJs, /cmsAdminFetch\(/);
   assert.match(visual, /cmsAdminNavigate\('\/admin\/theme-editor\?'/);
   assert.match(visual, /cmsAdminNavigate\(dest\)/);
   assert.match(visual, /cmsActivePageId/);
