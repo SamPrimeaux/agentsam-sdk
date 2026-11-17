@@ -397,7 +397,7 @@
     }
     sharedNavigation = window.AgentSamNav.mountNav({
       breadcrumbs: leading?.querySelector('.console-route-label'),
-      sidenav: aside, value: navigationValue(), resizable: true,
+      sidenav: aside, value: navigationValue(), resizable: true, mobileBreakpoint: 901,
       stateStore: window.__agentsamNavigationStore,
       onStateChange: ({open}) => leading?.querySelector('[data-shared-nav-toggle]')?.setAttribute('aria-expanded', String(open)),
       storageKey: 'agentsam-nav:' + (window.__shellUser?.id || 'local'),
