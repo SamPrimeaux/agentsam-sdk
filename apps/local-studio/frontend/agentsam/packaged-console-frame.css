@@ -130,3 +130,17 @@ body.console-body-bleed:has([data-agentsam-console-host]) .console-main--bleed {
 
 /* Local Studio navigation owns the one visible search affordance. Global Cmd+K remains available. */
 #console-app .console-topbar .console-search-wrap { display:none; }
+
+
+/* The installed iOS PWA uses a translucent system status bar. Reserve its inset
+   exactly once in the packaged Console header, not again in each application. */
+@media (max-width: 767px) and (display-mode: standalone) {
+  #console-app:has(#agentsam-host-workspace) .console-shell {
+    --c-topbar-h: calc(56px + env(safe-area-inset-top, 0px));
+  }
+  #console-app:has(#agentsam-host-workspace) .console-topbar {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    min-height: var(--c-topbar-h);
+  }
+}

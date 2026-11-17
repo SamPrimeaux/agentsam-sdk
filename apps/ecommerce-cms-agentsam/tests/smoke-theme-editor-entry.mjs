@@ -2,9 +2,9 @@
 /** Contract smoke for the single site-scoped Theme Studio entry/runtime. */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { chooseThemeEditorSite, planThemeEditorEntry } from '../../ecommerce-cms-agentsam/frontend/static/js/theme-editor-entry-resolution.mjs';
-import { parseThemeEditorLocation } from '../../ecommerce-cms-agentsam/frontend/theme-editor/routes.mjs';
-import { adminRouteForPath } from '../../ecommerce-cms-agentsam/backend/lib/route-manifest.js';
+import { chooseThemeEditorSite, planThemeEditorEntry } from '../frontend/static/js/theme-editor-entry-resolution.mjs';
+import { parseThemeEditorLocation } from '../frontend/theme-editor/routes.mjs';
+import { adminRouteForPath } from '../backend/lib/route-manifest.js';
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const siteA = { id:'site_a', name:'Agency site', status:'active', is_default:1 };
@@ -48,9 +48,9 @@ assert.deepEqual(
   {mode:'new',siteId:'site_a',legacy:true},
 );
 
-const shell = read('../../ecommerce-cms-agentsam/frontend/static/theme-editor.html');
-const alias = read('../../ecommerce-cms-agentsam/frontend/static/theme-project-editor.html');
-const bootstrap = read('../../ecommerce-cms-agentsam/frontend/static/js/theme-studio-bootstrap.mjs');
+const shell = read('../frontend/static/theme-editor.html');
+const alias = read('../frontend/static/theme-project-editor.html');
+const bootstrap = read('../frontend/static/js/theme-studio-bootstrap.mjs');
 assert.match(shell,/theme-studio-bootstrap\.mjs/);
 assert.doesNotMatch(shell,/theme-project-editor-bootstrap|theme-editor-entry\.js/);
 assert.match(alias,/location\.replace/);
