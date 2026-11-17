@@ -45,6 +45,7 @@ async function discoverBasinForAccount(env, accountId) {
         env,
         ownerId: accountId,
         authMode: "oauth",
+        capabilityId: "cloudflare.basin.read",
       });
     }
     if (!client?.accountId) {
