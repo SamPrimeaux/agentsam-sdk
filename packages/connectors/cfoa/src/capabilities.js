@@ -312,6 +312,14 @@ const CLOUDFLARE_CAPABILITIES_CURATED = {
     permissionLabel: 'Account → Browser Rendering',
     availability: 'generally_available',
   },
+  'cloudflare.basin.read': {
+    id: 'cloudflare.basin.read',
+    domain: 'data',
+    label: 'Basin Analytics (read-only)',
+    oauthScopes: ['pipelines.read', 'r2-catalog.read', 'r2-catalog-sql.read'],
+    permissionLabel: 'Account → Pipelines, R2 Catalog and R2 Catalog SQL → Read',
+    availability: 'generally_available',
+  },
   'cloudflare.pipelines': {
     id: 'cloudflare.pipelines',
     domain: 'data',
