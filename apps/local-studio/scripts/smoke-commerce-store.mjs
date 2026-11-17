@@ -162,7 +162,7 @@ try {
   assert.equal(createdSite,null,'Try does not create a generic default website starter');
   assert.equal(await page.title(),'Private Theme Library');
   assert.deepEqual(errors, [], 'No browser runtime errors');
-  console.log('Packaged Store smoke PASS: original theme, no modal, site-free Try, private draft return and mobile width');
+  console.log('Packaged Store smoke PASS: new theme opens shared Theme Studio, original theme, site-free Try, private draft return and mobile width');
 } finally {
   await browser.close();
   await new Promise((done) => server.close(done));
