@@ -1010,3 +1010,27 @@
 .page-editor-toolbar button{color:var(--c-ink-2);}
 .page-editor-media-card,.page-editor-media-card__copy{color:var(--c-ink);}
 .page-editor-media-card:hover,.page-editor-menu :is(a,button):hover{background:var(--c-hover);}
+
+/* Merchant Pages inventory: shared CMS tokens, full workspace, compact actions. */
+.pages-hub{max-width:1480px;width:100%;padding:24px 28px 72px;}
+.pages-hub-head{margin-bottom:18px;}
+.pages-hub-heading h1{font-size:19px;letter-spacing:-.02em;font-weight:650;}
+.pages-hub-heading p{font-size:12px;color:var(--c-muted);}
+.pages-hub-actions .btn{display:inline-flex;align-items:center;gap:7px;font-size:12px;border-radius:8px;}
+.pages-toolbar{gap:10px;background:var(--c-surface);padding:9px 12px;}
+.pages-visibility-filter{height:30px;max-width:105px;padding:0 10px;border:1px solid var(--c-line);border-radius:7px;background:var(--c-surface);color:var(--c-ink);font-size:12px;cursor:pointer;}
+.pages-visibility-filter:focus-visible{outline:2px solid var(--c-focus);outline-offset:2px;}
+.pages-card{border-radius:11px;}
+.pages-table th{font-size:11px;letter-spacing:.02em;}
+.pages-table tbody tr:hover td{background:var(--c-hover);}
+.pages-title-link{font-weight:550;}
+@media(max-width:700px){
+ .pages-hub{padding:16px 13px 86px;}
+ .pages-hub-head{align-items:flex-start;}
+ .pages-hub-actions{gap:7px;}
+ .pages-site-context{display:none;}
+ .pages-card{overflow-x:auto;}
+ .pages-table{min-width:540px;}
+ .pages-toolbar{min-width:540px;}
+ .pages-hub-heading h1{font-size:18px;}
+}
