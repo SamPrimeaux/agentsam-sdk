@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { EcommerceAppView } from './apps/ecommerce-cms-agentsam';
+import { OnlineStorePage } from '@/components/store/OnlineStorePage';
 
 /**
- * Online Store is the existing installed Ecommerce CMS, mounted at a clean
- * account-admin address. The iframe uses the packaged product asset to avoid
- * recursively loading this shell at /admin/store.
+ * Online Store is a native page in the global shell. Only a Theme Store
+ * Try/install hand-off (theme_sku, action, stock) still goes through the
+ * installed Ecommerce receiver, which validates release readiness.
  */
 export const Route = createFileRoute('/(apps)/admin/store')({
   validateSearch: (params: Record<string, unknown>) => ({
@@ -17,6 +18,8 @@ export const Route = createFileRoute('/(apps)/admin/store')({
   }),
   component: function InstalledOnlineStore() {
     const search = Route.useSearch();
-    return <EcommerceAppView search={{ ...search, page: '/admin/store' }} />;
+    if (search.theme_sku || search.action || search.stock || search.theme_version)
+      return <EcommerceAppView search={{ ...search, page: '/admin/store' }} />;
+    return <OnlineStorePage siteId={search.site_id} />;
   },
 });
