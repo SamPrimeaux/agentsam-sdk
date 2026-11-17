@@ -25,14 +25,14 @@ const textOrDash=(value:number|null|undefined,digits=0)=>value==null||!Number.is
 function SmallMetric({label,value,unit,source,muted=false}:{label:string;value:number|null|undefined;unit:string;source:string;muted?:boolean}){
  return <div className="card health-metric">
    <div className="muted text-xs health-metric-label">{label}</div>
-   <div className="mono fw-600 health-metric-value" style={{color:muted?"var(--muted)":"inherit"}}>
-     {textOrDash(value,label==="Error rate"?2:label==="Operations latency"?1:label==="Estimated model cost"?4:0)}{value!=null&&<span className="muted text-xs" style={{paddingLeft:5}}>{unit}</span>}
+   <div className={"mono fw-600 health-metric-value"+(muted?" is-muted":"")}>
+     {textOrDash(value,label==="Error rate"?2:label==="Operations latency"?1:label==="Estimated model cost"?4:0)}{value!=null&&<span className="muted text-xs health-metric-unit">{unit}</span>}
    </div>
    <div className="muted text-xs health-metric-source">{value==null?"Unavailable · "+source:source}</div>
  </div>;
 }
 function NoSource({reason}:{reason:string}){
- return <div className="muted" style={{padding:"24px 16px",lineHeight:1.6}}>No verified telemetry for this panel. {reason}</div>;
+ return <div className="muted health-no-source">No verified telemetry for this panel. {reason}</div>;
 }
 function Status({ready,label}:{ready:boolean;label:string}){
  return <span className={ready?"pill good":"pill"}><span className={ready?"dot":"muted"} />{label}</span>;
@@ -115,7 +115,7 @@ export default function HealthPage({range}:PageProps){
     <button type="button" className="btn" aria-expanded={alertsOpen} onClick={()=>setAlertsOpen(v=>!v)}><Icon name="bell" size={12}/> Failures {failureCount!=null?"("+failureCount+")":""}</button>
    </div>
   </div>
-  {error&&<div className="card" role="alert" style={{padding:14,color:"var(--bad)",marginBottom:14}}>{error}</div>}
+  {error&&<div className="card health-error" role="alert">{error}</div>}
   {data&&<div className="muted text-xs health-source-line">
     Sources: {data.edge.available?data.edge.source:
       ["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required","cloudflare_permission_denied"].includes(data.edge.reason||"")
@@ -131,13 +131,13 @@ export default function HealthPage({range}:PageProps){
     {" · "}refreshed {new Date(data.generatedAt).toLocaleTimeString()}
     <span>Recorded D1 events are not a continuous uptime guarantee.</span>
   </div>}
-  <div className="grid cols-4 health-metrics" style={{marginBottom:14}}>
+  <div className="grid cols-4 health-metrics health-section-space">
    <SmallMetric label="HTTP requests" value={data?.edge.requests} unit="" source="Cloudflare HTTP requests"/>
    <SmallMetric label="Error rate" value={data?.edge.errorRate} unit="%" source="Cloudflare HTTP 5xx / requests"/>
    <SmallMetric label="Throughput" value={data?.edge.rpm} unit="req/min" source="Cloudflare requests / window"/>
    <SmallMetric label="AgentSam operations" value={data?.app.totals?.events} unit="" source="Account-scoped D1 event and tool-call ledgers"/>
   </div>
-  <div className="grid cols-12 health-columns health-columns--primary" style={{marginBottom:14}}>
+  <div className="grid cols-12 health-columns health-columns--primary health-section-space">
    <div className="card span-8 health-chart-panel">
     <div className="card-head"><div><div className="card-title">Operation history</div>
      <div className="card-sub">Observed D1 events and tool calls — never generated series</div></div>
@@ -159,7 +159,7 @@ export default function HealthPage({range}:PageProps){
     </div>
    </div>
   </div>
-  <div className="card health-operations-panel" style={{marginBottom:14}}>
+  <div className="card health-operations-panel health-section-space">
    <div className="card-head"><div><div className="card-title">Operations · top activity</div><div className="card-sub">Successful and failed user/application actions</div></div></div>
    {operations.length?<>
     <div className="health-table-scroll" role="region" aria-label="Operations table" tabIndex={0}>
@@ -180,7 +180,7 @@ export default function HealthPage({range}:PageProps){
     </div>
    </>:<NoSource reason="No operation records in the selected range."/>}
   </div>
-  <div className="grid cols-12 health-columns health-columns--secondary" style={{marginBottom:14}}>
+  <div className="grid cols-12 health-columns health-columns--secondary health-section-space">
    <div className="card span-6">
     <div className="card-head"><div><div className="card-title">Repository quality · drift and contract errors</div>
       <div className="card-sub">GitHub/deployment events and classified schema/contract findings, if recorded</div></div></div>
@@ -219,13 +219,13 @@ export default function HealthPage({range}:PageProps){
    </div>
   </div>
   {data?.basin.enabled&&<BasinOverviewPanel basin={data.basin}/>}
-  {alertsOpen&&<section className="card" role="region" aria-label="Observed failures" style={{marginTop:14}}>
+  {alertsOpen&&<section className="card health-failure-details" role="region" aria-label="Observed failures">
    <div className="card-head"><div><div className="card-title">Failure details</div><div className="card-sub">Recent recorded failures · {range}</div></div></div>
-   {failures.length?failures.map((f,i)=><div key={i} style={{padding:"9px 15px",borderBottom:"1px solid var(--border)"}}>
+   {failures.length?failures.map((f,i)=><div key={i} className="health-failure-detail">
      <strong>{f.operation}</strong> <span className="muted">· {f.domain} · {f.error_code||"No error code"} · {new Date(f.occurred_at*1000).toLocaleString()}</span></div>):
     <NoSource reason="No failure details have been recorded."/>}
   </section>}
-  <div style={{marginTop:14}}>
+  <div className="health-logs">
   <LiveDiagnosticLogs range={range} poll={fetchLogs}
    onAsk={(selected,context)=>askAgentSamAboutLogs(selected,context as unknown as Record<string,unknown>)}/>
   </div>
