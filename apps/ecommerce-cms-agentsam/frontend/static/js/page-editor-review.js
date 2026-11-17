@@ -171,13 +171,21 @@
         if (blocked.has(el.tagName)) { el.remove(); return; }
         visit(el);
         if (!allowed.has(el.tagName)) { el.replaceWith(...el.childNodes); return; }
+        const href = el.getAttribute("href");
+        const src = el.getAttribute("src");
+        const alt = el.getAttribute("alt");
         [...el.attributes].forEach(attr => el.removeAttribute(attr.name));
         if (el.tagName === "A") {
-          const href = safeUrl((new DOMParser().parseFromString(String(html || ""),"text/html").body.querySelector("a[href]")||{}).href,false);
-          // Link destinations are restored by the editor command on new edits; stored
-          // arbitrary markup stays text-only unless it passes the URL allowlist.
-          if (href) el.setAttribute("href",href);
+          const url = safeUrl(href,false);
+          if (url) el.setAttribute("href",url);
           el.setAttribute("rel","noopener noreferrer");
+        }
+        if (el.tagName === "IMG") {
+          const url = safeUrl(src,true);
+          if (!url) { el.remove(); return; }
+          el.setAttribute("src",url);
+          el.setAttribute("alt",alt || "");
+          el.setAttribute("loading","lazy");
         }
       });
     };
