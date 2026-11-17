@@ -2453,3 +2453,96 @@ body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:last-child { tr
     color: var(--c-ink);
   }
 }
+
+
+/* One mobile navigation surface: push the workspace aside while the existing
+   sidebar slides in. The former overlay/backdrop drawer is not mounted. */
+.console-mobile-nav-head { display: none; }
+
+@media (max-width: 900px) {
+  body.console-theme {
+    --c-nav-w: 0px;
+    --agent-mobile-nav-width: min(304px, calc(100dvw - 68px));
+    overflow-x: clip;
+  }
+  .console-mobile-nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: none;
+    gap: 12px;
+    min-height: 50px;
+    padding: 4px 10px 12px;
+    border-bottom: 1px solid var(--c-nav-rail-border);
+    color: var(--c-ink);
+    font-size: 14px;
+    font-weight: 650;
+  }
+  .console-mobile-nav-close {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border: 1px solid var(--c-nav-rail-border);
+    border-radius: 12px;
+    background: var(--c-hover);
+    color: var(--c-ink);
+    cursor: pointer;
+  }
+  .console-mobile-nav-close:focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 2px;
+  }
+  body.console-theme .console-sidenav.admin-sidebar,
+  body.console-theme .console-sidenav.admin-sidebar.is-collapsed {
+    display: flex;
+    position: fixed;
+    left: 0;
+    top: var(--c-topbar-h, 56px);
+    bottom: 0;
+    z-index: 160;
+    box-sizing: border-box;
+    width: var(--agent-mobile-nav-width);
+    min-width: var(--agent-mobile-nav-width);
+    max-width: var(--agent-mobile-nav-width);
+    padding: 12px 9px max(12px, env(safe-area-inset-bottom, 0px));
+    opacity: 1;
+    background: var(--c-nav-rail-bg);
+    border-right: 1px solid var(--c-nav-rail-border);
+    box-shadow: var(--c-nav-rail-shadow);
+    transform: translate3d(0, 0, 0);
+    transition: transform 230ms cubic-bezier(.2,.8,.2,1);
+    overflow: hidden;
+  }
+  body.console-theme.console-nav-collapsed .console-sidenav.admin-sidebar {
+    transform: translate3d(-105%, 0, 0);
+    pointer-events: none;
+  }
+  body.console-theme .console-sidenav.admin-sidebar .console-sidenav-scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+  body.console-theme .console-workspace {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 100%;
+    transform: translate3d(0, 0, 0);
+    transition: transform 230ms cubic-bezier(.2,.8,.2,1);
+  }
+  body.console-theme:not(.console-nav-collapsed) .console-workspace {
+    transform: translate3d(var(--agent-mobile-nav-width),0,0);
+  }
+  body.console-theme .console-nav-ghost-toggle--persistent {
+    display: inline-flex !important;
+    z-index: 180;
+  }
+  body.console-theme .console-topbar-spacer { width: 52px; min-width: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.console-theme .console-sidenav.admin-sidebar,
+  body.console-theme .console-workspace { transition-duration: 0ms; }
+}
