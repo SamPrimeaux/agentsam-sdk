@@ -186,7 +186,10 @@ export async function loadConnectionsRegistry(env, userId) {
     .filter((row) => (row.settings_visible === 1 || row.settings_visible === true) && !nativeSideStage(row) && !nativeAdminApp(row))
     .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
   const composerPlugins = pluginRegistry.plugins
-    .filter((row) => (row.composer_visible === 1 || row.composer_visible === true) && !nativeSideStage(row) && !nativeAdminApp(row))
+    // Public catalog plugins and explicitly composer-visible installations are
+    // discoverable even when disabled; readiness is a separate runtime state.
+    .filter((row) => (row.composer_visible === 1 || row.composer_visible === true || row.metadata?.store?.listed === 1)
+      && !nativeSideStage(row) && !nativeAdminApp(row))
     .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
 
   const latestByProvider = new Map();

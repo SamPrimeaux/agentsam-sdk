@@ -305,7 +305,7 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
     mention_aliases: ['@'+entry.pluginKey],
     capabilities: [], // tool and permission activation is a separate authenticated step
     tools: [], // never allow a catalog payload to register executable tools
-    composer_visible: false,
+    composer_visible: true,
     settings_visible: true,
     health_strategy: 'oauth_probe',
     metadata: {source:entry.catalogUrl,version:entry.version,requires_authorization:true,
@@ -319,7 +319,7 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
     preserveEnabled:true,
     preserveRegistry:true,
   });
-  await updatePluginPreferences(env.DB,{accountId,pluginId:installed.plugin_id,enabled:false,composerVisible:false});
+  await updatePluginPreferences(env.DB,{accountId,pluginId:installed.plugin_id,enabled:false,composerVisible:true});
   return {pluginId:installed.plugin_id,pluginKey:entry.pluginKey,status:'requires_connection'};
 }
 
