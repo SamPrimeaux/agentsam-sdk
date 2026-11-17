@@ -15,3 +15,22 @@ export function buildBrowserInstruction(prompt: string, previousHtml?: string | 
     'Do not include private account information, passwords, API tokens, untrusted remote scripts or remote dependencies.',
   ].filter(Boolean).join('\n\n');
 }
+
+
+/** An opaque-origin preview cooperates with the host annotator via bounded postMessage data. */
+export function withBrowserAnnotationBridge(html: string): string {
+  const script = `<script>(function(){
+  var enabled=false,last=0;
+  function send(type,element){
+    var el=element&&element.closest&& (element.closest('button,a,img,input,textarea,select,label,h1,h2,h3,h4,p,li,article,section,[role="button"],[data-annotation-target]')||element);
+    if(!el)return;
+    var r=el.getBoundingClientRect(),field=el.matches('input,textarea,select,[contenteditable="true"]');
+    var clean=function(v,n){return String(v||'').replace(/\\s+/g,' ').trim().slice(0,n)};
+    parent.postMessage({source:'agentsam-browser',type:type,selection:{tag:el.tagName.toLowerCase(),label:clean(el.getAttribute('aria-label')||el.getAttribute('alt')||(field?'Input field':el.textContent),180),text:field?'[field value withheld]':clean(el.textContent,300),rect:{left:r.left,top:r.top,width:r.width,height:r.height},url:location.href}},'*');
+  }
+  addEventListener('message',function(e){if(e.source===parent&&e.data&&e.data.source==='agentsam-host'&&e.data.type==='annotation-mode')enabled=e.data.enabled===true});
+  addEventListener('pointermove',function(e){if(!enabled||Date.now()-last<70)return;last=Date.now();send('annotation-hover',e.target)},true);
+  addEventListener('click',function(e){if(!enabled)return;e.preventDefault();e.stopImmediatePropagation();send('annotation-selection',e.target)},true);
+})();</script>`;
+  return /<\/body\s*>/i.test(html) ? html.replace(/<\/body\s*>/i, `${script}</body>`) : `${html}${script}`;
+}

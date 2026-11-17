@@ -44,3 +44,12 @@ test("re-validates redirect hops", async () => {
 test("rewriteHtml handles documents without a head", () => {
   assert.match(rewriteHtml("<p>x</p>", "https://a.test/"), /<base href="https:\/\/a\.test\/">/);
 });
+
+test('Browser proxy bridges element annotation without granting frame DOM access', () => {
+  const html = rewriteHtml('<html><head></head><body><button>Click</button></body></html>', 'https://example.com/');
+  assert.match(html, /annotation-selection/);
+  assert.match(html, /annotation-hover/);
+  assert.match(html, /annotation-mode/);
+  assert.match(html, /if\(annotating\)return/);
+  assert.match(html, /replace\(\/\\s\+\/g/);
+});

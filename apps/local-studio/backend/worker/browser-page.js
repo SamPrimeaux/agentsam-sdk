@@ -94,6 +94,7 @@ const BRIDGE = `<script>(function(){
 function send(m){try{parent.postMessage(Object.assign({source:"agentsam-browser"},m),"*")}catch(e){}}
 function go(u){send({type:"navigate",url:u})}
 addEventListener("click",function(e){
+  if(annotating)return;
   if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
   var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(!a)return;
   var href=a.href;if(!/^https?:/i.test(href))return;
@@ -102,6 +103,7 @@ addEventListener("click",function(e){
   e.preventDefault();go(href);
 },true);
 addEventListener("submit",function(e){
+  if(annotating){e.preventDefault();return}
   var f=e.target;if(!f||!f.action)return;
   e.preventDefault();
   if(String(f.method||"get").toLowerCase()!=="get")return;
@@ -109,6 +111,22 @@ addEventListener("submit",function(e){
     d.forEach(function(v,k){if(typeof v==="string")u.searchParams.set(k,v)});go(u.href)}catch(x){}
 },true);
 window.open=function(u){if(u){try{go(new URL(u,document.baseURI).href)}catch(x){}}return null};
+// Cooperative element-level annotation; the cross-origin page never accesses the host DOM.
+var annotating=false,lastHover=0;
+function annotationTarget(element){
+  if(!element||!element.closest)return null;
+  return element.closest('button,a,img,input,textarea,select,label,h1,h2,h3,h4,p,li,article,section,[role="button"],[data-annotation-target]')||element;
+}
+function annotationPayload(element){
+  var target=annotationTarget(element);if(!target)return null;
+  var rect=target.getBoundingClientRect();
+  var field=target.matches('input,textarea,select,[contenteditable="true"]');
+  var clean=function(v,n){return String(v||'').replace(/\\s+/g,' ').trim().slice(0,n)};
+  return {tag:target.tagName.toLowerCase(),label:clean(target.getAttribute('aria-label')||target.getAttribute('alt')||(field?'Input field':target.textContent),180),text:field?'[field value withheld]':clean(target.textContent,300),rect:{left:rect.left,top:rect.top,width:rect.width,height:rect.height},url:location.href};
+}
+addEventListener('message',function(e){if(e.source!==parent||!e.data||e.data.source!=='agentsam-host'||e.data.type!=='annotation-mode')return;annotating=e.data.enabled===true});
+addEventListener('pointermove',function(e){if(!annotating||Date.now()-lastHover<70)return;lastHover=Date.now();var p=annotationPayload(e.target);if(p)send({type:'annotation-hover',selection:p})},true);
+addEventListener('click',function(e){if(!annotating)return;e.preventDefault();e.stopImmediatePropagation();var p=annotationPayload(e.target);if(p)send({type:'annotation-selection',selection:p})},true);
 function title(){send({type:"title",url:document.baseURI,title:document.title||""})}
 addEventListener("load",title);
 new MutationObserver(title).observe(document.documentElement,{childList:true,subtree:true,characterData:true});

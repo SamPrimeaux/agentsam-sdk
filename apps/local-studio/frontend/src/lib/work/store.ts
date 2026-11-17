@@ -1415,7 +1415,7 @@ export const useWorkStore = create<WorkState>()(
             targetKind === "side" ? "Preparing co-worker handoff" : "Finalizing response",
             4,
             5,
-            targetKind === "side" ? parentTitle || project.name : taskSummary || undefined,
+            targetKind === "side" ? parentTitle || project?.name || taskSummary : taskSummary || undefined,
             "phase-points",
             targetId,
           );
@@ -1435,7 +1435,7 @@ export const useWorkStore = create<WorkState>()(
             targetKind === "side" ? "Co-worker handoff ready" : "Response ready",
             5,
             5,
-            targetKind === "side" ? parentTitle || project.name : undefined,
+            targetKind === "side" ? parentTitle || project?.name || taskSummary : undefined,
             "phase-points",
             targetId,
           );

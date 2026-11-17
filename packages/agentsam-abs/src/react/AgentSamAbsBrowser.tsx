@@ -73,6 +73,10 @@ export interface AgentSamAbsBrowserProps {
   showThemeToggle?: boolean;
   toolbarActions?: ReactNode;
   statusSlot?: ReactNode;
+  /** Host owns the Side Stage tab chrome; avoid a second browser title bar. */
+  showWindowbar?: boolean;
+  /** Hosts with a conversation composer can suppress the duplicate Build address prompt. */
+  showBuildToolbar?: boolean;
 }
 
 export function AgentSamAbsBrowser({
@@ -114,6 +118,8 @@ export function AgentSamAbsBrowser({
   showThemeToggle = true,
   toolbarActions,
   statusSlot,
+  showWindowbar = true,
+  showBuildToolbar = true,
 }: AgentSamAbsBrowserProps) {
   const [localMode, setLocalMode] = useState<AbsBrowserMode>(defaultMode);
   const mode = controlledMode ?? localMode;
@@ -180,7 +186,7 @@ export function AgentSamAbsBrowser({
 
   return (
     <section className="abs-browser" data-abs-mode={mode} data-abs-theme={theme}>
-      <div className="abs-windowbar">
+      {showWindowbar && <div className="abs-windowbar">
         <div className="abs-brand-lockup">
           <span className="abs-brand-mark" aria-hidden="true" />
           <span className="abs-brand-name">AgentSam Browser</span>
@@ -197,7 +203,7 @@ export function AgentSamAbsBrowser({
         >
           {theme === 'dark' ? 'Light' : 'Dark'}
         </button>}
-      </div>
+      </div>}
       {mode === 'build' && showBuildTabs && (
         <div className="abs-tabbar" role="tablist" aria-label="Build tabs">
           <div className="abs-tablist">
@@ -262,22 +268,28 @@ export function AgentSamAbsBrowser({
                 type="button"
                 disabled={!exploreCanBack}
                 onClick={() => onExploreBack ? onExploreBack() : setExploreIndex((index) => Math.max(0, index - 1))}
+                aria-label="Back"
+                title="Back"
               >
-                Back
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
               </button>
               <button
                 type="button"
                 disabled={!exploreCanForward}
                 onClick={() => onExploreForward ? onExploreForward() : setExploreIndex((index) => Math.min(exploreHistory.length - 1, index + 1))}
+                aria-label="Forward"
+                title="Forward"
               >
-                Forward
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
               </button>
               <button
                 type="button"
                 disabled={!exploreUrl}
+                aria-label="Reload"
+                title="Reload"
                 onClick={() => onExploreRefresh ? onExploreRefresh() : setExploreReloadKey((key) => key + 1)}
               >
-                Reload
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.2 5.5"/><path d="M20 4v7h-7"/></svg>
               </button>
             </div>
             <form className="abs-omnibar" onSubmit={submitExplore}>
@@ -298,7 +310,7 @@ export function AgentSamAbsBrowser({
               </button>
             )}
           </>
-        ) : (
+        ) : showBuildToolbar ? (
           <>
             <div className="abs-nav-actions">
               <button type="button" disabled={!canGoBack} onClick={onBack}>Back</button>
@@ -321,7 +333,8 @@ export function AgentSamAbsBrowser({
               />
             </form>
           </>
-        )}
+        ) : null}
+        {!showWindowbar && toolbarActions ? <div className="abs-toolbar-actions">{toolbarActions}</div> : null}
       </div>
 
       <div className="abs-browser-stage">

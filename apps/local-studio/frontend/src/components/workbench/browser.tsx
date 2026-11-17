@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Puzzle, Square, X, ChevronUp, ChevronDown } from 'lucide-react';
-import { AgentSamAbsBrowser, AbsBuildHome } from '@inneranimalmedia/agentsam-abs/react';
+import { ArrowUp, ExternalLink, Eye, MessageSquare, MousePointer2, Puzzle, Square } from 'lucide-react';
+import { AgentSamAbsBrowser } from '@inneranimalmedia/agentsam-abs/react';
 import type { AbsBrowserMode, BrowserTabState } from '@inneranimalmedia/agentsam-abs';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
 import { useWorkStore } from '@/lib/work/store';
@@ -13,10 +13,17 @@ import { useActiveCompanion } from '../../../agentsam/CompanionContext';
 import { companionStateAsset } from '../../../agentsam/companions';
 import '@inneranimalmedia/agentsam-abs/browser.css';
 import './browser-stage.css';
-import { extractRunnableHtml, buildBrowserInstruction } from './browser-build-result';
+import { extractRunnableHtml, buildBrowserInstruction, withBrowserAnnotationBridge } from './browser-build-result';
 import { recordBrowserVisit } from '@/lib/browser-history';
 
 interface BrowserNativeEvent { sessionId: string; url: string; title?: string | null }
+
+/** Only the user's request is shown; implementation instructions remain internal. */
+function browserRequestText(value: string) {
+  const prefix = 'Build a functioning interactive webpage in the AgentSam Browser for this request:';
+  if (!value.startsWith(prefix)) return value;
+  return value.slice(prefix.length).split(/\n\n(?:You are editing this current browser preview|Return exactly one complete)/)[0].trim();
+}
 
 /** The existing Side Stage and expanded Work panel both mount this same browser session. */
 export function BrowserStage({ tab }: { tab: SideTab }) {
@@ -31,11 +38,12 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
   const [mode, setMode] = useState<AbsBrowserMode>(tab.srcdoc ? 'build' : 'explore');
   const [reloadKey, setReloadKey] = useState(0);
   const [buildError, setBuildError] = useState('');
-  const [activityOpen, setActivityOpen] = useState(true);
-  const [buildRequested, setBuildRequested] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(Boolean(tab.srcdoc));
+  const [buildDraft, setBuildDraft] = useState('');
+  const [buildRequested, setBuildRequested] = useState(Boolean(tab.messages.length));
   const send = useWorkStore(state => state.send);
   const stop = useWorkStore(state => state.stop);
-  const latestReply = [...tab.messages].reverse().find(message => message.role === 'assistant')?.content || '';
+  const conversationOpen = mode === 'build' && !previewOpen;
   useEffect(() => { if (tab.url) setMode('explore'); }, [tab.url]);
   // Settled page visits feed the New tab's Suggested tiles (account history, best-effort).
   useEffect(() => {
@@ -110,16 +118,21 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
   async function runBrowserBuild(intent: 'create' | 'edit', prompt: string) {
     if (!prompt.trim() || busy) return;
     const request = intent === 'edit' ? 'Revise the current page: ' + prompt : prompt;
-    setMode('build'); setBuildRequested(true); setActivityOpen(true); setBuildError('');
+    setMode('build'); setBuildRequested(true); setPreviewOpen(false); setBuildError('');
     const source = useWorkStore.getState().sideTabs.find(item => item.id === tab.id)?.srcdoc;
     try {
       await send(tab.id, 'side', buildBrowserInstruction(request, source), { runMode: 'agent' });
       const latest = useWorkStore.getState().sideTabs.find(item => item.id === tab.id);
       const answer = [...(latest?.messages || [])].reverse().find(message => message.role === 'assistant' && message.content.trim());
       const html = answer && extractRunnableHtml(answer.content);
-      if (!html) { setBuildError('The agent responded, but no complete runnable HTML was produced. Review its response below and retry.'); return; }
+      if (!html) {
+        const reply = answer?.content?.trim() || '';
+        const codeLike = /```(?:html|htm)?\s|<!doctype\s+html|<html\b/i.test(reply);
+        setBuildError(codeLike ? 'AgentSam returned an incomplete page. Ask it to finish the HTML and retry.' : reply.slice(0, 500) || 'No complete preview was returned. Try again.');
+        return;
+      }
       useWorkStore.getState().setBrowserSrcdoc(tab.id, html, 'Built · ' + prompt.trim().slice(0,48));
-      setActivityOpen(false);
+      setPreviewOpen(true);
     } catch (error) { setBuildError(error instanceof Error ? error.message : 'Browser build failed.'); }
   }
 
@@ -127,7 +140,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
     <div className="as-work-browser-shell flex h-full min-h-0 flex-col" data-agentsam-resource={`browser:${tab.id}`}>
       <AgentSamAbsBrowser
         breadcrumb={{ sitename: tab.title, page: '' }}
-        isLoading={false}
+        isLoading={busy}
         hasPageContent={Boolean(tab.srcdoc)}
         tabs={absTabs}
         activeTabIndex={0}
@@ -136,6 +149,8 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         mode={mode}
         onModeChange={setMode}
         showBuildTabs={false}
+        showWindowbar={false}
+        showBuildToolbar={false}
         showThemeToggle={false}
         exploreHomeExtra={mascot}
         exploreUrl={tab.url}
@@ -155,32 +170,59 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         onNewTab={() => openSideTab('browser', { ephemeral: false })}
         onCloseTab={() => undefined}
         onSwitchTab={() => undefined}
-        statusSlot={<span className="as-work-browser-status">In-app browser</span>}
         toolbarActions={<div className="as-work-browser-actions">
+          {mode === 'build' && tab.srcdoc && <button type="button" className="as-browser-view-switch" onClick={() => setPreviewOpen(value => !value)} aria-label={previewOpen ? 'Open build conversation' : 'View generated page'} title={previewOpen ? 'Conversation' : 'Preview'}>{previewOpen ? <MessageSquare size={14} /> : <Eye size={14} />}<span>{previewOpen ? 'Chat' : 'Preview'}</span></button>}
+          <button type="button" className="as-browser-annotate" onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))} aria-label="Annotate browser page" title="Annotate browser page"><MousePointer2 size={14}/><span>Annotate</span></button>
           {native && <IconAction type="button" variant="ghost" label="Chrome extensions" hint="Open Chrome extensions in your separate browser profile" onClick={() => {
             void openAgentBrowser('chrome://extensions/').catch((error) => toast.error(String(error)));
           }}><Puzzle size={14} /></IconAction>}
           <IconAction type="button" variant="ghost" label="Open externally" hint="Open this website in a separate browser window" onClick={() => openExternally()} disabled={!tab.url}><ExternalLink size={14} /></IconAction>
         </div>}
       >
-        {tab.srcdoc ? <iframe title={tab.title} key={`${tab.id}-${reloadKey}`} srcDoc={tab.srcdoc}
-          sandbox="allow-forms allow-scripts" className="as-work-generated-preview" /> : (
-          <AbsBuildHome mascot={mascot} title="Work with AgentSam" subtitle="Prepare a request for AgentSam to build or revise an experience in your current workspace."
-            onCreatePage={(prompt) => { void runBrowserBuild('create',prompt); }} />
-        )}
+        <div className="as-browser-build-experience" data-view={previewOpen && tab.srcdoc ? 'preview' : 'conversation'}>
+          {previewOpen && tab.srcdoc ? (
+            <iframe title={tab.title} key={`${tab.id}-${reloadKey}`} srcDoc={withBrowserAnnotationBridge(tab.srcdoc)}
+              sandbox="allow-forms allow-scripts" className="as-work-generated-preview" />
+          ) : (
+            <div className="as-browser-conversation" role="region" aria-label="Browser build conversation">
+              {!buildRequested && tab.messages.length === 0 ? (
+                <div className="as-browser-conversation-welcome">
+                  {mascot}
+                  <h2>What should we build?</h2>
+                  <p>Describe a page or experience. AgentSam will build it in this browser tab.</p>
+                </div>
+              ) : (
+                <div className="as-browser-messages" aria-live="polite">
+                  {tab.messages.filter(message => message.role === 'user' || message.role === 'assistant').map(message => {
+                    const userMessage = message.role === 'user';
+                    const content = userMessage ? browserRequestText(message.content) : message.content;
+                    const generatedCode = !userMessage && /```(?:html|htm)?\s|<!doctype\s+html|<html\b/i.test(content);
+                    const rendered = generatedCode ? (tab.srcdoc ? 'Your page is ready to preview.' : '') : content.trim();
+                    if (!rendered) return null;
+                    return <div key={message.id} className={`as-browser-message ${userMessage ? 'is-user' : 'is-assistant'}`}>
+                      {!userMessage && <strong>AgentSam</strong>}
+                      <p>{rendered.length > 1000 && !userMessage ? `${rendered.slice(0, 950)}…` : rendered}</p>
+                    </div>;
+                  })}
+                  {busy && <div className="as-browser-building" role="status"><span className="as-browser-thinking-dot" />Working on it… <button type="button" onClick={() => stop(tab.id)} aria-label="Stop build"><Square size={12} /> Stop</button></div>}
+                  {buildError && !busy && <div className="as-browser-build-error" role="alert">{buildError}</div>}
+                  {tab.srcdoc && !busy && <button type="button" className="as-browser-show-preview" onClick={() => setPreviewOpen(true)}><Eye size={15} /> View page</button>}
+                </div>
+              )}
+            </div>
+          )}
+          {!(previewOpen && tab.srcdoc) && <form className="as-browser-chat-composer" onSubmit={(event) => {
+            event.preventDefault();
+            const next = buildDraft.trim();
+            if (next) { setBuildDraft(''); void runBrowserBuild(tab.srcdoc ? 'edit' : 'create', next); }
+          }}>
+            <textarea aria-label="Build with AgentSam" placeholder={tab.srcdoc ? 'Describe a change…' : 'Ask AgentSam to build anything…'}
+              rows={2} value={buildDraft} onChange={event => setBuildDraft(event.target.value)}
+              onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
+            <div className="as-browser-composer-bottom"><span>{tab.srcdoc ? 'Edit this page' : 'Build in this tab'}</span><button type="submit" aria-label="Send build request" disabled={busy || !buildDraft.trim()}><ArrowUp size={17} /></button></div>
+          </form>}
+        </div>
       </AgentSamAbsBrowser>
-      {mode === 'build' && (busy || buildRequested || buildError) && <section className="as-browser-build-activity" data-open={activityOpen} aria-label="Browser build activity">
-        <header><strong>{busy ? 'Building with AgentSam…' : buildError ? 'Build needs attention' : 'Build complete'}</strong>
-          {busy && <IconAction type="button" label="Stop browser build" onClick={() => stop(tab.id)}><Square size={13}/></IconAction>}
-          <button type="button" aria-label={activityOpen ? 'Collapse build details' : 'Expand build details'} onClick={() => setActivityOpen(value => !value)}>{activityOpen ? <ChevronDown size={14}/> : <ChevronUp size={14}/>}</button>
-        </header>
-        {activityOpen && <div className="as-browser-build-details">
-          {buildError && <p role="alert">{buildError}</p>}
-          {latestReply && <pre>{latestReply.slice(-3000)}</pre>}
-          {!latestReply && busy ? <p role="status">Executing this task through the AgentSam agent runtime for this browser session.</p> : null}
-          {!busy && tab.srcdoc && <button type="button" onClick={() => setActivityOpen(false)}>Return to preview</button>}
-        </div>}
-      </section>}
     </div>
   );
 }

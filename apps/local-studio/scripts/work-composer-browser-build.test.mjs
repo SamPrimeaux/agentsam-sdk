@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { extractRunnableHtml, buildBrowserInstruction } from '../frontend/src/components/workbench/browser-build-result.ts';
+import { extractRunnableHtml, buildBrowserInstruction, withBrowserAnnotationBridge } from '../frontend/src/components/workbench/browser-build-result.ts';
 const here=dirname(fileURLToPath(import.meta.url));
 const read=(path)=>readFileSync(resolve(here,path),'utf8');
 
@@ -53,7 +53,51 @@ test('Explore and Build welcome screens use the active companion via ABS slots',
  const build=read('../../../packages/agentsam-abs/src/react/AbsBuildHome.tsx');
  assert.match(source,/companionStateAsset\(companion, busy \? 'working' : 'idle'\)/);
  assert.match(source,/exploreHomeExtra=\{mascot\}/);
- assert.match(source,/<AbsBuildHome mascot=\{mascot\}/);
+ assert.match(source,/as-browser-conversation-welcome/);
+ assert.match(source,/as-browser-chat-composer/);
+ assert.match(source,/showWindowbar=\{false\}/);
+ assert.match(source,/showBuildToolbar=\{false\}/);
  assert.match(abs,/exploreHomeExtra\?: ReactNode/);
  assert.match(build,/mascot\?: ReactNode/);
+});
+
+test('Browser build uses one compact toolbar, inline conversation and preview rather than a floating activity console', () => {
+ const browser=read('../frontend/src/components/workbench/browser.tsx');
+ const abs=read('../../../packages/agentsam-abs/src/react/AgentSamAbsBrowser.tsx');
+ const css=read('../frontend/src/components/workbench/browser-stage.css');
+ assert.match(browser,/showWindowbar=\{false\}/);
+ assert.match(browser,/showBuildToolbar=\{false\}/);
+ assert.match(browser,/setPreviewOpen\(true\)/);
+ assert.match(browser,/as-browser-chat-composer/);
+ assert.doesNotMatch(browser,/<section className="as-browser-build-activity"/);
+ assert.match(abs,/aria-label="Back"/);
+ assert.match(abs,/aria-label="Forward"/);
+ assert.match(css,/border-radius:17px/);
+});
+
+test('Browser build completion handles no selected project without crashing the response', () => {
+ const source=read('../frontend/src/lib/work/store.ts');
+ const send=source.slice(source.indexOf('send: async (targetId, targetKind, text, context) =>'));
+ assert.doesNotMatch(send,/parentTitle \|\| project\.name/);
+ assert.match(send,/parentTitle \|\| project\?\.name \|\| taskSummary/);
+});
+
+test('Browser annotation bridges isolated preview and proxied page elements', () => {
+ const html=read('../frontend/src/components/workbench/browser-build-result.ts');
+ const helper=read('../../../packages/agentsam-workbench/src/agent/MiniAgentSam.tsx');
+ const css=read('../../../packages/agentsam-workbench/src/agent/mini-agentsam.css');
+ assert.match(html,/annotation-selection/);
+ assert.match(html,/annotation-mode/);
+ assert.match(helper,/event\.source/);
+ assert.match(helper,/frame\.getBoundingClientRect/);
+ assert.match(css,/iframe:is\(\.as-web-browser-frame/);
+});
+
+test('Sandboxed HTML preview retains the generated page and a cooperative annotation bridge', () => {
+ const page='<!doctype html><html><body><button>Save</button></body></html>';
+ const bridged=withBrowserAnnotationBridge(page);
+ assert.match(bridged,/annotation-selection/);
+ assert.match(bridged,/annotation-mode/);
+ assert.match(bridged,/<button>Save<\/button>/);
+ assert.match(bridged,/<\/html>$/);
 });
