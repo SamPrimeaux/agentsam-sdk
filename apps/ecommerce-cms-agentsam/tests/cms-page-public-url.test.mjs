@@ -24,10 +24,12 @@ test('site URL resolution fails closed for absent, unsafe or mismatched public d
 });
 test('page edit does not interpret the AgentSam admin origin as the public domain',()=>{
   const html=readFileSync(new URL('../frontend/static/page-edit.html',import.meta.url),'utf8');
+  const editor=readFileSync(new URL('../frontend/static/js/page-editor-review.js',import.meta.url),'utf8');
   assert.match(html,/cms-site-public-url\.js/);
-  assert.match(html,/window\.cmsPublicPageUrl\(pageData\?\.site, pageData\?\.route_path\)/);
-  assert.doesNotMatch(html,/viewButton\.href = publishedRoute/);
-  assert.doesNotMatch(html,/previewLink\.href = publishedRoute/);
+  assert.match(editor,/window\.cmsPublicPageUrl\(site,page\.route_path\)/);
+  assert.match(editor,/page\.status === "published" && publicUrl/);
+  assert.doesNotMatch(editor,/viewButton\.href = publishedRoute/);
+  assert.doesNotMatch(editor,/previewLink\.href = publishedRoute/);
 });
 
 test('App Store editor templates preview a concrete resource on the authorized storefront',()=>{
