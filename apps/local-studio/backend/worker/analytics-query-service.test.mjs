@@ -93,9 +93,29 @@ function fixture() {
 test("Local Studio analytics routes are login-first and account-scoped across D1, finance and tool usage", async () => {
   const { sqlite, env } = fixture();
   try {
+    let graphCalls = 0;
     env.__agentsamTestCfClient = {
       accountId: "cf-account-real",
-      async request(method, path) {
+      async request(method, path, options = {}) {
+        if (method === "POST" && path.endsWith("/graphql")) {
+          graphCalls += 1;
+          assert.equal(options.body.variables.accountTag, "cf-account-real");
+          return {
+            raw: {
+              data: {
+                viewer: {
+                  accounts: [{
+                    requests: [{ count: 190 }, { count: 10 }],
+                    byStatus: [
+                      { count: 190, dimensions: { edgeResponseStatus: 200 } },
+                      { count: 10, dimensions: { edgeResponseStatus: 500 } },
+                    ],
+                  }],
+                },
+              },
+            },
+          };
+        }
         assert.equal(method, "GET");
         if (path.endsWith("/basin-catalog")) return { result: { warehouses: [{ id: "warehouse-1", name: "agentsam-analytics" }] } };
         if (path.endsWith("/pipelines/v1/pipelines")) return { result: [{ id: "pipeline-1", name: "agentsam-activity", status: "running" }] };
@@ -112,7 +132,16 @@ test("Local Studio analytics routes are login-first and account-scoped across D1
     assert.ok(health.body.app.operations.some((row) => row.operation === "catalog.search"));
     assert.ok(health.body.app.operations.some((row) => row.operation === "agent.run"));
     assert.ok(!health.body.app.failures.some((row) => row.error_code === "should_not_leak"));
-    assert.equal(health.body.edge.available, false);
+    assert.equal(health.body.edge.available, true);
+    assert.equal(health.body.edge.requests, 200);
+    assert.equal(health.body.edge.errors, 10);
+    assert.equal(health.body.edge.errorRate, 5);
+    assert.equal(health.body.edge.byStatus.length, 2);
+    assert.equal(graphCalls, 1);
+    const longRange = await handleAnalyticsQueryRequest(new Request("https://localhost/api/analytics/health?range=90d"), env, "account_A");
+    assert.equal(longRange.body.edge.available, false);
+    assert.equal(longRange.body.edge.reason, "cloudflare_analytics_retention_limit");
+    assert.equal(graphCalls, 1);
     assert.equal(health.body.basin.enabled, true);
     assert.equal(health.body.basin.status, "connected");
     assert.equal(health.body.basin.warehouses[0].id, "warehouse-1");

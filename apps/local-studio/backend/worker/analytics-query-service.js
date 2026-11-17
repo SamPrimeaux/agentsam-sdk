@@ -66,8 +66,113 @@ async function discoverBasinForAccount(env, accountId) {
   }
 }
 
+
+async function queryCloudflareHttpAnalytics(env, ownerAccountId, rawRange) {
+  const unavailable = {
+    available: false,
+    source: "Cloudflare GraphQL Analytics",
+    requests: null,
+    errors: null,
+    errorRate: null,
+    rpm: null,
+    byStatus: [],
+  };
+  const now = Math.floor(Date.now() / 1000);
+  const range = String(rawRange || "30d").toLowerCase();
+  let windowSeconds;
+  if (range === "24h") windowSeconds = 24 * 60 * 60;
+  else if (range === "7d") windowSeconds = 7 * 24 * 60 * 60;
+  else if (range === "30d") windowSeconds = 30 * 24 * 60 * 60;
+  else if (range === "90d") windowSeconds = 90 * 24 * 60 * 60;
+  else if (range === "ytd") {
+    const date = new Date(now * 1000);
+    windowSeconds = now - Math.floor(Date.UTC(date.getUTCFullYear(), 0, 1) / 1000);
+  } else windowSeconds = 365 * 24 * 60 * 60;
+
+  // Cloudflare guarantees at least 31 days of adaptive HTTP analytics. Do not
+  // silently show a 31-day slice as though it represented a longer selection.
+  if (windowSeconds > 31 * 24 * 60 * 60) {
+    return { ...unavailable, reason: "cloudflare_analytics_retention_limit", maxDays: 31 };
+  }
+
+  try {
+    let client;
+    if (env?.__agentsamTestCfClient !== undefined) {
+      client = env.__agentsamTestCfClient;
+    } else {
+      const { createCloudflareApiClient } = await import("../../../../packages/connectors/cfoa/src/api-client.js");
+      client = await createCloudflareApiClient({
+        env,
+        ownerId: ownerAccountId,
+        authMode: "oauth",
+      });
+    }
+    if (!client?.accountId) {
+      return { ...unavailable, reason: "cloudflare_account_selection_required" };
+    }
+
+    const start = now - windowSeconds;
+    const startIso = new Date(start * 1000).toISOString();
+    const endIso = new Date(now * 1000).toISOString();
+    const query = [
+      "query AgentSamHttpHealth($accountTag: string, $start: Time, $end: Time) {",
+      "  viewer {",
+      "    accounts(filter: { accountTag: $accountTag }) {",
+      "      requests: httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: $start, datetime_leq: $end, requestSource: \"eyeball\" }) { count }",
+      "      byStatus: httpRequestsAdaptiveGroups(limit: 100, filter: { datetime_geq: $start, datetime_leq: $end, requestSource: \"eyeball\" }) { count dimensions { edgeResponseStatus } }",
+      "    }",
+      "  }",
+      "}",
+    ].join("\n");
+    const response = await client.request("POST", "https://api.cloudflare.com/client/v4/graphql", {
+      body: {
+        query,
+        variables: { accountTag: client.accountId, start: startIso, end: endIso },
+      },
+    });
+    const graph = response?.raw || response?.result || response;
+    if (Array.isArray(graph?.errors) && graph.errors.length) {
+      const message = String(graph.errors[0]?.message || "Cloudflare Analytics GraphQL query failed");
+      const error = new Error(message);
+      error.code = /permission|not authorized|unauthorized|authentication/i.test(message)
+        ? "cloudflare_permission_denied"
+        : "cloudflare_analytics_query_failed";
+      throw error;
+    }
+    const account = graph?.data?.viewer?.accounts?.[0];
+    if (!account) return { ...unavailable, reason: "cloudflare_analytics_no_account_data" };
+
+    const requestGroups = Array.isArray(account.requests) ? account.requests : [];
+    const statusGroups = Array.isArray(account.byStatus) ? account.byStatus : [];
+    const requests = requestGroups.reduce((sum, row) => sum + asNumber(row.count), 0);
+    const byStatus = statusGroups.map((row) => ({
+      status: String(row.dimensions?.edgeResponseStatus ?? "unknown"),
+      requests: asNumber(row.count),
+    })).sort((a, b) => String(a.status).localeCompare(String(b.status), undefined, { numeric: true }));
+    const errors = byStatus
+      .filter((row) => Number(row.status) >= 500 && Number(row.status) <= 599)
+      .reduce((sum, row) => sum + row.requests, 0);
+    const minutes = Math.max(1, windowSeconds / 60);
+
+    return {
+      available: true,
+      source: "Cloudflare GraphQL Analytics",
+      requests,
+      errors,
+      errorRate: requests > 0 ? (errors / requests) * 100 : 0,
+      rpm: requests / minutes,
+      byStatus,
+      windowStart: startIso,
+      windowEnd: endIso,
+    };
+  } catch (error) {
+    const code = String(error?.code || "cloudflare_analytics_unavailable");
+    return { ...unavailable, reason: code };
+  }
+}
+
 async function buildHealthDashboard(ctx, env, range) {
-  const [overview, performance, health, toolUsage, modelUsage, agentRuns, basin] = await Promise.all([
+  const [overview, performance, health, toolUsage, modelUsage, agentRuns, basin, edge] = await Promise.all([
     queryAgentSamAnalytics(ctx, "overview", range),
     queryAgentSamAnalytics(ctx, "performance", range),
     queryAgentSamAnalytics(ctx, "health", range),
@@ -75,6 +180,7 @@ async function buildHealthDashboard(ctx, env, range) {
     queryAgentSamAnalytics(ctx, "usage", range),
     queryAgentSamAgentRuns(ctx, range),
     discoverBasinForAccount(env, ctx.accountId),
+    queryCloudflareHttpAnalytics(env, ctx.accountId, range),
   ]);
 
   const eventTotals = health.summary || {};
@@ -168,16 +274,7 @@ async function buildHealthDashboard(ctx, env, range) {
     range: String(overview.range || range),
     generatedAt: String(health.generated_at || new Date().toISOString()),
     probeIntervalMinutes: null,
-    edge: {
-      available: false,
-      reason: basin.reason || "cloudflare_http_analytics_not_connected",
-      source: "Cloudflare HTTP Analytics",
-      requests: null,
-      errors: null,
-      errorRate: null,
-      rpm: null,
-      byStatus: [],
-    },
+    edge,
     app: {
       available: true,
       source: "Account-scoped D1 operation, tool-call, agent-run and model-usage ledgers",
@@ -198,7 +295,7 @@ async function buildHealthDashboard(ctx, env, range) {
     },
     basin,
     dataAvailability: {
-      cloudflare: false,
+      cloudflare: edge.available,
       operations: true,
       basin: basin.enabled && basin.status === "connected",
     },

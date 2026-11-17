@@ -118,11 +118,13 @@ export default function HealthPage({range}:PageProps){
   {error&&<div className="card" role="alert" style={{padding:14,color:"var(--bad)",marginBottom:14}}>{error}</div>}
   {data&&<div className="muted text-xs" style={{marginBottom:13}}>
     Sources: {data.edge.available?data.edge.source:
-      ["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required"].includes(data.edge.reason||"")
+      ["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required","cloudflare_permission_denied"].includes(data.edge.reason||"")
         ?"Cloudflare connection needs reauthorization in Settings → Integrations"
-        :"Cloudflare HTTP analytics unavailable"} · {data.app.available?data.app.source:"D1 analytics unavailable"}
-    {["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required"].includes(data.edge.reason||"")&&
-      <> · <a href="/api/connections/cloudflare/start?return_to=%2Fadmin%2Fanalytics%2Fhealth">Reconnect Cloudflare</a></>}
+        :data.edge.reason==="cloudflare_analytics_retention_limit"
+          ?"Cloudflare adaptive HTTP history is limited to 31 days; select 30d or less"
+          :"Cloudflare HTTP analytics unavailable"} · {data.app.available?data.app.source:"D1 analytics unavailable"}
+    {["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required","cloudflare_permission_denied"].includes(data.edge.reason||"")&&
+      <> · <a href="/api/connections/cloudflare/start?packs=analytics,data&return_to=%2Fadmin%2Fanalytics%2Fhealth">Reconnect Cloudflare</a></>}
     {" · "}D1 probe: {data.app.probes?.samples
       ? `${data.app.probes.passed}/${data.app.probes.samples} observed checks passed`
       : "No scheduled health-probe events are recorded"}
