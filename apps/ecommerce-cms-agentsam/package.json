@@ -32,6 +32,7 @@
     "prebuild": "npm run sync:theme-contract"
   },
   "dependencies": {
+    "@inneranimalmedia/agentsam-cms": "2.6.15",
     "@inneranimalmedia/agentsam-merch": "2.6.15",
     "@inneranimalmedia/revise-theme": "0.2.0",
     "@inneranimalmedia/section-library": "0.1.0",
@@ -90,7 +91,9 @@
     "./cms/seo": "./backend/cms/seo.mjs",
     "./admin/surface": "./frontend/admin.surface.json",
     "./apps/registry": "./apps/registry.json",
-    "./backend/routes": "./backend/lib/route-manifest.js"
+    "./backend/routes": "./backend/lib/route-manifest.js",
+    "./backend/admin/api": "./backend/admin/api.js",
+    "./backend/admin/api.js": "./backend/admin/api.js"
   },
   "publishConfig": {
     "access": "public",
