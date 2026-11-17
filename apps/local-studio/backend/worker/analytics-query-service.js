@@ -1,399 +1,310 @@
-const VALID_RANGES = new Set(["24h", "7d", "30d", "90d", "YTD", "All"]);
+import {
+  handleAnalyticsQueryRequest as handlePackageAnalyticsQueryRequest,
+  queryAgentSamAnalytics,
+  queryAgentSamToolUsage,
+  queryAgentSamAgentRuns,
+} from "@inneranimalmedia/agentsam-analytics/server";
+import { buildFinancialAnalyticsReadModel } from "@inneranimalmedia/financial-analytics/server";
 
-export function normalizeAnalyticsRange(value) {
-  return VALID_RANGES.has(value) ? value : "30d";
-}
-
-export function rangeStartUnix(range, nowUnix = Math.floor(Date.now() / 1000)) {
-  const normalized = normalizeAnalyticsRange(range);
-
-  if (normalized === "All") return 0;
-  if (normalized === "24h") return nowUnix - 86_400;
-  if (normalized === "7d") return nowUnix - 604_800;
-  if (normalized === "30d") return nowUnix - 2_592_000;
-  if (normalized === "90d") return nowUnix - 7_776_000;
-
-  const now = new Date(nowUnix * 1000);
-  return Math.floor(Date.UTC(now.getUTCFullYear(), 0, 1) / 1000);
-}
-
-const number = (value) => {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
+const PRIVATE_HEADERS = {
+  "cache-control": "private, no-store, max-age=0",
+  vary: "Cookie",
 };
+const asNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+const asNullableNumber = (value) => value == null ? null : asNumber(value);
 
-const nullableNumber = (value) => {
-  if (value == null) return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
-};
-
-const ratio = (numerator, denominator) =>
-  denominator > 0 ? numerator / denominator : null;
-
-async function all(env, sql, ...bindings) {
-  const result = await env.DB.prepare(sql).bind(...bindings).all();
-  return result?.results || [];
-}
-
-async function first(env, sql, ...bindings) {
-  return (await env.DB.prepare(sql).bind(...bindings).first()) || {};
-}
-
-async function summary(env, since) {
-  const row = await first(
-    env,
-    `
-      SELECT
-        COUNT(*) AS total_events,
-        SUM(CASE WHEN outcome IN ('passed','success','succeeded','completed','ok') THEN 1 ELSE 0 END) AS successful_events,
-        SUM(CASE WHEN outcome IN ('failed','error','blocked','timeout','cancelled') THEN 1 ELSE 0 END) AS failed_events,
-        COALESCE(SUM(cost_usd), 0) AS total_cost_usd,
-        AVG(duration_ms) AS average_duration_ms,
-        COALESCE(SUM(retry_count), 0) AS total_retries
-      FROM agentsam_analytics
-      WHERE created_at_unix >= ?
-    `,
-    since,
-  );
-
-  const total = number(row.total_events);
-  const successful = number(row.successful_events);
-
+function failureRow(row, domain = row.domain || "unknown", operation = row.operation || "unknown") {
   return {
-    total_events: total,
-    successful_events: successful,
-    failed_events: number(row.failed_events),
-    success_rate: ratio(successful, total),
-    total_cost_usd: number(row.total_cost_usd),
-    average_duration_ms: nullableNumber(row.average_duration_ms),
-    total_retries: number(row.total_retries),
+    domain: String(domain),
+    operation: String(operation),
+    error_code: row.error_code == null ? null : String(row.error_code),
+    status: String(row.status || "failed"),
+    occurred_at: asNumber(row.created_at_unix),
   };
 }
 
-async function operations(env, since, limit = 50) {
-  const rows = await all(
-    env,
-    `
-      SELECT
-        domain,
-        operation,
-        COUNT(*) AS samples,
-        SUM(CASE WHEN outcome IN ('passed','success','succeeded','completed','ok') THEN 1 ELSE 0 END) AS successes,
-        SUM(CASE WHEN outcome IN ('failed','error','blocked','timeout','cancelled') THEN 1 ELSE 0 END) AS failures,
-        AVG(duration_ms) AS average_duration_ms,
-        MAX(duration_ms) AS max_duration_ms,
-        AVG(queue_wait_ms) AS average_queue_wait_ms,
-        AVG(external_wait_ms) AS average_external_wait_ms,
-        AVG(active_model_ms) AS average_active_model_ms,
-        COALESCE(SUM(retry_count), 0) AS total_retries,
-        COALESCE(SUM(cost_usd), 0) AS total_cost_usd
-      FROM agentsam_analytics
-      WHERE created_at_unix >= ?
-      GROUP BY domain, operation
-      ORDER BY samples DESC, failures DESC
-      LIMIT ?
-    `,
-    since,
-    limit,
-  );
-
-  return rows.map((row) => {
-    const samples = number(row.samples);
-    const successes = number(row.successes);
-
-    return {
-      domain: String(row.domain || "unknown"),
-      operation: String(row.operation || "unknown"),
-      samples,
-      successes,
-      failures: number(row.failures),
-      success_rate: ratio(successes, samples),
-      average_duration_ms: nullableNumber(row.average_duration_ms),
-      max_duration_ms: nullableNumber(row.max_duration_ms),
-      average_queue_wait_ms: nullableNumber(row.average_queue_wait_ms),
-      average_external_wait_ms: nullableNumber(row.average_external_wait_ms),
-      average_active_model_ms: nullableNumber(row.average_active_model_ms),
-      total_retries: number(row.total_retries),
-      total_cost_usd: number(row.total_cost_usd),
-    };
-  });
+async function discoverBasinForAccount(env, accountId) {
+  const unavailable = {
+    enabled: false,
+    status: "not_connected",
+    source: "Cloudflare Basin API",
+    checkedAt: null,
+    warehouses: [],
+    pipelines: [],
+    catalogTables: [],
+  };
+  try {
+    const { discoverBasinResources } = await import("../../../../packages/connectors/cfoa/src/families/basin.js");
+    let client;
+    // Test injection only; production always resolves the grant from this account's OAuth row.
+    if (env?.__agentsamTestCfClient !== undefined) {
+      client = env.__agentsamTestCfClient;
+    } else {
+      const { createCloudflareApiClient } = await import("../../../../packages/connectors/cfoa/src/api-client.js");
+      client = await createCloudflareApiClient({
+        env,
+        ownerId: accountId,
+        authMode: "oauth",
+      });
+    }
+    if (!client?.accountId) {
+      return { ...unavailable, enabled: true, status: "permission_required", checkedAt: new Date().toISOString() };
+    }
+    return { ...unavailable, ...(await discoverBasinResources(client)) };
+  } catch (error) {
+    const code = String(error?.code || "cloudflare_authorization_required");
+    if ([
+      "cloudflare_account_selection_required",
+      "cloudflare_reconnect_required",
+      "cloudflare_authorization_required",
+      "cloudflare_permission_denied",
+      "cloudflare_permission_required",
+    ].includes(code)) {
+      return { ...unavailable, enabled: true, status: "permission_required", reason: code };
+    }
+    return { ...unavailable, reason: code };
+  }
 }
 
-async function timeline(env, since, range) {
-  const bucket =
-    range === "24h"
-      ? "strftime('%Y-%m-%dT%H:00:00Z', created_at_unix, 'unixepoch')"
-      : "strftime('%Y-%m-%d', created_at_unix, 'unixepoch')";
-
-  const rows = await all(
-    env,
-    `
-      SELECT
-        ${bucket} AS bucket,
-        COUNT(*) AS events,
-        SUM(CASE WHEN outcome IN ('failed','error','blocked','timeout','cancelled') THEN 1 ELSE 0 END) AS failures,
-        COALESCE(SUM(cost_usd), 0) AS cost_usd,
-        COALESCE(SUM(duration_ms), 0) AS duration_ms
-      FROM agentsam_analytics
-      WHERE created_at_unix >= ?
-      GROUP BY bucket
-      ORDER BY bucket ASC
-      LIMIT 500
-    `,
-    since,
-  );
-
-  return rows.map((row) => ({
-    bucket: String(row.bucket),
-    events: number(row.events),
-    failures: number(row.failures),
-    cost_usd: number(row.cost_usd),
-    duration_ms: number(row.duration_ms),
-  }));
-}
-
-async function overview(env, range, since) {
-  const [totals, points, top] = await Promise.all([
-    summary(env, since),
-    timeline(env, since, range),
-    operations(env, since, 20),
+async function buildHealthDashboard(ctx, env, range) {
+  const [overview, performance, health, toolUsage, modelUsage, agentRuns, basin] = await Promise.all([
+    queryAgentSamAnalytics(ctx, "overview", range),
+    queryAgentSamAnalytics(ctx, "performance", range),
+    queryAgentSamAnalytics(ctx, "health", range),
+    queryAgentSamToolUsage(ctx, range),
+    queryAgentSamAnalytics(ctx, "usage", range),
+    queryAgentSamAgentRuns(ctx, range),
+    discoverBasinForAccount(env, ctx.accountId),
   ]);
 
-  return {
-    range,
-    generated_at: new Date().toISOString(),
-    summary: totals,
-    timeline: points,
-    top_operations: top,
-  };
-}
+  const eventTotals = health.summary || {};
+  const toolTotals = toolUsage.totals || {};
+  const runTotals = agentRuns.totals || {};
+  const eventCount = asNumber(eventTotals.total_events);
+  const toolCallCount = asNumber(toolTotals.calls);
+  const runCount = asNumber(runTotals.runs);
+  const totalEvents = eventCount + toolCallCount + runCount;
+  const totalFailures = asNumber(eventTotals.failed_events)
+    + asNumber(toolTotals.failures)
+    + asNumber(runTotals.failures);
+  const totalSuccesses = asNumber(eventTotals.successful_events)
+    + asNumber(toolTotals.successes)
+    + asNumber(runTotals.successes);
+  const eventDuration = asNullableNumber(eventTotals.average_duration_ms);
+  const toolDuration = asNullableNumber(toolTotals.average_duration_ms);
+  const runDuration = asNullableNumber(runTotals.average_latency_ms);
+  const weightedDuration = totalEvents > 0
+    ? (
+      (eventDuration || 0) * eventCount
+      + (toolDuration || 0) * toolCallCount
+      + (runDuration || 0) * runCount
+    ) / totalEvents
+    : null;
 
-async function usage(env, range, since) {
-  const [totals, rows] = await Promise.all([
-    first(
-      env,
-      `
-        SELECT
-          COALESCE(SUM(input_tokens), 0) AS input_tokens,
-          COALESCE(SUM(cached_input_tokens), 0) AS cached_input_tokens,
-          COALESCE(SUM(output_tokens), 0) AS output_tokens,
-          COALESCE(SUM(reasoning_tokens), 0) AS reasoning_tokens,
-          COALESCE(SUM(cost_usd), 0) AS total_cost_usd
-        FROM agentsam_analytics
-        WHERE created_at_unix >= ?
-      `,
-      since,
-    ),
-    all(
-      env,
-      `
-        SELECT
-          provider,
-          model_key,
-          COUNT(*) AS samples,
-          COALESCE(SUM(input_tokens), 0) AS input_tokens,
-          COALESCE(SUM(cached_input_tokens), 0) AS cached_input_tokens,
-          COALESCE(SUM(output_tokens), 0) AS output_tokens,
-          COALESCE(SUM(reasoning_tokens), 0) AS reasoning_tokens,
-          COALESCE(SUM(cost_usd), 0) AS total_cost_usd
-        FROM agentsam_analytics
-        WHERE created_at_unix >= ?
-          AND (
-            provider IS NOT NULL OR
-            model_key IS NOT NULL OR
-            input_tokens IS NOT NULL OR
-            output_tokens IS NOT NULL OR
-            cost_usd IS NOT NULL
-          )
-        GROUP BY provider, model_key
-        ORDER BY total_cost_usd DESC, samples DESC
-        LIMIT 100
-      `,
-      since,
-    ),
-  ]);
-
-  return {
-    range,
-    generated_at: new Date().toISOString(),
-    totals: {
-      input_tokens: number(totals.input_tokens),
-      cached_input_tokens: number(totals.cached_input_tokens),
-      output_tokens: number(totals.output_tokens),
-      reasoning_tokens: number(totals.reasoning_tokens),
-      total_cost_usd: number(totals.total_cost_usd),
-    },
-    by_provider_model: rows.map((row) => ({
-      provider: row.provider == null ? null : String(row.provider),
-      model_key: row.model_key == null ? null : String(row.model_key),
-      samples: number(row.samples),
-      input_tokens: number(row.input_tokens),
-      cached_input_tokens: number(row.cached_input_tokens),
-      output_tokens: number(row.output_tokens),
-      reasoning_tokens: number(row.reasoning_tokens),
-      total_cost_usd: number(row.total_cost_usd),
-    })),
-  };
-}
-
-async function performance(env, range, since) {
-  return {
-    range,
-    generated_at: new Date().toISOString(),
-    operations: await operations(env, since, 100),
-  };
-}
-
-async function health(env, range, since) {
-  const [totals, clusters, recent] = await Promise.all([
-    summary(env, since),
-    all(
-      env,
-      `
-        SELECT
-          domain,
-          operation,
-          error_code,
-          failure_origin,
-          COUNT(*) AS failures
-        FROM agentsam_analytics
-        WHERE created_at_unix >= ?
-          AND outcome IN ('failed','error','blocked','timeout','cancelled')
-        GROUP BY domain, operation, error_code, failure_origin
-        ORDER BY failures DESC
-        LIMIT 50
-      `,
-      since,
-    ),
-    all(
-      env,
-      `
-        SELECT
-          id,
-          domain,
-          operation,
-          error_code,
-          failure_origin,
-          artifact_ref,
-          created_at_unix
-        FROM agentsam_analytics
-        WHERE created_at_unix >= ?
-          AND outcome IN ('failed','error','blocked','timeout','cancelled')
-        ORDER BY created_at_unix DESC
-        LIMIT 50
-      `,
-      since,
-    ),
-  ]);
-
-  return {
-    range,
-    generated_at: new Date().toISOString(),
-    summary: totals,
-    failure_clusters: clusters.map((row) => ({
-      domain: String(row.domain || "unknown"),
-      operation: String(row.operation || "unknown"),
-      error_code: row.error_code == null ? null : String(row.error_code),
-      failure_origin:
-        row.failure_origin == null ? null : String(row.failure_origin),
-      failures: number(row.failures),
-    })),
-    recent_failures: recent.map((row) => ({
-      id: String(row.id),
-      domain: String(row.domain || "unknown"),
-      operation: String(row.operation || "unknown"),
-      error_code: row.error_code == null ? null : String(row.error_code),
-      failure_origin:
-        row.failure_origin == null ? null : String(row.failure_origin),
-      artifact_ref:
-        row.artifact_ref == null ? null : String(row.artifact_ref),
-      created_at_unix: number(row.created_at_unix),
-    })),
-  };
-}
-
-async function scores(env, range, since) {
-  const rows = await all(
-    env,
-    `
-      SELECT
-        score_family,
-        weights_version,
-        COUNT(*) AS samples,
-        AVG(score_value) AS average_score,
-        MIN(score_value) AS min_score,
-        MAX(score_value) AS max_score
-      FROM agentsam_analytics
-      WHERE created_at_unix >= ?
-        AND score_family IS NOT NULL
-        AND score_value IS NOT NULL
-        AND weights_version IS NOT NULL
-      GROUP BY score_family, weights_version
-      ORDER BY score_family ASC, weights_version DESC
-      LIMIT 100
-    `,
-    since,
-  );
-
-  return {
-    range,
-    generated_at: new Date().toISOString(),
-    families: rows.map((row) => ({
-      score_family: String(row.score_family),
-      weights_version: String(row.weights_version),
-      samples: number(row.samples),
-      average_score: number(row.average_score),
-      min_score: number(row.min_score),
-      max_score: number(row.max_score),
-    })),
-  };
-}
-
-export async function queryAgentSamAnalytics(env, section, rawRange) {
-  if (!env?.DB || typeof env.DB.prepare !== "function") {
-    throw new TypeError("analytics DB binding unavailable");
+  const timeline = new Map();
+  for (const point of overview.timeline || []) {
+    timeline.set(String(point.bucket), {
+      bucket: String(point.bucket),
+      events: asNumber(point.events),
+      failures: asNumber(point.failures),
+    });
+  }
+  for (const point of toolUsage.by_day || []) {
+    const key = String(point.bucket);
+    const current = timeline.get(key) || { bucket: key, events: 0, failures: 0 };
+    current.events += asNumber(point.calls);
+    current.failures += asNumber(point.failures);
+    timeline.set(key, current);
+  }
+  for (const point of agentRuns.by_day || []) {
+    const key = String(point.bucket);
+    const current = timeline.get(key) || { bucket: key, events: 0, failures: 0 };
+    current.events += asNumber(point.runs);
+    current.failures += asNumber(point.failures);
+    timeline.set(key, current);
   }
 
-  const range = normalizeAnalyticsRange(rawRange);
-  const since = rangeStartUnix(range);
+  const eventOperations = (performance.operations || []).map((row) => ({
+    domain: String(row.domain || "unknown"),
+    operation: String(row.operation || "unknown"),
+    samples: asNumber(row.samples),
+    failures: asNumber(row.failures),
+    duration_ms: asNullableNumber(row.average_duration_ms),
+  }));
+  const toolOperations = (toolUsage.by_tool || []).map((row) => ({
+    domain: "tools",
+    operation: String(row.tool_key || "unknown"),
+    samples: asNumber(row.calls),
+    failures: asNumber(row.failures),
+    duration_ms: asNullableNumber(row.average_duration_ms),
+  }));
+  const runOperations = runCount > 0 ? [{
+    domain: "agents",
+    operation: "agent.run",
+    samples: runCount,
+    failures: asNumber(runTotals.failures),
+    duration_ms: runDuration,
+  }] : [];
 
-  if (section === "overview") return overview(env, range, since);
-  if (section === "usage") return usage(env, range, since);
-  if (section === "performance") return performance(env, range, since);
-  if (section === "health") return health(env, range, since);
-  if (section === "scores") return scores(env, range, since);
+  const eventFailures = (health.recent_failures || []).map((row) => failureRow(row));
+  const toolFailures = (toolUsage.recent_failures || []).map((row) => failureRow(row, "tools", row.tool_key));
+  const runFailures = (agentRuns.recent_failures || []).map((row) =>
+    failureRow(row, "agents", row.mode || "agent.run"),
+  );
+  const failures = [...eventFailures, ...toolFailures, ...runFailures]
+    .sort((a, b) => b.occurred_at - a.occurred_at)
+    .slice(0, 50);
+  const repository = [...eventFailures, ...toolFailures].filter((row) =>
+    /repository|github|deployment|release|ci/i.test(String(row.domain) + " " + String(row.operation)),
+  );
 
-  const error = new Error("analytics_section_not_found");
-  error.status = 404;
-  throw error;
+  const usageHasSamples = (modelUsage.by_provider_model || []).length > 0;
+  const modelCost = usageHasSamples
+    ? asNumber(modelUsage.totals?.total_cost_usd)
+    : eventCount > 0 ? asNumber(eventTotals.total_cost_usd) : null;
+
+  return {
+    ok: true,
+    range: String(overview.range || range),
+    generatedAt: String(health.generated_at || new Date().toISOString()),
+    probeIntervalMinutes: null,
+    edge: {
+      available: false,
+      reason: basin.reason || "cloudflare_http_analytics_not_connected",
+      source: "Cloudflare HTTP Analytics",
+      requests: null,
+      errors: null,
+      errorRate: null,
+      rpm: null,
+      byStatus: [],
+    },
+    app: {
+      available: true,
+      source: "Account-scoped D1 operation, tool-call, agent-run and model-usage ledgers",
+      totals: {
+        events: totalEvents,
+        failures: totalFailures,
+        successes: totalSuccesses,
+        costUsd: totalEvents > 0 ? modelCost : null,
+        avgDurationMs: weightedDuration,
+      },
+      timeline: [...timeline.values()].sort((a, b) => a.bucket.localeCompare(b.bucket)),
+      operations: [...eventOperations, ...toolOperations, ...runOperations]
+        .sort((a, b) => b.samples - a.samples)
+        .slice(0, 50),
+      failures,
+      repository,
+      probes: null,
+    },
+    basin,
+    dataAvailability: {
+      cloudflare: false,
+      operations: true,
+      basin: basin.enabled && basin.status === "connected",
+    },
+  };
 }
 
-export async function handleAnalyticsQueryRequest(request, env) {
+/**
+ * Local Studio host adapter. Account identity is always injected from the
+ * authenticated session; request parameters and bridge keys cannot choose it.
+ */
+export async function handleAnalyticsQueryRequest(request, env, accountId) {
+  if (!accountId || typeof accountId !== "string" || !accountId.trim()) {
+    return { status: 401, headers: PRIVATE_HEADERS, body: { ok: false, error: "authenticated_account_required" } };
+  }
+  if (!env?.DB || typeof env.DB.prepare !== "function") {
+    return { status: 503, headers: PRIVATE_HEADERS, body: { ok: false, error: "analytics_db_unavailable" } };
+  }
   if (request.method !== "GET") {
-    return {
-      status: 405,
-      headers: { allow: "GET" },
-      body: { ok: false, error: "method_not_allowed" },
-    };
+    return { status: 405, headers: { ...PRIVATE_HEADERS, allow: "GET" }, body: { ok: false, error: "method_not_allowed" } };
   }
 
   const url = new URL(request.url);
-  const section = url.pathname.split("/").filter(Boolean).pop();
+  const ctx = { db: env.DB, accountId };
   const range = url.searchParams.get("range") || "30d";
 
   try {
+    if (url.pathname === "/api/analytics/financial") {
+      return {
+        status: 200,
+        headers: PRIVATE_HEADERS,
+        body: await buildFinancialAnalyticsReadModel(ctx, range),
+      };
+    }
+    if (url.pathname === "/api/analytics/health") {
+      return {
+        status: 200,
+        headers: PRIVATE_HEADERS,
+        body: await buildHealthDashboard(ctx, env, range),
+      };
+    }
+    if (url.pathname === "/api/analytics/logs/recent") {
+      const requestedWindow = Number.parseInt(url.searchParams.get("window") || "180", 10);
+      const windowMinutes = Number.isFinite(requestedWindow)
+        ? Math.max(1, Math.min(1440, requestedWindow))
+        : 180;
+      const since = Math.floor(Date.now() / 1000) - windowMinutes * 60;
+      const result = await env.DB.prepare(
+        "SELECT id, tool_key, status, error_code, failure_origin, duration_ms, created_at_unix " +
+        "FROM agentsam_tool_call_log WHERE account_id = ? AND created_at_unix >= ? " +
+        "ORDER BY created_at_unix DESC LIMIT 240",
+      ).bind(accountId, since).all();
+      const logs = (result?.results || []).map((row) => {
+        const status = String(row.status || "failed");
+        const toolKey = String(row.tool_key || "unknown");
+        const ok = status === "success";
+        return {
+          id: String(row.id),
+          source: "agentsam",
+          service: "AgentSam Tool Runtime",
+          timestamp: new Date(asNumber(row.created_at_unix) * 1000).toISOString(),
+          severity: ok ? "info" : "error",
+          message: toolKey + " " + status,
+          requestId: String(row.id),
+          rayId: "",
+          route: "tool:" + toolKey,
+          status: null,
+          durationMs: asNullableNumber(row.duration_ms),
+          errorCode: row.error_code == null ? "" : String(row.error_code),
+          provider: "",
+          model: "",
+          metadata: {
+            status,
+            failure_origin: row.failure_origin == null ? "" : String(row.failure_origin),
+          },
+        };
+      });
+      return {
+        status: 200,
+        headers: PRIVATE_HEADERS,
+        body: {
+          ok: true,
+          source: "AgentSam D1 tool-call ledger",
+          generatedAt: new Date().toISOString(),
+          logs,
+        },
+      };
+    }
+    if (url.pathname === "/api/analytics/tool-usage") {
+      return {
+        status: 200,
+        headers: PRIVATE_HEADERS,
+        body: await queryAgentSamToolUsage(ctx, range),
+      };
+    }
+
+    const result = await handlePackageAnalyticsQueryRequest(request, ctx);
     return {
-      status: 200,
-      body: await queryAgentSamAnalytics(env, section, range),
+      ...result,
+      headers: { ...PRIVATE_HEADERS, ...(result.headers || {}) },
     };
   } catch (error) {
+    const status = Number(error?.status || 500);
     return {
-      status: Number(error?.status || 500),
-      body: {
-        ok: false,
-        error: String(error?.message || error).slice(0, 200),
-      },
+      status: status >= 400 && status <= 599 ? status : 500,
+      headers: PRIVATE_HEADERS,
+      body: { ok: false, error: String(error?.message || error).slice(0, 200) },
     };
   }
 }

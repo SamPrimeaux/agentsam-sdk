@@ -311,6 +311,8 @@ export async function recordAiPluginModelDiscovery(db, value = {}) {
 }
 
 export async function recordToolCall(db, value = {}) {
+  const accountId = clean(value.accountId);
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(accountId)) throw new TypeError('authenticated_account_required');
   const callId = clean(value.id) || id('atcl');
   await runMutation(db, `
     INSERT INTO agentsam_tool_call_log (
@@ -319,7 +321,7 @@ export async function recordToolCall(db, value = {}) {
       cache_hit, external_execution, result_source, created_at_unix, cache_eligible
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch(), ?)
   `, [
-    callId, value.accountId, value.agentRunId || null, value.conversationId || null, value.callIndex ?? null,
+    callId, accountId, value.agentRunId || null, value.conversationId || null, value.callIndex ?? null,
     value.toolKey, value.status, Math.max(0, Number(value.durationMs || 0)), value.errorCode || '', value.failureOrigin || null,
     Math.max(0, Number(value.costUsd || 0)), Math.max(0, Number(value.inputTokens || 0)), Math.max(0, Number(value.outputTokens || 0)),
     value.costBasis || 'unknown', value.sourceClient || 'agentsam-sdk', value.cacheHit ? 1 : 0, value.externalExecution === false ? 0 : 1,

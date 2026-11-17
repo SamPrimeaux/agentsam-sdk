@@ -196,46 +196,30 @@ async function overview(ctx: AnalyticsQueryContext, range: string, since: number
 }
 
 async function usage(ctx: AnalyticsQueryContext, range: string, since: number) {
+  // Model usage has its own account-scoped ledger. agentsam_analytics is an
+  // operational fact stream and must not be treated as the source of truth for
+  // token and model-cost totals.
   const [totals, rows] = await Promise.all([
     first(
       ctx,
-      `
-        SELECT
-          COALESCE(SUM(input_tokens), 0) AS input_tokens,
-          COALESCE(SUM(cached_input_tokens), 0) AS cached_input_tokens,
-          COALESCE(SUM(output_tokens), 0) AS output_tokens,
-          COALESCE(SUM(reasoning_tokens), 0) AS reasoning_tokens,
-          COALESCE(SUM(cost_usd), 0) AS total_cost_usd
-        FROM agentsam_analytics
-        WHERE account_id = ? AND created_at_unix >= ?
-      `,
+      "SELECT COALESCE(SUM(input_tokens),0) AS input_tokens, " +
+        "COALESCE(SUM(cached_input_tokens),0) AS cached_input_tokens, " +
+        "COALESCE(SUM(output_tokens),0) AS output_tokens, " +
+        "COALESCE(SUM(reasoning_tokens),0) AS reasoning_tokens, " +
+        "COALESCE(SUM(cost_usd),0) AS total_cost_usd " +
+        "FROM agentsam_usage_events WHERE account_id = ? AND created_at_unix >= ?",
       since,
     ),
     all(
       ctx,
-      `
-        SELECT
-          provider,
-          model_key,
-          COUNT(*) AS samples,
-          COALESCE(SUM(input_tokens), 0) AS input_tokens,
-          COALESCE(SUM(cached_input_tokens), 0) AS cached_input_tokens,
-          COALESCE(SUM(output_tokens), 0) AS output_tokens,
-          COALESCE(SUM(reasoning_tokens), 0) AS reasoning_tokens,
-          COALESCE(SUM(cost_usd), 0) AS total_cost_usd
-        FROM agentsam_analytics
-        WHERE account_id = ? AND created_at_unix >= ?
-          AND (
-            provider IS NOT NULL OR
-            model_key IS NOT NULL OR
-            input_tokens IS NOT NULL OR
-            output_tokens IS NOT NULL OR
-            cost_usd IS NOT NULL
-          )
-        GROUP BY provider, model_key
-        ORDER BY total_cost_usd DESC, samples DESC
-        LIMIT 100
-      `,
+      "SELECT provider, model_key, COUNT(*) AS samples, " +
+        "COALESCE(SUM(input_tokens),0) AS input_tokens, " +
+        "COALESCE(SUM(cached_input_tokens),0) AS cached_input_tokens, " +
+        "COALESCE(SUM(output_tokens),0) AS output_tokens, " +
+        "COALESCE(SUM(reasoning_tokens),0) AS reasoning_tokens, " +
+        "COALESCE(SUM(cost_usd),0) AS total_cost_usd " +
+        "FROM agentsam_usage_events WHERE account_id = ? AND created_at_unix >= ? " +
+        "GROUP BY provider, model_key ORDER BY total_cost_usd DESC, samples DESC LIMIT 100",
       since,
     ),
   ]);
@@ -372,6 +356,192 @@ async function scores(ctx: AnalyticsQueryContext, range: string, since: number) 
       average_score: number(row.average_score),
       min_score: number(row.min_score),
       max_score: number(row.max_score),
+    })),
+  };
+}
+
+/** Account-scoped tool execution receipts from the canonical D1 tool-call ledger. */
+export async function queryAgentSamToolUsage(ctx: AnalyticsQueryContext, rawRange: unknown) {
+  if (!ctx?.db || typeof ctx.db.prepare !== "function") {
+    throw new TypeError("analytics DB binding unavailable");
+  }
+  if (!ctx?.accountId || typeof ctx.accountId !== "string" || !ctx.accountId.trim()) {
+    throw Object.assign(new Error("authenticated_account_required"), { status: 401 });
+  }
+
+  const range = normalizeAnalyticsRange(rawRange);
+  const since = rangeStartUnix(range);
+  const bucket = range === "24h"
+    ? "strftime('%Y-%m-%dT%H:00:00Z', created_at_unix, 'unixepoch')"
+    : "strftime('%Y-%m-%d', created_at_unix, 'unixepoch')";
+
+  const [summaryRows, toolRows, dayRows, failureRows] = await Promise.all([
+    all(ctx, `
+      SELECT
+        COUNT(*) AS calls,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS successes,
+        SUM(CASE WHEN status != 'success' THEN 1 ELSE 0 END) AS failures,
+        AVG(duration_ms) AS average_duration_ms,
+        COALESCE(SUM(CASE WHEN cost_basis IN ('api_metered','external_subscription') THEN cost_usd ELSE 0 END), 0) AS recorded_cost_usd,
+        SUM(CASE WHEN cost_basis IN ('api_metered','external_subscription') AND cost_usd > 0 THEN 1 ELSE 0 END) AS priced_calls,
+        MIN(created_at_unix) AS first_event_unix,
+        MAX(created_at_unix) AS last_event_unix
+      FROM agentsam_tool_call_log
+      WHERE account_id = ? AND created_at_unix >= ?
+    `, since),
+    all(ctx, `
+      SELECT
+        tool_key,
+        COUNT(*) AS calls,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS successes,
+        SUM(CASE WHEN status != 'success' THEN 1 ELSE 0 END) AS failures,
+        AVG(duration_ms) AS average_duration_ms,
+        COALESCE(SUM(CASE WHEN cost_basis IN ('api_metered','external_subscription') THEN cost_usd ELSE 0 END), 0) AS recorded_cost_usd,
+        SUM(CASE WHEN cost_basis IN ('api_metered','external_subscription') AND cost_usd > 0 THEN 1 ELSE 0 END) AS priced_calls
+      FROM agentsam_tool_call_log
+      WHERE account_id = ? AND created_at_unix >= ?
+      GROUP BY tool_key
+      ORDER BY calls DESC, tool_key ASC
+      LIMIT 100
+    `, since),
+    all(ctx, `
+      SELECT
+        ${bucket} AS bucket,
+        COUNT(*) AS calls,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS successes,
+        SUM(CASE WHEN status != 'success' THEN 1 ELSE 0 END) AS failures,
+        COALESCE(SUM(CASE WHEN cost_basis IN ('api_metered','external_subscription') THEN cost_usd ELSE 0 END), 0) AS recorded_cost_usd
+      FROM agentsam_tool_call_log
+      WHERE account_id = ? AND created_at_unix >= ?
+      GROUP BY bucket
+      ORDER BY bucket ASC
+      LIMIT 500
+    `, since),
+    all(ctx, `
+      SELECT id, tool_key, status, error_code, failure_origin, duration_ms, cost_usd, created_at_unix
+      FROM agentsam_tool_call_log
+      WHERE account_id = ? AND created_at_unix >= ? AND status != 'success'
+      ORDER BY created_at_unix DESC
+      LIMIT 50
+    `, since),
+  ]);
+
+  const summaryRow = summaryRows[0] || {};
+  return {
+    schema: "agentsam.tool-usage.v2",
+    range,
+    scope: "authenticated_account",
+    totals: {
+      calls: number(summaryRow.calls),
+      successes: number(summaryRow.successes),
+      failures: number(summaryRow.failures),
+      average_duration_ms: nullableNumber(summaryRow.average_duration_ms),
+      recorded_cost_usd: number(summaryRow.recorded_cost_usd),
+      priced_calls: number(summaryRow.priced_calls),
+      first_event_unix: nullableNumber(summaryRow.first_event_unix),
+      last_event_unix: nullableNumber(summaryRow.last_event_unix),
+    },
+    coverage: {
+      measured_calls: number(summaryRow.priced_calls),
+      unpriced_calls: Math.max(0, number(summaryRow.calls) - number(summaryRow.priced_calls)),
+    },
+    by_tool: toolRows.map((row) => ({
+      tool_key: String(row.tool_key),
+      calls: number(row.calls),
+      successes: number(row.successes),
+      failures: number(row.failures),
+      average_duration_ms: nullableNumber(row.average_duration_ms),
+      recorded_cost_usd: number(row.recorded_cost_usd),
+      priced_calls: number(row.priced_calls),
+    })),
+    by_day: dayRows.map((row) => ({
+      bucket: String(row.bucket),
+      calls: number(row.calls),
+      successes: number(row.successes),
+      failures: number(row.failures),
+      recorded_cost_usd: number(row.recorded_cost_usd),
+    })),
+    recent_failures: failureRows.map((row) => ({
+      id: String(row.id),
+      tool_key: String(row.tool_key),
+      status: String(row.status),
+      error_code: row.error_code == null ? "" : String(row.error_code),
+      failure_origin: row.failure_origin == null ? null : String(row.failure_origin),
+      duration_ms: nullableNumber(row.duration_ms),
+      cost_usd: number(row.cost_usd),
+      created_at_unix: number(row.created_at_unix),
+    })),
+  };
+}
+
+
+/** Account-scoped agent-run receipts from the canonical D1 run ledger. */
+export async function queryAgentSamAgentRuns(ctx: AnalyticsQueryContext, rawRange: unknown) {
+  if (!ctx?.db || typeof ctx.db.prepare !== "function") {
+    throw new TypeError("analytics DB binding unavailable");
+  }
+  if (!ctx?.accountId || typeof ctx.accountId !== "string" || !ctx.accountId.trim()) {
+    throw Object.assign(new Error("authenticated_account_required"), { status: 401 });
+  }
+
+  const range = normalizeAnalyticsRange(rawRange);
+  const since = rangeStartUnix(range);
+  const bucket = range === "24h"
+    ? "strftime('%Y-%m-%dT%H:00:00Z', created_at_unix, 'unixepoch')"
+    : "strftime('%Y-%m-%d', created_at_unix, 'unixepoch')";
+  const [summaryRows, dayRows, failureRows] = await Promise.all([
+    all(ctx, "SELECT COUNT(*) AS runs, " +
+      "SUM(CASE WHEN status IN ('completed','success','succeeded') THEN 1 ELSE 0 END) AS successes, " +
+      "SUM(CASE WHEN status IN ('failed','error','timeout','cancelled') THEN 1 ELSE 0 END) AS failures, " +
+      "SUM(CASE WHEN status NOT IN ('completed','success','succeeded','failed','error','timeout','cancelled') THEN 1 ELSE 0 END) AS in_progress, " +
+      "COALESCE(SUM(model_call_count),0) AS model_calls, COALESCE(SUM(tool_call_count),0) AS tool_calls, " +
+      "COALESCE(SUM(input_tokens),0) AS input_tokens, COALESCE(SUM(output_tokens),0) AS output_tokens, " +
+      "COALESCE(SUM(cost_usd),0) AS cost_usd, AVG(latency_ms) AS average_latency_ms, " +
+      "MIN(created_at_unix) AS first_run_unix, MAX(updated_at_unix) AS last_run_unix " +
+      "FROM agentsam_agent_run WHERE account_id = ? AND created_at_unix >= ?", since),
+    all(ctx, "SELECT " + bucket + " AS bucket, COUNT(*) AS runs, " +
+      "SUM(CASE WHEN status IN ('completed','success','succeeded') THEN 1 ELSE 0 END) AS successes, " +
+      "SUM(CASE WHEN status IN ('failed','error','timeout','cancelled') THEN 1 ELSE 0 END) AS failures " +
+      "FROM agentsam_agent_run WHERE account_id = ? AND created_at_unix >= ? " +
+      "GROUP BY bucket ORDER BY bucket ASC LIMIT 500", since),
+    all(ctx, "SELECT id, mode, surface, status, error_code, latency_ms, created_at_unix " +
+      "FROM agentsam_agent_run WHERE account_id = ? AND created_at_unix >= ? " +
+      "AND status IN ('failed','error','timeout','cancelled') " +
+      "ORDER BY created_at_unix DESC LIMIT 50", since),
+  ]);
+  const summary = summaryRows[0] || {};
+  return {
+    schema: "agentsam.agent-runs.v1",
+    range,
+    scope: "authenticated_account",
+    totals: {
+      runs: number(summary.runs),
+      successes: number(summary.successes),
+      failures: number(summary.failures),
+      in_progress: number(summary.in_progress),
+      model_calls: number(summary.model_calls),
+      tool_calls: number(summary.tool_calls),
+      input_tokens: number(summary.input_tokens),
+      output_tokens: number(summary.output_tokens),
+      cost_usd: number(summary.cost_usd),
+      average_latency_ms: nullableNumber(summary.average_latency_ms),
+      first_run_unix: nullableNumber(summary.first_run_unix),
+      last_run_unix: nullableNumber(summary.last_run_unix),
+    },
+    by_day: dayRows.map((row) => ({
+      bucket: String(row.bucket),
+      runs: number(row.runs),
+      successes: number(row.successes),
+      failures: number(row.failures),
+    })),
+    recent_failures: failureRows.map((row) => ({
+      id: String(row.id),
+      mode: row.mode == null ? null : String(row.mode),
+      surface: row.surface == null ? null : String(row.surface),
+      status: String(row.status),
+      error_code: row.error_code == null ? "" : String(row.error_code),
+      latency_ms: nullableNumber(row.latency_ms),
+      created_at_unix: number(row.created_at_unix),
     })),
   };
 }

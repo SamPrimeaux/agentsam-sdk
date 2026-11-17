@@ -27,11 +27,13 @@ test('optional creative extension installs into canonical tables and executes vi
   const installed=await installGSAPCreativePlugin(db,{accountId:'user-a',enabledModules:[]});
   const rows=await listPlugins(db,{accountId:'user-a'});assert.equal(rows[0].plugin_key,'gsap-creative');assert.equal(rows[0].transport,'native');assert.equal(rows[0].capabilities.length,1);
   const tools=await listPluginTools(db,{accountId:'user-a'});assert.equal(tools[0].plugin_id,installed.plugin_id);
-  const runtime=createPluginRuntime({tools,dispatchers:{native:createGSAPCreativeDispatcher({db,gsap})}});
+  const runtime=createPluginRuntime({tools,accountId:'user-a',dispatchers:{native:createGSAPCreativeDispatcher({db,gsap})},db});
   const sample=await runtime.execute('gsap-creative.sample',{timeUs:500000,durationUs:1000000},{accountId:'user-a'});assert.equal(sample.value,.875);
-  await assert.rejects(runtime.execute('gsap-creative.sample',{timeUs:500000,durationUs:1000000},{accountId:'user-b'}),/not_enabled/);
+  await assert.rejects(runtime.execute('gsap-creative.sample',{timeUs:500000,durationUs:1000000},{accountId:'user-b'}),/account_context_mismatch/);
   await updatePluginPreferences(db,{accountId:'user-a',pluginId:installed.plugin_id,enabled:false});
   await assert.rejects(runtime.execute('gsap-creative.sample',{timeUs:0,durationUs:1},{accountId:'user-a'}),/not_enabled/);
+  const receipts=await db.prepare('SELECT account_id FROM agentsam_tool_call_log ORDER BY created_at_unix').bind().all();
+  assert.ok(receipts.results.length>=1);assert.ok(receipts.results.every(row=>row.account_id==='user-a'));
   await installGSAPCreativePlugin(db,{accountId:'user-a'});assert.equal((await listPlugins(db,{accountId:'user-a',includeDisabled:true}))[0].is_enabled,0);
  }finally{db.sqlite.close();}
 });

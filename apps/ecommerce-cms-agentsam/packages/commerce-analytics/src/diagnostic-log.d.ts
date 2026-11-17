@@ -8,7 +8,7 @@ export function redactDiagnosticText(value:unknown,max?:number):string;
 export function normalizeDiagnosticLog(input:Partial<DiagnosticLogContext>&Record<string,unknown>):DiagnosticLogContext|null;
 export function formatDiagnosticLog(log:Partial<DiagnosticLogContext>):string;
 export function diagnosticContext(records:Partial<DiagnosticLogContext>[],scope?:{range?:string;level?:string;search?:string}):{
- surface:"analytics.health";context_type:"cloudflare.logs";
+ surface:"analytics.health";context_type:"agentsam.runtime.logs";
  range:string;filters:{level:string;search:string};selected_logs:DiagnosticLogContext[];source_note:string;
 };
 export const LOG_DIAGNOSTIC_LIMIT:number;

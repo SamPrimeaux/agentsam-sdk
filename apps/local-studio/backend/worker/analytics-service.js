@@ -312,12 +312,17 @@ function analyticsBindings(fact) {
   ];
 }
 
-export async function emitAnalyticsFact(env, input) {
+export async function emitAnalyticsFact(env, accountId, input) {
   if (!env?.DB || typeof env.DB.prepare !== "function") {
     throw new TypeError("analytics DB binding unavailable");
   }
+  if (typeof accountId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(accountId)) {
+    throw new TypeError("authenticated_account_required");
+  }
 
-  const fact = validateAnalyticsFact(input);
+  // The account is host-injected from the verified session. Payload fields
+  // named account_id or tenant_id are deliberately overwritten.
+  const fact = validateAnalyticsFact({ ...input, account_id: accountId, tenant_id: accountId });
 
   await env.DB.prepare(INSERT_SQL)
     .bind(...analyticsBindings(fact))
