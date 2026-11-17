@@ -1,0 +1,94 @@
+/* One user-facing Library. Data continues to be owned by the artifact and media providers. */
+.agentsam-unified-library {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground, var(--nav-text));
+  background: var(--background, var(--nav-canvas));
+}
+.agentsam-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  gap: 1rem;
+  padding: 1.15rem 1.5rem .65rem;
+  border-bottom: 1px solid var(--border, var(--nav-border));
+}
+.agentsam-library-header h1 {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+.agentsam-library-switch {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.agentsam-library-switch::-webkit-scrollbar { display: none; }
+.agentsam-library-switch a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: .5rem;
+  min-height: 2.35rem;
+  padding: 0 .95rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted-foreground, var(--nav-muted));
+  background: transparent;
+  text-decoration: none;
+  font-size: .875rem;
+  font-weight: 540;
+}
+.agentsam-library-switch a:hover,
+.agentsam-library-switch a.is-active {
+  color: var(--foreground, var(--nav-text));
+  background: var(--accent, var(--nav-selected));
+  border-color: var(--border, var(--nav-border));
+}
+.agentsam-library-switch a:focus-visible {
+  outline: 2px solid var(--primary, currentColor);
+  outline-offset: 2px;
+}
+.agentsam-library-content {
+  flex: 1 1 0%;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+}
+[data-library-view="media"] .agentsam-library-content { overflow: hidden; }
+.agentsam-library-content > .agentsam-media-library { height: 100%; }
+.agentsam-unified-library .agentsam-media-header__titles { display: none; }
+.agentsam-unified-library .agentsam-media-header { justify-content: flex-end; padding-block: .45rem 0; }
+@media (max-width: 767px) {
+  .agentsam-library-header {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .7rem;
+    padding: .85rem .8rem .4rem;
+  }
+  .agentsam-library-header h1 { font-size: 1.25rem; }
+  .agentsam-library-switch { width: 100%; gap: .2rem; }
+  .agentsam-library-switch a { min-height: 2.65rem; padding: 0 1.05rem; font-size: .9rem; }
+  .agentsam-unified-library .agentsam-media-header { padding: 0 .8rem; }
+}
+
+
+/* The Work artifacts surface already has its own Library heading. The shared
+   application header replaces it so mobile users never see stacked titles. */
+.agentsam-unified-library[data-library-view="artifacts"] .agentsam-work-artifacts__heading h1 { display: none; }
+.agentsam-unified-library:has(.agentsam-library__focused-view) .agentsam-library-header { display: none; }

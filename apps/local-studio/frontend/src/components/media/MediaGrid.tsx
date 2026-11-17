@@ -83,6 +83,7 @@ export function MediaItems({
             <MediaAssetMenu
               asset={asset}
               onOpen={(item) => onOpen(item.id)}
+              onSelectItem={(item) => onToggle(item.id)}
               onEdit={onEdit}
               onCopy={onCopy}
               onExport={onExport}

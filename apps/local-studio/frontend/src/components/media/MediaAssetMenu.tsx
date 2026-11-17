@@ -1,11 +1,12 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Copy, Download, Ellipsis, Eye, Pencil, Trash2 } from "lucide-react";
+import { CheckSquare2, Copy, Download, Ellipsis, Eye, Pencil, Trash2 } from "lucide-react";
 import { canDeleteMediaAsset, canEditMediaMetadata, previewUrl, providerOf, type MediaAsset } from "./media-utils";
 
 export function MediaAssetMenu({
   asset,
   onOpen,
+  onSelectItem,
   onEdit,
   onCopy,
   onExport,
@@ -13,6 +14,7 @@ export function MediaAssetMenu({
 }: {
   asset: MediaAsset;
   onOpen: (asset: MediaAsset) => void;
+  onSelectItem: (asset: MediaAsset) => void;
   onEdit: (asset: MediaAsset) => void;
   onCopy: (asset: MediaAsset) => void;
   onExport: (asset: MediaAsset) => void;
@@ -35,6 +37,7 @@ export function MediaAssetMenu({
       <DropdownMenu.Portal>
         <DropdownMenu.Content side="bottom" align="end" sideOffset={5} collisionPadding={12} className="agentsam-media-item__menu">
           <DropdownMenu.Item onSelect={() => onOpen(asset)}><Eye size={15} /> Open details</DropdownMenu.Item>
+          <DropdownMenu.Item onSelect={() => onSelectItem(asset)}><CheckSquare2 size={15} /> Select item</DropdownMenu.Item>
           <DropdownMenu.Item disabled={!canEditMediaMetadata(asset)} onSelect={() => onEdit(asset)}
             title={canEditMediaMetadata(asset) ? "Edit Cloudflare image metadata" : "Editing is not supported for this source"}>
             <Pencil size={15} /> Edit metadata

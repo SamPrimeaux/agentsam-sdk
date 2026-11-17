@@ -2,7 +2,6 @@ import { useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
   Blocks,
-  Box,
   CalendarDays,
   Database,
   FileCode,
@@ -32,12 +31,11 @@ const ITEMS = [
   { to: "/admin/chats", label: "Chats", icon: MessageSquare, match: (p: string) => p === "/admin/agentsam" || p.startsWith("/admin/chats") },
   { to: "/admin/cms", label: "CMS", icon: LayoutTemplate, match: (p: string) => p.startsWith("/admin/cms") },
   { to: "/admin/sites", label: "Sites", icon: Globe, match: (p: string) => p.startsWith("/admin/sites") },
-  { to: "/admin/media", label: "Media", icon: Images, match: (p: string) => p.startsWith("/admin/media") || p.startsWith("/admin/content") },
+  { to: "/admin/library", label: "Library", icon: Images, match: (p: string) => p.startsWith("/admin/library") || p.startsWith("/admin/media") || p.startsWith("/admin/artifacts") || p.startsWith("/admin/content") },
   { to: "/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth", label: "Growth", icon: Megaphone, match: (p: string) => p === "/admin/campaigns" || (p.startsWith("/admin/apps/ecommerce-cms-agentsam") && new URLSearchParams(window.location.search).get("page") === "/admin/growth") },
   { to: "/admin/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/admin/database") },
   { to: "/admin/collaborate", label: "Work", icon: CalendarDays, match: (p: string) => p.startsWith("/admin/collaborate") || p.startsWith("/admin/mail") },
   { to: "/admin/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/admin/projects") },
-  { to: "/admin/artifacts", label: "Artifacts", icon: Box, match: (p: string) => p.startsWith("/admin/artifacts") },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/admin/analytics") },
 ] as const;
 

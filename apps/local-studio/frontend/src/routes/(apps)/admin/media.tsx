@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
-import { MediaLibraryPage } from "@/components/media/MediaLibraryPage";
+import { UnifiedLibraryPage } from "@/components/media/UnifiedLibraryPage";
 
 /**
  * /admin/media is the library index; its /images, /videos, /models and /files
@@ -13,5 +13,5 @@ export const Route = createFileRoute("/(apps)/admin/media")({
 function MediaRoute() {
   const atIndex = useRouterState({ select: state =>
     state.location.pathname === "/admin/media" || state.location.pathname === "/admin/media/" });
-  return atIndex ? <MediaLibraryPage /> : <Outlet />;
+  return atIndex ? <UnifiedLibraryPage view="media" /> : <Outlet />;
 }

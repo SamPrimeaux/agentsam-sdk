@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { FolderOpen, Grid2X2, List, Loader2, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { Ellipsis, FolderOpen, Grid2X2, List, Loader2, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 import { BucketPicker, loadPinnedBuckets, savePinnedBuckets } from "./BucketPicker";
@@ -583,34 +583,42 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
           <p>{subtitle}</p>
         </div>
         <div className="agentsam-media-header__actions">
-          {source === "local" || source === "intake" ? <span className="agentsam-media-local-status"><FolderOpen size={14} /> {source === "intake" ? "Mac intake · local only" : "Local device"}</span>
-            : <ConnectionStatus resources={resources} bucketCount={buckets.length} connectUrl={connectUrl} />}
-          {accountChoices.length > 1 ? (
-            <select
-              className="agentsam-media-select"
-              aria-label="Cloudflare account"
-              value={cfAccountId}
-              onChange={(e) => {
-                const next = e.target.value;
-                setCfAccountId(next);
-                setActiveBucket(mediaPreference(accountId, "bucket", next) || null);
-                if (!next) return;
-                void fetch("/api/connections/cloudflare/select", {
-                  method: "POST",
-                  credentials: "same-origin",
-                  headers: { accept: "application/json", "content-type": "application/json" },
-                  body: JSON.stringify({ account_id: next, connection_id: next }),
-                }).catch(() => { /* selection still applies this session via the query parameter */ });
-              }}
-            >
-              <option value="">Select account…</option>
-              {accountChoices.map((row) => {
-                const id = String(row.cloudflareAccountId || row.connectionId || "");
-                return <option key={id} value={id}>{row.accountLabel || id}</option>;
-              })}
-            </select>
-          ) : null}
-          <a className="agentsam-media-btn agentsam-media-moviemode" href="/admin/moviemode">MovieMode</a>
+          <details className="agentsam-media-options">
+            <summary className="agentsam-media-options__trigger" aria-label="Library options" title="Library options">
+              <Ellipsis size={20} aria-hidden="true" />
+            </summary>
+            <div className="agentsam-media-options__panel">
+              <span className="agentsam-media-options__label">Source & connection</span>
+              {source === "local" || source === "intake"
+                ? <span className="agentsam-media-local-status"><FolderOpen size={14} /> {source === "intake" ? "Mac intake · local only" : "Local device"}</span>
+                : <ConnectionStatus resources={resources} bucketCount={buckets.length} connectUrl={connectUrl} />}
+              {accountChoices.length > 1 ? (
+                <select className="agentsam-media-select" aria-label="Cloudflare account" value={cfAccountId}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setCfAccountId(next);
+                    setActiveBucket(mediaPreference(accountId, "bucket", next) || null);
+                    if (!next) return;
+                    void fetch("/api/connections/cloudflare/select", {
+                      method: "POST",
+                      credentials: "same-origin",
+                      headers: { accept: "application/json", "content-type": "application/json" },
+                      body: JSON.stringify({ account_id: next, connection_id: next }),
+                    }).catch(() => { /* query parameter also scopes this session */ });
+                  }}>
+                  <option value="">Select account…</option>
+                  {accountChoices.map((row) => {
+                    const id = String(row.cloudflareAccountId || row.connectionId || "");
+                    return <option key={id} value={id}>{row.accountLabel || id}</option>;
+                  })}
+                </select>
+              ) : null}
+              <div className="agentsam-media-options__links">
+                <a href="/admin/moviemode">Open MovieMode</a>
+                <a href="/admin/settings/storage">Storage settings</a>
+              </div>
+            </div>
+          </details>
         </div>
       </header>
 
