@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { StudioIdentityUnavailableError, resolveStudioSessionUser, guardStudioDocumentSession, guardStudioAdminBoundary } from './studio-session.js';
+import { StudioIdentityUnavailableError, resolveStudioSessionUser, resolveStudioAccountIdForUser, guardStudioDocumentSession, guardStudioAdminBoundary } from './studio-session.js';
 
 const app = {id:'local-studio'};
 const DB = {prepare(){throw new Error('identity test factory owns the session lookup');}};
@@ -92,4 +92,17 @@ test('admin routing requires verified identity and fails closed when identity is
   });
   assert.equal(new URL(loginAliasWithNext.headers.get('location')).searchParams.get('next'),
     '/admin/store?action=try');
+});
+
+
+test('analytics account identity is resolved from accounts.id, not accepted from a request', async () => {
+  const seen = [];
+  const db = { prepare(sql) { return { bind(...values) { seen.push({ sql, values }); return { first: async () => values[0] === 'au_session' ? { id: 'au_session' } : null }; } }; } };
+  assert.equal(await resolveStudioAccountIdForUser(db, 'au_session'), 'au_session');
+  assert.equal(await resolveStudioAccountIdForUser(db, 'au_missing'), null);
+  assert.equal(seen.length, 2);
+  assert.ok(seen.every((entry) => entry.sql.includes('FROM accounts WHERE id = ?')));
+  assert.deepEqual(seen.map((entry) => entry.values[0]), ['au_session', 'au_missing']);
+  assert.equal(await resolveStudioAccountIdForUser(db, null), null);
+  await assert.rejects(resolveStudioAccountIdForUser(null, 'au_session'), StudioIdentityUnavailableError);
 });

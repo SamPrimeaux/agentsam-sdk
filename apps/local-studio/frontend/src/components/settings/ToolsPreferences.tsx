@@ -55,7 +55,7 @@ export function ToolsPreferences() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">Tools</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Choose which tools appear on your New tab and in the + menu. Editor apps such as CAD Creator and MovieMode keep their full standalone routes; hiding a tool never uninstalls them or deletes their work.
+            Choose which tools appear on your New tab. Every installed tool remains available from the composer + menu; this preference never uninstalls a tool, removes its capabilities, or deletes its work.
           </p>
         </div>
         <button type="button" onClick={() => void refresh()} disabled={loading || pending !== null}
@@ -99,7 +99,7 @@ export function ToolsPreferences() {
           ))}
         </div>
       ) : !error ? <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">{items.length?"No tools match your search.":"No tools are available for this account."}</p> : null}
-      <p className="text-xs text-muted-foreground">Use Apps above to install or remove an application. Use Plugins to manage external connections and capabilities. This section controls only which tools appear on your New tab.</p>
+      <p className="text-xs text-muted-foreground">Use Apps above to install or remove an application. Use Plugins to manage external connections and capabilities. This section controls only New-tab visibility. It does not hide installed tools from the composer + menu.</p>
     </section>
   );
 }

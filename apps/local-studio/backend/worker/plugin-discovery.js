@@ -6,6 +6,7 @@
 import { installPlugin, updatePluginPreferences } from '@inneranimalmedia/agentsam-sdk/plugins';
 import { loadPluginRegistry } from './plugin-registry.js';
 import { normalizeCatalogSideStage } from './plugin-side-stages.js';
+import { validatePluginCatalogEndpoint } from './plugin-discovery-policy.js';
 import { ENTERTAINMENT_PLUGIN_KEYS, installFirstPartyEntertainment, removeFirstPartyEntertainment } from './first-party-entertainment.js';
 
 /**
@@ -81,12 +82,19 @@ export function normalizeDiscoveredPlugin(input, source) {
   const key = text(input.plugin_key, 81);
   if (!KEY.test(key)) throw new Error('plugin_catalog_key_invalid');
   const sourceUrl = httpUrl(source);
-  const endpoint = httpUrl(input.endpoint_url);
-  // Never allow an operator-trusted discovery source to redirect plugin
-  // execution to a new unreviewed origin via a database row.
-  if (!sourceUrl || !endpoint || endpoint.origin !== sourceUrl.origin || !/^\/mcp(?:\/|$)/.test(endpoint.pathname) || endpoint.search) {
-    throw new Error('plugin_catalog_endpoint_invalid');
-  }
+  const remoteMcp = input.remote_mcp === true;
+  const identityMode = input.identity_mode === 'oauth_state_bound' ? 'oauth_state_bound' : 'studio_handoff';
+  const endpointPolicy = validatePluginCatalogEndpoint({
+    pluginKey: key,
+    source,
+    endpointUrl: input.endpoint_url,
+    oauthResource: input.oauth_resource,
+    remoteMcp,
+    identityMode,
+  });
+  const endpoint = httpUrl(endpointPolicy.endpointUrl);
+  const oauthResource = endpointPolicy.oauthResource;
+  if (!sourceUrl || !endpoint) throw new Error('plugin_catalog_endpoint_invalid');
   if (input.auth_type !== 'oauth' || input.transport !== 'streamable-http') throw new Error('plugin_catalog_protocol_unsupported');
   const name = text(input.display_name, 100);
   if (!name) throw new Error('plugin_catalog_display_name_missing');
@@ -119,7 +127,9 @@ export function normalizeDiscoveredPlugin(input, source) {
     tools: strings(input.tools, 150, 120),
     oauthScopes: strings(input.oauth_scopes,50,64),
     readOnlyScopes: strings(input.read_only_scopes,50,64),
-    oauthResource: link(input.oauth_resource),
+    oauthResource,
+    identityMode: endpointPolicy.identityMode,
+    remoteMcp: endpointPolicy.remoteMcp,
     toolPermissions: Array.isArray(input.tool_permissions) ? input.tool_permissions.map(row=>({
       id:text(row?.id,120), title:text(row?.title,160),
       scopes:strings(row?.scopes,12,64), readOnly:row?.read_only===true,
@@ -305,11 +315,12 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
     mention_aliases: ['@'+entry.pluginKey],
     capabilities: [], // tool and permission activation is a separate authenticated step
     tools: [], // never allow a catalog payload to register executable tools
-    composer_visible: false,
+    composer_visible: true,
     settings_visible: true,
     health_strategy: 'oauth_probe',
     metadata: {source:entry.catalogUrl,version:entry.version,requires_authorization:true,
       declared_tools:entry.toolCount,privacy_url:entry.privacyUrl,terms_url:entry.termsUrl,
+      identity_mode:entry.identityMode,remote_mcp:entry.remoteMcp,
       ...(entry.sideStage ? {side_stage:entry.sideStage} : {})},
   };
   const installed = await installPlugin(env.DB,{
@@ -319,7 +330,7 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
     preserveEnabled:true,
     preserveRegistry:true,
   });
-  await updatePluginPreferences(env.DB,{accountId,pluginId:installed.plugin_id,enabled:false,composerVisible:false});
+  await updatePluginPreferences(env.DB,{accountId,pluginId:installed.plugin_id,enabled:false,composerVisible:true});
   return {pluginId:installed.plugin_id,pluginKey:entry.pluginKey,status:'requires_connection'};
 }
 

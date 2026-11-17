@@ -157,6 +157,11 @@ try {
   for (const pathname of [
     '/api/admin/completeful/status',
     '/api/admin/completeful/catalog?category=apparel',
+    '/api/analytics/overview',
+    '/api/analytics/financial',
+    '/api/analytics/health',
+    '/api/analytics/tool-usage',
+    '/api/analytics/logs/recent',
     '/api/settings/companions',
     '/api/apps/launcher',
     '/api/browser/history',

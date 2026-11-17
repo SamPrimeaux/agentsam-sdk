@@ -54,6 +54,22 @@ describe('cloudflare capability-scoped auth', () => {
     assert.ok(!scopes.includes('ssl-and-certificates.write'));
   });
 
+  it('requests only read-only HTTP Analytics and Basin scopes for the Health dashboard', () => {
+    const scopes = requestedCloudflareScopes({
+      capabilities: ['cloudflare.perm.account-analytics', 'cloudflare.basin.read'],
+    });
+    assert.deepEqual(
+      [...scopes].sort(),
+      [...CLOUDFLARE_BASELINE_SCOPES, 'account-analytics.read', 'pipelines.read', 'r2-catalog.read', 'r2-catalog-sql.read'].sort(),
+    );
+    assert.ok(!scopes.some((scope) => /write|send/i.test(scope)));
+    assert.deepEqual(getCloudflareCapability('cloudflare.basin.read').oauthScopes, [
+      'pipelines.read',
+      'r2-catalog.read',
+      'r2-catalog-sql.read',
+    ]);
+  });
+
   it('uses images.read/write from OAuth catalog', () => {
     const cap = getCloudflareCapability('cloudflare.images');
     assert.deepEqual(cap.oauthScopes, ['images.read', 'images.write']);

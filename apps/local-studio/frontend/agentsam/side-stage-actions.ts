@@ -97,16 +97,18 @@ export function useSideStageRegistry() {
   return snapshot;
 }
 
-export function sideStageComposerWidgets() {
-  return current.actions.map(stage => ({
+export function sideStageComposerWidgets(stages: readonly SideStageAction[] = current.actions) {
+  return stages.map(stage => ({
     id: stage.id,
     label: stage.label,
     mention: "@" + stage.stageId,
     description: stage.description,
     icon: stage.icon,
     iconUrl: stage.iconUrl || undefined,
-    ready: true,
-    status: "available",
+    // A New-tab visibility preference does not uninstall or disable a tool.
+    // Disabled items stay discoverable and can be enabled from Apps settings.
+    ready: stage.enabled !== false,
+    status: stage.enabled === false ? "hidden from New tab" : "available",
     action: { type: "open-side-stage" as const, tab: stage.tabKind },
   }));
 }

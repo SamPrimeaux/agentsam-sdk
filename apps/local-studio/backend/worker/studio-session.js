@@ -59,3 +59,17 @@ export async function guardStudioAdminBoundary(request, { resolveUser, loginPath
   }
   return denied;
 }
+
+/** Resolve the canonical accounts.id for an already-verified session principal. */
+export async function resolveStudioAccountIdForUser(db, userId) {
+  if (!userId) return null;
+  if (!db || typeof db.prepare !== 'function') throw new StudioIdentityUnavailableError();
+  try {
+    const account = await db.prepare(
+      "SELECT id FROM accounts WHERE id = ? AND status = 'active' LIMIT 1",
+    ).bind(userId).first();
+    return account?.id ? String(account.id) : null;
+  } catch {
+    throw new StudioIdentityUnavailableError();
+  }
+}

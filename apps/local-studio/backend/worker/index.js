@@ -5,7 +5,7 @@ import { handleStudioConversationShares, handlePublicConversationShare } from ".
 import { handleStudioQueueObservability } from "./studio-queue-observability.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { serveDesignCanvasAdminRoute } from "./design-canvas-admin-route.js";
-import { resolveStudioSessionUser, guardStudioDocumentSession, guardStudioAdminBoundary } from "./studio-session.js";
+import { resolveStudioSessionUser, resolveStudioAccountIdForUser, guardStudioDocumentSession, guardStudioAdminBoundary } from "./studio-session.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
@@ -70,7 +70,6 @@ import { handleStudioNotificationSettings } from "./studio-notification-settings
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
-import { queryAccountToolUsage } from "./analytics-tool-usage-v2.js";
 import {
   mintStudioCredential,
   listStudioCredentials,
@@ -1324,15 +1323,20 @@ export default {
     // session lookup, skipped entirely when no Cookie header is present) so
     // static-asset traffic through the Worker pays nothing.
     let sessionUserId;
+    let sessionAccountId;
     async function sessionUser() {
       if (sessionUserId === undefined) sessionUserId = await resolveSessionUserId(request, env);
       return sessionUserId;
     }
+    async function sessionAccount() {
+      if (sessionAccountId === undefined) sessionAccountId = await resolveStudioAccountIdForUser(env.DB, await sessionUser());
+      return sessionAccountId;
+    }
 
     if(workspaceMatch) {
       if(request.method!=="GET")return json({ok:false,error:"method_not_allowed"},405);
-      const accountId=await sessionUser();
-      if(!accountId)return json({ok:false,error:"unauthorized"},401);
+      const accountId=await sessionAccount();
+      if(!accountId)return json({ok:false,error:"authenticated_account_required"},401);
       try{
         const response=await readPluginWorkspace(env,accountId,workspaceMatch[1]);
         return json({ok:true,...response},200,{"cache-control":"no-store"});
@@ -1416,8 +1420,8 @@ export default {
       if (request.method !== "POST") {
         return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "POST" });
       }
-      const userId = await sessionUser();
-      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      const userId = await sessionAccount();
+      if (!userId) return json({ ok: false, error: "authenticated_account_required" }, 401);
       if (!env.EXECOS?.fetch) {
         return json({ ok: false, error: "execos_binding_unavailable" }, 503);
       }
@@ -1453,6 +1457,8 @@ export default {
         });
       }
 
+      const accountId = await sessionAccount();
+      if (!accountId) return json({ ok: false, error: "authenticated_account_required" }, 401);
       const gate = await requireBridgeKey(request, env);
       if (!gate.ok) {
         return json(
@@ -1463,7 +1469,7 @@ export default {
 
       try {
         const versionMetadata = env.CF_VERSION_METADATA || {};
-        const result = await emitAnalyticsFact(env, {
+        const result = await emitAnalyticsFact(env, accountId, {
           event_kind: "runtime",
           domain: "analytics",
           operation: "basin_smoke_test",
@@ -1496,27 +1502,12 @@ export default {
     }
 
 if (isAnalyticsApi && !isAnalyticsSmoke) {
-      const sid = await sessionUser();
-      const gate = await requireBridgeKey(request, env);
+      // Private analytics are always scoped to the account resolved from the
+      // authenticated session. A bridge key is not an identity substitute.
+      const accountId = await sessionAccount();
+      if (!accountId) return json({ ok: false, error: "authenticated_account_required" }, 401);
 
-      if (!sid && !gate.ok) {
-        return json(
-          { ok: false, error: gate.error || "unauthorized" },
-          gate.status || 401,
-        );
-      }
-
-      if(url.pathname==='/api/analytics/tool-usage'){
-        // A bridge key cannot supply arbitrary identity. Only a verified
-        // account session can access private operational metrics.
-        if(!sid)return json({ok:false,error:'authenticated_account_required'},401);
-        try{return json(await queryAccountToolUsage(env,sid,url.searchParams.get('range')||'30d'));}
-        catch(error){
-          console.warn('tool_metrics_unavailable',String(error?.message||error).slice(0,120));
-          return json({ok:false,error:'tool_metrics_unavailable'},503);
-        }
-      }
-      const result = await handleAnalyticsQueryRequest(request, env);
+      const result = await handleAnalyticsQueryRequest(request, env, accountId);
       return json(result.body, result.status, result.headers || {});
     }
 
@@ -1817,8 +1808,8 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       if (request.method !== "PATCH" && request.method !== "DELETE") {
         return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "PATCH, DELETE" });
       }
-      const userId = await sessionUser();
-      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      const userId = await sessionAccount();
+      if (!userId) return json({ ok: false, error: "authenticated_account_required" }, 401);
       const pluginId = decodeURIComponent(pluginSettingsMatch[1] || "").trim();
       if (!/^plg_[a-z0-9]+$/i.test(pluginId)) {
         return json({ ok: false, error: "plugin_id_invalid" }, 400);

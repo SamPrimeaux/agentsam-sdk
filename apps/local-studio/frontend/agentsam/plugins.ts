@@ -11,12 +11,14 @@ export async function loadComposerCatalog(signal?: AbortSignal): Promise<Compose
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   const {listLocalStudioConnections}=await import("../src/lib/connections/client");
   const payload=await listLocalStudioConnections();
+  // Keep the operational Side Stage registry scoped to enabled tools, while
+  // projecting the complete account catalog into the composer menu.
   receiveSideStageRegistry(payload.side_stages ?? []);
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   return projectComposerCatalog({
     plugins:payload.composer_plugins || payload.plugins || [],
     connections:payload.connections || payload.items || [],
-    widgets:sideStageComposerWidgets(),
+    widgets:sideStageComposerWidgets(payload.side_stage_catalog ?? payload.side_stages ?? []),
   });
 }
 /** Kept as a compatibility alias for existing picker callers. */
