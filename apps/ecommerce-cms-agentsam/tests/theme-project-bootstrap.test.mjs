@@ -41,6 +41,8 @@ test('the shared shell mounts one editor runtime with target-specific adapters',
   assert.doesNotMatch(shell, /theme-project-editor-bootstrap|theme-editor-entry\.js/);
   assert.match(bootstrap, /createThemeProjectAdapter/);
   assert.match(bootstrap, /createCmsPageThemeEditorAdapter/);
+  assert.match(bootstrap, /\/ecommerce-cms-agentsam\/theme-editor\/routes\.mjs/);
+  assert.match(bootstrap, /\/ecommerce-cms-agentsam\/theme-editor\/cms-page-adapter\.mjs/);
   assert.equal((bootstrap.match(/mountThemeEditor\(frame, host/g) || []).length, 1);
   assert.match(bootstrap, /async onDuplicate\(\)/);
   assert.match(bootstrap, /async onDelete\(\)/);

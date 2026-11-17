@@ -147,7 +147,7 @@ try {
   // allowed to be fetched until a verified account session exists.
   for (const pathname of [
     '/theme-editor/project.mjs', '/theme-editor/bridge.mjs', '/theme-editor/mount.mjs',
-    '/theme-editor/routes.mjs', '/theme-editor/cms-page-adapter.mjs',
+    '/ecommerce-cms-agentsam/theme-editor/routes.mjs', '/ecommerce-cms-agentsam/theme-editor/cms-page-adapter.mjs',
     '/theme-editor/starter-project.mjs', '/theme-editor/starter-products.mjs',
     '/theme-editor/starter-chrome.mjs', '/theme-editor/system-template-registry.mjs',
   ]) {

@@ -22,7 +22,7 @@ assert.ok(fs.existsSync(serverEntry), ".output/server/index.mjs is required; run
 assert.ok(fs.statSync(serverEntry).isFile(), "Nitro server entry must be a file");
 assert.ok(fs.existsSync(assetsDir) && fs.statSync(assetsDir).isDirectory(), ".output/public is required");
 for (const name of ['routes.mjs', 'cms-page-adapter.mjs']) {
-  const modulePath = path.join(assetsDir, 'theme-editor', name);
+  const modulePath = path.join(assetsDir, 'ecommerce-cms-agentsam', 'theme-editor', name);
   assert.ok(fs.existsSync(modulePath) && fs.statSync(modulePath).isFile(),
     `Theme Studio's shared editor module must be present in Cloudflare assets: ${name}`);
 }

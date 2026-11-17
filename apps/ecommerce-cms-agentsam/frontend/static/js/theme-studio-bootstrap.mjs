@@ -2,14 +2,14 @@ import { createThemeProjectAdapter, repairEmptyThemeBlockControls } from '/theme
 import { createThemeEditorBridge } from '/theme-editor/bridge.mjs';
 import { mountThemeEditor } from '/theme-editor/mount.mjs';
 import { inheritDefaultTemplates, materializeStarterProject } from '/theme-editor/starter-project.mjs';
-import { createCmsPageThemeEditorAdapter } from '/theme-editor/cms-page-adapter.mjs';
+import { createCmsPageThemeEditorAdapter } from '/ecommerce-cms-agentsam/theme-editor/cms-page-adapter.mjs';
 import { chooseThemeEditorSite, planThemeEditorEntry } from './theme-editor-entry-resolution.mjs';
 import {
   parseThemeEditorLocation,
   themeProjectEditorPath,
   cmsPageEditorPath,
   themeEditorViewSearch,
-} from '/theme-editor/routes.mjs';
+} from '/ecommerce-cms-agentsam/theme-editor/routes.mjs';
 
 const errorNode = document.getElementById('theme-project-error');
 const frame = document.getElementById('theme-project-editor-frame');
