@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import { ChevronDown, ExternalLink, Globe2, MoreHorizontal, Plus, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { IconAction } from '@/components/ui/icon-action';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -126,7 +127,7 @@ function DraftRow({ theme, siteId, onPublished }: { theme: StoreTheme; siteId: s
         {edit && <InAppLink to={edit} className={cn(pill, 'h-8 bg-primary text-primary-foreground hover:bg-primary/90')}>Edit theme</InAppLink>}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${theme.name || 'theme'}`}><MoreHorizontal className="size-4" /></Button>
+            <IconAction variant="ghost" label={`Actions for ${theme.name || 'theme'}`} hint="Edit, preview or publish this theme"><MoreHorizontal className="size-4" /></IconAction>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-44">
             <DropdownMenuLabel>{theme.name || 'Theme'}</DropdownMenuLabel>
