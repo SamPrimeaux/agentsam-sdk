@@ -186,6 +186,58 @@
   // Static product pages read the existing Studio conversation persistence only.
   // Writes remain with Studio's Work store; the React host supplies its live callbacks.
   let registeredProjects = [], projectHistoryStatus = 'loading';
+  let merchantStores = [];
+  let merchantStoreId = null;
+  function switchMerchantStore(id) {
+    if (!merchantStores.some(site => site.id === id)) return;
+    merchantStoreId = id;
+    try { sessionStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
+    window.dispatchEvent(new CustomEvent('agentsam:cms-site-changed', {detail:{site_id:id}}));
+    navigateHost('/admin/pages?site_id=' + encodeURIComponent(id));
+    updateSharedNavigation();
+  }
+  async function refreshMerchantStores() {
+    try {
+      const response = await fetch('/api/cms/sites', {credentials:'same-origin'});
+      if (!response.ok) return;
+      const data = await response.json();
+      merchantStores = Array.isArray(data.sites) ? data.sites : [];
+      let cached = null;
+      try { cached = sessionStorage.getItem('agentsam.cms.selected-site.v1'); } catch {}
+      const requested = new URLSearchParams(location.search).get('site_id');
+      const eligible = id => id && merchantStores.some(site => site.id === id);
+      merchantStoreId = [requested, cached, data.default_site_id, merchantStores[0]?.id].find(eligible) || null;
+      updateSharedNavigation();
+    } catch { /* Account-scoped sites may not be available outside hosted CMS. */ }
+  }
+  function openCreateMerchantStore() {
+    const parent = hostedParent();
+    if (parent) { parent.dispatchEvent(new Event('agentsam:store:create')); return; }
+    const dialog = document.createElement('dialog');
+    dialog.className = 'as-store-create-dialog';
+    dialog.innerHTML = '<form method="dialog"><h2>Create store</h2><p>Create an account-owned site with an editable starter theme.</p><label>Store name<input name="name" required maxlength="120" autocomplete="off" placeholder="My store"></label><p class="as-store-create-error" role="alert" hidden></p><footer><button type="button" data-cancel>Cancel</button><button type="submit" data-create>Create store</button></footer></form>';
+    document.body.appendChild(dialog);
+    dialog.addEventListener('close', () => dialog.remove(), {once:true});
+    dialog.querySelector('[data-cancel]').addEventListener('click', () => dialog.close());
+    dialog.querySelector('form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const name = dialog.querySelector('[name="name"]').value.trim();
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (!slug || slug.length > 80) return;
+      const button = dialog.querySelector('[data-create]');button.disabled = true;
+      const error = dialog.querySelector('.as-store-create-error');
+      try {
+        const response = await fetch('/api/cms/sites',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({name,slug})});
+        const result = await response.json();
+        if (!response.ok || !result.site?.id) throw new Error(result.error || 'Could not create store');
+        merchantStores.push(result.site);
+        dialog.close();
+        switchMerchantStore(result.site.id);
+      } catch (err) { error.hidden = false;error.textContent = err.message || 'Could not create store';button.disabled = false; }
+    });
+    dialog.showModal();dialog.querySelector('[name="name"]').focus();
+  }
+
   async function refreshWorkspaceProjects() {
     projectHistoryStatus='loading';updateSharedNavigation();
     try {
@@ -261,6 +313,7 @@
   }
   function navigationValue(user) {
     const profile = user || window.__shellUser || {};
+    const sitesForMenu = typeof merchantStores !== 'undefined' ? merchantStores : [];
     const toDestination = (item, index) => ({
       id: item.id || item.href || String(index), label: item.label, href: item.href,
       icon: item.icon ? window.AgentSamNav?.navIcon?.(({agentic:'agentsam',email:'mail',messageSquare:'agentsam',box:'cad',layers:'apps',film:'moviemode',globe:'browser'})[item.icon] || item.icon) : undefined,
@@ -292,6 +345,12 @@
       account: { id: profile.id || 'local', name: profile.id ? profile.display_name || profile.email || 'Account' : 'Local account',
         avatar: safeAvatarUrl(profile.avatar_url) || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', plan: profile.id ? profile.email || 'Personal workspace' : 'Sign in required' },
       accountActions: [
+        { id:'stores',label:'Stores',icon:window.AgentSamNav?.navIcon?.('store'),children:[
+          ...sitesForMenu.map(site => ({id:'store-' + site.id,
+            label:(site.name || site.slug || 'Store') + (site.id === merchantStoreId ? ' · Current' : ''),
+            onSelect:() => switchMerchantStore(site.id)})),
+          {id:'store-create',label:'Create store',separatorBefore:sitesForMenu.length > 0,onSelect:() => openCreateMerchantStore()}
+        ]},
         { id:'account',label:'Account',onSelect:() => navigateHost('/admin/settings/general') },
         { id:'settings',label:'Settings',onSelect:() => navigateHost('/admin/settings/general') },
         ...(!profile.id ? [{id:'sign-in',label:'Sign in',onSelect:() => navigateHost('/auth/login')}] : profile.can_sign_out === false ? [] : [{
@@ -407,6 +466,7 @@
     aside.removeAttribute('data-shared-nav-pending');
     window.dispatchEvent(new Event('agentsam:navigation-ready'));
     updateSharedNavigation();
+    void refreshMerchantStores();
     if (!window.__agentsamWorkspaceNavigation) void refreshWorkspaceProjects();
   }
   function updateSharedNavigation(user) {

@@ -33,12 +33,12 @@ test('standalone Ecommerce Page Editor retains normal document navigation', () =
   assert.deepEqual(navigations, [['document', '/admin/page-edit?slug=home']]);
 });
 
-test('Pages leads to content editor and exposes the visual editor without unsafe bulk controls', () => {
+test('Pages leads to content editor and keeps theme composition separate', () => {
   const pages = readFileSync(new URL('../frontend/static/pages.html', import.meta.url), 'utf8');
-  assert.ok(pages.includes('const editHref = themePage'));
-  assert.ok(pages.includes('`/admin/page-edit?${query}`'));
-  assert.ok(pages.includes('encodeURIComponent(p.project_id)') && pages.includes('/themes/'), 'theme layouts use the site-scoped Theme Studio route');
-  assert.ok(pages.includes('const designHref = themePage ? editHref'));
+  assert.ok(pages.includes('const editHref = `/admin/page-edit?${query}`'));
+  assert.ok(pages.includes('allPages=canonicalPages'), 'merchant Pages lists real site-owned pages');
+  assert.ok(!pages.includes('const themePage = p.source'), 'theme-project placeholders must not navigate merchants to Theme Studio');
+  assert.ok(!pages.includes('id="pages-site-select"'), 'store selection belongs to the global profile menu');
   assert.ok(!pages.includes('id="cms-bootstrap-btn"'));
   assert.ok(pages.includes('id="add-page-btn"'), 'the real Add Page API now has a matching control');
   assert.ok(pages.includes('window.cmsAdminNavigate("/admin/page-edit?" + query.toString())'),

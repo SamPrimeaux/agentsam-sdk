@@ -20,10 +20,7 @@ renderShell("/admin/pages", `
         <p>Manage the pages that belong to this site.</p>
       </div>
       <div class="pages-hub-actions">
-        <label class="pages-site-control" for="pages-site-select">
-          <span>Site</span>
-          <select id="pages-site-select" aria-label="Select site"></select>
-        </label>
+        <span class="pages-site-context" id="pages-site-context" aria-live="polite"></span>
         <a class="btn ghost" id="edit-site-design" href="/admin/theme-editor">Edit site design</a>
         <button class="btn primary" type="button" id="add-page-btn">+ Add page</button>
       </div>
@@ -74,7 +71,7 @@ renderShell("/admin/pages", `
         <select id="new-page-type" name="page_type"></select>
       </label>
       <p class="pages-dialog-help" id="new-page-type-help"></p>
-      <p class="pages-dialog-help">The page will be created as a draft at <strong id="new-page-route">/about-us</strong>. You can add its sections in Theme Editor.</p>
+      <p class="pages-dialog-help">The page will be created as a draft at <strong id="new-page-route">/about-us</strong>. Open the Page Editor after creation to manage this page's content and settings.</p>
       <p class="pages-dialog-error" id="add-page-error" role="alert" hidden></p>
       <footer class="pages-dialog-actions">
         <button type="button" class="btn ghost" id="cancel-add-page">Cancel</button>
@@ -89,7 +86,7 @@ let availableSites = [];
 let selectedSiteId = null;
 let selectedSiteSlug = null;
 let selectedThemeProject = null;
-const siteSelect = document.getElementById("pages-site-select");
+const siteContext = document.getElementById("pages-site-context");
 const addPageDialog = document.getElementById("add-page-dialog");
 const addPageForm = document.getElementById("add-page-form");
 const newPageTitle = document.getElementById("new-page-title");
@@ -113,12 +110,6 @@ function identityQuery(page) {
   return query.toString();
 }
 
-function sourceEditorQuery(page) {
-  const query = new URLSearchParams({ slug: page.slug, source: "html" });
-  if (selectedSiteSlug) query.set("site", selectedSiteSlug);
-  return query.toString();
-}
-
 function routeForPage(page) {
   return page?.route_path || (page?.slug === "home" ? "/" : `/${page?.slug || ""}`);
 }
@@ -131,29 +122,17 @@ function renderRows(pages) {
   }
 
   body.innerHTML = pages.map((p) => {
-    const themePage = p.source === 'theme-project';
-    const badge = themePage
-      ? {label:'Theme draft',cls:'pages-badge pages-badge--hidden'}
-      : p.content_authority === "cms-draft-linked"
+    const badge = p.content_authority === "cms-draft-linked"
       ? { label: "Live site · editable draft", cls: "pages-badge pages-badge--visible" }
       : p.content_authority === "storefront-html"
         ? { label: "Live site · sync required", cls: "pages-badge pages-badge--visible" }
         : visibilityBadge(p.status || "draft");
     const query = identityQuery(p);
-    const editHref = themePage
-      ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/themes/${encodeURIComponent(p.project_id)}/editor/${encodeURIComponent(p.slug || 'home')}`
-      : `/admin/page-edit?${query}`;
-    const designHref = themePage ? editHref
-      : (p.id ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/pages/${encodeURIComponent(p.id)}/editor`
-        : `/admin/theme-editor?${query}`);
-    const sourceHref = !themePage && p.html_source_editable === true
-      ? `<a href="/admin/theme-editor?${cmsEscapeAttr(sourceEditorQuery(p))}" class="btn ghost small" onclick="event.stopPropagation()">Edit HTML source</a>`
-      : "";
+    const editHref = `/admin/page-edit?${query}`;
     return `
       <tr data-href="${cmsEscapeAttr(editHref)}" data-slug="${cmsEscapeAttr(p.slug)}">
         <td><a href="${cmsEscapeAttr(editHref)}" class="pages-title-link" onclick="event.stopPropagation()">${cmsEscapeHtml(p.title)}</a>
-            <a href="${cmsEscapeAttr(designHref)}" class="btn ghost small" onclick="event.stopPropagation()" aria-label="Edit design for ${cmsEscapeAttr(p.title)}">Edit design</a>
-            ${sourceHref}</td>
+        </td>
         <td><span class="${badge.cls}">${badge.label}</span></td>
         <td><span class="pages-preview">${cmsEscapeHtml(p.preview || routeForPage(p))}</span></td>
         <td class="pages-updated">${fmtPageDate(p.updated_at)}</td>
@@ -216,13 +195,7 @@ newPageSlug?.addEventListener("input", () => {
   updateNewPageRoute();
 });
 
-siteSelect?.addEventListener("change", () => {
-  const url = new URL(location.href);
-  url.searchParams.set("site_id", siteSelect.value);
-  url.searchParams.delete("page_id");
-  url.searchParams.delete("slug");
-  location.assign(url.toString());
-});
+
 
 addPageForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -269,22 +242,20 @@ addPageForm?.addEventListener("submit", async (event) => {
     const siteData = await cmsAdminFetch("/api/admin/cms/sites");
     availableSites = Array.isArray(siteData.sites) ? siteData.sites : [];
     const requestedSiteId = new URLSearchParams(location.search).get("site_id");
-    selectedSiteId = requestedSiteId || siteData.default_site_id ||
-      (availableSites.length === 1 ? availableSites[0].id : null);
-    if (selectedSiteId && !availableSites.some(site => site.id === selectedSiteId)) {
-      throw new Error("The selected site is not available to this account.");
+    let cachedSiteId = null;
+    try { cachedSiteId = sessionStorage.getItem('agentsam.cms.selected-site.v1'); } catch {}
+    const eligible = id => !!id && availableSites.some(site => site.id === id);
+    if (requestedSiteId && !eligible(requestedSiteId)) {
+      throw new Error("The requested site is not available to this account.");
     }
-    siteSelect.innerHTML = (selectedSiteId ? "" :
-      '<option value="" selected disabled>Select a website…</option>') +
-      availableSites.map(site => {
-        const label = `${site.name || site.slug} · ${site.slug} (${Number(site.page_count || 0)} pages)`;
-        return `<option value="${cmsEscapeAttr(site.id)}">${cmsEscapeHtml(label)}</option>`;
-      }).join("");
-    siteSelect.hidden = availableSites.length < 2;
-    siteSelect.parentElement.hidden = availableSites.length < 2;
+    selectedSiteId = requestedSiteId || (eligible(cachedSiteId) ? cachedSiteId : null) ||
+      siteData.default_site_id || availableSites[0]?.id || null;
+    if (siteContext) siteContext.textContent = selectedSiteId
+      ? (availableSites.find(site => site.id === selectedSiteId)?.name || 'Current store')
+      : 'No store selected';
     if (!selectedSiteId) {
       document.getElementById("pages-body").innerHTML =
-        '<tr><td colspan="4" class="pages-empty">Choose a website above to manage its pages.</td></tr>';
+        '<tr><td colspan="4" class="pages-empty">Create or select a store from your profile menu.</td></tr>';
       document.getElementById("add-page-btn").disabled = true;
       document.getElementById("edit-site-design").setAttribute("aria-disabled", "true");
       document.getElementById("edit-site-design").removeAttribute("href");
@@ -294,7 +265,6 @@ addPageForm?.addEventListener("submit", async (event) => {
     try {sessionStorage.setItem('agentsam.cms.selected-site.v1',selectedSiteId);} catch {}
     window.cmsActivePageId = null;
     window.cmsActivePageSlug = null;
-    siteSelect.value = selectedSiteId;
 
     const currentUrl = new URL(location.href);
     if (currentUrl.searchParams.get("site_id") !== selectedSiteId) {
@@ -310,15 +280,7 @@ addPageForm?.addEventListener("submit", async (event) => {
     // Global theme settings are edited in Theme Editor, not listed as a
     // customer-facing route in the Pages inventory.
     const canonicalPages=(data.pages||[]).filter(page=>page.slug!=='site');
-    const existingSlugs=new Set(canonicalPages.map(page=>page.slug));
-    const installedPages=(selectedThemeProject?.pages||[])
-      .filter(page=>!existingSlugs.has(page.slug))
-      .map(page=>({
-        slug:page.slug,title:page.title,project_id:selectedThemeProject.id,
-        site_id:selectedSiteId,source:'theme-project',status:'draft',
-        preview:'Editable theme page',route_path:page.slug==='home'?'/':'/'+page.slug,
-      }));
-    allPages=[...canonicalPages,...installedPages];
+    allPages=canonicalPages;
     const site = data.site || availableSites.find(item => item.id === selectedSiteId);
     selectedSiteSlug = site?.slug || availableSites.find(item => item.id === selectedSiteId)?.slug || null;
     const home = allPages.find(page => page.slug === "home") || allPages[0] || { slug: "site" };
@@ -329,7 +291,7 @@ addPageForm?.addEventListener("submit", async (event) => {
       : (home.id ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/pages/${encodeURIComponent(home.id)}/editor`
         : "/admin/theme-editor?" + editSiteQuery.toString());
     document.querySelector(".pages-hub-heading p").textContent =
-      `Manage ${allPages.length} editable pages for ${site?.name || site?.slug || "this site"} (${site?.slug || selectedSiteId}).`;
+      `Manage ${allPages.length} pages for ${site?.name || site?.slug || "this store"}. Switch stores from your profile menu.`;
     document.getElementById("add-page-btn").disabled = false;
     renderRows(allPages);
     if (!allPages.length) {
@@ -341,14 +303,13 @@ addPageForm?.addEventListener("submit", async (event) => {
         document.getElementById("pages-body").innerHTML =
           `<tr><td colspan="4" class="pages-empty">This selected site has no pages. ` +
           `Another website named ${cmsEscapeHtml(twin.name)} (${cmsEscapeHtml(twin.slug)}) ` +
-          `has ${Number(twin.page_count)} pages. Choose that website using the Site selector above.</td></tr>`;
+          `has ${Number(twin.page_count)} pages. Switch stores from your profile menu.</td></tr>`;
       }
     }
   } catch (error) {
     document.getElementById("pages-body").innerHTML =
       `<tr><td colspan="4" class="pages-empty">${cmsEscapeHtml(error.message)}</td></tr>`;
     document.getElementById("add-page-btn").disabled = true;
-    siteSelect.parentElement.hidden = true;
   }
 })();
 </script>
