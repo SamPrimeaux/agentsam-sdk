@@ -21,13 +21,13 @@ renderShell("/admin/pages", `
       </div>
       <div class="pages-hub-actions">
         <span class="pages-site-context" id="pages-site-context" aria-live="polite"></span>
-        <a class="btn ghost" id="edit-site-design" href="/admin/theme-editor">Edit site design</a>
-        <button class="btn primary" type="button" id="add-page-btn">+ Add page</button>
+        <button class="btn primary" type="button" id="add-page-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add page</button>
       </div>
     </header>
 
     <div class="pages-card">
       <div class="pages-toolbar">
+        <select id="pages-visibility-filter" class="pages-visibility-filter" aria-label="Filter pages by visibility"><option value="all">All</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>
         <label class="pages-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <input type="search" id="pages-search" placeholder="Search pages" autocomplete="off">
@@ -85,7 +85,6 @@ let allPages = [];
 let availableSites = [];
 let selectedSiteId = null;
 let selectedSiteSlug = null;
-let selectedThemeProject = null;
 const siteContext = document.getElementById("pages-site-context");
 const addPageDialog = document.getElementById("add-page-dialog");
 const addPageForm = document.getElementById("add-page-form");
@@ -145,13 +144,15 @@ function renderRows(pages) {
 }
 
 function filterPages(query) {
-  const q = query.trim().toLowerCase();
-  if (!q) return allPages;
-  return allPages.filter((p) =>
-    String(p.title || "").toLowerCase().includes(q) ||
-    String(p.slug || "").toLowerCase().includes(q) ||
-    String(p.preview || "").toLowerCase().includes(q)
-  );
+  const q = String(query || "").trim().toLowerCase();
+  const visibility = document.getElementById("pages-visibility-filter")?.value || "all";
+  return allPages.filter((p) => {
+    const matchesVisibility = visibility === "all" ||
+      (visibility === "visible" ? p.status === "published" : p.status !== "published");
+    const matchesQuery = !q || [p.title,p.slug,p.preview,p.route_path].some(value =>
+      String(value || "").toLowerCase().includes(q));
+    return matchesVisibility && matchesQuery;
+  });
 }
 
 function slugifyPageTitle(value) {
@@ -173,13 +174,13 @@ function closeAddPageDialog() {
 document.getElementById("pages-search")?.addEventListener("input", (event) => {
   renderRows(filterPages(event.target.value));
 });
+document.getElementById("pages-visibility-filter")?.addEventListener("change", () => {
+  renderRows(filterPages(document.getElementById("pages-search")?.value || ""));
+});
 document.getElementById("add-page-btn")?.addEventListener("click", () => {
-  addPageForm.reset();
-  newPageSlug.dataset.touched = "";
-  updateNewPageRoute();
-  syncNewPageTypeHelp();
-  addPageDialog.showModal();
-  newPageTitle.focus();
+  if (!selectedSiteId) return;
+  const query = new URLSearchParams({site_id:selectedSiteId,new:"1"});
+  window.cmsAdminNavigate("/admin/page-edit?" + query.toString());
 });
 document.getElementById("close-add-page")?.addEventListener("click", closeAddPageDialog);
 document.getElementById("cancel-add-page")?.addEventListener("click", closeAddPageDialog);
@@ -257,8 +258,6 @@ addPageForm?.addEventListener("submit", async (event) => {
       document.getElementById("pages-body").innerHTML =
         '<tr><td colspan="4" class="pages-empty">Create or select a store from your profile menu.</td></tr>';
       document.getElementById("add-page-btn").disabled = true;
-      document.getElementById("edit-site-design").setAttribute("aria-disabled", "true");
-      document.getElementById("edit-site-design").removeAttribute("href");
       return;
     }
     window.cmsActiveSiteId = selectedSiteId;
@@ -272,24 +271,13 @@ addPageForm?.addEventListener("submit", async (event) => {
       history.replaceState(null, "", currentUrl);
     }
 
-    const [data,themeData] = await Promise.all([
-      cmsAdminFetch('/api/admin/cms/pages'),
-      cmsAdminFetch('/api/admin/cms/theme-projects?site_id='+encodeURIComponent(selectedSiteId)),
-    ]);
-    selectedThemeProject=themeData?.projects?.[0]||null;
+    const data = await cmsAdminFetch('/api/admin/cms/pages');
     // Global theme settings are edited in Theme Editor, not listed as a
     // customer-facing route in the Pages inventory.
     const canonicalPages=(data.pages||[]).filter(page=>page.slug!=='site');
     allPages=canonicalPages;
     const site = data.site || availableSites.find(item => item.id === selectedSiteId);
     selectedSiteSlug = site?.slug || availableSites.find(item => item.id === selectedSiteId)?.slug || null;
-    const home = allPages.find(page => page.slug === "home") || allPages[0] || { slug: "site" };
-    const editSiteQuery = new URLSearchParams({ slug: home.slug, site_id: selectedSiteId });
-    if (home.id) editSiteQuery.set("page_id", home.id);
-    document.getElementById("edit-site-design").href = selectedThemeProject
-      ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/themes/${encodeURIComponent(selectedThemeProject.id)}/editor/${encodeURIComponent(selectedThemeProject.pages?.find(p=>p.slug==='home')?.slug || selectedThemeProject.pages?.[0]?.slug || 'home')}`
-      : (home.id ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/pages/${encodeURIComponent(home.id)}/editor`
-        : "/admin/theme-editor?" + editSiteQuery.toString());
     document.querySelector(".pages-hub-heading p").textContent =
       `Manage ${allPages.length} pages for ${site?.name || site?.slug || "this store"}. Switch stores from your profile menu.`;
     document.getElementById("add-page-btn").disabled = false;

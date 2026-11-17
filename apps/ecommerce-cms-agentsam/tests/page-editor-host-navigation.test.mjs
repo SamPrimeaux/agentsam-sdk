@@ -43,17 +43,39 @@ test('Pages leads to content editor and keeps theme composition separate', () =>
   assert.ok(pages.includes('id="add-page-btn"'), 'the real Add Page API now has a matching control');
   assert.ok(pages.includes('window.cmsAdminNavigate("/admin/page-edit?" + query.toString())'),
     'new pages should open their own Page Editor');
-  assert.ok(pages.includes("cmsAdminFetch('/api/admin/cms/theme-projects?site_id='+encodeURIComponent(selectedSiteId))"), 'installed starter layouts must be scoped to the selected site');
+  assert.ok(!pages.includes("cmsAdminFetch('/api/admin/cms/theme-projects"), 'page inventory must not fetch Theme Studio projects');
+  assert.ok(pages.includes('new:"1"'), 'Add Page opens the full independent Page Editor');
+  assert.ok(pages.includes('pages-visibility-filter'), 'visibility filter belongs to native Pages list');
   assert.ok(!pages.includes('id="pages-select-all"'));
 });
 
-test('portable Page Editor never hardcodes a specific merchant brand or domain', () => {
+test('merchant Page Editor is a separate, responsive content and SEO surface', () => {
   const editor = readFileSync(new URL('../frontend/static/page-edit.html', import.meta.url), 'utf8');
-  assert.ok(!editor.includes('fuelnfreetime.com') && !editor.includes('Fuel & Free Time'));
-  assert.ok(editor.includes('Site address not verified'));
-  assert.ok(editor.includes('window.cmsAdminNavigate'));
-  assert.ok(editor.includes('viewButton.removeAttribute("href")'));
-  assert.ok(editor.includes('const isPublicPage = pageData.status === "published"'));
-  assert.ok(!editor.includes('const liveUrl = PAGE_ROUTES[slug] || "/"'));
-  assert.ok(!editor.includes('Use Publish or run CMS bootstrap'));
+  const js = readFileSync(new URL('../frontend/static/js/page-editor-review.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../frontend/static/css/page-editor-review.css', import.meta.url), 'utf8');
+  assert.match(editor, /page-editor-review\.js/);
+  assert.match(editor, /page-editor-review\.css/);
+  assert.ok(!editor.includes('fuelnfreetime.com') && !js.includes('Fuel & Free Time'));
+  assert.ok(!js.includes('No editor schema for this section yet'));
+  assert.ok(!js.includes('/admin/theme-editor'), 'page editor must not redirect to Theme Studio');
+  for (const control of ['pe-title','pe-body','pe-format','pe-seo-fields','pe-handle','pe-template',
+    'pe-save','pe-preview-action','pe-publish-action','pe-duplicate','pe-more-menu']) {
+    assert.ok(js.includes(control), 'missing interactive Page Editor control '+control);
+  }
+  assert.match(js, /content-draft/);
+  assert.ok(js.includes('initialNewPage'), 'new pages share the same editor as existing pages');
+  assert.ok(js.includes('cmsAdminFetch("/api/admin/cms/pages",{'), 'first save creates a canonical CMS draft');
+  assert.match(js, /cmsAdminFetch/);
+  assert.match(js, /cmsPublicPageUrl/);
+  assert.match(js, /document\.execCommand/);
+  assert.match(css, /@media\(max-width:700px\)/);
+  assert.match(css, /var\(--c-surface\)/);
+});
+
+test('page review drafts are tenant-scoped and cannot silently publish', () => {
+  const api = readFileSync(new URL('../backend/cms/api.js', import.meta.url), 'utf8');
+  assert.match(api, /cms_page_drafts/);
+  assert.match(api, /getPageAdminForSite\(env, context\.accountId/);
+  assert.match(api, /ON CONFLICT\(page_id,user_id\)/);
+  assert.match(api, /publish_ready: false/);
 });
