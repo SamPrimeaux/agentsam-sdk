@@ -626,3 +626,44 @@
   .agentsam-media-library .agentsam-media-item.is-selecting .agentsam-media-item__check,
   .agentsam-media-library .agentsam-media-item__check:focus-visible { opacity: 1; }
 }
+
+
+/* Phone: put view/sort alongside connection settings in the familiar overflow
+   menu. Source navigation and search remain the only always-visible rows. */
+.agentsam-media-options__view { display: none; }
+@media (max-width: 720px) {
+  .agentsam-media-toolbar > .agentsam-media-sort,
+  .agentsam-media-toolbar > .agentsam-media-segment { display: none; }
+  .agentsam-media-options__view {
+    display: grid;
+    align-items: start;
+    justify-items: start;
+    width: 100%;
+    gap: .6rem;
+    padding-top: .6rem;
+    border-top: 1px solid var(--ml-border);
+  }
+  .agentsam-media-options__view .agentsam-media-segment {
+    display: inline-flex;
+    width: max-content;
+    max-width: 100%;
+  }
+  .agentsam-media-options__view .agentsam-media-segment button {
+    min-height: 2.6rem;
+    padding-inline: .85rem;
+  }
+  .agentsam-media-options__sort {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: space-between;
+    width: 100%;
+    color: var(--ml-muted);
+    font-size: .82rem;
+  }
+  .agentsam-media-options__sort select {
+    flex: 0 0 auto;
+    min-height: 2.5rem;
+    color: var(--foreground, inherit);
+  }
+}

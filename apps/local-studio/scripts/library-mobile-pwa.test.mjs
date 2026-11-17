@@ -29,6 +29,11 @@ test('Library media actions are reachable without a permanent provider toolbar',
   assert.match(page, /<ConnectionStatus/);
   assert.match(page, /Cloudflare account/);
   assert.match(page, /Open MovieMode/);
+  assert.match(page, /className="agentsam-media-options__view"/);
+  assert.match(page, /aria-label="Mobile layout"/);
+  assert.match(page, /aria-label="Mobile media sort"/);
+  const style = read('../frontend/src/components/media/media-library.css');
+  assert.match(style, /\.agentsam-media-toolbar > \.agentsam-media-sort,/);
   assert.match(menu, /Select item/);
   assert.match(menu, /onSelectItem: \(asset: MediaAsset\) => void/);
   assert.match(grid, /onSelectItem=\{\(item\) => onToggle\(item.id\)\}/);
