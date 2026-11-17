@@ -127,7 +127,7 @@ export default function HealthPage({range}:PageProps){
       ? `${data.app.probes.passed}/${data.app.probes.samples} observed checks passed`
       : "No scheduled health-probe events are recorded"}
     {" · "}refreshed {new Date(data.generatedAt).toLocaleTimeString()}
-    <span style={{marginLeft:6}}>Recorded D1 events are not a continuous uptime guarantee.</span>
+    <span>Recorded D1 events are not a continuous uptime guarantee.</span>
   </div>}
   <div className="grid cols-4" style={{marginBottom:14}}>
    <SmallMetric label="HTTP requests" value={data?.edge.requests} unit="" source="Cloudflare HTTP requests"/>
