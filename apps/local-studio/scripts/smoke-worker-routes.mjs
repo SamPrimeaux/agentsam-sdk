@@ -76,10 +76,14 @@ try {
     '/admin/moviemode', '/admin/moviemode/edit',
     '/admin/moviemode/edit?project=smoke',
     '/admin/store', '/admin/pages', '/admin/theme-editor?slug=home',
+    '/admin/theme-editor?new=1&site_id=site-a',
+    '/admin/sites/site-a/pages/page-home/editor',
+    '/admin/sites/site-a/themes/theme_plain-jane/editor/home',
+    '/admin/sites/site-a/settings/editor',
     '/admin/preferences', '/admin/subscribers', '/admin/products.html',
     '/admin/theme-project-editor?site_id=site-a&project=theme_plain-jane',
     '/admin/theme-code-editor?site_id=site-a&project=theme_plain-jane',
-    '/admin/js/theme-studio-bootstrap.mjs',
+    '/admin/js/theme-studio-bootstrap.mjs', '/admin/js/theme-editor-entry-resolution.mjs',
     '/admin/js/agentsam-nav.js', '/admin/host-config.js',
     '/admin/media', '/admin/media/images', '/admin/media/videos',
     '/admin/forms', '/admin/chats', '/admin/settings/general',
@@ -143,6 +147,7 @@ try {
   // allowed to be fetched until a verified account session exists.
   for (const pathname of [
     '/theme-editor/project.mjs', '/theme-editor/bridge.mjs', '/theme-editor/mount.mjs',
+    '/theme-editor/routes.mjs', '/theme-editor/cms-page-adapter.mjs',
     '/theme-editor/starter-project.mjs', '/theme-editor/starter-products.mjs',
     '/theme-editor/starter-chrome.mjs', '/theme-editor/system-template-registry.mjs',
   ]) {

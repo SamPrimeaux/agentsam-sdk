@@ -376,7 +376,7 @@ async function bootNewTheme(route) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ site_id: siteId, project }),
   });
-  if (!created.project?.id) throw new Error('theme_project_create_failed');
+  if (!created.project?.id) throw new Error(created.error || 'theme_project_create_failed');
   try { sessionStorage.setItem(LEGACY_SITE_SELECTION_KEY, siteId); } catch { /* Route remains site-scoped. */ }
   location.replace(themeProjectEditorPath(siteId, created.project.id, 'home'));
 }
