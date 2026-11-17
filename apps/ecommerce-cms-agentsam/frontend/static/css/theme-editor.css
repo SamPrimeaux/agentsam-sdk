@@ -4220,3 +4220,69 @@ dialog.te-section-menu :is(button,input):focus-visible {
     min-height: 44px;
   }
 }
+
+
+/* Unified Theme Studio catalog rail: section and block discovery share the
+   same theme-token surface, workspace geometry, and responsive drawer. */
+.theme-studio .theme-studio-workspace > dialog.te-section-menu {
+  border-color: var(--te-border) !important;
+  background: var(--te-panel) !important;
+  color: var(--te-text) !important;
+  box-shadow: var(--te-shadow, 14px 0 34px rgba(22, 28, 37, .17));
+}
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-section-menu__head,
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-section-menu__foot,
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-preview-meta {
+  border-color: var(--te-border) !important;
+  background: var(--te-panel) !important;
+  color: var(--te-text) !important;
+}
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-search,
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-tabs,
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-list,
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-preview {
+  background: var(--te-panel) !important;
+  color: var(--te-text) !important;
+}
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-preview {
+  background: var(--te-canvas) !important;
+}
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-preview p,
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-list small,
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-preview-unavailable {
+  color: var(--te-muted) !important;
+}
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-list-item {
+  border-color: var(--te-border) !important;
+  color: var(--te-text) !important;
+}
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-list-item.is-selected {
+  border-color: var(--te-accent) !important;
+  background: color-mix(in srgb, var(--te-accent) 12%, var(--te-panel)) !important;
+}
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-add,
+.theme-studio .theme-studio-workspace > dialog.te-section-menu .te-catalog-generate {
+  border-color: var(--te-accent) !important;
+  background: var(--te-accent) !important;
+  color: var(--te-on-accent, #fff) !important;
+}
+.theme-studio .theme-studio-workspace > dialog.te-block-picker {
+  inset-block: 0 !important;
+  inset-inline-start: var(--te-tree-width, 300px) !important;
+  inset-inline-end: auto !important;
+  width: min(var(--te-catalog-width, 520px), calc(100% - var(--te-tree-width, 300px))) !important;
+  max-width: none !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+  transform: none !important;
+  border-radius: 0 12px 12px 0 !important;
+  z-index: 48 !important;
+}
+@media (max-width: 900px) {
+  .theme-studio .theme-studio-workspace > dialog.te-block-picker {
+    inset: 0 !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+  }
+}

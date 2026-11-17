@@ -103,11 +103,11 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
       gallery.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    if (anchor.id === 'new-theme-btn' && typeof host.onCreateCanvas === 'function') {
+    if (anchor.id === 'new-theme-btn' && typeof host.onCreateTheme === 'function') {
       const destination = new URL(anchor.href, host.baseUrl);
       if (destination.origin !== new URL(host.baseUrl).origin) return;
       event.preventDefault();
-      host.onCreateCanvas(destination.href);
+      host.onCreateTheme(destination.href);
       return;
     }
     if (anchor.id !== 'edit-theme-btn' && !anchor.closest('.online-store-draft-actions')) return;

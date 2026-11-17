@@ -29,11 +29,8 @@ export function CmsThemeCodeEditor({ projectId, siteId }: { projectId:string; si
   if(!workspace)return <p role="alert" className="p-6">Choose an authorized theme workspace to edit.</p>;
   if(error)return <p role="alert" className="p-6">{error}</p>;
   const goBack=()=>{
-    const query=new URLSearchParams({
-      page:'/admin/theme-project-editor',
-      project:projectId,
-      site_id:siteId,
-    });
+    const page=`/admin/sites/${encodeURIComponent(siteId)}/themes/${encodeURIComponent(projectId)}/editor/home`;
+    const query=new URLSearchParams({ page });
     const route='/admin/apps/ecommerce-cms-agentsam?'+query.toString();
     if (isPackagedDesktop()) window.location.hash='#'+route;
     else window.location.assign(route);

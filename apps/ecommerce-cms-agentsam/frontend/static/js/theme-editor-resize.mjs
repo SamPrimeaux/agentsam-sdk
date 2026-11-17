@@ -40,7 +40,7 @@ export function mountThemeStudioResizers(root) {
       root.style.setProperty(px(key), values[key] + 'px');
       handles.get(key)?.setAttribute('aria-valuenow', String(values[key]));
     }
-    const catalog = workspace.querySelector('#te-section-menu');
+    const catalog = workspace.querySelector('#te-section-menu, .te-block-picker');
     if (catalog) catalog.style.setProperty('--te-catalog-width', values.catalog + 'px');
   };
   const persist = () => {
@@ -100,7 +100,7 @@ export function mountThemeStudioResizers(root) {
   makeHandle('tree', 'Resize sections and theme settings panel', workspace);
   makeHandle('inspector', 'Resize selected section settings panel', workspace);
   const dockCatalog = () => {
-    const menu = root.querySelector('#te-section-menu');
+    const menu = root.querySelector('#te-section-menu, .te-block-picker');
     const tree = root.querySelector('#te-tree');
     if (!menu || !tree) return;
     const target = desktop() ? workspace : tree;

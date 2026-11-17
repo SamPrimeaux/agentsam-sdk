@@ -157,6 +157,12 @@ export const themeProjectStore = {
   },
 };
 
+export async function getCmsSiteContext() {
+  const data = await jsonRequest('/api/admin/cms/pages');
+  if (!data.site?.id) throw new Error('cms_site_context_unavailable');
+  return data.site;
+}
+
 export async function getActiveThemeId(): Promise<string | undefined> {
   const database = await db();
   return new Promise((resolve, reject) => {

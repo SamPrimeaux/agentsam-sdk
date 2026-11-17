@@ -1,5 +1,5 @@
 import { invokeStudioService, isPackagedDesktop } from '@/lib/desktop/tauri';
-import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from './ecommerce-routing';
+import { isEcommerceAdminPath, resolveEcommerceAdminPath, resolveEcommerceAssetPath } from './ecommerce-routing';
 import { toast } from 'sonner';
 import { isStudioAdminPath } from '../../../../shared/studio-admin-routes.mjs';
 
@@ -7,12 +7,17 @@ export function consoleDestination(path: string): string | null {
   if (!path.startsWith('/') || path.startsWith('//') || /[\\#]/.test(path)) return null;
   const url = new URL(path, 'https://console.invalid');
   if (url.origin !== 'https://console.invalid') return null;
-  if (isStudioAdminPath(url.pathname) || /^\/(mail|settings|artifacts|tickets|collaborate|sites|chats)(\/|$)/.test(url.pathname)) return path;
+  // Ecommerce routes must win before the broad /admin shell route matcher:
+  // Theme Studio and Product Studio are hosted under /admin but render from
+  // the installed Ecommerce package, not the Local Studio shell fallback.
   const product = resolveEcommerceAdminPath(path);
-  // The installed desktop must be able to render the destination, not merely
-  // recognize its route. Never navigate into a known-unrenderable product page.
-  if (!product || (isPackagedDesktop() && !resolveEcommerceAssetPath(product))) return null;
-  return '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(product);
+  if (product) {
+    if (isPackagedDesktop() && !resolveEcommerceAssetPath(product)) return null;
+    return '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(product);
+  }
+  if (isEcommerceAdminPath(url.pathname)) return null;
+  if (isStudioAdminPath(url.pathname) || /^\/(mail|settings|artifacts|tickets|collaborate|sites|chats)(\/|$)/.test(url.pathname)) return path;
+  return null;
 }
 
 /** Same-origin installed console adapter; native transport attaches the secured session. */

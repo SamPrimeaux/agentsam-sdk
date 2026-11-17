@@ -184,8 +184,7 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
     if(!result.ok)return json(result,result.status||503);
     const projectId=result.project.id;
     const siteId=site.id;
-    const editor='/admin/theme-project-editor?project='+encodeURIComponent(projectId)+
-      '&site_id='+encodeURIComponent(siteId);
+    const editor='/admin/sites/'+encodeURIComponent(siteId)+'/themes/'+encodeURIComponent(projectId)+'/editor/home';
     return json({
       ok:true,installed:true,unchanged:result.unchanged===true,
       scope:'site',

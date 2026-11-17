@@ -274,10 +274,10 @@ async function savedDraftMarkup(preview) {
   // revision through the account- and site-scoped CMS API.
   const origin=window.AgentSamOnlineStoreHost?.baseUrl||window.location.origin;
   const editor = new URL(preview.edit_href, origin);
-  if (editor.origin !== new URL(origin).origin || editor.pathname !== '/admin/theme-project-editor')
-    throw Error('invalid_theme_project_editor');
-  const projectId=editor.searchParams.get('project');
-  const siteId=editor.searchParams.get('site_id');
+  const editorMatch = editor.pathname.match(/^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/themes\/([A-Za-z0-9_-]{1,160})\/editor(?:\/([A-Za-z0-9_-]{1,160}))?$/);
+  if (editor.origin !== new URL(origin).origin || !editorMatch) throw Error('invalid_theme_project_editor');
+  const siteId=editorMatch[1];
+  const projectId=editorMatch[2];
   if(!/^[A-Za-z0-9_-]{1,160}$/.test(projectId||'') ||
      !/^[A-Za-z0-9_-]{1,160}$/.test(siteId||'')) throw Error('invalid_theme_project_identity');
   const url='/api/admin/cms/theme-projects/'+encodeURIComponent(projectId)+
@@ -386,14 +386,15 @@ function scopedStoreEditorHref(raw,siteId) {
   let url;
   try { url = new URL(raw || '/admin/theme-editor',origin); }
   catch { return '/admin/store'; }
+  const cleanEditorMatch = url.pathname.match(/^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/);
   if (url.origin!==origin ||
-      !['/admin/theme-editor','/admin/theme-project-editor','/admin/page-edit'].includes(url.pathname))
+      (!cleanEditorMatch && !['/admin/theme-editor','/admin/theme-project-editor','/admin/page-edit'].includes(url.pathname)))
     return '/admin/store';
   // An editor URL from a different site is an invalid read-model record.
-  // Never silently rewrite its site_id and open the wrong project's editor.
-  const linkedSite=url.searchParams.get('site_id');
+  // Never silently rewrite its site identity and open the wrong site's editor.
+  const linkedSite=cleanEditorMatch?.[1] || url.searchParams.get('site_id');
   if(linkedSite && linkedSite!==siteId)return '/admin/store';
-  if (/^[A-Za-z0-9_-]{1,160}$/.test(siteId||'')) url.searchParams.set('site_id',siteId);
+  if (!cleanEditorMatch && /^[A-Za-z0-9_-]{1,160}$/.test(siteId||'')) url.searchParams.set('site_id',siteId);
   const chosenStock = new URLSearchParams(window.location.search).get('stock');
   if (/^platform\/[a-z0-9-]{1,70}$/.test(chosenStock || '')) url.searchParams.set('stock',chosenStock);
   return url.pathname+url.search;
@@ -439,18 +440,19 @@ function showActiveTheme(theme,siteId) {
       try {sessionStorage.setItem('agentsam.cms.selected-site.v1',d.selected_site_id);} catch {}
     }
     const createTheme=document.getElementById('new-theme-btn');
-    const canvasUrl = window.AgentSamOnlineStoreHost?.canvasUrl || d.canvas_url;
-    if(createTheme && typeof canvasUrl === 'string'){
+    const newThemeUrl = window.AgentSamOnlineStoreHost?.newThemeUrl || d.new_theme_url;
+    if(createTheme && typeof newThemeUrl === 'string'){
       // A host advertises its creation capability. No merchant website is
       // required, and standalone Ecommerce never guesses an absent SDK route.
       const base = new URL(window.AgentSamOnlineStoreHost?.baseUrl || location.href);
-      const destination = new URL(canvasUrl, base);
+      const destination = new URL(newThemeUrl, base);
       if(destination.origin === base.origin && destination.pathname.startsWith('/')){
         if(sites.some(site => site.id === d.selected_site_id))
           destination.searchParams.set('site_id',d.selected_site_id);
         createTheme.href=destination.href;
         createTheme.hidden=false;
-        createTheme.setAttribute('aria-label','Create a Canvas');
+        createTheme.textContent = '+ New theme';
+        createTheme.setAttribute('aria-label','Create a theme');
       }
     }
     const externalStore = document.getElementById('browse-themes-shortcut');

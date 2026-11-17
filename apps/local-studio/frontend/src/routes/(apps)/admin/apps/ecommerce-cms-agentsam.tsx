@@ -142,12 +142,17 @@ export function EcommerceAppView({ search, redirectOnly = false }: {
       // The host already owns global navigation, search, assistant and dock.
       // Standalone CMS routes remain unchanged; only this iframe is chrome-free.
       resolved.searchParams.set('__agentsamEmbedded', '1');
-      if (search.site_id && /^[A-Za-z0-9_-]{1,120}$/.test(search.site_id) && page?.startsWith('/admin/')) {
+      const cleanSiteScopedEditor = /^\/admin\/sites\/[A-Za-z0-9_-]{1,160}\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/.test(page?.split('?')[0] || '');
+      if (!cleanSiteScopedEditor && search.site_id && /^[A-Za-z0-9_-]{1,120}$/.test(search.site_id) && page?.startsWith('/admin/')) {
         resolved.searchParams.set('site_id', search.site_id);
       }
       if (page?.split('?')[0] === '/admin/theme-project-editor' && search.project && /^[A-Za-z0-9_-]{1,160}$/.test(search.project)) {
         resolved.searchParams.set('project', search.project);
       }
+      const editorRoutePath = page?.split('?')[0] || '';
+      const isThemeStudioRoute = editorRoutePath === '/admin/theme-editor' || editorRoutePath === '/admin/theme-project-editor' ||
+        /^\/admin\/sites\/[A-Za-z0-9_-]{1,160}\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/.test(editorRoutePath);
+      if (isThemeStudioRoute && page) resolved.searchParams.set('editor_route', page);
       // The source-backed Design Canvas handoff is only an editor selection.
       // It never grants site ownership, installs a component or publishes content.
       if (search.stock && /^platform\/[a-z0-9-]{1,70}$/.test(search.stock))
@@ -172,15 +177,15 @@ export function EcommerceAppView({ search, redirectOnly = false }: {
   // srcdoc workbench and storefront preview. Breakpoints affect layout only,
   // never which editor runs. Packaged desktop navigation is intentionally
   // handled by its native app host; it mounts the same CMS editor product.
-  const standaloneWebEditor = typeof window !== 'undefined'
-    && !isPackagedDesktop()
-    && page?.split('?')[0] === '/admin/theme-project-editor';
+  const editorRoutePath = page?.split('?')[0] || '';
+  const standaloneWebEditor = typeof window !== 'undefined' && !isPackagedDesktop() && (
+    editorRoutePath === '/admin/theme-editor' || editorRoutePath === '/admin/theme-project-editor' ||
+    /^\/admin\/sites\/[A-Za-z0-9_-]{1,160}\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/.test(editorRoutePath)
+  );
   useEffect(() => {
-    if (!standaloneWebEditor || !url || !bridgeReady || authPending || (!user && !localPreview)) return;
-    const target = new URL(url, window.location.origin);
-    target.searchParams.delete('__agentsamEmbedded');
-    window.location.replace(target.pathname + target.search + target.hash);
-  }, [standaloneWebEditor, url, bridgeReady, authPending, user, localPreview]);
+    if (!standaloneWebEditor || !page || !bridgeReady || authPending || (!user && !localPreview)) return;
+    window.location.replace(page);
+  }, [standaloneWebEditor, page, bridgeReady, authPending, user, localPreview]);
 
   if (!bridgeReady || authPending) return <p className="p-8 text-muted-foreground">Loading AgentSam account…</p>;
   if (!user && !localPreview) return <RedirectToSignIn />;

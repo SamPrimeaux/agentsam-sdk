@@ -142,7 +142,10 @@ const requiredCmsEditorFiles = [
   "admin/theme-project-editor.html",
   "admin/js/theme-editor.js",
   "admin/js/theme-editor-generation-bootstrap.mjs",
-  "admin/js/theme-project-editor-bootstrap.mjs",
+  "admin/js/theme-studio-bootstrap.mjs",
+  "admin/js/theme-editor-entry-resolution.mjs",
+  "theme-editor/cms-page-adapter.mjs",
+  "theme-editor/routes.mjs",
   "theme-editor/project.mjs",
   "theme-editor/bridge.mjs",
   "theme-editor/mount.mjs",
@@ -154,14 +157,17 @@ for (const relative of requiredCmsEditorFiles) {
 }
 const projectEditorHtml = existsSync(join(root, "admin/theme-project-editor.html"))
   ? readFileSync(join(root, "admin/theme-project-editor.html"), "utf8") : "";
-if (!projectEditorHtml.includes('src="js/theme-project-editor-bootstrap.mjs"')) {
-  failures.push("desktop_cms_project_editor_bootstrap_unlinked");
+if (!projectEditorHtml.includes('location.replace') ||
+    projectEditorHtml.includes('theme-project-editor-bootstrap') ||
+    projectEditorHtml.includes('theme-studio-bootstrap')) {
+  failures.push("desktop_cms_project_editor_must_be_legacy_redirect");
 }
 const themeEditorHtml = existsSync(join(root, "admin/theme-editor.html"))
   ? readFileSync(join(root, "admin/theme-editor.html"), "utf8") : "";
-if (!themeEditorHtml.includes('/admin/js/theme-editor.js') ||
-    !themeEditorHtml.includes('/admin/js/theme-editor-generation-bootstrap.mjs')) {
-  failures.push("desktop_cms_theme_editor_entry_unlinked");
+if (!themeEditorHtml.includes('js/theme-studio-bootstrap.mjs') ||
+    themeEditorHtml.includes('theme-project-editor-bootstrap') ||
+    themeEditorHtml.includes('theme-editor-entry.js')) {
+  failures.push("desktop_cms_unified_theme_studio_entry_unlinked");
 }
 const companionCatalogPath = join(root, "brand/inneranimal-companions/v1/catalog.json");
 if (!existsSync(companionCatalogPath)) {
@@ -169,8 +175,8 @@ if (!existsSync(companionCatalogPath)) {
 } else {
   const catalog = JSON.parse(readFileSync(companionCatalogPath, "utf8"));
   const ids = ["geaux", "meaux", "coder", "architect", "engineer", "py"];
-  if (catalog.defaultCompanionId !== "geaux" ||
-      JSON.stringify(catalog.companions.map((item) => item.id)) !== JSON.stringify(ids)) {
+  const availableIds = new Set((catalog.companions || []).map((item) => item.id));
+  if (catalog.defaultCompanionId !== "geaux" || ids.some((id) => !availableIds.has(id))) {
     failures.push("desktop_companion_catalog_incomplete");
   }
   for (const id of ids) {

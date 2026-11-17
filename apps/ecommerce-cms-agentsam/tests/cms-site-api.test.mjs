@@ -112,7 +112,7 @@ test("admin API creates a second site with a starter, without changing the accou
     const result=await second.json();
     assert.equal(result.site.is_default, 0);
     assert.equal(result.starter.installed,true);
-    assert.match(result.starter.editor_url,/theme-project-editor\?project=theme_heuristic&site_id=/);
+    assert.match(result.starter.editor_url,/\/admin\/sites\/cmssite_[A-Za-z0-9_-]+\/themes\/theme_heuristic\/editor\/home/);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE global_type='theme-project'").get().n,2);
     // Package manifest can be shared across one merchant's sites; authored
     // page revisions remain independently content-addressed in R2.

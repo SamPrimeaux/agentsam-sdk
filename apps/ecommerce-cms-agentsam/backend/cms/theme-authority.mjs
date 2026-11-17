@@ -92,8 +92,8 @@ function appearance(row, state, siteId = null) {
     preview_url: previewUrl,
     snapshot_url: previewUrl,
     edit_href: artifact?.metadata?.project_id
-      ? '/admin/theme-project-editor?project=' + encodeURIComponent(artifact.metadata.project_id)
-      : '/admin/theme-editor?slug=shop',
+      ? '/admin/sites/' + encodeURIComponent(siteId) + '/themes/' + encodeURIComponent(artifact.metadata.project_id) + '/editor/home'
+      : '/admin/theme-editor?slug=shop&site_id=' + encodeURIComponent(siteId),
     installed: true,
     site_id: siteId,
     created_at: createdAt,

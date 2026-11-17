@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ADMIN_ROUTE_MANIFEST } from '../../ecommerce-cms-agentsam/backend/lib/route-manifest.js';
+import { ADMIN_ROUTE_MANIFEST, adminRouteForPath } from '../../ecommerce-cms-agentsam/backend/lib/route-manifest.js';
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repo = path.resolve(studio, '../..');
@@ -29,6 +29,10 @@ const paths = [
   '/admin/theme-editor?slug=home',
   '/admin/theme-editor?showcase=plain-jane&slug=journal-home',
   '/admin/theme-editor?slug=home&catalog=revise',
+  '/admin/theme-editor?new=1&site_id=site_a',
+  '/admin/sites/site_a/pages/cmsp_home_a/editor',
+  '/admin/sites/site_a/themes/theme_plain-jane/editor/home?previewMode=tablet',
+  '/admin/sites/site_a/settings/editor',
   '/admin/pages',
   '/admin/page-edit?slug=about',
   '/admin/preferences',
@@ -46,7 +50,9 @@ test('complete Ecommerce app registers beside CAD in existing Local Studio Apps'
 test('requested real admin routes belong to the existing product route authority', () => {
   const templates = ADMIN_ROUTE_MANIFEST.map(x => x.path);
   for (const href of paths) {
-    assert.ok(templates.includes(href.split('?')[0]), 'missing canonical admin route: ' + href);
+    const pathname = href.split('?')[0];
+    assert.ok(templates.includes(pathname) || adminRouteForPath(pathname),
+      'missing canonical admin route: ' + href);
   }
 });
 
@@ -67,6 +73,14 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAssetPath('/admin/page-edit?slug=about'), '/ecommerce-cms-agentsam/admin/page-edit.html?slug=about');
   assert.equal(resolveEcommerceAssetPath('/admin/theme-editor?showcase=plain-jane&slug=journal-home'),
     '/ecommerce-cms-agentsam/admin/theme-editor.html?showcase=plain-jane&slug=journal-home');
+  assert.equal(resolveEcommerceAssetPath('/admin/sites/site_a/themes/theme_plain-jane/editor/home?previewMode=tablet'),
+    '/ecommerce-cms-agentsam/admin/theme-editor.html?previewMode=tablet');
+  assert.equal(resolveEcommerceAssetPath('/admin/sites/site_a/pages/cmsp_home_a/editor'),
+    '/ecommerce-cms-agentsam/admin/theme-editor.html');
+  assert.equal(resolveEcommerceAssetPath('/admin/theme-editor?new=1&site_id=site_a'),
+    '/ecommerce-cms-agentsam/admin/theme-editor.html?new=1&site_id=site_a');
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?new=0&site_id=site_a'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?new=1&site_id=site_a&project=other'), null);
   assert.equal(resolveEcommerceAssetPath('/admin/products/create'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate');
   assert.equal(resolveEcommerceAssetPath('/admin/products/create?site_id=site-a'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate%3Fsite_id%3Dsite-a');
   assert.equal(resolveEcommerceAssetPath('/admin/products/create/blueprint_12'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate%2Fblueprint_12');
@@ -115,6 +129,12 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAdminPath('/admin/pages?site_id=site-a'), '/admin/pages?site_id=site-a');
   assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&site_id=site-a&page_id=cmsp_123'), '/admin/page-edit?slug=about&site_id=site-a&page_id=cmsp_123');
   assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=about&site_id=site-a&page_id=cmsp_123'), '/admin/theme-editor?slug=about&site_id=site-a&page_id=cmsp_123');
+  assert.equal(resolveEcommerceAdminPath('/admin/sites/site_a/pages/cmsp_home_a/editor?marketplace_kind=cms_embed&marketplace_key=announcement_bar'),
+    '/admin/sites/site_a/pages/cmsp_home_a/editor?marketplace_kind=cms_embed&marketplace_key=announcement_bar');
+  assert.equal(resolveEcommerceAdminPath('/admin/sites/site_a/themes/theme_plain-jane/editor/home?previewMode=tablet'),
+    '/admin/sites/site_a/themes/theme_plain-jane/editor/home?previewMode=tablet');
+  assert.equal(resolveEcommerceAdminPath('/admin/sites/site_a/themes/theme_plain-jane/editor/home?marketplace_kind=bad'),
+    null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html'), '/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html');
   assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&slug=shop'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?catalog=unknown&slug=home'), null);
@@ -159,6 +179,9 @@ test('desktop host validates product destinations before navigation and leaves t
     const valid = '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent('/admin/products/create');
 
     assert.equal(consoleDestination('/admin/products/create'), valid);
+    const themeEditor = '/admin/sites/site_a/themes/theme_plain-jane/editor/home';
+    assert.equal(consoleDestination(themeEditor),
+      '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(themeEditor));
     assert.equal(consoleDestination('/admin/products/create?resume=unknown_draft'), null);
     host.navigate('/admin/products/create');
     host.navigate(valid);

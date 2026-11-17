@@ -1506,8 +1506,14 @@
       });
     });
     search.addEventListener('input', paint);
-    document.body.append(modal);
-    modal.showModal();
+    const workspace = document.querySelector('.theme-studio-workspace');
+    if (!workspace) throw new Error('theme_editor_workspace_missing');
+    workspace.querySelector('#te-section-menu')?.remove();
+    workspace.querySelector('.te-block-picker')?.remove();
+    workspace.append(modal);
+    // Non-modal and portalled into the workspace: this is the same side
+    // catalog surface used by Add section, not a centered browser dialog.
+    modal.show();
     paint();
     requestAnimationFrame(function() { search.focus(); });
   }
@@ -1526,6 +1532,7 @@
     // Catalog is portalled beside the tree on desktop; discard the prior dialog
     // before rebuilding the live section hierarchy.
     document.querySelector('.theme-studio-workspace > #te-section-menu')?.remove();
+    document.querySelector('.theme-studio-workspace > .te-block-picker')?.remove();
     if (resolveShowcase && window.AgentSamResolveStudio?.renderSections) {
       window.AgentSamResolveStudio.renderSections();
       return;
@@ -3638,14 +3645,24 @@
     if (host) {
       try {
         const preview = await host.adapter.resolvePreview(slug, pageData);
+        const frame = byId('theme-preview');
         if (preview?.html) {
-          byId('theme-preview').removeAttribute('src');
-          byId('theme-preview').srcdoc = preview.html;
-          byId('te-preview-label').textContent = 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
+          frame.removeAttribute('src');
+          frame.srcdoc = preview.html;
           byId('te-open-tab').removeAttribute('href');
+        } else if (preview?.url) {
+          frame.removeAttribute('srcdoc');
+          if (frame.getAttribute('src') !== preview.url) frame.src = preview.url;
+          byId('te-open-tab').href = preview.openUrl || preview.url;
+          byId('te-open-tab').target = '_blank';
+          byId('te-open-tab').rel = 'noopener';
+        } else {
+          throw new Error('theme_preview_unavailable');
         }
+        byId('te-preview-label').textContent = 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
       } catch (error) {
         byId('theme-preview').srcdoc = '<!doctype html><html><body style="font:16px system-ui;padding:32px"><h2>Preview unavailable</h2><p>' + cmsEscapeHtml(error.message || String(error)) + '</p></body></html>';
+        byId('te-open-tab').removeAttribute('href');
         setNote(error.message || String(error), 'error');
       }
       return;

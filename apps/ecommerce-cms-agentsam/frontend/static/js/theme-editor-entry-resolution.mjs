@@ -52,9 +52,12 @@ export function planThemeEditorEntry({site,location,projects=[],pages=[]}) {
     const project=installed.find(p=>p.pages.some(page=>page.slug===slug))||installed[0];
     const page=selectedProjectPage(project,slug);
     if(page) return {kind:'redirect',resource:'theme-project',
-      to:link('/admin/theme-project-editor',{project:project.id,site_id:site.id,page:page.slug})};
+      to:`/admin/sites/${encodeURIComponent(site.id)}/themes/${encodeURIComponent(project.id)}/editor/${encodeURIComponent(page.slug)}`};
   }
-  if(selected)return {kind:'redirect',resource:'cms-page',
-    to:link('/admin/theme-editor',{slug:selected.slug,site_id:site.id,page_id:selected.id||null,...marketplace})};
+  if(selected) {
+    const path=`/admin/sites/${encodeURIComponent(site.id)}/pages/${encodeURIComponent(selected.id)}/editor`;
+    const query=marketplace?new URLSearchParams(marketplace).toString():'';
+    return {kind:'redirect',resource:'cms-page',to:path+(query?`?${query}`:'')};
+  }
   return {kind:'redirect',resource:'empty-site',to:link('/admin/pages',{site_id:site.id})};
 }

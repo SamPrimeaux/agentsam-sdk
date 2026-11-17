@@ -1,102 +1,148 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
+import { parseThemeEditorLocation, themeProjectEditorPath, cmsPageEditorPath } from '../frontend/theme-editor/routes.mjs';
+import { adminRouteForPath } from '../backend/lib/route-manifest.js';
+import { createCmsPageThemeEditorAdapter } from '../frontend/theme-editor/cms-page-adapter.mjs';
+import { materializeStarterProject, inheritDefaultTemplates } from '../frontend/theme-editor/starter-project.mjs';
+import { validateThemeProjectPayload } from '../backend/cms/theme-project-store.mjs';
 
-const source = readFileSync(
-  new URL('../frontend/static/js/theme-project-editor-bootstrap.mjs', import.meta.url), 'utf8',
-).replace(/^import .*;$/gm, '');
+const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-async function bootEditor(search) {
-  const errors = [], calls = [], replaced = [];
-  let mountHost = null;
-  let frameLoad = null;
-  const errorNode = { hidden: true, textContent: '' };
-  const frame = {
-    srcdoc: '',
-    addEventListener(name, cb) {
-      assert.equal(name, 'load');
-      frameLoad = cb;
-    },
+test('both CMS pages and installed themes resolve to the same Theme Studio HTML route', () => {
+  for (const path of [
+    '/admin/sites/site_a/pages/page_home/editor',
+    '/admin/sites/site_a/themes/theme_plain_jane/editor/home',
+    '/admin/sites/site_a/themes/theme_plain_jane/editor/product',
+    '/admin/sites/site_a/settings/editor',
+  ]) assert.equal(adminRouteForPath(path)?.page, 'theme-editor', path);
+});
+
+test('shared route parser preserves the correct target identity and view state', () => {
+  assert.deepEqual(parseThemeEditorLocation(new URL('https://studio.test/admin/sites/site_a/themes/theme_plain_jane/editor/home?previewMode=tablet')), {
+    mode: 'project', siteId: 'site_a', projectId: 'theme_plain_jane', pageSlug: 'home', legacy: false,
+  });
+  assert.deepEqual(parseThemeEditorLocation(new URL('https://studio.test/admin/sites/site_a/pages/page_home/editor')), {
+    mode: 'page', siteId: 'site_a', pageId: 'page_home', pageSlug: null, legacy: false,
+  });
+  assert.deepEqual(parseThemeEditorLocation(new URL('https://studio.test/admin/sites/site_a/settings/editor')), {
+    mode: 'page', siteId: 'site_a', pageId: null, pageSlug: 'site', legacy: false,
+  });
+  assert.equal(themeProjectEditorPath('site_a', 'theme_plain_jane', 'home'), '/admin/sites/site_a/themes/theme_plain_jane/editor/home');
+  assert.equal(cmsPageEditorPath('site_a', 'page_home'), '/admin/sites/site_a/pages/page_home/editor');
+  assert.equal(cmsPageEditorPath('site_a', null, 'site'), '/admin/sites/site_a/settings/editor');
+});
+
+test('the shared shell mounts one editor runtime with target-specific adapters', () => {
+  const shell = read('../frontend/static/theme-editor.html');
+  const alias = read('../frontend/static/theme-project-editor.html');
+  const bootstrap = read('../frontend/static/js/theme-studio-bootstrap.mjs');
+  assert.match(shell, /theme-studio-bootstrap\.mjs/);
+  assert.doesNotMatch(shell, /theme-project-editor-bootstrap|theme-editor-entry\.js/);
+  assert.match(bootstrap, /createThemeProjectAdapter/);
+  assert.match(bootstrap, /createCmsPageThemeEditorAdapter/);
+  assert.equal((bootstrap.match(/mountThemeEditor\(frame, host/g) || []).length, 1);
+  assert.match(bootstrap, /async onDuplicate\(\)/);
+  assert.match(bootstrap, /async onDelete\(\)/);
+  assert.match(alias, /location\.replace/);
+  assert.doesNotMatch(alias, /<iframe|theme-project-editor-bootstrap|theme-studio-bootstrap/);
+});
+
+test('project and page saves remain scoped to the same site identity', () => {
+  const bootstrap = read('../frontend/static/js/theme-studio-bootstrap.mjs');
+  const pageAdapter = read('../frontend/theme-editor/cms-page-adapter.mjs');
+  assert.match(bootstrap, /site_id: siteId/);
+  assert.match(bootstrap, /scopedProjectPath\(projectId, siteId/);
+  assert.match(pageAdapter, /url\.searchParams\.set\('site_id', siteId\)/);
+});
+
+test('CMS page adapter pins every read and write to the selected site and resolves the real public preview URL', async () => {
+  const calls = [];
+  const pagesPayload = {
+    site: { id:'site_a', name:'Agency site', primary_domain:'example.com' },
+    pages: [
+      { id:'page_home_a', site_id:'site_a', slug:'home', route_path:'/' },
+      { id:'page_about_a', site_id:'site_a', slug:'about', route_path:'/about' },
+    ],
   };
-  const project = { id: 'theme_right', name: 'My private draft', revision: 1, pages: [{ slug: 'home', title: 'Home' }] };
-  const assigned = [];
-  const top = { location: { assign(path) { assigned.push(path); }, hash: '' } };
-  const href = 'https://cms.test/admin/theme-project-editor' + search;
-  const vmWindow = { top }; vmWindow.parent = vmWindow;
-  const context = {
-    console: { error: (...args) => errors.push(args.map(String).join(':')) },
-    location: { href, search, replace: path => assigned.push(path) },
-    history: { state: null, replaceState: (...args) => replaced.push(args[2]) },
-    window: vmWindow,
-    document: { getElementById(id) {
-      if (id === 'theme-project-error') return errorNode;
-      if (id === 'theme-project-editor-frame') return frame;
-      return null;
-    }},
-    URL, URLSearchParams, TextDecoder, FormData,
-    fetch: async path => {
-      calls.push(path);
-      if (path === '/api/admin/store/online?site_id=site_a') return Response.json({
-        ok:true,selected_site_id:'site_a',available_sites:[{id:'site_a',name:'Authorized store'}],
-      });
-      if (path === '/api/admin/cms/theme-projects?site_id=site_a') return Response.json({
-        ok: true, projects: [{ id: 'theme_right', pages: [{ slug: 'home' }] }, { id: 'theme_other', pages: [{ slug: 'home' }] }],
-      });
-      if (path === '/api/admin/cms/theme-projects/theme_right?site_id=site_a') return Response.json({ ok: true, project });
-      throw new Error('unexpected_api_request:' + path);
+  const adapter = createCmsPageThemeEditorAdapter({
+    siteId:'site_a',
+    pagesPayload,
+    publicUrlResolver:(site, route) => 'https://' + site.primary_domain + route,
+    fetchImpl:async (path, init) => {
+      calls.push({path, init});
+      const data = path.startsWith('/api/admin/cms/registry')
+        ? {ok:true, registry:{pages:[]}}
+        : path.startsWith('/api/admin/cms/themes')
+          ? {ok:true, active_theme:{name:'Plain Jane', state:'draft'}}
+          : {ok:true, page:pagesPayload.pages[0]};
+      return {ok:true, status:200, json:async()=>data};
     },
-    createThemeProjectAdapter: () => ({}),
-    createThemeEditorBridge: () => ({}),
-    repairEmptyThemeBlockControls: p => ({ project: p, changed: false }),
-    inheritDefaultTemplates: p => ({ project: p, changed: false }),
-    mountThemeEditor: (_frame, host) => { mountHost = host; return Promise.resolve(); },
+  });
+
+  await adapter.request('/api/admin/cms/pages/home?site_id=wrong');
+  const pageUrl = new URL(calls[0].path, 'https://agentsam.example');
+  assert.equal(pageUrl.searchParams.get('site_id'), 'site_a');
+  assert.equal(pageUrl.searchParams.get('page_id'), 'page_home_a');
+  assert.equal(calls[0].init.credentials, 'include');
+
+  await adapter.request('/api/admin/cms/pages/site?site_id=wrong');
+  const siteUrl = new URL(calls[1].path, 'https://agentsam.example');
+  assert.equal(siteUrl.searchParams.get('site_id'), 'site_a');
+  assert.equal(siteUrl.searchParams.has('page_id'), false);
+
+  assert.deepEqual(await adapter.getRegistry(), {pages:[]});
+  assert.deepEqual(await adapter.getThemeIdentity(), {name:'Plain Jane', status:'draft'});
+  const preview = await adapter.resolvePreview('about', pagesPayload.pages[1]);
+  const previewUrl = new URL(preview.url);
+  assert.equal(previewUrl.origin + previewUrl.pathname, 'https://example.com/about');
+  assert.equal(previewUrl.searchParams.get('preview'), '1');
+  assert.ok(previewUrl.searchParams.get('_'));
+  assert.equal(preview.openUrl, 'https://example.com/about');
+});
+
+test('new=1 parses as a Theme Studio creation intent on the shared editor route', () => {
+  assert.deepEqual(parseThemeEditorLocation(new URL('https://studio.test/admin/theme-editor?new=1&site_id=site_a')), {
+    mode:'new', siteId:'site_a', legacy:true,
+  });
+});
+
+test('new theme creation produces a non-empty Shopify-style scaffold in the same project contract', () => {
+  const preset = {
+    schema:'agentsam.website-starter-preset.v1',
+    theme:{slug:'new-theme-test',name:'New theme',packageVersion:'1.0.0'},
+    sampleProducts:false,
+    tokens:{},
+    pages:[
+      {slug:'home',title:'Home',sections:[
+        {type:'hero',eyebrow:'Test site',heading:'A clear place to begin',body:'Build a memorable experience.',ctaLabel:'Discover our story',ctaHref:'/about'},
+        {type:'features',eyebrow:'What makes you different',heading:'Your story, made clear',body:'Introduce your work.',ctaLabel:'Learn more',ctaHref:'/about'},
+      ]},
+      {slug:'about',title:'About',sections:[
+        {type:'hero',eyebrow:'About us',heading:'The people behind the work',body:'Share your story.',ctaLabel:'Back home',ctaHref:'/'},
+      ]},
+    ],
   };
-  runInNewContext(source, context, { filename: 'theme-project-editor-bootstrap.mjs' });
-  await new Promise(resolve => setTimeout(resolve, 12));
-  return { errorNode, errors, calls, replaced, frame, top, getMountHost: () => mountHost, onFrameLoad: () => frameLoad?.(), assigned };
-}
-
-test('explicit theme deep link cannot fall through to a different project on the same site', async () => {
-  const state = await bootEditor('?site_id=site_a&project=theme_missing');
-  assert.equal(state.errorNode.hidden, false);
-  assert.ok(state.errors.some(text => text.includes('theme_project_not_found_for_site')));
-  assert.deepEqual(state.calls, ['/api/admin/cms/theme-projects?site_id=site_a']);
-  assert.equal(state.frame.srcdoc, '');
+  const starter = materializeStarterProject(preset,{name:'Test site'});
+  const {project,changed} = inheritDefaultTemplates(starter);
+  assert.equal(changed,true);
+  assert.equal(project.id,'theme_new-theme-test');
+  assert.ok(project.pages.find(page=>page.slug==='home').sections.length >= 6);
+  for (const slug of ['about','product','collection','checkout','404']) {
+    assert.ok(project.pages.some(page=>page.slug===slug), 'missing scaffold page: '+slug);
+  }
+  assert.equal(project.media.length,0);
+  assert.equal(validateThemeProjectPayload(project).id,project.id);
 });
 
-test('project editor refuses missing website identity and ambiguous project selection', async () => {
-  const missingSite = await bootEditor('?project=theme_right');
-  assert.equal(missingSite.errorNode.hidden, false);
-  assert.ok(missingSite.errors.some(text => text.includes('theme_project_site_required')));
-  assert.deepEqual(missingSite.calls, []);
-  const ambiguous = await bootEditor('?site_id=site_a');
-  assert.ok(ambiguous.errors.some(text => text.includes('theme_project_selection_required')));
-  assert.equal(ambiguous.frame.srcdoc, '');
-});
-
-test('authorized project opens the same site and its existing code editor; desktop stays in SPA', async () => {
-  const state = await bootEditor('?site_id=site_a&project=theme_right');
-  assert.equal(state.errorNode.hidden, true, state.errors.join(';'));
-  assert.equal(state.calls.length, 2);
-  assert.match(state.frame.srcdoc, /theme-editor\/editor\.css/);
-  state.onFrameLoad();
-  await Promise.resolve();
-  assert.equal(typeof state.getMountHost()?.onEditCode, 'function');
-  state.getMountHost().onEditCode();
-  assert.equal(state.assigned.length, 1);
-  assert.equal(state.assigned[0], '/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-code-editor&project=theme_right&site_id=site_a');
-});
-
-
-test('legacy new-theme deep link opens independent Canvas rather than blank wizard', async () => {
-  const state = await bootEditor('?site_id=site_a&new=1');
-  assert.deepEqual(state.calls, ['/api/admin/store/online?site_id=site_a']);
-  assert.equal(state.assigned.length,1);
-  const url = new URL(state.assigned[0]);
-  assert.equal(url.pathname,'/canvas');
-  assert.equal(url.searchParams.get('host'),'online-store');
-  assert.equal(url.searchParams.get('site_id'),'site_a');
-  assert.equal(state.getMountHost(),null);
-  assert.equal(state.frame.srcdoc,'');
+test('legacy new-theme alias redirects to the shared Theme Studio, never Design Canvas', () => {
+  const alias = read('../frontend/static/theme-project-editor.html');
+  const bootstrap = read('../frontend/static/js/theme-studio-bootstrap.mjs');
+  assert.match(alias,/new/);
+  assert.match(alias,/\/admin\/theme-editor/);
+  assert.doesNotMatch(alias,/\/canvas/);
+  assert.match(bootstrap,/async function bootNewTheme/);
+  assert.match(bootstrap,/materializeStarterProject/);
+  assert.match(bootstrap,/inheritDefaultTemplates/);
+  assert.match(bootstrap,/themeProjectEditorPath\(siteId, created\.project\.id, 'home'\)/);
 });

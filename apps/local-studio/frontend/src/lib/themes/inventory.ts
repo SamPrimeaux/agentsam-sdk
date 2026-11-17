@@ -3,7 +3,7 @@ import type { SettingsTheme } from '@inneranimalmedia/agentsam-settings/contract
 import { THEME_PROJECTS_CHANGED } from './projects';
 // @ts-ignore Public portable JavaScript theme authoring contract.
 import { THEME_PROJECT_SCHEMA, extractThemePage, validateThemeProject, renderThemePage } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project';
-import { getActiveThemeId, setActiveThemeId, themeProjectStore } from './projects';
+import { getActiveThemeId, getCmsSiteContext, setActiveThemeId, themeProjectStore } from './projects';
 import {
   projectStudioShellAppearance,
   applyStudioShellAppearance,
@@ -214,25 +214,22 @@ export async function createThemeDraft(id: string | null, name: string) {
   return themeProjectStore.save(project, { expectedVersion: 0 });
 }
 
-export function openThemeProject(id: string) {
-  // The real editor belongs to the installed Ecommerce CMS application.
-  // Keep its canonical /admin/theme-project-editor URL inside the app host;
-  // direct /admin navigation bypasses routing in native Tauri Local Studio.
+export async function openThemeProject(id: string, siteId?: string) {
+  // All theme projects enter the same site-scoped Theme Studio route.
   if (!/^[A-Za-z0-9_-]{1,160}$/.test(id)) throw new Error('theme_project_id_invalid');
-  const page = '/admin/theme-project-editor?' + new URLSearchParams({ project: id });
+  const resolvedSiteId = siteId || (await getCmsSiteContext()).id;
+  if (!/^[A-Za-z0-9_-]{1,160}$/.test(resolvedSiteId || '')) throw new Error('cms_site_context_unavailable');
+  const page = `/admin/sites/${encodeURIComponent(resolvedSiteId)}/themes/${encodeURIComponent(id)}/editor/home`;
   const destination = '/apps/ecommerce-cms-agentsam?' + new URLSearchParams({ page });
-  if (window.location.hash.startsWith('#/')) {
-    window.location.hash = '#' + destination;
-  } else {
-    window.location.assign(destination);
-  }
+  if (window.location.hash.startsWith('#/')) window.location.hash = '#' + destination;
+  else window.location.assign(destination);
 }
 
 export const themeManagement = {
   async installTheme(id: string) {
     const descriptor = (bundled as BundledTheme[]).find((theme) => theme.id === id);
     const project = await installThemeDraft(id, descriptor?.name);
-    openThemeProject(project.id);
+    await openThemeProject(project.id, project.siteId || project.site_id);
   },
   async activateTheme(id: string) {
     const project = await themeProjectStore.get(id);
@@ -262,7 +259,7 @@ export const themeManagement = {
   },
   async editTheme(id: string) {
     const project = await themeProjectStore.get(id) || await installThemeDraft(id);
-    openThemeProject(project.id);
+    await openThemeProject(project.id, project.siteId || project.site_id);
   },
   async duplicateTheme(id: string, name: string, style: { themeFamily?: string; cssVars?: Record<string, string> } = {}) {
     const payload = await registryRequest('/api/studio/themes', 'POST', {

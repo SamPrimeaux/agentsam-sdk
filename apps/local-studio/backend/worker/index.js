@@ -34,7 +34,7 @@ import {
 import { runStudioCmsAssistant } from "./studio-cms-assistant.js";
 import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
-import { resolveCmsSiteAccess, readCmsSiteSelector, readCmsAssistantSiteSelector, configuredCmsWorkers } from "./cms-authority.js";
+import { resolveCmsSiteAccess, readCmsSiteSelector, readCmsAssistantSiteSelector, isCmsThemeEditorRoute, configuredCmsWorkers } from "./cms-authority.js";
 import { withLocalStudioCmsContext } from "@inneranimalmedia/agentsam-cms/account-context";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, publicSitePathForRequest, servePublicSitePage } from "./public-site.js";
@@ -1102,13 +1102,13 @@ export default {
           { remoteWorkerNames: configuredCmsWorkers(env) });
         if (!access.ok) return json({ ok: false, error: access.error }, access.status || 404);
         cmsSite = access.site;
-        if (cmsSite.source === "worker") {
-          if (!url.pathname.startsWith("/api/admin/cms/"))
-            return json({ ok: false, error: "remote_site_operation_not_supported_by_this_editor" }, 409);
+        if (cmsSite.source === "worker" && url.pathname.startsWith("/api/admin/cms/")) {
           const remoteUrl = new URL(request.url);
           remoteUrl.pathname = "/api/cms/remote/" + url.pathname.slice("/api/admin/cms/".length);
           return handleCmsWorkerRequest(new Request(remoteUrl, request), env, principal.id, { ensureCmsSiteStarter });
         }
+        if (cmsSite.source === "worker" && !isCmsThemeEditorRoute(url.pathname))
+          return json({ ok: false, error: "remote_site_operation_not_supported_by_this_editor" }, 409);
         studioUser.account_id = cmsSite.account_id;
         studioUser.role = cmsSite.role || "owner";
         studioUser.site_id = cmsSite.id;

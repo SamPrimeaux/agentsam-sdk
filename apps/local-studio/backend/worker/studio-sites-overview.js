@@ -70,9 +70,7 @@ export async function handleStudioSitesOverview(request, env, actorUserId) {
     id: saved.id,
     name: saved.name,
     preview_url: saved.sourcePreviewUrl || null,
-    edit_href: '/admin/theme-project-editor?' + new URLSearchParams({
-      project: saved.id, site_id: selectedSite.id,
-    }).toString(),
+    edit_href: '/admin/sites/' + encodeURIComponent(selectedSite.id) + '/themes/' + encodeURIComponent(saved.id) + '/editor/home',
   } : null);
 
   let homePage = null;
@@ -98,7 +96,7 @@ export async function handleStudioSitesOverview(request, env, actorUserId) {
   return response({
     ok: true,
     source: 'studio_cms_site_read_model',
-    canvas_url: '/admin/canvas?host=online-store',
+    new_theme_url: '/admin/theme-editor?new=1',
     store: { visibility: 'unpublished', url: null, domain: null, company_name: null },
     site_preview: homePage ? {
       title: homePage.title,

@@ -37,8 +37,8 @@ test('Pages leads to content editor and exposes the visual editor without unsafe
   const pages = readFileSync(new URL('../frontend/static/pages.html', import.meta.url), 'utf8');
   assert.ok(pages.includes('const editHref = themePage'));
   assert.ok(pages.includes('`/admin/page-edit?${query}`'));
-  assert.ok(pages.includes("'/admin/theme-project-editor?'"), 'theme layouts open their existing editor');
-  assert.ok(pages.includes('const designHref = themePage ? editHref : `/admin/theme-editor?${query}`'));
+  assert.ok(pages.includes('encodeURIComponent(p.project_id)') && pages.includes('/themes/'), 'theme layouts use the site-scoped Theme Studio route');
+  assert.ok(pages.includes('const designHref = themePage ? editHref'));
   assert.ok(!pages.includes('id="cms-bootstrap-btn"'));
   assert.ok(pages.includes('id="add-page-btn"'), 'the real Add Page API now has a matching control');
   assert.ok(pages.includes('window.cmsAdminNavigate("/admin/page-edit?" + query.toString())'),

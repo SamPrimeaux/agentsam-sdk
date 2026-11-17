@@ -69,8 +69,7 @@ export async function listStudioThemeDrafts(env,userId) {
       site_id:row.site_id,site_name:row.site_name,site_slug:row.site_slug,
       meta:project.packageName,
       preview_url:storePreview(project.sourceThemeId,project.sourcePackageVersion,project.sourcePreviewUrl),
-      edit_href:'/admin/theme-project-editor?project='+encodeURIComponent(project.id)+
-        '&site_id='+encodeURIComponent(row.site_id),
+      edit_href:'/admin/sites/'+encodeURIComponent(row.site_id)+'/themes/'+encodeURIComponent(project.id)+'/editor/home',
     };
   }).filter(Boolean);
  }catch{/* Missing v2 table must not hide historical selections. */}

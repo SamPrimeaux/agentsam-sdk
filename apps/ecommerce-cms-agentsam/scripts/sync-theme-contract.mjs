@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const MODULES=['project','bridge','cms-adapter'];
+const MODULES=['project','bridge','cms-adapter','cms-page-adapter','routes'];
 const VERIFY=process.argv.includes('--check');
 let failures=0;
 for (const name of MODULES) {

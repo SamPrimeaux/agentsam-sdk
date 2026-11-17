@@ -269,7 +269,7 @@ export async function createCanvasCmsDraft(env, actor, snapshot, site) {
     if (actual?.id !== source.id || actual.revision !== source.revision || actual.content_hash !== source.content_hash)
       throw failure('canvas_cms_conversion_conflict', 409);
     return { ok: true, site_id: site.id, project_id: projectId, revision: result.project.revision,
-      editor_url: '/admin/theme-project-editor?project=' + projectId + '&site_id=' + encodeURIComponent(site.id),
+      editor_url: '/admin/sites/' + encodeURIComponent(site.id) + '/themes/' + encodeURIComponent(projectId) + '/editor/home',
       source, published: false, unchanged: prior.ok || result.unchanged === true };
   }, actor);
 }

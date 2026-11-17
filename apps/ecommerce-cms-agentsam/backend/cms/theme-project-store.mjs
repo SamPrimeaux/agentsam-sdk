@@ -292,12 +292,21 @@ export async function createThemeProject(env, accountId, value, siteId = null) {
   let project;
   try { project = validateThemeProjectPayload(value); }
   catch (error) { return { ok: false, status: 400, error: error.message || "theme_project_invalid" }; }
-  if (await projectRow(env, accountId, project.id, siteId)) {
-    return { ok: false, status: 409, error: "theme_project_exists" };
+  let existing;
+  try { existing = await projectRow(env, accountId, project.id, siteId); }
+  catch (error) {
+    return { ok: false, status: error.status || (error.message === 'cms_site_not_found' ? 404 : 503),
+      error: String(error.message || error) };
   }
+  if (existing) return { ok: false, status: 409, error: "theme_project_exists" };
   const now = new Date().toISOString();
   project = { ...project, revision: 1, createdAt: project.createdAt || now, updatedAt: now };
-  const saved = await writeRevision(env, accountId, null, project, 1, "create", siteId);
+  let saved;
+  try { saved = await writeRevision(env, accountId, null, project, 1, "create", siteId); }
+  catch (error) {
+    return { ok: false, status: error.status || (error.message === 'cms_site_not_found' ? 404 : 503),
+      error: String(error.message || error) };
+  }
   if (!saved.ok) {
     if (saved.code === "theme_project_exists") {
       const existing = await getThemeProject(env, accountId, project.id, siteId);

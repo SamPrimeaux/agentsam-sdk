@@ -23,9 +23,9 @@ test('site selection requires ownership and never silently falls back across two
 test('bare editor chooses verified CMS homepage and preserves site and stable page IDs',()=>{
   const p=planThemeEditorEntry({site:siteA,location:'/admin/theme-editor',pages:[about,home]});
   assert.equal(p.kind,'redirect');
-  assert.equal(p.to,'/admin/theme-editor?slug=home&site_id=site_a&page_id=cmsp_home_a');
+  assert.equal(p.to,'/admin/sites/site_a/pages/cmsp_home_a/editor');
   const other=planThemeEditorEntry({site:siteA,location:'/admin/theme-editor?slug=about&site_id=site_a',pages:[about,home]});
-  assert.equal(other.to,'/admin/theme-editor?slug=about&site_id=site_a&page_id=cmsp_about_a');
+  assert.equal(other.to,'/admin/sites/site_a/pages/cmsp_about_a/editor');
 });
 
 test('installed private theme goes to its own site-scoped project editor, not an unrelated demo',()=>{
@@ -34,11 +34,11 @@ test('installed private theme goes to its own site-scoped project editor, not an
   assert.equal(destination.kind,'redirect');
   assert.equal(destination.resource,'theme-project');
   assert.equal(destination.to,
-    '/admin/theme-project-editor?project=theme_revise&site_id=site_b&page=home');
+    '/admin/sites/site_b/themes/theme_revise/editor/home');
   const journal=planThemeEditorEntry({site:siteB,
     location:'/admin/theme-editor?slug=journal&site_id=site_b',projects:[project]});
   assert.equal(journal.to,
-    '/admin/theme-project-editor?project=theme_revise&site_id=site_b&page=journal');
+    '/admin/sites/site_b/themes/theme_revise/editor/journal');
 });
 
 test('canonical deep-link page_id takes precedence and cannot resolve across sites',()=>{
@@ -51,7 +51,7 @@ test('canonical deep-link page_id takes precedence and cannot resolve across sit
     location:'/admin/theme-editor?slug=stale&site_id=site_a&page_id=cmsp_about_a',
     pages:[home,about],projects:[project]});
   assert.equal(exact.to,
-    '/admin/theme-editor?slug=about&site_id=site_a&page_id=cmsp_about_a');
+    '/admin/sites/site_a/pages/cmsp_about_a/editor');
 });
 
 test('empty sites go to Pages for the selected owner; no mocked homepage is manufactured',()=>{
@@ -60,17 +60,22 @@ test('empty sites go to Pages for the selected owner; no mocked homepage is manu
   assert.equal(planThemeEditorEntry({site:siteA,location:'/admin/theme-editor?slug=%2Fwrong',pages:[home]}).kind,'unavailable');
 });
 
-test('the live editor waits for account-owned route verification before CMS/preview initialization',()=>{
-  const source=readFileSync(new URL('../frontend/static/js/theme-editor.js',import.meta.url),'utf8');
+test('one Theme Studio shell verifies site ownership and mounts either target through one runtime',()=>{
   const html=readFileSync(new URL('../frontend/static/theme-editor.html',import.meta.url),'utf8');
-  const entry=readFileSync(new URL('../frontend/static/js/theme-editor-entry.js',import.meta.url),'utf8');
-  assert.ok(source.includes('await window.__agentsamThemeEditorEntryReady'));
-  assert.ok(source.indexOf('await window.__agentsamThemeEditorEntryReady') <
-    source.indexOf("const params = new URLSearchParams(location.search)"));
-  assert.ok(html.indexOf('theme-editor-entry.js') < html.indexOf('/admin/js/theme-editor.js'));
-  assert.match(entry,/\/api\/admin\/cms\/sites/);
-  assert.match(entry,/\/api\/admin\/cms\/pages\?site_id=/);
-  assert.match(entry,/\/api\/admin\/cms\/theme-projects\?site_id=/);
+  const bootstrap=readFileSync(new URL('../frontend/static/js/theme-studio-bootstrap.mjs',import.meta.url),'utf8');
+  const pageAdapter=readFileSync(new URL('../frontend/theme-editor/cms-page-adapter.mjs',import.meta.url),'utf8');
+  const projectAdapter=readFileSync(new URL('../packages/theme-contract/editor/project.mjs',import.meta.url),'utf8');
+  assert.match(html,/theme-studio-bootstrap\.mjs/);
+  assert.doesNotMatch(html,/theme-editor-entry\.js|theme-project-editor-bootstrap/);
+  assert.match(bootstrap,/chooseThemeEditorSite/);
+  assert.match(bootstrap,/planThemeEditorEntry/);
+  assert.match(bootstrap,/createCmsPageThemeEditorAdapter/);
+  assert.match(bootstrap,/createThemeProjectAdapter/);
+  assert.match(bootstrap,/mountThemeEditor\(frame, host/);
+  assert.match(bootstrap,/async onDuplicate\(\)/);
+  assert.match(bootstrap,/async onDelete\(\)/);
+  assert.match(pageAdapter,/site_id/);
+  assert.match(projectAdapter,/createThemeProjectAdapter/);
 });
 
 
@@ -79,10 +84,10 @@ test('Theme Studio gives every draft an account-owned site route instead of the 
   const store=readFileSync(new URL('../frontend/static/js/store.js',import.meta.url),'utf8');
   assert.match(workspace,/api\/admin\/cms\/theme-projects/);
   assert.match(workspace,/Array\.isArray\(data\.drafts\)/);
-  assert.match(workspace,/site_id: draft\.site_id/);
-  const editor=readFileSync(new URL('../frontend/static/js/theme-project-editor-bootstrap.mjs',import.meta.url),'utf8');
+  assert.match(workspace,/admin\/sites/);
+  const editor=readFileSync(new URL('../frontend/static/js/theme-studio-bootstrap.mjs',import.meta.url),'utf8');
   assert.match(editor,/async onDuplicate\(\)/);
-  assert.match(editor,/destination\.searchParams\.set\('site_id',result\.site_id\)/);
+  assert.match(editor,/themeProjectEditorPath\(siteId, result\.project\.id, 'home'\)/);
   assert.match(editor,/async onDelete\(\)/);
   assert.match(editor,/result\.archived !== true/);
   assert.doesNotMatch(editor,/studioMode|scope=studio/);
@@ -109,8 +114,8 @@ test('Theme Studio renders real site-owned drafts and refuses fabricated or miss
   assert.equal(pages.length,2);
   const html=pages.at(-1);
   assert.match(html,/Violet — Draft/);
-  assert.match(html,/site_id=site_violet/);
-  assert.match(html,/project=theme_violet/);
+  assert.match(html,/href="\/admin\/sites\/site_violet\/themes\/theme_violet\/editor\/home"/);
+  assert.doesNotMatch(html,/theme-project-editor\?|project=theme_violet/);
   assert.match(html,/Revision 3/);
   assert.doesNotMatch(html,/Invalid ghost|Unsafe ID|scope=studio/);
 });
@@ -121,7 +126,7 @@ test('marketplace intent reaches the authorized page editor with catalog install
     pages:[home],projects:[project]});
   assert.equal(destination.resource,'cms-page');
   assert.equal(destination.to,
-    '/admin/theme-editor?slug=home&site_id=site_a&page_id=cmsp_home_a&marketplace_kind=cms_embed&marketplace_key=announcement_bar');
+    '/admin/sites/site_a/pages/cmsp_home_a/editor?marketplace_kind=cms_embed&marketplace_key=announcement_bar');
 });
 
 

@@ -3,34 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f4f4f2">
-<link rel="icon" type="image/svg+xml" href="/admin/brand/agentsam-gorilla-tiny.svg">
-<title>Theme Studio — AgentSam Commerce</title>
-<link rel="stylesheet" href="/admin/css/admin.css">
-<link rel="stylesheet" href="/admin/css/console.css">
-<link rel="stylesheet" href="/admin/css/theme-editor.css">
-<link rel="stylesheet" href="/admin/css/theme-settings-panel.css">
-<link rel="stylesheet" href="/admin/css/theme-embed-review.css">
-<link rel="stylesheet" href="/admin/css/agentsam.css">
-<link rel="stylesheet" href="/admin/css/revise-atlas.css">
+<meta name="theme-color" content="#191919">
+<script>
+  (() => {
+    const base = document.createElement('base');
+    base.href = location.pathname.startsWith('/ecommerce-cms-agentsam/')
+      ? '/ecommerce-cms-agentsam/admin/' : '/admin/';
+    document.head.appendChild(base);
+  })();
+</script>
+<title>Theme Studio — AgentSam CMS</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg, #191919)}
+#theme-project-editor-frame{display:block;width:100%;height:100%;border:0}
+#theme-project-error{position:fixed;inset:12px 12px auto;z-index:10;max-width:760px;padding:12px 14px;border:1px solid var(--line, #313131);border-radius:10px;background:var(--surface, #262626);color:var(--text, #e5e5e5);font:13px/1.5 system-ui;white-space:pre-wrap}
+#theme-project-error[hidden]{display:none}
+#theme-project-loading{position:fixed;inset:0;z-index:5;display:grid;grid-template:54px 1fr/300px 1fr;gap:8px;padding:8px;box-sizing:border-box;background:var(--bg, #191919)}
+#theme-project-loading span{border-radius:10px;background:linear-gradient(100deg,var(--surface, #262626),var(--surface-2, #2a2a2a),var(--surface, #262626));background-size:200% 100%;animation:editor-loading 1.4s ease infinite}
+#theme-project-loading span:first-child{grid-column:1/-1}
+@keyframes editor-loading{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){#theme-project-loading span{animation:none}}
+/* The phone editor has a single work surface, not an 80px fake sidebar.
+   The skeleton must never imply a three-column canvas while loading. */
+@media(max-width:900px){
+  #theme-project-loading{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:52px minmax(0,1fr);
+    padding:8px;
+    gap:8px;
+  }
+  #theme-project-loading span:first-child{grid-column:1;grid-row:1}
+  #theme-project-loading span:nth-child(2){grid-column:1;grid-row:2}
+  #theme-project-loading span:nth-child(3){display:none}
+}
+</style>
 </head>
 <body>
-<script src="/admin/js/shell.js"></script>
-<script src="/admin/js/cms-authoring-engine.js"></script>
-<script src="/admin/js/pages-shared.js"></script>
-<script src="/admin/js/cms-site-public-url.js"></script>
-<script src="/admin/js/platform-stock-sections.js"></script>
-<script src="/admin/js/portable-sections.js"></script>
-<script src="/admin/js/revise-atlas.js"></script>
-<script src="/admin/js/theme-preview-registry.js"></script>
-<script src="/admin/js/miniagentsam-codepreview.js"></script>
-<script src="/admin/js/resolve-studio.js"></script>
-<script src="/admin/js/theme-editor-entry.js"></script>
-<script src="/admin/js/theme-editor.js"></script>
-<script src="/admin/js/theme-settings-panel.js"></script>
-<script type="module" src="/admin/js/theme-editor-resize.mjs"></script>
-<script src="/admin/js/theme-embed-review.js"></script>
-<script src="/admin/js/resolve-theme-settings.js"></script>
-<script type="module" src="/admin/js/theme-editor-generation-bootstrap.mjs"></script>
+<div id="theme-project-loading" role="status" aria-label="Loading theme" aria-busy="true"><span></span><span></span><span></span></div>
+<iframe id="theme-project-editor-frame" title="Theme Studio editor"></iframe>
+<pre id="theme-project-error" role="alert" hidden></pre>
+<script src="js/platform-stock-sections.js"></script>
+    <script src="js/cms-site-public-url.js"></script>
+<script type="module" src="js/theme-studio-bootstrap.mjs"></script>
 </body>
 </html>

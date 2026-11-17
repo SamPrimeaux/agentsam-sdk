@@ -25,8 +25,17 @@ function eventLabel(event:CanvasEvent) {
  const payload=event.payload||{};
  return String(event.message||payload.message||payload.title||payload.skill_id||payload.name||event.type.replaceAll("."," · ").replaceAll("_"," "));
 }
+function isThemeStudioEditorUrl(value?:string) {
+ try {
+  const url=new URL(value||"",location.origin);
+  return url.origin===location.origin && (
+   url.pathname==="/admin/theme-project-editor" ||
+   /^\/admin\/sites\/[A-Za-z0-9_-]{1,160}\/themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?$/.test(url.pathname)
+  );
+ } catch { return false; }
+}
 export function CanvasEntryStage({tab,openSources=false}:{tab:SideTab;openSources?:boolean}) {
- if(tab.url?.startsWith("/admin/theme-project-editor?"))return <ExistingThemeCanvas tab={tab}/>;
+ if(isThemeStudioEditorUrl(tab.url))return <ExistingThemeCanvas tab={tab}/>;
  return <IndependentCanvas key={tab.id} tab={tab} openSources={openSources}/>;
 }
 
@@ -395,7 +404,7 @@ function ExistingThemeCanvas({tab}:{tab:SideTab}) {
  useEffect(()=>{
   const handler=(event:MessageEvent)=>{
    if(event.origin!==location.origin||event.source!==iframe.current?.contentWindow||event.data?.type!=="agentsam:cms-canvas:route")return;
-   try{const next=new URL(event.data.href,location.origin);if(next.origin===location.origin&&next.pathname==="/admin/theme-project-editor"&&!next.searchParams.has("new")&&next.searchParams.get("site_id")===event.data.siteId&&next.searchParams.get("project")===event.data.projectId)setTabUrl(tab.id,next.pathname+next.search);}catch{}
+   try{const next=new URL(event.data.href,location.origin);const match=next.pathname.match(/^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/themes\/([A-Za-z0-9_-]{1,160})\/editor(?:\/[A-Za-z0-9_-]{1,160})?$/);if(next.origin===location.origin&&match&&match[1]===event.data.siteId&&match[2]===event.data.projectId)setTabUrl(tab.id,next.pathname+next.search);}catch{}
   };window.addEventListener("message",handler);return()=>window.removeEventListener("message",handler);
  },[tab.id,setTabUrl]);
  return <div className="cv-existing-theme"><header><strong>Website draft</strong><a href={tab.url} target="_blank" rel="noopener noreferrer">Open Theme Editor <ExternalLink size={13}/></a></header><iframe ref={iframe} title="CMS Theme Editor" src={tab.url}/></div>;

@@ -141,10 +141,11 @@ function renderRows(pages) {
         : visibilityBadge(p.status || "draft");
     const query = identityQuery(p);
     const editHref = themePage
-      ? '/admin/theme-project-editor?'+new URLSearchParams({
-        project:p.project_id,site_id:selectedSiteId,page:p.slug}).toString()
+      ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/themes/${encodeURIComponent(p.project_id)}/editor/${encodeURIComponent(p.slug || 'home')}`
       : `/admin/page-edit?${query}`;
-    const designHref = themePage ? editHref : `/admin/theme-editor?${query}`;
+    const designHref = themePage ? editHref
+      : (p.id ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/pages/${encodeURIComponent(p.id)}/editor`
+        : `/admin/theme-editor?${query}`);
     const sourceHref = !themePage && p.html_source_editable === true
       ? `<a href="/admin/theme-editor?${cmsEscapeAttr(sourceEditorQuery(p))}" class="btn ghost small" onclick="event.stopPropagation()">Edit HTML source</a>`
       : "";
@@ -324,12 +325,9 @@ addPageForm?.addEventListener("submit", async (event) => {
     const editSiteQuery = new URLSearchParams({ slug: home.slug, site_id: selectedSiteId });
     if (home.id) editSiteQuery.set("page_id", home.id);
     document.getElementById("edit-site-design").href = selectedThemeProject
-      ? '/admin/theme-project-editor?'+new URLSearchParams({
-        project:selectedThemeProject.id,site_id:selectedSiteId,
-        page:selectedThemeProject.pages?.find(p=>p.slug==='home')?.slug||
-          selectedThemeProject.pages?.[0]?.slug||'home',
-      }).toString()
-      : "/admin/theme-editor?" + editSiteQuery.toString();
+      ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/themes/${encodeURIComponent(selectedThemeProject.id)}/editor/${encodeURIComponent(selectedThemeProject.pages?.find(p=>p.slug==='home')?.slug || selectedThemeProject.pages?.[0]?.slug || 'home')}`
+      : (home.id ? `/admin/sites/${encodeURIComponent(selectedSiteId)}/pages/${encodeURIComponent(home.id)}/editor`
+        : "/admin/theme-editor?" + editSiteQuery.toString());
     document.querySelector(".pages-hub-heading p").textContent =
       `Manage ${allPages.length} editable pages for ${site?.name || site?.slug || "this site"} (${site?.slug || selectedSiteId}).`;
     document.getElementById("add-page-btn").disabled = false;

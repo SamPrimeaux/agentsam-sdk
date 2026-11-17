@@ -261,8 +261,15 @@ export async function resolveCmsSiteAccess(db, actorUserId, selector = null, acc
 }
 
 /** Read only an explicit site selector; generic page/project slugs are ignored. */
+export function isCmsThemeEditorRoute(pathname) {
+  return pathname === '/admin/theme-editor' || pathname === '/admin/theme-project-editor' ||
+    /^\/admin\/sites\/[A-Za-z0-9_-]{1,160}\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/.test(pathname);
+}
+
 export async function readCmsSiteSelector(request) {
   const url = new URL(request.url);
+  const editorPath = url.pathname.match(/^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/);
+  if (editorPath) return decodeURIComponent(editorPath[1]);
   const fromUrl = url.searchParams.get('site_id') || url.searchParams.get('site') || url.searchParams.get('site_slug');
   if (fromUrl) return fromUrl;
   if (['GET', 'HEAD'].includes(request.method)) return null;

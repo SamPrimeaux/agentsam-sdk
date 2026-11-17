@@ -97,17 +97,16 @@
       const hostOrigin=window.AgentSamOnlineStoreHost?.baseUrl
         ? new URL(window.AgentSamOnlineStoreHost.baseUrl).origin : location.origin;
       const editor=new URL(result.editor_url,hostOrigin);
-      if(editor.origin!==hostOrigin || editor.pathname!=='/admin/theme-project-editor' ||
-        editor.searchParams.get('project')!==result.project_id ||
-        !/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id||'') || editor.searchParams.get('site_id')!==result.site_id)
+      const editorMatch=editor.pathname.match(/^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/themes\/([A-Za-z0-9_-]{1,160})\/editor(?:\/([A-Za-z0-9_-]{1,160}))?$/);
+      if(editor.origin!==hostOrigin || !editorMatch || editorMatch[1]!==result.site_id || editorMatch[2]!==result.project_id ||
+        !/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id||''))
         throw Error('The installer returned an invalid editor destination');
       if(message)message.textContent=result.unchanged
         ? 'Opening your saved Theme Studio workspace…'
         : 'Your workspace is ready. Opening Theme Studio…';
       const embedded=window.parent&&window.parent!==window;
       const target=embedded?window.parent:window;
-      const appRoute=new URLSearchParams({page:editor.pathname,project:result.project_id});
-      appRoute.set('site_id',result.site_id);
+      const appRoute=new URLSearchParams({page:editor.pathname});
       const route=embedded
         ? '/apps/ecommerce-cms-agentsam?'+appRoute.toString()
         : editor.pathname+editor.search;

@@ -109,7 +109,7 @@ test("each duplicate is its own draft site with a cms_site_themes row; saves syn
     const second = await (await call("/api/admin/cms/theme-projects/theme_resolve/duplicate", "POST", { site_id: "site-src" })).json();
     assert.ok(first.ok && second.ok);
     assert.notEqual(first.site_id, second.site_id);
-    assert.match(first.editor_url, /site_id=cmssite_/);
+    assert.match(first.editor_url, new RegExp('admin/sites/cmssite_[A-Za-z0-9_-]+/themes/copy_[A-Za-z0-9_-]+/editor/home'));
     assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_site_themes WHERE account_id='acct-a' AND status='ready'").get().n, 2);
 
     // A failed try leaves no orphan draft site behind.
@@ -215,5 +215,37 @@ test("theme projects and theme selections are isolated by CMS site", async () =>
       new URL('https://cms.test/api/admin/cms/theme-projects/theme_resolve?site_id=site-a2'), { accountId: 'acct-a' },
     );
     assert.equal(archivedRead.status, 404);
+  } finally { sqlite.close(); }
+});
+
+test("new Theme Studio projects are created only inside the explicitly selected owned site", async () => {
+  const sqlite = createCmsTestDb();
+  const env = environment(sqlite);
+  try {
+    sqlite.exec("INSERT INTO accounts(id) VALUES ('acct-a'),('acct-other'); INSERT INTO cms_sites(id,account_id,name,slug,status,is_default,settings_json) VALUES ('site-live','acct-a','Live','default','active',1,'{}'),('site-other','acct-other','Other','other','active',1,'{}');");
+    const draft = project('New theme');
+    draft.id = 'theme_new_theme';
+    const created = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects', 'POST', { site_id:'site-live', project:draft }),
+      env,
+      new URL('https://cms.test/api/admin/cms/theme-projects?site_id=site-live'),
+      { accountId:'acct-a' },
+    );
+    assert.equal(created.status, 201);
+    const result = await created.json();
+    assert.equal(result.ok, true);
+    assert.equal(result.project.id, 'theme_new_theme');
+    assert.equal(sqlite.prepare("SELECT site_id FROM cms_globals WHERE account_id='acct-a' AND global_key='theme-project:theme_new_theme' AND global_type='theme-project'").get().site_id, 'site-live');
+
+    const forged = project('Wrong site');
+    forged.id = 'theme_wrong_site';
+    const rejected = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects', 'POST', { site_id:'site-other', project:forged }),
+      env,
+      new URL('https://cms.test/api/admin/cms/theme-projects?site_id=site-other'),
+      { accountId:'acct-a' },
+    );
+    assert.equal(rejected.status, 404);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_site_themes WHERE account_id='acct-other' AND site_id='site-other'").get().n, 0);
   } finally { sqlite.close(); }
 });

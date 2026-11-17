@@ -13,8 +13,7 @@ const validId = value => /^[A-Za-z0-9_-]{1,160}$/.test(String(value || ''));
 
 function editorHref(draft) {
   if (!validId(draft.project_id) || !validId(draft.site_id)) return null;
-  const query = new URLSearchParams({ project: draft.project_id, site_id: draft.site_id });
-  return '/admin/theme-project-editor?' + query.toString();
+  return `/admin/sites/${encodeURIComponent(draft.site_id)}/themes/${encodeURIComponent(draft.project_id)}/editor/home`;
 }
 
 function render(drafts) {

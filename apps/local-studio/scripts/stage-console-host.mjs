@@ -80,6 +80,16 @@ if (!existsSync(hostConfig)) throw new Error('Missing Local Studio host-only con
 mkdirSync(productStage, { recursive: true });
 mkdirSync(hostAdmin, { recursive: true });
 cpSync(source, productStage, { recursive: true, force: true });
+// Retire the former split-editor entry scripts from persistent staging roots.
+for (const name of ['theme-editor-entry.js', 'theme-project-editor-bootstrap.mjs']) {
+  rmSync(path.join(productStage, 'admin/js', name), { force: true });
+  rmSync(path.join(hostAdmin, 'js', name), { force: true });
+}
+// Theme Studio's shell imports these shared runtime modules from the stable
+// origin-root /theme-editor path on both hosted and packaged desktop surfaces.
+const hostThemeEditor = path.join(localStudio, 'frontend/public/theme-editor');
+mkdirSync(hostThemeEditor, { recursive: true });
+cpSync(path.join(source, 'theme-editor'), hostThemeEditor, { recursive: true, force: true });
 cpSync(path.join(source, 'admin'), hostAdmin, { recursive: true, force: true });
 // Stage the canonical browser adapter, rather than another host navigation renderer.
 const navPackage = path.resolve(localStudio, '../../packages/agentsam-nav');

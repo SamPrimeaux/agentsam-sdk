@@ -79,7 +79,7 @@ try {
     '/admin/preferences', '/admin/subscribers', '/admin/products.html',
     '/admin/theme-project-editor?site_id=site-a&project=theme_plain-jane',
     '/admin/theme-code-editor?site_id=site-a&project=theme_plain-jane',
-    '/admin/js/theme-project-editor-bootstrap.mjs',
+    '/admin/js/theme-studio-bootstrap.mjs',
     '/admin/js/agentsam-nav.js', '/admin/host-config.js',
     '/admin/media', '/admin/media/images', '/admin/media/videos',
     '/admin/forms', '/admin/chats', '/admin/settings/general',

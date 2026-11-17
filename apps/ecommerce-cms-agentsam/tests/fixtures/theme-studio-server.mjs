@@ -105,7 +105,8 @@ const server=http.createServer(async(req,res)=>{
   }
   if(url.pathname.startsWith("/api/"))return json({error:"Explicit development fixture: integration unavailable"},503);
   const documents={"/admin/theme-editor":"admin/theme-editor.html","/admin/theme-project-editor":"admin/theme-project-editor.html","/admin/products":"admin/products.html","/admin/product-edit":"admin/product-edit.html"};
-  let relative=documents[url.pathname]||decodeURIComponent(url.pathname).replace(/^\//,"");
+  const cleanThemeStudioRoute=/^\/admin\/sites\/main\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/.test(url.pathname);
+  let relative=cleanThemeStudioRoute?"admin/theme-editor.html":(documents[url.pathname]||decodeURIComponent(url.pathname).replace(/^\//,""));
   const target=path.resolve(assets,relative);
   if(!target.startsWith(assets+path.sep))return json({error:"forbidden"},403);
   let bytes=await readFile(target);
@@ -115,6 +116,6 @@ const server=http.createServer(async(req,res)=>{
 });
 // Never inherit PORT: the terminal transport may own it. Request a free local port.
 server.listen(0,"127.0.0.1",()=>{
- console.log("Disposable Theme Studio: http://127.0.0.1:"+server.address().port+"/admin/theme-project-editor?project=theme_heuristic&site_id=main");
+ console.log("Disposable Theme Studio: http://127.0.0.1:"+server.address().port+"/admin/sites/main/themes/theme_heuristic/editor/home");
 });
 process.on("SIGTERM",()=>server.close(()=>{f.db.close();catalogDb.close();process.exit(0);}));

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { listAuthorizedCmsSites, requireCmsSiteAccess, resolveCmsSiteAccess, readCmsSiteSelector, readCmsAssistantSiteSelector, createAuthorizedCmsSite } from "./cms-authority.js";
+import { listAuthorizedCmsSites, requireCmsSiteAccess, resolveCmsSiteAccess, readCmsSiteSelector, readCmsAssistantSiteSelector, isCmsThemeEditorRoute, createAuthorizedCmsSite } from "./cms-authority.js";
 
 const OWNER = "au_siteowner56789";
 const OTHER = "au_otheractor123";
@@ -53,6 +53,26 @@ function fixture(projectRows = []) {
     },
   };
 }
+
+test("remote CMS sites may serve the shared Theme Studio shell but not arbitrary admin routes", () => {
+  assert.equal(isCmsThemeEditorRoute("/admin/theme-editor"), true);
+  assert.equal(isCmsThemeEditorRoute("/admin/theme-project-editor"), true);
+  assert.equal(isCmsThemeEditorRoute("/admin/sites/site-a/themes/theme-a/editor/home"), true);
+  assert.equal(isCmsThemeEditorRoute("/admin/sites/site-a/pages/page-home/editor"), true);
+  assert.equal(isCmsThemeEditorRoute("/admin/analytics"), false);
+});
+
+test("clean Theme Studio routes carry their site ID through the same authorization boundary", async () => {
+  for (const pathname of [
+    "/admin/sites/site-a/pages/page-home/editor",
+    "/admin/sites/site-a/themes/theme-plain/editor",
+    "/admin/sites/site-a/themes/theme-plain/editor/home",
+    "/admin/sites/site-a/settings/editor",
+  ]) {
+    const request = new Request(`https://studio.example${pathname}`);
+    assert.equal(await readCmsSiteSelector(request), "site-a", pathname);
+  }
+});
 
 test("Theme Editor assistant selector reads the selected section's explicit site ID", async () => {
   const request = new Request("https://studio.example/api/admin/agentsam/chat", {

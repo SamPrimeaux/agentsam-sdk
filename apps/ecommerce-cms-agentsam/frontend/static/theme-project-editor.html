@@ -1,40 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f4f4f2">
-<title>Theme Studio — AgentSam CMS</title>
-<style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f4f4f2}
-#theme-project-editor-frame{display:block;width:100%;height:100%;border:0}
-#theme-project-error{position:fixed;inset:12px 12px auto;z-index:10;max-width:760px;padding:12px 14px;border:1px solid #d99;border-radius:10px;background:#fff1f1;color:#761b1b;font:13px/1.5 system-ui;white-space:pre-wrap}
-#theme-project-error[hidden]{display:none}
-#theme-project-loading{position:fixed;inset:0;z-index:5;display:grid;grid-template:54px 1fr/300px 1fr;gap:8px;padding:8px;box-sizing:border-box;background:#f4f4f2}
-#theme-project-loading span{border-radius:10px;background:linear-gradient(100deg,#e7e7e4,#fafaf8,#e7e7e4);background-size:200% 100%;animation:editor-loading 1.4s ease infinite}
-#theme-project-loading span:first-child{grid-column:1/-1}
-@keyframes editor-loading{to{background-position:-200% 0}}
-@media(prefers-reduced-motion:reduce){#theme-project-loading span{animation:none}}
-/* The phone editor has a single work surface, not an 80px fake sidebar.
-   The skeleton must never imply a three-column canvas while loading. */
-@media(max-width:900px){
-  #theme-project-loading{
-    grid-template-columns:minmax(0,1fr);
-    grid-template-rows:52px minmax(0,1fr);
-    padding:8px;
-    gap:8px;
-  }
-  #theme-project-loading span:first-child{grid-column:1;grid-row:1}
-  #theme-project-loading span:nth-child(2){grid-column:1;grid-row:2}
-  #theme-project-loading span:nth-child(3){display:none}
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Opening Theme Studio</title>
 </head>
 <body>
-<div id="theme-project-loading" role="status" aria-label="Loading theme" aria-busy="true"><span></span><span></span><span></span></div>
-<iframe id="theme-project-editor-frame" title="Theme Studio editor"></iframe>
-<pre id="theme-project-error" role="alert" hidden></pre>
-<script src="js/platform-stock-sections.js"></script>
-<script type="module" src="js/theme-project-editor-bootstrap.mjs"></script>
+  <p>Opening Theme Studio…</p>
+  <script>
+    (() => {
+      const source = new URL(location.href);
+      const query = source.searchParams;
+      const siteId = query.get('site_id');
+      const projectId = query.get('project') || query.get('project_id');
+      if (query.get('new') === '1') {
+        const target = new URL('/admin/theme-editor', location.origin);
+        target.searchParams.set('new', '1');
+        if (siteId) target.searchParams.set('site_id', siteId);
+        location.replace(target.pathname + target.search);
+        return;
+      }
+      if (!/^[A-Za-z0-9_-]{1,160}$/.test(siteId || '') || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId || '')) {
+        location.replace('/admin/theme-workspace');
+        return;
+      }
+      const page = query.get('page') || 'home';
+      if (!/^[A-Za-z0-9_-]{1,160}$/.test(page)) {
+        location.replace('/admin/theme-workspace');
+        return;
+      }
+      const target = new URL(`/admin/sites/${encodeURIComponent(siteId)}/themes/${encodeURIComponent(projectId)}/editor/${encodeURIComponent(page)}`, location.origin);
+      for (const key of ['section', 'block', 'previewMode', 'stock', 'marketplace_kind', 'marketplace_key', 'showcase']) {
+        const value = query.get(key);
+        if (value) target.searchParams.set(key, value);
+      }
+      location.replace(target.pathname + target.search);
+    })();
+  </script>
 </body>
 </html>

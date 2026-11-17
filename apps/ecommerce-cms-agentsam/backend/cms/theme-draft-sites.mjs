@@ -83,7 +83,7 @@ async function insertSiteTheme(env, accountId, siteId, project, { kind, ref, nam
 }
 
 function editorUrl(projectId, siteId) {
-  return `/admin/theme-project-editor?project=${encodeURIComponent(projectId)}&site_id=${encodeURIComponent(siteId)}`;
+  return `/admin/sites/${encodeURIComponent(siteId)}/themes/${encodeURIComponent(projectId)}/editor/home`;
 }
 
 /** "Try theme": new draft site + verified theme project + cms_site_themes row. */

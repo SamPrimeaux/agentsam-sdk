@@ -50,12 +50,12 @@ const server = createServer((req, res) => {
         ok:true, installed:true, scope:'site', project_id:'theme_plain-jane',
         site_id:'site-private-draft',
         site_status:'draft',
-        editor_url:'/admin/theme-project-editor?project=theme_plain-jane&site_id=site-private-draft',
+        editor_url:'/admin/sites/site-private-draft/themes/theme_plain-jane/editor/home',
       }));
     });
     return;
   }
-  if (pathname === '/admin/theme-project-editor') return res.writeHead(200,{
+  if (/^\/admin\/sites\/site-private-draft\/themes\/theme_plain-jane\/editor\/home$/.test(pathname)) return res.writeHead(200,{
     'content-type':'text/html',
   }).end('<!doctype html><title>Installed CMS Theme Editor</title><h1>Editable theme project</h1>');
   if (pathname === '/api/admin/website-themes') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
@@ -100,6 +100,8 @@ try {
       window.__mounted = mountOnlineStore(frame, {
         baseUrl: location.origin,
         storefrontUrl: null,
+        newThemeUrl: '/admin/theme-editor?new=1',
+        onCreateTheme(href) { window.__newTheme = href; },
         async loadStore() {
           return { store: { visibility: 'unpublished' }, performance: {},
             active_theme: null, preview_theme: null,
@@ -127,6 +129,10 @@ try {
   assert.match(await merchant.locator('#store-visibility-label').innerText(), /(?:Unverified|Not published|Theme not published)/);
   assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Theme not published');
   assert.equal(await merchant.locator('#test-customer-flow-btn').getAttribute('href'), '/admin/onboarding-preview?site_id=site-store', 'Embedded Store checkout preview uses the owning host origin rather than the srcdoc opaque origin');
+  assert.equal(await merchant.locator('#new-theme-btn').isVisible(), true, 'New theme action is available for the selected site');
+  assert.match(await merchant.locator('#new-theme-btn').getAttribute('href'), /\/admin\/theme-editor\?new=1&site_id=site-store/);
+  await merchant.locator('#new-theme-btn').click();
+  assert.match(await page.evaluate(() => window.__newTheme || ''), /\/admin\/theme-editor\?new=1&site_id=site-store/);
   assert.equal(await merchant.locator('.online-store-starter').count(), 0, 'No fake storefront is presented as installed');
   assert.equal(await merchant.locator('.online-store-active').isHidden(), true, 'Uninstalled storefront must not show a fabricated theme preview');
   assert.equal(await merchant.locator('#import-theme-btn').isDisabled(), true, 'Unimplemented import cannot be clicked');
@@ -148,7 +154,7 @@ try {
   assert.equal(await merchant.locator('dialog.website-theme-install-dialog').count(),0,
     'The nested modal must never be used to pick an arbitrary production site');
   await Promise.all([
-    page.waitForURL(/\/apps\/ecommerce-cms-agentsam\?page=%2Fadmin%2Ftheme-project-editor&project=theme_plain-jane&site_id=site-private-draft/),
+    page.waitForURL(/\/apps\/ecommerce-cms-agentsam\?page=%2Fadmin%2Fsites%2Fsite-private-draft%2Fthemes%2Ftheme_plain-jane%2Feditor%2Fhome/),
     merchant.locator('[data-install-theme="plain-jane"]').click(),
   ]);
   assert.deepEqual(receivedInstall,{version:'0.1.0'},

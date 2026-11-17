@@ -23,8 +23,7 @@ export async function ensureCmsSiteStarter(env, accountId, siteId, {
   if (!existing.ok) return existing;
   if (existing.projects.length) return {
     ok:true,unchanged:true,site_id:site.id,projects:existing.projects,
-    editor_url:'/admin/theme-project-editor?project='+
-      encodeURIComponent(existing.projects[0].id)+'&site_id='+encodeURIComponent(site.id),
+    editor_url:`/admin/sites/${encodeURIComponent(site.id)}/themes/${encodeURIComponent(existing.projects[0].id)}/editor/home`,
   };
 
   const project = materializeStarterProject(preset,site);
@@ -36,7 +35,6 @@ export async function ensureCmsSiteStarter(env, accountId, siteId, {
   return {
     ok:true,unchanged:installed.unchanged===true,site_id:site.id,
     projects:[installed.project],
-    editor_url:'/admin/theme-project-editor?project='+
-      encodeURIComponent(installed.project.id)+'&site_id='+encodeURIComponent(site.id),
+    editor_url:`/admin/sites/${encodeURIComponent(site.id)}/themes/${encodeURIComponent(installed.project.id)}/editor/home`,
   };
 }

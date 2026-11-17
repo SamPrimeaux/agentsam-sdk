@@ -7,8 +7,12 @@ import {
 } from '../../../../shared/ecommerce-admin-routes.mjs';
 
 type AdminRoute = { id: string; path: string; surface: string; handler: string; asset: string | null; page?: string | null };
-const adminRoutes = LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES as AdminRoute[];
+const adminRoutes = LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES as unknown as readonly AdminRoute[];
 const idParam = /^[a-zA-Z0-9_-]{1,160}$/;
+
+export function isEcommerceAdminPath(pathname: string): boolean {
+  return Boolean(resolveLocalStudioEcommerceAdminRoute(pathname));
+}
 
 /** Reject arbitrary URLs; the Local Studio route contract is the allowlist. */
 export function resolveEcommerceAdminPath(candidate = '/admin/store') {
@@ -17,13 +21,15 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
   try { url = new URL(candidate, 'https://ecommerce-route.invalid'); } catch { return null; }
   if (url.origin !== 'https://ecommerce-route.invalid' || !resolveLocalStudioEcommerceAdminRoute(url.pathname)) return null;
   const safe = new URLSearchParams();
+  const matchedRoute = resolveLocalStudioEcommerceAdminRoute(url.pathname) as unknown as AdminRoute | null;
+  const cleanThemeStudioRoute = Boolean(matchedRoute?.page === 'theme-editor' && matchedRoute.id.startsWith('admin.theme-editor.'));
   // Site identity is supplied by Local Studio. Query validation is retained at
   // this host boundary so packaged assets never become an open proxy.
   const recognized: Record<string, readonly string[]> = {
     '/admin/pages': ['site_id'],
-    '/admin/theme-editor': ['slug', 'site', 'site_id', 'page_id', 'showcase', 'catalog', 'source'],
+    '/admin/theme-editor': ['slug', 'site', 'site_id', 'page_id', 'showcase', 'catalog', 'source', 'section', 'block', 'previewMode', 'stock', 'project', 'project_id', 'page', 'new'],
     '/admin/page-edit': ['slug', 'site_id', 'page_id'],
-    '/admin/theme-project-editor': ['project','site_id','page','section','block','previewMode','new'],
+    '/admin/theme-project-editor': ['project','project_id','site_id','page','section','block','previewMode','stock','new'],
     '/admin/product-edit': ['id','site_id'],
     '/admin/products': ['view','site_id','collection_id'],
     '/admin/collections': ['site_id'],
@@ -35,7 +41,9 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/email': ['folder'],
   };
   const studioProductRoute = /^\/admin\/products\/create\/[A-Za-z0-9_-]+$/.test(url.pathname);
-  const allowed = recognized[url.pathname] || (studioProductRoute
+  const allowed = recognized[url.pathname] || (cleanThemeStudioRoute
+    ? ['section', 'block', 'previewMode', 'stock', 'marketplace_kind', 'marketplace_key', 'showcase', 'new']
+    : studioProductRoute
     ? ['site_id', 'resume', 'collection_id']
     : url.pathname === '/admin/products/create'
       ? ['site_id', 'collection_id']
@@ -43,14 +51,21 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
         ? ['site_id']
         : []);
   if ([...url.searchParams.keys()].some((name) => !allowed.includes(name) || url.searchParams.getAll(name).length !== 1)) return null;
+  if (url.pathname === '/admin/theme-editor' && url.searchParams.has('new') &&
+      (url.searchParams.get('new') !== '1' ||
+       ['project', 'project_id', 'page_id', 'slug', 'page'].some(key => url.searchParams.has(key)))) return null;
   if (url.pathname === '/admin/theme-project-editor') {
     if (url.searchParams.has('new') &&
-        (url.searchParams.get('new') !== '1' || !url.searchParams.has('site_id') || url.searchParams.has('project'))) return null;
+        (url.searchParams.get('new') !== '1' || !url.searchParams.has('site_id') ||
+         ['project', 'project_id', 'page', 'page_id'].some(key => url.searchParams.has(key)))) return null;
     if (url.searchParams.has('previewMode') &&
         !['desktop', 'tablet', 'mobile'].includes(url.searchParams.get('previewMode') || '')) return null;
   }
+  if (cleanThemeStudioRoute && url.searchParams.has('new') && url.searchParams.get('new') !== '1') return null;
+  if (cleanThemeStudioRoute && url.searchParams.has('previewMode') &&
+      !['desktop', 'tablet', 'mobile'].includes(url.searchParams.get('previewMode') || '')) return null;
   for (const [name, value] of url.searchParams) {
-    if (!idParam.test(value)
+    if (!(name === 'stock' ? /^platform\/[a-z0-9-]{1,70}$/.test(value) : name === 'marketplace_key' ? /^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/.test(value) : name === 'marketplace_kind' ? ['plugin','cms_embed'].includes(value) : idParam.test(value))
       || (name === 'view' && !['store', 'collections', 'platform'].includes(value))
       || (name === 'kind' && !['image', 'video', 'model', 'file'].includes(value))
       || (name === 'folder' && !['sent', 'inbox'].includes(value))
