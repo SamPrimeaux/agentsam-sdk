@@ -6,7 +6,7 @@
 export const SETTINGS_CATALOG_CHANGED_EVENT = "agentsam:settings-catalog-changed";
 export const CONNECTION_CALLBACK_BASE = "agentsamstudio://connection/callback";
 
-const SETTINGS_TARGET = /^\/settings\/[A-Za-z0-9/_-]*(\?[A-Za-z0-9_=&%.-]*)?$/;
+const SETTINGS_TARGET = /^\/(?:admin\/)?settings\/[A-Za-z0-9/_-]*(\?[A-Za-z0-9_=&%.-]*)?$/;
 
 export type ConnectionDeepLink = {
   provider: string;
@@ -49,8 +49,8 @@ export function parseConnectionDeepLink(value: string): ConnectionDeepLink | nul
   const rawResult = url.searchParams.get("result") || "";
   const result = rawResult === "connected" ? "connected" : rawResult === "error" ? "error" : "";
   const error = (url.searchParams.get("error") || "").replace(/[^a-z0-9_.-]/gi, "").slice(0, 80);
-  const to = url.searchParams.get("to") || "";
-  return { provider, result, error, to: isSettingsTarget(to) ? to : "" };
+  const to = normalizeSettingsTarget(url.searchParams.get("to") || "");
+  return { provider, result, error, to };
 }
 
 /** In-app location to open after a connection returns; carries the same result params the web redirect does. */
