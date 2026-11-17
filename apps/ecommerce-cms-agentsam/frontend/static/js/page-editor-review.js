@@ -2,7 +2,8 @@
 (function () {
   "use strict";
   const params = new URLSearchParams(location.search);
-  const slug = params.get("slug") || "home";
+  let slug = params.get("slug") || "home";
+  const initialNewPage = params.get("new") === "1";
   const initialSite = params.get("site_id");
   if (initialSite) window.cmsActiveSiteId = initialSite;
   window.cmsActivePageSlug = slug;
@@ -260,6 +261,28 @@
   }
   async function load() {
     if (!window.cmsActiveSiteId) { note("Choose a store from your profile menu first.",true); return; }
+    if (initialNewPage) {
+      try {
+        const list = await cmsAdminFetch("/api/admin/cms/pages");
+        site = list.site || {};
+        $("pe-heading").textContent = "Add page";
+        $("pe-template").innerHTML = '<option value="">Default page</option>';
+        $("pe-handle").value = "";
+        $("pe-title").value = "";
+        $("pe-seo-title-input").value = "";
+        $("pe-seo-description-input").value = "";
+        document.querySelector('[name="pe-visibility"][value="hidden"]').checked = true;
+        $("pe-visibility-meta").textContent = "Hidden until you publish this page";
+        $("pe-seo-site").textContent = site.name || site.slug || "Your store";
+        $("pe-prev").disabled = true;
+        $("pe-next").disabled = true;
+        $("pe-duplicate").disabled = true;
+        $("pe-view").setAttribute("aria-disabled","true");
+        syncPreview();
+        markSaved();
+        return;
+      } catch(error) { note(error?.message || "Unable to load store information",true);return; }
+    }
     try {
       const [pageRes, draftRes, listRes] = await Promise.all([
         cmsAdminFetch("/api/admin/cms/pages/" + encodeURIComponent(slug)),
@@ -317,6 +340,23 @@
     }
     const button = $("pe-save");button.disabled = true;button.textContent = "Saving…";
     try {
+      if (!page) {
+        const created = await cmsAdminFetch("/api/admin/cms/pages",{
+          method:"POST",
+          body:JSON.stringify({title:d.title,slug:d.url_handle,route_path:"/pages/"+d.url_handle,page_type:"standard"})
+        });
+        if (!created?.page?.id) throw Error("The CMS did not return a newly created page.");
+        page = created.page;
+        slug = page.slug;
+        window.cmsActivePageId = page.id;
+        window.cmsActivePageSlug = slug;
+        const url = new URL(location.href);
+        url.searchParams.delete("new");
+        url.searchParams.set("slug",slug);
+        url.searchParams.set("page_id",page.id);
+        history.replaceState(null,"",url);
+        $("pe-duplicate").disabled = false;
+      }
       await cmsAdminFetch("/api/admin/cms/pages/" + encodeURIComponent(slug) + "/content-draft",{
         method:"PUT", body:JSON.stringify(d)
       });
@@ -395,6 +435,14 @@
   $("pe-format").addEventListener("change",e => {editor.focus();document.execCommand("formatBlock",false,e.target.value);markDirty();});
   document.querySelectorAll("#pe-title,#pe-seo-title-input,#pe-seo-description-input,#pe-handle,#pe-template,#pe-source")
     .forEach(el => {el.addEventListener("input",markDirty);el.addEventListener("change",markDirty);});
+  $("pe-title").addEventListener("input",()=>{
+    if (!page && !$("pe-handle").dataset.userEdited) {
+      $("pe-handle").value = $("pe-title").value.toLowerCase()
+        .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80);
+      syncPreview();
+    }
+  });
+  $("pe-handle").addEventListener("input",()=>{$("pe-handle").dataset.userEdited="true";});
   document.querySelectorAll('[name="pe-visibility"]').forEach(el => el.addEventListener("change",markDirty));
   editor.addEventListener("input",markDirty);
   $("pe-seo-toggle").addEventListener("click",() => {
