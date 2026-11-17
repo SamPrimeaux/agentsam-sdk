@@ -56,19 +56,26 @@ export function projectComposerCatalog(sources: ComposerCatalogSources = {}): Co
       action:ready?{type:'mention'}:{type:'setup',pluginId:String(row.provider)}});
   }
   for(const row of sources.plugins||[]) {
-    if(!row||!enabled(row.composer_visible)||!enabled(row.is_enabled)) continue;
+    // Installed plugins remain discoverable in the + menu even when disabled or
+    // not yet authorized. Visibility and readiness are separate concerns.
+    if(!row) continue;
     const token=(Array.isArray(row.mention_aliases)?row.mention_aliases:[])
       .map(mention).find(Boolean)||mention(row.plugin_key);
     if(!token) continue;
     const key=String(row.plugin_key||'');
     const kind:ComposerKind=row.plugin_kind==='mcp'||row.transport==='mcp'||
       row.tool_lanes?.includes('mcp')||key.endsWith('-mcp')?'mcp':'plugin';
-    const healthy=!['disabled','unhealthy','unreachable','auth_error'].includes(String(row.health_status||''));
-    const ready=healthy&&(row.setup_status==='connected'||
-      (row.setup_status==='configured'&&['none','workers_binding'].includes(String(row.auth_type||''))));
+    const healthStatus=String(row.health_status||'unknown');
+    const setupStatus=String(row.setup_status||'unconfigured');
+    const healthy=!['disabled','unhealthy','unreachable','auth_error'].includes(healthStatus);
+    const configured=setupStatus==='connected'||
+      (setupStatus==='configured'&&['none','workers_binding'].includes(String(row.auth_type||'')));
+    const isEnabled=enabled(row.is_enabled);
+    const ready=isEnabled&&healthy&&configured;
+    const status=healthStatus==='auth_error'?'reconnect':!isEnabled?(setupStatus==='unconfigured'?'connect':'enable'):
+      !healthy?'check status':!configured?'connect':'available';
     add({id:'plugin:'+String(row.id||key),kind,mention:token,label:String(row.display_name||key),
-      description:row.description||((row.tool_count||0)+' tools'),ready,
-      status:row.health_status==='auth_error'?'reconnect':String(row.setup_status||'unconfigured'),
+      description:row.description||((row.tool_count||0)+' tools'),ready,status,
       iconUrl:row.icon_url,iconDarkUrl:row.icon_dark_url,capabilities:row.capabilities||[],
       action:ready?{type:'mention'}:{type:'setup',pluginId:String(row.id||key)}});
   }
