@@ -105,6 +105,7 @@ async function queryCloudflareHttpAnalytics(env, ownerAccountId, rawRange) {
         env,
         ownerId: ownerAccountId,
         authMode: "oauth",
+        capabilityId: "cloudflare.perm.account-analytics",
       });
     }
     if (!client?.accountId) {
@@ -129,6 +130,7 @@ async function queryCloudflareHttpAnalytics(env, ownerAccountId, rawRange) {
         query,
         variables: { accountTag: client.accountId, start: startIso, end: endIso },
       },
+      capabilityId: "cloudflare.perm.account-analytics",
     });
     const graph = response?.raw || response?.result || response;
     if (Array.isArray(graph?.errors) && graph.errors.length) {
