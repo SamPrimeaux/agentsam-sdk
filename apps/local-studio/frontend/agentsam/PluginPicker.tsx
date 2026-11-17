@@ -1,5 +1,5 @@
 import { IconAction } from "@/components/ui/icon-action";
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Bot, Box, Check, Database, FileCode, Film, Folder, Globe, ImagePlus, Layers, Plug, Plus, Search, ShieldCheck, Sparkles, SquareTerminal, Target, Upload, Users, Wrench, X } from 'lucide-react';
 import type { AgentRunMode } from '@inneranimalmedia/agentsam-contracts';
 import { filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
@@ -251,7 +251,7 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
         setOpen(typingMention);
       },
     })}
-    {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message" data-placement={placement} data-section={section} style={{maxHeight:menuMaxHeight}}>
+    {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message" data-placement={placement} data-section={section} style={{'--agentsam-plugin-menu-max-height':`${menuMaxHeight}px`} as CSSProperties}>
       {section!=='root'&&<div className="agentsam-plugin-heading">
         <button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');setActive(0);}}>Back</button>
         <strong>{section==='skills'?'Skills':section==='modes'?'Agent mode':section==='browser-tabs'?'Add browser tabs':'Mention'}</strong>
@@ -280,8 +280,8 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
       </div> : section==='modes' ? <div className="agentsam-plugin-sections" data-work-plus-menu="">
         {([['agent','Execute and open surfaces'],['plan','Design technical plans'],['debug','Inspect, prove and fix'],['multitask','Coordinate managed workflows'],['ask','Answer questions']] as const).map(([mode,description])=><button key={mode} type="button" className="agentsam-plugin-row agentsam-plugin-row--compact" aria-pressed={activeMode===mode} onClick={()=>{onModeChange?.(mode);setOpen(false);}}><Bot size={16}/><span className="agentsam-plugin-row-copy"><strong>{mode[0].toUpperCase()+mode.slice(1)}</strong><small>{description}</small></span>{activeMode===mode?<Check size={16}/>:null}</button>)}
       </div> : section==='browser-tabs' ? <div className="agentsam-plugin-sections">
-        {browserTabs.length ? browserTabs.map((tab,index)=><button key={tab.id} type="button" className="agentsam-plugin-row agentsam-plugin-row--compact" data-active={index===active} onClick={()=>chooseBrowserTab(tab)}>
-          <Globe size={17}/><span className="agentsam-plugin-row-copy"><strong>{tab.title}</strong><small>{tab.url}</small></span>
+        {browserTabs.length ? browserTabs.map((tab,index)=><button key={tab.id} type="button" aria-label={tab.title} className="agentsam-plugin-row agentsam-plugin-row--compact" data-active={index===active} onClick={()=>chooseBrowserTab(tab)}>
+          <Globe size={17}/><span className="agentsam-plugin-row-copy">{tab.title}<small>{tab.url}</small></span>
         </button>) : <>
           <p className="agentsam-plugin-notice">There are no open browser tabs yet. Open a page in AgentSam Browser, then return here to add it to your message.</p>
           <PlusMenuRow icon={<Globe size={17}/>} title="Open Browser" hint="Open a browser workspace" onClick={()=>{setOpen(false);openBrowserSideStage();}}/>
@@ -292,7 +292,7 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
           {skillsLoading&&<p role="status" className="agentsam-plugin-notice">Loading your skills…</p>}
           {skillsError&&<p role="alert" className="agentsam-plugin-notice">{skillsError} <button type="button" onClick={()=>setRevision(n=>n+1)}>Retry</button></p>}
           {!skillsLoading&&!skillsError&&!skills.length&&<p className="agentsam-plugin-notice">No private skills yet. Create one in Settings.</p>}
-          {skills.filter(skill=>(skill.name+' '+skill.description+' '+skill.trigger).toLowerCase().includes(query.toLowerCase())).map(skill=><button type="button" key={skill.id} className="agentsam-plugin-row agentsam-plugin-row--compact" onClick={()=>{onChange(value+(value?' ':'')+'[skill:'+skill.id+'] '+skill.trigger+' ');setOpen(false);}}><Sparkles size={17}/><span className="agentsam-plugin-row-copy"><strong>{skill.name}</strong><small>{skill.description||skill.trigger}</small></span></button>)}
+          {skills.filter(skill=>(skill.name+' '+skill.description+' '+skill.trigger).toLowerCase().includes(query.toLowerCase())).map(skill=><button type="button" key={skill.id} aria-label={skill.name} className="agentsam-plugin-row agentsam-plugin-row--compact" onClick={()=>{onChange(value+(value?' ':'')+'[skill:'+skill.id+'] '+skill.trigger+' ');setOpen(false);}}><Sparkles size={17}/><span className="agentsam-plugin-row-copy">{skill.name}<small>{skill.description||skill.trigger}</small></span></button>)}
           <a className="agentsam-plugin-row agentsam-plugin-row--compact" href="/admin/settings/skills"><Wrench size={17}/><span className="agentsam-plugin-row-copy"><strong>Manage skills</strong></span></a>
         </> : <>
           {error&&<p role="status" className="agentsam-plugin-notice">Some connected services couldn't be loaded. Available tools are still shown.</p>}

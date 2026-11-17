@@ -92,7 +92,7 @@
 .agentsam-plugin-host { position: relative; width: 100%; max-width: 1120px; margin: 0 auto; }
 .agentsam-plugin-menu {
   position: absolute; z-index: 120; left: 0; width: min(576px, calc(100vw - 24px)); bottom: calc(100% + 10px);
-  max-height: min(360px, calc(100dvh - 40px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+  max-height: min(var(--agentsam-plugin-menu-max-height, 360px), calc(100dvh - 40px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
   padding: 6px; border: 1px solid var(--nav-border, var(--border)); border-radius: 18px;
   background: var(--nav-popover); color: var(--nav-text);
   box-shadow: 0 24px 64px #00000066; backdrop-filter: blur(22px);
@@ -128,8 +128,9 @@
 .agentsam-plugin-row--compact > .agentsam-plugin-icon { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 7px; }
 .agentsam-plugin-row--compact .agentsam-plugin-icon img { width: 18px; height: 18px; }
 .agentsam-plugin-row-copy { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1; overflow: hidden; }
+.agentsam-plugin-row--compact .agentsam-plugin-row-copy { font-weight: 600; }
 .agentsam-plugin-row--compact .agentsam-plugin-row-copy strong { flex: 0 0 auto; font-size: 13px; line-height: 1.35; white-space: nowrap; }
-.agentsam-plugin-row--compact .agentsam-plugin-row-copy small { display: block; min-width: 0; overflow: hidden; color: var(--nav-muted); font-size: 12px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.agentsam-plugin-row--compact .agentsam-plugin-row-copy small { display: block; min-width: 0; overflow: hidden; color: var(--nav-muted); font-size: 12px; font-weight: 400; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .agentsam-plugin-row--compact > .agentsam-plugin-row-meta { flex: 0 0 auto; max-width: 100px; padding: 0; border-radius: 0; color: var(--nav-muted); background: transparent; font-family: inherit; font-size: 11px; line-height: 1.2; white-space: nowrap; }
 .agentsam-plugin-row img { width: 26px; height: 26px; object-fit: contain; }
 .agentsam-plugin-row > .agentsam-plugin-icon { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 9px; background: var(--nav-selected); }
