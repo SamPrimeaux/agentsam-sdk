@@ -16,7 +16,7 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
  const [active,setActive]=useState(false);
  const [loading,setLoading]=useState(false);
  const [records,setRecords]=useState<DiagnosticLogContext[]>([]);
- const [source,setSource]=useState("Cloudflare Log Explorer");
+ const [source,setSource]=useState("AgentSam D1 tool-call ledger");
  const [error,setError]=useState("");
  const [filter,setFilter]=useState<"all"|"error"|"warn">("all");
  const [search,setSearch]=useState("");
@@ -45,7 +45,7 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
      try{
        const result=await poll(controller.signal);
        if(disposed||stopped.current)return;
-       if(!result.ok)throw new Error(result.error||"Cloudflare logs unavailable");
+       if(!result.ok)throw new Error(result.error||"AgentSam runtime logs unavailable");
        setSource(result.source);
        setError("");
        const incoming=(result.logs||[]).map(normalizeDiagnosticLog).filter(Boolean) as DiagnosticLogContext[];
@@ -147,7 +147,7 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
      </div>
    </>}
    {error&&<div className="muted" role="alert" style={{padding:"8px 12px",color:"var(--bad)"}}>
-     {error}. Connect a Cloudflare Logs Read token and enable the workers_trace_events Log Explorer dataset.
+     {error}. The account-scoped AgentSam D1 tool-call ledger could not be queried.
    </div>}
    {copyMessage&&<div className="muted text-xs" role="status" style={{padding:"0 12px 10px"}}>{copyMessage}</div>}
  </section>;

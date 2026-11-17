@@ -164,6 +164,7 @@ export async function createLocalStudioPluginRuntime(env, accountId, options = {
   };
   return createPluginRuntime({
     tools: registry.tools,
+    accountId,
     db: env.DB,
     dispatchers: { plugin: dispatch, codemode: dispatch, mcp: mcpDispatch, native: nativeDispatch, internal: nativeDispatch },
     // The runtime was resolved for this signed-in account. A caller-supplied

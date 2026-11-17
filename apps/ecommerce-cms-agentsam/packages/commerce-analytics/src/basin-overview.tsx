@@ -26,8 +26,8 @@ export function BasinOverviewPanel({basin}:{basin:BasinOverview}) {
   const ready=basin.status==="connected";
   return <section className="card" aria-label="Basin lakehouse" style={{marginTop:14}}>
     <div className="card-head">
-      <div><div className="card-title">Basin · historical analytics</div>
-        <div className="card-sub">Pipelines → Iceberg / R2 → Catalog → SQL</div></div>
+      <div><div className="card-title">Basin · Catalog and pipelines</div>
+        <div className="card-sub">Pipelines → Iceberg / R2 → Catalog</div></div>
       <Indicator ready={ready}>{ready?"Provider connected":basin.status==="permission_required"?"Connection required":"Basin unavailable"}</Indicator>
     </div>
     {!ready?<div className="muted" style={{padding:"24px 16px"}}>
@@ -68,7 +68,7 @@ export function BasinOverviewPanel({basin}:{basin:BasinOverview}) {
           </table>
         </div>}
         <div className="card-foot">
-          Historical row counts, lag, volume and freshness appear only when returned by the Basin adapter.
+          SQL results, row counts, lag, volume and freshness appear only when returned by an authorized Basin SQL adapter.
         </div>
       </>}
   </section>;

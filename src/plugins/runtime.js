@@ -5,7 +5,15 @@ function clean(value) { return value == null ? '' : String(value).trim(); }
 export async function executeAgentSamTool(options = {}) {
   const tool = options.tool;
   if (!tool?.tool_key) throw new Error('agentsam_tool_required');
-  const context = options.context || {};
+  const requestedContext = options.context && typeof options.context === 'object' ? options.context : {};
+  const trustedAccountId = clean(options.accountId);
+  if (options.db?.prepare && !/^[A-Za-z0-9_-]{1,128}$/.test(trustedAccountId)) {
+    throw new Error('authenticated_account_required');
+  }
+  if (trustedAccountId && requestedContext.accountId && requestedContext.accountId !== trustedAccountId) {
+    throw new Error('account_context_mismatch');
+  }
+  const context = trustedAccountId ? { ...requestedContext, accountId: trustedAccountId } : requestedContext;
   const started = Date.now();
   let status = 'success';
   let errorCode = '';
@@ -43,7 +51,7 @@ export async function executeAgentSamTool(options = {}) {
     return await dispatcher({ tool, args: options.args || {}, context });
   } catch (error) {
     status = error?.code === 'AGENTSAM_TOOL_NOT_AUTHORIZED' || error?.code === 'AGENTSAM_TOOL_NOT_APPROVED' ? 'blocked' : 'error';
-    errorCode = clean(error?.code || error?.message || 'tool_error').slice(0, 160);
+    errorCode = clean(error?.code || error?.name || 'tool_error').slice(0, 160);
     failureOrigin = status === 'blocked' ? 'policy' : 'tool';
     throw error;
   } finally {
@@ -91,7 +99,7 @@ export function createPluginRuntime(options = {}) {
       const tool = byKey.get(clean(toolKey));
       if (!tool) throw new Error(`agentsam_tool_not_found:${toolKey}`);
       return executeAgentSamTool({
-        tool, args, context, db: options.db, dispatchers: options.dispatchers,
+        tool, args, context, accountId: options.accountId, db: options.db, dispatchers: options.dispatchers,
         handlers: options.handlers, resolveDispatcher: options.resolveDispatcher,
         authorizeTool: options.authorizeTool, requireApproval: options.requireApproval,
       });

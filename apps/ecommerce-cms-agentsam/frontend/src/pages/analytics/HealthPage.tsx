@@ -12,7 +12,7 @@ type Basin={enabled:boolean;status:string;source:string;checkedAt:string|null;
   warehouses:Array<{id:string;label:string}>;pipelines:Array<{id:string;label:string;status:string;lastEventAt:string|null}>;
   catalogTables:Array<{name:string;namespace:string;rows:number|null}>};
 type HealthResponse={
- ok:boolean;range:string;generatedAt:string;probeIntervalMinutes:number;
+ ok:boolean;range:string;generatedAt:string;probeIntervalMinutes:number|null;
  edge:{available:boolean;reason?:string;source:string;requests:number|null;errors:number|null;
    errorRate:number|null;rpm:number|null;byStatus:Array<{status:string;requests:number}>};
  app:{available:boolean;reason?:string;source?:string;
@@ -86,7 +86,7 @@ export default function HealthPage({range}:PageProps){
  const reload=useCallback(()=>setRefresh(v=>v+1),[]);
  useEffect(()=>{
   const ctl=new AbortController();setLoading(true);setError(null);setData(null);
-  adminFetch<HealthResponse>("/api/admin/analytics/health?range="+encodeURIComponent(range),{signal:ctl.signal})
+  adminFetch<HealthResponse>("/api/analytics/health?range="+encodeURIComponent(range),{signal:ctl.signal})
    .then(value=>{if(!ctl.signal.aborted)setData(value)})
    .catch(err=>{if(!ctl.signal.aborted)setError(err?.message||"Health data unavailable")})
    .finally(()=>{if(!ctl.signal.aborted)setLoading(false)});
@@ -102,13 +102,13 @@ export default function HealthPage({range}:PageProps){
  const driftEvents=repo.filter(x=>/drift|contract|schema/i.test(x.error_code||""));
  const fetchLogs=useCallback(async (signal:AbortSignal)=>{
   return adminFetch<{ok:boolean;logs:DiagnosticLogContext[];source:string;error?:string}>(
-   "/api/admin/analytics/logs/recent?window=180",{signal});
+   "/api/analytics/logs/recent?window=180",{signal});
  },[]);
 
  return <>
   <div className="page-head">
    <div><h1 className="page-title">Health</h1>
-    <p className="page-sub">Observed operations, Cloudflare traffic and repository quality · {range} · 30-minute health probe</p></div>
+    <p className="page-sub">Account-scoped operations, Cloudflare traffic and repository quality · {range}</p></div>
    <div className="page-actions">
     <Status ready={Boolean(data?.edge.available&&data?.app.available)} label={data?(data.edge.available&&data.app.available?"Sources connected":visibility?"Partial telemetry":"Telemetry unavailable"):"Loading sources"}/>
     <button type="button" className="btn" onClick={reload} disabled={loading}><Icon name="refresh" size={12}/> {loading?"Refreshing…":"Refresh"}</button>
@@ -117,38 +117,43 @@ export default function HealthPage({range}:PageProps){
   </div>
   {error&&<div className="card" role="alert" style={{padding:14,color:"var(--bad)",marginBottom:14}}>{error}</div>}
   {data&&<div className="muted text-xs" style={{marginBottom:13}}>
-    Sources: {data.edge.available?data.edge.source:"Cloudflare SQL unavailable"} · {data.app.available?data.app.source:"D1 analytics unavailable"}
+    Sources: {data.edge.available?data.edge.source:
+      ["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required"].includes(data.edge.reason||"")
+        ?"Cloudflare connection needs reauthorization in Settings → Integrations"
+        :"Cloudflare HTTP analytics unavailable"} · {data.app.available?data.app.source:"D1 analytics unavailable"}
+    {["cloudflare_authorization_required","cloudflare_reconnect_required","cloudflare_account_selection_required"].includes(data.edge.reason||"")&&
+      <> · <a href="/api/connections/cloudflare/start?return_to=%2Fadmin%2Fanalytics%2Fhealth">Reconnect Cloudflare</a></>}
     {" · "}D1 probe: {data.app.probes?.samples
       ? `${data.app.probes.passed}/${data.app.probes.samples} observed checks passed`
-      : "waiting for 30-minute samples"}
+      : "No scheduled health-probe events are recorded"}
     {" · "}refreshed {new Date(data.generatedAt).toLocaleTimeString()}
-    <span style={{marginLeft:6}}>Probe pass rate is not a continuous uptime guarantee.</span>
+    <span>Recorded D1 events are not a continuous uptime guarantee.</span>
   </div>}
   <div className="grid cols-4" style={{marginBottom:14}}>
    <SmallMetric label="HTTP requests" value={data?.edge.requests} unit="" source="Cloudflare HTTP requests"/>
    <SmallMetric label="Error rate" value={data?.edge.errorRate} unit="%" source="Cloudflare HTTP 5xx / requests"/>
    <SmallMetric label="Throughput" value={data?.edge.rpm} unit="req/min" source="Cloudflare requests / window"/>
-   <SmallMetric label="AgentSam operations" value={data?.app.totals?.events} unit="" source="D1 account-scoped event ledger"/>
+   <SmallMetric label="AgentSam operations" value={data?.app.totals?.events} unit="" source="Account-scoped D1 event and tool-call ledgers"/>
   </div>
   <div className="grid cols-12" style={{marginBottom:14}}>
    <div className="card span-8">
     <div className="card-head"><div><div className="card-title">Operation history</div>
-     <div className="card-sub">Observed D1 events and failures — never generated series</div></div>
+     <div className="card-sub">Observed D1 events and tool calls — never generated series</div></div>
      <Status ready={Boolean(data?.app.available)} label={data?.app.available?"D1 events":"No source"}/>
     </div>
     <div className="card-body">
      {hasTimeline?<AreaChart height={240} xLabels={timeline.map(x=>x.bucket)}
       series={[{name:"Events",data:timeline.map(x=>Number(x.events)),color:"var(--accent)"},
         {name:"Failures",data:timeline.map(x=>Number(x.failures)),color:"var(--bad)"}]}/>:
-      <NoSource reason={data?.app.available?"Two or more observed date buckets are required for a trend.":"D1 event ledger not accessible."}/>}
+      <NoSource reason={data?.app.available?"Two or more observed date buckets are required for a trend.":"Account-scoped D1 event and tool-call ledgers are not accessible."}/>}
     </div>
    </div>
    <div className="card span-4">
     <div className="card-head"><div><div className="card-title">Operation quality</div><div className="card-sub">Actual events in selected period</div></div></div>
     <div className="card-body" style={{display:"grid",gap:14}}>
-     <SmallMetric label="Failed operations" value={failureCount} unit="" source="D1 failed/error events"/>
-     <SmallMetric label="Operations latency" value={data?.app.totals?.avgDurationMs} unit="ms mean" source="D1 measured operation duration"/>
-     <SmallMetric label="Estimated model cost" value={data?.app.totals?.costUsd} unit="USD" source="D1 recorded estimate"/>
+     <SmallMetric label="Failed operations" value={failureCount} unit="" source="D1 event and tool-call failures"/>
+     <SmallMetric label="Operations latency" value={data?.app.totals?.avgDurationMs} unit="ms mean" source="D1 and tool-call measured duration"/>
+     <SmallMetric label="Estimated model cost" value={data?.app.totals?.costUsd} unit="USD" source="D1 and tool-call recorded cost estimate"/>
     </div>
    </div>
   </div>
