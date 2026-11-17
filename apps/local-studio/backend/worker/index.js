@@ -34,7 +34,7 @@ import {
 import { runStudioCmsAssistant } from "./studio-cms-assistant.js";
 import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
-import { resolveCmsSiteAccess, readCmsSiteSelector, configuredCmsWorkers } from "./cms-authority.js";
+import { resolveCmsSiteAccess, readCmsSiteSelector, readCmsAssistantSiteSelector, configuredCmsWorkers } from "./cms-authority.js";
 import { withLocalStudioCmsContext } from "@inneranimalmedia/agentsam-cms/account-context";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, publicSitePathForRequest, servePublicSitePage } from "./public-site.js";
@@ -1114,6 +1114,28 @@ export default {
         studioUser.site_id = cmsSite.id;
         studioUser.site = cmsSite;
       }
+      // The Theme Editor assistant is an account-level chat endpoint, but its
+      // selected CMS section belongs to one explicitly selected site. Carry the
+      // site through the same server-side authorization used by theme-editor
+      // APIs before CMS helpers resolve the selected section.
+      if (url.pathname === "/api/admin/agentsam/chat" && request.method === "POST") {
+        let selector = null;
+        try { selector = await readCmsAssistantSiteSelector(request); }
+        catch { return json({ ok: false, error: "cms_site_required" }, 400); }
+        if (selector) {
+          const access = await resolveCmsSiteAccess(env.DB, principal.id, selector, "read",
+            { remoteWorkerNames: configuredCmsWorkers(env) });
+          if (!access.ok) return json({ ok: false, error: access.error }, access.status || 404);
+          cmsSite = access.site;
+          if (cmsSite.source === "worker") {
+            return json({ ok: false, error: "remote_site_operation_not_supported_by_this_editor" }, 409);
+          }
+          studioUser.account_id = cmsSite.account_id;
+          studioUser.role = cmsSite.role || "owner";
+          studioUser.site_id = cmsSite.id;
+          studioUser.site = cmsSite;
+        }
+      }
       if (url.pathname === "/api/admin/me") {
         try {
           const preference = await handleStudioAccountAvatar(new Request(request.url), env, principal.id);
@@ -1151,7 +1173,7 @@ export default {
         try {
           return await withLocalStudioCmsContext(studioUser.account_id, cmsSite, () => handleEcommerceAdminApi(request, { ...commerceEnv, CMS_ASSISTANT_INFERENCE }, url, context, studioUser), principal.id);
         } catch (error) {
-          console.error("studio_cms_assistant_error", error?.message);
+          console.error("studio_cms_assistant_error", error?.stack || error?.message || String(error));
           return json({ ok: false, error: "AgentSam could not load the editor conversation. Try again." }, 503);
         }
       }

@@ -186,7 +186,7 @@ export async function buildContextPack(env, routing = {}, message = "", options 
 
   const convSummary = await loadConversationSummary(env, options.conversation_id);
   if (convSummary) {
-    sourceTables.push("agentsam_conversations");
+    sourceTables.push("agentsam_chat_sessions");
   }
 
   if (options.repo_context && (intent === "code" || routeLane === "code")) {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { listAuthorizedCmsSites, requireCmsSiteAccess, resolveCmsSiteAccess, readCmsSiteSelector, createAuthorizedCmsSite } from "./cms-authority.js";
+import { listAuthorizedCmsSites, requireCmsSiteAccess, resolveCmsSiteAccess, readCmsSiteSelector, readCmsAssistantSiteSelector, createAuthorizedCmsSite } from "./cms-authority.js";
 
 const OWNER = "au_siteowner56789";
 const OTHER = "au_otheractor123";
@@ -53,6 +53,42 @@ function fixture(projectRows = []) {
     },
   };
 }
+
+test("Theme Editor assistant selector reads the selected section's explicit site ID", async () => {
+  const request = new Request("https://studio.example/api/admin/agentsam/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      message: "Review this section",
+      context: {
+        page: "/admin/theme-editor",
+        selected_resource: {
+          type: "section", surface: "theme-studio", site_id: "inneranimalmedia",
+          id: "section-1", page: "/blog",
+        },
+      },
+    }),
+  });
+  assert.equal(await readCmsAssistantSiteSelector(request), "inneranimalmedia");
+});
+
+test("Theme Editor assistant does not infer a site from a page slug or project field", async () => {
+  const request = new Request("https://studio.example/api/admin/agentsam/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: "Hello", context: { page: "/admin/theme-editor", slug: "blog", project_id: "inneranimalmedia" } }),
+  });
+  assert.equal(await readCmsAssistantSiteSelector(request), null);
+});
+
+test("Theme Editor section context without a site fails closed", async () => {
+  const request = new Request("https://studio.example/api/admin/agentsam/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ context: { selected_resource: { type: "section", surface: "theme-studio", id: "section-1" } } }),
+  });
+  await assert.rejects(readCmsAssistantSiteSelector(request), /cms_assistant_site_required/);
+});
 
 test("SDK site is visible from cms_sites without legacy page/project identity", async () => {
   const db = fixture();

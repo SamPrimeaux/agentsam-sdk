@@ -67,10 +67,16 @@ test("CMS selection is bound to the verified account and selected site when slug
       await assert.rejects(() => resolveSelectedResource(env, { ...selection, site_id: "three" }), /cms_site_not_found/);
     });
     db.exec("PRAGMA foreign_keys = ON");
-    const migration = readFileSync(new URL("../migrations/1373_cms_editor_assistant_storage.sql", import.meta.url), "utf8");
-    db.exec(migration);
-    db.exec(migration);
+    const shareMigration = readFileSync(new URL("../migrations/1351_agentsam_conversation_shares.sql", import.meta.url), "utf8");
+    const assistantMigration = readFileSync(new URL("../migrations/1373_cms_editor_assistant_storage.sql", import.meta.url), "utf8");
+    const sessionMigration = readFileSync(new URL("../migrations/1377_agentsam_chat_session_share_contract.sql", import.meta.url), "utf8");
+    db.exec(shareMigration);
+    db.exec(assistantMigration);
+    db.exec(assistantMigration);
     db.exec(`INSERT INTO agentsam_conversations (id,account_id,title,source) VALUES ('c','other','Private','admin_agentsam');`);
+    db.exec(sessionMigration);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='agentsam_conversations'").get().n, 0);
+    assert.equal(db.prepare("SELECT account_id FROM agentsam_chat_sessions WHERE conversation_id='c'").get().account_id, "other");
     assert.throws(() => db.exec(`INSERT INTO agentsam_attachments
       (id,account_id,conversation_id,file_name,mime_type,file_size_bytes,r2_key,preview_url)
       VALUES ('a','me','c','file','text/plain',4,'key','url');`), /FOREIGN KEY/);

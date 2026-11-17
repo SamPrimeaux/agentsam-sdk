@@ -280,3 +280,30 @@ export async function readCmsSiteSelector(request) {
   } catch { /* The original request remains available to its handler. */ }
   return null;
 }
+
+/**
+ * The editor's Side Assistant carries the selected site inside client context;
+ * the caller must validate that selector against Local Studio site authority, not as a top-level request field. Extract only an
+ * explicit site ID from that editor context; the caller must still authorize it
+ * against cms_sites before entering the site scope.
+ */
+export async function readCmsAssistantSiteSelector(request) {
+  const direct = await readCmsSiteSelector(request);
+  if (direct) return direct;
+  if (['GET', 'HEAD'].includes(request.method)) return null;
+  try {
+    const body = await request.clone().json();
+    const context = body?.context && typeof body.context === 'object' && !Array.isArray(body.context)
+      ? body.context : {};
+    const resource = context.selected_resource;
+    if (resource?.type === 'section' && resource?.surface === 'theme-studio') {
+      const siteId = resource.site_id || context.site_id || context.siteId;
+      if (!siteId) throw new Error('cms_assistant_site_required');
+      return String(siteId);
+    }
+    return context.site_id || context.siteId || null;
+  } catch (error) {
+    if (error?.message === 'cms_assistant_site_required') throw error;
+    return null;
+  }
+}

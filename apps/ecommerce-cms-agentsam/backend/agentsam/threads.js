@@ -4,18 +4,14 @@
 
 import { conversationThreadKey, touchConversation } from "./conversations.js";
 
-function previewText(text, max = 120) {
-  const s = String(text || "").replace(/\s+/g, " ").trim();
-  if (!s) return "";
-  return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
-}
-
 export async function appendThreadMessage(env, conversationId, payload, options = {}) {
   if (!env?.WEBSITE_ASSETS || !conversationId) return { stored: false };
 
   const key = conversationThreadKey(conversationId);
   const line = `${JSON.stringify({
     ...payload,
+    ...(options.workflowKey ? { workflow_key: options.workflowKey } : {}),
+    ...(options.lastModelId ? { model_key: options.lastModelId } : {}),
     ts: payload.ts || new Date().toISOString(),
   })}\n`;
 
@@ -30,13 +26,8 @@ export async function appendThreadMessage(env, conversationId, payload, options 
 
     const writeMeta = touchConversation(env, conversationId, {
       title: options.setTitleFromUser && payload.role === "user" ? payload.content : undefined,
-      lastMessagePreview:
-        payload.role === "assistant" ? payload.content : options.userPreview || payload.content,
       lastModelId: options.lastModelId,
-      workflowKey: options.workflowKey,
       messageDelta: 1,
-      toolCallDelta: Array.isArray(payload.tool_calls) ? payload.tool_calls.length : 0,
-      attachmentDelta: Array.isArray(payload.attachments) ? payload.attachments.length : 0,
     });
 
     const waitUntil = options.ctx?.waitUntil;
@@ -85,7 +76,7 @@ export async function persistChatExchange(
           preview_url: a.preview_url || a.url,
         })),
       },
-      { ctx, setTitleFromUser: true, userPreview: previewText(userMessage), workflowKey: routing?.classification?.workflow_key }
+      { ctx, setTitleFromUser: true, workflowKey: routing?.classification?.workflow_key }
     );
 
     await appendThreadMessage(

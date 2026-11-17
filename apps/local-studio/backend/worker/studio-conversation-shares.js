@@ -1,3 +1,11 @@
+import {
+  createConversationShare,
+  getChatSession,
+  getPublicConversationShare,
+  listConversationShares,
+  revokeConversationShare,
+} from "@inneranimalmedia/agentsam-cms/chat-storage";
+
 const json = (body, status = 200, headers = {}) => Response.json(body, {
   status,
   headers: { "cache-control": "no-store", ...headers },
@@ -18,23 +26,23 @@ function text(value, max = 60_000) {
   return typeof value === "string" ? value.slice(0, max) : "";
 }
 
-function normalizeSnapshot(body) {
-  if (!body || typeof body !== "object" || !Array.isArray(body.messages)) return null;
-  const messages = body.messages.slice(-200).flatMap((message) => {
+function normalizeSnapshot(title, messages) {
+  if (!Array.isArray(messages)) return null;
+  const normalizedMessages = messages.slice(-200).flatMap((message) => {
     if (!message || !["user", "assistant"].includes(message.role)) return [];
     const content = text(message.content);
     const attachments = Array.isArray(message.attachments)
       ? message.attachments.slice(0, 20).map((attachment) => ({
           name: text(attachment?.name, 180),
-          mimeType: text(attachment?.mimeType, 100),
+          mimeType: text(attachment?.mimeType || attachment?.mime_type, 100),
         })).filter((attachment) => attachment.name)
       : [];
     if (!content && !attachments.length) return [];
     return [{ role: message.role, content, attachments }];
   });
   const snapshot = {
-    title: text(body.title, 200).trim() || "Shared conversation",
-    messages,
+    title: text(title, 200).trim() || "Shared conversation",
+    messages: normalizedMessages,
     sharedAt: new Date().toISOString(),
   };
   const encoded = JSON.stringify(snapshot);
@@ -42,9 +50,58 @@ function normalizeSnapshot(body) {
   return { snapshot, encoded };
 }
 
-export async function handleStudioConversationShares(request, env, userId, url) {
+async function readR2Transcript(env, session) {
+  if (!session.r2_messages_key) return [];
+  const buckets = [...new Set([env.AUTORAG_BUCKET, env.WEBSITE_ASSETS].filter(Boolean))];
+  for (const bucket of buckets) {
+    if (typeof bucket.get !== "function") continue;
+    try {
+      const object = await bucket.get(session.r2_messages_key);
+      if (!object) continue;
+      const contents = await object.text();
+      try {
+        const parsed = JSON.parse(contents);
+        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed?.messages)) return parsed.messages;
+      } catch { /* JSONL archive */ }
+      return contents.split("\n").filter(Boolean).slice(-1000).flatMap((line) => {
+        try { return [JSON.parse(line)]; } catch { return []; }
+      });
+    } catch {
+      /* try the next account-owned archive bucket */
+    }
+  }
+  return [];
+}
+
+async function readCurrentTranscript(request, env, session) {
+  if (env.IAM_API?.fetch) {
+    try {
+      const headers = new Headers();
+      for (const key of ["cookie", "authorization"]) {
+        const credential = request.headers.get(key);
+        if (credential) headers.set(key, credential);
+      }
+      const reply = await env.IAM_API.fetch(new Request(
+        "https://inneranimalmedia.com/api/agent/sessions/" +
+          encodeURIComponent(session.conversation_id) + "/messages",
+        { method: "GET", headers },
+      ));
+      if (reply.ok) {
+        const payload = await reply.json();
+        const messages = Array.isArray(payload) ? payload : payload?.messages;
+        if (Array.isArray(messages) && messages.length) return messages;
+      }
+    } catch {
+      /* the canonical session's R2 archive is the recoverable fallback */
+    }
+  }
+  return readR2Transcript(env, session);
+}
+
+export async function handleStudioConversationShares(request, env, accountId, url) {
   if (!env.DB?.prepare) return json({ ok: false, error: "share_storage_unavailable" }, 503);
-  if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+  if (!accountId) return json({ ok: false, error: "unauthorized" }, 401);
   const origin = request.headers.get("origin");
   if (origin && origin !== url.origin) return json({ ok: false, error: "origin_not_allowed" }, 403);
 
@@ -52,40 +109,60 @@ export async function handleStudioConversationShares(request, env, userId, url) 
   const match = /^\/api\/studio\/conversation-shares\/([A-Za-z0-9_-]{8,100})$/.exec(url.pathname);
   try {
     if (collection && request.method === "POST") {
-      const body = await request.json();
-      const conversationId = text(body?.conversationId, 160).trim();
-      const normalized = normalizeSnapshot(body);
-      if (!conversationId || !normalized) return json({ ok: false, error: "invalid_share_snapshot" }, 400);
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, error: "invalid_request" }, 400); }
+      const conversationId = text(body?.conversationId || body?.conversation_id, 160).trim();
+      if (!conversationId) return json({ ok: false, error: "conversation_id_required" }, 400);
+
+      // Resolve ownership and transcript from canonical storage. Client-supplied
+      // title/messages are deliberately ignored so a caller cannot share another
+      // account's session or forge a public snapshot.
+      const session = await getChatSession(env.DB, accountId, conversationId);
+      if (!session || session.expires_at != null || session.state === "trashed") {
+        return json({ ok: false, error: "conversation_not_found" }, 404);
+      }
+      const messages = await readCurrentTranscript(request, env, session);
+      if (!messages.length) return json({ ok: false, error: "conversation_messages_unavailable" }, 409);
+      const normalized = normalizeSnapshot(session.title, messages);
+      if (!normalized) return json({ ok: false, error: "invalid_share_snapshot" }, 400);
+
       const id = "cshare_" + crypto.randomUUID().replaceAll("-", "");
       const token = randomToken();
-      await env.DB.prepare(`INSERT INTO agentsam_conversation_shares
-        (id, owner_id, conversation_id, token, title, snapshot_json)
-        VALUES (?, ?, ?, ?, ?, ?)`)
-        .bind(id, userId, conversationId, token, normalized.snapshot.title, normalized.encoded).run();
+      const created = await createConversationShare(env.DB, {
+        id,
+        accountId,
+        conversationId,
+        token,
+        title: normalized.snapshot.title,
+        snapshotJson: normalized.encoded,
+      });
+      if (!created) return json({ ok: false, error: "conversation_not_found" }, 404);
       const link = new URL("/share/" + token, url.origin).toString();
       return json({ ok: true, link: { id, url: link, createdAt: new Date().toISOString() } }, 201);
     }
 
     if (collection && request.method === "GET") {
-      const conversationId = text(url.searchParams.get("conversation_id"), 160).trim();
-      if (!conversationId) return json({ ok: false, error: "conversation_id_required" }, 400);
-      const { results = [] } = await env.DB.prepare(`SELECT id, token, title, created_at
-        FROM agentsam_conversation_shares
-        WHERE owner_id = ? AND conversation_id = ? AND revoked_at IS NULL
-        ORDER BY created_at DESC LIMIT 50`).bind(userId, conversationId).all();
-      return json({ ok: true, links: results.map((row) => ({
+      const conversationId = text(url.searchParams.get("conversation_id"), 160).trim() || null;
+      const includeRevoked = url.searchParams.get("include_revoked") === "1";
+      const rows = await listConversationShares(env.DB, accountId, {
+        conversationId,
+        includeRevoked,
+        limit: 50,
+      });
+      return json({ ok: true, links: rows.map((row) => ({
         id: row.id,
+        conversationId: row.conversation_id,
         title: row.title,
         url: new URL("/share/" + row.token, url.origin).toString(),
         createdAt: new Date(Number(row.created_at) * 1000).toISOString(),
+        revokedAt: row.revoked_at == null ? null : new Date(Number(row.revoked_at) * 1000).toISOString(),
       })) });
     }
 
     if (match && request.method === "DELETE") {
-      const result = await env.DB.prepare(`UPDATE agentsam_conversation_shares
-        SET revoked_at = unixepoch()
-        WHERE id = ? AND owner_id = ? AND revoked_at IS NULL`).bind(match[1], userId).run();
-      return Number(result?.meta?.changes || 0) ? json({ ok: true }) : json({ ok: false, error: "share_not_found" }, 404);
+      const revoked = await revokeConversationShare(env.DB, accountId, match[1]);
+      return revoked ? json({ ok: true }) : json({ ok: false, error: "share_not_found" }, 404);
     }
     return json({ ok: false, error: "method_not_allowed" }, 405, { allow: collection ? "GET, POST" : "DELETE" });
   } catch (error) {
@@ -122,12 +199,14 @@ export async function handlePublicConversationShare(request, env, token) {
     return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } });
   }
   try {
-    const row = await env.DB.prepare(`SELECT snapshot_json FROM agentsam_conversation_shares
-      WHERE token = ? AND revoked_at IS NULL LIMIT 1`).bind(token).first();
+    // Public capability lookup is token-only: no auth and no joins to accounts
+    // or sessions. Revoked and unknown tokens deliberately share one 404.
+    const row = await getPublicConversationShare(env.DB, token);
     if (!row) return new Response("This share link is unavailable or has been revoked.", {
       status: 404, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
     });
     const snapshot = JSON.parse(row.snapshot_json);
+    if (!snapshot.title) snapshot.title = row.title;
     return new Response(renderSharedConversation(snapshot), {
       headers: {
         "content-type": "text/html; charset=utf-8",

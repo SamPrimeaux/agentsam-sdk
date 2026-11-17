@@ -4,6 +4,7 @@
 
 import { requireApplicationAccountId } from "../lib/account-context.js";
 import { trackAgentSamEvent } from "./analytics.js";
+import { listChatSessionCompactionCandidates, recordChatSessionCompaction } from "@inneranimalmedia/agentsam-cms/chat-storage";
 
 export const RETENTION = {
   analyticsHotDays: 30,
@@ -446,20 +447,14 @@ export async function refreshThreadSummaries(env, { limit = RETENTION.summaryRef
     return { ok: false, error: "DB or R2 not bound", refreshed: 0 };
   }
 
-  const { results } = await env.DB.prepare(
-    `SELECT id, title, r2_thread_key, r2_summary_key, message_count, last_active_unix
-     FROM agentsam_conversations
-     WHERE account_id = ? AND status = 'active' AND message_count > 0
-     ORDER BY last_active_unix DESC
-     LIMIT ?`
-  )
-    .bind(requireApplicationAccountId(), limit)
-    .all();
+  const accountId = requireApplicationAccountId();
+  const conversations = await listChatSessionCompactionCandidates(env.DB, accountId, limit);
 
   let refreshed = 0;
-  for (const conv of results || []) {
-    const threadKey = conv.r2_thread_key || `agentsam/thread-payloads/${conv.id}/messages.jsonl`;
-    const summaryKey = conv.r2_summary_key || `agentsam/thread-summaries/${conv.id}/latest.json`;
+  for (const conv of conversations) {
+    const threadKey = conv.r2_thread_key;
+    const summaryKey = conv.r2_summary_key;
+    if (!threadKey || !summaryKey) continue;
     try {
       const obj = await env.WEBSITE_ASSETS.get(threadKey);
       if (!obj) continue;
@@ -479,13 +474,7 @@ export async function refreshThreadSummaries(env, { limit = RETENTION.summaryRef
         httpMetadata: { contentType: "application/json; charset=utf-8" },
       });
 
-      await env.DB.prepare(
-        `UPDATE agentsam_conversations
-         SET summary = ?, updated_at = datetime('now')
-         WHERE id = ? AND account_id = ?`
-      )
-        .bind(excerpt.slice(0, 500), conv.id, requireApplicationAccountId())
-        .run();
+      await recordChatSessionCompaction(env.DB, accountId, conv.id);
 
       refreshed += 1;
     } catch (err) {

@@ -18,6 +18,7 @@
       "import": "./src/node.js"
     },
     "./account-context": "./src/account-context.js",
+    "./chat-storage": "./src/chat-storage.js",
     "./site-settings": "./src/site-settings-contract.js",
     "./site-nav-defaults": "./src/site-nav-defaults.js"
   },
