@@ -74,8 +74,7 @@ try {
     try {
       await page.getByPlaceholder("Brief the co-worker").waitFor({ timeout: 12000 });
       await page.getByText("Saved co-worker conversation", { exact: true }).waitFor({ timeout: 12000 });
-      const view = pathname === "/admin/store" ? page.frameLocator('iframe[title^="Ecommerce CMS"]') : page;
-      await view.getByRole("heading", { name: heading, exact: true }).waitFor({ timeout: 12000 });
+      await page.getByRole("heading", { name: heading, exact: true }).waitFor({ timeout: 12000 });
     } catch (error) {
       assert.deepEqual(reactErrors, [], pathname + " crashed after workbench restoration");
       throw error;
