@@ -43,7 +43,9 @@ test('Pages leads to content editor and keeps theme composition separate', () =>
   assert.ok(pages.includes('id="add-page-btn"'), 'the real Add Page API now has a matching control');
   assert.ok(pages.includes('window.cmsAdminNavigate("/admin/page-edit?" + query.toString())'),
     'new pages should open their own Page Editor');
-  assert.ok(pages.includes("cmsAdminFetch('/api/admin/cms/theme-projects?site_id='+encodeURIComponent(selectedSiteId))"), 'installed starter layouts must be scoped to the selected site');
+  assert.ok(!pages.includes("cmsAdminFetch('/api/admin/cms/theme-projects"), 'page inventory must not fetch Theme Studio projects');
+  assert.ok(pages.includes('new:"1"'), 'Add Page opens the full independent Page Editor');
+  assert.ok(pages.includes('pages-visibility-filter'), 'visibility filter belongs to native Pages list');
   assert.ok(!pages.includes('id="pages-select-all"'));
 });
 
@@ -61,6 +63,8 @@ test('merchant Page Editor is a separate, responsive content and SEO surface', (
     assert.ok(js.includes(control), 'missing interactive Page Editor control '+control);
   }
   assert.match(js, /content-draft/);
+  assert.ok(js.includes('initialNewPage'), 'new pages share the same editor as existing pages');
+  assert.ok(js.includes('cmsAdminFetch("/api/admin/cms/pages",{'), 'first save creates a canonical CMS draft');
   assert.match(js, /cmsAdminFetch/);
   assert.match(js, /cmsPublicPageUrl/);
   assert.match(js, /document\.execCommand/);
