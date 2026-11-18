@@ -195,6 +195,16 @@
     more: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>'
   };
 
+  // Identity imagery belongs to the owning host/theme, not this editor bundle.
+  function assistantMark() {
+    const source = host?.assets?.assistantIconUrl || window.AgentSamThemeEditorAssets?.assistantIconUrl || '';
+    if (typeof source === 'string' && source.startsWith('/') && !source.startsWith('//') &&
+        !/[\s"'<>]/.test(source)) {
+      return '<img src="' + cmsEscapeAttr(source) + '" width="20" height="20" alt="" aria-hidden="true">';
+    }
+    return '<span class="te-assistant-glyph" aria-hidden="true">✦</span>';
+  }
+
   function shellMarkup() {
     return [
       '<div class="theme-studio">',
@@ -219,7 +229,7 @@
             '<span class="te-save-state" id="te-save-state" role="status" aria-live="polite" title="Loading" aria-label="Loading">Loading</span>',
           '</div>',
           '<div class="theme-studio-toolbar__right">',
-            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false"><img src="/admin/brand/agentsam-gorilla-tiny.svg" width="20" height="20" alt="" aria-hidden="true"></button>',
+            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false">' + assistantMark() + '</button>',
             '<button type="button" class="te-icon-btn" id="te-inspect-mode" aria-label="Canvas inspection on" title="Canvas inspection on — select sections in the preview" aria-pressed="true">', icon.inspect, '</button>',
             '<span class="te-toolbar-separator" aria-hidden="true"></span>',
             '<div class="te-device-switch" aria-label="Preview device">',
@@ -1455,7 +1465,7 @@
         groups.get(entry.category).push(entry);
       }
       const generate = '<button type="button" class="te-catalog-generate" data-start-section-generation>' +
-        '<img src="/admin/brand/agentsam-gorilla-tiny.svg" alt="" aria-hidden="true">' +
+        assistantMark() +
         '<span><strong>Generate with AgentSam</strong><small>Create a reusable editable CMS section</small></span><span aria-hidden="true">↗</span></button>';
       list.innerHTML = generate + (filtered.length ? Array.from(groups.entries()).map(function([category, items]) {
         return '<div class="te-catalog-list-group"><div class="te-catalog-list-group__label">' +
