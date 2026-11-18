@@ -71,7 +71,7 @@ export const SCENE_KINDS = Object.freeze({
   'interactive.stage': {
     id: 'interactive.stage',
     label: 'Interactive Stage',
-    description: '3D / game / CAD / model stage.',
+    description: 'Native .iamscene, 3D / game / CAD / model stage.',
     slots: ['copy', 'demo', 'visual', 'actions'],
     defaultScroll: 'viewport',
   },
@@ -140,6 +140,8 @@ export function createSection(partial) {
     scroll: partial.scroll,
     visual: partial.visual,
     demo: partial.demo,
+    sceneDocument: partial.sceneDocument,
+    sceneAnimation: partial.sceneAnimation,
     groups: partial.groups || [],
     contentRef: partial.contentRef,
   });
