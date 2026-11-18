@@ -23,9 +23,6 @@ for (const relative of [
   "sw.js",
   "studio-cms-source-host.js",
   "studio-cms-source-host.css",
-  "store-start.html",
-  "store-start.js",
-  "store-start.css",
   "__agentsam/pwa/icon-180.png",
   "__agentsam/pwa/icon-192.png",
   "__agentsam/pwa/icon-512.png",
@@ -37,8 +34,7 @@ await mkdir(output, { recursive: true });
 await cp(path.join(source, "brand"), path.join(output, "brand"), { recursive: true });
 await cp(path.join(source, "favicon.svg"), path.join(output, "favicon.svg"));
 await cp(path.join(source, "sw.js"), path.join(output, "sw.js"));
-for (const name of ["studio-cms-source-host.js", "studio-cms-source-host.css",
-  "store-start.html", "store-start.js", "store-start.css"]) {
+for (const name of ["studio-cms-source-host.js", "studio-cms-source-host.css"]) {
   await cp(path.join(source, name), path.join(output, name));
 }
 await mkdir(path.join(output, "__agentsam", "pwa"), { recursive: true });
@@ -49,4 +45,15 @@ for (const name of ["icon-180.png", "icon-192.png", "icon-512.png"]) {
   );
 }
 
+// Identity owns the portable merchant first-run onboarding UI. This host only packages its
+// reusable static assets, which the host route adapter mounts at /start/*.
+const merchantSource = path.resolve(root, '../../packages/identity/src/frontend/merchant-onboarding');
+const merchantOutput = path.join(output, 'identity/merchant-onboarding');
+await mkdir(merchantOutput, {recursive:true});
+for (const name of ['store-start.html','store-start.js','store-start.css']) {
+  const file = path.join(merchantSource,name);
+  if (!(await stat(file)).isFile()) throw new Error('missing portable merchant onboarding asset: '+name);
+  await cp(file,path.join(merchantOutput,name));
+}
+console.log('[merchant-onboarding] staged reusable Identity onboarding assets');
 console.log("[shell-assets] staged canonical AgentSam brand + favicon + PWA icons");

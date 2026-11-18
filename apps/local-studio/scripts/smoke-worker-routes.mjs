@@ -67,17 +67,25 @@ try {
   // Merchant first-run is deliberately public, while identity and store writes
   // continue to use the existing signed-in account authority.
   {
-    const response = await request('/start');
+    const canonical = await request('/start');
+    if (canonical.status !== 308 || new URL(canonical.headers.get('location'),base).pathname !== '/start/')
+      throw new Error('merchant entry must resolve its host-owned canonical mount');
+    const response = await request('/start/');
     const text = await response.text();
     if (response.status !== 200 || !text.includes('id="start-signup"') ||
         !text.includes('id="start-create"') ||
         response.headers.get('cache-control') !== 'private, no-store') {
-      throw new Error('/start must serve the public first-run merchant document, not redirect to a dashboard');
+      throw new Error('merchant entry must serve the portable Ecommerce CMS setup document');
     }
-    for (const assetPath of ['/store-start.js','/store-start.css']) {
+    for (const assetPath of ['/start/store-start.js','/start/store-start.css']) {
       const asset = await request(assetPath);
       if (asset.status !== 200) throw new Error(assetPath + ' missing from deployed Worker assets');
     }
+    const routes = await request('/start/config');
+    const projected = await routes.json();
+    if (routes.status !== 200 || projected.identity.login !== '/auth/login' ||
+        projected.sites.create !== '/api/cms/sites' || projected.destinations.store !== '/admin/store?site_id={site_id}')
+      throw new Error('merchant setup route projection does not match host identity and CMS authorities');
     const sites = await request('/api/cms/sites');
     if (sites.status !== 401) throw new Error('/api/cms/sites must reject anonymous store inventory');
     const signin = await request('/auth/login?next=%2Fstart');
