@@ -110,7 +110,7 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       range("Exploded view", "stage.explode", 0, 1, .05, ss.explodeAmount) +
       range("Turntable spin", "stage.spin", 0, 1.6, .04, ss.spinSpeed) +
       range("Key light orbit", "stage.lightAngle", -3.14, 3.14, .05, ss.keyLightAngle) +
-      '<div class="sam-inline-actions">' + action(ss.brushEnabled ? "3D brush · On" : "3D brush · Off", "stage.brush", "brush") + action("Clear brush strokes", "stage.clearBrush", "eraser") + '</div>';
+      '<div class="sam-inline-actions">' + action(ss.brushEnabled ? "3D brush · On" : "3D brush · Off", "stage.brush", "pen") + action("Clear brush strokes", "stage.clearBrush", "trash") + '</div>';
   }
   if (step === "direct") {
     return '<div class="settings-panel-intro"><strong>Camera and voice direction</strong><span>Direct the shot, delivery and narration for the active scene.</span></div>' +
@@ -124,11 +124,11 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       select("Style preset", "direct.voicePreset", [["", "Choose a style"], ...VOICE_STYLES.map(v => [v.style, v.label] as [string, string])], ss.voiceStyle) +
       '<input id="sam-direct-style" class="settings-text-input" data-setting="direct.voicePreset" value="' + escapeHtml(ss.voiceStyle) + '" placeholder="Warm, articulate design documentary narrator" aria-label="Voice style direction">' +
       '<textarea id="sam-direct-script" class="settings-textarea" data-beat-field="script" rows="4" aria-label="Narration script">' + escapeHtml(beat?.script || "") + '</textarea>' +
-      '<div class="sam-inline-actions">' + action("Draft script with AgentSam", "direct.draft", "sparkles") + action("Preview narration", "direct.speak", "audio-lines") + action("Stop", "direct.stop", "stop") + '</div>' +
+      '<div class="sam-inline-actions">' + action("Draft script with AgentSam", "direct.draft", "sparkles") + action("Preview narration", "direct.speak", "waves") + action("Stop", "direct.stop", "stop") + '</div>' +
       '<p class="settings-note">Narration preview uses the browser voice available on this device. SamSpeaks Gemini voice synthesis is a separate runtime integration.</p>';
   }
   return '<div class="settings-panel-intro"><strong>Creativity Flow</strong><span>Review the complete storyboard and play the camera and atmosphere sequence.</span></div>' +
-    '<div class="sam-flow-toolbar">' + action("Add beat", "story.add", "plus") + action("Play flow", "story.play", "play") + action("Stop", "story.stop", "square") + '</div>' +
+    '<div class="sam-flow-toolbar">' + action("Add beat", "story.add", "plus") + action("Play flow", "story.play", "play") + action("Stop", "story.stop", "stop") + '</div>' +
     renderStoryCards(state.storyboard, (state as SettingsState & { activeBeatIndex?: number }).activeBeatIndex || 0, true) +
     renderBeatEditor(beat, (state as SettingsState & { activeBeatIndex?: number }).activeBeatIndex || 0, state.storyboard.length);
 }
