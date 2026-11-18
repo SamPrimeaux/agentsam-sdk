@@ -3114,6 +3114,28 @@
     target?.setAttribute('data-theme-editor-hover', 'true');
   }
 
+  // A published storefront is cross-origin inside Theme Studio. Its links
+  // must switch the CMS page, not just navigate the preview frame and leave
+  // the old page's section tree and editor URL in place.
+  window.addEventListener('message', function (event) {
+    if (!host || host.projectId || !host.siteId ||
+        event.data?.type !== 'agentsam:cms-preview:page-navigation') return;
+    const frame = byId('theme-preview');
+    if (!frame || event.source !== frame.contentWindow) return;
+    let expectedOrigin = null;
+    try { expectedOrigin = new URL(frame.getAttribute('src'), location.href).origin; } catch (_) {}
+    if (!expectedOrigin || event.origin !== expectedOrigin) return;
+    const pathname = event.data.pathname;
+    if (typeof pathname !== 'string' || !/^\/(?!\/)[^?#]*$/.test(pathname)) return;
+    const normalized = pathname.replace(/\/+$/, '') || '/';
+    const nextPage = pages.find(function (page) {
+      const candidate = host.pageRoutes?.[page.slug] || page.route_path || page.route || page.live_route;
+      if (typeof candidate !== 'string' || !candidate.startsWith('/')) return false;
+      return (candidate.replace(/\/+$/, '') || '/') === normalized;
+    });
+    if (nextPage && nextPage.slug !== slug) void switchPage(nextPage.slug);
+  });
+
   function bindPreviewSelection() {
     const frame = byId('theme-preview');
     let doc;

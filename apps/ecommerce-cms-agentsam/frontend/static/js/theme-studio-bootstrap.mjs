@@ -292,11 +292,12 @@ async function bootCmsPage(route) {
       publishRoute('agentsam:cms-page-editor:route', routeIdentity);
     },
     onPageChange(nextSlug) {
-      host.page = nextSlug;
       const nextPage = pages.find(page => page.slug === nextSlug);
       if (!nextPage?.id) { showError(new Error('cms_page_not_found_for_site')); return; }
+      host.page = nextPage.slug;
+      routeIdentity.pageId = nextPage.id;
       replaceEditorUrl(cmsPageEditorPath(siteId, nextPage.id, nextPage.slug), { clearSelection: true });
-      publishRoute('agentsam:cms-page-editor:route', { siteId, pageId: nextPage.id });
+      publishRoute('agentsam:cms-page-editor:route', routeIdentity);
     },
   };
   publishRoute('agentsam:cms-page-editor:route', routeIdentity);
