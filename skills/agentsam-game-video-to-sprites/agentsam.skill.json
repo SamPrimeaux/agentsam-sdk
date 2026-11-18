@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-game-video-to-sprites",
+  "name": "AgentSam · video to sprites",
+  "description": "Video→dense sprites (imagine_image_to_video + chroma postprocess)",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/agentsam-game-video-to-sprites"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "AgentSam game-development cookbook",
+    "status": "adapted",
+    "notice": "Original source and licenses retained in accompanying notices"
+  }
+}

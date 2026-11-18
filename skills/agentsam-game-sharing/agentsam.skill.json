@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-game-sharing",
+  "name": "AgentSam · sharing",
+  "description": "Brand assets: og.jpg card, social banner, SVG favicon, PWA icons — always a non-blocking `task` subagent",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/agentsam-game-sharing"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "AgentSam game-development cookbook",
+    "status": "adapted",
+    "notice": "Original source and licenses retained in accompanying notices"
+  }
+}

@@ -141,8 +141,8 @@
     "packages/connectors/cfoa/*",
     "skills/agentsam-cloudflare-workers",
     "skills/agentsam-cloudflare-workers/*",
-    "skills/grok-*",
-    "skills/grok-*/*",
+    "skills/agentsam-game-*",
+    "skills/agentsam-game-*/*",
     "apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json",
     "apps/cad-creator/src-tauri"
   ],

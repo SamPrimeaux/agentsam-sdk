@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-game-map-generation",
+  "name": "AgentSam · map generation",
+  "description": "2D game maps: layered art, props, collision metadata",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/agentsam-game-map-generation"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "AgentSam game-development cookbook",
+    "status": "adapted",
+    "notice": "Original source and licenses retained in accompanying notices"
+  }
+}

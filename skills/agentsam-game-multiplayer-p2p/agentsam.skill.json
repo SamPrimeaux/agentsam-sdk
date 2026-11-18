@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-game-multiplayer-p2p",
+  "name": "AgentSam · multiplayer p2p",
+  "description": "WebRTC P2P mesh, signaled at /api/rtc",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/agentsam-game-multiplayer-p2p"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "AgentSam game-development cookbook",
+    "status": "adapted",
+    "notice": "Original source and licenses retained in accompanying notices"
+  }
+}

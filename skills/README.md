@@ -23,12 +23,20 @@ current task calls for them.
 List or open them with `agentsam skills`; aliases such as `quick-bytes`, `no-regress`,
 `ingest` are intentionally short enough for terminal use.
 
-## Not portable (host / app scoped)
+## Portable game-development cookbooks
 
-`apps/local-studio/.grok/skills/*` (game/UI/sprite/xAI packs) are **Local Studio
-Grok host skills**. They do not belong in the SDK portable catalog and must not
-be confused with D1 `agentsam_skill` rows or `agentsam_tools`.
+Fourteen engine-independent or engine-specific game cookbooks live in
+`skills/agentsam-game-*` and are registered in `skills/catalog.json`.
+They cover playable loops, controls, physics, multiplayer, interface design,
+asset generation, 2D maps, tiles, animation, 3D engines and game sharing.
+Use `agentsam-game-building` as the starting workflow and load specific
+cookbooks for controls, multiplayer, rendering, assets, and delivery as needed.
 
+The game schemas remain in the separate canonical Game Studio schema pack.
+These skills are guidance, not a second application catalog, rendering engine,
+scene format, installation registry, or save-state authority.
+Original third-party licenses and provenance notices are retained alongside
+the adapted cookbooks.
 ## D1 registries (normalize for new users)
 
 | Table | Owns | New-user requirement |

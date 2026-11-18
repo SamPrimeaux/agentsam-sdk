@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-game-building",
+  "name": "AgentSam · building",
+  "description": "Browser games: loop, 3D orientation, camera, perf, assets, genres",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/agentsam-game-building"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "AgentSam game-development cookbook",
+    "status": "adapted",
+    "notice": "Original source and licenses retained in accompanying notices"
+  }
+}

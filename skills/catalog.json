@@ -107,7 +107,7 @@
         "sam.codebaseindex"
       ],
       "title": "AgentSam Codebaseindex",
-      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands \u2014 use agentsam codebaseindex / codebaseindex.ingest.",
+      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands — use agentsam codebaseindex / codebaseindex.ingest.",
       "entry": "agentsam-codebaseindex/SKILL.md",
       "references": [],
       "user_invocable": true
@@ -328,6 +328,174 @@
       "entry": "agentsam-arch-orchestrate/SKILL.md",
       "references": [],
       "user_invocable": true
+    },
+    {
+      "id": "agentsam-game-building",
+      "aliases": [
+        "building-games",
+        "game-building"
+      ],
+      "title": "AgentSam Game Building",
+      "description": "Portable game-development cookbook for game building, engine-independent where applicable.",
+      "entry": "agentsam-game-building/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-controls",
+      "aliases": [
+        "controls",
+        "game-controls"
+      ],
+      "title": "AgentSam Game Controls",
+      "description": "Portable game-development cookbook for game controls, engine-independent where applicable.",
+      "entry": "agentsam-game-controls/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-interface-design",
+      "aliases": [
+        "design-ui",
+        "game-interface-design"
+      ],
+      "title": "AgentSam Game Interface Design",
+      "description": "Portable game-development cookbook for game interface design, engine-independent where applicable.",
+      "entry": "agentsam-game-interface-design/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-animation-frames",
+      "aliases": [
+        "game-animation-frames",
+        "game-animation-frames"
+      ],
+      "title": "AgentSam Game Animation Frames",
+      "description": "Portable game-development cookbook for game animation frames, engine-independent where applicable.",
+      "entry": "agentsam-game-animation-frames/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-asset-core",
+      "aliases": [
+        "game-asset-core",
+        "game-asset-core"
+      ],
+      "title": "AgentSam Game Asset Core",
+      "description": "Portable game-development cookbook for game asset core, engine-independent where applicable.",
+      "entry": "agentsam-game-asset-core/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-character-consistency",
+      "aliases": [
+        "game-character-consistency",
+        "game-character-consistency"
+      ],
+      "title": "AgentSam Game Character Consistency",
+      "description": "Portable game-development cookbook for game character consistency, engine-independent where applicable.",
+      "entry": "agentsam-game-character-consistency/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-tilesets",
+      "aliases": [
+        "game-tilesets",
+        "game-tilesets"
+      ],
+      "title": "AgentSam Game Tilesets",
+      "description": "Portable game-development cookbook for game tilesets, engine-independent where applicable.",
+      "entry": "agentsam-game-tilesets/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-ui-icons",
+      "aliases": [
+        "game-ui-icons",
+        "game-ui-icons"
+      ],
+      "title": "AgentSam Game UI Icons",
+      "description": "Portable game-development cookbook for game ui icons, engine-independent where applicable.",
+      "entry": "agentsam-game-ui-icons/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-map-generation",
+      "aliases": [
+        "generate2dmap",
+        "game-map-generation"
+      ],
+      "title": "AgentSam Game Map Generation",
+      "description": "Portable game-development cookbook for game map generation, engine-independent where applicable.",
+      "entry": "agentsam-game-map-generation/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-sprite-generation",
+      "aliases": [
+        "generate2dsprite",
+        "game-sprite-generation"
+      ],
+      "title": "AgentSam Game Sprite Generation",
+      "description": "Portable game-development cookbook for game sprite generation, engine-independent where applicable.",
+      "entry": "agentsam-game-sprite-generation/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-multiplayer-p2p",
+      "aliases": [
+        "multiplayer-p2p",
+        "game-multiplayer-p2p"
+      ],
+      "title": "AgentSam Game Multiplayer P2P",
+      "description": "Portable game-development cookbook for game multiplayer p2p, engine-independent where applicable.",
+      "entry": "agentsam-game-multiplayer-p2p/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-sharing",
+      "aliases": [
+        "og",
+        "game-sharing"
+      ],
+      "title": "AgentSam Game Sharing and Identity",
+      "description": "Portable game-development cookbook for game sharing and identity, engine-independent where applicable.",
+      "entry": "agentsam-game-sharing/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-threejs",
+      "aliases": [
+        "threejs",
+        "game-threejs"
+      ],
+      "title": "AgentSam Game Three.js",
+      "description": "Portable game-development cookbook for game three.js, engine-independent where applicable.",
+      "entry": "agentsam-game-threejs/SKILL.md",
+      "references": [],
+      "user_invocable": false
+    },
+    {
+      "id": "agentsam-game-video-to-sprites",
+      "aliases": [
+        "video2dsprite",
+        "game-video-to-sprites"
+      ],
+      "title": "AgentSam Game Video to Sprites",
+      "description": "Portable game-development cookbook for game video to sprites, engine-independent where applicable.",
+      "entry": "agentsam-game-video-to-sprites/SKILL.md",
+      "references": [],
+      "user_invocable": false
     }
   ]
 }
