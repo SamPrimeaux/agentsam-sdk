@@ -22,7 +22,14 @@ export function normalizeCmsDefinition(row) {
   // Preserve the versioned settings from D1. Fill presentation labels only;
   // source types and keys remain untouched for the typed inspector contracts.
   const raw = parseJson(row.settings_schema_json, {});
-  const fields = Object.fromEntries(Object.entries(raw).map(([key, spec]) => [
+  // Existing stock manifests serialize {fields:[...],blocks:[...]}; newer
+  // definitions serialize an id -> setting map. Both are ONE editor contract.
+  // Never project the 'fields' array itself as an invented inspector control.
+  const rawFields = Array.isArray(raw.fields)
+    ? raw.fields.filter(field => field && typeof field.key === "string")
+        .map(({key,...spec}) => [key,spec])
+    : Object.entries(raw);
+  const fields = Object.fromEntries(rawFields.map(([key, spec]) => [
     key, spec && typeof spec === 'object' && !Array.isArray(spec)
       ? { ...spec, label: spec.label || key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[._-]/g, ' ') }
       : spec,
@@ -91,7 +98,21 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
   return (result.results || []).map(normalizeCmsDefinition);
 }
 
-export function normalizeCmsCatalogTemplate(row) {
+// The catalog may advertise only host-executable renderer registrations.
+// D1 metadata, preview HTML and an R2 URL are not renderer implementations.
+function bundledCmsRendererAvailable(rendererKey) {
+  if (!rendererKey) return false;
+  for (const name of ["ThemePortableSections", "ThemePlatformStock", "ThemeReviseAtlas"]) {
+    const runtime = globalThis[name];
+    if (typeof runtime?.get === "function" &&
+        typeof runtime?.render === "function" &&
+        typeof runtime?.validate === "function" &&
+        runtime.get(rendererKey)) return true;
+  }
+  return false;
+}
+
+export function normalizeCmsCatalogTemplate(row, {hasRenderer = bundledCmsRendererAvailable} = {}) {
   const templateData = parseJson(row.template_data, {});
   const editorSchema = parseJson(row.editor_schema_json, {});
   const compatibility = parseJson(row.compatibility_json, {});
@@ -99,10 +120,9 @@ export function normalizeCmsCatalogTemplate(row) {
   const dataBindings = parseJson(row.data_bindings_json, {});
   const preview = parseJson(row.preview_json, {});
   const metadata = parseJson(row.definition_metadata_json, {});
-  const rendererKey = metadata.rendererKey || metadata.renderer_key ||
-    templateData.rendererKey || templateData.renderer_key || null;
-  const implementationStatus = metadata.implementationStatus || metadata.implementation_status ||
-    templateData.implementationStatus || templateData.implementation_status || "unverified";
+  // These values MUST come from cms_components, never copied template metadata.
+  const rendererKey = row.resolved_renderer_key || null;
+  const implementationStatus = row.resolved_implementation_status || "unverified";
   const implementationClass = metadata.implementationClass || metadata.implementation_class ||
     templateData.implementationClass || templateData.implementation_class || null;
   const definition = row.resolved_definition_id ? {
@@ -120,9 +140,16 @@ export function normalizeCmsCatalogTemplate(row) {
     maxBlocks: row.definition_max_blocks == null ? null : Number(row.definition_max_blocks),
     metadata,
   } : null;
+  const definitionMatches = Boolean(definition &&
+    definition.kind === row.item_type &&
+    String(definition.version) === String(row.definition_version) &&
+    definition.key === row.definition_key);
+  const rendererVerified = Boolean(row.resolved_component_id &&
+    implementationStatus === "verified" &&
+    typeof rendererKey === "string" && rendererKey.length > 0);
+  const runtimeReady = rendererVerified && hasRenderer(rendererKey) === true;
   const installable = row.status === "active" && definition?.status === "active" &&
-    implementationStatus === "implemented" && implementationClass === "native" &&
-    typeof rendererKey === "string" && rendererKey.length > 0;
+    definitionMatches && rendererVerified && runtimeReady;
   return {
     id: row.id,
     sku: row.sku,
@@ -153,6 +180,11 @@ export function normalizeCmsCatalogTemplate(row) {
     rendererKey,
     implementationStatus,
     implementationClass,
+    componentId: row.resolved_component_id || null,
+    deliveryMode: row.resolved_delivery_mode || null,
+    sourceRef: row.resolved_source_ref || null,
+    rendererVerified,
+    runtimeReady,
     installable,
     isFeatured: Boolean(row.is_featured),
     featuredCollection: row.featured_collection || null,
@@ -183,6 +215,9 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
     d.settings_schema_json AS definition_settings_schema_json,
     d.allowed_blocks_json AS definition_allowed_blocks_json,
     d.max_blocks AS definition_max_blocks,d.metadata_json AS definition_metadata_json,
+    c.id AS resolved_component_id,c.renderer_key AS resolved_renderer_key,
+    c.implementation_status AS resolved_implementation_status,
+    c.delivery_mode AS resolved_delivery_mode,c.source_ref AS resolved_source_ref,
     c.package_ref AS resolved_package_ref,c.artifact_r2_bucket AS resolved_package_manifest_bucket,
     c.artifact_r2_key AS resolved_package_manifest_key,
     c.artifact_sha256 AS resolved_package_manifest_sha256
@@ -209,7 +244,9 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
   }
   query += " ORDER BY CASE WHEN t.item_type='section' THEN 0 ELSE 1 END, t.sort_order, t.template_name LIMIT 300";
   const result = await env.DB.prepare(query).bind(...binds).all();
-  return (result.results || []).map(normalizeCmsCatalogTemplate);
+  const hasRenderer = typeof filters.hasRenderer === "function"
+    ? filters.hasRenderer : bundledCmsRendererAvailable;
+  return (result.results || []).map(row => normalizeCmsCatalogTemplate(row,{hasRenderer}));
 }
 
 /**

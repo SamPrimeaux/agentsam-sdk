@@ -64,7 +64,8 @@ export interface CmsBlockDefinition {
 }
 export type FieldProjection = {fields:CmsInspectorField[];issues:ContractIssue[]};
 
-const ID = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
+// Nested fields (e.g. ctaPrimary.href) are native, editable content paths.
+const ID = /^[a-z][a-zA-Z0-9_-]{0,63}(?:\.[a-z][a-zA-Z0-9_-]{0,63}){0,3}$/;
 const TYPES:ReadonlySet<string> = new Set<SettingKind>([
   "text","textarea","rich_text","boolean","number","range","select",
   "color","link","media","video","product","collection","variant","url","json",

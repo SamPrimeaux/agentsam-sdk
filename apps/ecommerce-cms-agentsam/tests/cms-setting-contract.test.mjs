@@ -113,3 +113,16 @@ test("section field override remains section-scoped and does not erase its Butto
  assert.equal(s.blocks[0].fields.length,3);
  assert.equal(s.defaultContent.headline,"Original heading");
 });
+
+
+test("stock field arrays and dotted content paths use the canonical typed inspector",()=>{
+ const result=definition("section","portable-hero",{
+   fields:[{key:"headline",type:"text",label:"Headline"},
+     {key:"ctaPrimary.href",type:"link",label:"Button link"}],
+   blocks:[{key:"button",label:"Button"}],
+ });
+ const normalized=normalizeSettingContract(result.fields);
+ assert.deepEqual(normalized.issues,[]);
+ assert.deepEqual(normalized.fields.map(f=>f.key),["headline","ctaPrimary.href"]);
+ assert.equal(normalized.fields[1].type,"link");
+});
