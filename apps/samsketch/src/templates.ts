@@ -114,7 +114,7 @@ export function instanceTemplateModel(id:string,color?:string,wireframe=false,lo
    const preset=FINISHES.find(item=>item.id===finish);
    if(preset){
     o.material=new THREE.MeshPhysicalMaterial({
-     color:color||preset.swatchHex,metalness,roughness,
+     color:color||preset.swatchHex,metalness,roughness,anisotropy:preset.anisotropy,
      iridescence:preset.iridescence,iridescenceIOR:1.3,clearcoat:.28,clearcoatRoughness:Math.max(.05,preset.roughness),
      emissive:preset.emissive,emissiveIntensity:preset.emissiveIntensity,wireframe,side:THREE.DoubleSide
     });
