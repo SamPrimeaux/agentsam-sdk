@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080d12">
+    <title>Retrofuturistic Circuit — Scroll Scene</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main>
+      <section class="scene-scroll" data-scene-scroll aria-label="Retrofuturistic circuit story">
+        <div class="scene-scroll__sticky">
+          <div class="scene-scroll__canvas" id="scene-canvas" aria-hidden="true"></div>
+          <div class="scene-scroll__copy" aria-live="polite">
+            <p class="scene-scroll__eyebrow" id="chapter-eyebrow">01 / IGNITION</p>
+            <h1 id="chapter-title">A system begins with a single pulse.</h1>
+            <p class="scene-scroll__body" id="chapter-body">
+              Scroll to move through the native scene. The page controls time; the scene
+              document remains independent.
+            </p>
+            <div class="scene-scroll__meter" aria-label="Scene progress">
+              <div class="scene-scroll__meter-fill" id="progress-fill"></div>
+            </div>
+            <p class="scene-scroll__progress" id="progress-label">0%</p>
+            <p class="scene-scroll__hint" id="scroll-hint">Scroll to move through the scene</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="scene-after">
+        <p class="scene-after__eyebrow">ONE PORTABLE SOURCE</p>
+        <h2>One scene. Many placements.</h2>
+        <p>
+          The same .iamscene document can power a scroll story, an autoplay showcase,
+          an interactive stage, or a reusable CMS section. Page behavior stays with
+          the page; geometry and animation stay with the scene.
+        </p>
+      </section>
+    </main>
+    <p class="scene-error" id="scene-error" role="alert" hidden>
+      The scene could not be loaded. Check the browser console for the runtime error.
+    </p>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
