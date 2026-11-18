@@ -1,6 +1,6 @@
 {
-  "name": "SamScenes ",
-  "description": "Spatial 3D creative studio with procedural PBR sculptures, dynamic lighting, 3D sculpting brush, and Gemini 3.8 Flash TTS voice design.",
+  "name": "SamSpeaks",
+  "description": "SamSpeaks creative studio for scene direction, procedural PBR staging, dynamic lighting, camera direction, storyboard flow and Gemini voice design.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
