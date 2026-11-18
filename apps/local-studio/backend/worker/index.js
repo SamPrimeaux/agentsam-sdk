@@ -1179,17 +1179,25 @@ export default {
       return withLocalStudioCmsContext(studioUser.account_id, cmsSite, () => handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser), principal.id);
     }
 
-    // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
+    // Public marketing/docs and merchant CMS routes: D1-resolved site ownership,
+    // published page URLs, and same-site aliases are served before app fallback.
     const publicPath = publicSitePathForRequest(request);
-    if (request.method === "GET" && isPublicSitePath(publicPath)) {
+    const knownPublicPath = isPublicSitePath(publicPath);
+    const customSiteHtmlRoute = request.method === "GET" &&
+      url.hostname !== "agentsam.inneranimalmedia.com" &&
+      /(?:^|,)text\/html/i.test(request.headers.get("accept") || "") &&
+      !/^\/(?:admin|api|auth|media|settings|_next|assets|favicon)(?:\/|$)/.test(publicPath) &&
+      !/\.[a-z0-9]{1,8}$/i.test(publicPath);
+    if (request.method === "GET" && (knownPublicPath || customSiteHtmlRoute)) {
       const page = await servePublicSitePage(request, env, publicPath);
       if (page) return page;
-      // Never substitute another site's homepage when the request hostname has
-      // no active cms_sites registration or the site has no published page.
-      return new Response("Published site page not found", {
-        status: 404,
-        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
-      });
+      if (knownPublicPath) {
+        // Do not fall back to another tenant's static assets.
+        return new Response("Published site page not found", {
+          status: 404,
+          headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
     }
 
     if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {

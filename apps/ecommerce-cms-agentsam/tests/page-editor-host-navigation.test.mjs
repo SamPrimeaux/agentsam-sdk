@@ -79,3 +79,22 @@ test('page review drafts are tenant-scoped and cannot silently publish', () => {
   assert.match(api, /ON CONFLICT\(page_id,user_id\)/);
   assert.match(api, /publish_ready: false/);
 });
+
+test('merchant page URL edits update the canonical D1 route and preserve published redirects', () => {
+  const frontend = readFileSync(new URL('../frontend/static/js/page-editor-review.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../frontend/static/css/page-editor-review.css', import.meta.url), 'utf8');
+  const api = readFileSync(new URL('../backend/cms/api.js', import.meta.url), 'utf8');
+  assert.match(frontend, /currentRoute\(d\.url_handle\)/);
+  assert.match(frontend, /content-draft/);
+  assert.match(frontend, /\/route/);
+  assert.match(frontend, /created\?\.page\?\.id/);
+  assert.match(frontend, /page_id",page\.id/);
+  assert.match(frontend, /pe-discard/);
+  assert.match(frontend, /publishDockEdit\?\.\(\{active:false/);
+  assert.match(css, /\.pe-savebar\[hidden\]\{display:none!important;\}/);
+  assert.match(css, /position:fixed;top:125px/);
+  assert.match(api, /m = path\.match\(\/\^\\\/api\\\/admin\\\/cms\\\/pages/);
+  assert.match(api, /metadata\.route_redirects/);
+  assert.match(api, /WHERE id=\? AND site_id=\? AND slug=\? AND route_path=\?/);
+  assert.match(api, /A page already uses that URL/);
+});

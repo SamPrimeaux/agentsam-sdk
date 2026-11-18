@@ -218,7 +218,22 @@ export async function resolvePublishedPageSource(db, site, pathname) {
   const pages = pageResult.results || [];
   if (pages.length > 1) throw new Error('cms_public_page_route_ambiguous');
   const page = pages[0] || null;
-  if (!page) return null;
+  if (!page) {
+    // Published page URLs retain same-site 301 aliases after a merchant edit.
+    // The destination is always read from another published page of this site.
+    const redirects = await db.prepare(`
+      SELECT route_path FROM cms_pages WHERE site_id=? AND status='published' AND
+       EXISTS (SELECT 1 FROM json_each(COALESCE(json_extract(metadata_json,'$.route_redirects'),'[]')) alias
+         WHERE CAST(alias.value AS TEXT) IN (?,?)) LIMIT 2
+    `).bind(site.id,route,withoutTrailingSlash).all();
+    const matches = redirects.results || [];
+    if (matches.length > 1) throw new Error('cms_public_page_redirect_ambiguous');
+    const next = String(matches[0]?.route_path || '');
+    if (next && next !== route && /^\/(?:[a-z0-9][a-z0-9-]*(?:\/[a-z0-9][a-z0-9-]*)*)$/.test(next)) {
+      return { redirectTo:next };
+    }
+    return null;
+  }
   if (page.content_object_key) {
     if (!sitePublicObjectKey(site, page.content_object_key)) {
       throw new Error('cms_public_page_source_outside_site');
@@ -299,6 +314,11 @@ export async function servePublicSitePage(
       });
     }
     if (pageSource) {
+      if (pageSource.redirectTo) {
+        const destination = new URL(pageSource.redirectTo,request.url);
+        destination.search = new URL(request.url).search;
+        return Response.redirect(destination.toString(),301);
+      }
       authoritativePage = true;
       if (!pageSource.key) return null;
       r2Key = pageSource.key;

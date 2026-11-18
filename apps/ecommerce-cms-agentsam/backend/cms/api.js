@@ -3106,6 +3106,56 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json(result);
   }
 
+  // Change a real page URL without touching its published R2 content. Stable
+  // page_id and explicit site ownership prevent cross-site slug collisions.
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/route$/);
+  if (m && method === "PUT") {
+    if (!context.accountId || !siteId) return json({ error: "cms_site_required" }, { status: 400 });
+    const current = await getPageAdminForSite(env, context.accountId, m[1], siteId, pageId)
+      .catch(() => null);
+    const page = current?.page;
+    if (!page?.id) return json({ error: "Page not found in your selected site" }, { status: 404 });
+    if (page.route_path === "/" || page.slug === "site" || page.is_system_page) {
+      return json({ error: "This system or home page has a protected URL" }, { status: 409 });
+    }
+    let body;
+    try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const nextSlug = String(body?.slug || "").trim().toLowerCase();
+    const nextRoute = String(body?.route_path || "").trim();
+    const prefix = page.route_path.slice(0,page.route_path.lastIndexOf("/")+1);
+    const safeSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(nextSlug) && nextSlug.length <= 80;
+    if (!safeSlug || nextSlug === "site" || !prefix || nextRoute !== prefix + nextSlug ||
+        !/^\/(?:[a-z0-9][a-z0-9-]*(?:\/[a-z0-9][a-z0-9-]*)*)$/.test(nextRoute) ||
+        (/^\/$/.test(prefix) && /^(admin|api|auth|checkout|media|settings)$/i.test(nextSlug))) {
+      return json({ error: "Invalid or reserved page URL" }, { status: 400 });
+    }
+    if (nextSlug === page.slug && nextRoute === page.route_path) return json({ ok:true, page });
+    const collision = await env.DB.prepare(`
+      SELECT id FROM cms_pages WHERE site_id=? AND id<>? AND
+       (slug=? OR route_path=? OR EXISTS (
+         SELECT 1 FROM json_each(COALESCE(json_extract(metadata_json,'$.route_redirects'),'[]')) alias
+         WHERE CAST(alias.value AS TEXT)=?
+       )) LIMIT 1
+    `).bind(siteId,page.id,nextSlug,nextRoute,nextRoute).first();
+    if (collision) return json({ error: "A page already uses that URL" }, { status: 409 });
+    const metadata = page.metadata && typeof page.metadata === "object" && !Array.isArray(page.metadata)
+      ? { ...page.metadata } : {};
+    const aliases = Array.isArray(metadata.route_redirects) ? metadata.route_redirects
+      .filter(value => typeof value === "string" && /^\/[a-z0-9/\-]+$/.test(value)) : [];
+    if (page.status === "published") aliases.push(page.route_path);
+    metadata.route_redirects = [...new Set(aliases.filter(value => value !== nextRoute))].slice(-12);
+    const saved = await env.DB.prepare(`
+      UPDATE cms_pages SET slug=?,route_path=?,metadata_json=?,updated_at=unixepoch()
+      WHERE id=? AND site_id=? AND slug=? AND route_path=? AND status IN ('draft','published')
+    `).bind(nextSlug,nextRoute,JSON.stringify(metadata),page.id,siteId,page.slug,page.route_path).run();
+    if (!saved.meta?.changes) return json({ error: "Page changed during URL update; reload and retry" }, { status: 409 });
+    const verified = await getPageAdminForSite(env,context.accountId,nextSlug,siteId,page.id);
+    if (!verified?.page || verified.page.route_path !== nextRoute) {
+      return json({ error: "Updated URL could not be verified" }, { status: 500 });
+    }
+    return json({ ok:true, page:verified.page, redirected_from:page.status === "published" ? page.route_path : null });
+  }
+
   // Page Editor is independent from Theme Studio. Review drafts are account/site
   // scoped and never mutate live storefront HTML or publication pointers.
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/content-draft$/);

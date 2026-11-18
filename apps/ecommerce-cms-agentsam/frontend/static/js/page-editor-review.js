@@ -104,7 +104,7 @@
             <div id="pe-seo-fields" class="pe-seo-fields" hidden>
               <div class="pe-field"><label for="pe-seo-title-input">Page title</label><input id="pe-seo-title-input" maxlength="200" type="text"><small id="pe-seo-count">0 of 70 characters used</small></div>
               <div class="pe-field"><label for="pe-seo-description-input">Meta description</label><textarea id="pe-seo-description-input" rows="3" maxlength="1000"></textarea><small id="pe-meta-count">0 of 160 characters used</small></div>
-              <div class="pe-field"><label for="pe-handle">URL handle</label><div class="pe-handle-row"><span>pages/</span><input id="pe-handle" type="text" maxlength="80" spellcheck="false"></div><small id="pe-handle-help">Changes to the public route require a verified publication handoff.</small></div>
+              <div class="pe-field"><label for="pe-handle">URL handle</label><div class="pe-handle-row"><span id="pe-route-prefix">/pages/</span><input id="pe-handle" type="text" maxlength="80" spellcheck="false"></div><small id="pe-handle-help">The URL updates when you save. Existing published links redirect to the new address.</small></div>
             </div>
           </div>
         </section>
@@ -125,10 +125,11 @@
     </div>
     <p class="pe-note" role="status" id="pe-note" aria-live="polite"></p>
   </main>
-  <footer class="pe-savebar">
-    <span id="pe-save-status">${icon("check")} No unsaved changes</span>
-    <button type="button" id="pe-save" class="pe-save-btn" disabled>${icon("save")} Save</button>
-  </footer>
+  <div class="pe-savebar" id="pe-savebar" role="status" aria-label="Unsaved page changes" hidden>
+    <span id="pe-save-status">Unsaved changes</span>
+    <button type="button" id="pe-discard" class="pe-discard-btn">Discard</button>
+    <button type="button" id="pe-save" class="pe-save-btn">Save</button>
+  </div>
   <dialog class="pe-dialog" id="pe-preview-dialog">
     <div class="pe-dialog-header"><h2>Page draft preview</h2><button type="button" class="pe-icon-btn" data-close-dialog="pe-preview-dialog" aria-label="Close preview">${icon("x")}</button></div>
     <p>Private preview of the content draft. This does not publish the page.</p>
@@ -150,6 +151,16 @@
   let lastSaved = null;
   let sourceMode = false;
   let assets = [];
+  let saving = false;
+  // The merchant's actual page route is authoritative. Preserve its path family.
+  let routePrefix = "/pages/";
+  function routePrefixFor(path) {
+    const route = String(path || "");
+    if (route === "/") return "/";
+    const index = route.lastIndexOf("/");
+    return index <= 0 ? "/" : route.slice(0,index+1);
+  }
+  function currentRoute(handle) { return routePrefix + handle; }
   function parseJson(value) {
     if (value && typeof value === "object") return value;
     try { return JSON.parse(value || "{}"); } catch { return {}; }
@@ -201,16 +212,35 @@
   }
   function markDirty() {
     dirty = true;
+    $("pe-savebar").hidden = false;
     $("pe-save").disabled = false;
-    $("pe-save-status").innerHTML = icon("pencil") + " Unsaved changes";
+    $("pe-save-status").textContent = "Unsaved changes";
     syncPreview();
-    window.publishDockEdit?.({ active:true, dirty:true, canSave:true, saveLabel:"Save", onSave:save });
   }
   function markSaved() {
     dirty = false;
+    lastSaved = getDraft();
+    $("pe-savebar").hidden = true;
     $("pe-save").disabled = true;
-    $("pe-save-status").innerHTML = icon("check") + " All changes saved";
-    window.publishDockEdit?.({ active:true, dirty:false, canSave:false, saveLabel:"Save", onSave:save });
+  }
+  function discardChanges() {
+    if (!lastSaved || saving) return;
+    const d = lastSaved;
+    $("pe-title").value = d.title;
+    editor.innerHTML = safeHtml(d.body_html);
+    $("pe-source").value = d.body_html;
+    if (sourceMode) enterSourceMode(false);
+    document.querySelector('[name="pe-visibility"][value="' + d.visibility + '"]').checked = true;
+    if (d.template_sku && ![...$("pe-template").options].some(x => x.value === d.template_sku)) {
+      $("pe-template").add(new Option(d.template_sku,d.template_sku));
+    }
+    $("pe-template").value = d.template_sku;
+    $("pe-seo-title-input").value = d.seo_title;
+    $("pe-seo-description-input").value = d.seo_description;
+    $("pe-handle").value = d.url_handle;
+    syncPreview();
+    markSaved();
+    note("Changes discarded.");
   }
   function getDraft() {
     return {
@@ -230,8 +260,9 @@
     $("pe-seo-description").textContent = d.seo_description || editor.textContent.trim().slice(0,160) || "Add a description to improve your search preview.";
     $("pe-seo-count").textContent = d.seo_title.length + " of 70 characters used";
     $("pe-meta-count").textContent = d.seo_description.length + " of 160 characters used";
-    const publicUrl = window.cmsPublicPageUrl(site || {}, page?.route_path || "/pages/" + d.url_handle);
-    $("pe-seo-url").textContent = publicUrl || "Site address not verified · /pages/" + (d.url_handle || "page");
+    const urlPath = page?.route_path === "/" ? "/" : currentRoute(d.url_handle || "page");
+    const publicUrl = window.cmsPublicPageUrl(site || {}, urlPath);
+    $("pe-seo-url").textContent = publicUrl || "Site address not verified · " + urlPath;
   }
   function enterSourceMode(next) {
     sourceMode = next;
@@ -268,6 +299,8 @@
         $("pe-heading").textContent = "Add page";
         $("pe-template").innerHTML = '<option value="">Default page</option>';
         $("pe-handle").value = "";
+        routePrefix = "/pages/";
+        $("pe-route-prefix").textContent = routePrefix;
         $("pe-title").value = "";
         $("pe-seo-title-input").value = "";
         $("pe-seo-description-input").value = "";
@@ -311,7 +344,14 @@
       $("pe-template").value = currentTemplate;
       $("pe-seo-title-input").value = draft.seo_title ?? seo.title ?? "";
       $("pe-seo-description-input").value = draft.seo_description ?? seo.description ?? "";
+      routePrefix = routePrefixFor(page.route_path);
+      $("pe-route-prefix").textContent = routePrefix;
       $("pe-handle").value = draft.url_handle ?? page.slug ?? slug;
+      const homepage = page.route_path === "/" || page.slug === "site" || page.is_system_page;
+      $("pe-handle").readOnly = homepage;
+      $("pe-handle-help").textContent = homepage
+        ? "This page has a protected route. Its URL cannot be changed here."
+        : "Saving updates the page URL. Previously published URLs redirect automatically.";
       $("pe-seo-site").textContent = site.name || site.slug || "Your store";
       const publicUrl = window.cmsPublicPageUrl(site,page.route_path);
       const view = $("pe-view");
@@ -334,38 +374,83 @@
     }
   }
   async function save() {
+    if (saving) return;
     const d = getDraft();
-    if (!d.title || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(d.url_handle)) {
+    if (!d.title || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(d.url_handle) || d.url_handle.length > 80) {
       note("Enter a title and a valid lowercase URL handle.",true); return;
     }
-    const button = $("pe-save");button.disabled = true;button.textContent = "Saving…";
+    saving = true;
+    const button = $("pe-save");
+    button.disabled = true;
+    button.textContent = "Saving…";
     try {
+      let createdNow = false;
       if (!page) {
         const created = await cmsAdminFetch("/api/admin/cms/pages",{
           method:"POST",
-          body:JSON.stringify({title:d.title,slug:d.url_handle,route_path:"/pages/"+d.url_handle,page_type:"standard"})
+          body:JSON.stringify({title:d.title,slug:d.url_handle,route_path:currentRoute(d.url_handle),page_type:"standard"})
         });
-        if (!created?.page?.id) throw Error("The CMS did not return a newly created page.");
+        if (!created?.page?.id || !created.page.slug) throw Error("The CMS did not return a newly created page.");
         page = created.page;
         slug = page.slug;
         window.cmsActivePageId = page.id;
         window.cmsActivePageSlug = slug;
-        const url = new URL(location.href);
-        url.searchParams.delete("new");
-        url.searchParams.set("slug",slug);
-        url.searchParams.set("page_id",page.id);
-        history.replaceState(null,"",url);
+        createdNow = true;
         $("pe-duplicate").disabled = false;
+        $("pe-heading").textContent = page.title;
       }
+      const oldSlug = page.slug;
+      if (d.url_handle !== page.slug) {
+        if (page.route_path === "/" || page.is_system_page || page.slug === "site") {
+          throw Error("This page has a protected URL and cannot be renamed.");
+        }
+        // Canonical D1 route and slug are updated before the private copy draft.
+        const renamed = await cmsAdminFetch("/api/admin/cms/pages/" + encodeURIComponent(slug) + "/route",{
+          method:"PUT",body:JSON.stringify({slug:d.url_handle,route_path:currentRoute(d.url_handle)})
+        });
+        if (!renamed?.page?.id) throw Error("The URL change could not be verified.");
+        page = renamed.page;
+        slug = page.slug;
+      }
+      // A newly created or unpublished page can persist its title, template and SEO
+      // directly in the canonical CMS draft. Published pages keep these fields private.
+      if (page.status === "draft") {
+        const updated = await cmsAdminFetch("/api/admin/cms/pages/" + encodeURIComponent(slug),{
+          method:"PUT",body:JSON.stringify({title:d.title,template_sku:d.template_sku || null,
+            seo_title:d.seo_title,meta_description:d.seo_description})
+        });
+        if (!updated?.page?.id) throw Error("The page settings could not be verified.");
+        page = updated.page;
+      }
+      // Always route subsequent saves by the stable CMS page id (including newly-created pages).
+      window.cmsActivePageId = page.id;
+      window.cmsActivePageSlug = page.slug;
       await cmsAdminFetch("/api/admin/cms/pages/" + encodeURIComponent(slug) + "/content-draft",{
         method:"PUT", body:JSON.stringify(d)
       });
-      lastSaved = d;
-      note("Page draft saved. Publication is a separate operation; live storefront content was not changed.");
+      const url = new URL(location.href);
+      url.searchParams.delete("new");
+      url.searchParams.set("slug",page.slug);
+      url.searchParams.set("page_id",page.id);
+      history.replaceState(null,"",url);
+      const publicUrl = window.cmsPublicPageUrl(site || {}, page.route_path);
+      const view = $("pe-view");
+      if (page.status === "published" && publicUrl) {
+        view.href = publicUrl;
+        view.removeAttribute("aria-disabled");
+      }
+      syncPreview();
       markSaved();
+      note(createdNow ? "Page created and saved to your store's draft library." :
+        oldSlug !== page.slug ? "Page URL updated and draft saved. Old published URLs redirect to the new address." :
+        "Page draft saved. Live content is unchanged until publication.");
     } catch(error) {
-      note(error?.message || "Could not save page draft.",true);button.disabled = false;
-    } finally { button.innerHTML = icon("save") + " Save"; }
+      note(error?.message || "Could not save page.",true);
+      button.disabled = false;
+    } finally {
+      saving = false;
+      button.textContent = "Save";
+    }
   }
   function preview() {
     const d = getDraft();
@@ -450,6 +535,9 @@
     $("pe-seo-toggle").setAttribute("aria-expanded",String(!$("pe-seo-fields").hidden));
   });
   $("pe-save").addEventListener("click",save);
+  $("pe-discard").addEventListener("click",discardChanges);
+  // The Page Editor owns its floating Save control; do not open a second host dock.
+  window.publishDockEdit?.({active:false,dirty:false,canSave:false});
   $("pe-preview-action").addEventListener("click",preview);
   $("pe-duplicate").addEventListener("click",duplicate);
   $("pe-more").addEventListener("click",event => {event.stopPropagation();$("pe-more-menu").hidden = !$("pe-more-menu").hidden;});
