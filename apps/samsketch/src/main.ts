@@ -644,7 +644,7 @@ function brushPointFromEvent(event:PointerEvent):Vec3|null{
 }
 function finishBrushStroke(){
  if(!activeBrushStroke)return;
- if(activeBrushStroke.points.length>1){doc.brushStrokes=[...(doc.brushStrokes||[]),activeBrushStroke].slice(-500);renderBrushStrokes();store();announce("3D brush stroke saved to this scene.");}
+ if(activeBrushStroke.points.length>1){doc.brushStrokes=[...(doc.brushStrokes||[]),activeBrushStroke].slice(-100);renderBrushStrokes();store();announce("3D brush stroke saved to this scene.");}
  activeBrushStroke=null;controls.enabled=true;
 }
 renderer.domElement.addEventListener("pointerdown",e=>{
@@ -661,13 +661,13 @@ renderer.domElement.addEventListener("pointermove",e=>{
  const point=brushPointFromEvent(e);if(!point)return;
  const previous=activeBrushStroke.points[activeBrushStroke.points.length-1];
  if(!previous||new THREE.Vector3(...previous).distanceTo(new THREE.Vector3(...point))>.045){
-  activeBrushStroke.points.push(point);
+  if(activeBrushStroke.points.length<300)activeBrushStroke.points.push(point);
   const temporary=[...(doc.brushStrokes||[]),activeBrushStroke];const prior=doc.brushStrokes;doc.brushStrokes=temporary;renderBrushStrokes();doc.brushStrokes=prior;
  }
 });
 renderer.domElement.addEventListener("pointercancel",finishBrushStroke);
 renderer.domElement.addEventListener("pointerup",e=>{
- if(activeBrushStroke){const point=brushPointFromEvent(e);if(point)activeBrushStroke.points.push(point);finishBrushStroke();return;}
+ if(activeBrushStroke){const point=brushPointFromEvent(e);if(point&&activeBrushStroke.points.length<300)activeBrushStroke.points.push(point);finishBrushStroke();return;}
  if(!pressed||Math.hypot(e.clientX-pressed[0],e.clientY-pressed[1])>6)return;
  if(mode==="story")setManipulationMode("off");
  if(mode!=="select")return;
