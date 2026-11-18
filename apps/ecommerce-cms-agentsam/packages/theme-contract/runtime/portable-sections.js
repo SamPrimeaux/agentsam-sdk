@@ -98,6 +98,8 @@
     f("planBody", "Drawing review description", "textarea"), f("planImage", "Drawing review image", "media"),
     f("planImageAlt", "Drawing review image alt text"), f("planCaption", "Drawing review caption"),
     f("planCtaLabel", "Drawing review action"), f("planCtaHref", "Drawing review destination", "link"),
+    f("processOverline", "Process overline"), f("processTitle", "Process heading"),
+    f("processIntro", "Process introduction", "textarea"),
     f("statusNote", "Project status note", "textarea"),
   ]);
 
@@ -268,7 +270,7 @@
       (structure?'<figure><img data-cms="structureImage" data-cms-attr="src" src="'+structure+'" alt="'+esc(c.structureImageAlt||"")+'" loading="lazy"><figcaption data-cms="structureCaption">'+esc(c.structureCaption||"")+'</figcaption></figure>':"")+
       (experience?'<figure><img data-cms="experienceImage" data-cms-attr="src" src="'+experience+'" alt="'+esc(c.experienceImageAlt||"")+'" loading="lazy"><figcaption data-cms="experienceCaption">'+esc(c.experienceCaption||"")+'</figcaption></figure>':"")+
       '</div>'+(specMarkup?'<div class="ps-btb-evidence__specs">'+specMarkup+'</div>':"")+
-      (rungMarkup?'<div class="ps-btb-evidence__process"><header><p class="ps-btb-overline">THE PROCESS / RUNG BY RUNG</p><h3>Every drawing is a rung. Climb one at a time.</h3><p>Nobody starts fluent. Each stage produces a real drawing, teaches a real lesson and proves a real tool.</p></header>'+rungMarkup+'</div>':"")+
+      (rungMarkup?'<div class="ps-btb-evidence__process"><header><p class="ps-btb-overline" data-cms="processOverline">'+esc(c.processOverline||"")+'</p><h3 data-cms="processTitle">'+esc(c.processTitle||"")+'</h3><p data-cms="processIntro">'+esc(c.processIntro||"")+'</p></header>'+rungMarkup+'</div>':"")+
       '<div class="ps-btb-evidence__plans"><div><p class="ps-btb-overline">DETAILED VIEW / ARCHITECTURAL REVIEW</p><h3 data-cms="planTitle">'+esc(c.planTitle||"")+'</h3><p data-cms="planBody">'+esc(c.planBody||"")+'</p>'+planCta+'</div>'+
       (plan?'<figure><img data-cms="planImage" data-cms-attr="src" src="'+plan+'" alt="'+esc(c.planImageAlt||"")+'" loading="lazy"><figcaption data-cms="planCaption">'+esc(c.planCaption||"")+'</figcaption></figure>':"")+
       '</div><p class="ps-btb-evidence__status" data-cms="statusNote">'+esc(c.statusNote||"")+'</p></div></div>';
@@ -357,6 +359,8 @@
       experienceImage:"",experienceImageAlt:"",experienceCaption:"",
       planTitle:"See the whole. Inspect the parts.",planBody:"Connect the overview to the source drawings and project files.",
       planImage:"",planImageAlt:"",planCaption:"",planCtaLabel:"Explore the project",planCtaHref:"/studio",
+      processOverline:"THE PROCESS / RUNG BY RUNG",processTitle:"Every drawing is a rung. Climb one at a time.",
+      processIntro:"Nobody starts fluent. Each stage produces a real drawing and teaches a real lesson.",
       statusNote:"Describe the current review status and any professional limitations."
     },blocks:[{id:"evidence-item1",templateKey:"evidence-item",enabled:true}],blockContent:{
       "evidence-item1":{kind:"process",slug:"first-step",number:"01",version:"STEP ONE",
@@ -457,40 +461,4 @@
         const values = content[block.id];
         if (values != null && (typeof values !== "object" || Array.isArray(values)))
           return { ok: false, error: "Invalid block data" };
-        if (values) for (const [key, value] of Object.entries(values)) {
-          const fld = definition.blocks[0].fields.find((field) => field.key === key);
-          if (!fld || typeof value !== "string" || value.length > 12000 ||
-              (["link", "media"].includes(fld.type) && !isSafeUrl(value)))
-            return { ok: false, error: "Invalid block field: " + key };
-        }
-      }
-    }
-    return { ok: true };
-  }
-
-  scope.ThemePortableSections = Object.freeze({
-    definitions,
-    get: (id) => byId.get(id) || scope.ThemePlatformStock?.get(id) || scope.ThemeReviseAtlas?.get(id) || null,
-    catalog: () => [
-      ...definitions.map(({ id, label, family, source, templateKey, preset }) =>
-        ({ id, label, type: family, source, templateKey, preset })),
-      ...(scope.ThemePlatformStock?.catalog() || []),
-      ...(scope.ThemeReviseAtlas?.catalog() || []),
-    ],
-    defaults, render, validate,
-    schema(id) {
-      if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.schema(id);
-      if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.schema(id);
-      const definition = byId.get(id);
-      if (!definition) return null;
-      return {
-        label: definition.label,
-        fields: definition.fields,
-        blocks: definition.blocks,
-        settings: [],
-        capabilities: { edit: true, reorder: true, duplicate: true, remove: true, blocks: !!definition.blocks.length },
-        guardrails: { maxBlocks: definition.blocks[0]?.max || 0 },
-      };
-    },
-  });
-})(globalThis);
+  

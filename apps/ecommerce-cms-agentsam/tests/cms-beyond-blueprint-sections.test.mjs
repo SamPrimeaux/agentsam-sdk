@@ -37,6 +37,8 @@ test("architectural evidence supports independently editable project-fact and pr
  assert.equal(runtime.validate("cad-beyond/architectural-evidence",content).ok,true);
  const html=runtime.render({key:"architectural-evidence",content});
  assert.match(html,/id="architectural-evidence"/);assert.match(html,/Native source/);assert.match(html,/First plan/);
+ content.processTitle="The process, one step at a time.";
+ assert.match(runtime.render({key:"architectural-evidence",content}),/The process, one step at a time\./);
  content["evidence-item2"].imageUrl="javascript:alert(1)";
  assert.equal(runtime.validate("cad-beyond/architectural-evidence",content).ok,false);
 });
