@@ -23,6 +23,13 @@
      return url.origin===location.origin?url:null;
    }catch{return null;}
  };
+ const themeStoreImageUrl=value=>{
+   if(typeof value!=='string'||!value)return null;
+   try {
+     const url=new URL(value,location.origin);
+     return url.origin===location.origin||url.origin==='https://themes.inneranimalmedia.com'?url:null;
+   }catch{return null;}
+ };
  async function addDraft(product,button){
    button.disabled=true;button.textContent='Adding…';
    try{
