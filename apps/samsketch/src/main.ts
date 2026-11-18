@@ -11,6 +11,7 @@ import { templateCatalog, findTemplate, getTemplateModel, instanceTemplateModel 
 import { findInventoryEntry, modelLabel } from "./model-inventory";
 import { icon, iconButton } from "./icons";
 import { mountSettingsDrawer } from "./settings-drawer";
+import { CAMERA_SHOTS, DEFAULT_SCENE_SETTINGS, DEFAULT_STORYBOARD, FINISHES, MOODS, SCENE_PROFILES, SCENERY_PROPS, TRANSITIONS, type BrushStroke, type CameraShotId, type FinishId, type MoodId, type SceneSettings, type SceneryPropId, type StoryBeat, type TransitionId } from "./samspeaks-controls";
 import { mountProgressiveStudio } from "./progressive";
 import { mountSketchGallery, type SketchProjectCategory } from "./gallery";
 import { listScenes, openScene, createScene, updateScene, removeScene, type SceneSummary } from "./scene-api";
@@ -26,12 +27,12 @@ import "./embedded.css";
 import "./precision-studio.css";
 
 type Brand="agentsam"|"inneranimalmedia";
-type Kind="desktop"|"phone"|"panel"|"orb"|"box"|"ring"|"cad"|"template";
+type Kind="desktop"|"phone"|"panel"|"orb"|"box"|"ring"|"cad"|"template"|"prop";
 type Look="clay"|"glass"|"metal";
 type Vec3=[number,number,number];
 type PartOverride={position?:Vec3;rotation?:Vec3;scale?:Vec3;color?:string;visible?:boolean};
-interface Item { id:string; name:string; kind:Kind; position:Vec3; rotation:Vec3; scale:Vec3; color:string; material:Look; visible:boolean; cadParams?:CadParameters; templateId?:string; partOverrides?:Record<string,PartOverride>; }
-interface Document { version:1; name:string; brand:Brand; chapter:number; items:Item[]; }
+interface Item { id:string; name:string; kind:Kind; position:Vec3; rotation:Vec3; scale:Vec3; color:string; material:Look; visible:boolean; cadParams?:CadParameters; templateId?:string; partOverrides?:Record<string,PartOverride>; finish?:FinishId; propType?:SceneryPropId; }
+interface Document { version:1; name:string; brand:Brand; chapter:number; items:Item[]; sceneSettings?:SceneSettings; storyboard?:StoryBeat[]; brushStrokes?:BrushStroke[]; }
 const chapters=[
   ["The experience","Products with presence"],
   ["The composition","Everything is intentional"],
@@ -45,11 +46,14 @@ const brandInfo={
   inneranimalmedia:{name:"InnerAnimalMedia",accent:"#31886c",primary:"#182a45",background:"#eaf5f3",sub:"Systematically strategic software."}
 };
 function makeItem(kind:Kind,name:string,color:string,position:Vec3,scale:Vec3=[1,1,1]):Item{
- return {id:crypto.randomUUID(),name,kind,color,position,scale,rotation:[0,0,0],material:"clay",visible:true};
+ return {id:crypto.randomUUID(),name,kind,color,position,scale,rotation:[0,0,0],material:"clay",visible:true,finish:doc?.sceneSettings?.finish};
 }
 // An empty scene must genuinely be empty. Authored examples are inserted only on request.
 function freshDoc(brand:Brand):Document {
- return {version:1,name:"Untitled scene",brand,chapter:0,items:[]};
+ return {version:1,name:"Untitled scene",brand,chapter:0,items:[],sceneSettings:{...DEFAULT_SCENE_SETTINGS},storyboard:structuredClone(DEFAULT_STORYBOARD),brushStrokes:[]};
+}
+function normalizeDocument(value:Document):Document {
+ return {...value,sceneSettings:{...DEFAULT_SCENE_SETTINGS,...(value.sceneSettings||{})},storyboard:Array.isArray(value.storyboard)&&value.storyboard.length?value.storyboard:structuredClone(DEFAULT_STORYBOARD),brushStrokes:Array.isArray(value.brushStrokes)?value.brushStrokes:[]};
 }
 const storageKey="iam-showcase-studio-draft-v1";
 const projectsKey="iam-samsketch-projects-v1";
@@ -62,7 +66,7 @@ function writeSavedProjects(projects:SavedSketchProject[]){localStorage.setItem(
 let doc:Document;
 try {
  const saved=JSON.parse(localStorage.getItem(storageKey)||"null");
- doc=saved?.version===1 && Array.isArray(saved.items)?saved:freshDoc("agentsam");
+ doc=saved?.version===1 && Array.isArray(saved.items)?normalizeDocument(saved as Document):freshDoc("agentsam");
 } catch{doc=freshDoc("agentsam");}
 let selectedId=doc.items[0]?.id||"";
 let selectedPartId:string|null=null;
