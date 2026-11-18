@@ -1,3 +1,9 @@
+// Keep merchant catalog / native section acceptance in the canonical
+// CMS verification command without creating another parallel test workflow.
+import './cms-component-catalog-verification.test.mjs';
+import './cms-native-stock-registrations.test.mjs';
+import './platform-stock-native.test.mjs';
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import {normalizeSettingContract,overlayRenderableBlockFields} from "../backend/cms/setting-contract.ts";
