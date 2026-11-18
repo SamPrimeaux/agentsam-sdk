@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { resolveEcommerceAdminDestination } from '@/lib/apps/ecommerce-routing';
 
 /**
  * Native Online Store: website picker, live theme card, Draft themes with real
@@ -36,20 +37,14 @@ type MarketTheme = {
   thumbnail_url?: string | null; preview_url?: string | null; preview_alias?: string; can_install?: boolean;
 };
 
-const EDITOR_HOST = '/admin/apps/ecommerce-cms-agentsam';
 const THEME_STORE = 'https://themes.inneranimalmedia.com';
 const EDITOR_PATH = /^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/themes\/([A-Za-z0-9_-]{1,160})\/editor/;
 
 function go(to: string) { window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to } })); }
 
-/** Every editor entry goes through the one installed editor route. */
+/** Validate Online Store navigation against Local Studio's canonical admin routes. */
 export function editorTarget(href: string | null | undefined, siteId?: string): string | null {
-  if (!href) return null;
-  let url: URL;
-  try { url = new URL(href, window.location.origin); } catch { return null; }
-  if (url.origin !== window.location.origin || !url.pathname.startsWith('/admin/')) return null;
-  if (siteId && !url.searchParams.has('site_id')) url.searchParams.set('site_id', siteId);
-  return EDITOR_HOST + '?' + new URLSearchParams({ page: url.pathname + url.search }).toString();
+  return resolveEcommerceAdminDestination(href, siteId, window.location.origin);
 }
 
 /** Theme Store assets are only trusted from the Theme Store origin and its known paths. */

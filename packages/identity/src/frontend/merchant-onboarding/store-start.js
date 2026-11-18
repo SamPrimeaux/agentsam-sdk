@@ -53,24 +53,6 @@
     history.replaceState(null,'',entryLink(newParams));
     report();show('start-ready');
   };
-  const existingSites = () => {
-    const root=$('start-sites-list');root.replaceChildren();
-    const active=sites.filter(site=>site.status!=='archived');
-    $('start-existing').hidden=active.length===0;
-    $('start-existing-count').textContent=String(active.length)+' site'+(active.length===1?'':'s');
-    for (const site of active) {
-      const a=document.createElement('a');
-      a.className='site-entry';a.href=siteLink('store',site);
-      a.addEventListener('click',()=>selectSite(site));
-      const avatar=document.createElement('span');avatar.className='site-avatar';avatar.textContent=String(site.name||'S').charAt(0).toUpperCase();
-      const info=document.createElement('span');info.className='site-info';
-      const title=document.createElement('strong');title.textContent=site.name||site.slug||'Store';
-      const details=document.createElement('small');details.textContent=site.primary_domain||site.slug||'No domain configured';
-      info.append(title,details);
-      const arrow=document.createElement('span');arrow.className='site-action';arrow.textContent='Open →';
-      a.append(avatar,info,arrow);root.append(a);
-    }
-  };
   async function readJSON(url,options={}) {
     const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options});
     const data=await response.json().catch(()=>({}));
@@ -89,16 +71,18 @@
       if(auth.response.status!==401) report('Identity status is temporarily unavailable. Sign in to try again.');
       show('start-guest');return;
     }
+    // A normal onboarding visit is a create-store journey, not a site directory.
+    // Only resolve inventory when a trusted in-app link explicitly names a site.
+    if (!requestedSite) { show('start-workspace'); return; }
     try {
       const {response,data}=await readJSON(config.sites.list);
       if(response.status===401) {show('start-guest');return;}
-      if(!response.ok || !data.ok) throw Error(data.error||'Could not list your stores');
+      if(!response.ok || !data.ok) throw Error(data.error||'Could not verify the requested store');
       sites=Array.isArray(data.sites)?data.sites.filter(site=>site&&typeof site.id==='string'):[];
-      existingSites();
-      const requested=requestedSite&&sites.find(site=>site.id===requestedSite&&site.status!=='archived');
+      const requested=sites.find(site=>site.id===requestedSite&&site.status!=='archived');
       if(requested) return setReady(requested);
       show('start-workspace');
-    } catch(error) {show('start-workspace');report(error.message||'Store inventory is unavailable.');}
+    } catch(error) {show('start-workspace');report(error.message||'The requested store could not be verified.');}
   }
   $('start-name').addEventListener('input',event=>{
     if(!slugEdited)$('start-slug').value=slugFor(event.target.value);
@@ -142,8 +126,7 @@
           data?.detail||data?.error||'Could not create the store');
       }
       if(!data.site?.id || !data.site?.account_id)throw Error('The store was created without a verifiable owner.');
-      sites=[...sites.filter(site=>site.id!==data.site.id),data.site];
-      existingSites();
+      sites=[data.site];
       setReady(data.site,{created:true});
     }catch(error){report(error.message||'Could not create the store.');}
     finally{button.disabled=false;button.textContent='Create store →';}
@@ -152,7 +135,7 @@
     const query=new URLSearchParams(location.search);query.delete(config.siteIdParam);
     history.replaceState(null,'',entryLink(query));
     $('start-name').value='';$('start-slug').value='';slugEdited=false;
-    existingSites();report();show('start-workspace');
+    sites=[];report();show('start-workspace');
   });
   async function boot() {
     try {
