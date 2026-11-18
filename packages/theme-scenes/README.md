@@ -144,6 +144,35 @@ Semantic tokens only (`color.surface.canvas`, `type.display.xl`, …). `themeToC
 
 Hosts receive normalized `progress` 0→1 (`computeScrollProgress` / `stageAtProgress`).
 
+### Native .iamscene playback
+
+A section can reference a portable scene document without copying its geometry or
+animation into page content. The host resolves the asset role, loads the document
+with `@inneranimalmedia/iamscene`, and uses the section's scroll contract to scrub
+the selected animation:
+
+```js
+createSection({
+  id: 'circuit-story',
+  scene: 'interactive.stage',
+  visual: 'visual.iam-scene',
+  sceneDocument: { assetRole: 'scene.circuit-loop' },
+  sceneAnimation: {
+    id: 'circuit-loop',
+    playback: 'scroll',
+    startProgress: 0,
+    endProgress: 1,
+  },
+  scroll: SCROLL_PRESETS.cinematic,
+});
+```
+
+`compilePage(page, { resolveAsset })` exposes a `sceneHost` descriptor containing
+the resolved document reference, animation binding, and applicable scroll preset.
+Hosts map page progress to animation time with `sceneTimeAtProgress`, then call
+`runtime.seekAnimation(id, time, { wrap: false })`. Scroll settings remain page
+composition; the `.iamscene.json` document remains portable and reusable.
+
 ## Demo adapters
 
 | Adapter | Product surface |
