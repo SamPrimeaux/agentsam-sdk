@@ -4,6 +4,7 @@
  * No local-only theme project table or parallel theme database is introduced.
  */
 import "../../packages/theme-contract/runtime/platform-stock-sections.js";
+import "../../packages/theme-contract/runtime/portable-sections.js";
 import { validateThemeProject } from "../../frontend/theme-editor/project.mjs";
 import { validateThemeSettings } from "./theme-style-contract.mjs";
 import { fillMissingThemeChrome } from "../../frontend/theme-editor/starter-chrome.mjs";
