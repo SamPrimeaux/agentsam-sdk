@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { AgentSamClient, createSamOS, createSamCapabilityAdapter } from '../../src/sam/index.js';
-import { createNodeSqliteCmsRepository } from '../../src/sam/packs/cms/node.js';
+import { createCmsMemoryRepository } from '../../packages/agentsam-cms/test/support/memory-repository.mjs';
 import { buildAgentToolSurface } from '../../src/agent/responses-runner.js';
 
 const definitions=[
@@ -28,12 +28,12 @@ const cmsOptions=(repository,identity=principal,auth=()=>true)=>({
     : auth(operation),
 });
 
-test('SDK CMS machine: real SQLite lifecycle, revisions, schema validation, private preview, immutable publish and tenant isolation',async()=>{
+test('SDK CMS machine: host-repository lifecycle, revisions, schema validation, private preview, immutable publish and tenant isolation',async()=>{
   const root=await mkdtemp(path.join(os.tmpdir(),'sam-cms-machine-'));
   let db;
   try {
     const filename=path.join(root,'data.sqlite');
-    db=await createNodeSqliteCmsRepository({filename});
+    db=await createCmsMemoryRepository({namespace:filename});
     const osRuntime=createSamOS({core:false,cms:cmsOptions(db)});
     assert.equal(osRuntime.status().available.length,25);
     const sam=new AgentSamClient({os:osRuntime});
@@ -132,21 +132,12 @@ test('SDK CMS machine: real SQLite lifecycle, revisions, schema validation, priv
     const policyDenied=await surface.invoke('cms.page.publish',{pageId:'home',expectedVersion:10,confirmation:true});
     assert.equal(policyDenied.ok,false);
 
-    // The local adapter must materialize the existing CMS runtime tables,
-    // without adding a parallel family of SAM CMS storage tables.
-    const {DatabaseSync}=await import('node:sqlite');
-    const rawDb=new DatabaseSync(filename);
-    try {
-      assert.equal(rawDb.prepare('SELECT COUNT(*) AS n FROM cms_pages').get().n,1);
-      assert.equal(rawDb.prepare('SELECT COUNT(*) AS n FROM cms_sections').get().n,2);
-      assert.equal(rawDb.prepare('SELECT COUNT(*) AS n FROM cms_blocks').get().n,2);
-      assert.equal(rawDb.prepare('SELECT COUNT(*) AS n FROM cms_publications').get().n,1);
-      const parallel=rawDb.prepare("SELECT name FROM sqlite_master WHERE name LIKE 'sam_cms_%'").all();
-      assert.deepEqual(parallel,[]);
-    } finally {rawDb.close();}
+    // No SDK-owned schema, no parallel CMS table family.
+    assert.equal(db.stats(principal).pages,1);
+    assert.equal(db.stats(principal).publications,1);
 
     db.close();db=null;
-    const reopened=await createNodeSqliteCmsRepository({filename});
+    const reopened=await createCmsMemoryRepository({namespace:filename});
     db=reopened;
     assert.equal(db.readPage(principal,'home').version,10);
     assert.equal(db.getPublication(principal,'home').version,8);
@@ -158,13 +149,13 @@ test('SDK CMS machine: real SQLite lifecycle, revisions, schema validation, priv
   } finally {db?.close();await rm(root,{recursive:true,force:true});}
 });
 
-test('CMS idempotency and optimistic concurrency are transactionally enforced across SQLite connections',async()=>{
+test('CMS idempotency and optimistic concurrency are transactionally enforced across shared host sessions',async()=>{
   const root=await mkdtemp(path.join(os.tmpdir(),'sam-cms-cas-'));
   let a,b;
   try {
     const filename=path.join(root,'cms.sqlite');
-    a=await createNodeSqliteCmsRepository({filename});
-    b=await createNodeSqliteCmsRepository({filename});
+    a=await createCmsMemoryRepository({namespace:filename});
+    b=await createCmsMemoryRepository({namespace:filename});
     const input={pageId:'home',title:'Home',slug:'home',idempotencyKey:'page-home-1'};
     assert.equal(a.createPage(principal,input).document.version,1);
     assert.equal(b.createPage(principal,input).duplicate,true);
@@ -188,7 +179,7 @@ test('old section/block operation names execute canonical SDK machinery without 
   const dir=await mkdtemp(path.join(os.tmpdir(),'sam-cms-legacy-'));
   let db;
   try {
-    db=await createNodeSqliteCmsRepository({filename:path.join(dir,'cms.sqlite')});
+    db=await createCmsMemoryRepository({namespace:path.join(dir,'cms.sqlite')});
     const osRuntime=createSamOS({core:false,cms:cmsOptions(db)});
     const client=new AgentSamClient({os:osRuntime});
     const call=(id,input)=>client.invoke(id,input);
@@ -226,7 +217,7 @@ test('generated-v2 detects all existing portable CMS operations instead of false
   const dir=await mkdtemp(path.join(os.tmpdir(),'sam-cms-registry-reconcile-'));
   let db;
   try {
-    db=await createNodeSqliteCmsRepository({filename:path.join(dir,'cms.sqlite')});
+    db=await createCmsMemoryRepository({namespace:path.join(dir,'cms.sqlite')});
     const osRuntime=createSamOS({core:false,cms:cmsOptions(db),generated:{
       resolveTrustedContext:async()=>principal,authorize:async()=>true,
     }});
@@ -240,10 +231,4 @@ test('generated-v2 detects all existing portable CMS operations instead of false
   } finally {db?.close();await rm(dir,{recursive:true,force:true});}
 });
 
-test('portable CMS package pins the authoritative SDK cms-runtime schema verbatim',async()=>{
-  const [original,packaged]=await Promise.all([
-    readFile(new URL('../../packages/cms-runtime/schemas/sqlite/cms-local-runtime.v1.sql',import.meta.url)),
-    readFile(new URL('../../packages/agentsam-cms/src/schema/cms-local-runtime.v1.sql',import.meta.url)),
-  ]);
-  assert.deepEqual(packaged,original);
-});
+

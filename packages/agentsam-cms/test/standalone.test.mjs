@@ -4,12 +4,12 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {createCmsOperations,CMS_OPERATION_CONTRACTS} from '../src/index.js';
-import {createNodeSqliteCmsRepository} from '../src/node.js';
-test('package is executable without the AgentSam SDK source checkout',async()=>{
+import {createCmsMemoryRepository} from './support/memory-repository.mjs';
+test('package runs with an injected host repository without SQL',async()=>{
   const dir=await mkdtemp(path.join(os.tmpdir(),'sam-cms-packaged-'));
   let db;
   try{
-    db=await createNodeSqliteCmsRepository({filename:path.join(dir,'cms.sqlite')});
+    db=await createCmsMemoryRepository();
     const principal={accountId:'a',installationId:'i',actorId:'u'};
     const operations=createCmsOperations({
       defineSamOperation:x=>x,repository:db,

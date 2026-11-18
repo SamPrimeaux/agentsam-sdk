@@ -217,10 +217,6 @@ packages:
       name: "@inneranimalmedia/analytics-ui"
       path: "packages/analytics-ui"
       readiness: unverified
-    - id: "cms-runtime"
-      name: "@inneranimalmedia/cms-runtime"
-      path: "packages/cms-runtime"
-      readiness: unverified
     - id: "copro-editor"
       name: "@inneranimalmedia/copro-editor"
       path: "packages/copro-editor"

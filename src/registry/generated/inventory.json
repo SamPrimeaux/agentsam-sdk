@@ -8,7 +8,7 @@
   "counts": {
     "commands": 79,
     "capabilities": 82,
-    "packages": 67
+    "packages": 66
   },
   "commands": [
     {
@@ -1957,14 +1957,14 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-cms",
-      "purpose": "Portable executable SAM CMS machine with typed page/component tools, revision recovery, explicit publication, and the canonical cms-runtime SQLite storage schema.",
+      "purpose": "Canonical merchant CMS operations, page/theme lifecycle and approved publication via the host's existing site-first persistence; no SQLite bootstrap or SDK-owned schema.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-cms",
         "public_claim": false
       },
       "schema": "agentsam.package.v1",
-      "status": "local-verified-host-integration-required",
+      "status": "host-integration-required",
       "topics": [
         "cms",
         "sections",
@@ -3396,50 +3396,6 @@
       "topics": [],
       "use_when": [
         "Domain-neutral analytics presentation primitives for Inner Animal Media products."
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "package",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/cms-runtime",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/cms-runtime/README.md"
-      },
-      "execution_domains": [],
-      "id": "cms-runtime",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/cms-runtime",
-          "package": "@inneranimalmedia/cms-runtime",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/cms-runtime",
-      "purpose": "Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/cms-runtime",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts."
       ],
       "version": "2.6.12",
       "readiness": "unverified"

@@ -48,7 +48,6 @@ This is the exhaustive current package/app placement map for `agentsam-sdk`. It 
 | `@inneranimalmedia/copro-provider-contracts` | Provider contract | CoPro / Media Production | Abstract storage, streaming, transcription, generation, conversion and rendering capabilities. |
 | `@inneranimalmedia/copro-proof` | Acceptance primitive | CoPro / Media Production | Cross-package mechanical composition tests and architecture proof. |
 | `@inneranimalmedia/copro-ui` | Product UI | CoPro / Media Production | Mobile-first preview, timeline, gesture editing and composition screens. |
-| `@inneranimalmedia/cms-runtime` | Product engine | Site Studio, Commerce Studio | Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts. |
 | `@inneranimalmedia/theme-heuristic` | Theme/prebuild | Site Studio | Stock AgentSam CMS storefront shell theme contract (heuristic-theme). |
 | `@inneranimalmedia/agentsam-identity` | Platform capability | Public/local identity implementations | Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK) |
 | `@inneranimalmedia/theme-cypress` | Theme/prebuild | Site Studio | A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template. |
