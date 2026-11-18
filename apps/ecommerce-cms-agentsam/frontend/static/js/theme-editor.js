@@ -3575,8 +3575,14 @@
       setNote('Import the existing live page before publishing any CMS draft.', 'error');
       return;
     }
-    if ((!selectedTheme || selectedTheme !== primaryThemeSlug)) {
-      setNote('This theme is visual-preview only. Publication is disabled until its renderer and rollback pass acceptance.', 'error');
+    // A CMS page host may publish without sharing the theme-project identity.
+    // Draft theme projects explicitly declare publish=false instead.
+    const canPublish = host
+      ? host.adapter.capabilities?.publish === true
+      : Boolean(selectedTheme && selectedTheme === primaryThemeSlug &&
+          installedThemeSlugs.has(selectedTheme));
+    if (!canPublish) {
+      setNote('This draft does not have an approved publication capability.', 'error');
       return;
     }
     const button = byId('te-publish');
