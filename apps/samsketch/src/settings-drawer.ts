@@ -295,7 +295,18 @@ export function mountSettingsDrawer(host: HTMLElement) {
     }
     if (key === "scene.profile") {
       const profile = SCENE_PROFILES.find(item => item.id === value);
-      if (profile) { state.sceneSettings.finish = profile.finish; state.sceneSettings.mood = profile.mood; }
+      if (profile) {
+        state.sceneSettings.finish = profile.finish; state.sceneSettings.mood = profile.mood;
+        state.sceneSettings.surfaceTreatment = "metal";
+        const finish = FINISHES.find(item => item.id === profile.finish);
+        if (finish) { state.sceneSettings.roughness = finish.roughness; state.sceneSettings.metalness = finish.metalness; }
+        const mood = MOODS.find(item => item.id === profile.mood);
+        if (mood) {
+          state.sceneSettings.keyIntensity = mood.keyIntensity; state.sceneSettings.ambientHue = mood.ambientHue;
+          state.sceneSettings.ambientSaturation = mood.ambientSaturation; state.sceneSettings.ambientIntensity = mood.ambientIntensity;
+          state.sceneSettings.fogDensity = mood.fogDensity;
+        }
+      }
     }
     if (key === "styles.finish") {
       const preset = FINISHES.find(item => item.id === value);
