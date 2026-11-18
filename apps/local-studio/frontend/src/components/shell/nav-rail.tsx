@@ -2,6 +2,7 @@ import { useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
   Blocks,
+  Box,
   CalendarDays,
   Database,
   FileCode,
