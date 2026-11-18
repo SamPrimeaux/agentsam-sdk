@@ -138,6 +138,11 @@ jobs:
       - name: Verify Canvas unification and focused Media behavior
         run: node --test apps/local-studio/scripts/canvas-dedupe-media-focus.test.mjs apps/local-studio/backend/worker/plugin-side-stages.test.mjs apps/local-studio/backend/worker/design-canvas-unified.test.mjs
 
+      - name: Verify native scene and theme-scene packages
+        run: |
+          npm test --workspace @inneranimalmedia/iamscene
+          npm test --workspace @inneranimalmedia/theme-scenes
+
       - name: Verify SDK
         run: npm run verify
 
