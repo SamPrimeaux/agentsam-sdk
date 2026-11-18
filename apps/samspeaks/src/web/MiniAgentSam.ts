@@ -171,7 +171,7 @@ export class MiniAgentSam {
   private autoTour = false;
   private manualTransition: TransitionType = 'glide';
 
-  private movieTitle = 'Atelier Guided Adventure';
+  private movieTitle = 'SamSpeaks Guided Story';
   private promptDraft = '';
   private beats: MovieBeat[] = DEFAULT_STORYBOARD_BEATS.map((b) => ({ ...b }));
   private activeBeatIndex = 0;
