@@ -9,6 +9,12 @@ const cwd = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const permitted = new Set([
   'README.md', 'LICENSE', 'package.json',
   'src/index.js', 'src/project.js', 'src/storage.js', 'src/http.js',
+  'src/starter-library.js',
+  'starter-packs/increase-sales/v1/src/catalog.mjs',
+  'starter-packs/increase-sales/v1/src/preview.js',
+  'starter-packs/increase-sales/v1/src/style.css',
+  'starter-packs/increase-sales/v1/src/schema.json',
+  'starter-packs/increase-sales/v1/src/DISTRIBUTION.md',
   'sql/README.md', 'sql/0001_campaign_core.sql', 'sql/verify.sql',
 ]);
 const result = JSON.parse(execFileSync('npm', [
