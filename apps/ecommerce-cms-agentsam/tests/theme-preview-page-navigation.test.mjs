@@ -78,10 +78,8 @@ const clickHandlerSource = 'function previewNavigation(event) {\n' +
   source.slice(navBegin, navEnd) + '\n}';
 
 function setupProjectClick(href) {
-  let listener = null;
   const doc = {
     baseURI: 'https://themes.inneranimalmedia.com/theme-packages/iapj/0.3.0/preview/',
-    addEventListener(type, fn) { if (type === 'click') listener = fn; },
   };
   const link = { getAttribute(key) { return key === 'href' ? href : null; } };
   const changes = [];
