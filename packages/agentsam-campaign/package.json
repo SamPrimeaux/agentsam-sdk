@@ -23,7 +23,7 @@
     "starter-packs/increase-sales/v1/src"
   ],
   "scripts": {
-    "test": "node --test test/*.test.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs",
     "pack:dry": "npm run pack:check && npm pack --dry-run",
     "pack:check": "node scripts/check-public-pack.mjs",
     "build:starters": "node starter-packs/increase-sales/v1/build.mjs",
