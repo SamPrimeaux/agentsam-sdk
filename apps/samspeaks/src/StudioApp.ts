@@ -745,7 +745,7 @@ export class StudioApp extends xb.Script {
       ];
       const { filename, byteLength } = await exportSceneAsGlb(
         exportTargets,
-        `samscenes-${this.activeSubjectId}`
+        `samspeaks-${this.activeSubjectId}`
       );
       const sizeKb = Math.max(1, Math.round(byteLength / 1024));
       this.audioEngine.playStudioCue('ready');
