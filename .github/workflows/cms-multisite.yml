@@ -34,6 +34,8 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/frontend/theme-editor/remote-worker-adapter.mjs
       - name: Authorization, source-site discovery, signature and optimistic version tests
         run: node --test test/integration/cms-multisite-security.test.mjs apps/local-studio/backend/worker/cms-owned-sites.test.mjs apps/local-studio/backend/worker/cms-source.test.mjs apps/local-studio/backend/worker/cms-source-host.test.mjs
+      - name: Install ecommerce dependencies for selected-resource backend tests
+        run: npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts --no-audit --no-fund
       - name: CMS selections, nested block definitions and verified renderer catalog
         run: |
           node --check apps/ecommerce-cms-agentsam/backend/agentsam/selected-resource.js
