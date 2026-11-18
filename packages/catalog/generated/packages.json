@@ -2315,7 +2315,7 @@
         "Using .iamscene.json as the editable source of truth and GLTF/GLB as interchange or presentation assets",
         "Building precise scene geometry through the canonical @inneranimalmedia/agentsam-occt engine"
       ],
-      "version": "0.1.0"
+      "version": "0.1.2"
     },
     {
       "avoid_when": [
