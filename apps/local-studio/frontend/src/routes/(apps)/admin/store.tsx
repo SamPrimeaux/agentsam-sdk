@@ -19,8 +19,11 @@ export const Route = createFileRoute('/(apps)/admin/store')({
   }),
   component: function InstalledOnlineStore() {
     const search = Route.useSearch();
-    if (search.theme_sku || search.action || search.stock || search.theme_version)
-      return <EcommerceAppView search={{ ...search, page: '/admin/store' }} />;
+    const selected = themeStoreTrySelection(search);
+    // Never mount the full embedded Ecommerce CMS for a public Add handoff.
+    // /admin/sites executes one authenticated install request without previews.
+    if (selected) return <Navigate to="/admin/sites" search={selected} replace />;
+    if (search.stock) return <EcommerceAppView search={{ ...search, page: '/admin/store' }} />;
     return <OnlineStorePage siteId={search.site_id} />;
   },
 });
