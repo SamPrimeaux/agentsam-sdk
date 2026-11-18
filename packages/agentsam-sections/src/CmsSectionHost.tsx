@@ -65,9 +65,10 @@ export type CmsVerifiedRenderer =
   | {kind:'section'; component:ComponentType<CmsSectionRendererProps>}
   | {kind:'block'; component:ComponentType<CmsBlockRendererProps>};
 
+export type CmsRendererReference = Pick<CmsSectionInstance,
+  'definitionKey' | 'definitionVersion' | 'rendererKey'>;
 export interface CmsRendererRegistry {
-  resolve(instance: {definitionKey:string; definitionVersion:string|number; rendererKey:string},
-    kind:CmsDefinitionKind): CmsVerifiedRenderer;
+  resolve(instance: CmsRendererReference, kind:CmsDefinitionKind): CmsVerifiedRenderer;
   keys(): string[];
 }
 const VALID_RENDERER_KEY = /^[A-Za-z0-9][A-Za-z0-9_:/.-]{0,159}$/;
@@ -102,7 +103,7 @@ export function createCmsRendererRegistry(
     verified.set(record.renderer_key,{definition,implementation});
   }
   return Object.freeze({
-    resolve(instance, kind) {
+    resolve(instance: CmsRendererReference, kind: CmsDefinitionKind) {
       const row = verified.get(instance.rendererKey);
       assert(row, 'cms_renderer_unavailable:' + instance.rendererKey);
       assert(row.definition.kind === kind, 'cms_renderer_kind_mismatch');

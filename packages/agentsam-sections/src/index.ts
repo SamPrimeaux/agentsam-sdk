@@ -20,6 +20,6 @@ export type {
   CmsDefinitionRecord, CmsComponentRecord, CmsBlockInstance,
   CmsSectionInstance, CmsRenderContext, CmsBlockRendererProps,
   CmsSectionRendererProps, CmsRendererImplementations,
-  CmsVerifiedRenderer, CmsRendererRegistry,
+  CmsVerifiedRenderer, CmsRendererRegistry, CmsRendererReference,
   CmsSectionActions, CmsSectionHostProps
 } from './CmsSectionHost.js';

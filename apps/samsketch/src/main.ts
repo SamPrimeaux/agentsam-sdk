@@ -32,7 +32,8 @@ type Look="clay"|"glass"|"metal";
 type Vec3=[number,number,number];
 type PartOverride={position?:Vec3;rotation?:Vec3;scale?:Vec3;color?:string;visible?:boolean};
 interface Item { id:string; name:string; kind:Kind; position:Vec3; rotation:Vec3; scale:Vec3; color:string; material:Look; visible:boolean; cadParams?:CadParameters; templateId?:string; partOverrides?:Record<string,PartOverride>; finish?:FinishId; propType?:SceneryPropId; }
-interface Document { version:1; name:string; brand:Brand; chapter:number; items:Item[]; sceneSettings?:SceneSettings; storyboard?:StoryBeat[]; brushStrokes?:BrushStroke[]; }
+interface Document { version:1; name:string; brand:Brand; chapter:number; items:Item[]; sceneSettings:SceneSettings; storyboard:StoryBeat[]; brushStrokes:BrushStroke[]; }
+type DocumentInput = Omit<Document,"sceneSettings"|"storyboard"|"brushStrokes"> & Partial<Pick<Document,"sceneSettings"|"storyboard"|"brushStrokes">>;
 const chapters=[
   ["The experience","Products with presence"],
   ["The composition","Everything is intentional"],
@@ -53,12 +54,12 @@ function makeItem(kind:Kind,name:string,color:string,position:Vec3,scale:Vec3=[1
 function freshDoc(brand:Brand):Document {
  return {version:1,name:"Untitled scene",brand,chapter:0,items:[],sceneSettings:{...DEFAULT_SCENE_SETTINGS},storyboard:structuredClone(DEFAULT_STORYBOARD),brushStrokes:[]};
 }
-function normalizeDocument(value:Document):Document {
+function normalizeDocument(value:DocumentInput):Document {
  return {...value,sceneSettings:{...DEFAULT_SCENE_SETTINGS,...(value.sceneSettings||{})},storyboard:Array.isArray(value.storyboard)&&value.storyboard.length?value.storyboard:structuredClone(DEFAULT_STORYBOARD),brushStrokes:Array.isArray(value.brushStrokes)?value.brushStrokes:[]};
 }
 const storageKey="iam-showcase-studio-draft-v1";
 const projectsKey="iam-samsketch-projects-v1";
-type SavedSketchProject={id:string;name:string;category:SketchProjectCategory;itemCount:number;updatedAt:string;preview?:string|null;document:Document};
+type SavedSketchProject={id:string;name:string;category:SketchProjectCategory;itemCount:number;updatedAt:string;preview?:string|null;document:DocumentInput};
 function readSavedProjects():SavedSketchProject[]{
  try{const raw=JSON.parse(localStorage.getItem(projectsKey)||"[]");return Array.isArray(raw)?raw.filter((entry)=>entry?.document?.version===1&&Array.isArray(entry.document.items)):[] }
  catch{return[];}
@@ -67,7 +68,7 @@ function writeSavedProjects(projects:SavedSketchProject[]){localStorage.setItem(
 let doc:Document;
 try {
  const saved=JSON.parse(localStorage.getItem(storageKey)||"null");
- doc=saved?.version===1 && Array.isArray(saved.items)?normalizeDocument(saved as Document):freshDoc("agentsam");
+ doc=saved?.version===1 && Array.isArray(saved.items)?normalizeDocument(saved as DocumentInput):freshDoc("agentsam");
 } catch{doc=freshDoc("agentsam");}
 let selectedId=doc.items[0]?.id||"";
 let selectedPartId:string|null=null;
@@ -146,7 +147,7 @@ const bootParams=new URLSearchParams(location.search);
 if(bootParams.get("presentation")==="embedded") appFrame.classList.add("is-embedded");
 function enterStudio(){gallery?.hide();shell.dataset.ssSurface="studio";announce("Editing · "+doc.name);sendHostMessage("surface",{surface:"studio"});sendHostMessage("selection",{selection:studioContext()});}
 function showGallery(){nativeSceneEditor?.dispose();nativeSceneEditor=null;settingsApi.close();gallery?.show();sendHostMessage("surface",{surface:"gallery"});announce("SamSketch gallery");}
-function loadDocument(next:Document){
+function loadDocument(next:DocumentInput){
  stopStoryPlayback();stopStoryboardPlayback();
  mode="select";transformMode="off";storyTransition=null;cameraTransition=null;toggleTimeline(true);
  document.querySelectorAll(".canvas-tools .icon-control").forEach(button=>button.classList.remove("active"));
@@ -236,7 +237,7 @@ async function saveToCloud(withPreview=true):Promise<void>{
 function saveCurrentToGallery(){
  void saveToCloud(true);
 }
-function newHostedScene(next:Document){
+function newHostedScene(next:DocumentInput){
  forgetCurrentScene();
  loadDocument(next);
  enterStudio();
@@ -276,7 +277,7 @@ gallery=mountSketchGallery({
      cloudState("Native scene · account owned");
      return;
     }
-    loadDocument(result.document as Document);
+    loadDocument(result.document as DocumentInput);
     activeSceneId=result.scene.id;activeSceneHash=result.scene.contentHash;
     lastCloudDocument=JSON.stringify(doc);
     localStorage.setItem(activeKey,activeSceneId);localStorage.setItem(hashKey,activeSceneHash);
@@ -1099,8 +1100,8 @@ function addSceneryProp(type:SceneryPropId){
  item.propType=type;doc.items.push(item);selectedId=item.id;selectedPartId=null;
  renderAll();store();announce("Added SamSpeaks scenery prop · "+preset.label);
 }
-function undo(){if(!history.length)return;future.push(JSON.stringify(doc));doc=normalizeDocument(JSON.parse(history.pop()!) as Document);selectedId=doc.items.find(x=>x.id===selectedId)?.id||doc.items[0]?.id||"";selectedPartId=null;renderAll();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});}
-function redo(){if(!future.length)return;history.push(JSON.stringify(doc));doc=JSON.parse(future.pop()!) as Document;selectedId=doc.items[0]?.id||"";selectedPartId=null;renderAll();}
+function undo(){if(!history.length)return;future.push(JSON.stringify(doc));doc=normalizeDocument(JSON.parse(history.pop()!) as DocumentInput);selectedId=doc.items.find(x=>x.id===selectedId)?.id||doc.items[0]?.id||"";selectedPartId=null;renderAll();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});}
+function redo(){if(!future.length)return;history.push(JSON.stringify(doc));doc=normalizeDocument(JSON.parse(future.pop()!) as DocumentInput);selectedId=doc.items[0]?.id||"";selectedPartId=null;renderAll();}
 async function exportGLB(){
  announce("Preparing scene GLB...");
  try{const exporter=new GLTFExporter();const brushParent=brushGroup.parent;stage.add(brushGroup);
@@ -1131,7 +1132,7 @@ function importScene(){
  const picker=document.createElement("input");picker.type="file";picker.accept=".json,application/json";
  picker.addEventListener("change",async()=>{const file=picker.files?.[0];if(!file)return;
  try{const data=JSON.parse(await file.text());if(data.version!==1||!Array.isArray(data.items)||!["agentsam","inneranimalmedia"].includes(data.brand))throw Error("Unsupported manifest");
- newHostedScene(data as Document);
+ newHostedScene(data as DocumentInput);
  announce("Scene imported as a separate document; source assets remain unchanged.");
  }catch(e){announce("Import failed: "+(e instanceof Error?e.message:String(e)));}});
  picker.click();
@@ -1273,7 +1274,7 @@ const designAdapter=createSamSketchDesignAdapter({
  selection:()=>selectedId?[selectedPartId?{id:selectedPartId,kind:"source-part",parentId:selectedId}:{id:selectedId,kind:sel()?.kind||"object"}]:[],
  parts:id=>{const item=doc.items.find(row=>row.id===id);return item?sourceParts(item):[];},
  load:(id,hash,value)=>{
-  forgetCurrentScene();loadDocument(value as Document);
+  forgetCurrentScene();loadDocument(value as DocumentInput);
   activeSceneId=id;activeSceneHash=hash;lastCloudDocument=JSON.stringify(doc);
   localStorage.setItem(activeKey,id);localStorage.setItem(hashKey,hash);
   cloudState("Saved to account");enterStudio();

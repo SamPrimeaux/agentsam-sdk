@@ -56,6 +56,6 @@
       "test/integration/sam-cms-machine.integration.test.mjs"
     ],
     "runtime_proof": "pure-domain-and-host-contract-tests",
-    "host_integration": "pending-live-host-adapter-verification"
+    "host_integration": "not-verified"
   }
 }
