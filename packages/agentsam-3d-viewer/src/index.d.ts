@@ -16,6 +16,9 @@ export interface ThreeViewportOptions {
   insertCanvasFirst?: boolean;
   minHeight?: string;
   cameraUp?: [number, number, number]; // set before OrbitControls initialization
+  cameraProjection?: 'perspective' | 'orthographic';
+  orthographicFrustumHeight?: number;
+  orthographicZoom?: number;
   fov?: number;
   near?: number;
   far?: number;
