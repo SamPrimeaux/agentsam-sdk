@@ -2,7 +2,7 @@
   "schema": "agentsam.skill.v1",
   "id": "agentsam-game-video-to-sprites",
   "name": "AgentSam · video to sprites",
-  "description": "Video→dense sprites (imagine_image_to_video + chroma postprocess)",
+  "description": "Video-to-sprite conversion, animation-frame extraction, chroma cleanup and atlas verification",
   "icon": "skill",
   "slash": {
     "suggested": "/agentsam-game-video-to-sprites"
