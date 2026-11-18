@@ -1,0 +1,14 @@
+{
+  "name": "@inneranimalmedia/agentsam-growth-sales-starters",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Portable, interactive Increase Sales starter library for the existing Growth app",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node --test tests/package.test.mjs",
+    "pack": "node build.mjs && mkdir -p release && cd dist && zip -q -r ../release/agentsam-growth-increase-sales-v1.zip .",
+    "r2:dry": "node upload-r2.mjs",
+    "r2:publish": "node upload-r2.mjs --publish"
+  }
+}
