@@ -670,13 +670,21 @@ function zoomCamera(factor:number){
 }
 function applyProgress(progress:number){
  storyProgress=Math.max(0,Math.min(3,progress));const from=Math.floor(storyProgress),to=Math.ceil(storyProgress),blend=storyProgress-from;
- for(const item of doc.items){const object=roots.get(item.id);if(!object)continue;const a=poseFor(item,from),b=poseFor(item,to);object.position.set(a[0]+(b[0]-a[0])*blend,a[1]+(b[1]-a[1])*blend,a[2]+(b[2]-a[2])*blend);}
+ const explode=Math.max(0,Math.min(1,doc.sceneSettings?.explodeAmount??0));
+ doc.items.forEach((item,index)=>{
+  const object=roots.get(item.id);if(!object)return;
+  const a=poseFor(item,from),b=poseFor(item,to);
+  const direction=new THREE.Vector3(item.position[0],item.position[1]+.25,item.position[2]);
+  if(direction.lengthSq()<.001)direction.set(index%2?1:-1,.25,index%3?1:-1);
+  direction.normalize().multiplyScalar(explode*2.2);
+  object.position.set(a[0]+(b[0]-a[0])*blend+direction.x,a[1]+(b[1]-a[1])*blend+direction.y,a[2]+(b[2]-a[2])*blend+direction.z);
+ });
 }
 renderer.domElement.addEventListener("wheel",e=>{
  if(mode!=="story")return;e.preventDefault();storyTransition=null;applyProgress(storyProgress+e.deltaY/560);
  const index=Math.round(storyProgress);if(index!==doc.chapter){doc.chapter=index;renderChapters();store();}
 },{passive:false});
-function animate(){requestAnimationFrame(animate);if(storyTransition){const t=Math.min(1,(performance.now()-storyTransition.start)/storyTransition.duration);const smooth=t*t*(3-2*t);applyProgress(storyTransition.from+(storyTransition.to-storyTransition.from)*smooth);if(t>=1)storyTransition=null;}if(sceneAutoRotate&&!reducedMotionOverride&&!matchMedia("(prefers-reduced-motion: reduce)").matches)stage.rotation.y+=rotationSpeed;controls.update();selectedHelper?.update();renderer.render(scene,camera);}
+function animate(){requestAnimationFrame(animate);if(storyTransition){const t=Math.min(1,(performance.now()-storyTransition.start)/storyTransition.duration);const smooth=t*t*(3-2*t);applyProgress(storyTransition.from+(storyTransition.to-storyTransition.from)*smooth);if(t>=1)storyTransition=null;}if(cameraTransition){const t=Math.min(1,(performance.now()-cameraTransition.start)/cameraTransition.duration);const smooth=t*t*(3-2*t);camera.position.lerpVectors(cameraTransition.fromPosition,cameraTransition.toPosition,smooth);controls.target.lerpVectors(cameraTransition.fromTarget,cameraTransition.toTarget,smooth);camera.lookAt(controls.target);if(t>=1)cameraTransition=null;}if(sceneAutoRotate&&!reducedMotionOverride&&!matchMedia("(prefers-reduced-motion: reduce)").matches)stage.rotation.y+=rotationSpeed;controls.update();selectedHelper?.update();renderer.render(scene,camera);}
 animate();
 
 function sourceParts(item:Item):string[]{
@@ -809,7 +817,7 @@ function speakScript(script:string,voiceName="Kore",voiceStyle=""){
  const utterance=new SpeechSynthesisUtterance(script.replace(/<[^>]+>/g,"").replace(/\|yeah\||\|mhm\|/g,""));
  const voice=window.speechSynthesis.getVoices().find(item=>item.name.toLowerCase().includes(voiceName.toLowerCase()));
  if(voice)utterance.voice=voice;
- utterance.rate=voiceStyle.toLowerCase().includes("slow")?.88:1;
+ utterance.rate=voiceStyle.toLowerCase().includes("slow") ? 0.88 : 1;
  utterance.pitch=voiceStyle.toLowerCase().includes("bright")?1.08:1;
  return new Promise<void>(resolve=>{
   utterance.onend=()=>resolve();utterance.onerror=()=>resolve();window.speechSynthesis.speak(utterance);
