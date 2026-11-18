@@ -2,7 +2,7 @@
   "schema": "agentsam.package.v1",
   "id": "iamscene",
   "name": "@inneranimalmedia/iamscene",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "class": "package",
   "status": "in-development",
   "catalog_status": "needs-review",
