@@ -169,7 +169,28 @@ export function absolutizeThemePreviewPaths(html, baseUrl) {
 export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
   const fragments = page.sections.map((section) => {
     if (section.content.__editor?.visibility?.enabled === false) return '';
-    const doc = new DOMParser().parseFromString(section.html, 'text/html');
+    // The native implementation renders the merchant's CURRENT instance.
+    // Previously we reused its initial HTML snapshot, so saved edits were
+    // invisible in preview and could never become trustworthy publication.
+    let doc = new DOMParser().parseFromString(section.html, 'text/html');
+    const sourceKey = String(section.sourceTemplateKey || section.content.__editor?.templateKey || '');
+    if (sourceKey.startsWith('portable-')) {
+      const runtime = globalThis.ThemePortableSections;
+      const id = String(section.content.__editor?.themePreset || '');
+      if (runtime?.sourceTemplate?.(id)?.key !== sourceKey)
+        throw new Error('theme_portable_preset_invalid');
+      const content = clone(section.content);
+      content.__editor = {...content.__editor,templateKey:'portable',themePreset:id};
+      const validation = runtime?.validate?.(id,content);
+      if (!validation?.ok) throw new Error('theme_stock_content_invalid');
+      const markup = runtime.render({key:section.key,content});
+      if (typeof markup !== 'string') throw new Error('theme_portable_renderer_unavailable');
+      doc = new DOMParser().parseFromString(markup,'text/html');
+      for (const node of doc.querySelectorAll('[data-cms]'))
+        node.setAttribute('data-theme-project-field',node.getAttribute('data-cms'));
+      for (const node of doc.querySelectorAll('[data-cms-block]'))
+        node.setAttribute('data-theme-block-id',node.getAttribute('data-cms-block'));
+    }
     const apply = (doc, fields, content) => {
     for (const field of fields || []) {
       const el = doc.querySelector(`[data-theme-project-field="${field.binding?.field || field.key}"]`);
