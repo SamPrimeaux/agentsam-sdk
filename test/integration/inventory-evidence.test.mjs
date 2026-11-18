@@ -122,4 +122,22 @@ describe('inventory classifies by evidence', () => {
     assert.equal(final.theme_candidate, true);
     assert.equal(finalFnf?.candidate, true);
   });
+  it('handles constructor-named style namespaces without inherited object collisions', () => {
+    const evidence = extractStyleEvidence(`
+      <div class="constructor-toolbar constructor-button"></div>
+      <style>
+        .constructor-toolbar { color: var(--constructor-accent); }
+        .constructor-button { background: var(--constructor-accent); }
+        :root { --constructor-accent: red; }
+      </style>
+    `);
+    const accumulated = mergeStyleEvidence(null, evidence);
+    const row = finalizeStyleEvidence(accumulated).namespaces.find(
+      (item) => item.prefix === 'constructor',
+    );
+    assert.ok(row);
+    assert.equal(row.signals.class_tokens, 2);
+    assert.equal(row.signals.css_selectors, 2);
+  });
+
 });

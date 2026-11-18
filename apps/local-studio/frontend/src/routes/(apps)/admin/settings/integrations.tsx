@@ -5,5 +5,5 @@ export const Route = createFileRoute("/(apps)/admin/settings/integrations")({
 });
 
 function LegacyIntegrationsSettingsRoute() {
-  return <Navigate to="/admin/settings/customize" search={{ view: "plugins" }} replace />;
+  return <Navigate to="/admin/settings/$unit" params={{ unit: "customize" }} search={{ view: "plugins" }} replace />;
 }

@@ -112,12 +112,16 @@ export function mergeStyleEvidence(target, incoming) {
   }
 
   for (const row of incoming.namespaces || []) {
-    const current = merged.namespaces[row.prefix] || {
-      occurrences: 0,
-      signal_kinds: new Set(),
-      signals: {},
-      score: 0,
-    };
+    // Namespace names come from source code; "constructor" must not resolve
+    // to Object.prototype.constructor instead of an accumulated signal row.
+    const current = Object.hasOwn(merged.namespaces, row.prefix)
+      ? merged.namespaces[row.prefix]
+      : {
+        occurrences: 0,
+        signal_kinds: new Set(),
+        signals: {},
+        score: 0,
+      };
     current.occurrences += row.occurrences;
     for (const [kind, count] of Object.entries(row.signals || {})) {
       current.signals[kind] = (current.signals[kind] || 0) + count;

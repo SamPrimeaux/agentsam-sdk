@@ -48,7 +48,8 @@ test("portable runtime does not use FNF branded UI state or home composer select
 
 test("new chat uses a branded empty state, never a fake assistant reply", () => {
   assert.match(js, /function renderAgentsamEmptyState\(\)/);
-  assert.match(js, /agentsam-sidekick-symbol\.svg/);
+  assert.match(js, /\/admin\/brand\/agentsam-gorilla-tiny\.svg/);
+  assert.match(read("brand/agentsam-gorilla-tiny.svg"), /<svg\b/);
   assert.match(js, /box\.querySelector\("\.agentsam-empty"\)\?\.remove\(\)/);
   assert.doesNotMatch(js, /New chat ready\. I can use/);
   assert.doesNotMatch(js, /Ask about this page, store operations, customers/);

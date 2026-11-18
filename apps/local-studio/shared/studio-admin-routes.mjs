@@ -96,8 +96,9 @@ export function canonicalStudioPath(pathname) {
  * @param {string} pathname
  */
 export function isStudioAdminPath(pathname) {
-  return isLocalStudioEcommerceAdminPath(pathname) || STUDIO_ADMIN_MOUNTS.some(({ canonical, exactOnly }) =>
-    pathname === canonical || (!exactOnly && pathname.startsWith(canonical + '/')));
+  return isLocalStudioEcommerceAdminPath(pathname) || STUDIO_ADMIN_MOUNTS.some((mount) =>
+    pathname === mount.canonical || (!('exactOnly' in mount && mount.exactOnly)
+      && pathname.startsWith(mount.canonical + '/')));
 }
 
 /**
@@ -106,8 +107,9 @@ export function isStudioAdminPath(pathname) {
  * @param {string} pathname
  */
 export function isStudioShellAdminPath(pathname) {
-  return !isLocalStudioEcommerceDocumentPath(pathname) && STUDIO_ADMIN_MOUNTS.some(({ canonical, exactOnly }) =>
-    pathname === canonical || (!exactOnly && pathname.startsWith(canonical + '/')));
+  return !isLocalStudioEcommerceDocumentPath(pathname) && STUDIO_ADMIN_MOUNTS.some((mount) =>
+    pathname === mount.canonical || (!('exactOnly' in mount && mount.exactOnly)
+      && pathname.startsWith(mount.canonical + '/')));
 }
 
 /** @param {string} pathname @param {URLSearchParams | null | undefined} search */
