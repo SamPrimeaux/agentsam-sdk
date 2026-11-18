@@ -161,7 +161,7 @@ function loadDocument(next:Document){
  brushEnabled=doc.sceneSettings!.brushEnabled;reducedMotionOverride=doc.sceneSettings!.reducedMotion;
  settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});
  history.length=0;future.length=0;
- store();renderAll();applyMood(doc.sceneSettings!.mood,false,false);frame();
+ store();renderAll();applyMood(doc.sceneSettings!.mood,false,false);camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();floor.material.opacity=doc.sceneSettings!.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings!.shadowSoftness;applyCameraShot(doc.sceneSettings!.cameraShot,"cut",false);
 }
 function renderScenePreview():string|undefined{
  try{
@@ -852,7 +852,7 @@ function applyCameraShot(id:CameraShotId,transition?:TransitionId,persist=true){
  const selected=selectedSceneObject();
  const target=selected?new THREE.Box3().setFromObject(selected).getCenter(new THREE.Vector3()):new THREE.Vector3(0,0,0);
  const direction=new THREE.Vector3(...shot.direction).normalize();
- const distance=shot.distance;
+ const distance=persist?shot.distance:(doc.sceneSettings?.cameraDistance??shot.distance);
  const toPosition=target.clone().add(direction.multiplyScalar(distance));
  const toTarget=target.clone();
  const mode=transition||doc.sceneSettings?.transitionType||"glide";
@@ -1271,6 +1271,10 @@ if(requestedDocument&&/^sketch_[a-z0-9-]{12,80}$/.test(requestedDocument)){
  void resolveHostedDesignScope().then(scope=>designAdapter.open(scope,requestedDocument)).catch(error=>announce("Cannot open scene: "+String(error)));
 }
 renderAll();
+applyMood(doc.sceneSettings!.mood,false,false);
+camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();
+floor.material.opacity=doc.sceneSettings!.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings!.shadowSoftness;
+applyCameraShot(doc.sceneSettings!.cameraShot,"cut",false);
 const preferWorkspace=bootParams.get("workspace")==="1"||bootParams.get("surface")==="studio";
 if(preferWorkspace){enterStudio();announce("SamSketch ready · 20 compositions · 47 source parts · CAD kernel on demand");}
 else{showGallery();announce("SamSketch gallery · open a canvas to begin");}
