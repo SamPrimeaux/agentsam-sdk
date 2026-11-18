@@ -278,9 +278,23 @@ export async function servePublicSitePage(
   const redirect = themeStoreRedirect(request, pathname);
   if (redirect) return redirect;
 
+  // Site-scoped published pages on the AgentSam host provide a guaranteed
+  // previewable live route even before a merchant connects a custom domain.
+  // Use the immutable cms_sites.id rather than a non-unique site slug.
+  const hostedMatch = new URL(request.url).hostname === 'agentsam.inneranimalmedia.com'
+    ? pathname.match(/^\/public-sites\/([a-zA-Z0-9_-]{1,128})(\/.*)?$/) : null;
+  const hostedBase = hostedMatch ? `/public-sites/${hostedMatch[1]}` : null;
+  if (hostedMatch) pathname = hostedMatch[2] || '/';
   let site;
   try {
-    site = await resolvePublicSiteIdentity(env.DB, new URL(request.url).hostname);
+    if (hostedMatch) {
+      site = await env.DB.prepare(`
+        SELECT id,account_id,slug,name,primary_domain,domain_aliases_json,status
+        FROM cms_sites WHERE id=? AND status='active' LIMIT 1
+      `).bind(hostedMatch[1]).first();
+    } else {
+      site = await resolvePublicSiteIdentity(env.DB, new URL(request.url).hostname);
+    }
   } catch (error) {
     console.error('Public CMS site resolution failed:', String(error?.message || error));
     return new Response('Site routing unavailable', {
@@ -315,7 +329,7 @@ export async function servePublicSitePage(
     }
     if (pageSource) {
       if (pageSource.redirectTo) {
-        const destination = new URL(pageSource.redirectTo,request.url);
+        const destination = new URL((hostedBase || '') + pageSource.redirectTo,request.url);
         destination.search = new URL(request.url).search;
         return Response.redirect(destination.toString(),301);
       }
@@ -343,7 +357,10 @@ export async function servePublicSitePage(
         const text = await readR2Text(website.binding, r2Key);
         if (text) {
           if (relative.endsWith('.html')) {
-            return htmlResponse(text, {
+            const rendered = hostedBase
+              ? text.replace('<base href="/">', `<base href="${hostedBase}/">`)
+              : text;
+            return htmlResponse(rendered, {
               'x-public-site-source': `r2:${website.name}`,
               'x-public-site-key': r2Key,
             });

@@ -1183,15 +1183,19 @@ export default {
     // published page URLs, and same-site aliases are served before app fallback.
     const publicPath = publicSitePathForRequest(request);
     const knownPublicPath = isPublicSitePath(publicPath);
+    const hostedPublicSitePath = request.method === "GET" &&
+      url.hostname === "agentsam.inneranimalmedia.com" &&
+      /^\/public-sites\/[a-zA-Z0-9_-]{1,128}(?:\/.*)?$/.test(publicPath);
+
     const customSiteHtmlRoute = request.method === "GET" &&
       url.hostname !== "agentsam.inneranimalmedia.com" &&
       /(?:^|,)text\/html/i.test(request.headers.get("accept") || "") &&
       !/^\/(?:admin|api|auth|media|settings|_next|assets|favicon)(?:\/|$)/.test(publicPath) &&
       !/\.[a-z0-9]{1,8}$/i.test(publicPath);
-    if (request.method === "GET" && (knownPublicPath || customSiteHtmlRoute)) {
+    if (request.method === "GET" && (knownPublicPath || customSiteHtmlRoute || hostedPublicSitePath)) {
       const page = await servePublicSitePage(request, env, publicPath);
       if (page) return page;
-      if (knownPublicPath) {
+      if (knownPublicPath || hostedPublicSitePath) {
         // Do not fall back to another tenant's static assets.
         return new Response("Published site page not found", {
           status: 404,

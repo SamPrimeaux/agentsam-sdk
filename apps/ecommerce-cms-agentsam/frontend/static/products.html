@@ -117,7 +117,18 @@ renderShell('/admin/products', `
   </div>
 `);
 
-const catalogSiteId=new URLSearchParams(location.search).get('site_id');
+let catalogSiteId=new URLSearchParams(location.search).get('site_id');
+if (!catalogSiteId) {
+  try { catalogSiteId=localStorage.getItem('agentsam.cms.selected-site.v1') || null; } catch {}
+}
+async function ensureCatalogSite() {
+  if (catalogSiteId) return catalogSiteId;
+  const data=await window.adminFetch('/api/admin/cms/sites');
+  catalogSiteId=data?.default_site_id || data?.sites?.find(s => s.is_default && s.status==='active')?.id ||
+    (data?.sites?.filter(s=>s.status==='active').length===1 ? data.sites.find(s=>s.status==='active').id : null);
+  if (!catalogSiteId) throw new Error('Select a store from your profile menu before managing products.');
+  return catalogSiteId;
+}
 function catalogFetch(path,options) {
   const url=new URL(path,location.origin);
   if(catalogSiteId)url.searchParams.set('site_id',catalogSiteId);
@@ -161,6 +172,8 @@ document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
   }
   try {
     document.getElementById('store-products-table').hidden = false;
+    await ensureCatalogSite();
+    document.querySelectorAll('.product-catalog-tabs a,.admin-toolbar a').forEach(a=>a.href=catalogLink(a.getAttribute('href')));
     const d = await catalogFetch('/api/admin/products');
     const body = document.getElementById('products-body');
     if (!d.products.length) {
