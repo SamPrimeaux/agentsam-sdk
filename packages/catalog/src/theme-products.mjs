@@ -9,7 +9,7 @@ const PREVIEW_ROOT = path.resolve(
   '../../../apps/local-studio/frontend/public/themes'
 );
 const SAFE_SLUG = /^[a-z][a-z0-9-]{0,62}$/;
-const SAFE_VERSION = /^\\d+\\.\\d+\\.\\d+$/;
+const SAFE_VERSION = /^\d+\.\d+\.\d+$/;
 const HASH = /^[0-9a-f]{64}$/;
 
 async function exists(file) {
