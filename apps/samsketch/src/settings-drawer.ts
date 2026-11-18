@@ -119,10 +119,10 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       select("Transition", "camera.transition", TRANSITIONS.map(t => [t.id, t.label] as [string, string]), ss.transitionType) +
       toggle("Automatic orbit tour", "camera.autoTour", ss.autoTour) +
       '<span class="settings-section-label">VOICE & SOUND DIRECTION</span>' +
-      select("Voice mode", "direct.voiceMode", [["single", "Single narrator"], ["dual", "Dual voice"]] as [string, string][], "single") +
-      select("Voice", "direct.voiceName", VOICES.map(v => [v.name, v.name + " · " + v.tone] as [string, string]), "Kore") +
-      select("Style preset", "direct.voicePreset", [["", "Choose a style"], ...VOICE_STYLES.map(v => [v.style, v.label] as [string, string])], "") +
-      '<input id="sam-direct-style" class="settings-text-input" placeholder="Warm, articulate design documentary narrator" aria-label="Voice style direction">' +
+      select("Voice mode", "direct.voiceMode", [["single", "Single narrator"], ["dual", "Dual voice"]] as [string, string][], ss.voiceMode) +
+      select("Voice", "direct.voiceName", VOICES.map(v => [v.name, v.name + " · " + v.tone] as [string, string]), ss.voiceName) +
+      select("Style preset", "direct.voicePreset", [["", "Choose a style"], ...VOICE_STYLES.map(v => [v.style, v.label] as [string, string])], ss.voiceStyle) +
+      '<input id="sam-direct-style" class="settings-text-input" value="' + escapeHtml(ss.voiceStyle) + '" placeholder="Warm, articulate design documentary narrator" aria-label="Voice style direction">' +
       '<textarea id="sam-direct-script" class="settings-textarea" rows="4" placeholder="Write narration for this scene..."></textarea>' +
       '<div class="sam-inline-actions">' + action("Draft script with AgentSam", "direct.draft", "sparkles") + action("Preview narration", "direct.speak", "audio-lines") + action("Stop", "direct.stop", "square") + '</div>' +
       '<p class="settings-note">Narration preview uses the browser voice available on this device. SamSpeaks Gemini voice synthesis is a separate runtime integration.</p>';
@@ -141,7 +141,7 @@ function renderPanel(tab: Tab, step: SamStep, state: SettingsState, images: { na
         '<span class="settings-section-label">SCENE PROFILE</span>' +
         choiceButtons("scene.profile", SCENE_PROFILES.map(p => ({ id: p.id, label: p.label, color: p.color })), ss.profile) +
         select("Active chapter", "scene.chapter", [["0", "01 · Encounter"], ["1", "02 · Unfold"], ["2", "03 · Discover"], ["3", "04 · Experience"]], String(state.chapter)) +
-        toggle("Loop presentation", "scene.autoplay", false, "Advance through the four presentation chapters.") +
+        toggle("Loop presentation", "scene.autoplay", ss.loopPresentation, "Advance through the four presentation chapters.") +
         toggle("Auto-rotate selected geometry", "scene.autorotate", ss.autoTour) +
         action("Frame current scene", "camera.frame", "frame") +
         action("Reset scene view", "scene.reset", "undo");
@@ -149,9 +149,9 @@ function renderPanel(tab: Tab, step: SamStep, state: SettingsState, images: { na
       return '<p class="settings-description">Refine the surface response and atmosphere of your scene.</p>' +
         '<span class="settings-section-label">PBR FINISH</span>' +
         choiceButtons("styles.finish", FINISHES.map(f => ({ id: f.id, label: f.label, color: f.swatchHex })), ss.finish) +
-        select("Surface treatment", "styles.material", [["clay", "Soft clay"], ["glass", "Optical glass"], ["metal", "Machined metal"]], "metal") +
-        range("Material roughness", "styles.roughness", .02, 1, .01, .22) +
-        range("Material metalness", "styles.metalness", 0, 1, .01, .92) +
+        select("Surface treatment", "styles.material", [["clay", "Soft clay"], ["glass", "Optical glass"], ["metal", "Machined metal"]], ss.surfaceTreatment) +
+        range("Material roughness", "styles.roughness", .02, 1, .01, ss.roughness) +
+        range("Material metalness", "styles.metalness", 0, 1, .01, ss.metalness) +
         '<span class="settings-section-label">ATMOSPHERE MOOD</span>' +
         choiceButtons("styles.mood", MOODS.map(m => ({ id: m.id, label: m.label, color: m.swatchHex })), ss.mood);
     case "camera":
@@ -186,12 +186,12 @@ function renderPanel(tab: Tab, step: SamStep, state: SettingsState, images: { na
         toggle("Ground shadows", "effects.shadows", ss.shadowsEnabled) +
         toggle("Construction grid", "effects.grid", ss.showGrid) +
         toggle("Selection outline", "effects.selection", ss.selectionOutline) +
-        select("Environment", "sky.environment", [["studio", "Studio gradient"], ["daylight", "Daylight"], ["overcast", "Overcast"], ["night", "Night studio"]], "studio") +
-        range("Horizon brightness", "sky.brightness", .4, 2, .05, 1.12) +
-        range("Ambient shadow opacity", "shadows.ambient", 0, .6, .01, .23) +
-        toggle("Reduce motion", "global.reducedMotion", false) +
-        toggle("Show object properties", "global.properties", true) +
-        toggle("Keep timeline visible", "global.timeline", true) +
+        select("Environment", "sky.environment", [["studio", "Studio gradient"], ["daylight", "Daylight"], ["overcast", "Overcast"], ["night", "Night studio"]], ss.environment) +
+        range("Horizon brightness", "sky.brightness", .4, 2, .05, ss.horizonBrightness) +
+        range("Ambient shadow opacity", "shadows.ambient", 0, .6, .01, ss.ambientShadowOpacity) +
+        toggle("Reduce motion", "global.reducedMotion", ss.reducedMotion) +
+        toggle("Show object properties", "global.properties", ss.showProperties) +
+        toggle("Keep timeline visible", "global.timeline", ss.keepTimeline) +
         action("Reset panel layout", "global.resetLayout", "panel") +
         action("Restore defaults", "global.reset", "undo");
   }
