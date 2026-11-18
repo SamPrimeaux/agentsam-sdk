@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Local non-production UI preview; does not connect to customer databases. */
 import http from 'node:http';
-import {readFile,stat} from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {getRegistryPage} from '../backend/cms/registry.js';
