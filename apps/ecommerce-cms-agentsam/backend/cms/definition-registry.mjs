@@ -99,10 +99,12 @@ export function normalizeCmsCatalogTemplate(row) {
   const dataBindings = parseJson(row.data_bindings_json, {});
   const preview = parseJson(row.preview_json, {});
   const metadata = parseJson(row.definition_metadata_json, {});
-  const rendererKey = metadata.rendererKey || metadata.renderer_key ||
-    templateData.rendererKey || templateData.renderer_key || null;
-  const implementationStatus = metadata.implementationStatus || metadata.implementation_status ||
-    templateData.implementationStatus || templateData.implementation_status || "unverified";
+  // Only cms_components can attest to a renderer. Older template/definition
+  // metadata is presentation/provenance data, never installation authority.
+  const rendererKey = typeof row.resolved_renderer_key === "string" &&
+    row.resolved_renderer_key.trim() ? row.resolved_renderer_key.trim() : null;
+  const implementationStatus = row.resolved_implementation_status || "unverified";
+  const deliveryMode = row.resolved_delivery_mode || null;
   const implementationClass = metadata.implementationClass || metadata.implementation_class ||
     templateData.implementationClass || templateData.implementation_class || null;
   const definition = row.resolved_definition_id ? {
@@ -121,8 +123,8 @@ export function normalizeCmsCatalogTemplate(row) {
     metadata,
   } : null;
   const installable = row.status === "active" && definition?.status === "active" &&
-    implementationStatus === "implemented" && implementationClass === "native" &&
-    typeof rendererKey === "string" && rendererKey.length > 0;
+    implementationStatus === "verified" && Boolean(rendererKey) &&
+    ["bundled", "r2_bundle", "isolated_embed"].includes(deliveryMode);
   return {
     id: row.id,
     sku: row.sku,
@@ -153,6 +155,7 @@ export function normalizeCmsCatalogTemplate(row) {
     rendererKey,
     implementationStatus,
     implementationClass,
+    deliveryMode,
     installable,
     isFeatured: Boolean(row.is_featured),
     featuredCollection: row.featured_collection || null,
@@ -183,6 +186,9 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
     d.settings_schema_json AS definition_settings_schema_json,
     d.allowed_blocks_json AS definition_allowed_blocks_json,
     d.max_blocks AS definition_max_blocks,d.metadata_json AS definition_metadata_json,
+    c.renderer_key AS resolved_renderer_key,
+    c.implementation_status AS resolved_implementation_status,
+    c.delivery_mode AS resolved_delivery_mode,
     c.package_ref AS resolved_package_ref,c.artifact_r2_bucket AS resolved_package_manifest_bucket,
     c.artifact_r2_key AS resolved_package_manifest_key,
     c.artifact_sha256 AS resolved_package_manifest_sha256
