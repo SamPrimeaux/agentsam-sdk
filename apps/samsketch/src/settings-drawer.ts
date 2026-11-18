@@ -289,6 +289,10 @@ export function mountSettingsDrawer(host: HTMLElement) {
       const prop = stateMap[key];
       if (prop) (state.sceneSettings as unknown as Record<string, SettingValue>)[prop] = value;
     }
+    if (key === "direct.voicePreset") {
+      const styleInput = panelHost.querySelector<HTMLInputElement>("#sam-direct-style");
+      if (styleInput) styleInput.value = String(value);
+    }
     if (key === "scene.profile") {
       const profile = SCENE_PROFILES.find(item => item.id === value);
       if (profile) { state.sceneSettings.finish = profile.finish; state.sceneSettings.mood = profile.mood; }
