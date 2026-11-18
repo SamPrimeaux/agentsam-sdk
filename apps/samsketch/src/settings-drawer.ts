@@ -9,7 +9,7 @@ import "./settings-drawer.css";
 type Tab = "scene" | "finish" | "camera" | "light" | "samspeaks" | "advanced";
 type SamStep = "inspo" | "compose" | "stage" | "direct" | "flow";
 type SettingValue = string | number | boolean;
-type SettingsState = { sceneSettings: SceneSettings; storyboard: StoryBeat[]; chapter: number };
+type SettingsState = { sceneSettings: SceneSettings; storyboard: StoryBeat[]; chapter: number; activeBeatIndex?: number };
 type SettingsApi = {
   open: (tab?: Tab) => void;
   close: () => void;
@@ -28,8 +28,8 @@ const tabs: { id: Tab; label: string; glyph: string }[] = [
   { id: "finish", label: "Finish", glyph: "palette" },
   { id: "camera", label: "Camera", glyph: "camera" },
   { id: "light", label: "Lighting", glyph: "sun" },
-  { id: "samspeaks", label: "SamSpeaks", glyph: "clapperboard" },
-  { id: "advanced", label: "Advanced", glyph: "sliders-horizontal" },
+  { id: "samspeaks", label: "SamSpeaks", glyph: "sparkles" },
+  { id: "advanced", label: "Advanced", glyph: "settings" },
 ];
 const steps: { id: SamStep; label: string }[] = [
   { id: "inspo", label: "Inspo" }, { id: "compose", label: "Compose" },
@@ -43,7 +43,7 @@ const range = (label: string, key: string, min: number, max: number, step: numbe
 const toggle = (label: string, key: string, checked: boolean, hint = "") =>
   field(label, '<input class="settings-toggle" type="checkbox" data-setting="' + key + '" ' + (checked ? "checked" : "") + ' aria-label="' + label + '">', hint);
 const select = (label: string, key: string, options: [string, string][], value: string) =>
-  field(label, '<select data-setting="' + key + '" aria-label="' + label + '">' + options.map(([v, l]) => '<option value="' + v + '" ' + (v === value ? "selected" : "") + '>' + l + '</option>').join("") + '</select>');
+  field(label, '<select id="' + key.replaceAll('.', '-') + '" data-setting="' + key + '" aria-label="' + label + '">' + options.map(([v, l]) => '<option value="' + v + '" ' + (v === value ? "selected" : "") + '>' + l + '</option>').join("") + '</select>');
 const action = (label: string, key: string, glyph: string, extra = "") =>
   '<button type="button" class="settings-action" data-setting-action="' + key + '" ' + extra + '>' + icon(glyph, 15) + '<span>' + label + '</span></button>';
 const choiceButtons = (key: string, items: { id: string; label: string; color?: string }[], active: string, className = "settings-choice-grid") =>
@@ -75,7 +75,7 @@ function renderBeatEditor(beat: StoryBeat | undefined, index: number, total: num
     '<input class="settings-text-input" data-beat-field="voiceStyle" value="' + escapeHtml(beat.voiceStyle) + '" aria-label="Voice direction" placeholder="Voice direction">' +
     '<label class="settings-field"><span class="settings-field-label">Exploded view</span><span class="settings-range"><input type="range" data-beat-field="explodeAmount" min="0" max="1" step=".05" value="' + beat.explodeAmount + '"><output>' + Math.round(beat.explodeAmount * 100) + '%</output></span></label>' +
     '<textarea class="settings-textarea" data-beat-field="script" rows="3" aria-label="Narration script">' + escapeHtml(beat.script) + '</textarea>' +
-    '<div class="sam-inline-actions"><button type="button" class="settings-action is-primary" data-beat-action="speak">' + icon("audio-lines", 15) + '<span>Preview narration</span></button></div>' +
+    '<div class="sam-inline-actions"><button type="button" class="settings-action is-primary" data-beat-action="speak">' + icon("waves", 15) + '<span>Preview narration</span></button></div>' +
     '</div>';
 }
 
@@ -84,7 +84,7 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
   const beat = state.storyboard[Math.min(state.storyboard.length - 1, Math.max(0, (state as SettingsState & { activeBeatIndex?: number }).activeBeatIndex || 0))];
   if (step === "inspo") {
     return '<div class="settings-panel-intro"><strong>Reference board</strong><span>Collect visual direction before shaping the scene.</span></div>' +
-      '<label class="sam-upload-zone"><input id="sam-inspo-files" type="file" accept="image/*" multiple hidden><span class="sam-upload-icon">' + icon("image-plus", 22) + '</span><strong>Drop images or browse files</strong><small>Reference images stay in this browser session until a media-library connection is added.</small></label>' +
+      '<label class="sam-upload-zone"><input id="sam-inspo-files" type="file" accept="image/*" multiple hidden><span class="sam-upload-icon">' + icon("capture", 22) + '</span><strong>Drop images or browse files</strong><small>Reference images stay in this browser session until a media-library connection is added.</small></label>' +
       (images.length ? '<div class="sam-inspo-grid">' + images.map((img, i) => '<div class="sam-inspo-card"><img src="' + img.url + '" alt="' + escapeHtml(img.name) + '"><span>' + escapeHtml(img.name) + '</span><button type="button" data-inspo-remove="' + i + '" aria-label="Remove reference">×</button></div>').join("") + '</div>' : '<div class="settings-empty">No references added yet.</div>') +
       action("Send reference notes to AgentSam", "inspo.attach", "sparkles", images.length ? "" : "disabled");
   }
@@ -227,6 +227,7 @@ export function mountSettingsDrawer(host: HTMLElement) {
   const sync = (next: Partial<SettingsState>) => {
     if (next.sceneSettings) state.sceneSettings = { ...DEFAULT_SCENE_SETTINGS, ...next.sceneSettings };
     if (next.storyboard) state.storyboard = structuredClone(next.storyboard);
+    if (typeof next.activeBeatIndex === "number") activeBeatIndex = next.activeBeatIndex;
     if (typeof next.chapter === "number") state.chapter = next.chapter;
     activeBeatIndex = Math.max(0, Math.min(state.storyboard.length - 1, activeBeatIndex));
     render();
@@ -380,6 +381,13 @@ export function mountSettingsDrawer(host: HTMLElement) {
       const actionName = settingAction.dataset.settingAction!;
       const detail: Record<string, unknown> = { action: actionName, tab: active };
       if (settingAction.dataset.prop) detail.prop = settingAction.dataset.prop;
+      if (actionName === "story.add") {
+        const n = state.storyboard.length + 1;
+        const beat: StoryBeat = { id: "beat-" + Date.now(), title: String(n).padStart(2, "0") + " · New Scene", script: "Move into the next chapter of this scene.", ttsMode: "single", voiceName: "Kore", voiceStyle: "Warm cinematic narrator", cameraShot: "hero", transitionType: "glide", mood: state.sceneSettings.mood, explodeAmount: 0 };
+        state.storyboard.push(beat); activeBeatIndex = state.storyboard.length - 1;
+        window.dispatchEvent(new CustomEvent("samsketch:storyboard.change", { detail: { beats: structuredClone(state.storyboard) } }));
+        render(); return;
+      }
       if (actionName === "story.compose") detail.prompt = (panelHost.querySelector("#sam-compose-prompt") as HTMLTextAreaElement | null)?.value || "";
       if (actionName === "direct.draft" || actionName === "direct.speak") {
         detail.script = (panelHost.querySelector("#sam-direct-script") as HTMLTextAreaElement | null)?.value || "";
