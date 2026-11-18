@@ -55,15 +55,15 @@ test('Local site dashboard uses the Theme Store-backed browser and no SDK theme 
  const html=fs.readFileSync(new URL('store.html',root),'utf8');
  const code=fs.readFileSync(new URL('js/theme-product-browser.js',root),'utf8');
  assert.match(html,/Browse Templates/);
- assert.match(html,/theme-product-browser\\.js/);
- assert.match(code,/\\/api\\/admin\\/theme-products/);
+ assert.match(html,/theme-product-browser\.js/);
+ assert.match(code,/\/api\/admin\/theme-products/);
  assert.match(code,/Explore preview/);
  assert.match(code,/noopener noreferrer/);
- assert.match(code,/themes\\.inneranimalmedia\\.com/);
+ assert.match(code,/themes\.inneranimalmedia\.com/);
  assert.match(code,/Browse published themes from Theme Store/);
  assert.doesNotMatch(code,/Heuristic|Resolve|plain-jane|Plain Jane|Violet/);
  assert.doesNotMatch(code,/theme-marketplace-dialog/);
- assert.doesNotMatch(code,/fetch\\([^)]*\\/publish/);
+ assert.doesNotMatch(code,/fetch\([^)]*\/publish/);
 });
 
 test('Local preview staging discovers releases and routes from Theme Store rather than a slug allowlist',()=>{
@@ -72,14 +72,14 @@ test('Local preview staging discovers releases and routes from Theme Store rathe
  const sync=fs.readFileSync(new URL('../../../local-studio/scripts/sync-theme-store-previews.mjs',import.meta.url),'utf8');
  assert.match(server,/themePreviewRoot/);
  assert.match(server,/listThemeStoreProducts/);
- assert.match(server,/\\/themes\\/\\(\\[a-z\\]\\[a-z0-9-\\]\\{0,62\\}\\)\\/demo/);
- assert.doesNotMatch(server,/journalManifest|journalRoot|plain-jane\\/demo|listLocalThemeProducts/);
+ assert.match(server,/\/themes\/([a-z][a-z0-9-]{0,62})\/demo/);
+ assert.doesNotMatch(server,/journalManifest|journalRoot|plain-jane\/demo|listLocalThemeProducts/);
  assert.match(stage,/listThemeStoreProducts/);
- assert.match(stage,/readdirSync\\(previewSource/);
- assert.doesNotMatch(stage,/\\['resolve',\\s*'violet',\\s*'plain-jane'\\]/);
- assert.match(sync,/agentsam\\.website-theme-install-index\\.v1/);
- assert.match(sync,/api\\/install-index/);
- assert.match(sync,/Theme Store catalog\\/index release mismatch/);
+ assert.match(stage,/readdirSync\(previewSource/);
+ assert.doesNotMatch(stage,/\['resolve',\s*'violet',\s*'plain-jane'\]/);
+ assert.match(sync,/agentsam\.website-theme-install-index\.v1/);
+ assert.match(sync,/api\/install-index/);
+ assert.match(sync,/Theme Store catalog\/index release mismatch/);
  assert.match(sync,/SHA-256 mismatch/);
- assert.doesNotMatch(sync,/theme-store-previews\\.json|const pins|plain-jane|resolve.*2\\.6\\.13/);
+ assert.doesNotMatch(sync,/theme-store-previews\.json|const pins|plain-jane|resolve.*2\.6\.13/);
 });
