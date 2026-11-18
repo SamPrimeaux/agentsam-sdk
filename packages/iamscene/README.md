@@ -57,6 +57,26 @@ runtime.play('intro');
 runtime.dispose();
 ```
 
+## Scroll-controlled playback
+
+The scene document owns animation tracks and duration. The page section owns scroll
+behavior. A host can scrub an animation without starting the runtime's playback loop:
+
+```ts
+runtime.pause();
+const animation = document.animations.find((item) => item.id === 'circuit-loop');
+if (!animation) throw new Error('Animation not found');
+
+const progress = Math.max(0, Math.min(1, pageScrollProgress));
+runtime.seekAnimation('circuit-loop', progress * animation.duration, { wrap: false });
+```
+
+Use `wrap: false` for scroll-driven playback so a looping animation holds its final
+keyframe at the end of the section instead of jumping back to its first frame. The
+page composition and its scroll preset belong to `@inneranimalmedia/theme-scenes`,
+not to the portable `.iamscene.json` document. See
+`examples/scroll-controlled-circuit/` for a complete sticky-page example.
+
 ## Native OCCT geometry pipeline
 
 OCCT is owned by `@inneranimalmedia/agentsam-occt` and is a required part of this package. Store the canonical feature history in the scene node's `geometry` field; the generated GLTF is a presentation asset, never the only source of truth.
