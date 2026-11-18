@@ -161,7 +161,13 @@ function loadDocument(next:Document){
  brushEnabled=doc.sceneSettings!.brushEnabled;reducedMotionOverride=doc.sceneSettings!.reducedMotion;
  settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});
  history.length=0;future.length=0;
- store();renderAll();applyMood(doc.sceneSettings!.mood,false,false);camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();floor.material.opacity=doc.sceneSettings!.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings!.shadowSoftness;applyCameraShot(doc.sceneSettings!.cameraShot,"cut",false);
+ store();renderAll();applyMood(doc.sceneSettings!.mood,false,false);
+ camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();renderer.toneMappingExposure=doc.sceneSettings!.horizonBrightness;
+ floor.material.opacity=doc.sceneSettings!.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings!.shadowSoftness;
+ ambientLight.color.setHSL(doc.sceneSettings!.ambientHue/360,doc.sceneSettings!.ambientSaturation/100,.72);
+ light.position.set(Math.cos(doc.sceneSettings!.keyLightAngle)*11,10,Math.sin(doc.sceneSettings!.keyLightAngle)*11);
+ renderer.shadowMap.enabled=shadowsEnabled;light.castShadow=shadowsEnabled;fillLight.castShadow=shadowsEnabled;floor.receiveShadow=shadowsEnabled;
+ applyCameraShot(doc.sceneSettings!.cameraShot,"cut",false);
 }
 function renderScenePreview():string|undefined{
  try{
@@ -1272,8 +1278,11 @@ if(requestedDocument&&/^sketch_[a-z0-9-]{12,80}$/.test(requestedDocument)){
 }
 renderAll();
 applyMood(doc.sceneSettings!.mood,false,false);
-camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();
+camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();renderer.toneMappingExposure=doc.sceneSettings!.horizonBrightness;
 floor.material.opacity=doc.sceneSettings!.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings!.shadowSoftness;
+ambientLight.color.setHSL(doc.sceneSettings!.ambientHue/360,doc.sceneSettings!.ambientSaturation/100,.72);
+light.position.set(Math.cos(doc.sceneSettings!.keyLightAngle)*11,10,Math.sin(doc.sceneSettings!.keyLightAngle)*11);
+renderer.shadowMap.enabled=shadowsEnabled;light.castShadow=shadowsEnabled;fillLight.castShadow=shadowsEnabled;floor.receiveShadow=shadowsEnabled;grid.visible=showGrid;
 applyCameraShot(doc.sceneSettings!.cameraShot,"cut",false);
 const preferWorkspace=bootParams.get("workspace")==="1"||bootParams.get("surface")==="studio";
 if(preferWorkspace){enterStudio();announce("SamSketch ready · 20 compositions · 47 source parts · CAD kernel on demand");}
