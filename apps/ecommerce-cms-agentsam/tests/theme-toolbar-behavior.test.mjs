@@ -28,6 +28,7 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
     Object.defineProperty(w, "visualViewport", { configurable: true, value: viewport });
   }
   if (themePreviews.length) w.ThemeStudioPreview = { themes: themePreviews };
+  w.AgentSamThemeEditorAssets = { assistantIconUrl: '/site-owned/assistant.svg' };
   if (portableSections.length) w.ThemePortableSections = { catalog: () => portableSections };
   w.HTMLElement.prototype.scrollIntoView = () => {};
   const writes = [];
@@ -109,7 +110,7 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     assert.equal(doc.querySelectorAll("#te-save").length, 1);
     assert.equal(doc.querySelector("#te-save").textContent, "Save");
     assert.equal(doc.querySelector("#te-publish").textContent, "Publish live…");
-    assert.equal(doc.querySelector(".te-agentsam-mark img")?.getAttribute("src"), "/admin/brand/agentsam-gorilla-tiny.svg");
+    assert.equal(doc.querySelector(".te-agentsam-mark img")?.getAttribute("src"), "/site-owned/assistant.svg");
     assert.ok(doc.getElementById("agentsam-drawer"));
     doc.getElementById("agentsam-toggle").click();
     assert.equal(doc.body.classList.contains("agentsam-open"), true);
@@ -863,8 +864,8 @@ test("Editorial Tile merchant chooses a real Media Library image and another exi
  const newImage="https://assets.example.test/r2/new-editorial.webp";
  const {dom,doc,w,writes}=await editorFixture({registryOverride,
   mediaAssets:[{id:42,filename:"new-editorial.webp",r2_key:"editorial/new.webp",content_type:"image/webp",delivery_url:newImage}],
-  linkDestinations:{collections:[{slug:"masters",title:"Masters Collection"},{slug:"high-octane-performance-gear",title:"High Octane Collection"}],
-    products:[{slug:"heavyweight-tee",title:"Heavyweight Tee"}]}});
+  linkDestinations:{collections:[{slug:"masters",title:"Masters Collection",route_path:"/collections/masters"},{slug:"high-octane-performance-gear",title:"High Octane Collection",route_path:"/collections/high-octane-performance-gear"}],
+    products:[{slug:"heavyweight-tee",title:"Heavyweight Tee",route_path:"/products/heavyweight-tee"}]}});
  try {
   doc.querySelector('[data-select-block="tile1"][data-block-section="editorial-grid"]').click();
   doc.querySelector('[data-pick-media="tile1.imageUrl"]').click();
@@ -877,15 +878,15 @@ test("Editorial Tile merchant chooses a real Media Library image and another exi
   linkButton.click();
   await tick();await tick();await tick();
   const picker=doc.querySelector('[data-link-picker="tile1.href"]');
-  assert.ok(picker.querySelector('[data-link-choice="/shop/collections/masters"]'),"real collections are discoverable");
+  assert.ok(picker.querySelector('[data-link-choice="/collections/masters"]'),"real collections are discoverable");
   assert.ok(picker.querySelector('[data-link-choice="/products/heavyweight-tee"]'),"real products are discoverable");
-  picker.querySelector('[data-link-choice="/shop/collections/masters"]').click();
+  picker.querySelector('[data-link-choice="/collections/masters"]').click();
   assert.match(doc.querySelector('[data-link-trigger="tile1.href"]').textContent,/Masters Collection/);
   doc.getElementById('te-save').click();
   await tick();await tick();
   assert.equal(writes.length,1);
   assert.equal(writes[0].content.tile1.imageUrl,newImage);
-  assert.equal(writes[0].content.tile1.href,"/shop/collections/masters");
+  assert.equal(writes[0].content.tile1.href,"/collections/masters");
   assert.equal(writes[0].content.tile2.imageUrl,"/assets/presets/fuel-free-time/masters.webp");
   assert.equal(writes[0].content.tile3.headline,"Clock out. Get gone.");
   assert.equal(writes[0].content.__editor.blocks.length,3);
@@ -913,7 +914,7 @@ test("Theme Studio has no embedded customer/demo URLs or local showcase authorin
   const bootstrap=readFileSync(new URL("../frontend/static/js/theme-studio-bootstrap.mjs",import.meta.url),"utf8");
   for(const forbidden of [/fnf-cms-preview/,/__fnfGlobalInspectMode/,/fnf-theme-editor-device/,
     /fallbackPages/,/resolveShowcase/,/violetShowcase/,/journalShowcase/,
-    /renderResolveScaffold/,/renderVioletScaffold/,/A clear place to begin/,/Your story, made clear/]) {
+    /renderResolveScaffold/,/renderVioletScaffold/,/A clear place to begin/,/Your story, made clear/,/\/shop\/collections\//]) {
     assert.doesNotMatch(source,forbidden);
     assert.doesNotMatch(bootstrap,forbidden);
   }
