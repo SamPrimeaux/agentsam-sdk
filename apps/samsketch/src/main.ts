@@ -427,7 +427,7 @@ let surfaceRoughness=doc.sceneSettings?.roughness??.82,surfaceMetalness=doc.scen
 let fogEnabled=doc.sceneSettings?.fogEnabled??false,fogDensity=doc.sceneSettings?.fogDensity??.012,currentBackdrop="blue",shadowsEnabled=doc.sceneSettings?.shadowsEnabled??true;
 let selectionOutlineEnabled=doc.sceneSettings?.selectionOutline??true,reducedMotionOverride=doc.sceneSettings?.reducedMotion??false;
 let brushEnabled=doc.sceneSettings?.brushEnabled??false;
-let cameraTransition:{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number}|null=null;
+let cameraTransition:{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number;mode:TransitionId}|null=null;
 let storyboardTimer:number|null=null,storyboardRun=0;
 const hitRay=new THREE.Raycaster(),hitPointer=new THREE.Vector2();
 const tempCanvas=document.createElement("canvas");tempCanvas.width=1024;tempCanvas.height=640;
@@ -743,7 +743,21 @@ renderer.domElement.addEventListener("wheel",e=>{
  if(mode!=="story")return;e.preventDefault();storyTransition=null;applyProgress(storyProgress+e.deltaY/560);
  const index=Math.round(storyProgress);if(index!==doc.chapter){doc.chapter=index;renderChapters();store();}
 },{passive:false});
-function animate(){requestAnimationFrame(animate);if(storyTransition){const t=Math.min(1,(performance.now()-storyTransition.start)/storyTransition.duration);const smooth=t*t*(3-2*t);applyProgress(storyTransition.from+(storyTransition.to-storyTransition.from)*smooth);if(t>=1)storyTransition=null;}if(cameraTransition){const t=Math.min(1,(performance.now()-cameraTransition.start)/cameraTransition.duration);const smooth=t*t*(3-2*t);camera.position.lerpVectors(cameraTransition.fromPosition,cameraTransition.toPosition,smooth);controls.target.lerpVectors(cameraTransition.fromTarget,cameraTransition.toTarget,smooth);camera.lookAt(controls.target);if(t>=1)cameraTransition=null;}if(sceneAutoRotate&&!reducedMotionOverride&&!matchMedia("(prefers-reduced-motion: reduce)").matches)stage.rotation.y+=rotationSpeed;controls.update();selectedHelper?.update();renderer.render(scene,camera);}
+function animate(){requestAnimationFrame(animate);if(storyTransition){const t=Math.min(1,(performance.now()-storyTransition.start)/storyTransition.duration);const smooth=t*t*(3-2*t);applyProgress(storyTransition.from+(storyTransition.to-storyTransition.from)*smooth);if(t>=1)storyTransition=null;}if(cameraTransition){
+ const t=Math.min(1,(performance.now()-cameraTransition.start)/cameraTransition.duration);
+ const smooth=cameraTransition.mode==="dolly"?1-Math.pow(1-t,3):t*t*(3-2*t);
+ const position=new THREE.Vector3().lerpVectors(cameraTransition.fromPosition,cameraTransition.toPosition,smooth);
+ if(cameraTransition.mode==="orbit"){
+  const offset=position.clone().sub(cameraTransition.toTarget);
+  offset.applyAxisAngle(new THREE.Vector3(0,1,0),Math.sin(t*Math.PI)*.34);
+  position.copy(cameraTransition.toTarget).add(offset);
+ }else if(cameraTransition.mode==="crane"){
+  position.y+=Math.sin(t*Math.PI)*1.25;
+ }
+ camera.position.copy(position);
+ controls.target.lerpVectors(cameraTransition.fromTarget,cameraTransition.toTarget,smooth);
+ camera.lookAt(controls.target);if(t>=1)cameraTransition=null;
+}if(sceneAutoRotate&&!reducedMotionOverride&&!matchMedia("(prefers-reduced-motion: reduce)").matches)stage.rotation.y+=rotationSpeed;controls.update();selectedHelper?.update();renderer.render(scene,camera);}
 animate();
 
 function sourceParts(item:Item):string[]{
@@ -867,7 +881,7 @@ function applyCameraShot(id:CameraShotId,transition?:TransitionId,persist=true){
  if(duration===0||reducedMotionOverride||matchMedia("(prefers-reduced-motion: reduce)").matches){
   cameraTransition=null;camera.position.copy(toPosition);controls.target.copy(toTarget);camera.lookAt(toTarget);controls.update();
  }else{
-  cameraTransition={fromPosition:camera.position.clone(),toPosition,fromTarget:controls.target.clone(),toTarget,start:performance.now(),duration};
+  cameraTransition={fromPosition:camera.position.clone(),toPosition,fromTarget:controls.target.clone(),toTarget,start:performance.now(),duration,mode};
  }
  if(persist)store();
 }
