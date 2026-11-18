@@ -23,6 +23,13 @@
      return url.origin===location.origin?url:null;
    }catch{return null;}
  };
+ const themeStoreImageUrl=value=>{
+   if(typeof value!=='string'||!value)return null;
+   try {
+     const url=new URL(value,location.origin);
+     return url.origin===location.origin||url.origin==='https://themes.inneranimalmedia.com'?url:null;
+   }catch{return null;}
+ };
  async function addDraft(product,button){
    button.disabled=true;button.textContent='Adding…';
    try{
@@ -62,7 +69,7 @@
      const card=node('article','theme-marketplace-item');
      const visual=node('div','theme-marketplace-visual');
      const preview=sameOriginUrl(product.preview_url);
-     const thumbnail=sameOriginUrl(product.thumbnail_url);
+     const thumbnail=themeStoreImageUrl(product.thumbnail_url);
      if(thumbnail && product.preview_ready){
        const image=node('img','theme-marketplace-thumb');
        image.loading='lazy';
@@ -114,7 +121,7 @@
      root.replaceChildren();
      const tile=node('div','theme-marketplace-empty');
      const heading=node('strong','','Your installable themes are in Theme Store.');
-     const message=node('p','','Browse Heuristic, Resolve and your other packaged themes, then install a private CMS draft. Saving does not publish your site.');
+     const message=node('p','','Browse published themes from Theme Store, then install a private CMS draft. Saving does not publish your site.');
      const open=node('a','btn primary','Browse themes and create a draft');
      open.href=installedStore;
      tile.append(heading,message,open);

@@ -1,29 +1,18 @@
 #!/usr/bin/env node
 /* Local non-production UI preview; does not connect to customer databases. */
 import http from 'node:http';
-import {readFile,stat} from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import path from 'node:path';
-import {tmpdir} from 'node:os';
-import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {getRegistryPage} from '../backend/cms/registry.js';
-import {listLocalThemeProducts} from '../../../packages/catalog/src/theme-products.mjs';
+import {listThemeStoreProducts} from '../../../packages/catalog/src/theme-products.mjs';
 import {RESOLVE_PORTAL_TEMPLATES,portalCmsPage,portalTemplateForSlug,portalTemplateForPath} from '../../../packages/theme-resolve/src/portal-templates.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const staticRoot=path.join(root,'frontend/static');
 const distRoot=path.join(root,'frontend/dist');
-// Serve the real packaged theme assets; local preview never forks the storefront.
-const themeRoots=Object.fromEntries(['violet','resolve'].map(theme=>[theme,path.resolve(root,'../theme-gallery-preview/themes/'+theme+'/site')]));
-const violetRoot=path.resolve(root,'../../packages/theme-violet/site');
-themeRoots.violet=violetRoot;
-const journalRoot=path.resolve(root,'../../packages/theme-plain-jane/site');
-const journalManifest=JSON.parse(await readFile(path.join(journalRoot,'journal-cms-manifest.json'),'utf8'));
-const journalPages=journalManifest.pages.map(page=>({
-  slug:page.slug,title:page.title,status:'draft',template_key:page.template_key,
-  live_route:'/themes/plain-jane/demo/'+page.path,
-  preview_only:true
-}));
-const journalPaths=new Set(journalManifest.pages.map(p=>p.path));
+// Preview bytes are a local cache synced and SHA-256 verified from Theme Store.
+const localStudioRoot=path.resolve(root,'../local-studio');
+const themePreviewRoot=path.join(localStudioRoot,'frontend/public/themes');
 const resolvePortalRoot=path.resolve(root,'../../packages/theme-resolve/site/portal');
 const port=Number(process.env.PORT||4327);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.json':'application/json','.woff2':'font/woff2'};
@@ -88,14 +77,8 @@ const previewCatalog = [
     mockup_count: 1
   }
 ];
-const find=(p)=>{
- if(p==='/themes/plain-jane/demo'||p.startsWith('/themes/plain-jane/demo/')){
-   const relative=p.replace(/^\/themes\/plain-jane\/demo\/?/,'').replace(/\/$/,'');
-   if(!relative||journalPaths.has(relative))return path.join(journalRoot,'index.html');
-   if(!(/^(?:assets|images|icons)\/[a-z0-9._/-]+$/.test(relative)) && relative!=='journal-cms-manifest.json')return null;
-   const target=path.resolve(journalRoot,relative);
-   return target.startsWith(journalRoot+path.sep)?target:null;
- }
+const find=(p,referer)=>{
+
 
  if(p==='/themes/resolve/demo/portal'||p.startsWith('/themes/resolve/demo/portal/')){
    const relative=p.replace(/^\/themes\/resolve\/demo\/portal\/?/,'').replace(/\/$/,'');
@@ -104,21 +87,22 @@ const find=(p)=>{
    return null;
  }
 
- const themeRoute=p.match(/^\/themes\/(violet|resolve)\/demo(?:\/(.*))?$/);
+ const themeRoute=p.match(/^\/themes\/([a-z][a-z0-9-]{0,62})\/demo(?:\/(.*))?$/);
  if(themeRoute){
-   const themeRoot=themeRoots[themeRoute[1]];
+   const themeRoot=path.resolve(themePreviewRoot,themeRoute[1],'demo');
    const target=path.resolve(themeRoot,themeRoute[2]||'index.html');
-   return target===path.resolve(themeRoot,'index.html') || target.startsWith(themeRoot+path.sep) ? target : null;
+   return target===path.join(themeRoot,'index.html') || target.startsWith(themeRoot+path.sep) ? target : null;
  }
- if(p.startsWith('/assets/generated/')){
-   const target=path.resolve(violetRoot,'assets/generated',p.slice('/assets/generated/'.length));
-   return target.startsWith(violetRoot+path.sep) ? target : null;
- }
- if(p==='/themes/violet/demo'||p==='/themes/violet/demo/')return path.join(violetRoot,'index.html');
- if(p.startsWith('/themes/violet/demo/')){
-   const relative=p.slice('/themes/violet/demo/'.length);
-   const target=path.resolve(violetRoot,relative);
-   return target.startsWith(violetRoot+path.sep) ? target : null;
+ if(p.startsWith('/assets/')){
+   try{
+     const referringPath=new URL(referer||'').pathname;
+     const referringTheme=referringPath.match(/^\/themes\/([a-z][a-z0-9-]{0,62})\/demo(?:\/|$)/);
+     if(referringTheme){
+       const themeRoot=path.resolve(themePreviewRoot,referringTheme[1],'demo');
+       const target=path.resolve(themeRoot,p.slice(1));
+       return target.startsWith(themeRoot+path.sep) ? target : null;
+     }
+   }catch{}
  }
  if(p==='/')return path.join(staticRoot,'home.html');
  if(p==='/admin/registry-build-edit')return path.join(staticRoot,'registry-build-edit.html');
@@ -208,30 +192,8 @@ const server=http.createServer(async(req,res)=>{
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
    res.end(JSON.stringify({ok:true,preview_only:true,apps}));return;
   }
-  // Isolated CMS fixtures: no tenant D1, no writes, no Stripe.
-  if(pathname==='/api/admin/theme-products/plain-jane/download' && req.method==='GET'){
-    // Only serve the explicitly built local preview artifact. No install/payment.
-    const zip=path.join(tmpdir(),'agentsam-template-releases','plain-jane-journal-0.1.0-preview.zip');
-    try{
-      const [data,checksumLine]=await Promise.all([readFile(zip),readFile(zip+'.sha256','utf8')]);
-      const actual=createHash('sha256').update(data).digest('hex');
-      if(checksumLine.split(/\s+/)[0]!==actual){
-        res.writeHead(409,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({error:'artifact_checksum_mismatch'}));return;
-      }
-      res.writeHead(200,{'Content-Type':'application/zip','Cache-Control':'no-store',
-        'X-Content-Type-Options':'nosniff',
-        'Content-Length':String(data.length),
-        'Content-Disposition':'attachment; filename="plain-jane-journal-0.1.0-preview.zip"'});
-      res.end(data);
-    }catch{
-      res.writeHead(404,{'Content-Type':'application/json'});
-      res.end(JSON.stringify({error:'preview_artifact_missing',message:'Generate the local preview ZIP before downloading.'}));
-    }
-    return;
-  }
   if(pathname==='/api/admin/theme-products' && req.method==='GET'){
-    const products=await listLocalThemeProducts();
+    const products=await listThemeStoreProducts();
     res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
     res.end(JSON.stringify({ok:true,preview_only:true,products}));return;
   }
@@ -239,19 +201,10 @@ const server=http.createServer(async(req,res)=>{
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
    res.end(JSON.stringify({pages:['home','shop','about'].map(slug=>({
      slug,title:getRegistryPage(slug).title,live_route:slug==='home'?'/':'/'+slug
-   })).concat(journalPages).concat(RESOLVE_PORTAL_TEMPLATES.map(page=>({
+   })).concat(RESOLVE_PORTAL_TEMPLATES.map(page=>({
      slug:page.slug,title:page.title,live_route:'/themes/resolve/demo/portal/'+page.path,
      status:'draft',template_key:page.template_key,preview_only:true
    })))}));return;
-  }
-  const journalSlug=pathname.match(/^\/api\/admin\/cms\/pages\/(journal-[a-z0-9-]+)$/);
-  const journalPage=journalSlug && journalManifest.pages.find(page=>page.slug===journalSlug[1]);
-  if(journalPage && req.method==='GET'){
-    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
-    res.end(JSON.stringify({page:{
-      ...journalPage,metadata_json:JSON.stringify({theme:'plain-jane',path:journalPage.path}),
-      content_authority:'cms-draft'
-    },seeded:false,preview_only:true}));return;
   }
   const portalSlug=pathname.match(/^\/api\/admin\/cms\/pages\/(resolve-[a-z0-9-]+)$/);
   const portalDef=portalSlug && portalTemplateForSlug(portalSlug[1]);
@@ -269,11 +222,10 @@ const server=http.createServer(async(req,res)=>{
    res.end(JSON.stringify({page:getRegistryPage(previewPage[1]),seeded:false}));return;
   }
   if(pathname==='/api/admin/cms/themes' && req.method==='GET'){
+   const products=await listThemeStoreProducts();
+   const themes=products.map(product=>({slug:product.slug,name:product.name,state:'preview'}));
    res.writeHead(200,{'Content-Type':'application/json'});
-   res.end(JSON.stringify({ok:true,active_theme:null,
-     preview_theme:{slug:'resolve',name:'Resolve',state:'preview'},
-     themes:[{slug:'resolve',name:'Resolve',state:'preview'},
-             {slug:'violet',name:'Violet',state:'preview'}],content_version:1}));return;
+   res.end(JSON.stringify({ok:true,active_theme:null,preview_theme:null,themes,content_version:1}));return;
   }
   if(pathname==='/api/admin/cms/registry' && req.method==='GET'){
    res.writeHead(200,{'Content-Type':'application/json'});
@@ -282,7 +234,7 @@ const server=http.createServer(async(req,res)=>{
   if(pathname==='/api/admin/collections'){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({collections:[]}));return}
   if(pathname.startsWith('/api/')){res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'preview_only',message:'This is an isolated UI preview. Backend APIs and tenant data are not connected.'}));return}
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);res.end();return}
-  let target=(pathname==='/admin/product-edit' && /^\d+$/.test(new URL(req.url,'http://localhost').searchParams.get('id')||''))?path.join(staticRoot,'product-edit.html'):find(pathname);
+  let target=(pathname==='/admin/product-edit' && /^\d+$/.test(new URL(req.url,'http://localhost').searchParams.get('id')||''))?path.join(staticRoot,'product-edit.html'):find(pathname,req.headers.referer);
   if(!target){
     if(pathname.startsWith('/themes/resolve/demo/portal/')){
       res.writeHead(404,{'Content-Type':'text/plain','Cache-Control':'no-store'});
@@ -291,7 +243,7 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(302,{Location:'/admin/home'});res.end();return;
   }
   target=path.resolve(target);
-  if(![staticRoot,distRoot,path.join(root,'frontend'),resolvePortalRoot,journalRoot,...Object.values(themeRoots)].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
+  if(![staticRoot,distRoot,path.join(root,'frontend'),resolvePortalRoot,themePreviewRoot].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
   let data=await readFile(target);
   const ext=path.extname(target);
   if(ext==='.html'){

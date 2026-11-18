@@ -7,7 +7,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {listLocalThemeProducts} from '../../../packages/catalog/src/theme-products.mjs';
+import {listThemeStoreProducts} from '../../../packages/catalog/src/theme-products.mjs';
 
 const localStudio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = path.resolve(localStudio, '../ecommerce-cms-agentsam');
@@ -30,15 +30,15 @@ if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
   // and the complete demo/ subroutes consumed by the source-backed gallery.
   const compiledRoot = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist' : '.output/public');
   const previewSource = path.join(localStudio, 'frontend/public/themes');
-  for (const slug of ['resolve', 'violet', 'plain-jane']) {
-    if (!existsSync(path.join(previewSource, slug, 'demo/index.html'))) {
-      throw new Error('Missing generated theme demo for '+slug);
-    }
-  }
+  const themeSlugs = readdirSync(previewSource, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && existsSync(path.join(previewSource, entry.name, 'demo/index.html')))
+    .map(entry => entry.name)
+    .sort();
+  if (!themeSlugs.length) throw new Error('No verified Theme Store previews are staged');
   const compiledThemes = path.join(compiledRoot, 'themes');
   rmSync(compiledThemes,{recursive:true,force:true});
   mkdirSync(compiledThemes,{recursive:true});
-  for (const slug of ['resolve','violet','plain-jane']) {
+  for (const slug of themeSlugs) {
     cpSync(path.join(previewSource,slug),path.join(compiledThemes,slug),{recursive:true,force:true});
   }
   console.log('[console-host] root /admin + source-backed theme demos staged to ' + compiledRoot);
@@ -122,16 +122,14 @@ writeFileSync(path.join(productStage, 'index.html'), index);
 
 // Fetch exact, digest-verified immutable previews from Theme Store.
 await import('./sync-theme-store-previews.mjs');
-const previewCatalog=await listLocalThemeProducts();
-if(previewCatalog.length!==3 || previewCatalog.some(entry=>!entry.preview_ready))
- throw new Error('Theme preview catalog incomplete; refuse to stage stale product listing');
+const previewCatalog=await listThemeStoreProducts();
+if(!previewCatalog.length || previewCatalog.some(entry=>!entry.preview_ready))
+ throw new Error('Theme Store preview sync incomplete; refuse to stage a partial catalog');
 const products=previewCatalog.map(item=>({
   ...item,
-  // No unreviewed packaged downloads are advertised by the hosted gallery.
+  // The SDK previews only; installation and downloadable releases stay in Theme Store.
   download_url:null,download_kind:null,installed:false,purchasable:false,
-  install_status:'not_connected',state:'preview_only',
-  editor_url:'/admin/theme-editor?showcase='+encodeURIComponent(item.slug)+'&slug='+
-    (item.slug==='plain-jane'?'journal-home':'home'),
+  install_status:'published',state:'preview_only',
   preview_url:'/themes/'+item.slug+'/demo/'
 }));
 const catalogPath=path.join(productStage,'admin/data/theme-products.json');
