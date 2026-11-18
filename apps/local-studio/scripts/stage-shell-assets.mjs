@@ -23,6 +23,9 @@ for (const relative of [
   "sw.js",
   "studio-cms-source-host.js",
   "studio-cms-source-host.css",
+  "store-start.html",
+  "store-start.js",
+  "store-start.css",
   "__agentsam/pwa/icon-180.png",
   "__agentsam/pwa/icon-192.png",
   "__agentsam/pwa/icon-512.png",
@@ -34,7 +37,8 @@ await mkdir(output, { recursive: true });
 await cp(path.join(source, "brand"), path.join(output, "brand"), { recursive: true });
 await cp(path.join(source, "favicon.svg"), path.join(output, "favicon.svg"));
 await cp(path.join(source, "sw.js"), path.join(output, "sw.js"));
-for (const name of ["studio-cms-source-host.js", "studio-cms-source-host.css"]) {
+for (const name of ["studio-cms-source-host.js", "studio-cms-source-host.css",
+  "store-start.html", "store-start.js", "store-start.css"]) {
   await cp(path.join(source, name), path.join(output, name));
 }
 await mkdir(path.join(output, "__agentsam", "pwa"), { recursive: true });

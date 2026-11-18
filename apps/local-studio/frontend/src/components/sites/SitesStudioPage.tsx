@@ -45,7 +45,7 @@ export function SitesWorkspace() {
     return () => window.removeEventListener(THEME_PROJECTS_CHANGED, listener);
   }, [reload]);
   async function createSite() {
-    if (!name.trim()) { setError('Give the site draft a name.'); return; }
+    if (!name.trim()) { setError('Name your local design scratchpad.'); return; }
     setBusy(true); setError('');
     try {
       const project = await createThemeDraft(null, name.trim());
@@ -56,15 +56,16 @@ export function SitesWorkspace() {
   return <div className="h-full overflow-auto bg-background" data-studio-product="sites">
     <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-9">
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div><div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">CMS / Websites</div><h1 className="mt-2 text-3xl font-semibold tracking-tight">Sites</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Build and edit complete multipage theme projects using the packaged Site Editor. Local drafts are saved on this installation, not published to the internet.</p></div>
+        <div><div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">CMS / Websites</div><h1 className="mt-2 text-3xl font-semibold tracking-tight">Sites</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Manage your owned websites. Create stores through the account-authorized setup; local theme scratchpads are separate and never count as published websites.</p></div>
         <div className="flex items-center gap-2">
           <IconAction label="CMS documentation" hint="Open CMS documentation" className="size-10 rounded-xl border border-border bg-card hover:bg-muted" onClick={() => go('/admin/help/cms')}><CircleHelp size={18}/></IconAction>
           <button className={control} onClick={() => go('/admin/themes')}><LayoutTemplate size={16}/> Explore themes <ArrowUpRight size={14}/></button>
+          <button className={control} onClick={() => window.location.assign('/start')}><Globe2 size={16}/> Create store <ArrowUpRight size={14}/></button>
         </div>
       </header>
       <section className="flex flex-wrap gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <input className="min-w-[220px] flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void createSite(); }} placeholder="New website or theme project name" aria-label="New site name"/>
-        <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-2.5 text-sm font-semibold text-background disabled:opacity-40" onClick={() => void createSite()} disabled={busy}><Plus size={17}/> Create site draft</button>
+        <input className="min-w-[220px] flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void createSite(); }} placeholder="Local theme scratchpad name" aria-label="Local theme scratchpad name"/>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-2.5 text-sm font-semibold text-background disabled:opacity-40" onClick={() => void createSite()} disabled={busy}><Plus size={17}/> Create local theme draft</button>
       </section>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <section className="space-y-3 border-b border-border pb-8">

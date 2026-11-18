@@ -192,6 +192,7 @@
     if (!merchantStores.some(site => site.id === id)) return;
     merchantStoreId = id;
     try { sessionStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
+    try { localStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
     window.dispatchEvent(new CustomEvent('agentsam:cms-site-changed', {detail:{site_id:id}}));
     navigateHost('/admin/pages?site_id=' + encodeURIComponent(id));
     updateSharedNavigation();
@@ -211,31 +212,10 @@
     } catch { /* Account-scoped sites may not be available outside hosted CMS. */ }
   }
   function openCreateMerchantStore() {
+    // Use the same public -> auth -> account-owned merchant setup for every user.
+    // A document navigation is required: /start is not an SPA dashboard route.
     const parent = hostedParent();
-    if (parent) { parent.dispatchEvent(new Event('agentsam:store:create')); return; }
-    const dialog = document.createElement('dialog');
-    dialog.className = 'as-store-create-dialog';
-    dialog.innerHTML = '<form method="dialog"><h2>Create store</h2><p>Create an account-owned site with an editable starter theme.</p><label>Store name<input name="name" required maxlength="120" autocomplete="off" placeholder="My store"></label><p class="as-store-create-error" role="alert" hidden></p><footer><button type="button" data-cancel>Cancel</button><button type="submit" data-create>Create store</button></footer></form>';
-    document.body.appendChild(dialog);
-    dialog.addEventListener('close', () => dialog.remove(), {once:true});
-    dialog.querySelector('[data-cancel]').addEventListener('click', () => dialog.close());
-    dialog.querySelector('form').addEventListener('submit', async event => {
-      event.preventDefault();
-      const name = dialog.querySelector('[name="name"]').value.trim();
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-      if (!slug || slug.length > 80) return;
-      const button = dialog.querySelector('[data-create]');button.disabled = true;
-      const error = dialog.querySelector('.as-store-create-error');
-      try {
-        const response = await fetch('/api/cms/sites',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({name,slug})});
-        const result = await response.json();
-        if (!response.ok || !result.site?.id) throw new Error(result.error || 'Could not create store');
-        merchantStores.push(result.site);
-        dialog.close();
-        switchMerchantStore(result.site.id);
-      } catch (err) { error.hidden = false;error.textContent = err.message || 'Could not create store';button.disabled = false; }
-    });
-    dialog.showModal();dialog.querySelector('[name="name"]').focus();
+    (parent || window).location.assign('/start');
   }
 
   async function refreshWorkspaceProjects() {

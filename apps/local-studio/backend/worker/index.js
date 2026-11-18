@@ -6,6 +6,7 @@ import { handleStudioQueueObservability } from "./studio-queue-observability.js"
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { serveDesignCanvasAdminRoute } from "./design-canvas-admin-route.js";
 import { resolveStudioSessionUser, resolveStudioAccountIdForUser, guardStudioDocumentSession, guardStudioAdminBoundary } from "./studio-session.js";
+import { serveStudioMerchantStart } from "./studio-merchant-start.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
@@ -802,6 +803,10 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    // Public merchant entry lives outside /admin. Guests see the existing
+    // identity portal; only the signed-in CMS API may create a real store.
+    const merchantStart = await serveStudioMerchantStart(request,env);
+    if (merchantStart) return merchantStart;
     // Signing in (or up) mints the owning principal before any /admin/ shell,
     // script, editor, theme install or mutation is reachable. No site_id needed.
     const adminDenied = await guardStudioAdminBoundary(request, {

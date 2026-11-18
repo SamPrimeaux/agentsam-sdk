@@ -151,9 +151,6 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [merchantStores, setMerchantStores] = useState<MerchantStore[]>([]);
   const [selectedMerchantStoreId, setSelectedMerchantStoreId] = useState<string | null>(null);
-  const [createStoreOpen, setCreateStoreOpen] = useState(false);
-  const [createStoreName, setCreateStoreName] = useState('');
-  const [creatingStore, setCreatingStore] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     void fetch('/api/cms/sites', { credentials: 'same-origin', signal: controller.signal })
@@ -173,40 +170,14 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       }).catch(() => { if (!controller.signal.aborted) setMerchantStores([]); });
     return () => controller.abort();
   }, [user?.id]);
-  useEffect(() => {
-    const show = () => setCreateStoreOpen(true);
-    window.addEventListener('agentsam:store:create', show);
-    return () => window.removeEventListener('agentsam:store:create', show);
-  }, []);
   const selectMerchantStore = (id: string) => {
     if (!merchantStores.some(store => store.id === id)) return;
     try { sessionStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
+    try { localStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
     setSelectedMerchantStoreId(id);
     window.dispatchEvent(new CustomEvent('agentsam:cms-site-changed', { detail: { site_id: id } }));
     go('/admin/pages?site_id=' + encodeURIComponent(id));
   };
-  const createMerchantStore = async () => {
-    const name = createStoreName.trim();
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    if (!name || !slug || slug.length > 80 || creatingStore) return;
-    setCreatingStore(true);
-    try {
-      const response = await fetch('/api/cms/sites', { method: 'POST', credentials: 'same-origin',
-        headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, slug }) });
-      const data = await response.json() as {site?:MerchantStore;error?:string};
-      if (!response.ok || !data.site?.id) throw new Error(data.error || 'Could not create store');
-      setMerchantStores(previous => [...previous, data.site!]);
-      setCreateStoreOpen(false);
-      setCreateStoreName('');
-      toast.success('Store created');
-      // The returned identity is authorized by the server. Do not guess a slug.
-      try { sessionStorage.setItem('agentsam.cms.selected-site.v1', data.site.id); } catch {}
-      setSelectedMerchantStoreId(data.site.id);
-      go('/admin/pages?site_id=' + encodeURIComponent(data.site.id));
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not create store'); }
-    finally { setCreatingStore(false); }
-  };
-
   const [globalAssistantFocused, setGlobalAssistantFocused] = useState(false);
   const [globalAssistantWidth, setGlobalAssistantWidth] = useState(390);
   const hydratedRef = useRef(state.hydrated);
@@ -670,7 +641,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           onSelect:() => selectMerchantStore(store.id),
         })),
         {id:'store-create',label:'Create store',icon:<Plus />,separatorBefore:merchantStores.length > 0,
-          onSelect:() => setCreateStoreOpen(true)},
+          onSelect:() => window.location.assign('/start')},
       ]},
       {id:'profile-image',label:'Profile image',icon:<PawPrint />,onSelect:() => { setAvatarDraft(accountAvatarUrl || user?.profileImageUrl || ''); setAvatarDialogOpen(true); }},
       {id:'settings',label:'Settings',icon:<Settings />,onSelect:() => go('/admin/settings/general')},
@@ -755,21 +726,6 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         <AgentSamLaunchDock />
       </div><CliDrawer /><CommandPalette />
       <ChatShareDialog open={sharing} onOpenChange={setSharing} chat={chat ?? null} />
-      <Dialog open={createStoreOpen} onOpenChange={setCreateStoreOpen}><DialogContent>
-        <DialogTitle>Create store</DialogTitle>
-        <DialogDescription>Create a site owned by your account, with an editable starter storefront. You can choose its theme after setup.</DialogDescription>
-        <form className="flex flex-col gap-4" onSubmit={event => { event.preventDefault(); void createMerchantStore(); }}>
-          <label className="flex flex-col gap-2 text-sm">Store name
-            <input autoFocus required maxLength={120} type="text" value={createStoreName}
-              onChange={event => setCreateStoreName(event.target.value)} placeholder="My store"
-              className="rounded-md border border-border bg-background px-3 py-2 text-foreground outline-offset-2" />
-          </label>
-          <button type="submit" disabled={creatingStore || !createStoreName.trim() || !/[a-z0-9]/i.test(createStoreName)}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-            {creatingStore ? 'Creating…' : 'Create store'}
-          </button>
-        </form>
-      </DialogContent></Dialog>
       <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}><DialogContent>
         <DialogTitle>Profile image</DialogTitle>
         <DialogDescription>Select an image from your authorized Brand/Media assets, then paste its image URL here. Saved against your signed-in user, not as an installation default.</DialogDescription>
