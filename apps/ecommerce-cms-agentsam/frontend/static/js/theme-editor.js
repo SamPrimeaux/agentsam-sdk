@@ -32,9 +32,10 @@
   let pagePickerCategory = null;
   let activeSectionKey = null;
   let activeSectionOwner = slug;
-  let selectedTheme = 'heuristic';
+  let selectedTheme = null;
+  let primaryThemeSlug = null;
   let persistedThemeVersion = 0;
-  let installedThemeSlugs = new Set(['heuristic']);
+  let installedThemeSlugs = new Set();
   let previewBlobUrl = null;
   let siteDraftTouched = false;
   let liveUnimported = false;
@@ -472,44 +473,20 @@
   }
 
   function themeCatalog() {
-    // Installed projects own a derived registry of reusable source sections.
-    // Do not offer portable/native templates that the project adapter cannot
-    // install: that was the cause of theme_section_template_not_found.
-    if (host) {
-      return Object.entries(window.SECTION_SCHEMAS?.[slug] || {})
-        .filter(function([key, definition]) {
-          return /^(source-|custom-|stock-)/.test(key) && definition?.capabilities?.insert === true;
-        })
-        .map(function([key, definition]) {
-          return { id: key, label: definition.label || humanize(key),
-            type: definition.sourceKind || 'content-section', templateKey: key,
-            source: key.startsWith('stock-') ? 'Platform stock' :
-              definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
-            preset: key, category: key.startsWith('stock-') ? 'Platform stock' : 'Theme sections',
-            previewHtml: definition.previewHtml || '' };
-        });
-    }
-    // CMS pages use the published portable renderer catalog, not fixture labels.
-    const portable = window.ThemePortableSections?.catalog() || [];
-    const registry = window.SECTION_SCHEMAS?.[slug] || {};
-    const native = Object.entries(registry)
-      .filter(function([key]) {
-        // A legacy descriptor alone does NOT prove a renderer exists.
-        // Offer native templates only after finding their rendered source
-        // section in the current storefront. This works for arbitrary
-        // merchant pages rather than handpicked home/shop section names.
-        try {
-          const doc = byId('theme-preview')?.contentDocument;
-          return Boolean(doc?.querySelector(
-            '[data-cms-section="' + CSS.escape(key) + '"], [data-section-id="' + CSS.escape(key) + '"]'
-          ));
-        } catch { return false; }
-      })
-      .map(function([key, definition]) {
-        return { id: 'heuristic/' + key, label: definition.label || humanize(key),
-          type: key, templateKey: key, source: 'heuristic', preset: 'heuristic/' + key };
-      });
-    return [...native, ...portable];
+    // This picker shows only installed implementations declared insertable
+    // by the selected theme's runtime registry.
+    const schemas = window.SECTION_SCHEMAS?.[slug] || {};
+    const native = Object.entries(schemas)
+      .filter(([,definition]) => definition?.capabilities?.insert === true)
+      .map(([key,definition]) => ({
+        id:key, label:definition.label || humanize(key),
+        type:definition.sourceKind || 'section', templateKey:key,
+        preset:definition.preset || key,
+        source:definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
+        category:definition.category || 'Theme sections',
+        previewHtml:definition.previewHtml || '',
+      }));
+    return host ? native : [...native,...(window.ThemePortableSections?.catalog() || [])];
   }
 
   async function setTheme(nextTheme) {
@@ -560,14 +537,16 @@
       button.title = 'This draft theme workspace does not publish pages directly. Publish the reviewed theme from Online Store.';
       return;
     }
-    const sceneOnly = slug === 'bridge-fly';
-    const previewOnly = selectedTheme !== 'heuristic' || sceneOnly;
+    // A publish button requires verified capability from the host or the
+    // selected active, installed site theme. Never infer it from a slug.
+    const previewOnly = host
+      ? host.adapter.capabilities?.publish !== true
+      : !selectedTheme || selectedTheme !== primaryThemeSlug ||
+        !installedThemeSlugs.has(selectedTheme);
     button.disabled = previewOnly || liveUnimported;
-    button.title = sceneOnly
-      ? 'Scene source preview only. A storefront publication adapter is not approved.'
-      : previewOnly
-        ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
-        : liveUnimported ? 'Import the live storefront before publishing.' : 'Publish the current CMS page and changed global sections';
+    button.title = previewOnly ? 'Publishing is unavailable for this preview or draft.'
+      : liveUnimported ? 'Import the live storefront before publishing.'
+        : 'Publish the current CMS page and changed global sections';
   }
 
   function currentSection() {
