@@ -370,9 +370,9 @@
       "commands": [],
       "evidence": {
         "directory": "packages/agentsam-cms",
-        "host_integration": "not-verified",
+        "host_integration": "pending-live-host-adapter-verification",
         "readme": "packages/agentsam-cms/README.md",
-        "runtime_proof": "local-sqlite-and-cleanroom",
+        "runtime_proof": "pure-domain-and-host-contract-tests",
         "tests": [
           "packages/agentsam-cms/test/standalone.test.mjs",
           "test/integration/sam-cms-machine.integration.test.mjs"
@@ -386,7 +386,7 @@
       "id": "agentsam-cms",
       "install": [
         {
-          "command": "npm install ./packages/agentsam-cms-0.1.0.tgz",
+          "command": "npm install @inneranimalmedia/agentsam-cms",
           "package": "@inneranimalmedia/agentsam-cms",
           "type": "npm"
         }
@@ -396,7 +396,7 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-cms",
-      "purpose": "Canonical merchant CMS operations, page/theme lifecycle and approved publication via the host's existing site-first persistence; no SQLite bootstrap or SDK-owned schema.",
+      "purpose": "Canonical portable CMS operations for ecommerce-cms-agentsam; trusted site-first storage, themes and publication; zero SDK DDL or local database provisioning.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-cms",
@@ -418,7 +418,7 @@
         "Installing CMS capabilities inside a standalone Ecommerce or desktop application",
         "Resolving CMS definitions, preview, revision history and explicit publication"
       ],
-      "version": "0.1.0"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
