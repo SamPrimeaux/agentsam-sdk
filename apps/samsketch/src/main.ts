@@ -864,8 +864,7 @@ function applyMood(id:MoodId,persist=true,applyDefaults=true){
  const mood=MOODS.find(item=>item.id===id);if(!mood)return;
  if(persist)snapshot();
  const previous={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings};
- const hemiHsl=new THREE.Color(mood.ambientColor).getHSL({h:0,s:0,l:0});
- doc.sceneSettings={...previous,mood:id,...(applyDefaults?{keyIntensity:mood.keyIntensity,ambientIntensity:mood.ambientIntensity,fogDensity:mood.fogDensity,ambientHue:hemiHsl.h*360,ambientSaturation:hemiHsl.s*100}:{})};
+ doc.sceneSettings={...previous,mood:id,...(applyDefaults?{keyIntensity:mood.keyIntensity,ambientIntensity:mood.ambientIntensity,fogDensity:mood.fogDensity,ambientHue:mood.ambientHue,ambientSaturation:mood.ambientSaturation}:{})};
  light.color.set(mood.keyColor);light.intensity=doc.sceneSettings.keyIntensity;
  fillLight.color.set(mood.fillColor);fillLight.intensity=mood.fillIntensity;
  ambientLight.color.set(mood.ambientColor);ambientLight.groundColor.set(mood.ambientGroundColor);ambientLight.intensity=doc.sceneSettings.ambientIntensity;
