@@ -1057,7 +1057,7 @@ window.addEventListener("samsketch:settings.action",event=>{
   }
   case "direct.draft":{
    const prompt="Draft a concise SamSpeaks voiceover for the current scene. Voice direction: "+(detail.voiceStyle||"Warm cinematic narrator")+". Mode: "+(detail.voiceMode||"single")+". Existing script: "+(detail.script||"Create a new script.")+". Return the script only.";
-   sendHostMessage("assistant.request",{prompt,skill:"Write",context:studioContext()});announce("Voiceover brief sent to AgentSam.");break;
+   sendHostMessage("assistant.request",{prompt,skill:"Draft",context:studioContext()});announce("Voiceover brief sent to AgentSam.");break;
   }
   case "direct.speak":void speakScript(detail.script||"",detail.voiceName||"Kore",detail.voiceStyle||"");break;
   case "direct.stop":if("speechSynthesis" in window)window.speechSynthesis.cancel();break;
