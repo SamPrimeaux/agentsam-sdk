@@ -906,7 +906,7 @@
   }
 
   function discoverUnmanagedSections() {
-    if (selectedTheme !== 'heuristic') return;
+    if ((!selectedTheme || selectedTheme !== primaryThemeSlug)) return;
     let doc;
     try { doc = byId('theme-preview').contentDocument; } catch { return; }
     if (!doc || doc.documentElement?.getAttribute('data-cms-page') !== slug) return;
@@ -2717,7 +2717,7 @@
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
 
-    if (selectedTheme !== 'heuristic') {
+    if ((!selectedTheme || selectedTheme !== primaryThemeSlug)) {
       const runtime = window.ThemeStudioPreview;
       if (!runtime || !runtime.render) return;
       let html;
@@ -2738,7 +2738,7 @@
     }
 
     iframe.contentWindow.postMessage({
-      type: 'fnf-cms-preview',
+      type: 'agentsam:cms-preview:v1',
       slug: slug,
       sections: (pageData.sections || []).map(function(section) {
         return { key: section.key, sort_order: section.sort_order, status: section.status, content: section.content || {} };
@@ -3099,7 +3099,7 @@
         if (!event.relatedTarget?.closest?.('[data-cms-block], [data-cms-section], [data-section-id]')) hoverEditorNode(null);
       });
       doc.addEventListener('click', function(event) {
-        if (host && !window.__fnfGlobalInspectMode) {
+        if (host && !window.__agentsamCmsGlobalInspectMode) {
           const link = event.target?.closest?.('a[href]');
           if (link && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
             let destination = null;
@@ -3116,7 +3116,7 @@
             }
           }
         }
-        if (!inspectionEnabled || window.__fnfGlobalInspectMode) return;
+        if (!inspectionEnabled || window.__agentsamCmsGlobalInspectMode) return;
         if (event.target?.closest?.('[data-doc-menu],[data-doc-copy],[data-doc-filter]')) return;
         const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-block], [data-cms-section], [data-section-id]');
         if (!target) return;
@@ -3245,7 +3245,7 @@
       }
       return;
     }
-    if (selectedTheme !== 'heuristic') {
+    if ((!selectedTheme || selectedTheme !== primaryThemeSlug)) {
       pushLocalPreview();
       return;
     }
@@ -3273,9 +3273,7 @@
     byId('theme-preview').removeAttribute('srcdoc');
     byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
     byId('te-open-tab').href = liveUnimported ? route : route + separator + 'preview=1';
-    byId('te-preview-label').textContent = slug === 'bridge-fly'
-      ? 'Aviation scene · authenticated preview only'
-      : liveUnimported ? 'Live storefront — source inspection' : 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
+    byId('te-preview-label').textContent = liveUnimported ? 'Live storefront — source inspection' : 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
   }
 
   function schedulePreview() {
@@ -3333,7 +3331,7 @@
       liveSourceCaptured = false;
       liveCapturedSections = [];
       unmanagedLiveSections = [];
-      if (liveUnimported) selectedTheme = 'heuristic';
+      if (liveUnimported) selectedTheme = primaryThemeSlug;
       byId('te-import-live').hidden = Boolean(host) || (!missingSourceSections.length && !liveUnimported);
       if (!liveUnimported && missingSourceSections.length) {
         byId('te-import-live').textContent = 'Stage ' + missingSourceSections.length + ' missing sections';
@@ -3537,7 +3535,7 @@
       setNote('Import the existing live page before publishing any CMS draft.', 'error');
       return;
     }
-    if (selectedTheme !== 'heuristic') {
+    if ((!selectedTheme || selectedTheme !== primaryThemeSlug)) {
       setNote('This theme is visual-preview only. Publication is disabled until its renderer and rollback pass acceptance.', 'error');
       return;
     }
@@ -3619,7 +3617,7 @@
       activeSectionKey = result.section_key;
       activeBlockId = null;
       activeFieldKey = null;
-      setNote('Section added from ' + humanize(selectedTheme) + '.', 'success');
+      setNote('Section added to this draft.', 'success');
       await loadPage();
       selectSection(result.section_key, null, true, slug);
     } catch (error) {
@@ -3897,9 +3895,11 @@
   async function loadThemeIdentity() {
     try {
       if (host && host.adapter && typeof host.adapter.getThemeIdentity === 'function') {
-        selectedTheme = 'heuristic';
-        installedThemeSlugs = new Set(['heuristic']);
-        applyThemeIdentity(await host.adapter.getThemeIdentity());
+        const identity = await host.adapter.getThemeIdentity();
+        selectedTheme = identity?.slug || host.projectId || null;
+        primaryThemeSlug = selectedTheme;
+        installedThemeSlugs = new Set(selectedTheme ? [selectedTheme] : []);
+        applyThemeIdentity(identity);
         const switcher = document.querySelector('.te-theme-switcher');
         if (switcher) switcher.hidden = true;
         const menu = byId('te-theme-menu');
@@ -3912,7 +3912,8 @@
       if (!catalog.ok) throw new Error(catalog.error || 'Installed theme catalog unavailable');
       installedThemeSlugs = new Set((catalog.themes || []).map(function(theme) { return theme.slug; }));
       persistedThemeVersion = Number(catalog.content_version || 0);
-      selectedTheme = catalog.preview_theme?.slug || catalog.active_theme?.slug || 'heuristic';
+      primaryThemeSlug = catalog.active_theme?.slug || null;
+      selectedTheme = catalog.preview_theme?.slug || primaryThemeSlug;
       document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
         const installed = installedThemeSlugs.has(button.dataset.themePreview);
         button.disabled = !installed;
@@ -4424,7 +4425,7 @@
     // Alternate previews and the site-owned HTML source adapter use srcdoc.
     // Reassigning srcdoc during its own iframe load causes a navigation loop
     // and a blank canvas. Only the legacy live Heuristic iframe needs this.
-    if (!host && selectedTheme === 'heuristic') {
+    if (!host && (selectedTheme && selectedTheme === primaryThemeSlug)) {
       if (liveUnimported) {
         if (!dirty) captureLiveSource();
         else pushLocalPreview();
