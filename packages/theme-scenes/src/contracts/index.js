@@ -148,12 +148,22 @@
  */
 
 /**
+ * @typedef {object} SceneAnimationBinding
+ * @property {string} id  // animation id inside the .iamscene.json document
+ * @property {'autoplay'|'scroll'|'manual'} playback
+ * @property {number} [startProgress]  // normalized page progress at animation time 0
+ * @property {number} [endProgress]    // normalized page progress at animation duration
+ */
+
+/**
  * @typedef {object} SectionContent
  * @property {string} id
  * @property {string} scene  // SceneKind id
  * @property {SceneTheme} [theme]
  * @property {SceneMotion} [motion]
  * @property {ScrollBehavior} [scroll]
+ * @property {MediaRef} [sceneDocument]  // portable .iamscene.json asset reference
+ * @property {SceneAnimationBinding} [sceneAnimation]
  * @property {string} [visual]  // visual primitive id
  * @property {string} [demo]    // demo adapter id
  * @property {SectionGroup[]} [groups]
@@ -271,6 +281,36 @@ export function validatePageContent(page) {
   for (const section of page?.sections || []) {
     if (!section.id) errors.push({ code: 'section_id_required' });
     if (!section.scene) errors.push({ code: 'scene_required', section: section.id });
+    if (section.sceneDocument != null) {
+      const documentRef = section.sceneDocument;
+      if (!documentRef || typeof documentRef !== 'object' || Array.isArray(documentRef) ||
+          (typeof documentRef.assetRole !== 'string' && typeof documentRef.ref !== 'string')) {
+        errors.push({ code: 'scene_document_invalid', section: section.id });
+      }
+    }
+    if (section.sceneAnimation != null) {
+      const binding = section.sceneAnimation;
+      if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
+        errors.push({ code: 'scene_animation_invalid', section: section.id });
+      } else {
+        if (!section.sceneDocument) errors.push({ code: 'scene_document_required', section: section.id });
+        if (typeof binding.id !== 'string' || !binding.id.trim()) {
+          errors.push({ code: 'scene_animation_id_required', section: section.id });
+        }
+        if (!['autoplay', 'scroll', 'manual'].includes(binding.playback)) {
+          errors.push({ code: 'scene_animation_playback_invalid', section: section.id });
+        }
+        if (binding.playback === 'scroll' && (!section.scroll || section.scroll.mode === 'natural')) {
+          errors.push({ code: 'scene_scroll_behavior_required', section: section.id });
+        }
+        const start = binding.startProgress ?? 0;
+        const end = binding.endProgress ?? 1;
+        if (!Number.isFinite(start) || !Number.isFinite(end) ||
+            start < 0 || end > 1 || end <= start) {
+          errors.push({ code: 'scene_animation_progress_range_invalid', section: section.id });
+        }
+      }
+    }
     for (const group of section.groups || []) {
       for (const block of group.blocks || []) {
         if (!BLOCK_KINDS.includes(block.kind)) {
