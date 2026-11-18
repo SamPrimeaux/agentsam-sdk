@@ -30,7 +30,7 @@ export async function exportSceneAsGlb(
     filenameBase
       .toLowerCase()
       .replace(/[^a-z0-9-_]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'samscenes-export';
+      .replace(/^-+|-+$/g, '') || 'samspeaks-export';
 
   const result = await exporter.parseAsync(objects, {
     binary: true,

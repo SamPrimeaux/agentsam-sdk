@@ -414,7 +414,7 @@ camera.position.set(11,6.2,13.5);
 controls.target.set(0,0,0);
 const light=new THREE.DirectionalLight("#ffffff",3.5);light.position.set(-4,10,9);light.castShadow=true;light.shadow.mapSize.set(2048,2048);light.shadow.camera.left=-12;light.shadow.camera.right=12;light.shadow.camera.top=12;light.shadow.camera.bottom=-12;scene.add(light);
 const fillLight=new THREE.DirectionalLight("#b1c9ff",1.4);fillLight.position.set(6,4,-5);scene.add(fillLight);
-const ambientLight=new THREE.AmbientLight("#e8f1ff",2.1);scene.add(ambientLight);
+const ambientLight=new THREE.HemisphereLight("#e8f1ff","#63708a",2.1);scene.add(ambientLight);
 const stage=new THREE.Group();scene.add(stage);
 const brushGroup=new THREE.Group();brushGroup.name="SamSpeaks 3D Brush";scene.add(brushGroup);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:"#8190ad",opacity:.13}));floor.rotation.x=-Math.PI/2;floor.position.y=-2.15;floor.receiveShadow=true;scene.add(floor);
@@ -427,7 +427,8 @@ let surfaceRoughness=doc.sceneSettings?.roughness??.82,surfaceMetalness=doc.scen
 let fogEnabled=doc.sceneSettings?.fogEnabled??false,fogDensity=doc.sceneSettings?.fogDensity??.012,currentBackdrop="blue",shadowsEnabled=doc.sceneSettings?.shadowsEnabled??true;
 let selectionOutlineEnabled=doc.sceneSettings?.selectionOutline??true,reducedMotionOverride=doc.sceneSettings?.reducedMotion??false;
 let brushEnabled=doc.sceneSettings?.brushEnabled??false;
-let cameraTransition:{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number}|null=null;
+let armedPropType:SceneryPropId|null=null;
+let cameraTransition:{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number;mode:TransitionId}|null=null;
 let storyboardTimer:number|null=null,storyboardRun=0;
 const hitRay=new THREE.Raycaster(),hitPointer=new THREE.Vector2();
 const tempCanvas=document.createElement("canvas");tempCanvas.width=1024;tempCanvas.height=640;
@@ -442,7 +443,7 @@ function rounded(width:number,height:number,radius:number,depth:number,color:str
 }
 function material(color:string,look:Look,finish?:FinishId):THREE.MeshStandardMaterial|THREE.MeshPhysicalMaterial {
  const preset=finish?FINISHES.find(item=>item.id===finish):undefined;
- if(preset)return new THREE.MeshPhysicalMaterial({color,roughness:surfaceRoughness,metalness:surfaceMetalness,iridescence:preset.iridescence,iridescenceIOR:1.3,clearcoat:.28,clearcoatRoughness:Math.max(.05,preset.roughness),emissive:preset.emissive,emissiveIntensity:preset.emissiveIntensity,side:THREE.DoubleSide});
+ if(preset)return new THREE.MeshPhysicalMaterial({color,roughness:surfaceRoughness,metalness:surfaceMetalness,anisotropy:preset.anisotropy,iridescence:preset.iridescence,iridescenceIOR:1.3,clearcoat:.28,clearcoatRoughness:Math.max(.05,preset.roughness),emissive:preset.emissive,emissiveIntensity:preset.emissiveIntensity,side:THREE.DoubleSide});
  if(look==="glass")return new THREE.MeshPhysicalMaterial({color,roughness:Math.max(.04,surfaceRoughness*.15),metalness:surfaceMetalness*.25,transmission:.6,thickness:.6,transparent:true,opacity:.88,side:THREE.DoubleSide});
  if(look==="metal")return new THREE.MeshStandardMaterial({color,roughness:Math.max(.04,Math.min(.35,surfaceRoughness*.26)),metalness:Math.max(.6,surfaceMetalness)});
  return new THREE.MeshStandardMaterial({color,roughness:surfaceRoughness,metalness:surfaceMetalness*.15});
@@ -593,13 +594,22 @@ function clearStage(){
  stage.clear();roots.clear();
 }
 function renderBrushStrokes(){
- brushGroup.traverse(object=>{if(object instanceof THREE.Line){object.geometry.dispose();const material=object.material;if(material instanceof THREE.Material)material.dispose();}});
+ brushGroup.traverse(object=>{
+  if(object instanceof THREE.Mesh||object instanceof THREE.Line){
+   object.geometry.dispose();
+   const materials=Array.isArray(object.material)?object.material:[object.material];
+   materials.forEach(material=>material.dispose());
+  }
+ });
  brushGroup.clear();
  for(const stroke of doc.brushStrokes||[]){
   if(stroke.points.length<2)continue;
-  const geometry=new THREE.BufferGeometry().setFromPoints(stroke.points.map(point=>new THREE.Vector3(...point)));
-  const line=new THREE.Line(geometry,new THREE.LineBasicMaterial({color:stroke.color,linewidth:stroke.width,transparent:true,opacity:.92}));
-  line.name="Brush stroke · "+stroke.id;brushGroup.add(line);
+  const points=stroke.points.map(point=>new THREE.Vector3(...point));
+  const curve=new THREE.CatmullRomCurve3(points);
+  const geometry=new THREE.TubeGeometry(curve,Math.max(12,points.length*4),Math.max(.012,stroke.width*.012),8,false);
+  const material=new THREE.MeshPhysicalMaterial({color:stroke.color,emissive:stroke.color,emissiveIntensity:.35,metalness:.68,roughness:.22,clearcoat:.8,clearcoatRoughness:.1});
+  const ribbon=new THREE.Mesh(geometry,material);
+  ribbon.name="SamSpeaks paint ribbon · "+stroke.id;ribbon.castShadow=true;ribbon.receiveShadow=false;brushGroup.add(ribbon);
  }
 }
 function redraw(){
@@ -625,6 +635,8 @@ function brushPointFromEvent(event:PointerEvent):Vec3|null{
  const bounds=renderer.domElement.getBoundingClientRect();
  hitPointer.set((event.clientX-bounds.left)/bounds.width*2-1,-(event.clientY-bounds.top)/bounds.height*2+1);
  hitRay.setFromCamera(hitPointer,camera);
+ const surfaceHits=hitRay.intersectObjects(stage.children,true);
+ if(surfaceHits.length){const point=surfaceHits[0].point;return [point.x,point.y,point.z];}
  const point=new THREE.Vector3();
  const plane=new THREE.Plane(new THREE.Vector3(0,1,0),2.05);
  const hit=hitRay.ray.intersectPlane(plane,point);
@@ -663,6 +675,16 @@ renderer.domElement.addEventListener("pointerup",e=>{
  const bounds=renderer.domElement.getBoundingClientRect();
  hitPointer.set((e.clientX-bounds.left)/bounds.width*2-1,-(e.clientY-bounds.top)/bounds.height*2+1);
  hitRay.setFromCamera(hitPointer,camera);
+ if(armedPropType){
+  const point=new THREE.Vector3();
+  const ground=new THREE.Plane(new THREE.Vector3(0,1,0),2.05);
+  const hitGround=hitRay.ray.intersectPlane(ground,point);
+  if(hitGround){
+   const type=armedPropType;armedPropType=null;
+   addSceneryProp(type,[Math.max(-8,Math.min(8,point.x)),-2.0,Math.max(-8,Math.min(8,point.z))]);
+   return;
+  }
+ }
  const hit=resolveSceneHit(hitRay.intersectObjects(stage.children,true));
  selectedId=hit?.itemId||"";
  selectedPartId=hit?.partId||null;
@@ -743,7 +765,21 @@ renderer.domElement.addEventListener("wheel",e=>{
  if(mode!=="story")return;e.preventDefault();storyTransition=null;applyProgress(storyProgress+e.deltaY/560);
  const index=Math.round(storyProgress);if(index!==doc.chapter){doc.chapter=index;renderChapters();store();}
 },{passive:false});
-function animate(){requestAnimationFrame(animate);if(storyTransition){const t=Math.min(1,(performance.now()-storyTransition.start)/storyTransition.duration);const smooth=t*t*(3-2*t);applyProgress(storyTransition.from+(storyTransition.to-storyTransition.from)*smooth);if(t>=1)storyTransition=null;}if(cameraTransition){const t=Math.min(1,(performance.now()-cameraTransition.start)/cameraTransition.duration);const smooth=t*t*(3-2*t);camera.position.lerpVectors(cameraTransition.fromPosition,cameraTransition.toPosition,smooth);controls.target.lerpVectors(cameraTransition.fromTarget,cameraTransition.toTarget,smooth);camera.lookAt(controls.target);if(t>=1)cameraTransition=null;}if(sceneAutoRotate&&!reducedMotionOverride&&!matchMedia("(prefers-reduced-motion: reduce)").matches)stage.rotation.y+=rotationSpeed;controls.update();selectedHelper?.update();renderer.render(scene,camera);}
+function animate(){requestAnimationFrame(animate);if(storyTransition){const t=Math.min(1,(performance.now()-storyTransition.start)/storyTransition.duration);const smooth=t*t*(3-2*t);applyProgress(storyTransition.from+(storyTransition.to-storyTransition.from)*smooth);if(t>=1)storyTransition=null;}if(cameraTransition){
+ const t=Math.min(1,(performance.now()-cameraTransition.start)/cameraTransition.duration);
+ const smooth=cameraTransition.mode==="dolly"?1-Math.pow(1-t,3):t*t*(3-2*t);
+ const position=new THREE.Vector3().lerpVectors(cameraTransition.fromPosition,cameraTransition.toPosition,smooth);
+ if(cameraTransition.mode==="orbit"){
+  const offset=position.clone().sub(cameraTransition.toTarget);
+  offset.applyAxisAngle(new THREE.Vector3(0,1,0),Math.sin(t*Math.PI)*.34);
+  position.copy(cameraTransition.toTarget).add(offset);
+ }else if(cameraTransition.mode==="crane"){
+  position.y+=Math.sin(t*Math.PI)*1.25;
+ }
+ camera.position.copy(position);
+ controls.target.lerpVectors(cameraTransition.fromTarget,cameraTransition.toTarget,smooth);
+ camera.lookAt(controls.target);if(t>=1)cameraTransition=null;
+}if(sceneAutoRotate&&!reducedMotionOverride&&!matchMedia("(prefers-reduced-motion: reduce)").matches)stage.rotation.y+=rotationSpeed;controls.update();selectedHelper?.update();renderer.render(scene,camera);}
 animate();
 
 function sourceParts(item:Item):string[]{
@@ -831,7 +867,7 @@ function applyMood(id:MoodId,persist=true,applyDefaults=true){
  doc.sceneSettings={...previous,mood:id,...(applyDefaults?{keyIntensity:mood.keyIntensity,ambientIntensity:mood.ambientIntensity,fogDensity:mood.fogDensity}:{})};
  light.color.set(mood.keyColor);light.intensity=doc.sceneSettings.keyIntensity;
  fillLight.color.set(mood.fillColor);fillLight.intensity=mood.fillIntensity;
- ambientLight.color.set(mood.ambientColor);ambientLight.intensity=doc.sceneSettings.ambientIntensity;
+ ambientLight.color.set(mood.ambientColor);ambientLight.groundColor.set(mood.ambientGroundColor);ambientLight.intensity=doc.sceneSettings.ambientIntensity;
  renderer.toneMappingExposure=mood.exposure;
  fogDensity=doc.sceneSettings.fogDensity;
  setBackdrop(mood.backdrop);
@@ -867,7 +903,7 @@ function applyCameraShot(id:CameraShotId,transition?:TransitionId,persist=true){
  if(duration===0||reducedMotionOverride||matchMedia("(prefers-reduced-motion: reduce)").matches){
   cameraTransition=null;camera.position.copy(toPosition);controls.target.copy(toTarget);camera.lookAt(toTarget);controls.update();
  }else{
-  cameraTransition={fromPosition:camera.position.clone(),toPosition,fromTarget:controls.target.clone(),toTarget,start:performance.now(),duration};
+  cameraTransition={fromPosition:camera.position.clone(),toPosition,fromTarget:controls.target.clone(),toTarget,start:performance.now(),duration,mode};
  }
  if(persist)store();
 }
@@ -886,6 +922,19 @@ function speakScript(script:string,voiceName="Kore",voiceStyle=""){
   utterance.onend=()=>resolve();utterance.onerror=()=>resolve();window.speechSynthesis.speak(utterance);
  });
 }
+function speakDirectedScript(script:string,voiceName="Kore",voiceStyle="",mode:"single"|"dual"="single"){
+ if(mode!=="dual")return speakScript(script,voiceName,voiceStyle);
+ const clean=script.replace(/<[^>]+>/g,"").replace(/\|yeah\||\|mhm\|/g,"").trim();
+ const tagged=clean.split(/(?=(?:Alex|Sam)\s*:)/i).filter(part=>part.trim());
+ const chunks=tagged.length>1?tagged:clean.split(/(?<=[.!?])\s+/).filter(part=>part.trim());
+ const secondary=voiceName==="Charon"?"Puck":"Charon";
+ return chunks.reduce<Promise<void>>(async(chain,part,index)=>{
+  await chain;
+  const isSecond=/^Sam\s*:/i.test(part)||(tagged.length<=1&&index%2===1);
+  const spoken=part.replace(/^(?:Alex|Sam)\s*:\s*/i,"");
+  await speakScript(spoken,isSecond?secondary:voiceName,voiceStyle);
+ },Promise.resolve());
+}
 function applyStoryboardBeat(beat:StoryBeat){
  applyMood(beat.mood,false);doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,explodeAmount:beat.explodeAmount};
  applyProgress(storyProgress);applyCameraShot(beat.cameraShot,beat.transitionType,false);
@@ -902,7 +951,7 @@ function playStoryboard(){
  const next=async()=>{
   if(token!==storyboardRun)return;
   const beat=beats[index];if(!beat){stopStoryboardPlayback();announce("SamSpeaks flow complete.");return;}
-  applyStoryboardBeat(beat);await speakScript(beat.script,beat.voiceName,beat.voiceStyle);
+  applyStoryboardBeat(beat);await speakDirectedScript(beat.script,beat.voiceName,beat.voiceStyle,beat.ttsMode);
   if(token!==storyboardRun)return;
   index++;storyboardTimer=window.setTimeout(()=>{void next();},450);
  };
@@ -977,7 +1026,7 @@ function applyStudioSetting(key:string,value:string|number|boolean){
   case "light.temperature":{
    const keyColor=value==="warm"?"#ffe1bf":value==="cool"?"#c9ddff":"#ffffff";
    const fillColor=value==="warm"?"#ffcfa0":value==="cool"?"#a8c5ff":"#b1c9ff";
-   light.color.set(keyColor);fillLight.color.set(fillColor);ambientLight.color.set(value==="warm"?"#fff0dc":value==="cool"?"#d7e5ff":"#e8f1ff");persist();break;
+   light.color.set(keyColor);fillLight.color.set(fillColor);ambientLight.color.set(value==="warm"?"#fff0dc":value==="cool"?"#d7e5ff":"#e8f1ff");ambientLight.groundColor.set(value==="warm"?"#2a1a12":value==="cool"?"#111a2a":"#63708a");persist();break;
   }
   case "light.ambientHue":settings.ambientHue=Number(value);ambientLight.color.setHSL(settings.ambientHue/360,settings.ambientSaturation/100,.72);persist();break;
   case "light.ambientSaturation":settings.ambientSaturation=Number(value);ambientLight.color.setHSL(settings.ambientHue/360,settings.ambientSaturation/100,.72);persist();break;
@@ -1041,14 +1090,14 @@ window.addEventListener("samsketch:settings.action",event=>{
    applyMood("studio",false);redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
   }
   case "light.reset":
-   snapshot();doc.sceneSettings={...doc.sceneSettings,keyLightAngle:DEFAULT_SCENE_SETTINGS.keyLightAngle,keyIntensity:DEFAULT_SCENE_SETTINGS.keyIntensity,ambientHue:DEFAULT_SCENE_SETTINGS.ambientHue,ambientSaturation:DEFAULT_SCENE_SETTINGS.ambientSaturation,ambientIntensity:DEFAULT_SCENE_SETTINGS.ambientIntensity,shadowSoftness:DEFAULT_SCENE_SETTINGS.shadowSoftness,fogEnabled:false,fogDensity:DEFAULT_SCENE_SETTINGS.fogDensity};
+   snapshot();doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,keyLightAngle:DEFAULT_SCENE_SETTINGS.keyLightAngle,keyIntensity:DEFAULT_SCENE_SETTINGS.keyIntensity,ambientHue:DEFAULT_SCENE_SETTINGS.ambientHue,ambientSaturation:DEFAULT_SCENE_SETTINGS.ambientSaturation,ambientIntensity:DEFAULT_SCENE_SETTINGS.ambientIntensity,shadowSoftness:DEFAULT_SCENE_SETTINGS.shadowSoftness,fogEnabled:false,fogDensity:DEFAULT_SCENE_SETTINGS.fogDensity};
    fogEnabled=false;fogDensity=doc.sceneSettings.fogDensity;light.position.set(Math.cos(doc.sceneSettings.keyLightAngle)*11,10,Math.sin(doc.sceneSettings.keyLightAngle)*11);
    light.shadow.radius=doc.sceneSettings.shadowSoftness;ambientLight.color.setHSL(doc.sceneSettings.ambientHue/360,doc.sceneSettings.ambientSaturation/100,.72);
    applyMood("studio",false);setBackdrop("studio");store();settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "story.add":break;
   case "story.play":playStoryboard();break;
   case "story.stop":stopStoryboardPlayback();announce("SamSpeaks flow stopped.");break;
-  case "story.speak":if(detail.beat)void speakScript(detail.beat.script,detail.beat.voiceName,detail.beat.voiceStyle);break;
+  case "story.speak":if(detail.beat)void speakDirectedScript(detail.beat.script,detail.beat.voiceName,detail.beat.voiceStyle,detail.beat.ttsMode);break;
   case "story.compose":{
    const prompt=(detail.prompt||"").trim();
    if(!prompt){announce("Describe the story you want SamSpeaks to compose.");break;}
@@ -1057,21 +1106,21 @@ window.addEventListener("samsketch:settings.action",event=>{
   }
   case "direct.draft":{
    const prompt="Draft a concise SamSpeaks voiceover for the current scene. Voice direction: "+(detail.voiceStyle||"Warm cinematic narrator")+". Mode: "+(detail.voiceMode||"single")+". Existing script: "+(detail.script||"Create a new script.")+". Return the script only.";
-   sendHostMessage("assistant.request",{prompt,skill:"Write",context:studioContext()});announce("Voiceover brief sent to AgentSam.");break;
+   sendHostMessage("assistant.request",{prompt,skill:"Draft",context:studioContext()});announce("Voiceover brief sent to AgentSam.");break;
   }
-  case "direct.speak":void speakScript(detail.script||"",detail.voiceName||"Kore",detail.voiceStyle||"");break;
+  case "direct.speak":void speakDirectedScript(detail.script||"",detail.voiceName||"Kore",detail.voiceStyle||"",detail.voiceMode==="dual"?"dual":"single");break;
   case "direct.stop":if("speechSynthesis" in window)window.speechSynthesis.cancel();break;
   case "inspo.attach":{
    const names=(detail.images||[]).join(", ");
    sendHostMessage("assistant.request",{prompt:"Use these local visual reference filenames as creative direction for the current SamSketch scene: "+names+". Ask me for the images if visual inspection is needed.",skill:"Scene",context:studioContext()});
    announce("Reference notes sent to AgentSam; image files remain local to this browser session.");break;
   }
-  case "stage.addProp":addSceneryProp(String(detail.prop) as SceneryPropId);break;
+  case "stage.addProp":armedPropType=String(detail.prop) as SceneryPropId;announce("Placement armed · click the scene floor to place "+(SCENERY_PROPS.find(item=>item.id===armedPropType)?.label||"prop")+". Press Escape to cancel.");break;
   case "stage.brush":applyStudioSetting("stage.brush",!brushEnabled);settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "stage.clearBrush":doc.brushStrokes=[];redraw();store();announce("3D brush strokes cleared.");break;
   case "simulation.play":startStoryPlayback();break;
   case "simulation.pause":stopStoryPlayback();break;
-  case "effects.reset":wireframe=false;showGrid=false;grid.visible=false;shadowsEnabled=true;renderer.shadowMap.enabled=true;light.castShadow=true;floor.visible=true;selectionOutlineEnabled=true;doc.sceneSettings={...doc.sceneSettings,wireframe:false,showGrid:false,shadowsEnabled:true,selectionOutline:true};redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings});break;
+  case "effects.reset":wireframe=false;showGrid=false;grid.visible=false;shadowsEnabled=true;renderer.shadowMap.enabled=true;light.castShadow=true;floor.visible=true;selectionOutlineEnabled=true;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,wireframe:false,showGrid:false,shadowsEnabled:true,selectionOutline:true};redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "global.resetLayout":appFrame.style.removeProperty("--library-width");appFrame.style.removeProperty("--inspector-width");appFrame.style.removeProperty("--timeline-height");timelinePane.hidden=false;appFrame.dataset.timelineHidden="false";appFrame.dataset.libraryHidden="false";appFrame.dataset.inspectorHidden="false";toggleTimeline(false);break;
   case "global.reset":resetStudioSettings();break;
  }
@@ -1092,10 +1141,10 @@ function addItem(kind:Kind){
  const colors:{[key in Kind]:string}={desktop:"#2c3a57",phone:"#477ae5",panel:"#e9adbe",orb:"#86c4dc",box:"#95b4e6",ring:"#91d7cf",cad:"#f0d2ad",template:"#ffffff",prop:"#8a9dd6"};
  mutate(()=>{const i=makeItem(kind,kind==="cad"?"CAD Boolean solid":kind.charAt(0).toUpperCase()+kind.slice(1),colors[kind],[((doc.items.length%4)-1.5)*1.4,.15,(Math.floor(doc.items.length/4)-.5)*1.5]);doc.items.push(i);selectedId=i.id;selectedPartId=null;});
 }
-function addSceneryProp(type:SceneryPropId){
+function addSceneryProp(type:SceneryPropId,position?:Vec3){
  const preset=SCENERY_PROPS.find(item=>item.id===type);if(!preset)return;
  snapshot();
- const item=makeItem("prop",preset.label,preset.color,[((doc.items.length%4)-1.5)*1.5,.15,(Math.floor(doc.items.length/4)-.5)*1.5]);
+ const item=makeItem("prop",preset.label,preset.color,position||[((doc.items.length%4)-1.5)*1.5,-2.0,(Math.floor(doc.items.length/4)-.5)*1.5]);
  item.propType=type;doc.items.push(item);selectedId=item.id;selectedPartId=null;
  renderAll();store();announce("Added SamSpeaks scenery prop · "+preset.label);
 }
@@ -1241,6 +1290,7 @@ document.addEventListener("keydown",e=>{
  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="d"){e.preventDefault();(document.getElementById("duplicate") as HTMLButtonElement|null)?.click();}
  if(e.key==="Delete"||e.key==="Backspace"){e.preventDefault();(document.getElementById("delete") as HTMLButtonElement|null)?.click();}
  if(e.key==="Escape"&&autoPlay!==null){window.clearInterval(autoPlay);autoPlay=null;}
+ if(e.key==="Escape"&&armedPropType){armedPropType=null;announce("Scenery placement cancelled.");}
 });
 document.getElementById("mode-select")!.classList.add("active");
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(button=>button.addEventListener("click",()=>setCameraView(button.dataset.view||"iso")));

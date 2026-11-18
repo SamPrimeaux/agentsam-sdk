@@ -70,6 +70,8 @@ test('SamSpeaks scene settings, PBR finishes, storyboard beats, props and brush 
  const prop={id:'prop-1',name:'Cypress Pine',kind:'prop',propType:'pine',position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:'#476a55',material:'metal',finish:'gold',visible:true};
  const valid={...sample(),sceneSettings,storyboard:[beat],brushStrokes:[{id:'stroke-1',points:[[0,0,0],[1,.2,1]],color:'#8d7eff',width:3}],items:[prop]};
  assert.equal(validateSamSketchDocument(valid),true);
+ const canonicalPresets={...valid,sceneSettings:{...sceneSettings,finish:'iridescent',mood:'sunset'},storyboard:[{...beat,mood:'sunset'}],items:[{...prop,finish:'iridescent'}]};
+ assert.equal(validateSamSketchDocument(canonicalPresets),true);
  assert.equal(validateSamSketchDocument({...valid,sceneSettings:{...sceneSettings,finish:'silver'}}),false);
  assert.equal(validateSamSketchDocument({...valid,items:[{...prop,propType:'unknown'}]}),false);
  assert.equal(validateSamSketchDocument({...valid,storyboard:[{...beat,explodeAmount:2}]}),false);

@@ -104,7 +104,7 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       choiceButtons("styles.finish", FINISHES.map(f => ({ id: f.id, label: f.label, color: f.swatchHex })), ss.finish) +
       '<span class="settings-section-label">ATMOSPHERE MOOD</span>' +
       choiceButtons("styles.mood", MOODS.map(m => ({ id: m.id, label: m.label, color: m.swatchHex })), ss.mood) +
-      '<div class="settings-section-head"><span class="settings-section-label">SCENERY MAKER</span><small>Insert a procedural prop into the scene</small></div>' +
+      '<div class="settings-section-head"><span class="settings-section-label">SCENERY MAKER</span><small>Click a prop to arm placement, then click the scene floor · Escape cancels</small></div>' +
       '<div class="sam-prop-grid">' + SCENERY_PROPS.map(p => '<button type="button" class="sam-prop-card" data-setting-action="stage.addProp" data-prop="' + p.id + '"><span class="sam-prop-swatch" style="background:' + p.color + '"></span><strong>' + p.label + '</strong><small>' + p.hint + '</small></button>').join("") + '</div>' +
       '<span class="settings-section-label">STAGE CONTROLS</span>' +
       range("Exploded view", "stage.explode", 0, 1, .05, ss.explodeAmount) +
@@ -125,7 +125,7 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       '<input id="sam-direct-style" class="settings-text-input" data-setting="direct.voicePreset" value="' + escapeHtml(ss.voiceStyle) + '" placeholder="Warm, articulate design documentary narrator" aria-label="Voice style direction">' +
       '<textarea id="sam-direct-script" class="settings-textarea" data-beat-field="script" rows="4" aria-label="Narration script">' + escapeHtml(beat?.script || "") + '</textarea>' +
       '<div class="sam-inline-actions">' + action("Draft script with AgentSam", "direct.draft", "sparkles") + action("Preview narration", "direct.speak", "waves") + action("Stop", "direct.stop", "stop") + '</div>' +
-      '<p class="settings-note">Narration preview uses the browser voice available on this device. SamSpeaks Gemini voice synthesis is a separate runtime integration.</p>';
+      '<p class="settings-note">Narration preview uses browser voices on this device; dual mode alternates the selected voice with a secondary Charon or Puck voice. Gemini voice synthesis remains in the SamSpeaks runtime.</p>';
   }
   return '<div class="settings-panel-intro"><strong>Creativity Flow</strong><span>Review the complete storyboard and play the camera and atmosphere sequence.</span></div>' +
     '<div class="sam-flow-toolbar">' + action("Add beat", "story.add", "plus") + action("Play flow", "story.play", "play") + action("Stop", "story.stop", "stop") + '</div>' +
@@ -288,6 +288,10 @@ export function mountSettingsDrawer(host: HTMLElement) {
     else {
       const prop = stateMap[key];
       if (prop) (state.sceneSettings as unknown as Record<string, SettingValue>)[prop] = value;
+    }
+    if (key === "direct.voicePreset") {
+      const styleInput = panelHost.querySelector<HTMLInputElement>("#sam-direct-style");
+      if (styleInput) styleInput.value = String(value);
     }
     if (key === "scene.profile") {
       const profile = SCENE_PROFILES.find(item => item.id === value);

@@ -10,8 +10,8 @@ const respond = (body,status=200,headers={}) => Response.json(body,{
 const MAX_DOCUMENT_BYTES=1_500_000;
 const MAX_SCENE_ASSET_BYTES=25_000_000;
 const KIND=new Set(['desktop','phone','panel','orb','box','ring','cad','template','prop']);
-const FINISH=new Set(['gold','titanium','obsidian','copper','prism']);
-const MOOD=new Set(['studio','golden','twilight','noir','dawn']);
+const FINISH=new Set(['gold','titanium','obsidian','copper','iridescent']);
+const MOOD=new Set(['studio','sunset','twilight','noir','dawn']);
 const PROFILE=new Set(['astrolabe','pavilion','vox','terrarium']);
 const CAMERA=new Set(['establishing','hero','closeup','lowAngle','overhead','leftProp','rightProp']);
 const TRANSITION=new Set(['glide','dolly','orbit','crane','cut']);
