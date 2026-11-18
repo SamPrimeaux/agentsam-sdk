@@ -46,7 +46,8 @@ const brandInfo={
   inneranimalmedia:{name:"InnerAnimalMedia",accent:"#31886c",primary:"#182a45",background:"#eaf5f3",sub:"Systematically strategic software."}
 };
 function makeItem(kind:Kind,name:string,color:string,position:Vec3,scale:Vec3=[1,1,1]):Item{
- return {id:crypto.randomUUID(),name,kind,color,position,scale,rotation:[0,0,0],material:"clay",visible:true,finish:doc?.sceneSettings?.surfaceTreatment==="metal"?doc?.sceneSettings?.finish:undefined};
+ const treatment=doc?.sceneSettings?.surfaceTreatment||"clay";
+ return {id:crypto.randomUUID(),name,kind,color,position,scale,rotation:[0,0,0],material:treatment,visible:true,finish:treatment==="metal"?doc?.sceneSettings?.finish:undefined};
 }
 // An empty scene must genuinely be empty. Authored examples are inserted only on request.
 function freshDoc(brand:Brand):Document {
