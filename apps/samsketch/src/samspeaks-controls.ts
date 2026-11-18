@@ -174,7 +174,7 @@ export const VOICE_STYLES = [
 ];
 export const DEFAULT_SCENE_SETTINGS: SceneSettings = {
   profile: "astrolabe", finish: "gold", mood: "studio", explodeAmount: 0, spinSpeed: .28,
-  keyLightAngle: .65, keyIntensity: 2.6, ambientHue: 210, ambientSaturation: 24,
+  keyLightAngle: .65, keyIntensity: 2.6, ambientHue: 214, ambientSaturation: 100,
   ambientIntensity: 1.15, shadowSoftness: 3, cameraShot: "establishing", transitionType: "glide",
   cameraDistance: 15, fieldOfView: 37, autoTour: false, brushEnabled: false, fogEnabled: false,
   fogDensity: .012, wireframe: false, showGrid: false, selectionOutline: true, shadowsEnabled: true,
