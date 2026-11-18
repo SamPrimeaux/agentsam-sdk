@@ -7,7 +7,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {listLocalThemeProducts} from '../../../packages/catalog/src/theme-products.mjs';
+import {listThemeStoreProducts} from '../../../packages/catalog/src/theme-products.mjs';
 
 const localStudio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = path.resolve(localStudio, '../ecommerce-cms-agentsam');
