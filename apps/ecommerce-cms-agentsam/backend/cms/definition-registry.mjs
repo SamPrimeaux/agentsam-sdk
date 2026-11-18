@@ -98,7 +98,9 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
   return (result.results || []).map(normalizeCmsDefinition);
 }
 
-// The catalog may advertise only host-executable renderer registrations.
+// cms_component_templates owns the picker, template metadata, default content,
+// preview and stock identity. cms_components is only a verification dependency:
+// an unavailable renderer must NEVER erase a legitimate catalog template.
 // D1 metadata, preview HTML and an R2 URL are not renderer implementations.
 function bundledCmsRendererAvailable(rendererKey) {
   if (!rendererKey) return false;
@@ -120,7 +122,11 @@ export function normalizeCmsCatalogTemplate(row, {hasRenderer = bundledCmsRender
   const dataBindings = parseJson(row.data_bindings_json, {});
   const preview = parseJson(row.preview_json, {});
   const metadata = parseJson(row.definition_metadata_json, {});
-  // These values MUST come from cms_components, never copied template metadata.
+  // The template declares its preferred renderer, while cms_components
+  // independently proves whether an implementation of that renderer exists.
+  // Never silently overwrite the template's declared choice with a different
+  // implementation that happens to share its definition.
+  const templateRendererKey = templateData.rendererKey || templateData.renderer_key || null;
   const rendererKey = row.resolved_renderer_key || null;
   const implementationStatus = row.resolved_implementation_status || "unverified";
   const implementationClass = metadata.implementationClass || metadata.implementation_class ||
@@ -144,12 +150,23 @@ export function normalizeCmsCatalogTemplate(row, {hasRenderer = bundledCmsRender
     definition.kind === row.item_type &&
     String(definition.version) === String(row.definition_version) &&
     definition.key === row.definition_key);
+  // Template picker availability belongs solely to the catalog record.
+  // Renderability is a separate host capability, not template ownership.
+  // Composite/source-backed templates remain discoverable for host import;
+  // they are not falsely described as published-ready without verified output.
+  const catalogAvailable = row.status === "active";
+  const definitionReady = definition?.status === "active" && definitionMatches;
+  const rendererMatchesTemplate = !templateRendererKey || templateRendererKey === rendererKey;
   const rendererVerified = Boolean(row.resolved_component_id &&
     implementationStatus === "verified" &&
     typeof rendererKey === "string" && rendererKey.length > 0);
-  const runtimeReady = rendererVerified && hasRenderer(rendererKey) === true;
-  const installable = row.status === "active" && definition?.status === "active" &&
-    definitionMatches && rendererVerified && runtimeReady;
+  const runtimeReady = rendererVerified && rendererMatchesTemplate && hasRenderer(rendererKey) === true;
+  const installable = Boolean(catalogAvailable && definitionReady && runtimeReady);
+  const unavailableReason = installable ? null :
+    !catalogAvailable ? "template_inactive" :
+    !definitionReady ? "definition_unavailable" :
+    !rendererMatchesTemplate ? "renderer_mismatch" :
+    !rendererVerified ? "renderer_unverified" : "renderer_not_loaded";
   return {
     id: row.id,
     sku: row.sku,
@@ -177,9 +194,14 @@ export function normalizeCmsCatalogTemplate(row, {hasRenderer = bundledCmsRender
     definitionKey: row.definition_key || null,
     definitionVersion: row.definition_version || null,
     definition,
+    templateRendererKey,
     rendererKey,
     implementationStatus,
     implementationClass,
+    catalogAvailable,
+    definitionReady,
+    rendererMatchesTemplate,
+    unavailableReason,
     componentId: row.resolved_component_id || null,
     deliveryMode: row.resolved_delivery_mode || null,
     sourceRef: row.resolved_source_ref || null,
@@ -193,10 +215,11 @@ export function normalizeCmsCatalogTemplate(row, {hasRenderer = bundledCmsRender
 }
 
 /**
- * Read the existing system component catalog. The catalog supplies names,
- * categories, compatibility and preview metadata; the actual renderer remains
- * the portable/native implementation registry. Draft or unmapped rows are
- * returned for diagnostics but are never marked installable.
+ * Read reusable picker templates from cms_component_templates (NOT
+ * cms_components). All nonarchived entries remain discoverable even when
+ * no renderer has been registered. cms_components supplies independent
+ * executable verification; it never owns a template SKU or its defaults.
+ * Installation readiness is conditional, not the existence of the template.
  */
 export async function listCmsComponentCatalog(env, accountId, filters = {}) {
   if (typeof accountId !== "string" || !accountId.trim()) {

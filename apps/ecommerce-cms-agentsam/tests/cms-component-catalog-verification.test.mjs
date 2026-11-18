@@ -5,7 +5,7 @@ import { normalizeCmsCatalogTemplate, listCmsComponentCatalog } from '../backend
 
 const base = {
   id:'t1',sku:'SKU-PORTABLE-HERO',template_name:'Sticky curtain',template_type:'section',
-  status:'active',item_type:'section',tags:'[]',template_data:'{"renderer_key":"fake:key","implementation_status":"implemented"}',
+  status:'active',item_type:'section',tags:'[]',template_data:'{"renderer_key":"revise/sticky-curtain","implementation_status":"implemented"}',
   editor_schema_json:'{}',compatibility_json:'{}',responsive_schema_json:'{}',data_bindings_json:'{}',
   preview_json:'{}',definition_key:'revise/sticky-curtain',definition_version:'1',
   resolved_definition_id:'d1',resolved_definition_kind:'section',
@@ -17,6 +17,9 @@ const base = {
 test('metadata cannot impersonate a verified cms_components renderer',()=>{
   const row=normalizeCmsCatalogTemplate(base);
   assert.equal(row.rendererKey,'revise/sticky-curtain');
+  assert.equal(row.templateRendererKey,'revise/sticky-curtain');
+  assert.equal(row.catalogAvailable,true);
+  assert.equal(row.definitionReady,true);
   assert.equal(row.implementationStatus,'verified');
   assert.equal(row.rendererVerified,true);
   assert.equal(row.runtimeReady,true);
@@ -31,11 +34,34 @@ test('metadata cannot impersonate a verified cms_components renderer',()=>{
   ]) assert.equal(normalizeCmsCatalogTemplate({...base,...change}).installable,false,
     JSON.stringify(change));
 });
+test('template-owned renderer hints cannot silently redirect to a different component',()=>{
+  const row=normalizeCmsCatalogTemplate({
+    ...base,template_data:'{"renderer_key":"another/implementation","default_content":{"title":"Custom template"}}'
+  });
+  assert.equal(row.catalogAvailable,true);
+  assert.equal(row.templateRendererKey,'another/implementation');
+  assert.equal(row.rendererKey,'revise/sticky-curtain');
+  assert.equal(row.rendererMatchesTemplate,false);
+  assert.equal(row.installable,false);
+  assert.equal(row.unavailableReason,'renderer_mismatch');
+  assert.equal(row.templateData.default_content.title,'Custom template');
+});
+test('the catalog keeps stock visible when a renderer has not been registered',()=>{
+  const row=normalizeCmsCatalogTemplate({...base,resolved_component_id:null,
+    resolved_renderer_key:null,resolved_implementation_status:null,
+    r2_key:'cms/stock/example.json'});
+  assert.equal(row.catalogAvailable,true);
+  assert.equal(row.installable,false);
+  assert.equal(row.unavailableReason,'renderer_mismatch');
+  assert.equal(row.r2Key,'cms/stock/example.json');
+  assert.equal(row.sku,'SKU-PORTABLE-HERO');
+});
 test('an unrecognized bundled implementation cannot become installable by metadata',()=>{
   const row=normalizeCmsCatalogTemplate({...base,resolved_renderer_key:'fake:key'});
   assert.equal(row.rendererVerified,true);
   assert.equal(row.runtimeReady,false);
   assert.equal(row.installable,false);
+  assert.equal(row.catalogAvailable,true);
 });
 test('the account-scoped catalog SQL reads actual component status, key and delivery',async()=>{
   let sql='',binds=[];
