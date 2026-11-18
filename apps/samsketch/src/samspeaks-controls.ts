@@ -56,6 +56,19 @@ export interface SceneSettings {
   showGrid: boolean;
   selectionOutline: boolean;
   shadowsEnabled: boolean;
+  surfaceTreatment: "clay" | "glass" | "metal";
+  roughness: number;
+  metalness: number;
+  loopPresentation: boolean;
+  voiceMode: TransitionMode;
+  voiceName: VoiceName;
+  voiceStyle: string;
+  environment: string;
+  horizonBrightness: number;
+  ambientShadowOpacity: number;
+  reducedMotion: boolean;
+  showProperties: boolean;
+  keepTimeline: boolean;
 }
 export interface StoryBeat {
   id: string;
@@ -163,6 +176,10 @@ export const DEFAULT_SCENE_SETTINGS: SceneSettings = {
   ambientIntensity: 1.15, shadowSoftness: 3, cameraShot: "establishing", transitionType: "glide",
   cameraDistance: 15, fieldOfView: 37, autoTour: false, brushEnabled: false, fogEnabled: false,
   fogDensity: .012, wireframe: false, showGrid: false, selectionOutline: true, shadowsEnabled: true,
+  surfaceTreatment: "metal", roughness: .22, metalness: .92, loopPresentation: false,
+  voiceMode: "single", voiceName: "Kore", voiceStyle: "Warm, cinematic documentary narrator",
+  environment: "studio", horizonBrightness: 1.12, ambientShadowOpacity: .23,
+  reducedMotion: false, showProperties: true, keepTimeline: true,
 };
 export const DEFAULT_STORYBOARD: StoryBeat[] = [
   { id: "beat-1", title: "01 · Wide Establishing", script: "Welcome to SamSpeaks. Let us begin with the whole scene.", ttsMode: "single", voiceName: "Kore", voiceStyle: "Warm, cinematic documentary narrator", cameraShot: "establishing", transitionType: "glide", mood: "studio", explodeAmount: 0 },
