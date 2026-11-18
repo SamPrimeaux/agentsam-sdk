@@ -14,7 +14,7 @@ const outputRoot = path.join(root, 'frontend/public/themes');
 const base = new URL(process.env.AGENTSAM_THEME_STORE_URL || 'https://themes.inneranimalmedia.com').origin;
 const digest = value => createHash('sha256').update(value).digest('hex');
 const SAFE_SLUG = /^[a-z][a-z0-9-]{0,62}$/;
-const SAFE_VERSION = /^\\d+\\.\\d+\\.\\d+$/;
+const SAFE_VERSION = /^\d+\.\d+\.\d+$/;
 const HASH = /^[0-9a-f]{64}$/;
 const safePath = value => typeof value === 'string' && value.length > 0 &&
   !value.startsWith('/') && !value.includes('\\\\') &&
