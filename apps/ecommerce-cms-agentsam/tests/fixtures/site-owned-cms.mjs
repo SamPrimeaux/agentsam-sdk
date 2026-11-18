@@ -32,6 +32,19 @@ export function createSiteOwnedFixture(){
         'cms/sections/drafts/home/hero.json','cms/sections/publications/home/hero.json',
         'original','2026-10-01');
   `);
+  // The live inneranimalmedia-business tables have these identity and
+  // versioned renderer-reference columns. Site/page owns tenancy; sections
+  // themselves intentionally have NO account_id.
+  db.exec(`
+    ALTER TABLE cms_page_sections ADD COLUMN definition_id TEXT;
+    ALTER TABLE cms_page_sections ADD COLUMN template_sku TEXT;
+    ALTER TABLE cms_page_sections ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json));
+    ALTER TABLE cms_section_blocks ADD COLUMN id TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE cms_section_blocks ADD COLUMN definition_id TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN template_sku TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(settings_json));
+  `);
   const objects=new Map([
     ['cms/sections/drafts/home/hero.json',JSON.stringify({headline:'Existing R2 headline'})],
     ['cms/sections/publications/home/hero.json',JSON.stringify({headline:'Published headline'})],
