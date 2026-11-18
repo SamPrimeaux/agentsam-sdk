@@ -427,6 +427,7 @@ let surfaceRoughness=doc.sceneSettings?.roughness??.82,surfaceMetalness=doc.scen
 let fogEnabled=doc.sceneSettings?.fogEnabled??false,fogDensity=doc.sceneSettings?.fogDensity??.012,currentBackdrop="blue",shadowsEnabled=doc.sceneSettings?.shadowsEnabled??true;
 let selectionOutlineEnabled=doc.sceneSettings?.selectionOutline??true,reducedMotionOverride=doc.sceneSettings?.reducedMotion??false;
 let brushEnabled=doc.sceneSettings?.brushEnabled??false;
+let armedPropType:SceneryPropId|null=null;
 let cameraTransition:{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number;mode:TransitionId}|null=null;
 let storyboardTimer:number|null=null,storyboardRun=0;
 const hitRay=new THREE.Raycaster(),hitPointer=new THREE.Vector2();
@@ -674,6 +675,16 @@ renderer.domElement.addEventListener("pointerup",e=>{
  const bounds=renderer.domElement.getBoundingClientRect();
  hitPointer.set((e.clientX-bounds.left)/bounds.width*2-1,-(e.clientY-bounds.top)/bounds.height*2+1);
  hitRay.setFromCamera(hitPointer,camera);
+ if(armedPropType){
+  const point=new THREE.Vector3();
+  const ground=new THREE.Plane(new THREE.Vector3(0,1,0),2.05);
+  const hitGround=hitRay.ray.intersectPlane(ground,point);
+  if(hitGround){
+   const type=armedPropType;armedPropType=null;
+   addSceneryProp(type,[Math.max(-8,Math.min(8,point.x)),-2.0,Math.max(-8,Math.min(8,point.z))]);
+   return;
+  }
+ }
  const hit=resolveSceneHit(hitRay.intersectObjects(stage.children,true));
  selectedId=hit?.itemId||"";
  selectedPartId=hit?.partId||null;
@@ -1091,7 +1102,7 @@ window.addEventListener("samsketch:settings.action",event=>{
    sendHostMessage("assistant.request",{prompt:"Use these local visual reference filenames as creative direction for the current SamSketch scene: "+names+". Ask me for the images if visual inspection is needed.",skill:"Scene",context:studioContext()});
    announce("Reference notes sent to AgentSam; image files remain local to this browser session.");break;
   }
-  case "stage.addProp":addSceneryProp(String(detail.prop) as SceneryPropId);break;
+  case "stage.addProp":armedPropType=String(detail.prop) as SceneryPropId;announce("Placement armed · click the scene floor to place "+(SCENERY_PROPS.find(item=>item.id===armedPropType)?.label||"prop")+". Press Escape to cancel.");break;
   case "stage.brush":applyStudioSetting("stage.brush",!brushEnabled);settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "stage.clearBrush":doc.brushStrokes=[];redraw();store();announce("3D brush strokes cleared.");break;
   case "simulation.play":startStoryPlayback();break;
@@ -1117,10 +1128,10 @@ function addItem(kind:Kind){
  const colors:{[key in Kind]:string}={desktop:"#2c3a57",phone:"#477ae5",panel:"#e9adbe",orb:"#86c4dc",box:"#95b4e6",ring:"#91d7cf",cad:"#f0d2ad",template:"#ffffff",prop:"#8a9dd6"};
  mutate(()=>{const i=makeItem(kind,kind==="cad"?"CAD Boolean solid":kind.charAt(0).toUpperCase()+kind.slice(1),colors[kind],[((doc.items.length%4)-1.5)*1.4,.15,(Math.floor(doc.items.length/4)-.5)*1.5]);doc.items.push(i);selectedId=i.id;selectedPartId=null;});
 }
-function addSceneryProp(type:SceneryPropId){
+function addSceneryProp(type:SceneryPropId,position?:Vec3){
  const preset=SCENERY_PROPS.find(item=>item.id===type);if(!preset)return;
  snapshot();
- const item=makeItem("prop",preset.label,preset.color,[((doc.items.length%4)-1.5)*1.5,.15,(Math.floor(doc.items.length/4)-.5)*1.5]);
+ const item=makeItem("prop",preset.label,preset.color,position||[((doc.items.length%4)-1.5)*1.5,-2.0,(Math.floor(doc.items.length/4)-.5)*1.5]);
  item.propType=type;doc.items.push(item);selectedId=item.id;selectedPartId=null;
  renderAll();store();announce("Added SamSpeaks scenery prop · "+preset.label);
 }
@@ -1266,6 +1277,7 @@ document.addEventListener("keydown",e=>{
  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="d"){e.preventDefault();(document.getElementById("duplicate") as HTMLButtonElement|null)?.click();}
  if(e.key==="Delete"||e.key==="Backspace"){e.preventDefault();(document.getElementById("delete") as HTMLButtonElement|null)?.click();}
  if(e.key==="Escape"&&autoPlay!==null){window.clearInterval(autoPlay);autoPlay=null;}
+ if(e.key==="Escape"&&armedPropType){armedPropType=null;announce("Scenery placement cancelled.");}
 });
 document.getElementById("mode-select")!.classList.add("active");
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(button=>button.addEventListener("click",()=>setCameraView(button.dataset.view||"iso")));
