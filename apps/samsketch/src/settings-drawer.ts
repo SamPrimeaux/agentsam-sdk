@@ -303,7 +303,7 @@ export function mountSettingsDrawer(host: HTMLElement) {
     }
     if (key === "styles.mood") {
       const mood = MOODS.find(item => item.id === value);
-      if (mood) { state.sceneSettings.keyIntensity = mood.keyIntensity; state.sceneSettings.ambientIntensity = mood.ambientIntensity; state.sceneSettings.fogDensity = mood.fogDensity; }
+      if (mood) { state.sceneSettings.keyIntensity = mood.keyIntensity; state.sceneSettings.ambientHue = mood.ambientHue; state.sceneSettings.ambientSaturation = mood.ambientSaturation; state.sceneSettings.ambientIntensity = mood.ambientIntensity; state.sceneSettings.fogDensity = mood.fogDensity; }
     }
     if (key === "camera.shot") {
       const shot = CAMERA_SHOTS.find(item => item.id === value);
