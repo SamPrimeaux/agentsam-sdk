@@ -461,4 +461,40 @@
         const values = content[block.id];
         if (values != null && (typeof values !== "object" || Array.isArray(values)))
           return { ok: false, error: "Invalid block data" };
-  
+        if (values) for (const [key, value] of Object.entries(values)) {
+          const fld = definition.blocks[0].fields.find((field) => field.key === key);
+          if (!fld || typeof value !== "string" || value.length > 12000 ||
+              (["link", "media"].includes(fld.type) && !isSafeUrl(value)))
+            return { ok: false, error: "Invalid block field: " + key };
+        }
+      }
+    }
+    return { ok: true };
+  }
+
+  scope.ThemePortableSections = Object.freeze({
+    definitions,
+    get: (id) => byId.get(id) || scope.ThemePlatformStock?.get(id) || scope.ThemeReviseAtlas?.get(id) || null,
+    catalog: () => [
+      ...definitions.map(({ id, label, family, source, templateKey, preset }) =>
+        ({ id, label, type: family, source, templateKey, preset })),
+      ...(scope.ThemePlatformStock?.catalog() || []),
+      ...(scope.ThemeReviseAtlas?.catalog() || []),
+    ],
+    defaults, render, validate,
+    schema(id) {
+      if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.schema(id);
+      if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.schema(id);
+      const definition = byId.get(id);
+      if (!definition) return null;
+      return {
+        label: definition.label,
+        fields: definition.fields,
+        blocks: definition.blocks,
+        settings: [],
+        capabilities: { edit: true, reorder: true, duplicate: true, remove: true, blocks: !!definition.blocks.length },
+        guardrails: { maxBlocks: definition.blocks[0]?.max || 0 },
+      };
+    },
+  });
+})(globalThis);
