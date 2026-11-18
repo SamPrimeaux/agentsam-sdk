@@ -37,6 +37,26 @@ jobs:
         run: npm ci
       - name: Verify clean SDK Canvas provider import
         run: node --test --test-name-pattern='real generation orchestrator' test/integration/canvas-work-runtime.test.mjs
+      # The npm root workspaces do not include installable applications.
+      # Prepare their own locked dependencies before verifying public packages.
+      - name: Install standalone app release dependencies
+        run: |
+          npm ci --prefix apps/cad-creator --ignore-scripts --no-audit --no-fund
+          npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
+          npm ci --prefix apps/design-canvas --ignore-scripts --no-audit --no-fund
+          npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts --no-audit --no-fund
+          npm ci --prefix apps/ecommerce-cms-agentsam/frontend --ignore-scripts --no-audit --no-fund
+      - name: Set up Go for Desktop Shell sidecars
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/agentsam-go-worker/runtime/go.mod
+          cache: false
+      - name: Set up Rust for Desktop Shell
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Tauri Linux build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf
       - name: Check approved release train
         env:
           APPROVED_VERSION: ${{ inputs.version }}
