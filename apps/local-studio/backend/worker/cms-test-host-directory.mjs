@@ -1,6 +1,7 @@
 /** Ephemeral Local Studio authorization tables that already exist in production D1.
  * The merchant CMS schema fixture intentionally does not own these host tables. */
 export function addCmsHostDirectoryTables(db) {
+  db.exec('ALTER TABLE cms_sites ADD COLUMN worker_id TEXT');
   db.exec(`
     CREATE TABLE IF NOT EXISTS tenants (
       id TEXT PRIMARY KEY, workspace_id TEXT, owner_account_id TEXT,
