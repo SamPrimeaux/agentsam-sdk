@@ -335,7 +335,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     antialias: true,
   });
   const scene = viewport.scene as THREE.Scene;
-  const camera = viewport.camera as THREE.Camera;
+  const camera = viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera;
   camera.position.fromArray(document.camera.position);
   camera.lookAt(...document.camera.target);
   camera.updateProjectionMatrix();
