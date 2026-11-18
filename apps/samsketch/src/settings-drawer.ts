@@ -125,7 +125,7 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       '<input id="sam-direct-style" class="settings-text-input" data-setting="direct.voicePreset" value="' + escapeHtml(ss.voiceStyle) + '" placeholder="Warm, articulate design documentary narrator" aria-label="Voice style direction">' +
       '<textarea id="sam-direct-script" class="settings-textarea" data-beat-field="script" rows="4" aria-label="Narration script">' + escapeHtml(beat?.script || "") + '</textarea>' +
       '<div class="sam-inline-actions">' + action("Draft script with AgentSam", "direct.draft", "sparkles") + action("Preview narration", "direct.speak", "waves") + action("Stop", "direct.stop", "stop") + '</div>' +
-      '<p class="settings-note">Narration preview uses the browser voice available on this device. SamSpeaks Gemini voice synthesis is a separate runtime integration.</p>';
+      '<p class="settings-note">Narration preview uses browser voices on this device; dual mode alternates the selected voice with a secondary Charon or Puck voice. Gemini voice synthesis remains in the SamSpeaks runtime.</p>';
   }
   return '<div class="settings-panel-intro"><strong>Creativity Flow</strong><span>Review the complete storyboard and play the camera and atmosphere sequence.</span></div>' +
     '<div class="sam-flow-toolbar">' + action("Add beat", "story.add", "plus") + action("Play flow", "story.play", "play") + action("Stop", "story.stop", "stop") + '</div>' +
