@@ -24,11 +24,11 @@ type HostWindow = Window & {
 };
 
 const tabs: { id: Tab; label: string; glyph: string }[] = [
+  { id: "samspeaks", label: "SamSpeaks", glyph: "sparkles" },
   { id: "scene", label: "Scene", glyph: "cube" },
   { id: "finish", label: "Finish", glyph: "palette" },
   { id: "camera", label: "Camera", glyph: "camera" },
   { id: "light", label: "Lighting", glyph: "sun" },
-  { id: "samspeaks", label: "SamSpeaks", glyph: "sparkles" },
   { id: "advanced", label: "Advanced", glyph: "settings" },
 ];
 const steps: { id: SamStep; label: string }[] = [
@@ -212,7 +212,7 @@ export function mountSettingsDrawer(host: HTMLElement) {
   const drawer = host.querySelector<HTMLElement>(".sam-settings-drawer")!;
   const panelHost = host.querySelector<HTMLElement>("#sam-settings-panel")!;
   const resizeHandle = host.querySelector<HTMLElement>(".sam-settings-resize")!;
-  let active: Tab = "scene";
+  let active: Tab = "samspeaks";
   let activeStep: SamStep = "stage";
   let width = 390;
   let start: { x: number; width: number } | null = null;
