@@ -41,11 +41,11 @@ function d1(db) {
 function fixture() {
   const sqlite=createCmsTestDb();
   sqlite.exec(`
-    INSERT INTO accounts(id) VALUES('a'),('b');
+    INSERT INTO accounts(id) VALUES('au_testowner0001'),('au_testother0002');
     INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
-      VALUES('a-store','a','Store','store','active',1),
-            ('a-blog','a','Blog','blog','active',0),
-            ('b-store','b','Other','other','active',1);
+      VALUES('a-store','au_testowner0001','Store','store','active',1),
+            ('a-blog','au_testowner0001','Blog','blog','active',0),
+            ('b-store','au_testother0002','Other','other','active',1);
   `);
   const objects=new Map();
   const env={
@@ -81,9 +81,9 @@ async function withCatalog(callback,listed=sample){
 test('catalog preview alias may differ from the checksum-verified package preview',async()=>{
   const {sqlite,env}=fixture();
   try {await withCatalog(async()=>{
-    const response=await handleStudioWebsiteThemeInstall(install(),env,'a',slug);
+    const response=await handleStudioWebsiteThemeInstall(install(),env,'au_testowner0001',slug);
     assert.equal(response.status,201,JSON.stringify(await response.clone().json()));
-    const stored=await getThemeProject(env,'a','theme_plain-jane','a-blog');
+    const stored=await getThemeProject(env,'au_testowner0001','theme_plain-jane','a-blog');
     assert.equal(stored.ok,true);
     // The theme remains installable and editable; the persistence layer may
     // intentionally normalize release provenance into separately stored metadata.
@@ -93,7 +93,7 @@ test('catalog preview alias may differ from the checksum-verified package previe
 test('rejects a catalog preview alias outside the authorized Theme Store routes',async()=>{
   const {sqlite,env}=fixture();
   try {await withCatalog(async()=>{
-    const response=await handleStudioWebsiteThemeInstall(install(),env,'a',slug);
+    const response=await handleStudioWebsiteThemeInstall(install(),env,'au_testowner0001',slug);
     assert.equal(response.status,409);
     assert.equal((await response.json()).error,'theme_preview_url_not_verified');
   },{...sample,previewUrl:'https://attacker.invalid/theme/'});} finally {sqlite.close();}
@@ -101,7 +101,7 @@ test('rejects a catalog preview alias outside the authorized Theme Store routes'
 test('published original installs into chosen authorized CMS site with D1 pointer, immutable R2 revision, and usable editor URL',async()=>{
   const {sqlite,env,objects}=fixture();
   try {await withCatalog(async()=>{
-    const response=await handleStudioWebsiteThemeInstall(install(),env,'a',slug);
+    const response=await handleStudioWebsiteThemeInstall(install(),env,'au_testowner0001',slug);
     assert.equal(response.status,201);
     const result=await response.json();
     assert.equal(result.ok,true);
@@ -115,31 +115,31 @@ test('published original installs into chosen authorized CMS site with D1 pointe
     assert.ok(objects.has(row.content_object_key));
     assert.equal(sqlite.prepare("SELECT COUNT(*) as n FROM cms_revisions WHERE site_id='a-blog' AND revision_kind='draft'").get().n,1);
     assert.equal(sqlite.prepare("SELECT COUNT(*) as n FROM cms_artifacts").get().n,1);
-    const stored=await getThemeProject(env,'a','theme_plain-jane','a-blog');
+    const stored=await getThemeProject(env,'au_testowner0001','theme_plain-jane','a-blog');
     assert.equal(stored.ok,true);
     assert.equal(stored.project.pages.length,project.pages.length);
     assert.equal(stored.project.pages[0].sections.length>0,true);
-    assert.equal((await getThemeProject(env,'a','theme_plain-jane','a-store')).status,404);
-    assert.equal((await getThemeProject(env,'b','theme_plain-jane','a-blog')).ok,false);
+    assert.equal((await getThemeProject(env,'au_testowner0001','theme_plain-jane','a-store')).status,404);
+    assert.equal((await getThemeProject(env,'au_testother0002','theme_plain-jane','a-blog')).ok,false);
   });}finally{sqlite.close();}
 });
 test('repeat installation reopens previous edits without replacing customer content, including when another owned site installs separately',async()=>{
   const {sqlite,env}=fixture();
   try {await withCatalog(async()=>{
-    assert.equal((await handleStudioWebsiteThemeInstall(install(),env,'a',slug)).status,201);
-    const existing=(await getThemeProject(env,'a','theme_plain-jane','a-blog')).project;
+    assert.equal((await handleStudioWebsiteThemeInstall(install(),env,'au_testowner0001',slug)).status,201);
+    const existing=(await getThemeProject(env,'au_testowner0001','theme_plain-jane','a-blog')).project;
     const updated=structuredClone(existing);
     updated.pages[0].title='My owned blog';
-    const saved=await saveThemeProject(env,'a',updated.id,updated,1,'a-blog');
+    const saved=await saveThemeProject(env,'au_testowner0001',updated.id,updated,1,'a-blog');
     assert.equal(saved.ok,true,JSON.stringify(saved));
-    const repeated=await handleStudioWebsiteThemeInstall(install(),env,'a',slug);
+    const repeated=await handleStudioWebsiteThemeInstall(install(),env,'au_testowner0001',slug);
     assert.equal(repeated.status,200);
     assert.equal((await repeated.json()).unchanged,true);
-    const refreshed=(await getThemeProject(env,'a','theme_plain-jane','a-blog')).project;
+    const refreshed=(await getThemeProject(env,'au_testowner0001','theme_plain-jane','a-blog')).project;
     assert.equal(refreshed.pages[0].title,'My owned blog');
     assert.equal(refreshed.revision,2);
-    assert.equal((await handleStudioWebsiteThemeInstall(install('a-store'),env,'a',slug)).status,201);
-    const other=(await getThemeProject(env,'a','theme_plain-jane','a-store')).project;
+    assert.equal((await handleStudioWebsiteThemeInstall(install('a-store'),env,'au_testowner0001',slug)).status,201);
+    const other=(await getThemeProject(env,'au_testowner0001','theme_plain-jane','a-store')).project;
     assert.equal(other.pages[0].title,project.pages[0].title);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE global_type='theme-project'").get().n,2);
   });}finally{sqlite.close();}
@@ -148,22 +148,22 @@ test('cannot install into another account, without origin, or from a mismatched 
   const {sqlite,env}=fixture();
   try {
     await withCatalog(async()=>{
-      const unauthorized=await handleStudioWebsiteThemeInstall(install('b-store'),env,'a',slug);
+      const unauthorized=await handleStudioWebsiteThemeInstall(install('b-store'),env,'au_testowner0001',slug);
       assert.equal(unauthorized.status,404);
       assert.equal((await handleStudioWebsiteThemeInstall(install(),env,null,slug)).status,401);
       const badOrigin=new Request('https://cms.test/api/admin/website-themes/plain-jane/install',{
         method:'POST',headers:{'content-type':'application/json',origin:'https://elsewhere.invalid'},
         body:JSON.stringify({site_id:'a-blog',version}),
       });
-      assert.equal((await handleStudioWebsiteThemeInstall(badOrigin,env,'a',slug)).status,403);
+      assert.equal((await handleStudioWebsiteThemeInstall(badOrigin,env,'au_testowner0001',slug)).status,403);
       assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals").get().n,0);
     });
     await withCatalog(async()=>{
-      const response=await handleStudioWebsiteThemeInstall(install(),env,'a',slug);
+      const response=await handleStudioWebsiteThemeInstall(install(),env,'au_testowner0001',slug);
       assert.equal(response.status,409);
       assert.equal((await response.json()).error,'theme_release_does_not_match_verified_package');
       assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals").get().n,0);
-    },{...sample,release:{...sample.release,sha256:'b'.repeat(64)}});
+    },{...sample,release:{...sample.release,sha256:'au_testother0002'.repeat(64)}});
   } finally {sqlite.close();}
 });
 
@@ -186,9 +186,9 @@ test('remote R2 install index and checksum-pinned project work without an SDK-bu
     throw Error('unexpected_url:'+url);
   };
   try {
-    assert.equal((await handleStudioWebsiteThemeInstall(install(),env,'a',slug)).status,201);
+    assert.equal((await handleStudioWebsiteThemeInstall(install(),env,'au_testowner0001',slug)).status,201);
     projectBytes=Buffer.from(JSON.stringify({...project,name:'Tampered project'}));
-    const denied=await handleStudioWebsiteThemeInstall(install('a-store'),env,'a',slug);
+    const denied=await handleStudioWebsiteThemeInstall(install('a-store'),env,'au_testowner0001',slug);
     assert.equal(denied.status,503);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE site_id='a-store'").get().n,0);
   }finally{globalThis.fetch=oldFetch;sqlite.close();}
@@ -211,9 +211,9 @@ test('every Try creates its own draft site + cms_site_themes row; unlimited trie
   const {sqlite,env,objects}=fixture();
   seedCatalogTables(sqlite);
   try { await withCatalog(async()=>{
-    const sitesBefore=sqlite.prepare("SELECT COUNT(*) n FROM cms_sites WHERE account_id='a'").get().n;
-    const one=await handleStudioWebsiteThemeInstall(tryTheme(),env,'a',slug);
-    const two=await handleStudioWebsiteThemeInstall(tryTheme(),env,'a',slug);
+    const sitesBefore=sqlite.prepare("SELECT COUNT(*) n FROM cms_sites WHERE account_id='au_testowner0001'").get().n;
+    const one=await handleStudioWebsiteThemeInstall(tryTheme(),env,'au_testowner0001',slug);
+    const two=await handleStudioWebsiteThemeInstall(tryTheme(),env,'au_testowner0001',slug);
     assert.equal(one.status,201);
     assert.equal(two.status,201);
     const first=await one.json(),second=await two.json();
@@ -221,7 +221,7 @@ test('every Try creates its own draft site + cms_site_themes row; unlimited trie
     assert.notEqual(first.site_id,second.site_id);
     assert.equal(first.project_id,'theme_plain-jane');
     assert.equal(first.editor_url,'/admin/theme-project-editor?project=theme_plain-jane&site_id='+first.site_id);
-    assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_sites WHERE account_id='a'").get().n,sitesBefore+2);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_sites WHERE account_id='au_testowner0001'").get().n,sitesBefore+2);
     const site=sqlite.prepare('SELECT status,settings_json FROM cms_sites WHERE id=?').get(first.site_id);
     assert.equal(site.status,'draft');
     assert.equal(JSON.parse(site.settings_json).kind,'marketplace-theme-draft');
@@ -232,27 +232,27 @@ test('every Try creates its own draft site + cms_site_themes row; unlimited trie
     assert.equal(row.source_release_id,'release_pj_010');
     assert.equal(row.is_live,0);
     assert.ok(objects.has(row.draft_manifest_key));
-    const existing=await getThemeProject(env,'a','theme_plain-jane',first.site_id);
+    const existing=await getThemeProject(env,'au_testowner0001','theme_plain-jane',first.site_id);
     assert.equal(existing.ok,true);
     const edited=structuredClone(existing.project);
     edited.pages[0].title='Edited in my own sandbox';
-    assert.equal((await saveThemeProject(env,'a',edited.id,edited,1,first.site_id)).ok,true);
+    assert.equal((await saveThemeProject(env,'au_testowner0001',edited.id,edited,1,first.site_id)).ok,true);
     // The sibling try is untouched by edits to the first one.
-    assert.notEqual((await getThemeProject(env,'a','theme_plain-jane',second.site_id)).project.pages[0].title,'Edited in my own sandbox');
-    assert.equal((await listThemeDraftSites(env,'a')).drafts.length,2);
-    assert.equal((await listThemeDraftSites(env,'b')).drafts.length,0);
-    assert.equal((await getThemeProject(env,'b','theme_plain-jane',first.site_id)).status,404);
+    assert.notEqual((await getThemeProject(env,'au_testowner0001','theme_plain-jane',second.site_id)).project.pages[0].title,'Edited in my own sandbox');
+    assert.equal((await listThemeDraftSites(env,'au_testowner0001')).drafts.length,2);
+    assert.equal((await listThemeDraftSites(env,'au_testother0002')).drafts.length,0);
+    assert.equal((await getThemeProject(env,'au_testother0002','theme_plain-jane',first.site_id)).status,404);
   }); } finally {sqlite.close();}
 });
 
 test('Try succeeds for an account that has zero CMS sites, and an existing site slug never blocks or is adopted',async()=>{
   const {sqlite,env}=fixture();
   seedCatalogTables(sqlite);
-  sqlite.exec(`INSERT INTO accounts(id) VALUES('c');
+  sqlite.exec(`INSERT INTO accounts(id) VALUES('au_testnew0003');
     INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
-    VALUES('user-site','c','Different website','theme-draft-plain-jane-0-1-0','active',0)`);
+    VALUES('user-site','au_testnew0003','Different website','theme-draft-plain-jane-0-1-0','active',0)`);
   try { await withCatalog(async()=>{
-    const response=await handleStudioWebsiteThemeInstall(tryTheme(),env,'c',slug);
+    const response=await handleStudioWebsiteThemeInstall(tryTheme(),env,'au_testnew0003',slug);
     assert.equal(response.status,201);
     const result=await response.json();
     assert.notEqual(result.site_id,'user-site');
@@ -273,7 +273,7 @@ test('a failed install leaves no orphan draft site and reports an actionable err
   };
   try{
     const sitesBefore=sqlite.prepare('SELECT COUNT(*) n FROM cms_sites').get().n;
-    const response=await handleStudioWebsiteThemeInstall(tryTheme(),env,'a',slug);
+    const response=await handleStudioWebsiteThemeInstall(tryTheme(),env,'au_testowner0001',slug);
     assert.ok(response.status>=400);
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_sites').get().n,sitesBefore);
   }finally{globalThis.fetch=before;sqlite.close();}
