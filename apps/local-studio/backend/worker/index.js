@@ -93,7 +93,7 @@ import { listEmbedPolicy, listTrustedOrigins, trustOrigin, untrustOrigin } from 
 import { handleBrowserPage } from "./browser-page.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
-import { handleAdminApi as handleEcommerceAdminApi, ensureCmsSiteStarter } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
+import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleStudioContentMediaApi } from "./content-media-api.js";
 import { handlePlatformMediaRead } from "./platform-media-library.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
@@ -1116,7 +1116,7 @@ export default {
       if (url.pathname === "/api/admin/cms/sites") {
         const hostUrl = new URL(request.url);
         hostUrl.pathname = "/api/cms/sites";
-        return handleCmsWorkerRequest(new Request(hostUrl, request), env, principal.id, { ensureCmsSiteStarter });
+        return handleCmsWorkerRequest(new Request(hostUrl, request), env, principal.id);
       }
       let cmsSite = null;
       if (isSiteScopedCmsAdminApi(url.pathname)) {
@@ -1129,7 +1129,7 @@ export default {
         if (cmsSite.source === "worker" && url.pathname.startsWith("/api/admin/cms/")) {
           const remoteUrl = new URL(request.url);
           remoteUrl.pathname = "/api/cms/remote/" + url.pathname.slice("/api/admin/cms/".length);
-          return handleCmsWorkerRequest(new Request(remoteUrl, request), env, principal.id, { ensureCmsSiteStarter });
+          return handleCmsWorkerRequest(new Request(remoteUrl, request), env, principal.id);
         }
         if (cmsSite.source === "worker" && !isCmsThemeEditorRoute(url.pathname))
           return json({ ok: false, error: "remote_site_operation_not_supported_by_this_editor" }, 409);
@@ -1290,7 +1290,7 @@ export default {
       if (request.method === "OPTIONS") return new Response(null, { status: 204 });
       const cmsActorId = await resolveSessionUserId(request, env);
       if (!cmsActorId) return json({ ok: false, error: "unauthorized" }, 401);
-      return handleCmsWorkerRequest(request, env, cmsActorId, { ensureCmsSiteStarter });
+      return handleCmsWorkerRequest(request, env, cmsActorId);
     }
 
     // Canonical React app mounts are served as data-free, pre-rendered
