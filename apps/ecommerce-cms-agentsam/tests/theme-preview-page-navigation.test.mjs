@@ -129,10 +129,10 @@ test('installed-theme navigation still switches pages during global inspect mode
 });
 
 test('relative package links resolve to project routes, not the Theme Store preview path', () => {
-  const { listener, event, changes, prevented } = setupProjectClick('about');
-  listener(event);
-  assert.deepEqual(changes, ['about']);
-  assert.equal(prevented, true);
+  const result = setupProjectClick('about');
+  result.listener(result.event);
+  assert.deepEqual(result.changes, ['about']);
+  assert.equal(result.prevented, true);
 });
 
 test('unknown internal theme links fail closed instead of opening the Theme Store', () => {
