@@ -481,29 +481,55 @@ function buildRoot(item:Item):THREE.Object3D {
  const root=new THREE.Group();root.userData.itemId=item.id;
  let mesh:THREE.Object3D|undefined;
  if(item.kind==="desktop"){
-  const rim=rounded(6.4,3.9,.24,.28,item.color,item.material);root.add(rim);
+  const rim=rounded(6.4,3.9,.24,.28,item.color,item.material,item.finish);root.add(rim);
   const screen=new THREE.Mesh(new THREE.PlaneGeometry(6.05,3.52),new THREE.MeshBasicMaterial({map:canvasCard(doc.brand),toneMapped:false}));
   screen.position.z=.19;root.add(screen);
   const neck=new THREE.Mesh(new THREE.BoxGeometry(.48,1.0,.28),material("#a9bad3","metal"));neck.position.y=-2.48;root.add(neck);
   const base=rounded(2.9,.33,.1,.15,"#cdd7e6");base.rotation.x=-Math.PI/2;base.position.y=-2.96;root.add(base);
  }else if(item.kind==="phone"){
-  const body=rounded(1.57,3.13,.24,.19,item.color,item.material);root.add(body);
+  const body=rounded(1.57,3.13,.24,.19,item.color,item.material,item.finish);root.add(body);
   const screen=new THREE.Mesh(new THREE.PlaneGeometry(1.39,2.86),new THREE.MeshBasicMaterial({map:canvasCard(doc.brand,true),toneMapped:false}));
   screen.position.z=.14;root.add(screen);
   const cameraDot=new THREE.Mesh(new THREE.CircleGeometry(.065,16),new THREE.MeshBasicMaterial({color:"#273147"}));cameraDot.position.set(0,1.47,.151);root.add(cameraDot);
  }else if(item.kind==="panel"){
-  const backing=rounded(2.55,2.05,.22,.11,item.color,item.material);root.add(backing);
+  const backing=rounded(2.55,2.05,.22,.11,item.color,item.material,item.finish);root.add(backing);
   for(let i=0;i<4;i++){const pill=rounded(1.9-i*.18,.13,.06,.02,["#ffffff","#c3e7ef","#e6f2ff","#ffd7dc"][i]);pill.position.set(-.14,i*.34-.52,.18+i*.003);root.add(pill);}
   const dot=new THREE.Mesh(new THREE.SphereGeometry(.22,24,16),material("#ffffff","clay"));dot.position.set(-.65,.62,.26);root.add(dot);
  }else if(item.kind==="orb"){
-  mesh=new THREE.Mesh(new THREE.SphereGeometry(.85,48,32),material(item.color,item.material));
+  mesh=new THREE.Mesh(new THREE.SphereGeometry(.85,48,32),material(item.color,item.material,item.finish));
  }else if(item.kind==="box"){
-  mesh=rounded(1.65,1.65,.35,1.0,item.color,item.material);
+  mesh=rounded(1.65,1.65,.35,1.0,item.color,item.material,item.finish);
  }else if(item.kind==="ring"){
-  mesh=new THREE.Mesh(new THREE.TorusGeometry(.87,.18,24,64),material(item.color,item.material));mesh.rotation.set(.4,.5,0);
+  mesh=new THREE.Mesh(new THREE.TorusGeometry(.87,.18,24,64),material(item.color,item.material,item.finish));mesh.rotation.set(.4,.5,0);
+ }else if(item.kind==="prop"){
+  const group=new THREE.Group(),finish=item.finish;
+  const part=(geometry:THREE.BufferGeometry,color:string,position:Vec3,scale:Vec3=[1,1,1])=>{
+   const mesh=new THREE.Mesh(geometry,material(color,"metal",finish));mesh.position.set(...position);mesh.scale.set(...scale);group.add(mesh);return mesh;
+  };
+  if(item.propType==="pine"){
+   part(new THREE.CylinderGeometry(.09,.14,1.15,9),"#76553b",[0,-.1,0]);
+   part(new THREE.ConeGeometry(.62,1.25,9),item.color,[0,.45,0]);
+   part(new THREE.ConeGeometry(.48,1.05,9),item.color,[0,1.05,0]);
+   part(new THREE.ConeGeometry(.34,.82,9),item.color,[0,1.55,0]);
+  }else if(item.propType==="boulders"){
+   part(new THREE.IcosahedronGeometry(.58,1),item.color,[-.48,0,0],[1.15,.8,1]);
+   part(new THREE.IcosahedronGeometry(.48,1),item.color,[.38,-.08,-.12],[1,.76,.9]);
+   part(new THREE.IcosahedronGeometry(.32,1),item.color,[.05,.36,.12],[1,.9,.95]);
+  }else if(item.propType==="lantern"){
+   part(new THREE.CylinderGeometry(.055,.075,1.7,12),"#78644c",[0,.15,0]);
+   part(new THREE.CylinderGeometry(.3,.26,.12,16),"#8c704d",[0,-.72,0]);
+   part(new THREE.SphereGeometry(.24,24,16),"#f5c77c",[0,.72,0],[.78,1.2,.78]);
+   part(new THREE.CylinderGeometry(.32,.32,.09,16),"#8c704d",[0,1.02,0]);
+  }else{
+   const arch=part(new THREE.TorusGeometry(.88,.1,16,40,Math.PI),item.color,[0,.2,0]);
+   arch.rotation.z=Math.PI;
+   part(new THREE.CylinderGeometry(.1,.12,1.95,12),item.color,[-.88,-.76,0]);
+   part(new THREE.CylinderGeometry(.1,.12,1.95,12),item.color,[.88,-.76,0]);
+  }
+  mesh=group;
  }else if(item.kind==="template"){
   const key=item.templateId||"";
-  const loaded=instanceTemplateModel(key,item.color==="#ffffff"?undefined:item.color,wireframe,item.material);
+  const loaded=instanceTemplateModel(key,item.color==="#ffffff"?undefined:item.color,wireframe,item.material,item.finish);
   if(loaded){
    // Every source part remains addressable within its editable scene instance.
    loaded.traverse(node=>{
@@ -526,13 +552,13 @@ function buildRoot(item:Item):THREE.Object3D {
   const valid=stored&&generatedCadParams.get(item.id)===identity;
   if(valid){
    mesh=stored.clone(true);
-   mesh.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry=o.geometry.clone();o.material=material(item.color,item.material);}});
+   mesh.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry=o.geometry.clone();o.material=material(item.color,item.material,item.finish);}});
   }else if(item.cadParams){
    // A saved CAD object must never masquerade as a generated solid while restoring.
    ensureCadGeometry(item);
   }else{
    // An ungenerated draft primitive is only an editable starting point.
-   mesh=new THREE.Mesh(new THREE.SphereGeometry(.8,42,32),material(item.color,item.material));
+   mesh=new THREE.Mesh(new THREE.SphereGeometry(.8,42,32),material(item.color,item.material,item.finish));
   }
  }
  if(mesh){mesh.userData.itemId=item.id;root.add(mesh);}
