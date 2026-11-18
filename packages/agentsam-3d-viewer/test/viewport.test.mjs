@@ -18,10 +18,17 @@ function fakeRuntime() {
   class Scene { add() {} }
   class Color { constructor(value) { this.value = value; } }
   class Camera { constructor(fov, aspect, near, far) { this.fov=fov;this.aspect=aspect;this.near=near;this.far=far;this.position=new Vector3();this.up=new Vector3(); } updateProjectionMatrix() { events.resize += 1; } }
+  class OrthographicCamera {
+    constructor(left,right,top,bottom,near,far) {
+      Object.assign(this,{left,right,top,bottom,near,far,zoom:1,isOrthographicCamera:true});
+      this.position=new Vector3();this.up=new Vector3();
+    }
+    updateProjectionMatrix() { events.resize += 1; }
+  }
   class Renderer { constructor(options) { this.options=options;this.domElement=new FakeElement('canvas');this.shadowMap={};this.capabilities={getMaxAnisotropy:()=>8}; } setPixelRatio(value) { this.pixelRatio=value; } setSize(width,height,updateStyle) { this.size={width,height,updateStyle}; } render() { events.render += 1; } dispose() { events.disposedRenderer += 1; } }
   class Controls { constructor(camera,element) { this.camera=camera;this.element=element;this.target=new Vector3();this.cameraUpAtConstruction=[...(camera.up.values||[])]; } update() {} dispose() { events.disposedControls += 1; } }
   return { events, runtime: { THREE: {
-    Scene, Color, PerspectiveCamera: Camera, WebGLRenderer: Renderer,
+    Scene, Color, PerspectiveCamera: Camera, OrthographicCamera, WebGLRenderer: Renderer,
     SRGBColorSpace: 'srgb', NoToneMapping: 'none',
   }, OrbitControls: Controls } };
 }
@@ -93,4 +100,29 @@ test('shared viewport establishes robotics Z-up camera before OrbitControls are 
   assert.equal(viewport.renderer.pixelRatio,2);
   viewport.dispose();
   assert.equal(events.disposedControls,1);
+}));
+
+
+test('shared viewport supports an orthographic camera and updates its horizontal frustum on resize', () => withFakeDom((getObserver) => {
+  const host = new FakeElement('section');
+  const {runtime} = fakeRuntime();
+  const viewport = createThreeViewport(host, runtime, {
+    wrapper:false, controls:false, lights:false, autoRender:false,
+    cameraProjection:'orthographic', orthographicFrustumHeight:200, orthographicZoom:1.25,
+    near:-1000, far:1000,
+  });
+  assert.equal(viewport.camera.isOrthographicCamera,true);
+  assert.equal(viewport.camera.top,100);
+  assert.equal(viewport.camera.bottom,-100);
+  assert.equal(viewport.camera.left,-(100*640/360));
+  assert.equal(viewport.camera.right,100*640/360);
+  assert.equal(viewport.camera.zoom,1.25);
+  host.clientWidth=400;
+  host.clientHeight=800;
+  getObserver().callback();
+  assert.equal(viewport.camera.left,-50);
+  assert.equal(viewport.camera.right,50);
+  assert.equal(viewport.camera.top,100);
+  assert.equal(viewport.camera.bottom,-100);
+  viewport.dispose();
 }));

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createThreeViewport, type ThreeViewportHandle } from '@inneranimalmedia/agentsam-3d-viewer';
 import { sampleAnimation } from './animation.js';
 import { assertValidSceneDocument } from './validate.js';
@@ -37,7 +38,9 @@ export interface SceneRuntimeHandle {
   dispose(): void;
 }
 
-function makeMaterial(definition: SceneMaterial): THREE.MeshStandardMaterial {
+type MaterialCompilePatch = (this: THREE.Material, shader: Parameters<NonNullable<THREE.Material['onBeforeCompile']>>[0]) => void;
+
+export function createSceneMaterial(definition: SceneMaterial): THREE.MeshStandardMaterial {
   const material = new THREE.MeshStandardMaterial({
     color: definition.baseColor,
     emissive: definition.emissive ?? '#000000',
@@ -49,9 +52,9 @@ function makeMaterial(definition: SceneMaterial): THREE.MeshStandardMaterial {
     blending: definition.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
     depthWrite: definition.depthWrite ?? !definition.additive,
   });
+  const compilePatches: MaterialCompilePatch[] = [];
+
   if (definition.radialReveal) {
-    // Each cloned material owns its uniform. This makes an authored scene's reveal
-    // portable across ordinary CMS instances, without a page-specific shader.
     const reveal = definition.radialReveal;
     material.transparent = true;
     material.depthWrite = false;
@@ -62,7 +65,7 @@ function makeMaterial(definition: SceneMaterial): THREE.MeshStandardMaterial {
       pulseWidth: { value: Math.max(0.001, reveal.pulseWidth ?? 14) },
       pulseIntensity: { value: reveal.pulseIntensity ?? 0.35 },
     };
-    material.onBeforeCompile = function (shader) {
+    compilePatches.push(function (shader) {
       const uniforms = this.userData.iamRadialReveal;
       shader.uniforms.iamRevealRadius = uniforms.radius;
       shader.uniforms.iamRevealFeather = uniforms.feather;
@@ -91,23 +94,184 @@ function makeMaterial(definition: SceneMaterial): THREE.MeshStandardMaterial {
         ));
         gl_FragColor.rgb += vec3(0.04, 0.55, 0.58) * iamPulse * iamPulseIntensity;`,
       );
+    });
+  }
+
+  const earth = definition.holographicEarth;
+  if (earth) {
+    material.side = THREE.DoubleSide;
+    if (earth.layer !== 'ocean') {
+      material.transparent = true;
+      material.depthWrite = false;
+    }
+    material.userData.iamHolographicEarth = { layer: earth.layer };
+    compilePatches.push(function (shader) {
+      const frequency = earth.frequency ?? (earth.layer === 'ocean' ? [90, 90] : [150, 150]);
+      const dotColor = new THREE.Color(earth.dotColor ?? definition.baseColor);
+      const fresnelColor = new THREE.Color(earth.fresnelColor ?? '#005bff');
+      const lineColor = new THREE.Color(earth.lineColor ?? definition.baseColor);
+      shader.uniforms.iamEarthFrequency = { value: new THREE.Vector2(frequency[0], frequency[1]) };
+      shader.uniforms.iamEarthDotColor = { value: dotColor };
+      shader.uniforms.iamEarthDotSize = { value: earth.dotSize ?? 0.27 };
+      shader.uniforms.iamEarthSmoothness = { value: earth.smoothness ?? 0.5 };
+      shader.uniforms.iamEarthDotOpacity = { value: earth.dotOpacity ?? 0.32 };
+      shader.uniforms.iamEarthFresnelColor = { value: fresnelColor };
+      shader.uniforms.iamEarthFresnelBias = { value: earth.fresnelBias ?? 0.06 };
+      shader.uniforms.iamEarthFresnelScale = { value: earth.fresnelScale ?? 1.35 };
+      shader.uniforms.iamEarthFresnelPower = { value: earth.fresnelPower ?? 3.62 };
+      shader.uniforms.iamEarthFresnelIntensity = { value: earth.fresnelIntensity ?? 0.93 };
+      shader.uniforms.iamEarthLineColor = { value: lineColor };
+      shader.uniforms.iamEarthLineWidth = { value: earth.lineWidth ?? 1 };
+      shader.uniforms.iamEarthLineOpacity = { value: earth.lineOpacity ?? 0.18 };
+      shader.uniforms.iamEarthLineIntensity = { value: earth.lineIntensity ?? 0.75 };
+
+      const outlineVertex = earth.layer === 'outline'
+        ? 'attribute vec2 uv1; varying vec3 vIamEarthBarycentric;'
+        : '';
+      const outlineVarying = earth.layer === 'outline'
+        ? 'vIamEarthBarycentric = vec3(uv1, 1.0 - uv1.x - uv1.y);'
+        : '';
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `#include <common>
+        varying vec2 vIamEarthUv;
+        varying vec3 vIamEarthWorldNormal;
+        varying vec3 vIamEarthWorldPosition;
+        ${outlineVertex}`,
+      ).replace(
+        '#include <beginnormal_vertex>',
+        `#include <beginnormal_vertex>
+        vIamEarthWorldNormal = normalize(mat3(modelMatrix) * objectNormal);`,
+      ).replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        vec3 iamEarthNormal = normalize(objectNormal);
+        vIamEarthUv = vec2(
+          atan(iamEarthNormal.z, iamEarthNormal.x) / 6.28318530718 + 0.5,
+          asin(clamp(iamEarthNormal.y, -1.0, 1.0)) / 3.14159265359 + 0.5
+        );
+        vIamEarthWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        ${outlineVarying}`,
+      );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        `#include <common>
+        varying vec2 vIamEarthUv;
+        varying vec3 vIamEarthWorldNormal;
+        varying vec3 vIamEarthWorldPosition;
+        uniform vec2 iamEarthFrequency;
+        uniform vec3 iamEarthDotColor;
+        uniform float iamEarthDotSize;
+        uniform float iamEarthSmoothness;
+        uniform float iamEarthDotOpacity;
+        uniform vec3 iamEarthFresnelColor;
+        uniform float iamEarthFresnelBias;
+        uniform float iamEarthFresnelScale;
+        uniform float iamEarthFresnelPower;
+        uniform float iamEarthFresnelIntensity;
+        uniform vec3 iamEarthLineColor;
+        uniform float iamEarthLineWidth;
+        uniform float iamEarthLineOpacity;
+        uniform float iamEarthLineIntensity;
+        ${earth.layer === 'outline' ? 'varying vec3 vIamEarthBarycentric;' : ''}`,
+      );
+
+      if (earth.layer === 'ocean') {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          vec2 iamEarthCell = fract(vIamEarthUv * iamEarthFrequency) - 0.5;
+          iamEarthCell.x *= max(0.18, cos((vIamEarthUv.y - 0.5) * 3.14159265359));
+          float iamEarthDot = 1.0 - smoothstep(
+            iamEarthDotSize, iamEarthDotSize + iamEarthSmoothness * 0.04,
+            length(iamEarthCell)
+          );
+          vec3 iamEarthView = normalize(cameraPosition - vIamEarthWorldPosition);
+          float iamEarthFresnel = pow(
+            1.0 - max(dot(normalize(vIamEarthWorldNormal), iamEarthView), 0.0),
+            iamEarthFresnelPower
+          );
+          totalEmissiveRadiance += iamEarthDotColor * iamEarthDot * iamEarthDotOpacity;
+          totalEmissiveRadiance += iamEarthFresnelColor *
+            (iamEarthFresnelBias + iamEarthFresnelScale * iamEarthFresnel) *
+            iamEarthFresnelIntensity;`,
+        );
+      } else if (earth.layer === 'dots') {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+          vec2 iamEarthCell = fract(vIamEarthUv * iamEarthFrequency) - 0.5;
+          float iamEarthDot = 1.0 - smoothstep(
+            iamEarthDotSize * 0.35,
+            iamEarthDotSize * 0.35 + iamEarthSmoothness * 0.08,
+            length(iamEarthCell)
+          );
+          diffuseColor.rgb = iamEarthDotColor;
+          diffuseColor.a *= iamEarthDot * iamEarthDotOpacity;`,
+        ).replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          totalEmissiveRadiance += iamEarthDotColor * iamEarthDot * 1.25;`,
+        );
+      } else {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+          vec3 iamEarthBary = vIamEarthBarycentric;
+          vec3 iamEarthBaryWidth = fwidth(iamEarthBary) * max(iamEarthLineWidth, 0.01);
+          vec3 iamEarthEdge = smoothstep(vec3(0.0), iamEarthBaryWidth, iamEarthBary);
+          float iamEarthLine = 1.0 - min(min(iamEarthEdge.x, iamEarthEdge.y), iamEarthEdge.z);
+          diffuseColor.rgb = iamEarthLineColor;
+          diffuseColor.a *= iamEarthLine * iamEarthLineOpacity;`,
+        ).replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          totalEmissiveRadiance += iamEarthLineColor * iamEarthLine * iamEarthLineIntensity;`,
+        );
+      }
+    });
+  }
+
+  if (compilePatches.length) {
+    material.onBeforeCompile = function (shader) {
+      compilePatches.forEach(patch => patch.call(this, shader));
     };
+    material.customProgramCacheKey = () => `iam-scene-material-v1:${definition.id}:${JSON.stringify(earth ?? null)}:${Boolean(definition.radialReveal)}`;
   }
   return material;
+}
+
+function cloneSceneMaterial(material: THREE.Material): THREE.Material {
+  const clone = material.clone();
+  clone.onBeforeCompile = material.onBeforeCompile;
+  clone.customProgramCacheKey = material.customProgramCacheKey;
+  return clone;
 }
 
 function applyMaterial(root: THREE.Object3D, material: THREE.Material): void {
   root.traverse(object => {
     if (object instanceof THREE.Mesh) {
-      // Three.js Material.clone() does NOT preserve onBeforeCompile in r187.
-      // Preserve declarative shader behavior on imported GLTF meshes too.
-      const clone = material.clone();
-      clone.onBeforeCompile = material.onBeforeCompile;
-      object.material = clone;
+      object.material = cloneSceneMaterial(material);
       object.castShadow = true;
       object.receiveShadow = true;
     }
   });
+}
+
+function applyAssetMaterials(root: THREE.Object3D, materials: Map<string, THREE.Material>): void {
+  const visit = (object: THREE.Object3D, inheritedMaterialId?: string) => {
+    const ownId = object.userData?.iamMaterialId;
+    const materialId = typeof ownId === 'string' && ownId ? ownId : inheritedMaterialId;
+    if (object instanceof THREE.Mesh && materialId) {
+      const material = materials.get(materialId);
+      if (!material) throw new Error(`iamscene_asset_material_not_found:${materialId}`);
+      object.material = cloneSceneMaterial(material);
+      object.castShadow = true;
+      object.receiveShadow = true;
+    }
+    for (const child of object.children) visit(child, materialId);
+  };
+  visit(root);
 }
 
 function resolveBaseUrl(document: SceneDocument, supplied?: string | URL): URL {
@@ -163,6 +327,9 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     controls: options.controls ?? true,
     autoRender: false,
     wrapper: false,
+    cameraProjection: document.camera.projection,
+    orthographicFrustumHeight: document.camera.frustumHeight,
+    orthographicZoom: document.camera.zoom,
     fov: document.camera.fov,
     near: document.camera.near,
     far: document.camera.far,
@@ -172,7 +339,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     antialias: true,
   });
   const scene = viewport.scene as THREE.Scene;
-  const camera = viewport.camera as THREE.PerspectiveCamera;
+  const camera = viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera;
   camera.position.fromArray(document.camera.position);
   camera.lookAt(...document.camera.target);
   camera.updateProjectionMatrix();
@@ -190,7 +357,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     scene.add(light);
   }
 
-  const materials = new Map(document.materials.map(definition => [definition.id, makeMaterial(definition)]));
+  const materials = new Map<string, THREE.Material>(document.materials.map(definition => [definition.id, createSceneMaterial(definition)]));
   const nodes = new Map(document.scene.nodes.map(node => [node.id, node]));
   const objects = new Map<string, THREE.Group>();
   const paths = new Map<string, THREE.CatmullRomCurve3>();
@@ -198,6 +365,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
   const assetMap = new Map(document.assets.map(asset => [asset.id, asset]));
   const baseUrl = resolveBaseUrl(document, options.assetBaseUrl);
   const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
 
   for (const node of document.scene.nodes) {
     const object = new THREE.Group();
@@ -241,7 +409,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
         // a scene must not need a presentation GLTF for simple authored geometry.
         const mesh = new THREE.Mesh(
           new THREE.SphereGeometry(node.geometry.radius, 96, 64),
-          material?.clone() ?? new THREE.MeshStandardMaterial({ color: '#d8f7ff' }),
+          material ? cloneSceneMaterial(material) : new THREE.MeshStandardMaterial({ color: '#d8f7ff' }),
         );
         mesh.userData.iamSceneNodeId = node.id;
         mesh.renderOrder = node.renderOrder ?? 0;
@@ -250,8 +418,10 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
         if (!node.assetRef) throw new Error(`iamscene_mesh_asset_required:${node.id}`);
         const asset = assetMap.get(node.assetRef);
         if (!asset) throw new Error(`iamscene_asset_not_found:${node.assetRef}`);
+        if (node.materialRef && !material) throw new Error(`iamscene_material_not_found:${node.materialRef}`);
         assetLoads.push(loadAsset(asset).then(model => {
           if (material) applyMaterial(model, material);
+          else applyAssetMaterials(model, materials);
           model.userData.iamSceneNodeId = node.id;
           object.add(model);
         }));
@@ -273,7 +443,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
         node.geometry.closed ?? false,
       );
       const material = node.materialRef ? materials.get(node.materialRef) : undefined;
-      const mesh = new THREE.Mesh(geometry, material?.clone() ?? new THREE.MeshBasicMaterial({ color: '#00dfff' }));
+      const mesh = new THREE.Mesh(geometry, material ? cloneSceneMaterial(material) : new THREE.MeshBasicMaterial({ color: '#00dfff' }));
       mesh.userData.iamSceneNodeId = node.id;
       mesh.renderOrder = node.renderOrder ?? 2;
       object.add(mesh);
@@ -281,7 +451,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
       if (node.geometry?.type !== 'sphere' || !node.pathRef) throw new Error(`iamscene_pulse_geometry_invalid:${node.id}`);
       const geometry = new THREE.SphereGeometry(node.geometry.radius, 16, 12);
       const material = node.materialRef ? materials.get(node.materialRef) : undefined;
-      const mesh = new THREE.Mesh(geometry, material?.clone() ?? new THREE.MeshBasicMaterial({ color: '#c8fbff' }));
+      const mesh = new THREE.Mesh(geometry, material ? cloneSceneMaterial(material) : new THREE.MeshBasicMaterial({ color: '#c8fbff' }));
       mesh.userData.iamSceneNodeId = node.id;
       mesh.renderOrder = node.renderOrder ?? 4;
       object.add(mesh);

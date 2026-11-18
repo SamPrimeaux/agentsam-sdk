@@ -78,12 +78,27 @@ export function createThreeViewport(container, runtime, options = {}) {
   }
   if (options.showAxes) scene.add(new THREE.AxesHelper(options.axesSize ?? 1.5));
 
-  const camera = new THREE.PerspectiveCamera(
-    options.fov ?? 42,
-    1,
-    options.near ?? 0.01,
-    options.far ?? 10000,
-  );
+  const near = options.near ?? 0.01;
+  const far = options.far ?? 10000;
+  const initialWidth = Math.max(1, root.clientWidth || container.clientWidth || 400);
+  const initialHeight = Math.max(1, root.clientHeight || container.clientHeight || 300);
+  const cameraProjection = options.cameraProjection ?? 'perspective';
+  const orthographicFrustumHeight = options.orthographicFrustumHeight ?? 10;
+  const initialAspect = initialWidth / initialHeight;
+  const camera = cameraProjection === 'orthographic'
+    ? new THREE.OrthographicCamera(
+      -(orthographicFrustumHeight * initialAspect) / 2,
+      (orthographicFrustumHeight * initialAspect) / 2,
+      orthographicFrustumHeight / 2,
+      -orthographicFrustumHeight / 2,
+      near,
+      far,
+    )
+    : new THREE.PerspectiveCamera(options.fov ?? 42, initialAspect, near, far);
+  if (camera.isOrthographicCamera && options.orthographicZoom !== undefined) {
+    camera.zoom = options.orthographicZoom;
+    camera.updateProjectionMatrix();
+  }
   if (options.cameraUp) camera.up.set(...options.cameraUp);
   camera.position.set(4, 3, 5);
   const renderer = new THREE.WebGLRenderer({
@@ -119,7 +134,16 @@ export function createThreeViewport(container, runtime, options = {}) {
     if (disposed) return;
     const width = Math.max(1, root.clientWidth || container.clientWidth || 1);
     const height = Math.max(1, root.clientHeight || container.clientHeight || 1);
-    camera.aspect = width / height;
+    if (camera.isOrthographicCamera) {
+      const halfHeight = orthographicFrustumHeight / 2;
+      const halfWidth = halfHeight * (width / height);
+      camera.left = -halfWidth;
+      camera.right = halfWidth;
+      camera.top = halfHeight;
+      camera.bottom = -halfHeight;
+    } else {
+      camera.aspect = width / height;
+    }
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
   };

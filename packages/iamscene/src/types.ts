@@ -31,6 +31,24 @@ export interface SceneAsset {
   units?: 'm' | 'cm' | 'mm';
 }
 
+export interface SceneMaterialHolographicEarth {
+  layer: 'ocean' | 'dots' | 'outline';
+  frequency?: [number, number];
+  dotSize?: number;
+  smoothness?: number;
+  dotColor?: string;
+  dotOpacity?: number;
+  fresnelColor?: string;
+  fresnelBias?: number;
+  fresnelScale?: number;
+  fresnelPower?: number;
+  fresnelIntensity?: number;
+  lineColor?: string;
+  lineWidth?: number;
+  lineOpacity?: number;
+  lineIntensity?: number;
+}
+
 export interface SceneMaterial {
   id: string;
   baseColor: string;
@@ -42,6 +60,7 @@ export interface SceneMaterial {
   transparent?: boolean;
   additive?: boolean;
   depthWrite?: boolean;
+  holographicEarth?: SceneMaterialHolographicEarth;
   /** Reveal an imported mesh from its local XZ origin. The reveal radius is time-addressable. */
   radialReveal?: {
     initialRadius: number;
@@ -95,10 +114,13 @@ export interface SceneNode {
 }
 
 export interface SceneCamera {
-  projection: 'perspective';
+  projection: 'perspective' | 'orthographic';
   position: Vec3;
   target: Vec3;
-  fov: number;
+  fov?: number;
+  /** Effective vertical frustum height in scene units for orthographic cameras. */
+  frustumHeight?: number;
+  zoom?: number;
   near: number;
   far: number;
 }
