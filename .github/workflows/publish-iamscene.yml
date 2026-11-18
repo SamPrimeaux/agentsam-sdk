@@ -52,7 +52,7 @@ jobs:
       - name: Verify packed package contents
         run: |
           npm pack --workspace @inneranimalmedia/iamscene --dry-run --json > "$RUNNER_TEMP/iamscene-pack.json"
-          node --input-type=module -e 'import fs from "node:fs";const data=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/iamscene-pack.json"))[0];const files=new Set(data.files.map(f=>f.path));if(!files.has("dist/src/index.js")||!files.has("schema/iamscene.v1.schema.json"))throw Error("scene_publish_artifacts_missing")'
+          node --input-type=module -e 'import fs from "node:fs";const raw=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/iamscene-pack.json"));const data=Array.isArray(raw)?raw[0]:Object.values(raw)[0];const files=new Set(data.files.map(f=>f.path));if(!files.has("dist/src/index.js")||!files.has("schema/iamscene.v1.schema.json"))throw Error("scene_publish_artifacts_missing")'
       - name: Publish standalone IAM Scene with provenance
         run: npm publish --workspace @inneranimalmedia/iamscene --access public --provenance
       - name: Verify public registry version
