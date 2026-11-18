@@ -146,15 +146,22 @@ if(bootParams.get("presentation")==="embedded") appFrame.classList.add("is-embed
 function enterStudio(){gallery?.hide();shell.dataset.ssSurface="studio";announce("Editing · "+doc.name);sendHostMessage("surface",{surface:"studio"});sendHostMessage("selection",{selection:studioContext()});}
 function showGallery(){nativeSceneEditor?.dispose();nativeSceneEditor=null;settingsApi.close();gallery?.show();sendHostMessage("surface",{surface:"gallery"});announce("SamSketch gallery");}
 function loadDocument(next:Document){
- stopStoryPlayback();
- mode="select";transformMode="off";storyTransition=null;toggleTimeline(true);
+ stopStoryPlayback();stopStoryboardPlayback();
+ mode="select";transformMode="off";storyTransition=null;cameraTransition=null;toggleTimeline(true);
  document.querySelectorAll(".canvas-tools .icon-control").forEach(button=>button.classList.remove("active"));
  document.getElementById("mode-select")?.classList.add("active");
  snapshot();
- doc=next;
+ doc=normalizeDocument(next);
  selectedId=doc.items[0]?.id||"";selectedPartId=null;
+ surfaceRoughness=doc.sceneSettings!.roughness;surfaceMetalness=doc.sceneSettings!.metalness;
+ sceneAutoRotate=doc.sceneSettings!.autoTour;rotationSpeed=doc.sceneSettings!.spinSpeed*.01;
+ fogEnabled=doc.sceneSettings!.fogEnabled;fogDensity=doc.sceneSettings!.fogDensity;
+ shadowsEnabled=doc.sceneSettings!.shadowsEnabled;selectionOutlineEnabled=doc.sceneSettings!.selectionOutline;
+ wireframe=doc.sceneSettings!.wireframe;showGrid=doc.sceneSettings!.showGrid;grid.visible=showGrid;
+ brushEnabled=doc.sceneSettings!.brushEnabled;reducedMotionOverride=doc.sceneSettings!.reducedMotion;
+ settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});
  history.length=0;future.length=0;
- store();renderAll();frame();
+ store();renderAll();applyMood(doc.sceneSettings!.mood,false);frame();
 }
 function renderScenePreview():string|undefined{
  try{
@@ -800,7 +807,7 @@ function renderBrand(){
  document.documentElement.style.setProperty("--accent",brandInfo[doc.brand].accent);
  document.getElementById("project-name")!.textContent=doc.name+" ▾";
 }
-function renderAll(){renderBrand();renderPrimitives();renderInspector();renderChapters();redraw();renderLayers();progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
+function renderAll(){renderBrand();renderPrimitives();renderInspector();renderChapters();redraw();renderLayers();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
 function setBackdrop(preset:string){
  const colors:Record<string,string>={blue:"#e8effb",studio:"#202c40",neutral:"#e9e4dd",slate:"#252d3d",paper:"#f7f4ee",daylight:"#e7eff7",overcast:"#d8dfe8",night:"#242b3a"};
  const color=colors[preset]||preset||colors.blue;currentBackdrop=preset;
@@ -903,19 +910,21 @@ function startStoryPlayback(){
  for(const v of ["select","orbit","story"])document.getElementById("mode-"+v)?.classList.toggle("active",v==="story");
  if(reducedMotionOverride||matchMedia("(prefers-reduced-motion: reduce)").matches){announce("Reduced motion is enabled; select a chapter manually.");return;}
  setChapter(0);
- autoPlay=window.setInterval(()=>{if(doc.chapter>=3){stopStoryPlayback();return;}setChapter(doc.chapter+1);},2200);
+ autoPlay=window.setInterval(()=>{if(doc.chapter>=3){if(doc.sceneSettings?.loopPresentation)setChapter(0);else stopStoryPlayback();return;}setChapter(doc.chapter+1);},2200);
 }
 function resetStudioSettings(){
- stopStoryPlayback();surfaceRoughness=.82;surfaceMetalness=.08;sceneAutoRotate=false;rotationSpeed=.003;
- fogEnabled=false;fogDensity=.012;currentBackdrop="blue";shadowsEnabled=true;selectionOutlineEnabled=true;reducedMotionOverride=false;
+ stopStoryPlayback();stopStoryboardPlayback();surfaceRoughness=.82;surfaceMetalness=.08;sceneAutoRotate=false;rotationSpeed=.003;
+ fogEnabled=false;fogDensity=.012;currentBackdrop="blue";shadowsEnabled=true;selectionOutlineEnabled=true;reducedMotionOverride=false;brushEnabled=false;
  wireframe=false;showGrid=false;grid.visible=false;renderer.shadowMap.enabled=true;light.castShadow=true;fillLight.castShadow=true;
- light.intensity=3.5;light.color.set("#ffffff");fillLight.intensity=2.1;fillLight.color.set("#b1c9ff");ambientLight.intensity=2.1;
- floor.visible=true;floor.receiveShadow=true;floor.material.opacity=.13;renderer.toneMappingExposure=1.55;
- controls.enabled=true;controls.enableRotate=true;controls.enableZoom=true;controls.enablePan=true;
- doc.items.forEach(item=>item.material="clay");redraw();frame();setBackdrop("blue");
+ light.intensity=2.6;light.color.set("#fff0da");fillLight.intensity=1.35;fillLight.color.set("#409cff");ambientLight.intensity=1.15;ambientLight.color.set("#d0e2ff");
+ floor.visible=true;floor.receiveShadow=true;floor.material.opacity=.23;light.shadow.radius=3;renderer.toneMappingExposure=1.12;
+ controls.enabled=true;controls.enableRotate=true;controls.enableZoom=true;controls.enablePan=true;cameraTransition=null;
+ doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};doc.brushStrokes=[];
+ doc.items.forEach(item=>{item.material="clay";item.finish=undefined;});
+ applyMood("studio",false);redraw();frame();setBackdrop("#202c40");
  timelinePane.hidden=false;appFrame.dataset.timelineHidden="false";appFrame.dataset.libraryHidden="false";appFrame.dataset.inspectorHidden="false";
  appFrame.style.removeProperty("--library-width");appFrame.style.removeProperty("--inspector-width");appFrame.style.removeProperty("--timeline-height");
- toggleTimeline(false);
+ toggleTimeline(false);settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});store();
 }
 function applyStudioSetting(key:string,value:string|number|boolean){
  const settings=doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings};
