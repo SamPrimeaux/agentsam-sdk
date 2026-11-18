@@ -5,7 +5,7 @@ import {readFile,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {getRegistryPage} from '../backend/cms/registry.js';
-import {listLocalThemeProducts} from '../../../packages/catalog/src/theme-products.mjs';
+import {listThemeStoreProducts} from '../../../packages/catalog/src/theme-products.mjs';
 import {RESOLVE_PORTAL_TEMPLATES,portalCmsPage,portalTemplateForSlug,portalTemplateForPath} from '../../../packages/theme-resolve/src/portal-templates.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const staticRoot=path.join(root,'frontend/static');
