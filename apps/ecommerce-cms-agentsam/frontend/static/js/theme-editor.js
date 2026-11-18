@@ -3173,21 +3173,50 @@
         if (!event.relatedTarget?.closest?.('[data-cms-block], [data-cms-section], [data-section-id]')) hoverEditorNode(null);
       });
       doc.addEventListener('click', function(event) {
-        if (host && !window.__agentsamCmsGlobalInspectMode) {
-          const link = event.target?.closest?.('a[href]');
-          if (link && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
-            let destination = null;
-            try { destination = new URL(link.getAttribute('href'),location.origin); } catch {}
-            const route = destination?.origin === location.origin && !destination.search && !destination.hash
-              ? destination.pathname.replace(/\/?$/, '/') : null;
-            const matched = route && pages.find(p =>
-              (host.pageRoutes?.[p.slug] || p.route || '').replace(/\/?$/, '/') === route);
-            if (matched) {
-              event.preventDefault();
-              event.stopImmediatePropagation();
-              void switchPage(matched.slug);
-              return;
-            }
+        const link = event.target?.closest?.('a[href]');
+        const rawHref = String(link?.getAttribute('href') || '').trim();
+        // The base URL points at immutable Theme Store assets. It must never
+        // become the navigation authority for an installed theme's pages.
+        if (host && link && rawHref && !rawHref.startsWith('#')) {
+          let destination = null;
+          let assetOrigin = null;
+          let assetBasePath = '/';
+          try {
+            destination = new URL(rawHref, doc.baseURI || location.href);
+            const assetBase = new URL(doc.baseURI || location.href);
+            assetOrigin = assetBase.origin;
+            assetBasePath = assetBase.pathname.replace(/\/?$/, '/');
+          } catch {}
+          const samePreviewOrigin = Boolean(destination &&
+            (destination.origin === location.origin || destination.origin === assetOrigin));
+          const normalizeRoute = value => {
+            const path = String(value || '/').replace(/\/+$/, '');
+            return path || '/';
+          };
+          let routePath = destination?.pathname || '';
+          if (destination?.origin === assetOrigin && assetBasePath !== '/' &&
+              routePath.startsWith(assetBasePath)) {
+            routePath = '/' + routePath.slice(assetBasePath.length).replace(/^\/+/, '');
+          }
+          const route = samePreviewOrigin && !destination.search && !destination.hash
+            ? normalizeRoute(routePath) : null;
+          const matched = route && pages.find(page => normalizeRoute(
+            host.pageRoutes?.[page.slug] || page.route || page.route_path || page.live_route || ''
+          ) === route);
+          const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+          if (matched && !modified) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            void switchPage(matched.slug);
+            return;
+          }
+          // Unknown internal links in an installed theme must not fall through
+          // to the Theme Store preview origin (or another host-owned route).
+          if (host.projectId && samePreviewOrigin) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (!modified) setNote('This link is not a page in the installed theme. It cannot open the Theme Store.', 'info');
+            return;
           }
         }
         if (!inspectionEnabled || window.__agentsamCmsGlobalInspectMode) return;
