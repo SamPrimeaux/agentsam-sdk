@@ -1931,7 +1931,7 @@
       "commands": [],
       "evidence": {
         "directory": "packages/agentsam-cms",
-        "host_integration": "pending-live-host-adapter-verification",
+        "host_integration": "not-verified",
         "readme": "packages/agentsam-cms/README.md",
         "runtime_proof": "pure-domain-and-host-contract-tests",
         "tests": [
