@@ -2,18 +2,25 @@
   "schema": "agentsam.package.v1",
   "id": "agentsam-cms",
   "name": "@inneranimalmedia/agentsam-cms",
-  "version": "0.1.0",
+  "version": "2.6.15",
   "catalog_status": "classified",
   "class": "package",
-  "status": "local-verified-host-integration-required",
-  "languages": ["javascript", "typescript"],
-  "execution_domains": ["cms", "local", "worker-adapter"],
-  "purpose": "Portable executable SAM CMS machine with typed page/component tools, revision recovery, explicit publication, and the canonical cms-runtime SQLite storage schema.",
+  "status": "host-integration-required",
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "execution_domains": [
+    "cms",
+    "local",
+    "worker-adapter"
+  ],
+  "purpose": "Canonical portable CMS operations for ecommerce-cms-agentsam; trusted site-first storage, themes and publication; zero SDK DDL or local database provisioning.",
   "install": [
     {
       "type": "npm",
       "package": "@inneranimalmedia/agentsam-cms",
-      "command": "npm install ./packages/agentsam-cms-0.1.0.tgz"
+      "command": "npm install @inneranimalmedia/agentsam-cms"
     }
   ],
   "use_when": [
@@ -27,7 +34,15 @@
     "Trying to use CMS mutation tools as an unrestricted Bash or D1 executor"
   ],
   "commands": [],
-  "topics": ["cms", "sections", "blocks", "drafts", "revisions", "publication", "sam-os"],
+  "topics": [
+    "cms",
+    "sections",
+    "blocks",
+    "drafts",
+    "revisions",
+    "publication",
+    "sam-os"
+  ],
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-cms",
@@ -40,7 +55,7 @@
       "packages/agentsam-cms/test/standalone.test.mjs",
       "test/integration/sam-cms-machine.integration.test.mjs"
     ],
-    "runtime_proof": "local-sqlite-and-cleanroom",
-    "host_integration": "not-verified"
+    "runtime_proof": "pure-domain-and-host-contract-tests",
+    "host_integration": "pending-live-host-adapter-verification"
   }
 }

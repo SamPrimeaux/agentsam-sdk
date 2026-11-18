@@ -1,56 +1,58 @@
-# AgentSam CMS machine
+# @inneranimalmedia/agentsam-cms
 
-The @inneranimalmedia/agentsam-cms package is a portable, versioned CMS
-operations engine with no FuelNFreetime checkout, D1, MCP, ExecOS, or UI dependency.
+**The only supported AgentSam CMS SDK engine.** The merchant-facing Page Editor,
+Theme Studio, storefront delivery, and Apps are owned by
+`@inneranimalmedia/ecommerce-cms-agentsam`.
 
-This package provides:
-- 13 canonical operations for definition discovery, page/section/block CRUD,
-  duplicate/move/visibility, revision history/restore, private preview, and
-  explicitly approved live publication.
-- 12 compatibility aliases preserving legacy cms.section.* and cms.block.*
-  callers; new models should discover the canonical component operations.
-- Typed input and output schemas, definition-specific settings validation,
-  atomic version checks, revision recovery and idempotent create operations.
-- Trusted host actor/account/installation identity, permission and explicit
-  publication approval, never delegated to model-authored parameters.
-- Optional durable SQLite Node adapter, with separate live snapshots and
-  revision history. Node SQLite is experimental on the currently used Node 22.
+## Source of truth
 
-Portable entrypoint: @inneranimalmedia/agentsam-cms
-Node adapter entrypoint: @inneranimalmedia/agentsam-cms/node
+- No SQL migrations, DDL, runtime catalogs or embedded SQLite schema.
+- No `cms_runtime_*`, `cms_sections`, `cms_blocks`, or `sam_cms_*` tables.
+- Account, site and actor scope come from the trusted host session.
+- The host owns its existing `cms_sites`, `cms_pages`, `cms_page_sections`,
+  `cms_section_blocks`, `cms_revisions`, `cms_publications`, `cms_site_themes`,
+  `cms_globals` and `cms_assets` relationships.
+- D1/R2/host adapters implement durable revisions, atomic CAS, immutable
+  publication manifests and rollback. The SDK does not initialize storage.
 
-createCmsOperations needs a defineSamOperation callback from the installed
-SAM SDK, a repository implementing the documented CmsRepository interface,
-definitions containing settings_schema, resolveTrustedContext, and authorize.
-It returns executable operation definitions, not inactive catalog placeholders.
+## Runtime entry points
 
-The Node adapter createNodeSqliteCmsRepository({filename}) provides
-transactional compare-and-swap, account/installation scoping, versions,
-revival from historical snapshots, and durable publication snapshots.
+`createCmsOperations()` retains the canonical SDK agent operation vocabulary
+(definition discovery, section/block editing, revisions, private preview and
+approved publication), including compatibility aliases.
 
-Publish operations require BOTH explicit requested confirmation and a host
-authorization response {allow:true, publicationApproved:true}. A model
-cannot grant itself a publish permission.
+`createMerchantCms()` implements merchant-facing site, page, theme, navigation
+and asset domain operations on a host-supplied repository. It validates
+page/template/SEO/navigation input, checks site ownership, enforces authorizer
+policy and rejects publication without a durable manifest receipt.
 
-The storefront or Worker supplies its own repository mapping the existing
-authoritative CMS D1/R2 storage contracts. Do not add a competing family
-of hosted CMS tables or import source from another repository.
-The SQLite schema is a copied, pinned snapshot of the authoritative cms-runtime
-schema, not a new family of tables. The SDK verifies it has not drifted.
-Worker/D1 adapters must implement mutate with durable atomic revision CAS.
+```js
+import { createMerchantCms } from '@inneranimalmedia/agentsam-cms';
 
-The package can be packed and installed independently. A release is not
-hosted-production-ready until the consuming app implements and tests its
-authorized repository and publish path with real resources.
+const cms = createMerchantCms({
+  repository: ecommerceCmsRepository,
+  resolveTrustedContext: resolveSessionAccountSite,
+  authorize: authorizeCmsOperation
+});
 
-Example (when installed as an application dependency):
+await cms.pages.create({
+  title:'About', slug:'about', routePath:'/about', pageType:'page',
+  idempotencyKey:requestId
+}, requestContext);
+```
 
-  import {createCmsOperations} from '@inneranimalmedia/agentsam-cms';
-  const installed = createCmsOperations({
-    defineSamOperation, repository, definitions,
-    resolveTrustedContext, authorize
-  });
-  // Register installed in the host SAM runtime after verifying its adapter.
+The repository contract lives in `src/index.d.ts`. Its mutation methods
+**must** implement atomic version checks and durable storage using host-owned
+tables; successful publication requires an immutable manifest key/hash and a
+monotonic release number. The engine cannot fake a live site with a preview.
 
-The SDK also supports createSamOS({cms:{repository,definitions,
-resolveTrustedContext,authorize}}), which installs the same operations.
+The old `createNodeSqliteCmsRepository({filename})` constructor has been
+retired. There is no fallback local CMS schema when a host adapter is missing.
+
+## Acceptance
+
+`npm --prefix packages/agentsam-cms test` validates package contracts and
+injected-repository behavior. A real launch also requires the ecommerce
+CMS host's multi-tenant D1/R2 adapter and end-to-end Page Editor, Theme Studio,
+publication, rollback and storefront tests. SDK tests alone do not establish
+deployed product readiness.

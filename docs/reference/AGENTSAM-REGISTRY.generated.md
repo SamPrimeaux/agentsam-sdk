@@ -228,7 +228,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `agentsam-browser-surface` | `@inneranimalmedia/agentsam-browser-surface` | needs-review | AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Loc… |
 | `agentsam-campaign` | `@inneranimalmedia/agentsam-campaign` | needs-review | Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchand… |
 | `agentsam-cloudflare-images` | `@inneranimalmedia/agentsam-cloudflare-images` | needs-review | Shared Cloudflare Images transport: credentials, delivery URLs, and HTTP client. Content and Brand consume this — … |
-| `agentsam-cms` | `@inneranimalmedia/agentsam-cms` | classified | Portable executable SAM CMS machine with typed page/component tools, revision recovery, explicit publication, and … |
+| `agentsam-cms` | `@inneranimalmedia/agentsam-cms` | classified | Canonical merchant CMS operations, page/theme lifecycle and approved publication via the host's existing site-first pe… |
 | `agentsam-connector-cloudflare` | `@inneranimalmedia/agentsam-connector-cloudflare` | needs-review | Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not aff… |
 | `agentsam-content` | `@inneranimalmedia/agentsam-content` | needs-review | Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContent… |
 | `agentsam-content-studio` | `@inneranimalmedia/agentsam-content-studio` | needs-review | Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRu… |
@@ -260,7 +260,6 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `agentsam-work-graph` | `@inneranimalmedia/agentsam-work-graph` | needs-review | Core AgentSam work-graph primitive: one graph model (WorkItem, Dependency, TimelineEvent, Artifact, Evidence, Acto… |
 | `agentsam-workbench` | `@inneranimalmedia/agentsam-workbench` | needs-review | Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces. |
 | `analytics-ui` | `@inneranimalmedia/analytics-ui` | needs-review | Domain-neutral analytics presentation primitives for Inner Animal Media products. |
-| `cms-runtime` | `@inneranimalmedia/cms-runtime` | needs-review | Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package c… |
 | `copro-editor` | `@inneranimalmedia/copro-editor` | needs-review | Deterministic headless CoPro edit command engine with undo and redo. |
 | `copro-media` | `@inneranimalmedia/copro-media` | needs-review | Provider-neutral CoPro media asset identity, provenance, and repository contracts. |
 | `copro-project` | `@inneranimalmedia/copro-project` | needs-review | Provider-neutral CoPro project document, serialization, validation, and migration contracts. |

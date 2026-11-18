@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-cms",
   "version": "2.6.15",
-  "description": "Portable versioned CMS operation engine and transaction-backed Node adapter for SAM installations.",
+  "description": "Canonical CMS operations for merchant Page Editor, Theme Studio and publication with host-owned persistence; no SQL bootstrap.",
   "type": "module",
   "files": [
     "src",
@@ -20,7 +20,11 @@
     "./account-context": "./src/account-context.js",
     "./chat-storage": "./src/chat-storage.js",
     "./site-settings": "./src/site-settings-contract.js",
-    "./site-nav-defaults": "./src/site-nav-defaults.js"
+    "./site-nav-defaults": "./src/site-nav-defaults.js",
+    "./application": {
+      "types": "./src/index.d.ts",
+      "import": "./src/application.js"
+    }
   },
   "engines": {
     "node": ">=22"

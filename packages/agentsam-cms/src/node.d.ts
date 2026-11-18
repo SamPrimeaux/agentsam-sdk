@@ -1,7 +1,3 @@
-import type { CmsRepository, CmsIdentity, CmsDocument } from './index.js';
-export type NodeSqliteCmsRepository = CmsRepository & {
-  close:()=>void;
-  digest:(value:unknown)=>string;
-  getPublication:(identity:CmsIdentity,pageId:string,version?:number|null)=>{document:CmsDocument;version:number;digest:string}|null;
-};
-export declare function createNodeSqliteCmsRepository(options:{filename:string}):Promise<NodeSqliteCmsRepository>;
+import type {CmsRepository} from './index.js';
+export {createMerchantCms} from './index.js';
+export declare function createCmsHostRepository<T extends CmsRepository>(repository:T):T;
