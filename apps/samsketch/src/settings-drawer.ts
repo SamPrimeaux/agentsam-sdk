@@ -271,8 +271,8 @@ export function mountSettingsDrawer(host: HTMLElement) {
   const dispatchChange = (key: string, value: SettingValue) => {
     const stateMap: Record<string, keyof SceneSettings> = {
       "scene.profile": "profile", "styles.finish": "finish", "styles.mood": "mood",
-      "styles.roughness": "roughness" as keyof SceneSettings, "styles.metalness": "metalness" as keyof SceneSettings,
-      "scene.autorotate": "autoTour", "camera.autoTour": "autoTour", "camera.shot": "cameraShot",
+      "styles.roughness": "roughness", "styles.metalness": "metalness", "styles.material": "surfaceTreatment",
+      "scene.autorotate": "autoTour", "scene.autoplay": "loopPresentation", "camera.autoTour": "autoTour", "camera.shot": "cameraShot",
       "camera.transition": "transitionType", "camera.distance": "cameraDistance", "camera.fov": "fieldOfView",
       "stage.explode": "explodeAmount", "stage.spin": "spinSpeed", "stage.lightAngle": "keyLightAngle",
       "stage.brush": "brushEnabled", "light.key": "keyIntensity", "light.angle": "keyLightAngle",
@@ -280,7 +280,9 @@ export function mountSettingsDrawer(host: HTMLElement) {
       "light.ambientFill": "ambientIntensity", "light.shadowSoftness": "shadowSoftness",
       "light.shadows": "shadowsEnabled", "fog.enabled": "fogEnabled", "fog.density": "fogDensity",
       "effects.wireframe": "wireframe", "effects.shadows": "shadowsEnabled", "effects.grid": "showGrid",
-      "effects.selection": "selectionOutline",
+      "effects.selection": "selectionOutline", "direct.voiceMode": "voiceMode", "direct.voiceName": "voiceName", "direct.voicePreset": "voiceStyle",
+      "sky.environment": "environment", "sky.brightness": "horizonBrightness", "shadows.ambient": "ambientShadowOpacity",
+      "global.reducedMotion": "reducedMotion", "global.properties": "showProperties", "global.timeline": "keepTimeline",
     };
     if (key === "scene.chapter") state.chapter = Number(value);
     else {
