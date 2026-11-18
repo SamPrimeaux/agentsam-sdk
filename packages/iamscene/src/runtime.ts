@@ -172,15 +172,27 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
   for (const node of document.scene.nodes) {
     const object = objects.get(node.id)!;
     if (node.kind === 'mesh') {
-      if (!node.assetRef) throw new Error(`iamscene_mesh_asset_required:${node.id}`);
-      const asset = assetMap.get(node.assetRef);
-      if (!asset) throw new Error(`iamscene_asset_not_found:${node.assetRef}`);
-      assetLoads.push(loadAsset(asset).then(model => {
-        const material = node.materialRef ? materials.get(node.materialRef) : undefined;
-        if (material) applyMaterial(model, material);
-        model.userData.iamSceneNodeId = node.id;
-        object.add(model);
-      }));
+      const material = node.materialRef ? materials.get(node.materialRef) : undefined;
+      if (!node.assetRef && node.geometry?.type === 'sphere') {
+        // Built-in primitive from the canonical .iamscene source document:
+        // a scene must not need a presentation GLTF for simple authored geometry.
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(node.geometry.radius, 96, 64),
+          material?.clone() ?? new THREE.MeshStandardMaterial({ color: '#d8f7ff' }),
+        );
+        mesh.userData.iamSceneNodeId = node.id;
+        mesh.renderOrder = node.renderOrder ?? 0;
+        object.add(mesh);
+      } else {
+        if (!node.assetRef) throw new Error(`iamscene_mesh_asset_required:${node.id}`);
+        const asset = assetMap.get(node.assetRef);
+        if (!asset) throw new Error(`iamscene_asset_not_found:${node.assetRef}`);
+        assetLoads.push(loadAsset(asset).then(model => {
+          if (material) applyMaterial(model, material);
+          model.userData.iamSceneNodeId = node.id;
+          object.add(model);
+        }));
+      }
     } else if (node.kind === 'path') {
       if (node.geometry?.type !== 'polyline') throw new Error(`iamscene_path_geometry_invalid:${node.id}`);
       const curve = new THREE.CatmullRomCurve3(
