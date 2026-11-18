@@ -819,32 +819,35 @@ function setBackdrop(preset:string){
 }
 function applyMood(id:MoodId,persist=true){
  const mood=MOODS.find(item=>item.id===id);if(!mood)return;
- if(persist){snapshot();doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,mood:id};}
+ if(persist)snapshot();
+ doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,mood:id,fogDensity:mood.fogDensity};
  light.color.set(mood.keyColor);light.intensity=mood.keyIntensity;
  fillLight.color.set(mood.fillColor);fillLight.intensity=mood.fillIntensity;
  ambientLight.color.set(mood.ambientColor);ambientLight.intensity=mood.ambientIntensity;
  renderer.toneMappingExposure=mood.exposure;
- if(!doc.sceneSettings?.fogEnabled)fogEnabled=false;
- fogDensity=doc.sceneSettings?.fogDensity??mood.fogDensity;
+ fogDensity=mood.fogDensity;
  setBackdrop(mood.backdrop);
  if(persist)store();
 }
-function applyFinish(id:FinishId){
+function applyFinish(id:FinishId,persist=true){
  const preset=FINISHES.find(item=>item.id===id);if(!preset)return;
- snapshot();doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,finish:id};
+ if(persist)snapshot();
+ doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,finish:id,roughness:preset.roughness,metalness:preset.metalness,surfaceTreatment:"metal"};
+ surfaceRoughness=preset.roughness;surfaceMetalness=preset.metalness;
  const targets=sel()?[sel()!]:doc.items;
  targets.forEach(item=>{item.finish=id;item.material="metal";item.color=preset.swatchHex;});
- redraw();renderInspector();renderLayers();store();
+ redraw();renderInspector();renderLayers();if(persist)store();
 }
 function applySceneProfile(id:SceneProfileId){
  const profile=SCENE_PROFILES.find(item=>item.id===id);if(!profile)return;
+ snapshot();
  doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,profile:id,finish:profile.finish,mood:profile.mood};
- applyFinish(profile.finish);applyMood(profile.mood,false);
+ applyFinish(profile.finish,false);applyMood(profile.mood,false);store();
  announce("SamSpeaks scene profile · "+profile.label);
 }
 function applyCameraShot(id:CameraShotId,transition?:TransitionId,persist=true){
  const shot=CAMERA_SHOTS.find(item=>item.id===id);if(!shot)return;
- if(persist)doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,cameraShot:id};
+ if(persist){snapshot();doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,cameraShot:id,cameraDistance:shot.distance};}
  const selected=selectedSceneObject();
  const target=selected?new THREE.Box3().setFromObject(selected).getCenter(new THREE.Vector3()):new THREE.Vector3(0,0,0);
  const direction=new THREE.Vector3(...shot.direction).normalize();
