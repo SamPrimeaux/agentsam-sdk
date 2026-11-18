@@ -9,12 +9,34 @@ function setup() {
   db.exec(`
    CREATE TABLE cms_sites(id TEXT PRIMARY KEY,account_id TEXT NOT NULL,name TEXT NOT NULL,slug TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'active',is_default INTEGER DEFAULT 1,primary_domain TEXT,settings_json TEXT NOT NULL DEFAULT '{}');
    CREATE TABLE cms_pages(id TEXT PRIMARY KEY,site_id TEXT NOT NULL,slug TEXT NOT NULL,route_path TEXT NOT NULL,page_type TEXT NOT NULL,title TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft',template_sku TEXT,nav_visible INTEGER,requires_auth INTEGER,sort_order INTEGER,seo_json TEXT NOT NULL DEFAULT '{}',metadata_json TEXT NOT NULL DEFAULT '{}',content_object_key TEXT,published_manifest_object_key TEXT,created_at INTEGER,updated_at INTEGER,published_at INTEGER,UNIQUE(site_id,slug),UNIQUE(site_id,route_path));
-   CREATE TABLE cms_page_sections(id TEXT,page_id TEXT,section_key TEXT,section_type TEXT,section_name TEXT,section_data TEXT,sort_order INTEGER,is_visible INTEGER,r2_bucket TEXT,draft_r2_key TEXT,published_r2_key TEXT,updated_at INTEGER);
+   CREATE TABLE cms_page_sections(id TEXT,page_id TEXT,section_key TEXT,section_type TEXT,
+     section_name TEXT,section_data TEXT,sort_order INTEGER,is_visible INTEGER,r2_bucket TEXT,
+     draft_r2_key TEXT,published_r2_key TEXT,content_hash TEXT,published_hash TEXT,
+     template_sku TEXT,definition_id TEXT,updated_at INTEGER);
+   CREATE TABLE cms_section_blocks(id TEXT,account_id TEXT,section_id TEXT,block_key TEXT,
+     block_type TEXT,status TEXT,sort_order INTEGER,content_json TEXT,metadata_json TEXT);
    CREATE TABLE cms_revisions(account_id TEXT,site_id TEXT,entity_type TEXT,entity_id TEXT,revision_number INTEGER);
+   CREATE TABLE cms_publications(id TEXT DEFAULT (lower(hex(randomblob(8)))),account_id TEXT NOT NULL,
+     site_id TEXT NOT NULL,release_number INTEGER NOT NULL,
+     status TEXT NOT NULL DEFAULT 'published',manifest_object_key TEXT NOT NULL,
+     manifest_hash TEXT NOT NULL,source_revision_hash TEXT,created_by TEXT,
+     metadata_json TEXT,published_at TEXT,UNIQUE(site_id,release_number));
    CREATE TABLE cms_page_drafts(id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),page_id TEXT NOT NULL,user_id TEXT NOT NULL,draft_data TEXT NOT NULL,created_at TEXT DEFAULT (datetime('now')),updated_at TEXT DEFAULT (datetime('now')),UNIQUE(page_id,user_id));
    INSERT INTO cms_sites(id,account_id,name,slug,settings_json) VALUES('site_one','owner1','Custom Shop','custom-shop','{"store":{"brand":{"primary_color":"#23845c"}}}');
   `);
-  const DB={prepare(sql){const stmt=db.prepare(sql);return {bind(...params){return {async first(){return stmt.get(...params)||null},async all(){return {results:stmt.all(...params)}},async run(){const result=stmt.run(...params);return {meta:{changes:result.changes}}}}}}}};
+  const DB={
+    async batch(statements){
+      db.exec('BEGIN');try{const results=[];
+        for(const stmt of statements)results.push(await stmt.run());
+        db.exec('COMMIT');return results;
+      }catch(e){db.exec('ROLLBACK');throw e;}
+    },
+    prepare(sql){const stmt=db.prepare(sql);return {bind(...params){return {
+      async first(){return stmt.get(...params)||null},
+      async all(){return {results:stmt.all(...params)}},
+      async run(){const result=stmt.run(...params);return {meta:{changes:result.changes}}}
+    }}}}
+  };
   const objects=new Map();
   const WEBSITE_ASSETS={async get(key){const value=objects.get(key);return value == null ? null : {async text(){return value}}},async put(key,value){objects.set(key,value)}};
   return {db,objects,env:{DB,WEBSITE_ASSETS}};

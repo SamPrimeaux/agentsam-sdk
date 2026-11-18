@@ -2,6 +2,7 @@
 // CMS verification command without creating another parallel test workflow.
 import './cms-component-catalog-verification.test.mjs';
 import './cms-site-owned-stock-integration.test.mjs';
+import './cms-portable-style-proof.test.mjs';
 import './platform-stock-native.test.mjs';
 
 import test from "node:test";

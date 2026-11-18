@@ -38,6 +38,7 @@ export function createSiteOwnedFixture(){
   db.exec(`
     ALTER TABLE cms_page_sections ADD COLUMN definition_id TEXT;
     ALTER TABLE cms_page_sections ADD COLUMN template_sku TEXT;
+    ALTER TABLE cms_page_sections ADD COLUMN published_hash TEXT;
     ALTER TABLE cms_page_sections ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json));
     ALTER TABLE cms_section_blocks ADD COLUMN id TEXT;
     ALTER TABLE cms_section_blocks ADD COLUMN parent_block_id TEXT;
