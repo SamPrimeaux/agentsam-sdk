@@ -22,6 +22,7 @@ import {
 } from "./catalog-resource.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
+import { installSiteOwnedStockOrEmbed, listSiteOwnedStockCatalog } from './site-owned-component-install.mjs';
 import { validateThemeSettings, validateThemeCss, validateSectionStyles } from "./theme-style-contract.mjs";
 import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
 import {normalizeSettingFields} from "../../frontend/static/js/generated-settings-schema.mjs";
@@ -1965,72 +1966,16 @@ async function installCanonicalCatalogResource(env, scope, body = {}) {
   };
 }
 
-async function installSiteOwnedCatalogResource(env, accountId, slug, siteId, pageId, body) {
-  const template = resolveCatalogTemplate(body.catalogKey || body.catalog_key || body.key);
-  if (!template) return { error: "Unknown or non-installable catalog template", status: 400 };
-  const site = await selectOwnedPageSite(env, accountId, siteId);
-  const page = await findSiteOwnedPage(env, site, slug, pageId);
-  if (!page || page.slug === "site") return { error: "cms_page_not_found", status: 404 };
-  if (!env.CMS_CONTENT) return { error: "cms_section_bucket_unavailable", status: 503 };
-
-  const content = buildCatalogInstanceContent(template, body.settings || body.config || {});
-  const serialized = JSON.stringify(content);
-  if (new TextEncoder().encode(serialized).length > 524288) {
-    return { error: "cms_section_content_too_large", status: 413 };
-  }
-  const nonce = crypto.randomUUID().replaceAll("-", "");
-  const id = "cmss_" + nonce.slice(0, 20);
-  const sectionKey = sectionKeyBase(template.key) + "-" + nonce.slice(0, 8);
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(serialized));
-  const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
-  const key = "cms/sections/drafts/" + encodeURIComponent(page.id) + "/" + id + "/revision-000001-" + hash.slice(0, 16) + ".json";
-  await env.CMS_CONTENT.put(key, serialized, { httpMetadata: { contentType: "application/json" } });
-
-  const root = content.__editor.blocks[0];
-  const blockSettings = JSON.stringify(content[root.id]);
-  const index = Number.isSafeInteger(body.toIndex) ? Math.max(0, body.toIndex) : null;
-  // Find insertion order under the same D1 transaction that writes the
-  // section, native block and revision. Published objects aren't updated.
-  const ordering = index === null ? [] : [env.DB.prepare(`
-    WITH ranked AS MATERIALIZED (
-      SELECT id, ROW_NUMBER() OVER (ORDER BY sort_order,id) AS position
-      FROM cms_page_sections WHERE page_id=?
-    )
-    UPDATE cms_page_sections SET sort_order=(
-      SELECT (position - 1 + CASE WHEN position > ? THEN 1 ELSE 0 END) * 10
-      FROM ranked WHERE ranked.id=cms_page_sections.id
-    ) WHERE page_id=?`).bind(page.id, index, page.id)];
-  await env.DB.batch([
-    ...ordering,
-    env.DB.prepare(`INSERT INTO cms_page_sections
-      (id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket,draft_r2_key,content_hash)
-      VALUES (?,?,?,'storefront_embed',?,'{}',
-        CASE WHEN ? IS NULL THEN COALESCE((SELECT MAX(sort_order)+10 FROM cms_page_sections WHERE page_id=?),0)
-          ELSE MIN(?,(SELECT COUNT(*) FROM cms_page_sections WHERE page_id=?))*10 END,
-        ?,'cms',?,?)`)
-      .bind(id, page.id, sectionKey, template.name, index, page.id, index, page.id, root.enabled ? 1 : 0, key, hash),
-    env.DB.prepare(`INSERT INTO cms_section_blocks
-      (account_id,section_id,block_key,block_type,status,content_json,metadata_json)
-      VALUES (?,?,?,?,?,?,'{"source":"theme-studio-v1"}')`)
-      .bind(accountId, id, root.id, root.templateKey, root.enabled ? "active" : "hidden", blockSettings),
-    env.DB.prepare(`INSERT INTO cms_revisions
-      (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
-      VALUES (?,?,'section',?,1,'draft',?,?,?,'{"source":"catalog-install"}')`)
-      .bind(accountId, site.id, id, key, hash, JSON.stringify({ content, catalogKey: template.key })),
-  ]);
-  return { ok: true, section_key: sectionKey, catalog_key: template.key,
-    definition_key: template.key, template_key: content.__editor.templateKey,
-    version: 1, canonical: { status: "linked" }, instance: { id, key: sectionKey, settings: content } };
-}
 
 function catalogResourceDetails(section, settings) {
   const editor = settings.__editor || {};
-  const catalogKey = editor.catalogKey || section.metadata?.catalogKey || null;
+  const catalogKey = editor.catalogSku || editor.catalogKey || section.metadata?.catalogSku || section.metadata?.catalogKey || null;
   return {
     section_id: section.id,
     section_key: section.key,
     catalog_key: catalogKey,
     definition_key: editor.definitionKey || catalogKey,
+    template_sku: editor.catalogSku || section.template_sku || section.templateSku || null,
     status: section.status,
     enabled: editor.visibility?.enabled !== false,
     version: section.contentVersion ?? section.version,
@@ -2052,12 +1997,14 @@ export async function listInstalledCatalogResources(env, slug, accountId, siteId
   }));
   const storageMode = await cmsPageStorageMode(env.DB);
   if (storageMode === "site-owned" || storageMode === "site-owned-legacy") {
+    const stock = await listSiteOwnedStockCatalog(env,accountId).catch(()=>[]);
+    const allCatalog = [...catalog,...stock];
     const result = await getSiteOwnedPage(env, accountId, slug, siteId, pageId);
     if (!result) return { error: "cms_page_not_found", status: 404 };
     const installed = result.page.sections
-      .filter(section => isCatalogInstalledContent(section.content))
+      .filter(section => isCatalogInstalledContent(section.content) || typeof section.content?.__editor?.catalogSku === 'string')
       .map(section => catalogResourceDetails(section, section.content));
-    return { ok: true, slug: result.page.slug, catalog, installed, authority: result.source };
+    return { ok: true, slug: result.page.slug, catalog:allCatalog, installed, authority: result.source };
   }
   const scope = await resolveCmsPageScope(env, accountId, { siteId, pageId, slug });
   if (scope.error) {
@@ -3269,7 +3216,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
       const storageMode = await cmsPageStorageMode(env.DB);
       let result;
       if (storageMode === "site-owned" || storageMode === "site-owned-legacy") {
-        result = await installSiteOwnedCatalogResource(env, context.accountId, m[1], siteId, pageId, body);
+        result = await installSiteOwnedStockOrEmbed(env, context.accountId, m[1], siteId, pageId, body);
       } else {
         const mode = await pageMode(m[1]);
         if (mode.error || !mode.scope) return json({ error: mode.error || "cms_page_not_found" }, { status: mode.status || 404 });

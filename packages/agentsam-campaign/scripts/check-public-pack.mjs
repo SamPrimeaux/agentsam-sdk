@@ -22,7 +22,10 @@ const result = JSON.parse(execFileSync('npm', [
 ], { cwd, encoding: 'utf8' }));
 const files = (Array.isArray(result) ? result : Object.values(result || {}))[0]?.files?.map(item => item.path) || [];
 if (!files.length) throw new Error('campaign_public_package_empty');
-const unapproved = files.filter(file => !permitted.has(file));
+// npm may include a nested README automatically across npm versions.
+// Permit this documentation when bundled, without requiring it as API data.
+const optionalDocs = new Set(['starter-packs/increase-sales/v1/README.md']);
+const unapproved = files.filter(file => !permitted.has(file) && !optionalDocs.has(file));
 const missing = [...permitted].filter(file => !files.includes(file));
 if (unapproved.length || missing.length) {
   throw new Error('campaign_public_pack_contract_violation: ' + JSON.stringify({unapproved, missing}));

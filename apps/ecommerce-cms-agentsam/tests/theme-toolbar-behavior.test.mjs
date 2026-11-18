@@ -46,7 +46,23 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   w.fetch = async () => ({ ok: true, json: async () => ({ active_theme: { name: "Heuristic", status: "active" } }) });
   w.adminFetch = async (url, options = {}) => {
     const requestPath = new URL(url, w.location.origin).pathname;
-    if (requestPath.endsWith("/registry")) return registryOverride || registryForAdmin();
+    if (requestPath.endsWith("/registry")) {
+      const source=registryOverride || registryForAdmin();
+      const catalog=[...(source.catalog || [])];
+      if(stockHandoff)catalog.push({
+        sku:'SKU-STOCK-ONB-PLAN',name:'Plan selection',label:'Plan selection',
+        itemType:'section',category:'Commerce',status:'active',catalogAvailable:true,
+        installable:true,rendererKey:'platform/choose-a-plan',
+        definitionKey:'platform/choose-a-plan',templateData:{renderer_key:'platform/choose-a-plan'}
+      });
+      for(const row of portableSections)catalog.push({
+        sku:'SKU-TEST-'+row.id.toUpperCase(),name:row.label,label:row.label,
+        itemType:'section',category:row.category||'Sections',status:'active',
+        catalogAvailable:true,installable:true,rendererKey:row.id,
+        definitionKey:row.id,templateData:{renderer_key:row.id},
+      });
+      return {...source,catalog};
+    }
     if (url.startsWith("/api/admin/cms/themes?site_id=")) return {
       ok:true,active_theme:{slug:"fixture-theme",name:"Fixture theme",state:"active"},
       themes:[{slug:"fixture-theme"}],content_version:1
@@ -61,14 +77,16 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
       publishes.push({url,method:options.method});
       return w.__publishResponder ? w.__publishResponder() : { published_at: "2026-10-10T05:00:00Z" };
     }
-    if (stockHandoff && requestPath.endsWith("/pages/" + pageSlug + "/sections") && options.method === "POST") {
+    if (stockHandoff && requestPath.endsWith("/pages/" + pageSlug + "/catalog-resources") && options.method === "POST") {
       const body = JSON.parse(options.body || "{}");
-      const content = w.ThemePortableSections?.defaults?.(body.themePreset);
-      if (!content || body.templateKey !== "portable") throw new Error("stock_section_not_registered");
-      const key = "stock-created";
-      writes.push({url,operation:"insert",...body});
-      page.sections.push({key,content,version:1,status:"draft",sort_order:page.sections.length,source:"cms"});
-      return {ok:true,section_key:key,template_key:"portable",version:1};
+      if(body.catalogKey!=='SKU-STOCK-ONB-PLAN')throw new Error('stock_sku_not_registered');
+      const content=w.ThemePortableSections?.defaults?.('platform/choose-a-plan');
+      if(!content)throw new Error('stock_renderer_missing');
+      content.__editor.catalogSku=body.catalogKey;
+      const key='stock-created';
+      writes.push({url,operation:'insert',...body});
+      page.sections.push({key,content,version:1,status:'draft',sort_order:page.sections.length,source:'cms'});
+      return {ok:true,section_key:key,template_sku:body.catalogKey,version:1};
     }
     if (url.includes("/sections/") && options.method === "PUT") {
       writes.push({ url, ...JSON.parse(options.body) });
@@ -175,7 +193,7 @@ test("Canvas handoff selects real platform stock without inserting until explici
     await new Promise(resolve=>setTimeout(resolve,35));
     const modal=doc.getElementById("te-section-menu");
     assert.equal(modal.hidden,false,"authorized editor opens Add Section library");
-    const selected=doc.querySelector('[data-choose-section="platform/choose-a-plan"]');
+    const selected=doc.querySelector('[data-choose-section="SKU-STOCK-ONB-PLAN"]');
     assert.ok(selected,"actual worker-shared stock renderer appears in CMS picker");
     assert.equal(selected.getAttribute("aria-selected"),"true");
     assert.ok(doc.querySelector("#te-section-preview iframe.te-catalog-visual"));
@@ -183,8 +201,7 @@ test("Canvas handoff selects real platform stock without inserting until explici
     doc.querySelector('[data-add-selected-section]').click();
     await tick();await tick();
     assert.equal(writes.length,1,"merchant's explicit Add section persists via the real API: "+doc.getElementById("te-note")?.textContent);
-    assert.equal(writes[0].templateKey,"portable");
-    assert.equal(writes[0].themePreset,"platform/choose-a-plan");
+    assert.equal(writes[0].catalogKey,'SKU-STOCK-ONB-PLAN');
     assert.equal(doc.querySelector('[data-select-section="stock-created"]') != null,true);
   }finally{dom.window.close();}
 });

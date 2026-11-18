@@ -11,7 +11,7 @@ import {validateThemeSettings,renderThemeSettings} from "../backend/cms/theme-st
 const panel=readFileSync(new URL("../frontend/static/js/theme-settings-live.js",import.meta.url),"utf8");
 function seedBrand(f) {
   f.db.exec(`INSERT INTO cms_pages VALUES ('sitepage','main','site','/__site','global','Global','published',NULL,0,0,0,'{}','{}',NULL,NULL,1790000000,1790000000,1790000000);
-    INSERT INTO cms_page_sections VALUES ('brand','sitepage','brand','brand','Brand','{}',0,1,'cms','brand-draft','brand-live','original','2026-10-01');`);
+    INSERT INTO cms_page_sections (id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket,draft_r2_key,published_r2_key,content_hash,updated_at) VALUES ('brand','sitepage','brand','brand','Brand','{}',0,1,'cms','brand-draft','brand-live','original','2026-10-01');`);
   const content=JSON.stringify({__editor:{themeSettings:{}}});
   f.objects.set("brand-draft",content);f.objects.set("brand-live",content);
 }
@@ -129,7 +129,7 @@ test("color controls save and reload independently on two CMS sites",async()=>{
   const f=createSiteOwnedFixture();seedBrand(f);
   f.db.exec("INSERT INTO cms_sites VALUES ('secondary','merchant','Second site','second','second.example','active',0);\n"+
     "INSERT INTO cms_pages VALUES ('otherpage','secondary','site','/__site','global','Global','published',NULL,0,0,0,'{}','{}',NULL,NULL,1790000000,1790000000,1790000000);\n"+
-    "INSERT INTO cms_page_sections VALUES ('brand-other','otherpage','brand','brand','Brand','{}',0,1,'cms','brand-other-draft','brand-other-live','original','2026-10-01');");
+    "INSERT INTO cms_page_sections (id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket,draft_r2_key,published_r2_key,content_hash,updated_at) VALUES ('brand-other','otherpage','brand','brand','Brand','{}',0,1,'cms','brand-other-draft','brand-other-live','original','2026-10-01');");
   const otherContent=JSON.stringify({__editor:{themeSettings:{}}});
   f.objects.set("brand-other-draft",otherContent);f.objects.set("brand-other-live",otherContent);
   const dom=new JSDOM('<section data-drawer-panel="theme-settings"></section><iframe id="theme-preview"></iframe>',{url:"https://editor.test/admin/theme-editor?slug=home",runScripts:"outside-only"});

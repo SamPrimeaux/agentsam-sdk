@@ -131,7 +131,7 @@ test('catalog cannot be activated by forged template metadata; only verified cms
    bind(...args){params=args;return this;},
    async all(){return {results:db.prepare(sql).all(...params)};}
   };}}};
-  const find=async()=>(await listCmsComponentCatalog(env,'acct-other')).find(t=>t.sku==='SKU-FAKE');
+  const find=async(filters={})=>(await listCmsComponentCatalog(env,'acct-other',filters)).find(t=>t.sku==='SKU-FAKE');
   let fake=await find();
   assert.equal(fake.installable,false,'metadata alone must never authorize installation');
   assert.equal(fake.rendererKey,null);
@@ -145,7 +145,13 @@ test('catalog cannot be activated by forged template metadata; only verified cms
   assert.equal(fake.rendererKey,'verified/native','actual renderer key takes precedence over metadata');
   db.exec("UPDATE cms_components SET implementation_status='verified' WHERE id='cmp_fake'");
   fake=await find();
-  assert.equal(fake.installable,true,'verified renderer activates the existing catalog row');
+  assert.equal(fake.installable,false,'verified D1 status without runnable matching code stays unavailable');
+  assert.equal(fake.rendererVerified,true);
+  assert.equal(fake.rendererMatchesTemplate,false);
+  db.exec(`UPDATE cms_component_templates SET template_data='{"renderer_key":"verified/native"}' WHERE sku='SKU-FAKE'`);
+  assert.equal((await find()).installable,false,'matching metadata without runtime is still insufficient');
+  assert.equal((await find({hasRenderer:key=>key==='verified/native'})).installable,true,
+    'only an actual registered host implementation activates the renderer');
   assert.equal(fake.implementationStatus,'verified');
   assert.equal(fake.deliveryMode,'bundled');
   db.exec("UPDATE cms_component_templates SET status='draft' WHERE sku='SKU-FAKE'");
@@ -175,7 +181,8 @@ test('non-built-in definitions are not leaked through the system catalog fallbac
   assert.equal(other.rendererKey,null);
   assert.equal(other.installable,false);
   const owner=(await listCmsComponentCatalog(env,'acct-platform')).find(t=>t.sku==='SKU-PRIVATE');
-  assert.equal(owner.installable,true);
+  assert.equal(owner.installable,false,'registered but unavailable code is not installable');
+  assert.equal(owner.rendererVerified,true);
   assert.equal(owner.rendererKey,'private/renderer');
  } finally {db.close();}
 });

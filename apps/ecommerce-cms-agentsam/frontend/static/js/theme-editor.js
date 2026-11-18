@@ -483,8 +483,9 @@
   }
 
   function themeCatalog() {
-    // This picker shows only installed implementations declared insertable
-    // by the selected theme's runtime registry.
+    // The installed Theme Store project supplies actual insertable section
+    // definitions and faithful source previews. CMS pages additionally have
+    // tenant-authorized STOCK templates selected by their canonical SKU.
     const schemas = window.SECTION_SCHEMAS?.[slug] || {};
     const native = Object.entries(schemas)
       .filter(([,definition]) => definition?.capabilities?.insert === true)
@@ -496,7 +497,17 @@
         category:definition.category || 'Theme sections',
         previewHtml:definition.previewHtml || '',
       }));
-    return host ? native : [...native,...(window.ThemePortableSections?.catalog() || [])];
+    if(host)return native;
+    const stock=(window.cmsRegistry?.catalog||[])
+      .filter(row=>row.itemType==='section' && row.catalogAvailable===true &&
+        row.installable===true && !!row.sku)
+      .map(row=>({
+        id:row.sku,label:row.name||row.label||row.sku,
+        type:row.definitionKey||'section',templateKey:'catalog-stock',
+        source:'CMS stock',preset:row.sku,rendererPreset:row.rendererKey,
+        category:row.category||'Sections',catalog:row,
+      }));
+    return [...stock,...native];
   }
 
   async function setTheme(nextTheme) {
@@ -1358,7 +1369,7 @@
         cmsEscapeAttr(entry.label || entry.id) + '" sandbox="" loading="lazy" tabindex="-1" srcdoc="' +
         cmsEscapeAttr(entry.previewHtml) + '"></iframe>';
       const api = window.ThemePortableSections;
-      const preset = entry.preset || entry.id;
+      const preset = entry.rendererPreset || entry.preset || entry.id;
       if (api && typeof api.defaults === 'function' && typeof api.render === 'function') {
         const content = api.defaults(preset);
         if (content) {
@@ -3432,13 +3443,19 @@
         const chosen = host?.initialStock || params.get('stock');
         const match = /^platform\/([a-z0-9-]{1,70})$/.exec(String(chosen || ''));
         if (match) {
-          const key = host ? 'stock-' + match[1] : 'platform/' + match[1];
+          const renderer = 'platform/' + match[1];
           requestAnimationFrame(function() {
+            // Design Canvas hands off a renderer identity. Find its VERIFIED
+            // stock template SKU in the site's catalog; never synthesize a
+            // second template or insert a runtime preset without provenance.
+            const selection = themeCatalog().find(item =>
+              host ? item.id === 'stock-' + match[1] :
+                item.rendererPreset === renderer);
             const trigger = byId('te-add-section');
-            if (!trigger || !themeCatalog().some(item => item.id === key)) return;
+            if (!trigger || !selection) return;
             trigger.click();
             byId('te-section-list')?.querySelectorAll('[data-choose-section]')
-              .forEach(button => { if (button.dataset.chooseSection === key) button.click(); });
+              .forEach(button => { if (button.dataset.chooseSection === selection.id) button.click(); });
             setNote('Platform stock selected. Confirm Add section to insert into this draft.');
           });
         }
@@ -3647,13 +3664,19 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Adding section…');
     try {
-      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+      // Reusable stock templates install through the canonical SKU route,
+      // not the legacy generic section route. This preserves the actual
+      // cms_component_templates -> cms_page_sections / cms_section_blocks links.
+      const isStock = templateKey === 'catalog-stock';
+      const target = '/api/admin/cms/pages/' + encodeURIComponent(slug) +
+        (isStock ? '/catalog-resources' : '/sections');
+      const result = await editorRequest(target, {
         method: 'POST',
-        body: JSON.stringify({
-          templateKey: templateKey,
-          themePreset: themePreset || '',
-          toIndex: Number.isInteger(toIndex) ? toIndex : (pageData?.sections || []).length
-        })
+        body: JSON.stringify(isStock
+          ? {catalogKey:themePreset,toIndex:Number.isInteger(toIndex)
+              ?toIndex:(pageData?.sections||[]).length}
+          : {templateKey:templateKey,themePreset:themePreset||'',
+              toIndex:Number.isInteger(toIndex)?toIndex:(pageData?.sections||[]).length})
       });
       activeSectionOwner = slug;
       activeSectionKey = result.section_key;
