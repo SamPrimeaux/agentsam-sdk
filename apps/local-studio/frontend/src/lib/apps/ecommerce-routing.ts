@@ -14,6 +14,50 @@ export function isEcommerceAdminPath(pathname: string): boolean {
   return Boolean(resolveLocalStudioEcommerceAdminRoute(pathname));
 }
 
+const SITE_OWNED_EDITOR_PATH = /^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/;
+
+/** Build the installed CMS host destination without duplicating site identity.
+ * Clean editor routes carry site_id in the path; legacy editor/store routes use
+ * the query. The result is checked by the same canonical route allowlist used
+ * by browser and desktop navigation.
+ */
+export function resolveEcommerceAdminDestination(
+  href: string | null | undefined,
+  siteId: string | undefined,
+  origin: string,
+): string | null {
+  if (typeof href !== 'string' || !href || typeof origin !== 'string' || !origin) return null;
+  try {
+    const base = new URL(origin);
+    const url = new URL(href, base);
+    if (url.origin !== base.origin || !url.pathname.startsWith('/admin/')) return null;
+
+    const siteOwned = url.pathname.match(SITE_OWNED_EDITOR_PATH);
+    if (siteOwned) {
+      const pathSiteId = siteOwned[1];
+      if (siteId && pathSiteId !== siteId) return null;
+      const querySiteIds = url.searchParams.getAll('site_id');
+      if (querySiteIds.length > 1 || querySiteIds.some(value => value !== pathSiteId)) return null;
+      // The route already carries its complete site identity. Keeping a second
+      // site_id query makes the host's strict clean-route allowlist reject it.
+      url.searchParams.delete('site_id');
+    } else if (siteId) {
+      const querySiteIds = url.searchParams.getAll('site_id');
+      if (querySiteIds.length > 1 || querySiteIds.some(value => value !== siteId)) return null;
+      url.searchParams.set('site_id', siteId);
+    }
+
+    const destination = resolveEcommerceAdminPath(url.pathname + url.search);
+    if (!destination) return null;
+    // Editor documents are first-class Local Studio routes. Return the clean
+    // route directly; do not bounce through the installed-app compatibility
+    // wrapper, which adds another route-resolution hop.
+    return destination;
+  } catch {
+    return null;
+  }
+}
+
 /** Reject arbitrary URLs; the Local Studio route contract is the allowlist. */
 export function resolveEcommerceAdminPath(candidate = '/admin/store') {
   if (!candidate.startsWith('/admin/') || candidate.startsWith('//') || /[\\#]/.test(candidate)) return null;
@@ -30,6 +74,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/theme-editor': ['slug', 'site', 'site_id', 'page_id', 'showcase', 'catalog', 'source', 'section', 'block', 'previewMode', 'stock', 'project', 'project_id', 'page', 'new'],
     '/admin/page-edit': ['slug', 'site_id', 'page_id'],
     '/admin/theme-project-editor': ['project','project_id','site_id','page','section','block','previewMode','stock','new'],
+    '/admin/theme-workspace': ['site_id'],
     '/admin/product-edit': ['id','site_id'],
     '/admin/products': ['view','site_id','collection_id'],
     '/admin/collections': ['site_id'],

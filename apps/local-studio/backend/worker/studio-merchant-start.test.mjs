@@ -56,6 +56,14 @@ test('route authority is the host app manifest, while Identity UI contains no ho
   assert.match(js,/config\.identity\.me/);
   assert.match(js,/config\.sites\.list/);
   assert.match(js,/config\.sites\.create/);
+  assert.doesNotMatch(html,/Your existing stores|start-existing|start-sites-list/,
+    'merchant create-store onboarding must not render an existing-site directory');
+  assert.doesNotMatch(js,/existingSites|start-existing|start-sites-list/,
+    'the onboarding client must not render or enumerate existing sites');
+  assert.match(js,/if \(!requestedSite\) \{ show\('start-workspace'\); return; \}/,
+    'a normal create-store visit must skip the site inventory request');
+  assert.match(js,/sites=\[data\.site\]/,
+    'only the newly created, server-owned site is selected after creation');
   assert.match(js,/config\.destinations/);
   assert.match(host,/function openCreateMerchantStore\(\)/);
   assert.match(react,/onSelect:\(\) => window\.location\.assign\('\/start'\)/);

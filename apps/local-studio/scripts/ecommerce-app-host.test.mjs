@@ -67,7 +67,7 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
     }}],
   });
   const source = Buffer.from(result.outputFiles[0].text).toString('base64');
-  const { resolveEcommerceAdminPath, resolveEcommerceAssetPath } = await import('data:text/javascript;base64,' + source);
+  const { resolveEcommerceAdminPath, resolveEcommerceAssetPath, resolveEcommerceAdminDestination } = await import('data:text/javascript;base64,' + source);
   assert.equal(resolveEcommerceAssetPath('/admin/products'), '/ecommerce-cms-agentsam/admin/products.html');
   assert.equal(resolveEcommerceAssetPath('/admin/product-edit?id=12'), '/ecommerce-cms-agentsam/admin/product-edit.html?id=12');
   assert.equal(resolveEcommerceAssetPath('/admin/page-edit?slug=about'), '/ecommerce-cms-agentsam/admin/page-edit.html?slug=about');
@@ -133,6 +133,24 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
     '/admin/sites/site_a/pages/cmsp_home_a/editor?marketplace_kind=cms_embed&marketplace_key=announcement_bar');
   assert.equal(resolveEcommerceAdminPath('/admin/sites/site_a/themes/theme_plain-jane/editor/home?previewMode=tablet'),
     '/admin/sites/site_a/themes/theme_plain-jane/editor/home?previewMode=tablet');
+  assert.equal(resolveEcommerceAdminPath('/admin/sites/site_a/themes/theme_plain-jane/editor/home?site_id=site_a'), null,
+    'the strict clean-route contract rejects duplicate site identity in the query');
+  const cleanThemeEditor = '/admin/sites/site_a/themes/theme_plain-jane/editor/home';
+  const cleanThemeHost = cleanThemeEditor;
+  assert.equal(resolveEcommerceAdminDestination(cleanThemeEditor, 'site_a', 'https://agentsam.example'), cleanThemeHost,
+    'site identity already in the clean path must not be duplicated as a rejected site_id query');
+  assert.equal(resolveEcommerceAdminDestination(cleanThemeEditor + '?site_id=site_a', 'site_a', 'https://agentsam.example'), cleanThemeHost,
+    'normalize legacy redundant site_id without changing the selected site');
+  assert.equal(resolveEcommerceAdminDestination(cleanThemeEditor + '?site_id=site_a&site_id=site_a', 'site_a', 'https://agentsam.example'), null,
+    'reject duplicate site identity instead of silently normalizing ambiguous input');
+  assert.equal(resolveEcommerceAdminDestination(cleanThemeEditor, 'site_b', 'https://agentsam.example'), null,
+    'never route a theme into a different selected site');
+  assert.equal(resolveEcommerceAdminDestination('/admin/theme-project-editor?project=theme_plain-jane&page=home', 'site_a', 'https://agentsam.example'),
+    '/admin/theme-project-editor?project=theme_plain-jane&page=home&site_id=site_a',
+    'legacy editor routes receive the site identity in the query');
+  assert.equal(resolveEcommerceAdminDestination('/admin/theme-workspace', 'site_a', 'https://agentsam.example'),
+    '/admin/theme-workspace?site_id=site_a',
+    'the registered Theme Workspace route remains available through the same host');
   assert.equal(resolveEcommerceAdminPath('/admin/sites/site_a/themes/theme_plain-jane/editor/home?marketplace_kind=bad'),
     null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html'), '/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html');
@@ -204,4 +222,7 @@ test('Ecommerce iframe always uses packaged product assets and one host-owned na
   assert.match(host, /resolved\.searchParams\.set\('__agentsamEmbedded', '1'\)/);
   assert.doesNotMatch(host, /forcePackagedAsset/, 'there must not be separate iframe ownership paths');
   assert.doesNotMatch(store, /forcePackagedAsset/);
+  const onlineStore = fs.readFileSync(path.join(studio, 'frontend/src/components/store/OnlineStorePage.tsx'), 'utf8');
+  assert.match(onlineStore, /resolveEcommerceAdminDestination\(href, siteId, window\.location\.origin\)/,
+    'Online Store must use the canonical Local Studio route resolver for theme editor handoff');
 });
