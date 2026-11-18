@@ -10,18 +10,9 @@ import {RESOLVE_PORTAL_TEMPLATES,portalCmsPage,portalTemplateForSlug,portalTempl
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const staticRoot=path.join(root,'frontend/static');
 const distRoot=path.join(root,'frontend/dist');
-// Serve the real packaged theme assets; local preview never forks the storefront.
-const themeRoots=Object.fromEntries(['violet','resolve'].map(theme=>[theme,path.resolve(root,'../theme-gallery-preview/themes/'+theme+'/site')]));
-const violetRoot=path.resolve(root,'../../packages/theme-violet/site');
-themeRoots.violet=violetRoot;
-const journalRoot=path.resolve(root,'../../packages/theme-plain-jane/site');
-const journalManifest=JSON.parse(await readFile(path.join(journalRoot,'journal-cms-manifest.json'),'utf8'));
-const journalPages=journalManifest.pages.map(page=>({
-  slug:page.slug,title:page.title,status:'draft',template_key:page.template_key,
-  live_route:'/themes/plain-jane/demo/'+page.path,
-  preview_only:true
-}));
-const journalPaths=new Set(journalManifest.pages.map(p=>p.path));
+// Preview bytes are a local cache synced and SHA-256 verified from Theme Store.
+const localStudioRoot=path.resolve(root,'../local-studio');
+const themePreviewRoot=path.join(localStudioRoot,'frontend/public/themes');
 const resolvePortalRoot=path.resolve(root,'../../packages/theme-resolve/site/portal');
 const port=Number(process.env.PORT||4327);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.json':'application/json','.woff2':'font/woff2'};
