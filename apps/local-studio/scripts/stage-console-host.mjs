@@ -30,15 +30,15 @@ if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
   // and the complete demo/ subroutes consumed by the source-backed gallery.
   const compiledRoot = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist' : '.output/public');
   const previewSource = path.join(localStudio, 'frontend/public/themes');
-  for (const slug of ['resolve', 'violet', 'plain-jane']) {
-    if (!existsSync(path.join(previewSource, slug, 'demo/index.html'))) {
-      throw new Error('Missing generated theme demo for '+slug);
-    }
-  }
+  const themeSlugs = readdirSync(previewSource, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && existsSync(path.join(previewSource, entry.name, 'demo/index.html')))
+    .map(entry => entry.name)
+    .sort();
+  if (!themeSlugs.length) throw new Error('No verified Theme Store previews are staged');
   const compiledThemes = path.join(compiledRoot, 'themes');
   rmSync(compiledThemes,{recursive:true,force:true});
   mkdirSync(compiledThemes,{recursive:true});
-  for (const slug of ['resolve','violet','plain-jane']) {
+  for (const slug of themeSlugs) {
     cpSync(path.join(previewSource,slug),path.join(compiledThemes,slug),{recursive:true,force:true});
   }
   console.log('[console-host] root /admin + source-backed theme demos staged to ' + compiledRoot);
