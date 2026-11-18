@@ -205,14 +205,16 @@ function DiscoverCard({ theme, siteId }: { theme: MarketTheme; siteId: string })
   const cover = marketCover(theme);
   const preview = marketPreview(theme);
   const add = async () => {
+    if (!siteId) { setError('Choose a website before adding a theme.'); return; }
     setBusy(true); setError('');
     try {
       const response = await fetch(`/api/admin/website-themes/${encodeURIComponent(theme.slug)}/install`, {
         method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ version: theme.version }),
+        body: JSON.stringify({ version: theme.version, site_id: siteId }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || typeof data?.editor_url !== 'string') throw new Error(data?.error || 'install_failed');
+      if (data.site_id !== siteId) throw new Error('installed_site_mismatch');
       const target = editorTarget(data.editor_url, siteId);
       if (!target) throw new Error('invalid_editor_destination');
       go(target);
@@ -291,6 +293,16 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
   }
   const selectedId = data.selected_site_id || siteId || '';
   const selected = sites.find(site => site.id === selectedId);
+  if (!selected) {
+    return <div className="mx-auto flex max-w-2xl flex-col gap-4 px-6 py-12">
+      <h1 className="text-2xl font-semibold text-foreground">Choose a store</h1>
+      <p className="text-sm text-muted-foreground">Select the website you want to edit before adding a theme.</p>
+      {sites.map(site => <Button key={site.id} variant="outline" onClick={() => go('/admin/store?site_id=' + encodeURIComponent(site.id))}>
+        {site.name || site.title || site.slug || site.id}
+      </Button>)}
+      <Button onClick={() => window.location.assign('/start')}>Create another store</Button>
+    </div>;
+  }
   const siteName = data.selected_site_name || selected?.name || selected?.title || 'Your website';
   const siteDomain = selected?.primary_domain || selected?.url || '';
   const live = data.site_preview?.url || (data.store?.visibility === 'public' ? data.store?.url : '') || '';
@@ -301,7 +313,7 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
   const activeEdit = editorTarget(data.site_preview?.edit_href || activeTheme?.edit_href, selectedId);
   const activeSaved = formatSaved(activeTheme?.last_saved || activeTheme?.updated_at || activeTheme?.created_at);
   const drafts = (data.draft_themes || []).filter(draft => draft.id !== activeTheme?.id);
-  const newTheme = editorTarget(data.new_theme_url || '/admin/theme-editor?new=1', selectedId);
+
   const checkout = editorTarget('/admin/onboarding-preview', selectedId);
   const workspace = editorTarget('/admin/theme-workspace', selectedId);
 
@@ -369,7 +381,7 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
       <section aria-label="Draft themes">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Draft themes</h2>
-          {newTheme && <InAppLink to={newTheme} className={pill}><Plus className="size-4" aria-hidden="true" />New theme</InAppLink>}
+          <a href="#discover-themes" className={pill}><Plus className="size-4" aria-hidden="true" />Add theme</a>
         </div>
         <div className="rounded-2xl border border-border bg-card">
           {drafts.length
@@ -378,7 +390,7 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
         </div>
       </section>
 
-      <section aria-label="Discover themes">
+      <section id="discover-themes" aria-label="Discover themes">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Discover themes</h2>
           <a className={pill} href={THEME_STORE + '/'} target="_blank" rel="noopener noreferrer">Visit Theme Store <ExternalLink className="size-3.5" aria-hidden="true" /></a>
