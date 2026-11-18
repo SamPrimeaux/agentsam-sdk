@@ -723,7 +723,7 @@ export class StudioApp extends xb.Script {
 
   private handleDownloadAudio(): void {
     if (!this.lastAudioBase64) return;
-    const filename = `atelier-xr-${this.activeSubjectId}.wav`;
+    const filename = `samspeaks-${this.activeSubjectId}.wav`;
     downloadWavBase64(this.lastAudioBase64, filename);
     this.voiceCard.setStatus(`Downloaded ${filename}`);
     this.miniSam.showToast(`Downloaded ${filename}`);
