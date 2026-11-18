@@ -231,7 +231,7 @@ export async function agentsamChat(request, env, executionCtx = null, sessionUse
   if (rawContext.selected_resource) {
     // Legacy media selectors lack an account column. Hosted requests must
     // use scoped attachment IDs or the canonical site/section selector.
-    if (env.CMS_ASSISTANT_INFERENCE && rawContext.selected_resource.type !== "section") {
+    if (env.CMS_ASSISTANT_INFERENCE && !["section", "block"].includes(rawContext.selected_resource.type)) {
       return json({ error: "Attach a file or choose a section in the editor." }, { status: 400 });
     }
     try { rawContext.selected_resource = await resolveSelectedResource(env, rawContext.selected_resource); }

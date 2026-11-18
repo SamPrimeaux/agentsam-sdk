@@ -116,6 +116,7 @@ for (const critical of [
   "admin/js/shell.js", "admin/js/inspector.js",
   "admin/js/revise-atlas.js", "admin/js/portable-sections.js", "admin/js/platform-stock-sections.js",
   "admin/js/cms-authoring-engine.js", "admin/js/theme-preview-registry.js",
+  "admin/js/theme-editor-mini-agentsam.mjs", "admin/js/theme-editor-assistant-context.mjs",
   "admin/dock/index.js", "admin/dock/dock.css", "admin/dock/dock.config.json",
   "admin/profile-popup/index.js",
 ]) {

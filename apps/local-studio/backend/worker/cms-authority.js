@@ -303,7 +303,7 @@ export async function readCmsAssistantSiteSelector(request) {
     const context = body?.context && typeof body.context === 'object' && !Array.isArray(body.context)
       ? body.context : {};
     const resource = context.selected_resource;
-    if (resource?.type === 'section' && resource?.surface === 'theme-studio') {
+    if (['section', 'block'].includes(resource?.type) && resource?.surface === 'theme-studio') {
       const siteId = resource.site_id || context.site_id || context.siteId;
       if (!siteId) throw new Error('cms_assistant_site_required');
       return String(siteId);

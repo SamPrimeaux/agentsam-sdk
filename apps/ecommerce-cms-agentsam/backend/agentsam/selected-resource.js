@@ -123,6 +123,63 @@ async function resolveProductStudioArtwork(env, resource) {
   };
 }
 
+function safeObject(raw) {
+  const value = parseMeta(raw);
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+/** Resolve installed definition, stock template and actual renderer proof. */
+async function cmsComponentEvidence(env, accountId, definitionId, templateSku, kind) {
+  let definition = null;
+  let renderer = null;
+  if (definitionId) {
+    const row = await env.DB.prepare(
+      "SELECT d.id,d.definition_key,d.kind,d.version,d.label,d.status,d.origin," +
+      "d.settings_schema_json,d.allowed_blocks_json,d.max_blocks," +
+      "c.renderer_key,c.implementation_status " +
+      "FROM cms_definitions d LEFT JOIN cms_components c ON c.definition_id=d.id " +
+      "WHERE d.id=? AND d.kind=? AND (d.account_id=? OR d.origin='built_in') LIMIT 1"
+    ).bind(definitionId, kind, accountId).first();
+    if (row) {
+      const schema = safeObject(row.settings_schema_json);
+      const fields = schema.properties && typeof schema.properties === "object"
+        ? schema.properties : schema;
+      definition = {
+        id: row.id, key: row.definition_key, kind: row.kind,
+        version: row.version, label: row.label, status: row.status,
+        fields: Object.entries(fields).filter(([key]) => key.length <= 100)
+          .slice(0, 80).map(([key, spec]) => ({
+            key, type: typeof spec?.type === "string" ? spec.type : "unknown",
+            label: String(spec?.label || key).slice(0, 120),
+          })),
+        allowedBlocks: (() => {
+          const blocks = parseMeta(row.allowed_blocks_json);
+          return Array.isArray(blocks) ? blocks.filter(key => typeof key === "string").slice(0, 80) : [];
+        })(),
+        maxBlocks: row.max_blocks,
+      };
+      renderer = {
+        key: row.renderer_key || null,
+        verified: row.implementation_status === "verified" && Boolean(row.renderer_key),
+      };
+    }
+  }
+  let template = null;
+  if (templateSku) {
+    const row = await env.DB.prepare(
+      "SELECT sku,template_name,item_type,status,editor_schema_json,data_bindings_json " +
+      "FROM cms_component_templates " +
+      "WHERE sku=? AND item_type=? AND COALESCE(is_system,1)=1 LIMIT 1"
+    ).bind(templateSku,kind).first();
+    if (row) template = {
+      sku: row.sku, name: row.template_name, status: row.status,
+      editorFields: Object.keys(safeObject(row.editor_schema_json)).slice(0, 80),
+      hasDataBindings: Object.keys(safeObject(row.data_bindings_json)).length > 0,
+    };
+  }
+  return { definition, template, renderer };
+}
+
 /** Store-local session authorization precedes this lookup in the admin router. */
 export async function resolveSelectedResource(env, resource) {
   if (!resource || typeof resource !== "object") {
@@ -141,32 +198,56 @@ export async function resolveSelectedResource(env, resource) {
     return resolveMediaSelection(env, resource);
   }
 
-  if (resource.type !== "section" || resource.surface !== "theme-studio") {
+  if (!["section", "block"].includes(resource.type) ||
+      resource.surface !== "theme-studio") {
     throw new Error("Unsupported editable resource");
   }
 
   const slug = slugForStorefrontPath(String(resource.page || ""));
-  if (!slug || typeof resource.id !== "string" || resource.id.length > 100) {
+  const sectionKey = String(resource.type === "block" ? resource.section_key || "" : resource.id || "");
+  if (!slug || !sectionKey || sectionKey.length > 128) {
     throw new Error("Invalid store selection");
   }
-
+  // The site ID is only a lookup hint. Identity owns the authenticated actor.
+  if (typeof resource.site_id !== "string" || !resource.site_id.trim()) {
+    throw new Error("cms_assistant_site_required");
+  }
   const accountId = requireApplicationAccountId();
   const site = await resolveCmsSite(env.DB, { accountId, siteId: resource.site_id });
   const section = await env.DB.prepare(
-    "SELECT s.id,s.section_key,p.slug FROM cms_page_sections s " +
-      "JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id " +
-      "WHERE p.site_id=? AND p.account_id=? AND " +
-      "(p.route_path=? OR (p.route_path IS NULL AND p.slug=?)) AND s.section_key=?"
-  ).bind(site.id, accountId, resource.page, slug, resource.id).first();
-
+    "SELECT s.id,s.section_key,s.section_type,s.definition_id,s.template_sku,p.slug " +
+    "FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id " +
+    "JOIN cms_sites owner ON owner.id=p.site_id " +
+    "WHERE p.site_id=? AND owner.account_id=? AND owner.status!='archived' AND " +
+    "(p.route_path=? OR (p.route_path IS NULL AND p.slug=?)) AND " +
+    "(s.id=? OR s.section_key=?) LIMIT 1"
+  ).bind(site.id, accountId, resource.page, slug, sectionKey, sectionKey).first();
   if (!section) throw new Error("Selected section does not belong to this store");
 
+  if (resource.type === "block") {
+    const blockKey = String(resource.id || "");
+    if (!blockKey || blockKey.length > 128) throw new Error("Invalid CMS block selection");
+    const block = await env.DB.prepare(
+      "SELECT b.id,b.block_key,b.block_type,b.parent_block_id,b.definition_id,b.template_sku " +
+      "FROM cms_section_blocks b WHERE b.section_id=? AND b.account_id=? " +
+      "AND (b.id=? OR b.block_key=?) LIMIT 1"
+    ).bind(section.id,accountId,blockKey,blockKey).first();
+    if (!block) throw new Error("Selected block does not belong to this section");
+    const proof = await cmsComponentEvidence(env,accountId,block.definition_id,block.template_sku,"block");
+    return {
+      type:"block", id:block.id, key:block.block_key,
+      section:{ id:section.id, key:section.section_key || section.id },
+      parentBlockId:block.parent_block_id || null, blockType:block.block_type,
+      page:section.slug, site_id:site.id, surface:"theme-studio",
+      label:String(resource.label || "").slice(0,160), ...proof,
+    };
+  }
+
+  const proof = await cmsComponentEvidence(env,accountId,section.definition_id,section.template_sku,"section");
   return {
-    type: "section",
-    id: section.id,
-    key: section.section_key,
-    page: section.slug,
-    surface: "theme-studio",
-    label: String(resource.label || "").slice(0, 160),
+    type:"section", id:section.id, key:section.section_key || section.id,
+    sectionType:section.section_type, page:section.slug,
+    site_id:site.id, surface:"theme-studio",
+    label:String(resource.label || "").slice(0,160), ...proof,
   };
 }

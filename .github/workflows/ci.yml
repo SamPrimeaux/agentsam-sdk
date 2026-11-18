@@ -241,7 +241,10 @@ jobs:
           node --test \
             apps/ecommerce-cms-agentsam/tests/account-context-init.test.mjs \
             apps/ecommerce-cms-agentsam/tests/account-context-request-scope.test.mjs \
-            apps/ecommerce-cms-agentsam/tests/agentsam-status-degraded.test.mjs
+            apps/ecommerce-cms-agentsam/tests/agentsam-status-degraded.test.mjs \
+            apps/local-studio/backend/worker/studio-cms-assistant.test.mjs \
+            apps/local-studio/backend/worker/cms-owned-sites.test.mjs \
+            packages/connectors/cfoa/tests/capabilities.test.mjs
       - name: Build all registered included apps
         run: node apps/local-studio/scripts/build-included-apps.mjs --all
       - name: Install Local Studio build dependencies

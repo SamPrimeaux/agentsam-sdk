@@ -36,6 +36,31 @@ migrations/
 examples/legendary-os/
 ```
 
+## Context ownership
+
+Identity is the only package responsible for authenticated session, provider
+sign-in, user/account principal and account membership authority. The account
+SSOT remains `accounts`; provider identities remain linked records.
+
+The CMS passes a selected **site/page/section hint** to AgentSam through its
+editor adapter, but the browser must **never** supply trusted identity,
+credentials, roles, or publication authority. The host authenticates with
+Identity, resolves ownership against existing `cms_sites` and
+`cms_page_sections`, and only then hands the section data to the assistant.
+`agentsam-contracts` describes generic context and tool types, not sessions;
+`agentsam-cms` owns page/section semantics, not login or OAuth.
+
+Cloudflare provider sign-in is different from authorizing a customer's
+Cloudflare resource connection. The latter goes through
+`packages/connectors/cfoa`, where capabilities describe requested grants
+and credentials are resolved server-side. CMS users do **not** need to grant
+D1 or R2 permissions to edit a site hosted by AgentSam.
+
+The customer-facing `createIdentityClient` login/session methods are still
+alpha stubs and throw until a host Identity Service adapter is connected.
+A CMS should consume an established authenticated host principal, not
+attempt to call an unwired browser SDK method.
+
 ## SDK philosophy
 
 Ship: contracts, clients, adapters, scaffolding.
