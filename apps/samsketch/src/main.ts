@@ -813,7 +813,7 @@ function renderBrand(){
  document.documentElement.style.setProperty("--accent",brandInfo[doc.brand].accent);
  document.getElementById("project-name")!.textContent=doc.name+" ▾";
 }
-function renderAll(){renderBrand();renderPrimitives();renderInspector();renderChapters();redraw();renderLayers();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
+function renderAll(){renderBrand();renderPrimitives();renderInspector();renderChapters();redraw();renderLayers();progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
 function setBackdrop(preset:string){
  const colors:Record<string,string>={blue:"#e8effb",studio:"#202c40",neutral:"#e9e4dd",slate:"#252d3d",paper:"#f7f4ee",daylight:"#e7eff7",overcast:"#d8dfe8",night:"#242b3a"};
  const color=colors[preset]||preset||colors.blue;currentBackdrop=preset;
@@ -1082,7 +1082,7 @@ function addSceneryProp(type:SceneryPropId){
  item.propType=type;doc.items.push(item);selectedId=item.id;selectedPartId=null;
  renderAll();store();announce("Added SamSpeaks scenery prop · "+preset.label);
 }
-function undo(){if(!history.length)return;future.push(JSON.stringify(doc));doc=JSON.parse(history.pop()!) as Document;selectedId=doc.items.find(x=>x.id===selectedId)?.id||doc.items[0]?.id||"";selectedPartId=null;renderAll();}
+function undo(){if(!history.length)return;future.push(JSON.stringify(doc));doc=normalizeDocument(JSON.parse(history.pop()!) as Document);selectedId=doc.items.find(x=>x.id===selectedId)?.id||doc.items[0]?.id||"";selectedPartId=null;renderAll();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});}
 function redo(){if(!future.length)return;history.push(JSON.stringify(doc));doc=JSON.parse(future.pop()!) as Document;selectedId=doc.items[0]?.id||"";selectedPartId=null;renderAll();}
 async function exportGLB(){
  announce("Preparing scene GLB...");
@@ -1280,6 +1280,7 @@ if(requestedDocument&&/^sketch_[a-z0-9-]{12,80}$/.test(requestedDocument)){
  void resolveHostedDesignScope().then(scope=>designAdapter.open(scope,requestedDocument)).catch(error=>announce("Cannot open scene: "+String(error)));
 }
 renderAll();
+settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});
 applyMood(doc.sceneSettings!.mood,false,false);
 camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();renderer.toneMappingExposure=doc.sceneSettings!.horizonBrightness;
 floor.material.opacity=doc.sceneSettings!.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings!.shadowSoftness;
