@@ -136,12 +136,12 @@ test('relative package links resolve to project routes, not the Theme Store prev
 });
 
 test('unknown internal theme links fail closed instead of opening the Theme Store', () => {
-  const { listener, event, changes, notes, prevented, stopped } = setupProjectClick('/products/example');
-  listener(event);
-  assert.deepEqual(changes, []);
-  assert.equal(prevented, true);
-  assert.equal(stopped, true);
-  assert.match(notes[0]?.[0] || '', /cannot open the Theme Store/);
+  const result = setupProjectClick('/products/example');
+  result.listener(result.event);
+  assert.deepEqual(result.changes, []);
+  assert.equal(result.prevented, true);
+  assert.equal(result.stopped, true);
+  assert.match(result.notes[0]?.[0] || '', /cannot open the Theme Store/);
 });
 
 test('external and fragment links retain their normal behavior', () => {
