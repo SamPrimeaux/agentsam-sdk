@@ -944,7 +944,7 @@ function applyStudioSetting(key:string,value:string|number|boolean){
   case "scene.chapter":setChapter(Number(value));break;
   case "scene.profile":applySceneProfile(String(value) as SceneProfileId);break;
   case "scene.autoplay":case "simulation.autoplay":settings.loopPresentation=Boolean(value);persist();break;
-  case "scene.autorotate":case "camera.autoTour":settings.autoTour=Boolean(value);sceneAutoRotate=settings.autoTour;rotationSpeed=settings.spinSpeed*.01;persist();break;
+  case "scene.autorotate":case "camera.autoTour":settings.autoTour=Boolean(value);if(settings.autoTour&&settings.spinSpeed<=0)settings.spinSpeed=DEFAULT_SCENE_SETTINGS.spinSpeed;sceneAutoRotate=settings.autoTour;rotationSpeed=settings.spinSpeed*.01;persist();break;
   case "styles.finish":applyFinish(String(value) as FinishId);break;
   case "styles.mood":applyMood(String(value) as MoodId);break;
   case "styles.material":{
