@@ -121,11 +121,11 @@ function setupProjectClick(href) {
 }
 
 test('installed-theme navigation still switches pages during global inspect mode', () => {
-  const { listener, event, changes, prevented, stopped } = setupProjectClick('/work');
-  listener(event);
-  assert.deepEqual(changes, ['work']);
-  assert.equal(prevented, true);
-  assert.equal(stopped, true);
+  const result = setupProjectClick('/work');
+  result.listener(result.event);
+  assert.deepEqual(result.changes, ['work']);
+  assert.equal(result.prevented, true);
+  assert.equal(result.stopped, true);
 });
 
 test('relative package links resolve to project routes, not the Theme Store preview path', () => {
