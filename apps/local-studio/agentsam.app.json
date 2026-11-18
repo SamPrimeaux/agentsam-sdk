@@ -65,6 +65,21 @@
     "identity.signup": {
       "path": "/auth/signup"
     },
+    "identity.api.me": {
+      "path": "/api/auth/me"
+    },
+    "commerce.merchant.start": {
+      "path": "/start"
+    },
+    "commerce.sites": {
+      "path": "/api/cms/sites"
+    },
+    "commerce.store": {
+      "path": "/admin/store"
+    },
+    "commerce.pages": {
+      "path": "/admin/pages"
+    },
     "identity.reset": {
       "path": "/auth/reset"
     },

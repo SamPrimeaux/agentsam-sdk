@@ -122,6 +122,26 @@ const LOCAL_STUDIO_CLOUDFLARE_CAPABILITIES = Object.freeze([
 const LOGIN_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.LOGIN);
 const SIGNUP_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.SIGNUP);
 const RESET_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.RESET);
+const MERCHANT_ROUTES = Object.freeze({
+  entry:ROUTE_REGISTRY.resolve(APP.id,'commerce.merchant.start'),
+  identity:{
+    me:ROUTE_REGISTRY.resolve(APP.id,IDENTITY_ROUTE_IDS.AUTH_ME),
+    login:LOGIN_PATH, signup:SIGNUP_PATH,
+  },
+  sites:{
+    list:ROUTE_REGISTRY.resolve(APP.id,'commerce.sites'),
+    create:ROUTE_REGISTRY.resolve(APP.id,'commerce.sites'),
+  },
+  destinations:{
+    store:ROUTE_REGISTRY.resolve(APP.id,'commerce.store')+'?site_id={site_id}',
+    pages:ROUTE_REGISTRY.resolve(APP.id,'commerce.pages')+'?site_id={site_id}',
+    themes:ROUTE_REGISTRY.resolve(APP.id,'commerce.store')+'?site_id={site_id}',
+  },
+  branding:{name:'InnerAnimalMedia'},
+  siteIdParam:'site_id',
+  selectionStorageKey:'agentsam.cms.selected-site.v1',
+  selectionEvent:'agentsam:cms-site-changed',
+});
 
 // Paths owned by the identity package (auth pages, auth API, OAuth, company branding).
 const IDENTITY_EXACT_PATHS = new Set([
@@ -805,7 +825,7 @@ export default {
     const url = new URL(request.url);
     // Public merchant entry lives outside /admin. Guests see the existing
     // identity portal; only the signed-in CMS API may create a real store.
-    const merchantStart = await serveStudioMerchantStart(request,env);
+    const merchantStart = await serveStudioMerchantStart(request,env,MERCHANT_ROUTES);
     if (merchantStart) return merchantStart;
     // Signing in (or up) mints the owning principal before any /admin/ shell,
     // script, editor, theme install or mutation is reachable. No site_id needed.

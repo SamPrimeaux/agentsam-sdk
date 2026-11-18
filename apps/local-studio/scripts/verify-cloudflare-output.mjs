@@ -61,7 +61,7 @@ assert.ok(fs.existsSync(path.join(assetsDir, "__agentsam", "pwa", "icon-192.png"
 assert.ok(fs.existsSync(path.join(assetsDir, "__agentsam", "pwa", "icon-512.png")), "hosted AgentSam PWA 512 icon required");
 assert.match(fs.readFileSync(workerEntry, "utf8"), /public-site\.js/);
 for (const file of ["store-start.html", "store-start.css", "store-start.js"]) {
-  const merchantAsset = path.join(assetsDir, file);
+  const merchantAsset = path.join(assetsDir, 'identity/merchant-onboarding', file);
   assert.ok(fs.existsSync(merchantAsset) && fs.statSync(merchantAsset).size > 100,
     `merchant onboarding asset missing from Worker bundle: ${file}`);
 }
