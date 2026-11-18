@@ -7,6 +7,8 @@ import { handleStudioWebsiteThemeInstall } from './studio-website-theme-install.
 import { getThemeProject, saveThemeProject } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 import { listThemeDraftSites } from '../../../ecommerce-cms-agentsam/backend/cms/theme-draft-sites.mjs';
 import { createCmsTestDb } from '../../../ecommerce-cms-agentsam/tests/cms-test-db.mjs';
+import { addCmsHostDirectoryTables } from './cms-test-host-directory.mjs';
+import { handleCmsWorkerRequest } from './cms-service.js';
 
 const version='0.1.0';
 const slug='plain-jane';
@@ -40,6 +42,7 @@ function d1(db) {
 }
 function fixture() {
   const sqlite=createCmsTestDb();
+  addCmsHostDirectoryTables(sqlite);
   sqlite.exec(`
     INSERT INTO accounts(id) VALUES('au_testowner0001'),('au_testother0002');
     INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
@@ -277,4 +280,44 @@ test('a failed install leaves no orphan draft site and reports an actionable err
     assert.ok(response.status>=400);
     assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_sites').get().n,sitesBefore);
   }finally{globalThis.fetch=before;sqlite.close();}
+});
+
+test('create an empty owned store, add a verified Theme Store release, and reopen its editable project on that exact site', async () => {
+  const { sqlite, env, objects } = fixture();
+  try {
+    const create = await handleCmsWorkerRequest(new Request('https://cms.test/api/cms/sites', {
+      method: 'POST',
+      headers: { origin: 'https://cms.test', 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Fresh Merchant Store', slug: 'fresh-merchant-store' }),
+    }), env, 'au_testowner0001');
+    assert.equal(create.status, 201, JSON.stringify(await create.clone().json()));
+    const created = await create.json();
+    assert.equal(created.ok, true);
+    assert.equal(created.theme_required, true);
+    assert.equal(created.site.account_id, 'au_testowner0001');
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_globals WHERE site_id=?')
+      .get(created.site.id).n, 0, 'creating a store must not secretly install the SDK default theme');
+
+    await withCatalog(async () => {
+      const added = await handleStudioWebsiteThemeInstall(
+        install(created.site.id), env, 'au_testowner0001', slug);
+      assert.equal(added.status, 201, JSON.stringify(await added.clone().json()));
+      const installed = await added.json();
+      assert.equal(installed.site_id, created.site.id);
+      assert.equal(installed.source_release_sha256, sha);
+      assert.equal(installed.editor_url,
+        '/admin/sites/' + created.site.id + '/themes/theme_plain-jane/editor/home');
+      const projectRow = sqlite.prepare(
+        "SELECT content_object_key FROM cms_globals WHERE site_id=? AND global_type='theme-project'"
+      ).get(created.site.id);
+      assert.ok(projectRow && objects.has(projectRow.content_object_key));
+      const saved = await getThemeProject(env, 'au_testowner0001',
+        'theme_plain-jane', created.site.id);
+      assert.equal(saved.ok, true);
+      assert.ok(saved.project.pages.length >= 1);
+      assert.ok(saved.project.pages[0].sections.length >= 1);
+      assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_globals WHERE site_id=?')
+        .get('a-store').n, 0, 'another store remains unchanged');
+    });
+  } finally { sqlite.close(); }
 });
