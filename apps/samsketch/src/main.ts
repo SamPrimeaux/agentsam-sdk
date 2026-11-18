@@ -162,7 +162,7 @@ function loadDocument(next:Document){
  brushEnabled=doc.sceneSettings!.brushEnabled;reducedMotionOverride=doc.sceneSettings!.reducedMotion;
  settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});
  history.length=0;future.length=0;
- store();renderAll();applyMood(doc.sceneSettings!.mood,false,false);
+ store();renderAll();applyMood(doc.sceneSettings!.mood,false,false);setBackdrop(doc.sceneSettings!.environment==="studio"?"#202c40":doc.sceneSettings!.environment);
  camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();renderer.toneMappingExposure=doc.sceneSettings!.horizonBrightness;
  floor.material.opacity=doc.sceneSettings!.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings!.shadowSoftness;
  ambientLight.color.setHSL(doc.sceneSettings!.ambientHue/360,doc.sceneSettings!.ambientSaturation/100,.72);
@@ -1298,7 +1298,7 @@ if(requestedDocument&&/^sketch_[a-z0-9-]{12,80}$/.test(requestedDocument)){
 }
 renderAll();
 settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});
-applyMood(doc.sceneSettings!.mood,false,false);
+applyMood(doc.sceneSettings!.mood,false,false);setBackdrop(doc.sceneSettings!.environment==="studio"?"#202c40":doc.sceneSettings!.environment);
 camera.fov=doc.sceneSettings!.fieldOfView;camera.updateProjectionMatrix();renderer.toneMappingExposure=doc.sceneSettings!.horizonBrightness;
 floor.material.opacity=doc.sceneSettings!.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings!.shadowSoftness;
 ambientLight.color.setHSL(doc.sceneSettings!.ambientHue/360,doc.sceneSettings!.ambientSaturation/100,.72);
