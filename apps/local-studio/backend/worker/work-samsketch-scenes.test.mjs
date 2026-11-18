@@ -76,6 +76,8 @@ test('SamSpeaks scene settings, PBR finishes, storyboard beats, props and brush 
  assert.equal(validateSamSketchDocument({...valid,items:[{...prop,propType:'unknown'}]}),false);
  assert.equal(validateSamSketchDocument({...valid,storyboard:[{...beat,explodeAmount:2}]}),false);
  assert.equal(validateSamSketchDocument({...valid,brushStrokes:[{id:'stroke-2',points:[[0,0,0]],color:'#8d7eff',width:3}]}),false);
+ assert.equal(validateSamSketchDocument({...valid,brushStrokes:Array.from({length:101},(_,index)=>({id:'stroke-'+index,points:[[0,0,0],[1,1,1]],color:'#8d7eff',width:3}))}),false);
+ assert.equal(validateSamSketchDocument({...valid,brushStrokes:[{id:'stroke-long',points:Array.from({length:301},(_,index)=>[index/100,0,0]),color:'#8d7eff',width:3}]}),false);
 });
 test('create persists a private scene, retry is idempotent and reload reads same bytes',async()=>{
  const h=harness();
