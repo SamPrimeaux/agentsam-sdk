@@ -1,5 +1,8 @@
 {
-  "avoid_when": [],
+  "avoid_when": [
+    "Using Mxs visual presets as CMS section definitions",
+    "Treating a compiled HTML wrapper as editable CMS content"
+  ],
   "catalog_status": "needs-review",
   "class": "package",
   "commands": [],
@@ -8,7 +11,11 @@
     "purpose_source": "package-manifest-description",
     "readme": "packages/agentsam-sections/README.md"
   },
-  "execution_domains": [],
+  "execution_domains": [
+    "cms",
+    "theme-studio",
+    "merchant-storefront"
+  ],
   "id": "agentsam-sections",
   "install": [
     {
@@ -21,7 +28,7 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-sections",
-  "purpose": "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews.",
+  "purpose": "Verified renderer-driven, theme-neutral CMS section host over existing cms_components and cms_definitions; legacy Mxs visual kit retained for compatibility.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-sections",
@@ -35,8 +42,16 @@
     "use_when"
   ],
   "schema": "agentsam.package.v1",
-  "status": "unknown",
-  "topics": [],
-  "use_when": [],
-  "version": "2.6.12"
+  "status": "host-integration-required",
+  "topics": [
+    "cms",
+    "sections",
+    "theme-contract",
+    "renderers"
+  ],
+  "use_when": [
+    "Render installed CMS sections and nested blocks from verified component registrations",
+    "Provide Theme Studio editor selection and editing controls without imposing a theme layout"
+  ],
+  "version": "2.6.15"
 }

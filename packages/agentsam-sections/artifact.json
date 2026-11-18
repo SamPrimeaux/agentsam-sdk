@@ -4,19 +4,18 @@
   "name": "AgentSam Sections",
   "package": {
     "name": "@inneranimalmedia/agentsam-sections",
-    "version": "0.1.0"
+    "version": "2.6.15"
   },
   "kind": "ui",
   "family": "layout",
-  "summary": "Reusable global header/footer, scroll-driven split sections and a media slot (image, gif, video, glb, sandboxed app) under the standardized mxs-* theme.",
+  "summary": "Verified renderer-driven, theme-neutral CMS section host over existing cms_components and cms_definitions; legacy Mxs visual kit retained for compatibility.",
   "status": "experimental",
   "capabilities": [
-    "header",
-    "footer",
-    "scroll-sections",
-    "media-slot",
-    "model-viewer",
-    "app-preview"
+    "cms-section-host",
+    "verified-renderer-lookup",
+    "nested-blocks",
+    "editor-controls",
+    "legacy-mxs-compatibility"
   ],
   "related": [
     "agentsam-abs"

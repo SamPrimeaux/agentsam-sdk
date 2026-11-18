@@ -1,65 +1,57 @@
 # @inneranimalmedia/agentsam-sections
 
-Reusable page kit under the standardized `mxs-*` theme: global header / footer,
-scroll-driven split sections, and one media slot for image, gif, video, glb and
-sandboxed interactive app previews.
+## Canonical CMS section host
+
+The primary API is **CmsSectionHost**. This is a structural, theme-neutral
+section host, **not** a two-column marketing layout or a separate CMS.
+
+Hosted apps pass the authorized, installed D1 `cms_definitions` and
+`cms_components` records plus explicit renderer implementations to
+`createCmsRendererRegistry()`. Only rows with
+`cms_components.implementation_status = 'verified'`, an active
+matching definition, a matching definition version, and a supplied
+implementation can render. The registry never dynamically imports
+unverified code or generates theme layouts.
 
 ```tsx
-import { MxsHeader, MxsSection, MxsFooter } from '@inneranimalmedia/agentsam-sections';
-import '@inneranimalmedia/agentsam-abs/theme.css';        // optional: tokens (--as-*)
-import '@inneranimalmedia/agentsam-sections/mxs.css';
+import { CmsSectionHost, createCmsRendererRegistry } from '@inneranimalmedia/agentsam-sections';
+
+const registry = createCmsRendererRegistry(
+  definitions, // installed cms_definitions rows from authorized site
+  components, // installed cms_components rows
+  rendererImplementations // exact renderer_key -> verified React implementation
+);
+
+<CmsSectionHost section={siteOwnedSection} registry={registry}
+  mode='editor' viewport='phone' selected={true}
+  actions={{select,move,toggle,duplicate,remove}} />
 ```
 
-## Media kinds
+The section host owns stable instance identity, renderer and definition
+resolution, nested block slots, visibility and editor action interfaces.
+Theme implementations own layout, markup, typography, media, motion,
+content bindings and behavior. Merchant data and publication state remain
+under the one `ecommerce-cms-agentsam` CMS.
 
-```tsx
-{ kind: 'image', src, alt }
-{ kind: 'gif',   src, alt }
-{ kind: 'video', src, label, poster? }                    // plays in view, pauses out of view
-{ kind: 'model', src, alt, poster?, loadViewer }          // .glb via <model-viewer>
-{ kind: 'app',   src, title, poster? }                    // sandboxed iframe, click to launch
-```
+Unknown renderers render a diagnostic only in editor mode. Preview and
+published rendering throw; they never replace the theme with a dummy section.
+Hidden sections do not render publicly. No CMS tables or SQL are shipped.
 
-`model` needs the host to supply the viewer so the kit has no hidden dependency:
+**Host requirement:** provide exact definition keys, version, renderer key,
+settings, blocks and resolved data bindings from installed `cms_page_sections`
+and `cms_section_blocks`. Never guess these from a static HTML screenshot.
 
-```ts
-// host app: npm i @google/model-viewer
-const loadViewer = () => import('@google/model-viewer');
-```
+### Existing Mxs compatibility
 
-Keep `loadViewer` at module scope so its reference is stable.
+`MxsSection`, `MxsHeader`, `MxsFooter`, `MxsMedia`, `useMxsScroll` and
+`mxs.css` remain exported for existing consumers. These are **legacy visual
+components**, not the canonical CMS section shell. No new CMS editor should
+require their heading, CTA, media or scroll assumptions.
 
-## Motion
+### Acceptance
 
-`useMxsScroll` writes one CSS variable (`--mxs-p`, 0 → 1) per section while it is near the
-viewport. CSS maps it to enter / hold / exit for text and media. No re-renders on scroll,
-and `prefers-reduced-motion` pins everything visible.
-
-## Theme
-
-`mxs.css` reads `--as-*` tokens when present (light/dark via `data-theme`) and falls back to
-neutral values when used standalone.
-
-## Design invariant: inverse glass chrome
-
-For themes that use glassmorphic global chrome:
-
-- dark/deep page surfaces use a light frosted header/footer
-- light page surfaces use a purple/dark branded glass header/footer
-
-The mxs-chrome semantic tokens own this behavior. Individual pages should not
-override header/footer colors directly.
-
-## Product previews
-
-Do not rebuild a fake demo when the advertised product already has a runnable
-surface.
-
-Use:
-- component media to mount the real React/package product directly
-- app media to load a real deployed/local application URL
-- image/gif/video/model only when those formats are the product asset itself or
-  when a runnable preview is not appropriate
-
-App media supports autoLaunch when the host wants the live app visible
-immediately rather than gated behind a poster click.
+`npm --prefix packages/agentsam-sections test` compiles and exercises
+arbitrary layouts, nested blocks, version validation and fail-closed
+renderer resolution. Deployment requires the ecommerce CMS host to
+actually supply verified renderer implementations for installed themes;
+package-level tests alone do not establish live Theme Studio integration.

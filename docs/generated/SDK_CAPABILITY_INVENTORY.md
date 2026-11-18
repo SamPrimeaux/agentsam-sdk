@@ -256,7 +256,7 @@ Authority: `packages/catalog/generated/packages.json`. `catalog_status` and `sta
 | `@inneranimalmedia/agentsam-queue-control` | Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-repository` | Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime contracts. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-scoring` | Generic ScoreCard contract and versioned weight formulas. Raw evidence is SSOT; scores are recomputable derived views — never a grand similarity_score. | needs-review | unknown |
-| `@inneranimalmedia/agentsam-sections` | Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews. | needs-review | unknown |
+| `@inneranimalmedia/agentsam-sections` | Verified renderer-driven, theme-neutral CMS section host over existing cms_components and cms_definitions; legacy Mxs visual kit retained for compatibility. | needs-review | host-integration-required |
 | `@inneranimalmedia/agentsam-settings` | Portable AgentSam Settings shell, contracts, fixtures, and host adapter surface for desktop and hosted applications. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-shell-kit` | Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-vault` | AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager. | needs-review | unknown |

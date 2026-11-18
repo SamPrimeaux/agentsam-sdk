@@ -13,3 +13,13 @@ export type {
   MxsModelMedia,
   MxsVideoMedia,
 } from './types.js';
+
+export { CmsSectionHost, createCmsRendererRegistry } from './CmsSectionHost.js';
+export type {
+  CmsRenderMode, CmsViewport, CmsDefinitionKind,
+  CmsDefinitionRecord, CmsComponentRecord, CmsBlockInstance,
+  CmsSectionInstance, CmsRenderContext, CmsBlockRendererProps,
+  CmsSectionRendererProps, CmsRendererImplementations,
+  CmsVerifiedRenderer, CmsRendererRegistry,
+  CmsSectionActions, CmsSectionHostProps
+} from './CmsSectionHost.js';

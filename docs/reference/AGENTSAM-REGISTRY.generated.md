@@ -12,7 +12,7 @@
 | `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
-| `packages/catalog/generated/packages.json` | 67 | Package inventory rows (not npm publication proof) |
+| `packages/catalog/generated/packages.json` | 66 | Package inventory rows (not npm publication proof) |
 
 Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Host binding and approval remain separate.
 
@@ -252,7 +252,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `agentsam-rapid-rust` | `agentsam-rapid-rust` | needs-review | AgentSam native scaffolder and lifecycle CLI for Cloudflare Rust/Wasm Workers |
 | `agentsam-repository` | `@inneranimalmedia/agentsam-repository` | needs-review | Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime c… |
 | `agentsam-scoring` | `@inneranimalmedia/agentsam-scoring` | needs-review | Generic ScoreCard contract and versioned weight formulas. Raw evidence is SSOT; scores are recomputable derived vi… |
-| `agentsam-sections` | `@inneranimalmedia/agentsam-sections` | needs-review | Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, vide… |
+| `agentsam-sections` | `@inneranimalmedia/agentsam-sections` | needs-review | Verified renderer-driven, theme-neutral CMS section host over existing cms_components and cms_definitions; legacy … |
 | `agentsam-settings` | `@inneranimalmedia/agentsam-settings` | needs-review | Portable AgentSam Settings shell, contracts, fixtures, and host adapter surface for desktop and hosted application… |
 | `agentsam-shell-kit` | `@inneranimalmedia/agentsam-shell-kit` | needs-review | Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench. |
 | `agentsam-vault` | `@inneranimalmedia/agentsam-vault` | needs-review | AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-… |
