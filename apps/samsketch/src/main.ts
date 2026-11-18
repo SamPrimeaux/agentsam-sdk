@@ -593,13 +593,22 @@ function clearStage(){
  stage.clear();roots.clear();
 }
 function renderBrushStrokes(){
- brushGroup.traverse(object=>{if(object instanceof THREE.Line){object.geometry.dispose();const material=object.material;if(material instanceof THREE.Material)material.dispose();}});
+ brushGroup.traverse(object=>{
+  if(object instanceof THREE.Mesh||object instanceof THREE.Line){
+   object.geometry.dispose();
+   const materials=Array.isArray(object.material)?object.material:[object.material];
+   materials.forEach(material=>material.dispose());
+  }
+ });
  brushGroup.clear();
  for(const stroke of doc.brushStrokes||[]){
   if(stroke.points.length<2)continue;
-  const geometry=new THREE.BufferGeometry().setFromPoints(stroke.points.map(point=>new THREE.Vector3(...point)));
-  const line=new THREE.Line(geometry,new THREE.LineBasicMaterial({color:stroke.color,linewidth:stroke.width,transparent:true,opacity:.92}));
-  line.name="Brush stroke · "+stroke.id;brushGroup.add(line);
+  const points=stroke.points.map(point=>new THREE.Vector3(...point));
+  const curve=new THREE.CatmullRomCurve3(points);
+  const geometry=new THREE.TubeGeometry(curve,Math.max(12,points.length*4),Math.max(.012,stroke.width*.012),8,false);
+  const material=new THREE.MeshPhysicalMaterial({color:stroke.color,emissive:stroke.color,emissiveIntensity:.35,metalness:.68,roughness:.22,clearcoat:.8,clearcoatRoughness:.1});
+  const ribbon=new THREE.Mesh(geometry,material);
+  ribbon.name="SamSpeaks paint ribbon · "+stroke.id;ribbon.castShadow=true;ribbon.receiveShadow=false;brushGroup.add(ribbon);
  }
 }
 function redraw(){
@@ -625,6 +634,8 @@ function brushPointFromEvent(event:PointerEvent):Vec3|null{
  const bounds=renderer.domElement.getBoundingClientRect();
  hitPointer.set((event.clientX-bounds.left)/bounds.width*2-1,-(event.clientY-bounds.top)/bounds.height*2+1);
  hitRay.setFromCamera(hitPointer,camera);
+ const surfaceHits=hitRay.intersectObjects(stage.children,true);
+ if(surfaceHits.length){const point=surfaceHits[0].point;return [point.x,point.y,point.z];}
  const point=new THREE.Vector3();
  const plane=new THREE.Plane(new THREE.Vector3(0,1,0),2.05);
  const hit=hitRay.ray.intersectPlane(plane,point);
