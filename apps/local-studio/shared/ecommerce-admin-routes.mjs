@@ -75,7 +75,9 @@ export function resolveLocalStudioEcommerceAdminRoute(pathname) {
   return null;
 }
 
-/** Return a redirect target for legacy .html and trailing-slash paths only. */
+/** Return a redirect target for legacy .html and trailing-slash paths only.
+ * @param {string} pathname
+ */
 export function canonicalLocalStudioEcommercePath(pathname) {
   if (typeof pathname !== 'string') return null;
   const trimmed = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
@@ -87,14 +89,17 @@ export function canonicalLocalStudioEcommercePath(pathname) {
   return null;
 }
 
+/** @param {string} pathname */
 export function isLocalStudioEcommerceAdminPath(pathname) {
   return Boolean(resolveLocalStudioEcommerceAdminRoute(pathname));
 }
 
+/** @param {string} pathname */
 export function isLocalStudioEcommerceDocumentPath(pathname) {
   return resolveLocalStudioEcommerceAdminRoute(pathname)?.surface === 'document';
 }
 
+/** @param {string} pathname */
 export function localStudioEcommerceAssetForPath(pathname) {
   const resolved = resolveLocalStudioEcommerceAdminRoute(pathname);
   if (!resolved) return null;
