@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-game-controls",
+  "name": "AgentSam · controls",
+  "description": "Control signs, inverted A/D fix, vehicle/flight maps, mandatory self-test",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/agentsam-game-controls"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "AgentSam game-development cookbook",
+    "status": "adapted",
+    "notice": "Original source and licenses retained in accompanying notices"
+  }
+}

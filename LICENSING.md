@@ -11,7 +11,7 @@ Effective 2026-10-19. This repository is **source-available**, not open source: 
 | `packages/agentsam-contracts`, `packages/agentsam-errors`, `packages/agentsam-hooks` | MIT |
 | `apps/ecommerce-cms-agentsam` | Proprietary notice, see its `LICENSE.md` |
 | `@inneranimalmedia/agentsam-abs`, `-browser-surface`, `-sections` | Apache-2.0 as declared, unchanged until reviewed |
-| Third-party and vendored material (for example `skills/grok-*` and imported reference assets) | Their own licenses and notices, unchanged |
+| Third-party and vendored material (for example `skills/agentsam-game-*` and imported reference assets) | Their own licenses and notices, unchanged |
 
 ## FSL in plain English
 

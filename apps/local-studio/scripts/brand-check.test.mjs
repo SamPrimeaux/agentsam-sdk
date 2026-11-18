@@ -17,7 +17,7 @@ import {
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SDK_ROOT = join(TEMPLATE_ROOT, "..", "..");
-const CANONICAL_OG_SKILL_ROOT = join(SDK_ROOT, "skills/grok-og");
+const CANONICAL_OG_SKILL_ROOT = join(SDK_ROOT, "skills/agentsam-game-sharing");
 const SCRIPT = join(TEMPLATE_ROOT, "scripts/brand-check.mjs");
 
 const GAME_SITE = JSON.stringify({ title: "Wild Race", type: "x:game", card: "custom" });
@@ -313,10 +313,10 @@ const readDoc = (rel) =>
     "utf8",
   );
 
-test("SKILL.md and AGENTS.md name the marker path and bound this script uses", () => {
+test("AGENTS.md names the host marker path and bound this script uses", () => {
   // Prose wraps, so the minute count may straddle a line break.
   const bound = new RegExp(`${OG_PENDING_MAX_AGE_MS / 60_000}\\s+minutes`);
-  for (const rel of [".grok/skills/og/SKILL.md", "AGENTS.md"]) {
+  for (const rel of ["AGENTS.md"]) {
     const doc = readDoc(rel);
     assert.ok(doc.includes(`/workspace/${OG_PENDING_REL_PATH}`), `${rel}: marker path`);
     assert.ok(bound.test(doc), `${rel}: staleness bound`);
@@ -327,12 +327,6 @@ test("SKILL.md and AGENTS.md name the marker path and bound this script uses", (
 // of AGENTS.md instead would make every unrelated `wait_tasks` mention a future
 // feature adds to it this test's business.
 const PROHIBITION_SECTIONS = [
-  {
-    rel: ".grok/skills/og/SKILL.md",
-    label: '§ "Brand-asset pass"',
-    from: "## Brand-asset pass:",
-    until: /\n## /,
-  },
   {
     rel: "AGENTS.md",
     label: "execution loop step 6",

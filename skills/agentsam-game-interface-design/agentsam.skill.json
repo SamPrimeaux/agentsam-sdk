@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-game-interface-design",
+  "name": "AgentSam · interface design",
+  "description": "Polished, non-generic UI: tokens, layout, type, color, motion, anti-slop",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/agentsam-game-interface-design"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "AgentSam game-development cookbook",
+    "status": "adapted",
+    "notice": "Original source and licenses retained in accompanying notices"
+  }
+}

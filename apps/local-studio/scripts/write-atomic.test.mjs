@@ -16,7 +16,7 @@ import { handOver, parseWriteAtomicArgs, stagingError } from "./write-atomic.mjs
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SDK_ROOT = join(TEMPLATE_ROOT, "..", "..");
-const CANONICAL_OG_SKILL_ROOT = join(SDK_ROOT, "skills/grok-og");
+const CANONICAL_OG_SKILL_ROOT = join(SDK_ROOT, "skills/agentsam-game-sharing");
 const SCRIPT = join(TEMPLATE_ROOT, "scripts/write-atomic.mjs");
 
 function makeWorkspace() {
