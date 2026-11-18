@@ -205,8 +205,4 @@ forward = (-sin(yaw), 0, -cos(yaw))
 - 3D upright & camera-agrees self-tests pass (§3, §4).
 - Runs on mobile viewport with touch controls.
 - Production build (`npm run build`) renders the built output, not just dev.
-- **Share / social card:** open the **`agentsam-game-sharing`** skill — custom `public/og.jpg` **and**
-  `"type": "website"` in `src/lib/og/site.json`. X uses `og:type="website"`
-  to present the unfurl as a game card; do not use `twitter:card` or invent
-  `x:type` for this. `browser-smoke` / `brand-check` warn when canvas apps omit
-  the `site.json` field.
+- **Sharing preview:** use `agentsam-game-sharing` for standard Open Graph metadata, a verified image preview, and a favicon. Verify the deployed URL and the actual game experience.
