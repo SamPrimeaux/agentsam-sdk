@@ -205,14 +205,16 @@ function DiscoverCard({ theme, siteId }: { theme: MarketTheme; siteId: string })
   const cover = marketCover(theme);
   const preview = marketPreview(theme);
   const add = async () => {
+    if (!siteId) { setError('Choose a website before adding a theme.'); return; }
     setBusy(true); setError('');
     try {
       const response = await fetch(`/api/admin/website-themes/${encodeURIComponent(theme.slug)}/install`, {
         method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ version: theme.version }),
+        body: JSON.stringify({ version: theme.version, site_id: siteId }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || typeof data?.editor_url !== 'string') throw new Error(data?.error || 'install_failed');
+      if (data.site_id !== siteId) throw new Error('installed_site_mismatch');
       const target = editorTarget(data.editor_url, siteId);
       if (!target) throw new Error('invalid_editor_destination');
       go(target);
