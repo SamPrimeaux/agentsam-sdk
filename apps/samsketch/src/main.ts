@@ -79,7 +79,7 @@ let lastCloudDocument:string|null=null;
 let saveTimer:number|null=null,saveInFlight:Promise<void>|null=null,sceneGeneration=0;
 let cloudSaveFailed=false;
 let restoreInspectorAfterAssistant=false;
-let showGrid=false,wireframe=false,inspectorOpen=false,layersOpen=false,mode:"orbit"|"select"|"story"="select";
+let showGrid=doc.sceneSettings?.showGrid??false,wireframe=doc.sceneSettings?.wireframe??false,inspectorOpen=false,layersOpen=false,mode:"orbit"|"select"|"story"="select";
 let autoPlay:number|null=null;
 let progressive:ReturnType<typeof mountProgressiveStudio>|null=null;
 let gallery:ReturnType<typeof mountSketchGallery>|null=null;
@@ -408,21 +408,26 @@ let selectedHelper:THREE.BoxHelper|null=null;
 const roots=new Map<string,THREE.Object3D>();
 let storyProgress=doc.chapter;
 let storyTransition:{from:number;to:number;start:number;duration:number}|null=null;
-let surfaceRoughness=.82,surfaceMetalness=0,sceneAutoRotate=false,rotationSpeed=.003;
-let fogEnabled=false,fogDensity=.012,currentBackdrop="blue",shadowsEnabled=true;
-let selectionOutlineEnabled=true,reducedMotionOverride=false;
+let surfaceRoughness=doc.sceneSettings?.roughness??.82,surfaceMetalness=doc.sceneSettings?.metalness??0,sceneAutoRotate=doc.sceneSettings?.autoTour??false,rotationSpeed=doc.sceneSettings?.spinSpeed??.003;
+let fogEnabled=doc.sceneSettings?.fogEnabled??false,fogDensity=doc.sceneSettings?.fogDensity??.012,currentBackdrop="blue",shadowsEnabled=doc.sceneSettings?.shadowsEnabled??true;
+let selectionOutlineEnabled=doc.sceneSettings?.selectionOutline??true,reducedMotionOverride=doc.sceneSettings?.reducedMotion??false;
+let brushEnabled=doc.sceneSettings?.brushEnabled??false;
+let cameraTransition:{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number}|null=null;
+let storyboardTimer:number|null=null,storyboardRun=0;
 const hitRay=new THREE.Raycaster(),hitPointer=new THREE.Vector2();
 const tempCanvas=document.createElement("canvas");tempCanvas.width=1024;tempCanvas.height=640;
 
-function rounded(width:number,height:number,radius:number,depth:number,color:string,look:Look="clay"):THREE.Mesh {
+function rounded(width:number,height:number,radius:number,depth:number,color:string,look:Look="clay",finish?:FinishId):THREE.Mesh {
  const w=width/2,h=height/2,r=Math.min(radius,w,h);
  const sh=new THREE.Shape();
  sh.moveTo(-w+r,-h);sh.lineTo(w-r,-h);sh.quadraticCurveTo(w,-h,w,-h+r);sh.lineTo(w,h-r);sh.quadraticCurveTo(w,h,w-r,h);sh.lineTo(-w+r,h);sh.quadraticCurveTo(-w,h,-w,h-r);sh.lineTo(-w,-h+r);sh.quadraticCurveTo(-w,-h,-w+r,-h);
  const geometry=new THREE.ExtrudeGeometry(sh,{depth,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:.035,bevelThickness:.035,curveSegments:10});
  geometry.center();
- return new THREE.Mesh(geometry,material(color,look));
+ return new THREE.Mesh(geometry,material(color,look,finish));
 }
-function material(color:string,look:Look):THREE.MeshStandardMaterial|THREE.MeshPhysicalMaterial {
+function material(color:string,look:Look,finish?:FinishId):THREE.MeshStandardMaterial|THREE.MeshPhysicalMaterial {
+ const preset=finish?FINISHES.find(item=>item.id===finish):undefined;
+ if(preset)return new THREE.MeshPhysicalMaterial({color,roughness:preset.roughness,metalness:preset.metalness,iridescence:preset.iridescence,iridescenceIOR:1.3,clearcoat:.28,clearcoatRoughness:Math.max(.05,preset.roughness),emissive:preset.emissive,emissiveIntensity:preset.emissiveIntensity,side:THREE.DoubleSide});
  if(look==="glass")return new THREE.MeshPhysicalMaterial({color,roughness:Math.max(.04,surfaceRoughness*.15),metalness:surfaceMetalness*.25,transmission:.6,thickness:.6,transparent:true,opacity:.88,side:THREE.DoubleSide});
  if(look==="metal")return new THREE.MeshStandardMaterial({color,roughness:Math.max(.04,Math.min(.35,surfaceRoughness*.26)),metalness:Math.max(.6,surfaceMetalness)});
  return new THREE.MeshStandardMaterial({color,roughness:surfaceRoughness,metalness:surfaceMetalness*.15});
