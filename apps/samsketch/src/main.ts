@@ -414,7 +414,7 @@ camera.position.set(11,6.2,13.5);
 controls.target.set(0,0,0);
 const light=new THREE.DirectionalLight("#ffffff",3.5);light.position.set(-4,10,9);light.castShadow=true;light.shadow.mapSize.set(2048,2048);light.shadow.camera.left=-12;light.shadow.camera.right=12;light.shadow.camera.top=12;light.shadow.camera.bottom=-12;scene.add(light);
 const fillLight=new THREE.DirectionalLight("#b1c9ff",1.4);fillLight.position.set(6,4,-5);scene.add(fillLight);
-const ambientLight=new THREE.AmbientLight("#e8f1ff",2.1);scene.add(ambientLight);
+const ambientLight=new THREE.HemisphereLight("#e8f1ff","#63708a",2.1);scene.add(ambientLight);
 const stage=new THREE.Group();scene.add(stage);
 const brushGroup=new THREE.Group();brushGroup.name="SamSpeaks 3D Brush";scene.add(brushGroup);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:"#8190ad",opacity:.13}));floor.rotation.x=-Math.PI/2;floor.position.y=-2.15;floor.receiveShadow=true;scene.add(floor);
@@ -867,7 +867,7 @@ function applyMood(id:MoodId,persist=true,applyDefaults=true){
  doc.sceneSettings={...previous,mood:id,...(applyDefaults?{keyIntensity:mood.keyIntensity,ambientIntensity:mood.ambientIntensity,fogDensity:mood.fogDensity}:{})};
  light.color.set(mood.keyColor);light.intensity=doc.sceneSettings.keyIntensity;
  fillLight.color.set(mood.fillColor);fillLight.intensity=mood.fillIntensity;
- ambientLight.color.set(mood.ambientColor);ambientLight.intensity=doc.sceneSettings.ambientIntensity;
+ ambientLight.color.set(mood.ambientColor);ambientLight.groundColor.set(mood.ambientGroundColor);ambientLight.intensity=doc.sceneSettings.ambientIntensity;
  renderer.toneMappingExposure=mood.exposure;
  fogDensity=doc.sceneSettings.fogDensity;
  setBackdrop(mood.backdrop);
@@ -1026,7 +1026,7 @@ function applyStudioSetting(key:string,value:string|number|boolean){
   case "light.temperature":{
    const keyColor=value==="warm"?"#ffe1bf":value==="cool"?"#c9ddff":"#ffffff";
    const fillColor=value==="warm"?"#ffcfa0":value==="cool"?"#a8c5ff":"#b1c9ff";
-   light.color.set(keyColor);fillLight.color.set(fillColor);ambientLight.color.set(value==="warm"?"#fff0dc":value==="cool"?"#d7e5ff":"#e8f1ff");persist();break;
+   light.color.set(keyColor);fillLight.color.set(fillColor);ambientLight.color.set(value==="warm"?"#fff0dc":value==="cool"?"#d7e5ff":"#e8f1ff");ambientLight.groundColor.set(value==="warm"?"#2a1a12":value==="cool"?"#111a2a":"#63708a");persist();break;
   }
   case "light.ambientHue":settings.ambientHue=Number(value);ambientLight.color.setHSL(settings.ambientHue/360,settings.ambientSaturation/100,.72);persist();break;
   case "light.ambientSaturation":settings.ambientSaturation=Number(value);ambientLight.color.setHSL(settings.ambientHue/360,settings.ambientSaturation/100,.72);persist();break;
