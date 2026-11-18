@@ -278,11 +278,14 @@ test("Products and Collections open their template lists without closing the pag
       "uninstalled showcase fixtures do not appear in merchant navigation");
     doc.querySelector('[data-picker-category="products"]').click();
     assert.equal(doc.getElementById("te-page-popover").hidden, false);
-    assert.ok(doc.querySelector('[data-picker-template="product"]'));
+    assert.equal(doc.querySelector('[data-picker-template="product"]'), null,
+      "Uninstalled product templates cannot be fabricated in Theme Studio");
+    assert.match(doc.getElementById("te-page-options").textContent,/No pages of this type/);
     doc.querySelector('[data-picker-back]').click();
     doc.querySelector('[data-picker-category="collections"]').click();
     assert.equal(doc.getElementById("te-page-popover").hidden, false);
-    assert.ok(doc.querySelector('[data-picker-template="collection"]'));
+    assert.equal(doc.querySelector('[data-picker-template="collection"]'),null,
+      "Uninstalled collection templates cannot be fabricated in Theme Studio");
   } finally {
     dom.window.close();
   }
@@ -903,4 +906,17 @@ test("installed draft never switches into unrelated Resolve showcase",async()=>{
     assert.equal(doc.getElementById('te-theme-name')?.textContent,'Revise');
     assert.equal(doc.getElementById('te-theme-trigger-label')?.textContent,'Revise');
   }finally{dom.window.close();}
+});
+
+test("Theme Studio has no embedded customer/demo URLs or local showcase authoring bypass",()=>{
+  const source=readFileSync(new URL("../frontend/static/js/theme-editor.js",import.meta.url),"utf8");
+  const bootstrap=readFileSync(new URL("../frontend/static/js/theme-studio-bootstrap.mjs",import.meta.url),"utf8");
+  for(const forbidden of [/fnf-cms-preview/,/__fnfGlobalInspectMode/,/fnf-theme-editor-device/,
+    /fallbackPages/,/resolveShowcase/,/violetShowcase/,/journalShowcase/,
+    /renderResolveScaffold/,/renderVioletScaffold/,/A clear place to begin/,/Your story, made clear/]) {
+    assert.doesNotMatch(source,forbidden);
+    assert.doesNotMatch(bootstrap,forbidden);
+  }
+  assert.match(source,/agentsam:cms-preview:v1/);
+  assert.match(bootstrap,/blankThemeProject/);
 });
