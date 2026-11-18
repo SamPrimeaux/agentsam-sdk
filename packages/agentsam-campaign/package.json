@@ -13,17 +13,21 @@
     "./project": "./src/project.js",
     "./package.json": "./package.json",
     "./storage": "./src/storage.js",
-    "./http": "./src/http.js"
+    "./http": "./src/http.js",
+    "./starters/increase-sales": "./src/starter-library.js"
   },
   "files": [
     "src",
     "README.md",
-    "sql"
+    "sql",
+    "starter-packs/increase-sales/v1/src"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "pack:dry": "npm run pack:check && npm pack --dry-run",
-    "pack:check": "node scripts/check-public-pack.mjs"
+    "pack:check": "node scripts/check-public-pack.mjs",
+    "build:starters": "node starter-packs/increase-sales/v1/build.mjs",
+    "test:starters": "node --test test/starter-library.test.mjs"
   },
   "repository": {
     "type": "git",
