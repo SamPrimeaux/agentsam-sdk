@@ -114,7 +114,7 @@ function parseDualDialogueParts(
 
   if (parts.length === 0) {
     parts.push({
-      text: `${speakerA}: Welcome to Atelier XR.`,
+      text: `${speakerA}: Welcome to SamSpeaks.`,
       speechMetadata: styleA ? { speaker: speakerA, style: styleA } : { speaker: speakerA },
     });
   }
@@ -373,7 +373,7 @@ async function createServer() {
       const subjectLabel = body.subjectLabel || 'Astrolabe';
       const currentMood = body.mood || 'studio';
       const instruction = [
-        `Compose a 3 to 4 beat cinematic 3D guided movie walkthrough & audio storyboard for Atelier XR.`,
+        `Compose a 3 to 4 beat cinematic 3D guided movie walkthrough & audio storyboard for SamSpeaks.`,
         `Current 3D centerpiece: "${subjectLabel}". Current atmosphere: "${currentMood}".`,
         images.length > 0
           ? `The user dropped ${images.length} reference image(s) into the 3D scene—weave visual details from those images directly into the narration, mood, and camera beats.`
@@ -478,7 +478,7 @@ async function createServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Atelier XR server listening on http://0.0.0.0:${PORT}`);
+    console.log(`SamSpeaks server listening on http://0.0.0.0:${PORT}`);
   });
 }
 
