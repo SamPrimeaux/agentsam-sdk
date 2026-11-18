@@ -143,3 +143,51 @@ test("installed stock accepts Add Block and persists its exact fields in the ori
   assert.equal((await adapter.getPage("home")).sections[0].content.__editor.blocks.length,2);
   assert.equal(store.current().revision,3);
 }));
+
+test("six real merchant sections install, edit, reopen and render from native implementations",async()=>withDom(async()=>{
+ const entries=portable.merchantCatalog();
+ assert.equal(entries.length,6);
+ const project=blankThemeProject({name:"Merchant",purpose:"Shop",audience:"Customers",siteName:"Merchant"});
+ const store=memoryStore(project);
+ let adapter=createThemeProjectAdapter(project,store);
+ const registry=await adapter.getRegistry();
+ for(const entry of entries){
+   assert.ok(registry.pages.home.sections[entry.key]?.capabilities?.insert,entry.key);
+   const {section_key:id}=await adapter.addSection("home",entry.key);
+   const page=await adapter.getPage("home");
+   const section=page.sections.find(s=>s.key===id);
+   assert.equal(section.content.__editor.themePreset,entry.id);
+   const field=section.schema.fields.find(f=>f.type==="text" && !f.key.includes("."));
+   if(field){
+     section.content[field.key]="Merchant authored copy";
+     await adapter.saveDraft("home",id,section.content,section.version);
+     assert.match((await adapter.resolvePreview("home")).html,/Merchant authored copy/);
+   }
+   adapter=createThemeProjectAdapter(await store.get(),store);
+   assert.ok((await adapter.getPage("home")).sections.some(s=>s.key===id));
+ }
+ const section=(await adapter.getPage("home")).sections.find(s=>s.content.__editor.themePreset==="revise/faq");
+ assert.ok(section);
+ const result=await adapter.addBlock("home",section.key,"faq-item",1);
+ assert.ok(result.block_id.startsWith("block_"));
+ const html=(await adapter.resolvePreview("home")).html;
+ assert.match(html,/data-cms-block=/);
+ const {validateThemeProjectPayload}=await import("../backend/cms/theme-project-store.mjs");
+ assert.doesNotThrow(()=>validateThemeProjectPayload(await adapter.getProject()));
+}));
+test("merchant section source cannot be forged and unsafe content fails at the host boundary",async()=>withDom(async()=>{
+ const project=blankThemeProject({name:"Unsafe",purpose:"Shop",audience:"Customers",siteName:"Unsafe"});
+ const store=memoryStore(project),adapter=createThemeProjectAdapter(project,store);
+ const {section_key:id}=await adapter.addSection("home","portable-revise-sticky-curtain");
+ const section=(await adapter.getPage("home")).sections.find(s=>s.key===id);
+ section.content.ctaPrimary.href="javascript:alert(1)";
+ await assert.rejects(adapter.saveDraft("home",id,section.content,section.version),/theme_stock_content_invalid/);
+ const forged=await adapter.getProject();
+ const bad=forged.pages.find(p=>p.slug==="home").sections.find(s=>s.key===id);
+ bad.content.ctaPrimary.href="javascript:alert(1)";
+ const {validateThemeProjectPayload}=await import("../backend/cms/theme-project-store.mjs");
+ assert.throws(()=>validateThemeProjectPayload(forged),/theme_stock_content_invalid/);
+ bad.content.ctaPrimary.href="/shop";
+ bad.content.__editor.themePreset="revise/faq";
+ assert.throws(()=>validateThemeProjectPayload(forged),/theme_portable_preset_invalid/);
+}));
