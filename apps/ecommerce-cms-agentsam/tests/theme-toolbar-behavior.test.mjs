@@ -20,6 +20,8 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   });
   const w = dom.window;
   w.structuredClone = globalThis.structuredClone;
+  w.cmsActiveSiteId = 'site-test';
+  w.cmsEditorStorefrontUrl = (_site,route) => route;
   if (visualViewportHeight != null) {
     const viewport = new w.EventTarget();
     viewport.height = visualViewportHeight;
@@ -44,11 +46,15 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   w.fetch = async () => ({ ok: true, json: async () => ({ active_theme: { name: "Heuristic", status: "active" } }) });
   w.adminFetch = async (url, options = {}) => {
     if (url.endsWith("/registry")) return registryOverride || registryForAdmin();
+    if (url.startsWith("/api/admin/cms/themes?site_id=")) return {
+      ok:true,active_theme:{slug:"fixture-theme",name:"Fixture theme",state:"active"},
+      themes:[{slug:"fixture-theme"}],content_version:1
+    };
     if (linkDestinations && url === "/api/store/collections") return {ok:true,collections:linkDestinations.collections || []};
     if (linkDestinations && url === "/api/store/products") return {ok:true,products:linkDestinations.products || []};
     if (url.endsWith("/pages/site")) return { page: site };
     if (url.endsWith("/pages/" + pageSlug)) return { page, seeded: false };
-    if (url.endsWith("/pages")) return { pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
+    if (url.endsWith("/pages")) return {site:{id:"site-test"}, pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
     if (url.startsWith("/api/admin/media?")) return { assets: mediaAssets, pagination: { pages: 1 } };
     if (url.endsWith("/pages/shop/publish") && options.method === "POST") {
       publishes.push({url,method:options.method});
@@ -627,15 +633,14 @@ test("mobile toolbar gives Page priority without hiding real undo/redo, inspect,
   } finally { dom.window.close(); }
 });
 
-test("mobile stylesheet prevents horizontal toolbar scrolling while retaining page-first structure", () => {
+test("mobile stylesheet keeps the site-owned page switcher and actions within the viewport", () => {
   const css = readFileSync(new URL("../frontend/static/css/theme-editor.css", import.meta.url), "utf8");
-  assert.match(css, /Preview-first mobile toolbar: page identity outranks theme selection/);
-  assert.match(css, /grid-template-columns:28px minmax\(0,1fr\) auto/);
+  assert.match(css, /Preview-first mobile toolbar/);
+  assert.match(css, /grid-template-columns:68px minmax/);
   assert.match(css, /grid-template-rows:52px/);
-  assert.match(css, /\.theme-studio-toolbar__right[\s\S]*?max-width:none;overflow:visible/);
-  assert.match(css, /#te-more-menu[\s\S]*?te-mobile-more-entry/);
+  assert.match(css, /max-width:none;overflow:visible/);
+  assert.match(css, /#te-more-menu .te-mobile-more-entry/);
 });
-
 
 test("media fields show a compact asset card with View original and a collapsed, editable source", async () => {
   const { dom, doc } = await editorFixture();
@@ -662,10 +667,12 @@ test("mobile editing sheet offers compact, balanced and expanded heights without
 });
 
 
-test("Theme Studio remains a browser page with AgentSam product identity", () => {
+test("Theme Studio uses the host assistant identity and stays a browser page", () => {
   const html=readFileSync(new URL("../frontend/static/theme-editor.html",import.meta.url),"utf8");
+  const editor=readFileSync(new URL("../frontend/static/js/theme-editor.js",import.meta.url),"utf8");
   assert.match(html,/viewport-fit=cover/);
-  assert.match(html,/\/admin\/brand\/agentsam-gorilla-tiny\.svg/);
+  assert.doesNotMatch(html,/\/admin\/brand\/agentsam-gorilla-tiny\.svg/);
+  assert.match(editor,/assistantIconUrl/);
   assert.doesNotMatch(html,/apple-mobile-web-app-capable|apple-mobile-web-app-title/);
 });
 
@@ -684,13 +691,14 @@ test("Safari browser UI and keyboard events cannot shorten the editor below 100d
   }finally{dom.window.close();}
 });
 
-test("mobile browser safe-area consumes actual tab height without extra blank row", () => {
+test("mobile browser safe-area has no permanent bottom tab strip or duplicate viewport clamp", () => {
   const css=readFileSync(new URL("../frontend/static/css/theme-editor.css",import.meta.url),"utf8");
-  assert.match(css,/Safari browser-first: don't double-clamp 100dvh/);
-  assert.match(css,/grid-template-rows: minmax\(0, 1fr\) var\(--te-mobile-tabs-height\)/);
-  assert.match(css,/height: 100dvh;/);
+  assert.match(css,/Do not reserve an always-on/);
+  assert.match(css,/grid-template-rows:minmax\(0,1fr\)/);
+  assert.match(css,/\.te-mobile-pane-switch \{[\s\S]*?display:none!important/);
+  assert.match(css,/height:100dvh/);
   assert.doesNotMatch(css,/height: min\(100dvh, var\(--te-visual-viewport-height/);
-  assert.match(css,/bottom: var\(--te-mobile-tabs-height\)/);
+  assert.match(css,/bottom:max\(8px, env\(safe-area-inset-bottom/);
   assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
 
@@ -708,21 +716,19 @@ test("mobile sheet CSS preserves live canvas and does not touch the separate adm
   assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
 
-test("mobile scroll handoff remains browser-first and miniAgentSam honors canvas bounds", () => {
-  const css=readFileSync(new URL("../frontend/static/css/theme-editor.css",import.meta.url),"utf8");
+test("mobile scroll handoff is browser-first with no persistent bottom tab rail", () => {
+  const css = readFileSync(new URL("../frontend/static/css/theme-editor.css",import.meta.url),"utf8");
   const workbench=readFileSync(new URL("../packages/agentsam-workbench/src/mini-agentsam.js",import.meta.url),"utf8");
   const adapter=readFileSync(new URL("../frontend/static/js/theme-editor-mini-agentsam.mjs",import.meta.url),"utf8");
   const editor=readFileSync(new URL("../frontend/static/js/theme-editor.js",import.meta.url),"utf8");
   assert.match(css,/Mobile Safari scroll handoff/);
   assert.match(css,/overscroll-behavior-y: auto/);
-  assert.match(workbench,/host\.positionBounds/,"Shared composer supports optional, nonbreaking positioning region");
-  assert.match(adapter,/positionBounds,/,"Theme Studio uses the same shared miniAgentSam with canvas bounds");
+  assert.match(workbench,/host\.positionBounds/);
+  assert.match(adapter,/positionBounds,/);
   assert.match(editor,/positionBounds: function\(\)/);
   assert.match(editor,/querySelector\('\.theme-studio \.te-preview-stage'\)/);
-  assert.match(css,/grid-template-rows: minmax\(0, 1fr\) var\(--te-mobile-tabs-height\)/,
-    "Three-tab mobile navigation is retained");
+  assert.match(css,/\.te-mobile-pane-switch \{[\s\S]*?display:none!important/);
 });
-
 
 test("button selection offers a searchable CMS page destination, not raw URL entry or section-wide settings", async () => {
  const {dom,w,doc,writes}=await editorFixture();
