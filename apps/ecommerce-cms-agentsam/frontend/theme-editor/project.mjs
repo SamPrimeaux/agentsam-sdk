@@ -289,9 +289,15 @@ export function sourceSectionTemplateKey(pageSlug, sectionKey) {
     normalize(sectionKey).slice(0, 14) + '-' + (hash >>> 0).toString(36);
 }
 
+// Site chrome is a shared structural slot, never an ordinary insertable body section.
+function isSiteChromeTemplate(section) {
+  return Boolean(section?.globalKey || ['HEADER', 'FOOTER'].includes(section?.zone));
+}
+
 function installSourceTemplates(state, inherited = {}) {
-  const catalog = Object.fromEntries(Object.entries(inherited || {}).filter(([key]) =>
-    key.startsWith('source-') || key.startsWith('custom-') || key.startsWith('stock-')));
+  const catalog = Object.fromEntries(Object.entries(inherited || {}).filter(([key,section]) =>
+    (key.startsWith('source-') || key.startsWith('custom-') || key.startsWith('stock-')) &&
+    !isSiteChromeTemplate(section)));
   // System-provided components are a derived read-only definition catalog.
   // Their drafts use the same section instances, project revision and R2 store
   // as donor content. Never persist a second registry or modify a donor theme.
@@ -304,7 +310,7 @@ function installSourceTemplates(state, inherited = {}) {
     for (const section of page.sections) {
       // A duplicated/inserted instance points back to its source module;
       // it must not mint another apparent definition on every reuse.
-      if (section.sourceTemplateKey) continue;
+      if (section.sourceTemplateKey || isSiteChromeTemplate(section)) continue;
       const id = sourceSectionTemplateKey(page.slug, section.key);
       if (catalog[id]) continue;
       const source = clone(section);
@@ -519,7 +525,7 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
     },
     async addSection(slug, key, toIndex) {
       const source = state.sectionTemplates[key];
-      if (!source) throw new Error('theme_section_template_not_found');
+      if (!source || isSiteChromeTemplate(source)) throw new Error('theme_section_template_not_found');
       const s = clone(source);
       s.key = 'section_' + crypto.randomUUID().replaceAll('-', '');
       s.content.__editor.templateKey = key;
