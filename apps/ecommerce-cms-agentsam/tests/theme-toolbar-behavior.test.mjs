@@ -181,7 +181,7 @@ test("Canvas handoff selects real platform stock without inserting until explici
     assert.equal(writes.length,0,"handoff never inserts or publishes automatically");
     doc.querySelector('[data-add-selected-section]').click();
     await tick();await tick();
-    assert.equal(writes.length,1,"merchant's explicit Add section persists via the real API");
+    assert.equal(writes.length,1,"merchant's explicit Add section persists via the real API: "+doc.getElementById("te-note")?.textContent);
     assert.equal(writes[0].templateKey,"portable");
     assert.equal(writes[0].themePreset,"platform/choose-a-plan");
     assert.equal(doc.querySelector('[data-select-section="stock-created"]') != null,true);
@@ -461,7 +461,7 @@ test("explicit Publish live does not invoke browser confirm or issue concurrent 
   assert.equal(doc.getElementById("te-save-menu").hidden,false);
   doc.getElementById("te-publish").click();
   assert.equal(confirmCalls,0,"explicit menu selection is the publish intent");
-  assert.equal(doc.getElementById("te-save-menu").hidden,true);
+  assert.equal(doc.getElementById("te-save-menu").hidden,true,"publish: "+doc.getElementById("te-note")?.textContent+"; enabled="+!doc.getElementById("te-publish").disabled+"; theme="+doc.getElementById("te-theme-name").textContent);
   assert.equal(option.getAttribute("aria-expanded"),"false");
   await tick();
   assert.equal(publishes.length,1);
