@@ -1,0 +1,61 @@
+name: Publish IAM Scene standalone
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact independently approved iamscene version
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: iam-scene-npm-stable
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout clean main
+        uses: actions/checkout@v4
+      - name: Configure npm OIDC environment
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Require npm trusted-publishing compatible CLI
+        run: npm install --global npm@^11.21.0
+      - name: Verify independent scene version
+        env:
+          APPROVED_VERSION: ${{ inputs.version }}
+        run: |
+          node -e 'const p=require("./packages/iamscene/package.json"),a=require("./packages/iamscene/agentsam.package.json");if(p.version!==process.env.APPROVED_VERSION||a.version!==p.version)throw new Error("iamscene_release_version_mismatch")'
+          npm view "@inneranimalmedia/agentsam-3d-viewer@2.6.15" version
+          npm view "@inneranimalmedia/agentsam-occt@2.6.15" version
+          if npm view "@inneranimalmedia/iamscene@$APPROVED_VERSION" version --fetch-retries=0 >/dev/null 2>&1; then
+            echo "Release version already published — refusing overwrite."
+            exit 1
+          fi
+      - name: Install pinned SDK workspace dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify native scene engine and viewport
+        run: |
+          npm run test --workspace @inneranimalmedia/agentsam-3d-viewer
+          npm run test --workspace @inneranimalmedia/iamscene
+      - name: Verify packed package contents
+        run: |
+          npm pack --workspace @inneranimalmedia/iamscene --dry-run --json > "$RUNNER_TEMP/iamscene-pack.json"
+          node --input-type=module -e 'import fs from "node:fs";const raw=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/iamscene-pack.json"));const data=Array.isArray(raw)?raw[0]:Object.values(raw)[0];const files=new Set(data.files.map(f=>f.path));if(!files.has("dist/src/index.js")||!files.has("schema/iamscene.v1.schema.json"))throw Error("scene_publish_artifacts_missing")'
+      - name: Publish standalone IAM Scene with provenance
+        run: npm publish --workspace @inneranimalmedia/iamscene --access public --provenance
+      - name: Verify public registry version
+        env:
+          APPROVED_VERSION: ${{ inputs.version }}
+        run: npm view "@inneranimalmedia/iamscene@$APPROVED_VERSION" version
