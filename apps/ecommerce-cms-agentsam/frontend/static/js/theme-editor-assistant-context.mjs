@@ -14,6 +14,7 @@ export function buildThemeStudioAssistantContext(resource) {
   const sectionKey = String(resource.sectionKey);
   const page = String(resource.page);
   const field = resource.fieldKey || null;
+  const blockId = resource.blockId ? String(resource.blockId) : null;
   const context = {
     page: '/admin/theme-editor',
     surface: 'theme-studio',
@@ -21,7 +22,10 @@ export function buildThemeStudioAssistantContext(resource) {
     slug: resource.ownerSlug,
     workflow_key: 'cms_section_review',
     ...(resource.linked && resource.ownerSlug !== 'site'
-      ? { selected_resource: {
+      ? { selected_resource: blockId ? {
+        type:'block', id:blockId, section_key:sectionKey,
+        label:resource.label, page, site_id:siteId, surface:'theme-studio'
+      } : {
         type: 'section', id: sectionKey, label: resource.label,
         page, site_id: siteId, surface: 'theme-studio'
       } }
@@ -32,6 +36,7 @@ export function buildThemeStudioAssistantContext(resource) {
   };
   const selectionInfo = {
     section: sectionKey,
+    block: blockId,
     field,
     current_value: typeof resource.currentValue === 'string'
       ? resource.currentValue.slice(0, 2000) : null,
@@ -40,6 +45,6 @@ export function buildThemeStudioAssistantContext(resource) {
   return {
     context,
     selectionInfo,
-    conversationKey: JSON.stringify([siteId, page, sectionKey]),
+    conversationKey: JSON.stringify([siteId, page, sectionKey, blockId]),
   };
 }

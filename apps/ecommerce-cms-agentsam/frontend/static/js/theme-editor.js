@@ -3127,14 +3127,19 @@
   function selectedAgentResource() {
     const section = currentSection();
     if (!section) return null;
+    const block = currentBlockMeta();
     const field = activeFieldKey ? fieldByKey(activeFieldKey) : null;
     const value = field ? valueForField(section, field) : null;
     const owner = sectionOwner(section);
     return {
-      type: 'section', id: section.key, sectionKey: section.key,
+      type: block ? 'block' : 'section',
+      id: block?.id || section.key, sectionKey: section.key,
+      blockId: block?.id || null,
       siteId: host?.siteId || window.cmsActiveSiteId || params.get('site_id'),
       ownerSlug: owner, page: pageRoute(slug) || '/' + slug,
-      surface: 'theme-studio', label: (currentSectionSchema()?.label || humanize(section.key)),
+      surface: 'theme-studio',
+      label: block ? (currentBlockSchema()?.label || humanize(block.templateKey || block.id))
+        : (currentSectionSchema()?.label || humanize(section.key)),
       fieldKey: field?.key || null,
       currentValue: typeof value === 'string' ? value : null,
       sectionVersion: Number(section.version || 0),

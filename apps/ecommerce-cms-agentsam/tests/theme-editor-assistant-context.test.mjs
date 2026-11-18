@@ -17,10 +17,23 @@ test('Theme Studio carries a site lookup hint but never claims an authenticated 
   assert.equal(result.context.surface,'theme-studio');
   assert.equal(result.context.workflow_key,'cms_section_review');
   assert.equal(result.selectionInfo.current_value,'Welcome');
-  assert.equal(result.conversationKey,JSON.stringify(['site_alpha','/about','hero']));
+  assert.equal(result.conversationKey,JSON.stringify(['site_alpha','/about','hero',null]));
   assert.equal('accountId' in result.context,false);
   assert.equal('authUserId' in result.context,false);
   assert.equal('authority' in result.context,false);
+});
+
+test('Selected block includes its parent section and isolated conversation context',()=>{
+  const block=buildThemeStudioAssistantContext({
+    ...selected,blockId:'buy-button',fieldKey:'buy-button.label'
+  });
+  assert.deepEqual(block.context.selected_resource,{
+    type:'block',id:'buy-button',section_key:'hero',label:'Hero',
+    page:'/about',site_id:'site_alpha',surface:'theme-studio'
+  });
+  assert.equal(block.selectionInfo.block,'buy-button');
+  assert.equal(block.selectionInfo.field,'buy-button.label');
+  assert.notEqual(block.conversationKey,buildThemeStudioAssistantContext(selected).conversationKey);
 });
 
 test('Shared header/footer is annotation, not edit authority, but retains site selection',()=>{

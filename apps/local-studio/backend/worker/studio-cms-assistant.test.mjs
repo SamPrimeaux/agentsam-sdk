@@ -54,11 +54,28 @@ test("CMS selection is bound to the verified account and selected site when slug
       CREATE TABLE accounts (id TEXT PRIMARY KEY, status TEXT);
       CREATE TABLE cms_sites (id TEXT PRIMARY KEY, account_id TEXT, name TEXT, slug TEXT, primary_domain TEXT, status TEXT, is_default INTEGER);
       CREATE TABLE cms_pages (id TEXT PRIMARY KEY, site_id TEXT NOT NULL, route_path TEXT, slug TEXT);
-      CREATE TABLE cms_page_sections (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, section_key TEXT);
+      CREATE TABLE cms_page_sections (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, section_key TEXT, section_type TEXT, definition_id TEXT, template_sku TEXT);
+      CREATE TABLE cms_section_blocks (id TEXT PRIMARY KEY, account_id TEXT, section_id TEXT, block_key TEXT, block_type TEXT, parent_block_id TEXT, definition_id TEXT, template_sku TEXT);
+      CREATE TABLE cms_definitions (id TEXT PRIMARY KEY, account_id TEXT, definition_key TEXT, kind TEXT, version TEXT, label TEXT, status TEXT, origin TEXT, settings_schema_json TEXT, allowed_blocks_json TEXT, max_blocks INTEGER);
+      CREATE TABLE cms_components (definition_id TEXT, renderer_key TEXT, implementation_status TEXT);
+      CREATE TABLE cms_component_templates (sku TEXT PRIMARY KEY, template_name TEXT, item_type TEXT, status TEXT, editor_schema_json TEXT, data_bindings_json TEXT, is_system INTEGER);
       INSERT INTO accounts VALUES ('me','active'), ('other','active');
       INSERT INTO cms_sites VALUES ('one','me','One','one',NULL,'active',1), ('two','me','Two','two',NULL,'active',0), ('three','other','Three','three',NULL,'active',1);
       INSERT INTO cms_pages VALUES ('p1','one','/','home'), ('p2','two','/','home'), ('p3','three','/','home');
-      INSERT INTO cms_page_sections VALUES ('s1','p1','hero'), ('s2','p2','hero'), ('s3','p3','hero');
+      INSERT INTO cms_page_sections VALUES
+        ('s1','p1','hero','hero',NULL,NULL),
+        ('s2','p2','hero','hero','ds',NULL),
+        ('s3','p3','hero','hero',NULL,NULL);
+      INSERT INTO cms_section_blocks VALUES
+        ('b1','me','s1','buy','button',NULL,'db',NULL),
+        ('b2','me','s2','buy','button',NULL,'db','stock/button'),
+        ('b3','other','s3','buy','button',NULL,NULL,NULL),
+        ('b4','me','s2','nested','link','b2','db',NULL);
+      INSERT INTO cms_definitions VALUES
+        ('ds','me','hero','section','2','Hero','active','package','{"title":{"type":"text"}}','["button"]',12),
+        ('db','me','button','block','1','Button','active','package','{"label":{"type":"text","label":"Button label"}}','[]',0);
+      INSERT INTO cms_components VALUES ('ds','theme:hero','verified'),('db','theme:button','verified');
+      INSERT INTO cms_component_templates VALUES ('stock/button','Button','block','active','{"label":{"type":"text"}}','{"label":{}}',1);
     `);
     const env = { DB: { prepare: sql => ({ bind: (...args) => ({ first: async () => db.prepare(sql).get(...args) }) }) } };
     const selection = { type: "section", surface: "theme-studio", id: "hero", page: "/" };
@@ -67,6 +84,33 @@ test("CMS selection is bound to the verified account and selected site when slug
       assert.equal((await resolveSelectedResource(env, { ...selection, id: "s2", site_id: "two" })).key, "hero");
       await assert.rejects(() => resolveSelectedResource(env, selection), /cms_assistant_site_required/);
       await assert.rejects(() => resolveSelectedResource(env, { ...selection, site_id: "three" }), /cms_site_not_found/);
+      const section = await resolveSelectedResource(env,{...selection,site_id:"two"});
+      assert.equal(section.definition.key,"hero");
+      assert.equal(section.definition.version,"2");
+      assert.equal(section.renderer.verified,true);
+      const block = await resolveSelectedResource(env,{
+        type:"block",surface:"theme-studio",site_id:"two",page:"/",
+        section_key:"hero",id:"buy",label:"Buy now"
+      });
+      assert.equal(block.id,"b2");
+      assert.equal(block.section.id,"s2");
+      assert.equal(block.definition.kind,"block");
+      assert.equal(block.definition.fields[0].key,"label");
+      assert.equal(block.template.sku,"stock/button");
+      assert.equal(block.renderer.key,"theme:button");
+      const child = await resolveSelectedResource(env,{
+        type:"block",surface:"theme-studio",site_id:"two",page:"/",
+        section_key:"s2",id:"nested"
+      });
+      assert.equal(child.parentBlockId,"b2");
+      await assert.rejects(() => resolveSelectedResource(env,{
+        type:"block",surface:"theme-studio",site_id:"two",page:"/",
+        section_key:"hero",id:"b1"
+      }),/Selected block does not belong/);
+      await assert.rejects(() => resolveSelectedResource(env,{
+        type:"block",surface:"theme-studio",site_id:"three",page:"/",
+        section_key:"hero",id:"b3"
+      }),/cms_site_not_found/);
     });
     db.exec("PRAGMA foreign_keys = ON");
     const shareMigration = readFileSync(new URL("../migrations/1351_agentsam_conversation_shares.sql", import.meta.url), "utf8");

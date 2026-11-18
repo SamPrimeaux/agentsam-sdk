@@ -99,10 +99,12 @@ export function normalizeCmsCatalogTemplate(row) {
   const dataBindings = parseJson(row.data_bindings_json, {});
   const preview = parseJson(row.preview_json, {});
   const metadata = parseJson(row.definition_metadata_json, {});
-  const rendererKey = metadata.rendererKey || metadata.renderer_key ||
+  // Renderer evidence belongs to cms_components, never metadata supplied by
+  // a template. Preserve metadata as diagnostics only; it grants no install authority.
+  const declaredRendererKey = metadata.rendererKey || metadata.renderer_key ||
     templateData.rendererKey || templateData.renderer_key || null;
-  const implementationStatus = metadata.implementationStatus || metadata.implementation_status ||
-    templateData.implementationStatus || templateData.implementation_status || "unverified";
+  const rendererKey = row.resolved_renderer_key || declaredRendererKey;
+  const implementationStatus = row.resolved_implementation_status || "unverified";
   const implementationClass = metadata.implementationClass || metadata.implementation_class ||
     templateData.implementationClass || templateData.implementation_class || null;
   const definition = row.resolved_definition_id ? {
@@ -121,8 +123,8 @@ export function normalizeCmsCatalogTemplate(row) {
     metadata,
   } : null;
   const installable = row.status === "active" && definition?.status === "active" &&
-    implementationStatus === "implemented" && implementationClass === "native" &&
-    typeof rendererKey === "string" && rendererKey.length > 0;
+    implementationStatus === "verified" && typeof row.resolved_renderer_key === "string" &&
+    row.resolved_renderer_key.length > 0;
   return {
     id: row.id,
     sku: row.sku,
@@ -153,6 +155,7 @@ export function normalizeCmsCatalogTemplate(row) {
     rendererKey,
     implementationStatus,
     implementationClass,
+    rendererVerified: implementationStatus === "verified" && Boolean(row.resolved_renderer_key),
     installable,
     isFeatured: Boolean(row.is_featured),
     featuredCollection: row.featured_collection || null,
@@ -185,7 +188,9 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
     d.max_blocks AS definition_max_blocks,d.metadata_json AS definition_metadata_json,
     c.package_ref AS resolved_package_ref,c.artifact_r2_bucket AS resolved_package_manifest_bucket,
     c.artifact_r2_key AS resolved_package_manifest_key,
-    c.artifact_sha256 AS resolved_package_manifest_sha256
+    c.artifact_sha256 AS resolved_package_manifest_sha256,
+    c.renderer_key AS resolved_renderer_key,
+    c.implementation_status AS resolved_implementation_status
     FROM cms_component_templates t
     LEFT JOIN cms_definitions d
       ON d.id=COALESCE(

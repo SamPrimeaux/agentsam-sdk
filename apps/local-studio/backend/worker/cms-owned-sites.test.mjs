@@ -92,6 +92,17 @@ test("Theme Editor assistant selector reads the selected section's explicit site
   assert.equal(await readCmsAssistantSiteSelector(request), "inneranimalmedia");
 });
 
+test("Theme Studio block lookup carries the same required site authority as sections", async () => {
+  const request = new Request("https://studio.example/api/admin/agentsam/chat", {
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({context:{selected_resource:{
+      type:"block",surface:"theme-studio",site_id:"site_sdk",
+      section_key:"hero",id:"buy"
+    }}})
+  });
+  assert.equal(await readCmsAssistantSiteSelector(request),"site_sdk");
+});
+
 test("Theme Studio annotation carries the explicit site selection for host authorization", async () => {
   const request = new Request("https://studio.example/api/admin/agentsam/chat", {
     method: "POST",
