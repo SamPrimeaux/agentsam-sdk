@@ -289,6 +289,22 @@ export function mountSettingsDrawer(host: HTMLElement) {
       const prop = stateMap[key];
       if (prop) (state.sceneSettings as unknown as Record<string, SettingValue>)[prop] = value;
     }
+    if (key === "scene.profile") {
+      const profile = SCENE_PROFILES.find(item => item.id === value);
+      if (profile) { state.sceneSettings.finish = profile.finish; state.sceneSettings.mood = profile.mood; }
+    }
+    if (key === "styles.finish") {
+      const preset = FINISHES.find(item => item.id === value);
+      if (preset) { state.sceneSettings.surfaceTreatment = "metal"; state.sceneSettings.roughness = preset.roughness; state.sceneSettings.metalness = preset.metalness; }
+    }
+    if (key === "styles.mood") {
+      const mood = MOODS.find(item => item.id === value);
+      if (mood) { state.sceneSettings.keyIntensity = mood.keyIntensity; state.sceneSettings.ambientIntensity = mood.ambientIntensity; state.sceneSettings.fogDensity = mood.fogDensity; }
+    }
+    if (key === "camera.shot") {
+      const shot = CAMERA_SHOTS.find(item => item.id === value);
+      if (shot) state.sceneSettings.cameraDistance = shot.distance;
+    }
     window.dispatchEvent(new CustomEvent("samsketch:settings.change", { detail: { key, value, tab: active } }));
   };
 
