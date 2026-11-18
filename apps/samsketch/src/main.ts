@@ -161,7 +161,7 @@ function loadDocument(next:Document){
  brushEnabled=doc.sceneSettings!.brushEnabled;reducedMotionOverride=doc.sceneSettings!.reducedMotion;
  settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});
  history.length=0;future.length=0;
- store();renderAll();applyMood(doc.sceneSettings!.mood,false);frame();
+ store();renderAll();applyMood(doc.sceneSettings!.mood,false,false);frame();
 }
 function renderScenePreview():string|undefined{
  try{
@@ -817,15 +817,16 @@ function setBackdrop(preset:string){
   :`radial-gradient(ellipse at 52% 25%,${color} 0%,#edf2fc 68%,#dfe8f6 100%)`;
  scene.fog=fogEnabled?new THREE.FogExp2(new THREE.Color(MOODS.find(m=>m.id===doc.sceneSettings?.mood)?.fogColor||color),fogDensity):null;
 }
-function applyMood(id:MoodId,persist=true){
+function applyMood(id:MoodId,persist=true,applyDefaults=true){
  const mood=MOODS.find(item=>item.id===id);if(!mood)return;
  if(persist)snapshot();
- doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,mood:id,fogDensity:mood.fogDensity};
- light.color.set(mood.keyColor);light.intensity=mood.keyIntensity;
+ const previous={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings};
+ doc.sceneSettings={...previous,mood:id,...(applyDefaults?{keyIntensity:mood.keyIntensity,ambientIntensity:mood.ambientIntensity,fogDensity:mood.fogDensity}:{})};
+ light.color.set(mood.keyColor);light.intensity=doc.sceneSettings.keyIntensity;
  fillLight.color.set(mood.fillColor);fillLight.intensity=mood.fillIntensity;
- ambientLight.color.set(mood.ambientColor);ambientLight.intensity=mood.ambientIntensity;
+ ambientLight.color.set(mood.ambientColor);ambientLight.intensity=doc.sceneSettings.ambientIntensity;
  renderer.toneMappingExposure=mood.exposure;
- fogDensity=mood.fogDensity;
+ fogDensity=doc.sceneSettings.fogDensity;
  setBackdrop(mood.backdrop);
  if(persist)store();
 }
