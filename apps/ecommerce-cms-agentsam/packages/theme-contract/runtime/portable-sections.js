@@ -68,13 +68,6 @@
     spec("revise/newsletter", "Newsletter", "newsletter", cards.concat(f("buttonLabel", "Button text"))),
   ]);
   const byId = new Map(definitions.map((item) => [item.id, item]));
-  // Only bundled native renderers with complete merchant-editing support.
-  // Newsletter is withheld until its subscription route has been verified.
-  const merchantStockIds = Object.freeze([
-    "revise/sticky-curtain","revise/wardrobe-rail",
-    "revise/editorial-statement","revise/faq",
-    "revise/testimonials","revise/trust-row"
-  ]);
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
   const esc = (value) => String(value == null ? "" : value)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;")
@@ -285,30 +278,6 @@
     return { ok: true };
   }
 
-  // Source templates are generated from the SAME native renderer, not
-  // compiled screenshots. They remain transient picker definitions.
-  function sourceTemplate(id) {
-    if (!merchantStockIds.includes(id)) return null;
-    const definition=byId.get(id);
-    const key="portable-"+id.replace(/[^a-z0-9]+/g,"-");
-    const content=defaults(id);
-    const binding=field=>({...field,
-      ...(field.type==="link"?{binding:{attribute:"href"}}:
-          field.type==="media"?{binding:{attribute:"src"}}:{})});
-    return {
-      key,name:definition.label,type:definition.family,sourceKind:definition.family,
-      html:render({key,content}),version:0,zone:"BODY",status:"draft",
-      content:{...content,__editor:{...content.__editor,templateKey:key}},
-      schema:{
-        key,label:definition.label,fields:definition.fields.map(binding),settings:[],
-        blocks:definition.blocks.map(block=>({...block,fields:block.fields.map(binding),
-          defaults:JSON.parse(JSON.stringify(block.defaultContent||{}))})),
-        capabilities:{insert:true,edit:true,reorder:true,duplicate:true,remove:true,
-          blocks:definition.blocks.length>0},
-        guardrails:{maxBlocks:definition.blocks[0]?.max||0}
-      }
-    };
-  }
   scope.ThemePortableSections = Object.freeze({
     definitions,
     get: (id) => byId.get(id) || scope.ThemePlatformStock?.get(id) || scope.ThemeReviseAtlas?.get(id) || null,
@@ -318,10 +287,7 @@
       ...(scope.ThemePlatformStock?.catalog() || []),
       ...(scope.ThemeReviseAtlas?.catalog() || []),
     ],
-    defaults, render, validate, sourceTemplate,
-    merchantCatalog:()=>merchantStockIds.map(id=>({
-      ...byId.get(id),key:"portable-"+id.replace(/[^a-z0-9]+/g,"-")
-    })),
+    defaults, render, validate,
     schema(id) {
       if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.schema(id);
       if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.schema(id);
