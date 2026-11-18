@@ -854,8 +854,15 @@ function addTemplate(ref:string){
  void getTemplateModel(templateRef).then(()=>{redraw();renderLayers();announce("Inserted source-backed model · "+entry.name);}).catch(error=>announce("Model unavailable: "+String(error)));
 }
 function addItem(kind:Kind){
- const colors:{[key in Kind]:string}={desktop:"#2c3a57",phone:"#477ae5",panel:"#e9adbe",orb:"#86c4dc",box:"#95b4e6",ring:"#91d7cf",cad:"#f0d2ad",template:"#ffffff"};
+ const colors:{[key in Kind]:string}={desktop:"#2c3a57",phone:"#477ae5",panel:"#e9adbe",orb:"#86c4dc",box:"#95b4e6",ring:"#91d7cf",cad:"#f0d2ad",template:"#ffffff",prop:"#8a9dd6"};
  mutate(()=>{const i=makeItem(kind,kind==="cad"?"CAD Boolean solid":kind.charAt(0).toUpperCase()+kind.slice(1),colors[kind],[((doc.items.length%4)-1.5)*1.4,.15,(Math.floor(doc.items.length/4)-.5)*1.5]);doc.items.push(i);selectedId=i.id;selectedPartId=null;});
+}
+function addSceneryProp(type:SceneryPropId){
+ const preset=SCENERY_PROPS.find(item=>item.id===type);if(!preset)return;
+ snapshot();
+ const item=makeItem("prop",preset.label,preset.color,[((doc.items.length%4)-1.5)*1.5,.15,(Math.floor(doc.items.length/4)-.5)*1.5]);
+ item.propType=type;doc.items.push(item);selectedId=item.id;selectedPartId=null;
+ renderAll();store();announce("Added SamSpeaks scenery prop · "+preset.label);
 }
 function undo(){if(!history.length)return;future.push(JSON.stringify(doc));doc=JSON.parse(history.pop()!) as Document;selectedId=doc.items.find(x=>x.id===selectedId)?.id||doc.items[0]?.id||"";selectedPartId=null;renderAll();}
 function redo(){if(!future.length)return;history.push(JSON.stringify(doc));doc=JSON.parse(future.pop()!) as Document;selectedId=doc.items[0]?.id||"";selectedPartId=null;renderAll();}
