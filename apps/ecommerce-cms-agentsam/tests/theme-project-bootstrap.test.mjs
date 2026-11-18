@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { parseThemeEditorLocation, themeProjectEditorPath, cmsPageEditorPath } from '../frontend/theme-editor/routes.mjs';
 import { adminRouteForPath } from '../backend/lib/route-manifest.js';
 import { createCmsPageThemeEditorAdapter } from '../frontend/theme-editor/cms-page-adapter.mjs';
-import { materializeStarterProject, inheritDefaultTemplates } from '../frontend/theme-editor/starter-project.mjs';
+import { blankThemeProject, materializeStarterProject, inheritDefaultTemplates } from '../frontend/theme-editor/starter-project.mjs';
+import { fillMissingThemeChrome } from '../frontend/theme-editor/starter-chrome.mjs';
 import { validateThemeProjectPayload } from '../backend/cms/theme-project-store.mjs';
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -144,7 +145,25 @@ test('legacy new-theme alias redirects to the shared Theme Studio, never Design 
   assert.match(alias,/\/admin\/theme-editor/);
   assert.doesNotMatch(alias,/\/canvas/);
   assert.match(bootstrap,/async function bootNewTheme/);
-  assert.match(bootstrap,/materializeStarterProject/);
+  assert.match(bootstrap,/blankThemeProject/);
+  assert.match(bootstrap,/fillMissingThemeChrome/);
+  assert.doesNotMatch(bootstrap,/A clear place to begin|Discover our story|Your story, made clear|sampleProducts/);
   assert.match(bootstrap,/inheritDefaultTemplates/);
   assert.match(bootstrap,/themeProjectEditorPath\(siteId, created\.project\.id, 'home'\)/);
+});
+
+test('new theme creation starts from real, editable shared chrome without branded or fake hero content', () => {
+  const draft = blankThemeProject({ name:'New theme', purpose:'', audience:'', siteName:'Example site' });
+  const withChrome = fillMissingThemeChrome(draft, 'Example site');
+  const {project} = inheritDefaultTemplates(withChrome);
+  assert.equal(validateThemeProjectPayload(project).id, project.id);
+  const home = project.pages.find(page => page.slug === 'home');
+  assert.ok(home);
+  assert.ok(home.sections.some(s => s.globalKey === 'site-header'));
+  assert.ok(home.sections.some(s => s.globalKey === 'site-footer'));
+  assert.ok(project.pages.some(page => page.slug === 'product'));
+  assert.ok(project.pages.some(page => page.slug === 'checkout'));
+  assert.doesNotMatch(JSON.stringify(home),/A clear place to begin|Your story, made clear|fuelnfreetime/i);
+  assert.deepEqual(home.sections.filter(s => s.zone === 'BODY'),[],
+    'Generated body sections must not be fabricated by the new theme bootstrap');
 });

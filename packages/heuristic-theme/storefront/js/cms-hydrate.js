@@ -377,7 +377,7 @@
   window.addEventListener("message", (event) => {
     if (event.origin !== location.origin) return;
     const data = event.data;
-    if (!data || data.type !== "fnf-cms-preview" || data.slug !== pageSlug) return;
+    if (!data || data.type !== "agentsam:cms-preview:v1" || data.slug !== pageSlug) return;
     if (!Array.isArray(data.sections)) return;
     const sections = [
       ...(Array.isArray(data.siteSections) ? data.siteSections : []), ...data.sections,

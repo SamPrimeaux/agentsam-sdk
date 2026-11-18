@@ -13,13 +13,15 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
 async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null, packageSections = null, portableSections = [], stockHandoff = null } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-    url: "https://editor.test/admin/theme-editor?slug=" + pageSlug +
+    url: "https://editor.test/admin/theme-editor?site_id=site-test&slug=" + pageSlug +
       (stockHandoff ? "&stock="+encodeURIComponent(stockHandoff) : ""),
     runScripts: "outside-only",
     pretendToBeVisual: true
   });
   const w = dom.window;
   w.structuredClone = globalThis.structuredClone;
+  w.cmsActiveSiteId = 'site-test';
+  w.cmsEditorStorefrontUrl = (_site,route) => route;
   if (visualViewportHeight != null) {
     const viewport = new w.EventTarget();
     viewport.height = visualViewportHeight;
@@ -28,6 +30,7 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
     Object.defineProperty(w, "visualViewport", { configurable: true, value: viewport });
   }
   if (themePreviews.length) w.ThemeStudioPreview = { themes: themePreviews };
+  w.AgentSamThemeEditorAssets = { assistantIconUrl: '/site-owned/assistant.svg' };
   if (portableSections.length) w.ThemePortableSections = { catalog: () => portableSections };
   w.HTMLElement.prototype.scrollIntoView = () => {};
   const writes = [];
@@ -42,25 +45,48 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   w.renderShell = (_route, markup) => w.document.body.insertAdjacentHTML("afterbegin", markup);
   w.fetch = async () => ({ ok: true, json: async () => ({ active_theme: { name: "Heuristic", status: "active" } }) });
   w.adminFetch = async (url, options = {}) => {
-    if (url.endsWith("/registry")) return registryOverride || registryForAdmin();
+    const requestPath = new URL(url, w.location.origin).pathname;
+    if (requestPath.endsWith("/registry")) {
+      const source=registryOverride || registryForAdmin();
+      const catalog=[...(source.catalog || [])];
+      if(stockHandoff)catalog.push({
+        sku:'SKU-STOCK-ONB-PLAN',name:'Plan selection',label:'Plan selection',
+        itemType:'section',category:'Commerce',status:'active',catalogAvailable:true,
+        installable:true,rendererKey:'platform/choose-a-plan',
+        definitionKey:'platform/choose-a-plan',templateData:{renderer_key:'platform/choose-a-plan'}
+      });
+      for(const row of portableSections)catalog.push({
+        sku:'SKU-TEST-'+row.id.toUpperCase(),name:row.label,label:row.label,
+        itemType:'section',category:row.category||'Sections',status:'active',
+        catalogAvailable:true,installable:true,rendererKey:row.id,
+        definitionKey:row.id,templateData:{renderer_key:row.id},
+      });
+      return {...source,catalog};
+    }
+    if (url.startsWith("/api/admin/cms/themes?site_id=")) return {
+      ok:true,active_theme:{slug:"fixture-theme",name:"Fixture theme",state:"active"},
+      themes:[{slug:"fixture-theme"}],content_version:1
+    };
     if (linkDestinations && url === "/api/store/collections") return {ok:true,collections:linkDestinations.collections || []};
     if (linkDestinations && url === "/api/store/products") return {ok:true,products:linkDestinations.products || []};
-    if (url.endsWith("/pages/site")) return { page: site };
-    if (url.endsWith("/pages/" + pageSlug)) return { page, seeded: false };
-    if (url.endsWith("/pages")) return { pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
+    if (requestPath.endsWith("/pages/site")) return { page: site };
+    if (requestPath.endsWith("/pages/" + pageSlug)) return { page, seeded: false };
+    if (requestPath.endsWith("/pages")) return {site:{id:"site-test"}, pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
     if (url.startsWith("/api/admin/media?")) return { assets: mediaAssets, pagination: { pages: 1 } };
-    if (url.endsWith("/pages/shop/publish") && options.method === "POST") {
+    if (requestPath.endsWith("/pages/shop/publish") && options.method === "POST") {
       publishes.push({url,method:options.method});
       return w.__publishResponder ? w.__publishResponder() : { published_at: "2026-10-10T05:00:00Z" };
     }
-    if (stockHandoff && url.endsWith("/pages/" + pageSlug + "/sections") && options.method === "POST") {
+    if (stockHandoff && requestPath.endsWith("/pages/" + pageSlug + "/catalog-resources") && options.method === "POST") {
       const body = JSON.parse(options.body || "{}");
-      const content = w.ThemePortableSections?.defaults?.(body.themePreset);
-      if (!content || body.templateKey !== "portable") throw new Error("stock_section_not_registered");
-      const key = "stock-created";
-      writes.push({url,operation:"insert",...body});
-      page.sections.push({key,content,version:1,status:"draft",sort_order:page.sections.length,source:"cms"});
-      return {ok:true,section_key:key,template_key:"portable",version:1};
+      if(body.catalogKey!=='SKU-STOCK-ONB-PLAN')throw new Error('stock_sku_not_registered');
+      const content=w.ThemePortableSections?.defaults?.('platform/choose-a-plan');
+      if(!content)throw new Error('stock_renderer_missing');
+      content.__editor.catalogSku=body.catalogKey;
+      const key='stock-created';
+      writes.push({url,operation:'insert',...body});
+      page.sections.push({key,content,version:1,status:'draft',sort_order:page.sections.length,source:'cms'});
+      return {ok:true,section_key:key,template_sku:body.catalogKey,version:1};
     }
     if (url.includes("/sections/") && options.method === "PUT") {
       writes.push({ url, ...JSON.parse(options.body) });
@@ -109,7 +135,7 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     assert.equal(doc.querySelectorAll("#te-save").length, 1);
     assert.equal(doc.querySelector("#te-save").textContent, "Save");
     assert.equal(doc.querySelector("#te-publish").textContent, "Publish live…");
-    assert.equal(doc.querySelector(".te-agentsam-mark img")?.getAttribute("src"), "/admin/brand/agentsam-gorilla-tiny.svg");
+    assert.equal(doc.querySelector(".te-agentsam-mark img")?.getAttribute("src"), "/site-owned/assistant.svg");
     assert.ok(doc.getElementById("agentsam-drawer"));
     doc.getElementById("agentsam-toggle").click();
     assert.equal(doc.body.classList.contains("agentsam-open"), true);
@@ -167,16 +193,15 @@ test("Canvas handoff selects real platform stock without inserting until explici
     await new Promise(resolve=>setTimeout(resolve,35));
     const modal=doc.getElementById("te-section-menu");
     assert.equal(modal.hidden,false,"authorized editor opens Add Section library");
-    const selected=doc.querySelector('[data-choose-section="platform/choose-a-plan"]');
+    const selected=doc.querySelector('[data-choose-section="SKU-STOCK-ONB-PLAN"]');
     assert.ok(selected,"actual worker-shared stock renderer appears in CMS picker");
     assert.equal(selected.getAttribute("aria-selected"),"true");
     assert.ok(doc.querySelector("#te-section-preview iframe.te-catalog-visual"));
     assert.equal(writes.length,0,"handoff never inserts or publishes automatically");
     doc.querySelector('[data-add-selected-section]').click();
     await tick();await tick();
-    assert.equal(writes.length,1,"merchant's explicit Add section persists via the real API");
-    assert.equal(writes[0].templateKey,"portable");
-    assert.equal(writes[0].themePreset,"platform/choose-a-plan");
+    assert.equal(writes.length,1,"merchant's explicit Add section persists via the real API: "+doc.getElementById("te-note")?.textContent);
+    assert.equal(writes[0].catalogKey,'SKU-STOCK-ONB-PLAN');
     assert.equal(doc.querySelector('[data-select-section="stock-created"]') != null,true);
   }finally{dom.window.close();}
 });
@@ -278,11 +303,14 @@ test("Products and Collections open their template lists without closing the pag
       "uninstalled showcase fixtures do not appear in merchant navigation");
     doc.querySelector('[data-picker-category="products"]').click();
     assert.equal(doc.getElementById("te-page-popover").hidden, false);
-    assert.ok(doc.querySelector('[data-picker-template="product"]'));
+    assert.equal(doc.querySelector('[data-picker-template="product"]'), null,
+      "Uninstalled product templates cannot be fabricated in Theme Studio");
+    assert.match(doc.getElementById("te-page-options").textContent,/No pages of this type/);
     doc.querySelector('[data-picker-back]').click();
     doc.querySelector('[data-picker-category="collections"]').click();
     assert.equal(doc.getElementById("te-page-popover").hidden, false);
-    assert.ok(doc.querySelector('[data-picker-template="collection"]'));
+    assert.equal(doc.querySelector('[data-picker-template="collection"]'),null,
+      "Uninstalled collection templates cannot be fabricated in Theme Studio");
   } finally {
     dom.window.close();
   }
@@ -451,7 +479,7 @@ test("explicit Publish live does not invoke browser confirm or issue concurrent 
   assert.equal(doc.getElementById("te-save-menu").hidden,false);
   doc.getElementById("te-publish").click();
   assert.equal(confirmCalls,0,"explicit menu selection is the publish intent");
-  assert.equal(doc.getElementById("te-save-menu").hidden,true);
+  assert.equal(doc.getElementById("te-save-menu").hidden,true,"publish: "+doc.getElementById("te-note")?.textContent+"; enabled="+!doc.getElementById("te-publish").disabled+"; theme="+doc.getElementById("te-theme-name").textContent);
   assert.equal(option.getAttribute("aria-expanded"),"false");
   await tick();
   assert.equal(publishes.length,1);
@@ -623,15 +651,14 @@ test("mobile toolbar gives Page priority without hiding real undo/redo, inspect,
   } finally { dom.window.close(); }
 });
 
-test("mobile stylesheet prevents horizontal toolbar scrolling while retaining page-first structure", () => {
+test("mobile stylesheet keeps the site-owned page switcher and actions within the viewport", () => {
   const css = readFileSync(new URL("../frontend/static/css/theme-editor.css", import.meta.url), "utf8");
-  assert.match(css, /Preview-first mobile toolbar: page identity outranks theme selection/);
-  assert.match(css, /grid-template-columns:28px minmax\(0,1fr\) auto/);
+  assert.match(css, /Preview-first mobile toolbar/);
+  assert.match(css, /grid-template-columns:68px minmax/);
   assert.match(css, /grid-template-rows:52px/);
-  assert.match(css, /\.theme-studio-toolbar__right[\s\S]*?max-width:none;overflow:visible/);
-  assert.match(css, /#te-more-menu[\s\S]*?te-mobile-more-entry/);
+  assert.match(css, /max-width:none;overflow:visible/);
+  assert.match(css, /#te-more-menu .te-mobile-more-entry/);
 });
-
 
 test("media fields show a compact asset card with View original and a collapsed, editable source", async () => {
   const { dom, doc } = await editorFixture();
@@ -658,10 +685,12 @@ test("mobile editing sheet offers compact, balanced and expanded heights without
 });
 
 
-test("Theme Studio remains a browser page with AgentSam product identity", () => {
+test("Theme Studio uses the host assistant identity and stays a browser page", () => {
   const html=readFileSync(new URL("../frontend/static/theme-editor.html",import.meta.url),"utf8");
+  const editor=readFileSync(new URL("../frontend/static/js/theme-editor.js",import.meta.url),"utf8");
   assert.match(html,/viewport-fit=cover/);
-  assert.match(html,/\/admin\/brand\/agentsam-gorilla-tiny\.svg/);
+  assert.doesNotMatch(html,/\/admin\/brand\/agentsam-gorilla-tiny\.svg/);
+  assert.match(editor,/assistantIconUrl/);
   assert.doesNotMatch(html,/apple-mobile-web-app-capable|apple-mobile-web-app-title/);
 });
 
@@ -680,13 +709,14 @@ test("Safari browser UI and keyboard events cannot shorten the editor below 100d
   }finally{dom.window.close();}
 });
 
-test("mobile browser safe-area consumes actual tab height without extra blank row", () => {
+test("mobile browser safe-area has no permanent bottom tab strip or duplicate viewport clamp", () => {
   const css=readFileSync(new URL("../frontend/static/css/theme-editor.css",import.meta.url),"utf8");
-  assert.match(css,/Safari browser-first: don't double-clamp 100dvh/);
-  assert.match(css,/grid-template-rows: minmax\(0, 1fr\) var\(--te-mobile-tabs-height\)/);
-  assert.match(css,/height: 100dvh;/);
+  assert.match(css,/Do not reserve an always-on/);
+  assert.match(css,/grid-template-rows:minmax\(0,1fr\)/);
+  assert.match(css,/\.te-mobile-pane-switch \{[\s\S]*?display:none!important/);
+  assert.match(css,/height:100dvh/);
   assert.doesNotMatch(css,/height: min\(100dvh, var\(--te-visual-viewport-height/);
-  assert.match(css,/bottom: var\(--te-mobile-tabs-height\)/);
+  assert.match(css,/bottom:max\(8px, env\(safe-area-inset-bottom/);
   assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
 
@@ -704,21 +734,19 @@ test("mobile sheet CSS preserves live canvas and does not touch the separate adm
   assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
 
-test("mobile scroll handoff remains browser-first and miniAgentSam honors canvas bounds", () => {
-  const css=readFileSync(new URL("../frontend/static/css/theme-editor.css",import.meta.url),"utf8");
+test("mobile scroll handoff is browser-first with no persistent bottom tab rail", () => {
+  const css = readFileSync(new URL("../frontend/static/css/theme-editor.css",import.meta.url),"utf8");
   const workbench=readFileSync(new URL("../packages/agentsam-workbench/src/mini-agentsam.js",import.meta.url),"utf8");
   const adapter=readFileSync(new URL("../frontend/static/js/theme-editor-mini-agentsam.mjs",import.meta.url),"utf8");
   const editor=readFileSync(new URL("../frontend/static/js/theme-editor.js",import.meta.url),"utf8");
   assert.match(css,/Mobile Safari scroll handoff/);
   assert.match(css,/overscroll-behavior-y: auto/);
-  assert.match(workbench,/host\.positionBounds/,"Shared composer supports optional, nonbreaking positioning region");
-  assert.match(adapter,/positionBounds,/,"Theme Studio uses the same shared miniAgentSam with canvas bounds");
+  assert.match(workbench,/host\.positionBounds/);
+  assert.match(adapter,/positionBounds,/);
   assert.match(editor,/positionBounds: function\(\)/);
   assert.match(editor,/querySelector\('\.theme-studio \.te-preview-stage'\)/);
-  assert.match(css,/grid-template-rows: minmax\(0, 1fr\) var\(--te-mobile-tabs-height\)/,
-    "Three-tab mobile navigation is retained");
+  assert.match(css,/\.te-mobile-pane-switch \{[\s\S]*?display:none!important/);
 });
-
 
 test("button selection offers a searchable CMS page destination, not raw URL entry or section-wide settings", async () => {
  const {dom,w,doc,writes}=await editorFixture();
@@ -860,8 +888,8 @@ test("Editorial Tile merchant chooses a real Media Library image and another exi
  const newImage="https://assets.example.test/r2/new-editorial.webp";
  const {dom,doc,w,writes}=await editorFixture({registryOverride,
   mediaAssets:[{id:42,filename:"new-editorial.webp",r2_key:"editorial/new.webp",content_type:"image/webp",delivery_url:newImage}],
-  linkDestinations:{collections:[{slug:"masters",title:"Masters Collection"},{slug:"high-octane-performance-gear",title:"High Octane Collection"}],
-    products:[{slug:"heavyweight-tee",title:"Heavyweight Tee"}]}});
+  linkDestinations:{collections:[{slug:"masters",title:"Masters Collection",route_path:"/collections/masters"},{slug:"high-octane-performance-gear",title:"High Octane Collection",route_path:"/collections/high-octane-performance-gear"}],
+    products:[{slug:"heavyweight-tee",title:"Heavyweight Tee",route_path:"/products/heavyweight-tee"}]}});
  try {
   doc.querySelector('[data-select-block="tile1"][data-block-section="editorial-grid"]').click();
   doc.querySelector('[data-pick-media="tile1.imageUrl"]').click();
@@ -874,15 +902,15 @@ test("Editorial Tile merchant chooses a real Media Library image and another exi
   linkButton.click();
   await tick();await tick();await tick();
   const picker=doc.querySelector('[data-link-picker="tile1.href"]');
-  assert.ok(picker.querySelector('[data-link-choice="/shop/collections/masters"]'),"real collections are discoverable");
+  assert.ok(picker.querySelector('[data-link-choice="/collections/masters"]'),"real collections are discoverable");
   assert.ok(picker.querySelector('[data-link-choice="/products/heavyweight-tee"]'),"real products are discoverable");
-  picker.querySelector('[data-link-choice="/shop/collections/masters"]').click();
+  picker.querySelector('[data-link-choice="/collections/masters"]').click();
   assert.match(doc.querySelector('[data-link-trigger="tile1.href"]').textContent,/Masters Collection/);
   doc.getElementById('te-save').click();
   await tick();await tick();
   assert.equal(writes.length,1);
   assert.equal(writes[0].content.tile1.imageUrl,newImage);
-  assert.equal(writes[0].content.tile1.href,"/shop/collections/masters");
+  assert.equal(writes[0].content.tile1.href,"/collections/masters");
   assert.equal(writes[0].content.tile2.imageUrl,"/assets/presets/fuel-free-time/masters.webp");
   assert.equal(writes[0].content.tile3.headline,"Clock out. Get gone.");
   assert.equal(writes[0].content.__editor.blocks.length,3);
@@ -903,4 +931,17 @@ test("installed draft never switches into unrelated Resolve showcase",async()=>{
     assert.equal(doc.getElementById('te-theme-name')?.textContent,'Revise');
     assert.equal(doc.getElementById('te-theme-trigger-label')?.textContent,'Revise');
   }finally{dom.window.close();}
+});
+
+test("Theme Studio has no embedded customer/demo URLs or local showcase authoring bypass",()=>{
+  const source=readFileSync(new URL("../frontend/static/js/theme-editor.js",import.meta.url),"utf8");
+  const bootstrap=readFileSync(new URL("../frontend/static/js/theme-studio-bootstrap.mjs",import.meta.url),"utf8");
+  for(const forbidden of [/fnf-cms-preview/,/__fnfGlobalInspectMode/,/fnf-theme-editor-device/,
+    /fallbackPages/,/resolveShowcase/,/violetShowcase/,/journalShowcase/,
+    /renderResolveScaffold/,/renderVioletScaffold/,/A clear place to begin/,/Your story, made clear/,/\/shop\/collections\//]) {
+    assert.doesNotMatch(source,forbidden);
+    assert.doesNotMatch(bootstrap,forbidden);
+  }
+  assert.match(source,/agentsam:cms-preview:v1/);
+  assert.match(bootstrap,/blankThemeProject/);
 });

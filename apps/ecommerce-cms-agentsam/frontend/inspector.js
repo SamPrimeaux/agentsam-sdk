@@ -95,7 +95,7 @@
   function deactivate({ close = false } = {}) {
     active = false;
     button?.setAttribute('aria-pressed', 'false');
-    window.__fnfGlobalInspectMode = false;
+    window.__agentsamCmsGlobalInspectMode = false;
     if (close) instance?.close();
     else instance?.stopSelecting();
   }
@@ -140,7 +140,7 @@
     const resource = mediaResource(element);
     if (!resource.id) return;
     active = false;
-    window.__fnfGlobalInspectMode = false;
+    window.__agentsamCmsGlobalInspectMode = false;
     instance.select(resource, boundsFor(element));
     markOpen(true, true);
   }
@@ -196,7 +196,7 @@
       return;
     }
     active = true;
-    window.__fnfGlobalInspectMode = true;
+    window.__agentsamCmsGlobalInspectMode = true;
     button.setAttribute('aria-pressed', 'true');
     instance.startSelecting(mediaLibraryGrid()
       ? 'Click a media image to annotate · Esc to exit'
@@ -344,7 +344,7 @@
         document.querySelector('.theme-editor-panel, .ps-panel, .console-main'),
       onClose: () => {
         active = false;
-        window.__fnfGlobalInspectMode = false;
+        window.__agentsamCmsGlobalInspectMode = false;
         markOpen(false);
       },
       send: async ({ prompt, resource, capabilities, attachments: files, signal }) => {

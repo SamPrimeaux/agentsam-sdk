@@ -412,7 +412,7 @@
   window.addEventListener("message", (event) => {
     if (event.origin !== location.origin) return;
     const data = event.data;
-    if (!data || data.type !== "fnf-cms-preview" || !Array.isArray(data.siteSections)) return;
+    if (!data || data.type !== "agentsam:cms-preview:v1" || !Array.isArray(data.siteSections)) return;
     const header = data.siteSections.find((section) => section.key === "header");
     if (!header) return;
     applyCmsHeader(header.content || {});
