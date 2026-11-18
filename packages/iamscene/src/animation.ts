@@ -34,7 +34,23 @@ export function normalizeAnimationTime(animation: SceneAnimation, time: number):
   return Math.max(0, Math.min(animation.duration, time));
 }
 
-export function sampleAnimation(animation: SceneAnimation, time: number): Array<{ targetId: string; property: string; value: unknown }> {
-  const localTime = normalizeAnimationTime(animation, time);
-  return animation.tracks.map(track => ({ targetId: track.targetId, property: track.property, value: sampleAnimationTrack(track, localTime) }));
+export interface SampleAnimationOptions {
+  /** Set false for scroll scrubbing: a loop must hold its final frame at 100%. */
+  wrap?: boolean;
+}
+
+export function sampleAnimation(
+  animation: SceneAnimation,
+  time: number,
+  options: SampleAnimationOptions = {},
+): Array<{ targetId: string; property: string; value: unknown }> {
+  if (!Number.isFinite(time)) throw new Error('iamscene_animation_time_invalid');
+  const localTime = options.wrap === false
+    ? Math.max(0, Math.min(animation.duration, time))
+    : normalizeAnimationTime(animation, time);
+  return animation.tracks.map(track => ({
+    targetId: track.targetId,
+    property: track.property,
+    value: sampleAnimationTrack(track, localTime),
+  }));
 }
