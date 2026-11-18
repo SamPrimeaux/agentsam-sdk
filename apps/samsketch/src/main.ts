@@ -441,7 +441,7 @@ function rounded(width:number,height:number,radius:number,depth:number,color:str
 }
 function material(color:string,look:Look,finish?:FinishId):THREE.MeshStandardMaterial|THREE.MeshPhysicalMaterial {
  const preset=finish?FINISHES.find(item=>item.id===finish):undefined;
- if(preset)return new THREE.MeshPhysicalMaterial({color,roughness:preset.roughness,metalness:preset.metalness,iridescence:preset.iridescence,iridescenceIOR:1.3,clearcoat:.28,clearcoatRoughness:Math.max(.05,preset.roughness),emissive:preset.emissive,emissiveIntensity:preset.emissiveIntensity,side:THREE.DoubleSide});
+ if(preset)return new THREE.MeshPhysicalMaterial({color,roughness:surfaceRoughness,metalness:surfaceMetalness,iridescence:preset.iridescence,iridescenceIOR:1.3,clearcoat:.28,clearcoatRoughness:Math.max(.05,preset.roughness),emissive:preset.emissive,emissiveIntensity:preset.emissiveIntensity,side:THREE.DoubleSide});
  if(look==="glass")return new THREE.MeshPhysicalMaterial({color,roughness:Math.max(.04,surfaceRoughness*.15),metalness:surfaceMetalness*.25,transmission:.6,thickness:.6,transparent:true,opacity:.88,side:THREE.DoubleSide});
  if(look==="metal")return new THREE.MeshStandardMaterial({color,roughness:Math.max(.04,Math.min(.35,surfaceRoughness*.26)),metalness:Math.max(.6,surfaceMetalness)});
  return new THREE.MeshStandardMaterial({color,roughness:surfaceRoughness,metalness:surfaceMetalness*.15});
@@ -543,7 +543,7 @@ function buildRoot(item:Item):THREE.Object3D {
   mesh=group;
  }else if(item.kind==="template"){
   const key=item.templateId||"";
-  const loaded=instanceTemplateModel(key,item.color==="#ffffff"?undefined:item.color,wireframe,item.material,item.finish);
+  const loaded=instanceTemplateModel(key,item.color==="#ffffff"?undefined:item.color,wireframe,item.material,item.finish,surfaceRoughness,surfaceMetalness);
   if(loaded){
    // Every source part remains addressable within its editable scene instance.
    loaded.traverse(node=>{
