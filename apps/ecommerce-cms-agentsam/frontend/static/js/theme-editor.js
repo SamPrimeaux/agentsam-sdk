@@ -3126,12 +3126,12 @@
     try { expectedOrigin = new URL(frame.getAttribute('src'), location.href).origin; } catch (_) {}
     if (!expectedOrigin || event.origin !== expectedOrigin) return;
     const pathname = event.data.pathname;
-    if (typeof pathname !== 'string' || !/^\\/(?!\\/)[^?#]*$/.test(pathname)) return;
-    const normalized = pathname.replace(/\\/+$/, '') || '/';
+    if (typeof pathname !== 'string' || !/^\/(?!\/)[^?#]*$/.test(pathname)) return;
+    const normalized = pathname.replace(/\/+$/, '') || '/';
     const nextPage = pages.find(function (page) {
       const candidate = host.pageRoutes?.[page.slug] || page.route_path || page.route || page.live_route;
       if (typeof candidate !== 'string' || !candidate.startsWith('/')) return false;
-      return (candidate.replace(/\\/+$/, '') || '/') === normalized;
+      return (candidate.replace(/\/+$/, '') || '/') === normalized;
     });
     if (nextPage && nextPage.slug !== slug) void switchPage(nextPage.slug);
   });
