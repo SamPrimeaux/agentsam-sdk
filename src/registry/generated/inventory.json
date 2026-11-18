@@ -1921,50 +1921,41 @@
       "readiness": "unverified"
     },
     {
-      "avoid_when": [
-        "The consuming CMS repository or IAM permissions are not installed",
-        "Claiming Ecommerce deployment readiness from the SDK's local tests",
-        "Trying to use CMS mutation tools as an unrestricted Bash or D1 executor"
-      ],
+      "schema": "agentsam.package.v1",
+      "id": "agentsam-cms",
+      "name": "@inneranimalmedia/agentsam-cms",
+      "version": "2.6.15",
       "catalog_status": "classified",
       "class": "package",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/agentsam-cms",
-        "host_integration": "not-verified",
-        "readme": "packages/agentsam-cms/README.md",
-        "runtime_proof": "local-sqlite-and-cleanroom",
-        "tests": [
-          "packages/agentsam-cms/test/standalone.test.mjs",
-          "test/integration/sam-cms-machine.integration.test.mjs"
-        ]
-      },
+      "status": "host-integration-required",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
       "execution_domains": [
         "cms",
         "local",
         "worker-adapter"
       ],
-      "id": "agentsam-cms",
+      "purpose": "Canonical portable CMS operations for ecommerce-cms-agentsam; trusted site-first storage, themes and publication; zero SDK DDL or local database provisioning.",
       "install": [
         {
-          "command": "npm install ./packages/agentsam-cms-0.1.0.tgz",
+          "type": "npm",
           "package": "@inneranimalmedia/agentsam-cms",
-          "type": "npm"
+          "command": "npm install @inneranimalmedia/agentsam-cms"
         }
       ],
-      "languages": [
-        "javascript",
-        "typescript"
+      "use_when": [
+        "Authoring or changing CMS drafts using validated, revision-safe operations",
+        "Installing CMS capabilities inside a standalone Ecommerce or desktop application",
+        "Resolving CMS definitions, preview, revision history and explicit publication"
       ],
-      "name": "@inneranimalmedia/agentsam-cms",
-      "purpose": "Canonical merchant CMS operations, page/theme lifecycle and approved publication via the host's existing site-first persistence; no SQLite bootstrap or SDK-owned schema.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/agentsam-cms",
-        "public_claim": false
-      },
-      "schema": "agentsam.package.v1",
-      "status": "host-integration-required",
+      "avoid_when": [
+        "The consuming CMS repository or IAM permissions are not installed",
+        "Claiming Ecommerce deployment readiness from the SDK's local tests",
+        "Trying to use CMS mutation tools as an unrestricted Bash or D1 executor"
+      ],
+      "commands": [],
       "topics": [
         "cms",
         "sections",
@@ -1974,12 +1965,21 @@
         "publication",
         "sam-os"
       ],
-      "use_when": [
-        "Authoring or changing CMS drafts using validated, revision-safe operations",
-        "Installing CMS capabilities inside a standalone Ecommerce or desktop application",
-        "Resolving CMS definitions, preview, revision history and explicit publication"
-      ],
-      "version": "0.1.0",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-cms",
+        "public_claim": false
+      },
+      "evidence": {
+        "directory": "packages/agentsam-cms",
+        "readme": "packages/agentsam-cms/README.md",
+        "tests": [
+          "packages/agentsam-cms/test/standalone.test.mjs",
+          "test/integration/sam-cms-machine.integration.test.mjs"
+        ],
+        "runtime_proof": "pure-domain-and-host-contract-tests",
+        "host_integration": "pending-live-host-adapter-verification"
+      },
       "review_required": [],
       "readiness": "unverified"
     },
@@ -3044,7 +3044,10 @@
       "readiness": "unverified"
     },
     {
-      "avoid_when": [],
+      "avoid_when": [
+        "Using Mxs visual presets as CMS section definitions",
+        "Treating a compiled HTML wrapper as editable CMS content"
+      ],
       "catalog_status": "needs-review",
       "class": "package",
       "commands": [],
@@ -3053,7 +3056,11 @@
         "purpose_source": "package-manifest-description",
         "readme": "packages/agentsam-sections/README.md"
       },
-      "execution_domains": [],
+      "execution_domains": [
+        "cms",
+        "theme-studio",
+        "merchant-storefront"
+      ],
       "id": "agentsam-sections",
       "install": [
         {
@@ -3066,7 +3073,7 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-sections",
-      "purpose": "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews.",
+      "purpose": "Verified renderer-driven, theme-neutral CMS section host over existing cms_components and cms_definitions; legacy Mxs visual kit retained for compatibility.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-sections",
@@ -3079,12 +3086,18 @@
         "topics"
       ],
       "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews."
+      "status": "host-integration-required",
+      "topics": [
+        "cms",
+        "sections",
+        "theme-contract",
+        "renderers"
       ],
-      "version": "2.6.12",
+      "use_when": [
+        "Render installed CMS sections and nested blocks from verified component registrations",
+        "Provide Theme Studio editor selection and editing controls without imposing a theme layout"
+      ],
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {

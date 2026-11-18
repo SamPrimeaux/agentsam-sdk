@@ -6,7 +6,7 @@
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
     "directory": "packages/agentsam-sections"
   },
-  "description": "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews.",
+  "description": "Theme-neutral CMS section host resolving verified CMS component renderers, versioned definitions, editor controls and nested blocks; legacy Mxs kit preserved.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -31,7 +31,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test": "npm run build && node --test test/*.test.mjs"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -48,11 +49,11 @@
     "access": "public"
   },
   "keywords": [
-    "agentsam",
+    "cms",
     "sections",
-    "scroll-animation",
-    "media",
-    "glb",
-    "layout"
+    "theme-studio",
+    "renderer",
+    "composition",
+    "agentsam"
   ]
 }
