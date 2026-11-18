@@ -493,7 +493,7 @@
         id:key, label:definition.label || humanize(key),
         type:definition.sourceKind || 'section', templateKey:key,
         preset:definition.preset || key,
-        source:definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
+        source:'Theme section',
         category:definition.category || 'Theme sections',
         previewHtml:definition.previewHtml || '',
       }));
