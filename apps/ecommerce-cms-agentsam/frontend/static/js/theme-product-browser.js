@@ -69,7 +69,7 @@
      const card=node('article','theme-marketplace-item');
      const visual=node('div','theme-marketplace-visual');
      const preview=sameOriginUrl(product.preview_url);
-     const thumbnail=sameOriginUrl(product.thumbnail_url);
+     const thumbnail=themeStoreImageUrl(product.thumbnail_url);
      if(thumbnail && product.preview_ready){
        const image=node('img','theme-marketplace-thumb');
        image.loading='lazy';
