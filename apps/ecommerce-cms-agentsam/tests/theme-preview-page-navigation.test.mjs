@@ -112,7 +112,7 @@ function setupProjectClick(href) {
     setNote(...args) { notes.push(args); },
     URL,
   };
-  runInNewContext(clickHandlerSource, context);
+  const listener = runInNewContext('(' + clickHandlerSource + ')', context);
   return {
     listener, event, changes, notes,
     get prevented() { return prevented; },
@@ -121,27 +121,27 @@ function setupProjectClick(href) {
 }
 
 test('installed-theme navigation still switches pages during global inspect mode', () => {
-  const { listener, event, changes, prevented, stopped } = setupProjectClick('/work');
-  listener(event);
-  assert.deepEqual(changes, ['work']);
-  assert.equal(prevented, true);
-  assert.equal(stopped, true);
+  const result = setupProjectClick('/work');
+  result.listener(result.event);
+  assert.deepEqual(result.changes, ['work']);
+  assert.equal(result.prevented, true);
+  assert.equal(result.stopped, true);
 });
 
 test('relative package links resolve to project routes, not the Theme Store preview path', () => {
-  const { listener, event, changes, prevented } = setupProjectClick('about');
-  listener(event);
-  assert.deepEqual(changes, ['about']);
-  assert.equal(prevented, true);
+  const result = setupProjectClick('about');
+  result.listener(result.event);
+  assert.deepEqual(result.changes, ['about']);
+  assert.equal(result.prevented, true);
 });
 
 test('unknown internal theme links fail closed instead of opening the Theme Store', () => {
-  const { listener, event, changes, notes, prevented, stopped } = setupProjectClick('/products/example');
-  listener(event);
-  assert.deepEqual(changes, []);
-  assert.equal(prevented, true);
-  assert.equal(stopped, true);
-  assert.match(notes[0]?.[0] || '', /cannot open the Theme Store/);
+  const result = setupProjectClick('/products/example');
+  result.listener(result.event);
+  assert.deepEqual(result.changes, []);
+  assert.equal(result.prevented, true);
+  assert.equal(result.stopped, true);
+  assert.match(result.notes[0]?.[0] || '', /cannot open the Theme Store/);
 });
 
 test('external and fragment links retain their normal behavior', () => {
