@@ -27,7 +27,10 @@
     "pack:dry": "npm run pack:check && npm pack --dry-run",
     "pack:check": "node scripts/check-public-pack.mjs",
     "build:starters": "node starter-packs/increase-sales/v1/build.mjs",
-    "test:starters": "node --test test/starter-library.test.mjs"
+    "test:starters": "node --test test/starter-library.test.mjs",
+    "build:forms": "node starter-packs/increase-sales/v1/build-forms.mjs",
+    "r2:forms:dry": "node starter-packs/increase-sales/v1/upload-forms-r2.mjs",
+    "r2:forms:publish": "node starter-packs/increase-sales/v1/upload-forms-r2.mjs --publish"
   },
   "repository": {
     "type": "git",
