@@ -1732,13 +1732,22 @@
       const links = [];
       const collections = results[0].status === 'fulfilled' ? results[0].value?.collections : [];
       const products = results[1].status === 'fulfilled' ? results[1].value?.products : [];
+      // The resource provider owns public URLs. Do not infer them from slugs.
+      const resourceHref = item => {
+        const route = item?.storefront_url || item?.public_url ||
+          item?.route_path || item?.live_route || item?.href || item?.url;
+        return typeof route === 'string' && route.startsWith('/') &&
+          !route.startsWith('//') ? route : null;
+      };
       for (const collection of Array.isArray(collections) ? collections : []) {
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(String(collection.slug || ''))) continue;
-        links.push({label:String(collection.title || collection.slug),href:'/shop/collections/' + encodeURIComponent(collection.slug),group:'Collections'});
+        const href = resourceHref(collection);
+        if (!href) continue;
+        links.push({ label:String(collection.title || collection.slug || 'Collection'), href, group:'Collections' });
       }
       for (const product of Array.isArray(products) ? products : []) {
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(String(product.slug || ''))) continue;
-        links.push({label:String(product.title || product.slug),href:'/products/' + encodeURIComponent(product.slug),group:'Products'});
+        const href = resourceHref(product);
+        if (!href) continue;
+        links.push({ label:String(product.title || product.slug || 'Product'), href, group:'Products' });
       }
       if (version === merchantLinkCatalogVersion) merchantLinkCatalog = links;
       return links;
