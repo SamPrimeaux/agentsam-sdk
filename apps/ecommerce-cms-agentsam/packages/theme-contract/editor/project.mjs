@@ -1,6 +1,10 @@
 export const THEME_PROJECT_SCHEMA = 'agentsam.theme-project.v1';
 const clone = (value) => structuredClone(value);
 const safeKey = (key) => typeof key === 'string' && /^[a-zA-Z0-9_-]+$/.test(key) && !['__proto__', 'constructor', 'prototype'].includes(key);
+// Dotted field paths are allowed, never dotted object/section identities.
+const safeFieldKey = (key) => typeof key === 'string' &&
+  /^[a-zA-Z][a-zA-Z0-9_-]{0,63}(?:\.[a-zA-Z][a-zA-Z0-9_-]{0,63}){0,3}$/.test(key) &&
+  !key.split('.').some(part => ['__proto__','prototype','constructor'].includes(part));
 
 export function validateThemeProject(value) {
   if (!value || value.schema !== THEME_PROJECT_SCHEMA || !safeKey(value.id) || typeof value.name !== 'string' || !Array.isArray(value.pages) || !value.pages.length) throw new Error('theme_project_invalid');
@@ -8,10 +12,10 @@ export function validateThemeProject(value) {
     if (!safeKey(page.slug) || typeof page.template !== 'string' || !Array.isArray(page.sections)) throw new Error('theme_project_page_invalid');
     for (const section of page.sections) {
       if (!safeKey(section.key) || typeof section.html !== 'string' || !section.content || !section.schema) throw new Error('theme_project_section_invalid');
-      for (const field of section.schema.fields || []) if (!safeKey(field.key) || (field.binding?.field && !safeKey(field.binding.field))) throw new Error('theme_project_field_invalid');
+      for (const field of section.schema.fields || []) if (!safeFieldKey(field.key) || (field.binding?.field && !safeFieldKey(field.binding.field))) throw new Error('theme_project_field_invalid');
       for (const block of section.schema.blocks || []) {
         if (!safeKey(block.key)) throw new Error('theme_project_block_invalid');
-        for (const field of block.fields || []) if (!safeKey(field.key) || (field.binding?.field && !safeKey(field.binding.field))) throw new Error('theme_project_field_invalid');
+        for (const field of block.fields || []) if (!safeFieldKey(field.key) || (field.binding?.field && !safeFieldKey(field.binding.field))) throw new Error('theme_project_field_invalid');
       }
     }
   }
@@ -299,6 +303,12 @@ function installSourceTemplates(state, inherited = {}) {
     const template = stock.sourceTemplate(item.id);
     if (template?.key && !catalog[template.key]) catalog[template.key] = template;
   }
+  // Native merchant stock uses the same project-owned section instances.
+  const portable = globalThis.ThemePortableSections;
+  for (const item of portable?.merchantCatalog?.() || []) {
+    const template = portable.sourceTemplate(item.id);
+    if (template?.key && !catalog[template.key]) catalog[template.key] = template;
+  }
   for (const page of state.pages) {
     for (const section of page.sections) {
       // A duplicated/inserted instance points back to its source module;
@@ -497,12 +507,17 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       // the same constraints enforced by canonical site-owned D1/R2 API.
       const declared = section(slug,key);
       const stockKey = String(declared.sourceTemplateKey || declared.content?.__editor?.templateKey || "");
-      if (stockKey.startsWith("stock-")) {
-        const id = "platform/" + stockKey.slice("stock-".length);
+      if (stockKey.startsWith("stock-") || stockKey.startsWith("portable-")) {
+        const portable = globalThis.ThemePortableSections;
+        const id = stockKey.startsWith("stock-")
+          ? "platform/" + stockKey.slice("stock-".length)
+          : String(content?.__editor?.themePreset || "");
+        if (stockKey.startsWith("portable-") &&
+            portable?.sourceTemplate?.(id)?.key !== stockKey)
+          throw new Error("theme_portable_preset_invalid");
         const copy = clone(content);
         copy.__editor = {...(copy.__editor||{}), templateKey:"portable", themePreset:id};
-        const validator = globalThis.ThemePlatformStock?.validate;
-        const gate = validator?.(id,copy);
+        const gate = portable?.validate?.(id,copy);
         if (!gate?.ok) throw new Error("theme_stock_content_invalid:"+ (gate?.error||"stock_runtime_unavailable"));
       }
       const latest = await store.get(state.id);
