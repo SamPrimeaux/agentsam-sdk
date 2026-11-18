@@ -7,10 +7,10 @@
   overflow-y:auto;
   overscroll-behavior:contain;
   scrollbar-width:thin;
-  background:#fff;
-  color:#252529;
+  background:var(--te-panel);
+  color:var(--te-text);
 }
-.ts-theme-root {--ts-border:#e6e6e8;--ts-muted:#747479;--ts-focus:#6744cf;font:12px/1.4 Inter,system-ui,-apple-system,sans-serif;color:#29292d;min-width:0;}
+.ts-theme-root {--ts-border:var(--te-border);--ts-muted:var(--te-muted);--ts-focus:var(--te-accent);font:12px/1.4 Inter,system-ui,-apple-system,sans-serif;color:var(--te-text);min-width:0;}
 .ts-theme-root *, .ts-scrim * {box-sizing:border-box}
 .ts-theme-root [hidden], .ts-scrim [hidden] {display:none!important}
 .ts-heading {position:sticky;top:0;z-index:6;background:#fff;min-height:53px;border-bottom:1px solid #e6e6e8;display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
@@ -170,3 +170,45 @@
 .ts-motion-status {margin:10px 0}
 @keyframes ts-motion-review {0%{opacity:.35;transform:translateY(7px)}100%{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.ts-motion-card.is-playing{animation:none}}
+
+/* Administrative Theme Settings use the account shell's semantic tokens.
+   Never inherit the edited storefront's theme palette or force a light panel. */
+.ts-heading,.ts-modal {background:var(--te-panel);color:var(--te-text);border-color:var(--te-border)}
+.ts-heading h2,.ts-category > h3 > button,.ts-group,.ts-field > label,
+.ts-media-field > label,.ts-preview-title,.ts-code pre {color:var(--te-text)}
+.ts-heading span,.ts-helper,.ts-review-note,.ts-theme-style,
+.ts-preview p,.ts-demo-lines small,.ts-preview-title span {color:var(--te-muted)}
+.ts-heading,.ts-category,.ts-group,.ts-theme-style,.ts-modal-header,
+.ts-modal-footer {border-color:var(--te-border)}
+.ts-category > h3 > button:hover,.ts-category > h3 > button[aria-expanded="true"],
+.ts-segment,.ts-preview,.ts-motion-card,.ts-badge-example,.ts-code {
+  background:var(--te-soft)
+}
+.ts-select,.ts-color,.ts-numeric,.ts-segment > button.is-selected,
+.ts-media-empty > button:not(.ts-link),.ts-media-selected button,
+.ts-palette-plus,.ts-preview > [data-ts-demo-content] > button,
+.ts-resource-choice,.ts-demo-lines > button,.ts-demo-search > input,
+.ts-search-result,.ts-product > button,.ts-modal-footer button,
+.ts-modal-body input:not([type=file]):not([type=checkbox]) {
+  background:var(--te-panel);color:var(--te-text);border-color:var(--te-border)
+}
+.ts-field > select,.ts-select,.ts-numeric,.ts-color,.ts-palette-plus,.ts-media-empty,
+.ts-media-selected,.ts-page-example,.ts-code,.ts-product,.ts-resource-choice {
+  border-color:var(--te-border)
+}
+.ts-segment > button,.ts-numeric input,.ts-color,.ts-link,.ts-code pre,
+.ts-modal-body,.ts-modal-body label {color:var(--te-text)}
+.ts-segment > button.is-selected,.ts-resource-choice[aria-pressed="true"] {
+  background:var(--te-accent-soft);border-color:var(--te-accent)
+}
+.ts-theme-root button:focus-visible,.ts-theme-root select:focus-visible,
+.ts-theme-root input:focus-visible,.ts-theme-root textarea:focus-visible,
+.ts-scrim button:focus-visible,.ts-scrim input:focus-visible {
+  outline-color:var(--te-accent)
+}
+.ts-range > input[type=range] {accent-color:var(--te-accent)}
+.ts-switch[aria-checked="true"],.ts-modal-footer button.ts-apply {
+  background:var(--te-accent);color:var(--te-accent-ink);border-color:var(--te-accent)
+}
+.ts-scrim {background:color-mix(in srgb,var(--te-canvas) 70%,transparent)}
+.ts-review-note:empty {display:none}
