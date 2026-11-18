@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { mediaKindForPath, isMarkdownPath, isHtmlPath, MAX_EDITOR_TEXT_CHARS } from './media.js';
+import { mediaKindForPath, isMarkdownPath, isHtmlPath, MAX_EDITOR_TEXT_CHARS } from './media.ts';
 
 test('classifies media for the shared IDE without routing binary files through Monaco', () => {
   assert.equal(mediaKindForPath('assets/photo.webp'), 'image');
