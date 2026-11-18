@@ -57,6 +57,24 @@ test('blank scene is valid, duplicate IDs and malformed transforms are rejected'
  assert.equal(validateSamSketchDocument({...sample(),items:[{...one,position:[NaN,0,0]}]}),false);
  assert.equal(validateSamSketchDocument({...sample(),items:[{...one,partOverrides:{foo:{scale:[0,Infinity,1]}}}]}),false);
 });
+test('SamSpeaks scene settings, PBR finishes, storyboard beats, props and brush strokes validate',()=>{
+ const sceneSettings={
+  profile:'vox',finish:'titanium',mood:'twilight',explodeAmount:.35,spinSpeed:.28,keyLightAngle:.65,keyIntensity:2.6,
+  ambientHue:210,ambientSaturation:24,ambientIntensity:1.15,shadowSoftness:3,cameraShot:'hero',transitionType:'glide',
+  cameraDistance:15,fieldOfView:37,autoTour:false,brushEnabled:true,fogEnabled:false,fogDensity:.012,
+  wireframe:false,showGrid:false,selectionOutline:true,shadowsEnabled:true,surfaceTreatment:'metal',roughness:.22,metalness:.92,
+  loopPresentation:false,voiceMode:'single',voiceName:'Kore',voiceStyle:'Warm cinematic narrator',environment:'studio',
+  horizonBrightness:1.12,ambientShadowOpacity:.23,reducedMotion:false,showProperties:true,keepTimeline:true,
+ };
+ const beat={id:'beat-1',title:'Wide stage',script:'Welcome to SamSpeaks.',ttsMode:'single',voiceName:'Kore',voiceStyle:'Warm narrator',cameraShot:'establishing',transitionType:'glide',mood:'studio',explodeAmount:0};
+ const prop={id:'prop-1',name:'Cypress Pine',kind:'prop',propType:'pine',position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:'#476a55',material:'metal',finish:'gold',visible:true};
+ const valid={...sample(),sceneSettings,storyboard:[beat],brushStrokes:[{id:'stroke-1',points:[[0,0,0],[1,.2,1]],color:'#8d7eff',width:3}],items:[prop]};
+ assert.equal(validateSamSketchDocument(valid),true);
+ assert.equal(validateSamSketchDocument({...valid,sceneSettings:{...sceneSettings,finish:'silver'}}),false);
+ assert.equal(validateSamSketchDocument({...valid,items:[{...prop,propType:'unknown'}]}),false);
+ assert.equal(validateSamSketchDocument({...valid,storyboard:[{...beat,explodeAmount:2}]}),false);
+ assert.equal(validateSamSketchDocument({...valid,brushStrokes:[{id:'stroke-2',points:[[0,0,0]],color:'#8d7eff',width:3}]}),false);
+});
 test('create persists a private scene, retry is idempotent and reload reads same bytes',async()=>{
  const h=harness();
  const first=await handleSamSketchSceneRequest(req('POST','',{id,document:sample()}),h.env,'owner_one');
