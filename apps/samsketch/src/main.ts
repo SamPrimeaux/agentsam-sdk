@@ -928,9 +928,9 @@ function speakDirectedScript(script:string,voiceName="Kore",voiceStyle="",mode:"
  const tagged=clean.split(/(?=(?:Alex|Sam)\s*:)/i).filter(part=>part.trim());
  const chunks=tagged.length>1?tagged:clean.split(/(?<=[.!?])\s+/).filter(part=>part.trim());
  const secondary=voiceName==="Charon"?"Puck":"Charon";
- return chunks.reduce<Promise<void>>(async(chain,part)=>{
+ return chunks.reduce<Promise<void>>(async(chain,part,index)=>{
   await chain;
-  const isSecond=/^Sam\s*:/i.test(part);
+  const isSecond=/^Sam\s*:/i.test(part)||(tagged.length<=1&&index%2===1);
   const spoken=part.replace(/^(?:Alex|Sam)\s*:\s*/i,"");
   await speakScript(spoken,isSecond?secondary:voiceName,voiceStyle);
  },Promise.resolve());
