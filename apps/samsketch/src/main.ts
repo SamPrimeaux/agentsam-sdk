@@ -46,7 +46,7 @@ const brandInfo={
   inneranimalmedia:{name:"InnerAnimalMedia",accent:"#31886c",primary:"#182a45",background:"#eaf5f3",sub:"Systematically strategic software."}
 };
 function makeItem(kind:Kind,name:string,color:string,position:Vec3,scale:Vec3=[1,1,1]):Item{
- return {id:crypto.randomUUID(),name,kind,color,position,scale,rotation:[0,0,0],material:"clay",visible:true,finish:doc?.sceneSettings?.finish};
+ return {id:crypto.randomUUID(),name,kind,color,position,scale,rotation:[0,0,0],material:"clay",visible:true,finish:doc?.sceneSettings?.surfaceTreatment==="metal"?doc?.sceneSettings?.finish:undefined};
 }
 // An empty scene must genuinely be empty. Authored examples are inserted only on request.
 function freshDoc(brand:Brand):Document {
@@ -1023,7 +1023,7 @@ window.addEventListener("samsketch:settings.action",event=>{
   case "camera.reset":frame();break;
   case "scene.reset":stopStoryPlayback();stopStoryboardPlayback();doc.chapter=0;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};sceneAutoRotate=false;rotationSpeed=.003;applyMood("studio",false);redraw();frame();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
   case "styles.reset":{
-   snapshot();surfaceRoughness=.82;surfaceMetalness=.08;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};
+   snapshot();surfaceRoughness=.82;surfaceMetalness=.08;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,surfaceTreatment:"clay",roughness:.82,metalness:.08};
    doc.items.forEach(item=>{item.material="clay";item.finish=undefined;});
    applyMood("studio",false);redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
   }
