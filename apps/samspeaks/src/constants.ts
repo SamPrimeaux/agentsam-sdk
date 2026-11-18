@@ -21,7 +21,7 @@ export const SUBJECT_LIST: SubjectMetadata[] = [
     description:
       'A multi-axis gimbal sculpture with brushed metal rings, optical crystal core, and audio-reactive harmonic chimes.',
     defaultSingleScript:
-      'Welcome to Atelier XR. <breath> Notice how the brushed gimbal rings catch the studio key light while the crystal core resonates with every word.',
+      'Welcome to SamSpeaks. <breath> Notice how the brushed gimbal rings catch the studio key light while the crystal core resonates with every word.',
     defaultDualScript:
       'Alex: Look at the specular sheen across that outer gimbal! <breath> It feels sculptural.\nSam: |yeah| And every syllable pulses right through the harmonic chimes.',
   },
@@ -303,7 +303,7 @@ export const DEFAULT_STORYBOARD_BEATS: MovieBeat[] = [
     id: 'beat-1',
     title: '01 • Wide Establishing',
     script:
-      'Welcome to Atelier XR. <breath> Let us glide across the studio floor and begin our guided adventure.',
+      'Welcome to SamSpeaks. <breath> Let us glide across the studio floor and begin our guided adventure.',
     ttsMode: 'single',
     voiceName: 'Kore',
     voiceStyle: 'Warm, cinematic documentary narrator',
