@@ -3083,8 +3083,7 @@
         "avoid_when",
         "execution_domains",
         "status",
-        "topics",
-        "use_when"
+        "topics"
       ],
       "schema": "agentsam.package.v1",
       "status": "host-integration-required",
