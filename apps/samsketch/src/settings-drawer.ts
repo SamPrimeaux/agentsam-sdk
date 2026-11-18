@@ -104,7 +104,7 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       choiceButtons("styles.finish", FINISHES.map(f => ({ id: f.id, label: f.label, color: f.swatchHex })), ss.finish) +
       '<span class="settings-section-label">ATMOSPHERE MOOD</span>' +
       choiceButtons("styles.mood", MOODS.map(m => ({ id: m.id, label: m.label, color: m.swatchHex })), ss.mood) +
-      '<div class="settings-section-head"><span class="settings-section-label">SCENERY MAKER</span><small>Insert a procedural prop into the scene</small></div>' +
+      '<div class="settings-section-head"><span class="settings-section-label">SCENERY MAKER</span><small>Click a prop to arm placement, then click the scene floor · Escape cancels</small></div>' +
       '<div class="sam-prop-grid">' + SCENERY_PROPS.map(p => '<button type="button" class="sam-prop-card" data-setting-action="stage.addProp" data-prop="' + p.id + '"><span class="sam-prop-swatch" style="background:' + p.color + '"></span><strong>' + p.label + '</strong><small>' + p.hint + '</small></button>').join("") + '</div>' +
       '<span class="settings-section-label">STAGE CONTROLS</span>' +
       range("Exploded view", "stage.explode", 0, 1, .05, ss.explodeAmount) +
