@@ -555,11 +555,6 @@
   function syncPublishCapability() {
     const button = byId('te-publish');
     if (!button) return;
-    if (localShowcase) {
-      button.disabled = true;
-      button.title = showcaseDisplayName + ' preview-only showcase — publishing is disabled';
-      return;
-    }
     if (host && host.adapter.capabilities?.publish === false) {
       button.disabled = true;
       button.title = 'This draft theme workspace does not publish pages directly. Publish the reviewed theme from Online Store.';
@@ -790,7 +785,7 @@
 
   function schedulePrivateAutosave() {
     clearTimeout(autosaveTimer);
-    if (!dirty || liveUnimported || autosaveFailed || (localShowcase && !host?.capabilities?.cmsWrite)) return;
+    if (!dirty || liveUnimported || autosaveFailed) return;
     autosaveTimer = setTimeout(function() {
       void saveDraft({ automatic: true });
     }, 900);
@@ -810,14 +805,12 @@
     dirty = Boolean(value);
     const save = byId('te-save');
     if (save) {
-      save.disabled = (localShowcase && !host?.capabilities?.cmsWrite) || liveUnimported || (!dirty && !hasEditedThisSession && !host?.capabilities?.cmsWrite);
+      save.disabled = liveUnimported || (!dirty && !hasEditedThisSession && !host?.capabilities?.cmsWrite);
       save.classList.toggle('is-dirty', dirty);
       save.setAttribute('aria-label', dirty ? 'Save unsaved draft changes' : 'Save draft — latest changes already saved');
       save.title = dirty ? 'Save draft changes (⌘S)' : 'Draft is saved — Save again if needed (⌘S)';
     }
-    if (localShowcase && !host?.capabilities?.cmsWrite) setSaveState(showcaseDisplayName + ' · local preview only');
-    else if (localShowcase && host?.capabilities?.cmsWrite) setSaveState(dirty ? 'Unsaved CMS changes' : 'Saved to CMS draft', dirty ? 'dirty' : 'saved');
-    else if (liveUnimported) setSaveState('Preview only');
+    if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
     if (!dirty && hasEditedThisSession) {
@@ -855,7 +848,7 @@
   const catalogResources = { products: [], collections: [], loaded: false };
 
   async function loadStorefrontResources() {
-    if (host || localShowcase || catalogResources.loaded) return;
+    if (host || catalogResources.loaded) return;
     catalogResources.loaded = true;
     const requests = await Promise.allSettled([
       editorRequest('/api/admin/products'),
@@ -1200,10 +1193,6 @@
     // before rebuilding the live section hierarchy.
     document.querySelector('.theme-studio-workspace > #te-section-menu')?.remove();
     document.querySelector('.theme-studio-workspace > .te-block-picker')?.remove();
-    if (resolveShowcase && window.AgentSamResolveStudio?.renderSections) {
-      window.AgentSamResolveStudio.renderSections();
-      return;
-    }
     const pageSections = ownerSections(slug);
     const siteSections = ownerSections('site');
     const zoneFor = section => {
@@ -2119,11 +2108,6 @@
   }
 
   function renderInspector() {
-    if (localShowcase && showcaseTemplate) { renderScaffoldInspector(); return; }
-    if (resolveShowcase && window.AgentSamResolveStudio?.renderInspector) {
-      window.AgentSamResolveStudio.renderInspector();
-      return;
-    }
     const section = currentSection();
     if (!section) {
       byId('te-inspector-body').innerHTML = '<div class="te-empty">Select a section or block in the page structure to begin editing.</div>';
@@ -2880,12 +2864,6 @@
   }
 
   async function openMiniAgentSam() {
-    if(localShowcase) {
-      // The SDK preview has no authenticated AgentSam API. Do not open an
-      // unusable composer or surface a failed-module banner over the inspector.
-      setNote('AgentSam AI requires a connected workspace. Local section, app and theme controls remain editable.','info');
-      return;
-    }
     const selection = selectedAgentResource();
     if (!selection) { setNote('Select a section or editable field before asking AgentSam.'); return; }
     const tick = ++miniAgentSamSelectionTick;
@@ -3263,52 +3241,6 @@
   }
 
   async function refreshPreview() {
-    if (journalShowcase) {
-      const frame=byId('theme-preview');
-      const meta=typeof pageData?.metadata_json==='string'
-        ? JSON.parse(pageData.metadata_json) : pageData?.metadata_json||{};
-      const path=typeof meta?.path==='string' && /^[a-z0-9/-]*$/.test(meta.path)?meta.path:'';
-      const route='/themes/plain-jane/demo/'+path;
-      const src=route+(route.includes('?')?'&':'?')+'studio_preview=1';
-      frame.removeAttribute('srcdoc');
-      if(frame.getAttribute('src')!==src)frame.src=src;
-      byId('te-open-tab').href=route;
-      byId('te-preview-label').textContent='Plain Jane Journal · '+(pageData?.title||'Journal')+' · read-only CMS source';
-      return;
-    }
-    if (resolveShowcase) {
-      const frame = byId('theme-preview');
-      const portalPath = window.AgentSamResolveStudio?.pagePath?.(slug);
-      const url = portalPath
-        ? '/themes/resolve/demo/portal/' + portalPath + '?studio_preview=1'
-        : '/themes/resolve/demo/?studio_preview=1';
-      if (showcaseTemplate) {
-        frame.removeAttribute('src');
-        frame.srcdoc = renderResolveScaffold(showcaseTemplate.template, showcaseTemplate.title);
-      } else {
-        frame.removeAttribute('srcdoc');
-        if (frame.getAttribute('src') !== url) frame.src = url;
-        window.AgentSamResolveStudio?.sync?.();
-      }
-      byId('te-open-tab').href = portalPath
-        ? '/themes/resolve/demo/portal/' + portalPath
-        : '/themes/resolve/demo/';
-      byId('te-preview-label').textContent = 'Resolve · ' + (showcaseTemplate?.title || 'interactive') + (host?.capabilities?.cmsWrite ? ' · local CMS draft' : ' · local preview only');
-      return;
-    }
-    if (violetShowcase) {
-      const frame = byId('theme-preview');
-      if (showcaseTemplate) {
-        frame.removeAttribute('src');
-        frame.srcdoc = renderVioletScaffold(showcaseTemplate.template, showcaseTemplate.title);
-      } else {
-        frame.removeAttribute('srcdoc');
-        frame.src = '/themes/violet/demo/';
-      }
-      byId('te-open-tab').href = '/themes/violet/demo/';
-      byId('te-preview-label').textContent = 'Violet · ' + (showcaseTemplate?.title || 'Home page') + ' · local UI preview';
-      return;
-    }
     if (host) {
       try {
         const preview = await host.adapter.resolvePreview(slug, pageData);
@@ -3390,10 +3322,8 @@
     setSaveState('Loading');
     try {
       await loadCmsRegistry();
-      const localDraft=resolveShowcase && !host?.capabilities?.cmsWrite && window.AgentSamResolveStudio?.getDraft?.(slug);
       const results = await Promise.all([
-        localDraft ? Promise.resolve({page:localDraft,seeded:false}) :
-          editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
+        editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
         editorRequest('/api/admin/cms/pages').catch(function() { return { pages: [] }; }),
         editorRequest('/api/admin/cms/pages/site').catch(function() {
           return { page: { slug: 'site', title: 'Global', sections: [], status: 'draft' } };
@@ -3414,7 +3344,6 @@
         history.replaceState(null, '', identityUrl);
         slug = pageData.slug || slug;
       }
-      if (resolveShowcase) window.AgentSamResolveStudio?.setPage?.(pageData);
       liveUnimported = pageData.content_authority === 'storefront-html';
       missingSourceSections = Array.isArray(pageData.missing_source_sections)
         ? pageData.missing_source_sections.filter(function(key) {
@@ -3433,7 +3362,6 @@
       byId('te-save').textContent = 'Save';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
-      if(resolveShowcase && !host?.capabilities?.cmsWrite)pages.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[]));
       document.dispatchEvent(new CustomEvent('theme-editor:global-settings-ready'));
 
       (pageData.sections || []).forEach(function(section) { section.__ownerSlug = slug; });
@@ -3526,28 +3454,6 @@
   // Serialize writes and snapshot each section before awaiting the network. A later
   // keystroke must remain dirty even if an earlier autosave finishes afterward.
   async function saveDraft({ automatic = false } = {}) {
-    if (localShowcase) {
-      if (host?.capabilities?.cmsWrite && typeof window.AgentSamResolveStudio?.saveToCms === 'function') {
-        try {
-          const saved = await window.AgentSamResolveStudio.saveToCms();
-          if (saved) {
-            dirtySections.clear();
-            dirtyVersions.clear();
-            autosaveFailed = false;
-            setDirty(false);
-            setSaveState('Saved to CMS draft', 'saved');
-            setNote('Saved to the local CMS draft and R2 snapshot store. Not published.', 'success');
-          }
-          return Boolean(saved);
-        } catch (error) {
-          setSaveState('Save failed', 'error');
-          setNote(error.message || String(error), 'error');
-          return false;
-        }
-      }
-      setNote('This showcase is preview-only. Connect a CMS draft store to enable saving.', 'info');
-      return false;
-    }
     if (saveInFlight) {
       const previousSaved = await saveInFlight;
       if (!previousSaved) return false;
@@ -3642,7 +3548,6 @@
   }
 
   async function publishPage() {
-    if (localShowcase) { setNote('Local showcase cannot publish to a customer site.'); return false; }
     // The explicit Publish live menu action is the merchant confirmation.
     // Keep publish capability/preflight checks without a second browser-native dialog.
     if (publishInFlight) return false;
@@ -3917,9 +3822,7 @@
   }
 
   async function switchPage(nextSlug) {
-    const hadScaffold = localShowcase && !!showcaseTemplate;
-    if (localShowcase) showcaseTemplate = null;
-    if (!nextSlug || (nextSlug === slug && !hadScaffold)) {
+    if (!nextSlug || nextSlug === slug) {
       closePageMenu();
       return;
     }
@@ -4022,12 +3925,6 @@
         if (switcher) switcher.hidden = true;
         const menu = byId('te-theme-menu');
         if (menu) menu.hidden = true;
-        return;
-      }
-      if (localShowcase) {
-        selectedTheme = 'heuristic';
-        applyThemeIdentity({ name: showcaseDisplayName, status: 'preview' });
-        byId('te-theme-trigger-label').textContent = showcaseDisplayName;
         return;
       }
       const siteId = window.cmsActiveSiteId || new URLSearchParams(window.location.search).get('site_id');
@@ -4776,11 +4673,5 @@
       return true;
     },
   };
-  if ((localShowcase && !host?.capabilities?.cmsWrite) || new URLSearchParams(location.search).get('ui_review') === '1') {
-    const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'Read-only UI review · no CMS writes'; }
-    const publish = byId('te-publish'); if (publish) { publish.disabled = true; publish.title = 'No publishing from UI review'; }
-  }
-  window.AgentSamResolveStudio?.registerNavigator?.(nextSlug=>switchPage(nextSlug));
-  window.AgentSamResolveStudio?.mount?.();
   loadPage();
 })();
