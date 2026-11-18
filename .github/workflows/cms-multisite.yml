@@ -34,3 +34,12 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/frontend/theme-editor/remote-worker-adapter.mjs
       - name: Authorization, source-site discovery, signature and optimistic version tests
         run: node --test test/integration/cms-multisite-security.test.mjs apps/local-studio/backend/worker/cms-owned-sites.test.mjs apps/local-studio/backend/worker/cms-source.test.mjs apps/local-studio/backend/worker/cms-source-host.test.mjs
+      - name: CMS selections, nested block definitions and verified renderer catalog
+        run: |
+          node --check apps/ecommerce-cms-agentsam/backend/agentsam/selected-resource.js
+          node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor-assistant-context.mjs
+          node --test \
+            apps/local-studio/backend/worker/studio-cms-assistant.test.mjs \
+            apps/ecommerce-cms-agentsam/tests/theme-editor-assistant-context.test.mjs \
+            apps/ecommerce-cms-agentsam/tests/cms-definition-registry-portability.test.mjs \
+            packages/connectors/cfoa/tests/capabilities.test.mjs
