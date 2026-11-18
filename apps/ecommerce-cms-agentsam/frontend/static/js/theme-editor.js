@@ -614,6 +614,21 @@
     return sectionSchema.blocks.find(function(block) { return block.key === meta.templateKey; }) || null;
   }
 
+  // Match the canonical setting-contract.ts operators. A definition decides
+  // visibility; Theme Studio never branches on section names for controls.
+  function settingVisible(field, content) {
+    if (!Array.isArray(field?.visibleWhen) || !field.visibleWhen.length) return true;
+    return field.visibleWhen.every(condition => {
+      if (!condition || typeof condition.fieldId !== 'string') return false;
+      const value = cmsGetPath(content || {}, condition.fieldId);
+      if (condition.operator === 'equals') return value === condition.value;
+      if (condition.operator === 'not_equals') return value !== condition.value;
+      if (condition.operator === 'in') return Array.isArray(condition.value) &&
+        condition.value.includes(value);
+      return false;
+    });
+  }
+
   function currentSchema() {
     const block = currentBlockSchema();
     if (activeBlockId) {
@@ -625,12 +640,14 @@
       // typed authoring engine, not ad hoc field-name rules in this UI module.
       const fields = window.cmsAuthoring?.rendererFields('block', meta?.templateKey,
         block.fields || [], values) || block.fields || [];
-      return fields.map(function(field) {
+      return fields.filter(field => settingVisible(field, values)).map(function(field) {
         return { ...field, key: activeBlockId + '.' + field.key, blockRelativeKey: field.key };
       });
     }
     const schema = currentSectionSchema();
-    return (schema && schema.fields) || (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
+    const declared = (schema && schema.fields) ||
+      (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
+    return declared.filter(field => settingVisible(field, currentSection()?.content));
   }
 
   function contextualStyleFields() {
@@ -698,7 +715,7 @@
       // Initial surface should not expose 12 identical margin controls.
       return !/margin(Top|Bottom|Left|Right)|padding(Left|Right)|borderRadius/.test(field.key);
     }).map(function(field) { return {...field,designStyle:true}; });
-    return defined;
+    return defined.filter(field => settingVisible(field, currentSection()?.content));
   }
 
   function allEditableFields() {
@@ -1234,7 +1251,7 @@
       // save, undo and revision pipeline as direct canvas selection.
       const fieldRows = fields.filter(function(field) {
         const kind = String(field.type || '').toLowerCase();
-        if (section.key === 'header' && !section.content?.announcementEnabled && /^announcement(?:Text|Href)$/.test(field.key)) return false;
+        if (!settingVisible(field, section.content)) return false;
         return ['text','textarea','richtext','rich-text','media','image','video','link','url'].includes(kind);
       }).map(function(field) {
         const key = String(field.key);
@@ -1985,11 +2002,15 @@
     let visibleKinds = Object.keys(groups).filter(function(kind) {
       return groups[kind].length > 0;
     });
-    // Shopify-like progressive disclosure: the selected Hero offers its
-    // section media and layout first. Heading, copy and CTAs are selected
-    // directly from the left tree/canvas and own their contextual inspector.
-    if (section.key === 'hero' && !activeFieldKey && !activeBlockId) {
-      visibleKinds = groups.media.length ? ['media'] : [];
+    // Media-first composition is a field-group rule, not a hardcoded Hero
+    // branch. Definitions can declare the initial groups they want exposed.
+    const presentation = currentSectionSchema()?.presentation || {};
+    if (!activeFieldKey && !activeBlockId) {
+      if (Array.isArray(presentation.primaryGroups)) {
+        visibleKinds = visibleKinds.filter(group => presentation.primaryGroups.includes(group));
+      } else if (groups.media.length && groups.content.length) {
+        visibleKinds = ['media'];
+      }
     }
     const focusedField = activeFieldKey ? fieldByKey(activeFieldKey) : null;
     if (focusedField && currentSchema().some(function(field) { return field.key === focusedField.key; })) {
