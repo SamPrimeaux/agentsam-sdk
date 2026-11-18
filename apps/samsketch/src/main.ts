@@ -1059,7 +1059,7 @@ window.addEventListener("samsketch:settings.action",event=>{
   case "global.reset":resetStudioSettings();break;
  }
 });function mutate(fn:()=>void,rerender=true){snapshot();fn();if(rerender)renderAll();else{redraw();renderLayers();}store();}
-function setChapter(index:number){if(index<0||index>3)return;const before=storyProgress;doc.chapter=index;renderChapters();store();if(matchMedia("(prefers-reduced-motion: reduce)").matches){storyTransition=null;applyProgress(index);}else storyTransition={from:before,to:index,start:performance.now(),duration:750};}
+function setChapter(index:number){if(index<0||index>3)return;const before=storyProgress;doc.chapter=index;renderChapters();settingsApi.sync({chapter:doc.chapter});store();if(matchMedia("(prefers-reduced-motion: reduce)").matches){storyTransition=null;applyProgress(index);}else storyTransition={from:before,to:index,start:performance.now(),duration:750};}
 function addTemplate(ref:string){
  const key=ref.startsWith("part:")?"part:"+ref.slice(5):"composition:"+ref;
  const entry=findInventoryEntry(key);if(!entry)return;
