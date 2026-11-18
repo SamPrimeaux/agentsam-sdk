@@ -5,7 +5,7 @@
   "metadata": {
     "id": "original-4341-hover-native",
     "name": "Retrofuturistic Circuit \u00b7 Source-Mesh Hover Clone",
-    "description": "Native IAM scene reconstructed from original 4341 Spline source mesh geometry, camera placement, palette and authored bloom; no Spline runtime required.",
+    "description": "Native IAM scene using the actual four source meshes and a time-addressable radial circuit reveal emulating the original animated propagation, triggered on hover or tap.",
     "tags": [
       "native",
       "hover",
@@ -80,19 +80,25 @@
     },
     {
       "id": "battery-core",
-      "baseColor": "#145058",
-      "emissive": "#009bac",
-      "emissiveIntensity": 0.32,
+      "baseColor": "#0d3e45",
+      "emissive": "#25e4e9",
+      "emissiveIntensity": 0.8,
       "metalness": 0.08,
-      "roughness": 0.4
+      "roughness": 0.28
     },
     {
       "id": "circuit-traces",
-      "baseColor": "#031017",
-      "emissive": "#006980",
-      "emissiveIntensity": 0.28,
+      "baseColor": "#04141d",
+      "emissive": "#04a3bb",
+      "emissiveIntensity": 0.37,
       "metalness": 0.04,
-      "roughness": 0.8
+      "roughness": 0.8,
+      "radialReveal": {
+        "initialRadius": 50,
+        "feather": 12,
+        "pulseWidth": 15,
+        "pulseIntensity": 0.2
+      }
     }
   ],
   "scene": {
@@ -271,144 +277,47 @@
   },
   "animations": [
     {
-      "id": "hover-ignite",
-      "name": "Hover Ignite",
-      "duration": 0.46,
-      "loop": false,
+      "id": "circuit-expansion",
+      "name": "Original circuit propagation (hover controlled)",
+      "duration": 4.35,
+      "loop": true,
       "tracks": [
         {
-          "id": "hover-ignite-lightning",
-          "targetId": "lightning",
-          "property": "material.emissiveIntensity",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.65
-            },
-            {
-              "time": 0.46,
-              "value": 1.3,
-              "easing": "sineInOut"
-            }
-          ]
-        },
-        {
-          "id": "hover-ignite-battery-core",
-          "targetId": "battery-core",
-          "property": "material.emissiveIntensity",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.32
-            },
-            {
-              "time": 0.46,
-              "value": 0.82,
-              "easing": "sineInOut"
-            }
-          ]
-        },
-        {
-          "id": "hover-ignite-circuit-traces",
+          "id": "circuit-reveal-radius",
           "targetId": "circuit-traces",
-          "property": "material.emissiveIntensity",
+          "property": "material.revealRadius",
           "keyframes": [
             {
               "time": 0,
-              "value": 0.28
+              "value": 50
             },
             {
-              "time": 0.46,
-              "value": 0.78,
+              "time": 0.45,
+              "value": 83,
               "easing": "sineInOut"
-            }
-          ]
-        },
-        {
-          "id": "hover-ignite-battery-shell",
-          "targetId": "battery-shell",
-          "property": "material.emissiveIntensity",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.07
             },
             {
-              "time": 0.46,
-              "value": 0.23,
-              "easing": "sineInOut"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "hover-release",
-      "name": "Hover Release",
-      "duration": 0.75,
-      "loop": false,
-      "tracks": [
-        {
-          "id": "hover-release-lightning",
-          "targetId": "lightning",
-          "property": "material.emissiveIntensity",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 1.3
+              "time": 1.55,
+              "value": 203,
+              "easing": "linear"
             },
             {
-              "time": 0.75,
-              "value": 0.65,
+              "time": 2.5,
+              "value": 290,
               "easing": "sineInOut"
-            }
-          ]
-        },
-        {
-          "id": "hover-release-battery-core",
-          "targetId": "battery-core",
-          "property": "material.emissiveIntensity",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.82
             },
             {
-              "time": 0.75,
-              "value": 0.32,
-              "easing": "sineInOut"
-            }
-          ]
-        },
-        {
-          "id": "hover-release-circuit-traces",
-          "targetId": "circuit-traces",
-          "property": "material.emissiveIntensity",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.78
+              "time": 2.75,
+              "value": 290
             },
             {
-              "time": 0.75,
-              "value": 0.28,
-              "easing": "sineInOut"
-            }
-          ]
-        },
-        {
-          "id": "hover-release-battery-shell",
-          "targetId": "battery-shell",
-          "property": "material.emissiveIntensity",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.23
+              "time": 3.43,
+              "value": 56,
+              "easing": "cubicInOut"
             },
             {
-              "time": 0.75,
-              "value": 0.07,
-              "easing": "sineInOut"
+              "time": 4.35,
+              "value": 50
             }
           ]
         }
@@ -417,21 +326,21 @@
   ],
   "interactions": [
     {
-      "id": "native-hover-ignite",
+      "id": "circuit-on-hover",
       "targetId": "battery-shell",
       "event": "pointerenter",
       "action": {
         "type": "playAnimation",
-        "animationId": "hover-ignite"
+        "animationId": "circuit-expansion"
       }
     },
     {
-      "id": "native-hover-release",
+      "id": "circuit-on-click",
       "targetId": "battery-shell",
-      "event": "pointerleave",
+      "event": "click",
       "action": {
         "type": "playAnimation",
-        "animationId": "hover-release"
+        "animationId": "circuit-expansion"
       }
     }
   ],

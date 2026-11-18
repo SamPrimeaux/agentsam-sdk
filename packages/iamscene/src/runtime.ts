@@ -30,13 +30,15 @@ export interface SceneRuntimeHandle {
   seek(time: number): void;
   /** Select and sample an animation at an exact time without starting playback. */
   seekAnimation(animationId: string, time: number, options?: { wrap?: boolean }): void;
+  /** Drive a mesh's authored radial reveal from UI, scroll, or pointer interaction. */
+  setRevealRadius(nodeId: string, radius: number): void;
   setPlaybackRate(rate: number): void;
   render(): void;
   dispose(): void;
 }
 
 function makeMaterial(definition: SceneMaterial): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
+  const material = new THREE.MeshStandardMaterial({
     color: definition.baseColor,
     emissive: definition.emissive ?? '#000000',
     emissiveIntensity: definition.emissiveIntensity ?? 0,
@@ -47,12 +49,61 @@ function makeMaterial(definition: SceneMaterial): THREE.MeshStandardMaterial {
     blending: definition.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
     depthWrite: definition.depthWrite ?? !definition.additive,
   });
+  if (definition.radialReveal) {
+    // Each cloned material owns its uniform. This makes an authored scene's reveal
+    // portable across ordinary CMS instances, without a page-specific shader.
+    const reveal = definition.radialReveal;
+    material.transparent = true;
+    material.depthWrite = false;
+    material.side = THREE.DoubleSide;
+    material.userData.iamRadialReveal = {
+      radius: { value: reveal.initialRadius },
+      feather: { value: reveal.feather ?? 10 },
+      pulseWidth: { value: Math.max(0.001, reveal.pulseWidth ?? 14) },
+      pulseIntensity: { value: reveal.pulseIntensity ?? 0.35 },
+    };
+    material.onBeforeCompile = function (shader) {
+      const uniforms = this.userData.iamRadialReveal;
+      shader.uniforms.iamRevealRadius = uniforms.radius;
+      shader.uniforms.iamRevealFeather = uniforms.feather;
+      shader.uniforms.iamPulseWidth = uniforms.pulseWidth;
+      shader.uniforms.iamPulseIntensity = uniforms.pulseIntensity;
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        '#include <common>\nvarying float vIamRevealDistance;',
+      ).replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nvIamRevealDistance = length(position.xz);',
+      );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        '#include <common>\nvarying float vIamRevealDistance;\nuniform float iamRevealRadius;\nuniform float iamRevealFeather;\nuniform float iamPulseWidth;\nuniform float iamPulseIntensity;',
+      ).replace(
+        '#include <opaque_fragment>',
+        `#include <opaque_fragment>
+        float iamMask = 1.0 - smoothstep(
+          iamRevealRadius - iamRevealFeather, iamRevealRadius + 1.0,
+          vIamRevealDistance
+        );
+        gl_FragColor.a *= iamMask;
+        float iamPulse = exp(-pow(
+          (vIamRevealDistance - iamRevealRadius + 1.0) / iamPulseWidth, 2.0
+        ));
+        gl_FragColor.rgb += vec3(0.04, 0.55, 0.58) * iamPulse * iamPulseIntensity;`,
+      );
+    };
+  }
+  return material;
 }
 
 function applyMaterial(root: THREE.Object3D, material: THREE.Material): void {
   root.traverse(object => {
     if (object instanceof THREE.Mesh) {
-      object.material = material.clone();
+      // Three.js Material.clone() does NOT preserve onBeforeCompile in r187.
+      // Preserve declarative shader behavior on imported GLTF meshes too.
+      const clone = material.clone();
+      clone.onBeforeCompile = material.onBeforeCompile;
+      object.material = clone;
       object.castShadow = true;
       object.receiveShadow = true;
     }
@@ -78,6 +129,16 @@ function setObjectOpacity(root: THREE.Object3D, opacity: number): void {
       material.opacity = opacity;
       material.transparent = opacity < 1 || material.blending === THREE.AdditiveBlending;
       material.needsUpdate = true;
+    }
+  });
+}
+
+function setRevealRadiusOnObject(root: THREE.Object3D, radius: number): void {
+  root.traverse(object => {
+    if (!(object instanceof THREE.Mesh)) return;
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      const reveal = material.userData.iamRadialReveal;
+      if (reveal?.radius) reveal.radius.value = radius;
     }
   });
 }
@@ -250,6 +311,8 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
       setObjectOpacity(object, Number(value));
     } else if (property === 'emissiveIntensity' || property === 'material.emissiveIntensity') {
       setEmissiveIntensity(object, Number(value));
+    } else if (property === 'material.revealRadius') {
+      setRevealRadiusOnObject(object, Number(value));
     } else if (property === 'visible') {
       object.visible = Boolean(value);
     } else if (property === 'pathProgress') {
@@ -393,6 +456,12 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     pause,
     seek,
     seekAnimation,
+    setRevealRadius(nodeId: string, radius: number) {
+      if (!objects.has(nodeId)) throw new Error(`iamscene_node_not_found:${nodeId}`);
+      if (!Number.isFinite(radius) || radius < 0) throw new Error('iamscene_reveal_radius_invalid');
+      applyTrack(nodeId, 'material.revealRadius', radius);
+      render();
+    },
     setPlaybackRate(rate: number) {
       if (!Number.isFinite(rate) || rate <= 0 || rate > 8) throw new Error('iamscene_playback_rate_invalid');
       playbackRate = rate;

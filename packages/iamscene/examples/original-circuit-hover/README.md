@@ -1,31 +1,27 @@
-# Original circuit — native hover scene
+# Original 4341 circuit — native, hover-driven scene
 
-Faithful **native I.AM Scene** geometry recreation of the working `localhost:4341` Retrofuturistic Circuit Spline composition, without the Spline runtime or a `.splinecode` fetch at playback.
+This is a native I.AM Scene conversion of the actual localhost:4341 composition, not the different scroll-controlled-circuit sample. Its four original meshes (Lightning, Battery, Bettery2, Cirquit) were extracted from the authoring scene and converted into local, self-contained, content-hashed GLTF presentation assets. The original geometry, topology, transforms and composition are retained; the source app remains unchanged.
 
-## Source fidelity
+The original plays an outward-growing circuit propagation with a returning/fading phase. The native reproduction now captures that visual sequence, not just a light pulse: a radial-reveal shader on the original circuit geometry is driven by time-addressable material.revealRadius animation tracks in the IAM document. Idle leaves the chip alone. Hover initiates the circuit expansion; leave eases back to idle; tap runs one cycle.
 
-The four original runtime meshes (`Lightning`, `Battery`, `Bettery2`, `Cirquit`) were extracted once from the source scene, then converted into self-contained, content-hashed GLTF presentation assets. The original mesh positions, quaternions, scale, topology and scene composition are retained. The source camera's framing is matched in the portable perspective camera. Colors and bloom are recreated as native Three.js materials and postprocessing; Spline-specific NodeMaterial shaders are **not** retained, so the result is close but not pixel-identical to Spline.
+The native renderer also recreates the chip's dark face, bright cyan rim, lightning symbol, and glow with Three.js PBR materials and bloom. The exact Spline NodeMaterial gradient and its proprietary postprocessing shader are not retained; color, propagation and bloom are visually approximated, not pixel-identical.
 
-The source is publicly hosted at `https://prod.spline.design/XsILZHTplRmAlDaE/scene.splinecode`. This URL appears in document provenance only; **the preview neither imports the Spline runtime nor requests that URL**. The original source project was not modified.
+## Native portable model
 
-## Controls
+- original-4341.iamscene.json: references and SHA-256 hashes for the four source meshes, material/radialReveal definitions, the looping expansion timeline and pointerenter/click bindings.
+- assets/*.gltf: self-contained source mesh exports; no Spline dependency.
+- main.js: standalone host connecting the scene to section-level hover, touch, smooth leave and bloom.
+- styles.css: responsive full-bleed stage with no extra narrative overlays.
 
-- Idle: the circuit rests in the source pose and subdued glow.
-- Hover / pointer press: `hover-ignite` brightens the circuit, chip rim and bolt through native animation tracks.
-- Leave / release: `hover-release` returns the scene to its low-light resting state.
-- Reduced motion: holds the resting state; interaction animations are disabled.
+The IAM runtime handles authored radialReveal materials and material.revealRadius tracks generically, so a CMS renderer can host the scene without copying this demo's shader.
 
-The interactions are ordinary `SceneDocument.interactions`, using `pointerenter`/`pointerleave` and `playAnimation`; merchant placement can bind the scene like any other portable `.iamscene` document. The preview additionally binds the entire stage for easy hover discovery and adds an optional bloom pass.
+## Local preview
 
-## Preview
+Run from the repository root:
 
-From the repository root, build native runtime once and launch Vite:
+    npm run build --workspace @inneranimalmedia/iamscene
+    npx vite packages/iamscene/examples --host 127.0.0.1 --port 4175
 
-```sh
-npm run build --workspace @inneranimalmedia/iamscene
-npx vite packages/iamscene/examples --host 127.0.0.1 --port 4175
-```
+Open http://127.0.0.1:4175/original-circuit-hover/. Hover the stage; on touch, tap to launch one cycle. In reduced-motion mode, the source chip remains still. The original Spline file appears only as provenance metadata. The preview performs no requests to Spline and imports no Spline runtime.
 
-Open `http://127.0.0.1:4175/original-circuit-hover/`.
-
-The glTF meshes, scene document, materials and animation tracks are all local and content-addressed. CMS registration is a separate host-scoped step; this example does not claim to have published an installable section to `cms_components`.
+CMS boundary: Source-faithful geometry and portable authored animation are ready, but publishing or registering this as a merchant-selectable cms_components section still requires authorized host/R2 catalog integration.

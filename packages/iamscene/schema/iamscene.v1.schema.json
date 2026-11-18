@@ -428,6 +428,31 @@
         },
         "depthWrite": {
           "type": "boolean"
+        },
+        "radialReveal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "initialRadius"
+          ],
+          "properties": {
+            "initialRadius": {
+              "type": "number",
+              "minimum": 0
+            },
+            "feather": {
+              "type": "number",
+              "minimum": 0
+            },
+            "pulseWidth": {
+              "type": "number",
+              "minimum": 0
+            },
+            "pulseIntensity": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
         }
       }
     },
