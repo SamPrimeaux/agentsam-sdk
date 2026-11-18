@@ -10,6 +10,9 @@ export function AgentSamLaunchDock() {
   const { data, isMobile, open, setOpen } = useNav();
   const setSideOpen = useWorkStore((state) => state.setSideOpen);
   const [path, routeSearch = ''] = (data.pathname ?? '').split('?');
+  const installedAdminPage = path === '/admin/apps/ecommerce-cms-agentsam' ? new URLSearchParams(routeSearch).get('page') : null;
+  const chatsActive = path === '/admin/agentsam' || path.startsWith('/admin/chats');
+  const libraryActive = path === '/admin/library' || path === '/admin/media' || path.startsWith('/admin/media/') || path === '/admin/artifacts';
   // The launch dock is navigation for primary destinations, not editor chrome.
   // Focused tools (Canvas, Library, CMS, Media, Settings, etc.) own their stage.
   // Chats reserves the bottom edge for its single composer, as do focused tools.
@@ -17,7 +20,6 @@ export function AgentSamLaunchDock() {
   const launchRoute = path === '/admin/home' || path === '/admin/ideas' || path === '/admin/goalguru' || path === '/goalguru';
   // A modal navigation drawer takes precedence over the dock and underlying stage.
   if (!isMobile || open || !launchRoute) return null;
-  const installedAdminPage = path === '/admin/apps/ecommerce-cms-agentsam' ? new URLSearchParams(routeSearch).get('page') : null;
   const showPage = (path: string) => {
     setOpen(false);
     // A dedicated route must not open a second SideStage over itself.
@@ -28,7 +30,7 @@ export function AgentSamLaunchDock() {
   return <Nav.LaunchDock items={[
     {
       id: 'chats', label: 'Chats', icon: <MessageCircle />,
-      active: path === '/admin/agentsam' || path.startsWith('/admin/chats'),
+      active: chatsActive,
       onSelect: () => showPage('/admin/agentsam'),
     },
     {
@@ -49,7 +51,7 @@ export function AgentSamLaunchDock() {
     },
     {
       id: 'library', label: 'Library', icon: <BookOpen />,
-      active: path === '/admin/library' || path === '/admin/media' || path.startsWith('/admin/media/') || path === '/admin/artifacts',
+      active: libraryActive,
       onSelect: () => showPage('/admin/library'),
     },
   ]} />;
