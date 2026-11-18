@@ -519,7 +519,7 @@ function buildRoot(item:Item):THREE.Object3D {
  }else if(item.kind==="prop"){
   const group=new THREE.Group(),finish=item.finish;
   const part=(geometry:THREE.BufferGeometry,color:string,position:Vec3,scale:Vec3=[1,1,1])=>{
-   const mesh=new THREE.Mesh(geometry,material(color,"metal",finish));mesh.position.set(...position);mesh.scale.set(...scale);group.add(mesh);return mesh;
+   const mesh=new THREE.Mesh(geometry,material(color,item.material,finish));mesh.position.set(...position);mesh.scale.set(...scale);group.add(mesh);return mesh;
   };
   if(item.propType==="pine"){
    part(new THREE.CylinderGeometry(.09,.14,1.15,9),"#76553b",[0,-.1,0]);
