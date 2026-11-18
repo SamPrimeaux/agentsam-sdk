@@ -117,11 +117,11 @@ export function validateSamSketchDocument(doc) {
     }
   }
   if(doc.brushStrokes!==undefined){
-    if(!Array.isArray(doc.brushStrokes)||doc.brushStrokes.length>500)return false;
+    if(!Array.isArray(doc.brushStrokes)||doc.brushStrokes.length>100)return false;
     for(const stroke of doc.brushStrokes){
       if(!stroke||typeof stroke.id!=='string'||!stroke.id||stroke.id.length>100
         ||!color(stroke.color)||!bounded(stroke.width,1,10)
-        ||!Array.isArray(stroke.points)||stroke.points.length<2||stroke.points.length>1500
+        ||!Array.isArray(stroke.points)||stroke.points.length<2||stroke.points.length>300
         ||stroke.points.some(point=>!vec(point)))return false;
     }
   }
