@@ -305,6 +305,11 @@ export function mountSettingsDrawer(host: HTMLElement) {
       const shot = CAMERA_SHOTS.find(item => item.id === value);
       if (shot) state.sceneSettings.cameraDistance = shot.distance;
     }
+    if (key === "stage.spin") state.sceneSettings.autoTour = Number(value) > 0;
+    if (key === "scene.autorotate" || key === "camera.autoTour") {
+      state.sceneSettings.autoTour = Boolean(value);
+      if (state.sceneSettings.autoTour && state.sceneSettings.spinSpeed <= 0) state.sceneSettings.spinSpeed = DEFAULT_SCENE_SETTINGS.spinSpeed;
+    }
     window.dispatchEvent(new CustomEvent("samsketch:settings.change", { detail: { key, value, tab: active } }));
   };
 
