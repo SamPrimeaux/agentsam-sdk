@@ -38,41 +38,42 @@ test('hosted theme catalog is authenticated and read-only',()=>{
  assert.match(worker,/await resolveSessionUser\(request, env\)/);
  assert.match(worker,/error:'unauthorized'/);
  assert.match(worker,/admin\/data\/theme-products.json/);
- assert.match(builder,/listLocalThemeProducts/);
+ assert.match(builder,/listThemeStoreProducts/);
+ assert.match(builder,/readdirSync\(previewSource/);
  assert.match(builder,/sync-theme-store-previews/);
  assert.doesNotMatch(builder,/materializeViolet|materializeJournal|theme-gallery-preview/);
  assert.match(builder,/rmSync\(compiledThemes/);
  const sync=read('scripts/sync-theme-store-previews.mjs');
+ assert.match(sync,/agentsam\.website-theme-install-index\.v1/);
+ assert.match(sync,/api\/install-index/);
+ assert.match(sync,/Theme Store catalog\/index release mismatch/);
  assert.match(sync,/iam\.theme-preview-files\.v1/);
  assert.match(sync,/SHA-256 mismatch/);
- assert.deepEqual(JSON.parse(read('theme-store-previews.json')),{resolve:'2.6.13',violet:'2.6.13','plain-jane':'0.1.0'});
+ assert.doesNotMatch(sync,/const pins|theme-store-previews\.json|plain-jane|resolve.*2\.6\.13/);
+ assert.deepEqual(JSON.parse(read('theme-store-previews.json')),{});
  assert.match(builder,/installed:false,purchasable:false/);
 });
-test('staged product catalog and all three original preview entrypoints exist',()=>{
+test('staged product catalog and every published Theme Store preview entrypoint exist',()=>{
  const base='frontend/public/';
- for(const slug of ['violet','resolve','plain-jane'])
+ const json=JSON.parse(read('frontend/public/ecommerce-cms-agentsam/admin/data/theme-products.json'));
+ assert.equal(json.ok,true);
+ assert.ok(json.products.length>0);
+ const slugs=json.products.map(entry=>entry.slug);
+ for(const slug of slugs)
   assert.ok(existsSync(path.join(studio,base,'themes',slug,'demo/index.html')),slug);
  const compiledRoot=existsSync(path.join(studio,'desktop-dist/themes'))
   ? 'desktop-dist' : '.output/public';
  assert.ok(existsSync(path.join(studio,compiledRoot,'themes')),'No compiled theme preview output is available');
  const compiledSlugs=readdirSync(path.join(studio,compiledRoot,'themes'));
- for(const slug of ['plain-jane','resolve','violet']) assert.ok(compiledSlugs.includes(slug),slug+' compiled demo directory in '+compiledRoot);
- for(const slug of ['violet','resolve','plain-jane'])
+ for(const slug of slugs) assert.ok(compiledSlugs.includes(slug),slug+' compiled demo directory in '+compiledRoot);
+ for(const slug of slugs)
   assert.ok(existsSync(path.join(studio,compiledRoot,'themes',slug,'demo/index.html')),slug+' compiled demo in '+compiledRoot);
- assert.ok(existsSync(path.join(studio,compiledRoot,'themes/violet/demo/global/cpas-shell.css')));
- const json=JSON.parse(read('frontend/public/ecommerce-cms-agentsam/admin/data/theme-products.json'));
- assert.equal(json.ok,true);
- assert.equal(json.products.length,3);
  for(const entry of json.products){
   assert.equal(entry.installed,false);
   assert.equal(entry.purchasable,false);
   assert.equal(entry.state,'preview_only');
   assert.match(entry.preview_url,/^\/themes\/[^/]+\/demo\/$/);
-  assert.match(entry.thumbnail_url,/^\/themes\/[^/]+\/demo\//);
-  const relative=entry.thumbnail_url.slice(1);
-  assert.ok(existsSync(path.join(studio,'frontend/public',relative)),
-    'Missing staged source-derived image for '+entry.slug);
-  assert.ok(existsSync(path.join(studio,compiledRoot,relative)),
-   'Missing compiled source-derived image for '+entry.slug+' in '+compiledRoot);
+  assert.equal(entry.source,'Theme Store');
+  assert.ok(entry.thumbnail_url===null || entry.thumbnail_url.startsWith('https://themes.inneranimalmedia.com/'));
  }
 });
