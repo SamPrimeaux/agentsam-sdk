@@ -144,40 +144,82 @@
       }
     },
     "camera": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "projection",
-        "position",
-        "target",
-        "fov",
-        "near",
-        "far"
-      ],
-      "properties": {
-        "projection": {
-          "const": "perspective"
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projection",
+            "position",
+            "target",
+            "fov",
+            "near",
+            "far"
+          ],
+          "properties": {
+            "projection": {
+              "const": "perspective"
+            },
+            "position": {
+              "$ref": "#/$defs/vec3"
+            },
+            "target": {
+              "$ref": "#/$defs/vec3"
+            },
+            "fov": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 180
+            },
+            "near": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "far": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
         },
-        "position": {
-          "$ref": "#/$defs/vec3"
-        },
-        "target": {
-          "$ref": "#/$defs/vec3"
-        },
-        "fov": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "exclusiveMaximum": 180
-        },
-        "near": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        "far": {
-          "type": "number",
-          "exclusiveMinimum": 0
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projection",
+            "position",
+            "target",
+            "frustumHeight",
+            "near",
+            "far"
+          ],
+          "properties": {
+            "projection": {
+              "const": "orthographic"
+            },
+            "position": {
+              "$ref": "#/$defs/vec3"
+            },
+            "target": {
+              "$ref": "#/$defs/vec3"
+            },
+            "frustumHeight": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "zoom": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "near": {
+              "type": "number"
+            },
+            "far": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
         }
-      }
+      ]
     },
     "environment": {
       "type": "object",
@@ -449,6 +491,82 @@
               "minimum": 0
             },
             "pulseIntensity": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "holographicEarth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "layer"
+          ],
+          "properties": {
+            "layer": {
+              "enum": [
+                "ocean",
+                "dots",
+                "outline"
+              ]
+            },
+            "frequency": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "dotSize": {
+              "type": "number",
+              "minimum": 0
+            },
+            "smoothness": {
+              "type": "number",
+              "minimum": 0
+            },
+            "dotColor": {
+              "type": "string"
+            },
+            "dotOpacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "fresnelColor": {
+              "type": "string"
+            },
+            "fresnelBias": {
+              "type": "number",
+              "minimum": 0
+            },
+            "fresnelScale": {
+              "type": "number",
+              "minimum": 0
+            },
+            "fresnelPower": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "fresnelIntensity": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lineColor": {
+              "type": "string"
+            },
+            "lineWidth": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lineOpacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "lineIntensity": {
               "type": "number",
               "minimum": 0
             }
