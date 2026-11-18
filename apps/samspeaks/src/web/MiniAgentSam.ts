@@ -285,7 +285,7 @@ export class MiniAgentSam {
           <div class="ws-vp-left">
             <button type="button" class="ws-vp-pill ws-vp-accent" id="wsExpandSideBtn" hidden>Open Studio (H)</button>
             <div class="ws-vp-badge">
-              <strong>ATELIER XR</strong>
+              <strong>SAMSPEAKS</strong>
               <span id="wsBrandStatus">Astrolabe • Studio</span>
             </div>
           </div>
