@@ -114,3 +114,68 @@ test('native system components are installable for another account without copyi
     'Offering platform components never creates duplicate account-owned system definitions');
  }finally{db.close();}
 });
+
+test('catalog cannot be activated by forged template metadata; only verified cms_components qualifies',async()=>{
+ const db=setup();
+ try {
+  db.exec(sql);
+  db.exec(`
+   INSERT INTO cms_definitions(id,account_id,definition_key,kind,label,origin,status,version)
+     VALUES ('cmsd_fake','acct-platform','fake-renderer','section','Fake renderer','built_in','active','1');
+   INSERT INTO cms_component_templates
+     (sku,template_name,template_type,category,item_type,status,is_system,definition_id,definition_key,definition_version,template_data)
+     VALUES ('SKU-FAKE','Fake renderer','section','Test','section','active',1,'cmsd_fake','fake-renderer','1',
+      '{"rendererKey":"forged/metadata","implementationStatus":"implemented","implementationClass":"native"}');
+  `);
+  const env={DB:{prepare(sql){let params=[];return {
+   bind(...args){params=args;return this;},
+   async all(){return {results:db.prepare(sql).all(...params)};}
+  };}}};
+  const find=async()=>(await listCmsComponentCatalog(env,'acct-other')).find(t=>t.sku==='SKU-FAKE');
+  let fake=await find();
+  assert.equal(fake.installable,false,'metadata alone must never authorize installation');
+  assert.equal(fake.rendererKey,null);
+  assert.equal(fake.implementationStatus,'unverified');
+  db.exec(`
+   INSERT INTO cms_components(id,definition_id,renderer_key,delivery_mode,implementation_status)
+   VALUES ('cmp_fake','cmsd_fake','verified/native','bundled','unverified');
+  `);
+  fake=await find();
+  assert.equal(fake.installable,false,'unverified renderer must never authorize installation');
+  assert.equal(fake.rendererKey,'verified/native','actual renderer key takes precedence over metadata');
+  db.exec("UPDATE cms_components SET implementation_status='verified' WHERE id='cmp_fake'");
+  fake=await find();
+  assert.equal(fake.installable,true,'verified renderer activates the existing catalog row');
+  assert.equal(fake.implementationStatus,'verified');
+  assert.equal(fake.deliveryMode,'bundled');
+  db.exec("UPDATE cms_component_templates SET status='draft' WHERE sku='SKU-FAKE'");
+  assert.equal((await find()).installable,false,'draft catalog records remain non-installable');
+ } finally {db.close();}
+});
+
+test('non-built-in definitions are not leaked through the system catalog fallback',async()=>{
+ const db=setup();
+ try {
+  db.exec(`
+   INSERT INTO cms_definitions(id,account_id,definition_key,kind,label,origin,status,version)
+   VALUES ('cmsd_private','acct-platform','private-section','section','Private section','package','active','1');
+   INSERT INTO cms_components(id,definition_id,renderer_key,delivery_mode,implementation_status)
+   VALUES ('cmp_private','cmsd_private','private/renderer','bundled','verified');
+   INSERT INTO cms_component_templates
+     (sku,template_name,template_type,category,item_type,status,is_system,definition_id,definition_key,definition_version)
+   VALUES ('SKU-PRIVATE','Private section','section','Test','section','active',1,'cmsd_private','private-section','1');
+  `);
+  const env={DB:{prepare(sql){let params=[];return {
+   bind(...args){params=args;return this;},
+   async all(){return {results:db.prepare(sql).all(...params)};}
+  };}}};
+  const other=(await listCmsComponentCatalog(env,'acct-other')).find(t=>t.sku==='SKU-PRIVATE');
+  assert.ok(other);
+  assert.equal(other.definition,null);
+  assert.equal(other.rendererKey,null);
+  assert.equal(other.installable,false);
+  const owner=(await listCmsComponentCatalog(env,'acct-platform')).find(t=>t.sku==='SKU-PRIVATE');
+  assert.equal(owner.installable,true);
+  assert.equal(owner.rendererKey,'private/renderer');
+ } finally {db.close();}
+});
