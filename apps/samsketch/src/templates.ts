@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { STLLoader } from "three/addons/loaders/STLLoader.js";
 import { gunzipSync } from "fflate";
+import { FINISHES, type FinishId } from "./samspeaks-controls";
 
 const configuredAssetBase = (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL || "./";
 function assetUrl(path:string):string{
@@ -101,7 +102,7 @@ export async function getTemplateModel(id:string):Promise<THREE.Group>{
  return operation;
 }
 export function cachedTemplateModel(id:string){return modelCache.get(id);}
-export function instanceTemplateModel(id:string,color?:string,wireframe=false,look:"clay"|"glass"|"metal"="clay"):THREE.Group|undefined{
+export function instanceTemplateModel(id:string,color?:string,wireframe=false,look:"clay"|"glass"|"metal"="clay",finish?:FinishId,roughness=.22,metalness=.92):THREE.Group|undefined{
  const source=cachedTemplateModel(id);if(!source)return;
  const instance=source.clone(true);
  instance.traverse(o=>{
@@ -109,6 +110,17 @@ export function instanceTemplateModel(id:string,color?:string,wireframe=false,lo
   o.userData.sharedTemplateGeometry=true;
   o.material=(o.material as THREE.MeshStandardMaterial).clone();
   const mat=o.material as THREE.MeshStandardMaterial;
+  if(finish){
+   const preset=FINISHES.find(item=>item.id===finish);
+   if(preset){
+    o.material=new THREE.MeshPhysicalMaterial({
+     color:color||preset.swatchHex,metalness,roughness,
+     iridescence:preset.iridescence,iridescenceIOR:1.3,clearcoat:.28,clearcoatRoughness:Math.max(.05,preset.roughness),
+     emissive:preset.emissive,emissiveIntensity:preset.emissiveIntensity,wireframe,side:THREE.DoubleSide
+    });
+    return;
+   }
+  }
   if(color)mat.color.set(color);
   mat.wireframe=wireframe;
   if(look==="metal"){mat.metalness=.72;mat.roughness=.23;}

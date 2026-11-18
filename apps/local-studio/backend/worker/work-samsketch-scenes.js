@@ -9,7 +9,16 @@ const respond = (body,status=200,headers={}) => Response.json(body,{
 });
 const MAX_DOCUMENT_BYTES=1_500_000;
 const MAX_SCENE_ASSET_BYTES=25_000_000;
-const KIND=new Set(['desktop','phone','panel','orb','box','ring','cad','template']);
+const KIND=new Set(['desktop','phone','panel','orb','box','ring','cad','template','prop']);
+const FINISH=new Set(['gold','titanium','obsidian','copper','prism']);
+const MOOD=new Set(['studio','golden','twilight','noir','dawn']);
+const PROFILE=new Set(['astrolabe','pavilion','vox','terrarium']);
+const CAMERA=new Set(['establishing','hero','closeup','lowAngle','overhead','leftProp','rightProp']);
+const TRANSITION=new Set(['glide','dolly','orbit','crane','cut']);
+const PROP=new Set(['pine','boulders','lantern','arch']);
+const VOICE=new Set(['Kore','Puck','Charon','Fenrir','Zephyr','Aoede','Leda','Orus','Callirrhoe','Autonoe','Sulafat','Enceladus','Gacrux','Despina','Umbriel']);
+const bool=v=>typeof v==='boolean';
+const bounded=(v,min,max)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
 const vec=v=>Array.isArray(v)&&v.length===3&&v.every(x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<=100000);
 const color=v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v);
 const clean=v=>typeof v==='string'?v.trim():'';
@@ -61,6 +70,9 @@ export function validateSamSketchDocument(doc) {
       ||typeof item.visible!=='boolean')return false;
     ids.add(item.id);
     if(item.templateId!==undefined&&(!clean(item.templateId)||item.templateId.length>160))return false;
+    if(item.finish!==undefined&&!FINISH.has(item.finish))return false;
+    if(item.kind==='prop'&&(!PROP.has(item.propType)||item.finish!==undefined&&!FINISH.has(item.finish)))return false;
+    if(item.propType!==undefined&&!PROP.has(item.propType))return false;
     if(item.partOverrides!==undefined){
       const entries=Object.entries(item.partOverrides);
       if(entries.length>2500)return false;
@@ -72,6 +84,45 @@ export function validateSamSketchDocument(doc) {
           ||(v.color!==undefined&&!color(v.color))
           ||(v.visible!==undefined&&typeof v.visible!=='boolean'))return false;
       }
+    }
+  }
+  const settings=doc.sceneSettings;
+  if(settings!==undefined){
+    if(!settings||typeof settings!=='object'||!PROFILE.has(settings.profile)||!FINISH.has(settings.finish)||!MOOD.has(settings.mood)
+      ||!CAMERA.has(settings.cameraShot)||!TRANSITION.has(settings.transitionType)
+      ||!['clay','glass','metal'].includes(settings.surfaceTreatment)
+      ||!bounded(settings.explodeAmount,0,1)||!bounded(settings.spinSpeed,0,1.6)
+      ||!bounded(settings.keyLightAngle,-6.3,6.3)||!bounded(settings.keyIntensity,0,5)
+      ||!bounded(settings.ambientHue,0,360)||!bounded(settings.ambientSaturation,0,100)
+      ||!bounded(settings.ambientIntensity,0,2.5)||!bounded(settings.shadowSoftness,1,6)
+      ||!bounded(settings.cameraDistance,4,35)||!bounded(settings.fieldOfView,20,70)
+      ||!bounded(settings.fogDensity,.001,.08)||!bounded(settings.roughness,.02,1)
+      ||!bounded(settings.metalness,0,1)||!bounded(settings.horizonBrightness,.4,2)
+      ||!bounded(settings.ambientShadowOpacity,0,.6)
+      ||!['single','dual'].includes(settings.voiceMode)||!VOICE.has(settings.voiceName)
+      ||typeof settings.voiceStyle!=='string'||settings.voiceStyle.length>240
+      ||typeof settings.environment!=='string'||settings.environment.length>32
+      ||!['autoTour','brushEnabled','fogEnabled','wireframe','showGrid','selectionOutline','shadowsEnabled','loopPresentation','reducedMotion','showProperties','keepTimeline'].every(key=>bool(settings[key])))return false;
+  }
+  if(doc.storyboard!==undefined){
+    if(!Array.isArray(doc.storyboard)||doc.storyboard.length>100)return false;
+    for(const beat of doc.storyboard){
+      if(!beat||typeof beat.id!=='string'||!beat.id||beat.id.length>100
+        ||typeof beat.title!=='string'||!beat.title.trim()||beat.title.length>120
+        ||typeof beat.script!=='string'||beat.script.length>4000
+        ||!['single','dual'].includes(beat.ttsMode)||!VOICE.has(beat.voiceName)
+        ||typeof beat.voiceStyle!=='string'||beat.voiceStyle.length>240
+        ||!CAMERA.has(beat.cameraShot)||!TRANSITION.has(beat.transitionType)||!MOOD.has(beat.mood)
+        ||!bounded(beat.explodeAmount,0,1))return false;
+    }
+  }
+  if(doc.brushStrokes!==undefined){
+    if(!Array.isArray(doc.brushStrokes)||doc.brushStrokes.length>500)return false;
+    for(const stroke of doc.brushStrokes){
+      if(!stroke||typeof stroke.id!=='string'||!stroke.id||stroke.id.length>100
+        ||!color(stroke.color)||!bounded(stroke.width,1,10)
+        ||!Array.isArray(stroke.points)||stroke.points.length<2||stroke.points.length>1500
+        ||stroke.points.some(point=>!vec(point)))return false;
     }
   }
   return true;
