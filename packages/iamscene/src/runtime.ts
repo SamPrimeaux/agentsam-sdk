@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createThreeViewport, type ThreeViewportHandle } from '@inneranimalmedia/agentsam-3d-viewer';
 import { sampleAnimation } from './animation.js';
 import { assertValidSceneDocument } from './validate.js';
@@ -258,16 +259,19 @@ function applyMaterial(root: THREE.Object3D, material: THREE.Material): void {
 }
 
 function applyAssetMaterials(root: THREE.Object3D, materials: Map<string, THREE.Material>): void {
-  root.traverse(object => {
-    if (!(object instanceof THREE.Mesh)) return;
-    const materialId = object.userData?.iamMaterialId;
-    if (typeof materialId !== 'string' || !materialId) return;
-    const material = materials.get(materialId);
-    if (!material) throw new Error(`iamscene_asset_material_not_found:${materialId}`);
-    object.material = cloneSceneMaterial(material);
-    object.castShadow = true;
-    object.receiveShadow = true;
-  });
+  const visit = (object: THREE.Object3D, inheritedMaterialId?: string) => {
+    const ownId = object.userData?.iamMaterialId;
+    const materialId = typeof ownId === 'string' && ownId ? ownId : inheritedMaterialId;
+    if (object instanceof THREE.Mesh && materialId) {
+      const material = materials.get(materialId);
+      if (!material) throw new Error(`iamscene_asset_material_not_found:${materialId}`);
+      object.material = cloneSceneMaterial(material);
+      object.castShadow = true;
+      object.receiveShadow = true;
+    }
+    for (const child of object.children) visit(child, materialId);
+  };
+  visit(root);
 }
 
 function resolveBaseUrl(document: SceneDocument, supplied?: string | URL): URL {
@@ -361,6 +365,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
   const assetMap = new Map(document.assets.map(asset => [asset.id, asset]));
   const baseUrl = resolveBaseUrl(document, options.assetBaseUrl);
   const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
 
   for (const node of document.scene.nodes) {
     const object = new THREE.Group();
