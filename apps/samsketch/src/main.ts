@@ -1022,13 +1022,29 @@ window.addEventListener("samsketch:settings.action",event=>{
  switch(action){
   case "camera.frame":frame();break;
   case "camera.reset":frame();break;
-  case "scene.reset":stopStoryPlayback();stopStoryboardPlayback();doc.chapter=0;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};sceneAutoRotate=false;rotationSpeed=.003;applyMood("studio",false);redraw();frame();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
+  case "scene.reset":
+   stopStoryPlayback();stopStoryboardPlayback();doc.chapter=0;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};
+   surfaceRoughness=doc.sceneSettings.roughness;surfaceMetalness=doc.sceneSettings.metalness;
+   sceneAutoRotate=doc.sceneSettings.autoTour;rotationSpeed=doc.sceneSettings.spinSpeed*.01;
+   fogEnabled=doc.sceneSettings.fogEnabled;fogDensity=doc.sceneSettings.fogDensity;
+   wireframe=doc.sceneSettings.wireframe;showGrid=doc.sceneSettings.showGrid;grid.visible=showGrid;
+   shadowsEnabled=doc.sceneSettings.shadowsEnabled;selectionOutlineEnabled=doc.sceneSettings.selectionOutline;
+   brushEnabled=doc.sceneSettings.brushEnabled;reducedMotionOverride=doc.sceneSettings.reducedMotion;
+   renderer.shadowMap.enabled=shadowsEnabled;light.castShadow=shadowsEnabled;fillLight.castShadow=shadowsEnabled;floor.receiveShadow=shadowsEnabled;
+   floor.material.opacity=doc.sceneSettings.ambientShadowOpacity;light.shadow.radius=doc.sceneSettings.shadowSoftness;
+   ambientLight.color.setHSL(doc.sceneSettings.ambientHue/360,doc.sceneSettings.ambientSaturation/100,.72);
+   light.position.set(Math.cos(doc.sceneSettings.keyLightAngle)*11,10,Math.sin(doc.sceneSettings.keyLightAngle)*11);
+   applyMood("studio",false);redraw();frame();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
   case "styles.reset":{
    snapshot();surfaceRoughness=.82;surfaceMetalness=.08;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,surfaceTreatment:"clay",roughness:.82,metalness:.08};
    doc.items.forEach(item=>{item.material="clay";item.finish=undefined;});
    applyMood("studio",false);redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
   }
-  case "light.reset":applyMood("studio");settingsApi.sync({sceneSettings:doc.sceneSettings});break;
+  case "light.reset":
+   snapshot();doc.sceneSettings={...doc.sceneSettings,keyLightAngle:DEFAULT_SCENE_SETTINGS.keyLightAngle,keyIntensity:DEFAULT_SCENE_SETTINGS.keyIntensity,ambientHue:DEFAULT_SCENE_SETTINGS.ambientHue,ambientSaturation:DEFAULT_SCENE_SETTINGS.ambientSaturation,ambientIntensity:DEFAULT_SCENE_SETTINGS.ambientIntensity,shadowSoftness:DEFAULT_SCENE_SETTINGS.shadowSoftness,fogEnabled:false,fogDensity:DEFAULT_SCENE_SETTINGS.fogDensity};
+   fogEnabled=false;fogDensity=doc.sceneSettings.fogDensity;light.position.set(Math.cos(doc.sceneSettings.keyLightAngle)*11,10,Math.sin(doc.sceneSettings.keyLightAngle)*11);
+   light.shadow.radius=doc.sceneSettings.shadowSoftness;ambientLight.color.setHSL(doc.sceneSettings.ambientHue/360,doc.sceneSettings.ambientSaturation/100,.72);
+   applyMood("studio",false);setBackdrop("studio");store();settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "story.add":break;
   case "story.play":playStoryboard();break;
   case "story.stop":stopStoryboardPlayback();announce("SamSpeaks flow stopped.");break;
