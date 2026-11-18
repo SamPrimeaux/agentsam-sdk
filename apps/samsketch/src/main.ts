@@ -873,62 +873,129 @@ function resetStudioSettings(){
  toggleTimeline(false);
 }
 function applyStudioSetting(key:string,value:string|number|boolean){
+ const settings=doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings};
+ const persist=()=>store();
  switch(key){
   case "scene.chapter":setChapter(Number(value));break;
-  case "scene.autoplay":case "simulation.autoplay":if(Boolean(value))startStoryPlayback();else stopStoryPlayback();break;
-  case "scene.autorotate":sceneAutoRotate=Boolean(value);break;
-  case "styles.material":if(String(value)==="source")break;snapshot();doc.items.forEach(item=>item.material=String(value) as Look);redraw();renderInspector();break;
-  case "styles.backdrop":setBackdrop(String(value));break;
-  case "styles.roughness":surfaceRoughness=Number(value);redraw();break;
-  case "styles.metalness":surfaceMetalness=Number(value);redraw();break;
-  case "camera.distance":{const distance=Math.max(4,Math.min(35,Number(value)));camera.position.sub(controls.target).setLength(distance).add(controls.target);controls.update();break;}
-  case "camera.fov":camera.fov=Number(value);camera.updateProjectionMatrix();break;
-  case "camera.orbit":controls.enabled=Boolean(value);controls.enableRotate=Boolean(value);controls.enableZoom=Boolean(value);controls.enablePan=Boolean(value);break;
-  case "light.key":light.intensity=Number(value);break;
-  case "light.fill":fillLight.intensity=Number(value);break;
+  case "scene.profile":applySceneProfile(String(value) as SceneProfileId);break;
+  case "scene.autoplay":case "simulation.autoplay":settings.loopPresentation=Boolean(value);if(Boolean(value))startStoryPlayback();else stopStoryPlayback();persist();break;
+  case "scene.autorotate":case "camera.autoTour":settings.autoTour=Boolean(value);sceneAutoRotate=settings.autoTour;rotationSpeed=settings.spinSpeed*.01;persist();break;
+  case "styles.finish":applyFinish(String(value) as FinishId);break;
+  case "styles.mood":applyMood(String(value) as MoodId);break;
+  case "styles.material":{
+   settings.surfaceTreatment=String(value) as Look;
+   const targets=sel()?[sel()!]:doc.items;
+   targets.forEach(item=>{item.material=settings.surfaceTreatment;item.finish=undefined;});
+   redraw();renderInspector();persist();break;
+  }
+  case "styles.backdrop":setBackdrop(String(value));persist();break;
+  case "styles.roughness":settings.roughness=surfaceRoughness=Number(value);redraw();persist();break;
+  case "styles.metalness":settings.metalness=surfaceMetalness=Number(value);redraw();persist();break;
+  case "camera.shot":settings.cameraShot=String(value) as CameraShotId;applyCameraShot(settings.cameraShot,settings.transitionType);break;
+  case "camera.transition":settings.transitionType=String(value) as TransitionId;persist();break;
+  case "camera.distance":{
+   settings.cameraDistance=Math.max(4,Math.min(35,Number(value)));
+   const offset=camera.position.clone().sub(controls.target).normalize().multiplyScalar(settings.cameraDistance);
+   camera.position.copy(controls.target).add(offset);controls.update();persist();break;
+  }
+  case "camera.fov":settings.fieldOfView=Number(value);camera.fov=settings.fieldOfView;camera.updateProjectionMatrix();persist();break;
+  case "camera.orbit":controls.enabled=Boolean(value);controls.enableRotate=Boolean(value);controls.enableZoom=Boolean(value);controls.enablePan=Boolean(value);persist();break;
+  case "stage.explode":settings.explodeAmount=Number(value);applyProgress(storyProgress);persist();break;
+  case "stage.spin":settings.spinSpeed=Number(value);rotationSpeed=settings.spinSpeed*.01;sceneAutoRotate=settings.spinSpeed>0;settings.autoTour=sceneAutoRotate;persist();break;
+  case "stage.lightAngle":case "light.angle":{
+   settings.keyLightAngle=Number(value);const radius=11;
+   light.position.set(Math.cos(settings.keyLightAngle)*radius,10,Math.sin(settings.keyLightAngle)*radius);persist();break;
+  }
+  case "stage.brush":settings.brushEnabled=Boolean(value);brushEnabled=settings.brushEnabled;persist();announce(brushEnabled?"3D brush enabled · drag across the stage to draw":"3D brush disabled");break;
+  case "light.key":settings.keyIntensity=Number(value);light.intensity=settings.keyIntensity;persist();break;
+  case "light.fill":fillLight.intensity=Number(value);persist();break;
   case "light.temperature":{
    const keyColor=value==="warm"?"#ffe1bf":value==="cool"?"#c9ddff":"#ffffff";
    const fillColor=value==="warm"?"#ffcfa0":value==="cool"?"#a8c5ff":"#b1c9ff";
-   light.color.set(keyColor);fillLight.color.set(fillColor);ambientLight.color.set(value==="warm"?"#fff0dc":value==="cool"?"#d7e5ff":"#e8f1ff");break;
+   light.color.set(keyColor);fillLight.color.set(fillColor);ambientLight.color.set(value==="warm"?"#fff0dc":value==="cool"?"#d7e5ff":"#e8f1ff");persist();break;
   }
-  case "light.shadows":case "effects.shadows":shadowsEnabled=Boolean(value);renderer.shadowMap.enabled=shadowsEnabled;light.castShadow=shadowsEnabled;fillLight.castShadow=shadowsEnabled;floor.receiveShadow=shadowsEnabled;break;
-  case "simulation.speed":rotationSpeed=Number(value);break;
-  case "effects.wireframe":wireframe=Boolean(value);redraw();break;
-  case "effects.grid":case "sky.horizon":showGrid=Boolean(value);grid.visible=showGrid;break;
-  case "effects.selection":selectionOutlineEnabled=Boolean(value);refreshSelection();break;
-  case "fog.enabled":fogEnabled=Boolean(value);setBackdrop(currentBackdrop);break;
-  case "fog.density":fogDensity=Number(value);setBackdrop(currentBackdrop);break;
-  case "fog.color":setBackdrop(String(value)==="backdrop"?currentBackdrop:String(value));break;
-  case "sky.environment":setBackdrop(String(value)==="studio"?"blue":String(value));break;
-  case "sky.brightness":renderer.toneMappingExposure=Number(value);break;
-  case "shadows.ambient":floor.material.opacity=Number(value);break;
-  case "shadows.softness":light.shadow.radius=Number(value);break;
-  case "shadows.ground":case "shadows.contact":floor.visible=Boolean(value)&&shadowsEnabled;floor.receiveShadow=Boolean(value)&&shadowsEnabled;break;
-  case "global.reducedMotion":reducedMotionOverride=Boolean(value);if(reducedMotionOverride)stopStoryPlayback();break;
-  case "global.properties":{const inspector=document.getElementById("inspector");if(inspector)inspector.hidden=!Boolean(value);break;}
-  case "global.timeline":timelinePane.hidden=!Boolean(value);appFrame.dataset.timelineHidden=String(!Boolean(value));break;
-
+  case "light.ambientHue":settings.ambientHue=Number(value);ambientLight.color.setHSL(settings.ambientHue/360,settings.ambientSaturation/100,.72);persist();break;
+  case "light.ambientSaturation":settings.ambientSaturation=Number(value);ambientLight.color.setHSL(settings.ambientHue/360,settings.ambientSaturation/100,.72);persist();break;
+  case "light.ambientFill":settings.ambientIntensity=Number(value);ambientLight.intensity=settings.ambientIntensity;persist();break;
+  case "light.shadowSoftness":settings.shadowSoftness=Number(value);light.shadow.radius=settings.shadowSoftness;persist();break;
+  case "light.shadows":case "effects.shadows":settings.shadowsEnabled=shadowsEnabled=Boolean(value);renderer.shadowMap.enabled=shadowsEnabled;light.castShadow=shadowsEnabled;fillLight.castShadow=shadowsEnabled;floor.receiveShadow=shadowsEnabled;persist();break;
+  case "effects.wireframe":settings.wireframe=wireframe=Boolean(value);redraw();persist();break;
+  case "effects.grid":case "sky.horizon":settings.showGrid=showGrid=Boolean(value);grid.visible=showGrid;persist();break;
+  case "effects.selection":settings.selectionOutline=selectionOutlineEnabled=Boolean(value);refreshSelection();persist();break;
+  case "fog.enabled":settings.fogEnabled=fogEnabled=Boolean(value);setBackdrop(currentBackdrop);persist();break;
+  case "fog.density":settings.fogDensity=fogDensity=Number(value);setBackdrop(currentBackdrop);persist();break;
+  case "fog.color":setBackdrop(String(value)==="backdrop"?currentBackdrop:String(value));persist();break;
+  case "sky.environment":settings.environment=String(value);setBackdrop(String(value)==="studio"?"#202c40":String(value));persist();break;
+  case "sky.brightness":settings.horizonBrightness=Number(value);renderer.toneMappingExposure=settings.horizonBrightness;persist();break;
+  case "shadows.ambient":settings.ambientShadowOpacity=Number(value);floor.material.opacity=settings.ambientShadowOpacity;persist();break;
+  case "shadows.softness":settings.shadowSoftness=Number(value);light.shadow.radius=settings.shadowSoftness;persist();break;
+  case "shadows.ground":case "shadows.contact":floor.visible=Boolean(value)&&shadowsEnabled;floor.receiveShadow=Boolean(value)&&shadowsEnabled;persist();break;
+  case "global.reducedMotion":settings.reducedMotion=reducedMotionOverride=Boolean(value);if(reducedMotionOverride){stopStoryPlayback();stopStoryboardPlayback();}persist();break;
+  case "global.properties":settings.showProperties=Boolean(value);{const inspector=document.getElementById("inspector");if(inspector)inspector.hidden=!settings.showProperties;}persist();break;
+  case "global.timeline":settings.keepTimeline=Boolean(value);timelinePane.hidden=!settings.keepTimeline;appFrame.dataset.timelineHidden=String(!settings.keepTimeline);persist();break;
+  case "direct.voiceMode":settings.voiceMode=String(value) as "single"|"dual";persist();break;
+  case "direct.voiceName":settings.voiceName=String(value) as SceneSettings["voiceName"];persist();break;
+  case "direct.voicePreset":settings.voiceStyle=String(value);persist();break;
  }
 }
 window.addEventListener("samsketch:settings.change",event=>{
  const detail=(event as CustomEvent<{key:string;value:string|number|boolean}>).detail;
  if(detail)applyStudioSetting(detail.key,detail.value);
 });
+window.addEventListener("samsketch:storyboard.change",event=>{
+ const beats=(event as CustomEvent<{beats:StoryBeat[]}>).detail?.beats;
+ if(!Array.isArray(beats))return;
+ doc.storyboard=beats.slice(0,100);store();
+ settingsApi.sync({storyboard:doc.storyboard});
+});
+window.addEventListener("samsketch:storyboard.preview",event=>{
+ const beat=(event as CustomEvent<{beat:StoryBeat}>).detail?.beat;
+ if(beat)applyStoryboardBeat(beat);
+});
 window.addEventListener("samsketch:settings.action",event=>{
- const action=(event as CustomEvent<{action:string}>).detail?.action;
+ const detail=(event as CustomEvent<{action:string;prompt?:string;script?:string;voiceName?:string;voiceStyle?:string;voiceMode?:string;images?:string[];prop?:string;beat?:StoryBeat}>).detail;
+ const action=detail?.action;
  switch(action){
-  case "camera.frame":case "camera.reset":frame();break;
-  case "scene.reset":stopStoryPlayback();doc.chapter=0;stage.rotation.set(0,0,0);setChapter(0);resetStudioSettings();break;
-  case "styles.reset":snapshot();surfaceRoughness=.82;surfaceMetalness=.08;doc.items.forEach(item=>item.material="clay");redraw();setBackdrop("blue");break;
-  case "light.reset":light.intensity=3.5;light.color.set("#ffffff");fillLight.intensity=2.1;fillLight.color.set("#b1c9ff");ambientLight.intensity=2.1;break;
+  case "camera.frame":frame();break;
+  case "camera.reset":frame();break;
+  case "scene.reset":stopStoryPlayback();stopStoryboardPlayback();doc.chapter=0;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};sceneAutoRotate=false;rotationSpeed=.003;applyMood("studio",false);redraw();frame();store();break;
+  case "styles.reset":{
+   snapshot();surfaceRoughness=.82;surfaceMetalness=.08;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};
+   doc.items.forEach(item=>{item.material="clay";item.finish=undefined;});
+   applyMood("studio",false);redraw();store();break;
+  }
+  case "light.reset":applyMood("studio");break;
+  case "story.add":break;
+  case "story.play":playStoryboard();break;
+  case "story.stop":stopStoryboardPlayback();announce("SamSpeaks flow stopped.");break;
+  case "story.speak":if(detail.beat)void speakScript(detail.beat.script,detail.beat.voiceName,detail.beat.voiceStyle);break;
+  case "story.compose":{
+   const prompt=(detail.prompt||"").trim();
+   if(!prompt){announce("Describe the story you want SamSpeaks to compose.");break;}
+   sendHostMessage("assistant.request",{prompt:"Compose a SamSpeaks scene storyboard with clear camera shots, transitions, atmosphere changes and concise narration. "+prompt,skill:"Scene",context:studioContext()});
+   announce("Sent the SamSpeaks storyboard brief to AgentSam.");break;
+  }
+  case "direct.draft":{
+   const prompt="Draft a concise SamSpeaks voiceover for the current scene. Voice direction: "+(detail.voiceStyle||"Warm cinematic narrator")+". Mode: "+(detail.voiceMode||"single")+". Existing script: "+(detail.script||"Create a new script.")+". Return the script only.";
+   sendHostMessage("assistant.request",{prompt,skill:"Write",context:studioContext()});announce("Voiceover brief sent to AgentSam.");break;
+  }
+  case "direct.speak":void speakScript(detail.script||"",detail.voiceName||"Kore",detail.voiceStyle||"");break;
+  case "direct.stop":if("speechSynthesis" in window)window.speechSynthesis.cancel();break;
+  case "inspo.attach":{
+   const names=(detail.images||[]).join(", ");
+   sendHostMessage("assistant.request",{prompt:"Use these local visual reference filenames as creative direction for the current SamSketch scene: "+names+". Ask me for the images if visual inspection is needed.",skill:"Scene",context:studioContext()});
+   announce("Reference notes sent to AgentSam; image files remain local to this browser session.");break;
+  }
+  case "stage.addProp":addSceneryProp(String(detail.prop) as SceneryPropId);break;
+  case "stage.brush":applyStudioSetting("stage.brush",!brushEnabled);break;
+  case "stage.clearBrush":doc.brushStrokes=[];redraw();store();announce("3D brush strokes cleared.");break;
   case "simulation.play":startStoryPlayback();break;
   case "simulation.pause":stopStoryPlayback();break;
-  case "effects.reset":wireframe=false;showGrid=false;grid.visible=false;shadowsEnabled=true;renderer.shadowMap.enabled=true;light.castShadow=true;floor.visible=true;selectionOutlineEnabled=true;redraw();break;
+  case "effects.reset":wireframe=false;showGrid=false;grid.visible=false;shadowsEnabled=true;renderer.shadowMap.enabled=true;light.castShadow=true;floor.visible=true;selectionOutlineEnabled=true;doc.sceneSettings={...doc.sceneSettings,wireframe:false,showGrid:false,shadowsEnabled:true,selectionOutline:true};redraw();store();break;
   case "global.resetLayout":appFrame.style.removeProperty("--library-width");appFrame.style.removeProperty("--inspector-width");appFrame.style.removeProperty("--timeline-height");timelinePane.hidden=false;appFrame.dataset.timelineHidden="false";appFrame.dataset.libraryHidden="false";appFrame.dataset.inspectorHidden="false";toggleTimeline(false);break;
   case "global.reset":resetStudioSettings();break;
  }
-});
-function mutate(fn:()=>void,rerender=true){snapshot();fn();if(rerender)renderAll();else{redraw();renderLayers();}store();}
+});function mutate(fn:()=>void,rerender=true){snapshot();fn();if(rerender)renderAll();else{redraw();renderLayers();}store();}
 function setChapter(index:number){if(index<0||index>3)return;const before=storyProgress;doc.chapter=index;renderChapters();store();if(matchMedia("(prefers-reduced-motion: reduce)").matches){storyTransition=null;applyProgress(index);}else storyTransition={from:before,to:index,start:performance.now(),duration:750};}
 function addTemplate(ref:string){
  const key=ref.startsWith("part:")?"part:"+ref.slice(5):"composition:"+ref;
