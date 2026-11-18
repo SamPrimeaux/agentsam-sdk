@@ -402,6 +402,7 @@ const light=new THREE.DirectionalLight("#ffffff",3.5);light.position.set(-4,10,9
 const fillLight=new THREE.DirectionalLight("#b1c9ff",1.4);fillLight.position.set(6,4,-5);scene.add(fillLight);
 const ambientLight=new THREE.AmbientLight("#e8f1ff",2.1);scene.add(ambientLight);
 const stage=new THREE.Group();scene.add(stage);
+const brushGroup=new THREE.Group();brushGroup.name="SamSpeaks 3D Brush";scene.add(brushGroup);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:"#8190ad",opacity:.13}));floor.rotation.x=-Math.PI/2;floor.position.y=-2.15;floor.receiveShadow=true;scene.add(floor);
 const grid=new THREE.GridHelper(18,18,"#9caec9","#dbe3f0");grid.position.y=-2.13;grid.visible=false;scene.add(grid);
 let selectedHelper:THREE.BoxHelper|null=null;
@@ -577,10 +578,20 @@ function clearStage(){
  stage.traverse(o=>{if(o instanceof THREE.Mesh){if(!o.userData.sharedTemplateGeometry)o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];for(const m of mats){if(m instanceof THREE.Material){const tex=(m as THREE.MeshBasicMaterial).map;if(tex)tex.dispose();m.dispose();}}}});
  stage.clear();roots.clear();
 }
+function renderBrushStrokes(){
+ brushGroup.traverse(object=>{if(object instanceof THREE.Line){object.geometry.dispose();const material=object.material;if(material instanceof THREE.Material)material.dispose();}});
+ brushGroup.clear();
+ for(const stroke of doc.brushStrokes||[]){
+  if(stroke.points.length<2)continue;
+  const geometry=new THREE.BufferGeometry().setFromPoints(stroke.points.map(point=>new THREE.Vector3(...point)));
+  const line=new THREE.Line(geometry,new THREE.LineBasicMaterial({color:stroke.color,linewidth:stroke.width,transparent:true,opacity:.92}));
+  line.name="Brush stroke · "+stroke.id;brushGroup.add(line);
+ }
+}
 function redraw(){
  transformControls.detach();
  clearStage();for(const item of doc.items){const root=buildRoot(item);stage.add(root);roots.set(item.id,root);}
- applyProgress(mode==="story"?storyProgress:0);refreshSelection();store();
+ renderBrushStrokes();applyProgress(mode==="story"?storyProgress:0);refreshSelection();store();
 }
 function selectedSceneObject():THREE.Object3D|null {
  return exactSelectionRoot(roots.get(selectedId)||null,selectedPartId);
@@ -595,8 +606,42 @@ function refreshSelection(){
  }
 }
 let pressed:Vec3|null=null;
-renderer.domElement.addEventListener("pointerdown",e=>{pressed=transformControls.axis?null:[e.clientX,e.clientY,0]});
+let activeBrushStroke:BrushStroke|null=null;
+function brushPointFromEvent(event:PointerEvent):Vec3|null{
+ const bounds=renderer.domElement.getBoundingClientRect();
+ hitPointer.set((event.clientX-bounds.left)/bounds.width*2-1,-(event.clientY-bounds.top)/bounds.height*2+1);
+ hitRay.setFromCamera(hitPointer,camera);
+ const point=new THREE.Vector3();
+ const plane=new THREE.Plane(new THREE.Vector3(0,1,0),2.05);
+ const hit=hitRay.ray.intersectPlane(plane,point);
+ return hit?[point.x,point.y,point.z]:null;
+}
+function finishBrushStroke(){
+ if(!activeBrushStroke)return;
+ if(activeBrushStroke.points.length>1){doc.brushStrokes=[...(doc.brushStrokes||[]),activeBrushStroke].slice(-500);renderBrushStrokes();store();announce("3D brush stroke saved to this scene.");}
+ activeBrushStroke=null;controls.enabled=true;
+}
+renderer.domElement.addEventListener("pointerdown",e=>{
+ if(brushEnabled){
+  pressed=null;controls.enabled=false;
+  activeBrushStroke={id:crypto.randomUUID(),points:[],color:"#8d7eff",width:3};
+  const point=brushPointFromEvent(e);if(point)activeBrushStroke.points.push(point);
+  renderer.domElement.setPointerCapture(e.pointerId);return;
+ }
+ pressed=transformControls.axis?null:[e.clientX,e.clientY,0];
+});
+renderer.domElement.addEventListener("pointermove",e=>{
+ if(!activeBrushStroke)return;
+ const point=brushPointFromEvent(e);if(!point)return;
+ const previous=activeBrushStroke.points[activeBrushStroke.points.length-1];
+ if(!previous||new THREE.Vector3(...previous).distanceTo(new THREE.Vector3(...point))>.045){
+  activeBrushStroke.points.push(point);
+  const temporary=[...(doc.brushStrokes||[]),activeBrushStroke];const prior=doc.brushStrokes;doc.brushStrokes=temporary;renderBrushStrokes();doc.brushStrokes=prior;
+ }
+});
+renderer.domElement.addEventListener("pointercancel",finishBrushStroke);
 renderer.domElement.addEventListener("pointerup",e=>{
+ if(activeBrushStroke){const point=brushPointFromEvent(e);if(point)activeBrushStroke.points.push(point);finishBrushStroke();return;}
  if(!pressed||Math.hypot(e.clientX-pressed[0],e.clientY-pressed[1])>6)return;
  if(mode==="story")setManipulationMode("off");
  if(mode!=="select")return;
