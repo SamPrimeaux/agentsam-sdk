@@ -7,7 +7,6 @@
 
 import { createCmsDbClient } from './cms-db.js';
 import { listAuthorizedCmsSites, resolveCmsSiteAccess, createAuthorizedCmsSite, cmsActorRequired, configuredCmsWorkers } from './cms-authority.js';
-import { withLocalStudioCmsContext } from '@inneranimalmedia/agentsam-cms/account-context';
 import { handleRemoteCmsRequest } from './cms-remote.js';
 import { fetchSitePartial, putSitePartial, injectSitePartials } from './site-partials.js';
 import { handleCmsSourceRequest } from './cms-source.js';
@@ -67,7 +66,7 @@ function resolveSiteSlug(url, body = {}) {
   return trimmed || null;
 }
 
-export async function handleCmsWorkerRequest(request, env, actorUserId, { ensureCmsSiteStarter }) {
+export async function handleCmsWorkerRequest(request, env, actorUserId) {
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
 
@@ -129,15 +128,10 @@ export async function handleCmsWorkerRequest(request, env, actorUserId, { ensure
     const sites = await listAuthorizedCmsSites(env.DB, actorUserId, { remoteWorkerNames: configuredCmsWorkers(env) });
     const site = sites.find((candidate) => candidate.id === created?.id);
     if (!site) return json({ ok: false, error: 'cms_site_created_but_not_authorized' }, 500);
-    let starter;
-    try {
-      starter = await withLocalStudioCmsContext(site.account_id, site,
-        () => ensureCmsSiteStarter(env, site.account_id, site.id), actorUserId);
-    } catch (error) {
-      return json({ ok: false, error: 'cms_site_starter_failed', detail: String(error?.message || error), site_id: site.id, retryable: true }, 503);
-    }
-    if (!starter?.ok) return json({ ok: false, error: starter?.error || 'cms_site_starter_failed', site_id: site.id, retryable: true, starter }, starter?.status || 503);
-    return json({ ok: true, site, starter }, 201);
+    // A new store is an owned CMS site, not an implicit installation of an
+    // SDK-bundled default theme. The merchant explicitly chooses a verified
+    // Theme Store release from Online Store after creation.
+    return json({ ok: true, site, theme_required: true }, 201);
   }
 
   const siteSelector = resolveSiteSlug(url, body);

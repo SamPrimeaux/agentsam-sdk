@@ -51,13 +51,30 @@ try {
           ok: true, authenticated: true, user: { id: "au_smoke", display_name: "Smoke test" },
         } });
       }
+      // A site-owned Store screen requires the actual online read-model
+      // shape. A bare { sites: [] } belongs to the onboarding empty state,
+      // not to the populated Store view this smoke is exercising.
       if (url.pathname === "/api/admin/store/online") {
-        // Exercise the installed Online Store, not the unrelated first-store
-        // onboarding empty state. The account/site are test-only fixtures.
         return route.fulfill({ json: {
-          ok: true, selected_site_id: "site_smoke", selected_site_name: "Smoke Test Store",
-          available_sites: [{ id: "site_smoke", name: "Smoke Test Store" }],
-          active_theme: null, draft_themes: [], site_preview: null,
+          ok: true,
+          selected_site_id: "site-smoke",
+          selected_site_name: "Smoke Store",
+          available_sites: [{ id: "site-smoke", name: "Smoke Store", slug: "smoke-store", status: "active" }],
+          store: { visibility: "unpublished", url: null },
+          site_preview: null,
+          active_theme: null,
+          preview_theme: null,
+          draft_themes: [],
+        } });
+      }
+      if (url.pathname === "/api/admin/website-themes") {
+        return route.fulfill({ json: {
+          ok: true, products: [{
+            slug: "plain-jane", name: "Plain Jane", version: "0.3.0",
+            can_install: true,
+            preview_url: "https://themes.inneranimalmedia.com/iapj/",
+            preview_alias: "iapj",
+          }],
         } });
       }
       if (url.pathname.startsWith("/api/")) {
@@ -84,6 +101,10 @@ try {
       await page.getByPlaceholder("Brief the co-worker").waitFor({ timeout: 12000 });
       await page.getByText("Saved co-worker conversation", { exact: true }).waitFor({ timeout: 12000 });
       await page.getByRole("heading", { name: heading, exact: true }).waitFor({ timeout: 12000 });
+      if (pathname === "/admin/store") {
+        await page.getByRole("heading", { name: "Draft themes", exact: true }).waitFor();
+        await page.getByRole("button", { name: "Add", exact: true }).waitFor();
+      }
     } catch (error) {
       assert.deepEqual(reactErrors, [], pathname + " crashed after workbench restoration");
       throw error;

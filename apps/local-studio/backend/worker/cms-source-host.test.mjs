@@ -120,7 +120,7 @@ test('the existing Theme Editor waits for source adapter before selecting its CM
   const src = readFileSync(new URL('../../../ecommerce-cms-agentsam/frontend/static/js/theme-editor.js', import.meta.url), 'utf8');
   assert.ok(src.includes('await window.__agentsamCmsSourceHostReady'));
   assert.ok(src.includes('if (!window.AgentSamThemeEditorHost) return;'));
-  assert.ok(src.includes("if (!host && (selectedTheme && selectedTheme === primaryThemeSlug))"),
+  assert.ok(src.includes('if (!host && (selectedTheme && selectedTheme === primaryThemeSlug))'),
     'srcdoc previews must not be reloaded from the legacy iframe load handler');
   assert.ok(src.indexOf('await window.__agentsamCmsSourceHostReady') <
     src.indexOf('const host = window.AgentSamThemeEditorHost'),
