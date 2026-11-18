@@ -2,7 +2,7 @@ import { icon } from "./icons";
 import {
   CAMERA_SHOTS, DEFAULT_SCENE_SETTINGS, DEFAULT_STORYBOARD, FINISHES, MOODS, SCENE_PROFILES,
   SCENERY_PROPS, TRANSITIONS, VOICES, VOICE_STYLES,
-  type CameraShotId, type FinishId, type MoodId, type SceneSettings, type StoryBeat,
+  type SceneSettings, type StoryBeat,
 } from "./samspeaks-controls";
 import "./settings-drawer.css";
 
@@ -121,7 +121,7 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       '<span class="settings-section-label">VOICE & SOUND DIRECTION</span>' +
       select("Voice mode", "direct.voiceMode", [["single", "Single narrator"], ["dual", "Dual voice"]] as [string, string][], ss.voiceMode) +
       select("Voice", "direct.voiceName", VOICES.map(v => [v.name, v.name + " · " + v.tone] as [string, string]), ss.voiceName) +
-      select("Style preset", "direct.voicePreset", [["", "Choose a style"], ...VOICE_STYLES.map(v => [v.style, v.label] as [string, string])], ss.voiceStyle) +
+      select("Style preset", "direct.voicePreset", [["", "Choose a style"] as [string, string], ...VOICE_STYLES.map(v => [v.style, v.label] as [string, string])], ss.voiceStyle) +
       '<input id="sam-direct-style" class="settings-text-input" data-setting="direct.voicePreset" value="' + escapeHtml(ss.voiceStyle) + '" placeholder="Warm, articulate design documentary narrator" aria-label="Voice style direction">' +
       '<textarea id="sam-direct-script" class="settings-textarea" data-beat-field="script" rows="4" aria-label="Narration script">' + escapeHtml(beat?.script || "") + '</textarea>' +
       '<div class="sam-inline-actions">' + action("Draft script with AgentSam", "direct.draft", "sparkles") + action("Preview narration", "direct.speak", "waves") + action("Stop", "direct.stop", "stop") + '</div>' +
