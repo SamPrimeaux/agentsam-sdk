@@ -1041,7 +1041,7 @@ window.addEventListener("samsketch:settings.action",event=>{
    applyMood("studio",false);redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
   }
   case "light.reset":
-   snapshot();doc.sceneSettings={...doc.sceneSettings,keyLightAngle:DEFAULT_SCENE_SETTINGS.keyLightAngle,keyIntensity:DEFAULT_SCENE_SETTINGS.keyIntensity,ambientHue:DEFAULT_SCENE_SETTINGS.ambientHue,ambientSaturation:DEFAULT_SCENE_SETTINGS.ambientSaturation,ambientIntensity:DEFAULT_SCENE_SETTINGS.ambientIntensity,shadowSoftness:DEFAULT_SCENE_SETTINGS.shadowSoftness,fogEnabled:false,fogDensity:DEFAULT_SCENE_SETTINGS.fogDensity};
+   snapshot();doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,keyLightAngle:DEFAULT_SCENE_SETTINGS.keyLightAngle,keyIntensity:DEFAULT_SCENE_SETTINGS.keyIntensity,ambientHue:DEFAULT_SCENE_SETTINGS.ambientHue,ambientSaturation:DEFAULT_SCENE_SETTINGS.ambientSaturation,ambientIntensity:DEFAULT_SCENE_SETTINGS.ambientIntensity,shadowSoftness:DEFAULT_SCENE_SETTINGS.shadowSoftness,fogEnabled:false,fogDensity:DEFAULT_SCENE_SETTINGS.fogDensity};
    fogEnabled=false;fogDensity=doc.sceneSettings.fogDensity;light.position.set(Math.cos(doc.sceneSettings.keyLightAngle)*11,10,Math.sin(doc.sceneSettings.keyLightAngle)*11);
    light.shadow.radius=doc.sceneSettings.shadowSoftness;ambientLight.color.setHSL(doc.sceneSettings.ambientHue/360,doc.sceneSettings.ambientSaturation/100,.72);
    applyMood("studio",false);setBackdrop("studio");store();settingsApi.sync({sceneSettings:doc.sceneSettings});break;
@@ -1071,7 +1071,7 @@ window.addEventListener("samsketch:settings.action",event=>{
   case "stage.clearBrush":doc.brushStrokes=[];redraw();store();announce("3D brush strokes cleared.");break;
   case "simulation.play":startStoryPlayback();break;
   case "simulation.pause":stopStoryPlayback();break;
-  case "effects.reset":wireframe=false;showGrid=false;grid.visible=false;shadowsEnabled=true;renderer.shadowMap.enabled=true;light.castShadow=true;floor.visible=true;selectionOutlineEnabled=true;doc.sceneSettings={...doc.sceneSettings,wireframe:false,showGrid:false,shadowsEnabled:true,selectionOutline:true};redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings});break;
+  case "effects.reset":wireframe=false;showGrid=false;grid.visible=false;shadowsEnabled=true;renderer.shadowMap.enabled=true;light.castShadow=true;floor.visible=true;selectionOutlineEnabled=true;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,wireframe:false,showGrid:false,shadowsEnabled:true,selectionOutline:true};redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "global.resetLayout":appFrame.style.removeProperty("--library-width");appFrame.style.removeProperty("--inspector-width");appFrame.style.removeProperty("--timeline-height");timelinePane.hidden=false;appFrame.dataset.timelineHidden="false";appFrame.dataset.libraryHidden="false";appFrame.dataset.inspectorHidden="false";toggleTimeline(false);break;
   case "global.reset":resetStudioSettings();break;
  }
