@@ -120,8 +120,8 @@ test('shared viewport supports an orthographic camera and updates its horizontal
   host.clientWidth=400;
   host.clientHeight=800;
   getObserver().callback();
-  assert.equal(viewport.camera.left,-25);
-  assert.equal(viewport.camera.right,25);
+  assert.equal(viewport.camera.left,-50);
+  assert.equal(viewport.camera.right,50);
   assert.equal(viewport.camera.top,100);
   assert.equal(viewport.camera.bottom,-100);
   viewport.dispose();
