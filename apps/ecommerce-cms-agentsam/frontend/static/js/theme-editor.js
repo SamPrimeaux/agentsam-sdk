@@ -707,15 +707,11 @@
       return contextualStyleFields().concat(/cta|button|href|link/i.test(activeFieldKey) ? [] : sectionPadding);
     }
     const schema = currentSectionSchema();
-    const defined = ((schema && schema.settings) || []).filter(function(field) {
-      // A merchant adjusts the common layout and spacing in the standard
-      // inspector. Rare motion/visibility are available under the section menu.
-      return /^(layout|spacing|surface|appearance|media)$/i.test(field.group || '');
-    }).filter(function(field) {
-      // Initial surface should not expose 12 identical margin controls.
-      return !/margin(Top|Bottom|Left|Right)|padding(Left|Right)|borderRadius/.test(field.key);
-    }).map(function(field) { return {...field,designStyle:true}; });
-    return defined.filter(field => settingVisible(field, currentSection()?.content));
+    // The definition is the inspector authority: don't silently suppress
+    // valid fields because their group or key wasn't anticipated in this UI.
+    return ((schema && schema.settings) || [])
+      .filter(field => settingVisible(field, currentSection()?.content))
+      .map(field => ({...field,designStyle:true}));
   }
 
   function allEditableFields() {
