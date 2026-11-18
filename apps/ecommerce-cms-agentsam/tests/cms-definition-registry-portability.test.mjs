@@ -43,12 +43,24 @@ test("catalog installation uses verified cms_components, not spoofable template 
   assert.equal(normalizeCmsCatalogTemplate({...base,
     resolved_renderer_key:"theme:button",resolved_implementation_status:"unverified"
   }).installable,false);
-  const verified=normalizeCmsCatalogTemplate({...base,
+  const registeredRenderer = key => key === "theme:button";
+  const verifiedRow = {...base,
+    template_data:JSON.stringify({rendererKey:"theme:button"}),
+    resolved_component_id:"component-button",
     resolved_renderer_key:"theme:button",resolved_implementation_status:"verified"
-  });
+  };
+  const verified=normalizeCmsCatalogTemplate(verifiedRow,{hasRenderer:registeredRenderer});
   assert.equal(verified.installable,true);
   assert.equal(verified.rendererKey,"theme:button");
   assert.equal(verified.rendererVerified,true);
+  assert.equal(verified.runtimeReady,true);
+  assert.equal(normalizeCmsCatalogTemplate(verifiedRow).installable,false,
+    "a D1 verified flag cannot substitute for a registered renderer");
+  assert.equal(normalizeCmsCatalogTemplate({...verifiedRow,resolved_component_id:null},
+    {hasRenderer:registeredRenderer}).installable,false);
+  assert.equal(normalizeCmsCatalogTemplate({...verifiedRow,template_data:base.template_data},
+    {hasRenderer:registeredRenderer}).installable,false,
+    "a template hint cannot impersonate a different renderer");
   let sql="";
   const env={DB:{prepare(query){sql=query;return {bind(){return this;},async all(){return {results:[base]};}};}}};
   await listCmsComponentCatalog(env,"account-a");

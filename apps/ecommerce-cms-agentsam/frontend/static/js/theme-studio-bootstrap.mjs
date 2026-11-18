@@ -1,7 +1,8 @@
 import { createThemeProjectAdapter, repairEmptyThemeBlockControls } from '/theme-editor/project.mjs';
 import { createThemeEditorBridge } from '/theme-editor/bridge.mjs';
 import { mountThemeEditor } from '/theme-editor/mount.mjs';
-import { inheritDefaultTemplates, materializeStarterProject } from '/theme-editor/starter-project.mjs';
+import { blankThemeProject, inheritDefaultTemplates } from '/theme-editor/starter-project.mjs';
+import { fillMissingThemeChrome } from '/theme-editor/starter-chrome.mjs';
 import { createCmsPageThemeEditorAdapter } from '/ecommerce-cms-agentsam/theme-editor/cms-page-adapter.mjs';
 import { chooseThemeEditorSite, planThemeEditorEntry } from './theme-editor-entry-resolution.mjs';
 import {
@@ -61,7 +62,9 @@ function publishRoute(type, identity) {
 
 function mount(adapter, host) {
   frame.addEventListener('load', () => {
-    mountThemeEditor(frame, host, { assetsBase: '/theme-editor/' }).catch(showError);
+    mountThemeEditor(frame, host, { assetsBase: '/theme-editor/' })
+      .then(() => { if (host.openAssistantOnStart) frame.contentWindow?.openAgentsamDrawer?.(); })
+      .catch(showError);
   }, { once: true });
   frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/theme-editor/editor.css"></head><body></body></html>';
 }
@@ -133,6 +136,7 @@ async function bootProject(route) {
   const requestedPage = route.pageSlug || 'home';
   if (!project.pages.some(page => page.slug === requestedPage)) throw new Error('theme_project_page_not_found');
   const initialPage = requestedPage;
+  const openAssistantOnStart = new URLSearchParams(location.search).get('assistant') === 'theme';
   const adapter = createThemeProjectAdapter(project, store, {
     resolveAssetBase: base => new URL(base, location.href).href,
     listMedia,
@@ -148,6 +152,7 @@ async function bootProject(route) {
   const host = {
     adapter: bridge,
     page: initialPage,
+    openAssistantOnStart,
     pageRoutes,
     siteId,
     projectId,
@@ -346,31 +351,12 @@ async function bootNewTheme(route) {
 
   const siteId = choice.site.id;
   const siteName = String(choice.site.name || 'My website').trim() || 'My website';
-  const themeSlug = 'new-' + crypto.randomUUID().replaceAll('-', '').slice(0, 12);
-  const preset = {
-    schema: 'agentsam.website-starter-preset.v1',
-    theme: { slug: themeSlug, name: 'New theme', packageVersion: '1.0.0' },
-    sampleProducts: false,
-    tokens: {},
-    pages: [
-      { slug: 'home', title: 'Home', sections: [
-        { type: 'hero', eyebrow: siteName, heading: 'A clear place to begin',
-          body: 'Build a memorable experience for your customers.',
-          ctaLabel: 'Discover our story', ctaHref: '/about' },
-        { type: 'features', eyebrow: 'What makes you different',
-          heading: 'Your story, made clear',
-          body: 'Introduce your work, products, and point of view.',
-          ctaLabel: 'Learn more', ctaHref: '/about' },
-      ] },
-      { slug: 'about', title: 'About', sections: [
-        { type: 'hero', eyebrow: 'About us', heading: 'The people behind the work',
-          body: 'Share the story, purpose, and values that shape your business.',
-          ctaLabel: 'Back home', ctaHref: '/' },
-      ] },
-    ],
-  };
-  const starter = materializeStarterProject(preset, { name: siteName });
-  const { project } = inheritDefaultTemplates(starter);
+  // A new theme is an account-owned editable project, not a prewritten
+  // merchant website. Reuse the existing stock chrome and system templates;
+  // AgentSam opens to author the design after the draft has been created.
+  const draft = blankThemeProject({ name: 'New theme', purpose: '', audience: '', siteName });
+  const scopedDraft = fillMissingThemeChrome(draft, siteName);
+  const { project } = inheritDefaultTemplates(scopedDraft);
   const created = await jsonRequest(API + '?site_id=' + encodeURIComponent(siteId), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -378,7 +364,7 @@ async function bootNewTheme(route) {
   });
   if (!created.project?.id) throw new Error(created.error || 'theme_project_create_failed');
   try { sessionStorage.setItem(LEGACY_SITE_SELECTION_KEY, siteId); } catch { /* Route remains site-scoped. */ }
-  location.replace(themeProjectEditorPath(siteId, created.project.id, 'home'));
+  location.replace(themeProjectEditorPath(siteId, created.project.id, 'home') + '?assistant=theme');
 }
 
 async function boot() {

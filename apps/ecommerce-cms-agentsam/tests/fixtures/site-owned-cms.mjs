@@ -18,7 +18,7 @@ export function createSiteOwnedFixture(){
     CREATE TABLE cms_section_blocks(account_id TEXT,section_id TEXT,block_key TEXT,
       block_type TEXT,status TEXT,content_json TEXT,metadata_json TEXT);
     CREATE TABLE cms_revisions(account_id TEXT,site_id TEXT,entity_type TEXT,
-      entity_id TEXT,revision_number INTEGER,revision_kind TEXT,
+      entity_id TEXT,revision_number INTEGER NOT NULL,revision_kind TEXT,
       content_object_key TEXT,content_hash TEXT,snapshot_json TEXT,metadata_json TEXT);
     INSERT INTO cms_sites VALUES ('main','merchant','Site','site','example.com','active',1),
       ('foreign','other','Other','other','other.example','active',1);
@@ -31,6 +31,22 @@ export function createSiteOwnedFixture(){
       ('hero','home','main-hero','hero','Hero','{}',0,1,'cms',
         'cms/sections/drafts/home/hero.json','cms/sections/publications/home/hero.json',
         'original','2026-10-01');
+  `);
+  // The live inneranimalmedia-business tables have these identity and
+  // versioned renderer-reference columns. Site/page owns tenancy; sections
+  // themselves intentionally have NO account_id.
+  db.exec(`
+    ALTER TABLE cms_page_sections ADD COLUMN definition_id TEXT;
+    ALTER TABLE cms_page_sections ADD COLUMN template_sku TEXT;
+    ALTER TABLE cms_page_sections ADD COLUMN published_hash TEXT;
+    ALTER TABLE cms_page_sections ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json));
+    ALTER TABLE cms_section_blocks ADD COLUMN id TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN parent_block_id TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN updated_at TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE cms_section_blocks ADD COLUMN definition_id TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN template_sku TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(settings_json));
   `);
   const objects=new Map([
     ['cms/sections/drafts/home/hero.json',JSON.stringify({headline:'Existing R2 headline'})],

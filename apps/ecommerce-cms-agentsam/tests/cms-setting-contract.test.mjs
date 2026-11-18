@@ -1,3 +1,10 @@
+// Keep merchant catalog / native section acceptance in the canonical
+// CMS verification command without creating another parallel test workflow.
+import './cms-component-catalog-verification.test.mjs';
+import './cms-site-owned-stock-integration.test.mjs';
+import './cms-portable-style-proof.test.mjs';
+import './platform-stock-native.test.mjs';
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import {normalizeSettingContract,overlayRenderableBlockFields} from "../backend/cms/setting-contract.ts";
@@ -112,4 +119,17 @@ test("section field override remains section-scoped and does not erase its Butto
  assert.equal(s.blocks[0].key,"button");
  assert.equal(s.blocks[0].fields.length,3);
  assert.equal(s.defaultContent.headline,"Original heading");
+});
+
+
+test("stock field arrays and dotted content paths use the canonical typed inspector",()=>{
+ const result=definition("section","portable-hero",{
+   fields:[{key:"headline",type:"text",label:"Headline"},
+     {key:"ctaPrimary.href",type:"link",label:"Button link"}],
+   blocks:[{key:"button",label:"Button"}],
+ });
+ const normalized=normalizeSettingContract(result.fields);
+ assert.deepEqual(normalized.issues,[]);
+ assert.deepEqual(normalized.fields.map(f=>f.key),["headline","ctaPrimary.href"]);
+ assert.equal(normalized.fields[1].type,"link");
 });

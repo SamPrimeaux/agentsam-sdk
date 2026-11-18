@@ -4,6 +4,7 @@
  * No local-only theme project table or parallel theme database is introduced.
  */
 import "../../packages/theme-contract/runtime/platform-stock-sections.js";
+import "../../packages/theme-contract/runtime/portable-sections.js";
 import { validateThemeProject } from "../../frontend/theme-editor/project.mjs";
 import { validateThemeSettings } from "./theme-style-contract.mjs";
 import { fillMissingThemeChrome } from "../../frontend/theme-editor/starter-chrome.mjs";
@@ -72,11 +73,17 @@ export function validateThemeProjectPayload(value) {
       // bypasses the browser and sends a forged theme-project revision.
       const template = String(section?.sourceTemplateKey ||
         section?.content?.__editor?.templateKey || "");
-      if (!template.startsWith("stock-")) continue;
-      const id = "platform/" + template.slice("stock-".length);
+      if (!template.startsWith("stock-") && !template.startsWith("portable-")) continue;
+      const portable = globalThis.ThemePortableSections;
+      const id = template.startsWith("stock-")
+        ? "platform/" + template.slice("stock-".length)
+        : String(section.content?.__editor?.themePreset || "");
+      if (template.startsWith("portable-") &&
+          portable?.sourceTemplate?.(id)?.key !== template)
+        throw new Error("theme_portable_preset_invalid");
       const content = structuredClone(section.content || {});
       content.__editor = {...(content.__editor || {}),templateKey:"portable",themePreset:id};
-      const valid = globalThis.ThemePlatformStock?.validate(id,content);
+      const valid = portable?.validate?.(id,content);
       if (!valid?.ok) throw new Error("theme_stock_content_invalid");
     }
   }

@@ -20,30 +20,22 @@
     setNote("Theme settings validation is unavailable. Reload to retry; your draft has not been changed.", "error");
   });
   const params = new URLSearchParams(location.search);
-  const showcaseTheme = ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
-  // Packaged showcases stay preview-only unless the host explicitly provides
-  // a site-scoped CMS adapter. Resolve's local proof uses the same editor API
-  // contract without connecting to a customer or production database.
+  // Only the authenticated CMS host or explicit page inventory can select content.
   const host = window.AgentSamThemeEditorHost || null;
   let stockHandoffShown = false;
   const editorRequest = host ? host.adapter.request.bind(host.adapter) : (window.cmsAdminFetch || window.adminFetch);
-  const violetShowcase = showcaseTheme === 'violet';
-  const resolveShowcase = showcaseTheme === 'resolve';
-  const journalShowcase = showcaseTheme === 'plain-jane';
-  const localShowcase = Boolean(showcaseTheme);
-  const showcaseDisplayName = journalShowcase ? 'Plain Jane Journal' : resolveShowcase ? 'Resolve' : 'Violet';
-  let slug = host?.page || params.get('slug') || (localShowcase ? 'home' : 'shop');
+  let slug = host?.page || params.get('slug') || 'home';
   if (!host) window.cmsActivePageSlug = slug;
   let pageData = null;
   let siteData = null;
   let pages = [];
   let pagePickerCategory = null;
-  let showcaseTemplate = null;
   let activeSectionKey = null;
   let activeSectionOwner = slug;
-  let selectedTheme = 'heuristic';
+  let selectedTheme = null;
+  let primaryThemeSlug = null;
   let persistedThemeVersion = 0;
-  let installedThemeSlugs = new Set(['heuristic']);
+  let installedThemeSlugs = new Set();
   let previewBlobUrl = null;
   let siteDraftTouched = false;
   let liveUnimported = false;
@@ -134,7 +126,7 @@
   let publishInFlight = false;
   let hasEditedThisSession = false;
   let autosaveFailed = false;
-  const preferredDevice = host?.initialDevice || params.get('previewMode') || (localStorage.getItem('agentsam:cms:preview-device') || localStorage.getItem('fnf-theme-editor-device'));
+  const preferredDevice = host?.initialDevice || params.get('previewMode') || localStorage.getItem('agentsam:cms:preview-device');
   let device = ['desktop','tablet','mobile'].includes(preferredDevice) ? preferredDevice : 'desktop';
   let inspectionEnabled = true;
   const undoHistory = [];
@@ -183,18 +175,6 @@
   const showOutlines = true;
   const autoPreview = true;
 
-  // Public URL inventory for the SDK site; not CMS publication evidence.
-  // Tenant-owned CMS pages from /api/admin/cms/pages always take precedence.
-  const fallbackPages = [
-    { slug: 'home', title: 'Home', route: '/' },
-    { slug: 'learn', title: 'Learn', route: '/learn' },
-    { slug: 'themes', title: 'Themes', route: '/themes/' },
-    { slug: 'sdk-help', title: 'SDK Help', route: '/packages/sdk/help/' },
-    { slug: 'sam-docs', title: 'SAM Docs', route: '/docs/sam/' },
-    { slug: 'structured-decisions', title: 'Structured Decisions', route: '/docs/sam/structured-decisions' },
-    { slug: 'infrastructure-cookbooks', title: 'Infrastructure Cookbooks', route: '/docs/sam/infrastructure-cookbooks' },
-    { slug: 'native-runtime', title: 'Native Go Runtime', route: '/docs/sam/native-runtime' }
-  ];
   const icon = {
     page: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6z" stroke="currentColor" stroke-width="1.7"/><path d="M15 3v4h4" stroke="currentColor" stroke-width="1.7"/></svg>',
     section: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
@@ -214,6 +194,16 @@
     redo: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h2"/></svg>',
     more: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>'
   };
+
+  // Identity imagery belongs to the owning host/theme, not this editor bundle.
+  function assistantMark() {
+    const source = host?.assets?.assistantIconUrl || window.AgentSamThemeEditorAssets?.assistantIconUrl || '';
+    if (typeof source === 'string' && source.startsWith('/') && !source.startsWith('//') &&
+        !/[\s"'<>]/.test(source)) {
+      return '<img src="' + cmsEscapeAttr(source) + '" width="20" height="20" alt="" aria-hidden="true">';
+    }
+    return '<span class="te-assistant-glyph" aria-hidden="true">✦</span>';
+  }
 
   function shellMarkup() {
     return [
@@ -239,7 +229,7 @@
             '<span class="te-save-state" id="te-save-state" role="status" aria-live="polite" title="Loading" aria-label="Loading">Loading</span>',
           '</div>',
           '<div class="theme-studio-toolbar__right">',
-            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false"><img src="/admin/brand/agentsam-gorilla-tiny.svg" width="20" height="20" alt="" aria-hidden="true"></button>',
+            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false">' + assistantMark() + '</button>',
             '<button type="button" class="te-icon-btn" id="te-inspect-mode" aria-label="Canvas inspection on" title="Canvas inspection on — select sections in the preview" aria-pressed="true">', icon.inspect, '</button>',
             '<span class="te-toolbar-separator" aria-hidden="true"></span>',
             '<div class="te-device-switch" aria-label="Preview device">',
@@ -455,34 +445,14 @@
 
   function pageRoute(pageSlug) {
     if (host) return host.pageRoutes?.[pageSlug] || null;
-    // A site-owned CMS draft must never preview a global SDK/demo route just
-    // because another site happens to use a common slug such as 'home'.
-    if (window.cmsActiveSiteId) {
-      const owned = pageSlug === slug && pageData?.slug === slug
-        ? pageData : pages.find(page => page.slug === pageSlug);
-      if (!owned) return null;
-      if (activeCmsSite?.id && activeCmsSite.id !== window.cmsActiveSiteId) return null;
-      // Theme Store's preview is the published storefront, never a draft or
-      // internal site-shell document. All other selected sites use the same
-      // site-owned route resolver; app-store route templates are normalized
-      // by cmsEditorStorefrontUrl rather than a separate editor branch.
-      if (activeCmsSite?.id === 'theme-store' && owned.status !== 'published') return null;
-      const route = owned.route_path || owned.route || owned.live_route;
-      if (!route || route === '/_site-shell') return null;
-      return window.cmsEditorStorefrontUrl?.(activeCmsSite, route) || null;
-    }
-    // Bridge Fly is a real authored R2 scene, not a publishable storefront
-    // route. Its authenticated canvas can still be previewed in this editor.
-    if (pageSlug === 'bridge-fly') return '/admin/bridge-fly-preview';
-    const authoritative = pages.find(function(page) { return page.slug === pageSlug; });
-    if (authoritative?.live_route) return authoritative.live_route;
-    if (window.PAGE_ROUTES && window.PAGE_ROUTES[pageSlug]) return window.PAGE_ROUTES[pageSlug];
-    const known = fallbackPages.find(function(page) { return page.slug === pageSlug; });
-    // A CMS record is not necessarily a published storefront route. Never
-    // silently show the homepage as the preview for an unknown customer page.
-    return known ? known.route : null;
+    const owned = pageSlug === slug && pageData?.slug === slug
+      ? pageData : pages.find(page => page.slug === pageSlug);
+    if (!owned || !window.cmsActiveSiteId ||
+        (activeCmsSite?.id && activeCmsSite.id !== window.cmsActiveSiteId)) return null;
+    const route = owned.route_path || owned.route || owned.live_route;
+    return route && route !== '/_site-shell'
+      ? window.cmsEditorStorefrontUrl?.(activeCmsSite, route) || null : null;
   }
-
 
   function ownerSections(ownerSlug) {
     const doc = ownerSlug === 'site' ? siteData : pageData;
@@ -513,44 +483,31 @@
   }
 
   function themeCatalog() {
-    // Installed projects own a derived registry of reusable source sections.
-    // Do not offer portable/native templates that the project adapter cannot
-    // install: that was the cause of theme_section_template_not_found.
-    if (host) {
-      return Object.entries(window.SECTION_SCHEMAS?.[slug] || {})
-        .filter(function([key, definition]) {
-          return /^(source-|custom-|stock-)/.test(key) && definition?.capabilities?.insert === true;
-        })
-        .map(function([key, definition]) {
-          return { id: key, label: definition.label || humanize(key),
-            type: definition.sourceKind || 'content-section', templateKey: key,
-            source: key.startsWith('stock-') ? 'Platform stock' :
-              definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
-            preset: key, category: key.startsWith('stock-') ? 'Platform stock' : 'Theme sections',
-            previewHtml: definition.previewHtml || '' };
-        });
-    }
-    // CMS pages use the published portable renderer catalog, not fixture labels.
-    const portable = window.ThemePortableSections?.catalog() || [];
-    const registry = window.SECTION_SCHEMAS?.[slug] || {};
-    const native = Object.entries(registry)
-      .filter(function([key]) {
-        // A legacy descriptor alone does NOT prove a renderer exists.
-        // Offer native templates only after finding their rendered source
-        // section in the current storefront. This works for arbitrary
-        // merchant pages rather than handpicked home/shop section names.
-        try {
-          const doc = byId('theme-preview')?.contentDocument;
-          return Boolean(doc?.querySelector(
-            '[data-cms-section="' + CSS.escape(key) + '"], [data-section-id="' + CSS.escape(key) + '"]'
-          ));
-        } catch { return false; }
-      })
-      .map(function([key, definition]) {
-        return { id: 'heuristic/' + key, label: definition.label || humanize(key),
-          type: key, templateKey: key, source: 'heuristic', preset: 'heuristic/' + key };
-      });
-    return [...native, ...portable];
+    // The installed Theme Store project supplies actual insertable section
+    // definitions and faithful source previews. CMS pages additionally have
+    // tenant-authorized STOCK templates selected by their canonical SKU.
+    const schemas = window.SECTION_SCHEMAS?.[slug] || {};
+    const native = Object.entries(schemas)
+      .filter(([,definition]) => definition?.capabilities?.insert === true)
+      .map(([key,definition]) => ({
+        id:key, label:definition.label || humanize(key),
+        type:definition.sourceKind || 'section', templateKey:key,
+        preset:definition.preset || key,
+        source:definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
+        category:definition.category || 'Theme sections',
+        previewHtml:definition.previewHtml || '',
+      }));
+    if(host)return native;
+    const stock=(window.cmsRegistry?.catalog||[])
+      .filter(row=>row.itemType==='section' && row.catalogAvailable===true &&
+        row.installable===true && !!row.sku)
+      .map(row=>({
+        id:row.sku,label:row.name||row.label||row.sku,
+        type:row.definitionKey||'section',templateKey:'catalog-stock',
+        source:'CMS stock',preset:row.sku,rendererPreset:row.rendererKey,
+        category:row.category||'Sections',catalog:row,
+      }));
+    return [...stock,...native];
   }
 
   async function setTheme(nextTheme) {
@@ -596,24 +553,21 @@
   function syncPublishCapability() {
     const button = byId('te-publish');
     if (!button) return;
-    if (localShowcase) {
-      button.disabled = true;
-      button.title = showcaseDisplayName + ' preview-only showcase — publishing is disabled';
-      return;
-    }
     if (host && host.adapter.capabilities?.publish === false) {
       button.disabled = true;
       button.title = 'This draft theme workspace does not publish pages directly. Publish the reviewed theme from Online Store.';
       return;
     }
-    const sceneOnly = slug === 'bridge-fly';
-    const previewOnly = selectedTheme !== 'heuristic' || sceneOnly;
+    // A publish button requires verified capability from the host or the
+    // selected active, installed site theme. Never infer it from a slug.
+    const previewOnly = host
+      ? host.adapter.capabilities?.publish !== true
+      : !selectedTheme || selectedTheme !== primaryThemeSlug ||
+        !installedThemeSlugs.has(selectedTheme);
     button.disabled = previewOnly || liveUnimported;
-    button.title = sceneOnly
-      ? 'Scene source preview only. A storefront publication adapter is not approved.'
-      : previewOnly
-        ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
-        : liveUnimported ? 'Import the live storefront before publishing.' : 'Publish the current CMS page and changed global sections';
+    button.title = previewOnly ? 'Publishing is unavailable for this preview or draft.'
+      : liveUnimported ? 'Import the live storefront before publishing.'
+        : 'Publish the current CMS page and changed global sections';
   }
 
   function currentSection() {
@@ -671,6 +625,21 @@
     return sectionSchema.blocks.find(function(block) { return block.key === meta.templateKey; }) || null;
   }
 
+  // Match the canonical setting-contract.ts operators. A definition decides
+  // visibility; Theme Studio never branches on section names for controls.
+  function settingVisible(field, content) {
+    if (!Array.isArray(field?.visibleWhen) || !field.visibleWhen.length) return true;
+    return field.visibleWhen.every(condition => {
+      if (!condition || typeof condition.fieldId !== 'string') return false;
+      const value = cmsGetPath(content || {}, condition.fieldId);
+      if (condition.operator === 'equals') return value === condition.value;
+      if (condition.operator === 'not_equals') return value !== condition.value;
+      if (condition.operator === 'in') return Array.isArray(condition.value) &&
+        condition.value.includes(value);
+      return false;
+    });
+  }
+
   function currentSchema() {
     const block = currentBlockSchema();
     if (activeBlockId) {
@@ -682,12 +651,14 @@
       // typed authoring engine, not ad hoc field-name rules in this UI module.
       const fields = window.cmsAuthoring?.rendererFields('block', meta?.templateKey,
         block.fields || [], values) || block.fields || [];
-      return fields.map(function(field) {
+      return fields.filter(field => settingVisible(field, values)).map(function(field) {
         return { ...field, key: activeBlockId + '.' + field.key, blockRelativeKey: field.key };
       });
     }
     const schema = currentSectionSchema();
-    return (schema && schema.fields) || (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
+    const declared = (schema && schema.fields) ||
+      (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
+    return declared.filter(field => settingVisible(field, currentSection()?.content));
   }
 
   function contextualStyleFields() {
@@ -747,15 +718,11 @@
       return contextualStyleFields().concat(/cta|button|href|link/i.test(activeFieldKey) ? [] : sectionPadding);
     }
     const schema = currentSectionSchema();
-    const defined = ((schema && schema.settings) || []).filter(function(field) {
-      // A merchant adjusts the common layout and spacing in the standard
-      // inspector. Rare motion/visibility are available under the section menu.
-      return /^(layout|spacing|surface|appearance|media)$/i.test(field.group || '');
-    }).filter(function(field) {
-      // Initial surface should not expose 12 identical margin controls.
-      return !/margin(Top|Bottom|Left|Right)|padding(Left|Right)|borderRadius/.test(field.key);
-    }).map(function(field) { return {...field,designStyle:true}; });
-    return defined;
+    // The definition is the inspector authority: don't silently suppress
+    // valid fields because their group or key wasn't anticipated in this UI.
+    return ((schema && schema.settings) || [])
+      .filter(field => settingVisible(field, currentSection()?.content))
+      .map(field => ({...field,designStyle:true}));
   }
 
   function allEditableFields() {
@@ -831,7 +798,7 @@
 
   function schedulePrivateAutosave() {
     clearTimeout(autosaveTimer);
-    if (!dirty || liveUnimported || autosaveFailed || (localShowcase && !host?.capabilities?.cmsWrite)) return;
+    if (!dirty || liveUnimported || autosaveFailed) return;
     autosaveTimer = setTimeout(function() {
       void saveDraft({ automatic: true });
     }, 900);
@@ -851,14 +818,12 @@
     dirty = Boolean(value);
     const save = byId('te-save');
     if (save) {
-      save.disabled = (localShowcase && !host?.capabilities?.cmsWrite) || liveUnimported || (!dirty && !hasEditedThisSession && !host?.capabilities?.cmsWrite);
+      save.disabled = liveUnimported || (!dirty && !hasEditedThisSession && !host?.capabilities?.cmsWrite);
       save.classList.toggle('is-dirty', dirty);
       save.setAttribute('aria-label', dirty ? 'Save unsaved draft changes' : 'Save draft — latest changes already saved');
       save.title = dirty ? 'Save draft changes (⌘S)' : 'Draft is saved — Save again if needed (⌘S)';
     }
-    if (localShowcase && !host?.capabilities?.cmsWrite) setSaveState(showcaseDisplayName + ' · local preview only');
-    else if (localShowcase && host?.capabilities?.cmsWrite) setSaveState(dirty ? 'Unsaved CMS changes' : 'Saved to CMS draft', dirty ? 'dirty' : 'saved');
-    else if (liveUnimported) setSaveState('Preview only');
+    if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
     if (!dirty && hasEditedThisSession) {
@@ -873,65 +838,6 @@
   // installed pages or products. Every capability stays offered.
   const { templateNavigation } = await import('/theme-editor/system-template-registry.mjs');
   const storefrontMenu = templateNavigation();
-  if (resolveShowcase) {
-    const products = storefrontMenu.find(item => item.id === 'products');
-    products.children = [
-      {title:'All products',page:'resolve-products'},
-      {title:'Default product',page:'resolve-product'}
-    ];
-    const collections = storefrontMenu.find(item => item.id === 'collections');
-    collections.children = [
-      { title: 'Collections list', page: 'resolve-collections' },
-      { title: 'Default collection', page: 'resolve-collection' },
-      { title: 'Leather studies', page: 'resolve-leather' },
-      { title: 'Knitwear edit', page: 'resolve-knitwear' },
-    ];
-    for(const [id,page] of [
-      ['gift-card','resolve-gift-card'],['search','resolve-search'],
-      ['checkout','resolve-checkout'],['404','resolve-404'],['metaobject','resolve-metaobject']]){
-      storefrontMenu.find(item => item.id===id).page=page;
-    }
-    storefrontMenu.find(item=>item.id==='blogs').children=[
-      {title:'Editorial archive',page:'resolve-blogs'},
-      {title:'Plain Jane · Blog starter',preset:'plain-jane',page:'journal-home'}
-    ];
-    storefrontMenu.find(item=>item.id==='posts').children=[
-      {title:'Editorial article',page:'resolve-article'},
-      {title:'Plain Jane · Article starter',preset:'plain-jane',page:'journal-the-art-of-slow-travel'}
-    ];
-    const cart = storefrontMenu.find(item => item.id === 'cart'); cart.page = 'resolve-cart';
-    const password = storefrontMenu.find(item => item.id === 'password'); password.page = 'resolve-password';
-    storefrontMenu.find(item=>item.id==='customer').children.push(
-      { title: 'Sign in', page: 'resolve-sign-in' },
-      { title: 'Sign up', page: 'resolve-sign-up' },
-      { title: 'Account overview', page: 'resolve-account' },
-      { title: 'Order history', page: 'resolve-orders' },
-      { title: 'Saved pieces', page: 'resolve-saved' },
-      { title: 'Profile & preferences', page: 'resolve-profile' },
-    );
-  }
-  if (journalShowcase) {
-    const journalMenu = [
-      {id:'home',title:'Journal home',icon:'home',page:'journal-home'},
-      {id:'blogs',title:'Blog index',icon:'blog',children:[{title:'Notes on a quieter life',page:'journal-home'}]},
-      {id:'posts',title:'Articles',icon:'post',children:[
-        {title:'The art of slow travel',page:'journal-the-art-of-slow-travel'},
-        {title:'Analog photography in a digital age',page:'journal-analog-photography-digital-age'}
-      ]},
-      {id:'gallery',title:'Photography',icon:'collection',page:'journal-photography'},
-      {id:'pages',title:'Pages',icon:'page',children:[
-        {title:'About',page:'journal-about'},
-        {title:'Contact',page:'journal-contact'},
-        {title:'Privacy',page:'journal-privacy'},
-        {title:'Terms',page:'journal-terms'},
-        {title:'404',page:'journal-404'}
-      ]}
-    ];
-    storefrontMenu.find(item=>item.id==='blogs').children.push(...journalMenu.filter(item=>item.id==='blogs').flatMap(item=>item.children||[]));
-    storefrontMenu.find(item=>item.id==='posts').children.push(...journalMenu.filter(item=>item.id==='posts').flatMap(item=>item.children||[]));
-    storefrontMenu.find(item=>item.id==='pages').children.push(...journalMenu.filter(item=>item.id==='pages').flatMap(item=>item.children||[]));
-    storefrontMenu.find(item=>item.id==='home').page='journal-home';
-  }
   // Installed package pages are listed from the authorized CMS page inventory below.
 
   const pickerIconPaths = {
@@ -955,7 +861,7 @@
   const catalogResources = { products: [], collections: [], loaded: false };
 
   async function loadStorefrontResources() {
-    if (host || localShowcase || catalogResources.loaded) return;
+    if (host || catalogResources.loaded) return;
     catalogResources.loaded = true;
     const requests = await Promise.allSettled([
       editorRequest('/api/admin/products'),
@@ -966,298 +872,65 @@
     if (!byId('te-page-popover')?.hidden) renderPageOptions(byId('te-page-search').value);
   }
 
-  function showScaffoldTemplate(template, title) {
-    if (!localShowcase) {
-      // Navigate only to pages delivered by this installed package or site.
-      // A generic template choice must never jump into an unrelated showcase.
-      const aliases = { 'products-list': 'product', 'collections-list': 'collection', 'gift-card': 'gift_card', '404': 'not_found' };
-      const kind = aliases[template] || template;
-      const installed = pages.find(page => page.slug === template ||
-        page.page_type === kind || page.template_key === kind ||
-        page.slug?.endsWith('-' + template));
-      if (installed) void switchPage(installed.slug);
-      else {
-        const params=new URLSearchParams(location.search);
-        const target=new URL('/canvas',location.origin);
-        target.searchParams.set('host','online-store');
-        target.searchParams.set('template',kind);
-        if(params.get('site_id'))target.searchParams.set('site_id',params.get('site_id'));
-        window.top.location.assign(target.href);
-      }
-      return;
-    }
-    showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
-    byId('te-page-title').textContent = title;
-    byId('te-tree-title').textContent = title;
-    byId('te-tree').innerHTML = '<div class="te-tree-scaffold"><div class="te-picker-heading">Header</div>' +
-      '<div class="te-tree-scaffold-row">▤ &nbsp; Violet header</div><div class="te-picker-heading">Template</div>' +
-      '<div class="te-tree-scaffold-row">▤ &nbsp; ' + cmsEscapeHtml(title) + '</div>' +
-      '<div class="te-tree-scaffold-row">⊕ &nbsp; Add section · UI scaffold</div>' +
-      '<div class="te-picker-heading">Footer</div><div class="te-tree-scaffold-row">▤ &nbsp; Violet footer</div></div>';
-    closePageMenu();
-    renderScaffoldInspector();
-    refreshPreview();
-    setNote((resolveShowcase ? 'Resolve' : 'Violet') + ' · ' + title + ' — local template scaffold. No data is connected or published.');
-  }
-
-  function renderScaffoldInspector() {
-    if (!showcaseTemplate || !localShowcase) return;
-    const data = showcaseTemplate;
-    const formTemplate = ['checkout','metaobject','contact'].includes(data.template);
-    byId('te-inspector-title').textContent = data.title;
-    byId('te-inspector-subtitle').textContent = (resolveShowcase ? 'Resolve' : 'Violet') + ' · local template settings';
-    byId('te-section-status').textContent = 'preview';
-    const panel = byId('te-inspector-body');
-    panel.innerHTML = '<div class="te-scaffold-controls"><div class="te-picker-heading">Template content</div>' +
-      '<label>Heading<input type="text" maxlength="110" data-scaffold-setting="title" value="' + cmsEscapeAttr(data.title) + '"></label>' +
-      '<label>Description<textarea rows="3" data-scaffold-setting="subtitle">' + cmsEscapeHtml(data.subtitle) + '</textarea></label>' +
-      (formTemplate ? '<label>Button label<input type="text" maxlength="60" data-scaffold-setting="buttonLabel" value="' + cmsEscapeAttr(data.buttonLabel) + '"></label>' +
-      '<div class="te-picker-heading">Form fields · local only</div><div data-scaffold-fields>' +
-      data.fields.map((label,index) => '<div class="te-scaffold-field"><input aria-label="Field ' + (index+1) + '" data-scaffold-field="' + index + '" value="' + cmsEscapeAttr(label) + '">' +
-      '<button type="button" data-scaffold-remove="' + index + '" aria-label="Remove field ' + (index+1) + '">×</button></div>').join('') +
-      '</div><button type="button" class="te-scaffold-add" data-scaffold-add>+ Add form field</button>' : '') +
-      '<div class="te-scaffold-readonly">UI preview only. No Stripe, forms, or D1 records are changed.</div></div>';
-    panel.querySelectorAll('[data-scaffold-setting]').forEach(input => input.addEventListener('input', () => {
-      if (!showcaseTemplate) return;
-      showcaseTemplate[input.dataset.scaffoldSetting] = input.value;
-      if (input.dataset.scaffoldSetting === 'title') {
-        byId('te-page-title').textContent = input.value || 'Untitled template';
-        byId('te-tree-title').textContent = input.value || 'Untitled template';
-      }
-      refreshPreview();
-    }));
-    panel.querySelectorAll('[data-scaffold-field]').forEach(input => input.addEventListener('input', () => {
-      if (!showcaseTemplate) return;
-      showcaseTemplate.fields[Number(input.dataset.scaffoldField)] = input.value;
-      refreshPreview();
-    }));
-    panel.querySelectorAll('[data-scaffold-remove]').forEach(button => button.addEventListener('click', () => {
-      if (!showcaseTemplate) return;
-      showcaseTemplate.fields.splice(Number(button.dataset.scaffoldRemove),1);
-      renderScaffoldInspector();
-      refreshPreview();
-    }));
-    panel.querySelector('[data-scaffold-add]')?.addEventListener('click', () => {
-      if (!showcaseTemplate || showcaseTemplate.fields.length >= 12) return;
-      showcaseTemplate.fields.push('New field');
-      renderScaffoldInspector();
-      refreshPreview();
-    });
-  }
-
-  function renderResolveScaffold(template, title) {
-    const data = showcaseTemplate || { title, subtitle: '', buttonLabel: 'Continue', fields: [] };
-    const safeTitle = cmsEscapeHtml(data.title || title);
-    const safeSubtitle = cmsEscapeHtml(data.subtitle || '');
-    const needsForm = ['checkout','metaobject','contact','search'].includes(template);
-    const form = needsForm
-      ? '<div class="r-fields">' + (data.fields || []).map(label =>
-        '<label>' + cmsEscapeHtml(label) + '<input disabled placeholder="' + cmsEscapeAttr(label) + '"></label>').join('') +
-        '<button disabled>' + cmsEscapeHtml(data.buttonLabel || 'Continue') + ' · Preview</button></div>'
-      : '<div class="r-placeholders"><div></div><div></div><div></div></div>';
-    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-      '<style>body{margin:0;background:#fbfaf9;color:#0c0c0c;font:14px Geist,Arial,sans-serif}.r-head{background:#0b0b0b;padding:25px 5%;color:#fff;display:flex;justify-content:space-between;letter-spacing:.16em;font-size:11px}.r-head b{letter-spacing:.28em}.r-body{padding:100px max(6%,25px);min-height:55vh}.r-kicker{font-size:10px;letter-spacing:.2em;color:#8b181b;text-transform:uppercase;font-weight:750}.r-body h1{font-size:clamp(38px,5vw,72px);max-width:750px;line-height:1.05;text-transform:uppercase;letter-spacing:-.04em}.r-body p{color:#747474;max-width:500px;line-height:1.65}.r-fields{display:grid;gap:10px;max-width:510px;margin-top:40px}.r-fields label{font-size:11px;display:grid;gap:7px}.r-fields input{height:40px;padding:10px;border:1px solid #dedede}.r-fields button{background:#111;color:white;border:0;padding:15px}.r-placeholders{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:40px}.r-placeholders div{background:#efebed;height:180px}.r-foot{background:#111;color:#888;padding:25px 6%;font-size:11px}.r-tag{display:inline-block;margin-top:30px;padding:10px;border:1px solid #d3bec5;color:#8b181b;font-size:10px}@media(max-width:600px){.r-body{padding:60px 22px}.r-placeholders{grid-template-columns:1fr}}</style></head><body>' +
-      '<header class="r-head"><span>SHOP &nbsp; WARDROBE &nbsp; EDITORIAL</span><b>◆ RESOLVE ◆</b></header><main class="r-body">' +
-      '<div class="r-kicker">Resolve template · ' + cmsEscapeHtml(template) + '</div><h1>' + safeTitle + '</h1><p>' + safeSubtitle + '</p>' + form +
-      '<div class="r-tag">UI scaffold · Not connected to customer data</div></main><footer class="r-foot">RESOLVE ATELIER &nbsp; · &nbsp; AgentSam local preview</footer></body></html>';
-  }
-
-  function renderVioletScaffold(template, title) {
-    const safeTitle = cmsEscapeHtml(showcaseTemplate?.title || title);
-    const safeSubtitle = cmsEscapeHtml(showcaseTemplate?.subtitle || '');
-    const safeButton = cmsEscapeHtml(showcaseTemplate?.buttonLabel || 'Continue');
-    const safeKind = cmsEscapeHtml(template);
-    const cards = template === 'products-list' || template === 'collection' || template === 'collections-list'
-      ? '<div class="v-cards"><div>Campaign essentials</div><div>Community merch</div><div>Supporter gifts</div></div>' : '';
-    const form = template === 'checkout' || template === 'contact' || template === 'metaobject'
-      ? '<div class="v-form">' + (showcaseTemplate?.fields || []).map((label,index) =>
-        '<label>' + cmsEscapeHtml(label) + '<input type="text" placeholder="' + cmsEscapeAttr(label) + '" disabled></label>').join('') +
-        '<button type="button" disabled>' + safeButton + ' · preview only</button></div>' : '';
-    const empty = template === 'cart' ? '<div class="v-empty">Your cart is empty<div class="v-sub">Continue exploring the Violet storefront.</div></div>' : '';
-    const search = template === 'search' ? '<div class="v-form"><input placeholder="Search Violet" disabled></div>' : '';
-    const password = template === 'password' ? '<div class="v-form"><input type="password" placeholder="Store password" disabled></div>' : '';
-    const body = '<div class="v-sub">' + safeSubtitle + '</div>' +
-      (form || empty || search || password || cards || '<div class="v-sub">Connect this template to live content after approving the interface.</div>');
-    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-      '<link rel="stylesheet" href="/themes/violet/demo/global/cpas-public-surface.css">' +
-      '<style>body{background:#101127;color:#f6f4ff;font-family:Inter,system-ui,sans-serif;margin:0}.v-header{display:flex;align-items:center;justify-content:space-between;padding:19px 5%;border-bottom:1px solid #ffffff23;background:#15162d}.v-brand{display:flex;align-items:center;gap:11px;font-weight:800}.v-brand img{width:33px;height:33px;object-fit:contain}.v-nav{display:flex;gap:24px;font-size:12px;color:#c1bad2}.v-main{min-height:60vh;padding:64px max(6%,24px);background:radial-gradient(circle at 80% 0%,#713f862f,transparent 48%)}.v-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.17em;color:#c695ed;font-weight:800}.v-main h1{font-family:Georgia,serif;font-size:clamp(35px,5vw,68px);margin:18px 0 10px;letter-spacing:-.04em}.v-sub{color:#bdb7c9;font-size:14px;max-width:520px;line-height:1.6}.v-preview{display:inline-flex;font-size:11px;color:#d8bee8;background:#a758c520;border:1px solid #be8ace54;border-radius:100px;padding:7px 12px;margin-top:20px}.v-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:35px}.v-cards>div{min-height:160px;background:linear-gradient(130deg,#36203d,#25273b);border:1px solid #635070;border-radius:12px;display:flex;align-items:flex-end;padding:20px;font-weight:700}.v-form{max-width:540px;margin-top:30px;display:grid;gap:12px}.v-form label{display:grid;gap:6px;font-size:12px;color:#ddd}.v-form input,.v-form textarea{box-sizing:border-box;padding:13px 15px;width:100%;background:#ffffffef;border:0;border-radius:8px;color:#242424}.v-form button{padding:14px;border:0;border-radius:8px;background:#9345bb;color:#fff;font-weight:750}.v-empty{text-align:center;font-size:22px;font-weight:700;padding:55px 0}.v-footer{padding:27px 5%;border-top:1px solid #ffffff23;color:#a9a4b8;font-size:12px}.v-foot-row{display:flex;justify-content:space-between}@media(max-width:650px){.v-nav{display:none}.v-cards{grid-template-columns:1fr}.v-main{padding:45px 20px}}</style></head>' +
-      '<body data-studio-template="' + safeKind + '"><header class="v-header"><div class="v-brand"><img alt="" src="/themes/violet/demo/assets/generated/theme-mark.svg">Violet</div><div class="v-nav"><span>Home</span><span>Campaigns</span><span>Stories</span><span>Get involved</span></div></header>' +
-      '<main class="v-main"><div class="v-kicker">Violet theme · ' + safeKind + '</div><h1>' + safeTitle + '</h1>' + body +
-      '<div class="v-preview">UI scaffold · Not connected to customer data</div></main><footer class="v-footer"><div class="v-foot-row"><span>Violet Initiative</span><span>AgentSam Commerce · local preview</span></div></footer></body></html>';
-  }
-
+  // Pages are always the site-owned CMS inventory, never a fixture/theme showcase.
   function renderPageOptions(query) {
-    const needle = String(query || '').trim().toLowerCase();
     const root = byId('te-page-options');
-    const source = host ? pages : (pages.length ? pages : fallbackPages);
-    const pageFor = key => source.find(p => p.slug === key);
-    const canCreateResolve = resolveShowcase && ['products','collections','pages','blogs','posts','metaobject'].includes(pagePickerCategory);
-    const match = (text) => !needle || String(text || '').toLowerCase().includes(needle);
-    const row = (title, iconText, attrs, detail, arrow) =>
-      '<button type="button" class="te-page-option' + (detail === 'UI scaffold' ? ' is-scaffold' : '') + '" ' + attrs + '><span class="te-picker-icon" aria-hidden="true">' + pickerIcon(iconText) + '</span>' +
-      '<span class="te-picker-copy"><strong>' + cmsEscapeHtml(title) + '</strong>' +
-      (detail ? '<small>' + cmsEscapeHtml(detail) + '</small>' : '') + '</span>' +
-      (arrow ? '<span class="te-picker-chevron" aria-hidden="true">›</span>' : '') + '</button>';
+    if (!root) return;
+    const needle = String(query || '').trim().toLowerCase();
+    const source = pages.filter(page => page?.slug && page.slug !== 'site');
+    const pageKinds = {
+      home: ['home'], products: ['product','product_list'],
+      collections: ['collection','collection_list'], pages: ['page','contact'],
+      blogs: ['blog'], posts: ['article'], cart: ['cart'], checkout: ['checkout'],
+      customer: ['customer_account','customer_sign_in','customer_sign_up','customer_orders'],
+      search: ['search'], password: ['password'], '404': ['not_found'],
+      'gift-card': ['gift_card'],
+    };
+    const inCategory = (page, group) => {
+      const kinds = pageKinds[group.id] || [group.template || group.id];
+      return kinds.includes(page.page_type || page.template_key || page.slug) ||
+        kinds.includes(page.slug);
+    };
+    const pageButton = page => '<button type="button" class="te-page-option" data-picker-page="' +
+      cmsEscapeAttr(page.slug) + '"><span class="te-picker-icon" aria-hidden="true">' +
+      pickerIcon(page.page_type || 'page') + '</span><span class="te-picker-copy"><strong>' +
+      cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><small>' +
+      cmsEscapeHtml(page.route_path || page.route || '') + '</small></span></button>';
+    const group = storefrontMenu.find(item => item.id === pagePickerCategory);
     let html = '';
-    const parent = storefrontMenu.find(group => group.id === pagePickerCategory);
-    if (parent && !needle) {
-      html = '<button type="button" class="te-page-option te-picker-back" data-picker-back="true"><span class="te-picker-icon" aria-hidden="true">‹</span><span class="te-picker-copy"><strong>Back to online store</strong></span></button>';
-      html += '<div class="te-picker-heading">' + cmsEscapeHtml(parent.title) + '</div>';
-      const children = [...(parent.children || [])];
-      if (parent.resource === 'pages') {
-        const pageOptions = resolveShowcase
-          ? source.filter(p => p.slug === 'resolve-page')
-          : journalShowcase
-            ? source.filter(p => p.slug.startsWith('journal-') && p.slug !== 'journal-home')
-            : violetShowcase
-              ? source.filter(p => p.slug.startsWith('violet-'))
-              : source.filter(p => p.slug !== 'site' && !/^(resolve-|journal-|violet-)/.test(p.slug));
-        children.push(...pageOptions.map(p => ({ title: p.title || humanize(p.slug), page: p.slug })));
-        if(resolveShowcase && !children.some(child => child.page === 'resolve-page')) {
-          children.push({title:'Default content page',page:'resolve-page'});
-        }
-      }
-      if(resolveShowcase)children.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[])
-        .filter(p=>p.kind===parent.id).map(p=>({title:p.title+' · Draft',page:p.slug})));
-      if (host && ['products', 'collections', 'blogs', 'posts'].includes(parent.id)) {
-        const kind = { products: 'product', collections: 'collection', blogs: 'blog', posts: 'article' }[parent.id];
-        children.push(...source.filter(page => page.slug && (
-          page.page_type === kind || page.template_key === kind ||
-          page.slug === kind || page.slug.endsWith('-' + kind)
-        ) && !children.some(child => child.page === page.slug))
-          .map(page => ({ title: page.title || humanize(page.slug), page: page.slug })));
-      }
-      if (parent.resource === 'products' || parent.resource === 'collections') {
-        children.push(...(catalogResources[parent.resource] || []).slice(0, 25).map(p => ({
-          title: p.title || p.name || p.slug || 'Untitled',
-          resource: parent.resource, id: p.id,
-        })));
-      }
-      if(!resolveShowcase)children.push({ title: parent.resource === 'pages' ? 'Start from page template' : 'Start from ' + parent.title.toLowerCase().replace(/s$/, '') + ' template',
-        template: ({posts:'article',blogs:'blog',products:'product',collections:'collection',pages:'page'})[parent.id] || 'metaobject' });
-      html += children.map(child => row(child.title, 'page',
-        child.preset ? 'data-picker-preset="' + cmsEscapeAttr(child.preset) + '" data-preset-page="' + cmsEscapeAttr(child.page) + '"' :
-        child.page ? 'data-picker-page="' + cmsEscapeAttr(child.page) + '"' :
-        child.resource && child.id ? 'data-picker-resource="' + cmsEscapeAttr(child.resource) + '" data-resource-id="' + cmsEscapeAttr(child.id) + '"' :
-        'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? 'Theme' : child.origin==='stock' ? 'Stock · editable starter' : 'Create template', false)).join('');
-      if(canCreateResolve){
-        const instructions={
-          products:['Build your first product template','Start with the existing Resolve product layout and style its sections. Product inventory comes later.'],
-          collections:['Design a new collection','Create a reusable collection landing page. Associate inventory when the store is connected.'],
-          pages:['Create a content page','A reusable page layout for About, FAQ, policies and information.'],
-          blogs:['Create a blog layout','Organize stories in an editorial archive. No publishing yet.'],
-          posts:['Create an article template','Prepare a long-form story layout with media and rich content.'],
-          metaobject:['Create a structured template','Define a reusable template before connecting its data fields.']
-        };
-        const [title,subtitle]=instructions[parent.id];
-        html+='<div class="te-creation-empty" role="region" aria-label="Create '+cmsEscapeAttr(parent.title)+'">'+
-          '<div class="te-creation-symbol">＋</div><strong>'+cmsEscapeHtml(title)+'</strong>'+
-          '<p>'+cmsEscapeHtml(subtitle)+'</p>'+
-          '<button type="button" class="te-creation-primary" data-picker-create="'+cmsEscapeAttr(parent.id)+'">Create local draft +</button>'+
-          '<small>Preview only · No D1 records or live storefront changes</small></div>';
-      }
+    if (group && !needle) {
+      const options = source.filter(page => inCategory(page, group));
+      html = '<button type="button" class="te-page-option te-picker-back" data-picker-back><span class="te-picker-icon">‹</span><span class="te-picker-copy"><strong>Back</strong></span></button>' +
+        '<div class="te-picker-heading">' + cmsEscapeHtml(group.title) + '</div>' +
+        (options.length ? options.map(pageButton).join('') :
+          '<div class="te-empty">No pages of this type are installed for the selected site.</div>');
+    } else if (needle) {
+      const matching = source.filter(page => [page.title,page.slug,page.route_path,page.route]
+        .join(' ').toLowerCase().includes(needle));
+      html = matching.length ? matching.map(pageButton).join('') :
+        '<div class="te-empty">No matching CMS pages.</div>';
     } else {
-      html = storefrontMenu.filter(group => match(group.title) || (needle && group.children?.some(ch => match(ch.title)))).map(group => {
-        const hasChildren = !!(group.children || group.resource || (resolveShowcase && group.id==='metaobject'));
-        const page = group.page ? pageFor(group.page) : null;
-        const divider = !needle && ['cart', 'pages', 'search'].includes(group.id)
-          ? '<div class="te-picker-divider" role="separator"></div>' : '';
-        return divider + row(group.title, group.icon,
-          hasChildren ? 'data-picker-category="' + cmsEscapeAttr(group.id) + '"' :
-            page ? 'data-picker-page="' + cmsEscapeAttr(page.slug) + '"' :
-            'data-picker-template="' + cmsEscapeAttr(group.template || group.id) + '"',
-          (!hasChildren && !page) ? 'Stock · editable starter' : '', hasChildren);
+      html = storefrontMenu.map(item => {
+        const count = source.filter(page => inCategory(page,item)).length;
+        return '<button type="button" class="te-page-option" data-picker-category="' +
+          cmsEscapeAttr(item.id) + '"><span class="te-picker-icon" aria-hidden="true">' +
+          pickerIcon(item.icon || 'page') + '</span><span class="te-picker-copy"><strong>' +
+          cmsEscapeHtml(item.title) + '</strong><small>' + count +
+          (count === 1 ? ' page' : ' pages') + '</small></span>' +
+          '<span class="te-picker-chevron" aria-hidden="true">›</span></button>';
       }).join('');
     }
-    // Actual installed pages appear first. Stock templates remain available
-    // below them, rather than replacing the merchant's editable site.
-    if (host && !needle && !pagePickerCategory && source.length) {
-      const sitePages = source.slice(0, 40);
-      html = '<div class="te-picker-heading">Site pages ('+source.length+')</div>'+
-        sitePages.map(p=>row(p.title||humanize(p.slug),'page',
-          'data-picker-page="'+cmsEscapeAttr(p.slug)+'"',
-          p.route||p.live_route||'CMS draft',false)).join('')+
-        (source.length>sitePages.length
-          ? '<div class="te-picker-heading">Search to find more site pages</div>' : '')+
-        '<div class="te-picker-divider" role="separator"></div>'+html;
-    }
-    // One search across actual authorized CMS pages, not only menu headings.
-    // Preserve category browsing and do not invent templates or draft pages.
-    if (needle && !parent) {
-      const realPages=source.filter(p=>p.slug && p.slug!=='site' &&
-        (resolveShowcase ? !/^(journal-|violet-)/.test(p.slug) :
-         journalShowcase ? p.slug.startsWith('journal-') :
-         violetShowcase ? (p.slug==='home' || p.slug.startsWith('violet-')) :
-         !/^(resolve-|journal-|violet-)/.test(p.slug)) &&
-        match([p.title,p.slug,p.route,p.live_route].join(' '))).slice(0,30);
-      if(realPages.length)html=
-        '<div class="te-picker-heading">Matching CMS pages ('+realPages.length+')</div>'+
-        realPages.map(p=>row(p.title||humanize(p.slug),'page',
-          'data-picker-page="'+cmsEscapeAttr(p.slug)+'"',p.live_route||p.route||'',false)).join('')+
-        (html?'<div class="te-picker-divider" role="separator"></div>'+html:'');
-    }
-    root.innerHTML = html || (resolveShowcase?
-      '<div class="te-creation-empty"><strong>Nothing matches that search.</strong>'+
-      '<p>Try a different keyword, or open a resource category to create a new local draft template.</p>'+
-      '<button type="button" class="te-creation-primary" data-picker-clear>Explore templates</button></div>' :
-      '<div class="te-empty">No matching storefront templates.</div>');
-    root.querySelector('[data-picker-clear]')?.addEventListener('click',()=>{
-      pagePickerCategory=null;byId('te-page-search').value='';renderPageOptions('');
+    root.innerHTML = html;
+    root.querySelectorAll('[data-picker-category]').forEach(button => button.addEventListener('click', () => {
+      pagePickerCategory = button.dataset.pickerCategory;
+      renderPageOptions('');
+    }));
+    root.querySelector('[data-picker-back]')?.addEventListener('click', () => {
+      pagePickerCategory = null;
+      renderPageOptions('');
     });
-    root.querySelectorAll('[data-picker-category]').forEach(button =>
-      button.addEventListener('click', () => { pagePickerCategory = button.dataset.pickerCategory; byId('te-page-search').value = ''; renderPageOptions(''); }));
-    root.querySelector('[data-picker-back]')?.addEventListener('click', () => { pagePickerCategory = null; renderPageOptions(''); });
-    root.querySelectorAll('[data-picker-preset]').forEach(button => button.addEventListener('click', () => {
-      const preset=button.dataset.pickerPreset;
-      const page=button.dataset.presetPage;
-      if(!['resolve','plain-jane','violet'].includes(preset)||!page)return;
-      window.cmsAdminNavigate('/admin/theme-editor?'+new URLSearchParams({showcase:preset,slug:page}).toString());
-    }));
-    root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () => {
-      switchPage(button.dataset.pickerPage);
-    }));
-    root.querySelectorAll('[data-picker-create]').forEach(button=>button.addEventListener('click',()=>openResolveCreation(button.dataset.pickerCreate)));
-    root.querySelectorAll('[data-picker-template]').forEach(button => button.addEventListener('click', () => {
-      if(resolveShowcase){
-        const type=button.dataset.pickerTemplate;
-        openResolveCreation(type==='metaobject'?'metaobject':type==='product'?'products':type==='collection'?'collections':
-          type==='blog'?'blogs':type==='article'?'posts':'pages');
-      }else showScaffoldTemplate(button.dataset.pickerTemplate, button.querySelector('strong').textContent);
-    }));
-    root.querySelectorAll('[data-picker-resource]').forEach(button => button.addEventListener('click', () => {
-      const params=new URLSearchParams(window.location.search);
-      const scope=params.get('site_id')?'&site_id='+encodeURIComponent(params.get('site_id')):'';
-      const url = button.dataset.pickerResource === 'products'
-        ? '/admin/product-edit?id=' + encodeURIComponent(button.dataset.resourceId)+scope
-        : '/admin/products?view=collections&collection_id='+encodeURIComponent(button.dataset.resourceId)+scope;
-      if (localShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
-      else window.location.href = url;
-    }));
-  }
-
-  function openResolveCreation(kind){
-    const root=byId('te-page-options');
-    if(!root)return;
-    const labels={products:'Product template',collections:'Collection template',pages:'Content page',blogs:'Blog',posts:'Article',metaobject:'Metaobject'};
-    if(!labels[kind])return;
-    root.innerHTML='<div class="te-creation-workflow">'+
-      '<button class="te-creation-back" type="button" data-creation-back>‹ Back to '+cmsEscapeHtml(labels[kind])+'s</button>'+
-      '<div class="te-creation-symbol">＋</div><h3>New '+cmsEscapeHtml(labels[kind])+'</h3>'+
-      '<p>Start with Resolve’s authentic sections. Edit content and layout in the same CMS studio.</p>'+
-      '<form data-resolve-create-form><label>Template name<input name="title" maxlength="90" required autofocus placeholder="e.g. Autumn archive"></label>'+
-      '<div class="te-creation-hint">Creates a reusable local draft. Product records, URLs, and production publishing are not connected.</div>'+
-      '<button class="te-creation-primary" type="submit">Create & edit draft →</button></form></div>';
-    root.querySelector('[data-creation-back]')?.addEventListener('click',()=>{pagePickerCategory=kind;renderPageOptions('');});
-    root.querySelector('[data-resolve-create-form]')?.addEventListener('submit',event=>{
-      event.preventDefault();
-      const title=new FormData(event.currentTarget).get('title')?.toString().trim();
-      try{
-        const draft=window.AgentSamResolveStudio?.createDraft(kind,title);
-        if(!draft)throw Error('Resolve draft creation is unavailable.');
-        switchPage(draft.slug);
-      }catch(error){setNote(error.message||String(error),'error');}
-    });
-    root.querySelector('[name="title"]')?.focus();
+    root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () =>
+      switchPage(button.dataset.pickerPage)));
   }
 
   function blockSchemaFor(section, meta) {
@@ -1267,7 +940,7 @@
   }
 
   function discoverUnmanagedSections() {
-    if (selectedTheme !== 'heuristic') return;
+    if ((!selectedTheme || selectedTheme !== primaryThemeSlug)) return;
     let doc;
     try { doc = byId('theme-preview').contentDocument; } catch { return; }
     if (!doc || doc.documentElement?.getAttribute('data-cms-page') !== slug) return;
@@ -1533,10 +1206,6 @@
     // before rebuilding the live section hierarchy.
     document.querySelector('.theme-studio-workspace > #te-section-menu')?.remove();
     document.querySelector('.theme-studio-workspace > .te-block-picker')?.remove();
-    if (resolveShowcase && window.AgentSamResolveStudio?.renderSections) {
-      window.AgentSamResolveStudio.renderSections();
-      return;
-    }
     const pageSections = ownerSections(slug);
     const siteSections = ownerSections('site');
     const zoneFor = section => {
@@ -1589,7 +1258,7 @@
       // save, undo and revision pipeline as direct canvas selection.
       const fieldRows = fields.filter(function(field) {
         const kind = String(field.type || '').toLowerCase();
-        if (section.key === 'header' && !section.content?.announcementEnabled && /^announcement(?:Text|Href)$/.test(field.key)) return false;
+        if (!settingVisible(field, section.content)) return false;
         return ['text','textarea','richtext','rich-text','media','image','video','link','url'].includes(kind);
       }).map(function(field) {
         const key = String(field.key);
@@ -1700,7 +1369,7 @@
         cmsEscapeAttr(entry.label || entry.id) + '" sandbox="" loading="lazy" tabindex="-1" srcdoc="' +
         cmsEscapeAttr(entry.previewHtml) + '"></iframe>';
       const api = window.ThemePortableSections;
-      const preset = entry.preset || entry.id;
+      const preset = entry.rendererPreset || entry.preset || entry.id;
       if (api && typeof api.defaults === 'function' && typeof api.render === 'function') {
         const content = api.defaults(preset);
         if (content) {
@@ -1820,7 +1489,7 @@
         groups.get(entry.category).push(entry);
       }
       const generate = '<button type="button" class="te-catalog-generate" data-start-section-generation>' +
-        '<img src="/admin/brand/agentsam-gorilla-tiny.svg" alt="" aria-hidden="true">' +
+        assistantMark() +
         '<span><strong>Generate with AgentSam</strong><small>Create a reusable editable CMS section</small></span><span aria-hidden="true">↗</span></button>';
       list.innerHTML = generate + (filtered.length ? Array.from(groups.entries()).map(function([category, items]) {
         return '<div class="te-catalog-list-group"><div class="te-catalog-list-group__label">' +
@@ -2087,13 +1756,22 @@
       const links = [];
       const collections = results[0].status === 'fulfilled' ? results[0].value?.collections : [];
       const products = results[1].status === 'fulfilled' ? results[1].value?.products : [];
+      // The resource provider owns public URLs. Do not infer them from slugs.
+      const resourceHref = item => {
+        const route = item?.storefront_url || item?.public_url ||
+          item?.route_path || item?.live_route || item?.href || item?.url;
+        return typeof route === 'string' && route.startsWith('/') &&
+          !route.startsWith('//') ? route : null;
+      };
       for (const collection of Array.isArray(collections) ? collections : []) {
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(String(collection.slug || ''))) continue;
-        links.push({label:String(collection.title || collection.slug),href:'/shop/collections/' + encodeURIComponent(collection.slug),group:'Collections'});
+        const href = resourceHref(collection);
+        if (!href) continue;
+        links.push({ label:String(collection.title || collection.slug || 'Collection'), href, group:'Collections' });
       }
       for (const product of Array.isArray(products) ? products : []) {
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(String(product.slug || ''))) continue;
-        links.push({label:String(product.title || product.slug),href:'/products/' + encodeURIComponent(product.slug),group:'Products'});
+        const href = resourceHref(product);
+        if (!href) continue;
+        links.push({ label:String(product.title || product.slug || 'Product'), href, group:'Products' });
       }
       if (version === merchantLinkCatalogVersion) merchantLinkCatalog = links;
       return links;
@@ -2106,7 +1784,7 @@
   function merchantPageLinks(query = '') {
     const needle = String(query).trim().toLowerCase();
     const found = new Map();
-    for (const page of (host ? pages : (pages.length ? pages : fallbackPages))) {
+    for (const page of pages) {
       const href = page.live_route || page.route || pageRoute(page.slug);
       if (!href || !/^\/(?!\/)/.test(href)) continue;
       const label = String(page.title || humanize(page.slug));
@@ -2331,11 +2009,15 @@
     let visibleKinds = Object.keys(groups).filter(function(kind) {
       return groups[kind].length > 0;
     });
-    // Shopify-like progressive disclosure: the selected Hero offers its
-    // section media and layout first. Heading, copy and CTAs are selected
-    // directly from the left tree/canvas and own their contextual inspector.
-    if (section.key === 'hero' && !activeFieldKey && !activeBlockId) {
-      visibleKinds = groups.media.length ? ['media'] : [];
+    // Media-first composition is a field-group rule, not a hardcoded Hero
+    // branch. Definitions can declare the initial groups they want exposed.
+    const presentation = currentSectionSchema()?.presentation || {};
+    if (!activeFieldKey && !activeBlockId) {
+      if (Array.isArray(presentation.primaryGroups)) {
+        visibleKinds = visibleKinds.filter(group => presentation.primaryGroups.includes(group));
+      } else if (groups.media.length && groups.content.length) {
+        visibleKinds = ['media'];
+      }
     }
     const focusedField = activeFieldKey ? fieldByKey(activeFieldKey) : null;
     if (focusedField && currentSchema().some(function(field) { return field.key === focusedField.key; })) {
@@ -2452,11 +2134,6 @@
   }
 
   function renderInspector() {
-    if (localShowcase && showcaseTemplate) { renderScaffoldInspector(); return; }
-    if (resolveShowcase && window.AgentSamResolveStudio?.renderInspector) {
-      window.AgentSamResolveStudio.renderInspector();
-      return;
-    }
     const section = currentSection();
     if (!section) {
       byId('te-inspector-body').innerHTML = '<div class="te-empty">Select a section or block in the page structure to begin editing.</div>';
@@ -3087,7 +2764,7 @@
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
 
-    if (selectedTheme !== 'heuristic') {
+    if ((!selectedTheme || selectedTheme !== primaryThemeSlug)) {
       const runtime = window.ThemeStudioPreview;
       if (!runtime || !runtime.render) return;
       let html;
@@ -3108,7 +2785,7 @@
     }
 
     iframe.contentWindow.postMessage({
-      type: 'fnf-cms-preview',
+      type: 'agentsam:cms-preview:v1',
       slug: slug,
       sections: (pageData.sections || []).map(function(section) {
         return { key: section.key, sort_order: section.sort_order, status: section.status, content: section.content || {} };
@@ -3218,12 +2895,6 @@
   }
 
   async function openMiniAgentSam() {
-    if(localShowcase) {
-      // The SDK preview has no authenticated AgentSam API. Do not open an
-      // unusable composer or surface a failed-module banner over the inspector.
-      setNote('AgentSam AI requires a connected workspace. Local section, app and theme controls remain editable.','info');
-      return;
-    }
     const selection = selectedAgentResource();
     if (!selection) { setNote('Select a section or editable field before asking AgentSam.'); return; }
     const tick = ++miniAgentSamSelectionTick;
@@ -3480,7 +3151,7 @@
         if (!event.relatedTarget?.closest?.('[data-cms-block], [data-cms-section], [data-section-id]')) hoverEditorNode(null);
       });
       doc.addEventListener('click', function(event) {
-        if (host && !window.__fnfGlobalInspectMode) {
+        if (host && !window.__agentsamCmsGlobalInspectMode) {
           const link = event.target?.closest?.('a[href]');
           if (link && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
             let destination = null;
@@ -3497,7 +3168,7 @@
             }
           }
         }
-        if (!inspectionEnabled || window.__fnfGlobalInspectMode) return;
+        if (!inspectionEnabled || window.__agentsamCmsGlobalInspectMode) return;
         if (event.target?.closest?.('[data-doc-menu],[data-doc-copy],[data-doc-filter]')) return;
         const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-block], [data-cms-section], [data-section-id]');
         if (!target) return;
@@ -3601,52 +3272,6 @@
   }
 
   async function refreshPreview() {
-    if (journalShowcase) {
-      const frame=byId('theme-preview');
-      const meta=typeof pageData?.metadata_json==='string'
-        ? JSON.parse(pageData.metadata_json) : pageData?.metadata_json||{};
-      const path=typeof meta?.path==='string' && /^[a-z0-9/-]*$/.test(meta.path)?meta.path:'';
-      const route='/themes/plain-jane/demo/'+path;
-      const src=route+(route.includes('?')?'&':'?')+'studio_preview=1';
-      frame.removeAttribute('srcdoc');
-      if(frame.getAttribute('src')!==src)frame.src=src;
-      byId('te-open-tab').href=route;
-      byId('te-preview-label').textContent='Plain Jane Journal · '+(pageData?.title||'Journal')+' · read-only CMS source';
-      return;
-    }
-    if (resolveShowcase) {
-      const frame = byId('theme-preview');
-      const portalPath = window.AgentSamResolveStudio?.pagePath?.(slug);
-      const url = portalPath
-        ? '/themes/resolve/demo/portal/' + portalPath + '?studio_preview=1'
-        : '/themes/resolve/demo/?studio_preview=1';
-      if (showcaseTemplate) {
-        frame.removeAttribute('src');
-        frame.srcdoc = renderResolveScaffold(showcaseTemplate.template, showcaseTemplate.title);
-      } else {
-        frame.removeAttribute('srcdoc');
-        if (frame.getAttribute('src') !== url) frame.src = url;
-        window.AgentSamResolveStudio?.sync?.();
-      }
-      byId('te-open-tab').href = portalPath
-        ? '/themes/resolve/demo/portal/' + portalPath
-        : '/themes/resolve/demo/';
-      byId('te-preview-label').textContent = 'Resolve · ' + (showcaseTemplate?.title || 'interactive') + (host?.capabilities?.cmsWrite ? ' · local CMS draft' : ' · local preview only');
-      return;
-    }
-    if (violetShowcase) {
-      const frame = byId('theme-preview');
-      if (showcaseTemplate) {
-        frame.removeAttribute('src');
-        frame.srcdoc = renderVioletScaffold(showcaseTemplate.template, showcaseTemplate.title);
-      } else {
-        frame.removeAttribute('srcdoc');
-        frame.src = '/themes/violet/demo/';
-      }
-      byId('te-open-tab').href = '/themes/violet/demo/';
-      byId('te-preview-label').textContent = 'Violet · ' + (showcaseTemplate?.title || 'Home page') + ' · local UI preview';
-      return;
-    }
     if (host) {
       try {
         const preview = await host.adapter.resolvePreview(slug, pageData);
@@ -3672,7 +3297,7 @@
       }
       return;
     }
-    if (selectedTheme !== 'heuristic') {
+    if ((!selectedTheme || selectedTheme !== primaryThemeSlug)) {
       pushLocalPreview();
       return;
     }
@@ -3700,9 +3325,7 @@
     byId('theme-preview').removeAttribute('srcdoc');
     byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
     byId('te-open-tab').href = liveUnimported ? route : route + separator + 'preview=1';
-    byId('te-preview-label').textContent = slug === 'bridge-fly'
-      ? 'Aviation scene · authenticated preview only'
-      : liveUnimported ? 'Live storefront — source inspection' : 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
+    byId('te-preview-label').textContent = liveUnimported ? 'Live storefront — source inspection' : 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
   }
 
   function schedulePreview() {
@@ -3728,10 +3351,8 @@
     setSaveState('Loading');
     try {
       await loadCmsRegistry();
-      const localDraft=resolveShowcase && !host?.capabilities?.cmsWrite && window.AgentSamResolveStudio?.getDraft?.(slug);
       const results = await Promise.all([
-        localDraft ? Promise.resolve({page:localDraft,seeded:false}) :
-          editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
+        editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
         editorRequest('/api/admin/cms/pages').catch(function() { return { pages: [] }; }),
         editorRequest('/api/admin/cms/pages/site').catch(function() {
           return { page: { slug: 'site', title: 'Global', sections: [], status: 'draft' } };
@@ -3752,7 +3373,6 @@
         history.replaceState(null, '', identityUrl);
         slug = pageData.slug || slug;
       }
-      if (resolveShowcase) window.AgentSamResolveStudio?.setPage?.(pageData);
       liveUnimported = pageData.content_authority === 'storefront-html';
       missingSourceSections = Array.isArray(pageData.missing_source_sections)
         ? pageData.missing_source_sections.filter(function(key) {
@@ -3763,7 +3383,7 @@
       liveSourceCaptured = false;
       liveCapturedSections = [];
       unmanagedLiveSections = [];
-      if (liveUnimported) selectedTheme = 'heuristic';
+      if (liveUnimported) selectedTheme = primaryThemeSlug;
       byId('te-import-live').hidden = Boolean(host) || (!missingSourceSections.length && !liveUnimported);
       if (!liveUnimported && missingSourceSections.length) {
         byId('te-import-live').textContent = 'Stage ' + missingSourceSections.length + ' missing sections';
@@ -3771,7 +3391,6 @@
       byId('te-save').textContent = 'Save';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
-      if(resolveShowcase && !host?.capabilities?.cmsWrite)pages.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[]));
       document.dispatchEvent(new CustomEvent('theme-editor:global-settings-ready'));
 
       (pageData.sections || []).forEach(function(section) { section.__ownerSlug = slug; });
@@ -3829,13 +3448,19 @@
         const chosen = host?.initialStock || params.get('stock');
         const match = /^platform\/([a-z0-9-]{1,70})$/.exec(String(chosen || ''));
         if (match) {
-          const key = host ? 'stock-' + match[1] : 'platform/' + match[1];
+          const renderer = 'platform/' + match[1];
           requestAnimationFrame(function() {
+            // Design Canvas hands off a renderer identity. Find its VERIFIED
+            // stock template SKU in the site's catalog; never synthesize a
+            // second template or insert a runtime preset without provenance.
+            const selection = themeCatalog().find(item =>
+              host ? item.id === 'stock-' + match[1] :
+                item.rendererPreset === renderer);
             const trigger = byId('te-add-section');
-            if (!trigger || !themeCatalog().some(item => item.id === key)) return;
+            if (!trigger || !selection) return;
             trigger.click();
             byId('te-section-list')?.querySelectorAll('[data-choose-section]')
-              .forEach(button => { if (button.dataset.chooseSection === key) button.click(); });
+              .forEach(button => { if (button.dataset.chooseSection === selection.id) button.click(); });
             setNote('Platform stock selected. Confirm Add section to insert into this draft.');
           });
         }
@@ -3864,28 +3489,6 @@
   // Serialize writes and snapshot each section before awaiting the network. A later
   // keystroke must remain dirty even if an earlier autosave finishes afterward.
   async function saveDraft({ automatic = false } = {}) {
-    if (localShowcase) {
-      if (host?.capabilities?.cmsWrite && typeof window.AgentSamResolveStudio?.saveToCms === 'function') {
-        try {
-          const saved = await window.AgentSamResolveStudio.saveToCms();
-          if (saved) {
-            dirtySections.clear();
-            dirtyVersions.clear();
-            autosaveFailed = false;
-            setDirty(false);
-            setSaveState('Saved to CMS draft', 'saved');
-            setNote('Saved to the local CMS draft and R2 snapshot store. Not published.', 'success');
-          }
-          return Boolean(saved);
-        } catch (error) {
-          setSaveState('Save failed', 'error');
-          setNote(error.message || String(error), 'error');
-          return false;
-        }
-      }
-      setNote('This showcase is preview-only. Connect a CMS draft store to enable saving.', 'info');
-      return false;
-    }
     if (saveInFlight) {
       const previousSaved = await saveInFlight;
       if (!previousSaved) return false;
@@ -3980,7 +3583,6 @@
   }
 
   async function publishPage() {
-    if (localShowcase) { setNote('Local showcase cannot publish to a customer site.'); return false; }
     // The explicit Publish live menu action is the merchant confirmation.
     // Keep publish capability/preflight checks without a second browser-native dialog.
     if (publishInFlight) return false;
@@ -3991,8 +3593,14 @@
       setNote('Import the existing live page before publishing any CMS draft.', 'error');
       return;
     }
-    if (selectedTheme !== 'heuristic') {
-      setNote('This theme is visual-preview only. Publication is disabled until its renderer and rollback pass acceptance.', 'error');
+    // A CMS page host may publish without sharing the theme-project identity.
+    // Draft theme projects explicitly declare publish=false instead.
+    const canPublish = host
+      ? host.adapter.capabilities?.publish === true
+      : Boolean(selectedTheme && selectedTheme === primaryThemeSlug &&
+          installedThemeSlugs.has(selectedTheme));
+    if (!canPublish) {
+      setNote('This draft does not have an approved publication capability.', 'error');
       return;
     }
     const button = byId('te-publish');
@@ -4061,19 +3669,25 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Adding section…');
     try {
-      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+      // Reusable stock templates install through the canonical SKU route,
+      // not the legacy generic section route. This preserves the actual
+      // cms_component_templates -> cms_page_sections / cms_section_blocks links.
+      const isStock = templateKey === 'catalog-stock';
+      const target = '/api/admin/cms/pages/' + encodeURIComponent(slug) +
+        (isStock ? '/catalog-resources' : '/sections');
+      const result = await editorRequest(target, {
         method: 'POST',
-        body: JSON.stringify({
-          templateKey: templateKey,
-          themePreset: themePreset || '',
-          toIndex: Number.isInteger(toIndex) ? toIndex : (pageData?.sections || []).length
-        })
+        body: JSON.stringify(isStock
+          ? {catalogKey:themePreset,toIndex:Number.isInteger(toIndex)
+              ?toIndex:(pageData?.sections||[]).length}
+          : {templateKey:templateKey,themePreset:themePreset||'',
+              toIndex:Number.isInteger(toIndex)?toIndex:(pageData?.sections||[]).length})
       });
       activeSectionOwner = slug;
       activeSectionKey = result.section_key;
       activeBlockId = null;
       activeFieldKey = null;
-      setNote('Section added from ' + humanize(selectedTheme) + '.', 'success');
+      setNote('Section added to this draft.', 'success');
       await loadPage();
       selectSection(result.section_key, null, true, slug);
     } catch (error) {
@@ -4255,9 +3869,7 @@
   }
 
   async function switchPage(nextSlug) {
-    const hadScaffold = localShowcase && !!showcaseTemplate;
-    if (localShowcase) showcaseTemplate = null;
-    if (!nextSlug || (nextSlug === slug && !hadScaffold)) {
+    if (!nextSlug || nextSlug === slug) {
       closePageMenu();
       return;
     }
@@ -4353,19 +3965,15 @@
   async function loadThemeIdentity() {
     try {
       if (host && host.adapter && typeof host.adapter.getThemeIdentity === 'function') {
-        selectedTheme = 'heuristic';
-        installedThemeSlugs = new Set(['heuristic']);
-        applyThemeIdentity(await host.adapter.getThemeIdentity());
+        const identity = await host.adapter.getThemeIdentity();
+        selectedTheme = identity?.slug || host.projectId || null;
+        primaryThemeSlug = selectedTheme;
+        installedThemeSlugs = new Set(selectedTheme ? [selectedTheme] : []);
+        applyThemeIdentity(identity);
         const switcher = document.querySelector('.te-theme-switcher');
         if (switcher) switcher.hidden = true;
         const menu = byId('te-theme-menu');
         if (menu) menu.hidden = true;
-        return;
-      }
-      if (localShowcase) {
-        selectedTheme = 'heuristic';
-        applyThemeIdentity({ name: showcaseDisplayName, status: 'preview' });
-        byId('te-theme-trigger-label').textContent = showcaseDisplayName;
         return;
       }
       const siteId = window.cmsActiveSiteId || new URLSearchParams(window.location.search).get('site_id');
@@ -4374,7 +3982,8 @@
       if (!catalog.ok) throw new Error(catalog.error || 'Installed theme catalog unavailable');
       installedThemeSlugs = new Set((catalog.themes || []).map(function(theme) { return theme.slug; }));
       persistedThemeVersion = Number(catalog.content_version || 0);
-      selectedTheme = catalog.preview_theme?.slug || catalog.active_theme?.slug || 'heuristic';
+      primaryThemeSlug = catalog.active_theme?.slug || null;
+      selectedTheme = catalog.preview_theme?.slug || primaryThemeSlug;
       document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
         const installed = installedThemeSlugs.has(button.dataset.themePreview);
         button.disabled = !installed;
@@ -4886,7 +4495,7 @@
     // Alternate previews and the site-owned HTML source adapter use srcdoc.
     // Reassigning srcdoc during its own iframe load causes a navigation loop
     // and a blank canvas. Only the legacy live Heuristic iframe needs this.
-    if (!host && selectedTheme === 'heuristic') {
+    if (!host && (selectedTheme && selectedTheme === primaryThemeSlug)) {
       if (liveUnimported) {
         if (!dirty) captureLiveSource();
         else pushLocalPreview();
@@ -5114,11 +4723,5 @@
       return true;
     },
   };
-  if ((localShowcase && !host?.capabilities?.cmsWrite) || new URLSearchParams(location.search).get('ui_review') === '1') {
-    const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'Read-only UI review · no CMS writes'; }
-    const publish = byId('te-publish'); if (publish) { publish.disabled = true; publish.title = 'No publishing from UI review'; }
-  }
-  window.AgentSamResolveStudio?.registerNavigator?.(nextSlug=>switchPage(nextSlug));
-  window.AgentSamResolveStudio?.mount?.();
   loadPage();
 })();

@@ -22,7 +22,14 @@ export function normalizeCmsDefinition(row) {
   // Preserve the versioned settings from D1. Fill presentation labels only;
   // source types and keys remain untouched for the typed inspector contracts.
   const raw = parseJson(row.settings_schema_json, {});
-  const fields = Object.fromEntries(Object.entries(raw).map(([key, spec]) => [
+  // Existing stock manifests serialize {fields:[...],blocks:[...]}; newer
+  // definitions serialize an id -> setting map. Both are ONE editor contract.
+  // Never project the 'fields' array itself as an invented inspector control.
+  const rawFields = Array.isArray(raw.fields)
+    ? raw.fields.filter(field => field && typeof field.key === "string")
+        .map(({key,...spec}) => [key,spec])
+    : Object.entries(raw);
+  const fields = Object.fromEntries(rawFields.map(([key, spec]) => [
     key, spec && typeof spec === 'object' && !Array.isArray(spec)
       ? { ...spec, label: spec.label || key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[._-]/g, ' ') }
       : spec,
@@ -91,7 +98,23 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
   return (result.results || []).map(normalizeCmsDefinition);
 }
 
-export function normalizeCmsCatalogTemplate(row) {
+// cms_component_templates owns the picker, template metadata, default content,
+// preview and stock identity. cms_components is only a verification dependency:
+// an unavailable renderer must NEVER erase a legitimate catalog template.
+// D1 metadata, preview HTML and an R2 URL are not renderer implementations.
+function bundledCmsRendererAvailable(rendererKey) {
+  if (!rendererKey) return false;
+  for (const name of ["ThemePortableSections", "ThemePlatformStock", "ThemeReviseAtlas"]) {
+    const runtime = globalThis[name];
+    if (typeof runtime?.get === "function" &&
+        typeof runtime?.render === "function" &&
+        typeof runtime?.validate === "function" &&
+        runtime.get(rendererKey)) return true;
+  }
+  return false;
+}
+
+export function normalizeCmsCatalogTemplate(row, {hasRenderer = bundledCmsRendererAvailable} = {}) {
   const templateData = parseJson(row.template_data, {});
   const editorSchema = parseJson(row.editor_schema_json, {});
   const compatibility = parseJson(row.compatibility_json, {});
@@ -99,11 +122,12 @@ export function normalizeCmsCatalogTemplate(row) {
   const dataBindings = parseJson(row.data_bindings_json, {});
   const preview = parseJson(row.preview_json, {});
   const metadata = parseJson(row.definition_metadata_json, {});
-  // Renderer evidence belongs to cms_components, never metadata supplied by
-  // a template. Preserve metadata as diagnostics only; it grants no install authority.
-  const declaredRendererKey = metadata.rendererKey || metadata.renderer_key ||
-    templateData.rendererKey || templateData.renderer_key || null;
-  const rendererKey = row.resolved_renderer_key || declaredRendererKey;
+  // The template declares its preferred renderer, while cms_components
+  // independently proves whether an implementation of that renderer exists.
+  // Never silently overwrite the template's declared choice with a different
+  // implementation that happens to share its definition.
+  const templateRendererKey = templateData.rendererKey || templateData.renderer_key || null;
+  const rendererKey = row.resolved_renderer_key || null;
   const implementationStatus = row.resolved_implementation_status || "unverified";
   const implementationClass = metadata.implementationClass || metadata.implementation_class ||
     templateData.implementationClass || templateData.implementation_class || null;
@@ -122,9 +146,27 @@ export function normalizeCmsCatalogTemplate(row) {
     maxBlocks: row.definition_max_blocks == null ? null : Number(row.definition_max_blocks),
     metadata,
   } : null;
-  const installable = row.status === "active" && definition?.status === "active" &&
-    implementationStatus === "verified" && typeof row.resolved_renderer_key === "string" &&
-    row.resolved_renderer_key.length > 0;
+  const definitionMatches = Boolean(definition &&
+    definition.kind === row.item_type &&
+    String(definition.version) === String(row.definition_version) &&
+    definition.key === row.definition_key);
+  // Template picker availability belongs solely to the catalog record.
+  // Renderability is a separate host capability, not template ownership.
+  // Composite/source-backed templates remain discoverable for host import;
+  // they are not falsely described as published-ready without verified output.
+  const catalogAvailable = row.status === "active";
+  const definitionReady = definition?.status === "active" && definitionMatches;
+  const rendererMatchesTemplate = !templateRendererKey || templateRendererKey === rendererKey;
+  const rendererVerified = Boolean(row.resolved_component_id &&
+    implementationStatus === "verified" &&
+    typeof rendererKey === "string" && rendererKey.length > 0);
+  const runtimeReady = rendererVerified && rendererMatchesTemplate && hasRenderer(rendererKey) === true;
+  const installable = Boolean(catalogAvailable && definitionReady && runtimeReady);
+  const unavailableReason = installable ? null :
+    !catalogAvailable ? "template_inactive" :
+    !definitionReady ? "definition_unavailable" :
+    !rendererMatchesTemplate ? "renderer_mismatch" :
+    !rendererVerified ? "renderer_unverified" : "renderer_not_loaded";
   return {
     id: row.id,
     sku: row.sku,
@@ -152,10 +194,19 @@ export function normalizeCmsCatalogTemplate(row) {
     definitionKey: row.definition_key || null,
     definitionVersion: row.definition_version || null,
     definition,
+    templateRendererKey,
     rendererKey,
     implementationStatus,
     implementationClass,
-    rendererVerified: implementationStatus === "verified" && Boolean(row.resolved_renderer_key),
+    catalogAvailable,
+    definitionReady,
+    rendererMatchesTemplate,
+    unavailableReason,
+    componentId: row.resolved_component_id || null,
+    deliveryMode: row.resolved_delivery_mode || null,
+    sourceRef: row.resolved_source_ref || null,
+    rendererVerified,
+    runtimeReady,
     installable,
     isFeatured: Boolean(row.is_featured),
     featuredCollection: row.featured_collection || null,
@@ -164,10 +215,11 @@ export function normalizeCmsCatalogTemplate(row) {
 }
 
 /**
- * Read the existing system component catalog. The catalog supplies names,
- * categories, compatibility and preview metadata; the actual renderer remains
- * the portable/native implementation registry. Draft or unmapped rows are
- * returned for diagnostics but are never marked installable.
+ * Read reusable picker templates from cms_component_templates (NOT
+ * cms_components). All nonarchived entries remain discoverable even when
+ * no renderer has been registered. cms_components supplies independent
+ * executable verification; it never owns a template SKU or its defaults.
+ * Installation readiness is conditional, not the existence of the template.
  */
 export async function listCmsComponentCatalog(env, accountId, filters = {}) {
   if (typeof accountId !== "string" || !accountId.trim()) {
@@ -186,11 +238,12 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
     d.settings_schema_json AS definition_settings_schema_json,
     d.allowed_blocks_json AS definition_allowed_blocks_json,
     d.max_blocks AS definition_max_blocks,d.metadata_json AS definition_metadata_json,
+    c.id AS resolved_component_id,c.renderer_key AS resolved_renderer_key,
+    c.implementation_status AS resolved_implementation_status,
+    c.delivery_mode AS resolved_delivery_mode,c.source_ref AS resolved_source_ref,
     c.package_ref AS resolved_package_ref,c.artifact_r2_bucket AS resolved_package_manifest_bucket,
     c.artifact_r2_key AS resolved_package_manifest_key,
-    c.artifact_sha256 AS resolved_package_manifest_sha256,
-    c.renderer_key AS resolved_renderer_key,
-    c.implementation_status AS resolved_implementation_status
+    c.artifact_sha256 AS resolved_package_manifest_sha256
     FROM cms_component_templates t
     LEFT JOIN cms_definitions d
       ON d.id=COALESCE(
@@ -214,7 +267,9 @@ export async function listCmsComponentCatalog(env, accountId, filters = {}) {
   }
   query += " ORDER BY CASE WHEN t.item_type='section' THEN 0 ELSE 1 END, t.sort_order, t.template_name LIMIT 300";
   const result = await env.DB.prepare(query).bind(...binds).all();
-  return (result.results || []).map(normalizeCmsCatalogTemplate);
+  const hasRenderer = typeof filters.hasRenderer === "function"
+    ? filters.hasRenderer : bundledCmsRendererAvailable;
+  return (result.results || []).map(row => normalizeCmsCatalogTemplate(row,{hasRenderer}));
 }
 
 /**
