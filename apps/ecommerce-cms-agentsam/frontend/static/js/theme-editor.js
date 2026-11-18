@@ -866,153 +866,65 @@
     if (!byId('te-page-popover')?.hidden) renderPageOptions(byId('te-page-search').value);
   }
 
+  // Pages are always the site-owned CMS inventory, never a fixture/theme showcase.
   function renderPageOptions(query) {
-    const needle = String(query || '').trim().toLowerCase();
     const root = byId('te-page-options');
-    const source = pages;
-    const pageFor = key => source.find(p => p.slug === key);
-    const canCreateResolve = resolveShowcase && ['products','collections','pages','blogs','posts','metaobject'].includes(pagePickerCategory);
-    const match = (text) => !needle || String(text || '').toLowerCase().includes(needle);
-    const row = (title, iconText, attrs, detail, arrow) =>
-      '<button type="button" class="te-page-option' + (detail === 'UI scaffold' ? ' is-scaffold' : '') + '" ' + attrs + '><span class="te-picker-icon" aria-hidden="true">' + pickerIcon(iconText) + '</span>' +
-      '<span class="te-picker-copy"><strong>' + cmsEscapeHtml(title) + '</strong>' +
-      (detail ? '<small>' + cmsEscapeHtml(detail) + '</small>' : '') + '</span>' +
-      (arrow ? '<span class="te-picker-chevron" aria-hidden="true">›</span>' : '') + '</button>';
+    if (!root) return;
+    const needle = String(query || '').trim().toLowerCase();
+    const source = pages.filter(page => page?.slug && page.slug !== 'site');
+    const pageKinds = {
+      home: ['home'], products: ['product','product_list'],
+      collections: ['collection','collection_list'], pages: ['page','contact'],
+      blogs: ['blog'], posts: ['article'], cart: ['cart'], checkout: ['checkout'],
+      customer: ['customer_account','customer_sign_in','customer_sign_up','customer_orders'],
+      search: ['search'], password: ['password'], '404': ['not_found'],
+      'gift-card': ['gift_card'],
+    };
+    const inCategory = (page, group) => {
+      const kinds = pageKinds[group.id] || [group.template || group.id];
+      return kinds.includes(page.page_type || page.template_key || page.slug) ||
+        kinds.includes(page.slug);
+    };
+    const pageButton = page => '<button type="button" class="te-page-option" data-picker-page="' +
+      cmsEscapeAttr(page.slug) + '"><span class="te-picker-icon" aria-hidden="true">' +
+      pickerIcon(page.page_type || 'page') + '</span><span class="te-picker-copy"><strong>' +
+      cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><small>' +
+      cmsEscapeHtml(page.route_path || page.route || '') + '</small></span></button>';
+    const group = storefrontMenu.find(item => item.id === pagePickerCategory);
     let html = '';
-    const parent = storefrontMenu.find(group => group.id === pagePickerCategory);
-    if (parent && !needle) {
-      html = '<button type="button" class="te-page-option te-picker-back" data-picker-back="true"><span class="te-picker-icon" aria-hidden="true">‹</span><span class="te-picker-copy"><strong>Back to online store</strong></span></button>';
-      html += '<div class="te-picker-heading">' + cmsEscapeHtml(parent.title) + '</div>';
-      const children = [...(parent.children || [])];
-      if (parent.resource === 'pages') {
-        const pageOptions = resolveShowcase
-          ? source.filter(p => p.slug === 'resolve-page')
-          : journalShowcase
-            ? source.filter(p => p.slug.startsWith('journal-') && p.slug !== 'journal-home')
-            : violetShowcase
-              ? source.filter(p => p.slug.startsWith('violet-'))
-              : source.filter(p => p.slug !== 'site' && !/^(resolve-|journal-|violet-)/.test(p.slug));
-        children.push(...pageOptions.map(p => ({ title: p.title || humanize(p.slug), page: p.slug })));
-        if(resolveShowcase && !children.some(child => child.page === 'resolve-page')) {
-          children.push({title:'Default content page',page:'resolve-page'});
-        }
-      }
-      if(resolveShowcase)children.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[])
-        .filter(p=>p.kind===parent.id).map(p=>({title:p.title+' · Draft',page:p.slug})));
-      if (host && ['products', 'collections', 'blogs', 'posts'].includes(parent.id)) {
-        const kind = { products: 'product', collections: 'collection', blogs: 'blog', posts: 'article' }[parent.id];
-        children.push(...source.filter(page => page.slug && (
-          page.page_type === kind || page.template_key === kind ||
-          page.slug === kind || page.slug.endsWith('-' + kind)
-        ) && !children.some(child => child.page === page.slug))
-          .map(page => ({ title: page.title || humanize(page.slug), page: page.slug })));
-      }
-      if (parent.resource === 'products' || parent.resource === 'collections') {
-        children.push(...(catalogResources[parent.resource] || []).slice(0, 25).map(p => ({
-          title: p.title || p.name || p.slug || 'Untitled',
-          resource: parent.resource, id: p.id,
-        })));
-      }
-      if(!resolveShowcase)children.push({ title: parent.resource === 'pages' ? 'Start from page template' : 'Start from ' + parent.title.toLowerCase().replace(/s$/, '') + ' template',
-        template: ({posts:'article',blogs:'blog',products:'product',collections:'collection',pages:'page'})[parent.id] || 'metaobject' });
-      html += children.map(child => row(child.title, 'page',
-        child.preset ? 'data-picker-preset="' + cmsEscapeAttr(child.preset) + '" data-preset-page="' + cmsEscapeAttr(child.page) + '"' :
-        child.page ? 'data-picker-page="' + cmsEscapeAttr(child.page) + '"' :
-        child.resource && child.id ? 'data-picker-resource="' + cmsEscapeAttr(child.resource) + '" data-resource-id="' + cmsEscapeAttr(child.id) + '"' :
-        'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? 'Theme' : child.origin==='stock' ? 'Stock · editable starter' : 'Create template', false)).join('');
-      if(canCreateResolve){
-        const instructions={
-          products:['Build your first product template','Start with the existing Resolve product layout and style its sections. Product inventory comes later.'],
-          collections:['Design a new collection','Create a reusable collection landing page. Associate inventory when the store is connected.'],
-          pages:['Create a content page','A reusable page layout for About, FAQ, policies and information.'],
-          blogs:['Create a blog layout','Organize stories in an editorial archive. No publishing yet.'],
-          posts:['Create an article template','Prepare a long-form story layout with media and rich content.'],
-          metaobject:['Create a structured template','Define a reusable template before connecting its data fields.']
-        };
-        const [title,subtitle]=instructions[parent.id];
-        html+='<div class="te-creation-empty" role="region" aria-label="Create '+cmsEscapeAttr(parent.title)+'">'+
-          '<div class="te-creation-symbol">＋</div><strong>'+cmsEscapeHtml(title)+'</strong>'+
-          '<p>'+cmsEscapeHtml(subtitle)+'</p>'+
-          '<button type="button" class="te-creation-primary" data-picker-create="'+cmsEscapeAttr(parent.id)+'">Create local draft +</button>'+
-          '<small>Preview only · No D1 records or live storefront changes</small></div>';
-      }
+    if (group && !needle) {
+      const options = source.filter(page => inCategory(page, group));
+      html = '<button type="button" class="te-page-option te-picker-back" data-picker-back><span class="te-picker-icon">‹</span><span class="te-picker-copy"><strong>Back</strong></span></button>' +
+        '<div class="te-picker-heading">' + cmsEscapeHtml(group.title) + '</div>' +
+        (options.length ? options.map(pageButton).join('') :
+          '<div class="te-empty">No pages of this type are installed for the selected site.</div>');
+    } else if (needle) {
+      const matching = source.filter(page => [page.title,page.slug,page.route_path,page.route]
+        .join(' ').toLowerCase().includes(needle));
+      html = matching.length ? matching.map(pageButton).join('') :
+        '<div class="te-empty">No matching CMS pages.</div>';
     } else {
-      html = storefrontMenu.filter(group => match(group.title) || (needle && group.children?.some(ch => match(ch.title)))).map(group => {
-        const hasChildren = !!(group.children || group.resource || (resolveShowcase && group.id==='metaobject'));
-        const page = group.page ? pageFor(group.page) : null;
-        const divider = !needle && ['cart', 'pages', 'search'].includes(group.id)
-          ? '<div class="te-picker-divider" role="separator"></div>' : '';
-        return divider + row(group.title, group.icon,
-          hasChildren ? 'data-picker-category="' + cmsEscapeAttr(group.id) + '"' :
-            page ? 'data-picker-page="' + cmsEscapeAttr(page.slug) + '"' :
-            'data-picker-template="' + cmsEscapeAttr(group.template || group.id) + '"',
-          (!hasChildren && !page) ? 'Stock · editable starter' : '', hasChildren);
+      html = storefrontMenu.map(item => {
+        const count = source.filter(page => inCategory(page,item)).length;
+        return '<button type="button" class="te-page-option" data-picker-category="' +
+          cmsEscapeAttr(item.id) + '"><span class="te-picker-icon" aria-hidden="true">' +
+          pickerIcon(item.icon || 'page') + '</span><span class="te-picker-copy"><strong>' +
+          cmsEscapeHtml(item.title) + '</strong><small>' + count +
+          (count === 1 ? ' page' : ' pages') + '</small></span>' +
+          '<span class="te-picker-chevron" aria-hidden="true">›</span></button>';
       }).join('');
     }
-    // Actual installed pages appear first. Stock templates remain available
-    // below them, rather than replacing the merchant's editable site.
-    if (host && !needle && !pagePickerCategory && source.length) {
-      const sitePages = source.slice(0, 40);
-      html = '<div class="te-picker-heading">Site pages ('+source.length+')</div>'+
-        sitePages.map(p=>row(p.title||humanize(p.slug),'page',
-          'data-picker-page="'+cmsEscapeAttr(p.slug)+'"',
-          p.route||p.live_route||'CMS draft',false)).join('')+
-        (source.length>sitePages.length
-          ? '<div class="te-picker-heading">Search to find more site pages</div>' : '')+
-        '<div class="te-picker-divider" role="separator"></div>'+html;
-    }
-    // One search across actual authorized CMS pages, not only menu headings.
-    // Preserve category browsing and do not invent templates or draft pages.
-    if (needle && !parent) {
-      const realPages=source.filter(p=>p.slug && p.slug!=='site' &&
-        (resolveShowcase ? !/^(journal-|violet-)/.test(p.slug) :
-         journalShowcase ? p.slug.startsWith('journal-') :
-         violetShowcase ? (p.slug==='home' || p.slug.startsWith('violet-')) :
-         !/^(resolve-|journal-|violet-)/.test(p.slug)) &&
-        match([p.title,p.slug,p.route,p.live_route].join(' '))).slice(0,30);
-      if(realPages.length)html=
-        '<div class="te-picker-heading">Matching CMS pages ('+realPages.length+')</div>'+
-        realPages.map(p=>row(p.title||humanize(p.slug),'page',
-          'data-picker-page="'+cmsEscapeAttr(p.slug)+'"',p.live_route||p.route||'',false)).join('')+
-        (html?'<div class="te-picker-divider" role="separator"></div>'+html:'');
-    }
-    root.innerHTML = html || (resolveShowcase?
-      '<div class="te-creation-empty"><strong>Nothing matches that search.</strong>'+
-      '<p>Try a different keyword, or open a resource category to create a new local draft template.</p>'+
-      '<button type="button" class="te-creation-primary" data-picker-clear>Explore templates</button></div>' :
-      '<div class="te-empty">No matching storefront templates.</div>');
-    root.querySelector('[data-picker-clear]')?.addEventListener('click',()=>{
-      pagePickerCategory=null;byId('te-page-search').value='';renderPageOptions('');
+    root.innerHTML = html;
+    root.querySelectorAll('[data-picker-category]').forEach(button => button.addEventListener('click', () => {
+      pagePickerCategory = button.dataset.pickerCategory;
+      renderPageOptions('');
+    }));
+    root.querySelector('[data-picker-back]')?.addEventListener('click', () => {
+      pagePickerCategory = null;
+      renderPageOptions('');
     });
-    root.querySelectorAll('[data-picker-category]').forEach(button =>
-      button.addEventListener('click', () => { pagePickerCategory = button.dataset.pickerCategory; byId('te-page-search').value = ''; renderPageOptions(''); }));
-    root.querySelector('[data-picker-back]')?.addEventListener('click', () => { pagePickerCategory = null; renderPageOptions(''); });
-    root.querySelectorAll('[data-picker-preset]').forEach(button => button.addEventListener('click', () => {
-      const preset=button.dataset.pickerPreset;
-      const page=button.dataset.presetPage;
-      if(!['resolve','plain-jane','violet'].includes(preset)||!page)return;
-      window.cmsAdminNavigate('/admin/theme-editor?'+new URLSearchParams({showcase:preset,slug:page}).toString());
-    }));
-    root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () => {
-      switchPage(button.dataset.pickerPage);
-    }));
-    root.querySelectorAll('[data-picker-create]').forEach(button=>button.addEventListener('click',()=>openResolveCreation(button.dataset.pickerCreate)));
-    root.querySelectorAll('[data-picker-template]').forEach(button => button.addEventListener('click', () => {
-      if(resolveShowcase){
-        const type=button.dataset.pickerTemplate;
-        openResolveCreation(type==='metaobject'?'metaobject':type==='product'?'products':type==='collection'?'collections':
-          type==='blog'?'blogs':type==='article'?'posts':'pages');
-      }else showScaffoldTemplate(button.dataset.pickerTemplate, button.querySelector('strong').textContent);
-    }));
-    root.querySelectorAll('[data-picker-resource]').forEach(button => button.addEventListener('click', () => {
-      const params=new URLSearchParams(window.location.search);
-      const scope=params.get('site_id')?'&site_id='+encodeURIComponent(params.get('site_id')):'';
-      const url = button.dataset.pickerResource === 'products'
-        ? '/admin/product-edit?id=' + encodeURIComponent(button.dataset.resourceId)+scope
-        : '/admin/products?view=collections&collection_id='+encodeURIComponent(button.dataset.resourceId)+scope;
-      if (localShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
-      else window.location.href = url;
-    }));
+    root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () =>
+      switchPage(button.dataset.pickerPage)));
   }
 
   function blockSchemaFor(section, meta) {
