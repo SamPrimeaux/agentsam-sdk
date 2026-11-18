@@ -1086,7 +1086,10 @@ function undo(){if(!history.length)return;future.push(JSON.stringify(doc));doc=J
 function redo(){if(!future.length)return;history.push(JSON.stringify(doc));doc=JSON.parse(future.pop()!) as Document;selectedId=doc.items[0]?.id||"";selectedPartId=null;renderAll();}
 async function exportGLB(){
  announce("Preparing scene GLB...");
- try{const exporter=new GLTFExporter();const output=await exporter.parseAsync([stage,brushGroup],{binary:true,onlyVisible:true});const bytes=output as ArrayBuffer;download(new Blob([bytes],{type:"model/gltf-binary"}),"iam-showcase-scene.glb");announce("Visible geometry exported as GLB.");}
+ try{const exporter=new GLTFExporter();const brushParent=brushGroup.parent;stage.add(brushGroup);
+ let output:ArrayBuffer;
+ try{output=await exporter.parseAsync(stage,{binary:true,onlyVisible:true}) as ArrayBuffer;}
+ finally{if(brushParent)brushParent.add(brushGroup);else stage.remove(brushGroup);}const bytes=output as ArrayBuffer;download(new Blob([bytes],{type:"model/gltf-binary"}),"iam-showcase-scene.glb");announce("Visible geometry exported as GLB.");}
  catch(e){announce("GLB export failed: "+(e instanceof Error?e.message:String(e)));}
 }
 async function generateCAD(){
