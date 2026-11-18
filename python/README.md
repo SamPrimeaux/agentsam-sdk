@@ -108,3 +108,18 @@ The native process runner uses an executable plus an argument vector, an allowli
 D1 writes are intentionally different: they go through the existing D1Adapter only. That adapter uses the installed Wrangler/Node toolchain and requires an explicitly configured database UUID matching the requested target. The Python filesystem and process capabilities remain usable without Node; D1 mutation is unavailable when its existing adapter is not bound.
 
 AgentSamClient.procedures.run(id, version, input) and its async arun counterpart delegate to an explicitly injected trusted host procedure operation. They do not launch shell commands or create another procedure registry. The host-owned PrimeTech handler validates the pinned manifest, invokes the existing sam.superbash operation, and writes output artifacts and receipts to the configured receipt directory.
+
+## Native asset inventory (PrimeTech procedure API)
+
+The SDK source exposes a first-class `AgentSamClient.assets` facade. It does not reimplement the engineering scanner or execute shell commands.
+
+```python
+from agentsam_sdk import AgentSamClient
+
+client = AgentSamClient(procedure_invoker=authenticated_host_invoker)
+verified_receipt = client.assets.inventory_native()
+```
+
+Async hosts can use `await AsyncAgentSamClient(...).assets.ainventory_native()`. The existing host-owned `repo.asset.inventory@0.1.0` procedure owns native source discovery and hashing, while `ProcedureClient` validates its receipt.
+
+This is SOURCE functionality until the corresponding clean Python wheel is published to PyPI. The source declares `0.2.0`; do not assume that already-published `agentsam-sdk==0.1.0` includes it.
