@@ -3,6 +3,7 @@ import test from 'node:test';
 import {createCmsTestDb} from '../../../ecommerce-cms-agentsam/tests/cms-test-db.mjs';
 import {listStudioThemeDrafts} from './studio-theme-drafts.js';
 import {handleStudioSitesOverview} from './studio-sites-overview.js';
+import { addCmsHostDirectoryTables } from './cms-test-host-directory.mjs';
 
 const d1 = sqlite => ({prepare(sql) {
   let values=[];
@@ -16,6 +17,7 @@ const d1 = sqlite => ({prepare(sql) {
 }});
 function fixture() {
   const sqlite=createCmsTestDb();
+  addCmsHostDirectoryTables(sqlite);
   sqlite.exec(`
     INSERT INTO accounts(id) VALUES ('au_testowner0001'),('au_testother0002');
     INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
@@ -45,7 +47,7 @@ test('draft directory lists every owned site exactly once with site-bound editor
     assert.deepEqual(result.map(row=>row.site_id).sort(),['a-blog','a-main']);
     assert.equal(new Set(result.map(row=>row.id)).size,2);
     assert.ok(result.every(row=>row.installed&&row.site_linked));
-    assert.ok(result.every(row=>row.edit_href.endsWith('&site_id='+row.site_id)));
+    assert.ok(result.every(row=>row.edit_href.includes('/admin/sites/'+row.site_id+'/themes/')));
     assert.ok(result.every(row=>!row.name.includes('Secret')));
     assert.deepEqual(result.map(row=>row.site_name).sort(),['Personal Blog','Storefront']);
   }finally{sqlite.close();}
@@ -62,14 +64,13 @@ test('Store overview cannot promote another site draft into current preview and 
     assert.equal(automatic.preview_theme.installed,true);
     assert.equal(automatic.draft_themes.length,1);
     assert.deepEqual(automatic.available_sites.map(s=>s.id).sort(),['a-blog','a-main']);
-    // A legacy multi-site account with no default opens a deterministic,
-    // owned, established site rather than a blocking selector.
+    // A multi-site account with no default must explicitly select the website.
     sqlite.prepare("UPDATE cms_sites SET is_default=0 WHERE account_id='au_testowner0001'").run();
     const recovered=await (await handleStudioSitesOverview(new Request(base),env,'au_testowner0001')).json();
-    assert.equal(recovered.site_selection_required,false);
-    assert.equal(recovered.selected_site_id,'a-blog');
-    assert.equal(recovered.preview_theme.installed,true);
-    assert.equal(recovered.draft_themes.length,1);
+    assert.equal(recovered.site_selection_required,true);
+    assert.equal(recovered.selected_site_id,null);
+    assert.equal(recovered.preview_theme,null);
+    assert.equal(recovered.draft_themes.length,0);
     const selected=await handleStudioSitesOverview(new Request(base+'?site_id=a-blog'),env,'au_testowner0001');
     assert.equal(selected.status,200);
     const payload=await selected.json();
@@ -77,7 +78,7 @@ test('Store overview cannot promote another site draft into current preview and 
     assert.equal(payload.preview_theme.installed,true);
     assert.equal(payload.preview_theme.preview_href,null);
     assert.equal(payload.preview_theme.edit_href,
-      '/admin/theme-project-editor?project=theme_plain-jane&site_id=a-blog');
+      '/admin/sites/a-blog/themes/theme_plain-jane/editor/home');
     const forbidden=await handleStudioSitesOverview(new Request(base+'?site_id=b-blog'),env,'au_testowner0001');
     assert.equal(forbidden.status,404);
     // A merchant with exactly one site does not need to choose it every time.
