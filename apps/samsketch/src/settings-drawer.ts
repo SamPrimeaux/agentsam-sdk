@@ -122,8 +122,8 @@ function renderSamStep(step: SamStep, state: SettingsState, images: { name: stri
       select("Voice mode", "direct.voiceMode", [["single", "Single narrator"], ["dual", "Dual voice"]] as [string, string][], ss.voiceMode) +
       select("Voice", "direct.voiceName", VOICES.map(v => [v.name, v.name + " · " + v.tone] as [string, string]), ss.voiceName) +
       select("Style preset", "direct.voicePreset", [["", "Choose a style"], ...VOICE_STYLES.map(v => [v.style, v.label] as [string, string])], ss.voiceStyle) +
-      '<input id="sam-direct-style" class="settings-text-input" value="' + escapeHtml(ss.voiceStyle) + '" placeholder="Warm, articulate design documentary narrator" aria-label="Voice style direction">' +
-      '<textarea id="sam-direct-script" class="settings-textarea" rows="4" placeholder="Write narration for this scene..."></textarea>' +
+      '<input id="sam-direct-style" class="settings-text-input" data-setting="direct.voicePreset" value="' + escapeHtml(ss.voiceStyle) + '" placeholder="Warm, articulate design documentary narrator" aria-label="Voice style direction">' +
+      '<textarea id="sam-direct-script" class="settings-textarea" data-beat-field="script" rows="4" aria-label="Narration script">' + escapeHtml(beat?.script || "") + '</textarea>' +
       '<div class="sam-inline-actions">' + action("Draft script with AgentSam", "direct.draft", "sparkles") + action("Preview narration", "direct.speak", "audio-lines") + action("Stop", "direct.stop", "square") + '</div>' +
       '<p class="settings-note">Narration preview uses the browser voice available on this device. SamSpeaks Gemini voice synthesis is a separate runtime integration.</p>';
   }
