@@ -17,7 +17,7 @@ const SAFE_SLUG = /^[a-z][a-z0-9-]{0,62}$/;
 const SAFE_VERSION = /^\d+\.\d+\.\d+$/;
 const HASH = /^[0-9a-f]{64}$/;
 const safePath = value => typeof value === 'string' && value.length > 0 &&
-  !value.startsWith('/') && !value.includes('\\\\') &&
+  !value.startsWith('/') && !value.includes('\\') &&
   !value.split('/').some(part => !part || part === '.' || part === '..');
 
 const [indexResponse, catalogResponse] = await Promise.all([
