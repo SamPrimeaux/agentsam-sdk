@@ -20,25 +20,16 @@
     setNote("Theme settings validation is unavailable. Reload to retry; your draft has not been changed.", "error");
   });
   const params = new URLSearchParams(location.search);
-  const showcaseTheme = ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
-  // Packaged showcases stay preview-only unless the host explicitly provides
-  // a site-scoped CMS adapter. Resolve's local proof uses the same editor API
-  // contract without connecting to a customer or production database.
+  // Only the authenticated CMS host or explicit page inventory can select content.
   const host = window.AgentSamThemeEditorHost || null;
   let stockHandoffShown = false;
   const editorRequest = host ? host.adapter.request.bind(host.adapter) : (window.cmsAdminFetch || window.adminFetch);
-  const violetShowcase = showcaseTheme === 'violet';
-  const resolveShowcase = showcaseTheme === 'resolve';
-  const journalShowcase = showcaseTheme === 'plain-jane';
-  const localShowcase = Boolean(showcaseTheme);
-  const showcaseDisplayName = journalShowcase ? 'Plain Jane Journal' : resolveShowcase ? 'Resolve' : 'Violet';
-  let slug = host?.page || params.get('slug') || (localShowcase ? 'home' : 'shop');
+  let slug = host?.page || params.get('slug') || 'home';
   if (!host) window.cmsActivePageSlug = slug;
   let pageData = null;
   let siteData = null;
   let pages = [];
   let pagePickerCategory = null;
-  let showcaseTemplate = null;
   let activeSectionKey = null;
   let activeSectionOwner = slug;
   let selectedTheme = 'heuristic';
@@ -134,7 +125,7 @@
   let publishInFlight = false;
   let hasEditedThisSession = false;
   let autosaveFailed = false;
-  const preferredDevice = host?.initialDevice || params.get('previewMode') || (localStorage.getItem('agentsam:cms:preview-device') || localStorage.getItem('fnf-theme-editor-device'));
+  const preferredDevice = host?.initialDevice || params.get('previewMode') || localStorage.getItem('agentsam:cms:preview-device');
   let device = ['desktop','tablet','mobile'].includes(preferredDevice) ? preferredDevice : 'desktop';
   let inspectionEnabled = true;
   const undoHistory = [];
@@ -183,18 +174,6 @@
   const showOutlines = true;
   const autoPreview = true;
 
-  // Public URL inventory for the SDK site; not CMS publication evidence.
-  // Tenant-owned CMS pages from /api/admin/cms/pages always take precedence.
-  const fallbackPages = [
-    { slug: 'home', title: 'Home', route: '/' },
-    { slug: 'learn', title: 'Learn', route: '/learn' },
-    { slug: 'themes', title: 'Themes', route: '/themes/' },
-    { slug: 'sdk-help', title: 'SDK Help', route: '/packages/sdk/help/' },
-    { slug: 'sam-docs', title: 'SAM Docs', route: '/docs/sam/' },
-    { slug: 'structured-decisions', title: 'Structured Decisions', route: '/docs/sam/structured-decisions' },
-    { slug: 'infrastructure-cookbooks', title: 'Infrastructure Cookbooks', route: '/docs/sam/infrastructure-cookbooks' },
-    { slug: 'native-runtime', title: 'Native Go Runtime', route: '/docs/sam/native-runtime' }
-  ];
   const icon = {
     page: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6z" stroke="currentColor" stroke-width="1.7"/><path d="M15 3v4h4" stroke="currentColor" stroke-width="1.7"/></svg>',
     section: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
@@ -455,34 +434,14 @@
 
   function pageRoute(pageSlug) {
     if (host) return host.pageRoutes?.[pageSlug] || null;
-    // A site-owned CMS draft must never preview a global SDK/demo route just
-    // because another site happens to use a common slug such as 'home'.
-    if (window.cmsActiveSiteId) {
-      const owned = pageSlug === slug && pageData?.slug === slug
-        ? pageData : pages.find(page => page.slug === pageSlug);
-      if (!owned) return null;
-      if (activeCmsSite?.id && activeCmsSite.id !== window.cmsActiveSiteId) return null;
-      // Theme Store's preview is the published storefront, never a draft or
-      // internal site-shell document. All other selected sites use the same
-      // site-owned route resolver; app-store route templates are normalized
-      // by cmsEditorStorefrontUrl rather than a separate editor branch.
-      if (activeCmsSite?.id === 'theme-store' && owned.status !== 'published') return null;
-      const route = owned.route_path || owned.route || owned.live_route;
-      if (!route || route === '/_site-shell') return null;
-      return window.cmsEditorStorefrontUrl?.(activeCmsSite, route) || null;
-    }
-    // Bridge Fly is a real authored R2 scene, not a publishable storefront
-    // route. Its authenticated canvas can still be previewed in this editor.
-    if (pageSlug === 'bridge-fly') return '/admin/bridge-fly-preview';
-    const authoritative = pages.find(function(page) { return page.slug === pageSlug; });
-    if (authoritative?.live_route) return authoritative.live_route;
-    if (window.PAGE_ROUTES && window.PAGE_ROUTES[pageSlug]) return window.PAGE_ROUTES[pageSlug];
-    const known = fallbackPages.find(function(page) { return page.slug === pageSlug; });
-    // A CMS record is not necessarily a published storefront route. Never
-    // silently show the homepage as the preview for an unknown customer page.
-    return known ? known.route : null;
+    const owned = pageSlug === slug && pageData?.slug === slug
+      ? pageData : pages.find(page => page.slug === pageSlug);
+    if (!owned || !window.cmsActiveSiteId ||
+        (activeCmsSite?.id && activeCmsSite.id !== window.cmsActiveSiteId)) return null;
+    const route = owned.route_path || owned.route || owned.live_route;
+    return route && route !== '/_site-shell'
+      ? window.cmsEditorStorefrontUrl?.(activeCmsSite, route) || null : null;
   }
-
 
   function ownerSections(ownerSlug) {
     const doc = ownerSlug === 'site' ? siteData : pageData;
@@ -873,65 +832,6 @@
   // installed pages or products. Every capability stays offered.
   const { templateNavigation } = await import('/theme-editor/system-template-registry.mjs');
   const storefrontMenu = templateNavigation();
-  if (resolveShowcase) {
-    const products = storefrontMenu.find(item => item.id === 'products');
-    products.children = [
-      {title:'All products',page:'resolve-products'},
-      {title:'Default product',page:'resolve-product'}
-    ];
-    const collections = storefrontMenu.find(item => item.id === 'collections');
-    collections.children = [
-      { title: 'Collections list', page: 'resolve-collections' },
-      { title: 'Default collection', page: 'resolve-collection' },
-      { title: 'Leather studies', page: 'resolve-leather' },
-      { title: 'Knitwear edit', page: 'resolve-knitwear' },
-    ];
-    for(const [id,page] of [
-      ['gift-card','resolve-gift-card'],['search','resolve-search'],
-      ['checkout','resolve-checkout'],['404','resolve-404'],['metaobject','resolve-metaobject']]){
-      storefrontMenu.find(item => item.id===id).page=page;
-    }
-    storefrontMenu.find(item=>item.id==='blogs').children=[
-      {title:'Editorial archive',page:'resolve-blogs'},
-      {title:'Plain Jane · Blog starter',preset:'plain-jane',page:'journal-home'}
-    ];
-    storefrontMenu.find(item=>item.id==='posts').children=[
-      {title:'Editorial article',page:'resolve-article'},
-      {title:'Plain Jane · Article starter',preset:'plain-jane',page:'journal-the-art-of-slow-travel'}
-    ];
-    const cart = storefrontMenu.find(item => item.id === 'cart'); cart.page = 'resolve-cart';
-    const password = storefrontMenu.find(item => item.id === 'password'); password.page = 'resolve-password';
-    storefrontMenu.find(item=>item.id==='customer').children.push(
-      { title: 'Sign in', page: 'resolve-sign-in' },
-      { title: 'Sign up', page: 'resolve-sign-up' },
-      { title: 'Account overview', page: 'resolve-account' },
-      { title: 'Order history', page: 'resolve-orders' },
-      { title: 'Saved pieces', page: 'resolve-saved' },
-      { title: 'Profile & preferences', page: 'resolve-profile' },
-    );
-  }
-  if (journalShowcase) {
-    const journalMenu = [
-      {id:'home',title:'Journal home',icon:'home',page:'journal-home'},
-      {id:'blogs',title:'Blog index',icon:'blog',children:[{title:'Notes on a quieter life',page:'journal-home'}]},
-      {id:'posts',title:'Articles',icon:'post',children:[
-        {title:'The art of slow travel',page:'journal-the-art-of-slow-travel'},
-        {title:'Analog photography in a digital age',page:'journal-analog-photography-digital-age'}
-      ]},
-      {id:'gallery',title:'Photography',icon:'collection',page:'journal-photography'},
-      {id:'pages',title:'Pages',icon:'page',children:[
-        {title:'About',page:'journal-about'},
-        {title:'Contact',page:'journal-contact'},
-        {title:'Privacy',page:'journal-privacy'},
-        {title:'Terms',page:'journal-terms'},
-        {title:'404',page:'journal-404'}
-      ]}
-    ];
-    storefrontMenu.find(item=>item.id==='blogs').children.push(...journalMenu.filter(item=>item.id==='blogs').flatMap(item=>item.children||[]));
-    storefrontMenu.find(item=>item.id==='posts').children.push(...journalMenu.filter(item=>item.id==='posts').flatMap(item=>item.children||[]));
-    storefrontMenu.find(item=>item.id==='pages').children.push(...journalMenu.filter(item=>item.id==='pages').flatMap(item=>item.children||[]));
-    storefrontMenu.find(item=>item.id==='home').page='journal-home';
-  }
   // Installed package pages are listed from the authorized CMS page inventory below.
 
   const pickerIconPaths = {
@@ -966,130 +866,10 @@
     if (!byId('te-page-popover')?.hidden) renderPageOptions(byId('te-page-search').value);
   }
 
-  function showScaffoldTemplate(template, title) {
-    if (!localShowcase) {
-      // Navigate only to pages delivered by this installed package or site.
-      // A generic template choice must never jump into an unrelated showcase.
-      const aliases = { 'products-list': 'product', 'collections-list': 'collection', 'gift-card': 'gift_card', '404': 'not_found' };
-      const kind = aliases[template] || template;
-      const installed = pages.find(page => page.slug === template ||
-        page.page_type === kind || page.template_key === kind ||
-        page.slug?.endsWith('-' + template));
-      if (installed) void switchPage(installed.slug);
-      else {
-        const params=new URLSearchParams(location.search);
-        const target=new URL('/canvas',location.origin);
-        target.searchParams.set('host','online-store');
-        target.searchParams.set('template',kind);
-        if(params.get('site_id'))target.searchParams.set('site_id',params.get('site_id'));
-        window.top.location.assign(target.href);
-      }
-      return;
-    }
-    showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
-    byId('te-page-title').textContent = title;
-    byId('te-tree-title').textContent = title;
-    byId('te-tree').innerHTML = '<div class="te-tree-scaffold"><div class="te-picker-heading">Header</div>' +
-      '<div class="te-tree-scaffold-row">▤ &nbsp; Violet header</div><div class="te-picker-heading">Template</div>' +
-      '<div class="te-tree-scaffold-row">▤ &nbsp; ' + cmsEscapeHtml(title) + '</div>' +
-      '<div class="te-tree-scaffold-row">⊕ &nbsp; Add section · UI scaffold</div>' +
-      '<div class="te-picker-heading">Footer</div><div class="te-tree-scaffold-row">▤ &nbsp; Violet footer</div></div>';
-    closePageMenu();
-    renderScaffoldInspector();
-    refreshPreview();
-    setNote((resolveShowcase ? 'Resolve' : 'Violet') + ' · ' + title + ' — local template scaffold. No data is connected or published.');
-  }
-
-  function renderScaffoldInspector() {
-    if (!showcaseTemplate || !localShowcase) return;
-    const data = showcaseTemplate;
-    const formTemplate = ['checkout','metaobject','contact'].includes(data.template);
-    byId('te-inspector-title').textContent = data.title;
-    byId('te-inspector-subtitle').textContent = (resolveShowcase ? 'Resolve' : 'Violet') + ' · local template settings';
-    byId('te-section-status').textContent = 'preview';
-    const panel = byId('te-inspector-body');
-    panel.innerHTML = '<div class="te-scaffold-controls"><div class="te-picker-heading">Template content</div>' +
-      '<label>Heading<input type="text" maxlength="110" data-scaffold-setting="title" value="' + cmsEscapeAttr(data.title) + '"></label>' +
-      '<label>Description<textarea rows="3" data-scaffold-setting="subtitle">' + cmsEscapeHtml(data.subtitle) + '</textarea></label>' +
-      (formTemplate ? '<label>Button label<input type="text" maxlength="60" data-scaffold-setting="buttonLabel" value="' + cmsEscapeAttr(data.buttonLabel) + '"></label>' +
-      '<div class="te-picker-heading">Form fields · local only</div><div data-scaffold-fields>' +
-      data.fields.map((label,index) => '<div class="te-scaffold-field"><input aria-label="Field ' + (index+1) + '" data-scaffold-field="' + index + '" value="' + cmsEscapeAttr(label) + '">' +
-      '<button type="button" data-scaffold-remove="' + index + '" aria-label="Remove field ' + (index+1) + '">×</button></div>').join('') +
-      '</div><button type="button" class="te-scaffold-add" data-scaffold-add>+ Add form field</button>' : '') +
-      '<div class="te-scaffold-readonly">UI preview only. No Stripe, forms, or D1 records are changed.</div></div>';
-    panel.querySelectorAll('[data-scaffold-setting]').forEach(input => input.addEventListener('input', () => {
-      if (!showcaseTemplate) return;
-      showcaseTemplate[input.dataset.scaffoldSetting] = input.value;
-      if (input.dataset.scaffoldSetting === 'title') {
-        byId('te-page-title').textContent = input.value || 'Untitled template';
-        byId('te-tree-title').textContent = input.value || 'Untitled template';
-      }
-      refreshPreview();
-    }));
-    panel.querySelectorAll('[data-scaffold-field]').forEach(input => input.addEventListener('input', () => {
-      if (!showcaseTemplate) return;
-      showcaseTemplate.fields[Number(input.dataset.scaffoldField)] = input.value;
-      refreshPreview();
-    }));
-    panel.querySelectorAll('[data-scaffold-remove]').forEach(button => button.addEventListener('click', () => {
-      if (!showcaseTemplate) return;
-      showcaseTemplate.fields.splice(Number(button.dataset.scaffoldRemove),1);
-      renderScaffoldInspector();
-      refreshPreview();
-    }));
-    panel.querySelector('[data-scaffold-add]')?.addEventListener('click', () => {
-      if (!showcaseTemplate || showcaseTemplate.fields.length >= 12) return;
-      showcaseTemplate.fields.push('New field');
-      renderScaffoldInspector();
-      refreshPreview();
-    });
-  }
-
-  function renderResolveScaffold(template, title) {
-    const data = showcaseTemplate || { title, subtitle: '', buttonLabel: 'Continue', fields: [] };
-    const safeTitle = cmsEscapeHtml(data.title || title);
-    const safeSubtitle = cmsEscapeHtml(data.subtitle || '');
-    const needsForm = ['checkout','metaobject','contact','search'].includes(template);
-    const form = needsForm
-      ? '<div class="r-fields">' + (data.fields || []).map(label =>
-        '<label>' + cmsEscapeHtml(label) + '<input disabled placeholder="' + cmsEscapeAttr(label) + '"></label>').join('') +
-        '<button disabled>' + cmsEscapeHtml(data.buttonLabel || 'Continue') + ' · Preview</button></div>'
-      : '<div class="r-placeholders"><div></div><div></div><div></div></div>';
-    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-      '<style>body{margin:0;background:#fbfaf9;color:#0c0c0c;font:14px Geist,Arial,sans-serif}.r-head{background:#0b0b0b;padding:25px 5%;color:#fff;display:flex;justify-content:space-between;letter-spacing:.16em;font-size:11px}.r-head b{letter-spacing:.28em}.r-body{padding:100px max(6%,25px);min-height:55vh}.r-kicker{font-size:10px;letter-spacing:.2em;color:#8b181b;text-transform:uppercase;font-weight:750}.r-body h1{font-size:clamp(38px,5vw,72px);max-width:750px;line-height:1.05;text-transform:uppercase;letter-spacing:-.04em}.r-body p{color:#747474;max-width:500px;line-height:1.65}.r-fields{display:grid;gap:10px;max-width:510px;margin-top:40px}.r-fields label{font-size:11px;display:grid;gap:7px}.r-fields input{height:40px;padding:10px;border:1px solid #dedede}.r-fields button{background:#111;color:white;border:0;padding:15px}.r-placeholders{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:40px}.r-placeholders div{background:#efebed;height:180px}.r-foot{background:#111;color:#888;padding:25px 6%;font-size:11px}.r-tag{display:inline-block;margin-top:30px;padding:10px;border:1px solid #d3bec5;color:#8b181b;font-size:10px}@media(max-width:600px){.r-body{padding:60px 22px}.r-placeholders{grid-template-columns:1fr}}</style></head><body>' +
-      '<header class="r-head"><span>SHOP &nbsp; WARDROBE &nbsp; EDITORIAL</span><b>◆ RESOLVE ◆</b></header><main class="r-body">' +
-      '<div class="r-kicker">Resolve template · ' + cmsEscapeHtml(template) + '</div><h1>' + safeTitle + '</h1><p>' + safeSubtitle + '</p>' + form +
-      '<div class="r-tag">UI scaffold · Not connected to customer data</div></main><footer class="r-foot">RESOLVE ATELIER &nbsp; · &nbsp; AgentSam local preview</footer></body></html>';
-  }
-
-  function renderVioletScaffold(template, title) {
-    const safeTitle = cmsEscapeHtml(showcaseTemplate?.title || title);
-    const safeSubtitle = cmsEscapeHtml(showcaseTemplate?.subtitle || '');
-    const safeButton = cmsEscapeHtml(showcaseTemplate?.buttonLabel || 'Continue');
-    const safeKind = cmsEscapeHtml(template);
-    const cards = template === 'products-list' || template === 'collection' || template === 'collections-list'
-      ? '<div class="v-cards"><div>Campaign essentials</div><div>Community merch</div><div>Supporter gifts</div></div>' : '';
-    const form = template === 'checkout' || template === 'contact' || template === 'metaobject'
-      ? '<div class="v-form">' + (showcaseTemplate?.fields || []).map((label,index) =>
-        '<label>' + cmsEscapeHtml(label) + '<input type="text" placeholder="' + cmsEscapeAttr(label) + '" disabled></label>').join('') +
-        '<button type="button" disabled>' + safeButton + ' · preview only</button></div>' : '';
-    const empty = template === 'cart' ? '<div class="v-empty">Your cart is empty<div class="v-sub">Continue exploring the Violet storefront.</div></div>' : '';
-    const search = template === 'search' ? '<div class="v-form"><input placeholder="Search Violet" disabled></div>' : '';
-    const password = template === 'password' ? '<div class="v-form"><input type="password" placeholder="Store password" disabled></div>' : '';
-    const body = '<div class="v-sub">' + safeSubtitle + '</div>' +
-      (form || empty || search || password || cards || '<div class="v-sub">Connect this template to live content after approving the interface.</div>');
-    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-      '<link rel="stylesheet" href="/themes/violet/demo/global/cpas-public-surface.css">' +
-      '<style>body{background:#101127;color:#f6f4ff;font-family:Inter,system-ui,sans-serif;margin:0}.v-header{display:flex;align-items:center;justify-content:space-between;padding:19px 5%;border-bottom:1px solid #ffffff23;background:#15162d}.v-brand{display:flex;align-items:center;gap:11px;font-weight:800}.v-brand img{width:33px;height:33px;object-fit:contain}.v-nav{display:flex;gap:24px;font-size:12px;color:#c1bad2}.v-main{min-height:60vh;padding:64px max(6%,24px);background:radial-gradient(circle at 80% 0%,#713f862f,transparent 48%)}.v-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.17em;color:#c695ed;font-weight:800}.v-main h1{font-family:Georgia,serif;font-size:clamp(35px,5vw,68px);margin:18px 0 10px;letter-spacing:-.04em}.v-sub{color:#bdb7c9;font-size:14px;max-width:520px;line-height:1.6}.v-preview{display:inline-flex;font-size:11px;color:#d8bee8;background:#a758c520;border:1px solid #be8ace54;border-radius:100px;padding:7px 12px;margin-top:20px}.v-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:35px}.v-cards>div{min-height:160px;background:linear-gradient(130deg,#36203d,#25273b);border:1px solid #635070;border-radius:12px;display:flex;align-items:flex-end;padding:20px;font-weight:700}.v-form{max-width:540px;margin-top:30px;display:grid;gap:12px}.v-form label{display:grid;gap:6px;font-size:12px;color:#ddd}.v-form input,.v-form textarea{box-sizing:border-box;padding:13px 15px;width:100%;background:#ffffffef;border:0;border-radius:8px;color:#242424}.v-form button{padding:14px;border:0;border-radius:8px;background:#9345bb;color:#fff;font-weight:750}.v-empty{text-align:center;font-size:22px;font-weight:700;padding:55px 0}.v-footer{padding:27px 5%;border-top:1px solid #ffffff23;color:#a9a4b8;font-size:12px}.v-foot-row{display:flex;justify-content:space-between}@media(max-width:650px){.v-nav{display:none}.v-cards{grid-template-columns:1fr}.v-main{padding:45px 20px}}</style></head>' +
-      '<body data-studio-template="' + safeKind + '"><header class="v-header"><div class="v-brand"><img alt="" src="/themes/violet/demo/assets/generated/theme-mark.svg">Violet</div><div class="v-nav"><span>Home</span><span>Campaigns</span><span>Stories</span><span>Get involved</span></div></header>' +
-      '<main class="v-main"><div class="v-kicker">Violet theme · ' + safeKind + '</div><h1>' + safeTitle + '</h1>' + body +
-      '<div class="v-preview">UI scaffold · Not connected to customer data</div></main><footer class="v-footer"><div class="v-foot-row"><span>Violet Initiative</span><span>AgentSam Commerce · local preview</span></div></footer></body></html>';
-  }
-
   function renderPageOptions(query) {
     const needle = String(query || '').trim().toLowerCase();
     const root = byId('te-page-options');
-    const source = host ? pages : (pages.length ? pages : fallbackPages);
+    const source = pages;
     const pageFor = key => source.find(p => p.slug === key);
     const canCreateResolve = resolveShowcase && ['products','collections','pages','blogs','posts','metaobject'].includes(pagePickerCategory);
     const match = (text) => !needle || String(text || '').toLowerCase().includes(needle);
@@ -1233,31 +1013,6 @@
       if (localShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
       else window.location.href = url;
     }));
-  }
-
-  function openResolveCreation(kind){
-    const root=byId('te-page-options');
-    if(!root)return;
-    const labels={products:'Product template',collections:'Collection template',pages:'Content page',blogs:'Blog',posts:'Article',metaobject:'Metaobject'};
-    if(!labels[kind])return;
-    root.innerHTML='<div class="te-creation-workflow">'+
-      '<button class="te-creation-back" type="button" data-creation-back>‹ Back to '+cmsEscapeHtml(labels[kind])+'s</button>'+
-      '<div class="te-creation-symbol">＋</div><h3>New '+cmsEscapeHtml(labels[kind])+'</h3>'+
-      '<p>Start with Resolve’s authentic sections. Edit content and layout in the same CMS studio.</p>'+
-      '<form data-resolve-create-form><label>Template name<input name="title" maxlength="90" required autofocus placeholder="e.g. Autumn archive"></label>'+
-      '<div class="te-creation-hint">Creates a reusable local draft. Product records, URLs, and production publishing are not connected.</div>'+
-      '<button class="te-creation-primary" type="submit">Create & edit draft →</button></form></div>';
-    root.querySelector('[data-creation-back]')?.addEventListener('click',()=>{pagePickerCategory=kind;renderPageOptions('');});
-    root.querySelector('[data-resolve-create-form]')?.addEventListener('submit',event=>{
-      event.preventDefault();
-      const title=new FormData(event.currentTarget).get('title')?.toString().trim();
-      try{
-        const draft=window.AgentSamResolveStudio?.createDraft(kind,title);
-        if(!draft)throw Error('Resolve draft creation is unavailable.');
-        switchPage(draft.slug);
-      }catch(error){setNote(error.message||String(error),'error');}
-    });
-    root.querySelector('[name="title"]')?.focus();
   }
 
   function blockSchemaFor(section, meta) {
@@ -2106,7 +1861,7 @@
   function merchantPageLinks(query = '') {
     const needle = String(query).trim().toLowerCase();
     const found = new Map();
-    for (const page of (host ? pages : (pages.length ? pages : fallbackPages))) {
+    for (const page of pages) {
       const href = page.live_route || page.route || pageRoute(page.slug);
       if (!href || !/^\/(?!\/)/.test(href)) continue;
       const label = String(page.title || humanize(page.slug));
