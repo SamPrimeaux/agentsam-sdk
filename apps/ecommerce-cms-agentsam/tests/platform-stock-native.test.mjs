@@ -173,7 +173,8 @@ test("six real merchant sections install, edit, reopen and render from native im
  const html=(await adapter.resolvePreview("home")).html;
  assert.match(html,/data-cms-block=/);
  const {validateThemeProjectPayload}=await import("../backend/cms/theme-project-store.mjs");
- assert.doesNotThrow(()=>validateThemeProjectPayload(await adapter.getProject()));
+ const storedProject=await adapter.getProject();
+ assert.doesNotThrow(()=>validateThemeProjectPayload(storedProject));
 }));
 test("merchant section source cannot be forged and unsafe content fails at the host boundary",async()=>withDom(async()=>{
  const project=blankThemeProject({name:"Unsafe",purpose:"Shop",audience:"Customers",siteName:"Unsafe"});
