@@ -51,6 +51,15 @@ try {
           ok: true, authenticated: true, user: { id: "au_smoke", display_name: "Smoke test" },
         } });
       }
+      if (url.pathname === "/api/admin/store/online") {
+        // Exercise the installed Online Store, not the unrelated first-store
+        // onboarding empty state. The account/site are test-only fixtures.
+        return route.fulfill({ json: {
+          ok: true, selected_site_id: "site_smoke", selected_site_name: "Smoke Test Store",
+          available_sites: [{ id: "site_smoke", name: "Smoke Test Store" }],
+          active_theme: null, draft_themes: [], site_preview: null,
+        } });
+      }
       if (url.pathname.startsWith("/api/")) {
         return route.fulfill({ json: {
           ok: true, assets: [], apps: [], projects: [], notifications: [], sites: [], themes: [], drafts: [],
