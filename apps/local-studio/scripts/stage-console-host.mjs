@@ -122,16 +122,14 @@ writeFileSync(path.join(productStage, 'index.html'), index);
 
 // Fetch exact, digest-verified immutable previews from Theme Store.
 await import('./sync-theme-store-previews.mjs');
-const previewCatalog=await listLocalThemeProducts();
-if(previewCatalog.length!==3 || previewCatalog.some(entry=>!entry.preview_ready))
- throw new Error('Theme preview catalog incomplete; refuse to stage stale product listing');
+const previewCatalog=await listThemeStoreProducts();
+if(!previewCatalog.length || previewCatalog.some(entry=>!entry.preview_ready))
+ throw new Error('Theme Store preview sync incomplete; refuse to stage a partial catalog');
 const products=previewCatalog.map(item=>({
   ...item,
-  // No unreviewed packaged downloads are advertised by the hosted gallery.
+  // The SDK previews only; installation and downloadable releases stay in Theme Store.
   download_url:null,download_kind:null,installed:false,purchasable:false,
-  install_status:'not_connected',state:'preview_only',
-  editor_url:'/admin/theme-editor?showcase='+encodeURIComponent(item.slug)+'&slug='+
-    (item.slug==='plain-jane'?'journal-home':'home'),
+  install_status:'published',state:'preview_only',
   preview_url:'/themes/'+item.slug+'/demo/'
 }));
 const catalogPath=path.join(productStage,'admin/data/theme-products.json');
