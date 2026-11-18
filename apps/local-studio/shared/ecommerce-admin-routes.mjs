@@ -4,6 +4,9 @@
  * Its own backend route manifest is retained solely for standalone installs;
  * hosted Local Studio code must never import that manifest.
  */
+/** @param {string} id @param {string} path @param {string} handler
+ * @param {string | undefined} [page] @param {'document' | 'host'} [surface]
+ */
 const route = (id, path, handler, page, surface = 'document') => Object.freeze({
   id, path, handler, page: page || null, asset: handler === 'admin-spa' ? '_spa/index.html' : `${page}.html`, surface,
   authority: 'local-studio',
@@ -51,10 +54,14 @@ export const LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES = Object.freeze([
 
 const ID = /^[A-Za-z0-9_-]{1,160}$/;
 
+/** @param {string} pathname @param {string} template
+ * @returns {Record<string, string> | null}
+ */
 function matchPath(pathname, template) {
   const actual = String(pathname || '').split('/');
   const expected = String(template || '').split('/');
   if (actual.length !== expected.length) return null;
+  /** @type {Record<string, string>} */
   const params = {};
   for (let index = 0; index < expected.length; index += 1) {
     const segment = expected[index];
@@ -66,6 +73,7 @@ function matchPath(pathname, template) {
   return params;
 }
 
+/** @param {string} pathname */
 export function resolveLocalStudioEcommerceAdminRoute(pathname) {
   if (typeof pathname !== 'string' || !pathname.startsWith('/admin/') || pathname.startsWith('//') || /[?#\\]/.test(pathname)) return null;
   for (const candidate of LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES) {
