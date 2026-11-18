@@ -110,7 +110,7 @@ test('published original installs into chosen authorized CMS site with D1 pointe
     assert.equal(result.ok,true);
     assert.equal(result.site_id,'a-blog');
     assert.equal(result.page_count,project.pages.length);
-    assert.equal(result.editor_url,'/admin/theme-project-editor?project=theme_plain-jane&site_id=a-blog');
+    assert.equal(result.editor_url,'/admin/sites/a-blog/themes/theme_plain-jane/editor/home');
     assert.equal(result.source_release_sha256,sha);
     const row=sqlite.prepare("SELECT site_id,content_version,content_object_key FROM cms_globals WHERE global_key='theme-project:theme_plain-jane'").get();
     assert.equal(row.site_id,'a-blog');
@@ -223,7 +223,7 @@ test('every Try creates its own draft site + cms_site_themes row; unlimited trie
     assert.equal(first.scope,'site');
     assert.notEqual(first.site_id,second.site_id);
     assert.equal(first.project_id,'theme_plain-jane');
-    assert.equal(first.editor_url,'/admin/theme-project-editor?project=theme_plain-jane&site_id='+first.site_id);
+    assert.equal(first.editor_url,'/admin/sites/'+first.site_id+'/themes/theme_plain-jane/editor/home');
     assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_sites WHERE account_id='au_testowner0001'").get().n,sitesBefore+2);
     const site=sqlite.prepare('SELECT status,settings_json FROM cms_sites WHERE id=?').get(first.site_id);
     assert.equal(site.status,'draft');
