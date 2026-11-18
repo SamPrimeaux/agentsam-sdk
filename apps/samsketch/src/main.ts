@@ -1021,13 +1021,13 @@ window.addEventListener("samsketch:settings.action",event=>{
  switch(action){
   case "camera.frame":frame();break;
   case "camera.reset":frame();break;
-  case "scene.reset":stopStoryPlayback();stopStoryboardPlayback();doc.chapter=0;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};sceneAutoRotate=false;rotationSpeed=.003;applyMood("studio",false);redraw();frame();store();break;
+  case "scene.reset":stopStoryPlayback();stopStoryboardPlayback();doc.chapter=0;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};sceneAutoRotate=false;rotationSpeed=.003;applyMood("studio",false);redraw();frame();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
   case "styles.reset":{
    snapshot();surfaceRoughness=.82;surfaceMetalness=.08;doc.sceneSettings={...DEFAULT_SCENE_SETTINGS};
    doc.items.forEach(item=>{item.material="clay";item.finish=undefined;});
-   applyMood("studio",false);redraw();store();break;
+   applyMood("studio",false);redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings,storyboard:doc.storyboard,chapter:doc.chapter});break;
   }
-  case "light.reset":applyMood("studio");break;
+  case "light.reset":applyMood("studio");settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "story.add":break;
   case "story.play":playStoryboard();break;
   case "story.stop":stopStoryboardPlayback();announce("SamSpeaks flow stopped.");break;
@@ -1050,11 +1050,11 @@ window.addEventListener("samsketch:settings.action",event=>{
    announce("Reference notes sent to AgentSam; image files remain local to this browser session.");break;
   }
   case "stage.addProp":addSceneryProp(String(detail.prop) as SceneryPropId);break;
-  case "stage.brush":applyStudioSetting("stage.brush",!brushEnabled);break;
+  case "stage.brush":applyStudioSetting("stage.brush",!brushEnabled);settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "stage.clearBrush":doc.brushStrokes=[];redraw();store();announce("3D brush strokes cleared.");break;
   case "simulation.play":startStoryPlayback();break;
   case "simulation.pause":stopStoryPlayback();break;
-  case "effects.reset":wireframe=false;showGrid=false;grid.visible=false;shadowsEnabled=true;renderer.shadowMap.enabled=true;light.castShadow=true;floor.visible=true;selectionOutlineEnabled=true;doc.sceneSettings={...doc.sceneSettings,wireframe:false,showGrid:false,shadowsEnabled:true,selectionOutline:true};redraw();store();break;
+  case "effects.reset":wireframe=false;showGrid=false;grid.visible=false;shadowsEnabled=true;renderer.shadowMap.enabled=true;light.castShadow=true;floor.visible=true;selectionOutlineEnabled=true;doc.sceneSettings={...doc.sceneSettings,wireframe:false,showGrid:false,shadowsEnabled:true,selectionOutline:true};redraw();store();settingsApi.sync({sceneSettings:doc.sceneSettings});break;
   case "global.resetLayout":appFrame.style.removeProperty("--library-width");appFrame.style.removeProperty("--inspector-width");appFrame.style.removeProperty("--timeline-height");timelinePane.hidden=false;appFrame.dataset.timelineHidden="false";appFrame.dataset.libraryHidden="false";appFrame.dataset.inspectorHidden="false";toggleTimeline(false);break;
   case "global.reset":resetStudioSettings();break;
  }
