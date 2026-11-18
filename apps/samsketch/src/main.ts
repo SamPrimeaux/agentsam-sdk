@@ -922,6 +922,19 @@ function speakScript(script:string,voiceName="Kore",voiceStyle=""){
   utterance.onend=()=>resolve();utterance.onerror=()=>resolve();window.speechSynthesis.speak(utterance);
  });
 }
+function speakDirectedScript(script:string,voiceName="Kore",voiceStyle="",mode:"single"|"dual"="single"){
+ if(mode!=="dual")return speakScript(script,voiceName,voiceStyle);
+ const clean=script.replace(/<[^>]+>/g,"").replace(/\|yeah\||\|mhm\|/g,"").trim();
+ const tagged=clean.split(/(?=(?:Alex|Sam)\s*:)/i).filter(part=>part.trim());
+ const chunks=tagged.length>1?tagged:clean.split(/(?<=[.!?])\s+/).filter(part=>part.trim());
+ const secondary=voiceName==="Charon"?"Puck":"Charon";
+ return chunks.reduce<Promise<void>>(async(chain,part)=>{
+  await chain;
+  const isSecond=/^Sam\s*:/i.test(part);
+  const spoken=part.replace(/^(?:Alex|Sam)\s*:\s*/i,"");
+  await speakScript(spoken,isSecond?secondary:voiceName,voiceStyle);
+ },Promise.resolve());
+}
 function applyStoryboardBeat(beat:StoryBeat){
  applyMood(beat.mood,false);doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,explodeAmount:beat.explodeAmount};
  applyProgress(storyProgress);applyCameraShot(beat.cameraShot,beat.transitionType,false);
@@ -938,7 +951,7 @@ function playStoryboard(){
  const next=async()=>{
   if(token!==storyboardRun)return;
   const beat=beats[index];if(!beat){stopStoryboardPlayback();announce("SamSpeaks flow complete.");return;}
-  applyStoryboardBeat(beat);await speakScript(beat.script,beat.voiceName,beat.voiceStyle);
+  applyStoryboardBeat(beat);await speakDirectedScript(beat.script,beat.voiceName,beat.voiceStyle,beat.ttsMode);
   if(token!==storyboardRun)return;
   index++;storyboardTimer=window.setTimeout(()=>{void next();},450);
  };
@@ -1084,7 +1097,7 @@ window.addEventListener("samsketch:settings.action",event=>{
   case "story.add":break;
   case "story.play":playStoryboard();break;
   case "story.stop":stopStoryboardPlayback();announce("SamSpeaks flow stopped.");break;
-  case "story.speak":if(detail.beat)void speakScript(detail.beat.script,detail.beat.voiceName,detail.beat.voiceStyle);break;
+  case "story.speak":if(detail.beat)void speakDirectedScript(detail.beat.script,detail.beat.voiceName,detail.beat.voiceStyle,detail.beat.ttsMode);break;
   case "story.compose":{
    const prompt=(detail.prompt||"").trim();
    if(!prompt){announce("Describe the story you want SamSpeaks to compose.");break;}
@@ -1095,7 +1108,7 @@ window.addEventListener("samsketch:settings.action",event=>{
    const prompt="Draft a concise SamSpeaks voiceover for the current scene. Voice direction: "+(detail.voiceStyle||"Warm cinematic narrator")+". Mode: "+(detail.voiceMode||"single")+". Existing script: "+(detail.script||"Create a new script.")+". Return the script only.";
    sendHostMessage("assistant.request",{prompt,skill:"Draft",context:studioContext()});announce("Voiceover brief sent to AgentSam.");break;
   }
-  case "direct.speak":void speakScript(detail.script||"",detail.voiceName||"Kore",detail.voiceStyle||"");break;
+  case "direct.speak":void speakDirectedScript(detail.script||"",detail.voiceName||"Kore",detail.voiceStyle||"",detail.voiceMode==="dual"?"dual":"single");break;
   case "direct.stop":if("speechSynthesis" in window)window.speechSynthesis.cancel();break;
   case "inspo.attach":{
    const names=(detail.images||[]).join(", ");
