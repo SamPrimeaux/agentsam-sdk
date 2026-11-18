@@ -1,5 +1,6 @@
 import { createMiniAgentSam } from '/admin/workbench/mini-agentsam.js';
 import { readAgentSamReply } from './agentsam-response.mjs';
+import { buildThemeStudioAssistantContext } from './theme-editor-assistant-context.mjs';
 
 /** The existing CMS owns page/field state; this adapter owns no page persistence. */
 export function createThemeEditorMiniAgentSam({ onProposal, onClose, positionBounds }) {
@@ -11,31 +12,8 @@ export function createThemeEditorMiniAgentSam({ onProposal, onClose, positionBou
     resultStatus: 'AgentSam request sent',
     capabilities: { list: () => [] },
     async send({ prompt, resource, signal }) {
-      if (!resource?.sectionKey || !resource?.page) throw new Error('Choose a CMS section first.');
-      const conversationKey = JSON.stringify([resource.siteId, resource.page, resource.sectionKey]);
-      const field = resource.fieldKey || null;
-      const resourceInfo = JSON.stringify({
-        section: resource.sectionKey,
-        field,
-        current_value: typeof resource.currentValue === 'string' ? resource.currentValue.slice(0, 2000) : null,
-        request_type: field ? 'review selected field' : 'review selected section',
-      });
-      const context = {
-        page: '/admin/theme-editor',
-        slug: resource.ownerSlug,
-        workflow_key: 'cms_section_review',
-        // The backend validates store-owned page sections before giving them AI authority.
-        ...(resource.linked && resource.ownerSlug !== 'site'
-          ? { selected_resource: {
-            type: 'section', id: resource.sectionKey, label: resource.label,
-            page: resource.page, site_id: resource.siteId, surface: 'theme-studio',
-          } }
-          : { annotation: {
-            id: resource.sectionKey, label: resource.label,
-            page: resource.page, surface: 'theme-studio',
-            text: resource.currentValue ?? '',
-          } }),
-      };
+      const { context, selectionInfo, conversationKey } = buildThemeStudioAssistantContext(resource);
+      const resourceInfo = JSON.stringify(selectionInfo);
       const res = await fetch('/api/admin/agentsam/chat', {
         method: 'POST', credentials: 'include', signal,
         headers: { 'content-type': 'application/json', accept: 'application/json' },

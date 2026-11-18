@@ -81,6 +81,14 @@ describe('cloudflare capability-scoped auth', () => {
     assert.equal(cap.tokenRequired, true);
   });
 
+  it('never interprets a token-only Cloudflare product as OAuth authorized', () => {
+    const status = assessCapabilityAuthorization('cloudflare.snippets', ['account-settings.read']);
+    assert.equal(status.status, 'unknown');
+    assert.equal(status.token_required, true);
+    assert.equal(status.probe_required, true);
+    assert.equal(status.missing_scopes.length, 0);
+  });
+
   it('marks URL Scanner as needs_authorization when scopes missing', () => {
     const a = assessCapabilityAuthorization('cloudflare.url_scanner', ['account-settings.read']);
     assert.equal(a.status, 'needs_authorization');

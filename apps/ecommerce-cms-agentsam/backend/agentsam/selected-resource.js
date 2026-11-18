@@ -150,14 +150,21 @@ export async function resolveSelectedResource(env, resource) {
     throw new Error("Invalid store selection");
   }
 
+  // The selected site is a lookup hint. Only the authenticated principal and
+  // the host's authorized cms_sites row establish merchant ownership.
+  if (typeof resource.site_id !== "string" || !resource.site_id.trim()) {
+    throw new Error("cms_assistant_site_required");
+  }
   const accountId = requireApplicationAccountId();
   const site = await resolveCmsSite(env.DB, { accountId, siteId: resource.site_id });
   const section = await env.DB.prepare(
     "SELECT s.id,s.section_key,p.slug FROM cms_page_sections s " +
-      "JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id " +
-      "WHERE p.site_id=? AND p.account_id=? AND " +
-      "(p.route_path=? OR (p.route_path IS NULL AND p.slug=?)) AND s.section_key=?"
-  ).bind(site.id, accountId, resource.page, slug, resource.id).first();
+    "JOIN cms_pages p ON p.id=s.page_id " +
+    "JOIN cms_sites owner ON owner.id=p.site_id " +
+    "WHERE p.site_id=? AND owner.account_id=? AND owner.status!='archived' AND " +
+    "(p.route_path=? OR (p.route_path IS NULL AND p.slug=?)) AND " +
+    "(s.id=? OR s.section_key=?)"
+  ).bind(site.id, accountId, resource.page, slug, resource.id, resource.id).first();
 
   if (!section) throw new Error("Selected section does not belong to this store");
 

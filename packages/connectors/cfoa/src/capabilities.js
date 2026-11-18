@@ -4,6 +4,10 @@
  * Offerable surface = full Local Studio scope catalog (~315), organized into
  * permission products + feature packs (see permission-options.js).
  *
+ * This is a permission CATALOG, not connection/session authority. Identity
+ * authenticates the AgentSam actor; cfoa credential.js and oauth-persist.js
+ * resolve this actor's Cloudflare grants. CMS hosts use their existing D1/R2
+ * bindings unless a user explicitly connects their own Cloudflare account.
  * Default mint: baseline (+ host-selected packs). Explicit pack `all` or
  * `{ all: true }` requests the full catalog when the user chooses it.
  */
@@ -540,6 +544,21 @@ export function assessCapabilityAuthorization(capabilityId, grantedScopes = []) 
       missing_scopes: [],
       permissionLabel: null,
       availability: null,
+    };
+  }
+  // Token-only APIs cannot be authorized by checking OAuth scopes. An empty
+  // oauthScopes array must never turn an arbitrary grant into "authorized".
+  if (cap.tokenRequired) {
+    return {
+      capability_id: cap.id,
+      label: cap.label,
+      status: 'unknown',
+      missing_scopes: [],
+      permissionLabel: cap.permissionLabel,
+      availability: cap.availability,
+      availability_note: cap.availabilityNote || null,
+      token_required: true,
+      probe_required: true,
     };
   }
   if (cap.availability === 'subscription' || cap.availability === 'enterprise_addon') {

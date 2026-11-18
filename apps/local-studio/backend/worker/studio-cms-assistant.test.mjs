@@ -53,17 +53,19 @@ test("CMS selection is bound to the verified account and selected site when slug
     db.exec(`
       CREATE TABLE accounts (id TEXT PRIMARY KEY, status TEXT);
       CREATE TABLE cms_sites (id TEXT PRIMARY KEY, account_id TEXT, name TEXT, slug TEXT, primary_domain TEXT, status TEXT, is_default INTEGER);
-      CREATE TABLE cms_pages (id TEXT PRIMARY KEY, site_id TEXT, account_id TEXT, route_path TEXT, slug TEXT);
-      CREATE TABLE cms_page_sections (id TEXT PRIMARY KEY, account_id TEXT, page_id TEXT, section_key TEXT);
+      CREATE TABLE cms_pages (id TEXT PRIMARY KEY, site_id TEXT NOT NULL, route_path TEXT, slug TEXT);
+      CREATE TABLE cms_page_sections (id TEXT PRIMARY KEY, page_id TEXT NOT NULL, section_key TEXT);
       INSERT INTO accounts VALUES ('me','active'), ('other','active');
       INSERT INTO cms_sites VALUES ('one','me','One','one',NULL,'active',1), ('two','me','Two','two',NULL,'active',0), ('three','other','Three','three',NULL,'active',1);
-      INSERT INTO cms_pages VALUES ('p1','one','me','/','home'), ('p2','two','me','/','home'), ('p3','three','other','/','home');
-      INSERT INTO cms_page_sections VALUES ('s1','me','p1','hero'), ('s2','me','p2','hero'), ('s3','other','p3','hero');
+      INSERT INTO cms_pages VALUES ('p1','one','/','home'), ('p2','two','/','home'), ('p3','three','/','home');
+      INSERT INTO cms_page_sections VALUES ('s1','p1','hero'), ('s2','p2','hero'), ('s3','p3','hero');
     `);
     const env = { DB: { prepare: sql => ({ bind: (...args) => ({ first: async () => db.prepare(sql).get(...args) }) }) } };
     const selection = { type: "section", surface: "theme-studio", id: "hero", page: "/" };
     await withApplicationAccount(env, "me", async () => {
       assert.equal((await resolveSelectedResource(env, { ...selection, site_id: "two" })).id, "s2");
+      assert.equal((await resolveSelectedResource(env, { ...selection, id: "s2", site_id: "two" })).key, "hero");
+      await assert.rejects(() => resolveSelectedResource(env, selection), /cms_assistant_site_required/);
       await assert.rejects(() => resolveSelectedResource(env, { ...selection, site_id: "three" }), /cms_site_not_found/);
     });
     db.exec("PRAGMA foreign_keys = ON");

@@ -92,6 +92,18 @@ test("Theme Editor assistant selector reads the selected section's explicit site
   assert.equal(await readCmsAssistantSiteSelector(request), "inneranimalmedia");
 });
 
+test("Theme Studio annotation carries the explicit site selection for host authorization", async () => {
+  const request = new Request("https://studio.example/api/admin/agentsam/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message:"Review site header", context:{
+      page:"/admin/theme-editor",site_id:"site_sdk",
+      annotation:{id:"site-header",surface:"theme-studio",label:"Header"}
+    } })
+  });
+  assert.equal(await readCmsAssistantSiteSelector(request), "site_sdk");
+});
+
 test("Theme Editor assistant does not infer a site from a page slug or project field", async () => {
   const request = new Request("https://studio.example/api/admin/agentsam/chat", {
     method: "POST",
