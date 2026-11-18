@@ -112,7 +112,7 @@ function setupProjectClick(href) {
     setNote(...args) { notes.push(args); },
     URL,
   };
-  runInNewContext(clickHandlerSource, context);
+  const listener = runInNewContext('(' + clickHandlerSource + ')', context);
   return {
     listener, event, changes, notes,
     get prevented() { return prevented; },
