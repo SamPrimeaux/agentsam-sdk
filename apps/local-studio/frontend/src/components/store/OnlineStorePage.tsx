@@ -7,19 +7,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 /**
- * Native Online Store. One page in the global shell: store picker, live
- * preview, Draft themes and Discover themes. It reads the same authenticated
- * APIs the packaged console used; the packaged page and its second sidebar are
- * not involved.
+ * Native Online Store: website picker, live theme card, Draft themes with real
+ * renders, and Discover themes from the public Theme Store catalog. Colors
+ * come from theme tokens only.
  */
 
-type StoreSite = { id: string; name?: string; title?: string; slug?: string; url?: string; primary_domain?: string; is_default?: boolean };
+type StoreSite = { id: string; name?: string; title?: string; slug?: string; url?: string; primary_domain?: string };
 type StoreTheme = {
   id: string; name?: string; version?: string; package_version?: string;
   snapshot_url?: string | null; preview_url?: string | null; edit_href?: string | null; site_id?: string;
@@ -35,10 +33,12 @@ type StorePayload = {
 };
 type MarketTheme = {
   slug: string; name?: string; version?: string; developer?: string; author?: string;
-  thumbnail_url?: string | null; preview_url?: string | null; can_install?: boolean;
+  thumbnail_url?: string | null; preview_url?: string | null; preview_alias?: string; can_install?: boolean;
 };
 
 const EDITOR_HOST = '/admin/apps/ecommerce-cms-agentsam';
+const THEME_STORE = 'https://themes.inneranimalmedia.com';
+const EDITOR_PATH = /^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/themes\/([A-Za-z0-9_-]{1,160})\/editor/;
 
 function go(to: string) { window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to } })); }
 
@@ -52,6 +52,29 @@ export function editorTarget(href: string | null | undefined, siteId?: string): 
   return EDITOR_HOST + '?' + new URLSearchParams({ page: url.pathname + url.search }).toString();
 }
 
+/** Theme Store assets are only trusted from the Theme Store origin and its known paths. */
+function trusted(value: string | null | undefined, prefix: string): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.origin === THEME_STORE && url.pathname.startsWith(prefix) ? url.href : null;
+  } catch { return null; }
+}
+function marketCover(theme: MarketTheme) {
+  return trusted(theme.thumbnail_url, '/site-media/' + theme.slug + '/') || trusted(theme.thumbnail_url, '/previews/');
+}
+function marketPreview(theme: MarketTheme) {
+  const direct = trusted(theme.preview_url, '/theme-packages/' + theme.slug + '/')
+    || trusted(theme.preview_url, '/themes/' + theme.slug + '/presets/' + theme.slug + '/demo/');
+  if (direct) return direct;
+  try {
+    const url = new URL(theme.preview_url || '');
+    const alias = theme.preview_alias || '';
+    return url.origin === THEME_STORE && /^[a-z][a-z0-9-]{1,63}$/.test(alias) && url.pathname === '/' + alias + '/' && !url.search && !url.hash
+      ? url.href : null;
+  } catch { return null; }
+}
+
 function InAppLink({ to, className, children }: { to: string; className?: string; children: ReactNode }) {
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
@@ -62,15 +85,15 @@ function InAppLink({ to, className, children }: { to: string; className?: string
 }
 
 const pill = 'inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted';
+const primary = 'border-transparent bg-primary text-primary-foreground hover:bg-primary/90';
 
 function formatSaved(value?: string) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  const day = date.getDate();
   const month = date.toLocaleString('en-GB', { month: 'short' });
   const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-  return `${day} ${month} at ${time}`;
+  return `${date.getDate()} ${month} at ${time}`;
 }
 
 async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -80,15 +103,41 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return data as T;
 }
 
-function ThemeThumb({ theme }: { theme: StoreTheme }) {
-  const [failed, setFailed] = useState(false);
-  const src = theme.snapshot_url || null;
+/** A real, scaled render of the saved draft (never a placeholder when the project loads). */
+function DraftPreview({ theme }: { theme: StoreTheme }) {
+  const [html, setHtml] = useState('');
+  const [imageFailed, setImageFailed] = useState(false);
+  const match = (theme.edit_href || '').match(EDITOR_PATH);
+  const siteId = theme.site_id || match?.[1] || '';
+  const projectId = match?.[2] || '';
+  const snapshot = theme.snapshot_url && !imageFailed ? theme.snapshot_url : null;
+
+  useEffect(() => {
+    if (snapshot || !siteId || !projectId) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const data = await getJson<{ project?: { pages?: Array<{ slug?: string; assetBase?: string }>; tokens?: unknown } }>(
+          `/api/admin/cms/theme-projects/${encodeURIComponent(projectId)}?site_id=${encodeURIComponent(siteId)}`, controller.signal);
+        const pages = data.project?.pages || [];
+        const page = pages.find(item => item.slug === 'home') || pages[0];
+        if (!page) return;
+        const { renderDraftPage } = await import('@/lib/themes/render-draft');
+        if (!controller.signal.aborted) setHtml(renderDraftPage(page, data.project?.tokens || {}, page.assetBase || undefined));
+      } catch { /* the initial tile below stays */ }
+    })();
+    return () => controller.abort();
+  }, [snapshot, siteId, projectId]);
+
   const initial = (theme.name || 'T').trim().charAt(0).toUpperCase();
   return (
-    <div className="flex h-14 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
-      {src && !failed
-        ? <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" onError={() => setFailed(true)} />
-        : <span aria-hidden="true" className="text-lg font-semibold text-muted-foreground">{initial}</span>}
+    <div className="relative h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+      {snapshot
+        ? <img src={snapshot} alt="" loading="lazy" className="h-full w-full object-cover object-top" onError={() => setImageFailed(true)} />
+        : html
+          ? <iframe srcDoc={html} title="" aria-hidden="true" tabIndex={-1} sandbox="" loading="lazy"
+              className="pointer-events-none absolute left-0 top-0 h-[800px] w-[1280px] origin-top-left scale-[0.1] border-0 bg-white" />
+          : <span aria-hidden="true" className="flex h-full w-full items-center justify-center text-lg font-semibold text-muted-foreground">{initial}</span>}
     </div>
   );
 }
@@ -117,25 +166,23 @@ function DraftRow({ theme, siteId, onPublished }: { theme: StoreTheme; siteId: s
   return (
     <li className="flex flex-col gap-3 border-b border-border px-4 py-4 last:border-b-0">
       <div className="flex items-center gap-4">
-        <ThemeThumb theme={theme} />
+        <DraftPreview theme={theme} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">{theme.name || 'Untitled theme'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {saved ? `Last saved: ${saved}` : 'Not saved yet'}{version ? ` · v${version}` : ''}
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{saved ? `Last saved: ${saved}` : 'Not saved yet'}{version ? ` · v${version}` : ''}</p>
         </div>
-        {edit && <InAppLink to={edit} className={cn(pill, 'h-8 bg-primary text-primary-foreground hover:bg-primary/90')}>Edit theme</InAppLink>}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <IconAction variant="ghost" label={`Actions for ${theme.name || 'theme'}`} hint="Edit, preview or publish this theme"><MoreHorizontal className="size-4" /></IconAction>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuLabel>{theme.name || 'Theme'}</DropdownMenuLabel>
-            {edit && <DropdownMenuItem onSelect={() => go(edit)}>Edit theme</DropdownMenuItem>}
-            {theme.preview_url && <DropdownMenuItem onSelect={() => window.open(theme.preview_url!, '_blank', 'noopener')}>Preview in new tab</DropdownMenuItem>}
-            {canPublish && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setConfirming(true)}>Publish</DropdownMenuItem></>}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {canPublish && <Button variant="outline" size="sm" onClick={() => setConfirming(true)} disabled={busy}>Publish</Button>}
+        {edit && <InAppLink to={edit} className={cn(pill, 'h-8', primary)}>Edit theme</InAppLink>}
+        {theme.preview_url && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <IconAction variant="ghost" label={`More actions for ${theme.name || 'theme'}`} hint="Preview this theme"><MoreHorizontal className="size-4" /></IconAction>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuItem onSelect={() => window.open(theme.preview_url!, '_blank', 'noopener')}>Preview in new tab</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       {confirming && (
         <div role="alertdialog" aria-label="Publish theme" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted px-4 py-3">
@@ -155,6 +202,8 @@ function DiscoverCard({ theme, siteId }: { theme: MarketTheme; siteId: string })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [imageFailed, setImageFailed] = useState(false);
+  const cover = marketCover(theme);
+  const preview = marketPreview(theme);
   const add = async () => {
     setBusy(true); setError('');
     try {
@@ -169,20 +218,22 @@ function DiscoverCard({ theme, siteId }: { theme: MarketTheme; siteId: string })
       go(target);
     } catch { setError('This theme could not be added. Your existing sites have not changed.'); setBusy(false); }
   };
-  const by = theme.developer || theme.author;
+  const visual = cover && !imageFailed
+    ? <img src={cover} alt={`${theme.name || theme.slug} theme cover`} loading="lazy" className="h-full w-full object-cover object-top" onError={() => setImageFailed(true)} />
+    : <div className="flex h-full items-center justify-center text-3xl font-semibold text-muted-foreground" aria-hidden="true">{(theme.name || theme.slug).charAt(0).toUpperCase()}</div>;
   return (
     <li className="flex flex-col gap-3">
       <div className="aspect-[4/5] overflow-hidden rounded-xl border border-border bg-muted">
-        {theme.thumbnail_url && !imageFailed
-          ? <img src={theme.thumbnail_url} alt="" loading="lazy" className="h-full w-full object-cover" onError={() => setImageFailed(true)} />
-          : <div className="flex h-full items-center justify-center text-3xl font-semibold text-muted-foreground" aria-hidden="true">{(theme.name || theme.slug).charAt(0).toUpperCase()}</div>}
+        {preview
+          ? <a href={preview} target="_blank" rel="noopener noreferrer" aria-label={`Preview ${theme.name || theme.slug}`} className="block h-full w-full">{visual}</a>
+          : visual}
       </div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">{theme.name || theme.slug}</p>
-          {by && <p className="truncate text-xs text-muted-foreground">by {by}</p>}
+          <p className="truncate text-xs text-muted-foreground">by {theme.developer || theme.author || 'InnerAnimalMedia'}</p>
         </div>
-        {theme.can_install !== false && <Button variant="outline" size="sm" onClick={add} disabled={busy}>{busy ? 'Adding…' : 'Add'}</Button>}
+        {theme.can_install && <Button variant="outline" size="sm" onClick={add} disabled={busy}>{busy ? 'Adding…' : 'Add'}</Button>}
       </div>
       {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
     </li>
@@ -192,7 +243,7 @@ function DiscoverCard({ theme, siteId }: { theme: MarketTheme; siteId: string })
 export function OnlineStorePage({ siteId }: { siteId?: string }) {
   const [data, setData] = useState<StorePayload | null>(null);
   const [error, setError] = useState('');
-  const [market, setMarket] = useState<MarketTheme[]>([]);
+  const [market, setMarket] = useState<MarketTheme[] | null>(null);
   const [tick, setTick] = useState(0);
   const reload = useCallback(() => setTick(value => value + 1), []);
 
@@ -207,8 +258,8 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    getJson<{ themes?: MarketTheme[] } | MarketTheme[]>('/api/admin/website-themes', controller.signal)
-      .then(result => setMarket(Array.isArray(result) ? result : (result.themes || [])))
+    getJson<{ products?: MarketTheme[] }>('/api/admin/website-themes', controller.signal)
+      .then(result => setMarket((result.products || []).filter(item => item && item.slug && item.name)))
       .catch(() => { if (!controller.signal.aborted) setMarket([]); });
     return () => controller.abort();
   }, []);
@@ -235,6 +286,7 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
     : data.store?.visibility === 'password' ? 'Password protected' : 'Theme not published';
   const activeTheme = data.preview_theme || data.active_theme || null;
   const activeEdit = editorTarget(data.site_preview?.edit_href || activeTheme?.edit_href, selectedId);
+  const activeSaved = formatSaved(activeTheme?.last_saved || activeTheme?.updated_at || activeTheme?.created_at);
   const drafts = (data.draft_themes || []).filter(draft => draft.id !== activeTheme?.id);
   const newTheme = editorTarget(data.new_theme_url || '/admin/theme-editor?new=1', selectedId);
   const checkout = editorTarget('/admin/onboarding-preview', selectedId);
@@ -269,13 +321,22 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
         <h1 className="flex items-center gap-3 text-2xl font-semibold text-foreground"><Store className="size-5 text-muted-foreground" aria-hidden="true" />Online Store</h1>
         <div className="flex flex-wrap items-center gap-2">
           <span className={pill}><span className={cn('size-2 rounded-full', live ? 'bg-accent' : 'bg-muted-foreground')} aria-hidden="true" />{status}</span>
-          {checkout && <InAppLink to={checkout} className={pill}>Preview checkout</InAppLink>}
-          {live && <a className={pill} href={live} target="_blank" rel="noopener noreferrer">View site <ExternalLink className="size-3.5" aria-hidden="true" /></a>}
-          {workspace && <InAppLink to={workspace} className={pill}>My Theme Studio</InAppLink>}
+          {live && <a className={pill} href={live} target="_blank" rel="noopener noreferrer">Preview store <ExternalLink className="size-3.5" aria-hidden="true" /></a>}
+          {(checkout || workspace) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconAction variant="outline" label="More store actions" hint="Preview checkout and Theme Studio"><MoreHorizontal className="size-4" /></IconAction>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-48">
+                {checkout && <DropdownMenuItem onSelect={() => go(checkout)}>Preview checkout</DropdownMenuItem>}
+                {workspace && <DropdownMenuItem onSelect={() => go(workspace)}>My Theme Studio</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </header>
 
-      <section aria-label="Live site preview" className="overflow-hidden rounded-2xl border border-border bg-card">
+      <section aria-label="Current theme" className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="relative aspect-[16/8] bg-muted">
           {live
             ? <iframe src={live} title={`${siteName} preview`} loading="lazy" className="pointer-events-none h-full w-full border-0" sandbox="allow-scripts allow-same-origin" />
@@ -284,9 +345,11 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
         <div className="flex items-center justify-between gap-4 border-t border-border px-5 py-4">
           <div className="min-w-0">
             <p className="truncate text-base font-semibold text-foreground">{data.site_preview?.title || data.site_preview?.name || siteName}</p>
-            <p className="truncate text-xs text-muted-foreground">{live ? `Published website · ${live}` : (activeTheme?.name || 'No published theme')}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {[live ? `Published website · ${live}` : '', activeTheme?.name, activeSaved ? `Last saved: ${activeSaved}` : ''].filter(Boolean).join(' · ') || 'No published theme'}
+            </p>
           </div>
-          {activeEdit && <InAppLink to={activeEdit} className={cn(pill, 'bg-primary text-primary-foreground hover:bg-primary/90')}>Edit page</InAppLink>}
+          {activeEdit && <InAppLink to={activeEdit} className={cn(pill, primary)}>Edit theme</InAppLink>}
         </div>
       </section>
 
@@ -305,11 +368,13 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
       <section aria-label="Discover themes">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Discover themes</h2>
-          <a className={pill} href="https://themes.inneranimalmedia.com/" target="_blank" rel="noopener noreferrer">Visit Theme Store <ExternalLink className="size-3.5" aria-hidden="true" /></a>
+          <a className={pill} href={THEME_STORE + '/'} target="_blank" rel="noopener noreferrer">Visit Theme Store <ExternalLink className="size-3.5" aria-hidden="true" /></a>
         </div>
-        {market.length
-          ? <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{market.map(theme => <DiscoverCard key={theme.slug} theme={theme} siteId={selectedId} />)}</ul>
-          : <p className="text-sm text-muted-foreground">No themes are available to add right now.</p>}
+        {market === null
+          ? <p role="status" className="text-sm text-muted-foreground">Loading themes…</p>
+          : market.length
+            ? <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{market.map(theme => <DiscoverCard key={theme.slug} theme={theme} siteId={selectedId} />)}</ul>
+            : <p className="text-sm text-muted-foreground">Themes couldn’t be loaded right now. Visit the Theme Store to browse them.</p>}
       </section>
     </div>
   );
