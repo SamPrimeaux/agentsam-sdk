@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { verifyPinnedPicomatchSecurityFork } from './pinned-artifacts.js';
 
 export const exactVersion = (v) => typeof v === 'string' && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(v);
 export const packageName = (v) => typeof v === 'string' && /^(?:@[a-z0-9._~-]+\/)?[a-z0-9._~-]+$/i.test(v);
@@ -30,7 +31,14 @@ export function collectNpmDependencies(projectRoot = process.cwd(), options = {}
       candidate.name === name
       && candidate.version === pkg.version
       && candidate.location === location);
-    if (!packageName(name) || !exactVersion(pkg.version) || (/^(?:file:|link:|git[+:]|https?:\/\/.*\.git)/i.test(resolved) && !allowedReleaseCandidate)) {
+    const attestedSecurityFork = verifyPinnedPicomatchSecurityFork(root, pkg, location);
+    // Never treat an arbitrary GitHub raw tarball as a registry publication.
+    // The one reviewed fork is allowed only after local SHA-256, SHA-512,
+    // parser-source, identity, version and immutable URL verification.
+    const isUntrustedRawArtifact = /^https?:\/\/raw\.githubusercontent\.com\//i.test(resolved);
+    if (!packageName(name) || !exactVersion(pkg.version) ||
+        ((/^(?:file:|link:|git[+:]|https?:\/\/.*\.git)/i.test(resolved) || isUntrustedRawArtifact) &&
+          !allowedReleaseCandidate && !attestedSecurityFork)) {
       issues.push('Unresolved or non-registry dependency at ' + location);
       return;
     }
@@ -39,6 +47,13 @@ export function collectNpmDependencies(projectRoot = process.cwd(), options = {}
     item.direct ||= direct;
     item.paths.push(location);
     item.deprecated ||= Boolean(pkg.deprecated);
+    if (attestedSecurityFork) item.provenance = {
+      kind: 'sha256-and-sha512-attested-security-fork',
+      source: resolved,
+      integrity: pkg.integrity,
+      upstream: 'picomatch@4.0.7',
+      patch: 'https://github.com/micromatch/picomatch/pull/238',
+    };
     dependencies.set(key, item);
   };
   let fingerprint = null;

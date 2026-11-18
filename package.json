@@ -509,7 +509,8 @@
     "shell-quote": "1.12.0",
     "undici": "7.30.1",
     "@hono/node-server": "2.1.6",
-    "hono": "4.13.18"
+    "hono": "4.13.18",
+    "picomatch": "https://raw.githubusercontent.com/SamPrimeaux/agentsam-sdk/85fcc1dd70a8505b5c96e4a090bab3843a7d5fb9/vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
   },
   "packageManager": "npm@10.9.2"
 }
