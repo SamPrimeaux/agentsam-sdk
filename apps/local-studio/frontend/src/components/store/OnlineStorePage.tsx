@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from 'react';
-import { ChevronDown, ExternalLink, Globe2, MoreHorizontal, Plus, Store } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ExternalLink, Globe2, MoreHorizontal, Plus, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconAction } from '@/components/ui/icon-action';
 import {
@@ -258,6 +258,8 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
+    // The canonical catalog returns products. Retain the verified installed-site
+    // theme preview and card normalization introduced on main.
     getJson<{ products?: MarketTheme[] }>('/api/admin/website-themes', controller.signal)
       .then(result => setMarket((result.products || []).filter(item => item && item.slug && item.name)))
       .catch(() => { if (!controller.signal.aborted) setMarket([]); });
@@ -269,13 +271,24 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
       <div className="mx-auto max-w-3xl p-8" role="alert">
         <h1 className="text-xl font-semibold text-foreground">Online Store</h1>
         <p className="mt-3 text-sm text-muted-foreground">We couldn’t load your store right now.</p>
-        <Button className="mt-4" variant="outline" onClick={reload}>Try again</Button>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Button variant="outline" onClick={reload}>Try again</Button>
+          <Button onClick={() => window.location.assign('/start')}>Create or choose a store <ArrowUpRight className="ml-2 size-4" /></Button>
+        </div>
       </div>
     );
   }
   if (!data) return <p role="status" className="p-8 text-sm text-muted-foreground">Loading Online Store…</p>;
 
   const sites = data.available_sites || [];
+  if (!sites.length) {
+    return <div className="mx-auto flex max-w-2xl flex-col gap-5 px-6 py-16">
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Online Store</span>
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">Create your first store</h1>
+      <p className="text-sm leading-7 text-muted-foreground">Your account is ready. Give your website a name to create its own CMS workspace, then edit pages and choose a storefront design. You won't be redirected into someone else's dashboard.</p>
+      <Button onClick={() => window.location.assign('/start')} className="w-fit">Create store <ArrowUpRight className="ml-2 size-4" /></Button>
+    </div>;
+  }
   const selectedId = data.selected_site_id || siteId || '';
   const selected = sites.find(site => site.id === selectedId);
   const siteName = data.selected_site_name || selected?.name || selected?.title || 'Your website';

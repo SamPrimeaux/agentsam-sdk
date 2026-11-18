@@ -64,6 +64,29 @@ try {
     await pause(500);
   }
   if (!ready) throw new Error('local_worker_not_ready');
+  // Merchant first-run is deliberately public, while identity and store writes
+  // continue to use the existing signed-in account authority.
+  {
+    const response = await request('/start');
+    const text = await response.text();
+    if (response.status !== 200 || !text.includes('id="start-signup"') ||
+        !text.includes('id="start-create"') ||
+        response.headers.get('cache-control') !== 'private, no-store') {
+      throw new Error('/start must serve the public first-run merchant document, not redirect to a dashboard');
+    }
+    for (const assetPath of ['/store-start.js','/store-start.css']) {
+      const asset = await request(assetPath);
+      if (asset.status !== 200) throw new Error(assetPath + ' missing from deployed Worker assets');
+    }
+    const sites = await request('/api/cms/sites');
+    if (sites.status !== 401) throw new Error('/api/cms/sites must reject anonymous store inventory');
+    const signin = await request('/auth/login?next=%2Fstart');
+    const signup = await request('/auth/signup?next=%2Fstart');
+    if (signin.status !== 200 || signup.status !== 200)
+      throw new Error('first-run Sign in/Sign up destinations must resolve through the owned identity portal');
+    console.log('PASS /start: visitor signup/login, protected store API and staged assets');
+  }
+
   // Every anonymous /admin document AND /admin script is identity-gated.
   // A redirect is the expected success case; serving HTML or JS anonymously
   // would expose the admin boundary and must fail the deployment smoke test.
