@@ -1,0 +1,88 @@
+{
+  "schema": "iam.cms.component-pack.v1",
+  "pack_key": "cad-beyond-blueprint",
+  "version": "1.0.0",
+  "label": "Beyond the Blueprint",
+  "description": "Eight reusable editorial and architectural-evidence sections for the canonical AgentSam CMS.",
+  "runtime": "ThemePortableSections",
+  "delivery_mode": "bundled",
+  "source": {
+    "repository": "https://github.com/SamPrimeaux/agentsam-cad-machinery",
+    "path": "apps/cad-creator/frontend/src/app/beyond"
+  },
+  "tenant_data_policy": "The shared renderer contains no CAD customer copy, project imagery, account identifiers or site defaults. Those remain in site-owned CMS records.",
+  "components": [
+    {
+      "kind": "section",
+      "definition_key": "cad-beyond-aspiration",
+      "definition_version": "1.0.0",
+      "renderer_key": "cad-beyond/aspiration",
+      "sku": "SKU-SEC-CAD-BEYOND-ASPIRATION",
+      "label": "Aspiration",
+      "category": "Storytelling"
+    },
+    {
+      "kind": "section",
+      "definition_key": "cad-beyond-complexity",
+      "definition_version": "1.0.0",
+      "renderer_key": "cad-beyond/complexity",
+      "sku": "SKU-SEC-CAD-BEYOND-COMPLEXITY",
+      "label": "Complexity",
+      "category": "Storytelling"
+    },
+    {
+      "kind": "section",
+      "definition_key": "cad-beyond-uncertainty",
+      "definition_version": "1.0.0",
+      "renderer_key": "cad-beyond/uncertainty",
+      "sku": "SKU-SEC-CAD-BEYOND-UNCERTAINTY",
+      "label": "Uncertainty",
+      "category": "Storytelling"
+    },
+    {
+      "kind": "section",
+      "definition_key": "cad-beyond-perseverance",
+      "definition_version": "1.0.0",
+      "renderer_key": "cad-beyond/perseverance",
+      "sku": "SKU-SEC-CAD-BEYOND-PERSEVERANCE",
+      "label": "Perseverance",
+      "category": "Storytelling"
+    },
+    {
+      "kind": "section",
+      "definition_key": "cad-beyond-understanding",
+      "definition_version": "1.0.0",
+      "renderer_key": "cad-beyond/understanding",
+      "sku": "SKU-SEC-CAD-BEYOND-UNDERSTANDING",
+      "label": "Understanding",
+      "category": "Storytelling"
+    },
+    {
+      "kind": "section",
+      "definition_key": "cad-beyond-capability",
+      "definition_version": "1.0.0",
+      "renderer_key": "cad-beyond/capability",
+      "sku": "SKU-SEC-CAD-BEYOND-CAPABILITY",
+      "label": "Capability",
+      "category": "Storytelling"
+    },
+    {
+      "kind": "section",
+      "definition_key": "cad-beyond-possibility",
+      "definition_version": "1.0.0",
+      "renderer_key": "cad-beyond/possibility",
+      "sku": "SKU-SEC-CAD-BEYOND-POSSIBILITY",
+      "label": "Possibility",
+      "category": "Storytelling"
+    },
+    {
+      "kind": "section",
+      "definition_key": "cad-beyond-architectural-evidence",
+      "definition_version": "1.0.0",
+      "renderer_key": "cad-beyond/architectural-evidence",
+      "sku": "SKU-SEC-CAD-BEYOND-ARCHITECTURAL-EVIDENCE",
+      "label": "Architectural evidence",
+      "category": "Architecture"
+    }
+  ]
+}
