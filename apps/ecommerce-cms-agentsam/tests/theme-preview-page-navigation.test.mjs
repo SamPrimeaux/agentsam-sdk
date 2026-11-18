@@ -65,11 +65,17 @@ test('cross-origin forgery and unknown routes do not switch pages', () => {
   assert.deepEqual(changes, []);
 });
 
-const clickAnchor = "doc.addEventListener('click', function(event) {";
-const clickBegin = source.indexOf(clickAnchor, source.indexOf('function bindPreviewSelection'));
-const clickEnd = source.indexOf('\n      });', clickBegin);
-assert.ok(clickBegin >= 0 && clickEnd > clickBegin, 'installed-theme preview click router must be present');
-const clickHandlerSource = source.slice(clickBegin, clickEnd + '\n      });'.length);
+const navBegin = source.indexOf(
+  "        const link = event.target?.closest?.('a[href]');",
+  source.indexOf('function bindPreviewSelection')
+);
+const navEnd = source.indexOf(
+  '        if (!inspectionEnabled || window.__agentsamCmsGlobalInspectMode) return;',
+  navBegin
+);
+assert.ok(navBegin >= 0 && navEnd > navBegin, 'installed-theme preview click router must be present');
+const clickHandlerSource = 'function previewNavigation(event) {\n' +
+  source.slice(navBegin, navEnd) + '\n}';
 
 function setupProjectClick(href) {
   let listener = null;
