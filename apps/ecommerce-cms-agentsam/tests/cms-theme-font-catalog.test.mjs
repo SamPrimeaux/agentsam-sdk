@@ -109,7 +109,7 @@ test("font role payloads reject malformed family IDs, CSS injection and unknown 
 test("font-role changes survive the existing site-owned D1/R2 draft API without publishing",async()=>{
  const f=createSiteOwnedFixture();
  try{
-  f.db.exec("INSERT INTO cms_pages VALUES ('sitepage','main','site','/__site','global','Global','published',NULL,0,0,0,'{}','{}',NULL,NULL,1790000000,1790000000,1790000000); INSERT INTO cms_page_sections VALUES ('brand','sitepage','brand','brand','Brand','{}',0,1,'cms','brand-draft','brand-live','original','2026-10-01');");
+  f.db.exec("INSERT INTO cms_pages VALUES ('sitepage','main','site','/__site','global','Global','published',NULL,0,0,0,'{}','{}',NULL,NULL,1790000000,1790000000,1790000000); INSERT INTO cms_page_sections (id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket,draft_r2_key,published_r2_key,content_hash,updated_at) VALUES ('brand','sitepage','brand','brand','Brand','{}',0,1,'cms','brand-draft','brand-live','original','2026-10-01');");
   const liveContent=JSON.stringify({__editor:{themeSettings:{colors:{ink:"#222222"}}}});
   f.objects.set("brand-draft",liveContent);
   f.objects.set("brand-live",liveContent);
