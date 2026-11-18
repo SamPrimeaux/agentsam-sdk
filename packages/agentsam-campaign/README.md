@@ -91,11 +91,11 @@ through AgentSam data and connections rather than hallucinated.
 The fourteen **Increase Sales** campaign starters are owned by this package, not
 by Ecommerce CMS or Growth. The versioned source and interactive previews are in:
 
-\`starter-packs/increase-sales/v1/\`
+`starter-packs/increase-sales/v1/`
 
 SDK import:
 
-\`\`\`js
+```js
 import {
   starterCampaigns,
   campaignById,
@@ -111,23 +111,23 @@ const draft = prepareCampaignFromStarter(template.id, {
 // Pass the draft through the trusted canonical Campaign store, after
 // session/site authorization and merchant resource resolution.
 const creativeDrafts = prepareStarterMaterials(template.id);
-\`\`\`
+```
 
-- **Domain owner:** \`@inneranimalmedia/agentsam-campaign\` owns campaign
+- **Domain owner:** `@inneranimalmedia/agentsam-campaign` owns campaign
   definitions, canonical campaign storage, approvals, publication receipts,
   evidence-backed attribution and metric facts.
 - **Consumer:** Growth renders the template picker, editor and previews.
 - **CMS authority:** Existing CMS owns storefront pages, blocks, assets and
   publications. Campaign materials link to these resources, not duplicate them.
-- **Database:** Use the authorized \`inneranimalmedia-business\` D1 installation.
-  The versioned Campaign SQL is in \`sql/0001_campaign_core.sql\`.
+- **Database:** Use the authorized `inneranimalmedia-business` D1 installation.
+  The versioned Campaign SQL is in `sql/0001_campaign_core.sql`.
 - **R2 distribution:** The immutable v1 archive and the 117 standalone preview
   files are currently stored under the compatibility key
-  \`cms/growth/starter-campaigns/increase-sales/v1/\`. This is an object-storage
+  `cms/growth/starter-campaigns/increase-sales/v1/`. This is an object-storage
   path, not a declaration that Growth or CMS owns Campaign data.
 - **No live execution:** HTML previews are local-only and have no customer,
   checkout, email-delivery, or CMS-publish authority.
 
 Build the previews with
-\`node starter-packs/increase-sales/v1/build.mjs\`;
-test the domain with \`npm test\`.
+`node starter-packs/increase-sales/v1/build.mjs`;
+test the domain with `npm test`.
