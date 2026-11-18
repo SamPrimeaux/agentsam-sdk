@@ -52,6 +52,7 @@
         <a href="${backHref}">${icon("file")} Pages</a>
       </nav>
       <div class="pe-header-actions">
+        ${action("pe-publish","Publish","check","pe-outline pe-publish-action")}
         ${action("pe-duplicate","Duplicate","copy","pe-outline")}
         <a id="pe-view" class="pe-action pe-outline" target="_blank" rel="noopener" aria-disabled="true">${icon("eye")}<span>View</span></a>
         <div class="pe-menu-wrap">
@@ -123,6 +124,7 @@
         </section>
       </aside>
     </div>
+    <div class="pe-publication-notice" id="pe-publication-notice" hidden role="status"><span id="pe-publication-message"></span><a id="pe-publication-link" target="_blank" rel="noopener noreferrer">View published page</a><a id="pe-publication-new">Create another page</a></div>
     <p class="pe-note" role="status" id="pe-note" aria-live="polite"></p>
   </main>
   <div class="pe-savebar" id="pe-savebar" role="status" aria-label="Unsaved page changes" hidden>
@@ -161,6 +163,17 @@
     return index <= 0 ? "/" : route.slice(0,index+1);
   }
   function currentRoute(handle) { return routePrefix + handle; }
+  function hostedPageUrl() {
+    const siteId = site?.id || window.cmsActiveSiteId;
+    if (!siteId || !page?.route_path) return null;
+    return location.origin + "/public-sites/" + encodeURIComponent(siteId) + page.route_path;
+  }
+  function updatePublicLink() {
+    const view = $("pe-view");
+    const url = page?.status === "published" ? hostedPageUrl() : null;
+    if (url) { view.href = url; view.removeAttribute("aria-disabled"); }
+    else { view.removeAttribute("href"); view.setAttribute("aria-disabled","true"); }
+  }
   function parseJson(value) {
     if (value && typeof value === "object") return value;
     try { return JSON.parse(value || "{}"); } catch { return {}; }
@@ -353,31 +366,23 @@
         ? "This page has a protected route. Its URL cannot be changed here."
         : "Saving updates the page URL. Previously published URLs redirect automatically.";
       $("pe-seo-site").textContent = site.name || site.slug || "Your store";
-      const publicUrl = window.cmsPublicPageUrl(site,page.route_path);
-      const view = $("pe-view");
-      if (page.status === "published" && publicUrl) {
-        view.href = publicUrl;
-        view.removeAttribute("aria-disabled");
-      } else {
-        view.removeAttribute("href");
-        view.setAttribute("aria-disabled","true");
-        view.title = "This page has no verified public URL";
-      }
+      updatePublicLink();
       const pos = siblings.findIndex(item => item.id === page.id);
       $("pe-prev").disabled = pos < 1;
       $("pe-next").disabled = pos < 0 || pos === siblings.length-1;
       syncPreview();
       markSaved();
+      $("pe-publish").disabled = page.status === "archived";
       note(draftRes?.draft ? "Your saved page draft is ready to edit." : "");
     } catch (error) {
       note(error?.message || "Unable to load this page.",true);
     }
   }
   async function save() {
-    if (saving) return;
+    if (saving) return false;
     const d = getDraft();
     if (!d.title || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(d.url_handle) || d.url_handle.length > 80) {
-      note("Enter a title and a valid lowercase URL handle.",true); return;
+      note("Enter a title and a valid lowercase URL handle.",true); return false;
     }
     saving = true;
     const button = $("pe-save");
@@ -433,30 +438,60 @@
       url.searchParams.set("slug",page.slug);
       url.searchParams.set("page_id",page.id);
       history.replaceState(null,"",url);
-      const publicUrl = window.cmsPublicPageUrl(site || {}, page.route_path);
-      const view = $("pe-view");
-      if (page.status === "published" && publicUrl) {
-        view.href = publicUrl;
-        view.removeAttribute("aria-disabled");
-      }
+      updatePublicLink();
       syncPreview();
       markSaved();
       note(createdNow ? "Page created and saved to your store's draft library." :
         oldSlug !== page.slug ? "Page URL updated and draft saved. Old published URLs redirect to the new address." :
-        "Page draft saved. Live content is unchanged until publication.");
+        "Page draft saved. Select Publish to make this page public.");
+      return true;
     } catch(error) {
       note(error?.message || "Could not save page.",true);
       button.disabled = false;
+      return false;
     } finally {
       saving = false;
       button.textContent = "Save";
     }
   }
-  function preview() {
-    const d = getDraft();
-    const body = safeHtml(d.body_html);
-    $("pe-preview-frame").srcdoc = '<!doctype html><html><head><meta charset="UTF-8"><style>body{font:16px/1.6 system-ui,sans-serif;color:#222;max-width:780px;margin:50px auto;padding:0 28px}h1{font-size:34px}img{max-width:100%}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:10px}</style></head><body><h1>' + escaped(d.title) + '</h1>' + body + '</body></html>';
-    $("pe-preview-dialog").showModal();
+  async function preview() {
+    if (!page?.id) { note("Save the new page to preview its website rendering.",true);return; }
+    try {
+      const rendered = await cmsAdminFetch("/api/admin/cms/pages/" + encodeURIComponent(slug) + "/preview",{
+        method:"POST",body:JSON.stringify(getDraft())
+      });
+      if (!rendered?.html) throw Error("The website renderer returned no preview.");
+      $("pe-preview-frame").srcdoc = rendered.html;
+      $("pe-preview-dialog").showModal();
+    } catch(error) { note(error?.message || "Unable to preview this page.",true); }
+  }
+  async function publish() {
+    if ($("pe-publish").disabled) return;
+    $("pe-more-menu").hidden = true;
+    const button = $("pe-publish");
+    button.disabled = true;
+    $("pe-publish-action").disabled = true;
+    try {
+      if (dirty || !page?.id) {
+        if (!(await save())) throw Error("Save the page draft successfully before publishing.");
+      }
+      if (!page?.id) throw Error("The CMS page was not created.");
+      const published = await cmsAdminFetch("/api/admin/cms/pages/" + encodeURIComponent(slug) + "/publish",{
+        method:"POST",body:JSON.stringify({confirm:"publish"})
+      });
+      if (!published?.ok || published.status !== "published" || published.page_id !== page.id)
+        throw Error(published?.error || "The CMS did not confirm publication.");
+      page.status = "published";
+      page.content_object_key = published.key;
+      updatePublicLink();
+      const url = hostedPageUrl();
+      $("pe-publication-notice").hidden = false;
+      $("pe-publication-message").textContent = "Page published successfully. Your CMS page is live.";
+      $("pe-publication-link").href = url;
+      $("pe-publication-new").href = "/admin/page-edit?" + new URLSearchParams({site_id:site.id,new:"1"});
+      note("Published " + published.route_path + " to the site-owned website runtime.");
+    } catch(error) { note(error?.message || "Publishing failed.",true); }
+    finally {button.disabled = false;$("pe-publish-action").disabled = false;}
   }
   function navigateSibling(delta) {
     const at = siblings.findIndex(p => p.id === page?.id);
@@ -542,9 +577,8 @@
   $("pe-duplicate").addEventListener("click",duplicate);
   $("pe-more").addEventListener("click",event => {event.stopPropagation();$("pe-more-menu").hidden = !$("pe-more-menu").hidden;});
   document.addEventListener("click",event=> {if(!event.target.closest(".pe-menu-wrap")) $("pe-more-menu").hidden=true;});
-  $("pe-publish-action").addEventListener("click",()=>{
-    note("Draft saved separately from the live site. Publishing requires a verified storefront renderer; no live page was changed.",true);
-  });
+  $("pe-publish").addEventListener("click",publish);
+  $("pe-publish-action").addEventListener("click",publish);
   $("pe-prev").addEventListener("click",()=>navigateSibling(-1));
   $("pe-next").addEventListener("click",()=>navigateSibling(1));
   $("pe-media-search").addEventListener("input",drawMedia);

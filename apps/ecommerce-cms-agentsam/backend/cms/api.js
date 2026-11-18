@@ -12,6 +12,7 @@ import {
   saveSiteOwnedSectionDraft, selectOwnedPageSite, findSiteOwnedPage,
 } from "./site-owned-page-adapter.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
+import { previewMerchantPage, publishMerchantPage } from "./page-publication.mjs";
 import {handleCheckoutPreviewApi} from "./checkout-preview.mjs";
 import {
   buildCatalogInstanceContent,
@@ -3085,9 +3086,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json(result, { status: 201 });
   }
 
-  let m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)$/);
+  let m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9%_-]+)$/);
   if (m && method === "GET") {
-    const data = await getPageAdminForSite(env, context.accountId, m[1], siteId, pageId).catch(error => {
+    const data = await getPageAdminForSite(env, context.accountId, decodeURIComponent(m[1]), siteId, pageId).catch(error => {
       if (error?.message === "cms_site_not_found") return null;
       throw error;
     });
@@ -3101,17 +3102,17 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
-    const result = await updatePageMetaForSite(env, context.accountId, m[1], siteId, pageId, body);
+    const result = await updatePageMetaForSite(env, context.accountId, decodeURIComponent(m[1]), siteId, pageId, body);
     if (result.error) return json({ error: result.error }, { status: result.status || 400 });
     return json(result);
   }
 
   // Change a real page URL without touching its published R2 content. Stable
   // page_id and explicit site ownership prevent cross-site slug collisions.
-  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/route$/);
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9%_-]+)\/route$/);
   if (m && method === "PUT") {
     if (!context.accountId || !siteId) return json({ error: "cms_site_required" }, { status: 400 });
-    const current = await getPageAdminForSite(env, context.accountId, m[1], siteId, pageId)
+    const current = await getPageAdminForSite(env, context.accountId, decodeURIComponent(m[1]), siteId, pageId)
       .catch(() => null);
     const page = current?.page;
     if (!page?.id) return json({ error: "Page not found in your selected site" }, { status: 404 });
@@ -3158,10 +3159,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   // Page Editor is independent from Theme Studio. Review drafts are account/site
   // scoped and never mutate live storefront HTML or publication pointers.
-  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/content-draft$/);
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9%_-]+)\/content-draft$/);
   if (m && (method === "GET" || method === "PUT")) {
     if (!context.accountId || !siteId) return json({ error: "cms_site_required" }, { status: 400 });
-    const data = await getPageAdminForSite(env, context.accountId, m[1], siteId, pageId)
+    const data = await getPageAdminForSite(env, context.accountId, decodeURIComponent(m[1]), siteId, pageId)
       .catch(() => null);
     const ownedPage = data?.page;
     if (!ownedPage?.id) return json({ error: "Page not found in the selected account site" }, { status: 404 });
@@ -3204,16 +3205,26 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json({ ok: true, saved: true, mode: "page-draft", publish_ready: false });
   }
 
-  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/publish$/);
+  // Page Editor preview and publish share one renderer. The CMS page row is
+  // canonical; no second page identity or Theme Studio redirect is required.
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9%_-]+)\/preview$/);
   if (m && method === "POST") {
-    const mode = await pageMode(m[1]);
-    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
-    if (mode.canonical) {
-      return json({ error: "This page needs an installed, verified theme renderer before it can be published", code: "cms_page_renderer_required" }, { status: 409 });
-    }
-    const result = await publishPage(env, m[1]);
-    if (result.error) return json({ error: result.error }, { status: result.status });
-    return json(result);
+    if (!context.accountId || !siteId || !pageId) return json({error:'cms_site_and_page_required'},{status:400});
+    let body;
+    try {body=await request.json();} catch {return json({error:'Invalid JSON'},{status:400});}
+    if (!body || typeof body!=='object' || Array.isArray(body)) return json({error:'Invalid preview content'},{status:400});
+    const keys=['title','body_html','visibility','template_sku','seo_title','seo_description','url_handle'];
+    if(Object.keys(body).some(k=>!keys.includes(k)) || keys.some(k=>body[k]!=null && typeof body[k]!=='string'))
+      return json({error:'Invalid preview fields'},{status:400});
+    const result=await previewMerchantPage(env,context.accountId,siteId,decodeURIComponent(m[1]),pageId,body);
+    return json(result,{status:typeof result.status==='number'?result.status:(result.ok?200:400)});
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9%_-]+)\/publish$/);
+  if (m && method === "POST") {
+    if (!context.accountId || !siteId || !pageId) return json({error:'cms_site_and_page_required'},{status:400});
+    const result=await publishMerchantPage(env,context.accountId,siteId,decodeURIComponent(m[1]),pageId);
+    return json(result,{status:typeof result.status==='number'?result.status:(result.ok?200:400)});
   }
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/seed$/);

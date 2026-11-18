@@ -152,3 +152,10 @@
  .pe-savebar{top:76px;left:50%;min-height:38px;padding:5px 6px 5px 12px;}
 }
 @media(prefers-reduced-motion:reduce){.pe-screen *{scroll-behavior:auto!important;transition:none!important;}}
+
+/* Real merchant publication confirmation, reachable from compact Page Editor. */
+.pe-publish-action{background:var(--c-accent,var(--c-ink));color:var(--c-accent-ink,var(--c-surface));border-color:var(--c-line)}
+.pe-publication-notice{display:flex;align-items:center;flex-wrap:wrap;gap:10px;border:1px solid var(--c-line);border-radius:9px;padding:12px 14px;margin:17px 0 0;background:var(--c-surface);font-size:12px;}
+.pe-publication-notice[hidden]{display:none!important;}
+.pe-publication-notice span{font-weight:650;flex:1 1 180px;}
+.pe-publication-notice a{color:var(--c-accent,var(--c-ink));text-decoration:underline;cursor:pointer;}
