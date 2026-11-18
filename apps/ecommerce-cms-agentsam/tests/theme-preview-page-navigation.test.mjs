@@ -64,3 +64,90 @@ test('cross-origin forgery and unknown routes do not switch pages', () => {
   });
   assert.deepEqual(changes, []);
 });
+
+const clickAnchor = "doc.addEventListener('click', function(event) {";
+const clickBegin = source.indexOf(clickAnchor, source.indexOf('function bindPreviewSelection'));
+const clickEnd = source.indexOf('\n      });', clickBegin);
+assert.ok(clickBegin >= 0 && clickEnd > clickBegin, 'installed-theme preview click router must be present');
+const clickHandlerSource = source.slice(clickBegin, clickEnd + '\n      });'.length);
+
+function setupProjectClick(href) {
+  let listener = null;
+  const doc = {
+    baseURI: 'https://themes.inneranimalmedia.com/theme-packages/iapj/0.3.0/preview/',
+    addEventListener(type, fn) { if (type === 'click') listener = fn; },
+  };
+  const link = { getAttribute(key) { return key === 'href' ? href : null; } };
+  const changes = [];
+  const notes = [];
+  let prevented = false;
+  let stopped = false;
+  const event = {
+    target: { closest() { return link; } },
+    metaKey: false, ctrlKey: false, shiftKey: false, altKey: false,
+    preventDefault() { prevented = true; },
+    stopImmediatePropagation() { stopped = true; },
+  };
+  const context = {
+    doc,
+    host: {
+      projectId: 'theme_iapj',
+      pageRoutes: { home: '/', work: '/work/', about: '/about/', blog: '/blog/' },
+    },
+    pages: [
+      { slug: 'home', route: '/' },
+      { slug: 'work', route: '/work/' },
+      { slug: 'about', route: '/about/' },
+      { slug: 'blog', route: '/blog/' },
+    ],
+    location: { origin: 'https://agentsam.inneranimalmedia.com', href: 'https://agentsam.inneranimalmedia.com/admin/sites/site/themes/theme_iapj/editor/home' },
+    window: { __agentsamCmsGlobalInspectMode: true },
+    inspectionEnabled: false,
+    slug: 'home',
+    switchPage(next) { changes.push(next); },
+    setNote(...args) { notes.push(args); },
+    URL,
+  };
+  runInNewContext(clickHandlerSource, context);
+  return {
+    listener, event, changes, notes,
+    get prevented() { return prevented; },
+    get stopped() { return stopped; },
+  };
+}
+
+test('installed-theme navigation still switches pages during global inspect mode', () => {
+  const { listener, event, changes, prevented, stopped } = setupProjectClick('/work');
+  listener(event);
+  assert.deepEqual(changes, ['work']);
+  assert.equal(prevented, true);
+  assert.equal(stopped, true);
+});
+
+test('relative package links resolve to project routes, not the Theme Store preview path', () => {
+  const { listener, event, changes, prevented } = setupProjectClick('about');
+  listener(event);
+  assert.deepEqual(changes, ['about']);
+  assert.equal(prevented, true);
+});
+
+test('unknown internal theme links fail closed instead of opening the Theme Store', () => {
+  const { listener, event, changes, notes, prevented, stopped } = setupProjectClick('/products/example');
+  listener(event);
+  assert.deepEqual(changes, []);
+  assert.equal(prevented, true);
+  assert.equal(stopped, true);
+  assert.match(notes[0]?.[0] || '', /cannot open the Theme Store/);
+});
+
+test('external and fragment links retain their normal behavior', () => {
+  const external = setupProjectClick('https://example.com/about');
+  external.listener(external.event);
+  assert.equal(external.prevented, false);
+  assert.deepEqual(external.changes, []);
+
+  const fragment = setupProjectClick('#latest');
+  fragment.listener(fragment.event);
+  assert.equal(fragment.prevented, false);
+  assert.deepEqual(fragment.changes, []);
+});
