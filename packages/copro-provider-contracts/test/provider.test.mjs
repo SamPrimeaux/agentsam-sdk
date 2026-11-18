@@ -29,3 +29,21 @@ test("adapter invocation is capability gated", async () => {
     /copro_provider_capability_unsupported/
   );
 });
+
+test("creative provider vocabulary is broad but capability support remains explicit", async () => {
+  for (const name of ["voice.synthesize", "image.edit", "audio.denoise", "speech.align", "scene.render", "video.upscale", "render.audio"]) {
+    assert.ok(COPRO_PROVIDER_CAPABILITIES.includes(name), name);
+  }
+  const adapter = defineProviderAdapter({
+    id: "speech-example",
+    capabilities: ["voice.synthesize"],
+    invoke: async (capability, input) => ({ capability, input }),
+  });
+  assert.equal(supportsCapability(adapter, "voice.synthesize"), true);
+  assert.equal(supportsCapability(adapter, "audio.mix"), false);
+  await assert.rejects(invokeCapability(adapter, "audio.mix", {}), /unsupported/);
+  assert.deepEqual(await invokeCapability(adapter, "voice.synthesize", { text: "Original narration" }), {
+    capability: "voice.synthesize",
+    input: { text: "Original narration" },
+  });
+});
