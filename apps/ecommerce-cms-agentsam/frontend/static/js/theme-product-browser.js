@@ -121,7 +121,7 @@
      root.replaceChildren();
      const tile=node('div','theme-marketplace-empty');
      const heading=node('strong','','Your installable themes are in Theme Store.');
-     const message=node('p','','Browse Heuristic, Resolve and your other packaged themes, then install a private CMS draft. Saving does not publish your site.');
+     const message=node('p','','Browse published themes from Theme Store, then install a private CMS draft. Saving does not publish your site.');
      const open=node('a','btn primary','Browse themes and create a draft');
      open.href=installedStore;
      tile.append(heading,message,open);
