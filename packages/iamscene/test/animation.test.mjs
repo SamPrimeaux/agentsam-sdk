@@ -19,6 +19,18 @@ test('normalizes loop time and samples complete animation tracks', () => {
   assert.deepEqual(sampleAnimation(animation, 1), [{ targetId: 'node', property: 'position', value: [1, 2, 3] }]);
 });
 
+test('scroll scrubbing can hold the terminal frame of a looping animation', () => {
+  assert.deepEqual(sampleAnimation(animation, 2, { wrap: false }), [
+    { targetId: 'node', property: 'position', value: [2, 4, 6] },
+  ]);
+  assert.deepEqual(sampleAnimation(animation, 2.5, { wrap: false }), [
+    { targetId: 'node', property: 'position', value: [2, 4, 6] },
+  ]);
+  assert.deepEqual(sampleAnimation(animation, 2), [
+    { targetId: 'node', property: 'position', value: [0, 0, 0] },
+  ]);
+});
+
 test('supports step interpolation and smooth easing', () => {
   const step = { ...track, interpolation: 'step' };
   assert.deepEqual(sampleAnimationTrack(step, 1), [0, 0, 0]);
