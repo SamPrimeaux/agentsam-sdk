@@ -749,13 +749,93 @@ function renderBrand(){
 }
 function renderAll(){renderBrand();renderPrimitives();renderInspector();renderChapters();redraw();renderLayers();progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
 function setBackdrop(preset:string){
- const colors:Record<string,string>={blue:"#e8effb",studio:"#e8effb",neutral:"#e9e4dd",slate:"#252d3d",paper:"#f7f4ee",daylight:"#e7eff7",overcast:"#d8dfe8",night:"#242b3a"};
+ const colors:Record<string,string>={blue:"#e8effb",studio:"#202c40",neutral:"#e9e4dd",slate:"#252d3d",paper:"#f7f4ee",daylight:"#e7eff7",overcast:"#d8dfe8",night:"#242b3a"};
  const color=colors[preset]||preset||colors.blue;currentBackdrop=preset;
  const dark=document.documentElement.dataset.samsketchTheme==="dark";
  viewport.style.background=dark
-  ?"radial-gradient(ellipse at 52% 25%,#27354a 0%,#1a2230 60%,#131923 100%)"
+  ?`radial-gradient(ellipse at 52% 25%,${color} 0%,#1a2230 65%,#131923 100%)`
   :`radial-gradient(ellipse at 52% 25%,${color} 0%,#edf2fc 68%,#dfe8f6 100%)`;
- scene.fog=fogEnabled?new THREE.FogExp2(new THREE.Color(color),fogDensity):null;
+ scene.fog=fogEnabled?new THREE.FogExp2(new THREE.Color(MOODS.find(m=>m.id===doc.sceneSettings?.mood)?.fogColor||color),fogDensity):null;
+}
+function applyMood(id:MoodId,persist=true){
+ const mood=MOODS.find(item=>item.id===id);if(!mood)return;
+ if(persist){snapshot();doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,mood:id};}
+ light.color.set(mood.keyColor);light.intensity=mood.keyIntensity;
+ fillLight.color.set(mood.fillColor);fillLight.intensity=mood.fillIntensity;
+ ambientLight.color.set(mood.ambientColor);ambientLight.intensity=mood.ambientIntensity;
+ renderer.toneMappingExposure=mood.exposure;
+ if(!doc.sceneSettings?.fogEnabled)fogEnabled=false;
+ fogDensity=doc.sceneSettings?.fogDensity??mood.fogDensity;
+ setBackdrop(mood.backdrop);
+ if(persist)store();
+}
+function applyFinish(id:FinishId){
+ const preset=FINISHES.find(item=>item.id===id);if(!preset)return;
+ snapshot();doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,finish:id};
+ const targets=sel()?[sel()!]:doc.items;
+ targets.forEach(item=>{item.finish=id;item.material="metal";item.color=preset.swatchHex;});
+ redraw();renderInspector();renderLayers();store();
+}
+function applySceneProfile(id:SceneProfileId){
+ const profile=SCENE_PROFILES.find(item=>item.id===id);if(!profile)return;
+ doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,profile:id,finish:profile.finish,mood:profile.mood};
+ applyFinish(profile.finish);applyMood(profile.mood,false);
+ announce("SamSpeaks scene profile · "+profile.label);
+}
+function applyCameraShot(id:CameraShotId,transition?:TransitionId,persist=true){
+ const shot=CAMERA_SHOTS.find(item=>item.id===id);if(!shot)return;
+ if(persist)doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,cameraShot:id};
+ const selected=selectedSceneObject();
+ const target=selected?new THREE.Box3().setFromObject(selected).getCenter(new THREE.Vector3()):new THREE.Vector3(0,0,0);
+ const direction=new THREE.Vector3(...shot.direction).normalize();
+ const distance=shot.distance;
+ const toPosition=target.clone().add(direction.multiplyScalar(distance));
+ const toTarget=target.clone();
+ const mode=transition||doc.sceneSettings?.transitionType||"glide";
+ const duration=TRANSITIONS.find(item=>item.id===mode)?.duration||0;
+ if(duration===0||reducedMotionOverride||matchMedia("(prefers-reduced-motion: reduce)").matches){
+  cameraTransition=null;camera.position.copy(toPosition);controls.target.copy(toTarget);camera.lookAt(toTarget);controls.update();
+ }else{
+  cameraTransition={fromPosition:camera.position.clone(),toPosition,fromTarget:controls.target.clone(),toTarget,start:performance.now(),duration};
+ }
+ if(persist)store();
+}
+function speakScript(script:string,voiceName="Kore",voiceStyle=""){
+ if(!script.trim())return Promise.resolve();
+ if(!("speechSynthesis" in window)||!("SpeechSynthesisUtterance" in window)){
+  announce("Narration preview is unavailable in this browser.");return Promise.resolve();
+ }
+ window.speechSynthesis.cancel();
+ const utterance=new SpeechSynthesisUtterance(script.replace(/<[^>]+>/g,"").replace(/\|yeah\||\|mhm\|/g,""));
+ const voice=window.speechSynthesis.getVoices().find(item=>item.name.toLowerCase().includes(voiceName.toLowerCase()));
+ if(voice)utterance.voice=voice;
+ utterance.rate=voiceStyle.toLowerCase().includes("slow")?.88:1;
+ utterance.pitch=voiceStyle.toLowerCase().includes("bright")?1.08:1;
+ return new Promise<void>(resolve=>{
+  utterance.onend=()=>resolve();utterance.onerror=()=>resolve();window.speechSynthesis.speak(utterance);
+ });
+}
+function applyStoryboardBeat(beat:StoryBeat){
+ applyMood(beat.mood,false);doc.sceneSettings={...DEFAULT_SCENE_SETTINGS,...doc.sceneSettings,explodeAmount:beat.explodeAmount};
+ applyProgress(storyProgress);applyCameraShot(beat.cameraShot,beat.transitionType,false);
+ announce("SamSpeaks · "+beat.title);
+}
+function stopStoryboardPlayback(){
+ storyboardRun++;if(storyboardTimer!==null){window.clearTimeout(storyboardTimer);storyboardTimer=null;}
+ if("speechSynthesis" in window)window.speechSynthesis.cancel();
+}
+function playStoryboard(){
+ stopStoryboardPlayback();const token=++storyboardRun;const beats=doc.storyboard||[];
+ if(!beats.length){announce("Add a storyboard beat before playing the flow.");return;}
+ let index=0;
+ const next=async()=>{
+  if(token!==storyboardRun)return;
+  const beat=beats[index];if(!beat){stopStoryboardPlayback();announce("SamSpeaks flow complete.");return;}
+  applyStoryboardBeat(beat);await speakScript(beat.script,beat.voiceName,beat.voiceStyle);
+  if(token!==storyboardRun)return;
+  index++;storyboardTimer=window.setTimeout(()=>{void next();},450);
+ };
+ void next();
 }
 function applyWorkspaceTheme(theme:"light"|"dark"){
  document.documentElement.dataset.samsketchTheme=theme;
