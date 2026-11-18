@@ -10,6 +10,7 @@ import {
   createCopyBlock,
   createActionBlock,
   createDemoBlock,
+  createSection,
   createWorkPreset,
   createAgencyHomePreset,
   createPreset,
@@ -24,6 +25,7 @@ import {
   createDemoHost,
   getSceneKind,
   normalizeSection,
+  sceneTimeAtProgress,
 } from '../src/index.js';
 
 describe('theme-scenes contracts', () => {
@@ -88,6 +90,20 @@ describe('scenes inventory', () => {
     assert.equal(section.groups[0].blocks.length, 1);
     assert.equal(section.groups[0].blocks[0].kind, 'copy');
   });
+
+  it('validates that scroll-driven scene bindings have a document and page scroll behavior', () => {
+    const result = validatePageContent({
+      id: 'invalid-scene-page',
+      theme: 'foundation',
+      sections: [{
+        id: 'scene',
+        scene: 'interactive.stage',
+        sceneAnimation: { id: 'circuit-loop', playback: 'scroll' },
+      }],
+    });
+    assert.ok(result.errors.some((error) => error.code === 'scene_document_required'));
+    assert.ok(result.errors.some((error) => error.code === 'scene_scroll_behavior_required'));
+  });
 });
 
 describe('themes', () => {
@@ -107,6 +123,42 @@ describe('themes', () => {
 });
 
 describe('presets + compile', () => {
+  it('maps normalized scroll progress to bounded scene animation time', () => {
+    assert.equal(sceneTimeAtProgress(0, 8), 0);
+    assert.equal(sceneTimeAtProgress(0.5, 8), 4);
+    assert.equal(sceneTimeAtProgress(1, 8), 8);
+    assert.equal(sceneTimeAtProgress(0.75, 8, { start: 0.25, end: 0.75 }), 8);
+    assert.equal(sceneTimeAtProgress(0.1, 8, { start: 0.25, end: 0.75 }), 0);
+    assert.throws(() => sceneTimeAtProgress(0.5, 0), /duration_invalid/);
+  });
+
+  it('compiles a portable IAM scene document into a scroll-aware host descriptor', () => {
+    const page = {
+      id: 'circuit-story',
+      theme: 'inneranimal',
+      sections: [createSection({
+        id: 'circuit',
+        scene: 'interactive.stage',
+        visual: 'visual.iam-scene',
+        sceneDocument: { assetRole: 'scene.circuit-loop' },
+        sceneAnimation: { id: 'circuit-loop', playback: 'scroll', startProgress: 0, endProgress: 1 },
+        scroll: SCROLL_PRESETS.cinematic,
+        groups: [{ blocks: [createCopyBlock({ title: 'Energy in motion' })] }],
+      })],
+    };
+    const plan = compilePage(page, {
+      resolveAsset: (role) => role === 'scene.circuit-loop'
+        ? '/media/scenes/retrofuturistic-circuit-loop.iamscene.json'
+        : null,
+    });
+    const section = plan.sections[0];
+    assert.equal(plan.validation.ok, true);
+    assert.equal(section.visualMeta.runtime, 'iamscene');
+    assert.equal(section.sceneHost.kind, 'iamscene');
+    assert.equal(section.sceneHost.document.url, '/media/scenes/retrofuturistic-circuit-loop.iamscene.json');
+    assert.equal(section.sceneHost.animation.id, 'circuit-loop');
+    assert.equal(section.sceneHost.scroll.mode, 'cinematic');
+  });
   it('lists presets', () => {
     assert.ok(listPresets().includes('work'));
     assert.ok(listPresets().includes('agency-home'));

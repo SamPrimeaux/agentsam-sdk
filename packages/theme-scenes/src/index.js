@@ -71,5 +71,6 @@ export {
   compilePage,
   resolveMedia,
   computeScrollProgress,
+  sceneTimeAtProgress,
   stageAtProgress,
 } from './runtime/compile.js';

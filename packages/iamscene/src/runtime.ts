@@ -28,6 +28,8 @@ export interface SceneRuntimeHandle {
   play(animationId: string, options?: { restart?: boolean; time?: number }): void;
   pause(): void;
   seek(time: number): void;
+  /** Select and sample an animation at an exact time without starting playback. */
+  seekAnimation(animationId: string, time: number, options?: { wrap?: boolean }): void;
   setPlaybackRate(rate: number): void;
   render(): void;
   dispose(): void;
@@ -281,14 +283,28 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     viewport.controls?.update?.();
     viewport.render();
   };
-  const seek = (time: number) => {
-    const animation = activeAnimationId ? animationMap.get(activeAnimationId) : undefined;
-    if (!animation) { currentTime = Math.max(0, time); render(); return; }
-    currentTime = animation.loop
+  const seekAnimation = (
+    animationId: string,
+    time: number,
+    seekOptions: { wrap?: boolean } = {},
+  ) => {
+    const animation = animationMap.get(animationId);
+    if (!animation) throw new Error(`iamscene_animation_not_found:${animationId}`);
+    if (!Number.isFinite(time)) throw new Error('iamscene_animation_time_invalid');
+    activeAnimationId = animationId;
+    const wrap = seekOptions.wrap ?? animation.loop;
+    currentTime = wrap
       ? ((time % animation.duration) + animation.duration) % animation.duration
       : Math.max(0, Math.min(animation.duration, time));
-    for (const sample of sampleAnimation(animation, currentTime)) applyTrack(sample.targetId, sample.property, sample.value);
+    for (const sample of sampleAnimation(animation, currentTime, { wrap: false })) {
+      applyTrack(sample.targetId, sample.property, sample.value);
+    }
     render();
+  };
+  const seek = (time: number) => {
+    if (!Number.isFinite(time)) throw new Error('iamscene_animation_time_invalid');
+    if (!activeAnimationId) { currentTime = Math.max(0, time); render(); return; }
+    seekAnimation(activeAnimationId, time);
   };
   const tick = (now: number) => {
     if (!playing || disposed) return;
@@ -320,7 +336,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     if (playOptions.time !== undefined) currentTime = playOptions.time;
     else if (playOptions.restart !== false) currentTime = 0;
     options.onAnimationChange?.(activeAnimationId, currentTime);
-    seek(currentTime);
+    seekAnimation(animationId, currentTime);
     playing = true;
     frameHandle = requestAnimationFrame(tick);
   };
@@ -376,6 +392,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     play,
     pause,
     seek,
+    seekAnimation,
     setPlaybackRate(rate: number) {
       if (!Number.isFinite(rate) || rate <= 0 || rate > 8) throw new Error('iamscene_playback_rate_invalid');
       playbackRate = rate;

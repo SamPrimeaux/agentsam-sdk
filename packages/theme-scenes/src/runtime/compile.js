@@ -34,12 +34,22 @@ export function compilePage(page, options = {}) {
         demoHost = null;
       }
     }
+    const sceneDocument = section.sceneDocument
+      ? resolveMedia(section.sceneDocument, options.resolveAsset)
+      : null;
+    const sceneHost = sceneDocument ? {
+      kind: 'iamscene',
+      document: sceneDocument,
+      animation: section.sceneAnimation || null,
+      scroll: section.sceneAnimation?.playback === 'scroll' ? section.scroll || null : null,
+    } : null;
 
     return {
       ...section,
       groups,
       sceneMeta: kind,
       visualMeta: section.visual ? getVisual(section.visual) : null,
+      sceneHost,
       demoHost,
       adapterMeta: section.demo ? getDemoAdapter(section.demo) : null,
     };
@@ -107,6 +117,20 @@ export function computeScrollProgress(scrollY, sectionRect, scroll = {}) {
   const local = scrollY - start + pin;
   if (lengthPx <= 0) return 0;
   return Math.min(1, Math.max(0, local / lengthPx));
+}
+
+/** Map normalized page progress to an exact scene animation time. */
+export function sceneTimeAtProgress(progress, duration, range = {}) {
+  if (!Number.isFinite(progress)) throw new Error('theme_scene_progress_invalid');
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error('theme_scene_duration_invalid');
+  const start = range.start ?? 0;
+  const end = range.end ?? 1;
+  if (!Number.isFinite(start) || !Number.isFinite(end) ||
+      start < 0 || end > 1 || end <= start) {
+    throw new Error('theme_scene_progress_range_invalid');
+  }
+  const local = Math.max(0, Math.min(1, (progress - start) / (end - start)));
+  return local * duration;
 }
 
 export function stageAtProgress(progress, stages = []) {

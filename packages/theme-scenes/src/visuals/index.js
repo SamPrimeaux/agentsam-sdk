@@ -30,6 +30,13 @@ export const VISUAL_KINDS = Object.freeze({
     runtime: 'dom',
     props: ['title', 'chrome'],
   },
+  'visual.iam-scene': {
+    id: 'visual.iam-scene',
+    label: 'Native IAM Scene',
+    description: 'Portable .iamscene.json rendered by the AgentSam scene runtime; supports scroll scrubbing.',
+    runtime: 'iamscene',
+    props: ['sceneDocument', 'animationId', 'playback'],
+  },
 });
 
 export function getVisual(id) {
