@@ -11,7 +11,7 @@ import { templateCatalog, findTemplate, getTemplateModel, instanceTemplateModel 
 import { findInventoryEntry, modelLabel } from "./model-inventory";
 import { icon, iconButton } from "./icons";
 import { mountSettingsDrawer } from "./settings-drawer";
-import { CAMERA_SHOTS, DEFAULT_SCENE_SETTINGS, DEFAULT_STORYBOARD, FINISHES, MOODS, SCENE_PROFILES, SCENERY_PROPS, TRANSITIONS, type BrushStroke, type CameraShotId, type FinishId, type MoodId, type SceneSettings, type SceneryPropId, type StoryBeat, type TransitionId } from "./samspeaks-controls";
+import { CAMERA_SHOTS, DEFAULT_SCENE_SETTINGS, DEFAULT_STORYBOARD, FINISHES, MOODS, SCENE_PROFILES, SCENERY_PROPS, TRANSITIONS, type BrushStroke, type CameraShotId, type FinishId, type MoodId, type SceneProfileId, type SceneSettings, type SceneryPropId, type StoryBeat, type TransitionId } from "./samspeaks-controls";
 import { mountProgressiveStudio } from "./progressive";
 import { mountSketchGallery, type SketchProjectCategory } from "./gallery";
 import { listScenes, openScene, createScene, updateScene, removeScene, type SceneSummary } from "./scene-api";
@@ -946,7 +946,6 @@ window.addEventListener("samsketch:storyboard.change",event=>{
  const beats=(event as CustomEvent<{beats:StoryBeat[]}>).detail?.beats;
  if(!Array.isArray(beats))return;
  doc.storyboard=beats.slice(0,100);store();
- settingsApi.sync({storyboard:doc.storyboard});
 });
 window.addEventListener("samsketch:storyboard.preview",event=>{
  const beat=(event as CustomEvent<{beat:StoryBeat}>).detail?.beat;
