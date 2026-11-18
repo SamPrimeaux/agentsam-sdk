@@ -13,7 +13,7 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
 async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null, packageSections = null, portableSections = [], stockHandoff = null } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-    url: "https://editor.test/admin/theme-editor?slug=" + pageSlug +
+    url: "https://editor.test/admin/theme-editor?site_id=site-test&slug=" + pageSlug +
       (stockHandoff ? "&stock="+encodeURIComponent(stockHandoff) : ""),
     runScripts: "outside-only",
     pretendToBeVisual: true
@@ -45,22 +45,23 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   w.renderShell = (_route, markup) => w.document.body.insertAdjacentHTML("afterbegin", markup);
   w.fetch = async () => ({ ok: true, json: async () => ({ active_theme: { name: "Heuristic", status: "active" } }) });
   w.adminFetch = async (url, options = {}) => {
-    if (url.endsWith("/registry")) return registryOverride || registryForAdmin();
+    const requestPath = new URL(url, w.location.origin).pathname;
+    if (requestPath.endsWith("/registry")) return registryOverride || registryForAdmin();
     if (url.startsWith("/api/admin/cms/themes?site_id=")) return {
       ok:true,active_theme:{slug:"fixture-theme",name:"Fixture theme",state:"active"},
       themes:[{slug:"fixture-theme"}],content_version:1
     };
     if (linkDestinations && url === "/api/store/collections") return {ok:true,collections:linkDestinations.collections || []};
     if (linkDestinations && url === "/api/store/products") return {ok:true,products:linkDestinations.products || []};
-    if (url.endsWith("/pages/site")) return { page: site };
-    if (url.endsWith("/pages/" + pageSlug)) return { page, seeded: false };
-    if (url.endsWith("/pages")) return {site:{id:"site-test"}, pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
+    if (requestPath.endsWith("/pages/site")) return { page: site };
+    if (requestPath.endsWith("/pages/" + pageSlug)) return { page, seeded: false };
+    if (requestPath.endsWith("/pages")) return {site:{id:"site-test"}, pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
     if (url.startsWith("/api/admin/media?")) return { assets: mediaAssets, pagination: { pages: 1 } };
-    if (url.endsWith("/pages/shop/publish") && options.method === "POST") {
+    if (requestPath.endsWith("/pages/shop/publish") && options.method === "POST") {
       publishes.push({url,method:options.method});
       return w.__publishResponder ? w.__publishResponder() : { published_at: "2026-10-10T05:00:00Z" };
     }
-    if (stockHandoff && url.endsWith("/pages/" + pageSlug + "/sections") && options.method === "POST") {
+    if (stockHandoff && requestPath.endsWith("/pages/" + pageSlug + "/sections") && options.method === "POST") {
       const body = JSON.parse(options.body || "{}");
       const content = w.ThemePortableSections?.defaults?.(body.themePreset);
       if (!content || body.templateKey !== "portable") throw new Error("stock_section_not_registered");
