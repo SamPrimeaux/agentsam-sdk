@@ -42,6 +42,13 @@ export interface SceneMaterial {
   transparent?: boolean;
   additive?: boolean;
   depthWrite?: boolean;
+  /** Reveal an imported mesh from its local XZ origin. The reveal radius is time-addressable. */
+  radialReveal?: {
+    initialRadius: number;
+    feather?: number;
+    pulseWidth?: number;
+    pulseIntensity?: number;
+  };
 }
 
 export interface SceneTransform {
