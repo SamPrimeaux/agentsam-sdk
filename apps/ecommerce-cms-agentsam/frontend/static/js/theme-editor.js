@@ -519,7 +519,7 @@
     if (host) {
       return Object.entries(window.SECTION_SCHEMAS?.[slug] || {})
         .filter(function([key, definition]) {
-          return /^(source-|custom-|stock-)/.test(key) && definition?.capabilities?.insert === true;
+          return /^(source-|custom-|stock-|portable-)/.test(key) && definition?.capabilities?.insert === true;
         })
         .map(function([key, definition]) {
           return { id: key, label: definition.label || humanize(key),
@@ -530,8 +530,20 @@
             previewHtml: definition.previewHtml || '' };
         });
     }
-    // CMS pages use the published portable renderer catalog, not fixture labels.
-    const portable = window.ThemePortableSections?.catalog() || [];
+    // Site-owned CMS pages choose REAL records from cms_component_templates.
+    // A renderer preset is not a stock catalog SKU and must not impersonate
+    // one. Theme-project mode above retains its own source-backed presets.
+    const catalogStock = (window.cmsRegistry?.catalog || [])
+      .filter(function(row) {
+        return row.itemType === 'section' && row.catalogAvailable === true &&
+          row.installable === true && !!row.sku;
+      })
+      .map(function(row) {
+        return { id:row.sku,label:row.name || row.label || row.sku,
+          type:row.definitionKey || 'section',templateKey:'catalog-stock',
+          source:'CMS stock',preset:row.sku,rendererPreset:row.rendererKey,
+          category:row.category || 'Sections',catalog:row };
+      });
     const registry = window.SECTION_SCHEMAS?.[slug] || {};
     const native = Object.entries(registry)
       .filter(function([key]) {
@@ -550,7 +562,7 @@
         return { id: 'heuristic/' + key, label: definition.label || humanize(key),
           type: key, templateKey: key, source: 'heuristic', preset: 'heuristic/' + key };
       });
-    return [...native, ...portable];
+    return [...catalogStock, ...native];
   }
 
   async function setTheme(nextTheme) {
@@ -1700,7 +1712,7 @@
         cmsEscapeAttr(entry.label || entry.id) + '" sandbox="" loading="lazy" tabindex="-1" srcdoc="' +
         cmsEscapeAttr(entry.previewHtml) + '"></iframe>';
       const api = window.ThemePortableSections;
-      const preset = entry.preset || entry.id;
+      const preset = entry.rendererPreset || entry.preset || entry.id;
       if (api && typeof api.defaults === 'function' && typeof api.render === 'function') {
         const content = api.defaults(preset);
         if (content) {
@@ -4056,13 +4068,19 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Adding section…');
     try {
-      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+      // Reusable stock templates install through the canonical SKU route,
+      // not the legacy generic section route. This preserves the actual
+      // cms_component_templates -> cms_page_sections / cms_section_blocks links.
+      const isStock = templateKey === 'catalog-stock';
+      const target = '/api/admin/cms/pages/' + encodeURIComponent(slug) +
+        (isStock ? '/catalog-resources' : '/sections');
+      const result = await editorRequest(target, {
         method: 'POST',
-        body: JSON.stringify({
-          templateKey: templateKey,
-          themePreset: themePreset || '',
-          toIndex: Number.isInteger(toIndex) ? toIndex : (pageData?.sections || []).length
-        })
+        body: JSON.stringify(isStock
+          ? {catalogKey:themePreset,toIndex:Number.isInteger(toIndex)
+              ?toIndex:(pageData?.sections||[]).length}
+          : {templateKey:templateKey,themePreset:themePreset||'',
+              toIndex:Number.isInteger(toIndex)?toIndex:(pageData?.sections||[]).length})
       });
       activeSectionOwner = slug;
       activeSectionKey = result.section_key;

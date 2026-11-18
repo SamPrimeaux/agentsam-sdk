@@ -1,6 +1,9 @@
 import { resolveCmsSite } from "./site-context.mjs";
 import { normalizeSeo } from "./seo.mjs";
 import { validateSectionStyles } from "./theme-style-contract.mjs";
+import {listCmsComponentCatalog} from './definition-registry.mjs';
+import '../../packages/theme-contract/runtime/platform-stock-sections.js';
+import '../../packages/theme-contract/runtime/portable-sections.js';
 
 /**
  * Adapter for the shared-D1 site-owned cms_pages schema. cms_sites.id is the
@@ -285,6 +288,77 @@ export async function updateSiteOwnedPage(env, accountId, slug, siteId, pageId, 
   return result ? { ok: true, site, page: result.page } : problem("Page update could not be verified", 500);
 }
 
+
+/** Project ordered R2 editor blocks into the existing site-scoped D1 block table.
+ * Preserves row IDs through edits/reorders; archives removed blocks. */
+async function catalogBlockStatements(db,accountId,section,content){
+  if(!section.template_sku && content?.__editor?.source!=='catalog-install')return [];
+  const list=content?.__editor?.blocks||[];
+  if(!Array.isArray(list)||list.length>64)throw new Error('cms_block_list_invalid');
+  const {results:prior=[]}=await db.prepare(
+    'SELECT id,block_key,metadata_json FROM cms_section_blocks WHERE section_id=? AND account_id=?'
+  ).bind(section.id,accountId).all();
+  const owned=prior.filter(row=>parse(row.metadata_json).source==='theme-studio-v1');
+  const foreign=new Set(prior.filter(row=>parse(row.metadata_json).source!=='theme-studio-v1').map(row=>row.block_key));
+  const old=new Map(owned.map(row=>[row.block_key,row]));
+  const ids=new Map(),nodes=new Map();
+  const safe=x=>typeof x==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(x)&&
+    !['__proto__','constructor','prototype'].includes(x);
+  for(const [index,block] of list.entries()){
+    if(!block||typeof block!=='object'||!safe(block.id)||!safe(block.templateKey)||
+      nodes.has(block.id)||foreign.has(block.id))throw new Error('cms_block_identity_invalid');
+    const data=content[block.id]||{};
+    if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('cms_block_data_invalid');
+    const parent=block.parentBlockId||null;
+    if(parent!==null&&!safe(parent))throw new Error('cms_block_parent_invalid');
+    nodes.set(block.id,{index,block,data,parent});
+    ids.set(block.id,old.get(block.id)?.id||'cmsb_'+crypto.randomUUID().replaceAll('-').slice(0,20));
+  }
+  const visiting=new Set(),visited=new Set(),ordered=[];
+  function visit(key){
+    if(visiting.has(key))throw new Error('cms_block_parent_cycle');
+    if(visited.has(key))return;
+    const node=nodes.get(key);
+    if(!node)throw new Error('cms_block_parent_missing');
+    visiting.add(key);if(node.parent)visit(node.parent);
+    visiting.delete(key);visited.add(key);ordered.push(key);
+  }
+  for(const key of nodes.keys())visit(key);
+  const result=[];
+  for(const key of ordered){
+    const item=nodes.get(key),before=old.get(key),parentId=item.parent?ids.get(item.parent):null;
+    const status=item.block.enabled===false?'hidden':'active',data=JSON.stringify(item.data);
+    if(before)result.push(db.prepare(
+      `UPDATE cms_section_blocks SET parent_block_id=?,block_type=?,sort_order=?,status=?,
+      content_json=?,updated_at=datetime('now') WHERE id=? AND section_id=? AND account_id=?`
+    ).bind(parentId,item.block.templateKey,item.index*10,status,data,before.id,section.id,accountId));
+    else result.push(db.prepare(
+      `INSERT INTO cms_section_blocks
+      (id,account_id,section_id,parent_block_id,block_key,block_type,sort_order,status,content_json,metadata_json)
+      VALUES (?,?,?,?,?,?,?,?,?,'{"source":"theme-studio-v1"}')`
+    ).bind(ids.get(key),accountId,section.id,parentId,key,item.block.templateKey,item.index*10,status,data));
+  }
+  for(const before of owned)if(!nodes.has(before.block_key))result.push(db.prepare(
+    `UPDATE cms_section_blocks SET status='archived',updated_at=datetime('now')
+    WHERE id=? AND section_id=? AND account_id=?`
+  ).bind(before.id,section.id,accountId));
+  return result;
+}
+async function validateCatalogStockDraft(env,accountId,section,content){
+  if(!section.template_sku)return;
+  const rows=await listCmsComponentCatalog(env,accountId,{itemType:'section'});
+  const entry=rows.find(row=>row.sku===section.template_sku);
+  if(!entry?.installable||!entry.rendererKey)throw new Error('cms_stock_renderer_unavailable');
+  if(content.__editor?.catalogSku!==entry.sku ||
+      content.__editor?.definitionKey!==entry.definitionKey ||
+      String(content.__editor?.definitionVersion)!==String(entry.definitionVersion) ||
+      content.__editor?.themePreset!==entry.rendererKey)
+    throw new Error('cms_stock_identity_changed');
+  const current=structuredClone(content);
+  current.__editor={...current.__editor,templateKey:'portable',themePreset:entry.rendererKey};
+  const gate=globalThis.ThemePortableSections?.validate?.(entry.rendererKey,current);
+  if(!gate?.ok)throw new Error('cms_stock_content_invalid:'+String(gate?.error||'unknown'));
+}
 /**
  * Write only a private R2 draft for an established site-owned page. The
  * published object and published page status remain unchanged.
@@ -298,7 +372,7 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
   const page = await findSiteOwnedPage(env, site, slug, pageId);
   if (!page) return problem("cms_page_not_found", 404);
   const section = await env.DB.prepare(`
-    SELECT id, section_key, draft_r2_key, r2_bucket FROM cms_page_sections
+    SELECT id, section_key, draft_r2_key, r2_bucket, template_sku FROM cms_page_sections
     WHERE page_id=? AND (section_key=? OR id=?) LIMIT 1
   `).bind(page.id, sectionKey, sectionKey).first();
   if (!section) return problem("cms_section_not_found", 404);
@@ -309,6 +383,11 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
   }
   const styles = validateSectionStyles(content);
   if (!styles.ok) return problem(styles.error, 422);
+  let blocks;
+  try {
+    await validateCatalogStockDraft(env,accountId,section,content);
+    blocks=await catalogBlockStatements(env.DB,accountId,section,content);
+  }catch(e){return problem(String(e.message||e),422);}
   const serialized = JSON.stringify(content);
   if (new TextEncoder().encode(serialized).length > 524288) return problem("cms_section_content_too_large", 413);
   const current = await env.DB.prepare(`
@@ -326,17 +405,24 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
     encodeURIComponent(section.id) + "/revision-" + String(revision).padStart(6, "0") +
     "-" + hash.slice(0, 16) + ".json";
   await env.CMS_CONTENT.put(key, serialized, { httpMetadata: { contentType: "application/json" } });
-  const changed = await env.DB.prepare(`
-    UPDATE cms_page_sections SET draft_r2_key=?, content_hash=?, updated_at=datetime('now')
-    WHERE id=? AND page_id=? AND draft_r2_key IS ?
-  `).bind(key, hash, section.id, page.id, section.draft_r2_key).run();
-  if (Number(changed.meta?.changes || 0) !== 1) return problem("cms_section_revision_conflict", 409);
-  await env.DB.prepare(`
-    INSERT INTO cms_revisions(account_id, site_id, entity_type, entity_id, revision_number,
-      revision_kind, content_object_key, content_hash, snapshot_json, metadata_json)
-    VALUES (?,?,'section',?,?,'draft',?,?,?,?)
-  `).bind(accountId, site.id, section.id, revision, key, hash,
-    JSON.stringify({ content }), JSON.stringify({ source: "cms-site", published: false })).run();
+  // A D1 batch is one transaction. The NOT NULL revision guard aborts all
+  // changes if the immediately preceding section CAS updated zero rows.
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`
+        UPDATE cms_page_sections SET draft_r2_key=?,content_hash=?,updated_at=datetime('now')
+        WHERE id=? AND page_id=? AND draft_r2_key IS ?`)
+        .bind(key,hash,section.id,page.id,section.draft_r2_key),
+      env.DB.prepare(`
+        INSERT INTO cms_revisions
+        (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,
+         content_object_key,content_hash,snapshot_json,metadata_json)
+        VALUES (?,?,'section',?,CASE WHEN changes()=1 THEN ? ELSE NULL END,'draft',?,?,?,?)`)
+        .bind(accountId,site.id,section.id,revision,key,hash,
+          JSON.stringify({content}),JSON.stringify({source:'cms-site',published:false})),
+      ...blocks,
+    ]);
+  }catch{return problem('cms_section_revision_conflict',409);}
   return { ok: true, version: revision, section_key: section.section_key || section.id,
     content_object_key: key, published: false, updated_at: new Date().toISOString() };
 }

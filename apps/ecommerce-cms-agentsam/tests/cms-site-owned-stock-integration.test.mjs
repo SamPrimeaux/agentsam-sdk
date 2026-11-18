@@ -111,3 +111,50 @@ test('catalog rejects forged fields, unsafe destinations, and foreign page IDs w
   assert.equal(db.prepare("SELECT status FROM cms_pages WHERE id='home'").get().status,'published');
  }finally{db.close();}
 });
+
+test('merchant block edits, reorders and additions persist atomically with the section revision',async()=>{
+ const {db,env,objects}=stockFixture();
+ try{
+  const created=await invoke(env,'merchant','POST',{catalogKey:sku});
+  const section=await created.json();
+  assert.equal(created.status,201,JSON.stringify(section));
+  const initial=db.prepare('SELECT id,block_key FROM cms_section_blocks WHERE section_id=?')
+    .all(section.section_id);
+  const initialIds=new Map(initial.map(row=>[row.block_key,row.id]));
+  const content=structuredClone(section.instance.settings);
+  content.title='Merchant edited plans';
+  content.plan1.title='Starter';
+  delete content.plan2;
+  content.plan3={title:'Enterprise',detail:'Custom assistance',price:'Request a quote',
+    linkText:'Contact sales',href:'/contact'};
+  content.__editor.blocks=[
+    {id:'plan3',templateKey:'plan',enabled:true},
+    {id:'plan1',templateKey:'plan',enabled:true},
+  ];
+  const saveUrl='https://cms.test/api/admin/cms/pages/home/sections/'+section.section_key+'?site_id=main&page_id=home';
+  const saved=await invoke(env,'merchant','PUT',{content,expected_version:1},saveUrl);
+  assert.equal(saved.status,200,JSON.stringify(await saved.json()));
+  const blocks=db.prepare('SELECT id,block_key,sort_order,status,content_json FROM cms_section_blocks WHERE section_id=? ORDER BY sort_order')
+    .all(section.section_id);
+  const editable=blocks.filter(row=>row.status!=='archived');
+  assert.deepEqual(editable.map(row=>row.block_key),['plan3','plan1']);
+  assert.equal(blocks.find(row=>row.block_key==='plan2').status,'archived');
+  assert.equal(blocks.find(row=>row.block_key==='plan1').id,initialIds.get('plan1'));
+  assert.equal(JSON.parse(editable[1].content_json).title,'Starter');
+  const reopen=(await getSiteOwnedPage(env,'merchant','home','main','home')).page;
+  const current=reopen.sections.find(row=>row.key===section.section_key);
+  assert.equal(current.version,2);
+  assert.equal(current.content.title,'Merchant edited plans');
+  assert.deepEqual(current.content.__editor.blocks.map(x=>x.id),['plan3','plan1']);
+  const persisted=db.prepare('SELECT draft_r2_key,published_r2_key FROM cms_page_sections WHERE id=?')
+    .get(section.section_id);
+  assert.ok(objects.has(persisted.draft_r2_key));
+  assert.equal(persisted.published_r2_key,null);
+  const stale=await invoke(env,'merchant','PUT',{content:{...content,title:'Stale writer'},
+    expected_version:1},saveUrl);
+  assert.equal(stale.status,409);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM cms_revisions WHERE entity_id=?').get(section.section_id).n,2);
+  assert.equal((await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections.find(
+    row=>row.key===section.section_key).content.title,'Merchant edited plans');
+ }finally{db.close();}
+});

@@ -18,7 +18,7 @@ export function createSiteOwnedFixture(){
     CREATE TABLE cms_section_blocks(account_id TEXT,section_id TEXT,block_key TEXT,
       block_type TEXT,status TEXT,content_json TEXT,metadata_json TEXT);
     CREATE TABLE cms_revisions(account_id TEXT,site_id TEXT,entity_type TEXT,
-      entity_id TEXT,revision_number INTEGER,revision_kind TEXT,
+      entity_id TEXT,revision_number INTEGER NOT NULL,revision_kind TEXT,
       content_object_key TEXT,content_hash TEXT,snapshot_json TEXT,metadata_json TEXT);
     INSERT INTO cms_sites VALUES ('main','merchant','Site','site','example.com','active',1),
       ('foreign','other','Other','other','other.example','active',1);
@@ -40,6 +40,8 @@ export function createSiteOwnedFixture(){
     ALTER TABLE cms_page_sections ADD COLUMN template_sku TEXT;
     ALTER TABLE cms_page_sections ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json));
     ALTER TABLE cms_section_blocks ADD COLUMN id TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN parent_block_id TEXT;
+    ALTER TABLE cms_section_blocks ADD COLUMN updated_at TEXT;
     ALTER TABLE cms_section_blocks ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE cms_section_blocks ADD COLUMN definition_id TEXT;
     ALTER TABLE cms_section_blocks ADD COLUMN template_sku TEXT;
