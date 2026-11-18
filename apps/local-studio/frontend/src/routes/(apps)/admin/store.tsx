@@ -1,5 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Navigate } from '@tanstack/react-router';
 import { EcommerceAppView } from './apps/ecommerce-cms-agentsam';
+import { themeStoreTrySelection } from '@/lib/apps/theme-store-selection';
 import { OnlineStorePage } from '@/components/store/OnlineStorePage';
 
 /**
