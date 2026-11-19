@@ -63,6 +63,20 @@ export function Composer({
   const [submitting, setSubmitting] = useState(false);
   const streaming = busy ?? workStreaming;
   const cancel = () => onCancel ? onCancel() : stop(targetId);
+  // Follow-ups typed while the agent works are held here (never interrupting the
+  // run) and delivered together as the next message once the turn finishes.
+  const [queued, setQueued] = useState<string[]>([]);
+  const wasStreaming = useRef(streaming);
+  useEffect(() => {
+    if (wasStreaming.current && !streaming && queued.length) {
+      const text = queued.join("\n\n");
+      setQueued([]);
+      setDraft(targetId, text);
+      void send(targetId, targetKind);
+    }
+    wasStreaming.current = streaming;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streaming]);
   const runMode = useWorkStore((s) => s.runModes[targetId] ?? defaultRunModeForTarget(targetKind));
   const setRunMode = useWorkStore((s) => s.setRunMode);
   const fileRef = useRef<HTMLInputElement>(null);
