@@ -1,7 +1,7 @@
 import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from './WorkspaceSourceRail.js';
 import { mediaKindForPath, isMarkdownPath, isHtmlPath } from '../workspace/media.js';
 import { WorkspaceTreeView } from './WorkspaceTreeView.js';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { AgentSamMonacoEditor, type AgentSamEditorPalette, type AgentSamMonacoEditorProps } from '../monaco/editor.js';
 import { WorkspaceSaveQueue, type SaveStatus } from '../workspace/save-queue.js';
 import { visibleWorkspaceTree, workspaceParents } from '../workspace/tree.js';
@@ -346,8 +346,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         onChange={event=>updateAppearance({wordWrap:event.target.checked})}/>Wrap lines</label>
       <button type="button" onClick={()=>setAppearanceOpen(false)}>Done</button>
     </div>}
-    <div className="asi-main" style={{gridTemplateColumns:explorerOpen?'minmax(150px, '+sidebarWidth+'px) 7px minmax(0,1fr)':'0px 0px minmax(0,1fr)'}}>
-      <aside className="asi-aside" aria-label="Editor sidebar" style={!explorerOpen?{display:'none'}:undefined}>
+    <div className={'asi-main'+(explorerOpen?'':' asi-explorer-collapsed')}
+      style={{'--asi-sidebar-width':sidebarWidth+'px'} as CSSProperties}>
+      <aside className="asi-aside" aria-label="Editor sidebar">
         {sources?.length ? <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} /> : null}
         <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
@@ -370,7 +371,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
           {panel==='Dependencies'&&workspace.configuration?.dependencies?.map(item=><p key={item}>{item}</p>)}
         </div>
       </aside>
-      <div className="asi-grabbar" style={!explorerOpen?{display:'none'}:undefined} role="separator" aria-label="Resize file explorer" aria-orientation="vertical" tabIndex={0}
+      <div className="asi-grabbar" role="separator" aria-label="Resize file explorer" aria-orientation="vertical" tabIndex={0}
         onPointerDown={event=>{event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);}}
         onPointerMove={event=>{if(!event.currentTarget.hasPointerCapture(event.pointerId))return;const rect=event.currentTarget.parentElement?.getBoundingClientRect();if(rect)setSidebarWidth(Math.min(Math.max(150,event.clientX-rect.left),Math.max(150,rect.width-210)));}}
         onPointerUp={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);}}
@@ -380,7 +381,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
         {current?<><div className="asi-breadcrumb">{current.displayName||current.path.split('/').join(' › ')}<div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={readonly||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>void remove()} disabled={readonly||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
         <div className={'asi-editors'+(split&&!current.preview?' asi-split':'')}
-          style={split&&!current.preview?{gridTemplateColumns:'minmax(0,'+splitPercent+'fr) 7px minmax(0,'+(100-splitPercent)+'fr)'}:undefined}>
+          style={split&&!current.preview?{
+            '--asi-split-editor':splitPercent+'fr','--asi-split-preview':(100-splitPercent)+'fr',
+          } as CSSProperties:undefined}>
           {!current.preview&&(!previewOnly||split)?<div>{rendered(current)}</div>:null}
           {split&&!current.preview&&<div className="asi-grabbar asi-grabbar--preview" role="separator" aria-label="Resize source and preview" aria-orientation="vertical" tabIndex={0}
             onPointerDown={event=>{event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);}}
