@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveConsoleFile, shouldServeProductCatalogView } from "./packaged-console.js";
 import { isLocalStudioEcommerceDocumentPath, resolveLocalStudioEcommerceAdminRoute } from "../../shared/ecommerce-admin-routes.mjs";
-import { canonicalStudioPath, isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
+import { canonicalStudioPath, isStudioAdminPath, isStudioShellAdminPath } from "../../shared/studio-admin-routes.mjs";
 
 test("the canonical store route is Studio-owned, not packaged HTML", () => {
   assert.equal(resolveConsoleFile("/admin/store"), null);
@@ -10,6 +10,13 @@ test("the canonical store route is Studio-owned, not packaged HTML", () => {
 
 test("the legacy /sites URL no longer serves a second store page", () => {
   assert.equal(resolveConsoleFile("/sites"), null);
+});
+
+test("MovieMode project and editor routes both render inside the shared admin shell", () => {
+  for (const path of ["/admin/moviemode", "/admin/moviemode/edit"]) {
+    assert.equal(isStudioAdminPath(path), true, path + " belongs to the canonical admin namespace");
+    assert.equal(isStudioShellAdminPath(path), true, path + " renders inside the shared AgentSam shell");
+  }
 });
 
 test("installed theme projects use the existing CMS project editor route", () => {

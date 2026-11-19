@@ -80,6 +80,25 @@ for (const name of ["js/platform-stock-sections.js", "admin/js/platform-stock-se
   await copy(source("packages/theme-contract/runtime/platform-stock-sections.js"),
     path.join(dest,name));
 }
+// PrimeTech portable sections use the original shared Three.js world and
+// the original I.AM Scene circuit source meshes. Both browser runtimes are
+// bundled once and served to the Theme Studio preview and published storefront.
+for (const [entry, asset] of [
+  ["primetech-scene-browser.js", "primetech-scene.js"],
+  ["primetech-circuit-browser.js", "primetech-circuit.js"],
+]) {
+  const built = await bundle({
+    entryPoints: [source("packages/theme-contract/runtime/" + entry)],
+    bundle: true, platform: "browser", format: "iife", target: "es2022",
+    write: false, minify: false,
+  });
+  for (const name of ["js/" + asset, "admin/js/" + asset]) {
+    const out = path.join(dest, name);
+    await mkdir(path.dirname(out), { recursive: true });
+    await writeFile(out, built.outputFiles[0].contents);
+  }
+}
+await copy(source("packages/theme-contract/runtime/primetech/assets"), path.join(dest, "primetech"));
 const atlas = await bundle({
   entryPoints: [source("packages/theme-contract/runtime/revise-atlas-browser.js")],
   bundle: true, platform: "browser", format: "iife", target: "es2022",
@@ -115,6 +134,9 @@ for (const critical of [
   "admin/_spa/index.html", "admin/theme-editor.html",
   "admin/js/shell.js", "admin/js/inspector.js",
   "admin/js/revise-atlas.js", "admin/js/portable-sections.js", "admin/js/platform-stock-sections.js",
+  "admin/js/primetech-scene.js", "admin/js/primetech-circuit.js", "js/primetech-scene.js", "js/primetech-circuit.js",
+  "primetech/companions/geaux.png", "primetech/companions/meaux.png",
+  "primetech/scenes/original-4341/original-4341.iamscene.json",
   "admin/js/cms-authoring-engine.js", "admin/js/theme-preview-registry.js",
   "admin/js/theme-editor-mini-agentsam.mjs", "admin/js/theme-editor-assistant-context.mjs",
   "admin/dock/index.js", "admin/dock/dock.css", "admin/dock/dock.config.json",

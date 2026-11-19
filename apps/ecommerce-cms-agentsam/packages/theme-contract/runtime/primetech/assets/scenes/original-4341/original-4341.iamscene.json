@@ -1,0 +1,349 @@
+{
+  "$schema": "https://schemas.inneranimalmedia.com/iamscene/v1/iamscene.schema.json",
+  "format": "iamscene",
+  "formatVersion": "1.0.0",
+  "metadata": {
+    "id": "original-4341-hover-native",
+    "name": "Retrofuturistic Circuit \u00b7 Source-Mesh Hover Clone",
+    "description": "Native IAM scene using the actual four source meshes and a time-addressable radial circuit reveal emulating the original animated propagation, triggered on hover or tap.",
+    "tags": [
+      "native",
+      "hover",
+      "circuit",
+      "source-mesh"
+    ],
+    "provenance": {
+      "sourceUrl": "https://prod.spline.design/XsILZHTplRmAlDaE/scene.splinecode",
+      "sourceVersion": "2025-12-01",
+      "conversion": "mesh geometry extracted once; native GLTF runtime"
+    }
+  },
+  "coordinateSystem": {
+    "handedness": "right",
+    "upAxis": "Y",
+    "distanceUnit": "m"
+  },
+  "assets": [
+    {
+      "id": "lightning-gltf",
+      "uri": "./assets/lightning.gltf",
+      "mediaType": "model/gltf+json",
+      "sha256": "dfffced168ce19fc90cf7a4c5cf8a60eecaaa27c96da0bb017c375ba7f2151dc",
+      "role": "presentation",
+      "sourceNodeId": "lightning",
+      "units": "m"
+    },
+    {
+      "id": "battery-shell-gltf",
+      "uri": "./assets/battery-shell.gltf",
+      "mediaType": "model/gltf+json",
+      "sha256": "5f003f959d616d43103fcff5b5386c3aa599012adda37fa429e9a5024e11b1bf",
+      "role": "presentation",
+      "sourceNodeId": "battery-shell",
+      "units": "m"
+    },
+    {
+      "id": "battery-core-gltf",
+      "uri": "./assets/battery-core.gltf",
+      "mediaType": "model/gltf+json",
+      "sha256": "6176bb8d9941e2aca147aa8390c2ddc75b0ad9de8e49f465b6342c16695a4a9f",
+      "role": "presentation",
+      "sourceNodeId": "battery-core",
+      "units": "m"
+    },
+    {
+      "id": "circuit-traces-gltf",
+      "uri": "./assets/circuit-traces.gltf",
+      "mediaType": "model/gltf+json",
+      "sha256": "a73db21960e5a57c942f1ba14d471dbe311a2ef33b60a7936f4f017daf116e2b",
+      "role": "presentation",
+      "sourceNodeId": "circuit-traces",
+      "units": "m"
+    }
+  ],
+  "materials": [
+    {
+      "id": "lightning",
+      "baseColor": "#b5fcf4",
+      "emissive": "#cbfff9",
+      "emissiveIntensity": 0.65,
+      "metalness": 0.07,
+      "roughness": 0.9
+    },
+    {
+      "id": "battery-shell",
+      "baseColor": "#041016",
+      "emissive": "#001e2c",
+      "emissiveIntensity": 0.07,
+      "metalness": 0.18,
+      "roughness": 0.52
+    },
+    {
+      "id": "battery-core",
+      "baseColor": "#0d3e45",
+      "emissive": "#25e4e9",
+      "emissiveIntensity": 0.8,
+      "metalness": 0.08,
+      "roughness": 0.28
+    },
+    {
+      "id": "circuit-traces",
+      "baseColor": "#04141d",
+      "emissive": "#04a3bb",
+      "emissiveIntensity": 0.37,
+      "metalness": 0.04,
+      "roughness": 0.8,
+      "radialReveal": {
+        "initialRadius": 50,
+        "feather": 12,
+        "pulseWidth": 15,
+        "pulseIntensity": 0.2
+      }
+    }
+  ],
+  "scene": {
+    "rootNodeIds": [
+      "lightning",
+      "battery-shell",
+      "battery-core",
+      "circuit-traces"
+    ],
+    "nodes": [
+      {
+        "id": "lightning",
+        "name": "Lightning",
+        "kind": "mesh",
+        "transform": {
+          "position": [
+            78.76641416311216,
+            2.937500099559718,
+            -1818.283959026105
+          ],
+          "rotation": [
+            -0.6532814824381882,
+            0.2705980500730985,
+            0.2705980500730985,
+            0.6532814824381884
+          ],
+          "scale": [
+            0.1,
+            0.1,
+            0.09999999999999996
+          ]
+        },
+        "visible": true,
+        "assetRef": "lightning-gltf",
+        "materialRef": "lightning",
+        "userData": {
+          "sourceObjectId": "3eff7ced-efeb-4d2c-bc87-a55f21463f62",
+          "origin": "local 4341 Spline runtime geometry snapshot"
+        }
+      },
+      {
+        "id": "battery-shell",
+        "name": "Battery",
+        "kind": "mesh",
+        "transform": {
+          "position": [
+            87.37703993798648,
+            -1.1645603380635117,
+            -1764.925026667236
+          ],
+          "rotation": [
+            -0.6644630243886746,
+            0.24184476264797503,
+            0.2418447626479751,
+            0.6644630243886749
+          ],
+          "scale": [
+            0.9999999999999999,
+            0.9999999999999998,
+            0.9999999999999998
+          ]
+        },
+        "visible": true,
+        "assetRef": "battery-shell-gltf",
+        "materialRef": "battery-shell",
+        "userData": {
+          "sourceObjectId": "94cd6d78-c34a-4858-ab0a-33364e20e649",
+          "origin": "local 4341 Spline runtime geometry snapshot"
+        }
+      },
+      {
+        "id": "battery-core",
+        "name": "Bettery2",
+        "kind": "mesh",
+        "transform": {
+          "position": [
+            87.37703993798647,
+            -4.766759570152794,
+            -1764.9250266672357
+          ],
+          "rotation": [
+            -0.6644630243886746,
+            0.24184476264797508,
+            0.2418447626479752,
+            0.6644630243886749
+          ],
+          "scale": [
+            0.9999999999999998,
+            0.9999999999999997,
+            0.9999999999999998
+          ]
+        },
+        "visible": true,
+        "assetRef": "battery-core-gltf",
+        "materialRef": "battery-core",
+        "userData": {
+          "sourceObjectId": "391195a7-3c14-4f49-82ef-df0fa68ee515",
+          "origin": "local 4341 Spline runtime geometry snapshot"
+        }
+      },
+      {
+        "id": "circuit-traces",
+        "name": "Cirquit",
+        "kind": "mesh",
+        "transform": {
+          "position": [
+            105.55,
+            -7.75,
+            -1812.8941221463929
+          ],
+          "rotation": [
+            0,
+            0.3420201433256687,
+            0,
+            0.9396926207859084
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true,
+        "assetRef": "circuit-traces-gltf",
+        "materialRef": "circuit-traces",
+        "userData": {
+          "sourceObjectId": "63fadc37-ba03-424d-a493-c1a87ce863db",
+          "origin": "local 4341 Spline runtime geometry snapshot"
+        }
+      }
+    ]
+  },
+  "camera": {
+    "projection": "perspective",
+    "position": [
+      690.2024021437504,
+      426.95346616371114,
+      -1562.5576578928249
+    ],
+    "target": [
+      63.79101418670814,
+      -37.37161560252201,
+      -1847.0062322969038
+    ],
+    "fov": 18.4,
+    "near": 0.1,
+    "far": 10000
+  },
+  "environment": {
+    "background": "#040608",
+    "ambientIntensity": 0.18,
+    "lights": [
+      {
+        "id": "soft-key",
+        "type": "directional",
+        "color": "#c0fdff",
+        "intensity": 0.5,
+        "position": [
+          530,
+          890,
+          -900
+        ]
+      },
+      {
+        "id": "cool-fill",
+        "type": "directional",
+        "color": "#008dbe",
+        "intensity": 0.1,
+        "position": [
+          -360,
+          400,
+          -1500
+        ]
+      }
+    ]
+  },
+  "animations": [
+    {
+      "id": "circuit-expansion",
+      "name": "Original circuit propagation (hover controlled)",
+      "duration": 4.35,
+      "loop": true,
+      "tracks": [
+        {
+          "id": "circuit-reveal-radius",
+          "targetId": "circuit-traces",
+          "property": "material.revealRadius",
+          "keyframes": [
+            {
+              "time": 0,
+              "value": 50
+            },
+            {
+              "time": 0.45,
+              "value": 83,
+              "easing": "sineInOut"
+            },
+            {
+              "time": 1.55,
+              "value": 203,
+              "easing": "linear"
+            },
+            {
+              "time": 2.5,
+              "value": 290,
+              "easing": "sineInOut"
+            },
+            {
+              "time": 2.75,
+              "value": 290
+            },
+            {
+              "time": 3.43,
+              "value": 56,
+              "easing": "cubicInOut"
+            },
+            {
+              "time": 4.35,
+              "value": 50
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "interactions": [
+    {
+      "id": "circuit-on-hover",
+      "targetId": "battery-shell",
+      "event": "pointerenter",
+      "action": {
+        "type": "playAnimation",
+        "animationId": "circuit-expansion"
+      }
+    },
+    {
+      "id": "circuit-on-click",
+      "targetId": "battery-shell",
+      "event": "click",
+      "action": {
+        "type": "playAnimation",
+        "animationId": "circuit-expansion"
+      }
+    }
+  ],
+  "extensionsUsed": [],
+  "extensionsRequired": []
+}

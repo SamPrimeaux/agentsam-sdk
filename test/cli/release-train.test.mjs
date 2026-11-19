@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { findPrivateWorkspaceDependencyEdges, registryVersionMatches, unwrapSingleNpmViewValue } from '../../scripts/release-train-policy.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -15,17 +16,41 @@ test('release train check enforces public package versions and exact public inte
   assert.match(output, /PASS all public release packages and dependency pins aligned/);
 });
 
-test('viewer is publicly packageable while native OCCT and SamSketch remain private source workspaces', () => {
+test('OCCT and viewer are public npm packages consumed through registry pins', () => {
   const viewer = JSON.parse(readFileSync(path.join(root, 'packages/agentsam-3d-viewer/package.json'), 'utf8'));
   const occt = JSON.parse(readFileSync(path.join(root, 'packages/agentsam-occt/package.json'), 'utf8'));
   const samsketch = JSON.parse(readFileSync(path.join(root, 'apps/samsketch/package.json'), 'utf8'));
+  const cadFrontend = JSON.parse(readFileSync(path.join(root, 'apps/cad-creator/frontend/package.json'), 'utf8'));
   assert.notEqual(viewer.private, true);
   assert.equal(viewer.publishConfig?.access, 'public');
   assert.equal(viewer.license, 'FSL-1.1-MIT');
-  assert.equal(occt.private, true);
+  assert.notEqual(occt.private, true);
+  assert.equal(occt.publishConfig?.access, 'public');
+  assert.equal(occt.license, 'FSL-1.1-MIT');
   assert.equal(samsketch.private, true);
-  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-occt'], 'file:../../packages/agentsam-occt');
-  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-3d-viewer'], 'file:../../packages/agentsam-3d-viewer');
+  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-occt'], '2.6.15');
+  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-3d-viewer'], '2.6.15');
+  assert.equal(cadFrontend.dependencies['@inneranimalmedia/agentsam-3d-viewer'], '2.6.15');
+});
+
+test('registry version verification accepts npm JSON scalar and array responses', () => {
+  assert.equal(registryVersionMatches('2.6.15', '2.6.15'), true);
+  assert.equal(registryVersionMatches(['2.6.15'], '2.6.15'), true);
+  assert.equal(registryVersionMatches(['2.6.14'], '2.6.15'), false);
+  assert.deepEqual(unwrapSingleNpmViewValue([{ '.': { import: './src/index.js' } }]), { '.': { import: './src/index.js' } });
+});
+
+test('release policy rejects a public package that depends on a private workspace', () => {
+  const edges = findPrivateWorkspaceDependencyEdges([
+    { file: 'packages/public/package.json', manifest: { name: '@inneranimalmedia/public', dependencies: { '@inneranimalmedia/private': '2.6.15' } } },
+    { file: 'packages/private/package.json', manifest: { name: '@inneranimalmedia/private', private: true } },
+  ]);
+  assert.deepEqual(edges, [{
+    consumer: '@inneranimalmedia/public',
+    dependency: '@inneranimalmedia/private',
+    section: 'dependencies',
+    file: 'packages/public/package.json',
+  }]);
 });
 
 

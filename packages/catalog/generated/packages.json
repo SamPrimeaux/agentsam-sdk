@@ -30,9 +30,9 @@
       "id": "agentsam-3d-viewer",
       "install": [
         {
-          "command": "npm install --workspace @inneranimalmedia/agentsam-3d-viewer",
+          "command": "npm install @inneranimalmedia/agentsam-3d-viewer",
           "package": "@inneranimalmedia/agentsam-3d-viewer",
-          "type": "npm-workspace"
+          "type": "npm"
         }
       ],
       "languages": [
@@ -42,9 +42,9 @@
       "name": "@inneranimalmedia/agentsam-3d-viewer",
       "purpose": "Shared framework-agnostic Three.js viewport, model viewing, and verified OCCT mesh display adapters for BIM, robotics and public scenes; native OCCT stays geometry authority.",
       "registry": {
-        "kind": "npm-workspace",
+        "kind": "npm",
         "name": "@inneranimalmedia/agentsam-3d-viewer",
-        "public_claim": false
+        "public_claim": true
       },
       "schema": "agentsam.package.v1",
       "status": "in-development",
@@ -62,7 +62,7 @@
         "Creating a reusable Three.js viewport while keeping CAD-specific selection and scene logic in the host",
         "Displaying validated native OCCT tessellations with consistent units, axes and indexed triangles"
       ],
-      "version": "0.2.0"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -1232,9 +1232,9 @@
       "id": "agentsam-occt",
       "install": [
         {
-          "command": "npm install --workspace @inneranimalmedia/agentsam-occt",
+          "command": "npm install @inneranimalmedia/agentsam-occt",
           "package": "@inneranimalmedia/agentsam-occt",
-          "type": "npm-workspace"
+          "type": "npm"
         }
       ],
       "languages": [
@@ -1245,9 +1245,9 @@
       "name": "@inneranimalmedia/agentsam-occt",
       "purpose": "One OpenCascade engine contract with shared browser-WASM and native C++ adapters for AgentSam CAD surfaces.",
       "registry": {
-        "kind": "npm-workspace",
+        "kind": "npm",
         "name": "@inneranimalmedia/agentsam-occt",
-        "public_claim": false
+        "public_claim": true
       },
       "schema": "agentsam.package.v1",
       "status": "in-development",
@@ -1265,7 +1265,7 @@
         "Adding OCCT-backed geometry to a browser, desktop, or local CAD application",
         "Reusing the canonical native OCCT provider and browser Boolean adapter"
       ],
-      "version": "0.1.0"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
