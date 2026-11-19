@@ -109,15 +109,23 @@ assert.ok(releaseState, 'release state must be candidate or published');
 assert.equal(targetVersion, sdkPack.version, 'distribution test must target the canonical release version');
 const sdkManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 const errorsVersion = sdkManifest.dependencies?.['@inneranimalmedia/agentsam-errors'];
+const contractsVersion = sdkManifest.dependencies?.['@inneranimalmedia/agentsam-contracts'];
 assert.equal(errorsVersion, sdkPack.version, 'the SDK must declare its exact release-train error contract');
-const errorsPack = releaseState === 'candidate'
-  ? pack(path.join(ROOT, 'packages', 'agentsam-errors'))
-  : null;
-if (errorsPack) {
-  assert.equal(errorsPack.name, '@inneranimalmedia/agentsam-errors');
-  assert.equal(errorsPack.version, errorsVersion);
-}
-const installTarballs = [sdkPack, servicePack, ...(errorsPack ? [errorsPack] : [])]
+assert.equal(contractsVersion, sdkPack.version, 'the SDK must declare its exact release-train portable contracts');
+const candidatePacks = releaseState === 'candidate'
+  ? [
+      ['@inneranimalmedia/agentsam-errors', errorsVersion, 'agentsam-errors'],
+      ['@inneranimalmedia/agentsam-contracts', contractsVersion, 'agentsam-contracts'],
+    ].map(([expectedName, expectedVersion, folder]) => {
+      const candidate = pack(path.join(ROOT, 'packages', folder));
+      assert.equal(candidate.name, expectedName);
+      assert.equal(candidate.version, expectedVersion);
+      return candidate;
+    })
+  : [];
+// Install real local tarballs while the approved train is still a candidate.
+// Published releases must instead resolve exact versions from the npm registry.
+const installTarballs = [sdkPack, servicePack, ...candidatePacks]
   .map((item) => path.join(artifacts, item.filename));
 
 assert.equal(sdkPack.name, '@inneranimalmedia/agentsam-sdk');
