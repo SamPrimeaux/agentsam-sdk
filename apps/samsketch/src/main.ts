@@ -1,4 +1,4 @@
-import {observeShellAppearance} from '../../../packages/agentsam-settings/src/appearance';
+import {observeShellAppearance} from './shell-appearance';
 import '../../../packages/agentsam-nav/src/shell.css';
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -256,6 +256,7 @@ gallery=mountSketchGallery({
  ],
  onOpenDraft:()=>{enterStudio();cloudState(activeSceneHash?"Draft in browser · cloud revision known":"Draft in browser");},
  onOpenBlank:()=>newHostedScene(freshDoc(doc.brand)),
+ onOpenTypeface:()=>{const url=new URL(window.location.href);url.searchParams.set("workspace","typeface");window.location.assign(url.toString());},
  onOpenSaved:(id)=>{
   if(id.startsWith("sketch_")){
    const run=++sceneGeneration;

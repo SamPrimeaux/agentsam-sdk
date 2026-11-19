@@ -34,6 +34,7 @@ type GalleryOptions = {
   listSaved: () => Array<{ id: string; name: string; category: SketchProjectCategory; itemCount: number; updatedAt: string; preview?: string | null }>;
   onOpenDraft: () => void;
   onOpenBlank: () => void;
+  onOpenTypeface: () => void;
   onOpenSaved: (id: string) => void;
   onOpenStarter: (starterId: string, name: string, category: SketchProjectCategory) => void;
   onDeleteSaved?: (id: string) => void;
@@ -173,6 +174,7 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
         <div class="ss-gallery__actions">
           <button type="button" class="ss-gallery__primary" data-gallery-action="blank">${icon("plus", 15)} New canvas</button>
           <button type="button" class="ss-gallery__secondary" data-gallery-action="continue">${icon("folder", 15)} Continue draft</button>
+          <button type="button" class="ss-gallery__secondary" data-gallery-action="typeface">${icon("type", 15)} Typeface Studio</button>
         </div>
       </header>
       <div class="ss-gallery__intro">
@@ -226,6 +228,7 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
     if (galleryAction) {
       if (galleryAction.dataset.galleryAction === "blank") options.onOpenBlank();
       if (galleryAction.dataset.galleryAction === "continue") options.onOpenDraft();
+      if (galleryAction.dataset.galleryAction === "typeface") options.onOpenTypeface();
       return;
     }
     const more = target.closest<HTMLButtonElement>("[data-more]");

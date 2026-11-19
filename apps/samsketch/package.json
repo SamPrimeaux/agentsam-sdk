@@ -12,19 +12,23 @@
     "prebuild": "npm --prefix ../../packages/agentsam-occt run build"
   },
   "dependencies": {
+    "@inneranimalmedia/agentsam-3d-viewer": "file:../../packages/agentsam-3d-viewer",
+    "@inneranimalmedia/agentsam-occt": "file:../../packages/agentsam-occt",
+    "ajv": "^8.20.0",
     "fflate": "^0.8.2",
     "opencascade.js": "^2.0.0-beta.b5ff984",
-    "three": "^0.180.0",
-    "@inneranimalmedia/agentsam-occt": "file:../../packages/agentsam-occt",
-    "@inneranimalmedia/agentsam-3d-viewer": "file:../../packages/agentsam-3d-viewer"
+    "opentype.js": "^1.3.4",
+    "react": "^19.3.1",
+    "three": "^0.180.0"
   },
   "devDependencies": {
+    "@types/react": "^19.3.0",
     "@types/three": "^0.180.0",
     "playwright-core": "^1.56.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.10"
   },
   "overrides": {
-    "picomatch": "https://raw.githubusercontent.com/SamPrimeaux/agentsam-sdk/85fcc1dd70a8505b5c96e4a090bab3843a7d5fb9/vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
+    "picomatch": "file:../../vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
   }
 }
