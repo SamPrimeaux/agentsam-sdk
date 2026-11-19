@@ -90,6 +90,9 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'eval', summary: 'Context fixtures and live eval telemetry', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
   { id: 'index', summary: 'Plan/run incremental AST (+ optional embeddings)', topic: 'work', skill: 'agentsam-codebaseindex', operation: 'codebaseindex.ingest' },
   { id: 'search', summary: 'Retrieve indexed code/text', topic: 'work', skill: 'agentsam-codebaseindex' },
+  { id: 'memory', summary: 'Source-backed long-horizon memory via authorized remote MCP', topic: 'work',
+    usage: ['agentsam memory remote doctor', 'agentsam memory remote search "query" [--json]',
+      'agentsam memory remote commit --key decision:area:slot --title "Decision" --file decision.md [--apply]'] },
   {
     id: 'repo',
     summary: 'Repository snapshot / observations',

@@ -8,7 +8,7 @@
 
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
-| `src/cli/command-catalog.js` | 79 | Registered top-level CLI command entries |
+| `src/cli/command-catalog.js` | 80 | Registered top-level CLI command entries |
 | `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
@@ -64,6 +64,7 @@ Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Ho
 | `agentsam logout` | start | Sign out locally |
 | `agentsam machine` | work | Machine inspection, evidence crawl, and read-only code reuse proposals |
 | `agentsam mcp` | runtime | MCP server catalog and client adapters |
+| `agentsam memory` | work | Source-backed long-horizon memory via authorized remote MCP |
 | `agentsam merch` | work | Preflight designs against portable manufacturing profiles |
 | `agentsam merkle` | work | File integrity snapshots and explorer |
 | `agentsam mini` | create | Create a small local gadget |

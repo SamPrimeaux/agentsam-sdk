@@ -58,7 +58,9 @@ assert.doesNotMatch(alias,/<iframe|theme-studio-bootstrap|theme-project-editor-b
 assert.match(bootstrap,/createThemeProjectAdapter/);
 assert.match(bootstrap,/createCmsPageThemeEditorAdapter/);
 assert.match(bootstrap,/bootNewTheme/);
-assert.match(bootstrap,/materializeStarterProject/);
+assert.match(bootstrap,/blankThemeProject/);
+assert.match(bootstrap,/inheritDefaultTemplates/);
+assert.match(bootstrap,/fillMissingThemeChrome/);
 assert.equal((bootstrap.match(/mountThemeEditor\(frame, host/g)||[]).length,1);
 
 console.log('PASS single Theme Studio route, ownership, page/theme adapters, and legacy redirect');

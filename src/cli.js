@@ -803,6 +803,9 @@ if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
       process.exitCode = 1;
     }
   }
+} else if (command === 'memory') {
+  try { await (await import('./commands/memory.js')).runMemory(rest); }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (['index', 'search', 'repo'].includes(command)) {
   try {
     const commands = await import('./commands/knowledge.js');

@@ -6,7 +6,7 @@
     "packages/catalog/generated/packages.json"
   ],
   "counts": {
-    "commands": 79,
+    "commands": 80,
     "capabilities": 82,
     "packages": 66
   },
@@ -661,6 +661,18 @@
       "topic": "work",
       "usage": [
         "agentsam search"
+      ],
+      "operation": null
+    },
+    {
+      "id": "memory",
+      "aliases": [],
+      "summary": "Source-backed long-horizon memory via authorized remote MCP",
+      "topic": "work",
+      "usage": [
+        "agentsam memory remote doctor",
+        "agentsam memory remote search \"query\" [--json]",
+        "agentsam memory remote commit --key decision:area:slot --title \"Decision\" --file decision.md [--apply]"
       ],
       "operation": null
     },
