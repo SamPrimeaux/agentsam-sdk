@@ -39,7 +39,7 @@ class CliDistributionTests(unittest.TestCase):
                 return True
 
         captured = TtyStream()
-        with mock.patch("sys.stdin", TtyStream()), mock.patch("sys.stderr", captured):
+        with mock.patch("sys.stdin", TtyStream()), mock.patch("sys.stderr", captured), mock.patch.dict("os.environ", {"CI": ""}):
             with mock.patch("agentsam_sdk.terminal_ui.Prompt.ask", side_effect=["help", "exit"]):
                 self.assertEqual(run_home(build_parser()), 0)
         self.assertIn("AgentSam CLI", captured.getvalue())
