@@ -491,7 +491,12 @@ def build(account_id: str) -> tuple[dict, dict[str, tuple[pathlib.Path, str]], l
         "compatibility": {
             "legacyPrefixes": ["agentsam/"],
             "legacyObjectCount": legacy_count,
-            "policy": "Existing agentsam/ objects are retained as compatibility aliases and are never deleted by this publisher. New consumers resolve package contracts through packages/manifest.v1.json.",
+            "legacySchemaAliases": [{
+                "legacyUri": f"{BASE}/packages/iamscene/v1/scene.schema.json",
+                "canonicalUri": f"{BASE}/packages/iamscene/v1/scene.canonical.schema.json",
+                "legacySha256": "0a231b4d2121058ee9f6b3ce6ccc93a281834ecb4e188c562fc7b5d685a3c997",
+            }],
+            "policy": "Legacy agentsam/ objects and published immutable schema aliases are retained byte-for-byte. No existing schema identity is overwritten; new consumers use packages/manifest.v1.json.",
         },
     }
     validate_registry(registry, registry_schema)
