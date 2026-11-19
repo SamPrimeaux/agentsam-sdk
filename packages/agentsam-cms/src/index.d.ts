@@ -53,7 +53,7 @@ export type CmsOperationContract =
     readonly capability:string;
   };
 export type CmsOperation =
-  Omit<AgentOperationDefinition<Record<string,unknown>,Record<string,unknown>,unknown>,'input_schema'|'output_schema'> & {
+  Omit<AgentOperationDefinition<unknown,unknown,unknown>,'input_schema'|'output_schema'> & {
     input_schema:CmsJsonSchema;
     output_schema:CmsJsonSchema;
     model_visible?:boolean;
