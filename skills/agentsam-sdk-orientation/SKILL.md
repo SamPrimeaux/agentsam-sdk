@@ -75,4 +75,4 @@ vocabulary with seed contracts; `docs/plans/SAM_WORK_PROTOCOL.md` is a **proposa
 2. Run the nearest existing command or operation and read its output.
 3. Extend what exists. Add a new table, registry, or package only when nothing existing fits.
 
-Last verified against agentsam-sdk 2.6.12.
+Last verified against agentsam-sdk 2.6.15.
