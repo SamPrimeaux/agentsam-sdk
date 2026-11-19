@@ -58,6 +58,7 @@ test('JSON Schema enums and TypeScript/runtime vocabularies cannot drift', async
   assert.deepEqual(operation.properties.idempotencyMode.enum, contracts.AGENT_OPERATION_IDEMPOTENCY_MODES);
   assert.deepEqual(operation.$defs.authorityRequirement.properties.type.enum, contracts.AGENT_AUTHORITY_TYPES);
   assert.deepEqual(result.properties.receipt.properties.execution.properties.lane.enum, contracts.AGENT_OPERATION_LANES);
+  assert.deepEqual(result.properties.usage.required, ['provider_calls']);
 
   assert.deepEqual(tool.properties.riskLevel.enum, contracts.AGENT_TOOL_RISK_LEVELS);
   assert.deepEqual(tool.properties.sideEffectLevel.enum, contracts.AGENT_TOOL_SIDE_EFFECT_LEVELS);
