@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/result.schema.json",
+  "title": "AgentOperationResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "operation", "ok", "data", "receipt"],
+  "properties": {
+    "schema": { "const": "agentsam.result.v1" },
+    "operation": { "type": "string", "minLength": 1 },
+    "operation_version": { "type": "integer", "minimum": 1 },
+    "ok": { "type": "boolean" },
+    "data": {},
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "operation", "started_at", "completed_at", "execution", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "operation": { "type": "string", "minLength": 1 },
+        "module": { "type": "string" },
+        "started_at": { "type": "string" },
+        "completed_at": { "type": "string" },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lane", "deterministic", "model_used"],
+          "properties": {
+            "lane": { "enum": ["local", "remote", "sandbox", "platform", "mcp"] },
+            "deterministic": { "type": "boolean" },
+            "model_used": { "type": "boolean" }
+          }
+        },
+        "side_effects": { "type": "array", "items": { "type": "string" } },
+        "input_hash": { "type": ["string", "null"] },
+        "output_hash": { "type": ["string", "null"] },
+        "status": { "enum": ["completed", "failed", "cancelled"] },
+        "mcp": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "server_name": { "type": "string" },
+            "server_url": { "type": "string" },
+            "tool_name": { "type": "string" },
+            "required_scopes": { "type": "array", "items": { "type": "string" } },
+            "feature_packs": { "type": "array", "items": { "type": "string" } },
+            "protocol": { "enum": ["streamable_http", "sse", "stdio"] }
+          }
+        }
+      }
+    },
+    "evidence": { "type": "array" },
+    "artifacts": { "type": "array" },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider_calls": { "type": "integer", "minimum": 0 },
+        "model_calls": { "type": "integer", "minimum": 0 },
+        "embedding_calls": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "help": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "skill": { "type": ["string", "null"] }
+      }
+    },
+    "warnings": { "type": "array" },
+    "diagnostics": { "type": "array" },
+    "error": {}
+  }
+}
