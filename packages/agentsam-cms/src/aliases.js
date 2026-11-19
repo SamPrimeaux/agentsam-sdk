@@ -61,7 +61,7 @@ export function createCmsCompatibilityOperations(canonical,defineSamOperation) {
       id:name,version:1,module:'cms',action:name.slice(4),
       summary:'Compatibility alias of '+target+'. Use '+target+' for new clients.',
       description:'Compatibility alias of '+target+'. Use canonical CMS operations for new models.',
-      capabilities:[sourceContract.capability],
+      capabilities:[sourceContract.capabilities[0]],
       execution:source.execution,risk:source.risk,
       input_schema,output_schema:source.output_schema,
       status:'compatibility',model_visible:false,aliasFor:target,

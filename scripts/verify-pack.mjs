@@ -38,6 +38,8 @@ const requiredPortableRuntimeFiles = [
   'native/agentsam-machine/cli/src/main.rs',
   'native/agentsam-machine/core/src/frontend.rs',
   'contracts/source-types.v1.json',
+  'contracts/source-types.v2.json',
+  'contracts/source-types.v2.schema.json',
   'packages/agentsam-cms/package.json',
   'packages/agentsam-cms/src/index.js',
   'packages/agentsam-cms/src/node.js',

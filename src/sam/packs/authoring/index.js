@@ -42,7 +42,7 @@ export function createAuthoringOperations({compiler,repository,resolveTrustedCon
   const op=(id,action,capability,handler,write=false)=>defineSamOperation({
     id,module:'authoring',action,summary:'Authorized component '+action+' through the installed source compiler and existing CMS.',
     purpose:'Portable and scoped component authoring without another CMS authority.',
-    execution:{lanes:['local','remote','sandbox'],model:'never',network:'optional',sideEffects:write?'cms_draft':'none'},
+    execution:{lanes:['local','remote','sandbox'],model:'never',network:'optional',sideEffects:write?'remote_write':'none'},
     risk:write?'write':'read_only',capabilities:[capability],status:'experimental',handler
   });
 

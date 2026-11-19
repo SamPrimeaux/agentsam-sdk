@@ -103,3 +103,34 @@ test('SAM CLI exposes only explicitly installed host authoring operations', asyn
   const defaultList = await runSam(['list'], { identityLoader: async () => null, write: () => {} });
   assert.equal(defaultList.operations.some(op => op.id === 'sam.authoring.inspect'), false);
 });
+
+
+test('SAM operation definitions enforce and normalize shared execution policies', () => {
+  const never = defineSamOperation({
+    id:'fixture.policy.never',module:'fixture',action:'never',summary:'No provider spend',
+    execution:{lanes:['local'],model:'never',network:'none',sideEffects:'none'},
+    risk:'read_only',input_schema:{type:'object'},handler:async()=>({ok:true}),
+  });
+  assert.equal(never.execution.embedding,'never');
+  assert.equal(never.execution.provider_spend,'never');
+
+  const optional = defineSamOperation({
+    id:'fixture.policy.optional',module:'fixture',action:'optional',summary:'Optional provider spend',
+    execution:{lanes:['local'],model:'optional',network:'optional',sideEffects:'none'},
+    risk:'read_only',handler:async()=>({ok:true}),
+  });
+  assert.equal(optional.execution.provider_spend,'optional');
+
+  const required = defineSamOperation({
+    id:'fixture.policy.required',module:'fixture',action:'required',summary:'Required provider spend',
+    execution:{lanes:['remote'],model:'required',network:'required',sideEffects:'remote_read'},
+    risk:'read_only',handler:async()=>({ok:true}),
+  });
+  assert.equal(required.execution.provider_spend,'optional');
+
+  assert.throws(() => defineSamOperation({
+    id:'fixture.policy.invalid',module:'fixture',action:'invalid',summary:'Invalid network',
+    execution:{lanes:['local'],model:'never',network:'never',sideEffects:'none'},
+    risk:'read_only',handler:async()=>({ok:true}),
+  }),/invalid execution network policy/);
+});

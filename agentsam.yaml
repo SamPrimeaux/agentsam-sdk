@@ -19,7 +19,7 @@ ownership:
   rules:
     - Portable SDK code, contracts, CLI tooling, and reusable packages land here once.
     - Host-specific credentials, authorization, deployment wiring, and runtime policy stay with the consuming host.
-    - Reusable contracts live under protocol/ and travel with the SDK.
+    - Portable operation and tool contracts are owned by packages/agentsam-contracts; protocol/ publishes stable, tested schema mirrors.
     - Host applications import or adapt SDK code instead of mirroring SDK source trees.
     - Repository tools are provider-neutral and read-only by default unless mutation is explicit.
 

@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-contracts",
   "version": "2.6.15",
-  "description": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
+  "description": "Framework-neutral AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts.",
   "type": "module",
   "main": "./dist/index.js",
   "exports": {
@@ -88,11 +88,24 @@
     "./design-workspace-registry": {
       "types": "./dist/design-workspace-registry.d.ts",
       "import": "./dist/design-workspace-registry.js"
-    }
+    },
+    "./operations": {
+      "types": "./dist/operations.d.ts",
+      "import": "./dist/operations.js"
+    },
+    "./schemas/sam-operation.v1.schema.json": "./schemas/sam-operation.v1.schema.json",
+    "./schemas/agent-tool-definition.v1.schema.json": "./schemas/agent-tool-definition.v1.schema.json",
+    "./schemas/sam-result.v1.schema.json": "./schemas/sam-result.v1.schema.json",
+    "./source-types": {
+      "types": "./dist/source-types.d.ts",
+      "import": "./dist/source-types.js"
+    },
+    "./source-types/catalog": "./schemas/source-types.v2.json",
+    "./source-types/schema": "./schemas/source-types.v2.schema.json"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --test test/*.test.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
     "build": "node scripts/build.mjs",
     "prepack": "npm run build"
   },
@@ -110,6 +123,7 @@
   },
   "files": [
     "dist",
+    "schemas",
     "README.md"
   ],
   "license": "MIT",

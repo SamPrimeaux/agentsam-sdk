@@ -102,7 +102,7 @@ export function createGeneratedSamOperations({
       },
       risk: ['read','platform_read','script_artifact_read'].includes(record.policy.effect) ? 'read_only'
         : ['live_publish','shell_execution'].includes(record.policy.effect) ? 'privileged' : 'write',
-      input_schema: record.input_schema, output_schema: SCRIPT_TOOL_DOCS[record.name]?.output_schema || record.output_schema,
+      input_schema: record.input_schema || undefined, output_schema: SCRIPT_TOOL_DOCS[record.name]?.output_schema || record.output_schema || undefined,
       status: 'stable',
       async handler(input, sdkCtx) {
         validate(input, record.input_schema);

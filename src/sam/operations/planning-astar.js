@@ -26,7 +26,7 @@ export const planningAstarOp = defineSamOperation({
     embedding: 'never',
     network: 'none',
     sideEffects: 'none',
-    provider_spend: 'none',
+    provider_spend: 'never',
   },
   risk: 'read_only',
   capabilities: ['planning.astar'],

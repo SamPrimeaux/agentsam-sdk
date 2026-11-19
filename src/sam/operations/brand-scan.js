@@ -37,7 +37,7 @@ export const brandScanOp = defineSamOperation({
     embedding: 'never',
     network: 'optional',
     sideEffects: 'none',
-    provider_spend: 'possible',
+    provider_spend: 'optional',
   },
   risk: 'read_only',
   capabilities: ['brand.scan', 'repository.snapshot'],

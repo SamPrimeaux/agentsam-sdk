@@ -1,3 +1,9 @@
+/**
+ * Host plugin-installation manifest normalizer.
+ * The snake_case tool rows emitted here are a D1 persistence projection, not a
+ * portable AgentToolDefinition. Portable tool contracts are owned by
+ * @inneranimalmedia/agentsam-contracts.
+ */
 export const AGENTSAM_PLUGIN_SCHEMA_VERSION = 1;
 
 const KINDS = new Set(['mcp', 'api', 'oauth', 'native', 'webhook', 'database', 'storage', 'ai']);

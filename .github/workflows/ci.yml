@@ -50,6 +50,9 @@ jobs:
             sleep "$((attempt * 5))"
           done
 
+      - name: Build packaged portable contracts
+        run: npm run build:contracts
+
       # Root-only installs must resolve Worker imports before nested app installs
       # can accidentally hide missing SDK/package dependency boundaries.
       - name: Verify clean SDK Canvas provider import
@@ -240,6 +243,8 @@ jobs:
           cache: npm
       - name: Install root dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build packaged portable contracts
+        run: npm run build:contracts
       - name: Verify Ecommerce nested npm 11 clean install
         run: npm run install:studio --prefix apps/ecommerce-cms-agentsam
       - name: Verify Ecommerce installer tests

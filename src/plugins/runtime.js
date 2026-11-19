@@ -82,6 +82,7 @@ export function createPluginRuntime(options = {}) {
   const byKey = new Map(tools.map((tool) => [clean(tool.tool_key), tool]));
   return Object.freeze({
     tools: Object.freeze([...tools]),
+    /** Project persisted plugin rows into ephemeral SAM discovery cards; this is not a contract source. */
     toolDescriptors() {
       return tools.map((tool) => ({
         name: tool.tool_key,

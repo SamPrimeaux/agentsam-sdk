@@ -1,13 +1,41 @@
+import type {
+  AgentSourceFormatReference,
+  AgentSourceKindReference,
+  AgentSourceIdentificationResult,
+} from '@inneranimalmedia/agentsam-contracts/source-types';
+
 export type CadProjectDomain =
   | 'architecture.building' | 'mechanical.part' | 'mechanical.assembly'
   | 'product.design' | 'site.landscape' | 'general.cad';
 export type CadUnit = 'in'|'mm'|'cm'|'m'|'ft';
 export type CadOutputState = 'planned'|'queued'|'running'|'generated'|'validated'|'approved'|'stale'|'failed'|'blocked';
 export interface CadGeometryEntity { id: string; kind: string; sourceGroup?: string; data?: Record<string,unknown>; parameters?: Record<string,unknown> }
+export interface CadAsset {
+  id: string;
+  role: 'reference'|'source'|'derived'|'published';
+  uri?: string;
+  sha256?: string;
+  status?: 'planned'|'available'|'restricted';
+  mediaType?: string;
+  sourceRevision?: number;
+  sourceKindRef?: AgentSourceKindReference;
+  formatRef?: AgentSourceFormatReference;
+  formatDetection?: AgentSourceIdentificationResult;
+  [key: string]: unknown;
+}
+export interface CadOutputArtifact {
+  uri: string;
+  sha256: string;
+  formatRef?: AgentSourceFormatReference;
+  mediaType?: string;
+  extension?: string;
+  byteSize?: number;
+  [key: string]: unknown;
+}
 export interface CadOutput {
-  id: string; kind: string; format: string; capability: string; state: CadOutputState;
+  id: string; kind: string; format: string; formatRef?: AgentSourceFormatReference; capability: string; state: CadOutputState;
   sourceRevision: number; dependencies: string[]; elementIds?: string[];
-  artifact?: {uri: string; sha256: string; [key:string]: unknown}; receiptId?: string;
+  artifact?: CadOutputArtifact; receiptId?: string;
   executor?: {provider:string; version:string}; professionalReviewRequired?: boolean;
 }
 export interface CadProjectV2 {
@@ -16,7 +44,7 @@ export interface CadProjectV2 {
   geometry: {entities:CadGeometryEntity[];relationships:Array<{id:string;from:string;to:string;kind?:string}>;constraints:Record<string,unknown>[]};
   modules: Record<string,Record<string,unknown>>;
   intent: {references:unknown[]; decisions:unknown[]; assumptions:unknown[]};
-  assets: Array<{id:string;role:'reference'|'source'|'derived'|'published';uri?:string;sha256?:string;status?:string}>;
+  assets: CadAsset[];
   views:unknown[];sheets:unknown[];scenes:unknown[];productions:unknown[];
   outputs:CadOutput[];
   packages:Array<{id:string;profile:string;outputIds:string[];permitReady:false;sealed:false;state?:string;release?:string}>;
@@ -44,5 +72,5 @@ export declare function normalizeArchitecturalSource(source:Record<string,unknow
 export declare function invalidateCadOutputs(project:CadProjectV2,changedElementIds:string[],nextRevision:number):{project:CadProjectV2;affectedOutputIds:string[]};
 export declare function updateCadGeometryEntity(project:CadProjectV2,id:string,updatedData:Record<string,unknown>,nextRevision:number):{project:CadProjectV2;affectedOutputIds:string[]};
 export declare function completeCadOutput(project:CadProjectV2,outputId:string,args:{
- artifact:{uri:string;sha256:string};receiptId:string;provider:string;providerVersion:string;
+ artifact:CadOutputArtifact;receiptId:string;provider:string;providerVersion:string;
 }):CadProjectV2;

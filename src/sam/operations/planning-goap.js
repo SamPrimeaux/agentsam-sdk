@@ -24,7 +24,7 @@ export const planningGoapOp = defineSamOperation({
     embedding: 'never',
     network: 'none',
     sideEffects: 'none',
-    provider_spend: 'none',
+    provider_spend: 'never',
   },
   risk: 'read_only',
   capabilities: ['planning.goap', 'planning.astar'],

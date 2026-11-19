@@ -33,7 +33,7 @@ export const repositoryInspect = defineSamOperation({
     embedding: 'never',
     network: 'none',
     sideEffects: 'none',
-    provider_spend: 'none',
+    provider_spend: 'never',
   },
   risk: 'read_only',
   capabilities: ['repository.snapshot', 'repository.ast', 'repository.merkle'],

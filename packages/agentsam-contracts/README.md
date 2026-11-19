@@ -21,3 +21,26 @@ MCP, CLI, Work Graph, queue-control, application routes and provider packages sh
 Provider-specific storage, account/shop identifiers, secrets, business rules, and product state remain host concerns. A provider may emit both its native normalized event and a host/domain event (for example `completeful.order.created` then `commerce.order.created`).
 
 Product state does **not** belong here. Trails/projects, CAD geometry, CMS page schemas, auth/session persistence, fulfillment mappings, shop configuration, and deployment-specific wiring stay with their owning app/package.
+
+## Portable operation and tool contract authority
+
+This package is the single source of truth for portable operation and tool definitions:
+
+- `src/operations.ts` owns `AgentOperationContract`, execution policy vocabulary, `assertAgentOperationContract()`, operation definitions, and normalized operation receipts/results.
+- `src/tools.ts` owns `AgentToolDefinition`, tool-call vocabulary, risk, side-effect, idempotency, retry and receipt policy types, plus `assertAgentToolDefinition()` as the framework-neutral runtime guard.
+- `schemas/` owns the versioned JSON Schemas for operation contracts, tool definitions and operation results.
+- `protocol/` contains stable public schema mirrors. The package test suite requires each mirror to match its package-owned source exactly.
+
+An operation is a product capability with a stable identity and execution policy. A tool is a bounded executable primitive or provider-facing projection. A host may project an operation into one or more tools, but neither the host nor the plugin manifest becomes a competing portable contract authority.
+
+`src/tools/registry.js` is the SDK runtime registry/controller and delegates definition validation to `assertAgentToolDefinition()`. Runtime handlers, local process context, persistence, authorization decisions and product-specific semantics remain with their owning SDK runtime or package. CMS operation semantics remain in `@inneranimalmedia/agentsam-cms`; that package consumes `AgentOperationContract` rather than redefining it.
+
+
+## Universal source-format identity
+
+- Canonical catalog: `contracts/source-types.v2.json`.
+- Canonical Draft 2020-12 schema: `contracts/source-types.v2.schema.json`.
+- `src/source-types.ts` exports the framework-neutral reference and identification types.
+- The package build copies the canonical catalog and schema into `schemas/` for npm consumers; those package files are generated mirrors, not a second authority.
+- The catalog describes identity and detection evidence only. Runtime adapters separately declare real inspect, import, preview, validate, convert, transcode and export capabilities.
+- V1 identifiers remain available through the explicit `compatibility.legacyIdMappings` map.
