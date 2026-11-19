@@ -233,7 +233,10 @@ export function ChatWorkspace({ chat }: { chat: Chat }) {
                 onPointerLeave={(e) => lightPane(e, false)}
               >
                 <SideStage onSplitChange={enabled=>{
-                  if(enabled) setSideW(width=>Math.max(width,Math.min(900,Math.max(560,window.innerWidth-railW-380))));
+                  if(enabled) {
+                    const minPrimaryWidth = Math.max(360, Math.min(560, window.innerWidth * 0.36));
+                    setSideW(Math.min(640, Math.max(280, window.innerWidth - railW - minPrimaryWidth)));
+                  }
                 }}/>
               </aside>
             </>
