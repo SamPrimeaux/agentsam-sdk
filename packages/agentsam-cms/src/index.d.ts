@@ -53,14 +53,14 @@ export type CmsOperationContract =
     readonly capability:string;
   };
 export type CmsOperation =
-  Omit<AgentOperationDefinition<unknown,unknown,unknown>,'input_schema'|'output_schema'> & {
+  Omit<AgentOperationDefinition<any,any,any>,'input_schema'|'output_schema'> & {
     input_schema:CmsJsonSchema;
     output_schema:CmsJsonSchema;
     model_visible?:boolean;
     aliasFor?:string;
   };
 export type CmsMachineOptions = {
-  defineSamOperation:(definition:AgentOperationDefinition<Record<string,unknown>,Record<string,unknown>,unknown>)=>CmsOperation;
+  defineSamOperation:(definition:AgentOperationDefinition<any,any,any>)=>CmsOperation;
   repository:CmsRepository;
   definitions?:CmsDefinition[];
   resolveTrustedContext:(context?:unknown)=>Promise<CmsIdentity|null>|CmsIdentity|null;
