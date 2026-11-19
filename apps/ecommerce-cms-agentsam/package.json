@@ -26,7 +26,7 @@
     "prepack": "npm run build && npm run test:release",
     "install:studio": "node scripts/install-studio-deps.mjs",
     "release:verify": "npm run build && npm run test:package && npm run test:release",
-    "test:collections": "node --experimental-strip-types --test tests/cms-collections-alignment.test.mjs",
+    "test:collections": "node --experimental-strip-types --test tests/cms-collections-alignment.test.mjs backend/cms/account-owned-catalog.test.mjs",
     "sync:theme-contract": "node scripts/sync-theme-contract.mjs",
     "check:theme-contract": "node scripts/sync-theme-contract.mjs --check",
     "prebuild": "npm run sync:theme-contract",
