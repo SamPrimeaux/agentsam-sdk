@@ -90,7 +90,7 @@ step('mini', 'create-write-only', () => {
     detected_key_files: files,
     stdout: result.stdout.trim(),
     network: 'none',
-    provider_spend: 'none',
+    provider_spend: 'never',
   };
 });
 step('mini', 'templates', () => {
