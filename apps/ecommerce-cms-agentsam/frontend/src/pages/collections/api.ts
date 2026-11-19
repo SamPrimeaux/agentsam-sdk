@@ -54,7 +54,8 @@ function normalize(row: CmsRow): Collection {
     sort_order: row.sort_order || 0, seo_title: row.seo_title || null, seo_description: row.seo_description || null,
     hero_settings_json: JSON.stringify(object(metadata.merch_hero)),
     product_plan_json: JSON.stringify(Array.isArray(metadata.merch_plan) ? metadata.merch_plan : []),
-    product_count: row.product_count || 0, updated_at: row.updated_at, created_at: row.created_at,
+    product_count: row.product_count || 0,
+    updated_at: displayTimestamp(row.updated_at), created_at: displayTimestamp(row.created_at),
   };
 }
 async function items(id: string, siteId?: string): Promise<CmsItem[]> {
