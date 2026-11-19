@@ -12,6 +12,13 @@ test("the legacy /sites URL no longer serves a second store page", () => {
   assert.equal(resolveConsoleFile("/sites"), null);
 });
 
+test("MovieMode project and editor routes both render inside the shared admin shell", () => {
+  for (const path of ["/admin/moviemode", "/admin/moviemode/edit"]) {
+    assert.equal(isStudioAdminPath(path), true, path + " belongs to the canonical admin namespace");
+    assert.equal(isStudioShellAdminPath(path), true, path + " renders inside the shared AgentSam shell");
+  }
+});
+
 test("installed theme projects use the existing CMS project editor route", () => {
   assert.equal(resolveConsoleFile("/admin/theme-project-editor"), "theme-project-editor.html");
   assert.equal(resolveConsoleFile("/admin/theme-editor"), "theme-editor.html");
