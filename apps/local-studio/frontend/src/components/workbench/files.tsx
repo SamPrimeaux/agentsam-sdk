@@ -3,6 +3,7 @@
  * It must not maintain a second explorer/Monaco implementation.
  */
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { FolderOpen, RefreshCw, Settings2 } from 'lucide-react';
 import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
 import type { AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
 import { HttpLspTransport, workspaceRootFileUri } from '@inneranimalmedia/agentsam-ide/lsp';
@@ -17,7 +18,8 @@ const renderIDEWorkspaceMarkdown = (content:string) => <Markdown remarkPlugins={
 import { useActiveProject, useWorkStore } from '@/lib/work/store';
 import { isAuthorizedHostProject, isSampleProject, projectNeedsConnection } from '@/lib/work/workspace-restore';
 import { createRuntimeIDEWorkspace, createTutorialIDEWorkspace } from '@/lib/work/ide-workspace';
-import { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, type FileWorkspace } from '@inneranimalmedia/agentsam-ide/workspace';
+import { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, restoreBrowserFsaIDEWorkspace, reconnectBrowserFsaIDEWorkspace, type FileWorkspace, type BrowserFsaRestore } from '@inneranimalmedia/agentsam-ide/workspace';
+import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { WorkspaceGate } from '@/components/workbench/workspace-gate';
 import { NewTabStage } from '@/components/workbench/new-tab-stage';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -35,12 +37,17 @@ const descriptions: Record<IDEFileSourceId, string> = {
 
 export function FilesStage({ tab }: { tab: SideTab }) {
   const project = useActiveProject();
+  const { user, isPending: identityPending } = useCurrentUserState();
+  const browserScope = !identityPending && user?.id ? user.id : '';
   const projects = useWorkStore(state => state.projects);
   const selectProject = useWorkStore(state => state.setActiveProject);
   const [connectOpen, setConnectOpen] = useState(false);
+  const openRuntimeSettings = () => window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/admin/settings/runtime' } }));
+  const rememberedProjects = projects.filter(item => item.kind === 'filesystem' && !isSampleProject(item) && (item.workspaceRoot || item.name));
   const [source,setSource] = useState<IDEFileSourceId>('local');
   const [browserWorkspace,setBrowserWorkspace] = useState<FileWorkspace|null>(null);
   const [browserWorkspaceName,setBrowserWorkspaceName] = useState('');
+  const [browserResumeHint,setBrowserResumeHint] = useState<BrowserFsaRestore|null>(null);
   const [browserWorkspaceKey,setBrowserWorkspaceKey] = useState('');
   const [browserFsaReady,setBrowserFsaReady] = useState(false);
   useEffect(()=>setBrowserFsaReady(!isPackagedDesktop()&&browserFsaAvailable()),[]);
@@ -74,6 +81,24 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     keyword:theme.tokens.foreground,
   }),[theme]);
   const ready = Boolean(project && (isAuthorizedHostProject(project) || isSampleProject(project)));
+  // Browser permissions are device-local and user-scoped. Query on mount; prompt only
+  // when the user clicks Reconnect, never in an effect or across account changes.
+  useEffect(()=>{
+    setBrowserWorkspace(null);setBrowserWorkspaceName('');setBrowserResumeHint(null);
+  },[browserScope]);
+  useEffect(()=>{
+    if(!browserFsaReady||!browserScope||ready)return;
+    let active=true;
+    void restoreBrowserFsaIDEWorkspace(browserScope).then(restored=>{
+      if(!active||!restored)return;
+      if(restored.workspace){
+        setBrowserWorkspace(restored.workspace);setBrowserWorkspaceName(restored.name);
+        setBrowserWorkspaceKey(crypto.randomUUID());
+        setBrowserResumeHint(null);
+      }else setBrowserResumeHint(restored);
+    }).catch(()=>{});
+    return ()=>{active=false;};
+  },[browserFsaReady,browserScope,ready]);
   // A successful connection closes the opt-in connect dialog.
   useEffect(()=>{ if(ready) setConnectOpen(false); },[ready,project?.id]);
   const workspace = useMemo(() => {
@@ -101,10 +126,12 @@ export function FilesStage({ tab }: { tab: SideTab }) {
 
   async function openBrowserFolder() {
     setSourceNotice('');
+    if(!browserScope){setSourceNotice('Sign in before connecting a browser folder.');return;}
     try {
-      const result=await chooseBrowserFsaIDEWorkspace();
+      const result=await chooseBrowserFsaIDEWorkspace(browserScope);
       setBrowserWorkspace(result.workspace);
       setBrowserWorkspaceName(result.name);
+      setBrowserResumeHint(null);
       setBrowserWorkspaceKey(crypto.randomUUID());
       setSource('local');
       setConnectOpen(false);
@@ -112,6 +139,17 @@ export function FilesStage({ tab }: { tab: SideTab }) {
       if(error instanceof Error && error.name==='AbortError')return;
       setSourceNotice(error instanceof Error?error.message:String(error));
     }
+  }
+
+  async function reconnectBrowserFolder(){
+    if(!browserScope)return;
+    setSourceNotice('');
+    try{
+      const result=await reconnectBrowserFsaIDEWorkspace(browserScope,browserResumeHint?.handle||null);
+      setBrowserWorkspace(result.workspace);setBrowserWorkspaceName(result.name);
+      setBrowserResumeHint(null);setBrowserWorkspaceKey(crypto.randomUUID());
+      setSource('local');
+    }catch(error){setSourceNotice(error instanceof Error?error.message:String(error));}
   }
 
   if(source!=='local')return <RemoteFilesSource source={source} onSelect={setSource}
@@ -128,7 +166,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
         :<Suspense fallback={<p className="p-4 text-xs">Loading IDE…</p>}>
           <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} workspace={browserWorkspace} key={browserWorkspaceKey} workspaceId={browserWorkspaceKey}
             label={browserWorkspaceName} palette={palette} sources={sources} sourceId="local"
-            onSourceSelect={setSource} showHostModes/>
+            onSourceSelect={setSource} showHostModes onReconnect={()=>setConnectOpen(true)} onConnectionSettings={openRuntimeSettings}/>
         </Suspense>}
     </div>
   </section>;
@@ -143,6 +181,34 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   if (!project || projectNeedsConnection(project) || !ready)
     return <div className="h-full overflow-y-auto"><WorkspaceSourceRail sources={sources} sourceId="local" onSelect={setSource}/>
       {sourceNotice?<p role="alert" className="p-3 text-xs text-destructive">{sourceNotice}</p>:null}
+      <section className="mx-3 mt-3 rounded-lg border border-border bg-card/50 p-3 text-xs" aria-label="Reconnect workspace files">
+        <div className="flex items-center justify-between gap-2">
+          <strong className="font-semibold">File tree</strong>
+          <button className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 hover:bg-muted" type="button" onClick={openRuntimeSettings}>
+            <Settings2 className="size-3" /> Runtime settings
+          </button>
+        </div>
+        <p className="mt-1 text-muted-foreground">Previously opened projects remain identifiable here. Reauthorize a root before reading its files.</p>
+        <div className="mt-3 flex flex-col gap-1.5">
+          {rememberedProjects.map(saved=><div key={saved.id} className="flex min-w-0 items-center gap-2 rounded-md border border-border/70 px-2 py-2">
+            <FolderOpen className="size-4 shrink-0 text-muted-foreground"/>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium" title={saved.name}>{saved.name}</div>
+              {saved.workspaceRoot&&<div className="truncate font-mono text-[10px] text-muted-foreground" title={saved.workspaceRoot}>{saved.workspaceRoot}</div>}
+            </div>
+            <button className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1.5 hover:bg-muted" type="button"
+              onClick={()=>{selectProject(saved.id);setConnectOpen(true);}}><RefreshCw className="size-3"/>Reconnect</button>
+          </div>)}
+          {browserResumeHint&&<div className="flex min-w-0 items-center gap-2 rounded-md border border-border/70 px-2 py-2">
+            <FolderOpen className="size-4 shrink-0 text-muted-foreground"/>
+            <div className="min-w-0 flex-1"><div className="truncate font-medium">{browserResumeHint.name}</div><div className="text-[10px] text-muted-foreground">Browser folder · authorization required</div></div>
+            <button type="button" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1.5 hover:bg-muted"
+              onClick={()=>void reconnectBrowserFolder()}><RefreshCw className="size-3"/>Reconnect folder</button>
+          </div>}
+          {!rememberedProjects.length&&!browserResumeHint&&<button type="button" className="flex items-center gap-2 rounded-md border border-border px-2 py-2 text-left hover:bg-muted" onClick={()=>setConnectOpen(true)}>
+            <FolderOpen className="size-4"/>Connect a local workspace</button>}
+        </div>
+      </section>
       <NewTabStage tab={tab} omitKinds={['files']} onConnectProject={()=>setConnectOpen(true)} onOpenFolder={browserFsaReady?openBrowserFolder:undefined} />
       {connectDialog}
     </div>;
@@ -166,7 +232,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
       <Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading AgentSam IDE…</p>}>
       <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} key={project.id} workspace={workspace} workspaceId={project.id}
         label={project.name} palette={palette} lsp={lsp} showHostModes sources={sources} sourceId="local"
-        onSourceSelect={id => setSource(id)}/>
+        onSourceSelect={id => setSource(id)} onReconnect={()=>setConnectOpen(true)} onConnectionSettings={openRuntimeSettings}/>
       </Suspense>
     </div>
     {connectDialog}

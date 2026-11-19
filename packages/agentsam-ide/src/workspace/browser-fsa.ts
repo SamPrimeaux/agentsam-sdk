@@ -18,6 +18,68 @@ const MAX_TEXT_BYTES=3*1024*1024;
 const MAX_SEARCH_FILES=180;
 const ALLOWED_SEARCH=/\.(tsx?|jsx?|mjs|cjs|html?|css|json|mdx?|txt|py|sql|ya?ml|toml|rs|go)$/i;
 const isFolder=(h:FileSystemHandle):h is FileSystemDirectoryHandle=>h.kind==='directory';
+// Browser-origin handles stay in this device's IndexedDB, keyed by verified user.
+const FSA_DB='agentsam-ide-folders-v1',FSA_STORE='handles';
+function accountKey(scopeKey:string):string{
+  if(!scopeKey.trim())throw new Error('A verified account is required to remember a browser folder.');
+  return 'account:'+scopeKey.trim();
+}
+function nameKey(scope:string):string{return 'agentsam.ide.fsa.name.'+scope;}
+async function openDb():Promise<IDBDatabase|null>{
+  if(typeof indexedDB==='undefined')return null;
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(FSA_DB,1);
+    req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(FSA_STORE))req.result.createObjectStore(FSA_STORE);};
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function loadHandle(scope:string):Promise<BrowserDir|null>{
+  try{
+    const db=await openDb();if(!db)return null;
+    try{return await new Promise<BrowserDir|null>((resolve,reject)=>{
+      const req=db.transaction(FSA_STORE,'readonly').objectStore(FSA_STORE).get(scope);
+      req.onsuccess=()=>resolve(req.result?.kind==='directory'?req.result as BrowserDir:null);
+      req.onerror=()=>reject(req.error);
+    });}finally{db.close();}
+  }catch{return null;}
+}
+async function rememberHandle(scope:string,handle:BrowserDir):Promise<void>{
+  try{localStorage.setItem(nameKey(scope),handle.name);}catch{}
+  try{
+    const db=await openDb();if(!db)return;
+    try{await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction(FSA_STORE,'readwrite');
+      tx.objectStore(FSA_STORE).put(handle,scope);
+      tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+    });}finally{db.close();}
+  }catch{/* Private browsing may only retain a name hint. */}
+}
+export type BrowserFsaRestore={name:string;workspace:FileWorkspace|null;handle:FileSystemDirectoryHandle|null};
+/** Query only on page load; never request permission without a click. */
+export async function restoreBrowserFsaIDEWorkspace(scopeKey:string):Promise<BrowserFsaRestore|null>{
+  if(!browserFsaAvailable())return null;
+  const scope=accountKey(scopeKey),root=await loadHandle(scope);
+  if(!root){
+    let name='';try{name=localStorage.getItem(nameKey(scope))||'';}catch{}
+    return name?{name,workspace:null,handle:null}:null;
+  }
+  if(typeof root.entries!=='function')return {name:root.name,workspace:null,handle:null};
+  const granted=await root.queryPermission?.({mode:'readwrite'}).catch(()=>undefined);
+  return {name:root.name,workspace:granted==='granted'?createBrowserFsaWorkspace(root):null,handle:root};
+}
+/** Call from a direct click, with the handle preloaded on mount. */
+export async function reconnectBrowserFsaIDEWorkspace(scopeKey:string,handle:FileSystemDirectoryHandle|null):Promise<{name:string;workspace:FileWorkspace}>{
+  if(!handle)return chooseBrowserFsaIDEWorkspace(scopeKey);
+  const root=handle as BrowserDir;
+  if(typeof root.entries!=='function')return unavailable('Stored folder handle cannot enumerate directories. Select it again.');
+  const permission=await root.queryPermission?.({mode:'readwrite'});
+  if(permission!=='granted'&&await root.requestPermission?.({mode:'readwrite'})!=='granted')
+    return unavailable('Folder permission was not granted. Select the folder again.');
+  await rememberHandle(accountKey(scopeKey),root);
+  return {name:root.name,workspace:createBrowserFsaWorkspace(root)};
+}
+
 
 function checkedParts(path:string):string[] {
   return normalizeWorkspacePath(path).split('/');
@@ -44,7 +106,7 @@ export function browserFsaAvailable():boolean {
     && typeof (window as Window & {showDirectoryPicker?:unknown}).showDirectoryPicker==='function';
 }
 
-export async function chooseBrowserFsaIDEWorkspace():Promise<{name:string;workspace:FileWorkspace}> {
+export async function chooseBrowserFsaIDEWorkspace(scopeKey:string):Promise<{name:string;workspace:FileWorkspace}> {
   if(!browserFsaAvailable())return unavailable('Browser folder access requires Chromium and a secure origin. Use the native Local Studio runtime on desktop.');
   const picker=window as unknown as Window & {showDirectoryPicker(options:{mode:'readwrite'}):Promise<BrowserDir>};
   const selected=await picker.showDirectoryPicker({mode:'readwrite'});
@@ -57,6 +119,7 @@ export async function chooseBrowserFsaIDEWorkspace():Promise<{name:string;worksp
   const permission=await root.queryPermission?.({mode:'readwrite'});
   if(permission && permission!=='granted' && await root.requestPermission?.({mode:'readwrite'})!=='granted')
     return unavailable('The selected folder did not grant read/write access.');
+  await rememberHandle(accountKey(scopeKey),root);
   return {name:root.name,workspace:createBrowserFsaWorkspace(root)};
 }
 

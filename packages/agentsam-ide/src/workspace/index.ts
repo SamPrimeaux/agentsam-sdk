@@ -5,4 +5,5 @@ export type { FileWorkspace, WorkspaceEntry, WorkspaceFile, WorkspaceWriteResult
 export { hashWorkspaceEntries, diffWorkspaceSnapshots } from './merkle.js';
 export type { WorkspaceHashedEntry } from './merkle.js';
 
-export { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, createBrowserFsaWorkspace } from './browser-fsa.js';
+export { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, restoreBrowserFsaIDEWorkspace, reconnectBrowserFsaIDEWorkspace, createBrowserFsaWorkspace } from './browser-fsa.js';
+export type { BrowserFsaRestore } from './browser-fsa.js';

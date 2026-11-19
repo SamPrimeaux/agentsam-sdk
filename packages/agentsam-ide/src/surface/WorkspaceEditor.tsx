@@ -21,6 +21,9 @@ export type WorkspaceEditorProps = {
   sourceId?: IDEFileSourceId;
   onSourceSelect?: (source: IDEFileSourceId) => void;
   showHostModes?: boolean;
+  /** Connections and provisioning are owned by the embedding host, not Monaco. */
+  onReconnect?: () => void;
+  onConnectionSettings?: () => void;
   /** Host-owned full Markdown renderer; avoids bundling an untrusted parser into the portable IDE. */
   renderMarkdown?: (content:string) => ReactNode;
   onExit?: () => void;
@@ -29,7 +32,7 @@ export type WorkspaceEditorProps = {
 type Tab = WorkspaceFile & { value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string; preview?: WorkspacePreview };
 type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'Changes' | 'Snapshot' | 'References' | 'Dependencies';
 
-export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown}: WorkspaceEditorProps) {
+export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown, onReconnect, onConnectionSettings}: WorkspaceEditorProps) {
   const [tree,setTree]=useState<WorkspaceEntry[]>([]);
   const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
   const [tabs,setTabs]=useState<Tab[]>([]);
@@ -50,6 +53,12 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const [appearanceOpen,setAppearanceOpen]=useState(false);
   const [cursor,setCursor]=useState({line:1,column:1});
   const [message,setMessage]=useState('');
+  const [treeError,setTreeError]=useState('');
+  const [problemsOpen,setProblemsOpen]=useState(false);
+  const [revealRequest,setRevealRequest]=useState<{path:string;line:number;column:number;requestId:number}|null>(null);
+  const [sidebarWidth,setSidebarWidth]=useState(235);
+  const [explorerOpen,setExplorerOpen]=useState(true);
+  const [splitPercent,setSplitPercent]=useState(50);
   const [changeEntries,setChangeEntries]=useState<import('../workspace/files.js').WorkspaceChange[]>([]);
   const [snapshot,setSnapshot]=useState<import('../workspace/files.js').WorkspaceSnapshot|null>(null);
   const [modeLoading,setModeLoading]=useState(false);
@@ -94,6 +103,10 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     manualSave: workspace.configuration?.manualSave,
     write: async (path,content,version,overwrite)=>{
       const result=await workspace.write(path,content,version,{overwrite});
+      if(!result.ok && result.diagnostics?.length){
+        setTabs(prev=>prev.map(tab=>tab.path===path?{...tab,diagnostics:result.diagnostics||[]}:tab));
+        setProblemsOpen(true);
+      }
       return result.ok?{ok:true as const,version:result.file.version}:{ok:false as const,error:result.message,code:result.code};
     },
     onStatus:(path,status,error)=>{
@@ -104,8 +117,8 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   }),[workspace]);
 
   const refresh=useCallback(async()=>{
-    try{setTree(await workspace.list());setMessage('');}
-    catch(e){setMessage(e instanceof Error?e.message:String(e));}
+    try{setTree(await workspace.list());setTreeError('');setMessage('');}
+    catch(e){const reason=e instanceof Error?e.message:String(e);setTree([]);setTreeError(reason);setMessage(reason);}
   },[workspace]);
   useEffect(()=>{void refresh();},[refresh]);
 
@@ -142,7 +155,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         const diagnostics=await workspace.validate(path,tab.value);
         setTabs(prev=>prev.map(item=>item.path===path?{...item,diagnostics}:item));
         if(diagnostics.some(d=>d.severity==='error'&&d.blocksSave)){
-          setPanel('Problems');setMessage('Resolve the blocking problems before saving.');return;
+          setPanel('Problems');setProblemsOpen(true);setMessage('Resolve the blocking problems before saving.');return;
         }
       }catch(e){setMessage(e instanceof Error?e.message:String(e));return;}
     }
@@ -256,6 +269,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     {name:'Merkle snapshot',run:()=>void showSnapshot()},
     {name:'Editor appearance',run:()=>setAppearanceOpen(true)},
     {name:'Split editor',run:()=>setSplit(!split)},
+    {name:'Toggle explorer',run:()=>setExplorerOpen(value=>!value)},
   ];
   const rendered=(tab:Tab)=><AgentSamMonacoEditor document={{workspaceId,path:tab.path,text:tab.value,languageId:tab.language}}
     onChange={value=>edit(tab.path,value)} onSave={()=>save(tab.path)} palette={palette} readOnly={Boolean(readonly||tab.readonly)}
@@ -263,6 +277,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       path:tab.path,message:marker.message,severity:marker.severity>=8?'error':marker.severity>=4?'warning':'info',
       line:marker.startLineNumber,column:marker.startColumn,
     }))}:item))}
+    revealPosition={revealRequest?.path===tab.path?revealRequest:undefined}
     savedVersion={tab.version} lsp={lsp} onNavigate={onNavigate} onApplyWorkspaceEdit={onApplyWorkspaceEdit} onSelectionChange={s=>setCursor({line:s.startLine,column:s.startColumn})}
     options={{fontFamily:EDITOR_FONTS.find(font=>font.id===appearance.fontId)!.family,fontSize:appearance.fontSize,
       minimap:{enabled:appearance.minimap},wordWrap:appearance.wordWrap?'on':'off'}} height="100%"/>;
@@ -281,13 +296,32 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     if(isHtmlPath(tab.path))return <iframe className="asi-html-preview" title={tab.path+' preview'} sandbox="" srcDoc={tab.value}/>;
     return rendered(tab);
   };
+  // Host validators and Monaco/LSP markers are authoritative; never invent CLI errors.
+  useEffect(()=>{
+    if(!workspace.validate||!current||current.preview)return;
+    const path=current.path;
+    const content=current.value;
+    let live=true;
+    const timeout=setTimeout(()=>{
+      void workspace.validate!(path,content).then(diagnostics=>{
+        if(live)setTabs(prev=>prev.map(tab=>tab.path===path&&tab.value===content?{...tab,diagnostics}:tab));
+      }).catch(()=>{ /* A disconnected validator is not a fabricated problem. */ });
+    },650);
+    return ()=>{live=false;clearTimeout(timeout);};
+  },[workspace,current?.path,current?.value]);
   const availablePanels:Panel[]=['Explorer','Search','Timeline','Problems',...(showHostModes?['Changes' as const,'Snapshot' as const]:[]),...(workspace.configuration?.references?.length?['References' as const]:[]),...(workspace.configuration?.dependencies?.length?['Dependencies' as const]:[])];
   const problems=tabs.flatMap(tab=>[...tab.diagnostics,...tab.editorDiagnostics].map(item=>({...item,path:tab.path})));
+  const goToProblem=(problem:WorkspaceDiagnostic)=>{
+    setRevealRequest(previous=>({path:problem.path,line:problem.line||1,column:problem.column||1,requestId:(previous?.requestId||0)+1}));
+    void open(problem.path);
+    setPanel('Problems');
+  };
   const dirty=current&&current.status!=='saved';
   return <div className="asi-ide">
     <header className="asi-toolbar">
       <strong>{label}</strong>
       <nav aria-label="Editor actions">
+        <button type="button" aria-pressed={explorerOpen} onClick={()=>setExplorerOpen(value=>!value)}>{explorerOpen?'Hide files':'Show files'}</button>
         <button type="button" onClick={()=>setPaletteMode('file')}>Open file</button>
         <button type="button" onClick={()=>{setPaletteMode('command');setPaletteQuery('');}}>Commands</button>
         <button type="button" disabled={!current} onClick={()=>{setSplit(!split);setPreviewOnly(false);}}>{split?'Close split':'Split'}</button>
@@ -312,18 +346,19 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         onChange={event=>updateAppearance({wordWrap:event.target.checked})}/>Wrap lines</label>
       <button type="button" onClick={()=>setAppearanceOpen(false)}>Done</button>
     </div>}
-    <div className="asi-main">
-      <aside className="asi-aside" aria-label="Editor sidebar">
+    <div className="asi-main" style={{gridTemplateColumns:explorerOpen?'minmax(150px, '+sidebarWidth+'px) 7px minmax(0,1fr)':'0px 0px minmax(0,1fr)'}}>
+      <aside className="asi-aside" aria-label="Editor sidebar" style={!explorerOpen?{display:'none'}:undefined}>
         {sources?.length ? <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} /> : null}
         <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
           {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" disabled={readonly} aria-label="New file" onClick={()=>{setModal('file');setPathInput('');}}>＋</button><button type="button" disabled={readonly} aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
+            {treeError&&<div className="asi-reconnect" role="alert"><strong>Files unavailable</strong><p>{treeError}</p><div>{onReconnect&&<button type="button" onClick={onReconnect}>Reconnect workspace</button>}{onConnectionSettings&&<button type="button" onClick={onConnectionSettings}>Runtime settings</button>}<button type="button" onClick={()=>void refresh()}>Retry files</button></div></div>}
             <WorkspaceTreeView entries={visibleTree} expanded={expanded} active={active}
               onFile={path=>void open(path)} onFolder={path=>void toggleFolder(path)}
               onMenu={(entry,point)=>setContextMenu({path:entry.path,x:Math.max(8,Math.min(point.x,window.innerWidth-220)),y:Math.max(8,Math.min(point.y,window.innerHeight-230))})}/></>}
           {panel==='Search'&&<><div className="asi-side-header"><strong>Find in files</strong></div><form className="asi-search" onSubmit={e=>{e.preventDefault();void find();}}><input value={query} aria-label="Search workspace" onChange={e=>setQuery(e.target.value)}/><button type="submit">Find</button></form>{hits.map((hit,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(hit.path)}><strong>{hit.path}:{hit.line}</strong><span>{hit.preview}</span></button>)}</>}
           {panel==='Timeline'&&<><div className="asi-side-header"><strong>Timeline</strong></div>{history.map(rev=><div key={rev.id} className="asi-revision"><span>{rev.label||rev.createdAt}</span><button type="button" onClick={()=>void restore(rev)}>Restore</button></div>)}</>}
-          {panel==='Problems'&&<><div className="asi-side-header"><strong>Problems · {problems.length}</strong></div>{problems.map((problem,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(problem.path)}>{problem.severity}: {problem.path} — {problem.message}</button>)}</>}
+          {panel==='Problems'&&<><div className="asi-side-header"><strong>Problems · {problems.length}</strong></div>{problems.map((problem,i)=><button key={i} className="asi-hit" type="button" onClick={()=>goToProblem(problem)}>{problem.severity}: {problem.path} — {problem.message}</button>)}</>}
           {panel==='Changes'&&<><div className="asi-side-header"><strong>Changes</strong><button type="button" aria-label="Refresh changes" onClick={()=>void showChanges()}>↻</button></div>
             {modeLoading?<p>Inspecting verified changes…</p>:!workspace.changes?<p>No Git/diff provider is connected to this workspace.</p>:changeEntries.length===0?<p>No reported changes.</p>:changeEntries.map((entry,i)=><button className="asi-hit" key={entry.path+String(i)} type="button" onClick={()=>void open(entry.path)}><strong>{entry.status}</strong><span>{entry.path}</span></button>)}</>}
           {panel==='Snapshot'&&<><div className="asi-side-header"><strong>Merkle snapshot</strong><button type="button" aria-label="Refresh Merkle snapshot" onClick={()=>void showSnapshot()}>↻</button></div>
@@ -335,11 +370,24 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
           {panel==='Dependencies'&&workspace.configuration?.dependencies?.map(item=><p key={item}>{item}</p>)}
         </div>
       </aside>
+      <div className="asi-grabbar" style={!explorerOpen?{display:'none'}:undefined} role="separator" aria-label="Resize file explorer" aria-orientation="vertical" tabIndex={0}
+        onPointerDown={event=>{event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);}}
+        onPointerMove={event=>{if(!event.currentTarget.hasPointerCapture(event.pointerId))return;const rect=event.currentTarget.parentElement?.getBoundingClientRect();if(rect)setSidebarWidth(Math.min(Math.max(150,event.clientX-rect.left),Math.max(150,rect.width-210)));}}
+        onPointerUp={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);}}
+        onDoubleClick={()=>setSidebarWidth(235)}
+        onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();setSidebarWidth(value=>Math.max(150,Math.min(450,value+(event.key==='ArrowLeft'?-16:16))));}}}/>
       <section className="asi-center" aria-label="Code editor">
         <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
         {current?<><div className="asi-breadcrumb">{current.displayName||current.path.split('/').join(' › ')}<div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={readonly||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>void remove()} disabled={readonly||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
-        <div className={'asi-editors'+(split?' asi-split':'')}>
+        <div className={'asi-editors'+(split&&!current.preview?' asi-split':'')}
+          style={split&&!current.preview?{gridTemplateColumns:'minmax(0,'+splitPercent+'fr) 7px minmax(0,'+(100-splitPercent)+'fr)'}:undefined}>
           {!current.preview&&(!previewOnly||split)?<div>{rendered(current)}</div>:null}
+          {split&&!current.preview&&<div className="asi-grabbar asi-grabbar--preview" role="separator" aria-label="Resize source and preview" aria-orientation="vertical" tabIndex={0}
+            onPointerDown={event=>{event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);}}
+            onPointerMove={event=>{if(!event.currentTarget.hasPointerCapture(event.pointerId))return;const rect=event.currentTarget.parentElement?.getBoundingClientRect();if(rect)setSplitPercent(Math.max(20,Math.min(80,100*(event.clientX-rect.left)/rect.width)));}}
+            onPointerUp={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);}}
+            onDoubleClick={()=>setSplitPercent(50)}
+            onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();setSplitPercent(value=>Math.max(20,Math.min(80,value+(event.key==='ArrowLeft'?-5:5))));}}}/>}
           {(current.preview||previewOnly||split)?<div>{previewed(current)}</div>:null}
         </div>
         {current.status==='conflict'&&<div className="asi-alert" role="alert"><strong>File changed elsewhere. Your edits are preserved.</strong><button type="button" onClick={()=>void reload()}>Reload theirs</button><button type="button" onClick={()=>{if(window.confirm('Overwrite the currently saved content? This may replace another writer’s changes. Version history is only available when the provider supports it.'))void save(current.path,true);}}>Overwrite</button><button type="button" onClick={async()=>{try{setTheirs((await workspace.read(current.path)).content);}catch(e){setMessage(String(e));}}}>Compare</button></div>}
@@ -367,8 +415,20 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         </>}
       </div>
     </>}
+    {problemsOpen&&<section className="asi-problems-dock" aria-label="Problems panel">
+      <header><strong>Problems · {problems.length}</strong><button type="button" onClick={()=>setProblemsOpen(false)} aria-label="Close Problems panel">×</button></header>
+      <div className="asi-problems-list">
+        {problems.length===0?<p>No diagnostics reported for open files. Monaco/LSP and host validators populate this view when available.</p>:
+          problems.map((problem,i)=><button type="button" className="asi-problem-row" key={problem.path+String(i)+problem.message}
+            onClick={()=>goToProblem(problem)}>
+            <span data-severity={problem.severity}>{problem.severity}</span>
+            <span className="asi-problem-path">{problem.path}{problem.line?':'+problem.line+(problem.column?':'+problem.column:''):''}</span>
+            <span>{problem.message}</span>
+          </button>)}
+      </div>
+    </section>}
     {agent&&current&&<div className="asi-agent"><button type="button" disabled={agentBusy} onClick={()=>void ask()}>{agentBusy?'Preparing proposal…':'Work with '+agent.label}</button></div>}
-    <footer className="asi-status"><span>{label}</span><span>{current?.status||''}</span><span>Ln {cursor.line}, Col {cursor.column}</span><span>{current?.eol||'LF'}</span><span>{current?.encoding||'UTF-8'}</span><span>{current?.language||'Text'}</span><button type="button" onClick={()=>setPanel('Problems')}>{problems.length} problems</button></footer>
+    <footer className="asi-status"><span>{label}</span><span>{current?.status||''}</span><span>Ln {cursor.line}, Col {cursor.column}</span><span>{current?.eol||'LF'}</span><span>{current?.encoding||'UTF-8'}</span><span>{current?.language||'Text'}</span><button type="button" aria-expanded={problemsOpen} onClick={()=>{setPanel('Problems');setProblemsOpen(value=>!value);}}>{problems.length} problems</button></footer>
     {message&&<div className="asi-message" role="status">{message}<button type="button" onClick={()=>setMessage('')}>×</button></div>}
     {modal&&<div className="asi-overlay"><form className="asi-dialog" onSubmit={e=>{e.preventDefault();void create();}}><strong>{modal==='rename'?'Rename file':'New '+modal}</strong><input autoFocus value={pathInput} aria-label="Workspace path" onChange={e=>setPathInput(e.target.value)} placeholder="folder/name.ext"/><div><button type="button" onClick={()=>setModal(null)}>Cancel</button><button type="submit">Confirm</button></div></form></div>}
     {paletteMode&&<div className="asi-overlay"><div className="asi-dialog" role="dialog" aria-modal="true"><input autoFocus aria-label="Command palette" value={paletteQuery} onKeyDown={e=>e.key==='Escape'&&setPaletteMode(null)} onChange={e=>setPaletteQuery(e.target.value)} placeholder={paletteMode==='file'?'Go to file…':'Run command…'}/><div className="asi-palette-results">{paletteMode==='file'?tree.filter(f=>f.kind==='file'&&f.path.toLowerCase().includes(paletteQuery.toLowerCase())).map(f=><button key={f.path} type="button" onClick={()=>{setPaletteMode(null);void open(f.path);}}>{f.path}</button>):commands.filter(c=>c.name.toLowerCase().includes(paletteQuery.toLowerCase())).map(c=><button key={c.name} type="button" onClick={()=>{setPaletteMode(null);c.run();}}>{c.name}</button>)}</div><button type="button" onClick={()=>setPaletteMode(null)}>Close</button></div></div>}

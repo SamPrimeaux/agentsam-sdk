@@ -61,6 +61,8 @@ export type AgentSamMonacoEditorProps = {
   onNavigate?: (uri:string,range:{start:{line:number;character:number};end:{line:number;character:number}})=>Promise<void>|void;
   onApplyWorkspaceEdit?: (edit:unknown)=>Promise<void>;
   onEditorReady?: OnMount;
+  /** UI-only reveal request; path and document authority remain with the host. */
+  revealPosition?: { line: number; column?: number; requestId: number };
   /** Optional real external LSP; the authorized workspace host provides the transport. */
   lsp?: {transport:LspTransport;workspaceRootUri:string;onStatus?:(status:'starting'|'ready'|'error'|'missing',detail?:string)=>void};
   palette?: AgentSamEditorPalette;
@@ -121,7 +123,7 @@ export function defineAgentSamEditorTheme(monaco: Monaco, name: string, p: Agent
 
 /** Portable Monaco UI. All filesystem, auth, LSP and sidecar behavior is host-owned. */
 export function AgentSamMonacoEditor({
-  document, onChange, onSave, savedVersion, onSelectionChange, onDiagnostics, onEditorReady, onNavigate, onApplyWorkspaceEdit,
+  document, onChange, onSave, savedVersion, onSelectionChange, onDiagnostics, onEditorReady, onNavigate, onApplyWorkspaceEdit, revealPosition,
   palette, themeId = 'agentsam-ide', readOnly = false, options, className, lsp,
   height = '100%', loading = 'Loading editor…',
 }: AgentSamMonacoEditorProps) {
@@ -256,6 +258,15 @@ export function AgentSamMonacoEditor({
     defineAgentSamEditorTheme(monacoRef.current, themeId, palette);
     monacoRef.current.editor.setTheme(themeId);
   }, [palette, themeId]);
+
+  useEffect(()=>{
+    if(!mountedEditor||!revealPosition||!editorRef.current)return;
+    const editor=editorRef.current;
+    const position={lineNumber:Math.max(1,revealPosition.line),column:Math.max(1,revealPosition.column||1)};
+    editor.revealPositionInCenter(position);
+    editor.setPosition(position);
+    editor.focus();
+  },[mountedEditor,document.path,revealPosition?.requestId]);
 
   return (
     <Editor
