@@ -68,7 +68,7 @@ export const collectionsApi = {
     const path = collectionSiteId() ? "/api/admin/products" : "/api/admin/products?scope=account";
     return accepted(await adminFetch<Ok & { products: Product[] }>(scoped(path))).products || [];
   },
-  async get(id: string): Promise<CollectionDetail> {
+  async get(id: string, siteId?: string): Promise<CollectionDetail> {
     const path = `/api/admin/collections/${encodeURIComponent(id)}`;
     const [result, members] = await Promise.all([
       adminFetch<Ok & { collection: CmsRow }>(scoped(path)), items(id),
