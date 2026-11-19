@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { navigateHostedStudioRoute } from "../../lib/studio-host-navigation";
 import StudioIcon from "../products/StudioIcon";
 import { collectionsApi } from "./api";
