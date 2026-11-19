@@ -427,10 +427,16 @@
         "parameters": {
           "type": "object",
           "additionalProperties": {
-            "type": [
-              "string",
-              "number",
-              "boolean"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
             ]
           }
         }
