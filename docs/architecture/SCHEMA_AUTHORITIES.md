@@ -38,7 +38,7 @@ Observed immutable legacy R2 object (retained byte-for-byte):
 New package-scoped canonical target:
 `inneranimalmedia-schemas/packages/iamscene/v1/scene.canonical.schema.json`
 
-At audit time the `iamscene/v1/scene.schema.json` object was not found through connected R2. The existing `packages/...` object contains a 16,350-character older schema, while SDK source contains a 19,998-character schema. The source includes a perspective/orthographic camera union and additional material definitions absent from the older published copy.
+On November 19, 2026, the existing `packages/iamscene/v1/scene.schema.json` object was read back from R2 (19,998 bytes, SHA-256 `0a231b4d2121058ee9f6b3ce6ccc93a281834ecb4e188c562fc7b5d685a3c997`). Its `$id` is the earlier `https://schemas.inneranimalmedia.com/iamscene/v1/scene.schema.json`. The proposed source changes the `$id`, so it must be published at the distinct `scene.canonical.schema.json` key. The registry records the old key and checksum explicitly, and the publisher must refuse to proceed if that legacy object changes.
 
 **Correct release rule:** The npm package schema is the source of truth. Publish its exact bytes, with a verified SHA-256 receipt, under the canonical `$id` key. If the `packages/...` legacy URL is still referenced, preserve it as an exact-byte mirror or an explicit redirect—not as a second independently maintained schema. Validate representative old and new scene fixtures before replacing any same-version public schema. Do not overwrite a breaking schema at the same semantic version; publish a migrated version instead. Verify HTTP content type, cache, publicly retrievable response and SHA after uploading.
 
