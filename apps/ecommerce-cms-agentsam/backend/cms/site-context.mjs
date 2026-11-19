@@ -57,10 +57,14 @@ export async function ensureDefaultCmsSite(db, accountId, { name = "Default site
 }
 
 export async function listCmsSites(db, accountId) {
-  const hosted = hostOwnedSite(accountId);
-  if (hosted) return [hosted];
-  if (getApplicationAccountContext()?.authority === 'local-studio') return [];
   if (!accountId) throw new Error("cms_site_account_required");
+  // Site inventory is an account-owned read, not site selection or creation.
+  // Local Studio must not hide other owned stores just because one editor is open.
+  const hosted = getApplicationAccountContext();
+  if (hosted?.authority === 'local-studio' &&
+      String(hosted.accountId || '') !== String(accountId)) {
+    throw new Error('cms_site_context_account_mismatch');
+  }
   // This GET is an inventory, not a setup transaction. Opening an editor
   // must never create a site or silently promote an existing site to default.
   const { results = [] } = await db.prepare(`
