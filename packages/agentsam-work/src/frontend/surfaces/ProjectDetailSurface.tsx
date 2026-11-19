@@ -48,6 +48,7 @@ export function ProjectDetailSurface({
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [creatingChat, setCreatingChat] = useState(false);
+  const [chatDraft, setChatDraft] = useState("");
   const [chatError, setChatError] = useState("");
   const [showAllFocus, setShowAllFocus] = useState(false);
   const [insights, setInsights] = useState<WorkProjectInsights | null>(null);
