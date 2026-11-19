@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-occt",
   "version": "2.6.15",
-  "private": true,
   "type": "module",
   "description": "Canonical AgentSam OpenCascade engine contract with browser-WASM and native OCCT adapters.",
   "exports": {
@@ -34,5 +33,9 @@
   ],
   "engines": {
     "node": ">=22 <27"
+  },
+  "license": "FSL-1.1-MIT",
+  "publishConfig": {
+    "access": "public"
   }
 }

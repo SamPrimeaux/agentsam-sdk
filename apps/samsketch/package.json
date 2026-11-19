@@ -8,15 +8,14 @@
     "dev": "vite --host 127.0.0.1 --port 4340",
     "build": "node scripts/verify-assets.mjs && tsc --noEmit && vite build",
     "check": "node scripts/verify-assets.mjs && tsc --noEmit",
-    "test": "node scripts/verify-assets.mjs && node --test test/*.test.mjs",
-    "prebuild": "npm --prefix ../../packages/agentsam-occt run build"
+    "test": "node scripts/verify-assets.mjs && node --test test/*.test.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.2",
     "opencascade.js": "^2.0.0-beta.b5ff984",
     "three": "^0.180.0",
-    "@inneranimalmedia/agentsam-occt": "file:../../packages/agentsam-occt",
-    "@inneranimalmedia/agentsam-3d-viewer": "file:../../packages/agentsam-3d-viewer"
+    "@inneranimalmedia/agentsam-occt": "2.6.15",
+    "@inneranimalmedia/agentsam-3d-viewer": "2.6.15"
   },
   "devDependencies": {
     "@types/three": "^0.180.0",
@@ -25,6 +24,6 @@
     "vite": "^7.1.10"
   },
   "overrides": {
-    "picomatch": "https://raw.githubusercontent.com/SamPrimeaux/agentsam-sdk/85fcc1dd70a8505b5c96e4a090bab3843a7d5fb9/vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
+    "picomatch": "file:../../vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
   }
 }
