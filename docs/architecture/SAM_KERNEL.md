@@ -101,7 +101,7 @@ Every externally callable AgentSam capability:
 
 Alias ≠ authority. Human CLI aliases (`agentsam inspect`, `agentsam sca`) remain; internal ID stays `repository.inspect` / `security.scan`.
 
-**Contract ownership:** `@inneranimalmedia/agentsam-contracts` owns the portable `AgentOperationContract`, `AgentToolDefinition`, operation result/receipt types, and their source JSON Schemas. `src/sam/types.js` adds the SAM host-bound handler/context type; `defineSamOperation()` binds execution but does not create a second portable schema. `src/tools/registry.js` validates tool definitions through the package's `assertAgentToolDefinition()`. Public `protocol/sam/*.schema.json` and `protocol/tools/*.schema.json` files are tested mirrors of package-owned schemas. Domain packages add their own semantics as extensions; CMS does this in `@inneranimalmedia/agentsam-cms`.
+**Contract ownership:** `@inneranimalmedia/agentsam-contracts` owns the portable `AgentOperationContract`, `AgentToolDefinition`, operation result/receipt types, and their source JSON Schemas. `src/sam/types.js` aliases the shared types for SAM; `defineSamOperation()` calls `assertAgentOperationContract()` before binding a host handler and does not create a second portable schema. `src/tools/registry.js` validates tool definitions through the package's `assertAgentToolDefinition()`. Public `protocol/sam/*.schema.json` and `protocol/tools/*.schema.json` files are tested mirrors of package-owned schemas. Domain packages add their own semantics as extensions; CMS does this in `@inneranimalmedia/agentsam-cms`.
 
 ### Session vs operations
 
