@@ -344,6 +344,17 @@ export function Composer({
           }
         />
       ) : null}
+      {queued.length ? (
+        <div className="mx-auto mb-2 flex w-full max-w-6xl flex-col gap-1.5" role="list" aria-label="Queued follow-ups">
+          {queued.map((text, index) => (
+            <div key={index} role="listitem" data-composer-queued="" className="flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1.5 text-xs text-muted-foreground opacity-70">
+              <span className="min-w-0 flex-1 truncate">{text}</span>
+              <span className="shrink-0 text-[10px] uppercase tracking-wide">Queued</span>
+              <button type="button" className="grid size-6 shrink-0 place-items-center rounded-full hover:bg-muted" aria-label="Remove queued message" onClick={() => setQueued((items) => items.filter((_, i) => i !== index))}><X className="size-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()}
         onLibrary={() => setLibraryOpen(true)}
         onImage={() => setImageMode(true)}
