@@ -7,7 +7,7 @@ import { normalizeCollectionRules } from "@inneranimalmedia/agentsam-merch/colle
 // This is its site-scoped AgentSam CMS adapter; never write legacy store_* tables.
 type Ok = { ok: boolean; error?: string };
 type CmsRow = {
-  id: string; name: string; slug: string; description?: string; status: CollectionStatus;
+  id: string; site_id?: string; site_name?: string; name: string; slug: string; description?: string; status: CollectionStatus;
   visibility?: string; sort_order?: number; seo_title?: string | null; seo_description?: string | null;
   image_url?: string | null; metadata?: Record<string, unknown>; metadata_json?: string;
   product_count?: number; updated_at?: string; created_at?: string;
