@@ -203,6 +203,21 @@ export default function CollectionEditor() {
       hero:{...f.hero,headline:!f.hero.headline||f.hero.headline===f.title?value:f.hero.headline}}));
   }
   if(loading)return <main className="cs-workspace"><div className="cs-container"><div className="cs-loading">Loading Collections Studio…</div></div></main>;
+  if(!editId && !selectedSiteId) return <main className="cs-workspace"><div className="cs-container">
+    <div className="cs-breadcrumb"><Link to={collectionHref("/collections")}>Collections</Link><span>/</span><strong>New collection</strong></div>
+    <section className="cs-panel" style={{padding:"28px"}}>
+      <h1>Where will this collection be published?</h1>
+      <p>Your account-wide library includes every store. Choose a destination only when creating a store-owned collection.</p>
+      {siteError && <div className="cs-alert error" role="alert">{siteError}</div>}
+      <div style={{display:"flex",flexWrap:"wrap",gap:"12px",marginTop:"20px"}}>
+        {availableSites.map(site=><button className="cs-button" type="button" key={site.id}
+          onClick={()=>navigate(collectionHref("/collections/new",site.id),{replace:true})}>
+          {site.name}
+        </button>)}
+      </div>
+      {!siteError && !availableSites.length && <p>Loading your stores, or no stores are available to this account.</p>}
+    </section>
+  </div></main>;
   return <main className="cs-workspace">
     <div className="cs-container cs-editor-container">
       <div className="cs-breadcrumb"><Link to={collectionHref("/products")}>Products</Link><span>/</span><Link to={collectionHref("/collections")} onClick={e=>{if(!confirmLeave())e.preventDefault();}}>Collections</Link><span>/</span><strong>{collection?.title||"Create collection"}</strong></div>
