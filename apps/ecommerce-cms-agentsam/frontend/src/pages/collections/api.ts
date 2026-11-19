@@ -14,7 +14,16 @@ type CmsRow = {
 };
 type CmsItem = { item_type: string; item_ref: string; status: string; sort_order: number };
 type CollectionDetail = { collection: Collection; product_ids: number[]; rules: MerchCollectionRules };
-const revisions = new Map<string, string>();
+const revisions = new Map<string, string | number>();
+function displayTimestamp(value?: string | number): string | undefined {
+  if (value == null) return undefined;
+  const numeric = Number(value);
+  if (String(value).trim() && Number.isFinite(numeric) && numeric > 0) {
+    const iso = new Date(numeric < 100_000_000_000 ? numeric * 1000 : numeric);
+    return Number.isNaN(iso.getTime()) ? undefined : iso.toISOString();
+  }
+  return typeof value === "string" ? value : undefined;
+}
 const MANUAL_RULES: MerchCollectionRules = { mode: "manual", match: "all", conditions: [], excludedIds: [] };
 function accepted<T extends Ok>(result: T): T {
   if (!result.ok) throw new Error(result.error || "Request was not completed");
