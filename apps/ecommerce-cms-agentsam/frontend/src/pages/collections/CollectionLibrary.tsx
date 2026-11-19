@@ -71,7 +71,7 @@ export default function CollectionLibrary() {
           <div className="cs-input-search"><StudioIcon name="search" size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search collections" aria-label="Search collections"/></div>
           <div className="cs-segmented cs-library-filters" aria-label="Filter collections">{STATUSES.map(f=><button key={f.value} type="button" className={status===f.value?"active":""} onClick={()=>setStatus(f.value)}>{f.label}</button>)}</div>
         </div>
-        {loading?<div className="cs-loading">Loading your collection library…</div>:visible.length?<div className="cs-library-list">{visible.map(c=>{
+        {loading?<div className="cs-loading">Loading your collection library…</div>:error?<div className="cs-library-empty" role="alert"><h2>Collections unavailable</h2><p>Could not verify your account's collection inventory. No records were changed.</p></div>:visible.length?<div className="cs-library-list">{visible.map(c=>{
           const image=safeMediaUrl(c.image_url);
           return <article className="cs-library-row" key={c.id}>
             <Link className="cs-library-thumbnail" to={collectionHref(`/collections/${c.id}`,c.site_id)}>{image?<img src={image} alt="" loading="lazy"/>:<StudioIcon name="layers" size={29}/>}</Link>
