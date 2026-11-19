@@ -531,6 +531,21 @@ def build(account_id: str) -> tuple[dict, dict[str, tuple[pathlib.Path, str]], l
 
 
 def publish(objects: dict[str, tuple[pathlib.Path, str]], account_id: str) -> None:
+    # Never mutate any already-public immutable contract, including a URI created
+    # before the package registry. Check *all* collisions before the first write.
+    # The mutable root index is the only approved in-place update.
+    published = set()
+    for prefix in ("packages/", "contracts/"):
+        listing = aws(["s3", "ls", f"s3://{BUCKET}/{prefix}", "--recursive"], account_id)
+        for line in listing.splitlines():
+            parts = line.split(maxsplit=3)
+            if len(parts) == 4:
+                published.add(parts[3])
+    for key, (path, _) in sorted(objects.items()):
+        if key in published and key != "packages/manifest.v1.json":
+            if sha(fetch_object(key, account_id)) != sha(path.read_bytes()):
+                raise RuntimeError(f"Immutable public schema collision: {key}. Choose a new versioned URI; existing bytes must be retained.")
+
     # Per-object uploads preserve the correct schema/JSON MIME type and cache policy.
     # There is deliberately no --delete: legacy objects and independent release registries stay intact.
     for key, (path, content_type) in sorted(objects.items()):
