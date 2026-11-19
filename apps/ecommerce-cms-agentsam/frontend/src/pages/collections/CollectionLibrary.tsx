@@ -26,7 +26,7 @@ export default function CollectionLibrary() {
   async function duplicate(c: Collection) {
     setBusy(c.id);setError("");setNotice("");
     try{
-      const data=await collectionsApi.get(c.id);
+      const data=await collectionsApi.get(c.id,c.site_id);
       const form=parseCollection(data.collection,data.rules);
       form.title=`${form.title} (Copy)`;
       const base=slugify(`${form.slug}-copy`);
@@ -45,7 +45,7 @@ export default function CollectionLibrary() {
     if (!window.confirm(`Archive "${c.title}"? The storefront collection will be hidden, but its products remain intact.`)) return;
     setBusy(c.id);setError("");setNotice("");
     try{
-      const data=await collectionsApi.get(c.id);
+      const data=await collectionsApi.get(c.id,c.site_id);
       await collectionsApi.save({...parseCollection(data.collection),status:"archived"},c.id,"archived");
       setCollections(items=>items.map(item=>item.id===c.id?{...item,status:"archived"}:item));
       setNotice(`${c.title} archived.`);
