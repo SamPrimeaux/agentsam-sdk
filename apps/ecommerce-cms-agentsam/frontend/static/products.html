@@ -172,9 +172,8 @@ document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
   }
   try {
     document.getElementById('store-products-table').hidden = false;
-    await ensureCatalogSite();
-    document.querySelectorAll('.product-catalog-tabs a,.admin-toolbar a').forEach(a=>a.href=catalogLink(a.getAttribute('href')));
-    const d = await catalogFetch('/api/admin/products');
+    // Account-wide by default; explicit site_id still narrows the view.
+    const d = await catalogFetch(catalogSiteId ? '/api/admin/products' : '/api/admin/products?scope=account');
     const body = document.getElementById('products-body');
     if (!d.products.length) {
       body.innerHTML = '<tr><td colspan="7" class="admin-empty">No products yet — create your first one.</td></tr>';
