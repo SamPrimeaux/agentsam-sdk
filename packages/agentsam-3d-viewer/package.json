@@ -32,5 +32,10 @@
   "license": "FSL-1.1-MIT",
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-3d-viewer"
   }
 }

@@ -52,5 +52,10 @@
   },
   "engines": {
     "node": ">=22 <27"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/iamscene"
   }
 }

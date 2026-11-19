@@ -37,6 +37,8 @@ jobs:
         run: npm ci
       - name: Verify clean SDK Canvas provider import
         run: node --test --test-name-pattern='real generation orchestrator' test/integration/canvas-work-runtime.test.mjs
+      - name: Install CAD Creator release dependencies
+        run: npm ci --prefix apps/cad-creator --ignore-scripts --no-audit --no-fund
       - name: Check approved release train
         env:
           APPROVED_VERSION: ${{ inputs.version }}
