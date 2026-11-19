@@ -288,6 +288,10 @@
 .cs-preview-outer.mobile .merch-showcase__foot>span{display:none}
 
 /* Supplier-backed collection pack coverage; scoped to Collections Studio only. */
+.cs-destination-panel { padding: 28px; }
+.cs-destination-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+
+/* Supplier-backed collection pack coverage; scoped to Collections Studio only. */
 .cs-pack-coverage { margin: 14px 0; border: 1px solid var(--cs-border, #d5d9dc); border-radius: 14px; padding: 16px; background: var(--cs-surface, #fff); }
 .cs-pack-coverage > strong { display: block; font-size: 14px; margin-bottom: 5px; }
 .cs-pack-coverage > p { margin: 0 0 12px; font-size: 12px; color: #626a70; line-height: 1.6; }
