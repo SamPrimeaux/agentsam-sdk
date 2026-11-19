@@ -15,12 +15,12 @@
       "type": "string"
     },
     "query": {
-      "$ref": "./retrieval-query.schema.json"
+      "$ref": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/knowledge.retrieval-query.schema.json"
     },
     "hits": {
       "type": "array",
       "items": {
-        "$ref": "./retrieval-hit.schema.json"
+        "$ref": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/knowledge.retrieval-hit.schema.json"
       }
     },
     "estimated_tokens": {

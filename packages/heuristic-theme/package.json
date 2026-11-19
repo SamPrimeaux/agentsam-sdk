@@ -21,7 +21,9 @@
     "presets",
     "storefront",
     "theme.json",
-    "theme.schema.json"
+    "theme.schema.json",
+    "contracts/**/*.schema.json",
+    "tokens.schema.json"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs"

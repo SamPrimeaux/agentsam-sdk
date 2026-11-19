@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/manifest.v1.schema.json",
+  "title": "AgentSam Published Package Schema Registry v1",
+  "description": "Authoritative index of published AgentSam package schema packs, shared contracts, and independently versioned registries. Package object keys live under packages/{package}/v{major}/; legacy agentsam/ objects remain compatibility-only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "source", "packages", "sharedContracts", "registries", "compatibility"],
+  "properties": {
+    "$schema": { "const": "https://schemas.inneranimalmedia.com/packages/manifest.v1.schema.json" },
+    "schema": { "const": "agentsam.package-schema-registry.v1" },
+    "version": { "const": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "commit", "ref", "builtAt"],
+      "properties": {
+        "repository": { "const": "SamPrimeaux/agentsam-sdk" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "ref": { "type": "string", "minLength": 1 },
+        "builtAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "packages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/package" }
+    },
+    "sharedContracts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sharedContract" }
+    },
+    "registries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/registry" }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["legacyPrefixes", "legacyObjectCount", "policy"],
+      "properties": {
+        "legacyPrefixes": { "type": "array", "items": { "type": "string" } },
+        "legacyObjectCount": { "type": "integer", "minimum": 0 },
+        "policy": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "package": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "name", "version", "kind", "manifestUri", "schemaCount", "manifestSha256"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["protocol", "npm", "application", "external", "asset-catalog"] },
+        "manifestUri": { "type": "string", "format": "uri" },
+        "objectPrefix": { "type": "string" },
+        "schemaPackVersion": { "type": "string" },
+        "schemaCount": { "type": "integer", "minimum": 0 },
+        "componentsCount": { "type": "integer", "minimum": 0 },
+        "artifactCount": { "type": "integer", "minimum": 0 },
+        "manifestSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "registryUri": { "type": "string", "format": "uri" },
+        "sourcePath": { "type": "string" },
+        "release": { "type": "string" }
+      }
+    },
+    "sharedContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "schemaUri", "dataUri", "schemaSha256", "dataSha256", "schemaBytes", "dataBytes"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "schemaUri": { "type": "string", "format": "uri" },
+        "dataUri": { "type": "string", "format": "uri" },
+        "schemaSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "dataSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "schemaBytes": { "type": "integer", "minimum": 1 },
+        "dataBytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "registryUri", "manifestUri", "release", "moduleCount", "manifestSha256"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "registryUri": { "type": "string", "format": "uri" },
+        "manifestUri": { "type": "string", "format": "uri" },
+        "release": { "type": "string", "minLength": 1 },
+        "moduleCount": { "type": "integer", "minimum": 1 },
+        "manifestSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

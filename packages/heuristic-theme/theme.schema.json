@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:heuristic-commerce:schema:theme:v1",
+  "$id": "https://schemas.inneranimalmedia.com/packages/theme-heuristic/v1/theme.schema.json",
   "title": "Heuristic Commerce Theme",
   "type": "object",
   "required": ["id", "name", "version", "entry", "pages", "runtime", "contracts", "presets", "sections"],

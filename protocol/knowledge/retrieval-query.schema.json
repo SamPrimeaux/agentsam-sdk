@@ -71,7 +71,7 @@
       "default": true
     },
     "result_policy": {
-      "$ref": "../context/result-policy.schema.json"
+      "$ref": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/context.result-policy.schema.json"
     }
   }
 }
