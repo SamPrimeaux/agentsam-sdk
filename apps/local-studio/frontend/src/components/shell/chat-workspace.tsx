@@ -216,14 +216,17 @@ export function ChatWorkspace({ chat }: { chat: Chat }) {
                 axis="x"
                 label="Resize side stage"
                 className="hidden md:flex"
-                onDrag={(d) => setSideW((w) => Math.max(280, Math.min(1100, w - d, window.innerWidth - railW - 360)))}
+                onDrag={(d) => setSideW((w) => {
+                  const minPrimaryWidth = Math.max(360, Math.min(560, window.innerWidth * 0.36));
+                  return Math.max(280, Math.min(1100, w - d, window.innerWidth - railW - minPrimaryWidth));
+                })}
                 onDoubleClick={() => setSideW(420)}
               />
               <aside
                 className={cn(
                   "studio-pane min-h-0 min-w-0 bg-background",
                   "max-md:fixed max-md:inset-0 max-md:z-50",
-                  "md:relative md:shrink-0 md:max-w-[calc(100%-360px)] md:w-[var(--agentsam-side-stage-width)] md:basis-[var(--agentsam-side-stage-width)]",
+                  "md:relative md:shrink-0 md:max-w-[calc(100%_-_clamp(360px,_36vw,_560px))] md:w-[var(--agentsam-side-stage-width)] md:basis-[var(--agentsam-side-stage-width)]",
                 )}
                 style={{ "--agentsam-side-stage-width": sideW + "px" } as CSSProperties}
                 onPointerEnter={(e) => lightPane(e, true)}
