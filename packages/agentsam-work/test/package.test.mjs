@@ -147,7 +147,7 @@ test('project overview starts a conversation in its linked chat and keeps Work c
   assert.match(detail, /aw-project-detail__details/);
   assert.match(projects, /aw-projects-page/);
   assert.match(css, /\.agentsam-work \.aw-projects-page \{ width: 100%; max-width: 1040px;/);
-  assert.match(css, /\.aw-project-detail__layout \{ display: block;/);
+  assert.match(css, /\.aw-project-detail__layout \{ display: flex; flex-direction: column;/);
   assert.match(css, /\.aw-work-content-layout\[data-ticket-open="true"\] \.aw-work-content-primary \{ display: none; \}/);
   assert.match(adapter, /if \(message\) void store\.send\(id, "chat", message, \{ projectId \}\)/);
   assert.match(workspace, /Math\.min\(560, window\.innerWidth \* 0\.36\)/);
