@@ -340,7 +340,7 @@
     "verify:ui-quality:source": "node scripts/ui-quality/check-source.mjs --changed-from origin/main",
     "docs:registry": "node scripts/registry/generate-docs.mjs",
     "docs:registry:check": "node scripts/registry/generate-docs.mjs --check",
-    "verify:registry": "node scripts/registry/generate-docs.mjs --check && node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && node --test test/registry/*.test.mjs",
+    "verify:registry": "node scripts/registry/generate-docs.mjs --check && node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && node --test test/registry/*.test.mjs && python3 -m unittest discover -s scripts/schema-registry -p 'test_*.py'",
     "catalog:check": "python3 scripts/catalog/build_catalog.py --repo . --check",
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
     "test:brand": "npm --prefix packages/agentsam-brand test",
