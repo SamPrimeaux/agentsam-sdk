@@ -312,7 +312,9 @@ export function ProjectDetailSurface({
 
       {tab === "chats" ? <ProjectChatsPanel projectId={project.id} host={chatHost || {}} onNavigate={onNavigate} /> : null}
         </main>
-        <aside className="aw-project-detail__inspector" aria-label="Project details">
+        <details className="aw-project-detail__details">
+          <summary><strong>Project details</strong><span>Progress, delivery, work time and links</span></summary>
+          <aside className="aw-project-detail__inspector" aria-label="Project details">
           <header className="aw-project-inspector__head"><strong>Quick stats</strong><span>{project.status === "archived" ? "Archived" : "Live workspace"}</span></header>
           <div className="aw-project-inspector__progress">
             <div className="aw-project-inspector__ring" style={{ ["--value" as string]: project.progress + "%", ["--ring" as string]: project.accent }}><strong>{project.progress}%</strong></div>
