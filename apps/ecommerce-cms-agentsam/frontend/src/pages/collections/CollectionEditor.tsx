@@ -51,6 +51,15 @@ export default function CollectionEditor() {
   const collectionRuleExcluded=useRef<number[]>([]);
 
   useEffect(()=>{
+    if (editId || selectedSiteId) return;
+    let live=true;
+    adminFetch<{ok:boolean;sites:{id:string;name:string;status?:string}[]}>("/api/admin/cms/sites")
+      .then(result=>{if(live)setAvailableSites((result.sites||[]).filter(site=>site.status!=="archived"));})
+      .catch(error=>{if(live)setSiteError(error instanceof Error?error.message:"Unable to load your stores");});
+    return()=>{live=false;};
+  },[editId,selectedSiteId]);
+  useEffect(()=>{
+    if(!editId && !selectedSiteId)return;
     document.title = editId ? "Edit collection — Store Admin" : "Create collection — Store Admin";
     let live=true;
     queueMicrotask(()=>{if(live){setLoading(true);setError("");setNotice("");}});
