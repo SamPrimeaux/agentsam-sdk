@@ -136,6 +136,23 @@ test('Work project conversations are assigned Local Studio chats, not IAM record
   assert.match(contracts, /createProjectChat/);
 });
 
+test('project overview starts a conversation in its linked chat and keeps Work center-stage', () => {
+  const detail = readFileSync(new URL('../src/frontend/surfaces/ProjectDetailSurface.tsx', import.meta.url), 'utf8');
+  const projects = readFileSync(new URL('../src/frontend/surfaces/ProjectsSurface.tsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/frontend/theme.css', import.meta.url), 'utf8');
+  const adapter = readFileSync(new URL('../../../apps/local-studio/frontend/src/lib/project-chat-links.ts', import.meta.url), 'utf8');
+  const workspace = readFileSync(new URL('../../../apps/local-studio/frontend/src/components/shell/chat-workspace.tsx', import.meta.url), 'utf8');
+  assert.match(detail, /className="aw-project-composer"/);
+  assert.match(detail, /createProjectChat\(project\.id, message \|\| undefined\)/);
+  assert.match(detail, /aw-project-detail__details/);
+  assert.match(projects, /aw-projects-page/);
+  assert.match(css, /\.agentsam-work \.aw-projects-page \{ width: 100%; max-width: 1040px;/);
+  assert.match(css, /\.aw-project-detail__layout \{ display: flex; flex-direction: column;/);
+  assert.match(css, /\.aw-work-content-layout\[data-ticket-open="true"\] \.aw-work-content-primary \{ display: none; \}/);
+  assert.match(adapter, /if \(message\) void store\.send\(id, "chat", message, \{ projectId \}\)/);
+  assert.match(workspace, /Math\.min\(560, window\.innerWidth \* 0\.36\)/);
+});
+
 test('Work delegates installed project apps to the host instead of defining a second project registry', () => {
   const contracts = readFileSync(new URL('../src/contracts/index.ts', import.meta.url), 'utf8');
   const detail = readFileSync(new URL('../src/frontend/surfaces/ProjectDetailSurface.tsx', import.meta.url), 'utf8');

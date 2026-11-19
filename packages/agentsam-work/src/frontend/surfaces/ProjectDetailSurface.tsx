@@ -48,6 +48,7 @@ export function ProjectDetailSurface({
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [creatingChat, setCreatingChat] = useState(false);
+  const [chatDraft, setChatDraft] = useState("");
   const [chatError, setChatError] = useState("");
   const [showAllFocus, setShowAllFocus] = useState(false);
   const [insights, setInsights] = useState<WorkProjectInsights | null>(null);
@@ -88,12 +89,14 @@ export function ProjectDetailSurface({
     return () => { cancelled = true; window.clearInterval(interval); window.removeEventListener("focus", refresh); };
   }, [chatHost?.projectInsights, project.id]);
 
-  async function newProjectChat() {
+  async function newProjectChat(initialMessage = "") {
     if (!chatHost?.createProjectChat || creatingChat) return;
     setCreatingChat(true);
     setChatError("");
     try {
-      const chatId = await chatHost.createProjectChat(project.id);
+      const message = initialMessage.trim();
+      const chatId = await chatHost.createProjectChat(project.id, message || undefined);
+      setChatDraft("");
       onNavigate("/chats/" + encodeURIComponent(chatId));
     } catch (cause) {
       setChatError(cause instanceof Error ? cause.message : "Could not create project chat");
@@ -135,7 +138,6 @@ export function ProjectDetailSurface({
           </div>
         </div>
         <div className="aw-actions aw-project-detail__actions">
-          {chatHost?.createProjectChat ? <button type="button" className="aw-btn aw-btn--primary" onClick={() => void newProjectChat()} disabled={creatingChat}><MessageSquarePlus size={15}/> {creatingChat ? "Creating…" : "New chat"}</button> : null}
           {chatHost?.listAssignableChats && chatHost?.assignProjectChat ? <button type="button" className="aw-btn" onClick={() => setTab("chats")}><Link2 size={15}/> Attach chat</button> : null}
           <div className="aw-project-detail__desktop-actions">
             {knowledgeAction}
@@ -171,6 +173,30 @@ export function ProjectDetailSurface({
       {tab === "overview" ? (
         <div className="aw-project-home" aria-label="Project overview">
           {chatError ? <p role="alert" className="aw-error">{chatError}</p> : null}
+          {chatHost?.createProjectChat ? <form className="aw-project-composer" onSubmit={(event) => { event.preventDefault(); void newProjectChat(chatDraft); }}>
+            <div className="aw-project-composer__field">
+              <label htmlFor="aw-project-chat-prompt">Start a conversation</label>
+              <textarea
+                id="aw-project-chat-prompt"
+                className="aw-textarea"
+                rows={2}
+                value={chatDraft}
+                onChange={(event) => setChatDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    if (chatDraft.trim() && !creatingChat) void newProjectChat(chatDraft);
+                  }
+                }}
+                placeholder="How can I help you today?"
+                aria-label={"Start a conversation about " + project.name}
+              />
+              <small>Project context is attached automatically. Use Shift + Enter for a new line.</small>
+            </div>
+            <button type="submit" className="aw-btn aw-btn--primary" disabled={!chatDraft.trim() || creatingChat}>
+              <MessageSquarePlus size={15}/>{creatingChat ? "Starting…" : "Start conversation"}
+            </button>
+          </form> : null}
           <section className="aw-project-home__objective">
             <span className="aw-project-eyebrow">CURRENT OBJECTIVE</span>
             <h2>{project.objective || "Define your next objective"}</h2>
@@ -286,7 +312,9 @@ export function ProjectDetailSurface({
 
       {tab === "chats" ? <ProjectChatsPanel projectId={project.id} host={chatHost || {}} onNavigate={onNavigate} /> : null}
         </main>
-        <aside className="aw-project-detail__inspector" aria-label="Project details">
+        <details className="aw-project-detail__details">
+          <summary><strong>Project details</strong><span>Progress, delivery, work time and links</span></summary>
+          <aside className="aw-project-detail__inspector" aria-label="Project details">
           <header className="aw-project-inspector__head"><strong>Quick stats</strong><span>{project.status === "archived" ? "Archived" : "Live workspace"}</span></header>
           <div className="aw-project-inspector__progress">
             <div className="aw-project-inspector__ring" style={{ ["--value" as string]: project.progress + "%", ["--ring" as string]: project.accent }}><strong>{project.progress}%</strong></div>
@@ -352,7 +380,8 @@ export function ProjectDetailSurface({
             <h3><CalendarDays size={15}/> Upcoming</h3>
             {upcoming.slice(0, 3).map((e) => <p key={e.id}>{e.title} · {formatDate(e.start)}</p>)}
           </section> : null}
-        </aside>
+          </aside>
+        </details>
       </div>
 
       {editing ? (
