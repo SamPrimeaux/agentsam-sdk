@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://inneranimalmedia.com/protocol/runtime/primetech-procedure.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/runtime/primetech-procedure.v1.schema.json",
   "title": "PrimeTech Procedure v1",
   "description": "A pinned, versioned workflow manifest. Procedures delegate execution to an existing authorized SAM operation; manifests never define arbitrary shell commands.",
   "type": "object",
