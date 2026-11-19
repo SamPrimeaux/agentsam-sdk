@@ -14,7 +14,7 @@
     "dompurify": "3.4.17",
     "@hono/node-server": "2.1.6",
     "hono": "4.13.18",
-    "picomatch": "file:../../vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
+    "picomatch": "https://raw.githubusercontent.com/SamPrimeaux/agentsam-sdk/85fcc1dd70a8505b5c96e4a090bab3843a7d5fb9/vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
   },
   "scripts": {
     "dev": "npm run build:settings && node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
