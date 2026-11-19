@@ -33,7 +33,7 @@ Source-declared `$id` and README reference:
 `https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json`
 
 Observed published R2 object:
-`inneranimalmedia-schemas/packages/iamscene/v1/scene.schema.json`
+`inneranimalmedia-schemas/packages/iamscene/v1/scene.canonical.schema.json`
 
 At audit time the `iamscene/v1/scene.schema.json` object was not found through connected R2. The existing `packages/...` object contains a 16,350-character older schema, while SDK source contains a 19,998-character schema. The source includes a perspective/orthographic camera union and additional material definitions absent from the older published copy.
 
