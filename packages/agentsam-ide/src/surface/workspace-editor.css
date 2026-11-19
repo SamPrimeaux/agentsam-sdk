@@ -25,7 +25,9 @@
 .asi-appearance-panel button { border:1px solid var(--asi-border); border-radius:5px; padding:6px 10px; margin-left:auto; }
 .asi-toolbar nav { display:flex; align-items:center; gap:5px; }
 .asi-toolbar button,.asi-dialog button,.asi-alert button,.asi-revision button { border:1px solid var(--asi-border); border-radius:7px; padding:5px 10px; }
-.asi-main { min-height:0; flex:1; display:grid; grid-template-columns:minmax(200px,265px) minmax(0,1fr); }
+.asi-main { min-height:0; flex:1; display:grid; grid-template-columns:minmax(150px,var(--asi-sidebar-width,235px)) 7px minmax(0,1fr); }
+.asi-main.asi-explorer-collapsed { grid-template-columns:0 0 minmax(0,1fr); }
+.asi-main.asi-explorer-collapsed .asi-aside,.asi-main.asi-explorer-collapsed>.asi-grabbar { display:none; }
 .asi-aside { display:flex; flex-direction:column; background:var(--asi-surface); border-right:1px solid var(--asi-border); min-height:0; }
 .asi-sidebar-nav { display:flex; flex-wrap:wrap; gap:2px; border-bottom:1px solid var(--asi-border); padding:4px; }
 .asi-sidebar-nav button { border-radius:5px; padding:5px 7px; font-size:11px; }
@@ -64,7 +66,7 @@
 .asi-breadcrumb>div { display:flex; gap:4px; }
 .asi-breadcrumb button { color:var(--asi-ink); border-radius:5px; padding:3px 7px; }
 .asi-editors { display:grid; grid-template-columns:minmax(0,1fr); flex:1; min-height:0; }
-.asi-editors.asi-split { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.asi-editors.asi-split { grid-template-columns:minmax(0,var(--asi-split-editor,1fr)) 7px minmax(0,var(--asi-split-preview,1fr)); }
 .asi-editors>div { min-height:0; min-width:0; border-right:1px solid var(--asi-border); }
 .asi-welcome { display:grid; place-items:center; flex:1; color:var(--asi-muted); }
 .asi-alert { display:flex; align-items:center; flex-wrap:wrap; gap:9px; padding:10px; border-top:1px solid var(--asi-border); background:var(--asi-surface); }
@@ -83,7 +85,7 @@
 .asi-palette-results { display:flex; flex-direction:column; max-height:340px; overflow:auto; }
 .asi-palette-results button { text-align:left; padding:9px; border-radius:6px; }
 @media(max-width:700px) {
-  .asi-main { grid-template-columns:minmax(130px,34%) minmax(0,1fr); }
+  .asi-main { grid-template-columns:minmax(130px,34%) 7px minmax(0,1fr); }
   .asi-toolbar nav { max-width:100%; overflow:auto; }
   .asi-sidebar-nav button { font-size:10px; }
   .asi-editors.asi-split { grid-template-columns:minmax(0,1fr); }
