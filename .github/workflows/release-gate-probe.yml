@@ -1,0 +1,39 @@
+name: Temporary 2.6.15 release blocker probe
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release-gate-probe.yml'
+      - 'scripts/verify-public-packages.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install root and standalone workspace dependencies
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ci --prefix apps/cad-creator --ignore-scripts --no-audit --no-fund
+          npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
+      - name: Build portable contracts
+        run: npm run build:contracts
+      - name: CAD Creator test
+        continue-on-error: true
+        run: npm test --prefix apps/cad-creator
+      - name: Local Studio typecheck
+        continue-on-error: true
+        run: npm run typecheck --prefix apps/local-studio
+      - name: Local Studio test
+        continue-on-error: true
+        run: npm test --prefix apps/local-studio
+      - name: Desktop native build guard
+        continue-on-error: true
+        run: npm run prepare:cad --prefix packages/agentsam-desktop-shell
