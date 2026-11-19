@@ -205,7 +205,7 @@ export default function CollectionEditor() {
   if(loading)return <main className="cs-workspace"><div className="cs-container"><div className="cs-loading">Loading Collections Studio…</div></div></main>;
   if(!editId && !selectedSiteId) return <main className="cs-workspace"><div className="cs-container">
     <div className="cs-breadcrumb"><Link to={collectionHref("/collections")}>Collections</Link><span>/</span><strong>New collection</strong></div>
-    <section className="cs-panel" style={{padding:"28px"}}>
+    <section className="cs-panel cs-destination-panel">
       <h1>Where will this collection be published?</h1>
       <p>Your account-wide library includes every store. Choose a destination only when creating a store-owned collection.</p>
       {siteError && <div className="cs-alert error" role="alert">{siteError}</div>}
