@@ -48,7 +48,7 @@ function normalize(row: CmsRow): Collection {
     product_count: row.product_count || 0, updated_at: row.updated_at, created_at: row.created_at,
   };
 }
-async function items(id: string): Promise<CmsItem[]> {
+async function items(id: string, siteId?: string): Promise<CmsItem[]> {
   const all: CmsItem[] = [];
   for (let offset = 0; offset < 1000; offset += 100) {
     const url = scoped(`/api/admin/collections/${encodeURIComponent(id)}/items?limit=100&offset=${offset}`);
