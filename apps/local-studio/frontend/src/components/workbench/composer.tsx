@@ -158,6 +158,11 @@ export function Composer({
 
   async function submitWithAttachments() {
     if (imageMode) { await generateImage(); return; }
+    if (streaming && !onSubmit && !staging && !submitting && value.trim()) {
+      setQueued((items) => [...items, value.trim()]);
+      setDraft(targetId, "");
+      return;
+    }
     if (staging || submitting || streaming || (!value.trim() && !pendingAttachments.length)) return;
     if (onSubmit) {
       setSubmitting(true);
