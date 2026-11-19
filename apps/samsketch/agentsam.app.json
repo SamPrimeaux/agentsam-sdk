@@ -13,12 +13,17 @@
     "scene-authoring",
     "source-model-inventory",
     "asset-export",
-    "iconography"
+    "iconography",
+    "typeface-authoring",
+    "vector-glyph-editing",
+    "font-export"
   ],
   "provides": [
     "workspace.panel",
     "preview",
-    "scene.authoring"
+    "scene.authoring",
+    "typeface.studio",
+    "font.authoring"
   ],
   "surfaces": [
     "models",
@@ -26,7 +31,11 @@
     "shapes",
     "icons",
     "inspector",
-    "timeline"
+    "timeline",
+    "typeface",
+    "glyphs",
+    "font-metrics",
+    "specimen"
   ],
   "auth": {
     "required": false,
@@ -79,7 +88,8 @@
           "node_modules/three/package.json",
           "node_modules/opencascade.js/package.json",
           "node_modules/@inneranimalmedia/agentsam-occt/package.json",
-          "node_modules/@inneranimalmedia/agentsam-3d-viewer/package.json"
+          "node_modules/@inneranimalmedia/agentsam-3d-viewer/package.json",
+          "node_modules/opentype.js/package.json"
         ],
         "command": [
           "npm",
