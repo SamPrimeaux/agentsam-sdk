@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectPackageManifests } from '../src/commands/package.js';
+import { registryVersionMatches, unwrapSingleNpmViewValue } from './release-train-policy.mjs';
 
 const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -81,7 +82,7 @@ if (!intentOnly) {
       const index = cursor++;
       const pkg = publicPackages[index];
       const versionResult = await npmView(pkg.name, pkg.version, 'version');
-      if (!versionResult.ok || versionResult.value !== pkg.version) {
+      if (!versionResult.ok || !registryVersionMatches(versionResult.value, pkg.version)) {
         report.missing.push({
           name: pkg.name,
           version: pkg.version,
@@ -92,7 +93,7 @@ if (!intentOnly) {
 
       if (pkg.manifest.exports !== undefined) {
         const exportsResult = await npmView(pkg.name, pkg.version, 'exports');
-        const registryExports = exportsResult.ok ? exportsResult.value : undefined;
+        const registryExports = exportsResult.ok ? unwrapSingleNpmViewValue(exportsResult.value) : undefined;
         if (!exportsResult.ok || !same(pkg.manifest.exports, registryExports)) {
           report.export_drift.push({
             name: pkg.name,

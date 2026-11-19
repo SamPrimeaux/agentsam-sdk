@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {findPrivateWorkspaceDependencyEdges} from './release-train-policy.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const mode=process.argv[2]||'--plan';
@@ -40,15 +41,25 @@ const all=new Map(entries.map(x=>[x.name,x]));
 if(all.size!==entries.length)throw Error('duplicate_first_party_package');
 all.set(sdk.name,{name:sdk.name,manifest:sdk,cwd:root,rel:'package.json'});
 const allowed=new Map([...all].filter(([name,x])=>!independent.has(name)&&(name===sdk.name||(x.manifest.private!==true&&x.manifest.publishConfig?.access==='public'))));
+const independentAllowed=new Map([...all].filter(([name,x])=>independent.has(name)&&x.manifest.private!==true&&x.manifest.publishConfig?.access==='public'));
 if(all.size<65||allowed.size<50)throw Error('incomplete_package_inventory');
-// Private source-only workspaces are included in the SDK bundle where needed,
-// but they are not published release-train packages and may keep local versions.
-for(const x of allowed.values()){
- if(x.manifest.version!==version)throw Error('release_train_drift:'+x.name);
+// Validate the complete public graph, including independently versioned public
+// packages. They are published separately, but must never depend on private
+// workspaces that downstream consumers cannot install.
+const publicEntries=[...entries,{name:sdk.name,manifest:sdk,cwd:root,rel:'package.json'}];
+const privateEdges=findPrivateWorkspaceDependencyEdges(publicEntries.map(x=>({file:x.rel,manifest:x.manifest})),['dependencies','devDependencies','peerDependencies','optionalDependencies']);
+if(privateEdges.length){const edge=privateEdges[0];throw Error('public_package_depends_on_private:'+edge.consumer+'->'+edge.dependency);}
+const publishable=[...all.values()].filter(x=>x.manifest.private!==true&&(x.name===sdk.name||x.manifest.publishConfig?.access==='public'));
+for(const x of publishable){
  for(const sec of ['dependencies','devDependencies','peerDependencies','optionalDependencies'])
-  for(const [name,spec]of Object.entries(x.manifest[sec]||{}))
-   if(all.has(name)&&spec!==(independent.has(name)?all.get(name).manifest.version:version))throw Error('dependency_pin_drift:'+x.name+'->'+name+'@'+spec);
+  for(const [name,spec]of Object.entries(x.manifest[sec]||{})){
+   if(!all.has(name))continue;
+   const expected=independent.has(name)?all.get(name).manifest.version:version;
+   if(spec!==expected)throw Error('dependency_pin_drift:'+x.name+'->'+name+'@'+spec);
+  }
 }
+for(const x of allowed.values())if(x.manifest.version!==version)throw Error('release_train_drift:'+x.name);
+for(const x of independentAllowed.values())if(!/^\d+\.\d+\.\d+$/.test(x.manifest.version||''))throw Error('independent_version_invalid:'+x.name);
 const seen=new Set(),active=new Set(),order=[];
 function visit(name){
  if(seen.has(name))return;
@@ -69,12 +80,31 @@ function visit(name){
 }
 for(const name of allowed.keys())visit(name);
 if(!order.some(x=>x.name===sdk.name))throw Error('sdk_release_node_missing');
+const independentSeen=new Set(),independentActive=new Set(),independentOrder=[];
+function visitIndependent(name){
+ if(independentSeen.has(name))return;
+ if(independentActive.has(name))throw Error('independent_release_dependency_cycle:'+name);
+ const x=independentAllowed.get(name);if(!x)throw Error('independent_package_not_public:'+name);
+ independentActive.add(name);
+ for(const sec of ['dependencies','peerDependencies','optionalDependencies'])
+  for(const dep of Object.keys(x.manifest[sec]||{})){
+   if(!all.has(dep))continue;
+   if(independentAllowed.has(dep)){visitIndependent(dep);continue;}
+   if(allowed.has(dep))continue;
+   if(sec==='peerDependencies'&&x.manifest.peerDependenciesMeta?.[dep]?.optional)continue;
+   throw Error('independent_package_depends_on_nonpublic:'+name+'->'+dep);
+  }
+ independentActive.delete(name);independentSeen.add(name);independentOrder.push(x);
+}
+for(const name of independentAllowed.keys())visitIndependent(name);
 if(!sdk.exports?.['./cad-project-v2']||!sdk.files?.includes('services/cad/occt')||!sdk.files?.includes('packages/agentsam-occt')||!sdk.files?.includes('packages/agentsam-3d-viewer'))
  throw Error('cad_v2_occt_viewer_missing_from_distribution');
 for(const name of ['src/lib/cad/project-v2.js','packages/agentsam-occt/package.json','packages/agentsam-occt/native/main.cpp','packages/agentsam-occt/native/CMakeLists.txt','packages/agentsam-occt/src/browser.ts','packages/agentsam-3d-viewer/package.json','packages/agentsam-3d-viewer/src/index.js','protocol/cad/cad.project.v2.schema.json'])
  if(!fs.existsSync(path.join(root,name)))throw Error('release_file_missing:'+name);
 console.log('AGENTSAM_STABLE_RELEASE '+version+' '+order.length+' packages');
 for(const [i,x]of order.entries())console.log(String(i+1).padStart(2,'0')+' '+x.name+'@'+version+' '+path.relative(root,x.cwd));
+console.log('AGENTSAM_INDEPENDENT_RELEASES '+independentOrder.length+' packages');
+for(const [i,x]of independentOrder.entries())console.log('I'+String(i+1).padStart(2,'0')+' '+x.name+'@'+x.manifest.version+' '+path.relative(root,x.cwd));
 if(mode==='--plan')process.exit(0);
 const localPublish=mode==='--publish-local';
 if(localPublish){
@@ -99,10 +129,10 @@ function npm(args,cwd=root,quiet=false){
  if(!quiet&&res.status!==0)throw Error('npm_failed:'+args.join(' '));
  return res;
 }
-function exists(name){
- const r=npm(['view',name+'@'+version,'version','--json','--prefer-online','--fetch-retries=0'],root,true);
+function exists(name,targetVersion=version){
+ const r=npm(['view',name+'@'+targetVersion,'version','--json','--prefer-online','--fetch-retries=0'],root,true);
  if(r.status!==0)return false;
- try{const v=JSON.parse(r.stdout);return v===version||(Array.isArray(v)&&v.includes(version));}
+ try{const v=JSON.parse(r.stdout);return v===targetVersion||(Array.isArray(v)&&v.includes(targetVersion));}
  catch{return false;}
 }
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -126,3 +156,23 @@ for(const item of order){
  if(!confirmed)throw Error('version_not_visible_after_publish:'+item.name);
 }
 console.log('AGENTSAM_RELEASE_VERIFIED '+version);
+for(const item of independentOrder){
+ const targetVersion=item.manifest.version;
+ if(exists(item.name,targetVersion)){console.log('ALREADY_PUBLISHED '+item.name+'@'+targetVersion);continue;}
+ const dir=item.cwd;
+ console.log('PUBLISH_INDEPENDENT '+item.name+'@'+targetVersion);
+ const workspace=path.relative(root,dir).replaceAll(path.sep,'/');
+ if(dir!==root&&!sdk.workspaces?.includes(workspace)&&fs.existsSync(path.join(dir,'package-lock.json'))){
+  npm(['install','--package-lock-only','--ignore-scripts'],dir);
+  npm(['ci','--ignore-scripts'],dir);
+ }
+ npm(['publish','--access','public',...(localPublish?[]:['--provenance'])],dir);
+ let confirmed=false;
+ for(let attempt=0;attempt<36;attempt++){
+  if(exists(item.name,targetVersion)){confirmed=true;break;}
+  console.log('WAIT_REGISTRY_VISIBILITY '+item.name+'@'+targetVersion+' attempt '+(attempt+1)+'/36');
+  await sleep(5000);
+ }
+ if(!confirmed)throw Error('version_not_visible_after_publish:'+item.name+'@'+targetVersion);
+}
+console.log('AGENTSAM_ALL_RELEASES_VERIFIED '+(order.length+independentOrder.length)+' packages');

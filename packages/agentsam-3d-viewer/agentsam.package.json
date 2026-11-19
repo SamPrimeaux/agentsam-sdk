@@ -2,7 +2,7 @@
   "schema": "agentsam.package.v1",
   "id": "agentsam-3d-viewer",
   "name": "@inneranimalmedia/agentsam-3d-viewer",
-  "version": "0.2.0",
+  "version": "2.6.15",
   "class": "package",
   "status": "in-development",
   "catalog_status": "needs-review",
@@ -17,15 +17,15 @@
   "purpose": "Shared framework-agnostic Three.js viewport, model viewing, and verified OCCT mesh display adapters for BIM, robotics and public scenes; native OCCT stays geometry authority.",
   "install": [
     {
-      "type": "npm-workspace",
+      "type": "npm",
       "package": "@inneranimalmedia/agentsam-3d-viewer",
-      "command": "npm install --workspace @inneranimalmedia/agentsam-3d-viewer"
+      "command": "npm install @inneranimalmedia/agentsam-3d-viewer"
     }
   ],
   "registry": {
-    "kind": "npm-workspace",
+    "kind": "npm",
     "name": "@inneranimalmedia/agentsam-3d-viewer",
-    "public_claim": false
+    "public_claim": true
   },
   "use_when": [
     "Showing an existing GLB, GLTF, or STL in a public marketing page or application panel",
