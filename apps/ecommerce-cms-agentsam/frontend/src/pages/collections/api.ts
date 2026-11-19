@@ -51,7 +51,7 @@ function normalize(row: CmsRow): Collection {
 async function items(id: string, siteId?: string): Promise<CmsItem[]> {
   const all: CmsItem[] = [];
   for (let offset = 0; offset < 1000; offset += 100) {
-    const url = scoped(`/api/admin/collections/${encodeURIComponent(id)}/items?limit=100&offset=${offset}`);
+    const url = scoped(`/api/admin/collections/${encodeURIComponent(id)}/items?limit=100&offset=${offset}`, siteId);
     const page = accepted(await adminFetch<Ok & { items: CmsItem[] }>(url)).items || [];
     all.push(...page);
     if (page.length < 100) break;
