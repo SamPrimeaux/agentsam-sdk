@@ -1957,7 +1957,7 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-cms",
-      "purpose": "Canonical portable CMS operations for ecommerce-cms-agentsam; trusted site-first storage, themes and publication; zero SDK DDL or local database provisioning.",
+      "purpose": "CMS-owned operation semantics and host-independent domain behavior for ecommerce-cms-agentsam; consumes shared AgentSam operation contracts and leaves trusted identity, storage, rendering and publication adapters with the host.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-cms",
@@ -2143,7 +2143,7 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-contracts",
-      "purpose": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
+      "purpose": "Single portable source of truth for AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-contracts",
@@ -2159,9 +2159,9 @@
       "status": "unknown",
       "topics": [],
       "use_when": [
-        "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context."
+        "Single portable source of truth for AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
