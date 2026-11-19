@@ -1657,6 +1657,10 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
  .aw-project-detail__layout { grid-template-columns: minmax(0,1fr); }
 }
 @media (max-width: 900px) {
+ .aw-project-composer { display:grid; grid-template-columns:minmax(0,1fr); }
+ .aw-project-composer > .aw-btn { width:100%; justify-content:center; }
+ .aw-project-detail__details > summary { align-items:flex-start; flex-wrap:wrap; }
+ .aw-project-detail__details > summary span { width:100%; margin-left:0; }
  .aw-project-detail__inspector { order:1; }
  .aw-project-home__objective { padding:16px; }
  .aw-project-home__focus header { padding:14px; }
