@@ -127,7 +127,7 @@ const enumValue = (value: unknown, allowed: readonly string[]) =>
  */
 export function assertAgentOperationContract(value: unknown): asserts value is AgentOperationContract {
   if (!isRecord(value)) throw new TypeError('agent operation contract must be an object');
-  if (!nonEmptyString(value.id) || !/^[a-z][A-Za-z0-9_-]*(\\.[A-Za-z][A-Za-z0-9_-]*)+$/.test(value.id)) {
+  if (!nonEmptyString(value.id) || !/^[a-z][A-Za-z0-9_-]*(\.[A-Za-z][A-Za-z0-9_-]*)+$/.test(value.id)) {
     throw new TypeError('agent operation contract requires a dotted id');
   }
   for (const field of ['module','action','summary']) {
