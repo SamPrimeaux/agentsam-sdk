@@ -31,7 +31,7 @@ export const codebaseindexIngestOp = defineSamOperation({
     embedding: 'optional',
     network: 'optional',
     sideEffects: 'local_write',
-    provider_spend: 'possible',
+    provider_spend: 'optional',
   },
   risk: 'write',
   capabilities: ['knowledge.index', 'knowledge.search', 'repository.snapshot'],
