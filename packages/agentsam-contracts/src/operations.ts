@@ -1,25 +1,27 @@
 import type { AgentAuthorityRequirement } from './authority';
 import type { AgentJsonSchema, AgentToolIdempotencyMode } from './tools';
+import { AGENT_TOOL_IDEMPOTENCY_MODES } from './tools';
 
-export type AgentOperationLane = 'local' | 'remote' | 'sandbox' | 'platform' | 'mcp';
-export type AgentOperationModelPolicy = 'never' | 'optional' | 'required';
-export type AgentOperationNetworkPolicy = 'none' | 'optional' | 'required';
-export type AgentOperationSideEffects =
-  | 'none'
-  | 'local_write'
-  | 'remote_read'
-  | 'remote_write'
-  | 'deploy'
-  | 'billable'
-  | 'oauth';
-export type AgentOperationRisk = 'read_only' | 'write' | 'privileged';
-export type AgentOperationSpendPolicy = 'never' | 'optional' | 'required';
-export type AgentOperationStatus =
-  | 'stable'
-  | 'experimental'
-  | 'stub'
-  | 'deprecated'
-  | 'compatibility';
+export const AGENT_OPERATION_LANES = ['local', 'remote', 'sandbox', 'platform', 'mcp'] as const;
+export const AGENT_OPERATION_MODEL_POLICIES = ['never', 'optional', 'required'] as const;
+export const AGENT_OPERATION_NETWORK_POLICIES = ['none', 'optional', 'required'] as const;
+export const AGENT_OPERATION_SIDE_EFFECTS = [
+  'none', 'local_write', 'remote_read', 'remote_write', 'deploy', 'billable', 'oauth',
+] as const;
+export const AGENT_OPERATION_RISKS = ['read_only', 'write', 'privileged'] as const;
+export const AGENT_OPERATION_SPEND_POLICIES = ['never', 'optional', 'required'] as const;
+export const AGENT_OPERATION_STATUSES = [
+  'stable', 'experimental', 'stub', 'deprecated', 'compatibility',
+] as const;
+export const AGENT_OPERATION_IDEMPOTENCY_MODES = AGENT_TOOL_IDEMPOTENCY_MODES;
+
+export type AgentOperationLane = typeof AGENT_OPERATION_LANES[number];
+export type AgentOperationModelPolicy = typeof AGENT_OPERATION_MODEL_POLICIES[number];
+export type AgentOperationNetworkPolicy = typeof AGENT_OPERATION_NETWORK_POLICIES[number];
+export type AgentOperationSideEffects = typeof AGENT_OPERATION_SIDE_EFFECTS[number];
+export type AgentOperationRisk = typeof AGENT_OPERATION_RISKS[number];
+export type AgentOperationSpendPolicy = typeof AGENT_OPERATION_SPEND_POLICIES[number];
+export type AgentOperationStatus = typeof AGENT_OPERATION_STATUSES[number];
 
 export interface AgentOperationExecution {
   lanes: AgentOperationLane[];
