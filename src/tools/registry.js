@@ -1,5 +1,5 @@
 import { assertAgentToolDefinition } from '@inneranimalmedia/agentsam-contracts';
-/** @typedef {import('../../packages/agentsam-contracts/src/tools').AgentToolDefinition} AgentToolDefinition */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentToolDefinition} AgentToolDefinition */
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
