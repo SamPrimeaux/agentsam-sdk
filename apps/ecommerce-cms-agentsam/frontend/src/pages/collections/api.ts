@@ -20,8 +20,8 @@ function accepted<T extends Ok>(result: T): T {
   if (!result.ok) throw new Error(result.error || "Request was not completed");
   return result;
 }
-function scoped(path: string): string {
-  const siteId = collectionSiteId();
+function scoped(path: string, siteIdOverride?: string | null): string {
+  const siteId = siteIdOverride ?? collectionSiteId();
   if (!siteId) return path;
   const url = new URL(path, window.location.origin);
   url.searchParams.set("site_id", siteId);
