@@ -62,7 +62,7 @@ export default function CollectionLibrary() {
       <div className="cs-library-metrics">
         <div><span>Total collections</span><strong>{error?"—":loading?"…":collections.length}</strong></div>
         <div><span>Published</span><strong>{error?"—":loading?"…":collections.filter(c=>c.status==="active").length}</strong></div>
-        <div><span>Drafts</span><strong>{collections.filter(c=>c.status==="draft").length}</strong></div>
+        <div><span>Drafts</span><strong>{error?"—":loading?"…":collections.filter(c=>c.status==="draft").length}</strong></div>
         <div><span>Product assignments</span><strong>{collections.reduce((total,c)=>total+Number(c.product_count||0),0)}</strong></div>
       </div>
       {(error||notice)&&<div className={`cs-alert ${error?"error":"success"}`} role="status">{error||notice}</div>}
