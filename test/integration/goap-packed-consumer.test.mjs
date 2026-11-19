@@ -42,13 +42,16 @@ test('standalone SDK tarball installs and launches with authenticated release de
     // tarball from this checkout, without linking a monorepo workspace.
     // Postpublication verifies a standalone root-tarball install instead.
     if (process.env.AGENTSAM_REQUIRE_PUBLISHED_SDK !== '1') {
-      const errorTar = run('npm', [
-        'pack', '--silent', '--pack-destination', packDir,
-      ], path.join(root, 'packages/agentsam-errors'));
-      run('npm', [
-        'install', '--ignore-scripts', '--no-audit', '--no-fund',
-        path.join(packDir, errorTar),
-      ], consumer);
+      const sourcePackages = ['agentsam-errors', 'agentsam-contracts'];
+      for (const packageDir of sourcePackages) {
+        const tarball = run('npm', [
+          'pack', '--silent', '--pack-destination', packDir,
+        ], path.join(root, 'packages', packageDir));
+        run('npm', [
+          'install', '--ignore-scripts', '--no-audit', '--no-fund',
+          path.join(packDir, tarball),
+        ], consumer);
+      }
     }
     // No sibling workspaces, second checkout, CMS source dependency or NODE_PATH.
     run('npm', [
