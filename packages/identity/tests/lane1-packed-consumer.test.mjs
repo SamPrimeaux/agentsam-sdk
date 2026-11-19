@@ -48,6 +48,17 @@ describe('Lane 1 packed identity consumer proof', () => {
     // The root SDK now declares the independently packaged CMS engine.
     // Install its local tarball in this offline packed-consumer fixture,
     // matching the published-dependency release order.
+    // AgentSam SDK now depends on the shared contracts package. Seed its
+    // exact local tarball in the isolated pre-publication consumer, never
+    // a workspace symlink or a different npm release version.
+    const contractsPackOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts],
+      path.join(REPO, 'packages', 'agentsam-contracts'));
+    const contractsPacked = JSON.parse(contractsPackOut);
+    const contractsTarballName = firstPack(contractsPacked)?.filename;
+    assert.ok(contractsTarballName, 'shared contracts npm pack must emit a tarball name');
+    const contractsTarballDest = path.join(artifacts, contractsTarballName);
+    assert.ok(fs.existsSync(contractsTarballDest), contractsTarballDest);
+
     const cmsPackOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts],
       path.join(REPO, 'packages', 'agentsam-cms'));
     const cmsPacked = JSON.parse(cmsPackOut);
@@ -76,7 +87,7 @@ describe('Lane 1 packed identity consumer proof', () => {
     );
     run(
       'npm',
-      ['install', errorsTarballDest, cmsTarballDest, tarballDest, '--ignore-scripts', '--no-audit', '--no-fund'],
+      ['install', errorsTarballDest, contractsTarballDest, cmsTarballDest, tarballDest, '--ignore-scripts', '--no-audit', '--no-fund'],
       consumer,
     );
 
