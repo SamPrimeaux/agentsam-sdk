@@ -349,7 +349,7 @@
     "brand:apply": "python3 scripts/brand-compliance/brand_compliance.py apply",
     "test:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run test -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run test -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run test -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run test -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio && npm run test -w @inneranimalmedia/agentsam-content-studio",
     "build:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio",
-    "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock && npm run test:primetech-procedures",
+    "test:standard": "npm --prefix packages/agentsam-contracts run build && node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock && npm run test:primetech-procedures",
     "test:unit": "node --test test/*.test.mjs test/unit/*.test.mjs",
     "test:cli": "node --test test/cli/*.test.mjs",
     "test:integration:mock": "npm run build -w @inneranimalmedia/agentsam-provider-completeful && node scripts/run-sdk-integration-tests.mjs && npm run verify:cms:canonical",
@@ -451,7 +451,8 @@
     "picocolors": "^1.1.1",
     "typescript": "5.9.3",
     "undici": "7.30.1",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "@inneranimalmedia/agentsam-contracts": "2.6.15"
   },
   "publishConfig": {
     "access": "public"
