@@ -72,7 +72,7 @@ PACKAGE_SPECS = [
         ("apps/agentsam-go-worker/contracts/runtime.v1.json", "runtime.v1.schema.json"),
     ]),
     ("iamscene", "@inneranimalmedia/iamscene", "packages/iamscene/package.json", "npm", "iamscene", "1.0.0", "v1", [
-        ("packages/iamscene/schema/iamscene.v1.schema.json", "scene.schema.json"),
+        ("packages/iamscene/schema/iamscene.v1.schema.json", "scene.canonical.schema.json"),
     ]),
 ]
 
