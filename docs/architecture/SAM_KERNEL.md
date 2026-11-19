@@ -101,6 +101,8 @@ Every externally callable AgentSam capability:
 
 Alias ≠ authority. Human CLI aliases (`agentsam inspect`, `agentsam sca`) remain; internal ID stays `repository.inspect` / `security.scan`.
 
+**Contract ownership:** `@inneranimalmedia/agentsam-contracts` owns the portable `AgentOperationContract`, `AgentToolDefinition`, operation result/receipt types, and their source JSON Schemas. `src/sam/types.js` adds the SAM host-bound handler/context type; `defineSamOperation()` binds execution but does not create a second portable schema. `src/tools/registry.js` validates tool definitions through the package's `assertAgentToolDefinition()`. Public `protocol/sam/*.schema.json` and `protocol/tools/*.schema.json` files are tested mirrors of package-owned schemas. Domain packages add their own semantics as extensions; CMS does this in `@inneranimalmedia/agentsam-cms`.
+
 ### Session vs operations
 
 `login`, `logout`, `whoami`, shell preferences, and help are **client/session/runtime** controls. Do not force them through `sam.invoke('auth.login')`.
@@ -199,8 +201,12 @@ See: Go Worker product lane already live; expand carefully.
 
 | Path | Role |
 |------|------|
-| `protocol/sam/operation.schema.json` | Operation metadata schema |
-| `protocol/sam/result.schema.json` | SamResult envelope |
+| `packages/agentsam-contracts/src/operations.ts` | Portable operation contract and SAM result/receipt types |
+| `packages/agentsam-contracts/src/tools.ts` | Portable tool definition and runtime contract guard |
+| `packages/agentsam-contracts/schemas/` | Canonical operation, tool and result JSON Schemas |
+| `protocol/sam/operation.schema.json` | Public mirror of the package-owned operation schema |
+| `protocol/sam/result.schema.json` | Public mirror of the package-owned operation result schema |
+| `protocol/tools/agent-tool-definition.v1.schema.json` | Public mirror of the package-owned tool schema |
 | `protocol/sam/registry.seed.json` | Seed operation registry |
 | `src/sam/` | Kernel registry + `AgentSamClient` / `invoke` / `describe` / `discover` |
 | `protocol/capabilities/manifest.json` | Existing capability cards (migrate into ops over time) |
