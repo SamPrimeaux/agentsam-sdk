@@ -172,7 +172,7 @@ export function ProjectsSurface({
                 <div className="aw-project-v3__cover" data-has-cover={Boolean(p.coverImageUrl)} aria-label={"Cover for " + p.name}>
                   {p.coverImageUrl
                     ? <img src={p.coverImageUrl} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} />
-                    : <div className="aw-project-v3__cover-empty"><ImageIcon size={24} aria-hidden/><span>{p.name}</span></div>}
+                    : <div className="aw-project-v3__cover-empty" aria-hidden><ImageIcon size={24}/></div>}
                   <span className="aw-project-v3__cover-status">{projectStatusLabel(p.status)}</span>
                 </div>
                 <div className="aw-project-v3__content">
