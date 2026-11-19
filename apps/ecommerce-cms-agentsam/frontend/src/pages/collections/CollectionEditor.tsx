@@ -78,7 +78,7 @@ export default function CollectionEditor() {
       }).catch(e=>{if(live)setError(e instanceof Error?e.message:"Unable to load collection");})
       .finally(()=>{if(live)setLoading(false);});
     return()=>{live=false;};
-  },[editId]);
+  },[editId,selectedSiteId]);
   const dirty=!loading && savedSnapshot!==JSON.stringify({form,selected});
   const effectiveIds=useMemo(()=>{
     try{return resolveCollectionMembers(products,selected,form.rules);}catch{return [];}
