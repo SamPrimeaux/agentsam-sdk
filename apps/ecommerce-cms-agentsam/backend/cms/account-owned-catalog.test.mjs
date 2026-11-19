@@ -12,7 +12,7 @@ function fixture() {
     CREATE TABLE cms_sites (
       id TEXT PRIMARY KEY, account_id TEXT NOT NULL, name TEXT NOT NULL,
       slug TEXT, primary_domain TEXT, status TEXT, is_default INTEGER,
-      created_at TEXT, domain_aliases_json TEXT
+      created_at TEXT, updated_at TEXT, domain_aliases_json TEXT
     );
     CREATE TABLE products (
       id INTEGER PRIMARY KEY, site_id TEXT NOT NULL, slug TEXT, title TEXT,
