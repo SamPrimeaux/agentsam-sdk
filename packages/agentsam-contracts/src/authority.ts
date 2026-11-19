@@ -1,10 +1,12 @@
-export type AgentAuthorityType =
-  | 'none'
-  | 'host'
-  | 'binding'
-  | 'secret'
-  | 'oauth'
-  | 'connection';
+export const AGENT_AUTHORITY_TYPES = [
+  'none',
+  'host',
+  'binding',
+  'secret',
+  'oauth',
+  'connection',
+] as const;
+export type AgentAuthorityType = typeof AGENT_AUTHORITY_TYPES[number];
 
 export interface AgentAuthorityRequirement {
   type: AgentAuthorityType;
