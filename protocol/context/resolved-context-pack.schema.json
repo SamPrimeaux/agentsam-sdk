@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/context/resolved-context-pack.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/context.resolved-context-pack.schema.json",
   "title": "ResolvedContextPack",
   "type": "object",
   "additionalProperties": false,

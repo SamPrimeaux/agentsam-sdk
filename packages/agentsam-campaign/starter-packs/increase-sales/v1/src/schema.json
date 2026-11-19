@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-campaign/v1/increase-sales.schema.json",
   "title": "AgentSam Growth campaign starter",
   "type": "object",
   "required": [

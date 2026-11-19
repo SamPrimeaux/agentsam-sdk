@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.repository-mine-input.schema.json",
   "title": "repository-mine-input",
   "type": "object",
   "required": [

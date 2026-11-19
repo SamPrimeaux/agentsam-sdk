@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/plugin-quality-evidence/v1",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/plugins.agentsam.plugin-quality-evidence.v1.schema.json",
   "title": "AgentSam Plugin Quality Evidence",
   "type": "object",
   "additionalProperties": false,

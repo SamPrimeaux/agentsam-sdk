@@ -1,6 +1,6 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-worker-job.schema.json",
+  "$id":"https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.site-scrape-worker-job.schema.json",
   "title":"Authorized project site scrape Queue envelope",
   "description":"Queue consumers must verify that this envelope matches the project authorization recorded for the run in the project's R2 bucket.",
   "type":"object",

@@ -1,7 +1,7 @@
 import { assertValidSceneDocument, validateSceneDocument } from './validate.js';
 import type { SceneDocument, SceneMetadata } from './types.js';
 
-export const IAMSCENE_SCHEMA_URI = 'https://schemas.inneranimalmedia.com/iamscene/v1/scene.schema.json';
+export const IAMSCENE_SCHEMA_URI = 'https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.schema.json';
 export const IAMSCENE_FORMAT_VERSION = '1.0.0' as const;
 
 export interface CreateSceneDocumentOptions {

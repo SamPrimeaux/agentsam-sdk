@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/tools/agent-tool-definition.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-contracts/v1/agent-tool-definition.v1.schema.json",
   "title": "AgentToolDefinition",
   "description": "Portable tool definition. Handler references and authority references are opaque; credentials are never embedded.",
   "type": "object",

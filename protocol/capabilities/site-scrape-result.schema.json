@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-result.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.site-scrape-result.schema.json",
   "title": "site.scrape result",
   "description": "Receipt produced by every site.scrape runtime (local Python, Worker). Same status vocabulary and counters regardless of runtime.",
   "type": "object",

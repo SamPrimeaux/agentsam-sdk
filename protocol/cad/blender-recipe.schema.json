@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/cad/blender-recipe.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/cad.blender-recipe.schema.json",
   "title": "AgentSam Blender modeling recipe",
   "type": "object",
   "additionalProperties": false,

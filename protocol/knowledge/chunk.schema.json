@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/knowledge/chunk.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/knowledge.chunk.schema.json",
   "type": "object",
   "additionalProperties": false,
   "title": "Chunk",

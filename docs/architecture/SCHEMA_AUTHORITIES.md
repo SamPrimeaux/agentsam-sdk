@@ -30,7 +30,7 @@ Package export:
 `@inneranimalmedia/iamscene/schema`
 
 Source-declared `$id` and README reference:
-`https://schemas.inneranimalmedia.com/iamscene/v1/scene.schema.json`
+`https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.schema.json`
 
 Observed published R2 object:
 `inneranimalmedia-schemas/packages/iamscene/v1/scene.schema.json`

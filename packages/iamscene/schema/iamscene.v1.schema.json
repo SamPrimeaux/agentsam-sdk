@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/iamscene/v1/scene.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.schema.json",
   "title": "InnerAnimalMedia Scene Document",
   "description": "Portable editable scene document. Geometry source, presentation assets and animation remain independently addressable.",
   "type": "object",

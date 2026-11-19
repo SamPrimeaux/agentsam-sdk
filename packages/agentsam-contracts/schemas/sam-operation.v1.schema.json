@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/operation.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-contracts/v1/sam-operation.v1.schema.json",
   "title": "AgentOperationContract",
   "description": "Portable operation metadata. Runtime handlers and host secrets are deliberately excluded.",
   "type": "object",

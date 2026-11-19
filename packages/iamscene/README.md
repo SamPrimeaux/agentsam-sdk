@@ -119,7 +119,7 @@ legacy R2 mirrors must publish the exact same verified schema bytes.
 
 - `format`: `iamscene`
 - `formatVersion`: `1.0.0`
-- schema: `https://schemas.inneranimalmedia.com/iamscene/v1/scene.schema.json`
+- schema: `https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.schema.json`
 - coordinate system: right-handed, Y-up, meters by default
 - stable IDs for nodes, materials, assets, animations and interactions
 - animation tracks are deterministic and time-addressable

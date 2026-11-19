@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-input.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.site-scrape-input.schema.json",
   "title": "site.scrape input",
   "description": "Runtime-neutral crawl request. Hosts supply identity, credentials, storage bindings and rate limits; this contract carries only crawl semantics. Runtimes report any field they did not honor in result.applied.ignored.",
   "type": "object",
