@@ -84,10 +84,15 @@ for (const release of index.packages) {
       throw Error('Theme Store preview file unavailable: ' + slug + '/' + entry.path + ' (' + response.status + ')');
     }
     const bytes = Buffer.from(await response.arrayBuffer());
-    // Cloudflare can append request-specific challenge/analytics tags to served
-    // HTML. Never copy those tags into the immutable installed theme package.
-    // The verifier accepts only the original manifest-hashed payload.
-    const verifiedBytes = verifyThemeStorePreviewBytes(bytes, entry.sha256, slug + '/' + entry.path);
+    // Archived theme previews sometimes contain './' followed by their absolute
+    // theme-package base. The Theme Store hashes the canonical, normalized
+    // browser document (see normalizePreviewHtml). Match that exact source
+    // transformation before verifying the immutable preview manifest.
+    const basePath = '/theme-packages/' + slug + '/' + version + '/preview/';
+    const sourceBytes = entry.path.toLowerCase().endsWith('.html')
+      ? Buffer.from(bytes.toString('utf8').replaceAll('.' + basePath, basePath))
+      : bytes;
+    const verifiedBytes = verifyThemeStorePreviewBytes(sourceBytes, entry.sha256, slug + '/' + entry.path);
     const destination = path.join(target, ...entry.path.split('/'));
     await mkdir(path.dirname(destination), { recursive: true });
     await writeFile(destination, verifiedBytes);
