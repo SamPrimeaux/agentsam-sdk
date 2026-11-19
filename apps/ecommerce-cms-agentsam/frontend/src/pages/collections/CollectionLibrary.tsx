@@ -77,7 +77,7 @@ export default function CollectionLibrary() {
             <Link className="cs-library-thumbnail" to={collectionHref(`/collections/${c.id}`,c.site_id)}>{image?<img src={image} alt="" loading="lazy"/>:<StudioIcon name="layers" size={29}/>}</Link>
             <div className="cs-library-info"><Link to={collectionHref(`/collections/${c.id}`,c.site_id)}>{c.title}</Link><span>{c.site_name? `${c.site_name} · ` : ""}{c.product_count||0} products · Updated {c.updated_at?.slice(0,10)||"recently"}</span><small>{c.description||"No description yet"}</small></div>
             <span className={`cs-status-chip ${c.status==="active"?"active":""}`}>{c.status==="active"?"Published":c.status}</span>
-            <div className="cs-library-actions"><Link className="cs-button small" to={collectionHref(`/collections/${c.id}`)}>Edit</Link>
+            <div className="cs-library-actions"><Link className="cs-button small" to={collectionHref(`/collections/${c.id}`,c.site_id)}>Edit</Link>
               {c.status==="active"&&<a className="cs-icon-button" title="View storefront" aria-label={`Preview ${c.title}`} href={`/shop/collections/${encodeURIComponent(c.slug)}`} target="_blank" rel="noreferrer"><StudioIcon name="image" size={16}/></a>}
               <button type="button" className="cs-icon-button" title="Duplicate" aria-label={`Duplicate ${c.title}`} disabled={busy!==null} onClick={()=>void duplicate(c)}><StudioIcon name="layers" size={16}/></button>
               {c.status!=="archived"&&<button type="button" className="cs-icon-button" title="Archive" aria-label={`Archive ${c.title}`} disabled={busy!==null} onClick={()=>void archive(c)}><StudioIcon name="close" size={16}/></button>}
