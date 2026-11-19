@@ -187,7 +187,7 @@ document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
         <td>${badgeFor(p.status)}</td>
         <td>${p.variant_count}</td>
         <td>${p.total_inventory}${p.total_inventory <= 3 && p.variant_count > 0 ? ' <span class="badge low">low</span>' : ''}</td>
-        <td><a href="${catalogLink('/admin/product-edit?id='+encodeURIComponent(p.id))}" class="btn ghost small">Edit</a></td>
+        <td><a href="${catalogLink('/admin/product-edit?id='+encodeURIComponent(p.id),p.site_id)}" class="btn ghost small">Edit</a></td>
       </tr>
     `).join('');
   } catch (err) {
