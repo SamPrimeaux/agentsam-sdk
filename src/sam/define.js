@@ -38,7 +38,7 @@ export function defineSamOperation(def) {
       : (def.skill || undefined);
 
   const providerSpend = def.execution.provider_spend ??
-    (def.execution.model === 'never' ? 'never' : def.execution.model === 'required' ? 'required' : 'optional');
+    (def.execution.model === 'never' ? 'never' : 'optional');
 
   return {
     ...def,
