@@ -207,7 +207,8 @@ const receipt = {
   ok: true,
   temp_root: temp,
   release_phase: releaseState,
-  candidate_error_tarball: errorsPack ? {name: errorsPack.name, version: errorsPack.version} : null,
+  candidate_error_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/agentsam-errors') ? {name: '@inneranimalmedia/agentsam-errors', version: errorsVersion} : null,
+  candidate_contracts_tarball: candidatePacks.find(item => item.name === '@inneranimalmedia/agentsam-contracts') ? {name: '@inneranimalmedia/agentsam-contracts', version: contractsVersion} : null,
   sdk: {
     name: sdkPack.name,
     version: sdkPack.version,
