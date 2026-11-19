@@ -6,75 +6,21 @@
 export const SAM_RESULT_SCHEMA = 'agentsam.result.v1';
 export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
 
-/** @typedef {'local'|'remote'|'sandbox'|'platform'|'mcp'} SamLane */
-/** @typedef {'never'|'optional'|'required'} SamModelPolicy */
-/** @typedef {'none'|'optional'|'required'} SamNetworkPolicy */
-/** @typedef {'none'|'local_write'|'remote_read'|'remote_write'|'deploy'|'billable'|'oauth'} SamSideEffects */
-/** @typedef {'read_only'|'write'|'privileged'} SamRisk */
-/** @typedef {'never'|'optional'|'required'} SamSpendPolicy */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationLane} SamLane */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationModelPolicy} SamModelPolicy */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationNetworkPolicy} SamNetworkPolicy */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationSideEffects} SamSideEffects */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationRisk} SamRisk */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationSpendPolicy} SamSpendPolicy */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentCapabilityReference} SamCapabilityRef */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentMcpProjection} SamMcpProjection */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationExecution} SamExecutionMeta */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationReceipt} SamReceipt */
+/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationResult} SamResult */
 
 /**
- * Provider capability / OAuth pack reference (Cloudflare, GitHub, …).
- * Prefer pack- or capability-scoped consent — never wholesale scope catalogs.
- * @typedef {object} SamCapabilityRef
- * @property {string} id
- * @property {string} [provider]
- * @property {string[]} [oauth_scopes]
- * @property {string[]} [feature_packs]
- */
-
-/**
- * MCP projection for an operation (server tool surface).
- * @typedef {object} SamMcpProjection
- * @property {string} [server_name]
- * @property {string} [server_url]
- * @property {string} [tool_name]
- * @property {string[]} [required_scopes]
- * @property {string[]} [feature_packs]
- * @property {'streamable_http'|'sse'|'stdio'} [protocol]
- */
-
-/**
- * @typedef {object} SamExecutionMeta
- * @property {SamLane[]} lanes
- * @property {SamModelPolicy} model
- * @property {SamNetworkPolicy} network
- * @property {SamSideEffects} sideEffects
- * @property {SamSpendPolicy} [embedding]
- * @property {SamSpendPolicy} [provider_spend]
- */
-
-/**
- * Rich product capability contract — not just catalog cards.
- * @typedef {object} SamOperationDef
- * @property {string} id
- * @property {number} version
- * @property {string} module
- * @property {string} action
- * @property {string} summary
- * @property {string} [purpose]
- * @property {string} [outcome]
- * @property {string} [description]
- * @property {SamExecutionMeta} execution
- * @property {{ account?: boolean, provider?: string[] }} [auth]
- * @property {SamCapabilityRef[]} [capability_refs]
- * @property {SamMcpProjection} [mcp]
- * @property {SamRisk} risk
- * @property {string} [input_schema]
- * @property {string} [output_schema]
- * @property {string[]} [capabilities]
- * @property {string[]} [accepts]
- * @property {string[]} [phases]
- * @property {string[]} [artifacts]
- * @property {{ id?: string, help?: boolean }|string|null} [skill]
- * @property {{ available?: boolean, operation?: string }} [preview]
- * @property {{ command?: string[][] }} [cli]
- * @property {{ section?: string, examples?: string[] }} [docs]
- * @property {'stable'|'experimental'|'stub'|'deprecated'} [status]
- * @property {(input: unknown, ctx: SamOperationContext) => Promise<unknown>|unknown} handler
- */
-
-/**
+ * Runtime-only context supplied by the SAM host. It is never serialized as an
+ * operation contract; host paths and environment values stay out of portable metadata.
  * @typedef {object} SamOperationContext
  * @property {AbortSignal} [signal]
  * @property {Record<string, unknown>} [execution]
@@ -84,33 +30,6 @@ export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
  */
 
 /**
- * @typedef {object} SamReceipt
- * @property {string} id
- * @property {string} operation
- * @property {string} [module]
- * @property {string} started_at
- * @property {string} completed_at
- * @property {{ lane: SamLane, deterministic: boolean, model_used: boolean }} execution
- * @property {string[]} [side_effects]
- * @property {string|null} [input_hash]
- * @property {string|null} [output_hash]
- * @property {'completed'|'failed'|'cancelled'} status
- * @property {SamMcpProjection} [mcp]
- */
-
-/**
- * @typedef {object} SamResult
- * @property {'agentsam.result.v1'} schema
- * @property {string} operation
- * @property {number} [operation_version]
- * @property {boolean} ok
- * @property {unknown} data
- * @property {SamReceipt} receipt
- * @property {unknown[]} [evidence]
- * @property {unknown[]} [artifacts]
- * @property {{ provider_calls: number, model_calls?: number, embedding_calls?: number, cost_usd?: number }} [usage]
- * @property {{ skill?: string|null }} [help]
- * @property {unknown[]} [warnings]
- * @property {unknown[]} [diagnostics]
- * @property {unknown} [error]
+ * Runtime operation = shared portable contract + host-bound handler.
+ * @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationDefinition<unknown, unknown, SamOperationContext>} SamOperationDef
  */
