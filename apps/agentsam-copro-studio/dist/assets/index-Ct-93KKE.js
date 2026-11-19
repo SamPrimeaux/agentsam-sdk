@@ -1,4 +1,4 @@
-var e=Object.freeze([{id:`gl:BlockDissolve`,name:`Block Dissolve`,glsl:`// Author: nwoeanhinnogaehr
+const k=Object.freeze([{id:"gl:BlockDissolve",name:"Block Dissolve",glsl:`// Author: nwoeanhinnogaehr
 // License: MIT
 // Description: The incoming image appears in small random blocks
 // Tags: dissolve, blocks, noise
@@ -13,7 +13,7 @@ float rand(vec2 co) {
 vec4 transition(vec2 uv) {
   return mix(getFromColor(uv), getToColor(uv), step(rand(floor(uv / blocksize)), progress));
 }
-`,parameters:{blocksize:{type:`float`,default:.02}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/BlockDissolve.glsl`,license:`MIT`},description:`The incoming image appears in small random blocks`},{id:`gl:BookFlip`,name:`Book Flip`,glsl:`// Author: hong
+`,parameters:{blocksize:{type:"float",default:.02}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/BlockDissolve.glsl",license:"MIT"},description:"The incoming image appears in small random blocks"},{id:"gl:BookFlip",name:"Book Flip",glsl:`// Author: hong
 // License: MIT
 // Description: The outgoing image turns like a book page from right to left, revealing the incoming one
 // Tags: page, flip, 3d
@@ -49,7 +49,7 @@ vec4 transition (vec2 p) {
     return mix(getFromColor(skewRight(p)) * addShade(), getToColor(p),   pr);
   }
 }
-`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/BookFlip.glsl`,license:`MIT`},description:`The outgoing image turns like a book page from right to left, revealing the incoming one`},{id:`gl:Bounce`,name:`Bounce`,glsl:`// Author: Adrian Purser
+`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/BookFlip.glsl",license:"MIT"},description:"The outgoing image turns like a book page from right to left, revealing the incoming one"},{id:"gl:Bounce",name:"Bounce",glsl:`// Author: Adrian Purser
 // License: MIT
 // Description: The outgoing image drops out of the frame with a few bounces, revealing the incoming one
 // Tags: bounce, slide, vertical, shadow
@@ -84,7 +84,7 @@ vec4 transition (vec2 uv) {
     step(d, 0.0)
   );
 }
-`,parameters:{shadow_colour:{type:`vec4`,default:[0,0,0,.6]},shadow_height:{type:`float`,default:.075},bounces:{type:`float`,default:3}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Bounce.glsl`,license:`MIT`},description:`The outgoing image drops out of the frame with a few bounces, revealing the incoming one`},{id:`gl:BowTieHorizontal`,name:`Bow Tie Horizontal`,glsl:`// Author: huynx
+`,parameters:{shadow_colour:{type:"vec4",default:[0,0,0,.6]},shadow_height:{type:"float",default:.075},bounces:{type:"float",default:3}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Bounce.glsl",license:"MIT"},description:"The outgoing image drops out of the frame with a few bounces, revealing the incoming one"},{id:"gl:BowTieHorizontal",name:"Bow Tie Horizontal",glsl:`// Author: huynx
 // License: MIT
 // Description: Two triangles grow from the left and right edges into a bow tie that reveals the incoming image
 // Tags: wipe, shape, horizontal
@@ -205,7 +205,7 @@ vec4 transition (vec2 uv) {
   else {
     return getFromColor(uv);
   }
-}`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/BowTieHorizontal.glsl`,license:`MIT`},description:`Two triangles grow from the left and right edges into a bow tie that reveals the incoming image`},{id:`gl:BowTieVertical`,name:`Bow Tie Vertical`,glsl:`// Author: huynx
+}`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/BowTieHorizontal.glsl",license:"MIT"},description:"Two triangles grow from the left and right edges into a bow tie that reveals the incoming image"},{id:"gl:BowTieVertical",name:"Bow Tie Vertical",glsl:`// Author: huynx
 // License: MIT
 // Description: Two triangles grow from the top and bottom edges into a bow tie that reveals the incoming image
 // Tags: wipe, shape, vertical
@@ -320,7 +320,7 @@ vec4 transition (vec2 uv) {
   else {
     return getFromColor(uv);
   }
-}`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/BowTieVertical.glsl`,license:`MIT`},description:`Two triangles grow from the top and bottom edges into a bow tie that reveals the incoming image`},{id:`gl:BurnThrough`,name:`Burn Through`,glsl:`// Author: liubailin2020@gmail.com
+}`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/BowTieVertical.glsl",license:"MIT"},description:"Two triangles grow from the top and bottom edges into a bow tie that reveals the incoming image"},{id:"gl:BurnThrough",name:"Burn Through",glsl:`// Author: liubailin2020@gmail.com
 // License: MIT
 // Description: The outgoing image burns away in noisy, glowing patches
 // Tags: burn, fire, noise
@@ -374,7 +374,7 @@ vec4 transition (vec2 uv) {
     float edge = (1.0 - l) * l * 5.0;
     return mix(to, from, l) + vec4(burnColor, 0.0) * edge;
 }
-`,parameters:{burnColor:{type:`vec3`,default:[1,.5,0]}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/BurnThrough.glsl`,license:`MIT`},description:`The outgoing image burns away in noisy, glowing patches`},{id:`gl:CircleIris`,name:`Circle Iris`,glsl:`// Author: Fernando Kuteken
+`,parameters:{burnColor:{type:"vec3",default:[1,.5,0]}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/BurnThrough.glsl",license:"MIT"},description:"The outgoing image burns away in noisy, glowing patches"},{id:"gl:CircleIris",name:"Circle Iris",glsl:`// Author: Fernando Kuteken
 // License: MIT
 // Description: The outgoing image closes into a circle over a background color, then the incoming one opens from it
 // Tags: circle, iris, shape
@@ -397,7 +397,7 @@ vec4 transition (vec2 uv) {
     else return getToColor(uv);
   }
 }
-`,parameters:{center:{type:`vec2`,default:[.5,.5]},backColor:{type:`vec4`,default:[.1,.1,.1,1]}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/CircleIris.glsl`,license:`MIT`},description:`The outgoing image closes into a circle over a background color, then the incoming one opens from it`},{id:`gl:CircleOpen`,name:`Circle Open`,glsl:`// Author: gre
+`,parameters:{center:{type:"vec2",default:[.5,.5]},backColor:{type:"vec4",default:[.1,.1,.1,1]}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/CircleIris.glsl",license:"MIT"},description:"The outgoing image closes into a circle over a background color, then the incoming one opens from it"},{id:"gl:CircleOpen",name:"Circle Open",glsl:`// Author: gre
 // License: MIT
 // Description: A soft-edged circle opens from the center to reveal the incoming image
 // Tags: circle, iris, wipe
@@ -414,7 +414,7 @@ vec4 transition (vec2 uv) {
   float m = smoothstep(-smoothness, 0.0, SQRT_2*distance(center, uv) - x*(1.+smoothness));
   return mix(getFromColor(uv), getToColor(uv), opening ? 1.-m : m);
 }
-`,parameters:{smoothness:{type:`float`,default:.3},opening:{type:`bool`,default:!0}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/CircleOpen.glsl`,license:`MIT`},description:`A soft-edged circle opens from the center to reveal the incoming image`},{id:`gl:ColorDistance`,name:`Color Distance`,glsl:`// License: MIT
+`,parameters:{smoothness:{type:"float",default:.3},opening:{type:"bool",default:!0}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/CircleOpen.glsl",license:"MIT"},description:"A soft-edged circle opens from the center to reveal the incoming image"},{id:"gl:ColorDistance",name:"Color Distance",glsl:`// License: MIT
 // Author: P-Seebauer
 // Description: Pixels switch to the incoming image in order of how close their colors are
 // Tags: blend, color
@@ -432,7 +432,7 @@ vec4 transition(vec2 p) {
     pow(progress, power)
   );
 }
-`,parameters:{power:{type:`float`,default:5}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/ColorDistance.glsl`,license:`MIT`},description:`Pixels switch to the incoming image in order of how close their colors are`},{id:`gl:CrossWarp`,name:`Cross Warp`,glsl:`// Author: Eke Péter <peterekepeter@gmail.com>
+`,parameters:{power:{type:"float",default:5}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/ColorDistance.glsl",license:"MIT"},description:"Pixels switch to the incoming image in order of how close their colors are"},{id:"gl:CrossWarp",name:"Cross Warp",glsl:`// Author: Eke Péter <peterekepeter@gmail.com>
 // License: MIT
 // Description: The outgoing image zooms in while the incoming one zooms out into place, sweeping from right to left
 // Tags: warp, zoom, horizontal
@@ -441,7 +441,7 @@ vec4 transition(vec2 p) {
   x=smoothstep(.0,1.0,(x*2.0+p.x-1.0));
   return mix(getFromColor((p-.5)*(1.-x)+.5), getToColor((p-.5)*x+.5), x);
 }
-`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/CrossWarp.glsl`,license:`MIT`},description:`The outgoing image zooms in while the incoming one zooms out into place, sweeping from right to left`},{id:`gl:CrossZoom`,name:`Cross Zoom`,glsl:`// License: MIT
+`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/CrossWarp.glsl",license:"MIT"},description:"The outgoing image zooms in while the incoming one zooms out into place, sweeping from right to left"},{id:"gl:CrossZoom",name:"Cross Zoom",glsl:`// License: MIT
 // Author: rectalogic
 // Description: A crossfade through a strong zoom blur
 // Tags: zoom, blur, blend
@@ -508,7 +508,7 @@ vec4 transition(vec2 uv) {
     }
     return color / total;
 }
-`,parameters:{strength:{type:`float`,default:.4}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/CrossZoom.glsl`,license:`MIT`},description:`A crossfade through a strong zoom blur`},{id:`gl:Directional`,name:`Directional`,glsl:`// Author: Gaëtan Renaudeau
+`,parameters:{strength:{type:"float",default:.4}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/CrossZoom.glsl",license:"MIT"},description:"A crossfade through a strong zoom blur"},{id:"gl:Directional",name:"Directional",glsl:`// Author: Gaëtan Renaudeau
 // License: MIT
 // Description: The incoming image pushes the outgoing one out in a given direction
 // Tags: slide, push, directional
@@ -525,7 +525,7 @@ vec4 transition (vec2 uv) {
     step(0.0, p.y) * step(p.y, 1.0) * step(0.0, p.x) * step(p.x, 1.0)
   );
 }
-`,parameters:{direction:{type:`vec2`,default:[0,1]}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Directional.glsl`,license:`MIT`},description:`The incoming image pushes the outgoing one out in a given direction`},{id:`gl:DirectionalWarp`,name:`Directional Warp`,glsl:`// Author: pschroen
+`,parameters:{direction:{type:"vec2",default:[0,1]}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Directional.glsl",license:"MIT"},description:"The incoming image pushes the outgoing one out in a given direction"},{id:"gl:DirectionalWarp",name:"Directional Warp",glsl:`// Author: pschroen
 // License: MIT
 // Description: A diagonal wipe with a warped, smeared edge
 // Tags: wipe, warp, directional
@@ -544,7 +544,7 @@ vec4 transition (vec2 uv) {
   float m = 1.0 - smoothstep(-smoothness, 0.0, v.x * uv.x + v.y * uv.y - (d - 0.5 + progress * (1.0 + smoothness)));
   return mix(getFromColor((uv - 0.5) * (1.0 - m) + 0.5), getToColor((uv - 0.5) * m + 0.5), m);
 }
-`,parameters:{smoothness:{type:`float`,default:.1},direction:{type:`vec2`,default:[-1,1]}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/DirectionalWarp.glsl`,license:`MIT`},description:`A diagonal wipe with a warped, smeared edge`},{id:`gl:DirectionalWipe`,name:`Directional Wipe`,glsl:`// Author: gre
+`,parameters:{smoothness:{type:"float",default:.1},direction:{type:"vec2",default:[-1,1]}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/DirectionalWarp.glsl",license:"MIT"},description:"A diagonal wipe with a warped, smeared edge"},{id:"gl:DirectionalWipe",name:"Directional Wipe",glsl:`// Author: gre
 // License: MIT
 // Description: A soft-edged diagonal wipe
 // Tags: wipe, directional
@@ -565,7 +565,7 @@ vec4 transition (vec2 uv) {
     (1.0 - smoothstep(-smoothness, 0.0, v.x * uv.x + v.y * uv.y - (d-0.5+progress*(1.+smoothness))));
   return mix(getFromColor(uv), getToColor(uv), m);
 }
-`,parameters:{direction:{type:`vec2`,default:[1,-1]},smoothness:{type:`float`,default:.5}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/DirectionalWipe.glsl`,license:`MIT`},description:`A soft-edged diagonal wipe`},{id:`gl:Dreamy`,name:`Dreamy`,glsl:`// Author: mikolalysenko
+`,parameters:{direction:{type:"vec2",default:[1,-1]},smoothness:{type:"float",default:.5}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/DirectionalWipe.glsl",license:"MIT"},description:"A soft-edged diagonal wipe"},{id:"gl:Dreamy",name:"Dreamy",glsl:`// Author: mikolalysenko
 // License: MIT
 // Description: A crossfade with a gentle wavy distortion
 // Tags: wave, blend
@@ -578,7 +578,7 @@ vec2 offset(float progress, float x, float theta) {
 vec4 transition(vec2 p) {
   return mix(getFromColor(p + offset(progress, p.x, 0.0)), getToColor(p + offset(1.0-progress, p.x, 3.14)), progress);
 }
-`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Dreamy.glsl`,license:`MIT`},description:`A crossfade with a gentle wavy distortion`},{id:`gl:DreamyZoom`,name:`Dreamy Zoom`,glsl:`// Author: Zeh Fernando
+`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Dreamy.glsl",license:"MIT"},description:"A crossfade with a gentle wavy distortion"},{id:"gl:DreamyZoom",name:"Dreamy Zoom",glsl:`// Author: Zeh Fernando
 // License: MIT
 // Description: Zooms and rotates into a bright flash, then out to the incoming image
 // Tags: zoom, rotate, flash
@@ -621,7 +621,7 @@ vec4 transition(vec2 uv) {
   // The flash lights up the image, not the transparent areas around it.
   return vec4(c.rgb + (progress < 0.5 ? mix(0.0, 1.0, phase) : mix(1.0, 0.0, phase)), c.a);
 }
-`,parameters:{rotation:{type:`float`,default:6},scale:{type:`float`,default:1.2}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/DreamyZoom.glsl`,license:`MIT`},description:`Zooms and rotates into a bright flash, then out to the incoming image`},{id:`gl:Fade`,name:`Fade`,glsl:`// Author: gre
+`,parameters:{rotation:{type:"float",default:6},scale:{type:"float",default:1.2}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/DreamyZoom.glsl",license:"MIT"},description:"Zooms and rotates into a bright flash, then out to the incoming image"},{id:"gl:Fade",name:"Fade",glsl:`// Author: gre
 // License: MIT
 // Description: A linear crossfade between the two images
 // Tags: fade, blend
@@ -633,7 +633,7 @@ vec4 transition (vec2 uv) {
     progress
   );
 }
-`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Fade.glsl`,license:`MIT`},description:`A linear crossfade between the two images`},{id:`gl:FilmBurn`,name:`Film Burn`,glsl:`// Author: Anastasia Dunbar
+`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Fade.glsl",license:"MIT"},description:"A linear crossfade between the two images"},{id:"gl:FilmBurn",name:"Film Burn",glsl:`// Author: Anastasia Dunbar
 // License: MIT
 // Description: Glowing film-burn light leaks wash over the image and reveal the incoming one
 // Tags: burn, film, light-leak
@@ -695,7 +695,7 @@ vec4 transition(vec2 p) {
   
   return blurred_image+vec4(f,0.);
 }
-`,parameters:{Seed:{type:`float`,default:2.31}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/FilmBurn.glsl`,license:`MIT`},description:`Glowing film-burn light leaks wash over the image and reveal the incoming one`},{id:`gl:GlitchDisplace`,name:`Glitch Displace`,glsl:`// Author: Matt DesLauriers
+`,parameters:{Seed:{type:"float",default:2.31}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/FilmBurn.glsl",license:"MIT"},description:"Glowing film-burn light leaks wash over the image and reveal the incoming one"},{id:"gl:GlitchDisplace",name:"Glitch Displace",glsl:`// Author: Matt DesLauriers
 // License: MIT
 // Description: Blocks of the image are displaced in a glitch that flashes into the incoming image
 // Tags: glitch, displace
@@ -771,7 +771,7 @@ vec4 transition(vec2 uv) {
 
    //gl_FragColor = mix(texture2D(from, p), texture2D(to, p), progress);
 }
-`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/GlitchDisplace.glsl`,license:`MIT`},description:`Blocks of the image are displaced in a glitch that flashes into the incoming image`},{id:`gl:GlitchMemories`,name:`Glitch Memories`,glsl:`// Author: Gunnar Roth
+`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/GlitchDisplace.glsl",license:"MIT"},description:"Blocks of the image are displaced in a glitch that flashes into the incoming image"},{id:"gl:GlitchMemories",name:"Glitch Memories",glsl:`// Author: Gunnar Roth
 // based on work from natewave
 // License: MIT
 // Description: A crossfade with glitchy, color-shifted blocks
@@ -789,7 +789,7 @@ vec4 transition(vec2 p) {
   return vec4(mix(getFromColor(red), getToColor(red), progress).r, center.g, mix(getFromColor(blue), getToColor(blue), progress).b, center.a);
 }
 
-`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/GlitchMemories.glsl`,license:`MIT`},description:`A crossfade with glitchy, color-shifted blocks`},{id:`gl:GridFlip`,name:`Grid Flip`,glsl:`// License: MIT
+`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/GlitchMemories.glsl",license:"MIT"},description:"A crossfade with glitchy, color-shifted blocks"},{id:"gl:GridFlip",name:"Grid Flip",glsl:`// License: MIT
 // Author: TimDonselaar
 // Description: The image splits into a grid of tiles that flip one by one to the incoming image
 // Tags: grid, tiles, flip
@@ -865,7 +865,7 @@ vec4 transition(vec2 p) {
     return mix(bgcolor, getToColor(p), a);
   }
 }
-`,parameters:{size:{type:`ivec2`,default:[4,4]},pause:{type:`float`,default:.1},dividerWidth:{type:`float`,default:.05},bgcolor:{type:`vec4`,default:[0,0,0,1]},randomness:{type:`float`,default:.1}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/GridFlip.glsl`,license:`MIT`},description:`The image splits into a grid of tiles that flip one by one to the incoming image`},{id:`gl:InvertedPageCurl`,name:`Inverted Page Curl`,glsl:`// Author: Hewlett-Packard
+`,parameters:{size:{type:"ivec2",default:[4,4]},pause:{type:"float",default:.1},dividerWidth:{type:"float",default:.05},bgcolor:{type:"vec4",default:[0,0,0,1]},randomness:{type:"float",default:.1}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/GridFlip.glsl",license:"MIT"},description:"The image splits into a grid of tiles that flip one by one to the incoming image"},{id:"gl:InvertedPageCurl",name:"Inverted Page Curl",glsl:`// Author: Hewlett-Packard
 // License: BSD 3 Clause
 // Description: The outgoing image curls away like a page, revealing the incoming one
 // Tags: page, curl, 3d
@@ -1093,7 +1093,7 @@ vec4 transition(vec2 p) {
 
         return antiAlias(color, cl, dist);
 }
-`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/InvertedPageCurl.glsl`,license:`BSD 3 Clause`},description:`The outgoing image curls away like a page, revealing the incoming one`},{id:`gl:Morph`,name:`Morph`,glsl:`// Author: paniq
+`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/InvertedPageCurl.glsl",license:"BSD 3 Clause"},description:"The outgoing image curls away like a page, revealing the incoming one"},{id:"gl:Morph",name:"Morph",glsl:`// Author: paniq
 // License: MIT
 // Description: A crossfade in which each image is displaced by the other's colors, like a morph
 // Tags: morph, distort, blend
@@ -1112,7 +1112,7 @@ vec4 transition(vec2 p) {
   float w1 = 1.0-w0;
   return mix(getFromColor(p+oc*w0), getToColor(p-oc*w1), progress);
 }
-`,parameters:{strength:{type:`float`,default:.1}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Morph.glsl`,license:`MIT`},description:`A crossfade in which each image is displaced by the other's colors, like a morph`},{id:`gl:Pixelize`,name:`Pixelize`,glsl:`// Author: gre
+`,parameters:{strength:{type:"float",default:.1}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Morph.glsl",license:"MIT"},description:"A crossfade in which each image is displaced by the other's colors, like a morph"},{id:"gl:Pixelize",name:"Pixelize",glsl:`// Author: gre
 // License: MIT
 // Description: Both images pixelate, crossfade, then sharpen again
 // Tags: pixelate, blend
@@ -1132,7 +1132,7 @@ vec4 transition(vec2 uv) {
   vec2 p = dist>0.0 ? (floor(uv / squareSize) + 0.5) * squareSize : uv;
   return mix(getFromColor(p), getToColor(p), progress);
 }
-`,parameters:{squaresMin:{type:`ivec2`,default:[20,20]},steps:{type:`int`,default:50}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Pixelize.glsl`,license:`MIT`},description:`Both images pixelate, crossfade, then sharpen again`},{id:`gl:PolkaDotsCurtain`,name:`Polka Dots Curtain`,glsl:`// Author: bobylito
+`,parameters:{squaresMin:{type:"ivec2",default:[20,20]},steps:{type:"int",default:50}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Pixelize.glsl",license:"MIT"},description:"Both images pixelate, crossfade, then sharpen again"},{id:"gl:PolkaDotsCurtain",name:"Polka Dots Curtain",glsl:`// Author: bobylito
 // License: MIT
 // Description: The incoming image appears through growing polka dots
 // Tags: dots, pattern
@@ -1145,7 +1145,7 @@ vec4 transition(vec2 uv) {
   bool nextImage = distance(fract(uv * dots), vec2(0.5, 0.5)) < ( progress / distance(uv, center));
   return nextImage ? getToColor(uv) : getFromColor(uv);
 }
-`,parameters:{dots:{type:`float`,default:20},center:{type:`vec2`,default:[0,0]}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/PolkaDotsCurtain.glsl`,license:`MIT`},description:`The incoming image appears through growing polka dots`},{id:`gl:Ripple`,name:`Ripple`,glsl:`// Author: gre
+`,parameters:{dots:{type:"float",default:20},center:{type:"vec2",default:[0,0]}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/PolkaDotsCurtain.glsl",license:"MIT"},description:"The incoming image appears through growing polka dots"},{id:"gl:Ripple",name:"Ripple",glsl:`// Author: gre
 // License: MIT
 // Description: Ripples spread from the center while crossfading
 // Tags: ripple, wave, blend
@@ -1164,7 +1164,7 @@ vec4 transition (vec2 uv) {
     smoothstep(0.2, 1.0, progress)
   );
 }
-`,parameters:{amplitude:{type:`float`,default:100},speed:{type:`float`,default:50}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Ripple.glsl`,license:`MIT`},description:`Ripples spread from the center while crossfading`},{id:`gl:SimpleZoom`,name:`Simple Zoom`,glsl:`// Author: 0gust1
+`,parameters:{amplitude:{type:"float",default:100},speed:{type:"float",default:50}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Ripple.glsl",license:"MIT"},description:"Ripples spread from the center while crossfading"},{id:"gl:SimpleZoom",name:"Simple Zoom",glsl:`// Author: 0gust1
 // License: MIT
 // Description: Zooms into the outgoing image, then fades to the incoming one
 // Tags: zoom, fade
@@ -1182,7 +1182,7 @@ vec4 transition (vec2 uv) {
     getToColor(uv),
    smoothstep(nQuick-0.2, 1.0, progress)
   );
-}`,parameters:{zoom_quickness:{type:`float`,default:.8}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/SimpleZoom.glsl`,license:`MIT`},description:`Zooms into the outgoing image, then fades to the incoming one`},{id:`gl:SimpleZoomOut`,name:`Simple Zoom Out`,glsl:`// Author: Tianshuo
+}`,parameters:{zoom_quickness:{type:"float",default:.8}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/SimpleZoom.glsl",license:"MIT"},description:"Zooms into the outgoing image, then fades to the incoming one"},{id:"gl:SimpleZoomOut",name:"Simple Zoom Out",glsl:`// Author: Tianshuo
 // License: MIT
 // Description: The incoming image zooms out into place while fading in
 // Tags: zoom, fade
@@ -1204,7 +1204,7 @@ vec4 transition (vec2 uv) {
    fade?smoothstep(1.0-nQuick, 1., progress):(progress<1.0-nQuick?0.0:1.0)
   );
 }
-`,parameters:{zoom_quickness:{type:`float`,default:.8},fade:{type:`bool`,default:!0}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/SimpleZoomOut.glsl`,license:`MIT`},description:`The incoming image zooms out into place while fading in`},{id:`gl:StereoViewer`,name:`Stereo Viewer`,glsl:`// Tunable parameters
+`,parameters:{zoom_quickness:{type:"float",default:.8},fade:{type:"bool",default:!0}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/SimpleZoomOut.glsl",license:"MIT"},description:"The incoming image zooms out into place while fading in"},{id:"gl:StereoViewer",name:"Stereo Viewer",glsl:`// Tunable parameters
 // How much to zoom (out) for the effect ~ 0.5 - 1.0
 // @range(0.5, 1) How much the images zoom out
 uniform float zoom; // = 0.88
@@ -1417,7 +1417,7 @@ vec4 transition(vec2 uv) {
     return getToColor(p);
   }
 }
-`,parameters:{zoom:{type:`float`,default:.88},corner_radius:{type:`float`,default:.22}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/StereoViewer.glsl`,license:`BSD 2 Clause`},description:`Both images shrink into rounded cards that swap, like a stereo viewer toy`},{id:`gl:Swirl`,name:`Swirl`,glsl:`// License: MIT
+`,parameters:{zoom:{type:"float",default:.88},corner_radius:{type:"float",default:.22}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/StereoViewer.glsl",license:"BSD 2 Clause"},description:"Both images shrink into rounded cards that swap, like a stereo viewer toy"},{id:"gl:Swirl",name:"Swirl",glsl:`// License: MIT
 // Author: Sergey Kosarevsky
 // Description: Both images swirl around the center while crossfading
 // Tags: swirl, rotate, blend
@@ -1450,7 +1450,7 @@ vec4 transition(vec2 UV)
 
 	return mix( C0, C1, T );
 }
-`,parameters:{},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Swirl.glsl`,license:`MIT`},description:`Both images swirl around the center while crossfading`},{id:`gl:WaterDrop`,name:`Water Drop`,glsl:`// Author: Paweł Płóciennik
+`,parameters:{},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Swirl.glsl",license:"MIT"},description:"Both images swirl around the center while crossfading"},{id:"gl:WaterDrop",name:"Water Drop",glsl:`// Author: Paweł Płóciennik
 // License: MIT
 // Description: Ripples spread from the center like a drop falling into water, crossfading to the incoming image
 // Tags: ripple, water, blend
@@ -1470,7 +1470,7 @@ vec4 transition(vec2 p) {
     return mix(getFromColor( p + offset), getToColor( p), progress);
   }
 }
-`,parameters:{amplitude:{type:`float`,default:30},speed:{type:`float`,default:30}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/WaterDrop.glsl`,license:`MIT`},description:`Ripples spread from the center like a drop falling into water, crossfading to the incoming image`},{id:`gl:Wind`,name:`Wind`,glsl:`// Author: gre
+`,parameters:{amplitude:{type:"float",default:30},speed:{type:"float",default:30}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/WaterDrop.glsl",license:"MIT"},description:"Ripples spread from the center like a drop falling into water, crossfading to the incoming image"},{id:"gl:Wind",name:"Wind",glsl:`// Author: gre
 // License: MIT
 // Description: A ragged left-to-right wipe, as if the image was blown away by the wind
 // Tags: wipe, horizontal, noise
@@ -1494,11 +1494,11 @@ vec4 transition (vec2 uv) {
     m
   );
 }
-`,parameters:{size:{type:`float`,default:.2},reversed:{type:`bool`,default:!1}},provenance:{repository:`gl-transitions/gl-transitions`,path:`transitions/Wind.glsl`,license:`MIT`},description:`A ragged left-to-right wipe, as if the image was blown away by the wind`},{id:`copro:anamorphic-flash`,name:`Anamorphic Flash`,glsl:`vec4 transition(vec2 uv) { float flash=pow(sin(progress*3.14159265),12.0); vec2 d=vec2(flash*.025,0.); vec4 c=mix(getFromColor(uv+d),getToColor(uv-d),smoothstep(.35,.65,progress)); return vec4(c.rgb+vec3(.5,.65,.8)*flash,c.a); }`,parameters:{},provenance:{repository:`original`,license:`FSL-1.1-MIT`},description:`Original CoPro cinematic transition.`},{id:`copro:shutter-bands`,name:`Shutter Bands`,glsl:`vec4 transition(vec2 uv) { float row=floor(uv.y*12.0); float phase=fract(row*.618); float p=smoothstep(phase*.3, .7+phase*.3,progress); return mix(getFromColor(uv),getToColor(uv),step(fract(uv.x*3.0),p)); }`,parameters:{},provenance:{repository:`original`,license:`FSL-1.1-MIT`},description:`Original CoPro cinematic transition.`},{id:`copro:focus-pull`,name:`Focus Pull`,glsl:`vec4 transition(vec2 uv) { float b=sin(progress*3.14159265)*.012; vec4 a=vec4(0.); vec4 c=vec4(0.); for(int i=0;i<9;i++){float x=float(i)-4.;vec2 o=vec2(x*b,0.);a+=getFromColor(uv+o)/9.;c+=getToColor(uv+o)/9.;}return mix(a,c,smoothstep(.25,.75,progress)); }`,parameters:{},provenance:{repository:`original`,license:`FSL-1.1-MIT`},description:`Original CoPro cinematic transition.`},{id:`copro:blueprint-reveal`,name:`Blueprint Reveal`,glsl:`vec4 transition(vec2 uv) { vec2 cell=floor(uv*vec2(16.,9.));float d=(cell.x+cell.y)/25.;float p=smoothstep(d*.6,d*.6+.4,progress);float edge=sin(p*3.14159265)*.16;return mix(getFromColor(uv),getToColor(uv),p)+vec4(.2,.8,.7,0.)*edge; }`,parameters:{},provenance:{repository:`original`,license:`FSL-1.1-MIT`},description:`Original CoPro cinematic transition.`}]),t=e=>structuredClone(e),n={fade:`gl:Fade`,crossfade:`gl:Fade`,wipe:`gl:DirectionalWipe`,zoom:`gl:SimpleZoom`,glitch:`gl:GlitchMemories`};function r(r){let i=e.find(e=>e.id===(n[r]||r));if(!i)throw Error(`copro_transition_unknown:`+r);return t(i)}function i(e={}){if(typeof e==`string`&&(e={type:e}),e.type===`none`)return{type:`none`,durationUs:0,parameters:{}};let n=r(e.type),i=e.durationUs??3e5;if(!Number.isSafeInteger(i)||i<=0)throw RangeError(`copro_transition_duration_invalid`);if(e.parameters!==void 0&&(!e.parameters||typeof e.parameters!=`object`||Array.isArray(e.parameters)))throw TypeError(`copro_transition_parameters_invalid`);let a={};for(let t of Object.keys(e.parameters||{}))if(!Object.hasOwn(n.parameters,t))throw Error(`copro_transition_parameter_unknown:`+t);for(let[r,i]of Object.entries(n.parameters)){let n=e.parameters?.[r]??t(i.default),o=i.type===`int`||i.type.startsWith(`ivec`),s=e=>Number.isFinite(e)&&Math.abs(e)<=1e6&&(!o||Number.isSafeInteger(e));if(i.type===`bool`?typeof n!=`boolean`:i.type.includes(`vec`)?!Array.isArray(n)||n.length!==Number(i.type.at(-1))||!n.every(s):!s(n))throw TypeError(`copro_transition_parameter_invalid:`+r);a[r]=n}return{type:n.id,durationUs:i,parameters:a}}function a(e,t){if(!Number.isSafeInteger(e)||!Number.isSafeInteger(t)||t<=0)throw RangeError(`copro_transition_time_invalid`);return Math.max(0,Math.min(1,e/t))}var o=`attribute vec2 position; varying vec2 vUv; void main(){vUv=(position+1.0)*0.5;gl_Position=vec4(position,0.0,1.0);}`;function s(e,t=`highp`){return`precision ${t} float; varying vec2 vUv;
+`,parameters:{size:{type:"float",default:.2},reversed:{type:"bool",default:!1}},provenance:{repository:"gl-transitions/gl-transitions",path:"transitions/Wind.glsl",license:"MIT"},description:"A ragged left-to-right wipe, as if the image was blown away by the wind"},{id:"copro:anamorphic-flash",name:"Anamorphic Flash",glsl:"vec4 transition(vec2 uv) { float flash=pow(sin(progress*3.14159265),12.0); vec2 d=vec2(flash*.025,0.); vec4 c=mix(getFromColor(uv+d),getToColor(uv-d),smoothstep(.35,.65,progress)); return vec4(c.rgb+vec3(.5,.65,.8)*flash,c.a); }",parameters:{},provenance:{repository:"original",license:"FSL-1.1-MIT"},description:"Original CoPro cinematic transition."},{id:"copro:shutter-bands",name:"Shutter Bands",glsl:"vec4 transition(vec2 uv) { float row=floor(uv.y*12.0); float phase=fract(row*.618); float p=smoothstep(phase*.3, .7+phase*.3,progress); return mix(getFromColor(uv),getToColor(uv),step(fract(uv.x*3.0),p)); }",parameters:{},provenance:{repository:"original",license:"FSL-1.1-MIT"},description:"Original CoPro cinematic transition."},{id:"copro:focus-pull",name:"Focus Pull",glsl:"vec4 transition(vec2 uv) { float b=sin(progress*3.14159265)*.012; vec4 a=vec4(0.); vec4 c=vec4(0.); for(int i=0;i<9;i++){float x=float(i)-4.;vec2 o=vec2(x*b,0.);a+=getFromColor(uv+o)/9.;c+=getToColor(uv+o)/9.;}return mix(a,c,smoothstep(.25,.75,progress)); }",parameters:{},provenance:{repository:"original",license:"FSL-1.1-MIT"},description:"Original CoPro cinematic transition."},{id:"copro:blueprint-reveal",name:"Blueprint Reveal",glsl:"vec4 transition(vec2 uv) { vec2 cell=floor(uv*vec2(16.,9.));float d=(cell.x+cell.y)/25.;float p=smoothstep(d*.6,d*.6+.4,progress);float edge=sin(p*3.14159265)*.16;return mix(getFromColor(uv),getToColor(uv),p)+vec4(.2,.8,.7,0.)*edge; }",parameters:{},provenance:{repository:"original",license:"FSL-1.1-MIT"},description:"Original CoPro cinematic transition."}]),P=n=>structuredClone(n),O={fade:"gl:Fade",crossfade:"gl:Fade",wipe:"gl:DirectionalWipe",zoom:"gl:SimpleZoom",glitch:"gl:GlitchMemories"};function C(n){const i=k.find(e=>e.id===(O[n]||n));if(!i)throw new Error("copro_transition_unknown:"+n);return P(i)}function z(n={}){if(typeof n=="string"&&(n={type:n}),n.type==="none")return{type:"none",durationUs:0,parameters:{}};const i=C(n.type),e=n.durationUs??3e5;if(!Number.isSafeInteger(e)||e<=0)throw new RangeError("copro_transition_duration_invalid");if(n.parameters!==void 0&&(!n.parameters||typeof n.parameters!="object"||Array.isArray(n.parameters)))throw new TypeError("copro_transition_parameters_invalid");const f={};for(const c of Object.keys(n.parameters||{}))if(!Object.hasOwn(i.parameters,c))throw new Error("copro_transition_parameter_unknown:"+c);for(const[c,s]of Object.entries(i.parameters)){const p=n.parameters?.[c]??P(s.default),g=s.type==="int"||s.type.startsWith("ivec"),h=u=>Number.isFinite(u)&&Math.abs(u)<=1e6&&(!g||Number.isSafeInteger(u));if(s.type==="bool"?typeof p!="boolean":s.type.includes("vec")?!Array.isArray(p)||p.length!==Number(s.type.at(-1))||!p.every(h):!h(p))throw new TypeError("copro_transition_parameter_invalid:"+c);f[c]=p}return{type:i.id,durationUs:e,parameters:f}}function M(n,i){if(!Number.isSafeInteger(n)||!Number.isSafeInteger(i)||i<=0)throw new RangeError("copro_transition_time_invalid");return Math.max(0,Math.min(1,n/i))}const L="attribute vec2 position; varying vec2 vUv; void main(){vUv=(position+1.0)*0.5;gl_Position=vec4(position,0.0,1.0);}";function N(n,i="highp"){return`precision ${i} float; varying vec2 vUv;
  uniform sampler2D fromTexture; uniform sampler2D toTexture;
  uniform float progress; uniform float ratio; uniform float fromRatio; uniform float toRatio;
  vec2 coverUv(vec2 uv,float imageRatio){return (uv-.5)*vec2(min(ratio/imageRatio,1.0),min(imageRatio/ratio,1.0))+.5;}
  vec4 getFromColor(vec2 uv){return texture2D(fromTexture,coverUv(uv,fromRatio));}
  vec4 getToColor(vec2 uv){return texture2D(toTexture,coverUv(uv,toRatio));}
- ${e.glsl}
- void main(){if(progress<=0.0){gl_FragColor=getFromColor(vUv);}else if(progress>=1.0){gl_FragColor=getToColor(vUv);}else{gl_FragColor=transition(vUv);}}`}function c(e,{contextAttributes:t={}}={}){let n=e?.getContext?.(`webgl`,{alpha:!0,premultipliedAlpha:!1,preserveDrawingBuffer:!0,...t});if(!n)throw Error(`copro_webgl_unavailable`);let c=!1,l=!1,u,d=[],f=new Map;function p(e,t){let r=n.createShader(e);if(n.shaderSource(r,t),n.compileShader(r),!n.getShaderParameter(r,n.COMPILE_STATUS)){let e=n.getShaderInfoLog(r);throw n.deleteShader(r),Error(`copro_shader_compile_failed:`+e)}return r}function m(){u=n.createBuffer(),n.bindBuffer(n.ARRAY_BUFFER,u),n.bufferData(n.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),n.STATIC_DRAW),d=[0,1].map(()=>{let e=n.createTexture();return n.bindTexture(n.TEXTURE_2D,e),n.texParameteri(n.TEXTURE_2D,n.TEXTURE_WRAP_S,n.CLAMP_TO_EDGE),n.texParameteri(n.TEXTURE_2D,n.TEXTURE_WRAP_T,n.CLAMP_TO_EDGE),n.texParameteri(n.TEXTURE_2D,n.TEXTURE_MIN_FILTER,n.LINEAR),n.texParameteri(n.TEXTURE_2D,n.TEXTURE_MAG_FILTER,n.LINEAR),e})}function h(e){if(f.has(e.id))return f.get(e.id);let t=n.getShaderPrecisionFormat(n.FRAGMENT_SHADER,n.HIGH_FLOAT)?.precision?`highp`:`mediump`,r,i,a;try{if(r=p(n.VERTEX_SHADER,o),i=p(n.FRAGMENT_SHADER,s(e,t)),a=n.createProgram(),n.attachShader(a,r),n.attachShader(a,i),n.linkProgram(a),!n.getProgramParameter(a,n.LINK_STATUS))throw Error(`copro_shader_link_failed:`+n.getProgramInfoLog(a));return f.set(e.id,a),a}catch(e){throw a&&n.deleteProgram(a),e}finally{r&&n.deleteShader(r),i&&n.deleteShader(i)}}function g(){if(c)throw Error(`copro_transition_renderer_disposed`);if(l||n.isContextLost())throw Error(`copro_webgl_context_lost`)}function _(e){e.preventDefault(),l=!0,f.clear()}function v(){c||(l=!1,m())}return e.addEventListener?.(`webglcontextlost`,_),e.addEventListener?.(`webglcontextrestored`,v),m(),Object.freeze({compile(e){return g(),h(r(e)),{type:e,compiled:!0}},render({transition:e,from:t,to:o,timeUs:s=0}){g();let c=i(e),l=r(c.type===`none`?`gl:Fade`:c.type),f=h(l);n.useProgram(f);let p=n.drawingBufferWidth,m=n.drawingBufferHeight;if(p<1||m<1)throw Error(`copro_transition_canvas_empty`);n.viewport(0,0,p,m),n.bindBuffer(n.ARRAY_BUFFER,u);let _=n.getAttribLocation(f,`position`);n.enableVertexAttribArray(_),n.vertexAttribPointer(_,2,n.FLOAT,!1,0,0);let v=(e,t,...r)=>{let i=n.getUniformLocation(f,e);i!==null&&n[t](i,...r)};for(let[e,r]of[t,o].entries()){let t=r?.displayWidth||r?.videoWidth||r?.naturalWidth||r?.width,i=r?.displayHeight||r?.videoHeight||r?.naturalHeight||r?.height;if(!(t>0&&i>0))throw Error(`copro_transition_source_invalid`);n.activeTexture(n.TEXTURE0+e),n.bindTexture(n.TEXTURE_2D,d[e]),n.pixelStorei(n.UNPACK_FLIP_Y_WEBGL,!0),n.texImage2D(n.TEXTURE_2D,0,n.RGBA,n.RGBA,n.UNSIGNED_BYTE,r),v(e?`toTexture`:`fromTexture`,`uniform1i`,e),v(e?`toRatio`:`fromRatio`,`uniform1f`,t/i)}let y=c.type===`none`?1:a(s,c.durationUs);v(`progress`,`uniform1f`,y),v(`ratio`,`uniform1f`,p/m);for(let[e,t]of Object.entries(l.parameters)){let n=c.parameters[e]??t.default;t.type.includes(`vec`)?v(e,`uniform${t.type.at(-1)}${t.type.startsWith(`i`)?`i`:`f`}v`,n):v(e,t.type===`float`?`uniform1f`:`uniform1i`,t.type===`bool`?Number(n):n)}n.disable(n.BLEND),n.drawArrays(n.TRIANGLE_STRIP,0,4);let b=n.getError();if(b!==n.NO_ERROR)throw Error(`copro_webgl_error:`+b);return{type:c.type,progress:y,width:p,height:m}},dispose(){if(!c){c=!0,e.removeEventListener?.(`webglcontextlost`,_),e.removeEventListener?.(`webglcontextrestored`,v);for(let e of f.values())n.deleteProgram(e);for(let e of d)n.deleteTexture(e);n.deleteBuffer(u),f.clear()}}})}export{c as createCoProTransitionRenderer};
+ ${n.glsl}
+ void main(){if(progress<=0.0){gl_FragColor=getFromColor(vUv);}else if(progress>=1.0){gl_FragColor=getToColor(vUv);}else{gl_FragColor=transition(vUv);}}`}function U(n,{contextAttributes:i={}}={}){const e=n?.getContext?.("webgl",{alpha:!0,premultipliedAlpha:!1,preserveDrawingBuffer:!0,...i});if(!e)throw new Error("copro_webgl_unavailable");let f=!1,c=!1,s,p=[];const g=new Map;function h(o,T){const a=e.createShader(o);if(e.shaderSource(a,T),e.compileShader(a),!e.getShaderParameter(a,e.COMPILE_STATUS)){const d=e.getShaderInfoLog(a);throw e.deleteShader(a),new Error("copro_shader_compile_failed:"+d)}return a}function u(){s=e.createBuffer(),e.bindBuffer(e.ARRAY_BUFFER,s),e.bufferData(e.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),e.STATIC_DRAW),p=[0,1].map(()=>{const o=e.createTexture();return e.bindTexture(e.TEXTURE_2D,o),e.texParameteri(e.TEXTURE_2D,e.TEXTURE_WRAP_S,e.CLAMP_TO_EDGE),e.texParameteri(e.TEXTURE_2D,e.TEXTURE_WRAP_T,e.CLAMP_TO_EDGE),e.texParameteri(e.TEXTURE_2D,e.TEXTURE_MIN_FILTER,e.LINEAR),e.texParameteri(e.TEXTURE_2D,e.TEXTURE_MAG_FILTER,e.LINEAR),o})}function I(o){if(g.has(o.id))return g.get(o.id);const T=e.getShaderPrecisionFormat(e.FRAGMENT_SHADER,e.HIGH_FLOAT)?.precision?"highp":"mediump";let a,d,r;try{if(a=h(e.VERTEX_SHADER,L),d=h(e.FRAGMENT_SHADER,N(o,T)),r=e.createProgram(),e.attachShader(r,a),e.attachShader(r,d),e.linkProgram(r),!e.getProgramParameter(r,e.LINK_STATUS))throw new Error("copro_shader_link_failed:"+e.getProgramInfoLog(r));return g.set(o.id,r),r}catch(y){throw r&&e.deleteProgram(r),y}finally{a&&e.deleteShader(a),d&&e.deleteShader(d)}}function A(){if(f)throw new Error("copro_transition_renderer_disposed");if(c||e.isContextLost())throw new Error("copro_webgl_context_lost")}function E(o){o.preventDefault(),c=!0,g.clear()}function D(){f||(c=!1,u())}return n.addEventListener?.("webglcontextlost",E),n.addEventListener?.("webglcontextrestored",D),u(),Object.freeze({compile(o){return A(),I(C(o)),{type:o,compiled:!0}},render({transition:o,from:T,to:a,timeUs:d=0}){A();const r=z(o),y=C(r.type==="none"?"gl:Fade":r.type),_=I(y);e.useProgram(_);const x=e.drawingBufferWidth,w=e.drawingBufferHeight;if(x<1||w<1)throw new Error("copro_transition_canvas_empty");e.viewport(0,0,x,w),e.bindBuffer(e.ARRAY_BUFFER,s);const S=e.getAttribLocation(_,"position");e.enableVertexAttribArray(S),e.vertexAttribPointer(S,2,e.FLOAT,!1,0,0);const v=(l,t,...m)=>{const b=e.getUniformLocation(_,l);b!==null&&e[t](b,...m)};for(const[l,t]of[T,a].entries()){const m=t?.displayWidth||t?.videoWidth||t?.naturalWidth||t?.width,b=t?.displayHeight||t?.videoHeight||t?.naturalHeight||t?.height;if(!(m>0&&b>0))throw new Error("copro_transition_source_invalid");e.activeTexture(e.TEXTURE0+l),e.bindTexture(e.TEXTURE_2D,p[l]),e.pixelStorei(e.UNPACK_FLIP_Y_WEBGL,!0),e.texImage2D(e.TEXTURE_2D,0,e.RGBA,e.RGBA,e.UNSIGNED_BYTE,t),v(l?"toTexture":"fromTexture","uniform1i",l),v(l?"toRatio":"fromRatio","uniform1f",m/b)}const R=r.type==="none"?1:M(d,r.durationUs);v("progress","uniform1f",R),v("ratio","uniform1f",x/w);for(const[l,t]of Object.entries(y.parameters)){const m=r.parameters[l]??t.default;t.type.includes("vec")?v(l,`uniform${t.type.at(-1)}${t.type.startsWith("i")?"i":"f"}v`,m):v(l,t.type==="float"?"uniform1f":"uniform1i",t.type==="bool"?Number(m):m)}e.disable(e.BLEND),e.drawArrays(e.TRIANGLE_STRIP,0,4);const F=e.getError();if(F!==e.NO_ERROR)throw new Error("copro_webgl_error:"+F);return{type:r.type,progress:R,width:x,height:w}},dispose(){if(!f){f=!0,n.removeEventListener?.("webglcontextlost",E),n.removeEventListener?.("webglcontextrestored",D);for(const o of g.values())e.deleteProgram(o);for(const o of p)e.deleteTexture(o);e.deleteBuffer(s),g.clear()}}})}export{k as TRANSITIONS,U as createCoProTransitionRenderer,C as findTransition,z as normalizeTransition,N as transitionFragmentSource,M as transitionProgress};
