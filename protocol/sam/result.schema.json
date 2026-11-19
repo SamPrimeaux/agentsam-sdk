@@ -54,6 +54,7 @@
     "usage": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["provider_calls"],
       "properties": {
         "provider_calls": { "type": "integer", "minimum": 0 },
         "model_calls": { "type": "integer", "minimum": 0 },
