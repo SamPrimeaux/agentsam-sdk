@@ -65,7 +65,8 @@ export const collectionsApi = {
     return (result.collections || []).map(normalize);
   },
   async products(): Promise<Product[]> {
-    return accepted(await adminFetch<Ok & { products: Product[] }>(scoped("/api/admin/products"))).products || [];
+    const path = collectionSiteId() ? "/api/admin/products" : "/api/admin/products?scope=account";
+    return accepted(await adminFetch<Ok & { products: Product[] }>(scoped(path))).products || [];
   },
   async get(id: string): Promise<CollectionDetail> {
     const path = `/api/admin/collections/${encodeURIComponent(id)}`;
