@@ -22,6 +22,19 @@ const selection = `SELECT c.*,
   (SELECT count(*) FROM cms_collection_items i WHERE i.collection_id=c.id
     AND i.site_id=c.site_id AND i.account_id=c.account_id AND i.item_type='product' AND i.status='active') AS product_count
   FROM cms_collections c`;
+// Account-level collection overview; require both the collection and site to
+// belong to the authenticated account. Mutations still use collectionScope().
+export async function listAccountCmsCollections(env, accountId) {
+  if (!accountId) fail('cms_collection_account_required', 403);
+  const { results = [] } = await env.DB.prepare(
+    "SELECT listed.*, s.name AS site_name FROM (" + selection + ") AS listed" +
+    " JOIN cms_sites s ON s.id=listed.site_id AND s.account_id=listed.account_id" +
+    " WHERE listed.account_id=? AND s.account_id=?" +
+    " ORDER BY listed.sort_order,lower(listed.name),listed.id"
+  ).bind(accountId, accountId).all();
+  return results.map(collectionJson);
+}
+
 export async function listCmsCollections(env,scope,{publicOnly=false}={}) {
   const {results=[]}=await env.DB.prepare(selection+
     " WHERE c.site_id=? AND c.account_id=?"+(publicOnly?" AND c.status='active' AND c.visibility='public'":"")+
@@ -198,8 +211,13 @@ export async function handleCollectionApi(request,env,url,context) {
   const match=url.pathname.match(/^\/api\/admin\/(?:cms\/)?collections(?:\/([A-Za-z0-9_-]+)(\/items)?)?$/);
   if(!match)return null;
   try {
-    const scope=await collectionScope(env,{accountId:context.accountId,siteId:url.searchParams.get('site_id')});
     const [,id,items]=match;
+    if (!id && request.method==='GET' && url.searchParams.get('scope')==='account' &&
+        !url.searchParams.has('site_id')) {
+      return Response.json({ok:true,scope:'account',site_id:null,
+        collections:await listAccountCmsCollections(env,context.accountId)});
+    }
+    const scope=await collectionScope(env,{accountId:context.accountId,siteId:url.searchParams.get('site_id')});
     if(!id&&request.method==='GET')return Response.json({ok:true,site_id:scope.id,collections:await listCmsCollections(env,scope)});
     if(!id&&request.method==='POST')return Response.json({ok:true,site_id:scope.id,collection:await saveCmsCollection(env,scope,await request.json())},{status:201});
     if(id&&!items&&request.method==='GET') {

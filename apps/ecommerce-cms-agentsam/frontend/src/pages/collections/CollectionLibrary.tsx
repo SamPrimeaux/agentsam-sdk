@@ -26,7 +26,7 @@ export default function CollectionLibrary() {
   async function duplicate(c: Collection) {
     setBusy(c.id);setError("");setNotice("");
     try{
-      const data=await collectionsApi.get(c.id);
+      const data=await collectionsApi.get(c.id,c.site_id);
       const form=parseCollection(data.collection,data.rules);
       form.title=`${form.title} (Copy)`;
       const base=slugify(`${form.slug}-copy`);
@@ -34,10 +34,10 @@ export default function CollectionLibrary() {
       let proposed=base;
       while(collections.some(item=>item.slug===proposed))proposed=slugify(`${base}-${++suffix}`);
       form.slug=proposed;form.status="draft";
-      const clone=await collectionsApi.save(form,undefined,"draft");
-      if(data.product_ids.length)await collectionsApi.assign(clone.id,data.product_ids);
+      const clone=await collectionsApi.save(form,undefined,"draft",c.site_id);
+      if(data.product_ids.length)await collectionsApi.assign(clone.id,data.product_ids,c.site_id);
       if(form.rules.mode!=="manual")await collectionsApi.saveRules(clone.id,form.rules);
-      navigate(collectionHref(`/collections/${clone.id}`));
+      navigate(collectionHref(`/collections/${clone.id}`,c.site_id));
     }catch(e){setError(e instanceof Error?e.message:"Couldn't duplicate collection");}
     finally{setBusy(null);}
   }
@@ -45,8 +45,8 @@ export default function CollectionLibrary() {
     if (!window.confirm(`Archive "${c.title}"? The storefront collection will be hidden, but its products remain intact.`)) return;
     setBusy(c.id);setError("");setNotice("");
     try{
-      const data=await collectionsApi.get(c.id);
-      await collectionsApi.save({...parseCollection(data.collection),status:"archived"},c.id,"archived");
+      const data=await collectionsApi.get(c.id,c.site_id);
+      await collectionsApi.save({...parseCollection(data.collection),status:"archived"},c.id,"archived",c.site_id);
       setCollections(items=>items.map(item=>item.id===c.id?{...item,status:"archived"}:item));
       setNotice(`${c.title} archived.`);
     }catch(e){setError(e instanceof Error?e.message:"Couldn't archive collection");}
@@ -60,10 +60,10 @@ export default function CollectionLibrary() {
         <Link className="cs-button primary cs-new-button" to={collectionHref("/collections/new")}><span aria-hidden="true">＋</span> Create collection</Link>
       </header>
       <div className="cs-library-metrics">
-        <div><span>Total collections</span><strong>{collections.length}</strong></div>
-        <div><span>Published</span><strong>{collections.filter(c=>c.status==="active").length}</strong></div>
-        <div><span>Drafts</span><strong>{collections.filter(c=>c.status==="draft").length}</strong></div>
-        <div><span>Product assignments</span><strong>{collections.reduce((total,c)=>total+Number(c.product_count||0),0)}</strong></div>
+        <div><span>Total collections</span><strong>{error?"—":loading?"…":collections.length}</strong></div>
+        <div><span>Published</span><strong>{error?"—":loading?"…":collections.filter(c=>c.status==="active").length}</strong></div>
+        <div><span>Drafts</span><strong>{error?"—":loading?"…":collections.filter(c=>c.status==="draft").length}</strong></div>
+        <div><span>Product assignments</span><strong>{error?"—":loading?"…":collections.reduce((total,c)=>total+Number(c.product_count||0),0)}</strong></div>
       </div>
       {(error||notice)&&<div className={`cs-alert ${error?"error":"success"}`} role="status">{error||notice}</div>}
       <section className="cs-panel cs-library-panel">
@@ -71,13 +71,13 @@ export default function CollectionLibrary() {
           <div className="cs-input-search"><StudioIcon name="search" size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search collections" aria-label="Search collections"/></div>
           <div className="cs-segmented cs-library-filters" aria-label="Filter collections">{STATUSES.map(f=><button key={f.value} type="button" className={status===f.value?"active":""} onClick={()=>setStatus(f.value)}>{f.label}</button>)}</div>
         </div>
-        {loading?<div className="cs-loading">Loading your collection library…</div>:visible.length?<div className="cs-library-list">{visible.map(c=>{
+        {loading?<div className="cs-loading">Loading your collection library…</div>:error?<div className="cs-library-empty" role="alert"><h2>Collections unavailable</h2><p>Could not verify your account's collection inventory. No records were changed.</p></div>:visible.length?<div className="cs-library-list">{visible.map(c=>{
           const image=safeMediaUrl(c.image_url);
           return <article className="cs-library-row" key={c.id}>
-            <Link className="cs-library-thumbnail" to={collectionHref(`/collections/${c.id}`)}>{image?<img src={image} alt="" loading="lazy"/>:<StudioIcon name="layers" size={29}/>}</Link>
-            <div className="cs-library-info"><Link to={collectionHref(`/collections/${c.id}`)}>{c.title}</Link><span>{c.product_count||0} products · Updated {c.updated_at?.slice(0,10)||"recently"}</span><small>{c.description||"No description yet"}</small></div>
+            <Link className="cs-library-thumbnail" to={collectionHref(`/collections/${c.id}`,c.site_id)}>{image?<img src={image} alt="" loading="lazy"/>:<StudioIcon name="layers" size={29}/>}</Link>
+            <div className="cs-library-info"><Link to={collectionHref(`/collections/${c.id}`,c.site_id)}>{c.title}</Link><span>{c.site_name? `${c.site_name} · ` : ""}{c.product_count||0} products · Updated {c.updated_at?.slice(0,10)||"recently"}</span><small>{c.description||"No description yet"}</small></div>
             <span className={`cs-status-chip ${c.status==="active"?"active":""}`}>{c.status==="active"?"Published":c.status}</span>
-            <div className="cs-library-actions"><Link className="cs-button small" to={collectionHref(`/collections/${c.id}`)}>Edit</Link>
+            <div className="cs-library-actions"><Link className="cs-button small" to={collectionHref(`/collections/${c.id}`,c.site_id)}>Edit</Link>
               {c.status==="active"&&<a className="cs-icon-button" title="View storefront" aria-label={`Preview ${c.title}`} href={`/shop/collections/${encodeURIComponent(c.slug)}`} target="_blank" rel="noreferrer"><StudioIcon name="image" size={16}/></a>}
               <button type="button" className="cs-icon-button" title="Duplicate" aria-label={`Duplicate ${c.title}`} disabled={busy!==null} onClick={()=>void duplicate(c)}><StudioIcon name="layers" size={16}/></button>
               {c.status!=="archived"&&<button type="button" className="cs-icon-button" title="Archive" aria-label={`Archive ${c.title}`} disabled={busy!==null} onClick={()=>void archive(c)}><StudioIcon name="close" size={16}/></button>}

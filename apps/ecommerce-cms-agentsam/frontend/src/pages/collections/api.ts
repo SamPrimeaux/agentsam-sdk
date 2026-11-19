@@ -7,21 +7,30 @@ import { normalizeCollectionRules } from "@inneranimalmedia/agentsam-merch/colle
 // This is its site-scoped AgentSam CMS adapter; never write legacy store_* tables.
 type Ok = { ok: boolean; error?: string };
 type CmsRow = {
-  id: string; name: string; slug: string; description?: string; status: CollectionStatus;
+  id: string; site_id?: string; site_name?: string; name: string; slug: string; description?: string; status: CollectionStatus;
   visibility?: string; sort_order?: number; seo_title?: string | null; seo_description?: string | null;
   image_url?: string | null; metadata?: Record<string, unknown>; metadata_json?: string;
-  product_count?: number; updated_at?: string; created_at?: string;
+  product_count?: number; updated_at?: string | number; created_at?: string | number;
 };
 type CmsItem = { item_type: string; item_ref: string; status: string; sort_order: number };
 type CollectionDetail = { collection: Collection; product_ids: number[]; rules: MerchCollectionRules };
-const revisions = new Map<string, string>();
+const revisions = new Map<string, string | number>();
+function displayTimestamp(value?: string | number): string | undefined {
+  if (value == null) return undefined;
+  const numeric = Number(value);
+  if (String(value).trim() && Number.isFinite(numeric) && numeric > 0) {
+    const iso = new Date(numeric < 100_000_000_000 ? numeric * 1000 : numeric);
+    return Number.isNaN(iso.getTime()) ? undefined : iso.toISOString();
+  }
+  return typeof value === "string" ? value : undefined;
+}
 const MANUAL_RULES: MerchCollectionRules = { mode: "manual", match: "all", conditions: [], excludedIds: [] };
 function accepted<T extends Ok>(result: T): T {
   if (!result.ok) throw new Error(result.error || "Request was not completed");
   return result;
 }
-function scoped(path: string): string {
-  const siteId = collectionSiteId();
+function scoped(path: string, siteIdOverride?: string | null): string {
+  const siteId = siteIdOverride ?? collectionSiteId();
   if (!siteId) return path;
   const url = new URL(path, window.location.origin);
   url.searchParams.set("site_id", siteId);
@@ -38,19 +47,21 @@ function normalize(row: CmsRow): Collection {
   const metadata = Object.keys(object(row.metadata)).length ? object(row.metadata) : object(row.metadata_json);
   if (row.updated_at) revisions.set(row.id, row.updated_at);
   return {
-    id: row.id, slug: row.slug, title: row.name, description: row.description || "",
+    id: row.id, site_id: row.site_id, site_name: row.site_name,
+    slug: row.slug, title: row.name, description: row.description || "",
     eyebrow: String(metadata.eyebrow || ""), image_url: row.image_url || String(metadata.image_url || "") || null,
     accent_color: String(metadata.accent_color || "#5a7df7"), status: row.status,
     sort_order: row.sort_order || 0, seo_title: row.seo_title || null, seo_description: row.seo_description || null,
     hero_settings_json: JSON.stringify(object(metadata.merch_hero)),
     product_plan_json: JSON.stringify(Array.isArray(metadata.merch_plan) ? metadata.merch_plan : []),
-    product_count: row.product_count || 0, updated_at: row.updated_at, created_at: row.created_at,
+    product_count: row.product_count || 0,
+    updated_at: displayTimestamp(row.updated_at), created_at: displayTimestamp(row.created_at),
   };
 }
-async function items(id: string): Promise<CmsItem[]> {
+async function items(id: string, siteId?: string): Promise<CmsItem[]> {
   const all: CmsItem[] = [];
   for (let offset = 0; offset < 1000; offset += 100) {
-    const url = scoped(`/api/admin/collections/${encodeURIComponent(id)}/items?limit=100&offset=${offset}`);
+    const url = scoped(`/api/admin/collections/${encodeURIComponent(id)}/items?limit=100&offset=${offset}`, siteId);
     const page = accepted(await adminFetch<Ok & { items: CmsItem[] }>(url)).items || [];
     all.push(...page);
     if (page.length < 100) break;
@@ -59,16 +70,18 @@ async function items(id: string): Promise<CmsItem[]> {
 }
 export const collectionsApi = {
   async list(): Promise<Collection[]> {
-    const result = accepted(await adminFetch<Ok & { collections: CmsRow[] }>(scoped("/api/admin/collections")));
+    const path = collectionSiteId() ? "/api/admin/collections" : "/api/admin/collections?scope=account";
+    const result = accepted(await adminFetch<Ok & { collections: CmsRow[] }>(scoped(path)));
     return (result.collections || []).map(normalize);
   },
   async products(): Promise<Product[]> {
-    return accepted(await adminFetch<Ok & { products: Product[] }>(scoped("/api/admin/products"))).products || [];
+    const path = collectionSiteId() ? "/api/admin/products" : "/api/admin/products?scope=account";
+    return accepted(await adminFetch<Ok & { products: Product[] }>(scoped(path))).products || [];
   },
-  async get(id: string): Promise<CollectionDetail> {
+  async get(id: string, siteId?: string): Promise<CollectionDetail> {
     const path = `/api/admin/collections/${encodeURIComponent(id)}`;
     const [result, members] = await Promise.all([
-      adminFetch<Ok & { collection: CmsRow }>(scoped(path)), items(id),
+      adminFetch<Ok & { collection: CmsRow }>(scoped(path, siteId)), items(id, siteId),
     ]);
     const row = accepted(result).collection;
     const metadata = Object.keys(object(row.metadata)).length ? object(row.metadata) : object(row.metadata_json);
@@ -82,10 +95,10 @@ export const collectionsApi = {
       rules,
     };
   },
-  async save(form: CollectionForm, id?: string, status?: CollectionStatus): Promise<Collection> {
+  async save(form: CollectionForm, id?: string, status?: CollectionStatus, siteId?: string): Promise<Collection> {
     const payload = serializeCollection(form, status);
     const path = id ? `/api/admin/collections/${encodeURIComponent(id)}` : "/api/admin/collections";
-    const result = accepted(await adminFetch<Ok & { collection: CmsRow }>(scoped(path), {
+    const result = accepted(await adminFetch<Ok & { collection: CmsRow }>(scoped(path, siteId), {
       method: id ? "PUT" : "POST",
       body: JSON.stringify({ ...payload, eyebrow: form.eyebrow, merch_rules: form.rules,
         ...(id && revisions.has(id) ? { expected_updated_at: revisions.get(id) } : {}) }),
@@ -97,9 +110,9 @@ export const collectionsApi = {
     // compatibility no-op for the FNF editor's former separate rules endpoint.
     return { ok: true, rules };
   },
-  async assign(id: string, productIds: number[]) {
+  async assign(id: string, productIds: number[], siteId?: string) {
     const response = accepted(await adminFetch<Ok & { items: CmsItem[] }>(
-      scoped(`/api/admin/collections/${encodeURIComponent(id)}/items`),
+      scoped(`/api/admin/collections/${encodeURIComponent(id)}/items`, siteId),
       { method: "PUT", body: JSON.stringify({
         items: productIds.map(item_ref => ({ item_type: "product", item_ref: String(item_ref), status: "active" })),
       }) },

@@ -117,10 +117,9 @@ renderShell('/admin/products', `
   </div>
 `);
 
+// A store is an optional filter for the account overview, not a prerequisite.
+// Never silently narrow the account's inventory using a stale saved site.
 let catalogSiteId=new URLSearchParams(location.search).get('site_id');
-if (!catalogSiteId) {
-  try { catalogSiteId=localStorage.getItem('agentsam.cms.selected-site.v1') || null; } catch {}
-}
 async function ensureCatalogSite() {
   if (catalogSiteId) return catalogSiteId;
   const data=await window.adminFetch('/api/admin/cms/sites');
@@ -134,16 +133,17 @@ function catalogFetch(path,options) {
   if(catalogSiteId)url.searchParams.set('site_id',catalogSiteId);
   return window.adminFetch(url.pathname+url.search,options);
 }
-function catalogLink(path) {
+function catalogLink(path, productSiteId=null) {
   const url=new URL(path,location.origin);
-  if(catalogSiteId)url.searchParams.set('site_id',catalogSiteId);
+  const siteId=productSiteId || catalogSiteId;
+  if(siteId)url.searchParams.set('site_id',siteId);
   return url.pathname+url.search;
 }
 document.querySelectorAll('.product-catalog-tabs a,.admin-toolbar a').forEach(a=>a.href=catalogLink(a.getAttribute('href')));
 function escapeProduct(s) { return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 function productThumb(p) {
   const url=p.thumbnail_url||p.image_url||p.primary_image_url||p.images?.[0]?.url;
-  if(typeof url==='string' && (/^https:\/\/[^\s]+$/i.test(url)||url.startsWith('/admin/'))) return '<img src="'+escapeProduct(url)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">';
+  if(typeof url==='string' && (/^https:\/\/[^\s]+$/i.test(url)||url.startsWith('/admin/'))) return '<img src="'+escapeProduct(url)+'" alt="" loading="lazy" class="admin-product-thumbnail-image">';
   return '<span style="font-size:11px;color:#aaa">—</span>';
 }
 function badgeFor(status) {
@@ -172,9 +172,8 @@ document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
   }
   try {
     document.getElementById('store-products-table').hidden = false;
-    await ensureCatalogSite();
-    document.querySelectorAll('.product-catalog-tabs a,.admin-toolbar a').forEach(a=>a.href=catalogLink(a.getAttribute('href')));
-    const d = await catalogFetch('/api/admin/products');
+    // Account-wide by default; explicit site_id still narrows the view.
+    const d = await catalogFetch(catalogSiteId ? '/api/admin/products' : '/api/admin/products?scope=account');
     const body = document.getElementById('products-body');
     if (!d.products.length) {
       body.innerHTML = '<tr><td colspan="7" class="admin-empty">No products yet — create your first one.</td></tr>';
@@ -182,13 +181,13 @@ document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
     }
     body.innerHTML = d.products.map(p => `
       <tr>
-        <td><div style="display:flex;align-items:center;gap:10px"><span style="display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid #e9e9e9;border-radius:5px;background:#f5f5f5;overflow:hidden">${productThumb(p)}</span><a href="${catalogLink('/admin/product-edit?id='+encodeURIComponent(p.id))}">${escapeProduct(p.title)}</a></div></td>
+        <td><div class="admin-product-heading"><span class="admin-product-thumbnail">${productThumb(p)}</span><span><a href="${catalogLink('/admin/product-edit?id='+encodeURIComponent(p.id),p.site_id)}">${escapeProduct(p.title)}</a>${p.site_name ? '<small class="admin-product-store">'+escapeProduct(p.site_name)+'</small>' : ''}</span></div></td>
         <td>${escapeProduct(p.collection_names || '—')}</td>
         <td>${centsToDollars(p.price_cents)}</td>
         <td>${badgeFor(p.status)}</td>
         <td>${p.variant_count}</td>
         <td>${p.total_inventory}${p.total_inventory <= 3 && p.variant_count > 0 ? ' <span class="badge low">low</span>' : ''}</td>
-        <td><a href="${catalogLink('/admin/product-edit?id='+encodeURIComponent(p.id))}" class="btn ghost small">Edit</a></td>
+        <td><a href="${catalogLink('/admin/product-edit?id='+encodeURIComponent(p.id),p.site_id)}" class="btn ghost small">Edit</a></td>
       </tr>
     `).join('');
   } catch (err) {

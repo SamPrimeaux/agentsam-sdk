@@ -242,6 +242,31 @@ async function overview(request, env) {
 }
 
 // ----- Products -----
+//
+// An account overview is a read-only projection over the account's existing CMS sites.
+// Never select an arbitrary default site or accept a client-supplied account identifier.
+// Writes and product detail operations remain scoped to an explicitly owned site.
+export async function listAccountProducts(request, env, accountId) {
+  if (!accountId) return json({ ok: false, error: "application_account_unavailable" }, { status: 403 });
+  const { results = [] } = await env.DB.prepare(
+    `SELECT p.*, s.name AS site_name,
+            COUNT(v.id) AS variant_count,
+            COALESCE(SUM(v.inventory_qty), 0) AS total_inventory,
+            (SELECT group_concat(c.name, ', ')
+               FROM cms_collection_items i
+               JOIN cms_collections c ON c.id = i.collection_id
+              WHERE i.item_type = 'product' AND i.item_ref = CAST(p.id AS TEXT)
+                AND i.site_id = p.site_id AND i.account_id = s.account_id
+                AND c.site_id = p.site_id AND c.account_id = s.account_id
+                AND i.status = 'active') AS collection_names
+       FROM products p
+       JOIN cms_sites s ON s.id = p.site_id AND s.account_id = ?
+       LEFT JOIN product_variants v ON v.product_id = p.id
+       GROUP BY p.id
+       ORDER BY p.updated_at DESC, p.id DESC`
+  ).bind(accountId).all();
+  return json({ ok: true, scope: "account", site_id: null, products: results });
+}
 
 async function listProducts(request, env) {
   const { results } = await env.DB.prepare(
@@ -694,6 +719,11 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
   if (path === "/api/admin/me" && method === "GET") return me(request, env, user);
   if (path === "/api/admin/account/password" && method === "POST") {
     return changePassword(request, env, user);
+  }
+  // Explicit account-wide product list: a read-only owner projection, not a site mutation.
+  if (path === "/api/admin/products" && method === "GET" &&
+      url.searchParams.get("scope") === "account" && !url.searchParams.has("site_id")) {
+    return listAccountProducts(request, env, user.account_id);
   }
   if (/^\/api\/admin\/(?:products|variants|inventory|product-studio)(?:\/|$)/.test(path)) {
     let scope;

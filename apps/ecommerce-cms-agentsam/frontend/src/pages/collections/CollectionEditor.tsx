@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { navigateHostedStudioRoute } from "../../lib/studio-host-navigation";
+import { adminFetch } from "../../lib/api";
 import StudioIcon from "../products/StudioIcon";
 import { collectionsApi } from "./api";
 import CollectionMediaPicker from "./CollectionMediaPicker";
 import CollectionProducts from "./CollectionProducts";
 import CollectionPresentation from "./CollectionPresentation";
 import type { Collection, CollectionForm, CollectionStatus, CollectionTab, MediaAsset, Product } from "./model";
-import { collectionHref, initialCollection, parseCollection, safeMediaUrl, slugify } from "./model";
+import { collectionHref, collectionSiteId, initialCollection, parseCollection, safeMediaUrl, slugify } from "./model";
 import { normalizeCollectionRules, resolveCollectionMembers } from "@inneranimalmedia/agentsam-merch/collection-planning";
 import CollectionRules from "./CollectionRules";
 
@@ -28,6 +29,10 @@ export default function CollectionEditor() {
   const params=useParams();
   const editId=params.id && /^[A-Za-z0-9_-]+$/.test(params.id) ? params.id : null;
   const navigate=useNavigate();
+  const route=useLocation();
+  const selectedSiteId=useMemo(()=>collectionSiteId(),[route.search]);
+  const [availableSites,setAvailableSites]=useState<{id:string;name:string;status?:string}[]>([]);
+  const [siteError,setSiteError]=useState("");
   const [form,setForm]=useState<CollectionForm>(initialCollection);
   const [collection,setCollection]=useState<Collection|null>(null);
   const [selected,setSelected]=useState<number[]>([]);
@@ -46,6 +51,15 @@ export default function CollectionEditor() {
   const collectionRuleExcluded=useRef<number[]>([]);
 
   useEffect(()=>{
+    if (editId || selectedSiteId) return;
+    let live=true;
+    adminFetch<{ok:boolean;sites:{id:string;name:string;status?:string}[]}>("/api/admin/cms/sites")
+      .then(result=>{if(live)setAvailableSites((result.sites||[]).filter(site=>site.status!=="archived"));})
+      .catch(error=>{if(live)setSiteError(error instanceof Error?error.message:"Unable to load your stores");});
+    return()=>{live=false;};
+  },[editId,selectedSiteId]);
+  useEffect(()=>{
+    if(!editId && !selectedSiteId)return;
     document.title = editId ? "Edit collection — Store Admin" : "Create collection — Store Admin";
     let live=true;
     queueMicrotask(()=>{if(live){setLoading(true);setError("");setNotice("");}});
@@ -64,7 +78,7 @@ export default function CollectionEditor() {
       }).catch(e=>{if(live)setError(e instanceof Error?e.message:"Unable to load collection");})
       .finally(()=>{if(live)setLoading(false);});
     return()=>{live=false;};
-  },[editId]);
+  },[editId,selectedSiteId]);
   const dirty=!loading && savedSnapshot!==JSON.stringify({form,selected});
   const effectiveIds=useMemo(()=>{
     try{return resolveCollectionMembers(products,selected,form.rules);}catch{return [];}
@@ -189,6 +203,21 @@ export default function CollectionEditor() {
       hero:{...f.hero,headline:!f.hero.headline||f.hero.headline===f.title?value:f.hero.headline}}));
   }
   if(loading)return <main className="cs-workspace"><div className="cs-container"><div className="cs-loading">Loading Collections Studio…</div></div></main>;
+  if(!editId && !selectedSiteId) return <main className="cs-workspace"><div className="cs-container">
+    <div className="cs-breadcrumb"><Link to={collectionHref("/collections")}>Collections</Link><span>/</span><strong>New collection</strong></div>
+    <section className="cs-panel cs-destination-panel">
+      <h1>Where will this collection be published?</h1>
+      <p>Your account-wide library includes every store. Choose a destination only when creating a store-owned collection.</p>
+      {siteError && <div className="cs-alert error" role="alert">{siteError}</div>}
+      <div className="cs-destination-list">
+        {availableSites.map(site=><button className="cs-button" type="button" key={site.id}
+          onClick={()=>navigate(collectionHref("/collections/new",site.id),{replace:true})}>
+          {site.name}
+        </button>)}
+      </div>
+      {!siteError && !availableSites.length && <p>Loading your stores, or no stores are available to this account.</p>}
+    </section>
+  </div></main>;
   return <main className="cs-workspace">
     <div className="cs-container cs-editor-container">
       <div className="cs-breadcrumb"><Link to={collectionHref("/products")}>Products</Link><span>/</span><Link to={collectionHref("/collections")} onClick={e=>{if(!confirmLeave())e.preventDefault();}}>Collections</Link><span>/</span><strong>{collection?.title||"Create collection"}</strong></div>

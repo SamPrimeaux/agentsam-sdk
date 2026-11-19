@@ -32,6 +32,8 @@ export interface MerchHero {
 }
 export interface Collection {
   id: string;
+  site_id?: string;
+  site_name?: string;
   slug: string;
   title: string;
   description: string;
@@ -135,8 +137,7 @@ export function collectionSiteId(): string | null {
   return embedded && query !== undefined && query >= 0
     ? new URLSearchParams(embedded.slice(query + 1)).get("site_id") : null;
 }
-export function collectionHref(path: string): string {
-  const siteId = collectionSiteId();
+export function collectionHref(path: string, siteId: string | null = collectionSiteId()): string {
   return siteId ? `${path}${path.includes("?") ? "&" : "?"}site_id=${encodeURIComponent(siteId)}` : path;
 }
 export function parseCollection(c: Collection, rules?: MerchCollectionRules): CollectionForm {
