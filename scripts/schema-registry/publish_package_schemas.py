@@ -557,25 +557,41 @@ def publish(objects: dict[str, tuple[pathlib.Path, str]], account_id: str) -> No
             if sha(fetch_object(key, account_id)) != sha(path.read_bytes()):
                 raise RuntimeError(f"Immutable public schema collision: {key}. Choose a new versioned URI; existing bytes must be retained.")
 
-    # Per-object uploads preserve the correct schema/JSON MIME type and cache policy.
-    # There is deliberately no --delete: legacy objects and independent release registries stay intact.
+    # The root index must not become visible until *every* immutable object
+    # is safely staged and read back. Existing immutable keys are never reuploaded,
+    # even when their bytes match; this also preserves their cache metadata.
+    index_key = "packages/manifest.v1.json"
+    if index_key not in objects:
+        raise RuntimeError("Missing package registry root index")
     for key, (path, content_type) in sorted(objects.items()):
-        immutable = key.startswith("packages/") and key != "packages/manifest.v1.json"
-        immutable = immutable or key.startswith("contracts/")
-        cache_control = "public, max-age=31536000, immutable" if immutable else "public, max-age=60, must-revalidate"
+        if key == index_key or key in published:
+            continue
         aws([
             "s3", "cp", str(path), f"s3://{BUCKET}/{key}",
             "--content-type", content_type,
-            "--cache-control", cache_control,
+            "--cache-control", "public, max-age=31536000, immutable",
             "--only-show-errors",
         ], account_id)
 
-    # Read each exact object back from R2; compare byte-for-byte SHA-256 before reporting success.
+    # Verify all existing and newly uploaded immutable objects before
+    # exposing their references via the mutable discoverable index.
     for key, (path, _) in sorted(objects.items()):
+        if key == index_key:
+            continue
         remote = fetch_object(key, account_id)
         if sha(remote) != sha(path.read_bytes()):
             raise RuntimeError(f"R2 readback checksum mismatch: {key}")
-    registry_bytes = fetch_object("packages/manifest.v1.json", account_id)
+
+    index_path, index_type = objects[index_key]
+    aws([
+        "s3", "cp", str(index_path), f"s3://{BUCKET}/{index_key}",
+        "--content-type", index_type,
+        "--cache-control", "public, max-age=60, must-revalidate",
+        "--only-show-errors",
+    ], account_id)
+    registry_bytes = fetch_object(index_key, account_id)
+    if sha(registry_bytes) != sha(index_path.read_bytes()):
+        raise RuntimeError("R2 root registry readback checksum mismatch")
     published_registry = json.loads(registry_bytes)
     if published_registry["source"]["commit"] != git_value("rev-parse", "HEAD"):
         raise RuntimeError("R2 registry commit pointer does not match the published source commit")
