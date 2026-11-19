@@ -32,6 +32,8 @@ export interface MerchHero {
 }
 export interface Collection {
   id: string;
+  site_id?: string;
+  site_name?: string;
   slug: string;
   title: string;
   description: string;
