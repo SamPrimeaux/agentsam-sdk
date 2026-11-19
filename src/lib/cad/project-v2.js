@@ -16,6 +16,30 @@ const isRecord = value => value !== null && typeof value === 'object' && !Array.
 const isId = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(value);
 const isSha = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 const validUri = value => typeof value === 'string' && value.length > 0 && !/^javascript:/i.test(value);
+const SOURCE_TYPES_CATALOG = 'agentsam.source-types.v2';
+const sourceFormatKinds = new Set(['source','container','codec','native-project','exchange','dataset','archive','package','sequence','subtitle','font','shader','machine-program','color-profile','database','directory-package']);
+const sourceIdentificationStatuses = new Set(['declared','identified','ambiguous','unknown','mismatch']);
+const sourceIdentificationConfidence = new Set(['high','medium','low','none']);
+const sourceIdentificationEvidence = new Set(['extension','media-type','signature','container','content','application-context','user-selection','provider-metadata']);
+const isSourceFormatReference = value => isRecord(value)
+  && value.catalog === SOURCE_TYPES_CATALOG
+  && typeof value.id === 'string' && /^[a-z][a-z0-9.-]{1,127}$/.test(value.id)
+  && (value.extension == null || (typeof value.extension === 'string' && /^\\.[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(value.extension)))
+  && (value.mediaType == null || (typeof value.mediaType === 'string' && value.mediaType.length >= 3))
+  && (value.variant == null || (typeof value.variant === 'string' && value.variant.length > 0))
+  && (value.parameters == null || (isRecord(value.parameters) && Object.values(value.parameters).every(v => ['string','number','boolean'].includes(typeof v))))
+  && Object.keys(value).every(k => ['catalog','id','extension','mediaType','variant','parameters'].includes(k));
+const isSourceKindReference = value => isRecord(value)
+  && value.catalog === SOURCE_TYPES_CATALOG
+  && typeof value.id === 'string' && /^[a-z][a-z0-9.-]{1,63}$/.test(value.id)
+  && Object.keys(value).every(k => ['catalog','id'].includes(k));
+const isSourceIdentificationResult = value => isRecord(value)
+  && sourceIdentificationStatuses.has(value.status)
+  && sourceIdentificationConfidence.has(value.confidence)
+  && Array.isArray(value.evidence) && value.evidence.every(x => sourceIdentificationEvidence.has(x))
+  && (value.candidates == null || (Array.isArray(value.candidates) && value.candidates.every(isSourceFormatReference)))
+  && (value.notes == null || (Array.isArray(value.notes) && value.notes.every(x => typeof x === 'string')))
+  && Object.keys(value).every(k => ['status','confidence','evidence','candidates','notes'].includes(k));
 const groupsV1 = ['walls', 'rooms', 'doors', 'windows', 'furniture', 'annotations'];
 const states = new Set(['planned', 'queued', 'running', 'generated', 'validated', 'approved', 'stale', 'failed', 'blocked']);
 const profiles = Object.freeze({
@@ -83,6 +107,10 @@ export function validateCadProjectV2(project) {
         || !isId(output.capability) || !states.has(output.state)
         || !Array.isArray(output.dependencies)) errors.push('invalid_output_contract:' + output?.id);
     else outputIds.add(output.id);
+    if (output?.formatRef != null && !isSourceFormatReference(output.formatRef))
+      errors.push('invalid_output_format_ref:' + output?.id);
+    if (output?.artifact?.formatRef != null && !isSourceFormatReference(output.artifact.formatRef))
+      errors.push('invalid_output_artifact_format_ref:' + output?.id);
     if (['generated', 'validated', 'approved'].includes(output?.state)
         && (!isRecord(output.artifact) || !validUri(output.artifact.uri)
             || !isSha(output.artifact.sha256) || !isId(output.receiptId)

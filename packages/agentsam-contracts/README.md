@@ -34,3 +34,13 @@ This package is the single source of truth for portable operation and tool defin
 An operation is a product capability with a stable identity and execution policy. A tool is a bounded executable primitive or provider-facing projection. A host may project an operation into one or more tools, but neither the host nor the plugin manifest becomes a competing portable contract authority.
 
 `src/tools/registry.js` is the SDK runtime registry/controller and delegates definition validation to `assertAgentToolDefinition()`. Runtime handlers, local process context, persistence, authorization decisions and product-specific semantics remain with their owning SDK runtime or package. CMS operation semantics remain in `@inneranimalmedia/agentsam-cms`; that package consumes `AgentOperationContract` rather than redefining it.
+
+
+## Universal source-format identity
+
+- Canonical catalog: `contracts/source-types.v2.json`.
+- Canonical Draft 2020-12 schema: `contracts/source-types.v2.schema.json`.
+- `src/source-types.ts` exports the framework-neutral reference and identification types.
+- The package build copies the canonical catalog and schema into `schemas/` for npm consumers; those package files are generated mirrors, not a second authority.
+- The catalog describes identity and detection evidence only. Runtime adapters separately declare real inspect, import, preview, validate, convert, transcode and export capabilities.
+- V1 identifiers remain available through the explicit `compatibility.legacyIdMappings` map.

@@ -1,0 +1,566 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json",
+  "title": "AgentSam Universal Source Types v2",
+  "description": "Canonical schema for source kinds, file formats, containers, codecs, signatures, ambiguity and portable format references.",
+  "$comment": "Format identity only. Import/export/preview/convert capability is declared by runtime adapters, never inferred from this catalog.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "description",
+    "detectionPolicy",
+    "sourceKinds",
+    "families",
+    "formats",
+    "ambiguities",
+    "compatibility"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "agentsam.source-types.v2"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^2\\.[0-9]+\\.[0-9]+$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "detectionPolicy": {
+      "$ref": "#/$defs/detectionPolicy"
+    },
+    "sourceKinds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/sourceKindRecord"
+      }
+    },
+    "families": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/familyRecord"
+      }
+    },
+    "formats": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/formatRecord"
+      }
+    },
+    "ambiguities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ambiguityRecord"
+      }
+    },
+    "compatibility": {
+      "$ref": "#/$defs/compatibility"
+    }
+  },
+  "$defs": {
+    "formatId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.-]{1,127}$"
+    },
+    "sourceKindId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.-]{1,63}$"
+    },
+    "familyId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.-]{1,63}$"
+    },
+    "extension": {
+      "type": "string",
+      "pattern": "^\\.[A-Za-z0-9][A-Za-z0-9._+-]*$"
+    },
+    "mediaType": {
+      "type": "string",
+      "minLength": 3
+    },
+    "formatKind": {
+      "type": "string",
+      "enum": [
+        "source",
+        "container",
+        "codec",
+        "native-project",
+        "exchange",
+        "dataset",
+        "archive",
+        "package",
+        "sequence",
+        "subtitle",
+        "font",
+        "shader",
+        "machine-program",
+        "color-profile",
+        "database",
+        "directory-package"
+      ]
+    },
+    "identificationSignal": {
+      "type": "string",
+      "enum": [
+        "extension",
+        "media-type",
+        "signature",
+        "container",
+        "content",
+        "application-context",
+        "user-selection",
+        "provider-metadata"
+      ]
+    },
+    "detectionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "extensionMatching",
+        "extensionIsHintOnly",
+        "mediaTypeIsHintOnly",
+        "signaturePrecedence",
+        "ambiguityHandling",
+        "unknownHandling"
+      ],
+      "properties": {
+        "extensionMatching": {
+          "const": "longest-suffix"
+        },
+        "extensionIsHintOnly": {
+          "const": true
+        },
+        "mediaTypeIsHintOnly": {
+          "const": true
+        },
+        "signaturePrecedence": {
+          "enum": [
+            "stronger-than-extension",
+            "signature-first"
+          ]
+        },
+        "ambiguityHandling": {
+          "const": "return-candidates"
+        },
+        "unknownHandling": {
+          "const": "preserve-opaque-source"
+        }
+      }
+    },
+    "sourceKindRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "transport",
+        "description",
+        "supportsChildren",
+        "mayBeLive"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/sourceKindId"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transport": {
+          "enum": [
+            "filesystem",
+            "archive",
+            "http",
+            "cloud",
+            "provider",
+            "database",
+            "stream",
+            "memory",
+            "generated",
+            "device",
+            "clipboard",
+            "repository",
+            "application",
+            "package"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supportsChildren": {
+          "type": "boolean"
+        },
+        "mayBeLive": {
+          "type": "boolean"
+        }
+      }
+    },
+    "familyRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/familyId"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "signatureSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "offset"
+      ],
+      "properties": {
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytesHex": {
+          "type": "string",
+          "pattern": "^(?:[0-9A-Fa-f]{2})+$"
+        },
+        "ascii": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "description",
+        "confidence",
+        "segments"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "segments": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/signatureSegment"
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "segments"
+          ],
+          "properties": {
+            "segments": {
+              "items": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "bytesHex"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "ascii"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "formatRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "family",
+        "kind",
+        "extensions",
+        "mediaTypes",
+        "identificationSignals",
+        "proprietary"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/formatId"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "$ref": "#/$defs/familyId"
+        },
+        "kind": {
+          "$ref": "#/$defs/formatKind"
+        },
+        "extensions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/extension"
+          }
+        },
+        "mediaTypes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/mediaType"
+          }
+        },
+        "identificationSignals": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identificationSignal"
+          }
+        },
+        "signatures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signature"
+          }
+        },
+        "proprietary": {
+          "type": "boolean"
+        },
+        "vendor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "companionExtensions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/extension"
+          }
+        },
+        "codecs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/formatId"
+          }
+        },
+        "containerFormats": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/formatId"
+          }
+        },
+        "variants": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "formatReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "catalog",
+        "id"
+      ],
+      "properties": {
+        "catalog": {
+          "const": "agentsam.source-types.v2"
+        },
+        "id": {
+          "$ref": "#/$defs/formatId"
+        },
+        "extension": {
+          "$ref": "#/$defs/extension"
+        },
+        "mediaType": {
+          "$ref": "#/$defs/mediaType"
+        },
+        "variant": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        }
+      }
+    },
+    "sourceKindReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "catalog",
+        "id"
+      ],
+      "properties": {
+        "catalog": {
+          "const": "agentsam.source-types.v2"
+        },
+        "id": {
+          "$ref": "#/$defs/sourceKindId"
+        }
+      }
+    },
+    "identificationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "confidence",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "declared",
+            "identified",
+            "ambiguous",
+            "unknown",
+            "mismatch"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low",
+            "none"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identificationSignal"
+          }
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/formatReference"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ambiguityRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "extension",
+        "formatIds",
+        "resolution",
+        "notes"
+      ],
+      "properties": {
+        "extension": {
+          "$ref": "#/$defs/extension"
+        },
+        "formatIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/formatId"
+          }
+        },
+        "resolution": {
+          "enum": [
+            "signature",
+            "container",
+            "content",
+            "application-context",
+            "user-choice",
+            "multiple-signals"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previousSchema",
+        "legacyIdMappings"
+      ],
+      "properties": {
+        "previousSchema": {
+          "const": "agentsam.source-types.v1"
+        },
+        "legacyIdMappings": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/formatId"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -23,7 +23,79 @@ const sameSchema = doc => {
   assert.deepEqual(validateCadProjectV2(doc), { valid: true, errors: [] });
 };
 
-test('portable v2 validates domain profiles without requiring architectural fields', () => {
+
+test('root source-types v2 catalog validates, covers broad format families and preserves V1 identifiers', () => {
+  assert.equal(validateSourceTypes(sourceTypesCatalog), true, JSON.stringify(validateSourceTypes.errors));
+  assert.ok(sourceTypesCatalog.formats.length >= 180, 'catalog should cover more than a language-only list');
+  const ids = new Set(sourceTypesCatalog.formats.map(x => x.id));
+  assert.equal(ids.size, sourceTypesCatalog.formats.length, 'format IDs must be unique');
+  const familyIds = new Set(sourceTypesCatalog.families.map(x => x.id));
+  for (const format of sourceTypesCatalog.formats) {
+    assert.ok(familyIds.has(format.family), 'unknown family for ' + format.id);
+    for (const related of [...(format.codecs || []), ...(format.containerFormats || [])])
+      assert.ok(ids.has(related), 'unknown related format ' + related);
+  }
+  const extensionIds = new Map();
+  for (const format of sourceTypesCatalog.formats) for (const extension of format.extensions) {
+    const found = extensionIds.get(extension) || [];
+    found.push(format.id);
+    extensionIds.set(extension, found);
+  }
+  const ambiguityMap = new Map(sourceTypesCatalog.ambiguities.map(x => [x.extension, x.formatIds]));
+  for (const [extension, formatIds] of extensionIds) {
+    if (formatIds.length > 1) {
+      assert.ok(ambiguityMap.has(extension), 'unregistered extension ambiguity: ' + extension);
+      assert.deepEqual([...ambiguityMap.get(extension)].sort(), [...new Set(formatIds)].sort());
+    }
+  }
+  const legacy = sourceTypesCatalog.compatibility.legacyIdMappings;
+  for (const type of sourceTypesV1.types) assert.ok(legacy[type.id]?.length, 'missing V1 mapping: ' + type.id);
+  for (const id of ['cad.step','bim.ifc','cam.gcode','model.glb','video.mp4','audio.wav','image.exr','pointcloud.e57','science.dicom'])
+    assert.ok(ids.has(id), 'missing expected format ' + id);
+  assert.ok(ambiguityMap.has('.stl'));
+  assert.ok(ambiguityMap.has('.ts'));
+  assert.ok(ambiguityMap.has('.nc'));
+});
+
+test('CAD assets and outputs use shared format references without breaking legacy format labels', () => {
+  const project = createCadProjectV2({
+    id: 'format_ref_project', name: 'Format reference project', domain: 'mechanical.part',
+    modules: { mechanical: { components: [] } },
+  });
+  const stepRef = { catalog: 'agentsam.source-types.v2', id: 'cad.step', extension: '.step' };
+  project.assets.push({
+    id: 'source_step', role: 'source', uri: 'r2://cad/source.step', sha256: 'a'.repeat(64),
+    status: 'available', mediaType: 'application/step',
+    sourceKindRef: { catalog: 'agentsam.source-types.v2', id: 'filesystem.file' },
+    formatRef: stepRef,
+    formatDetection: { status: 'identified', confidence: 'high', evidence: ['extension','signature'], candidates: [stepRef] },
+  });
+  project.outputs.push({
+    id: 'ifc_export', kind: 'exchange', format: 'ifc', formatRef: { catalog: 'agentsam.source-types.v2', id: 'bim.ifc', extension: '.ifc' },
+    capability: 'cad.model.export', state: 'planned', sourceRevision: 1, dependencies: [],
+  });
+  sameSchema(project);
+  assert.deepEqual(validateCadProjectV2(project), { valid: true, errors: [] });
+
+  const ambiguous = structuredClone(project);
+  ambiguous.assets.push({
+    id: 'ambiguous_stl', role: 'reference',
+    formatDetection: {
+      status: 'ambiguous', confidence: 'medium', evidence: ['extension'],
+      candidates: [
+        { catalog: 'agentsam.source-types.v2', id: 'model.stl', extension: '.stl' },
+        { catalog: 'agentsam.source-types.v2', id: 'subtitle.ebu-stl', extension: '.stl' },
+      ],
+    },
+  });
+  sameSchema(ambiguous);
+
+  const invalid = structuredClone(project);
+  invalid.assets[0].formatRef.catalog = 'agentsam.source-types.v1';
+  assert.equal(validateSchema(invalid), false);
+  assert.ok(validateCadProjectV2(invalid).errors.includes('invalid_asset_format_ref:source_step'));
+});
+\ntest('portable v2 validates domain profiles without requiring architectural fields', () => {
   const part = createCadProjectV2({
     id: 'bushing_001', name: 'Bushing', domain: 'mechanical.part', unit: 'mm',
     geometry: { entities: [{ id: 'solid_A', kind: 'solid', data: { diameter: 18, length: 24 } }],

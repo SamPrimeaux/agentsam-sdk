@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/cad.project.v2.schema.json",
   "title": "AgentSam Portable CAD Project v2",
-  "description": "Universal CAD project authority. Domain modules contain specialized data; generated artifact claims require provider receipts.",
+  "description": "Universal CAD project authority. Domain modules contain specialized data; generated artifact claims require provider receipts. Asset and output format identities reference the shared AgentSam source-types.v2 catalog; format identity does not assert adapter capability.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -226,10 +226,20 @@
             ]
           },
           "mediaType": {
-            "type": "string"
+            "type": "string",
+            "description": "Declared or observed media type. It is evidence, not a canonical format identity; prefer formatRef when known."
           },
           "sourceRevision": {
             "type": "integer"
+          },
+          "sourceKindRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json#/$defs/sourceKindReference"
+          },
+          "formatRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json#/$defs/formatReference"
+          },
+          "formatDetection": {
+            "$ref": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json#/$defs/identificationResult"
           }
         },
         "additionalProperties": true
@@ -280,7 +290,8 @@
             "type": "string"
           },
           "format": {
-            "type": "string"
+            "type": "string",
+            "description": "Legacy output format label retained for compatibility. Prefer formatRef for canonical format identity."
           },
           "capability": {
             "$ref": "#/$defs/id"
@@ -322,6 +333,20 @@
               },
               "sha256": {
                 "$ref": "#/$defs/sha"
+              },
+              "formatRef": {
+                "$ref": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json#/$defs/formatReference"
+              },
+              "mediaType": {
+                "type": "string",
+                "minLength": 3
+              },
+              "extension": {
+                "$ref": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json#/$defs/extension"
+              },
+              "byteSize": {
+                "type": "integer",
+                "minimum": 0
               }
             },
             "additionalProperties": true
@@ -334,6 +359,9 @@
           },
           "professionalReviewRequired": {
             "type": "boolean"
+          },
+          "formatRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json#/$defs/formatReference"
           }
         },
         "additionalProperties": false

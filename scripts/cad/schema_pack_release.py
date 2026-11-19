@@ -321,18 +321,21 @@ def publish():
         raise RuntimeError("Tracked worktree changes detected; commit before publication")
     tracked = set(run(["git", "ls-files"]).splitlines())
     required = ["protocol/cad/v2/schema-pack.manifest.json", "scripts/cad/schema_pack_release.py",
-                "apps/cad-creator/scripts/stage-cad-v2-schema.mjs"] + ["protocol/cad/v2/" + x["path"] for x in m["modules"]]
+                "apps/cad-creator/scripts/stage-cad-v2-schema.mjs", "contracts/source-types.v2.schema.json", "contracts/source-types.v2.json"] + ["protocol/cad/v2/" + x["path"] for x in m["modules"]]
     if any(f not in tracked for f in required):
         raise RuntimeError("Release source/scripts are not committed to Git main")
     local = run(["git", "rev-parse", "HEAD"])
     remote = run(["git", "ls-remote", "origin", "refs/heads/main"]).split("\t", 1)[0]
     if local != remote:
         raise RuntimeError("GitHub main is not exactly this local source commit; push main first")
-    payload = [(x["path"], (SOURCE / x["path"]).read_bytes()) for x in m["modules"]]
-    payload.append(("schema-pack.manifest.json", (SOURCE / "schema-pack.manifest.json").read_bytes()))
+    payload = [(RELEASE_PREFIX + x["path"], x["path"], (SOURCE / x["path"]).read_bytes()) for x in m["modules"]]
+    payload.append((RELEASE_PREFIX + "schema-pack.manifest.json", "schema-pack.manifest.json",
+                    (SOURCE / "schema-pack.manifest.json").read_bytes()))
+    # Shared source-format contracts are immutable root-level dependencies of the CAD envelope.
+    for name in ["contracts/source-types.v2.schema.json", "contracts/source-types.v2.json"]:
+        payload.append((name, name, (ROOT / name).read_bytes()))
     # Immutable write-once release: existing different bytes abort instead of overwriting.
-    for name, body in payload:
-        key = RELEASE_PREFIX + name
+    for key, name, body in payload:
         previous = remote_bytes(key)
         if previous is not None and previous != body:
             raise RuntimeError("Immutable R2 release conflicts with existing object: " + key)

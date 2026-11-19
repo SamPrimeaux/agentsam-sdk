@@ -95,7 +95,13 @@
     },
     "./schemas/sam-operation.v1.schema.json": "./schemas/sam-operation.v1.schema.json",
     "./schemas/agent-tool-definition.v1.schema.json": "./schemas/agent-tool-definition.v1.schema.json",
-    "./schemas/sam-result.v1.schema.json": "./schemas/sam-result.v1.schema.json"
+    "./schemas/sam-result.v1.schema.json": "./schemas/sam-result.v1.schema.json",
+    "./source-types": {
+      "types": "./dist/source-types.d.ts",
+      "import": "./dist/source-types.js"
+    },
+    "./source-types/catalog": "./schemas/source-types.v2.json",
+    "./source-types/schema": "./schemas/source-types.v2.schema.json"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
