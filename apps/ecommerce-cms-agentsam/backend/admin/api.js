@@ -720,6 +720,11 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
   if (path === "/api/admin/account/password" && method === "POST") {
     return changePassword(request, env, user);
   }
+  // Explicit account-wide product list: a read-only owner projection, not a site mutation.
+  if (path === "/api/admin/products" && method === "GET" &&
+      url.searchParams.get("scope") === "account" && !url.searchParams.has("site_id")) {
+    return listAccountProducts(request, env, user.account_id);
+  }
   if (/^\/api\/admin\/(?:products|variants|inventory|product-studio)(?:\/|$)/.test(path)) {
     let scope;
     try { scope = await collectionScope(env, {accountId:user.account_id,siteId:url.searchParams.get("site_id")}); }
