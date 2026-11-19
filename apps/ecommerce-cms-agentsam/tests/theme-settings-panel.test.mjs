@@ -254,7 +254,16 @@ test("installed theme settings save supported controls to the CMS bridge, not ju
  assert.equal(persisted.designDraft['page.maxWidth'],1600);
  assert.equal(persisted.buttonRadius,20);
  w.document.dispatchEvent(new w.CustomEvent('theme-editor:global-settings-ready'));
+ assert.equal(w.document.querySelector('[data-ts-review-note]')?.textContent || '', '',
+   'normal editing never exposes implementation-oriented draft messaging');
  assert.equal(w.ThemeSettingsPanel.getState().values['page.width'],'Wide');
  assert.equal(w.ThemeSettingsPanel.getState().values['buttons.primary.radius'],20);
  dom.window.close();
+});
+
+test("Theme Settings chrome follows account shell tokens rather than a white-only panel",()=>{
+ const css=readFileSync(new URL("../frontend/static/css/theme-settings-panel.css",import.meta.url),"utf8");
+ assert.match(css,/background:var\(--te-panel\)/);
+ assert.match(css,/--ts-focus:var\(--te-accent\)/);
+ assert.match(css,/\.ts-review-note:empty \{display:none\}/);
 });

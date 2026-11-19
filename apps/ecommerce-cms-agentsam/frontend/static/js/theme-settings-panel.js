@@ -531,7 +531,7 @@ function mount(){
  const hydrateCmsSettings=()=>{
   const current=window.CmsThemeSettings?.read?.();
   if(!current){
-   if(reviewNote())reviewNote().textContent="Local preview only. CMS settings are not connected.";
+   if(reviewNote())reviewNote().textContent="";
    return;
   }
   // An older in-flight save may complete after newer local edits; never
@@ -544,7 +544,7 @@ function mount(){
   paletteCount=Math.max(4,...Object.keys(current.controls||{}).filter(key=>/^palette\.[0-9]+$/.test(key)).map(key=>Number(key.split(".")[1])+1));
   paletteLinks={...(current.paletteLinks||{})};
   if(typeof state["brand.name"]==="string")brandName=state["brand.name"];
-  if(reviewNote())reviewNote().textContent="Editing this site's draft. Publish is a separate action.";
+  if(reviewNote())reviewNote().textContent="";
   for(const [key,value] of Object.entries({
    "page.bg":current.colors?.canvas,"type.text":current.colors?.ink,"palette.2":current.colors?.accent,
    "type.font.Body":current.font==="system-ui"?"system-ui":current.font,

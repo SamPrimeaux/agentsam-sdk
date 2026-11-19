@@ -103,6 +103,30 @@ test('multiple source pages expose independent reusable sections and cross-page 
   assert.ok((await reopened.getRegistry()).pages.home.sections[contactKey]);
 }));
 
+test('global header/footer remain shared site chrome and cannot leak into Add Section',()=>withDom(async()=> {
+  const home=page('<header><nav><a href="/">Home</a></nav></header><main><section><h1>Welcome</h1></section></main><footer><p>Footer</p></footer>','home','Home');
+  const about=page('<header><nav><a href="/about">About</a></nav></header><main><section><h1>About</h1></section></main><footer><p>Footer</p></footer>','about','About');
+  const project=demoProject([home,about]);
+  const store=memoryStore(project);
+  const adapter=runtime.createThemeProjectAdapter(project,store);
+  const registry=await adapter.getRegistry();
+  for(const [slug,pageData] of [['home',home],['about',about]]) {
+    for(const section of pageData.sections.filter(s=>['HEADER','FOOTER'].includes(s.zone))) {
+      const key=runtime.sourceSectionTemplateKey(slug,section.key);
+      // Structural site chrome is editable in Header/Footer but not insertable into Template.
+      assert.equal(registry.pages.home.sections[key],undefined);
+      await assert.rejects(()=>adapter.addSection('home',key,0),/theme_section_template_not_found/);
+    }
+  }
+  const bodyKey=runtime.sourceSectionTemplateKey('about',about.sections.find(s=>s.zone==='BODY').key);
+  assert.equal(registry.pages.home.sections[bodyKey].capabilities.insert,true);
+  assert.match(registry.pages.home.sections[bodyKey].previewHtml,/About/);
+  const added=await adapter.addSection('home',bodyKey,1);
+  assert.ok(added.section_key);
+  assert.equal((await adapter.getPage('home')).sections.length,4);
+  assert.equal(store.current().sectionTemplates,undefined);
+}));
+
 test('source sections can be reused while originals remain unchanged',()=>withDom(async()=>{
   const home=page('<main><section><h2>Solutions</h2><div data-cms-group="Solutions"><h3>Insurance</h3><p>Protection.</p></div></section></main>','home','Home');
   const store=memoryStore(demoProject([home]));
