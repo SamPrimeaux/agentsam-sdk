@@ -6,17 +6,17 @@
 export const SAM_RESULT_SCHEMA = 'agentsam.result.v1';
 export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
 
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationLane} SamLane */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationModelPolicy} SamModelPolicy */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationNetworkPolicy} SamNetworkPolicy */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationSideEffects} SamSideEffects */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationRisk} SamRisk */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationSpendPolicy} SamSpendPolicy */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentCapabilityReference} SamCapabilityRef */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentMcpProjection} SamMcpProjection */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationExecution} SamExecutionMeta */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationReceipt} SamReceipt */
-/** @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationResult} SamResult */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationLane} SamLane */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationModelPolicy} SamModelPolicy */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationNetworkPolicy} SamNetworkPolicy */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationSideEffects} SamSideEffects */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationRisk} SamRisk */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationSpendPolicy} SamSpendPolicy */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentCapabilityReference} SamCapabilityRef */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentMcpProjection} SamMcpProjection */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationExecution} SamExecutionMeta */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationReceipt} SamReceipt */
+/** @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationResult} SamResult */
 
 /**
  * Runtime-only context supplied by the SAM host. It is never serialized as an
@@ -31,5 +31,5 @@ export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
 
 /**
  * Runtime operation = shared portable contract + host-bound handler.
- * @typedef {import('../../packages/agentsam-contracts/src/operations').AgentOperationDefinition<unknown, unknown, SamOperationContext>} SamOperationDef
+ * @typedef {import('@inneranimalmedia/agentsam-contracts').AgentOperationDefinition<unknown, unknown, SamOperationContext>} SamOperationDef
  */
