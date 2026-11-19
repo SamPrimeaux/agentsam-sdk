@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://inneranimalmedia.com/schemas/theme-package-contract.v1.json",
+  "$id": "https://schemas.inneranimalmedia.com/contracts/theme-package-contract.v1.schema.json",
   "title": "InnerAnimalMedia Theme Package Contract v1",
   "type": "object",
   "required": ["contractVersion", "id", "name", "layouts", "templates", "sections", "components"],

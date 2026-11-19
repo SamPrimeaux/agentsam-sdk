@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:heuristic-commerce:schema:block:v1",
+  "$id": "https://schemas.inneranimalmedia.com/packages/heuristic-theme/v1/contracts/block.schema.json",
   "title": "Heuristic Block",
   "type": "object",
   "required": ["id", "type", "content", "visibility"],
