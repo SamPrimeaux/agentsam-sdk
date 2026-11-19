@@ -27,10 +27,10 @@ Product state does **not** belong here. Trails/projects, CAD geometry, CMS page 
 This package is the single source of truth for portable operation and tool definitions:
 
 - `src/operations.ts` owns `AgentOperationContract`, execution policy vocabulary, operation definitions, and normalized operation receipts/results.
-- `src/tools.ts` owns `AgentToolDefinition`, tool-call vocabulary, risk, side-effect, idempotency, retry and receipt policy types.
+- `src/tools.ts` owns `AgentToolDefinition`, tool-call vocabulary, risk, side-effect, idempotency, retry and receipt policy types, plus `assertAgentToolDefinition()` as the framework-neutral runtime guard.
 - `schemas/` owns the versioned JSON Schemas for operation contracts, tool definitions and operation results.
 - `protocol/` contains stable public schema mirrors. The package test suite requires each mirror to match its package-owned source exactly.
 
 An operation is a product capability with a stable identity and execution policy. A tool is a bounded executable primitive or provider-facing projection. A host may project an operation into one or more tools, but neither the host nor the plugin manifest becomes a competing portable contract authority.
 
-Runtime handlers, local process context, persistence, authorization decisions and product-specific semantics remain with their owning SDK runtime or package. CMS operation semantics remain in `@inneranimalmedia/agentsam-cms`; that package consumes `AgentOperationContract` rather than redefining it.
+`src/tools/registry.js` is the SDK runtime registry/controller and delegates definition validation to `assertAgentToolDefinition()`. Runtime handlers, local process context, persistence, authorization decisions and product-specific semantics remain with their owning SDK runtime or package. CMS operation semantics remain in `@inneranimalmedia/agentsam-cms`; that package consumes `AgentOperationContract` rather than redefining it.
