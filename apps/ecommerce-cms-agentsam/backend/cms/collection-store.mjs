@@ -26,11 +26,13 @@ const selection = `SELECT c.*,
 // belong to the authenticated account. Mutations still use collectionScope().
 export async function listAccountCmsCollections(env, accountId) {
   if (!accountId) fail('cms_collection_account_required', 403);
-  const { results = [] } = await env.DB.prepare(selection +
-    " JOIN cms_sites s ON s.id=c.site_id AND s.account_id=c.account_id" +
-    " WHERE c.account_id=? AND s.account_id=?" +
-    " ORDER BY c.sort_order,lower(c.name),c.id").bind(accountId, accountId).all();
-  return results.map(row => collectionJson({ ...row, site_name: row.site_name || null }));
+  const { results = [] } = await env.DB.prepare(
+    "SELECT listed.*, s.name AS site_name FROM (" + selection + ") AS listed" +
+    " JOIN cms_sites s ON s.id=listed.site_id AND s.account_id=listed.account_id" +
+    " WHERE listed.account_id=? AND s.account_id=?" +
+    " ORDER BY listed.sort_order,lower(listed.name),listed.id"
+  ).bind(accountId, accountId).all();
+  return results.map(collectionJson);
 }
 
 export async function listCmsCollections(env,scope,{publicOnly=false}={}) {
