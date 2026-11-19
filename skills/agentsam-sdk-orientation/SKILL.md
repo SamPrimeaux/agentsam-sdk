@@ -36,7 +36,7 @@ agentsam skills             # list portable skills
 | What CLI commands exist? | `src/cli/command-catalog.js` (generated view: `docs/generated/SDK_CAPABILITY_INVENTORY.md`) |
 | What packages and apps exist? | `agentsam.yaml`, `packages/catalog/` |
 | What can be invoked as an operation? | `src/sam/` (`seed.js` lists registered ops); vocabulary in `docs/architecture/SAM_KERNEL.md` |
-| What are the wire contracts? | `protocol/` (JSON Schemas) and `packages/agentsam-contracts` |
+| What are portable operation/tool contracts? | `packages/agentsam-contracts/src/operations.ts` and `src/tools.ts` plus package-owned `schemas/`; `protocol/` contains tested public mirrors |
 | What are the capability inputs? | `protocol/capabilities/manifest.json` and the `*.schema.json` beside it |
 | What rules apply in this repo? | `AGENTSAM.md` (canonical), `.agentsamrules` |
 | What skills exist? | `skills/catalog.json` |
@@ -52,13 +52,16 @@ tool = bounded executable primitive, often agent-facing; skill = procedural know
 pipeline = ordered composition; provider = adapter to an external or local implementation;
 contract = portable schemas and types.
 
-## Tool definitions: three shapes already exist
+## Portable operation and tool contracts: one authority
 
-1. `SamOperationDef` via `defineSamOperation()` in `src/sam/define.js`.
-2. `AgentToolDefinition` in `packages/agentsam-contracts/src/tools.ts`, used by `createToolRegistry()` in `src/tools/registry.js`.
-3. The plugin manifest normalizer in `src/plugins/contracts.js`, which maps to rows in the D1 `agentsam_tools` table.
+- `packages/agentsam-contracts/src/operations.ts` owns `AgentOperationContract`, operation execution policy, and normalized operation receipts/results.
+- `packages/agentsam-contracts/src/tools.ts` owns `AgentToolDefinition`, tool-call vocabulary, risk, side-effect, idempotency, retry and receipt policy types.
+- `packages/agentsam-contracts/schemas/` owns their JSON Schemas. `protocol/` publishes stable mirrors; package tests enforce exact parity.
+- `src/sam/types.js` aliases the shared operation types for the SAM runtime. `defineSamOperation()` binds a runtime handler; it does not redefine the portable contract.
+- `src/tools/registry.js` is the runtime registry/controller for shared tool definitions.
+- `src/plugins/contracts.js` normalizes a host/plugin manifest into its persistence projection. That D1-facing shape is not another portable tool definition.
 
-Reuse one of these. Do not add a fourth.
+Do not introduce another operation or tool definition vocabulary.
 
 ## Doc status
 
