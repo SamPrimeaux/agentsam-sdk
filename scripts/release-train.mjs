@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findPrivateWorkspaceDependencyEdges } from './release-train-policy.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -102,14 +103,16 @@ function releaseManifestDrift() {
 function check() {
   const failures = [];
   let dependencyEdges = 0;
+  for (const edge of findPrivateWorkspaceDependencyEdges(workspaces, sections)) {
+    failures.push(`${edge.consumer}: ${edge.section}.${edge.dependency} resolves to private workspace (${relative(edge.file)}); publish the dependency or remove it from the public dependency graph`);
+  }
   for (const { file, manifest } of workspaces) {
     const isPrivate = manifest.private === true;
     const isPublic = !isPrivate && manifest.publishConfig?.access === 'public';
     if (!isPrivate && !isPublic) {
       failures.push((manifest.name || '<unnamed>') + ': package intent is ambiguous; set private=true or publishConfig.access=public (' + relative(file) + ')');
     }
-    // Private source workspaces (including CAD kernels) are bundled by their
-    // public host packages and deliberately keep their own local versions.
+    // Private app/source workspaces are excluded from the public npm release train.
     if (isPrivate) continue;
     if (manifest.releaseTrain && !['independent', 'coordinated'].includes(manifest.releaseTrain)) {
       failures.push(manifest.name + ': invalid releaseTrain policy ' + manifest.releaseTrain);
