@@ -1641,6 +1641,16 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 .aw-project-detail__actions > .aw-btn { display:inline-flex; align-items:center; gap:6px; }
 .aw-project-detail__inspector { color:var(--agentsam-work-text); }
 .aw-project-inspector__facts strong { overflow-wrap:anywhere; }
+.aw-project-composer {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
+  margin: 0 0 18px; padding: 16px; border: 1px solid var(--agentsam-work-border);
+  border-radius: 14px; background: var(--agentsam-work-panel-subtle);
+}
+.aw-project-composer__field { display: grid; flex: 1; min-width: 0; gap: 8px; }
+.aw-project-composer__field label { color: var(--agentsam-work-text); font-size: 13px; font-weight: 700; }
+.aw-project-composer__field textarea { width: 100%; min-height: 72px; resize: vertical; background: var(--agentsam-work-panel); }
+.aw-project-composer__field small { color: var(--agentsam-work-muted); font-size: 11px; line-height: 1.4; }
+.aw-project-composer > .aw-btn { flex: none; min-height: 42px; }
 @media (max-width: 1000px) {
  .aw-project-home__tool-grid { grid-template-columns:1fr; }
  .aw-project-home__tool { min-height:auto; padding:13px; }
