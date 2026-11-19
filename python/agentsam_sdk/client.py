@@ -21,7 +21,7 @@ from typing import Any, Mapping
 
 from .runtime.native import NativeRuntime, NATIVE_OPERATION_SPECS, NativeOperationError
 from .procedures import ProcedureClient, ProcedureClientError
-from .assets import AssetsClient
+from .assets import AssetProcedures
 
 class SamClientError(RuntimeError):
     def __init__(self, code: str, message: str | None = None):
@@ -192,7 +192,7 @@ class AgentSamClient:
         )
         self.procedure_invoker = procedure_invoker
         self.procedures = ProcedureClient(procedure_invoker)
-        self.assets = AssetsClient(self.native_runtime.workspace_root, invoke=self.native_runtime.invoke)
+        self.assets = AssetProcedures(self.procedures)
         self.control_plane = _ControlPlane(control_plane_url,control_plane_token or "") if control_plane_url else None
 
     def _resolved_node(self) -> str:

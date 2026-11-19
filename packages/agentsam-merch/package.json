@@ -43,7 +43,8 @@
     "./node": {
       "types": "./src/node/index.d.ts",
       "import": "./src/node/index.js"
-    }
+    },
+    "./adapters/printify": "./src/adapters-printify.js"
   },
   "bin": {
     "agentsam-merch": "./bin/agentsam-merch.mjs"

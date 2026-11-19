@@ -13,5 +13,4 @@ __version__ = "0.3.0"
 from .client import AgentSamClient, AsyncAgentSamClient, Choose, Check, Score, SamClientError
 
 from .procedures import ProcedureClient, ProcedureClientError
-
-from .assets import AssetsClient, AssetInventoryError
+from .assets import AssetProcedures

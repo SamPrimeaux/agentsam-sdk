@@ -9,8 +9,6 @@ pip install --upgrade agentsam-sdk
 agentsam                       # interactive home (TTY only)
 agentsam doctor                # installed SDK and runtime overview
 agentsam doctor --verify-cad   # real OCCT solid/export/reopen proof, if installed
-agentsam assets inventory .    # CAD, scene, drawing, media and toolpath file discovery
-agentsam assets inventory . --hash --format json
 agentsam repository inventory --repo-root . --format json
 ```
 
@@ -18,24 +16,29 @@ Requires Python 3.10+. Data-only commands never open an interactive prompt.
 Human-facing terminal chrome goes to stderr; JSON goes to stdout, including when
 piped. Set `NO_COLOR=1` or use `agentsam --plain <command>` for plain text.
 
-Native asset inventory is deterministic, scoped to the selected project root,
-never follows symlinks, and can hash files using SHA-256. File presence **does not
-prove** geometric integrity or machine readiness.
+Source-asset inventory is exposed through the existing authorized PrimeTech
+procedure host. The Python package does **not** duplicate its scanner or invent
+an unauthenticated local shell fallback.
 
 ```python
 from agentsam_sdk import AgentSamClient
 
-client = AgentSamClient(cwd="/path/to/project")
-assets = client.assets.inventory(include_hashes=True)
+# The trusted host supplies procedure_invoker and project/identity scope.
+client = AgentSamClient(procedure_invoker=authorized_sam_invoker)
+receipt = client.assets.inventory()
+# Async: await async_client.assets.ainventory()
 ```
+
+Without a bound procedure host, inventory refuses with the existing
+`sam_procedure_host_not_configured` error instead of guessing.
 
 For local development: `cd python && pip install -e .` then
 `python -m unittest discover -s tests -v`.
 
 ### `AgentSamClient.invoke()`
 
-Repository, data, hooks, workspace, bounded argv execution, and native
-asset inventory work in Python without Node. Other `AgentSamClient.invoke()`
+Repository, data, hooks, workspace and bounded argv execution work in Python
+without Node. Other `AgentSamClient.invoke()`
 operations still delegate to the existing Node SAM kernel, requiring Node 20+
 and the npm SDK available to that authorized host:
 
@@ -117,3 +120,18 @@ The native process runner uses an executable plus an argument vector, an allowli
 D1 writes are intentionally different: they go through the existing D1Adapter only. That adapter uses the installed Wrangler/Node toolchain and requires an explicitly configured database UUID matching the requested target. The Python filesystem and process capabilities remain usable without Node; D1 mutation is unavailable when its existing adapter is not bound.
 
 AgentSamClient.procedures.run(id, version, input) and its async arun counterpart delegate to an explicitly injected trusted host procedure operation. They do not launch shell commands or create another procedure registry. The host-owned PrimeTech handler validates the pinned manifest, invokes the existing sam.superbash operation, and writes output artifacts and receipts to the configured receipt directory.
+
+## Native asset inventory (PrimeTech procedure API)
+
+The SDK source exposes a first-class `AgentSamClient.assets` facade. It does not reimplement the engineering scanner or execute shell commands.
+
+```python
+from agentsam_sdk import AgentSamClient
+
+client = AgentSamClient(procedure_invoker=authenticated_host_invoker)
+verified_receipt = client.assets.inventory_native()
+```
+
+Async hosts can use `await AsyncAgentSamClient(...).assets.ainventory_native()`. The existing host-owned `repo.asset.inventory@0.1.0` procedure owns native source discovery and hashing, while `ProcedureClient` validates its receipt.
+
+This is SOURCE functionality until the corresponding clean Python wheel is published to PyPI. The source declares `0.2.0`; do not assume that already-published `agentsam-sdk==0.1.0` includes it.

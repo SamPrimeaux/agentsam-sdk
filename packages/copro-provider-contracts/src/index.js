@@ -1,10 +1,39 @@
+/**
+ * Provider-operation vocabulary only; these names do not assert a provider,
+ * paid model, feature UI or production renderer is available. An installed
+ * adapter must opt into each capability and pass host-side authorization.
+ * The CoPro editor/command engine owns timeline and local creative operations.
+ */
 export const COPRO_PROVIDER_CAPABILITIES = Object.freeze([
   "media.store",
   "media.stream",
   "media.transcribe",
   "media.embed",
   "media.convert",
+  "media.inspect",
+  "media.search",
+  "image.generate",
+  "image.edit",
+  "image.upscale",
+  "audio.synthesize",
+  "audio.denoise",
+  "audio.separate",
+  "audio.mix",
+  "audio.master",
+  "voice.synthesize",
+  "voice.direct",
+  "speech.align",
+  "captions.generate",
+  "captions.translate",
   "video.generate",
+  "video.analyze",
+  "video.stabilize",
+  "video.interpolate",
+  "video.upscale",
+  "scene.render",
+  "scene.capture",
+  "render.image",
+  "render.audio",
   "render.video",
 ]);
 

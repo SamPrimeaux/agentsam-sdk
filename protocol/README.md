@@ -9,7 +9,7 @@ Platform repositories may consume the SDK, provide host adapters, or incubate pr
 1. **Portable code lands here once.** A reusable capability has one canonical implementation in this repository.
 2. **Host-specific code stays with the host.** Product bindings, credentials, deployment wiring, and runtime-only policy remain in the consuming application and connect through explicit adapters or ports.
 3. **Extract instead of mirror.** When a platform implementation becomes reusable, move the portable contract/core here and replace the host copy with an import, dependency, or adapter.
-4. **Contracts travel with the SDK.** Shared schemas and protocol definitions live under `protocol/` and are versioned with the code that consumes them.
+4. **Contracts travel with the SDK.** Portable operation and tool contract types plus their source JSON Schemas are owned by `packages/agentsam-contracts/`. Stable public schema URLs under `protocol/` are exact mirrors, verified by the package test suite.
 5. **No copied package trees.** Do not duplicate `protocol/`, `agentsam_sdk/`, or package source under another path in this repository or another repository merely to keep two homes in sync.
 6. **Repository tools observe before they prescribe.** Generic repository intelligence must accept an explicit repo root, be read-only by default, and must not hardcode one repository's folder names, tenant IDs, workspace IDs, providers, or framework layout.
 7. **Model facts have one authority chain.** `/models`, CLI JSON, runtime selection, and usage receipts must follow the normative model SSOT contract in `protocol/models/README.md`; provider facts retain authoritative provenance while AgentSam recommendations remain separate policy.
@@ -24,7 +24,7 @@ agentsam-sdk/
 ├── apps/                      # Portable product APPs (when agentsam.app.json exists)
 │   └── */agentsam.app.json    # Canonical APP product definition (APP.id)
 │   └── */.agentsam/app.json   # Host/install state (app_id → APP.id)
-├── protocol/                  # Shared SDK contracts and ownership rules
+├── protocol/                  # Public protocol schemas and ownership rules
 │   ├── apps/                  # agentsam.app.v1 + host-install schemas
 │   └── features/              # agentsam.feature.v1 schema + catalog
 ├── templates/                 # Scaffold templates

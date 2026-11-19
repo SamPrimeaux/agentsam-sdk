@@ -14,6 +14,14 @@
 - `normalizeArchitecturalSource` preserves the locked SD-02 contract as original source; it does not rescale, redraw or override approved dimensions.
 - Application-specific view state may be layered by CAD Creator; SDK-owned contracts must not import app-owned source.
 
+## Shared source-format authority
+
+- Universal source identity is owned by `contracts/source-types.v2.json`; its Draft 2020-12 contract is `contracts/source-types.v2.schema.json`.
+- Public schema reference: `https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json`. The CAD schema release publishes the shared catalog and schema at these immutable root-level keys before updating the CAD registry pointer.
+- CAD asset records may carry `sourceKindRef`, `formatRef` and `formatDetection`. CAD outputs and generated artifact records may carry `formatRef`. Existing `mediaType` and `format` fields remain valid for compatibility.
+- A format reference identifies a format; it does not claim that a provider can import, preview, validate, convert or export it. Runtime adapter capability and execution receipts remain separate authorities.
+- Ambiguous extensions (for example `.stl`, `.ts`, `.obj`, `.nc`) must remain candidate sets until signatures, container/content inspection or application context resolve them.
+
 ## SAM operation authority
 
 Existing stable normalized routes remain: `cad.project.get/validate/apply/save/restore`, `cad.model.build/inspect/render/export`, and authorized `cad.job.*` routes.

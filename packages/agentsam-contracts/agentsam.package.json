@@ -22,7 +22,7 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-contracts",
-  "purpose": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
+  "purpose": "Single portable source of truth for AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-contracts",
@@ -39,5 +39,5 @@
   "status": "unknown",
   "topics": [],
   "use_when": [],
-  "version": "2.6.12"
+  "version": "2.6.15"
 }

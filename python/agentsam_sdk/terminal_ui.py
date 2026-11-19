@@ -23,25 +23,13 @@ from .terminal_art import boot_header
 from .tui.theme import IAM_THEME
 
 _RECOVERY = {
-    "asset_inventory_path_outside_scope": (
-        "The requested directory is outside the selected project.",
-        "Choose a path inside the project root.", None,
+    "sam_procedure_host_not_configured": (
+        "This asset operation needs an authorized AgentSam procedure host.",
+        "Connect a trusted SAM host with PrimeTech procedures installed; no standalone fallback is run.", None,
     ),
-    "asset_inventory_limit_invalid": (
-        "The requested asset inventory limit is invalid.",
-        "Choose a limit between 1 and 100000.", None,
-    ),
-    "asset_inventory_depth_invalid": (
-        "The requested directory scan depth is invalid.",
-        "Choose a maximum depth between 0 and 32.", None,
-    ),
-    "asset_inventory_read_failed": (
-        "An asset could not be read or hashed.",
-        "Check file permissions and retry with a smaller project scope.", None,
-    ),
-    "asset_inventory_target_not_found": (
-        "The selected directory could not be opened.",
-        "Check the directory name and try again.", None,
+    "primetech_procedure_verification_failed": (
+        "The procedure returned an unverified result.",
+        "Inspect the host procedure receipt before relying on any output.", None,
     ),
     "occt_host_not_found": (
         "The native CAD runtime is not installed or discoverable.",
@@ -151,12 +139,12 @@ def run_home(parser: Any) -> int:
     commands.add_column(style="bold", width=8)
     commands.add_column()
     commands.add_row("doctor", "Check installed SDK and optional runtimes")
-    commands.add_row("assets", "Inventory project CAD, media and scene assets")
     commands.add_row("cad", "Verify the native OCCT/FreeCAD adapters")
     commands.add_row("repository", "Inspect a local source tree")
     commands.add_row("data", "Run configured D1 audits")
     console.print(Panel(commands, title="Local tools", border_style="dim", expand=False))
-    console.print("[dim]Type a command, 'help', or 'exit'. No cloud credentials are required for local operations.[/]")
+    console.print("[dim]Type a command, 'help', or 'exit'. Local operations require no cloud credentials.[/]")
+    console.print("[dim]Asset procedures: client.assets.inventory() with an authorized SAM host.[/]")
     while True:
         try:
             line = Prompt.ask("[bold]agentsam[/]", console=console)

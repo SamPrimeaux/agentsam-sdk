@@ -173,24 +173,6 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     return 0 if report["ok"] else 1
 
 
-def _cmd_assets_inventory(args: argparse.Namespace) -> int:
-    from .assets import AssetsClient
-    result = AssetsClient(args.root).inventory(
-        ".", include_hashes=args.hash, limit=args.limit, max_depth=args.max_depth
-    )
-    if args.format == "json":
-        print(json.dumps(result, indent=2))
-    else:
-        from .terminal_ui import show_data_table
-        rows = [("Root", result["root"]), ("Assets", str(result["total"])),
-                ("Bytes", str(result["bytes"])), ("Truncated", str(result["truncated"]))]
-        rows.extend((kind, str(count)) for kind, count in result["by_kind"].items())
-        show_data_table("Project asset inventory", rows)
-        if result["truncated"]:
-            print("Inventory reached the file limit; narrow the target or raise --limit.", file=sys.stderr)
-    return 0
-
-
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="agentsam", description="AgentSam Python SDK · local-first engineering tools")
     from .terminal_art import version_string
@@ -201,17 +183,6 @@ def build_parser() -> argparse.ArgumentParser:
     diag.add_argument("--json", action="store_true", help="machine-readable diagnostics")
     diag.add_argument("--verify-cad", action="store_true", help="run a real OCCT solid/export/reopen proof")
     diag.set_defaults(func=_cmd_doctor)
-
-    assets = sub.add_parser("assets", help="inspect local CAD, drawing, scene and media assets")
-    assets_sub = assets.add_subparsers(dest="assets_command", required=True)
-    inventory = assets_sub.add_parser("inventory", help="inventory project assets without third-party applications")
-    inventory.add_argument("root", nargs="?", default=".", help="project directory (default: current directory)")
-    inventory.add_argument("--format", choices=("json", "text"), default="text")
-    inventory.add_argument("--hash", action="store_true", help="hash each asset using SHA-256")
-    inventory.add_argument("--limit", type=int, default=5000, help="maximum files scanned")
-    inventory.add_argument("--max-depth", type=int, default=12, help="maximum directory depth")
-    inventory.set_defaults(func=_cmd_assets_inventory)
-
 
     cad = sub.add_parser("cad", help="discover and validate native CAD engines")
     cad_sub = cad.add_subparsers(dest="cad_command", required=True)

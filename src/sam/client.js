@@ -446,7 +446,7 @@ export class AgentSamClient {
           model:row.model_required?'required':'never',
           risk:['none','network-read'].includes(row.side_effects)?'read_only':'write',
           network:row.side_effects==='network-read'?'required':'optional',
-          side_effects:row.side_effects||'unknown',lanes:['host'],
+          side_effects:row.side_effects||'unknown',lanes:['platform'],
           status:row.status||'stable',host_bound:true,cli:[],
         });
         known.add(row.id);

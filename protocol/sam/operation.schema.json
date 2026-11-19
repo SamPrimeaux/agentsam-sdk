@@ -1,20 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/operation.schema.json",
-  "title": "SamOperation",
+  "title": "AgentOperationContract",
+  "description": "Portable operation metadata. Runtime handlers and host secrets are deliberately excluded.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "version", "module", "action", "summary", "execution", "risk"],
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9]+(\\.[a-z][a-z0-9_-]+)+$",
-      "description": "Canonical operation id, e.g. brand.scan"
+      "pattern": "^[a-z][A-Za-z0-9_-]*(\\.[A-Za-z][A-Za-z0-9_-]*)+$",
+      "description": "Canonical dotted operation ID, including existing camelCase action names."
     },
     "version": { "type": "integer", "minimum": 1 },
     "module": { "type": "string", "minLength": 1 },
     "action": { "type": "string", "minLength": 1 },
     "summary": { "type": "string", "minLength": 1 },
+    "purpose": { "type": "string" },
+    "outcome": { "type": "string" },
     "description": { "type": "string" },
     "execution": {
       "type": "object",
@@ -24,13 +27,15 @@
         "lanes": {
           "type": "array",
           "minItems": 1,
-          "items": { "enum": ["local", "remote", "sandbox", "platform"] }
+          "items": { "enum": ["local", "remote", "sandbox", "platform", "mcp"] }
         },
         "model": { "enum": ["never", "optional", "required"] },
         "network": { "enum": ["none", "optional", "required"] },
         "sideEffects": {
-          "enum": ["none", "local_write", "remote_read", "remote_write", "deploy", "billable"]
-        }
+          "enum": ["none", "local_write", "remote_read", "remote_write", "deploy", "billable", "oauth"]
+        },
+        "embedding": { "enum": ["never", "optional", "required"] },
+        "provider_spend": { "enum": ["never", "optional", "required"] }
       }
     },
     "auth": {
@@ -41,12 +46,78 @@
         "provider": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "authority": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/authorityRequirement" }
+    },
+    "capability_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "provider": { "type": "string" },
+          "oauth_scopes": { "type": "array", "items": { "type": "string" } },
+          "feature_packs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "server_name": { "type": "string" },
+        "server_url": { "type": "string" },
+        "tool_name": { "type": "string" },
+        "required_scopes": { "type": "array", "items": { "type": "string" } },
+        "feature_packs": { "type": "array", "items": { "type": "string" } },
+        "protocol": { "enum": ["streamable_http", "sse", "stdio"] }
+      }
+    },
     "risk": { "enum": ["read_only", "write", "privileged"] },
-    "input_schema": { "type": "string" },
-    "output_schema": { "type": "string" },
+    "input_schema": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "object" }
+      ]
+    },
+    "output_schema": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "object" }
+      ]
+    },
     "capabilities": { "type": "array", "items": { "type": "string" } },
+    "accepts": { "type": "array", "items": { "type": "string" } },
+    "phases": { "type": "array", "items": { "type": "string" } },
+    "artifacts": { "type": "array", "items": { "type": "string" } },
+    "skill": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": "string" },
+            "help": { "type": "boolean" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "available": { "type": "boolean" },
+        "operation": { "type": "string" }
+      }
+    },
     "cli": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "command": {
           "type": "array",
@@ -56,11 +127,33 @@
     },
     "docs": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "section": { "type": "string" },
         "examples": { "type": "array", "items": { "type": "string" } }
       }
     },
-    "status": { "enum": ["stable", "experimental", "stub", "deprecated"] }
+    "pipeline": { "type": "string" },
+    "idempotencyMode": {
+      "enum": ["not_applicable", "intrinsic", "supported", "required"]
+    },
+    "status": {
+      "enum": ["stable", "experimental", "stub", "deprecated", "compatibility"]
+    }
+  },
+  "$defs": {
+    "authorityRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["none", "host", "binding", "secret", "oauth", "connection"] },
+        "ref": { "type": "string" },
+        "provider": { "type": "string" },
+        "scopes": { "type": "array", "items": { "type": "string" } },
+        "optional": { "type": "boolean" },
+        "metadata": { "type": "object" }
+      }
+    }
   }
 }

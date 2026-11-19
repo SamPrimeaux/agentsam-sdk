@@ -15,7 +15,7 @@
     "local",
     "worker-adapter"
   ],
-  "purpose": "Canonical portable CMS operations for ecommerce-cms-agentsam; trusted site-first storage, themes and publication; zero SDK DDL or local database provisioning.",
+  "purpose": "CMS-owned operation semantics and host-independent domain behavior for ecommerce-cms-agentsam; consumes shared AgentSam operation contracts and leaves trusted identity, storage, rendering and publication adapters with the host.",
   "install": [
     {
       "type": "npm",

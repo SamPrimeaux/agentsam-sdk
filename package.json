@@ -349,7 +349,7 @@
     "brand:apply": "python3 scripts/brand-compliance/brand_compliance.py apply",
     "test:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run test -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run test -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run test -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run test -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio && npm run test -w @inneranimalmedia/agentsam-content-studio",
     "build:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio",
-    "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock && npm run test:primetech-procedures",
+    "test:standard": "npm run build:contracts && node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock && npm run test:primetech-procedures",
     "test:unit": "node --test test/*.test.mjs test/unit/*.test.mjs",
     "test:cli": "node --test test/cli/*.test.mjs",
     "test:integration:mock": "npm run build -w @inneranimalmedia/agentsam-provider-completeful && node scripts/run-sdk-integration-tests.mjs && npm run verify:cms:canonical",
@@ -357,7 +357,7 @@
     "test:terminal:mock": "node --test test/terminal/*.test.mjs",
     "test:live:terminal": "node --test test/live/*.live.test.mjs",
     "test:identity": "npm --prefix packages/identity test",
-    "test:workspaces": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-vault test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench run build && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-goalguru test && npm --prefix packages/agentsam-nav run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test && npm --prefix packages/agentsam-queue-control test && npm --prefix packages/agentsam-goap test && npm --prefix packages/agentsam-hooks test && npm --prefix packages/agentsam-sections test",
+    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-cms test && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-vault test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench run build && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-goalguru test && npm --prefix packages/agentsam-nav run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test && npm --prefix packages/agentsam-queue-control test && npm --prefix packages/agentsam-goap test && npm --prefix packages/agentsam-hooks test && npm --prefix packages/agentsam-sections test",
     "test:autorag": "npm --prefix packages/agentsam-knowledge test",
     "smoke": "node test/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",
@@ -432,7 +432,8 @@
     "sam:machine:build": "node scripts/sam-machine/build.mjs --out /tmp/sam-machine-build",
     "sam:machine:verify": "bash scripts/sam-machine/verify.sh",
     "test:primetech-procedures": "npm --prefix packages/primetech-procedures test",
-    "wip:audit": "node scripts/wip-landscape.mjs"
+    "wip:audit": "node scripts/wip-landscape.mjs",
+    "build:contracts": "npm --prefix packages/agentsam-contracts run build"
   },
   "engines": {
     "node": ">=22"
@@ -451,7 +452,8 @@
     "picocolors": "^1.1.1",
     "typescript": "5.9.3",
     "undici": "7.30.1",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "@inneranimalmedia/agentsam-contracts": "2.6.15"
   },
   "publishConfig": {
     "access": "public"

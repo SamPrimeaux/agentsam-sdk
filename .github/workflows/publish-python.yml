@@ -50,7 +50,7 @@ jobs:
       - name: Test installed Python-native SDK and default CLI
         run: |
           python -m pip install -e .
-          for suite in test_assets_cli.py test_packaging.py test_terminal_art.py test_tui_cli.py test_native_runtime.py test_cad_occt.py; do
+          for suite in test_cli_distribution.py test_asset_procedure_api.py test_packaging.py test_terminal_art.py test_tui_cli.py test_native_runtime.py test_cad_occt.py; do
             python -m unittest discover -s tests -p "$suite" -v
           done
 
@@ -69,7 +69,6 @@ jobs:
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/smoke/bin/agentsam" --help
           "$RUNNER_TEMP/smoke/bin/agentsam" doctor --json
-          "$RUNNER_TEMP/smoke/bin/agentsam" assets inventory "$GITHUB_WORKSPACE/python" --format json
           "$RUNNER_TEMP/smoke/bin/python" -c "import agentsam_sdk; from agentsam_sdk import AgentSamClient; assert hasattr(AgentSamClient(), 'assets'); print(agentsam_sdk.__version__)"
 
       - uses: actions/upload-artifact@v4

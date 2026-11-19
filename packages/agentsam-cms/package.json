@@ -40,5 +40,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-contracts": "2.6.15"
   }
 }

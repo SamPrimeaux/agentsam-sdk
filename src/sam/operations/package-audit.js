@@ -22,7 +22,7 @@ export const packageAuditOp = defineSamOperation({
     embedding: 'never',
     network: 'optional',
     sideEffects: 'none',
-    provider_spend: 'none',
+    provider_spend: 'never',
   },
   risk: 'read_only',
   capabilities: ['package.audit'],

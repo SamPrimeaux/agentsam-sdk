@@ -122,3 +122,20 @@ test('registry rejects duplicate tool keys instead of silently shadowing definit
     /duplicate tool definition/,
   );
 });
+
+
+test('registry enforces the packaged AgentToolDefinition contract', () => {
+  const definition = COMPLETEFUL_TOOL_DEFINITIONS[0];
+  assert.throws(
+    () => createToolRegistry({ tools: [{ ...definition, riskLevel: 'unclassified' }] }),
+    /invalid riskLevel/,
+  );
+  assert.throws(
+    () => createToolRegistry({ tools: [{ ...definition, displayName: '' }] }),
+    /requires displayName/,
+  );
+  assert.throws(
+    () => createToolRegistry({ tools: [{ ...definition, handler: { type: 'unknown', ref: 'x' } }] }),
+    /invalid handler type/,
+  );
+});

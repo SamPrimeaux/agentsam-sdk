@@ -17,8 +17,9 @@ def inspect_installation(*, verify_cad: bool = False) -> dict:
         {"name": "Python SDK", "state": "ready", "detail": f"{version_string()} · Python {sys.version_info.major}.{sys.version_info.minor}"},
         {"name": "Default terminal UI", "state": "ready" if importlib.util.find_spec("rich") else "missing",
          "detail": "Rich included in the base pip package"},
-        {"name": "Local Python operations", "state": "ready", "detail": "Workspace, repository and asset inventory"},
+        {"name": "Local Python operations", "state": "ready", "detail": "Workspace, repository and bounded process execution"},
         {"name": "Node bridge", "state": "optional", "detail": "Only needed for bridge-only operations"},
+        {"name": "Procedure host", "state": "optional", "detail": "Required for client.assets.inventory()"},
     ]
     if verify_cad:
         evidence = probe_occt(occt)

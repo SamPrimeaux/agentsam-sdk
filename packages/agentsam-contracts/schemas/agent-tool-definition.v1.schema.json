@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/tools/agent-tool-definition.v1.schema.json",
+  "title": "AgentToolDefinition",
+  "description": "Portable tool definition. Handler references and authority references are opaque; credentials are never embedded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "toolKey",
+    "displayName",
+    "capabilityKey",
+    "inputSchema",
+    "outputSchema",
+    "riskLevel",
+    "sideEffectLevel",
+    "idempotencyMode"
+  ],
+  "properties": {
+    "toolKey": { "type": "string", "minLength": 1 },
+    "displayName": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "provider": { "type": "string" },
+    "pluginId": { "type": "string" },
+    "capabilityKey": { "type": "string", "minLength": 1 },
+    "handler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "ref"],
+      "properties": {
+        "type": { "enum": ["local", "http", "worker_rpc", "execos", "mcp", "custom"] },
+        "ref": { "type": "string", "minLength": 1 },
+        "metadata": { "type": "object" }
+      }
+    },
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" },
+    "authority": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type"],
+        "properties": {
+          "type": { "enum": ["none", "host", "binding", "secret", "oauth", "connection"] },
+          "ref": { "type": "string" },
+          "provider": { "type": "string" },
+          "scopes": { "type": "array", "items": { "type": "string" } },
+          "optional": { "type": "boolean" },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "riskLevel": { "enum": ["low", "moderate", "high", "critical"] },
+    "sideEffectLevel": {
+      "enum": ["none", "local_write", "external_write", "billable_external_write", "destructive_possible"]
+    },
+    "idempotencyMode": { "enum": ["not_applicable", "intrinsic", "supported", "required"] },
+    "timeoutMs": { "type": "integer", "minimum": 1 },
+    "retryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxAttempts"],
+      "properties": {
+        "maxAttempts": { "type": "integer", "minimum": 1 },
+        "backoff": { "enum": ["none", "fixed", "exponential"] },
+        "baseDelayMs": { "type": "integer", "minimum": 0 },
+        "maxDelayMs": { "type": "integer", "minimum": 0 },
+        "retryableReasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "receiptMode": { "enum": ["full", "redacted", "metadata_only"] },
+    "sensitiveInputPaths": { "type": "array", "items": { "type": "string" } },
+    "sensitiveOutputPaths": { "type": "array", "items": { "type": "string" } },
+    "emitsEvents": { "type": "array", "items": { "type": "string" } },
+    "active": { "type": "boolean" },
+    "metadata": { "type": "object" }
+  }
+}

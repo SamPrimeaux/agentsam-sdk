@@ -23,11 +23,24 @@ for (const relative of [
 
 const schemaPath = path.join(root, 'schemas', 'cad.project.v2.schema.json');
 const sourcePath = path.join(root, '..', '..', 'protocol', 'cad', 'cad.project.v2.schema.json');
+const sourceTypesSchemaPath = path.join(root, '..', '..', 'contracts', 'source-types.v2.schema.json');
+const sourceTypesCatalogPath = path.join(root, '..', '..', 'contracts', 'source-types.v2.json');
 must('schemas/cad.project.v2.schema.json');
+must('../../contracts/source-types.v2.schema.json');
+must('../../contracts/source-types.v2.json');
 if (!fs.existsSync(sourcePath) || fs.readFileSync(schemaPath, 'utf8') !== fs.readFileSync(sourcePath, 'utf8')) {
   throw new Error('CAD v2 npm schema differs from SDK canonical protocol');
 }
 const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+const sourceTypesSchema = JSON.parse(fs.readFileSync(sourceTypesSchemaPath, 'utf8'));
+const sourceTypesCatalog = JSON.parse(fs.readFileSync(sourceTypesCatalogPath, 'utf8'));
+if (sourceTypesSchema.$id !== 'https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json'
+    || sourceTypesCatalog.schema !== 'agentsam.source-types.v2'
+    || schema.properties?.assets?.items?.properties?.formatRef?.$ref !== sourceTypesSchema.$id + '#/$defs/formatReference'
+    || schema.properties?.assets?.items?.properties?.sourceKindRef?.$ref !== sourceTypesSchema.$id + '#/$defs/sourceKindReference'
+    || schema.properties?.outputs?.items?.properties?.formatRef?.$ref !== sourceTypesSchema.$id + '#/$defs/formatReference') {
+  throw new Error('shared source-types.v2 contract reference mismatch');
+}
 if (schema.$id !== 'https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/cad.project.v2.schema.json' ||
     schema.properties?.schema?.const !== 'cad.project.v2') {
   throw new Error('CAD v2 schema identity or contract mismatch');

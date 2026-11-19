@@ -56,3 +56,16 @@ injected-repository behavior. A real launch also requires the ecommerce
 CMS host's multi-tenant D1/R2 adapter and end-to-end Page Editor, Theme Studio,
 publication, rollback and storefront tests. SDK tests alone do not establish
 deployed product readiness.
+
+## Contract boundary
+
+CMS operation declarations in `src/contracts.js` are CMS semantics, not a second
+portable operation format. They extend `AgentOperationContract` from
+`@inneranimalmedia/agentsam-contracts` with the CMS-owned effect vocabulary and
+CMS-specific input/output schemas. The machine projects the shared portable
+metadata into SAM handlers; authorization, revision rules, section/block
+composition and publication behavior remain CMS-owned.
+
+The package depends on `@inneranimalmedia/agentsam-contracts` for its public
+operation and JSON Schema types. It does not copy or redefine the shared
+operation/tool vocabulary.

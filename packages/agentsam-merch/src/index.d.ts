@@ -314,6 +314,19 @@ export function completefulProfileContext(
   location?: Record<string, unknown>,
 ): Readonly<Record<string, unknown>>;
 export function completefulTarget(location?: Record<string, unknown>): Readonly<ManufacturingTarget>;
+/** Printify blueprint/print-provider/variant selection; manufacturing rules remain profile data. */
+export function printifyProfileContext(
+  blueprint?: Record<string, unknown>,
+  printProvider?: Record<string, unknown>,
+  variant?: Record<string, unknown>,
+  placeholder?: Record<string, unknown>,
+  options?: { physicalSize?: { width?: number; height?: number; unit?: string }; providerDpi?: number; process?: string },
+): Readonly<Record<string, unknown>>;
+/** Physical size must carry verified units; raw blueprint pixel counts are not print dimensions. */
+export function printifyTarget(
+  physicalSize?: { width?: number; height?: number; unit?: string },
+  providerDpi?: number | null,
+): Readonly<ManufacturingTarget>;
 
 /** Source-pixel geometry (never inferred from a mockup delivery image). */
 export interface PrintGeometryInput {
