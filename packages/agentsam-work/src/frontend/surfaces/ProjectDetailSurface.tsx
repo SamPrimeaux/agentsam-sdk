@@ -138,7 +138,6 @@ export function ProjectDetailSurface({
           </div>
         </div>
         <div className="aw-actions aw-project-detail__actions">
-          {chatHost?.createProjectChat ? <button type="button" className="aw-btn aw-btn--primary" onClick={() => void newProjectChat()} disabled={creatingChat}><MessageSquarePlus size={15}/> {creatingChat ? "Creating…" : "New chat"}</button> : null}
           {chatHost?.listAssignableChats && chatHost?.assignProjectChat ? <button type="button" className="aw-btn" onClick={() => setTab("chats")}><Link2 size={15}/> Attach chat</button> : null}
           <div className="aw-project-detail__desktop-actions">
             {knowledgeAction}
