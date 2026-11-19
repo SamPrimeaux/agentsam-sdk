@@ -369,7 +369,7 @@ export function Composer({
         onSend={submitWithAttachments}
         onCancel={cancel}
         streaming={streaming}
-        placeholder={imageMode ? 'Describe the image to create…' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
+        placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Reply or hold to talk' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
         toolbarStart={<>{trigger}{!workMode ? attachControl : imageMode ? <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title="Leave image creation mode"><ImagePlus size={14}/> Image creation <X size={13}/></button> : null}</>}
         toolbarEnd={workMode ? <><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></> : null}
         attachmentPreview={attachmentPreview}
