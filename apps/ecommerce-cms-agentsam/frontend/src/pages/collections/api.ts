@@ -88,7 +88,7 @@ export const collectionsApi = {
   async save(form: CollectionForm, id?: string, status?: CollectionStatus, siteId?: string): Promise<Collection> {
     const payload = serializeCollection(form, status);
     const path = id ? `/api/admin/collections/${encodeURIComponent(id)}` : "/api/admin/collections";
-    const result = accepted(await adminFetch<Ok & { collection: CmsRow }>(scoped(path), {
+    const result = accepted(await adminFetch<Ok & { collection: CmsRow }>(scoped(path, siteId), {
       method: id ? "PUT" : "POST",
       body: JSON.stringify({ ...payload, eyebrow: form.eyebrow, merch_rules: form.rules,
         ...(id && revisions.has(id) ? { expected_updated_at: revisions.get(id) } : {}) }),
