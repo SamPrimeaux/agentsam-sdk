@@ -349,7 +349,7 @@
     "brand:apply": "python3 scripts/brand-compliance/brand_compliance.py apply",
     "test:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run test -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run test -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run test -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run test -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio && npm run test -w @inneranimalmedia/agentsam-content-studio",
     "build:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio",
-    "test:standard": "npm --prefix packages/agentsam-contracts run build && node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock && npm run test:primetech-procedures",
+    "test:standard": "npm run build:contracts && node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock && npm run test:primetech-procedures",
     "test:unit": "node --test test/*.test.mjs test/unit/*.test.mjs",
     "test:cli": "node --test test/cli/*.test.mjs",
     "test:integration:mock": "npm run build -w @inneranimalmedia/agentsam-provider-completeful && node scripts/run-sdk-integration-tests.mjs && npm run verify:cms:canonical",
@@ -432,7 +432,8 @@
     "sam:machine:build": "node scripts/sam-machine/build.mjs --out /tmp/sam-machine-build",
     "sam:machine:verify": "bash scripts/sam-machine/verify.sh",
     "test:primetech-procedures": "npm --prefix packages/primetech-procedures test",
-    "wip:audit": "node scripts/wip-landscape.mjs"
+    "wip:audit": "node scripts/wip-landscape.mjs",
+    "build:contracts": "npm --prefix packages/agentsam-contracts run build"
   },
   "engines": {
     "node": ">=22"
