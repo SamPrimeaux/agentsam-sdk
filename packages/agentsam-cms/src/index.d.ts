@@ -1,22 +1,7 @@
+import type { AgentJsonSchema, AgentOperationContract, AgentOperationDefinition } from '@inneranimalmedia/agentsam-contracts';
+
 export type CmsIdentity = { accountId:string; installationId:string; actorId:string };
-export type CmsJsonSchema = {
-  type?: 'object'|'array'|'string'|'number'|'integer'|'boolean';
-  properties?: Record<string,CmsJsonSchema>;
-  required?: string[];
-  additionalProperties?: boolean|CmsJsonSchema;
-  items?: CmsJsonSchema;
-  enum?: unknown[];
-  const?: unknown;
-  minimum?: number;
-  maximum?: number;
-  minLength?: number;
-  maxLength?: number;
-  minItems?: number;
-  maxItems?: number;
-  minProperties?: number;
-  pattern?: string;
-  [key:string]:unknown;
-};
+export type CmsJsonSchema = AgentJsonSchema;
 export type CmsDefinition = {
   kind:'section'|'block';
   key:string;
@@ -54,18 +39,28 @@ export type CmsRepository = {
   getRevision(identity:CmsIdentity,pageId:string,version:number):Promise<CmsDocument|null>|CmsDocument|null;
   getPublication(identity:CmsIdentity,pageId:string,version?:number|null):Promise<unknown>|unknown;
 };
-export type CmsOperationContract = {
-  name:string; capability:string; effect:string; description:string;
-  input_schema:CmsJsonSchema; output_schema:CmsJsonSchema;
-};
-export type CmsOperation = {
-  id:string; input_schema:CmsJsonSchema; output_schema:CmsJsonSchema;
-  model_visible?:boolean; aliasFor?:string;
-  handler:(input:Record<string,unknown>,context?:unknown)=>Promise<Record<string,unknown>>;
-  [key:string]:unknown;
-};
+export type CmsOperationEffect =
+  | 'read' | 'draft_create' | 'draft_update' | 'draft_soft_remove'
+  | 'draft_reorder' | 'draft_visibility' | 'draft_restore' | 'live_publish';
+export type CmsOperationContract =
+  Omit<AgentOperationContract,'input_schema'|'output_schema'> & {
+    input_schema:CmsJsonSchema;
+    output_schema:CmsJsonSchema;
+    effect:CmsOperationEffect;
+    /** @deprecated Use id. */
+    readonly name:string;
+    /** @deprecated Use capabilities[0]. */
+    readonly capability:string;
+  };
+export type CmsOperation =
+  Omit<AgentOperationDefinition<Record<string,unknown>,Record<string,unknown>,unknown>,'input_schema'|'output_schema'> & {
+    input_schema:CmsJsonSchema;
+    output_schema:CmsJsonSchema;
+    model_visible?:boolean;
+    aliasFor?:string;
+  };
 export type CmsMachineOptions = {
-  defineSamOperation:(definition:Record<string,unknown>)=>CmsOperation;
+  defineSamOperation:(definition:AgentOperationDefinition<Record<string,unknown>,Record<string,unknown>,unknown>)=>CmsOperation;
   repository:CmsRepository;
   definitions?:CmsDefinition[];
   resolveTrustedContext:(context?:unknown)=>Promise<CmsIdentity|null>|CmsIdentity|null;
