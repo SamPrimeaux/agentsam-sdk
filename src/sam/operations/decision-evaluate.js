@@ -21,7 +21,7 @@ export const decisionEvaluateOp = defineSamOperation({
     embedding: 'never',
     network: 'optional',
     sideEffects: 'none',
-    provider_spend: 'possible',
+    provider_spend: 'optional',
   },
   risk: 'read_only',
   capabilities: ['decision.evaluate', 'planning.goap'],
