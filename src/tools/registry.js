@@ -1,3 +1,4 @@
+import { assertAgentToolDefinition } from '@inneranimalmedia/agentsam-contracts';
 /** @typedef {import('../../packages/agentsam-contracts/src/tools').AgentToolDefinition} AgentToolDefinition */
 
 function clean(value) {
@@ -6,20 +7,14 @@ function clean(value) {
 
 /** @param {AgentToolDefinition} definition */
 function assertToolDefinition(definition) {
-  if (!definition || typeof definition !== 'object') {
-    throw new TypeError('tool definition must be an object');
-  }
-  if (!clean(definition.toolKey)) throw new TypeError('tool definition requires toolKey');
-  if (!clean(definition.capabilityKey)) throw new TypeError(`tool ${definition.toolKey} requires capabilityKey`);
-  if (!definition.inputSchema || typeof definition.inputSchema !== 'object') {
-    throw new TypeError(`tool ${definition.toolKey} requires inputSchema`);
-  }
-  if (!definition.outputSchema || typeof definition.outputSchema !== 'object') {
-    throw new TypeError(`tool ${definition.toolKey} requires outputSchema`);
-  }
+  assertAgentToolDefinition(definition);
   return definition;
 }
 
+/**
+ * Runtime registry for canonical AgentToolDefinition contracts.
+ * Provider adapters and handler references are bound by the host, never serialized credentials.
+ */
 export function createToolRegistry({ tools = [], adapters = [], handlers = [] } = {}) {
   const toolsByKey = new Map();
   const adaptersByProvider = new Map();
