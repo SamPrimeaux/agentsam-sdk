@@ -38,7 +38,8 @@ function normalize(row: CmsRow): Collection {
   const metadata = Object.keys(object(row.metadata)).length ? object(row.metadata) : object(row.metadata_json);
   if (row.updated_at) revisions.set(row.id, row.updated_at);
   return {
-    id: row.id, slug: row.slug, title: row.name, description: row.description || "",
+    id: row.id, site_id: row.site_id, site_name: row.site_name,
+    slug: row.slug, title: row.name, description: row.description || "",
     eyebrow: String(metadata.eyebrow || ""), image_url: row.image_url || String(metadata.image_url || "") || null,
     accent_color: String(metadata.accent_color || "#5a7df7"), status: row.status,
     sort_order: row.sort_order || 0, seo_title: row.seo_title || null, seo_description: row.seo_description || null,
