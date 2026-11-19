@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.collection-candidate.v1.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-merch/v1/collection-candidate.v1.schema.json",
   "title": "AgentSam Collection Lab Candidate",
   "type": "object",
   "required": [

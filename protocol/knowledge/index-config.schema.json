@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/knowledge/index-config.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/knowledge.index-config.schema.json",
   "title": "Portable index configuration v1",
   "type": "object",
   "additionalProperties": false,

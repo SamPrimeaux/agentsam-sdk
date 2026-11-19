@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/repository/repository-identity.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/repository.repository-identity.schema.json",
   "title": "AgentSam Repository Identity",
   "type": "object",
   "additionalProperties": false,

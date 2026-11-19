@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/context/result-policy.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/context.result-policy.schema.json",
   "title": "ResultPolicy",
   "type": "object",
   "additionalProperties": false,

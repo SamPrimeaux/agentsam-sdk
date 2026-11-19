@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/packages/heuristic-theme/v1/contracts/section.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/theme-heuristic/v1/contracts/section.schema.json",
   "title": "Heuristic Section",
   "type": "object",
   "required": ["id", "type", "blocks", "appearance", "motion", "responsive", "visibility"],

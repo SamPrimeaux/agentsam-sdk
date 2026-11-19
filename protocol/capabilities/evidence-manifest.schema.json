@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/evidence-manifest.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.evidence-manifest.schema.json",
   "title": "AgentSamEvidence run manifest",
   "description": "Written last when a run is sealed; its presence is the completion marker. Status is computed from the tree, never hand-written. Keys are relative slug paths; ids appear only as fields.",
   "type": "object",

@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-desktop-shell/v1/brand-manifest.schema.json",
   "title": "AgentSam Desktop Brand Manifest",
   "type": "object",
   "required": ["app_id", "app_name", "bundle_identifier", "base_url", "deep_link_scheme", "identity_provider"],

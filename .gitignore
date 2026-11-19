@@ -92,3 +92,6 @@ apps/local-studio/frontend/public/themes/
 
 # Mac-only creative media inventory, never shipped or committed
 apps/local-studio/.local-media-intake/
+
+# Generated, verified R2 package-schema staging output
+/dist/schema-registry/

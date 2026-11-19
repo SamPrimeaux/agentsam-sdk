@@ -1,6 +1,6 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"https://schemas.inneranimalmedia.com/agentsam/capabilities/site-index.schema.json",
+  "$id":"https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.site-index.schema.json",
   "title":"Derived site scrape resource graph",
   "type":"object",
   "required":["schema","resources","assets","edges","counts","content_hash"],

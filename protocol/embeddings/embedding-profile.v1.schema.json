@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/embeddings/embedding-profile.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/embeddings.embedding-profile.v1.schema.json",
   "title": "AgentSamEmbeddingProfile",
   "type": "object",
   "required": ["schema", "id", "provider", "dimensions", "revision", "fingerprint"],

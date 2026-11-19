@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/cloudflare-cpu-audit-input.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.cloudflare-cpu-audit-input.schema.json",
   "title": "cloudflare.cpu.audit input",
   "type": "object",
   "additionalProperties": false,

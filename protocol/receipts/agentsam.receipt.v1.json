@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.receipt.v1.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/receipts.agentsam.receipt.v1.schema.json",
   "title": "AgentSam Receipt Envelope v1",
   "type": "object",
   "required": [
@@ -17,7 +17,7 @@
   ],
   "properties": {
     "$schema": {
-      "const": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.receipt.v1.json"
+      "const": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/receipts.agentsam.receipt.v1.schema.json"
     },
     "schema": { "const": "agentsam.receipt.v1" },
     "receipt_id": { "type": "string", "minLength": 1 },

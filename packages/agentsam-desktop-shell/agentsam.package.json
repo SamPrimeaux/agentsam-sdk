@@ -47,5 +47,5 @@
     "Building and packaging AgentSam Local Studio for desktop installation.",
     "Preparing native desktop bridges, frontend assets and the bundled agentsamd sidecar."
   ],
-  "version": "2.6.12"
+  "version": "2.6.15"
 }

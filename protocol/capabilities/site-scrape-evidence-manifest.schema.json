@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-evidence-manifest.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.site-scrape-evidence-manifest.schema.json",
   "title": "Private site.scrape evidence archive manifest",
   "description": "Private account/project/run-scoped R2 manifest; uploaded last as an archive completion marker. Account/project keys are labels, not IAM authorization.",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/repository-snapshot-input.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.repository-snapshot-input.schema.json",
   "title": "repository.snapshot input",
   "type": "object",
   "additionalProperties": false,

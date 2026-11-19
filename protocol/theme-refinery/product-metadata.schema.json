@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/theme-refinery/product-metadata.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/theme-refinery.product-metadata.schema.json",
   "title": "agentsam_products.metadata for portable prebuild packages",
   "type": "object",
   "additionalProperties": false,

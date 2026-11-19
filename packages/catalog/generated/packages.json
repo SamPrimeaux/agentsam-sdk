@@ -231,7 +231,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -315,7 +315,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -696,7 +696,7 @@
         "Building and packaging AgentSam Local Studio for desktop installation.",
         "Preparing native desktop bridges, frontend assets and the bundled agentsamd sidecar."
       ],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -779,7 +779,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -866,7 +866,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -950,7 +950,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -1162,7 +1162,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -1307,7 +1307,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],
@@ -2414,7 +2414,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.14"
     },
     {
       "avoid_when": [],
@@ -2666,7 +2666,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.15"
     },
     {
       "avoid_when": [],

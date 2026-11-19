@@ -28,7 +28,7 @@
       "20 MB PNG upload limit"
     ]
   },
-  "$schema": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.manufacturing-profile.v1.json",
+  "$schema": "https://schemas.inneranimalmedia.com/packages/agentsam-merch/v1/manufacturing-profile.v1.schema.json",
   "resolution": {
     "readyPpi": 300,
     "minimumPpi": 300

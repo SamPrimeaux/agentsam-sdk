@@ -34,7 +34,7 @@ def _build(crawl_result):
 class TestContract(unittest.TestCase):
     def test_schemas_parse_and_ids_follow_convention(self):
         for schema in (RESULT_SCHEMA, INPUT_SCHEMA):
-            self.assertTrue(schema["$id"].startswith("https://schemas.inneranimalmedia.com/agentsam/capabilities/"))
+            self.assertTrue(schema["$id"].startswith("https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities."))
 
     def test_receipt_has_every_required_key(self):
         r = _build(_crawl([("https://example.com/", "Home", 3)], []))

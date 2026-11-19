@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/repository-crawl-input.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.repository-crawl-input.schema.json",
   "title": "repository-crawl-input",
   "type": "object",
   "required": [

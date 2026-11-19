@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/repository/repository-dependency.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/repository.repository-dependency.schema.json",
   "title": "AgentSam Repository Dependency Record",
   "type": "object",
   "additionalProperties": false,

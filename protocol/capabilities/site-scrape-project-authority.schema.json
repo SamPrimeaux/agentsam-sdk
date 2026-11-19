@@ -1,6 +1,6 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-project-authority.schema.json",
+  "$id":"https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/capabilities.site-scrape-project-authority.schema.json",
   "title":"Project-authority service result for site scrape",
   "description":"Result produced only by a trusted AUTHORIZER Worker service binding. User-supplied account and project IDs are not permissions.",
   "type":"object",

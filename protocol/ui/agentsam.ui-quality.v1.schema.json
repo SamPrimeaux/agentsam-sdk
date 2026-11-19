@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/ui/agentsam.ui-quality.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-protocol/v1/ui.agentsam.ui-quality.v1.schema.json",
   "title": "AgentSam UI Quality Receipt",
   "description": "Evidence-backed release gate for native and generated UI, CMS themes, hosted apps and desktop. Not a manually writable readiness status.",
   "type": "object",

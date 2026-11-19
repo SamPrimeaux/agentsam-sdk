@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/packages/heuristic-theme/v1/contracts/page.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/packages/theme-heuristic/v1/contracts/page.schema.json",
   "title": "Heuristic Page",
   "type": "object",
   "required": ["id", "route", "title", "sections"],

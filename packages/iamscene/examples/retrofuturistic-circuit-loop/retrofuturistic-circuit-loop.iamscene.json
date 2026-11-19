@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schemas.inneranimalmedia.com/iamscene/v1/scene.schema.json",
+  "$schema": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json",
   "format": "iamscene",
   "formatVersion": "1.0.0",
   "metadata": {
