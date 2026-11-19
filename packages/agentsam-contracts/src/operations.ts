@@ -1,3 +1,4 @@
+import { AGENT_AUTHORITY_TYPES } from './authority';
 import type { AgentAuthorityRequirement } from './authority';
 import type { AgentJsonSchema, AgentToolIdempotencyMode } from './tools';
 import { AGENT_TOOL_IDEMPOTENCY_MODES } from './tools';
@@ -108,6 +109,84 @@ export interface AgentOperationDefinition<
   TContext = unknown,
 > extends AgentOperationContract {
   handler: (input: TInput, context: TContext) => TOutput | Promise<TOutput>;
+}
+
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+const nonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+const stringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every(item => typeof item === 'string');
+const enumValue = (value: unknown, allowed: readonly string[]) =>
+  typeof value === 'string' && allowed.includes(value);
+
+/**
+ * Runtime guard for portable operation metadata. Runtime-only handler and host
+ * extensions are intentionally ignored; JSON Schema remains strict for wire data.
+ */
+export function assertAgentOperationContract(value: unknown): asserts value is AgentOperationContract {
+  if (!isRecord(value)) throw new TypeError('agent operation contract must be an object');
+  if (!nonEmptyString(value.id) || !/^[a-z][A-Za-z0-9_-]*(\\.[A-Za-z][A-Za-z0-9_-]*)+$/.test(value.id)) {
+    throw new TypeError('agent operation contract requires a dotted id');
+  }
+  for (const field of ['module','action','summary']) {
+    if (!nonEmptyString(value[field])) throw new TypeError(`operation ${value.id} requires ${field}`);
+  }
+  if (!Number.isInteger(value.version) || (value.version as number) < 1) {
+    throw new TypeError(`operation ${value.id} version must be a positive integer`);
+  }
+  if (!isRecord(value.execution)) throw new TypeError(`operation ${value.id} requires execution policy`);
+  const execution=value.execution;
+  if (!Array.isArray(execution.lanes) || execution.lanes.length===0 ||
+      execution.lanes.some(lane=>!enumValue(lane,AGENT_OPERATION_LANES))) {
+    throw new TypeError(`operation ${value.id} has invalid execution lanes`);
+  }
+  if (!enumValue(execution.model,AGENT_OPERATION_MODEL_POLICIES)) {
+    throw new TypeError(`operation ${value.id} has invalid execution model policy`);
+  }
+  if (!enumValue(execution.network,AGENT_OPERATION_NETWORK_POLICIES)) {
+    throw new TypeError(`operation ${value.id} has invalid execution network policy`);
+  }
+  if (!enumValue(execution.sideEffects,AGENT_OPERATION_SIDE_EFFECTS)) {
+    throw new TypeError(`operation ${value.id} has invalid execution side-effect policy`);
+  }
+  for (const field of ['embedding','provider_spend']) {
+    if (execution[field]!==undefined && !enumValue(execution[field],AGENT_OPERATION_SPEND_POLICIES)) {
+      throw new TypeError(`operation ${value.id} has invalid execution ${field} policy`);
+    }
+  }
+  if (!enumValue(value.risk,AGENT_OPERATION_RISKS)) {
+    throw new TypeError(`operation ${value.id} has invalid risk`);
+  }
+  for (const field of ['input_schema','output_schema']) {
+    if (value[field]!==undefined && typeof value[field]!=='string' && !isRecord(value[field])) {
+      throw new TypeError(`operation ${value.id} ${field} must be a schema object or reference`);
+    }
+    if (typeof value[field]==='string' && !value[field].trim()) {
+      throw new TypeError(`operation ${value.id} ${field} reference cannot be empty`);
+    }
+  }
+  for (const field of ['capabilities','accepts','phases','artifacts']) {
+    if (value[field]!==undefined && !stringArray(value[field])) {
+      throw new TypeError(`operation ${value.id} ${field} must be a string array`);
+    }
+  }
+  if (value.idempotencyMode!==undefined &&
+      !enumValue(value.idempotencyMode,AGENT_OPERATION_IDEMPOTENCY_MODES)) {
+    throw new TypeError(`operation ${value.id} has invalid idempotency mode`);
+  }
+  if (value.status!==undefined && !enumValue(value.status,AGENT_OPERATION_STATUSES)) {
+    throw new TypeError(`operation ${value.id} has invalid status`);
+  }
+  if (value.authority!==undefined) {
+    if (!Array.isArray(value.authority)) throw new TypeError(`operation ${value.id} authority must be an array`);
+    for (const requirement of value.authority) {
+      if (!isRecord(requirement) || !enumValue(requirement.type,AGENT_AUTHORITY_TYPES)) {
+        throw new TypeError(`operation ${value.id} has invalid authority requirement`);
+      }
+    }
+  }
 }
 
 export interface AgentOperationReceipt {
