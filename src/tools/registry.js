@@ -1,7 +1,10 @@
+/** @typedef {import('../../packages/agentsam-contracts/src/tools').AgentToolDefinition} AgentToolDefinition */
+
 function clean(value) {
   return value == null ? '' : String(value).trim();
 }
 
+/** @param {AgentToolDefinition} definition */
 function assertToolDefinition(definition) {
   if (!definition || typeof definition !== 'object') {
     throw new TypeError('tool definition must be an object');
