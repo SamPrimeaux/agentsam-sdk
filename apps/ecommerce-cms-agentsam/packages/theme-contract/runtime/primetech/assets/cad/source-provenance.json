@@ -1,0 +1,8 @@
+{
+  "schema": "primetech.cad.evidence-assets.v1",
+  "source": "InnerAnimalMedia apps/inneranimalmedia/brand/beyond/source-manifest.json",
+  "project": "DreamHouse V1.2",
+  "status": "architectural-review-not-approved-for-construction",
+  "policy": "Exact editorial image derivatives of actual project artifacts; these do not authorize claims of engineering signoff or modification to native CAD source",
+  "files": ["v12-courtyard.jpg", "v12-isometric.jpg", "v12-wireframe.jpg", "v12-plan.jpg"]
+}
