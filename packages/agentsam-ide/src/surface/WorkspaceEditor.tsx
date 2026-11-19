@@ -381,9 +381,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
         {current?<><div className="asi-breadcrumb">{current.displayName||current.path.split('/').join(' › ')}<div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={readonly||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>void remove()} disabled={readonly||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
         <div className={'asi-editors'+(split&&!current.preview?' asi-split':'')}
-          style={split&&!current.preview?{
-            '--asi-split-editor':splitPercent+'fr','--asi-split-preview':(100-splitPercent)+'fr',
-          } as CSSProperties:undefined}>
+          style={{'--asi-split-editor':splitPercent+'fr','--asi-split-preview':(100-splitPercent)+'fr'} as CSSProperties}>
           {!current.preview&&(!previewOnly||split)?<div>{rendered(current)}</div>:null}
           {split&&!current.preview&&<div className="asi-grabbar asi-grabbar--preview" role="separator" aria-label="Resize source and preview" aria-orientation="vertical" tabIndex={0}
             onPointerDown={event=>{event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);}}
