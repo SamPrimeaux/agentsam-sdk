@@ -1553,9 +1553,10 @@
 
 /* Project catalog: media-led, host-themed, usable without a dated ticket. */
 .agentsam-work .aw-page { max-width: none; color: var(--agentsam-work-text); }
-.agentsam-work .aw-project-cards-v3 { grid-template-columns: repeat(auto-fill,minmax(min(100%,270px),1fr)); gap: 16px; }
+.agentsam-work .aw-projects-page { width: 100%; max-width: 1040px; margin-inline: auto; }
+.agentsam-work .aw-projects-page .aw-project-cards-v3 { grid-template-columns: repeat(auto-fill,minmax(min(100%,340px),1fr)); gap: 16px; }
 .aw-project-v3 { padding: 0; overflow: hidden; background: var(--agentsam-work-panel); color: var(--agentsam-work-text); }
-.aw-project-v3__cover { position: relative; aspect-ratio: 16 / 8; width: 100%; background: color-mix(in srgb,var(--aw-accent) 10%,var(--agentsam-work-panel)); overflow: hidden; }
+.aw-project-v3__cover { position: relative; aspect-ratio: 16 / 9; width: 100%; background: color-mix(in srgb,var(--aw-accent) 10%,var(--agentsam-work-panel)); overflow: hidden; }
 .aw-project-v3__cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .aw-project-v3__cover-empty { width: 100%; height: 100%; display: grid; align-content: center; justify-items: center; gap: 9px; color: var(--agentsam-work-muted); font-size: 12px; }
 .aw-project-v3__cover-empty span { max-width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
