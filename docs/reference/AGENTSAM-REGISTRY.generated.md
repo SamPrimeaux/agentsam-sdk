@@ -228,7 +228,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `agentsam-browser-surface` | `@inneranimalmedia/agentsam-browser-surface` | needs-review | AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Loc… |
 | `agentsam-campaign` | `@inneranimalmedia/agentsam-campaign` | needs-review | Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchand… |
 | `agentsam-cloudflare-images` | `@inneranimalmedia/agentsam-cloudflare-images` | needs-review | Shared Cloudflare Images transport: credentials, delivery URLs, and HTTP client. Content and Brand consume this — … |
-| `agentsam-cms` | `@inneranimalmedia/agentsam-cms` | classified | Canonical portable CMS operations for ecommerce-cms-agentsam; trusted site-first storage, themes and publication; … |
+| `agentsam-cms` | `@inneranimalmedia/agentsam-cms` | classified | CMS-owned operation semantics and host-independent domain behavior for ecommerce-cms-agentsam; consumes shared Age… |
 | `agentsam-connector-cloudflare` | `@inneranimalmedia/agentsam-connector-cloudflare` | needs-review | Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not aff… |
 | `agentsam-content` | `@inneranimalmedia/agentsam-content` | needs-review | Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContent… |
 | `agentsam-content-studio` | `@inneranimalmedia/agentsam-content-studio` | needs-review | Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRu… |
