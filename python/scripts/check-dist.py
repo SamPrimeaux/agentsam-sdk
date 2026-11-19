@@ -32,6 +32,12 @@ def main() -> int:
                 errors.append(f"{whl.name}: METADATA version != __version__ ({version})")
             if "Requires-Python: >=3.10" not in meta:
                 errors.append(f"{whl.name}: Requires-Python missing/changed")
+            if not re.search(r"(?im)^Requires-Dist: rich(?:[ ;<=>]|$)", meta):
+                errors.append(f"{whl.name}: default Rich dependency missing")
+            for required in ("agentsam_sdk/terminal_ui.py", "agentsam_sdk/diagnostics.py",
+                             "agentsam_sdk/assets/__init__.py", "agentsam_sdk/assets/geaux_boot.json"):
+                if required not in names:
+                    errors.append(f"{whl.name}: built-in CLI asset missing: {required}")
             entry = next((z.read(n).decode() for n in names if n.endswith("entry_points.txt")), "")
             if "agentsam = agentsam_sdk.cli:main" not in entry:
                 errors.append(f"{whl.name}: console script `agentsam` missing")

@@ -1,5 +1,4 @@
-"""agentsam CLI -- stdlib argparse only (no click/typer dep, per project
-convention: Python tooling here is stdlib-only).
+"""AgentSam CLI -- stdlib argparse and native operations with built-in Rich UI.
 
   agentsam data d1-bloat --quick --format markdown --output-dir /tmp/d1-bloat
   agentsam data agentsam-walk --prefix agentsam_ --output-dir /tmp/walk
@@ -21,12 +20,8 @@ def _print_result(result: ToolResult, fmt: str) -> None:
     if fmt == "json":
         print(json.dumps(result.to_dict(), indent=2, default=str))
     else:
-        status = "OK" if result.ok else "FAIL"
-        print(f"[{status}] {result.tool} ({result.mode}) — {result.summary}", file=sys.stderr)
-        if result.error:
-            print(f"  error: {result.error}", file=sys.stderr)
-        for a in result.artifacts:
-            print(f"  wrote: {a}", file=sys.stderr)
+        from .terminal_ui import show_result
+        show_result(result)
         # When markdown artifacts were written, surface path; else dump summary data keys
         if fmt == "markdown" and result.ok and result.data.get("categories"):
             # stdout stays quiet when artifacts exist; callers use the .md file
@@ -165,9 +160,58 @@ def _cmd_cad_doctor(args: argparse.Namespace) -> int:
     return 0 if all(result.get("ready") for result in results.values()) else 1
 
 
+def _cmd_doctor(args: argparse.Namespace) -> int:
+    from .diagnostics import inspect_installation
+    report = inspect_installation(verify_cad=args.verify_cad)
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        from .terminal_ui import show_data_table
+        show_data_table("AgentSam installation", [
+            (row["name"], f'{row["state"]} · {row["detail"]}') for row in report["checks"]
+        ])
+    return 0 if report["ok"] else 1
+
+
+def _cmd_assets_inventory(args: argparse.Namespace) -> int:
+    from .assets import AssetsClient
+    result = AssetsClient(args.root).inventory(
+        ".", include_hashes=args.hash, limit=args.limit, max_depth=args.max_depth
+    )
+    if args.format == "json":
+        print(json.dumps(result, indent=2))
+    else:
+        from .terminal_ui import show_data_table
+        rows = [("Root", result["root"]), ("Assets", str(result["total"])),
+                ("Bytes", str(result["bytes"])), ("Truncated", str(result["truncated"]))]
+        rows.extend((kind, str(count)) for kind, count in result["by_kind"].items())
+        show_data_table("Project asset inventory", rows)
+        if result["truncated"]:
+            print("Inventory reached the file limit; narrow the target or raise --limit.", file=sys.stderr)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="agentsam", description="agentsam_sdk CLI")
+    ap = argparse.ArgumentParser(prog="agentsam", description="AgentSam Python SDK · local-first engineering tools")
+    from .terminal_art import version_string
+    ap.add_argument("--version", action="version", version=f"agentsam-sdk {version_string()}")
+    ap.add_argument("--plain", "--no-color", action="store_true", help="disable colored terminal presentation")
     sub = ap.add_subparsers(dest="group", required=True)
+    diag = sub.add_parser("doctor", help="check installed Python SDK and optional native runtimes")
+    diag.add_argument("--json", action="store_true", help="machine-readable diagnostics")
+    diag.add_argument("--verify-cad", action="store_true", help="run a real OCCT solid/export/reopen proof")
+    diag.set_defaults(func=_cmd_doctor)
+
+    assets = sub.add_parser("assets", help="inspect local CAD, drawing, scene and media assets")
+    assets_sub = assets.add_subparsers(dest="assets_command", required=True)
+    inventory = assets_sub.add_parser("inventory", help="inventory project assets without third-party applications")
+    inventory.add_argument("root", nargs="?", default=".", help="project directory (default: current directory)")
+    inventory.add_argument("--format", choices=("json", "text"), default="text")
+    inventory.add_argument("--hash", action="store_true", help="hash each asset using SHA-256")
+    inventory.add_argument("--limit", type=int, default=5000, help="maximum files scanned")
+    inventory.add_argument("--max-depth", type=int, default=12, help="maximum directory depth")
+    inventory.set_defaults(func=_cmd_assets_inventory)
+
 
     cad = sub.add_parser("cad", help="discover and validate native CAD engines")
     cad_sub = cad.add_subparsers(dest="cad_command", required=True)
@@ -278,7 +322,15 @@ def main(argv: list[str] | None = None) -> int:
         from .terminal_art import run_home
         return run_home(parser)
     args = parser.parse_args(args_list)
-    return args.func(args)
+    if args.plain:
+        import os
+        os.environ["AGENTSAM_PLAIN"] = "1"
+    try:
+        return args.func(args)
+    except (OSError, RuntimeError, ValueError) as exc:
+        from .terminal_ui import show_error
+        show_error(exc)
+        return 2 if isinstance(exc, ValueError) else 1
 
 
 if __name__ == "__main__":

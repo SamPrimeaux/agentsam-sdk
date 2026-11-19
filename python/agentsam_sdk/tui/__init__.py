@@ -1,4 +1,4 @@
-"""Optional Rich terminal UI for the Agent Sam SDK CLI.
+"""Rich presentation primitives for the built-in AgentSam CLI.
 
 This package is presentation only. It is not an Agent Sam tool, tool catalog,
 execution adapter, or authorization surface.

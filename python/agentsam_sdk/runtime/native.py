@@ -667,6 +667,19 @@ def d1_write(input: Mapping[str, Any], adapter: Any, *, delete_only: bool = Fals
 
 
 NATIVE_OPERATION_SPECS: dict[str, dict[str, Any]] = {
+    "assets.inventory": {
+        "module": "assets", "side_effects": [], "deterministic": True,
+        "description": "Inventory supported project CAD, scene, drawing and media assets; optional SHA-256.",
+        "input_schema": {
+            "type": "object", "additionalProperties": False,
+            "properties": {
+                "path": {"type": "string"},
+                "include_hashes": {"type": "boolean"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 100000},
+                "max_depth": {"type": "integer", "minimum": 0, "maximum": 32},
+            },
+        },
+    },
     "workspace.read": {
         "module": "workspace", "side_effects": [], "deterministic": True,
         "description": "Read one bounded UTF-8 file from the configured workspace.",
@@ -738,6 +751,18 @@ class NativeRuntime:
         self.env = dict(env) if env is not None else None
 
     def _handler(self, operation: str, data: dict[str, Any]) -> dict[str, Any]:
+        if operation == "assets.inventory":
+            from ..assets import AssetsClient, AssetInventoryError
+            _check_keys(data, {"path", "include_hashes", "limit", "max_depth"})
+            try:
+                return AssetsClient(self.workspace_root).inventory(
+                    path=data.get("path", "."),
+                    include_hashes=data.get("include_hashes", False),
+                    limit=data.get("limit", 5000),
+                    max_depth=data.get("max_depth", 12),
+                )
+            except AssetInventoryError as exc:
+                raise NativeOperationError(exc.code, str(exc)) from exc
         if operation == "workspace.read":
             return workspace_read(data, self.workspace_root)
         if operation == "workspace.list":

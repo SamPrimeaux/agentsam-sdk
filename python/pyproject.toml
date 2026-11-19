@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentsam-sdk"
 dynamic = ["version"]
-description = "Stdlib-first Agent Sam repository/data CLI and local SAM client, with an optional Rich terminal UI."
+description = "AgentSam Python SDK and native-first CLI with built-in interactive terminal experience."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -25,10 +25,7 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Typing :: Typed",
 ]
-dependencies = []
-
-[project.optional-dependencies]
-tui = ["rich>=13.7.0"]
+dependencies = ["rich>=13.7,<15"]
 
 [project.urls]
 Homepage = "https://github.com/SamPrimeaux/agentsam-sdk"
