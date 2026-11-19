@@ -36,7 +36,7 @@ export const localStudioProjectChats: Pick<
     const id = store.startChat();
     store.assignChatToWorkProject(id, projectId);
     const message = initialMessage?.trim();
-    if (message) await store.send(id, "chat", message, { projectId });
+    if (message) void store.send(id, "chat", message, { projectId });
     return id;
   },
 };
