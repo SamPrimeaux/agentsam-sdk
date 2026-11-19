@@ -99,7 +99,8 @@ test('CAD assets and outputs use shared format references without breaking legac
   assert.equal(validateSchema(invalid), false);
   assert.ok(validateCadProjectV2(invalid).errors.includes('invalid_asset_format_ref:source_step'));
 });
-\ntest('portable v2 validates domain profiles without requiring architectural fields', () => {
+
+test('portable v2 validates domain profiles without requiring architectural fields', () => {
   const part = createCadProjectV2({
     id: 'bushing_001', name: 'Bushing', domain: 'mechanical.part', unit: 'mm',
     geometry: { entities: [{ id: 'solid_A', kind: 'solid', data: { diameter: 18, length: 24 } }],
