@@ -271,7 +271,12 @@
               "type": "object",
               "required": [
                 "formatRef"
-              ]
+              ],
+              "properties": {
+                "formatRef": {
+                  "$ref": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json#/$defs/formatReference"
+                }
+              }
             }
           },
           {
