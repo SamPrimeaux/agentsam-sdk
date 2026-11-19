@@ -22,6 +22,17 @@ const selection = `SELECT c.*,
   (SELECT count(*) FROM cms_collection_items i WHERE i.collection_id=c.id
     AND i.site_id=c.site_id AND i.account_id=c.account_id AND i.item_type='product' AND i.status='active') AS product_count
   FROM cms_collections c`;
+// Account-level collection overview; require both the collection and site to
+// belong to the authenticated account. Mutations still use collectionScope().
+export async function listAccountCmsCollections(env, accountId) {
+  if (!accountId) fail('cms_collection_account_required', 403);
+  const { results = [] } = await env.DB.prepare(selection +
+    " JOIN cms_sites s ON s.id=c.site_id AND s.account_id=c.account_id" +
+    " WHERE c.account_id=? AND s.account_id=?" +
+    " ORDER BY c.sort_order,lower(c.name),c.id").bind(accountId, accountId).all();
+  return results.map(row => collectionJson({ ...row, site_name: row.site_name || null }));
+}
+
 export async function listCmsCollections(env,scope,{publicOnly=false}={}) {
   const {results=[]}=await env.DB.prepare(selection+
     " WHERE c.site_id=? AND c.account_id=?"+(publicOnly?" AND c.status='active' AND c.visibility='public'":"")+
