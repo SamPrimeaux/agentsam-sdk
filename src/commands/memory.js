@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
+import { AgentSamDiagnosticError } from '../errors/diagnostic.js';
 
 const TYPES = new Set(['fact','preference','decision','policy','state','procedure','event','error']);
 const HELP = [
@@ -25,15 +26,17 @@ function parse(argv) {
   } });
   return { verb:positionals[0]||'help', rest:positionals.slice(1), values };
 }
-function fail(code){ const error = new Error(code); error.code=code; throw error; }
+function fail(code, kind='usage_error'){
+  throw new AgentSamDiagnosticError({source:'agentsam-sdk',kind,code,message:code});
+}
 function unwrap(call){
-  if(!call?.ok) fail(call?.error || 'memory_remote_mcp_call_failed');
+  if(!call?.ok) fail(call?.error || 'memory_remote_mcp_call_failed','runtime_error');
   let value = call.result?.structuredContent;
   if(!value) {
     const raw = call.result?.content?.find(x=>x.type==='text')?.text;
     try { value=JSON.parse(raw); } catch { value={text:raw}; }
   }
-  if(value?.ok===false) fail(value.error || 'memory_remote_backend_failed');
+  if(value?.ok===false) fail(value.error || 'memory_remote_backend_failed','runtime_error');
   return value;
 }
 export async function runMemory(argv=[], dependencies={}) {
@@ -48,7 +51,7 @@ export async function runMemory(argv=[], dependencies={}) {
   let output;
   if(verb==='doctor') {
     const found=await mcp.listMcpTools(server);
-    if(found.error) fail('memory_remote_tool_discovery_failed');
+    if(found.error) fail('memory_remote_tool_discovery_failed','runtime_error');
     const names=new Set((found.tools||[]).map(t=>t.name));
     output={ok:names.has('agentsam_memory_search')&&names.has('agentsam_memory_commit'),
       provider:'inneranimalmedia-mcp',backend:'IAM_MAIN',
