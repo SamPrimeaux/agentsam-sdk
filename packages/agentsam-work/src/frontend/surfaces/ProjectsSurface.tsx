@@ -96,7 +96,7 @@ export function ProjectsSurface({
   const update = (id: string, patch: WorkProjectInput) => run(async () => { await actions.updateProject?.(id, patch); });
 
   return (
-    <div className="aw-page">
+    <div className="aw-page aw-projects-page">
       <div className="aw-head">
         <div>
           <p className="aw-kicker">Work</p>
