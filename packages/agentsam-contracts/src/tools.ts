@@ -1,3 +1,4 @@
+import { AGENT_AUTHORITY_TYPES } from './authority';
 import type { AgentAuthorityRequirement } from './authority';
 
 export const AGENT_TOOL_SIDE_EFFECT_LEVELS = [
@@ -83,10 +84,33 @@ const nonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 const stringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every(item => typeof item === 'string');
-
 function assertEnum(value: unknown, allowed: readonly string[], field: string, toolKey: string): void {
   if (typeof value !== 'string' || !allowed.includes(value)) {
     throw new TypeError(`tool ${toolKey} has invalid ${field}`);
+  }
+}
+function assertOnlyFields(value: Record<string, unknown>, allowed: readonly string[], field: string, toolKey: string): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key)) throw new TypeError(`tool ${toolKey} has unknown ${field} field: ${key}`);
+  }
+}
+function assertAuthorityRequirement(value: unknown, toolKey: string): void {
+  if (!isRecord(value)) throw new TypeError(`tool ${toolKey} has invalid authority requirement`);
+  assertOnlyFields(value,['type','ref','provider','scopes','optional','metadata'],'authority',toolKey);
+  assertEnum(value.type,AGENT_AUTHORITY_TYPES,'authority type',toolKey);
+  for (const field of ['ref','provider']) {
+    if (value[field] !== undefined && typeof value[field] !== 'string') {
+      throw new TypeError(`tool ${toolKey} authority ${field} must be a string`);
+    }
+  }
+  if (value.scopes !== undefined && !stringArray(value.scopes)) {
+    throw new TypeError(`tool ${toolKey} authority scopes must be a string array`);
+  }
+  if (value.optional !== undefined && typeof value.optional !== 'boolean') {
+    throw new TypeError(`tool ${toolKey} authority optional must be boolean`);
+  }
+  if (value.metadata !== undefined && !isRecord(value.metadata)) {
+    throw new TypeError(`tool ${toolKey} authority metadata must be an object`);
   }
 }
 
@@ -94,46 +118,78 @@ function assertEnum(value: unknown, allowed: readonly string[], field: string, t
 export function assertAgentToolDefinition(value: unknown): asserts value is AgentToolDefinition {
   if (!isRecord(value)) throw new TypeError('tool definition must be an object');
   const toolKey = nonEmptyString(value.toolKey) ? value.toolKey : '(unknown)';
-  for (const field of ['toolKey', 'displayName', 'capabilityKey']) {
+  const allowedFields = [
+    'toolKey','displayName','description','provider','pluginId','capabilityKey','handler',
+    'inputSchema','outputSchema','authority','riskLevel','sideEffectLevel','idempotencyMode',
+    'timeoutMs','retryPolicy','receiptMode','sensitiveInputPaths','sensitiveOutputPaths',
+    'emitsEvents','active','metadata',
+  ];
+  assertOnlyFields(value,allowedFields,'definition',toolKey);
+  for (const field of ['toolKey','displayName','capabilityKey']) {
     if (!nonEmptyString(value[field])) throw new TypeError(`tool definition requires ${field}`);
   }
-  for (const field of ['inputSchema', 'outputSchema']) {
-    if (!isRecord(value[field])) throw new TypeError(`tool ${toolKey} requires object ${field}`);
-  }
-  assertEnum(value.riskLevel, AGENT_TOOL_RISK_LEVELS, 'riskLevel', toolKey);
-  assertEnum(value.sideEffectLevel, AGENT_TOOL_SIDE_EFFECT_LEVELS, 'sideEffectLevel', toolKey);
-  assertEnum(value.idempotencyMode, AGENT_TOOL_IDEMPOTENCY_MODES, 'idempotencyMode', toolKey);
-
-  if (value.handler !== undefined) {
-    if (!isRecord(value.handler) ||
-        typeof value.handler.type !== 'string' ||
-        !(AGENT_TOOL_HANDLER_TYPES as readonly string[]).includes(value.handler.type) ||
-        !nonEmptyString(value.handler.ref)) {
-      throw new TypeError(`tool ${toolKey} has invalid handler reference`);
+  for (const field of ['description','provider','pluginId']) {
+    if (value[field] !== undefined && typeof value[field] !== 'string') {
+      throw new TypeError(`tool ${toolKey} ${field} must be a string`);
     }
   }
-  if (value.authority !== undefined && !Array.isArray(value.authority)) {
-    throw new TypeError(`tool ${toolKey} authority must be an array`);
+  for (const field of ['inputSchema','outputSchema']) {
+    if (!isRecord(value[field])) throw new TypeError(`tool ${toolKey} requires object ${field}`);
+  }
+  assertEnum(value.riskLevel,AGENT_TOOL_RISK_LEVELS,'riskLevel',toolKey);
+  assertEnum(value.sideEffectLevel,AGENT_TOOL_SIDE_EFFECT_LEVELS,'sideEffectLevel',toolKey);
+  assertEnum(value.idempotencyMode,AGENT_TOOL_IDEMPOTENCY_MODES,'idempotencyMode',toolKey);
+
+  if (value.handler !== undefined) {
+    if (!isRecord(value.handler)) throw new TypeError(`tool ${toolKey} has invalid handler reference`);
+    assertOnlyFields(value.handler,['type','ref','metadata'],'handler',toolKey);
+    assertEnum(value.handler.type,AGENT_TOOL_HANDLER_TYPES,'handler type',toolKey);
+    if (!nonEmptyString(value.handler.ref)) throw new TypeError(`tool ${toolKey} has invalid handler reference`);
+    if (value.handler.metadata !== undefined && !isRecord(value.handler.metadata)) {
+      throw new TypeError(`tool ${toolKey} handler metadata must be an object`);
+    }
+  }
+  if (value.authority !== undefined) {
+    if (!Array.isArray(value.authority)) throw new TypeError(`tool ${toolKey} authority must be an array`);
+    value.authority.forEach(requirement=>assertAuthorityRequirement(requirement,toolKey));
   }
   if (value.timeoutMs !== undefined &&
       (!Number.isInteger(value.timeoutMs) || (value.timeoutMs as number) < 1)) {
     throw new TypeError(`tool ${toolKey} timeoutMs must be a positive integer`);
   }
-  if (value.retryPolicy !== undefined &&
-      (!isRecord(value.retryPolicy) || !Number.isInteger(value.retryPolicy.maxAttempts) ||
-       (value.retryPolicy.maxAttempts as number) < 1)) {
-    throw new TypeError(`tool ${toolKey} has invalid retryPolicy`);
+  if (value.retryPolicy !== undefined) {
+    if (!isRecord(value.retryPolicy)) throw new TypeError(`tool ${toolKey} has invalid retryPolicy`);
+    assertOnlyFields(value.retryPolicy,['maxAttempts','backoff','baseDelayMs','maxDelayMs','retryableReasons'],'retryPolicy',toolKey);
+    if (!Number.isInteger(value.retryPolicy.maxAttempts) || (value.retryPolicy.maxAttempts as number) < 1) {
+      throw new TypeError(`tool ${toolKey} has invalid retryPolicy`);
+    }
+    if (value.retryPolicy.backoff !== undefined &&
+        !['none','fixed','exponential'].includes(String(value.retryPolicy.backoff))) {
+      throw new TypeError(`tool ${toolKey} retryPolicy backoff is invalid`);
+    }
+    for (const field of ['baseDelayMs','maxDelayMs']) {
+      if (value.retryPolicy[field] !== undefined &&
+          (!Number.isInteger(value.retryPolicy[field]) || (value.retryPolicy[field] as number) < 0)) {
+        throw new TypeError(`tool ${toolKey} retryPolicy ${field} is invalid`);
+      }
+    }
+    if (value.retryPolicy.retryableReasons !== undefined && !stringArray(value.retryPolicy.retryableReasons)) {
+      throw new TypeError(`tool ${toolKey} retryPolicy retryableReasons must be a string array`);
+    }
   }
   if (value.receiptMode !== undefined) {
-    assertEnum(value.receiptMode, AGENT_TOOL_RECEIPT_MODES, 'receiptMode', toolKey);
+    assertEnum(value.receiptMode,AGENT_TOOL_RECEIPT_MODES,'receiptMode',toolKey);
   }
-  for (const field of ['sensitiveInputPaths', 'sensitiveOutputPaths', 'emitsEvents']) {
+  for (const field of ['sensitiveInputPaths','sensitiveOutputPaths','emitsEvents']) {
     if (value[field] !== undefined && !stringArray(value[field])) {
       throw new TypeError(`tool ${toolKey} ${field} must be a string array`);
     }
   }
   if (value.active !== undefined && typeof value.active !== 'boolean') {
     throw new TypeError(`tool ${toolKey} active must be boolean`);
+  }
+  if (value.metadata !== undefined && !isRecord(value.metadata)) {
+    throw new TypeError(`tool ${toolKey} metadata must be an object`);
   }
 }
 
