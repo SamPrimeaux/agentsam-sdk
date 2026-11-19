@@ -363,7 +363,8 @@ export interface WorkHost {
   listProjectChats?(projectId: string): Promise<WorkProjectChat[]>;
   listAssignableChats?(): Promise<(WorkProjectChat & { workProjectId?: string })[]>;
   assignProjectChat?(chatId: string, projectId: string | null): Promise<void>;
-  createProjectChat?(projectId: string): Promise<string>;
+  /** Create a project-linked chat and optionally send its first message before opening it. */
+  createProjectChat?(projectId: string, initialMessage?: string): Promise<string>;
   refresh?(): Promise<void>;
   createTicket?(input: WorkTicketInput & { title: string }): Promise<WorkTicket>;
   updateTicket?(id: string, patch: WorkTicketInput): Promise<WorkTicket>;
