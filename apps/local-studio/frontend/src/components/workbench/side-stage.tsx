@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Columns2, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -281,8 +281,8 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
             <SplitHandle axis="x" className="hidden xl:flex" label="Resize editor and co-worker"
               onDrag={delta=>setCoworkerWidth(width=>Math.max(260,Math.min(520,width-delta)))}
               onDoubleClick={()=>setCoworkerWidth(330)} />
-            <aside className="hidden min-h-0 shrink-0 border-l border-border bg-background xl:block"
-              style={{width:coworkerWidth,flexBasis:coworkerWidth}} aria-label="Independent co-worker thread">
+            <aside className="hidden min-h-0 shrink-0 border-l border-border bg-background xl:block xl:w-[var(--coworker-width)] xl:basis-[var(--coworker-width)]"
+              style={{'--coworker-width':coworkerWidth+'px'} as CSSProperties} aria-label="Independent co-worker thread">
               <CoworkerChat tabId={splitCoworker.id}/>
             </aside>
           </div>
