@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { verifyThemeStorePreviewBytes } from './theme-store-preview-integrity.mjs';
+import { verifyThemeStorePreviewBytes, normalizeThemeStorePreviewSource } from './theme-store-preview-integrity.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const original = Buffer.from('<!doctype html>\n<html><body>\n<h1>Cypress</h1>\n</body>\n</html>\n');
@@ -32,4 +32,12 @@ test('unrecognized HTML changes or altered signed source cannot pass verificatio
 test('binary assets retain strict byte-for-byte verification', () => {
   const png = Buffer.from([0x89,0x50,0x4e,0x47]);
   assert.throws(() => verifyThemeStorePreviewBytes(png, 'f'.repeat(64), 'cypress/image.png'), /SHA-256 mismatch/);
+});
+
+test('legacy preview source matches the exact canonical browser manifest bytes', () => {
+  const src = Buffer.from('<a href="./theme-packages/grove/2.6.13/preview/assets/logo.svg">Logo</a>');
+  const expected = Buffer.from('<a href="/theme-packages/grove/2.6.13/preview/assets/logo.svg">Logo</a>');
+  const normalized = normalizeThemeStorePreviewSource(src, 'grove', '2.6.13');
+  assert.deepEqual(verifyThemeStorePreviewBytes(normalized, sha(expected), 'grove/pages/contact.html'), expected);
+  assert.deepEqual(normalizeThemeStorePreviewSource(src, 'cypress', '2.6.13'), src);
 });

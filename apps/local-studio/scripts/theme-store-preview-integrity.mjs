@@ -58,3 +58,9 @@ export function verifyThemeStorePreviewBytes(responseBytes, expectedSha256, reso
   if (sha256(recovered) !== expectedSha256) return fail();
   return recovered;
 }
+
+/** Exact legacy source normalization used by Theme Store's normalizePreviewHtml. */
+export function normalizeThemeStorePreviewSource(sourceBytes, slug, version) {
+  const prefix = '/theme-packages/' + slug + '/' + version + '/preview/';
+  return Buffer.from(Buffer.from(sourceBytes).toString('utf8').replaceAll('.' + prefix, prefix), 'utf8');
+}

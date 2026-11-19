@@ -4,7 +4,7 @@
  * Theme availability and release versions are discovered from its live index;
  * this repository keeps no theme slug/version allowlist.
  */
-import { verifyThemeStorePreviewBytes } from './theme-store-preview-integrity.mjs';
+import { verifyThemeStorePreviewBytes, normalizeThemeStorePreviewSource } from './theme-store-preview-integrity.mjs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -88,9 +88,8 @@ for (const release of index.packages) {
     // theme-package base. The Theme Store hashes the canonical, normalized
     // browser document (see normalizePreviewHtml). Match that exact source
     // transformation before verifying the immutable preview manifest.
-    const basePath = '/theme-packages/' + slug + '/' + version + '/preview/';
     const sourceBytes = entry.path.toLowerCase().endsWith('.html')
-      ? Buffer.from(bytes.toString('utf8').replaceAll('.' + basePath, basePath))
+      ? normalizeThemeStorePreviewSource(bytes, slug, version)
       : bytes;
     const verifiedBytes = verifyThemeStorePreviewBytes(sourceBytes, entry.sha256, slug + '/' + entry.path);
     const destination = path.join(target, ...entry.path.split('/'));
