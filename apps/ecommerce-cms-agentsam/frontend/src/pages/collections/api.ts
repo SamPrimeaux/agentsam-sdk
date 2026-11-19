@@ -102,7 +102,7 @@ export const collectionsApi = {
   },
   async assign(id: string, productIds: number[], siteId?: string) {
     const response = accepted(await adminFetch<Ok & { items: CmsItem[] }>(
-      scoped(`/api/admin/collections/${encodeURIComponent(id)}/items`),
+      scoped(`/api/admin/collections/${encodeURIComponent(id)}/items`, siteId),
       { method: "PUT", body: JSON.stringify({
         items: productIds.map(item_ref => ({ item_type: "product", item_ref: String(item_ref), status: "active" })),
       }) },
