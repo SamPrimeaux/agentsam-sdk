@@ -1144,10 +1144,10 @@
 
 /* Project details stay available without reserving a permanent column. */
 .aw-project-detail { background: transparent; }
-.aw-project-detail__layout { display: block; min-width: 0; }
+.aw-project-detail__layout { display: flex; flex-direction: column; min-width: 0; }
 .aw-project-detail__main { min-width: 0; width: 100%; }
 .aw-project-detail__details {
-  margin-top: 18px; border: 1px solid var(--agentsam-work-border);
+  order: -1; margin-top: 18px; border: 1px solid var(--agentsam-work-border);
   border-radius: 14px; overflow: hidden; background: var(--agentsam-work-panel-subtle);
 }
 .aw-project-detail__details > summary {
