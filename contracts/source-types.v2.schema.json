@@ -244,7 +244,21 @@
           "type": "string",
           "minLength": 1
         }
-      }
+      },
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "bytesHex"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "ascii"
+          ]
+        }
+      ]
     },
     "signature": {
       "type": "object",
@@ -278,32 +292,7 @@
             "$ref": "#/$defs/signatureSegment"
           }
         }
-      },
-      "anyOf": [
-        {
-          "required": [
-            "segments"
-          ],
-          "properties": {
-            "segments": {
-              "items": {
-                "anyOf": [
-                  {
-                    "required": [
-                      "bytesHex"
-                    ]
-                  },
-                  {
-                    "required": [
-                      "ascii"
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      ]
+      }
     },
     "formatRecord": {
       "type": "object",

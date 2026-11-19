@@ -2688,6 +2688,9 @@
             }
           ]
         }
+      ],
+      "codecs": [
+        "codec.audio.pcm"
       ]
     },
     {
@@ -2710,7 +2713,10 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.audio.pcm"
+      ]
     },
     {
       "id": "audio.mp3",
@@ -2730,7 +2736,10 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.audio.mp3"
+      ]
     },
     {
       "id": "audio.aac",
@@ -2750,7 +2759,10 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.audio.aac"
+      ]
     },
     {
       "id": "audio.flac",
@@ -2784,13 +2796,16 @@
             }
           ]
         }
+      ],
+      "codecs": [
+        "codec.audio.flac"
       ]
     },
     {
       "id": "audio.alac",
       "label": "Apple Lossless audio",
       "family": "audio",
-      "kind": "codec",
+      "kind": "container",
       "extensions": [
         ".alac"
       ],
@@ -2802,7 +2817,10 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.audio.alac"
+      ]
     },
     {
       "id": "audio.ogg",
@@ -2837,6 +2855,11 @@
             }
           ]
         }
+      ],
+      "codecs": [
+        "codec.audio.vorbis",
+        "codec.audio.opus",
+        "codec.audio.flac"
       ]
     },
     {
@@ -2857,7 +2880,10 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.audio.opus"
+      ]
     },
     {
       "id": "audio.wma",
@@ -3009,7 +3035,14 @@
           ]
         }
       ],
-      "notes": "Container identity does not identify the contained video/audio codecs."
+      "notes": "Container identity does not identify the contained video/audio codecs.",
+      "codecs": [
+        "codec.video.h264",
+        "codec.video.h265",
+        "codec.video.av1",
+        "codec.audio.aac",
+        "codec.audio.pcm"
+      ]
     },
     {
       "id": "video.quicktime",
@@ -3029,7 +3062,16 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.video.h264",
+        "codec.video.h265",
+        "codec.video.prores",
+        "codec.video.dnxhr",
+        "codec.audio.aac",
+        "codec.audio.alac",
+        "codec.audio.pcm"
+      ]
     },
     {
       "id": "video.webm",
@@ -3064,7 +3106,14 @@
           ]
         }
       ],
-      "notes": "Container identity does not identify the contained video/audio codecs."
+      "notes": "Container identity does not identify the contained video/audio codecs.",
+      "codecs": [
+        "codec.video.vp8",
+        "codec.video.vp9",
+        "codec.video.av1",
+        "codec.audio.opus",
+        "codec.audio.vorbis"
+      ]
     },
     {
       "id": "video.matroska",
@@ -3100,6 +3149,20 @@
             }
           ]
         }
+      ],
+      "codecs": [
+        "codec.video.h264",
+        "codec.video.h265",
+        "codec.video.av1",
+        "codec.video.vp8",
+        "codec.video.vp9",
+        "codec.video.prores",
+        "codec.video.dnxhr",
+        "codec.audio.aac",
+        "codec.audio.opus",
+        "codec.audio.flac",
+        "codec.audio.mp3",
+        "codec.audio.pcm"
       ]
     },
     {
@@ -3138,6 +3201,12 @@
             }
           ]
         }
+      ],
+      "codecs": [
+        "codec.video.h264",
+        "codec.video.mpeg2",
+        "codec.audio.mp3",
+        "codec.audio.pcm"
       ]
     },
     {
@@ -3200,7 +3269,11 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.video.mpeg2",
+        "codec.audio.mp2"
+      ]
     },
     {
       "id": "video.mpeg-ts",
@@ -3222,7 +3295,14 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.video.h264",
+        "codec.video.h265",
+        "codec.video.mpeg2",
+        "codec.audio.aac",
+        "codec.audio.mp2"
+      ]
     },
     {
       "id": "video.3gp",
@@ -3242,7 +3322,11 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.video.h264",
+        "codec.audio.aac"
+      ]
     },
     {
       "id": "video.ogv",
@@ -3262,7 +3346,11 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.video.vp8",
+        "codec.audio.vorbis"
+      ]
     },
     {
       "id": "video.mxf",
@@ -3282,7 +3370,13 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "codecs": [
+        "codec.video.prores",
+        "codec.video.dnxhr",
+        "codec.video.h264",
+        "codec.audio.pcm"
+      ]
     },
     {
       "id": "video.red-r3d",
@@ -3375,7 +3469,11 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "video.mp4",
+        "video.mpeg-ts"
+      ]
     },
     {
       "id": "video.dash-manifest",
@@ -3395,7 +3493,10 @@
         "content",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "video.mp4"
+      ]
     },
     {
       "id": "codec.video.h264",
@@ -3411,7 +3512,16 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "video.mp4",
+        "video.quicktime",
+        "video.matroska",
+        "video.avi",
+        "video.mpeg-ts",
+        "video.3gp",
+        "video.mxf"
+      ]
     },
     {
       "id": "codec.video.h265",
@@ -3427,7 +3537,13 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "video.mp4",
+        "video.quicktime",
+        "video.matroska",
+        "video.mpeg-ts"
+      ]
     },
     {
       "id": "codec.video.av1",
@@ -3443,7 +3559,12 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "video.mp4",
+        "video.webm",
+        "video.matroska"
+      ]
     },
     {
       "id": "codec.video.vp9",
@@ -3459,7 +3580,11 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "video.webm",
+        "video.matroska"
+      ]
     },
     {
       "id": "codec.video.prores",
@@ -3475,7 +3600,12 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "video.quicktime",
+        "video.matroska",
+        "video.mxf"
+      ]
     },
     {
       "id": "codec.video.dnxhr",
@@ -3491,7 +3621,12 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "video.quicktime",
+        "video.matroska",
+        "video.mxf"
+      ]
     },
     {
       "id": "codec.audio.pcm",
@@ -3507,7 +3642,16 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "audio.wav",
+        "audio.aiff",
+        "video.mp4",
+        "video.quicktime",
+        "video.matroska",
+        "video.avi",
+        "video.mxf"
+      ]
     },
     {
       "id": "codec.audio.aac",
@@ -3523,7 +3667,16 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "audio.aac",
+        "audio.m4a",
+        "video.mp4",
+        "video.quicktime",
+        "video.matroska",
+        "video.mpeg-ts",
+        "video.3gp"
+      ]
     },
     {
       "id": "codec.audio.opus",
@@ -3539,7 +3692,13 @@
         "container",
         "application-context"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "containerFormats": [
+        "audio.ogg",
+        "audio.opus",
+        "video.webm",
+        "video.matroska"
+      ]
     },
     {
       "id": "subtitle.srt",
@@ -4887,8 +5046,7 @@
       "family": "pcb",
       "kind": "native-project",
       "extensions": [
-        ".fbrd",
-        ".brd"
+        ".fbrd"
       ],
       "mediaTypes": [],
       "identificationSignals": [
@@ -6064,24 +6222,6 @@
       "mediaTypes": [
         "image/tiff"
       ],
-      "identificationSignals": [
-        "extension",
-        "media-type",
-        "container",
-        "content",
-        "application-context"
-      ],
-      "proprietary": false
-    },
-    {
-      "id": "geo.imx",
-      "label": "InfraWorks model exchange",
-      "family": "geospatial",
-      "kind": "exchange",
-      "extensions": [
-        ".imx"
-      ],
-      "mediaTypes": [],
       "identificationSignals": [
         "extension",
         "media-type",
@@ -8555,19 +8695,17 @@
       "id": "pcb.odbpp",
       "label": "ODB++ electronics manufacturing package",
       "family": "pcb",
-      "kind": "package",
-      "extensions": [
-        ".odb"
-      ],
+      "kind": "directory-package",
+      "extensions": [],
       "mediaTypes": [],
       "identificationSignals": [
-        "extension",
-        "media-type",
         "container",
         "content",
-        "application-context"
+        "application-context",
+        "user-selection"
       ],
-      "proprietary": false
+      "proprietary": false,
+      "notes": "Directory-based ODB++ job package; it is not a single .odb file. The .odb extension is used by the Abaqus output database."
     },
     {
       "id": "pcb.ipc2581",
@@ -8805,6 +8943,176 @@
         "application-context"
       ],
       "proprietary": false
+    },
+    {
+      "id": "audio.m4a",
+      "label": "MPEG-4 audio container",
+      "family": "audio",
+      "kind": "container",
+      "extensions": [
+        ".m4a"
+      ],
+      "mediaTypes": [
+        "audio/mp4"
+      ],
+      "identificationSignals": [
+        "extension",
+        "media-type",
+        "container",
+        "content",
+        "application-context"
+      ],
+      "proprietary": false,
+      "codecs": [
+        "codec.audio.aac",
+        "codec.audio.alac"
+      ]
+    },
+    {
+      "id": "codec.audio.mp3",
+      "label": "MPEG Layer III codec",
+      "family": "audio",
+      "kind": "codec",
+      "extensions": [],
+      "mediaTypes": [
+        "audio/mpeg"
+      ],
+      "identificationSignals": [
+        "media-type",
+        "container",
+        "application-context"
+      ],
+      "proprietary": false,
+      "containerFormats": [
+        "audio.mp3",
+        "video.matroska",
+        "video.avi"
+      ]
+    },
+    {
+      "id": "codec.audio.flac",
+      "label": "FLAC codec",
+      "family": "audio",
+      "kind": "codec",
+      "extensions": [],
+      "mediaTypes": [
+        "audio/flac"
+      ],
+      "identificationSignals": [
+        "media-type",
+        "container",
+        "application-context"
+      ],
+      "proprietary": false,
+      "containerFormats": [
+        "audio.flac",
+        "audio.ogg",
+        "video.matroska"
+      ]
+    },
+    {
+      "id": "codec.audio.alac",
+      "label": "Apple Lossless codec",
+      "family": "audio",
+      "kind": "codec",
+      "extensions": [],
+      "mediaTypes": [
+        "audio/alac"
+      ],
+      "identificationSignals": [
+        "media-type",
+        "container",
+        "application-context"
+      ],
+      "proprietary": false,
+      "containerFormats": [
+        "audio.alac",
+        "audio.m4a",
+        "video.quicktime"
+      ]
+    },
+    {
+      "id": "codec.audio.vorbis",
+      "label": "Vorbis codec",
+      "family": "audio",
+      "kind": "codec",
+      "extensions": [],
+      "mediaTypes": [
+        "audio/vorbis"
+      ],
+      "identificationSignals": [
+        "media-type",
+        "container",
+        "application-context"
+      ],
+      "proprietary": false,
+      "containerFormats": [
+        "audio.ogg",
+        "video.webm",
+        "video.ogv"
+      ]
+    },
+    {
+      "id": "codec.video.vp8",
+      "label": "VP8 codec",
+      "family": "video",
+      "kind": "codec",
+      "extensions": [],
+      "mediaTypes": [
+        "video/vp8"
+      ],
+      "identificationSignals": [
+        "media-type",
+        "container",
+        "application-context"
+      ],
+      "proprietary": false,
+      "containerFormats": [
+        "video.webm",
+        "video.matroska",
+        "video.ogv"
+      ]
+    },
+    {
+      "id": "codec.video.mpeg2",
+      "label": "MPEG-2 video codec",
+      "family": "video",
+      "kind": "codec",
+      "extensions": [],
+      "mediaTypes": [
+        "video/mpeg"
+      ],
+      "identificationSignals": [
+        "media-type",
+        "container",
+        "application-context"
+      ],
+      "proprietary": false,
+      "containerFormats": [
+        "video.avi",
+        "video.mpeg",
+        "video.mpeg-ts"
+      ]
+    },
+    {
+      "id": "codec.audio.mp2",
+      "label": "MPEG Layer II audio codec",
+      "family": "audio",
+      "kind": "codec",
+      "extensions": [],
+      "mediaTypes": [
+        "audio/mpeg"
+      ],
+      "identificationSignals": [
+        "media-type",
+        "container",
+        "application-context"
+      ],
+      "proprietary": false,
+      "containerFormats": [
+        "video.mpeg",
+        "video.mpeg-ts"
+      ]
     }
   ],
   "ambiguities": [
@@ -8815,15 +9123,6 @@
         "subtitle.ass"
       ],
       "resolution": "multiple-signals",
-      "notes": "Do not resolve from the extension alone. Use signature, container/content inspection, application context or explicit user selection."
-    },
-    {
-      "extension": ".brd",
-      "formatIds": [
-        "cad.fusion-board",
-        "pcb.eagle-board"
-      ],
-      "resolution": "application-context",
       "notes": "Do not resolve from the extension alone. Use signature, container/content inspection, application context or explicit user selection."
     },
     {
@@ -8842,15 +9141,6 @@
         "code.c-header"
       ],
       "resolution": "application-context",
-      "notes": "Do not resolve from the extension alone. Use signature, container/content inspection, application context or explicit user selection."
-    },
-    {
-      "extension": ".imx",
-      "formatIds": [
-        "bim.imx",
-        "geo.imx"
-      ],
-      "resolution": "multiple-signals",
       "notes": "Do not resolve from the extension alone. Use signature, container/content inspection, application context or explicit user selection."
     },
     {
@@ -8878,7 +9168,7 @@
         "audio.midi",
         "geo.mid"
       ],
-      "resolution": "multiple-signals",
+      "resolution": "application-context",
       "notes": "Do not resolve from the extension alone. Use signature, container/content inspection, application context or explicit user selection."
     },
     {
@@ -8906,15 +9196,6 @@
         "model.wavefront-obj"
       ],
       "resolution": "content",
-      "notes": "Do not resolve from the extension alone. Use signature, container/content inspection, application context or explicit user selection."
-    },
-    {
-      "extension": ".odb",
-      "formatIds": [
-        "pcb.odbpp",
-        "science.abaqus-odb"
-      ],
-      "resolution": "container",
       "notes": "Do not resolve from the extension alone. Use signature, container/content inspection, application context or explicit user selection."
     },
     {

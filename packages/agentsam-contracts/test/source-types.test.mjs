@@ -23,4 +23,9 @@ test('packaged source type catalog and schema mirror the root contract vocabular
   assert.deepEqual(schema.$defs.identificationSignal.enum, [...AGENT_SOURCE_IDENTIFICATION_EVIDENCE]);
   assert.ok(catalog.formats.length >= 180);
   assert.ok(catalog.sourceKinds.length >= 12);
+  const byId = new Map(catalog.formats.map(format => [format.id, format]));
+  assert.equal(byId.get('video.mp4').kind, 'container');
+  assert.ok(byId.get('video.mp4').codecs.includes('codec.video.h264'));
+  assert.equal(byId.get('codec.video.h264').kind, 'codec');
+  assert.ok(byId.get('codec.video.h264').containerFormats.includes('video.mp4'));
 });

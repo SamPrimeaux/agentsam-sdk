@@ -242,7 +242,77 @@
             "$ref": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json#/$defs/identificationResult"
           }
         },
-        "additionalProperties": true
+        "additionalProperties": true,
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "formatDetection"
+              ],
+              "properties": {
+                "formatDetection": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "declared",
+                        "identified"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "type": "object",
+              "required": [
+                "formatRef"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "formatDetection"
+              ],
+              "properties": {
+                "formatDetection": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "const": "ambiguous"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "formatDetection": {
+                  "type": "object",
+                  "required": [
+                    "candidates"
+                  ],
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "minItems": 2
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "views": {
