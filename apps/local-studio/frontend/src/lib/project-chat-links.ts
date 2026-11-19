@@ -31,10 +31,12 @@ export const localStudioProjectChats: Pick<
     if (!store.chats.some((chat) => chat.id === chatId)) throw new Error("studio_chat_not_found");
     store.assignChatToWorkProject(chatId, projectId);
   },
-  async createProjectChat(projectId) {
+  async createProjectChat(projectId, initialMessage) {
     const store = useWorkStore.getState();
     const id = store.startChat();
     store.assignChatToWorkProject(id, projectId);
+    const message = initialMessage?.trim();
+    if (message) await store.send(id, "chat", message, { projectId });
     return id;
   },
 };
