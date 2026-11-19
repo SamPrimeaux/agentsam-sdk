@@ -11,7 +11,7 @@ export const STUDIO_ADMIN_MOUNTS = Object.freeze([
   Object.freeze({ id: 'commerce.home', flat: '/admin/home', canonical: '/admin/home', exactOnly: true }),
   Object.freeze({ id: 'commerce.store', flat: '/admin/store', canonical: '/admin/store', exactOnly: true }),
   Object.freeze({ id: 'commerce.checkout-preview', flat: '/admin/onboarding-preview', canonical: '/admin/onboarding-preview', exactOnly: true }),
-  Object.freeze({ id: 'creative.moviemode', flat: '/admin/moviemode', canonical: '/admin/moviemode', exactOnly: true }),
+  Object.freeze({ id: 'creative.moviemode', flat: '/admin/moviemode', canonical: '/admin/moviemode' }),
   Object.freeze({ id: 'agent.cad-compat', flat: '/agentsam/apps/cad', canonical: '/admin/cad' }),
   Object.freeze({ id: 'ecommerce.compat', flat: '/apps/ecommerce-cms-agentsam', canonical: '/admin/apps/ecommerce-cms-agentsam' }),
   Object.freeze({ id: 'help.cms', flat: '/help/cms', canonical: '/admin/help/cms' }),
