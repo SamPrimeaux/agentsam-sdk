@@ -74,7 +74,7 @@ export default function CollectionLibrary() {
         {loading?<div className="cs-loading">Loading your collection library…</div>:visible.length?<div className="cs-library-list">{visible.map(c=>{
           const image=safeMediaUrl(c.image_url);
           return <article className="cs-library-row" key={c.id}>
-            <Link className="cs-library-thumbnail" to={collectionHref(`/collections/${c.id}`)}>{image?<img src={image} alt="" loading="lazy"/>:<StudioIcon name="layers" size={29}/>}</Link>
+            <Link className="cs-library-thumbnail" to={collectionHref(`/collections/${c.id}`,c.site_id)}>{image?<img src={image} alt="" loading="lazy"/>:<StudioIcon name="layers" size={29}/>}</Link>
             <div className="cs-library-info"><Link to={collectionHref(`/collections/${c.id}`)}>{c.title}</Link><span>{c.product_count||0} products · Updated {c.updated_at?.slice(0,10)||"recently"}</span><small>{c.description||"No description yet"}</small></div>
             <span className={`cs-status-chip ${c.status==="active"?"active":""}`}>{c.status==="active"?"Published":c.status}</span>
             <div className="cs-library-actions"><Link className="cs-button small" to={collectionHref(`/collections/${c.id}`)}>Edit</Link>
