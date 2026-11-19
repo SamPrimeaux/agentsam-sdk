@@ -47,7 +47,7 @@ def exercise(mode: str):
             if args[:2] == ["s3", "ls"]:
                 prefix = args[2].split(f"s3://{publisher.BUCKET}/", 1)[1]
                 return "".join(
-                    f"2026-11-19 00:00:00 {len(body)} {key}\\n"
+                    f"2026-11-19 00:00:00 {len(body)} {key}\n"
                     for key, body in remote.items() if key.startswith(prefix)
                 )
             if args[:2] == ["s3", "cp"]:
