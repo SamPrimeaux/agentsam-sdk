@@ -93,6 +93,212 @@
 
 /* Beyond the Blueprint - portable editorial chapters and architectural evidence. */
 .ps-section.ps-cad-beyond-chapter{--ps-ink:#243f34;--ps-paper:#fff8ef;--ps-accent:#2f5445;min-height:100svh;display:flex;align-items:stretch;overflow:clip;padding:0;background:linear-gradient(145deg,#fdf0dc 0%,#f9e2d1 35%,#d7ebe4 100%)}
+
+/* PrimeTech portable section family. The Three.js world is a shared page layer;
+   every panel remains an independent CMS section and inherits the host theme. */
+.pt-scene-environment {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(145deg, var(--surface, #eaf6f7) 0%, var(--surface, #d9f0f2) 58%, var(--surface, #c6e9ed) 100%);
+  transition: opacity .38s ease;
+}
+.pt-scene-environment.is-active { opacity: 1; }
+.pt-scene-environment canvas { display:block; width:100%; height:100%; }
+.pt-scene-sky-wash, .pt-scene-light-haze { position:absolute; inset:0; pointer-events:none; }
+.pt-scene-sky-wash { background:linear-gradient(180deg,color-mix(in srgb,var(--surface,#fff) 42%,transparent),color-mix(in srgb,var(--surface,#fff) 28%,transparent) 56%,color-mix(in srgb,var(--surface,#fff) 58%,transparent)); }
+.pt-scene-light-haze { background:radial-gradient(ellipse at 50% 46%,color-mix(in srgb,var(--surface,#fff) 4%,transparent),color-mix(in srgb,var(--surface,#fff) 22%,transparent) 70%,color-mix(in srgb,var(--surface,#fff) 42%,transparent)); }
+.ps-section.ps-primetech {
+  --ps-ink: var(--theme-text, var(--text, var(--ink, #20344d)));
+  --ps-paper: transparent;
+  --ps-accent: var(--theme-accent, var(--accent, #9fc544));
+  --pt-surface: var(--theme-surface, var(--surface, rgba(255,255,255,.56)));
+  --pt-muted: var(--theme-muted, var(--muted, #52677b));
+  --pt-edge: clamp(24px, 5vw, 84px);
+  color:var(--ps-ink);
+  background:transparent;
+  font-family:inherit;
+  position:relative;
+  z-index:1;
+  min-height:100svh;
+  overflow:clip;
+}
+.ps-section.ps-primetech::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:color-mix(in srgb,var(--pt-surface) 42%,transparent);
+}
+.ps-section.ps-primetech h2,
+.ps-section.ps-primetech h3,
+.ps-section.ps-primetech p { margin:0; color:inherit; font-family:inherit; }
+.ps-section.ps-primetech h2 {
+  max-width:11ch;
+  font-size:clamp(3.6rem,8.3vw,8.8rem);
+  font-weight:400;
+  line-height:1.015;
+  letter-spacing:-.065em;
+  white-space:pre-line;
+  text-wrap:balance;
+}
+.ps-section.ps-primetech p { font-size:clamp(1rem,1.3vw,1.22rem); line-height:1.58; }
+.ps-section.ps-primetech .pt-inner {
+  width:100%;
+  max-width:1600px;
+  min-height:100svh;
+  box-sizing:border-box;
+  margin-inline:auto;
+  padding:clamp(72px,10vh,130px) var(--pt-edge) clamp(64px,8vh,100px);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.ps-section.ps-primetech .pt-eyebrow {
+  display:block;
+  margin-bottom:clamp(18px,2.4vw,30px);
+  color:var(--pt-muted);
+  font-size:.67rem;
+  font-weight:700;
+  line-height:1.4;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.ps-section.ps-primetech .pt-body { max-width:54ch; margin-top:24px; }
+.ps-section.ps-primetech .pt-lede { max-width:34ch; }
+.ps-section.ps-primetech .pt-copy { width:min(100%,650px); position:relative; z-index:1; }
+.ps-section.ps-primetech .pt-copy--right { margin-left:auto; }
+.ps-section.ps-primetech .pt-panel-inner--right { align-items:flex-end; }
+.ps-section.ps-primetech .pt-caption {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:clamp(24px,5vw,90px);
+  width:100%;
+  margin-top:auto;
+  padding-top:clamp(48px,8vh,110px);
+  position:relative;
+  z-index:1;
+}
+.ps-section.ps-primetech .pt-caption p { max-width:54ch; }
+.ps-section.ps-primetech .pt-caption-title { font-size:clamp(1.15rem,1.7vw,1.5rem); font-weight:600; }
+.ps-section.ps-primetech .pt-caption-body { color:var(--pt-muted); }
+.ps-section.ps-primetech .pt-hero-inner { justify-content:space-between; }
+.ps-section.ps-primetech .pt-hero-copy { margin-top:clamp(24px,10vh,130px); }
+.ps-section.ps-primetech .pt-hero-copy .pt-display { max-width:8.5ch; }
+.ps-section.ps-primetech .pt-hero-caption {
+  display:flex; justify-content:space-between; align-items:end; gap:24px;
+  padding-top:40px; color:var(--pt-muted); font-size:.66rem; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+}
+.ps-section.ps-primetech .pt-hero-caption span:last-child { font-size:.9rem; font-weight:500; letter-spacing:0; text-transform:none; color:var(--ps-ink); }
+.ps-section.ps-primetech .pt-scroll-next {
+  align-self:center; display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:16px;
+  border:0; background:transparent; color:var(--pt-muted); font:inherit; font-size:.68rem; cursor:pointer;
+}
+.ps-section.ps-primetech .pt-scroll-next span:last-child { font-size:1.6rem; line-height:1; }
+.ps-section.ps-primetech .pt-circuit-showcase {
+  width:min(46%,680px); margin-top:clamp(34px,7vh,90px); margin-right:auto;
+  border-radius:18px; overflow:hidden; position:relative; z-index:1;
+  background:#02090d; color:#d8fffb; box-shadow:0 22px 70px rgba(15,35,48,.16);
+}
+.ps-section.ps-primetech .pt-circuit-bar,
+.ps-section.ps-primetech .pt-circuit-foot {
+  display:flex; justify-content:space-between; gap:16px; padding:12px 16px;
+  font-size:.58rem; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
+}
+.ps-section.ps-primetech .pt-circuit-hint { color:#7bdedc; }
+.ps-section.ps-primetech .pt-circuit-stage { position:relative; height:clamp(230px,29vw,410px); cursor:pointer; outline-offset:4px; }
+.ps-section.ps-primetech .pt-circuit-canvas { position:absolute; inset:0; }
+.ps-section.ps-primetech .pt-circuit-canvas canvas { display:block; width:100%; height:100%; }
+.ps-section.ps-primetech .pt-circuit-grain { position:absolute; inset:0; pointer-events:none; opacity:.12; background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.12) 4px); }
+.ps-section.ps-primetech .pt-circuit-error { position:absolute; inset:auto 16px 14px; color:#b6fff4; font-size:.75rem; }
+.ps-section.ps-primetech .pt-circuit-foot { color:#8ca5aa; font-size:.52rem; }
+.ps-section.ps-primetech .pt-principles-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,.8fr); gap:clamp(48px,10vw,180px); align-items:center; }
+.ps-section.ps-primetech .pt-section-kicker { margin-bottom:20px; color:var(--pt-muted); font-size:1rem; }
+.ps-section.ps-primetech .pt-principle-list { display:grid; grid-template-columns:1fr; gap:clamp(17px,2.2vw,30px); }
+.ps-section.ps-primetech .pt-principle { display:flex; align-items:center; gap:18px; font-size:clamp(1rem,1.35vw,1.25rem); }
+.ps-section.ps-primetech .pt-principle-icon { display:grid; place-items:center; width:34px; flex:0 0 34px; color:var(--ps-accent); font-size:1.65rem; }
+.ps-section.ps-primetech .pt-world-inner { justify-content:space-between; }
+.ps-section.ps-primetech .pt-world-copy { max-width:650px; }
+.ps-section.ps-primetech .pt-world-pins { display:flex; flex-wrap:wrap; gap:12px; align-self:flex-end; max-width:880px; margin-top:clamp(42px,8vh,100px); }
+.ps-section.ps-primetech .pt-world-pin {
+  display:inline-flex; align-items:center; min-height:46px; padding:11px 17px;
+  border:1px solid color-mix(in srgb,var(--ps-ink) 24%,transparent);
+  border-radius:999px; background:color-mix(in srgb,var(--pt-surface) 78%,transparent);
+  backdrop-filter:blur(12px); font-size:.86rem; font-weight:600;
+}
+.ps-section.ps-primetech .pt-link {
+  display:inline-flex; align-items:center; gap:14px; width:fit-content; margin-top:26px;
+  padding:0 0 7px; border-bottom:1px solid currentColor; color:var(--ps-ink); font-size:.92rem; font-weight:600;
+}
+.ps-section.ps-primetech .pt-link--primary { padding:13px 18px; border:1px solid var(--ps-ink); border-radius:999px; }
+.ps-section.ps-primetech .pt-companion-showcase { display:flex; flex-wrap:wrap; gap:18px; margin-top:28px; }
+.ps-section.ps-primetech .pt-companion { display:flex; align-items:center; gap:12px; min-width:190px; }
+.ps-section.ps-primetech .pt-companion img,
+.ps-section.ps-primetech .pt-companion-placeholder { width:58px; height:58px; border-radius:50%; object-fit:cover; background:color-mix(in srgb,var(--ps-ink) 10%,transparent); }
+.ps-section.ps-primetech .pt-companion figcaption { display:flex; flex-direction:column; gap:4px; }
+.ps-section.ps-primetech .pt-companion figcaption strong { font-size:.9rem; }
+.ps-section.ps-primetech .pt-companion figcaption span { color:var(--pt-muted); font-size:.75rem; }
+.ps-section.ps-primetech .pt-theme-inner { justify-content:flex-start; }
+.ps-section.ps-primetech .pt-theme-head { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr); gap:clamp(28px,6vw,100px); align-items:end; }
+.ps-section.ps-primetech .pt-theme-copy h2 { font-size:clamp(3.4rem,7vw,7.2rem); }
+.ps-section.ps-primetech .pt-theme-actions { display:flex; flex-direction:column; gap:26px; }
+.ps-section.ps-primetech .pt-theme-stats { display:flex; flex-wrap:wrap; gap:14px 24px; }
+.ps-section.ps-primetech .pt-theme-stats span { color:var(--pt-muted); font-size:.75rem; }
+.ps-section.ps-primetech .pt-theme-stats strong { display:block; color:var(--ps-ink); font-size:1.7rem; font-weight:500; }
+.ps-section.ps-primetech .pt-theme-links { display:flex; flex-wrap:wrap; gap:18px; }
+.ps-section.ps-primetech .pt-theme-routes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(16px,3vw,42px); margin-top:clamp(38px,6vh,72px); }
+.ps-section.ps-primetech .pt-theme-route-group { min-width:0; }
+.ps-section.ps-primetech .pt-theme-route-group header { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding-bottom:12px; border-bottom:1px solid color-mix(in srgb,var(--ps-ink) 24%,transparent); }
+.ps-section.ps-primetech .pt-theme-route-group h3 { font-size:.75rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.ps-section.ps-primetech .pt-theme-route-group header span { color:var(--pt-muted); font-size:.66rem; white-space:nowrap; }
+.ps-section.ps-primetech .pt-theme-route-group ul { list-style:none; padding:0; margin:0; }
+.ps-section.ps-primetech .pt-theme-route-group li { border-bottom:1px solid color-mix(in srgb,var(--ps-ink) 13%,transparent); }
+.ps-section.ps-primetech .pt-theme-route-group li a { display:flex; justify-content:space-between; gap:12px; padding:9px 0; font-size:.78rem; line-height:1.35; }
+.ps-section.ps-primetech .pt-theme-footnote { margin-top:18px; color:var(--pt-muted); font-size:.72rem; }
+.ps-section.ps-primetech .pt-contact-inner { display:grid; grid-template-columns:minmax(0,.9fr) minmax(320px,1fr); gap:clamp(40px,8vw,140px); align-items:start; }
+.ps-section.ps-primetech .pt-contact-head h2 { max-width:9ch; }
+.ps-section.ps-primetech .pt-contact-bottom { display:flex; flex-direction:column; gap:24px; }
+.ps-section.ps-primetech .pt-contact-bottom>p { max-width:44ch; }
+.ps-section.ps-primetech .pt-contact-form { display:grid; grid-template-columns:1fr 1fr; gap:18px 24px; }
+.ps-section.ps-primetech .pt-contact-form label { display:flex; flex-direction:column; gap:8px; color:var(--pt-muted); font-size:.72rem; }
+.ps-section.ps-primetech .pt-contact-form input,
+.ps-section.ps-primetech .pt-contact-form textarea { width:100%; min-width:0; padding:10px 0; border:0; border-bottom:1px solid color-mix(in srgb,var(--ps-ink) 38%,transparent); border-radius:0; background:transparent; color:var(--ps-ink); font:inherit; font-size:.9rem; }
+.ps-section.ps-primetech .pt-contact-form textarea { min-height:90px; resize:vertical; }
+.ps-section.ps-primetech .pt-contact-form .pt-contact-idea,
+.ps-section.ps-primetech .pt-contact-form .pt-contact-submit,
+.ps-section.ps-primetech .pt-contact-form .pt-contact-status { grid-column:1/-1; }
+.ps-section.ps-primetech .pt-contact-submit { display:flex; justify-content:space-between; align-items:center; min-height:48px; padding:12px 18px; border:1px solid var(--ps-ink); border-radius:999px; background:transparent; color:var(--ps-ink); font:inherit; font-size:.84rem; font-weight:600; cursor:pointer; }
+.ps-section.ps-primetech .pt-contact-status { color:var(--pt-muted); font-size:.7rem; }
+@media(max-width:760px) {
+  .ps-section.ps-primetech .pt-inner { min-height:100svh; padding-block:76px 54px; }
+  .ps-section.ps-primetech h2 { max-width:10ch; font-size:clamp(3.2rem,13vw,5.8rem); }
+  .ps-section.ps-primetech .pt-caption,
+  .ps-section.ps-primetech .pt-principles-layout,
+  .ps-section.ps-primetech .pt-theme-head,
+  .ps-section.ps-primetech .pt-theme-routes,
+  .ps-section.ps-primetech .pt-contact-inner { grid-template-columns:1fr; }
+  .ps-section.ps-primetech .pt-caption { gap:14px; padding-top:42px; }
+  .ps-section.ps-primetech .pt-hero-caption { align-items:flex-start; flex-direction:column; gap:10px; }
+  .ps-section.ps-primetech .pt-copy--right { margin-left:0; }
+  .ps-section.ps-primetech .pt-circuit-showcase { width:100%; margin-top:34px; }
+  .ps-section.ps-primetech .pt-principles-layout { gap:36px; }
+  .ps-section.ps-primetech .pt-world-pins { align-self:flex-start; margin-top:38px; }
+  .ps-section.ps-primetech .pt-theme-routes { gap:26px; }
+  .ps-section.ps-primetech .pt-contact-form { grid-template-columns:1fr; }
+  .ps-section.ps-primetech .pt-contact-form>* { grid-column:1/-1; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .pt-scene-environment { transition:none; }
+  .ps-section.ps-primetech .pt-world-pin { backdrop-filter:none; }
+}
+
+/* Original CAD Beyond the Blueprint universal sections. */
+.ps-cad-beyond-chapter{--ps-ink:#243f34;--ps-paper:#fff8ef;--ps-accent:#2f5445;min-height:100svh;display:flex;align-items:stretch;overflow:clip;padding:0;background:linear-gradient(145deg,#fdf0dc 0%,#f9e2d1 35%,#d7ebe4 100%)}
 .ps-cad-beyond-chapter .ps-btb-chapter__world{position:absolute;inset:0;z-index:0;overflow:hidden;background:radial-gradient(ellipse 70% 55% at 78% 24%,rgba(255,248,223,.95),transparent 75%),radial-gradient(ellipse 46% 70% at 74% 75%,rgba(118,205,194,.36),transparent 75%)}
 .ps-cad-beyond-chapter .ps-btb-chapter__world img{display:block;width:100%;height:100%;object-fit:cover;object-position:64% center;opacity:.38;filter:saturate(.72)}
 .ps-cad-beyond-chapter .ps-btb-chapter__world::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,249,240,.97) 0%,rgba(255,249,240,.88) 25%,rgba(255,249,240,.48) 48%,rgba(255,249,240,.04) 78%)}
@@ -161,3 +367,16 @@
  .ps-cad-beyond-evidence .ps-btb-evidence__specs,.ps-cad-beyond-evidence .ps-btb-rung{grid-template-columns:1fr}
  .ps-cad-beyond-evidence .ps-btb-rung dl div{grid-template-columns:1fr;gap:3px}
 }
+
+/* Real architectural review media in the portable CAD chapter. */
+.ps-section.ps-primetech .pt-cad-evidence {
+ position:absolute;top:50%;left:var(--pt-edge);width:clamp(230px,40%,620px);
+ display:grid;grid-template-columns:1fr .38fr;gap:10px;align-items:end;
+ transform:translateY(-45%);z-index:1;pointer-events:auto;
+}
+.ps-section.ps-primetech .pt-cad-evidence figure{margin:0;min-width:0;background:#e9f1f1;overflow:hidden;box-shadow:0 22px 64px rgba(23,45,57,.16)}
+.ps-section.ps-primetech .pt-cad-evidence img{display:block;width:100%;aspect-ratio:1.2;object-fit:cover}
+.ps-section.ps-primetech .pt-cad-evidence figcaption{padding:11px;color:var(--ps-ink);font-size:.62rem;letter-spacing:.11em;font-weight:700}
+.ps-section.ps-primetech .pt-cad-evidence-secondary{margin-bottom:30px}
+.ps-section.ps-primetech .pt-cad-evidence-secondary img{aspect-ratio:.78}
+@media(max-width:760px){.ps-section.ps-primetech .pt-cad-evidence{position:relative;top:auto;left:auto;width:100%;transform:none;grid-template-columns:1fr .4fr;margin-top:25px}}

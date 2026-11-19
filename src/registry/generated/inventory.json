@@ -1587,9 +1587,9 @@
       "id": "agentsam-3d-viewer",
       "install": [
         {
-          "command": "npm install --workspace @inneranimalmedia/agentsam-3d-viewer",
+          "command": "npm install @inneranimalmedia/agentsam-3d-viewer",
           "package": "@inneranimalmedia/agentsam-3d-viewer",
-          "type": "npm-workspace"
+          "type": "npm"
         }
       ],
       "languages": [
@@ -1599,9 +1599,9 @@
       "name": "@inneranimalmedia/agentsam-3d-viewer",
       "purpose": "Shared framework-agnostic Three.js viewport, model viewing, and verified OCCT mesh display adapters for BIM, robotics and public scenes; native OCCT stays geometry authority.",
       "registry": {
-        "kind": "npm-workspace",
+        "kind": "npm",
         "name": "@inneranimalmedia/agentsam-3d-viewer",
-        "public_claim": false
+        "public_claim": true
       },
       "schema": "agentsam.package.v1",
       "status": "in-development",
@@ -1619,7 +1619,7 @@
         "Creating a reusable Three.js viewport while keeping CAD-specific selection and scene logic in the host",
         "Displaying validated native OCCT tessellations with consistent units, axes and indexed triangles"
       ],
-      "version": "0.2.0",
+      "version": "2.6.15",
       "review_required": [],
       "readiness": "unverified"
     },
@@ -1797,7 +1797,7 @@
       "use_when": [
         "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify)."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
@@ -1885,7 +1885,7 @@
       "use_when": [
         "Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchandising, audience targeting, conversion, brand consistency, and evidence-backed campaign evaluation."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
@@ -2278,7 +2278,7 @@
         "Building and packaging AgentSam Local Studio for desktop installation.",
         "Preparing native desktop bridges, frontend assets and the bundled agentsamd sidecar."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
@@ -2365,7 +2365,7 @@
       "use_when": [
         "Canonical AgentSam runtime error normalization, classification, transport, remediation and rendering."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
@@ -2456,7 +2456,7 @@
       "use_when": [
         "Provider-neutral, language-agnostic AgentSam lifecycle hooks with callback, command, HTTP, model, tool, MCP, LSP, and sub-agent adapters."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
@@ -2544,7 +2544,7 @@
       "use_when": [
         "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)"
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
@@ -2765,7 +2765,7 @@
       "use_when": [
         "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
@@ -2838,9 +2838,9 @@
       "id": "agentsam-occt",
       "install": [
         {
-          "command": "npm install --workspace @inneranimalmedia/agentsam-occt",
+          "command": "npm install @inneranimalmedia/agentsam-occt",
           "package": "@inneranimalmedia/agentsam-occt",
-          "type": "npm-workspace"
+          "type": "npm"
         }
       ],
       "languages": [
@@ -2851,9 +2851,9 @@
       "name": "@inneranimalmedia/agentsam-occt",
       "purpose": "One OpenCascade engine contract with shared browser-WASM and native C++ adapters for AgentSam CAD surfaces.",
       "registry": {
-        "kind": "npm-workspace",
+        "kind": "npm",
         "name": "@inneranimalmedia/agentsam-occt",
-        "public_claim": false
+        "public_claim": true
       },
       "schema": "agentsam.package.v1",
       "status": "in-development",
@@ -2871,7 +2871,7 @@
         "Adding OCCT-backed geometry to a browser, desktop, or local CAD application",
         "Reusing the canonical native OCCT provider and browser Boolean adapter"
       ],
-      "version": "0.1.0",
+      "version": "2.6.15",
       "review_required": [],
       "readiness": "unverified"
     },
@@ -2916,7 +2916,7 @@
       "use_when": [
         "Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
@@ -4076,7 +4076,7 @@
       "use_when": [
         "Portable provider-neutral theme preview registry and composition contracts"
       ],
-      "version": "2.6.12",
+      "version": "2.6.14",
       "readiness": "unverified"
     },
     {
@@ -4340,7 +4340,7 @@
       "use_when": [
         "Resolve the stock AgentSam CMS storefront shell theme contract."
       ],
-      "version": "2.6.12",
+      "version": "2.6.15",
       "readiness": "unverified"
     },
     {
