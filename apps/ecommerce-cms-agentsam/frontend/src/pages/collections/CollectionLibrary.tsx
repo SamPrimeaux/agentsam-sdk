@@ -34,10 +34,10 @@ export default function CollectionLibrary() {
       let proposed=base;
       while(collections.some(item=>item.slug===proposed))proposed=slugify(`${base}-${++suffix}`);
       form.slug=proposed;form.status="draft";
-      const clone=await collectionsApi.save(form,undefined,"draft");
-      if(data.product_ids.length)await collectionsApi.assign(clone.id,data.product_ids);
+      const clone=await collectionsApi.save(form,undefined,"draft",c.site_id);
+      if(data.product_ids.length)await collectionsApi.assign(clone.id,data.product_ids,c.site_id);
       if(form.rules.mode!=="manual")await collectionsApi.saveRules(clone.id,form.rules);
-      navigate(collectionHref(`/collections/${clone.id}`));
+      navigate(collectionHref(`/collections/${clone.id}`,c.site_id));
     }catch(e){setError(e instanceof Error?e.message:"Couldn't duplicate collection");}
     finally{setBusy(null);}
   }
