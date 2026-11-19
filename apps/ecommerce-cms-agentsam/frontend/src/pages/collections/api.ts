@@ -71,7 +71,7 @@ export const collectionsApi = {
   async get(id: string, siteId?: string): Promise<CollectionDetail> {
     const path = `/api/admin/collections/${encodeURIComponent(id)}`;
     const [result, members] = await Promise.all([
-      adminFetch<Ok & { collection: CmsRow }>(scoped(path)), items(id),
+      adminFetch<Ok & { collection: CmsRow }>(scoped(path, siteId)), items(id, siteId),
     ]);
     const row = accepted(result).collection;
     const metadata = Object.keys(object(row.metadata)).length ? object(row.metadata) : object(row.metadata_json);
