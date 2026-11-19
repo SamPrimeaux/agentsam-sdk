@@ -36,6 +36,13 @@ for (const pkg of ordered) {
   } else {
     failures.push(result);
     console.error(`  BLOCKED ${pkg.name}@${pkg.version} · ${result.blockers.join('; ')}`);
+    // Preserve the failing gate evidence already captured by verifyPackage().
+    // Summaries alone make release failures impossible to diagnose from CI.
+    for (const gate of result.gates.filter((item) => !item.ok)) {
+      console.error(`    FAIL ${gate.gate} · exit ${gate.exit_code ?? 'unknown'}`);
+      if (gate.stderr) console.error(`    stderr:\n${gate.stderr}`);
+      if (gate.stdout) console.error(`    stdout:\n${gate.stdout}`);
+    }
   }
 }
 
