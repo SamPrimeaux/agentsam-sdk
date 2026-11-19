@@ -26,7 +26,7 @@ Product state does **not** belong here. Trails/projects, CAD geometry, CMS page 
 
 This package is the single source of truth for portable operation and tool definitions:
 
-- `src/operations.ts` owns `AgentOperationContract`, execution policy vocabulary, operation definitions, and normalized operation receipts/results.
+- `src/operations.ts` owns `AgentOperationContract`, execution policy vocabulary, `assertAgentOperationContract()`, operation definitions, and normalized operation receipts/results.
 - `src/tools.ts` owns `AgentToolDefinition`, tool-call vocabulary, risk, side-effect, idempotency, retry and receipt policy types, plus `assertAgentToolDefinition()` as the framework-neutral runtime guard.
 - `schemas/` owns the versioned JSON Schemas for operation contracts, tool definitions and operation results.
 - `protocol/` contains stable public schema mirrors. The package test suite requires each mirror to match its package-owned source exactly.
