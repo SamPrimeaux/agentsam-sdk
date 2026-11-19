@@ -209,7 +209,7 @@ export default function CollectionEditor() {
       <h1>Where will this collection be published?</h1>
       <p>Your account-wide library includes every store. Choose a destination only when creating a store-owned collection.</p>
       {siteError && <div className="cs-alert error" role="alert">{siteError}</div>}
-      <div style={{display:"flex",flexWrap:"wrap",gap:"12px",marginTop:"20px"}}>
+      <div className="cs-destination-list">
         {availableSites.map(site=><button className="cs-button" type="button" key={site.id}
           onClick={()=>navigate(collectionHref("/collections/new",site.id),{replace:true})}>
           {site.name}
