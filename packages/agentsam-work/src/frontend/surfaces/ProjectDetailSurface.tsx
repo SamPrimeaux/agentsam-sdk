@@ -89,12 +89,14 @@ export function ProjectDetailSurface({
     return () => { cancelled = true; window.clearInterval(interval); window.removeEventListener("focus", refresh); };
   }, [chatHost?.projectInsights, project.id]);
 
-  async function newProjectChat() {
+  async function newProjectChat(initialMessage = "") {
     if (!chatHost?.createProjectChat || creatingChat) return;
     setCreatingChat(true);
     setChatError("");
     try {
-      const chatId = await chatHost.createProjectChat(project.id);
+      const message = initialMessage.trim();
+      const chatId = await chatHost.createProjectChat(project.id, message || undefined);
+      setChatDraft("");
       onNavigate("/chats/" + encodeURIComponent(chatId));
     } catch (cause) {
       setChatError(cause instanceof Error ? cause.message : "Could not create project chat");
