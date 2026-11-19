@@ -209,8 +209,13 @@ export async function handleCollectionApi(request,env,url,context) {
   const match=url.pathname.match(/^\/api\/admin\/(?:cms\/)?collections(?:\/([A-Za-z0-9_-]+)(\/items)?)?$/);
   if(!match)return null;
   try {
-    const scope=await collectionScope(env,{accountId:context.accountId,siteId:url.searchParams.get('site_id')});
     const [,id,items]=match;
+    if (!id && request.method==='GET' && url.searchParams.get('scope')==='account' &&
+        !url.searchParams.has('site_id')) {
+      return Response.json({ok:true,scope:'account',site_id:null,
+        collections:await listAccountCmsCollections(env,context.accountId)});
+    }
+    const scope=await collectionScope(env,{accountId:context.accountId,siteId:url.searchParams.get('site_id')});
     if(!id&&request.method==='GET')return Response.json({ok:true,site_id:scope.id,collections:await listCmsCollections(env,scope)});
     if(!id&&request.method==='POST')return Response.json({ok:true,site_id:scope.id,collection:await saveCmsCollection(env,scope,await request.json())},{status:201});
     if(id&&!items&&request.method==='GET') {
