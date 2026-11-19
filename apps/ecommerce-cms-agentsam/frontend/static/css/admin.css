@@ -313,6 +313,7 @@ table.admin-table {
 }
 
 .admin-table tr:last-child td { border-bottom: none; }
+.admin-product-store { display: block; opacity: .7; font-size: 11px; margin-top: 2px; }
 
 .admin-table tr:hover td { background: rgba(255,255,255,0.02); }
 
