@@ -1094,28 +1094,28 @@
   box-shadow: 0 2px 10px color-mix(in srgb, var(--agentsam-work-accent) 7%, transparent);
 }
 
-/* Selection stays in the work surface. No backdrop, slide-in or page-width
-   takeover for inspecting or editing a ticket. */
+/* Ticket editing takes over the Work center stage. The global Co-worker
+   remains a separate, independently resizable stage instead of becoming a
+   third column inside the work surface. */
 .aw-work-content-layout {
   display: grid; grid-template-columns: minmax(0, 1fr);
-  min-height: 100%; width: 100%; align-items: start;
+  min-height: 100%; width: 100%; align-items: stretch;
 }
 .aw-work-content-layout[data-ticket-open="true"] {
-  grid-template-columns: minmax(0, 1fr) clamp(360px, 29vw, 460px);
-  background: var(--agentsam-work-canvas);
+  display: flex; flex-direction: column;
+  width: 100%; height: 100%; min-height: 100%;
+  overflow: auto; background: var(--agentsam-work-canvas);
 }
 .aw-work-content-primary { min-width: 0; }
-.aw-work-content-layout[data-ticket-open="true"] .aw-work-content-primary { min-width: 0; }
-.aw-work-content-layout[data-ticket-open="true"] .aw-work-content-primary .aw-page { padding-right: 14px; }
+.aw-work-content-layout[data-ticket-open="true"] .aw-work-content-primary { display: none; }
 .aw-ticket-context {
-  min-width: 0; width: 100%;
-  height: min(calc(100dvh - 58px), 1040px);
-  position: sticky; top: 0;
+  min-width: 0; width: min(100%, 1040px); max-width: 100%;
+  height: 100%; min-height: 100%; margin: 0 auto;
+  position: relative; top: auto;
   display: flex; flex-direction: column; overflow: hidden;
   background: var(--agentsam-work-panel);
   color: var(--agentsam-work-text);
-  border-left: 1px solid var(--agentsam-work-border);
-  box-shadow: -7px 0 30px color-mix(in srgb, var(--agentsam-work-accent) 7%, transparent);
+  border: 0; border-radius: 0; box-shadow: none;
 }
 .aw-ticket-context__header { padding: 17px 22px 13px; border-bottom: 1px solid var(--agentsam-work-border); }
 .aw-ticket-context__back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; border: 0; background: transparent; color: var(--agentsam-work-muted); font-size: 12px; cursor: pointer; }
