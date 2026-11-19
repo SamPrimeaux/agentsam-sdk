@@ -173,6 +173,30 @@ export function ProjectDetailSurface({
       {tab === "overview" ? (
         <div className="aw-project-home" aria-label="Project overview">
           {chatError ? <p role="alert" className="aw-error">{chatError}</p> : null}
+          {chatHost?.createProjectChat ? <form className="aw-project-composer" onSubmit={(event) => { event.preventDefault(); void newProjectChat(chatDraft); }}>
+            <div className="aw-project-composer__field">
+              <label htmlFor="aw-project-chat-prompt">Start a conversation</label>
+              <textarea
+                id="aw-project-chat-prompt"
+                className="aw-textarea"
+                rows={2}
+                value={chatDraft}
+                onChange={(event) => setChatDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    if (chatDraft.trim() && !creatingChat) void newProjectChat(chatDraft);
+                  }
+                }}
+                placeholder="How can I help you today?"
+                aria-label={"Start a conversation about " + project.name}
+              />
+              <small>Project context is attached automatically. Use Shift + Enter for a new line.</small>
+            </div>
+            <button type="submit" className="aw-btn aw-btn--primary" disabled={!chatDraft.trim() || creatingChat}>
+              <MessageSquarePlus size={15}/>{creatingChat ? "Starting…" : "Start conversation"}
+            </button>
+          </form> : null}
           <section className="aw-project-home__objective">
             <span className="aw-project-eyebrow">CURRENT OBJECTIVE</span>
             <h2>{project.objective || "Define your next objective"}</h2>
