@@ -269,7 +269,7 @@ export function Composer({
       label="Send"
       data-composer-send=""
       className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
-      disabled={staging || submitting || streaming || (!value.trim() && pendingAttachments.length === 0)}
+      disabled={staging || submitting || (streaming && (!!onSubmit || !value.trim())) || (!value.trim() && pendingAttachments.length === 0)}
       onClick={submitWithAttachments}
     >
       <ArrowUp className="size-4" />
