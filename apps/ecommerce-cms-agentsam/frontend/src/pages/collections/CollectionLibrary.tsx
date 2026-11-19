@@ -60,7 +60,7 @@ export default function CollectionLibrary() {
         <Link className="cs-button primary cs-new-button" to={collectionHref("/collections/new")}><span aria-hidden="true">＋</span> Create collection</Link>
       </header>
       <div className="cs-library-metrics">
-        <div><span>Total collections</span><strong>{collections.length}</strong></div>
+        <div><span>Total collections</span><strong>{error?"—":loading?"…":collections.length}</strong></div>
         <div><span>Published</span><strong>{collections.filter(c=>c.status==="active").length}</strong></div>
         <div><span>Drafts</span><strong>{collections.filter(c=>c.status==="draft").length}</strong></div>
         <div><span>Product assignments</span><strong>{collections.reduce((total,c)=>total+Number(c.product_count||0),0)}</strong></div>
