@@ -117,10 +117,9 @@ renderShell('/admin/products', `
   </div>
 `);
 
+// A store is an optional filter for the account overview, not a prerequisite.
+// Never silently narrow the account's inventory using a stale saved site.
 let catalogSiteId=new URLSearchParams(location.search).get('site_id');
-if (!catalogSiteId) {
-  try { catalogSiteId=localStorage.getItem('agentsam.cms.selected-site.v1') || null; } catch {}
-}
 async function ensureCatalogSite() {
   if (catalogSiteId) return catalogSiteId;
   const data=await window.adminFetch('/api/admin/cms/sites');
