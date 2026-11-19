@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://inneranimalmedia.com/schemas/agentsam/queue-control/job-envelope.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/queue-control/job-envelope.v1.schema.json",
   "title": "AgentSam Queue Job Envelope v1",
   "type": "object",
   "required": [
