@@ -1142,18 +1142,30 @@
 .aw-ticket-context__footer .aw-btn { font-size: 11px; }
 .aw-ticket-context__delete { margin-left: auto; color: var(--agentsam-work-danger) !important; }
 
-/* Project header + main body + permanent right details.
-   This is distinct from the (non-modal) ticket context inspector. */
+/* Project details stay available without reserving a permanent column. */
 .aw-project-detail { background: transparent; }
-.aw-project-detail__layout {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(295px, 330px);
-  gap: 16px; align-items: start; min-width: 0;
+.aw-project-detail__layout { display: block; min-width: 0; }
+.aw-project-detail__main { min-width: 0; width: 100%; }
+.aw-project-detail__details {
+  margin-top: 18px; border: 1px solid var(--agentsam-work-border);
+  border-radius: 14px; overflow: hidden; background: var(--agentsam-work-panel-subtle);
 }
-.aw-project-detail__main { min-width: 0; }
+.aw-project-detail__details > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 50px; padding: 12px 16px; cursor: pointer; list-style: none;
+  color: var(--agentsam-work-text);
+}
+.aw-project-detail__details > summary::-webkit-details-marker { display: none; }
+.aw-project-detail__details > summary::after {
+  content: "+"; color: var(--agentsam-work-muted); font-size: 18px; line-height: 1;
+}
+.aw-project-detail__details[open] > summary { border-bottom: 1px solid var(--agentsam-work-border); }
+.aw-project-detail__details[open] > summary::after { content: "−"; }
+.aw-project-detail__details > summary strong { font-size: 13px; }
+.aw-project-detail__details > summary span { margin-left: auto; color: var(--agentsam-work-muted); font-size: 11px; }
 .aw-project-detail__inspector {
-  min-width: 0; display: grid; gap: 12px; padding: 18px 16px 24px;
-  border: 1px solid var(--agentsam-work-border); border-radius: 15px;
-  background: var(--agentsam-work-panel-subtle); box-shadow: 0 4px 16px color-mix(in srgb, var(--agentsam-work-accent) 7%, transparent);
+  min-width: 0; width: 100%; display: grid; gap: 12px; padding: 18px 16px 24px;
+  border: 0; border-radius: 0; background: var(--agentsam-work-panel-subtle); box-shadow: none;
 }
 .aw-project-inspector__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-bottom: 5px; }
 .aw-project-inspector__head strong { font-size: 14px; color: var(--agentsam-work-text); }
