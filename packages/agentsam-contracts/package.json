@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-contracts",
   "version": "2.6.15",
-  "description": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
+  "description": "Framework-neutral AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts.",
   "type": "module",
   "main": "./dist/index.js",
   "exports": {
@@ -88,7 +88,14 @@
     "./design-workspace-registry": {
       "types": "./dist/design-workspace-registry.d.ts",
       "import": "./dist/design-workspace-registry.js"
-    }
+    },
+    "./operations": {
+      "types": "./dist/operations.d.ts",
+      "import": "./dist/operations.js"
+    },
+    "./schemas/sam-operation.v1.schema.json": "./schemas/sam-operation.v1.schema.json",
+    "./schemas/agent-tool-definition.v1.schema.json": "./schemas/agent-tool-definition.v1.schema.json",
+    "./schemas/sam-result.v1.schema.json": "./schemas/sam-result.v1.schema.json"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -110,6 +117,7 @@
   },
   "files": [
     "dist",
+    "schemas",
     "README.md"
   ],
   "license": "MIT",
