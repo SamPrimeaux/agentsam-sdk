@@ -2,6 +2,7 @@ export * from './agent';
 export * from './events';
 export * from './run';
 export * from './tools';
+export * from './operations';
 export * from './authority';
 export * from './execution';
 export * from './providers';
