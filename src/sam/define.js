@@ -1,3 +1,5 @@
+import { assertAgentOperationContract } from '@inneranimalmedia/agentsam-contracts';
+
 /**
  * @param {import('./types.js').SamOperationDef} def
  * @returns {import('./types.js').SamOperationDef}
@@ -25,11 +27,18 @@ export function defineSamOperation(def) {
     throw new TypeError(`defineSamOperation(${def.id}): summary is required`);
   }
 
+  // Validate portable metadata through the contracts package. Handler and any
+  // host/runtime-only extensions are not part of the serialized contract.
+  assertAgentOperationContract({ ...def, version: def.version ?? 1 });
+
   const skill = typeof def.skill === 'string'
     ? { id: def.skill, help: true }
     : def.skill === null
       ? null
       : (def.skill || undefined);
+
+  const providerSpend = def.execution.provider_spend ??
+    (def.execution.model === 'never' ? 'never' : def.execution.model === 'required' ? 'required' : 'optional');
 
   return {
     ...def,
@@ -42,9 +51,9 @@ export function defineSamOperation(def) {
     artifacts: Array.isArray(def.artifacts) ? [...def.artifacts] : [],
     skill,
     execution: {
-      embedding: 'never',
-      provider_spend: def.execution.model === 'never' ? 'none' : 'possible',
       ...def.execution,
+      embedding: def.execution.embedding ?? 'never',
+      provider_spend: providerSpend,
       lanes: [...def.execution.lanes],
     },
   };
