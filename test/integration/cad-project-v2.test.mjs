@@ -15,8 +15,12 @@ import { createCadProductionOperations } from '../../src/lib/cad/production-oper
 import { createCadOperations } from '../../src/sam/packs/cad/index.js';
 
 const json = p => JSON.parse(fs.readFileSync(p, 'utf8'));
+const sourceTypesSchema = json(new URL('../../contracts/source-types.v2.schema.json', import.meta.url));
+const sourceTypesCatalog = json(new URL('../../contracts/source-types.v2.json', import.meta.url));
+const sourceTypesV1 = json(new URL('../../contracts/source-types.v1.json', import.meta.url));
 const schema = json(new URL('../../protocol/cad/cad.project.v2.schema.json', import.meta.url));
 const ajv = new Ajv2020({ strict: true, allErrors: true });
+const validateSourceTypes = ajv.compile(sourceTypesSchema);
 const validateSchema = ajv.compile(schema);
 const sameSchema = doc => {
   assert.equal(validateSchema(doc), true, JSON.stringify(validateSchema.errors));
@@ -161,10 +165,11 @@ test('SD/CD, imagery, interactive, film and handoff are output intents, not fict
   assert.equal(ready.missingOutputIds.length, CAD_DELIVERY_PROFILES['architecture.cd-preparation'].length);
   assert.throws(() => completeCadOutput(staged, staged.outputs[0].id, {artifact: {uri: 'r2://x', sha256: 'x'}}), /verified_artifact/);
   const generated = completeCadOutput(staged, staged.outputs[0].id, {
-    artifact: {uri: 'r2://cad/projects/x/image.png',sha256:'a'.repeat(64)},
+    artifact: {uri: 'r2://cad/projects/x/image.png',sha256:'a'.repeat(64),formatRef:{catalog:'agentsam.source-types.v2',id:'image.png',extension:'.png'}},
     receiptId:'samr_approved1',provider:'blender',providerVersion:'5.0.1',
   });
   sameSchema(generated);
+  assert.equal(generated.outputs[0].artifact.formatRef.id, 'image.png');
   const stale = invalidateCadOutputs(generated, ['walls:wall-0'], 2);
   assert.equal(stale.project.outputs[0].state, 'stale');
   sameSchema(stale.project);

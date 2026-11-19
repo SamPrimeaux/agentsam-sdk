@@ -17,14 +17,13 @@ const isId = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{
 const isSha = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 const validUri = value => typeof value === 'string' && value.length > 0 && !/^javascript:/i.test(value);
 const SOURCE_TYPES_CATALOG = 'agentsam.source-types.v2';
-const sourceFormatKinds = new Set(['source','container','codec','native-project','exchange','dataset','archive','package','sequence','subtitle','font','shader','machine-program','color-profile','database','directory-package']);
 const sourceIdentificationStatuses = new Set(['declared','identified','ambiguous','unknown','mismatch']);
 const sourceIdentificationConfidence = new Set(['high','medium','low','none']);
 const sourceIdentificationEvidence = new Set(['extension','media-type','signature','container','content','application-context','user-selection','provider-metadata']);
 const isSourceFormatReference = value => isRecord(value)
   && value.catalog === SOURCE_TYPES_CATALOG
   && typeof value.id === 'string' && /^[a-z][a-z0-9.-]{1,127}$/.test(value.id)
-  && (value.extension == null || (typeof value.extension === 'string' && /^\\.[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(value.extension)))
+  && (value.extension == null || (typeof value.extension === 'string' && /^\.[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(value.extension)))
   && (value.mediaType == null || (typeof value.mediaType === 'string' && value.mediaType.length >= 3))
   && (value.variant == null || (typeof value.variant === 'string' && value.variant.length > 0))
   && (value.parameters == null || (isRecord(value.parameters) && Object.values(value.parameters).every(v => ['string','number','boolean'].includes(typeof v))))
@@ -100,6 +99,16 @@ export function validateCadProjectV2(project) {
     else assetIds.add(asset.id);
     if (asset?.status === 'available' && (!validUri(asset.uri) || !isSha(asset.sha256)))
       errors.push('available_asset_requires_uri_and_sha256:' + asset?.id);
+    if (asset?.sourceKindRef != null && !isSourceKindReference(asset.sourceKindRef))
+      errors.push('invalid_asset_source_kind_ref:' + asset?.id);
+    if (asset?.formatRef != null && !isSourceFormatReference(asset.formatRef))
+      errors.push('invalid_asset_format_ref:' + asset?.id);
+    if (asset?.formatDetection != null && !isSourceIdentificationResult(asset.formatDetection))
+      errors.push('invalid_asset_format_detection:' + asset?.id);
+    if (['declared','identified'].includes(asset?.formatDetection?.status) && !asset?.formatRef)
+      errors.push('asset_format_ref_required_for_identified_source:' + asset?.id);
+    if (asset?.formatDetection?.status === 'ambiguous' && (asset.formatDetection.candidates?.length ?? 0) < 2)
+      errors.push('ambiguous_asset_requires_candidates:' + asset?.id);
   }
   const outputIds = new Set();
   for (const output of project.outputs ?? []) {
