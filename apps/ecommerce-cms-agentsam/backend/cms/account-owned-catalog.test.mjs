@@ -103,6 +103,19 @@ test('account collection inventory includes verified store names and per-store c
   }
 });
 
+test('hosted account inventory lists every owned site without assuming an active editor site', async () => {
+  const { sqlite, DB } = fixture();
+  try {
+    await withLocalStudioCmsContext('account_a', null, async () => {
+      const sites = await listCmsSites(DB, 'account_a');
+      assert.deepEqual(sites.map(site => site.id).sort(), ['site_a1', 'site_a2']);
+      await assert.rejects(() => listCmsSites(DB, 'account_b'), /cms_site_context_account_mismatch/);
+    });
+  } finally {
+    sqlite.close();
+  }
+});
+
 test('account-level collection GET never requires site context; writes still do', async () => {
   const { sqlite, DB } = fixture();
   try {
