@@ -60,7 +60,8 @@ async function items(id: string, siteId?: string): Promise<CmsItem[]> {
 }
 export const collectionsApi = {
   async list(): Promise<Collection[]> {
-    const result = accepted(await adminFetch<Ok & { collections: CmsRow[] }>(scoped("/api/admin/collections")));
+    const path = collectionSiteId() ? "/api/admin/collections" : "/api/admin/collections?scope=account";
+    const result = accepted(await adminFetch<Ok & { collections: CmsRow[] }>(scoped(path)));
     return (result.collections || []).map(normalize);
   },
   async products(): Promise<Product[]> {
