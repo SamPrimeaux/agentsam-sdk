@@ -136,6 +136,6 @@ test('registry enforces the packaged AgentToolDefinition contract', () => {
   );
   assert.throws(
     () => createToolRegistry({ tools: [{ ...definition, handler: { type: 'unknown', ref: 'x' } }] }),
-    /invalid handler reference/,
+    /invalid handler type/,
   );
 });
