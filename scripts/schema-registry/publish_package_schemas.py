@@ -536,6 +536,12 @@ def build(account_id: str) -> tuple[dict, dict[str, tuple[pathlib.Path, str]], l
 
 
 def publish(objects: dict[str, tuple[pathlib.Path, str]], account_id: str) -> None:
+    # Guard the pre-existing legacy identity even though it is not staged for upload.
+    legacy_key = "packages/iamscene/v1/scene.schema.json"
+    legacy_sha256 = "0a231b4d2121058ee9f6b3ce6ccc93a281834ecb4e188c562fc7b5d685a3c997"
+    if sha(fetch_object(legacy_key, account_id)) != legacy_sha256:
+        raise RuntimeError(f"Immutable legacy contract changed: {legacy_key}; refusing publication")
+
     # Never mutate any already-public immutable contract, including a URI created
     # before the package registry. Check *all* collisions before the first write.
     # The mutable root index is the only approved in-place update.
