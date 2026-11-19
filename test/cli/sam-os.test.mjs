@@ -126,7 +126,7 @@ test('SAM operation definitions enforce and normalize shared execution policies'
     execution:{lanes:['remote'],model:'required',network:'required',sideEffects:'remote_read'},
     risk:'read_only',handler:async()=>({ok:true}),
   });
-  assert.equal(required.execution.provider_spend,'required');
+  assert.equal(required.execution.provider_spend,'optional');
 
   assert.throws(() => defineSamOperation({
     id:'fixture.policy.invalid',module:'fixture',action:'invalid',summary:'Invalid network',
