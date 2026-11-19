@@ -63,6 +63,20 @@ export function Composer({
   const [submitting, setSubmitting] = useState(false);
   const streaming = busy ?? workStreaming;
   const cancel = () => onCancel ? onCancel() : stop(targetId);
+  // Follow-ups typed while the agent works are held here (never interrupting the
+  // run) and delivered together as the next message once the turn finishes.
+  const [queued, setQueued] = useState<string[]>([]);
+  const wasStreaming = useRef(streaming);
+  useEffect(() => {
+    if (wasStreaming.current && !streaming && queued.length) {
+      const text = queued.join("\n\n");
+      setQueued([]);
+      setDraft(targetId, text);
+      void send(targetId, targetKind);
+    }
+    wasStreaming.current = streaming;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streaming]);
   const runMode = useWorkStore((s) => s.runModes[targetId] ?? defaultRunModeForTarget(targetKind));
   const setRunMode = useWorkStore((s) => s.setRunMode);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -144,6 +158,11 @@ export function Composer({
 
   async function submitWithAttachments() {
     if (imageMode) { await generateImage(); return; }
+    if (streaming && !onSubmit && !staging && !submitting && value.trim()) {
+      setQueued((items) => [...items, value.trim()]);
+      setDraft(targetId, "");
+      return;
+    }
     if (staging || submitting || streaming || (!value.trim() && !pendingAttachments.length)) return;
     if (onSubmit) {
       setSubmitting(true);
@@ -250,7 +269,7 @@ export function Composer({
       label="Send"
       data-composer-send=""
       className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
-      disabled={staging || submitting || streaming || (!value.trim() && pendingAttachments.length === 0)}
+      disabled={staging || submitting || (streaming && (!!onSubmit || !value.trim())) || (!value.trim() && pendingAttachments.length === 0)}
       onClick={submitWithAttachments}
     >
       <ArrowUp className="size-4" />
@@ -325,6 +344,17 @@ export function Composer({
           }
         />
       ) : null}
+      {queued.length ? (
+        <div className="mx-auto mb-2 flex w-full max-w-6xl flex-col gap-1.5" role="list" aria-label="Queued follow-ups">
+          {queued.map((text, index) => (
+            <div key={index} role="listitem" data-composer-queued="" className="flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1.5 text-xs text-muted-foreground opacity-70">
+              <span className="min-w-0 flex-1 truncate">{text}</span>
+              <span className="shrink-0 text-[10px] uppercase tracking-wide">Queued</span>
+              <button type="button" className="grid size-6 shrink-0 place-items-center rounded-full hover:bg-muted" aria-label="Remove queued message" onClick={() => setQueued((items) => items.filter((_, i) => i !== index))}><X className="size-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()}
         onLibrary={() => setLibraryOpen(true)}
         onImage={() => setImageMode(true)}
@@ -339,7 +369,7 @@ export function Composer({
         onSend={submitWithAttachments}
         onCancel={cancel}
         streaming={streaming}
-        placeholder={imageMode ? 'Describe the image to create…' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
+        placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Reply or hold to talk' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
         toolbarStart={<>{trigger}{!workMode ? attachControl : imageMode ? <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title="Leave image creation mode"><ImagePlus size={14}/> Image creation <X size={13}/></button> : null}</>}
         toolbarEnd={workMode ? <><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></> : null}
         attachmentPreview={attachmentPreview}
