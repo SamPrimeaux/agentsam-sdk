@@ -19,14 +19,22 @@ class AssetProcedures:
             raise TypeError("agentsam_asset_procedure_client_required")
         self._procedures = procedures
 
-    def inventory_native(self, *, version: str = "0.1.0") -> dict[str, Any]:
-        """Run the registered read-only CAD/BIM/scene inventory on host-owned project scope.
+    def inventory(self, *, version: str = "0.1.0") -> dict[str, Any]:
+        """Run the authorized inventory through whichever host execution lane is bound.
 
-        The caller does not supply a filesystem path or raw shell command.
-        Returns the original verified procedure receipt, including evidence.
+        No caller-selected paths or shell commands. Only the existing procedure
+        host determines scope and verifies the artifact/receipt.
         """
         return self._procedures.run("repo.asset.inventory", version, {})
 
-    async def ainventory_native(self, *, version: str = "0.1.0") -> dict[str, Any]:
-        """Async counterpart using the same host authorization and procedure."""
+    async def ainventory(self, *, version: str = "0.1.0") -> dict[str, Any]:
+        """Async version of inventory() using the same authoritative procedure."""
         return await self._procedures.arun("repo.asset.inventory", version, {})
+
+    def inventory_native(self, *, version: str = "0.1.0") -> dict[str, Any]:
+        """Compatibility alias; prefer inventory(), independent of the execution lane."""
+        return self.inventory(version=version)
+
+    async def ainventory_native(self, *, version: str = "0.1.0") -> dict[str, Any]:
+        """Compatibility alias; prefer ainventory()."""
+        return await self.ainventory(version=version)

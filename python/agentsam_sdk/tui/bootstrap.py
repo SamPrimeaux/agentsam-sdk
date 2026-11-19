@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 _MISSING = (
-    "Python package 'rich' is required for the internal Agent Sam Rich preview.\n"
-    "  pip install -e './python[tui]'\n"
+    "AgentSam CLI requires the 'rich' runtime dependency.\n"
+    "  pip install --upgrade agentsam-sdk\n"
     "  python -m agentsam_sdk.tui --scene boot\n"
 )
 

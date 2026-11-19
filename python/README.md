@@ -1,23 +1,46 @@
 # agentsam-sdk (Python)
 
-Core repository/data commands remain **stdlib-only** (`dependencies = []`).
-Rich is an optional renderer dependency used by the SDK's internal terminal preview lab;
-it is not exposed as an installed-user renderer command.
+The Python SDK ships with a built-in Rich terminal experience and its existing
+Geaux companion art. It is the default `agentsam` experience, not a separate
+`[tui]` product or installation.
 
 ```bash
-pip install agentsam-sdk            # stdlib-only core
-pip install "agentsam-sdk[tui]"     # optional Rich terminal renderer
-agentsam repository inventory --repo-root /path/to/repo --format json
+pip install --upgrade agentsam-sdk
+agentsam                       # interactive home (TTY only)
+agentsam doctor                # installed SDK and runtime overview
+agentsam doctor --verify-cad   # real OCCT solid/export/reopen proof, if installed
+agentsam repository inventory --repo-root . --format json
 ```
 
-Requires Python 3.10+. For development from a checkout: `cd python && pip install -e .`
-then `python -m unittest discover -s tests -v`.
+Requires Python 3.10+. Data-only commands never open an interactive prompt.
+Human-facing terminal chrome goes to stderr; JSON goes to stdout, including when
+piped. Set `NO_COLOR=1` or use `agentsam --plain <command>` for plain text.
+
+Source-asset inventory is exposed through the existing authorized PrimeTech
+procedure host. The Python package does **not** duplicate its scanner or invent
+an unauthenticated local shell fallback.
+
+```python
+from agentsam_sdk import AgentSamClient
+
+# The trusted host supplies procedure_invoker and project/identity scope.
+client = AgentSamClient(procedure_invoker=authorized_sam_invoker)
+receipt = client.assets.inventory()
+# Async: await async_client.assets.ainventory()
+```
+
+Without a bound procedure host, inventory refuses with the existing
+`sam_procedure_host_not_configured` error instead of guessing.
+
+For local development: `cd python && pip install -e .` then
+`python -m unittest discover -s tests -v`.
 
 ### `AgentSamClient.invoke()`
 
-The repository, data, hooks and `agentsam` CLI tools run entirely in Python. The local
-SAM client (`AgentSamClient`) delegates to the Node SAM kernel, so it needs Node 20+ and
-the npm package in the project or a parent directory:
+Repository, data, hooks, workspace and bounded argv execution work in Python
+without Node. Other `AgentSamClient.invoke()`
+operations still delegate to the existing Node SAM kernel, requiring Node 20+
+and the npm SDK available to that authorized host:
 
 ```bash
 npm install @inneranimalmedia/agentsam-sdk
@@ -57,26 +80,15 @@ for composition, permission, and subprocess transport rules.
 | `agentsam-site-scrape` | [`../packages/agentsam-site-scrape/`](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/packages/agentsam-site-scrape/) | Optional/network (`requests`); crawl→R2. Dual-homed with IAM `tools/agentsam-site-scrape/`. Does **not** fold into `agentsam_sdk`. |
 
 
-## Internal Rich renderer preview
+## Built-in terminal renderer
 
-The npm SDK owns the public interactive experience. For renderer development only:
-
-```bash
-cd ..
-npm run ui:preview -- tour
-npm run ui:preview -- thinking
-```
-
-The Python module can also be invoked directly after installing the optional extra:
+The existing Rich renderer and Geaux assets are installed by default.
+`agentsam_sdk.tui` is the shared presentation library and a developer
+preview, not a separate CLI executable, operation registry, or execution host.
 
 ```bash
-cd python
-pip install -e '.[tui]'
-PYTHONPATH=. python -m agentsam_sdk.tui --scene dashboard --check
+python -m agentsam_sdk.tui --scene dashboard --check
 ```
-
-`agentsam_sdk.tui` is presentation-only. It does not define tools, execution policy, or public CLI vocabulary.
-
 
 ## Portable CAD host adapter (macOS, Windows, Linux)
 

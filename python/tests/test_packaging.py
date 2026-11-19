@@ -34,8 +34,9 @@ class PackagingTests(unittest.TestCase):
         text = (ROOT / "README.md").read_text()
         self.assertIsNone(re.search(r"\]\(\.\./", text), "PyPI cannot resolve ../ links")
 
-    def test_core_stays_stdlib_only(self):
-        self.assertEqual(self.meta["project"]["dependencies"], [])
+    def test_terminal_renderer_is_a_default_dependency(self):
+        self.assertTrue(any(dep.startswith("rich>=") for dep in self.meta["project"]["dependencies"]))
+        self.assertNotIn("tui", self.meta["project"].get("optional-dependencies", {}))
 
 
 if __name__ == "__main__":

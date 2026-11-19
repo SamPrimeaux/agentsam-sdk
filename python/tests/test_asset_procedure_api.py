@@ -31,17 +31,18 @@ class AssetProcedureApiTests(unittest.TestCase):
                 cwd=tmp,
                 procedure_invoker=lambda payload: (calls.append(payload), verified_result())[1],
             )
-            receipt = client.assets.inventory_native()
+            receipt = client.assets.inventory()
             self.assertEqual(receipt["status"], "completed")
+            self.assertEqual(client.assets.inventory_native()["status"], "completed")
         self.assertEqual(calls, [{
             "id": "repo.asset.inventory", "version": "0.1.0", "input": {},
-        }])
+        }] * 2)
 
     def test_unbound_host_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = AgentSamClient(cwd=tmp)
             with self.assertRaises(ProcedureClientError) as caught:
-                client.assets.inventory_native()
+                client.assets.inventory()
         self.assertEqual(caught.exception.code, "sam_procedure_host_not_configured")
 
     def test_async_host_reuses_same_procedure_receipt_contract(self):
@@ -54,7 +55,7 @@ class AssetProcedureApiTests(unittest.TestCase):
         async def scenario():
             with tempfile.TemporaryDirectory() as tmp:
                 client = AsyncAgentSamClient(cwd=tmp, procedure_invoker=invoke)
-                result = await client.assets.ainventory_native()
+                result = await client.assets.ainventory()
                 self.assertEqual(result["id"], "repo.asset.inventory")
 
         asyncio.run(scenario())

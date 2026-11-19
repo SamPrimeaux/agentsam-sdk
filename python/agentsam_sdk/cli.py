@@ -1,5 +1,4 @@
-"""agentsam CLI -- stdlib argparse only (no click/typer dep, per project
-convention: Python tooling here is stdlib-only).
+"""AgentSam CLI -- stdlib argparse and native operations with built-in Rich UI.
 
   agentsam data d1-bloat --quick --format markdown --output-dir /tmp/d1-bloat
   agentsam data agentsam-walk --prefix agentsam_ --output-dir /tmp/walk
@@ -21,12 +20,8 @@ def _print_result(result: ToolResult, fmt: str) -> None:
     if fmt == "json":
         print(json.dumps(result.to_dict(), indent=2, default=str))
     else:
-        status = "OK" if result.ok else "FAIL"
-        print(f"[{status}] {result.tool} ({result.mode}) — {result.summary}", file=sys.stderr)
-        if result.error:
-            print(f"  error: {result.error}", file=sys.stderr)
-        for a in result.artifacts:
-            print(f"  wrote: {a}", file=sys.stderr)
+        from .terminal_ui import show_result
+        show_result(result)
         # When markdown artifacts were written, surface path; else dump summary data keys
         if fmt == "markdown" and result.ok and result.data.get("categories"):
             # stdout stays quiet when artifacts exist; callers use the .md file
@@ -165,9 +160,29 @@ def _cmd_cad_doctor(args: argparse.Namespace) -> int:
     return 0 if all(result.get("ready") for result in results.values()) else 1
 
 
+def _cmd_doctor(args: argparse.Namespace) -> int:
+    from .diagnostics import inspect_installation
+    report = inspect_installation(verify_cad=args.verify_cad)
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        from .terminal_ui import show_data_table
+        show_data_table("AgentSam installation", [
+            (row["name"], f'{row["state"]} · {row["detail"]}') for row in report["checks"]
+        ])
+    return 0 if report["ok"] else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="agentsam", description="agentsam_sdk CLI")
+    ap = argparse.ArgumentParser(prog="agentsam", description="AgentSam Python SDK · local-first engineering tools")
+    from .terminal_art import version_string
+    ap.add_argument("--version", action="version", version=f"agentsam-sdk {version_string()}")
+    ap.add_argument("--plain", "--no-color", action="store_true", help="disable colored terminal presentation")
     sub = ap.add_subparsers(dest="group", required=True)
+    diag = sub.add_parser("doctor", help="check installed Python SDK and optional native runtimes")
+    diag.add_argument("--json", action="store_true", help="machine-readable diagnostics")
+    diag.add_argument("--verify-cad", action="store_true", help="run a real OCCT solid/export/reopen proof")
+    diag.set_defaults(func=_cmd_doctor)
 
     cad = sub.add_parser("cad", help="discover and validate native CAD engines")
     cad_sub = cad.add_subparsers(dest="cad_command", required=True)
@@ -278,7 +293,15 @@ def main(argv: list[str] | None = None) -> int:
         from .terminal_art import run_home
         return run_home(parser)
     args = parser.parse_args(args_list)
-    return args.func(args)
+    if args.plain:
+        import os
+        os.environ["AGENTSAM_PLAIN"] = "1"
+    try:
+        return args.func(args)
+    except (OSError, RuntimeError, ValueError) as exc:
+        from .terminal_ui import show_error
+        show_error(exc)
+        return 2 if isinstance(exc, ValueError) else 1
 
 
 if __name__ == "__main__":

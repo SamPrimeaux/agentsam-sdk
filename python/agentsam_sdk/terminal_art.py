@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import shutil
 import sys
 from importlib import metadata, resources
@@ -81,39 +80,6 @@ def boot_header(*, width: int | None = None, color: bool | None = None) -> str:
 
 
 def run_home(parser: Any) -> int:
-    """A useful terminal-native entry point without Node, Rich or cloud credentials."""
-    if not (sys.stdin.isatty() and sys.stderr.isatty()) or os.environ.get("CI"):
-        parser.print_help(file=sys.stderr)
-        return 0
-    sys.stderr.write("\n" + boot_header() + "\n")
-    sys.stderr.write("  Repository intelligence  ·  CAD diagnostics  ·  Data tools\n")
-    sys.stderr.write("  Type 'help' to see commands or 'exit' to leave.\n")
-    sys.stderr.flush()
-    while True:
-        sys.stderr.write("\n  agentsam > ")
-        sys.stderr.flush()
-        line = sys.stdin.readline()
-        if not line:
-            break
-        try:
-            words = shlex.split(line)
-        except ValueError as exc:
-            sys.stderr.write(f"  ! Invalid command · {exc}\n    └ Fix: check your quotes and retry\n")
-            continue
-        if not words:
-            continue
-        if words[0] in ("exit", "quit", "/exit", "/quit"):
-            break
-        if words[0] in ("help", "/help", "?"):
-            parser.print_help(file=sys.stderr)
-            continue
-        try:
-            parsed = parser.parse_args(words)
-            result = parsed.func(parsed)
-            if result:
-                sys.stderr.write(f"  ! Command failed · exit code {result}\n    └ Fix: run 'help' for available commands\n")
-        except SystemExit:
-            sys.stderr.write("    └ Fix: enter 'help' to list supported commands\n")
-        except (OSError, RuntimeError, ValueError) as exc:
-            sys.stderr.write(f"  ! {type(exc).__name__}: {exc}\n    └ Fix: inspect command options with 'help'\n")
-    return 0
+    """Compatibility entrypoint for the built-in Rich terminal home."""
+    from .terminal_ui import run_home as rich_home
+    return rich_home(parser)

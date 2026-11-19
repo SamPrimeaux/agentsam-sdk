@@ -6,9 +6,9 @@ Run from repo root through the SDK design lane:
     npm run ui:preview -- boot
     npm run ui:preview -- thinking
 
-Or invoke the renderer module directly after installing the optional Rich extra:
+Or invoke the renderer module with the normal Python SDK installation:
 
-    pip install -e './python[tui]'
+    pip install -e './python'
     PYTHONPATH=python python -m agentsam_sdk.tui --scene dashboard --check
 """
 
