@@ -59,7 +59,7 @@ contract = portable schemas and types.
 - `packages/agentsam-contracts/schemas/` owns their JSON Schemas. `protocol/` publishes stable mirrors; package tests enforce exact parity.
 - `src/sam/types.js` aliases the shared operation types for the SAM runtime. `defineSamOperation()` binds a runtime handler; it does not redefine the portable contract.
 - `src/tools/registry.js` is the runtime registry/controller for shared tool definitions.
-- `src/plugins/contracts.js` normalizes a host/plugin manifest into its persistence projection. That D1-facing shape is not another portable tool definition.
+- `src/plugins/contracts.js` normalizes a host/plugin manifest into D1 persistence rows; `src/plugins/runtime.js` projects those rows into ephemeral SAM discovery cards. Neither is a portable tool definition. The canonical portable definition is `AgentToolDefinition` from `agentsam-contracts`.
 
 Do not introduce another operation or tool definition vocabulary.
 
