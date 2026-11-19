@@ -75,7 +75,11 @@ for (const release of index.packages) {
     if (!safePath(entry.path) || !HASH.test(entry.sha256 || '')) {
       throw Error('Invalid preview manifest entry: ' + slug);
     }
-    const response = await fetch(prefix + entry.path.split('/').map(encodeURIComponent).join('/'));
+    // Published preview HTML must come from the immutable byte stream, not
+    // Cloudflare's transformed browser response (Fonts, challenge or analytics).
+    const sourceUrl = prefix + entry.path.split('/').map(encodeURIComponent).join('/')
+      + (entry.path.toLowerCase().endsWith('.html') ? '?raw=1' : '');
+    const response = await fetch(sourceUrl);
     if (!response.ok) {
       throw Error('Theme Store preview file unavailable: ' + slug + '/' + entry.path + ' (' + response.status + ')');
     }
