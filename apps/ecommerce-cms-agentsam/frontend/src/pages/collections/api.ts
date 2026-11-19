@@ -100,7 +100,7 @@ export const collectionsApi = {
     // compatibility no-op for the FNF editor's former separate rules endpoint.
     return { ok: true, rules };
   },
-  async assign(id: string, productIds: number[]) {
+  async assign(id: string, productIds: number[], siteId?: string) {
     const response = accepted(await adminFetch<Ok & { items: CmsItem[] }>(
       scoped(`/api/admin/collections/${encodeURIComponent(id)}/items`),
       { method: "PUT", body: JSON.stringify({
