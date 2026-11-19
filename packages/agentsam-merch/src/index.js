@@ -33,6 +33,7 @@ export {
   completefulProfileContext,
   completefulTarget,
 } from "./adapters-completeful.js";
+export { printifyProfileContext, printifyTarget } from "./adapters-printify.js";
 
 export {
   TRANSFORM_OPERATION,

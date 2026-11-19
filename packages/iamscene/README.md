@@ -21,11 +21,11 @@ import {
   validateSceneDocument,
 } from '@inneranimalmedia/iamscene';
 
-const document = createSceneDocument({
+const sceneDocument = createSceneDocument({
   id: 'product-world',
   name: 'Product World',
 });
-const editor = createSceneEditor(document);
+const editor = createSceneEditor(sceneDocument);
 editor.addNode({
   id: 'hero-group',
   name: 'Hero Group',
@@ -45,10 +45,10 @@ if (!validateSceneDocument(reopened).valid) throw new Error('Invalid scene');
 import { createSceneRuntime, parseSceneDocument } from '@inneranimalmedia/iamscene';
 
 const response = await fetch('/scenes/product-world.iamscene.json');
-const document = parseSceneDocument(await response.text());
+const sceneDocument = parseSceneDocument(await response.text());
 const runtime = await createSceneRuntime({
   container: document.querySelector('#scene')!,
-  document,
+  document: sceneDocument,
   assetBaseUrl: new URL('/scenes/', location.origin),
 });
 runtime.play('intro');
@@ -64,7 +64,7 @@ behavior. A host can scrub an animation without starting the runtime's playback 
 
 ```ts
 runtime.pause();
-const animation = document.animations.find((item) => item.id === 'circuit-loop');
+const animation = sceneDocument.animations.find((item) => item.id === 'circuit-loop');
 if (!animation) throw new Error('Animation not found');
 
 const progress = Math.max(0, Math.min(1, pageScrollProgress));
@@ -97,6 +97,23 @@ iamscene inspect scene.iamscene.json
 iamscene normalize scene.iamscene.json
 iamscene build-occt scene.iamscene.json
 ```
+
+## Document authority and interoperable sources
+
+The IAMScene document is the portable editable scene/presentation graph. It does
+not replace the native source-of-truth for a parametric CAD/BIM project, video
+timeline, physics simulation or game save-state. Such a project can reference or
+export a scene with stable source revisions, asset hashes, coordinate conversions
+and explicit supported renderer extensions.
+
+Consumers must not silently degrade missing runtime features. A validating
+document is not proof that the host supports every shader, camera mode, model
+format, scene effect or transition. Test source-to-public schema parity and
+representative rendering behavior before making a deployment claim.
+
+The JSON Schema is owned at `schema/iamscene.v1.schema.json` in this package,
+exported as `@inneranimalmedia/iamscene/schema`. The public `$id` and any
+legacy R2 mirrors must publish the exact same verified schema bytes.
 
 ## Document contract
 
