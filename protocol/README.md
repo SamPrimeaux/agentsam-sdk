@@ -24,7 +24,7 @@ agentsam-sdk/
 ├── apps/                      # Portable product APPs (when agentsam.app.json exists)
 │   └── */agentsam.app.json    # Canonical APP product definition (APP.id)
 │   └── */.agentsam/app.json   # Host/install state (app_id → APP.id)
-├── protocol/                  # Shared SDK contracts and ownership rules
+├── protocol/                  # Public protocol schemas and ownership rules
 │   ├── apps/                  # agentsam.app.v1 + host-install schemas
 │   └── features/              # agentsam.feature.v1 schema + catalog
 ├── templates/                 # Scaffold templates
