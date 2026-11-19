@@ -229,7 +229,9 @@ export function ChatWorkspace({ chat }: { chat: Chat }) {
                 onPointerEnter={(e) => lightPane(e, true)}
                 onPointerLeave={(e) => lightPane(e, false)}
               >
-                <SideStage />
+                <SideStage onSplitChange={enabled=>{
+                  if(enabled) setSideW(width=>Math.max(width,Math.min(900,Math.max(560,window.innerWidth-railW-380))));
+                }}/>
               </aside>
             </>
           ) : null}

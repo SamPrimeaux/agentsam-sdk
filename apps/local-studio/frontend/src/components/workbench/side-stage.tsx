@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid } from "lucide-react";
+import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Columns2, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SplitHandle } from "@/components/shell/split-handle";
 import { IconAction } from "@/components/ui/icon-action";
 import {
   DropdownMenu,
@@ -49,8 +50,12 @@ function TabIcon({ kind, icon }: { kind: string; icon?: string | null }) {
   return <FileCode className="size-3.5" />;
 }
 
-export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?: boolean; onFocusToggle?: () => void }) {
+export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }: {
+  workFocused?: boolean; onFocusToggle?: () => void; onSplitChange?: (enabled: boolean) => void;
+}) {
   const tabs = useWorkStore((s) => s.sideTabs);
+  const [splitCoworkerId, setSplitCoworkerId] = useState<string | null>(null);
+  const [coworkerWidth, setCoworkerWidth] = useState(330);
   const activeId = useWorkStore((s) => s.activeSideTabId);
   const setActiveSideTab = useWorkStore((s) => s.setActiveSideTab);
   const closeSideTab = useWorkStore((s) => s.closeSideTab);
@@ -75,6 +80,20 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
   // preserve cached tab state, draft text and conversations for re-enabling.
   const visibleTabs = registry.loaded && !registry.error ? tabs.filter(registered) : tabs;
   const tab = visibleTabs.find(item => item.id === activeId) ?? visibleTabs[0] ?? null;
+  const splitCoworker = splitCoworkerId ? visibleTabs.find(item => item.id === splitCoworkerId && item.kind === 'chat') : null;
+  const toggleCoworkerSplit = () => {
+    if (splitCoworker) {
+      setSplitCoworkerId(null);
+      onSplitChange?.(false);
+      return;
+    }
+    const existing = visibleTabs.find(item => item.kind === 'chat');
+    const id = existing?.id || openSideTab('chat', { ephemeral: false });
+    setSplitCoworkerId(id);
+    // Opening a new co-worker normally selects its tab; leave Files mounted instead.
+    if (tab) setActiveSideTab(tab.id);
+    onSplitChange?.(true);
+  };
 
   // Persisted plugin tabs can outlive a registry migration. When an installed
   // app becomes a host-owned renderer, upgrade its old tab in place instead
@@ -207,6 +226,26 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        {tab?.kind === "files" && <IconAction
+          type="button" variant="ghost"
+          className="hidden xl:inline-flex"
+          label={splitCoworker ? "Close co-worker split" : "Split Files beside a co-worker"}
+          hint="Lead thread | Monaco / preview | independent co-worker thread"
+          aria-pressed={Boolean(splitCoworker)}
+          onClick={toggleCoworkerSplit}
+        ><Columns2 className="size-4" /></IconAction>}
+        {tab?.kind === "files" && splitCoworker && <>
+          <select className="hidden max-w-36 rounded-md border border-border bg-background px-1.5 py-1 text-xs text-foreground lg:block"
+            aria-label="Co-worker thread displayed beside the editor" value={splitCoworker.id}
+            onChange={event=>setSplitCoworkerId(event.target.value)}>
+            {visibleTabs.filter(item=>item.kind==='chat').map(item=><option key={item.id} value={item.id}>{item.title}</option>)}
+          </select>
+          <IconAction type="button" variant="ghost" className="hidden xl:inline-flex" label="Add another co-worker thread"
+            hint="Start a separate co-worker beside the editor without closing Files"
+            onClick={()=>{const fileTabId=tab.id;const id=openSideTab('chat',{ephemeral:false});setSplitCoworkerId(id);setActiveSideTab(fileTabId);}}>
+            <Users className="size-4"/>
+          </IconAction>
+        </>}
         {tab?.kind === "media" && <IconAction
           type="button"
           variant="ghost"
@@ -236,7 +275,18 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
       <div className="min-h-0 flex-1">
         {tab?.kind === "chat" ? <CoworkerChat tabId={tab.id} /> : null}
         {tab?.kind === "browser" ? <BrowserStage tab={tab} /> : null}
-        {tab?.kind === "files" ? <FilesStage tab={tab} /> : null}
+        {tab?.kind === "files" ? splitCoworker ? (
+          <div className="flex h-full min-h-0 min-w-0">
+            <div className="min-w-0 flex-1"><FilesStage tab={tab} /></div>
+            <SplitHandle axis="x" className="hidden xl:flex" label="Resize editor and co-worker"
+              onDrag={delta=>setCoworkerWidth(width=>Math.max(260,Math.min(520,width-delta)))}
+              onDoubleClick={()=>setCoworkerWidth(330)} />
+            <aside className="hidden min-h-0 shrink-0 border-l border-border bg-background xl:block"
+              style={{width:coworkerWidth,flexBasis:coworkerWidth}} aria-label="Independent co-worker thread">
+              <CoworkerChat tabId={splitCoworker.id}/>
+            </aside>
+          </div>
+        ) : <FilesStage tab={tab} /> : null}
         {tab?.kind === "artifacts" ? <ArtifactsStage tab={tab} /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
         {tab?.kind === "design" ? <CanvasEntryStage tab={tab} /> : null}
