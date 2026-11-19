@@ -247,16 +247,26 @@
       },
       "anyOf": [
         {
-          "type": "object",
           "required": [
             "bytesHex"
-          ]
+          ],
+          "properties": {
+            "bytesHex": {
+              "type": "string",
+              "pattern": "^(?:[0-9A-Fa-f]{2})+$"
+            }
+          }
         },
         {
-          "type": "object",
           "required": [
             "ascii"
-          ]
+          ],
+          "properties": {
+            "ascii": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       ]
     },

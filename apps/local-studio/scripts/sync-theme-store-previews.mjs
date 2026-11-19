@@ -4,7 +4,7 @@
  * Theme availability and release versions are discovered from its live index;
  * this repository keeps no theme slug/version allowlist.
  */
-import { createHash } from 'node:crypto';
+import { verifyThemeStorePreviewBytes } from './theme-store-preview-integrity.mjs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +12,6 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputRoot = path.join(root, 'frontend/public/themes');
 const base = new URL(process.env.AGENTSAM_THEME_STORE_URL || 'https://themes.inneranimalmedia.com').origin;
-const digest = value => createHash('sha256').update(value).digest('hex');
 const SAFE_SLUG = /^[a-z][a-z0-9-]{0,62}$/;
 const SAFE_VERSION = /^\d+\.\d+\.\d+$/;
 const HASH = /^[0-9a-f]{64}$/;
@@ -81,12 +80,13 @@ for (const release of index.packages) {
       throw Error('Theme Store preview file unavailable: ' + slug + '/' + entry.path + ' (' + response.status + ')');
     }
     const bytes = Buffer.from(await response.arrayBuffer());
-    if (digest(bytes) !== entry.sha256) {
-      throw Error('Theme Store preview SHA-256 mismatch: ' + slug + '/' + entry.path);
-    }
+    // Cloudflare can append request-specific challenge/analytics tags to served
+    // HTML. Never copy those tags into the immutable installed theme package.
+    // The verifier accepts only the original manifest-hashed payload.
+    const verifiedBytes = verifyThemeStorePreviewBytes(bytes, entry.sha256, slug + '/' + entry.path);
     const destination = path.join(target, ...entry.path.split('/'));
     await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, bytes);
+    await writeFile(destination, verifiedBytes);
   }
   console.log('Verified Theme Store preview ' + slug + '@' + version + ' (' + manifest.files.length + ' files)');
 }

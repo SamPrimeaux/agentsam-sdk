@@ -210,17 +210,22 @@ test("Custom CSS source edits remain isolated and do not inject new styles",()=>
  dom.window.close();
 });
 
-test("actual Theme Editor HTML loads the Theme Settings runtime after its editor host",()=>{
+test("actual Theme Studio HTML boots the canonical mounted editor and its Theme Settings panel",()=>{
  const html=readFileSync(new URL("../frontend/static/theme-editor.html",import.meta.url),"utf8");
+ const bootstrap=readFileSync(new URL("../frontend/static/js/theme-studio-bootstrap.mjs",import.meta.url),"utf8");
+ const mount=readFileSync(new URL("../frontend/theme-editor/mount.mjs",import.meta.url),"utf8");
  const shell=new JSDOM(html);
- const resources=[...shell.window.document.querySelectorAll("script[src]")].map(el=>el.getAttribute("src"));
- const editor=resources.indexOf("/admin/js/theme-editor.js");
- const settings=resources.indexOf("/admin/js/theme-settings-panel.js");
- assert.ok(editor>=0,"canonical editor asset must load");
- assert.equal(settings,editor+1,"theme settings must mount immediately after the editor");
- assert.equal(resources.filter(x=>x==="/admin/js/theme-settings-panel.js").length,1);
- assert.equal(resources.includes("/admin/js/theme-settings-live.js"),false,"only one settings renderer may mount");
- assert.ok(shell.window.document.querySelector('link[href="/admin/css/theme-settings-panel.css"]'));
+ const scripts=[...shell.window.document.querySelectorAll("script[src]")];
+ const boot=scripts.filter(el=>el.getAttribute("src")==="js/theme-studio-bootstrap.mjs");
+ assert.equal(boot.length,1,"the installed Theme Studio must have one canonical bootstrap");
+ assert.equal(boot[0].getAttribute("type"),"module","Theme Studio must use the module bootstrap");
+ assert.ok(shell.window.document.getElementById("theme-project-editor-frame"),"the editor mounts in the real work surface");
+ assert.match(bootstrap,/import \{ mountThemeEditor \} from '\/theme-editor\/mount\.mjs'/);
+ assert.match(bootstrap,/mountThemeEditor\(frame, host/,"the bootstrap must initialize the installed editor");
+ assert.match(mount,/await load\('runtime\.js'\)/,"portable theme runtime must mount first");
+ assert.match(mount,/await load\('\/admin\/js\/theme-settings-panel\.js'\)/,"Theme Settings must mount in the installed editor");
+ assert.equal((mount.match(/await load\('\/admin\/js\/theme-settings-panel\.js'\)/g)||[]).length,1,"Theme Settings must mount once");
+ assert.doesNotMatch(html,/\/admin\/js\/theme-settings-live\.js|\/admin\/js\/theme-settings-panel\.js/,"the outer shell must not duplicate editor panels");
  assert.doesNotMatch(shell.window.document.body.textContent,/\\n/,"literal slash-n must not appear in editor markup");
  shell.window.close();
 });
