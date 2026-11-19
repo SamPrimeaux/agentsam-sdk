@@ -380,7 +380,8 @@ export function ProjectDetailSurface({
             <h3><CalendarDays size={15}/> Upcoming</h3>
             {upcoming.slice(0, 3).map((e) => <p key={e.id}>{e.title} · {formatDate(e.start)}</p>)}
           </section> : null}
-        </aside>
+          </aside>
+        </details>
       </div>
 
       {editing ? (
