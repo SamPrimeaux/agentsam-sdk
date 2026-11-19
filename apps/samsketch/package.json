@@ -13,8 +13,8 @@
     "prebuild": "npm --prefix ../../packages/agentsam-occt run build"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-3d-viewer": "file:../../packages/agentsam-3d-viewer",
-    "@inneranimalmedia/agentsam-occt": "file:../../packages/agentsam-occt",
+    "@inneranimalmedia/agentsam-3d-viewer": "2.6.15",
+    "@inneranimalmedia/agentsam-occt": "2.6.15",
     "ajv": "^8.20.0",
     "fflate": "^0.8.2",
     "opencascade.js": "^2.0.0-beta.b5ff984",
