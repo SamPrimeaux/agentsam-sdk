@@ -93,3 +93,37 @@ test('packaged tool guard enforces the portable AgentToolDefinition shape', () =
     /unknown definition field/,
   );
 });
+
+
+test('packaged operation guard enforces canonical execution policy values', () => {
+  const valid = {
+    id:'fixture.read',
+    version:1,
+    module:'fixture',
+    action:'read',
+    summary:'Read fixture',
+    execution:{lanes:['local'],model:'never',network:'none',sideEffects:'none'},
+    risk:'read_only',
+    input_schema:{type:'object'},
+    output_schema:{type:'object'},
+  };
+  assert.doesNotThrow(() => contracts.assertAgentOperationContract(valid));
+  assert.throws(
+    () => contracts.assertAgentOperationContract({
+      ...valid, execution:{...valid.execution,network:'never'}
+    }),
+    /invalid execution network policy/,
+  );
+  assert.throws(
+    () => contracts.assertAgentOperationContract({
+      ...valid, execution:{...valid.execution,sideEffects:'cms_draft'}
+    }),
+    /invalid execution side-effect policy/,
+  );
+  assert.throws(
+    () => contracts.assertAgentOperationContract({
+      ...valid, execution:{...valid.execution,provider_spend:'possible'}
+    }),
+    /invalid execution provider_spend policy/,
+  );
+});
