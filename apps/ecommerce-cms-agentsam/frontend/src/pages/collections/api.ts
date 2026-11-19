@@ -10,7 +10,7 @@ type CmsRow = {
   id: string; site_id?: string; site_name?: string; name: string; slug: string; description?: string; status: CollectionStatus;
   visibility?: string; sort_order?: number; seo_title?: string | null; seo_description?: string | null;
   image_url?: string | null; metadata?: Record<string, unknown>; metadata_json?: string;
-  product_count?: number; updated_at?: string; created_at?: string;
+  product_count?: number; updated_at?: string | number; created_at?: string | number;
 };
 type CmsItem = { item_type: string; item_ref: string; status: string; sort_order: number };
 type CollectionDetail = { collection: Collection; product_ids: number[]; rules: MerchCollectionRules };
