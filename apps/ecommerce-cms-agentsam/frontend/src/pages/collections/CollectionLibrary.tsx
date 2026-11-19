@@ -46,7 +46,7 @@ export default function CollectionLibrary() {
     setBusy(c.id);setError("");setNotice("");
     try{
       const data=await collectionsApi.get(c.id,c.site_id);
-      await collectionsApi.save({...parseCollection(data.collection),status:"archived"},c.id,"archived");
+      await collectionsApi.save({...parseCollection(data.collection),status:"archived"},c.id,"archived",c.site_id);
       setCollections(items=>items.map(item=>item.id===c.id?{...item,status:"archived"}:item));
       setNotice(`${c.title} archived.`);
     }catch(e){setError(e instanceof Error?e.message:"Couldn't archive collection");}
