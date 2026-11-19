@@ -85,7 +85,7 @@ export const collectionsApi = {
       rules,
     };
   },
-  async save(form: CollectionForm, id?: string, status?: CollectionStatus): Promise<Collection> {
+  async save(form: CollectionForm, id?: string, status?: CollectionStatus, siteId?: string): Promise<Collection> {
     const payload = serializeCollection(form, status);
     const path = id ? `/api/admin/collections/${encodeURIComponent(id)}` : "/api/admin/collections";
     const result = accepted(await adminFetch<Ok & { collection: CmsRow }>(scoped(path), {
