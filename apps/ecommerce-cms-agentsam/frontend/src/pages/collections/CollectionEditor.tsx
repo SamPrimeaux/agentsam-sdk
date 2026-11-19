@@ -29,6 +29,10 @@ export default function CollectionEditor() {
   const params=useParams();
   const editId=params.id && /^[A-Za-z0-9_-]+$/.test(params.id) ? params.id : null;
   const navigate=useNavigate();
+  const route=useLocation();
+  const selectedSiteId=useMemo(()=>collectionSiteId(),[route.search]);
+  const [availableSites,setAvailableSites]=useState<{id:string;name:string;status?:string}[]>([]);
+  const [siteError,setSiteError]=useState("");
   const [form,setForm]=useState<CollectionForm>(initialCollection);
   const [collection,setCollection]=useState<Collection|null>(null);
   const [selected,setSelected]=useState<number[]>([]);
