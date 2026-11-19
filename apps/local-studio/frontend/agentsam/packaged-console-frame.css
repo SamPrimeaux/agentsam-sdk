@@ -114,14 +114,19 @@ body.console-body-bleed:has([data-agentsam-console-host]) .console-main--bleed {
    authenticated Chats drawer through @inneranimalmedia/agentsam-nav instead.
    The legacy persistent rail's later CSS must not resurrect it at phone widths. */
 @media (max-width: 767px) {
-  #console-app:has(#agentsam-host-workspace) .console-sidenav.admin-sidebar,
+  /* Hide the legacy rail, not the shared push drawer mounted inside its host.
+     Otherwise the open state updates while the actual navigation remains hidden. */
+  #console-app:has(#agentsam-host-workspace) .console-sidenav.admin-sidebar:not(:has(.as-nav-mobile-push-shell)),
   #console-app:has(#agentsam-host-workspace) .console-nav-ghost-toggle--persistent {
     display: none !important;
   }
+  /* The shared navigation injects a 48px interactive button into this slot.
+     Reserve its actual hit area so the center Chat/Work mode switch never
+     overlaps or intercepts mobile taps. */
   #console-app:has(#agentsam-host-workspace) .console-topbar-spacer {
-    width: 8px !important;
-    min-width: 8px !important;
-    flex: 0 0 8px;
+    width: 48px !important;
+    min-width: 48px !important;
+    flex: 0 0 48px !important;
   }
   #console-app:has(#agentsam-host-workspace) .console-topbar {
     padding-inline: 10px !important;

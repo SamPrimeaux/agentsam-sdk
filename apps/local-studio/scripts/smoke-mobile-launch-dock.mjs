@@ -40,16 +40,28 @@ try {
   });
   const dock = page.getByRole('navigation', { name: 'Quick navigation' });
   await dock.waitFor({ state: 'visible' });
+  // The nav shell may appear before React has hydrated its destinations.
+  // Wait for the real interactive control, not just an empty nav container.
+  await dock.getByRole('button', { name: 'Chats' }).waitFor({ state: 'visible' });
   assert.deepEqual(await dock.locator('button').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))),
     ['Chats', 'Home', 'Ideas', 'Goals', 'Library']);
-  assert.equal(await page.locator('.console-sidenav.admin-sidebar').evaluate((element) => getComputedStyle(element).display), 'none');
+  // The host remains mounted at zero width so the shared fixed push drawer
+  // can appear; the legacy rail itself must not occupy mobile canvas space.
+  assert.equal(await page.locator('.console-sidenav.admin-sidebar').evaluate((element) =>
+    element.getBoundingClientRect().width), 0);
   await dock.getByRole('button', { name: 'Chats' }).click();
   // Chats is a focused conversation. Only the header bubble opens navigation.
   await dock.waitFor({state:'hidden'});
   const navToggle = page.locator('[data-shared-nav-toggle], .agentsam-topbar-leading [aria-label="Toggle global navigation"]').first();
   await navToggle.click();
-  const drawer = page.getByRole('dialog', { name: 'Navigation' });
-  assert.equal(await drawer.isVisible(), true);
+  // Shared navigation is a push drawer (an inline aside), not a modal dialog.
+  const drawer = page.locator('.as-nav-mobile-drawer');
+  await drawer.locator('[aria-label="New chat"]').waitFor({ state: 'visible' });
+  assert.equal(await drawer.getAttribute('data-open'), 'true');
+  await page.waitForFunction(() => {
+    const workspace = document.querySelector('.console-workspace');
+    return workspace && getComputedStyle(workspace).transform !== 'none';
+  });
   assert.equal(await page.locator('.as-nav-mobile-drawer').count(), 1);
   assert.equal(await drawer.getByRole('button', { name: 'New chat' }).count(), 1, 'New chat is the first navigation action');
   assert.equal(await drawer.getByRole('button', { name: 'Open Projects' }).count(), 1, 'one Projects collection has a real management route');
@@ -57,8 +69,14 @@ try {
     'search stays concealed until requested');
   await drawer.getByRole('button', { name: 'Search projects and conversations' }).click();
   assert.equal(await drawer.getByRole('textbox', { name: 'Filter projects and conversations' }).count(), 1);
+  // Escape first dismisses the focused search field; the next Escape closes
+  // the push drawer. Neither action may leave the workspace untouchable.
   await page.keyboard.press('Escape');
-  await drawer.waitFor({ state: 'hidden' });
+  await drawer.getByRole('textbox', { name: 'Filter projects and conversations' }).waitFor({ state: 'hidden' });
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('.as-nav-mobile-drawer')?.getAttribute('data-open') === 'false');
+  assert.equal(await drawer.getAttribute('aria-hidden'), 'true');
+  assert.equal(await drawer.getAttribute('inert'), '');
   assert.equal(await page.evaluate(() => getComputedStyle(document.body).pointerEvents), 'auto',
     'closing Chats must restore touch interaction');
   await page.goto('http://127.0.0.1:' + server.address().port + '/#/admin/home', {waitUntil:'domcontentloaded'});
@@ -67,19 +85,21 @@ try {
   await page.frameLocator('iframe[title="AgentSam admin home"]')
     .locator('#fnf-home-heading').waitFor({ state: 'visible' });
   assert.equal(await page.frameLocator('iframe[title="AgentSam admin home"]')
-    .locator('.console-topbar').evaluate((element) => getComputedStyle(element).display),
-    'none', 'Home must not render a second global toolbar');
+    .locator('.console-topbar').count(),
+    0, 'Home must not render a second global toolbar');
   await page.locator('.console-topbar-center .agentsam-mobile-companion-identity [data-companion-id]')
     .waitFor({ state: 'visible' });
   assert.equal(await dock.isVisible(), true, 'Home must retain the app launch dock');
   await dock.getByRole('button', { name: 'Ideas' }).click();
   await page.locator('[data-studio-product="ideas"]').waitFor({ state: 'visible' });
   await dock.getByRole('button', { name: 'Goals' }).click();
-  await page.waitForURL(/#\/goalguru/);
+  await page.waitForURL(/#\/admin\/goalguru/);
   await dock.getByRole('button', { name: 'Library' }).click();
-  await page.getByRole('tablist', { name: 'Library content' }).waitFor({ state: 'visible' });
+  const library = page.locator('[data-studio-product="library"][data-library-view="artifacts"]');
+  await library.waitFor({ state: 'visible' });
   assert.equal(await dock.isVisible(), false, 'Library is a focused destination without the launch dock');
-  await page.getByRole('tab', { name: 'Media', exact: true }).click();
+  await library.getByRole('navigation', { name: 'Library sections' }).getByRole('button', { name: 'Media' }).click();
+  await page.locator('[data-studio-product="library"][data-library-view="media"]').waitFor({ state: 'visible' });
   await page.locator('[data-agentsam-media-library]').waitFor({ state: 'visible' });
   assert.deepEqual(errors, [], 'the mobile path must not throw page errors');
   console.log('[mobile-launch-smoke] PASS 390x844: chat without dock, one header drawer, scoped Home/Ideas/Goals dock, focused Library/Media');
