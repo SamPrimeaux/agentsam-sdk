@@ -6,48 +6,55 @@ const BEACON_TAG = '<script type="module" src="https://static.cloudflareinsights
 const SCRIPT_END = '</script>';
 
 /**
- * Verify exactly the immutable Theme Store preview manifest bytes.
+ * Validate Theme Store preview bytes against the immutable R2 release digest.
  *
- * Cloudflare may inject a dynamic Bot Management precursor and Insights beacon
- * into an HTML response. They are not part of the source release, and their
- * per-request values make raw public response hashes unstable. Accept a
- * recovered source only when BOTH known tags appear as one adjacent insertion
- * immediately before </body> and the recovered payload hashes to the manifest.
- * Everything else, including unexpected modifications, fails closed.
+ * Cloudflare sometimes adds a dynamic challenge script and/or an Insights beacon
+ * to HTML delivered through the public edge. The file in R2 is unchanged, but
+ * the response's bytes differ per request. We remove ONLY these exact identified
+ * edge additions and only accept the result if its hash matches the manifest.
+ * No unknown mutations, non-HTML transformations or checksum bypasses.
  */
 export function verifyThemeStorePreviewBytes(responseBytes, expectedSha256, resource) {
   const bytes = Buffer.from(responseBytes);
   if (sha256(bytes) === expectedSha256) return bytes;
-
-  const fail = () => {
-    throw Error('Theme Store preview SHA-256 mismatch: ' + resource);
-  };
+  const fail = () => { throw Error('Theme Store preview SHA-256 mismatch: ' + resource); };
   if (!String(resource).toLowerCase().endsWith('.html')) return fail();
 
   const html = bytes.toString('utf8');
-  const start = html.lastIndexOf(CHALLENGE_TAG);
-  if (start < 0) return fail();
-  const challengeEndStart = html.indexOf(SCRIPT_END, start);
-  if (challengeEndStart < 0) return fail();
-  const challengeEnd = challengeEndStart + SCRIPT_END.length;
-  if (!html.slice(start, challengeEnd).includes('/cdn-cgi/challenge-platform/scripts/precursor/main.js?ray=')) return fail();
+  const positions = [];
+  const challengeStart = html.indexOf(CHALLENGE_TAG);
+  if (challengeStart >= 0) {
+    const endAt = html.indexOf(SCRIPT_END, challengeStart);
+    if (endAt < 0 || html.indexOf(CHALLENGE_TAG, challengeStart + 1) >= 0) return fail();
+    const end = endAt + SCRIPT_END.length;
+    if (!html.slice(challengeStart, end).includes('/cdn-cgi/challenge-platform/scripts/precursor/main.js?ray=')) return fail();
+    positions.push({ start: challengeStart, end });
+  }
 
-  const beacon = html.indexOf(BEACON_TAG, challengeEnd);
-  // The edge-injected tags must be directly adjacent, not mixed with product scripts.
-  if (beacon !== challengeEnd) return fail();
-  const beaconEndStart = html.indexOf(SCRIPT_END, beacon);
-  if (beaconEndStart < 0) return fail();
-  const beaconEnd = beaconEndStart + SCRIPT_END.length;
-  const beaconScript = html.slice(beacon, beaconEnd);
-  if (!beaconScript.includes('static.cloudflareinsights.com/beacon.min.js/')
-    || !beaconScript.includes('data-cf-beacon=')) return fail();
+  const beaconStart = html.indexOf(BEACON_TAG);
+  if (beaconStart >= 0) {
+    const endAt = html.indexOf(SCRIPT_END, beaconStart);
+    if (endAt < 0 || html.indexOf(BEACON_TAG, beaconStart + 1) >= 0) return fail();
+    const end = endAt + SCRIPT_END.length;
+    const beacon = html.slice(beaconStart, end);
+    if (!beacon.includes('static.cloudflareinsights.com/beacon.min.js/')
+      || !beacon.includes('data-cf-beacon=')) return fail();
+    positions.push({ start: beaconStart, end });
+  }
 
-  const trailing = html.slice(beaconEnd);
-  if (!/^\r?\n<\/body>\s*<\/html>\s*$/i.test(trailing)) return fail();
+  if (!positions.length) return fail();
+  const closingBody = html.lastIndexOf('</body>');
+  if (closingBody < 0 || positions.some(pos => pos.start > closingBody || closingBody - pos.end > 4)) return fail();
+  const ordered = [...positions].sort((a,b) => b.start - a.start);
+  let cleaned = html;
+  for (const { start, end } of ordered) cleaned = cleaned.slice(0, start) + cleaned.slice(end);
+  let recovered = Buffer.from(cleaned, 'utf8');
+  if (sha256(recovered) === expectedSha256) return recovered;
 
-  // The original HTML already contains a line break before </body>. Cloudflare
-  // introduces a second line for its injected script pair; remove that line.
-  const recovered = Buffer.from(html.slice(0, start) + trailing.replace(/^\r?\n/, ''), 'utf8');
+  // Some Cloudflare deployments insert an additional newline after the pair
+  // of scripts. Remove one extra blank line only immediately before </body>.
+  cleaned = cleaned.replace(/\r?\n\r?\n(<\/body>)/i, '\n$1');
+  recovered = Buffer.from(cleaned, 'utf8');
   if (sha256(recovered) !== expectedSha256) return fail();
   return recovered;
 }
