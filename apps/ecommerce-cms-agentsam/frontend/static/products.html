@@ -133,9 +133,10 @@ function catalogFetch(path,options) {
   if(catalogSiteId)url.searchParams.set('site_id',catalogSiteId);
   return window.adminFetch(url.pathname+url.search,options);
 }
-function catalogLink(path) {
+function catalogLink(path, productSiteId=null) {
   const url=new URL(path,location.origin);
-  if(catalogSiteId)url.searchParams.set('site_id',catalogSiteId);
+  const siteId=productSiteId || catalogSiteId;
+  if(siteId)url.searchParams.set('site_id',siteId);
   return url.pathname+url.search;
 }
 document.querySelectorAll('.product-catalog-tabs a,.admin-toolbar a').forEach(a=>a.href=catalogLink(a.getAttribute('href')));
