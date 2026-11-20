@@ -15,8 +15,8 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.18.4",
-    "@inneranimalmedia/analytics-ui": "2.6.15",
-    "@inneranimalmedia/financial-analytics": "2.6.15"
+    "@inneranimalmedia/analytics-ui": "2.6.16",
+    "@inneranimalmedia/financial-analytics": "2.6.16"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

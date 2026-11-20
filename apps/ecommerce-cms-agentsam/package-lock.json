@@ -10,11 +10,11 @@
       "license": "SEE LICENSE IN LICENSE.md",
       "dependencies": {
         "@inneranimalmedia/agentsam-3d-viewer": "2.6.15",
-        "@inneranimalmedia/agentsam-cms": "2.6.15",
-        "@inneranimalmedia/agentsam-merch": "2.6.15",
+        "@inneranimalmedia/agentsam-cms": "2.6.16",
+        "@inneranimalmedia/agentsam-merch": "2.6.16",
         "@inneranimalmedia/revise-theme": "0.2.0",
         "@inneranimalmedia/section-library": "0.1.0",
-        "@inneranimalmedia/theme-heuristic": "2.6.15",
+        "@inneranimalmedia/theme-heuristic": "2.6.16",
         "@jsquash/jpeg": "1.6.0",
         "@jsquash/png": "3.1.1",
         "@jsquash/resize": "2.1.1",
@@ -37,10 +37,10 @@
     },
     "../../packages/agentsam-cms": {
       "name": "@inneranimalmedia/agentsam-cms",
-      "version": "2.6.15",
+      "version": "2.6.16",
       "license": "FSL-1.1-MIT",
       "dependencies": {
-        "@inneranimalmedia/agentsam-contracts": "2.6.15"
+        "@inneranimalmedia/agentsam-contracts": "2.6.16"
       },
       "engines": {
         "node": ">=22"
@@ -48,7 +48,7 @@
     },
     "../../packages/agentsam-merch": {
       "name": "@inneranimalmedia/agentsam-merch",
-      "version": "2.6.15",
+      "version": "2.6.16",
       "license": "FSL-1.1-MIT",
       "bin": {
         "agentsam-merch": "bin/agentsam-merch.mjs"
@@ -71,7 +71,7 @@
     },
     "../../packages/heuristic-theme": {
       "name": "@inneranimalmedia/theme-heuristic",
-      "version": "2.6.15",
+      "version": "2.6.16",
       "license": "FSL-1.1-MIT",
       "engines": {
         "node": ">=22"
