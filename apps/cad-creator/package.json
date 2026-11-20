@@ -71,7 +71,7 @@
   },
   "overrides": {
     "qs": "6.16.0",
-    "picomatch": "https://raw.githubusercontent.com/SamPrimeaux/agentsam-sdk/85fcc1dd70a8505b5c96e4a090bab3843a7d5fb9/vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
+    "picomatch": "file:../../vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
   },
   "allowScripts": {
     "fsevents@2.3.3": true,
