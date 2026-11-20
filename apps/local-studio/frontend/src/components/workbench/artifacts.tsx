@@ -1,155 +1,94 @@
-import { Box, Cloud, FileCode, FileText, Globe, Plus, Trash2 } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { shortTime, uid } from "@/lib/utils";
-import { useActiveProject, useWorkStore } from "@/lib/work/store";
-import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
-import { openBrowserSideStage } from "@/lib/work/open-browser-side-stage";
-import type { Artifact, SideTab } from "@inneranimalmedia/agentsam-local-shared";
-import { ArtifactDocumentEditor, isEditableDocument } from "./document-editor";
-import { NewTabStage } from "./new-tab-stage";
-import { projectNeedsConnection } from "@/lib/work/workspace-restore";
-import { RuntimeFilesystemAdapter } from "@/lib/work/workspace-fs";
-import "./document-editor.css";
-import { cn } from "@/lib/utils";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArtifactsSurface } from "@inneranimalmedia/agentsam-work/frontend";
+import type { WorkArtifact, WorkSnapshot } from "@inneranimalmedia/agentsam-work/contracts";
+import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
+import { sharedLiveWorkHost } from "@/components/work/LocalStudioWorkPage";
+import { startArtifactCreation } from "@/lib/work/artifact-launcher";
+import { useWorkStore } from "@/lib/work/store";
 
-function kindOf(file: Artifact) {
-  if (file.kind) return file.kind;
-  if (file.path.endsWith(".html")) return "preview";
-  if (file.path.includes(".agentsam/deploys")) return "deploy";
-  return "code";
-}
+/**
+ * Global account Library for the Side Stage.
+ * Artifacts are not project files: this surface always loads the account-wide
+ * Work library and never falls back to the New tab when no project is active.
+ */
+export function ArtifactsStage({ tab }: { tab: SideTab }) {
+  const host = useMemo(() => sharedLiveWorkHost(), []);
+  const openSideTab = useWorkStore((state) => state.openSideTab);
+  const [artifacts, setArtifacts] = useState<WorkArtifact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-export function ArtifactsStage({tab}: {tab?:SideTab}) {
-  const navigate = useNavigate();
-  const project = useActiveProject();
-  const selectFile = useWorkStore((s) => s.selectFile);
-  const deleteFile = useWorkStore((s) => s.deleteFile);
-  const openSideTab = useWorkStore((s) => s.openSideTab);
-  const files = [...(project?.files ?? [])].sort((a, b) => b.updatedAt - a.updatedAt);
-  const [documentId, setDocumentId] = useState<string | null>(tab?.fileId ?? null);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const chatId = useWorkStore(s=>s.activeChatId);
-  const upsertFile = useWorkStore(s=>s.upsertFile);
-  const selectedDocument = files.find(file => file.id === documentId);
-  useEffect(() => {if (tab?.fileId) setDocumentId(tab.fileId);}, [tab?.fileId]);
-
-  async function createDocument(sourceContent?:string, sourceTitle?:string) {
-    if (!project || creating) return;
-    setCreating(true);setCreateError(null);
-    const id = uid();
-    const path = 'document-' + id.replace(/[^a-z0-9_-]/gi,'').slice(0,18) + '.agentdoc.html';
-    const title = sourceTitle ? sourceTitle.replace(/\.[^.]+$/, '') + ' · Document' : 'Untitled document';
-    const content = sourceContent || '<h1>Untitled document</h1><p></p>';
+  const refresh = useCallback(async () => {
+    setError("");
+    setLoading(true);
     try {
-      if (project.kind === 'filesystem') {
-        if (!project.runtimeBaseUrl || !project.runtimeCapability)
-          throw new Error('Documents can be created once this project is connected.');
-        const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl,project.runtimeCapability);
-        const result = await adapter.create(path,content);
-        if (!result.ok) throw new Error('Could not create a document in this project.');
-      }
-      upsertFile(project.id,{ id, path, title, language:'html', content,
-        updatedAt:Date.now(),kind:'code',origin:'editor',chatId:chatId || undefined });
-      setDocumentId(id);
-    } catch(error) {
-      setCreateError(error instanceof Error ? error.message : 'Could not create document.');
-    } finally {setCreating(false);}
-  }
-  // Nothing connected and nothing captured: the New tab is the default surface.
-  if (!project || (projectNeedsConnection(project) && files.length === 0))
-    return <NewTabStage tab={tab} omitKinds={["artifacts"]} />;
-  const canCreate = project.kind !== "filesystem" || Boolean(project.runtimeBaseUrl && project.runtimeCapability);
-  const supportsDocumentPreview = (file:Artifact) => isEditableDocument(file.path) || /\.(md|markdown|txt)$/.test(file.path);
-  if (project && selectedDocument && supportsDocumentPreview(selectedDocument)) {
-    return <ArtifactDocumentEditor file={selectedDocument} project={project} chatId={chatId}
-      onClose={()=>setDocumentId(null)} onEditCopy={(content,title)=>createDocument(content,title)}/>;
-  }
+      const snapshot: WorkSnapshot = await host.snapshot({ surface: "artifacts" });
+      setArtifacts(Array.isArray(snapshot.artifacts) ? snapshot.artifacts : []);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Artifacts could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, [host]);
+
+  useEffect(() => {
+    void refresh();
+    const onRefresh = () => { void refresh(); };
+    window.addEventListener("agentsam:work-refresh", onRefresh);
+    return () => window.removeEventListener("agentsam:work-refresh", onRefresh);
+  }, [refresh]);
+
+  const openArtifact = useCallback((artifact: WorkArtifact) => {
+    if (artifact.source === "local") {
+      void host.openArtifact?.(artifact);
+      return;
+    }
+
+    // Design Canvas documents have a real editor route. Reopen the stored
+    // canvas ID in the existing Canvas specialist instead of showing its JSON.
+    if (artifact.artifactType === "design-canvas" && artifact.providerId) {
+      openSideTab("design", {
+        title: artifact.name,
+        ephemeral: false,
+        url: "/canvas?canvas=" + encodeURIComponent(artifact.providerId),
+      });
+      return;
+    }
+
+    const target = artifact.open || artifact.preview;
+    if (target) {
+      openSideTab("browser", {
+        title: artifact.name,
+        url: target,
+        history: [target],
+        historyIndex: 0,
+        ephemeral: false,
+      });
+    }
+  }, [host, openSideTab]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-medium">Outputs</h2>
-          {canCreate ? <Button type="button" size="sm" variant="outline" disabled={creating}
-            aria-label="Create document" onClick={()=>void createDocument()}>
-            <Plus className="size-4" /> Document
-          </Button> : null}
+    <div className="agentsam-artifact-stage" data-testid="artifact-stage" data-tab-id={tab.id}>
+      {error ? (
+        <div className="agentsam-artifact-stage__error" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void refresh()}>Retry</button>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Open a saved document, file, preview, or deployment.
-        </p>
-        {createError ? <p role="alert" className="mt-2 text-xs text-destructive">{createError}</p> : null}
-      </div>
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-2">
-        {files.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-            <Box className="mb-3 size-8 text-stone" />
-            <h3 className="text-sm font-medium">Nothing captured yet</h3>
-            <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-              Code from chats, HTML previews, and ship receipts land here.
-            </p>
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {files.map((file) => {
-              const kind = kindOf(file);
-              return (
-                <li
-                  key={file.id}
-                  className="group flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-muted/60"
-                >
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                    onClick={() => {
-                      if (supportsDocumentPreview(file)) { setDocumentId(file.id); return; }
-                      if (kind === "preview") {
-                        openBrowserSideStage({ title: file.path, srcdoc: buildWorkspacePreview(file, project?.files ?? []) });
-                        return;
-                      }
-                      if (kind === "deploy" && file.url) {
-                        openBrowserSideStage({ url: file.url, title: file.title ?? 'Deploy' });
-                        return;
-                      }
-                      selectFile(file.id);
-                      useWorkStore.getState().openSideTab("files", { ephemeral: false });
-                    }}
-                  >
-                    {supportsDocumentPreview(file) ? (
-                      <FileText className="size-3.5 shrink-0 text-stone" />
-                    ) : kind === "deploy" ? (
-                      <Cloud className="size-3.5 shrink-0 text-stone" />
-                    ) : kind === "preview" ? (
-                      <Globe className="size-3.5 shrink-0 text-stone" />
-                    ) : (
-                      <FileCode className="size-3.5 shrink-0 text-stone" />
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{file.title ?? file.path}</span>
-                      <span className="block text-[11px] text-muted-foreground">
-                        {kind} · {shortTime(file.updatedAt)}
-                      </span>
-                    </span>
-                  </button>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    className={cn("opacity-0 group-hover:opacity-100 max-md:opacity-100")}
-                    aria-label={`Delete ${file.path}`}
-                    onClick={() => { if (project) deleteFile(project.id, file.id); }}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      ) : null}
+      {loading && artifacts.length === 0 ? (
+        <div className="agentsam-artifact-stage__loading" role="status">Loading Artifacts…</div>
+      ) : (
+        <ArtifactsSurface
+          artifacts={artifacts}
+          title="Artifacts"
+          onCreateArtifact={startArtifactCreation}
+          onOpenArtifact={openArtifact}
+          onRefresh={refresh}
+          openInWorkspace
+          showCreateSection
+          emptyMessage={error || "Your saved work will appear here."}
+        />
+      )}
     </div>
   );
 }
