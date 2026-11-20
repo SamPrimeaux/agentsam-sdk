@@ -57,7 +57,7 @@ function siteOwnedDb(rowsByHost, pagesBySite = {}, sectionsByPage = {}) {
         };
       }
       if (/FROM cms_pages/.test(sql)) {
-        assert.match(sql, /site_id = \\?/);
+        assert.match(sql, /site_id\s*=\s*\?/);
         assert.match(sql, /status = 'published'/);
         return {
           bind(siteId, route, withoutTrailingSlash) {
