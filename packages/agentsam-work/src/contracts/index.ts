@@ -101,6 +101,8 @@ export type WorkTicket = {
 
 export type WorkTicketInput = Partial<Omit<WorkTicket, "id" | "updatedAt" | "createdAt" | "closedAt">>;
 
+export type WorkArtifactCreateKind = "docs" | "slides" | "sheets" | "design" | "data" | "whiteboard";
+
 export type WorkArtifact = {
   id: string;
   name: string;
@@ -117,6 +119,8 @@ export type WorkArtifact = {
   /** Authorized open target (or verified public URL); never an unscoped R2 key. */
   open?: string | null;
   resourceType?: string | null;
+  /** Provider-native artifact type used to reopen specialist editors without guessing from filenames. */
+  artifactType?: string | null;
   sourceLabel?: string | null;
   mime?: string | null;
   sizeLabel?: string | null;

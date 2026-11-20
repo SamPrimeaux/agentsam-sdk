@@ -265,7 +265,7 @@ export function ProjectDetailSurface({
             artifacts={projectArtifacts}
             onOpenArtifact={chatHost?.openArtifact}
             title={project.name + " · Gallery"}
-            heading="Associated files"
+            showCreateSection={false}
             emptyMessage="No registered files are associated with this project yet. Attach from Media Library — the gallery only shows explicit project-linked media, not guessed filename matches."
           />
         </div>

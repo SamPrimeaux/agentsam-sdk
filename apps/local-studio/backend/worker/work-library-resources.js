@@ -25,7 +25,7 @@ const readableSize = value => {
 };
 function kindOf(name, mime, category) {
   const type = safe(category).toLowerCase();
-  if (['theme','template','page-build','site-build','design','scene'].includes(type)) return 'design';
+  if (['theme','template','page-build','site-build','design','scene','design-canvas','samsketch-scene'].includes(type)) return 'design';
   if (['product','mockup','merchandise'].includes(type)) return 'product';
   const lower = (safe(name) + ' ' + safe(mime)).toLowerCase();
   if (/image\//.test(lower) || /\.(png|jpe?g|webp|gif|svg|avif)\b/.test(lower)) return 'image';
@@ -78,7 +78,7 @@ export async function listAccountLibraryResources(db, owner) {
     return {
       starred: attributes.library?.starred === true,
       id:'artifact:'+row.id,name,kind,source:'artifacts',mime:safe(row.mime_type)||null,
-      providerId:row.id,sizeLabel:readableSize(row.file_size_bytes),
+      providerId:row.id,artifactType:safe(row.artifact_type)||null,sizeLabel:readableSize(row.file_size_bytes),
       ...when(row.updated_at),
       deleted: Boolean(row.archived_at),
       // Render previews by verified stored thumbnail availability, not by the
@@ -86,7 +86,10 @@ export async function listAccountLibraryResources(db, owner) {
       // generated preview while its source file remains JSON/HTML.
       preview: richPreview || (row.thumbnail_r2_key || row.preview_r2_key
         ? base+'?preview=1' : (kind==='image'?base:null)),
-      open:staticPublic || base, resourceType:'artifact',
+      open:row.artifact_type === 'design-canvas'
+        ? '/admin/canvas?canvas='+encodeURIComponent(row.id)
+        : staticPublic || base,
+      resourceType:'artifact',
     };
   });
   const cms = cmsAssets.map(row => {
@@ -96,7 +99,7 @@ export async function listAccountLibraryResources(db, owner) {
     const image = kind === 'image' ? safeWebUrl(row.thumbnail_url) || url : null;
     return {
       id:'cms:'+row.id,name,kind,source:'artifacts',
-      mime:safe(row.mime_type)||null,providerId:row.id,
+      mime:safe(row.mime_type)||null,providerId:row.id,artifactType:safe(row.category)||null,
       sizeLabel:readableSize(row.size),
       ...when(row.updated_at),preview:image,open:url,resourceType:'cms',
       sourceLabel:row.site_name ? 'CMS · '+row.site_name : 'CMS',
@@ -113,7 +116,7 @@ export async function listAccountLibraryResources(db, owner) {
       : row.provider === 'r2' ? 'r2' : row.provider === 'local' ? 'local' : 'artifacts';
     return {
       id:'media:'+row.id,name,kind,source,mime:safe(row.content_type)||null,
-      providerId:row.provider_resource_id||row.id,sizeLabel:readableSize(row.size_bytes),
+      providerId:row.provider_resource_id||row.id,artifactType:safe(row.media_kind)||null,sizeLabel:readableSize(row.size_bytes),
       ...when(row.updated_at),
       preview:kind==='image'&&url?url:null,
       open:url,resourceType:'media',durationMs:Number(row.duration_ms)||null,
@@ -123,7 +126,7 @@ export async function listAccountLibraryResources(db, owner) {
     const name = safe(row.artifact_key).replace(/[-_]+/g,' ') || 'CMS design';
     return {
       id:'cms-artifact:'+row.id,name,kind:kindOf(name,null,row.artifact_type),
-      source:'artifacts',providerId:row.id,
+      source:'artifacts',providerId:row.id,artifactType:safe(row.artifact_type)||null,
       ...when(row.created_at),preview:null,open:null,resourceType:'cms-artifact',
       sourceLabel:'CMS · '+row.artifact_type,
     };

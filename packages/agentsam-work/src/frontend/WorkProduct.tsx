@@ -1,6 +1,7 @@
 import { CalendarPlus, FolderPlus, ListTodo, Settings, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type {
+  WorkArtifactCreateKind,
   WorkHost,
   WorkNavigate,
   WorkSnapshot,
@@ -65,6 +66,7 @@ export function WorkProduct({
   onNavCollapsedChange,
   headerActions,
   knowledgeAction,
+  onCreateArtifact,
 }: {
   host: WorkHost;
   surface: WorkSurfaceId;
@@ -78,6 +80,8 @@ export function WorkProduct({
   headerActions?: ReactNode;
   /** Host control for knowledge / codebase indexing on the project page. */
   knowledgeAction?: ReactNode;
+  /** Start a new artifact in the appropriate lead-chat or specialist workspace. */
+  onCreateArtifact?: (kind: WorkArtifactCreateKind) => void;
 }) {
   const [range, setRange] = useState<{ from?: string; to?: string }>({});
   const calendarRange = surface === "calendar" && range.from ? range : {};
@@ -352,6 +356,7 @@ export function WorkProduct({
       ) : null}
       {surface === "artifacts" ? <ArtifactsSurface
         artifacts={snapshot.artifacts}
+        onCreateArtifact={onCreateArtifact}
         onOpenArtifact={host.openArtifact}
         onRefresh={async () => { await refreshSnapshot(); }}
         initialSource={(() => {
@@ -363,7 +368,7 @@ export function WorkProduct({
         initialView={(() => {
           if (typeof window === "undefined") return "all";
           const value = new URLSearchParams(window.location.search).get("view");
-          return value === "recent" || value === "starred" || value === "trash" || value === "shared"
+          return value === "yours" || value === "recent" || value === "starred" || value === "trash" || value === "shared"
             ? value : "all";
         })()}
       /> : null}
