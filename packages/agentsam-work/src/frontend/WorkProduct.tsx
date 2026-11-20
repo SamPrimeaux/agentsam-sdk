@@ -1,6 +1,7 @@
 import { CalendarPlus, FolderPlus, ListTodo, Settings, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type {
+  WorkArtifactCreateKind,
   WorkHost,
   WorkNavigate,
   WorkSnapshot,
