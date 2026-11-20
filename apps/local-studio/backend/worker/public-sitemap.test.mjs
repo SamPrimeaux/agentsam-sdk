@@ -122,7 +122,7 @@ test("AgentSam sitemap includes published indexable pages and static legal/setup
   assert.ok(locations.includes("https://agentsam.inneranimalmedia.com/terms"));
   assert.ok(locations.includes("https://agentsam.inneranimalmedia.com/packages/sdk/setup-guide/"));
   assert.ok(!locations.some(location => /\/(?:admin|api|auth|private|hidden|portal|themes)(?:\/|$)/.test(location)));
-  assert.equal(entries.find(entry => entry.path === "/").lastmod, "2026-09-29");
+  assert.equal(entries.find(entry => entry.path === "/").lastmod, "2026-09-30");
 });
 
 test("XML sitemap is absolute, validly typed, and excludes protected routes", async () => {
