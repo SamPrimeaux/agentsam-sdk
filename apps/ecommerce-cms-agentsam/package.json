@@ -33,11 +33,11 @@
     "preverify:cms": "node scripts/compile-portable-styles.mjs"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-cms": "2.6.15",
-    "@inneranimalmedia/agentsam-merch": "2.6.15",
+    "@inneranimalmedia/agentsam-cms": "2.6.16",
+    "@inneranimalmedia/agentsam-merch": "2.6.16",
     "@inneranimalmedia/revise-theme": "0.2.0",
     "@inneranimalmedia/section-library": "0.1.0",
-    "@inneranimalmedia/theme-heuristic": "2.6.15",
+    "@inneranimalmedia/theme-heuristic": "2.6.16",
     "@jsquash/jpeg": "1.6.0",
     "@jsquash/png": "3.1.1",
     "@jsquash/resize": "2.1.1",
