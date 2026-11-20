@@ -376,7 +376,7 @@
     "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
     "publish:identity-alpha:publish-only": "bash scripts/publish-identity-alpha.sh --publish-only",
     "preview:auth-portal": "node packages/identity/scripts/preview-auth-portal.mjs --open",
-    "prepublishOnly": "npm run site:sync && npm run verify:release",
+    "prepublishOnly": "node scripts/prepublish-gate.mjs",
     "site:sync": "node scripts/sync-public-site.mjs",
     "site:learn": "node scripts/build-learn-site.mjs",
     "site:sam-docs": "node scripts/build-sam-docs.mjs",
