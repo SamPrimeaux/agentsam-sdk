@@ -35,7 +35,7 @@ function normalizePublicPath(value) {
     !raw.startsWith('/') ||
     raw.includes('?') ||
     raw.includes('#') ||
-    raw.includes('\\\\') ||
+    raw.includes('\\') ||
     raw.includes('//') ||
     /%(?:2f|5c|0[0-9a-f]|1[0-9a-f])/i.test(raw)
   ) return null;
