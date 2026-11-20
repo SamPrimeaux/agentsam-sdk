@@ -10,6 +10,7 @@ import {
   resolveWorkerStaticAssets,
   websitePublicKey,
 } from './bindings.js';
+import { isPublicSearchDiscoveryPath, servePublicSearchDiscovery } from './public-sitemap.js';
 
 /**
  * Resolve the public site from its verified hostname. Public requests do not
