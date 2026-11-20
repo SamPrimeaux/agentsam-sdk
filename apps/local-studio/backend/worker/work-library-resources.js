@@ -126,7 +126,7 @@ export async function listAccountLibraryResources(db, owner) {
     const name = safe(row.artifact_key).replace(/[-_]+/g,' ') || 'CMS design';
     return {
       id:'cms-artifact:'+row.id,name,kind:kindOf(name,null,row.artifact_type),
-      source:'artifacts',providerId:row.id,
+      source:'artifacts',providerId:row.id,artifactType:safe(row.artifact_type)||null,
       ...when(row.created_at),preview:null,open:null,resourceType:'cms-artifact',
       sourceLabel:'CMS · '+row.artifact_type,
     };
