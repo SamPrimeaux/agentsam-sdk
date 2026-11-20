@@ -501,7 +501,6 @@
     "ajv": "^8.17.1",
     "esbuild": "0.28.1",
     "grpc-tools": "^1.13.1",
-    "picomatch": "file:./vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz",
     "wrangler": "^4.157.0"
   },
   "overrides": {
@@ -513,8 +512,7 @@
     "shell-quote": "1.12.0",
     "undici": "7.30.1",
     "@hono/node-server": "2.1.6",
-    "hono": "4.13.18",
-    "picomatch": "$picomatch"
+    "hono": "4.13.18"
   },
   "packageManager": "npm@12.2.2"
 }
