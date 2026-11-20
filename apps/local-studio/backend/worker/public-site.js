@@ -106,6 +106,7 @@ export function publicSitePathForRequest(request) {
 
 export function isPublicSitePath(pathname) {
   return (
+    isPublicSearchDiscoveryPath(pathname) ||
     Object.hasOwn(PUBLIC_SITE_HTML, pathname) ||
     isThemesPath(pathname) ||
     isDocsPath(pathname) ||
