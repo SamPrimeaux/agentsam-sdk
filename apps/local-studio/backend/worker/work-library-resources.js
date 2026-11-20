@@ -78,7 +78,7 @@ export async function listAccountLibraryResources(db, owner) {
     return {
       starred: attributes.library?.starred === true,
       id:'artifact:'+row.id,name,kind,source:'artifacts',mime:safe(row.mime_type)||null,
-      providerId:row.id,sizeLabel:readableSize(row.file_size_bytes),
+      providerId:row.id,artifactType:safe(row.artifact_type)||null,sizeLabel:readableSize(row.file_size_bytes),
       ...when(row.updated_at),
       deleted: Boolean(row.archived_at),
       // Render previews by verified stored thumbnail availability, not by the
