@@ -7,7 +7,6 @@
   "target_workspace": "apps/cad-creator",
   "target_package": "@inneranimalmedia/agentsam-cad-creator",
   "policy": {
-    "full_donor_snapshot": "reference/robotics-donor/4aa63fff4149",
     "active_runtime_import": "robotics-only",
     "existing_cad_app_overwrite": false,
     "frontend_provider_secrets": false,
