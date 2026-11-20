@@ -46,8 +46,8 @@ export async function removeFirstPartyEntertainment(env,accountId,pluginId){
     "SELECT instance_key FROM agentsam_plugin_installations WHERE account_id=? AND plugin_id=? AND instance_key='entertainment-v1' LIMIT 1"
   ).bind(accountId,pluginId).first();
   if(!own)throw Error('plugin_installation_not_found');
-  const tools=await env.DB.prepare("SELECT COUNT(*) AS total FROM agentsam_tools WHERE plugin_id=? AND account_id=?")
-    .bind(pluginId,accountId).first();
+  const tools=await env.DB.prepare("SELECT COUNT(*) AS total FROM agentsam_tools WHERE plugin_key=? AND account_id=?")
+    .bind(plugin.plugin_key,accountId).first();
   if(Number(tools?.total||0)>0)throw Error('plugin_remove_requires_disconnect');
   await env.DB.prepare(
     "DELETE FROM agentsam_plugin_installations WHERE account_id=? AND plugin_id=? AND instance_key='entertainment-v1'"

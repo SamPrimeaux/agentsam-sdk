@@ -2,6 +2,34 @@ import { recordToolCall } from './registry.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 
+const DISPATCH_TARGET_BY_TRANSPORT = Object.freeze({
+  remote_jsonrpc: 'mcp',
+  iam_mcp_catalog: 'mcp',
+  http_rest: 'plugin',
+  http_graphql: 'plugin',
+  webhook: 'plugin',
+  workers_binding: 'internal',
+  native: 'native',
+  none: 'internal',
+});
+
+/** Resolve an explicit per-tool lane override, otherwise derive it from the
+ * owning plugin's transport. The legacy D1 default `internal` is treated as
+ * absent for plugin-owned rows unless handler_config explicitly overrides it.
+ */
+export function resolvePluginDispatchTarget(tool = {}) {
+  const configOverride = clean(tool.handler_config?.dispatch_target_override);
+  const storedTarget = clean(tool.dispatch_target);
+  const transport = clean(tool.plugin_transport || tool.transport);
+  const hasPluginTransport = Boolean(clean(tool.plugin_key) && transport);
+  const override = configOverride || (
+    storedTarget && !(storedTarget === 'internal' && hasPluginTransport) ? storedTarget : ''
+  );
+  if (override) return override;
+  if (DISPATCH_TARGET_BY_TRANSPORT[transport]) return DISPATCH_TARGET_BY_TRANSPORT[transport];
+  return clean(tool.plugin_kind) === 'native' ? 'native' : 'internal';
+}
+
 export async function executeAgentSamTool(options = {}) {
   const tool = options.tool;
   if (!tool?.tool_key) throw new Error('agentsam_tool_required');
@@ -18,9 +46,24 @@ export async function executeAgentSamTool(options = {}) {
   let status = 'success';
   let errorCode = '';
   let failureOrigin = null;
+  let costUsd = Number.isFinite(options.costUsd) ? Math.max(0, options.costUsd) : 0;
+  let costBasis = clean(options.costBasis) || 'unknown';
+  const args = options.args || {};
+  const resolveCost = async (details) => {
+    if (typeof options.resolveCost !== 'function') return;
+    try {
+      const observed = await options.resolveCost({ tool, args, context, ...details });
+      if (Number.isFinite(observed?.costUsd) && observed.costUsd >= 0) costUsd = observed.costUsd;
+      if (['api_metered', 'external_subscription', 'platform_included', 'unknown'].includes(observed?.costBasis)) {
+        costBasis = observed.costBasis;
+      }
+    } catch {
+      // Cost enrichment must never change the tool result.
+    }
+  };
   try {
     if (typeof options.authorizeTool === 'function') {
-      const authorization = await options.authorizeTool({ tool, args: options.args || {}, context });
+      const authorization = await options.authorizeTool({ tool, args, context });
       if (authorization === false || authorization?.allowed === false) {
         const error = new Error(`tool_not_authorized:${tool.tool_key}`);
         error.code = 'AGENTSAM_TOOL_NOT_AUTHORIZED';
@@ -29,7 +72,7 @@ export async function executeAgentSamTool(options = {}) {
     }
     if (Boolean(tool.requires_approval) || Boolean(tool.requires_confirmation)) {
       const approved = typeof options.requireApproval === 'function'
-        ? await options.requireApproval({ tool, args: options.args || {}, context })
+        ? await options.requireApproval({ tool, args, context })
         : false;
       if (approved !== true) {
         const error = new Error(`tool_not_approved:${tool.tool_key}`);
@@ -37,22 +80,27 @@ export async function executeAgentSamTool(options = {}) {
         throw error;
       }
     }
-    const target = clean(tool.dispatch_target || 'plugin');
-    // The persisted row selects the lane and handler family. This keeps
-    // installed plugins generic instead of embedding provider names in the
-    // AgentSam orchestration loop.
+    const target = resolvePluginDispatchTarget(tool);
+    // Plugin transport supplies the default lane; a tool-level target is only
+    // an explicit override for tools that need a different executor path.
     const dispatcher = typeof options.resolveDispatcher === 'function'
       ? await options.resolveDispatcher({ tool, target, context })
-      : options.dispatchers?.[target]
-        || options.dispatchers?.[clean(tool.handler_type)]
-        || options.handlers?.[clean(tool.handler_type)]
-        || options.handlers?.[clean(tool.handler_key)];
-    if (typeof dispatcher !== 'function') throw new Error(`tool_dispatcher_unavailable:${target}`);
-    return await dispatcher({ tool, args: options.args || {}, context });
+      : options.dispatchers?.[target] || options.handlers?.[clean(tool.handler_key)];
+    if (typeof dispatcher !== 'function') {
+      const error = new Error(`tool_dispatcher_unavailable:${target}:${clean(tool.handler_key) || 'unknown'}`);
+      error.failureOrigin = 'platform';
+      throw error;
+    }
+    const result = await dispatcher({ tool, args, context });
+    await resolveCost({ result });
+    return result;
   } catch (error) {
     status = error?.code === 'AGENTSAM_TOOL_NOT_AUTHORIZED' || error?.code === 'AGENTSAM_TOOL_NOT_APPROVED' ? 'blocked' : 'error';
     errorCode = clean(error?.code || error?.name || 'tool_error').slice(0, 160);
-    failureOrigin = status === 'blocked' ? 'policy' : 'tool';
+    const allowedOrigins = new Set(['model', 'tool', 'provider', 'platform', 'policy', 'user']);
+    const reportedOrigin = clean(error?.failureOrigin || error?.failure_origin);
+    failureOrigin = status === 'blocked' ? 'policy' : (allowedOrigins.has(reportedOrigin) ? reportedOrigin : 'tool');
+    await resolveCost({ error });
     throw error;
   } finally {
     if (options.db?.prepare && context.accountId) {
@@ -67,6 +115,8 @@ export async function executeAgentSamTool(options = {}) {
           durationMs: Date.now() - started,
           errorCode,
           failureOrigin,
+          costUsd,
+          costBasis,
           sourceClient: context.sourceClient || 'agentsam-sdk',
           externalExecution: true,
         });
@@ -103,6 +153,7 @@ export function createPluginRuntime(options = {}) {
         tool, args, context, accountId: options.accountId, db: options.db, dispatchers: options.dispatchers,
         handlers: options.handlers, resolveDispatcher: options.resolveDispatcher,
         authorizeTool: options.authorizeTool, requireApproval: options.requireApproval,
+        resolveCost: options.resolveCost, costUsd: options.costUsd, costBasis: options.costBasis,
       });
     },
   });

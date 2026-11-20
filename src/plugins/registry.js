@@ -100,45 +100,62 @@ export async function installPlugin(db, options = {}) {
   for (const tool of manifest.tools) {
     const existing = await db.prepare(`
       SELECT id, tool_name FROM agentsam_tools
-      WHERE plugin_id = ? AND account_id = ? AND tool_key = ?
+      WHERE plugin_key = ? AND account_id = ? AND tool_key = ?
       LIMIT 1
-    `).bind(pluginId, accountId, tool.tool_key).first();
+    `).bind(manifest.plugin_key, accountId, tool.tool_key).first();
     const toolId = existing?.id || id('ast');
-    // The canonical schema intentionally keeps tool_name globally unique even
-    // though installed tools belong to an account. tool_key is the stable,
-    // model-facing identifier; tool_name is an internal unique function name.
+    // tool_key is the stable model-facing identity. tool_name remains the
+    // legacy globally unique function alias until its readers are migrated.
     const installedToolName = existing?.tool_name || `${tool.tool_name}__${toolId}`;
     if (existing?.id) {
-      await runMutation(db, `
-        UPDATE agentsam_tools SET
-          display_name=?, tool_category=?, handler_type=?, description=?, input_schema=?, output_schema=?, handler_config=?,
-          intent_tags=?, risk_level=?, requires_approval=?, requires_confirmation=?, is_active=?, updated_at=unixepoch(),
-          tool_key=?, capability_key=?, handler_key=?, domain=?, oauth_visible=1, dispatch_target=?, connector_visible=?,
-          connector_priority=?, connector_access_class=?, account_id=?, plugin_key=?, plugin_id=?
-        WHERE id=?
-      `, [
-        tool.display_name, tool.tool_category, tool.handler_type, tool.description, JSON.stringify(tool.input_schema),
-        tool.output_schema ? JSON.stringify(tool.output_schema) : null, JSON.stringify(tool.handler_config), JSON.stringify(tool.intent_tags),
-        tool.risk_level, tool.requires_approval ? 1 : 0, tool.requires_confirmation ? 1 : 0, tool.is_active ? 1 : 0,
-        tool.tool_key, tool.capability_key, tool.handler_key, manifest.provider_key, tool.dispatch_target,
-        tool.connector_visible ? 1 : 0, manifest.sort_priority, tool.connector_access_class, accountId, manifest.plugin_key, pluginId, toolId,
-      ]);
+      const assignments = [
+        'display_name=?', 'tool_category=?', 'description=?', 'input_schema=?', 'output_schema=?',
+        'handler_config=?', 'intent_tags=?', 'risk_level=?', 'requires_approval=?',
+        'requires_confirmation=?', 'is_active=?', 'tool_key=?', 'capability_key=?',
+        'handler_key=?', 'domain=?', 'oauth_visible=1', 'connector_visible=?',
+        'connector_priority=?', 'connector_access_class=?', 'account_id=?', 'plugin_key=?',
+      ];
+      const values = [
+        tool.display_name, tool.tool_category, tool.description, JSON.stringify(tool.input_schema),
+        tool.output_schema ? JSON.stringify(tool.output_schema) : null, JSON.stringify(tool.handler_config),
+        JSON.stringify(tool.intent_tags), tool.risk_level, tool.requires_approval ? 1 : 0,
+        tool.requires_confirmation ? 1 : 0, tool.is_active ? 1 : 0, tool.tool_key,
+        tool.capability_key, tool.handler_key, manifest.provider_key,
+        tool.connector_visible ? 1 : 0, manifest.sort_priority, tool.connector_access_class,
+        accountId, manifest.plugin_key,
+      ];
+      if (tool.dispatch_target) {
+        assignments.push('dispatch_target=?');
+        values.push(tool.dispatch_target);
+      }
+      assignments.push('updated_at=unixepoch()');
+      values.push(toolId);
+      await runMutation(db, `UPDATE agentsam_tools SET ${assignments.join(', ')} WHERE id=?`, values);
     } else {
-      await runMutation(db, `
-        INSERT INTO agentsam_tools (
-          id, tool_name, display_name, tool_category, handler_type, description, input_schema, output_schema,
-          handler_config, intent_tags, risk_level, requires_approval, requires_confirmation, is_active,
-          tool_key, capability_key, handler_key, domain, oauth_visible, dispatch_target, connector_visible,
-          connector_priority, connector_access_class, account_id, plugin_key, plugin_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, unixepoch(), unixepoch())
-      `, [
-        toolId, installedToolName, tool.display_name, tool.tool_category, tool.handler_type, tool.description,
+      const columns = [
+        'id', 'tool_name', 'display_name', 'tool_category', 'description', 'input_schema', 'output_schema',
+        'handler_config', 'intent_tags', 'risk_level', 'requires_approval', 'requires_confirmation', 'is_active',
+        'tool_key', 'capability_key', 'handler_key', 'domain', 'oauth_visible', 'connector_visible',
+        'connector_priority', 'connector_access_class', 'account_id', 'plugin_key',
+      ];
+      const values = [
+        toolId, installedToolName, tool.display_name, tool.tool_category, tool.description,
         JSON.stringify(tool.input_schema), tool.output_schema ? JSON.stringify(tool.output_schema) : null,
         JSON.stringify(tool.handler_config), JSON.stringify(tool.intent_tags), tool.risk_level,
         tool.requires_approval ? 1 : 0, tool.requires_confirmation ? 1 : 0, tool.is_active ? 1 : 0,
-        tool.tool_key, tool.capability_key, tool.handler_key, manifest.provider_key, tool.dispatch_target,
-        tool.connector_visible ? 1 : 0, manifest.sort_priority, tool.connector_access_class, accountId, manifest.plugin_key, pluginId,
-      ]);
+        tool.tool_key, tool.capability_key, tool.handler_key, manifest.provider_key, 1,
+        tool.connector_visible ? 1 : 0, manifest.sort_priority, tool.connector_access_class,
+        accountId, manifest.plugin_key,
+      ];
+      if (tool.dispatch_target) {
+        const at = columns.indexOf('connector_visible');
+        columns.splice(at, 0, 'dispatch_target');
+        values.splice(at, 0, tool.dispatch_target);
+      }
+      await runMutation(db, `
+        INSERT INTO agentsam_tools (${columns.join(', ')}, created_at, updated_at)
+        VALUES (${columns.map(() => '?').join(', ')}, unixepoch(), unixepoch())
+      `, values);
     }
     await runMutation(db, `
       INSERT OR REPLACE INTO agentsam_tool_capabilities
@@ -166,11 +183,13 @@ export async function listPluginTools(db, options = {}) {
   // The *installation* is always account-owned. EXISTS avoids duplicated tools
   // when a provider has several installations, and never leaks another tenant's tools.
   const result = await db.prepare(`
-    SELECT t.* FROM agentsam_tools t
+    SELECT t.*, p.transport AS plugin_transport, p.plugin_kind AS plugin_kind
+    FROM agentsam_tools t
+    JOIN agentsam_plugins p ON p.plugin_key = t.plugin_key
     WHERE t.is_active = 1 AND (t.account_id = ? OR t.account_id IS NULL)
       AND EXISTS (
         SELECT 1 FROM agentsam_plugin_installations i
-        WHERE i.plugin_id = t.plugin_id AND i.account_id = ?
+        WHERE i.plugin_id = p.id AND i.account_id = ?
           AND (? = 1 OR i.enabled = 1)
       )
     ORDER BY t.connector_priority, t.sort_priority, t.tool_name

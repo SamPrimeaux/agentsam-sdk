@@ -41,21 +41,21 @@ export const AGENTSAM_MCP_PLUGIN_MANIFEST = normalizePluginManifest({
   tools: [
     {
       tool_key: 'agentsam-mcp.docs', tool_name: 'agentsam_mcp_docs', display_name: 'Cloudflare docs',
-      description: 'Search Cloudflare developer documentation.', handler_type: 'cf', dispatch_target: 'mcp',
+      description: 'Search Cloudflare developer documentation.', dispatch_target: 'mcp',
       capability_key: 'cloudflare.api.docs', handler_config: { server_url: 'https://mcp.cloudflare.com/mcp', remote_tool: 'docs' },
       input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'], additionalProperties: false },
       risk_level: 'low', connector_access_class: 'read', intent_tags: ['cloudflare', 'docs', 'search'],
     },
     {
       tool_key: 'agentsam-mcp.search', tool_name: 'agentsam_mcp_search', display_name: 'Search Cloudflare API',
-      description: 'Search Cloudflare’s current OpenAPI spec for operations before executing code.', handler_type: 'cf', dispatch_target: 'plugin',
+      description: 'Search Cloudflare’s current OpenAPI spec for operations before executing code.', dispatch_target: 'plugin',
       capability_key: 'cloudflare.api.search', handler_config: { server_url: 'https://mcp.cloudflare.com/mcp', remote_tool: 'search', network: 'none' },
       input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'], additionalProperties: false },
       risk_level: 'low', connector_access_class: 'read', intent_tags: ['cloudflare', 'openapi', 'search'],
     },
     {
       tool_key: 'agentsam-mcp.execute', tool_name: 'agentsam_mcp_execute', display_name: 'Execute Cloudflare API',
-      description: 'Run an approved AgentSam Cloudflare program with the connected OAuth token kept outside generated code.', handler_type: 'cf', dispatch_target: 'codemode',
+      description: 'Run an approved AgentSam Cloudflare program with the connected OAuth token kept outside generated code.', dispatch_target: 'codemode',
       capability_key: 'cloudflare.api.execute', handler_config: { server_url: 'https://mcp.cloudflare.com/mcp', remote_tool: 'execute', network: 'cloudflare_api_only' },
       input_schema: { type: 'object', properties: { code: { type: 'string' }, account_id: { type: 'string' } }, required: ['code'], additionalProperties: false },
       risk_level: 'high', requires_approval: true, requires_confirmation: true, connector_access_class: 'write', intent_tags: ['cloudflare', 'api', 'execute'],

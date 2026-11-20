@@ -69,7 +69,7 @@ export function applyOauthPluginState(plugin, tokenRows = []) {
 }
 
 export function safePluginSettingsRecord(plugin, tools = []) {
-  const pluginTools = tools.filter((tool) => tool.plugin_id === plugin.id);
+  const pluginTools = tools.filter((tool) => tool.plugin_key === plugin.plugin_key);
   const disconnectUrl =
     typeof plugin.config?.disconnect_url === "string" &&
     plugin.config.disconnect_url.startsWith("/")

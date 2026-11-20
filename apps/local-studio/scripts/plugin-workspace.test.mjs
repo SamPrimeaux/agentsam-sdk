@@ -10,7 +10,7 @@ function fixture(){
   plugin_id TEXT,account_id TEXT,instance_key TEXT,setup_status TEXT,enabled INTEGER
  );
  CREATE TABLE agentsam_tools(
-  id TEXT,account_id TEXT,plugin_id TEXT,tool_key TEXT,handler_config TEXT,
+  id TEXT,account_id TEXT,plugin_key TEXT,tool_key TEXT,handler_config TEXT,
   is_active INTEGER,sort_priority INTEGER
  );`);
  sqlite.prepare("INSERT INTO agentsam_plugins VALUES (?,?,?)")

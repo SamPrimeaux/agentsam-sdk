@@ -697,7 +697,7 @@ export async function agentsamChat(request, env, executionCtx = null, sessionUse
           agentsam_tools_id: tool.id,
           tool_category: tool.tool_category,
           mcp_server_key: tool.mcp_server_key,
-          handler_type: tool.handler_type,
+          handler_key: tool.handler_key,
           status:
             result?.ok === true
               ? "success"

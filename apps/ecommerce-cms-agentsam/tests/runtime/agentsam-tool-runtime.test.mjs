@@ -21,7 +21,6 @@ function toolRow(overrides = {}) {
     tool_key: "growth_campaign_create",
     display_name: "Create Campaign Draft",
     tool_category: "growth.campaigns",
-    handler_type: "admin_api",
     handler_key: "growth",
     description: "Create a campaign draft",
     input_schema: '{"type":"object","properties":{"name":{"type":"string"}}}',

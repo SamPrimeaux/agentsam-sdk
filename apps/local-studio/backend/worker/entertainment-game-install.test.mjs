@@ -16,7 +16,7 @@ function fixture(){
   const sqlite=new DatabaseSync(':memory:');
   sqlite.exec("CREATE TABLE agentsam_plugins(id TEXT PRIMARY KEY,plugin_key TEXT,provider_key TEXT,plugin_kind TEXT,category TEXT,transport TEXT,auth_type TEXT,family_key TEXT,display_name TEXT,description TEXT,icon_url TEXT,metadata_json TEXT,sort_priority INTEGER)");
   sqlite.exec("CREATE TABLE agentsam_plugin_installations(account_id TEXT,plugin_id TEXT,instance_key TEXT,enabled INTEGER,setup_status TEXT,health_status TEXT,composer_visible INTEGER,settings_visible INTEGER,updated_at INTEGER,UNIQUE(account_id,plugin_id,instance_key))");
-  sqlite.exec("CREATE TABLE agentsam_tools(plugin_id TEXT,account_id TEXT)");
+  sqlite.exec("CREATE TABLE agentsam_tools(plugin_key TEXT,account_id TEXT)");
   sqlite.prepare("INSERT INTO agentsam_plugins VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
     .run(id,key,'inneranimalmedia','native','entertainment','native','none','build',
       'Wizard Chess 3D','Premium online and offline 3D chess',null,meta,75);

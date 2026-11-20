@@ -24,7 +24,6 @@ function mapToolRow(row) {
     tool_key: row.tool_key,
     display_name: row.display_name,
     tool_category: row.tool_category,
-    handler_type: row.handler_type,
     handler_key: row.handler_key || null,
     description: row.description,
     input_schema: parseJson(row.input_schema, {}),
@@ -34,7 +33,6 @@ function mapToolRow(row) {
     intent_tags: parseJson(row.intent_tags, []),
     app_id: row.app_id || null,
     plugin_key: row.plugin_key || null,
-    plugin_id: row.plugin_id || null,
     mcp_server_key: row.mcp_server_key,
     mcp_service_url: row.mcp_service_url,
     dispatch_target: row.dispatch_target,
@@ -89,14 +87,8 @@ async function matchesInstalledToolScope(env, tool, accountId) {
     const bindingName = String(cfg.binding);
     const binding = env?.[bindingName];
     if (!binding || (typeof binding !== "object" && typeof binding !== "function")) return false;
-    if (tool.handler_type === "d1" && typeof binding.prepare !== "function") return false;
-    if (tool.handler_type === "vectorize" && typeof binding.query !== "function") return false;
-    if (tool.handler_type === "ai" && typeof binding.run !== "function") return false;
-    if (tool.handler_type === "cf" && !(
-      typeof binding.list === "function" ||
-      typeof binding.get === "function" ||
-      typeof binding.run === "function"
-    )) return false;
+    const requiredMethods = Array.isArray(cfg.required_binding_methods) ? cfg.required_binding_methods : [];
+    if (requiredMethods.some((method) => typeof method !== "string" || typeof binding[method] !== "function")) return false;
   }
 
   const repos = cfg.repo_allowlist || scope.github_repos || [];
@@ -189,9 +181,9 @@ export async function listAgentSamTools(env, options = {}) {
 
   if (!includeInactive) clauses.push("is_active = 1");
   if (options.includeDegraded !== true) clauses.push("is_degraded = 0");
-  if (options.handler_type) {
-    clauses.push("handler_type = ?");
-    binds.push(options.handler_type);
+  if (options.handler_key) {
+    clauses.push("handler_key = ?");
+    binds.push(options.handler_key);
   }
   if (options.domain) {
     clauses.push("domain = ?");
@@ -351,7 +343,8 @@ export async function getToolsRegistryStatus(env) {
     env.DB.prepare(`SELECT COUNT(*) AS n FROM agentsam_tools t
       WHERE t.is_active = 1 AND (t.account_id = ? OR t.account_id IS NULL)
         AND EXISTS (SELECT 1 FROM agentsam_plugin_installations i
-          WHERE i.account_id = ? AND i.plugin_id = t.plugin_id AND i.enabled = 1)`)
+          JOIN agentsam_plugins p ON p.id = i.plugin_id
+          WHERE i.account_id = ? AND p.plugin_key = t.plugin_key AND i.enabled = 1)`)
       .bind(accountId, accountId).first().catch(() => null),
     env.DB.prepare(`SELECT COUNT(DISTINCT p.id) AS n FROM agentsam_plugin_installations i
       JOIN agentsam_plugins p ON p.id = i.plugin_id
@@ -448,7 +441,7 @@ export async function listToolsGrouped(env) {
     grouped[cat].push({
       tool_key: tool.tool_key,
       display_name: tool.display_name,
-      handler_type: tool.handler_type,
+      handler_key: tool.handler_key,
       domain: tool.domain,
       risk_level: tool.risk_level,
       requires_approval: tool.requires_approval,

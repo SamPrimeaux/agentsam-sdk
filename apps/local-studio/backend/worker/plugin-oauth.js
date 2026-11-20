@@ -94,6 +94,16 @@ export async function getOwnedCatalogPlugin(db,accountId,pluginId){
   if(!row)fail('plugin_installation_not_found');
   return row;
 }
+export async function getOwnedCatalogPluginByKey(db,accountId,pluginKey){
+  if(typeof pluginKey!=='string'||! /^[a-z0-9][a-z0-9._-]{1,127}$/i.test(pluginKey))fail('plugin_key_invalid');
+  const row=await db.prepare(
+    `SELECT p.*, i.account_id, i.instance_key AS installation_key, i.enabled AS is_enabled, i.setup_status
+     FROM agentsam_plugin_installations i JOIN agentsam_plugins p ON p.id = i.plugin_id
+     WHERE p.plugin_key = ? AND i.account_id = ? AND i.instance_key = 'catalog-v1' LIMIT 1`
+  ).bind(pluginKey,accountId).first();
+  if(!row)fail('plugin_installation_not_found');
+  return row;
+}
 function scopesFor(entry,allowWrites){
   return allowWrites ? entry.oauthScopes : entry.readOnlyScopes;
 }
@@ -245,14 +255,14 @@ function toolStatements(db,entry,installed,accountId,tools){
     const id='ast_'+crypto.randomUUID().replaceAll('-','').slice(0,16);
     const isWrite=!tool.permission.readOnly;
     statements.push(db.prepare(`INSERT INTO agentsam_tools (
-      id,account_id,plugin_id,plugin_key,tool_key,tool_name,display_name,tool_category,
-      handler_type,description,input_schema,output_schema,handler_config,intent_tags,
+      id,account_id,plugin_key,tool_key,tool_name,display_name,tool_category,
+      description,input_schema,output_schema,handler_config,intent_tags,
       risk_level,requires_approval,requires_confirmation,is_active,connector_visible,
       connector_access_class,dispatch_target,handler_key,created_at,updated_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,unixepoch(),unixepoch())`).bind(
-      id,accountId,installed.id,installed.plugin_key,tool.name,name,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?,unixepoch(),unixepoch())`).bind(
+      id,accountId,installed.plugin_key,tool.name,name,
       String(tool.title||tool.permission.title||tool.name).slice(0,140),'integrations',
-      'mcp',String(tool.description||'').slice(0,700),JSON.stringify(tool.inputSchema),
+      String(tool.description||'').slice(0,700),JSON.stringify(tool.inputSchema),
       tool.outputSchema?JSON.stringify(tool.outputSchema):null,
       JSON.stringify({remote_tool:tool.name,server_url:entry.endpointUrl,required_scopes:tool.permission.requiredScopes||tool.permission.scopes}),
       JSON.stringify([installed.plugin_key]),isWrite?'high':'low',
@@ -282,7 +292,7 @@ async function finishAuthorizedConnection(env,pending,payload,oauthState,fetcher
     allowMissingUserinfo:entry.identityMode==='oauth_state_bound',
   });
   const statements=[
-    env.DB.prepare('DELETE FROM agentsam_tools WHERE account_id = ? AND plugin_id = ?').bind(pending.account_id,pending.plugin_id),
+    env.DB.prepare('DELETE FROM agentsam_tools WHERE account_id = ? AND plugin_key = ?').bind(pending.account_id,installed.plugin_key),
     ...toolStatements(env.DB,entry,installed,pending.account_id,tools),
     env.DB.prepare(`INSERT INTO agentsam_plugin_oauth_grants (
       account_id,plugin_id,client_id,resource_url,issuer_url,credentials_ciphertext,scopes_json,expires_at
@@ -377,20 +387,20 @@ export async function getRemotePluginToken(env,accountId,pluginId,fetcher=fetch)
   return {token:refreshed.access_token,resource:grant.resource_url,scopes};
 }
 export async function runRemotePluginTool(env,accountId,tool,args,fetcher=fetch){
-  const installed=await getOwnedCatalogPlugin(env.DB,accountId,tool.plugin_id);
+  const installed=await getOwnedCatalogPluginByKey(env.DB,accountId,tool.plugin_key);
   if(installed.is_enabled!==1||installed.setup_status!=='connected')fail('plugin_oauth_not_connected');
   const metadata=typeof tool.handler_config==='string'?JSON.parse(tool.handler_config||'{}'):(tool.handler_config||{});
   if(metadata.server_url!==installed.endpoint_url||metadata.remote_tool!==tool.tool_key)fail('plugin_oauth_tool_mismatch');
-  const grant=await getRemotePluginToken(env,accountId,tool.plugin_id,fetcher);
+  const grant=await getRemotePluginToken(env,accountId,installed.id,fetcher);
   const required=Array.isArray(metadata.required_scopes)?metadata.required_scopes:[];
   if(required.length===0||!required.every(scope=>grant.scopes.includes(scope)))fail('plugin_oauth_scope_missing');
   return callRemoteMcpTool(installed.endpoint_url,grant.resource,grant.token,tool.tool_key,args,
     (url,options)=>fetchPluginResource(env,url,options,fetcher));
 }
 export async function disconnectPublicPlugin(env,accountId,pluginId){
-  await getOwnedCatalogPlugin(env.DB,accountId,pluginId);
+  const installed=await getOwnedCatalogPlugin(env.DB,accountId,pluginId);
   await env.DB.batch([
-    env.DB.prepare('DELETE FROM agentsam_tools WHERE plugin_id=? AND account_id=?').bind(pluginId,accountId),
+    env.DB.prepare('DELETE FROM agentsam_tools WHERE plugin_key=? AND account_id=?').bind(installed.plugin_key,accountId),
     env.DB.prepare('DELETE FROM agentsam_plugin_oauth_grants WHERE plugin_id=? AND account_id=?').bind(pluginId,accountId),
     env.DB.prepare(`UPDATE agentsam_plugin_installations SET setup_status='unconfigured',health_status='unknown',
       enabled=0,composer_visible=0,updated_at=unixepoch()
