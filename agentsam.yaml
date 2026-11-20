@@ -357,7 +357,7 @@ packages:
     separately_published: true
   shell_kit:
     name: "@inneranimalmedia/agentsam-shell-kit"
-    version: "2.6.15"
+    version: "2.6.16"
     path: packages/agentsam-shell-kit
     private: false
     separately_published: true
