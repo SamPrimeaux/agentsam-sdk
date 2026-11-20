@@ -101,6 +101,8 @@ export type WorkTicket = {
 
 export type WorkTicketInput = Partial<Omit<WorkTicket, "id" | "updatedAt" | "createdAt" | "closedAt">>;
 
+export type WorkArtifactCreateKind = "docs" | "slides" | "sheets" | "design" | "data" | "whiteboard";
+
 export type WorkArtifact = {
   id: string;
   name: string;
