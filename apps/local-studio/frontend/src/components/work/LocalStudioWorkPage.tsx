@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { createHttpWorkHost, createWorkCrud } from "@inneranimalmedia/agentsam-work/client";
 import { useWorkStore } from "@/lib/work/store";
 import { listLocalWorkspaceArtifacts, localArtifactTarget } from "@/lib/work/local-artifacts";
+import { startArtifactCreation } from "@/lib/work/artifact-launcher";
 import { localStudioProjectChats } from "@/lib/project-chat-links";
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, openExternalUrl } from "@/lib/desktop/tauri";
 import { WorkProduct } from "@inneranimalmedia/agentsam-work/frontend";
