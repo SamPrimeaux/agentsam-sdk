@@ -6,9 +6,9 @@ export async function readPluginWorkspace(env,accountId,pluginId,fetcher=fetch) 
   if(plugin.setup_status!=="connected"||plugin.is_enabled!==1)
     throw new Error("plugin_workspace_not_connected");
   const rows=await env.DB.prepare(`SELECT * FROM agentsam_tools
-    WHERE account_id=? AND plugin_id=? AND is_active=1
+    WHERE account_id=? AND plugin_key=? AND is_active=1
     AND tool_key LIKE '%.get_context' ORDER BY sort_priority ASC LIMIT 5`)
-    .bind(accountId,pluginId).all();
+    .bind(accountId,plugin.plugin_key).all();
   const contextTool=(rows.results||[]).find(row=>{
     const cfg=typeof row.handler_config==="string"
       ? JSON.parse(row.handler_config||"{}"):row.handler_config;

@@ -13,6 +13,12 @@ import { callCloudflareMcpTool, executeAgentSamCloudflareProgram, searchCloudfla
 import { executeCompletefulNative } from './completeful-native.js';
 import { runRemotePluginTool } from './plugin-oauth.js';
 
+function withFailureOrigin(error, origin) {
+  const failure = error && typeof error === 'object' ? error : new Error(String(error));
+  if (!failure.failureOrigin && !failure.failure_origin) failure.failureOrigin = origin;
+  return failure;
+}
+
 const LOCAL_STUDIO_CLOUDFLARE_MANIFEST = Object.freeze({
   ...CLOUDFLARE_PLUGIN_MANIFEST,
   installation_key: 'local-studio-pkce',
@@ -131,15 +137,16 @@ export async function createLocalStudioPluginRuntime(env, accountId, options = {
       await recordToolHealth(env, accountId, plugin, 'healthy', startedAt);
       return result;
     } catch (error) {
-      const status = /connection|auth/i.test(String(error?.message || '')) ? 'auth_error' : 'unhealthy';
-      await recordToolHealth(env, accountId, plugin, status, startedAt, error);
-      throw error;
+      const failure = withFailureOrigin(error, 'provider');
+      const status = /connection|auth/i.test(String(failure?.message || '')) ? 'auth_error' : 'unhealthy';
+      await recordToolHealth(env, accountId, plugin, status, startedAt, failure);
+      throw failure;
     }
   };
   const mcpDispatch = async ({ tool, args }) => {
     const startedAt = Date.now();
     try {
-      const owner = registry.plugins.find(row => row.id === tool.plugin_id);
+      const owner = registry.plugins.find(row => row.plugin_key === tool.plugin_key);
       const result = owner?.installation_key === 'catalog-v1'
         ? await runRemotePluginTool(env, accountId, tool, args, options.mcpFetch || fetch)
         : await callCloudflareMcpTool(tool.handler_config?.remote_tool || tool.handler_key, args, {
@@ -148,25 +155,30 @@ export async function createLocalStudioPluginRuntime(env, accountId, options = {
       if(owner)await recordToolHealth(env, accountId, owner, 'healthy', startedAt);
       return result;
     } catch (error) {
-      const owner=registry.plugins.find(row=>row.id===tool.plugin_id);
-      if(owner)await recordToolHealth(env, accountId, owner, /auth|scope|token/i.test(String(error?.message||''))?'auth_error':'unhealthy', startedAt, error);
-      throw error;
+      const failure = withFailureOrigin(error, 'provider');
+      const owner=registry.plugins.find(row=>row.plugin_key===tool.plugin_key);
+      if(owner)await recordToolHealth(env, accountId, owner, /auth|scope|token/i.test(String(failure?.message||''))?'auth_error':'unhealthy', startedAt, failure);
+      throw failure;
     }
   };
-  const nativeDispatch = async ({ tool, args, context }) => {
-    if (tool.handler_type === 'vectorize') {
+  const nativeDispatch = async (entry) => {
+    const { tool, args, context } = entry;
+    const registeredHandler = options.handlers?.[tool.handler_key];
+    if (typeof registeredHandler === 'function') return registeredHandler(entry);
+    if (tool.handler_config?.executor === 'vectorize' || tool.handler_key === 'vectorize') {
       return executeVectorizeTool({ tool, args, context: { ...context, env } });
     }
     if (tool.handler_key === 'completeful' || tool.plugin_key === 'completeful') {
       return executeCompletefulNative(env, tool, args);
     }
-    throw new Error(`native_handler_unavailable:${tool.handler_type || tool.handler_key || 'unknown'}`);
+    throw new Error(`native_handler_unavailable:${tool.handler_key || 'unknown'}`);
   };
   return createPluginRuntime({
     tools: registry.tools,
     accountId,
     db: env.DB,
     dispatchers: { plugin: dispatch, codemode: dispatch, mcp: mcpDispatch, native: nativeDispatch, internal: nativeDispatch },
+    handlers: options.handlers,
     // The runtime was resolved for this signed-in account. A caller-supplied
     // context may narrow that principal but must never switch to another one.
     authorizeTool: async (entry) => {
@@ -178,5 +190,6 @@ export async function createLocalStudioPluginRuntime(env, accountId, options = {
         : true;
     },
     requireApproval: options.requireApproval,
+    resolveCost: options.resolveCost,
   });
 }

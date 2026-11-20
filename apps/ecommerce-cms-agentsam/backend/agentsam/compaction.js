@@ -6,6 +6,12 @@ import { requireApplicationAccountId } from "../lib/account-context.js";
 import { trackAgentSamEvent } from "./analytics.js";
 import { listChatSessionCompactionCandidates, recordChatSessionCompaction } from "@inneranimalmedia/agentsam-cms/chat-storage";
 
+export const TOOL_RELIABILITY_ROLLUP = Object.freeze({
+  windowDays: 30,
+  minimumSampleSize: 20,
+  degradedFailureRate: 0.05,
+});
+
 export const RETENTION = {
   analyticsHotDays: 30,
   promptUsageHotDays: 30,
@@ -325,10 +331,54 @@ export async function rollupToolCallDaily(env, dateKey) {
     .run()
     .catch(() => ({ meta: { changes: 0 } }));
 
+  // Reliability is a trailing-window signal, not the daily aggregate. Keep it
+  // account-scoped, require enough real executions, and exclude policy/user
+  // blocks so they cannot make a healthy tool look degraded.
+  const accountId = requireApplicationAccountId();
+  const reliabilityStart = end - TOOL_RELIABILITY_ROLLUP.windowDays * 86400;
+  const reliabilityResult = await env.DB.prepare(
+    `WITH metrics AS (
+       SELECT tool_key,
+              COUNT(*) AS sample_count,
+              SUM(CASE WHEN status IN ('error', 'timeout') THEN 1 ELSE 0 END) AS failure_count,
+              AVG(duration_ms) AS avg_latency_ms
+       FROM agentsam_tool_call_log
+       WHERE account_id = ? AND created_at >= ? AND created_at < ?
+         AND tool_key IS NOT NULL AND tool_key != ''
+         AND status IN ('success', 'error', 'timeout')
+         AND COALESCE(failure_origin, '') NOT IN ('policy', 'user')
+       GROUP BY tool_key
+       HAVING COUNT(*) >= ?
+     )
+     UPDATE agentsam_tools
+     SET failure_rate = (
+           SELECT CAST(failure_count AS REAL) / sample_count
+           FROM metrics WHERE metrics.tool_key = agentsam_tools.tool_key
+         ),
+         avg_latency_ms = (
+           SELECT avg_latency_ms FROM metrics WHERE metrics.tool_key = agentsam_tools.tool_key
+         ),
+         is_degraded = CASE WHEN (
+           SELECT CAST(failure_count AS REAL) / sample_count
+           FROM metrics WHERE metrics.tool_key = agentsam_tools.tool_key
+         ) > ? THEN 1 ELSE 0 END
+     WHERE account_id = ? AND tool_key IN (SELECT tool_key FROM metrics)`
+  ).bind(
+    accountId,
+    reliabilityStart,
+    end,
+    TOOL_RELIABILITY_ROLLUP.minimumSampleSize,
+    TOOL_RELIABILITY_ROLLUP.degradedFailureRate,
+    accountId,
+  ).run();
+
   return {
     ok: true,
     rows: dailyResult.meta?.changes ?? 0,
     lifetime_rows: lifetimeResult.meta?.changes ?? 0,
+    health_rows: reliabilityResult.meta?.changes ?? 0,
+    health_window_days: TOOL_RELIABILITY_ROLLUP.windowDays,
+    health_minimum_sample_size: TOOL_RELIABILITY_ROLLUP.minimumSampleSize,
   };
 }
 

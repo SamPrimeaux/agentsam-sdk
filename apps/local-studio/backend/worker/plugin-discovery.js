@@ -248,7 +248,7 @@ export async function listCatalogForAccount(env, accountId, fetcher = fetch) {
         availability: row?.setup_status === 'connected'
           && Number(row?.is_enabled) === 1
           && row?.health_status === 'healthy'
-          && installed.tools.some(tool=>tool.plugin_id === row?.id)
+          && installed.tools.some(tool=>tool.plugin_key === row?.plugin_key)
           ? 'connected' : row ? 'requires_connection' : 'available',
       };
     }),
@@ -346,7 +346,9 @@ export async function removeCatalogInstallation(env,accountId,pluginId) {
   ).bind(pluginId,accountId,installKey).first();
   if (!row) throw new Error('plugin_installation_not_found');
   const tools = await env.DB.prepare(
-    'SELECT COUNT(*) AS total FROM agentsam_tools WHERE plugin_id = ? AND account_id = ?'
+    `SELECT COUNT(*) AS total FROM agentsam_tools
+     WHERE plugin_key = (SELECT plugin_key FROM agentsam_plugins WHERE id = ?)
+       AND account_id = ?`
   ).bind(pluginId,accountId).first();
   if (Number(tools?.total || 0) > 0) throw new Error('plugin_remove_requires_disconnect');
   await env.DB.prepare(

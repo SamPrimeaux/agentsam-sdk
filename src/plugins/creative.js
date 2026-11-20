@@ -8,7 +8,7 @@ export const GSAP_CREATIVE_PLUGIN=normalizePluginManifest({
  composer_visible:false,config:{enabledModules:[]},
  capabilities:[{capability_key:'gsap-creative.sample',domain:'creative',verb:'sample',description:'Sample GSAP easing',is_mutating:false}],
  metadata:{source:'https://github.com/greensock/GSAP',version:'3.15.0',license:'GSAP Standard License',optional:true,modules:MODULES,delivery:'prototype/not-integrated',productionReview:'Record product licensing decision before commercial rollout.'},
- tools:[{tool_key:'gsap-creative.sample',display_name:'Sample GSAP easing',description:'Sample an installed GSAP easing at an integer-microsecond time.',dispatch_target:'native',handler_type:'media',handler_key:'gsap-creative.sample',connector_visible:false,input_schema:{type:'object',properties:{timeUs:{type:'integer',minimum:0},durationUs:{type:'integer',minimum:1},ease:{type:'string',enum:['none','power1.out','power2.out','power3.inOut','sine.inOut','back.out']}},required:['timeUs','durationUs'],additionalProperties:false}}],
+ tools:[{tool_key:'gsap-creative.sample',display_name:'Sample GSAP easing',description:'Sample an installed GSAP easing at an integer-microsecond time.',handler_key:'gsap-creative.sample',connector_visible:false,input_schema:{type:'object',properties:{timeUs:{type:'integer',minimum:0},durationUs:{type:'integer',minimum:1},ease:{type:'string',enum:['none','power1.out','power2.out','power3.inOut','sine.inOut','back.out']}},required:['timeUs','durationUs'],additionalProperties:false}}],
 });
 export async function installGSAPCreativePlugin(db,{accountId,environment='production',enabledModules=[]}={}) {
  if(!Array.isArray(enabledModules)||enabledModules.some(x=>!MODULES.includes(x)))throw new Error('copro_gsap_module_unknown');
@@ -24,7 +24,7 @@ export function createGSAPCreativeDispatcher({db,gsap,modules={}}={}) {
   if(tool?.handler_key!=='gsap-creative.sample'||tool?.tool_key!=='gsap-creative.sample')throw new Error('copro_creative_handler_unknown');
   if(!context.accountId)throw new Error('plugin_account_id_required');
   const installations=await listPlugins(db,{accountId:context.accountId,environment:context.environment||'production'});
-  const installed=installations.find(p=>p.plugin_key==='gsap-creative'&&p.account_id===context.accountId&&Number(p.is_enabled)===1&&p.id===tool.plugin_id);
+  const installed=installations.find(p=>p.plugin_key==='gsap-creative'&&p.account_id===context.accountId&&Number(p.is_enabled)===1&&p.plugin_key===tool.plugin_key);
   if(!installed)throw new Error('copro_gsap_plugin_not_enabled');
   if(!gsap?.parseEase||!gsap?.registerPlugin)throw new Error('copro_gsap_runtime_unavailable');
   const enabled=installed.config?.enabledModules||[];

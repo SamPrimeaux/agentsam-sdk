@@ -10,7 +10,7 @@ const ACCOUNT = "acct_authorized";
 const ROOT_REPO = "org/installation";
 const row = (tool_key, extra = {}) => ({
   tool_key, tool_name: tool_key, display_name: tool_key, tool_category: "test",
-  capability_key: "agentsam.models.read", handler_type: "d1",
+  capability_key: "agentsam.models.read", handler_key: tool_key,
   handler_config: "{}", resource_scope_json: "{}", input_schema: '{"type":"object"}',
   is_active: 1, is_degraded: 0, account_id: ACCOUNT, ...extra,
 });
@@ -108,7 +108,6 @@ test("bad GitHub allowlist or mismatched account denies only that tool", async (
   __setApplicationAccountId(ACCOUNT);
   const ping = row("agentsam_ping");
   const repo = row("agentsam_github_repo_list", {
-    handler_type: "mcp",
     handler_config: JSON.stringify({ repo_allowlist: [ROOT_REPO] }),
   });
   const crossed = row("completeful_catalog_list", {
@@ -129,12 +128,11 @@ test("bad GitHub allowlist or mismatched account denies only that tool", async (
 test("runtime bindings are verified without any hardcoded FNF platform-scope names", async () => {
   __setApplicationAccountId(ACCOUNT);
   const vector = row("search_vector", {
-    handler_type: "vectorize",
-    handler_config: '{"binding":"VECTOR_BINDING"}',
+    handler_key: "vectorize",
+    handler_config: '{"binding":"VECTOR_BINDING","required_binding_methods":["query"],"executor":"vectorize"}',
   });
   const image = row("image_transform", {
-    handler_type: "cf",
-    handler_config: '{"binding":"ASSETS"}',
+    handler_config: '{"binding":"ASSETS","required_binding_methods":["list"]}',
   });
   const db = dbFixture({ tools: [vector, image] });
   const visible = await listAgentSamTools({

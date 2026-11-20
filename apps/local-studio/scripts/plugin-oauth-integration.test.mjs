@@ -12,12 +12,13 @@ const resource=origin+'/mcp';
 const endpoint=origin+'/mcp/brand';
 const accountId='au_test';
 const pluginId='plg_authdemo';
+const pluginKey='agentsam-brand';
 const token='ags_test_access_token_long_enough_123456789';
 const callbackUrl='https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback';
 test('OAuth success returns directly to the D1-selected plugin in Studio, not a timer page',()=>{
   const destination=new URL(pluginOAuthReturnUrl(callbackUrl+'?code=secret&state=opaque','agentsam-brand'));
   assert.equal(destination.origin,'https://agentsam.inneranimalmedia.com');
-  assert.equal(destination.pathname,'/admin/settings/customize');
+  assert.equal(destination.pathname,'/settings/customize');
   assert.equal(destination.searchParams.get('view'),'plugins');
   assert.equal(destination.searchParams.get('connected'),'agentsam-brand');
   assert.equal(destination.searchParams.has('code'),false);
@@ -46,7 +47,7 @@ function dbFixture() {
   sqlite.prepare(`INSERT INTO agentsam_plugins(
     id,plugin_key,family_key,provider_key,plugin_kind,display_name,transport,auth_type,endpoint_url,category,composer_visible
   ) VALUES (?,?,'connections',?,'mcp','AgentSam Brand','remote_jsonrpc','oauth',?,'Productivity',0)`).run(
-    pluginId,'agentsam-brand','agentsam-brand',endpoint
+    pluginId,pluginKey,pluginKey,endpoint
   );
   sqlite.prepare(`INSERT INTO agentsam_plugin_installations(account_id,plugin_id,instance_key,enabled,composer_visible)
     VALUES (?,?,'catalog-v1',0,0)`).run(accountId,pluginId);
@@ -149,7 +150,7 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.equal(installed.setup_status,'connected');
   assert.equal(installed.enabled,1);
   assert.equal(installed.health_status,'healthy');
-  const registered=sqlite.prepare('SELECT * FROM agentsam_tools WHERE plugin_id=?').all(pluginId);
+  const registered=sqlite.prepare('SELECT * FROM agentsam_tools WHERE plugin_key=?').all(pluginKey);
   assert.equal(registered.length,1);
   assert.equal(registered[0].tool_key,'brand.get_context');
   assert.equal(registered[0].requires_approval,0);
@@ -179,7 +180,7 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.equal(catalog.plugins[0].availability,'connected');
   const disconnected=await disconnectPublicPlugin(env,accountId,pluginId);
   assert.equal(disconnected.disconnected,true);
-  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_tools WHERE plugin_id=?').get(pluginId).count,0);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_tools WHERE plugin_key=?').get(pluginKey).count,0);
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_plugin_oauth_grants').get().count,0);
   assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugin_installations').get().setup_status,'unconfigured');
   sqlite.close();
@@ -224,7 +225,7 @@ test('OAuth refuses a mismatched resource audience without enabling the plugin',
   const state=new URL(started.authorize_url).searchParams.get('state');
   const request=new Request('https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback?code=samplecode&state='+state);
   await assert.rejects(completePluginOAuth(env,request,mockFetcher({wrongAudience:true}).fetcher),/plugin_oauth_identity_mismatch/);
-  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_tools WHERE plugin_id=?').get(pluginId).count,0);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_tools WHERE plugin_key=?').get(pluginKey).count,0);
   assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugin_installations').get().setup_status,'unconfigured');
   sqlite.close();
 });
@@ -252,12 +253,12 @@ test('Campaign keeps writes unavailable without scopes and requires approval aft
   const started=await beginPluginOAuth(env,accountId,pluginId,{callbackUrl},readOnly.fetcher);
   assert.equal(new URL(started.authorize_url).searchParams.get('scope'),'campaign:read');
   await completePluginOAuth(env,new Request('https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback?code=one&state='+new URL(started.authorize_url).searchParams.get('state')),readOnly.fetcher);
-  assert.deepEqual(sqlite.prepare('SELECT tool_key FROM agentsam_tools WHERE plugin_id=?').all(pluginId).map(r=>r.tool_key),['campaign.get_context']);
+  assert.deepEqual(sqlite.prepare('SELECT tool_key FROM agentsam_tools WHERE plugin_key=?').all('agentsam-campaign').map(r=>r.tool_key),['campaign.get_context']);
   const elevated=mockFetcher({metadata:campaign,tools:availableTools,scopes:['campaign:read','campaign:brief:write']});
   const elevatedStart=await beginPluginOAuth(env,accountId,pluginId,{allowWrites:true,callbackUrl},elevated.fetcher);
   assert.equal(new URL(elevatedStart.authorize_url).searchParams.get('scope'),'campaign:brief:write campaign:read');
   await completePluginOAuth(env,new Request('https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback?code=two&state='+new URL(elevatedStart.authorize_url).searchParams.get('state')),elevated.fetcher);
-  const write=sqlite.prepare("SELECT * FROM agentsam_tools WHERE tool_key='campaign.brief.save' AND plugin_id=?").get(pluginId);
+  const write=sqlite.prepare("SELECT * FROM agentsam_tools WHERE tool_key='campaign.brief.save' AND plugin_key=?").get('agentsam-campaign');
   assert.equal(write.requires_approval,1);
   assert.equal(write.connector_access_class,'write');
   const denied=await createLocalStudioPluginRuntime(env,accountId,{

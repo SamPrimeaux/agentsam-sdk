@@ -50,11 +50,9 @@ export const COMPLETEFUL_PLUGIN_MANIFEST = normalizePluginManifest({
       : `Execute the curated Completeful ${display_name.toLowerCase()} capability.`,
     tool_category: 'ecommerce-cms-agentsam',
     // The live agentsam_tools contract reserves `cms` as the native family;
-    // handler_key carries the provider identity so older D1 schemas remain
-    // valid while dispatch stays generic.
-    handler_type: 'cms',
+    // The plugin's native transport selects the executor; handler_key selects
+    // the concrete Completeful operation family.
     handler_key: 'completeful',
-    dispatch_target: 'internal',
     capability_key,
     handler_config: { family: 'ecommerce-cms-agentsam', operation: capability_key },
     input_schema: tool_key === 'completeful_catalog_semantic_search'

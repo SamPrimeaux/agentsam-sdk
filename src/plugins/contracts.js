@@ -34,15 +34,14 @@ export function normalizePluginManifest(value) {
     if (!toolKey.startsWith(`${pluginKey}.`) && !toolKey.startsWith(`${pluginKey}_`)) {
       throw new Error(`plugin_tool_key_must_start_with:${pluginKey}.`);
     }
-    const dispatchTarget = clean(tool.dispatch_target || 'plugin');
-    if (!DISPATCH_TARGETS.has(dispatchTarget)) throw new Error(`invalid_dispatch_target:${dispatchTarget}`);
+    const dispatchTarget = clean(tool.dispatch_target) || null;
+    if (dispatchTarget && !DISPATCH_TARGETS.has(dispatchTarget)) throw new Error(`invalid_dispatch_target:${dispatchTarget}`);
     return Object.freeze({
       tool_key: toolKey,
       tool_name: clean(tool.tool_name || toolKey.replaceAll('.', '_')),
       display_name: clean(tool.display_name || toolKey),
       description: clean(tool.description),
       tool_category: clean(tool.tool_category || 'integrations'),
-      handler_type: clean(tool.handler_type || 'integrations'),
       handler_key: clean(tool.handler_key || toolKey),
       dispatch_target: dispatchTarget,
       capability_key: clean(tool.capability_key || toolKey),

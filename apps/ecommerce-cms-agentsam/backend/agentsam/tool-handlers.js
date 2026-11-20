@@ -32,9 +32,9 @@ const COMPLETEFUL_EXECUTABLE_OPERATIONS = new Set([
 
 export function isAgentSamToolExecutable(tool) {
   if (!tool?.tool_key) return false;
-  if (tool.handler_type === "vectorize" || tool.tool_key === "fnf_semantic_search") return true;
+  if (tool.handler_key === "vectorize" || tool.handler_config?.executor === "vectorize" || tool.tool_key === "fnf_semantic_search") return true;
   if (CORE_EXECUTABLE_TOOL_KEYS.has(tool.tool_key)) return true;
-  if (tool.handler_type === "admin_api" && ["growth", "mail"].includes(tool.handler_key)) return true;
+  if (["growth", "mail"].includes(tool.handler_key)) return true;
   if (tool.handler_key === "completeful") {
     return COMPLETEFUL_EXECUTABLE_OPERATIONS.has(
       String(tool.handler_config?.operation || "").toLowerCase(),
@@ -83,7 +83,6 @@ export async function executeAgentSamTool(env, toolKey, params = {}, options = {
       ok: false,
       error: "handler_not_implemented",
       tool_key: toolKey,
-      handler_type: tool.handler_type,
       handler_key: tool.handler_key || null,
     };
   }
@@ -91,7 +90,7 @@ export async function executeAgentSamTool(env, toolKey, params = {}, options = {
   const gated = writeGate(tool, options);
   if (gated) return gated;
 
-  if (toolKey === "fnf_semantic_search" || tool.handler_type === "vectorize") {
+  if (toolKey === "fnf_semantic_search" || tool.handler_key === "vectorize" || tool.handler_config?.executor === "vectorize") {
     return executeFnfSemanticSearch(env, {
       ...params,
       source_type: params.source_type || tool.handler_config?.default_source_type || null,
@@ -102,7 +101,7 @@ export async function executeAgentSamTool(env, toolKey, params = {}, options = {
     return executeCoreTool(env, tool, params, options);
   }
 
-  if (tool.handler_type === "admin_api") {
+  if (["growth", "mail"].includes(tool.handler_key)) {
     return executeAdminAppTool(env, tool, params, options);
   }
 
@@ -114,6 +113,6 @@ export async function executeAgentSamTool(env, toolKey, params = {}, options = {
     ok: false,
     error: "handler_not_implemented",
     tool_key: toolKey,
-    handler_type: tool.handler_type,
+    handler_key: tool.handler_key || null,
   };
 }

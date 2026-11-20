@@ -16,9 +16,9 @@ test("media executable keys correspond to real handlers, not decorative planned 
   for (const key of ["commerce_mockup_render", "media_image_generate", "media_image_background_remove", "media_image_optimize",
     "media_image_edit", "media_image_resample", "commerce_artwork_preflight"]) {
     assert.equal(CORE_EXECUTABLE_TOOL_KEYS.has(key), true);
-    assert.equal(isAgentSamToolExecutable({ tool_key: key, handler_type: "core" }), true);
+    assert.equal(isAgentSamToolExecutable({ tool_key: key }), true);
   }
-  assert.equal(isAgentSamToolExecutable({ tool_key: "media_image_upscale", handler_type: "core" }), false);
+  assert.equal(isAgentSamToolExecutable({ tool_key: "media_image_upscale" }), false);
 });
 
 test("media writes cannot bypass the AgentSam confirmation gate", async () => {
@@ -26,7 +26,7 @@ test("media writes cannot bypass the AgentSam confirmation gate", async () => {
   let touched = false;
   const row = {
     id: "t_media_edit", tool_name: "media_image_edit", tool_key: "media_image_edit",
-    display_name: "Edit image", handler_type: "core", input_schema: '{"type":"object"}',
+    display_name: "Edit image", input_schema: '{"type":"object"}',
     handler_config: "{}", resource_scope_json: '{"account_id":"acct_test"}',
     connector_access_class: "write", is_active: 1, is_degraded: 0,
     risk_level: "medium", requires_confirmation: 0,
