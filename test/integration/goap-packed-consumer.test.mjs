@@ -11,7 +11,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 function run(command, args, cwd) {
   const env = { ...process.env };
   for (const key of Object.keys(env)) {
-    if (/^npm_config_allow[_-]?scripts$/i.test(key)) delete env[key];
+    // npm publish --dry-run exports npm_config_dry_run; a child npm pack would then write no tarball.
+    if (/^npm_config_(allow[_-]?scripts|dry[_-]?run)$/i.test(key)) delete env[key];
   }
   return execFileSync(command, args, {
     cwd,
