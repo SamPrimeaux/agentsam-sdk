@@ -219,6 +219,33 @@ function align() {
     if (!dryRun) fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
     console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} coordinated ecommerce product ${rel}@${targetVersion}`);
   }
+  // Local Studio npm 10 product lock: first-party workspace/link entries follow
+  // the train; registry-resolved entries keep their genuinely published version.
+  {
+    const rel = 'apps/local-studio/package-lock.json';
+    const file = path.join(root, rel);
+    if (fs.existsSync(file)) {
+      const lock = read(file);
+      const from = lock.version;
+      if (from && from !== targetVersion) {
+        const isRegistry = (entry) => typeof entry?.resolved === 'string' && /^https?:/.test(entry.resolved);
+        lock.version = targetVersion;
+        for (const entry of Object.values(lock.packages || {})) {
+          if (isRegistry(entry)) continue;
+          if (entry.version === from) entry.version = targetVersion;
+          for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+            for (const [dep, range] of Object.entries(entry[field] || {})) {
+              if (dep.startsWith('@inneranimalmedia/') && range === from) entry[field][dep] = targetVersion;
+            }
+          }
+        }
+        changedFiles += 1;
+        changedVersions += 1;
+        if (!dryRun) fs.writeFileSync(file, `${JSON.stringify(lock, null, 2)}\n`);
+        console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} local-studio npm10 lock ${from} -> ${targetVersion} · ${rel}`);
+      }
+    }
+  }
   console.log(`${dryRun ? 'DRY RUN' : 'DONE'} files=${changedFiles} versions=${changedVersions} dependency_pins=${changedEdges}`);
 }
 
