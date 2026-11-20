@@ -1863,7 +1863,7 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 .agentsam-artifact-hub__create-art {display:grid;place-items:center;aspect-ratio:1.35/1;min-height:48px;border:1px solid color-mix(in srgb,var(--agentsam-work-text) 7%,transparent);border-radius:9px;background:color-mix(in srgb,var(--agentsam-work-accent) 20%,var(--agentsam-work-panel));color:var(--agentsam-work-text);transition:transform 140ms ease,border-color 140ms ease;}
 .agentsam-artifact-hub__create-card:hover .agentsam-artifact-hub__create-art {transform:translateY(-2px);border-color:color-mix(in srgb,var(--agentsam-work-accent) 55%,var(--agentsam-work-border));}
 .agentsam-artifact-hub__create-card[data-kind="docs"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-accent) 26%,var(--agentsam-work-panel));color:var(--agentsam-work-accent);}
-.agentsam-artifact-hub__create-card[data-kind="slides"] .agentsam-artifact-hub__create-art {background:#693014;color:#ffc29c;}
+.agentsam-artifact-hub__create-card[data-kind="slides"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-warning) 26%,var(--agentsam-work-panel));color:var(--agentsam-work-warning);}
 .agentsam-artifact-hub__create-card[data-kind="sheets"] .agentsam-artifact-hub__create-art {background:#174c2b;color:#a3e7ad;}
 .agentsam-artifact-hub__create-card[data-kind="design"] .agentsam-artifact-hub__create-art {background:#3e2c75;color:#d3c4ff;}
 .agentsam-artifact-hub__create-card[data-kind="data"] .agentsam-artifact-hub__create-art {background:#6c252c;color:#ffb7bd;}
