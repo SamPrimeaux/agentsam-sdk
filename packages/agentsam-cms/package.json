@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cms",
-  "version": "2.6.15",
+  "version": "2.6.16",
   "description": "Canonical CMS operations for merchant Page Editor, Theme Studio and publication with host-owned persistence; no SQL bootstrap.",
   "type": "module",
   "files": [
@@ -42,6 +42,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-contracts": "2.6.15"
+    "@inneranimalmedia/agentsam-contracts": "2.6.16"
   }
 }
