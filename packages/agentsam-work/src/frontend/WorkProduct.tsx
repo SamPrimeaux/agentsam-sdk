@@ -80,6 +80,8 @@ export function WorkProduct({
   headerActions?: ReactNode;
   /** Host control for knowledge / codebase indexing on the project page. */
   knowledgeAction?: ReactNode;
+  /** Start a new artifact in the appropriate lead-chat or specialist workspace. */
+  onCreateArtifact?: (kind: WorkArtifactCreateKind) => void;
 }) {
   const [range, setRange] = useState<{ from?: string; to?: string }>({});
   const calendarRange = surface === "calendar" && range.from ? range : {};
