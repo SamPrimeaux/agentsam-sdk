@@ -291,7 +291,12 @@
 
 /* Supplier-backed collection pack coverage; scoped to Collections Studio only. */
 .cs-destination-panel { padding: 28px; }
-.cs-destination-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.cs-destination-panel { max-width: 840px; margin-inline: auto; display: grid; gap: 17px; }
+.cs-destination-panel > p { max-width: 640px; color: var(--cs-sub); line-height: 1.6; }
+.cs-destination-fields { max-width: 600px; display: grid; gap: 8px; }
+.cs-destination-fields label { font-weight: 650; font-size: 13px; }
+.cs-destination-fields small { color: var(--cs-sub); line-height: 1.5; }
+.cs-destination-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 
 /* Supplier-backed collection pack coverage; scoped to Collections Studio only. */
 .cs-pack-coverage { margin: 14px 0; border: 1px solid var(--cs-border, #d5d9dc); border-radius: 14px; padding: 16px; background: var(--cs-card); }

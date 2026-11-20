@@ -31,7 +31,8 @@ export default function CollectionEditor() {
   const navigate=useNavigate();
   const route=useLocation();
   const selectedSiteId=useMemo(()=>collectionSiteId(),[route.search]);
-  const [availableSites,setAvailableSites]=useState<{id:string;name:string;status?:string}[]>([]);
+  const [availableSites,setAvailableSites]=useState<{id:string;name:string;slug?:string;primary_domain?:string|null;status?:string;is_default?:boolean|number}[]>([]);
+  const [destinationSiteId,setDestinationSiteId]=useState('');
   const [siteError,setSiteError]=useState("");
   const [form,setForm]=useState<CollectionForm>(initialCollection);
   const [collection,setCollection]=useState<Collection|null>(null);
@@ -53,8 +54,16 @@ export default function CollectionEditor() {
   useEffect(()=>{
     if (editId || selectedSiteId) return;
     let live=true;
-    adminFetch<{ok:boolean;sites:{id:string;name:string;status?:string}[]}>("/api/admin/cms/sites")
-      .then(result=>{if(live)setAvailableSites((result.sites||[]).filter(site=>site.status!=="archived"));})
+    adminFetch<{ok:boolean;default_site_id?:string|null;sites:{id:string;name:string;slug?:string;primary_domain?:string|null;status?:string;is_default?:boolean|number}[]}>("/api/admin/cms/sites")
+      .then(result=>{
+        if(!live)return;
+        const sites=(result.sites||[]).filter(site=>site.status!=="archived" &&
+          !(site.status==="draft" && site.slug?.startsWith("theme-draft-")));
+        setAvailableSites(sites);
+        const preferred=result.default_site_id || sites.find(site=>site.is_default)?.id ||
+          (sites.length===1 ? sites[0].id : '');
+        setDestinationSiteId(current=>sites.some(site=>site.id===current)?current:preferred);
+      })
       .catch(error=>{if(live)setSiteError(error instanceof Error?error.message:"Unable to load your stores");});
     return()=>{live=false;};
   },[editId,selectedSiteId]);
@@ -206,14 +215,24 @@ export default function CollectionEditor() {
   if(!editId && !selectedSiteId) return <main className="cs-workspace"><div className="cs-container">
     <div className="cs-breadcrumb"><Link to={collectionHref("/collections")}>Collections</Link><span>/</span><strong>New collection</strong></div>
     <section className="cs-panel cs-destination-panel">
-      <h1>Where will this collection be published?</h1>
-      <p>Your account-wide library includes every store. Choose a destination only when creating a store-owned collection.</p>
+      <span className="cs-overline">COLLECTION STUDIO · NEW COLLECTION</span>
+      <h1>Create a collection</h1>
+      <p>Choose the store that will own this collection. You can build its product lineup, imagery and presentation before publishing.</p>
       {siteError && <div className="cs-alert error" role="alert">{siteError}</div>}
-      <div className="cs-destination-list">
-        {availableSites.map(site=><button className="cs-button" type="button" key={site.id}
-          onClick={()=>navigate(collectionHref("/collections/new",site.id),{replace:true})}>
-          {site.name}
-        </button>)}
+      <div className="cs-destination-fields">
+        <label htmlFor="cs-destination-store">Online store</label>
+        <select id="cs-destination-store" value={destinationSiteId} onChange={event=>setDestinationSiteId(event.target.value)}>
+          <option value="">{availableSites.length ? "Select a store" : "No stores available"}</option>
+          {availableSites.map(site=><option key={site.id} value={site.id}>
+            {site.name} — {site.primary_domain || site.slug || site.id}{site.status==="draft" ? " (Draft)" : ""}
+          </option>)}
+        </select>
+        <small>Collections belong to one store. Draft theme previews are not separate storefront destinations.</small>
+      </div>
+      <div className="cs-destination-actions">
+        <Link className="cs-button" to={collectionHref("/collections",null)}>Back to collections</Link>
+        <button className="cs-button primary" type="button" disabled={!destinationSiteId}
+          onClick={()=>navigate(collectionHref("/collections/new",destinationSiteId),{replace:true})}>Continue to editor</button>
       </div>
       {!siteError && !availableSites.length && <p>Loading your stores, or no stores are available to this account.</p>}
     </section>

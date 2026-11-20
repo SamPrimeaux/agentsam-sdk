@@ -178,3 +178,16 @@ test('unregistered ecommerce tools never masquerade as installed admin Apps',()=
   assert.deepEqual(withInstalledApps(base,installed).apps.map(row=>row.id),['local-studio','growth']);
   assert.deepEqual(withInstalledApps(base,[{...installed[0],installed:false}]).apps.map(row=>row.id),['local-studio']);
 });
+
+
+test('installed Commerce CMS does not duplicate canonical Online Store navigation',()=>{
+  const base={...defaults,channels:[{id:'online-store',label:'Online Store',href:'/admin/store'}]};
+  const installed=[
+    {key:'ecommerce-cms-agentsam',label:'Ecommerce + CMS',href:'/apps/ecommerce-cms-agentsam',kind:'app',installable:true,installed:true,enabled:true,surfaces:['admin-nav']},
+    {key:'cad-creator',label:'CAD Creator',href:'/admin/cad',kind:'app',installable:true,installed:true,enabled:true,surfaces:['admin-nav']},
+  ];
+  const result=withInstalledApps(base,installed);
+  assert.equal(result.apps.some(app=>app.pluginKey==='ecommerce-cms-agentsam'),false);
+  assert.equal(result.apps.some(app=>app.id==='cad-creator'),true);
+  assert.equal(installed[0].installed,true);
+});
