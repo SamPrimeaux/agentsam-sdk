@@ -368,7 +368,7 @@ export function WorkProduct({
         initialView={(() => {
           if (typeof window === "undefined") return "all";
           const value = new URLSearchParams(window.location.search).get("view");
-          return value === "recent" || value === "starred" || value === "trash" || value === "shared"
+          return value === "yours" || value === "recent" || value === "starred" || value === "trash" || value === "shared"
             ? value : "all";
         })()}
       /> : null}
