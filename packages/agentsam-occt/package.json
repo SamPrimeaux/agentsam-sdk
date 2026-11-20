@@ -24,6 +24,11 @@
     "prepare": "npm run build",
     "test": "node --experimental-strip-types --test test/*.test.mjs"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-occt"
+  },
   "files": [
     "dist/",
     "src/",
