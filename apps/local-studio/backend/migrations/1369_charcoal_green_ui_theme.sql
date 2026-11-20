@@ -1,3 +1,4 @@
+-- agentsam-engine: d1
 -- Charcoal green: brand-neutral platform UI theme (spec sheet source of truth).
 -- Platform stock theme: account_id NULL, public. D1 row is canonical; the theme-store
 -- package (cms/ui-themes/v1/charcoal-green/<hash>/) is compiled from it by
