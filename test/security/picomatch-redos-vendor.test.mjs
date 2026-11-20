@@ -34,7 +34,6 @@ const locks = [
   'apps/samsketch/package-lock.json',
   'apps/samspeaks/package-lock.json',
   'apps/ecommerce-cms-agentsam/frontend/package-lock.json',
-  'apps/cad-creator/reference/robotics-donor/4aa63fff4149/package-lock.json',
   'packages/theme-plain-jane/source/package-lock.json',
 ];
 
