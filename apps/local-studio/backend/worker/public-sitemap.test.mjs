@@ -189,6 +189,22 @@ test("sitemap slash alias redirects to the canonical human-readable route", asyn
   assert.equal(response.headers.get("location"), "https://agentsam.inneranimalmedia.com/sitemap");
 });
 
+test("sitemap rejects backslash paths that could normalize into protected routes", async () => {
+  const entries = await resolvePublicSitemapEntries(
+    sitemapDb(agentSamSite, [{
+      route_path: "/auth\\login",
+      title: "Login alias",
+      page_type: "page",
+      requires_auth: 0,
+      seo_json: "{}",
+    }]),
+    agentSamSite,
+    new Request("https://agentsam.inneranimalmedia.com/sitemap.xml"),
+  );
+
+  assert.equal(entries.some(entry => entry.loc.includes("/auth/")), false);
+});
+
 test("tenant sitemap is scoped to that site's published pages without AgentSam static entries", async () => {
   const tenant = {
     id: "site_customer",
