@@ -2442,8 +2442,14 @@
       "commands": [],
       "evidence": {
         "directory": "packages/theme-scenes",
+        "host_integration": "not-verified",
         "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-scenes/README.md"
+        "readme": "packages/theme-scenes/README.md",
+        "runtime_proof": "portable-scene-composition-and-cms-renderer-contract-tests",
+        "tests": [
+          "packages/theme-scenes/test/theme-scenes.test.mjs",
+          "packages/theme-scenes/test/cms.test.mjs"
+        ]
       },
       "execution_domains": [
         "creative",

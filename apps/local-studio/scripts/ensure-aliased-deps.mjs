@@ -19,7 +19,7 @@ const root = path.resolve(studioRoot, '../..');
 const packagesRoot = path.join(root, 'packages');
 const studioNodeModules = path.join(studioRoot, 'node_modules');
 
-/** Packages whose /src is aliased from apps/local-studio/vite.config.ts */
+/** Source-aliased packages plus agentsam-ide, whose peer/build dependencies are staged beside its package dist. */
 const ALIASED = ['agentsam-ide', 'agentsam-nav', 'agentsam-workbench', 'agentsam-settings', 'agentsam-analytics'];
 
 const workspacePackages = new Map();
@@ -256,6 +256,11 @@ for (const name of ALIASED) {
   // The app lock already contains transitive package dependencies. Vite's
   // source aliases need their resolution paths available in each sibling.
   for (const dep of Object.keys(deps)) linkInstalledClosure(pkgDir, dep);
+
+  // Local Studio rebuilds the IDE distribution on every hosted/desktop build,
+  // so its package-local TypeScript and React declarations must be available
+  // even when an older dist entry already exists.
+  if (name === 'agentsam-ide') linkBuildTooling(pkgDir, pkg);
 
   if (!packageReady(pkgDir) && pkg?.scripts?.build) {
     linkBuildTooling(pkgDir, pkg);

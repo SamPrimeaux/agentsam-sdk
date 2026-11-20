@@ -37,7 +37,14 @@ test('catalog is generated and unreviewed packages remain explicitly drafts', ()
     assert.ok(item.evidence?.runtime_proof, item.name + ': missing runtime proof');
     assert.ok(item.evidence?.tests?.length, item.name + ': missing tests');
     assert.ok(['not-verified', 'sdk-cli-bound'].includes(item.evidence.host_integration), item.name + ': invalid host integration evidence');
-    assert.equal(item.registry?.public_claim, false);
+    assert.equal(typeof item.registry?.public_claim, 'boolean', item.name + ': public_claim must be explicit');
+    const packageManifestPath = new URL('../../' + item.evidence.directory + '/package.json', import.meta.url);
+    assert.ok(existsSync(packageManifestPath), item.name + ': missing package manifest');
+    const packageManifest = JSON.parse(readFileSync(packageManifestPath, 'utf8'));
+    if (item.registry.public_claim === true) {
+      assert.notEqual(packageManifest.private, true, item.name + ': public claim conflicts with private package');
+      assert.equal(packageManifest.publishConfig?.access, 'public', item.name + ': public claim requires public npm access');
+    }
   }
 });
 
