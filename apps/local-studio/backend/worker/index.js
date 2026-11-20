@@ -1132,7 +1132,7 @@ export default {
         return handleCmsWorkerRequest(new Request(hostUrl, request), env, principal.id);
       }
       let cmsSite = null;
-      if (isSiteScopedCmsAdminApi(url.pathname)) {
+      if (isSiteScopedCmsAdminApi(url.pathname, request)) {
         const selector = await readCmsSiteSelector(request);
         const access = await resolveCmsSiteAccess(env.DB, principal.id, selector,
           /\/(?:publish|rollback)$/.test(url.pathname) ? "publish" : ["GET", "HEAD"].includes(request.method) ? "read" : "write",
