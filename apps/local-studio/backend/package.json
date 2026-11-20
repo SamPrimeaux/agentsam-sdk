@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --test worker/agentsam-forms.test.mjs worker/apps-launcher.test.mjs worker/apps-launcher-lifecycle.test.mjs worker/browser-history.test.mjs worker/browser-trust.test.mjs worker/plugin-side-stages.test.mjs worker/design-canvas-unified.test.mjs worker/public-site.test.mjs worker/public-sitemap.test.mjs"
+    "test": "node --test worker/agentsam-forms.test.mjs worker/apps-launcher.test.mjs worker/apps-launcher-lifecycle.test.mjs worker/browser-history.test.mjs worker/browser-trust.test.mjs worker/plugin-side-stages.test.mjs worker/design-canvas-unified.test.mjs worker/public-site.test.mjs worker/public-sitemap.test.mjs worker/work-library-resources.test.mjs"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-sdk": "2.6.13",

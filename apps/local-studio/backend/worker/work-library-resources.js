@@ -5,6 +5,7 @@
 const safe = value => String(value ?? '').trim();
 const safeWebUrl = value => {
   const raw = safe(value);
+  if (raw.includes('\\') || /[\u0000-\u001f\u007f]/.test(raw)) return null;
   if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
   try { const parsed = new URL(raw); return parsed.protocol === 'https:' ? parsed.href : null; }
   catch { return null; }
@@ -145,8 +146,14 @@ export async function serveAccountLibraryFile(env,owner,id,preview=false) {
   ).bind(id,owner).first();
   if (!row) return Response.json({error:'not_found'},{status:404});
   const bucketName = safe(row.r2_bucket || 'artifacts');
-  const bucket = bucketName === 'artifacts' ? env.ARTIFACTS
-    : bucketName === 'inneranimalmedia-autorag' ? env.AUTORAG_BUCKET : null;
+  const bucket = ({
+    artifacts: env.ARTIFACTS,
+    'inneranimalmedia-autorag': env.AUTORAG_BUCKET,
+    cms: env.CMS_CONTENT,
+    cad: env.CAD_PROJECT_ASSETS,
+    inneranimalmedia: env.INNERANIMALMEDIA_ASSETS,
+    cajunengravincompany: env.CAJUNENGRAVINCOMPANY_ASSETS,
+  })[bucketName];
   if (!bucket?.get) return Response.json({error:'file_unavailable'},{status:404});
   const key = preview ? safe(row.thumbnail_r2_key || row.preview_r2_key || row.r2_key) : safe(row.r2_key);
   if (!key) return Response.json({error:'file_unavailable'},{status:404});

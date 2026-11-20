@@ -83,6 +83,14 @@
     {
       "binding": "ARTIFACTS",
       "bucket_name": "artifacts"
+    },
+    {
+      "binding": "INNERANIMALMEDIA_ASSETS",
+      "bucket_name": "inneranimalmedia"
+    },
+    {
+      "binding": "CAJUNENGRAVINCOMPANY_ASSETS",
+      "bucket_name": "cajunengravincompany"
     }
   ],
   "pipelines": [
