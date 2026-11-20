@@ -25,7 +25,7 @@ const readableSize = value => {
 };
 function kindOf(name, mime, category) {
   const type = safe(category).toLowerCase();
-  if (['theme','template','page-build','site-build','design','scene'].includes(type)) return 'design';
+  if (['theme','template','page-build','site-build','design','scene','design-canvas','samsketch-scene'].includes(type)) return 'design';
   if (['product','mockup','merchandise'].includes(type)) return 'product';
   const lower = (safe(name) + ' ' + safe(mime)).toLowerCase();
   if (/image\//.test(lower) || /\.(png|jpe?g|webp|gif|svg|avif)\b/.test(lower)) return 'image';
