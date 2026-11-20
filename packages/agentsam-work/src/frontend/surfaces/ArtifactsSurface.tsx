@@ -323,26 +323,28 @@ export function ArtifactsSurface({
                 {layout === "grid" ? <List size={17} /> : <Grid2X2 size={17} />}
               </button>
 
-              <details className="agentsam-artifact-hub__menu">
-                <summary className="agentsam-artifact-hub__add-button" aria-label="Create artifact" title="Create artifact">
-                  <Plus size={18} />
-                </summary>
-                <div className="agentsam-artifact-hub__menu-panel agentsam-artifact-hub__create-menu">
-                  <span className="agentsam-artifact-hub__menu-label">Create new</span>
-                  {createOptions.map((option) => {
-                    const Icon = option.icon;
-                    return (
-                      <button key={option.id} type="button" disabled={!onCreateArtifact} onClick={(event) => {
-                        onCreateArtifact?.(option.id);
-                        event.currentTarget.closest("details")?.removeAttribute("open");
-                      }}>
-                        <Icon size={15} />
-                        <span>{option.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </details>
+              {onCreateArtifact ? (
+                <details className="agentsam-artifact-hub__menu">
+                  <summary className="agentsam-artifact-hub__add-button" aria-label="Create artifact" title="Create artifact">
+                    <Plus size={18} />
+                  </summary>
+                  <div className="agentsam-artifact-hub__menu-panel agentsam-artifact-hub__create-menu">
+                    <span className="agentsam-artifact-hub__menu-label">Create new</span>
+                    {createOptions.map((option) => {
+                      const Icon = option.icon;
+                      return (
+                        <button key={option.id} type="button" onClick={(event) => {
+                          onCreateArtifact(option.id);
+                          event.currentTarget.closest("details")?.removeAttribute("open");
+                        }}>
+                          <Icon size={15} />
+                          <span>{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </details>
+              ) : null}
             </div>
 
             {showCreateSection ? (
