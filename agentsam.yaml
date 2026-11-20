@@ -345,7 +345,7 @@ packages:
     public_import_prefix: "@inneranimalmedia/agentsam-sdk/identity"
   agentsam_contracts:
     name: "@inneranimalmedia/agentsam-contracts"
-    version: "2.6.15"
+    version: "2.6.16"
     path: packages/agentsam-contracts
     private: false
     separately_published: true
