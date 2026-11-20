@@ -306,6 +306,9 @@ export async function servePublicSitePage(
   }
   if (!site) return null;
 
+  const searchDiscovery = await servePublicSearchDiscovery(request, env, site, pathname);
+  if (searchDiscovery) return searchDiscovery;
+
   const siteSlug = site.slug;
   const website = resolveWebsiteAssets(env);
   // Worker ASSETS is an AgentSam-only bootstrap copy. Never let another
