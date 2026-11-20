@@ -58,7 +58,7 @@ function siteOwnedDb(rowsByHost, pagesBySite = {}, sectionsByPage = {}) {
       }
       if (/FROM cms_pages/.test(sql)) {
         assert.match(sql, /site_id\s*=\s*\?/);
-        assert.match(sql, /status = 'published'/);
+        assert.match(sql, /status\s*=\s*'published'/);
         return {
           bind(siteId, route, withoutTrailingSlash) {
             return { all: async () => ({ results: (pagesBySite[siteId] || []).filter(page =>
