@@ -119,6 +119,8 @@ export type WorkArtifact = {
   /** Authorized open target (or verified public URL); never an unscoped R2 key. */
   open?: string | null;
   resourceType?: string | null;
+  /** Provider-native artifact type used to reopen specialist editors without guessing from filenames. */
+  artifactType?: string | null;
   sourceLabel?: string | null;
   mime?: string | null;
   sizeLabel?: string | null;
