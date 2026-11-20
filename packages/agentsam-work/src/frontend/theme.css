@@ -1832,6 +1832,12 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 .agentsam-artifact-hub__toolbar-spacer {flex:1;min-width:0;}
 .agentsam-artifact-hub__icon-button,
 .agentsam-artifact-hub__menu > summary {display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--agentsam-work-muted);cursor:pointer;list-style:none;}
+.agentsam-artifact-hub__icon-button,.agentsam-artifact-hub__search-field button {position:relative;}
+.agentsam-artifact-hub__icon-tooltip {position:absolute;top:calc(100% + 6px);right:0;z-index:60;padding:5px 7px;border:1px solid var(--agentsam-work-border);border-radius:7px;background:var(--agentsam-work-panel);color:var(--agentsam-work-text);font-size:10px;line-height:1.2;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;box-shadow:0 8px 20px color-mix(in srgb,var(--agentsam-work-text) 18%,transparent);}
+.agentsam-artifact-hub__icon-button:hover .agentsam-artifact-hub__icon-tooltip,
+.agentsam-artifact-hub__icon-button:focus-visible .agentsam-artifact-hub__icon-tooltip,
+.agentsam-artifact-hub__search-field button:hover .agentsam-artifact-hub__icon-tooltip,
+.agentsam-artifact-hub__search-field button:focus-visible .agentsam-artifact-hub__icon-tooltip {opacity:1;visibility:visible;}
 .agentsam-artifact-hub__icon-button:hover,
 .agentsam-artifact-hub__menu > summary:hover,
 .agentsam-artifact-hub__menu[open] > summary {border-color:var(--agentsam-work-border);background:var(--agentsam-work-panel-subtle);color:var(--agentsam-work-text);}
