@@ -351,7 +351,7 @@ packages:
     separately_published: true
   agentsam_workbench:
     name: "@inneranimalmedia/agentsam-workbench"
-    version: "2.6.15"
+    version: "2.6.16"
     path: packages/agentsam-workbench
     private: false
     separately_published: true
