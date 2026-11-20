@@ -99,7 +99,7 @@ export async function listAccountLibraryResources(db, owner) {
     const image = kind === 'image' ? safeWebUrl(row.thumbnail_url) || url : null;
     return {
       id:'cms:'+row.id,name,kind,source:'artifacts',
-      mime:safe(row.mime_type)||null,providerId:row.id,
+      mime:safe(row.mime_type)||null,providerId:row.id,artifactType:safe(row.category)||null,
       sizeLabel:readableSize(row.size),
       ...when(row.updated_at),preview:image,open:url,resourceType:'cms',
       sourceLabel:row.site_name ? 'CMS · '+row.site_name : 'CMS',
