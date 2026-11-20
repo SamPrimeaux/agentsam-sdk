@@ -10,6 +10,7 @@ import {
   resolveWorkerStaticAssets,
   websitePublicKey,
 } from './bindings.js';
+import { isPublicSearchDiscoveryPath, servePublicSearchDiscovery } from './public-sitemap.js';
 
 /**
  * Resolve the public site from its verified hostname. Public requests do not
@@ -105,6 +106,7 @@ export function publicSitePathForRequest(request) {
 
 export function isPublicSitePath(pathname) {
   return (
+    isPublicSearchDiscoveryPath(pathname) ||
     Object.hasOwn(PUBLIC_SITE_HTML, pathname) ||
     isThemesPath(pathname) ||
     isDocsPath(pathname) ||
@@ -303,6 +305,9 @@ export async function servePublicSitePage(
     });
   }
   if (!site) return null;
+
+  const searchDiscovery = await servePublicSearchDiscovery(request, env, site, pathname);
+  if (searchDiscovery) return searchDiscovery;
 
   const siteSlug = site.slug;
   const website = resolveWebsiteAssets(env);

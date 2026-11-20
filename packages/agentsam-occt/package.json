@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-occt",
-  "version": "2.6.15",
+  "version": "2.6.17",
   "type": "module",
   "description": "Canonical AgentSam OpenCascade engine contract with browser-WASM and native OCCT adapters.",
   "exports": {
@@ -23,6 +23,11 @@
     "build": "tsc -p tsconfig.json",
     "prepare": "npm run build",
     "test": "node --experimental-strip-types --test test/*.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-occt"
   },
   "files": [
     "dist/",

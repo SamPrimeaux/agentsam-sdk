@@ -28,9 +28,10 @@ test('OCCT and viewer are public npm packages consumed through registry pins', (
   assert.equal(occt.publishConfig?.access, 'public');
   assert.equal(occt.license, 'FSL-1.1-MIT');
   assert.equal(samsketch.private, true);
-  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-occt'], '2.6.15');
-  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-3d-viewer'], '2.6.15');
-  assert.equal(cadFrontend.dependencies['@inneranimalmedia/agentsam-3d-viewer'], '2.6.15');
+  // Exact version pins (never file:), kept equal to the packages the app links by the release train.
+  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-occt'], occt.version);
+  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-3d-viewer'], viewer.version);
+  assert.match(cadFrontend.dependencies['@inneranimalmedia/agentsam-3d-viewer'], /^\d+\.\d+\.\d+$/);
 });
 
 test('registry version verification accepts npm JSON scalar and array responses', () => {

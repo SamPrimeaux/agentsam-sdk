@@ -15,9 +15,9 @@ test("only Chats routes are registered, without trails fallbacks or redirects", 
   assert.ok(!existsSync(resolve(root, "frontend/src/routes/_app/trails")));
   assert.ok(existsSync(resolve(root, "frontend/src/routes/(apps)/chats/$chatId.tsx")));
   assert.ok(existsSync(resolve(root, "frontend/src/routes/(apps)/chats/index.tsx")));
-  assert.match(read("frontend/src/components/shell/nav-rail.tsx"), /to: "\/chats", label: "Chats"/);
+  assert.match(read("frontend/src/components/shell/nav-rail.tsx"), /to: "\/admin\/chats", label: "Chats"/);
   assert.match(read("frontend/src/components/shell/ChatsIndex.tsx"), /listAccountChats/);
-  assert.match(read("frontend/src/components/shell/chat-workspace.tsx"), /<Link to="\/chats"/);
+  assert.match(read("frontend/src/components/shell/chat-workspace.tsx"), /<Link to="\/admin\/chats"/);
 });
 
 test("Work project chat association reuses persisted Studio chats, not IAM", () => {

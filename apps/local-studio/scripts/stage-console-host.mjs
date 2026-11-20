@@ -7,7 +7,6 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {listThemeStoreProducts} from '../../../packages/catalog/src/theme-products.mjs';
 
 const localStudio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = path.resolve(localStudio, '../ecommerce-cms-agentsam');
@@ -15,6 +14,27 @@ const source = path.join(app, 'dist/assets');
 const productStage = path.join(localStudio, 'frontend/public/ecommerce-cms-agentsam');
 const hostAdmin = path.join(localStudio, 'frontend/public/admin');
 const hostConfig = path.join(hostAdmin, 'host-config.js');
+const themePreviewMirror = path.join(localStudio, 'frontend/public/themes');
+const legacySiteThemeGallery = path.join(localStudio, 'frontend/public/site/themes');
+// Remove only former website preview subdirectories. The /themes root also
+// contains first-party Studio appearance assets and must never be deleted.
+function removeThemeStorePreviewMirrors(root) {
+  if (!existsSync(root)) return;
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const themeRoot = path.join(root, entry.name);
+    // Older SDK builds emitted complete storefront packages at /themes/<slug>/.
+    // Remove those pages; preserve unrelated Studio appearance assets.
+    if (existsSync(path.join(themeRoot, 'index.html'))) {
+      rmSync(themeRoot, { recursive: true, force: true });
+      continue;
+    }
+    const demo = path.join(themeRoot, 'demo');
+    if (existsSync(path.join(demo, 'index.html'))) rmSync(demo, { recursive: true, force: true });
+  }
+}
+removeThemeStorePreviewMirrors(themePreviewMirror);
+rmSync(legacySiteThemeGallery, { recursive: true, force: true });
 const {writeStudioNavigation} = await import('./studio-navigation.mjs');
 writeStudioNavigation();
 
@@ -25,23 +45,12 @@ if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
   }
   mkdirSync(destination, { recursive: true });
   cpSync(hostAdmin, destination, { recursive: true, force: true });
-  // Copy the packaged, generated demo pages *after* Vite has emitted its
-  // /themes/<sku> entrypoints. Keep both the editor's original theme routes
-  // and the complete demo/ subroutes consumed by the source-backed gallery.
+  // Website theme previews are served by their owning Theme Store origin.
+  // Keep stale SDK mirrors out of hosted and desktop release assets.
   const compiledRoot = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist' : '.output/public');
-  const previewSource = path.join(localStudio, 'frontend/public/themes');
-  const themeSlugs = readdirSync(previewSource, { withFileTypes: true })
-    .filter(entry => entry.isDirectory() && existsSync(path.join(previewSource, entry.name, 'demo/index.html')))
-    .map(entry => entry.name)
-    .sort();
-  if (!themeSlugs.length) throw new Error('No verified Theme Store previews are staged');
-  const compiledThemes = path.join(compiledRoot, 'themes');
-  rmSync(compiledThemes,{recursive:true,force:true});
-  mkdirSync(compiledThemes,{recursive:true});
-  for (const slug of themeSlugs) {
-    cpSync(path.join(previewSource,slug),path.join(compiledThemes,slug),{recursive:true,force:true});
-  }
-  console.log('[console-host] root /admin + source-backed theme demos staged to ' + compiledRoot);
+  removeThemeStorePreviewMirrors(path.join(compiledRoot, 'themes'));
+  rmSync(path.join(compiledRoot, 'site/themes'), { recursive: true, force: true });
+  console.log('[console-host] root /admin staged; Theme Store previews remain externally served');
   process.exit(0);
 }
 // The ecommerce dashboard is a separately installable frontend with its own
@@ -118,22 +127,8 @@ bindHost(hostAdmin);
 const index = readFileSync(path.join(source, 'admin/_spa/index.html'), 'utf8')
   .replace(/(\b(?:href|src)=["'])\/(?!\/)/g, '$1/ecommerce-cms-agentsam/');
 writeFileSync(path.join(productStage, 'index.html'), index);
-
-
-// Fetch exact, digest-verified immutable previews from Theme Store.
-await import('./sync-theme-store-previews.mjs');
-const previewCatalog=await listThemeStoreProducts();
-if(!previewCatalog.length || previewCatalog.some(entry=>!entry.preview_ready))
- throw new Error('Theme Store preview sync incomplete; refuse to stage a partial catalog');
-const products=previewCatalog.map(item=>({
-  ...item,
-  // The SDK previews only; installation and downloadable releases stay in Theme Store.
-  download_url:null,download_kind:null,installed:false,purchasable:false,
-  install_status:'published',state:'preview_only',
-  preview_url:'/themes/'+item.slug+'/demo/'
-}));
-const catalogPath=path.join(productStage,'admin/data/theme-products.json');
-mkdirSync(path.dirname(catalogPath),{recursive:true});
-writeFileSync(catalogPath,JSON.stringify({ok:true,status:'preview_only',products},null,2)+'\n');
+// Retire the former SDK-owned Theme Store catalog snapshot. The authenticated
+// /api/admin/website-themes route reads the live, validated Theme Store catalog.
+rmSync(path.join(productStage, 'admin/data/theme-products.json'), { force: true });
 
 console.log('[console-host] staged ORIGINAL Ecommerce Admin into Local Studio web and desktop asset roots');

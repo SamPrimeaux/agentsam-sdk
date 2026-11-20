@@ -65,7 +65,7 @@ Project-local configuration (`./my-project/.agentsam/site-scrape.json`):
 ```
 
 `agentsam site index` resolves only the current project's own evidence or
-public site origin. A successful `--refresh --max-pages 5` on the FNF public
+public site origin. A successful `--refresh --max-pages 5` on a customer public
 site can index several sitemap-listed routes even when home page links are
 client-rendered; it still does not execute JavaScript or claim full browser
 capture. It discovers site origins from that project's explicit

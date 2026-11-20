@@ -58,7 +58,7 @@ function normalizeAdminPath(value) {
 
 export function isAllowlistedAdminPath(pathname, routes = ADMIN_EXIT_ROUTES) {
   const path = normalizeAdminPath(pathname);
-  if (!path.startsWith("/admin/") || path.startsWith("/admin/theme-editor") || path.startsWith("/admin/theme-workspace")) return false;
+  if (!path.startsWith("/admin/") || path.startsWith("/admin/theme-editor")) return false;
   return routes.some(function(route) {
     return path === route || path.startsWith(route + "/");
   });

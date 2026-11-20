@@ -125,3 +125,21 @@ test('draft changed during publication rejects the CAS and leaves the page unpub
   assert.equal(db.prepare('SELECT status FROM cms_pages WHERE id=?').get(p.id).status,'draft');
  }finally{db.close()}
 });
+
+test('interactive CMS scenes load only the same-origin iamscene runtime with scoped CSP permissions', () => {
+ const html=renderMerchantPage({
+  site:{name:'Scene site',settings_json:'{}'},
+  page:{title:'Interactive scene'},
+  draft:draft({title:'Interactive scene',body_html:'<p>Scene page</p>'}),
+  sections:{markup:'<section data-scene-kind="interactive-stage"></section>',css:'.scene{}',scripts:['/assets/js/iamscene-runtime.js']},
+ });
+ assert.match(html,/<script src="\/assets\/js\/iamscene-runtime\.js" defer><\/script>/);
+ assert.match(html,/script-src &#39;self&#39;/);
+ assert.match(html,/connect-src &#39;self&#39; https:/);
+ const staticHtml=renderMerchantPage({
+  site:{name:'Scene site',settings_json:'{}'},page:{title:'Static page'},
+  draft:draft({title:'Static page',body_html:'<p>Static page</p>'}),
+ });
+ assert.doesNotMatch(staticHtml,/iamscene-runtime\.js/);
+ assert.doesNotMatch(staticHtml,/script-src/);
+});

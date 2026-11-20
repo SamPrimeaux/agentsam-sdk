@@ -12,7 +12,7 @@
 | `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
-| `packages/catalog/generated/packages.json` | 66 | Package inventory rows (not npm publication proof) |
+| `packages/catalog/generated/packages.json` | 55 | Package inventory rows (not npm publication proof) |
 
 Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Host binding and approval remain separate.
 
@@ -271,22 +271,11 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `copro-templates` | `@inneranimalmedia/copro-templates` | needs-review | Structured CoPro creative template contracts for canvas, slots, track skeletons, captions, transitions, audio cues… |
 | `copro-timeline` | `@inneranimalmedia/copro-timeline` | needs-review | Headless CoPro timeline projection, ordering, duration, and viewport math. |
 | `copro-ui` | `@inneranimalmedia/copro-ui` | needs-review | Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, … |
-| `fnf-theme` | `@inneranimalmedia/fnf-theme` | needs-review | Brand-specific FNF theme renderer consuming portable ThemePreview registry |
 | `iamscene` | `@inneranimalmedia/iamscene` | needs-review | Portable editable .iamscene.json format, deterministic scene authoring and animation runtime, Three.js presentatio… |
 | `primetech-procedures` | `@inneranimalmedia/primetech-procedures` | classified | Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset in… |
 | `theme-contract` | `@inneranimalmedia/theme-contract` | needs-review | Portable provider-neutral theme preview registry and composition contracts |
-| `theme-cypress` | `@inneranimalmedia/theme-cypress` | needs-review | A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven stor… |
-| `theme-ember` | `@inneranimalmedia/theme-ember` | needs-review | An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch momen… |
-| `theme-forge` | `@inneranimalmedia/theme-forge` | needs-review | A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and… |
-| `theme-grove` | `@inneranimalmedia/theme-grove` | needs-review | A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate … |
-| `theme-harbor` | `@inneranimalmedia/theme-harbor` | needs-review | A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lea… |
-| `theme-heuristic` | `@inneranimalmedia/theme-heuristic` | needs-review | Stock AgentSam CMS storefront shell theme contract (heuristic-theme). |
-| `theme-iasf` | `@inneranimalmedia/theme-iasf` | needs-review | IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest). |
 | `theme-plain-jane` | `@inneranimalmedia/theme-plain-jane` | needs-review | Read-only editorial journal and photography CMS starter with externally editable manifest. |
-| `theme-resolve` | `@inneranimalmedia/theme-resolve` | needs-review | A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbo… |
-| `theme-scenes` | `@inneranimalmedia/theme-scenes` | needs-review | Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns … |
-| `theme-summit` | `@inneranimalmedia/theme-summit` | needs-review | A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure… |
-| `theme-violet` | `@inneranimalmedia/theme-violet` | needs-review | A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation … |
+| `theme-scenes` | `@inneranimalmedia/theme-scenes` | classified | Cross-product creative scene composition contracts, reusable scene templates and a CMS-compatible portable rendere… |
 
 Packages may be public distributions, shared implementation, local application dependencies, or infrastructure. Directory placement alone does not define the intent or distribution status. The package catalog is a projection, not platform `agentsam_products` or install-state authority.
 

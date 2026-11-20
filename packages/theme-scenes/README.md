@@ -1,6 +1,6 @@
 # @inneranimalmedia/theme-scenes
 
-Reusable **scene / shell / block** vocabulary for branded website experiences.
+Reusable **scene / shell / block** vocabulary and portable renderer for creative website experiences. This is a cross-product creative package, not a storefront theme.
 
 | Layer | Owns |
 | --- | --- |
@@ -13,7 +13,7 @@ Scenes never hardcode CDN URLs, nav hrefs, or product copy. They consume `SECTIO
 
 ## Install
 
-Workspace package (private for now):
+Use the SDK workspace during development. The package is independently versioned and published only when its matching npm release is available:
 
 ```js
 import {
@@ -24,6 +24,32 @@ import {
   composeCardCollection,
 } from '@inneranimalmedia/theme-scenes';
 ```
+
+
+## AgentSam CMS integration
+
+`@inneranimalmedia/theme-scenes/cms` adapts the scene contract to the existing AgentSam CMS page, section and artifact models. It does not create tables, write D1/R2, or own tenant identity.
+
+- `ThemeScenesSections` is the portable section renderer registered by the CMS as `theme-scenes/*` renderers. The ten scene kinds become ordinary CMS section templates, editable in Theme Studio and usable by any compatible storefront theme.
+- `createCmsScenePage(page, { siteId })` produces the existing site-scoped page-composition envelope with `pageType: 'scene'` and registered section identities.
+- `createCmsSceneArtifactManifest({ artifactKey, page })` produces a reusable `artifact_type: 'scene'`, `content_mode: 'scene'` manifest. The artifact definition stays site-independent; CMS installation and section instances carry the account/site scope.
+- `compileCmsScenePage(composition)` compiles the saved CMS composition back into the canonical scene render plan.
+
+```js
+import {
+  createCmsScenePage,
+  createCmsSceneArtifactManifest,
+} from '@inneranimalmedia/theme-scenes/cms';
+
+const composition = createCmsScenePage(scenePage, { siteId: 'site_123' });
+const reusableArtifact = createCmsSceneArtifactManifest({
+  artifactKey: 'creative/interactive-showcase',
+  page: scenePage,
+});
+// Persist composition/artifact through the CMS APIs; this package is pure.
+```
+
+The CMS ships the `.iamscene` browser hydrator only when a page contains an interactive scene document. It resolves same-origin or HTTPS scene documents, uses the native `@inneranimalmedia/iamscene` runtime, respects reduced-motion preferences, and supports autoplay or scroll-scrubbed animation. Store scene documents and their referenced assets through the CMS media/artifact flow; do not embed tenant-specific URLs in reusable scene definitions.
 
 ## Hierarchy
 

@@ -4,6 +4,8 @@ This is the exhaustive current package/app placement map for `agentsam-sdk`. It 
 
 ## Packages
 
+Storefront theme packages, previews, catalog and release assets are intentionally owned by `inneranimalmedia-theme-store` and are not vendored or published by the SDK. The SDK retains `@inneranimalmedia/theme-scenes` only as a cross-product creative runtime and CMS scene adapter; it is not a storefront theme registry.
+
 | Package | Portfolio role | Primary offer(s) | Current description |
 | --- | --- | --- | --- |
 | `@inneranimalmedia/agentsam-abs` | Product engine | AgentSam Browser | AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation, sandboxed previews, deterministic history, and packaged runtime scenes. |
@@ -48,18 +50,8 @@ This is the exhaustive current package/app placement map for `agentsam-sdk`. It 
 | `@inneranimalmedia/copro-provider-contracts` | Provider contract | CoPro / Media Production | Abstract storage, streaming, transcription, generation, conversion and rendering capabilities. |
 | `@inneranimalmedia/copro-proof` | Acceptance primitive | CoPro / Media Production | Cross-package mechanical composition tests and architecture proof. |
 | `@inneranimalmedia/copro-ui` | Product UI | CoPro / Media Production | Mobile-first preview, timeline, gesture editing and composition screens. |
-| `@inneranimalmedia/theme-heuristic` | Theme/prebuild | Site Studio | Stock AgentSam CMS storefront shell theme contract (heuristic-theme). |
 | `@inneranimalmedia/agentsam-identity` | Platform capability | Public/local identity implementations | Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK) |
-| `@inneranimalmedia/theme-cypress` | Theme/prebuild | Site Studio | A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template. |
-| `@inneranimalmedia/theme-ember` | Theme/prebuild | Site Studio | An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid. |
-| `@inneranimalmedia/theme-forge` | Theme/prebuild | Site Studio | A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen. |
-| `@inneranimalmedia/theme-grove` | Theme/prebuild | Site Studio | A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew. |
-| `@inneranimalmedia/theme-harbor` | Theme/prebuild | Site Studio | A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look. |
-| `@inneranimalmedia/theme-iasf` | Theme/prebuild | Site Studio / Commerce Studio | IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest). |
-| `@inneranimalmedia/theme-resolve` | Theme/prebuild | Site Studio / Commerce Studio | A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled. |
-| `@inneranimalmedia/theme-scenes` | Composition primitive | Site Studio, branded experiences | Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition. |
-| `@inneranimalmedia/theme-summit` | Theme/prebuild | Site Studio | A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking. |
-| `@inneranimalmedia/theme-violet` | Theme/prebuild | Site Studio | A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action. |
+| `@inneranimalmedia/theme-scenes` | Cross-product creative runtime | PrimeTech, CMS sites, branded experiences | Reusable scene / shell / block vocabulary plus a CMS portable-section renderer and scene-artifact adapter. Not a storefront theme. BrandPack owns look; theme-scenes owns composition. |
 | `@inneranimalmedia/agentsam-work-graph` | Shared/domain primitive | AgentSam Work, Hosted Runtime | Core AgentSam work-graph primitive: one graph model (WorkItem, Dependency, TimelineEvent, Artifact, Evidence, Actor) powering an engineering adapter (git/MCP/tests/deploys) and a business adapter (projects/clients/approvals/milestones), with Gantt/timeline rendering as a pure projection over the graph rather than its own source of truth. |
 | `@inneranimalmedia/agentsam-provider-completeful` | Provider adapter | Commerce Studio, Merch | Portable Completeful provider adapter and AgentSam tool definitions. |
 | `@inneranimalmedia/agentsam-connector-cloudflare` | Provider connector | Platform/runtime/storage consumers | Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not affiliated with Cloudflare, Inc.. |

@@ -10,9 +10,7 @@ import {RESOLVE_PORTAL_TEMPLATES,portalCmsPage,portalTemplateForSlug,portalTempl
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const staticRoot=path.join(root,'frontend/static');
 const distRoot=path.join(root,'frontend/dist');
-// Preview bytes are a local cache synced and SHA-256 verified from Theme Store.
-const localStudioRoot=path.resolve(root,'../local-studio');
-const themePreviewRoot=path.join(localStudioRoot,'frontend/public/themes');
+// Theme previews stay on their owning Theme Store origin.
 const resolvePortalRoot=path.resolve(root,'../../packages/theme-resolve/site/portal');
 const port=Number(process.env.PORT||4327);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.json':'application/json','.woff2':'font/woff2'};
@@ -20,6 +18,11 @@ const storefrontManifestPaths=[
  path.join(root,'agentsam.app.json'),
  path.join(root,'apps/resend/agentsam.app.json')
 ];
+let themeStoreProductsPromise=null;
+const getThemeStoreProducts=()=>{
+ if(!themeStoreProductsPromise) themeStoreProductsPromise=listThemeStoreProducts().catch(error=>{themeStoreProductsPromise=null;throw error;});
+ return themeStoreProductsPromise;
+};
 const spa=new Set(['analytics','account','products/create','products/help/artwork']);
 // Read-only supplier examples for this isolated UI preview. Production uses the
 // authenticated Completeful adapter; these records keep the local visual route
@@ -87,25 +90,7 @@ const find=(p,referer)=>{
    return null;
  }
 
- const themeRoute=p.match(/^\/themes\/([a-z][a-z0-9-]{0,62})\/demo(?:\/(.*))?$/);
- if(themeRoute){
-   const themeRoot=path.resolve(themePreviewRoot,themeRoute[1],'demo');
-   const target=path.resolve(themeRoot,themeRoute[2]||'index.html');
-   return target===path.join(themeRoot,'index.html') || target.startsWith(themeRoot+path.sep) ? target : null;
- }
- if(p.startsWith('/assets/')){
-   try{
-     const referringPath=new URL(referer||'').pathname;
-     const referringTheme=referringPath.match(/^\/themes\/([a-z][a-z0-9-]{0,62})\/demo(?:\/|$)/);
-     if(referringTheme){
-       const themeRoot=path.resolve(themePreviewRoot,referringTheme[1],'demo');
-       const target=path.resolve(themeRoot,p.slice(1));
-       return target.startsWith(themeRoot+path.sep) ? target : null;
-     }
-   }catch{}
- }
  if(p==='/')return path.join(staticRoot,'home.html');
- if(p==='/admin/registry-build-edit')return path.join(staticRoot,'registry-build-edit.html');
  if(p==='/admin/product-edit')return path.join(staticRoot,'product-edit.html');
  // Preserve the production Resend app route on this static local preview.
  if(p==='/admin/email')return path.join(staticRoot,'dashboard/email.html');
@@ -125,6 +110,17 @@ const server=http.createServer(async(req,res)=>{
  try{
   const requestUrl=new URL(req.url,'http://localhost');
   const pathname=decodeURIComponent(requestUrl.pathname);
+  const themePreviewRoute=pathname.match(/^\/themes\/([a-z][a-z0-9-]{0,62})\/demo(?:\/(.*))?$/);
+  const isResolvePortal=themePreviewRoute?.[1]==='resolve' && (themePreviewRoute[2]||'').startsWith('portal');
+  if(themePreviewRoute && !isResolvePortal){
+   const product=(await getThemeStoreProducts()).find(item=>item.slug===themePreviewRoute[1] && item.preview_url);
+   if(!product){res.writeHead(404,{'Content-Type':'text/plain'});res.end('Theme Store preview not found');return;}
+   const segments=(themePreviewRoute[2]||'').split('/').filter(Boolean);
+   if(segments.some(segment=>segment==='.'||segment==='..')){res.writeHead(400);res.end();return;}
+   const suffix=segments.map(encodeURIComponent).join('/')+((themePreviewRoute[2]||'').endsWith('/')&&segments.length?'/':'');
+   const target=new URL(suffix,product.preview_url);
+   res.writeHead(302,{Location:target.href,'Cache-Control':'no-store'});res.end();return;
+  }
   // Localhost is the Resolve commerce design studio. A bare editor URL must
   // never fall into a disconnected Violet production mode and show a white iframe.
   if(pathname==='/admin/theme-editor' && !requestUrl.searchParams.has('showcase') && requestUrl.searchParams.get('ui_review')!=='1'){
@@ -193,7 +189,7 @@ const server=http.createServer(async(req,res)=>{
    res.end(JSON.stringify({ok:true,preview_only:true,apps}));return;
   }
   if(pathname==='/api/admin/theme-products' && req.method==='GET'){
-    const products=await listThemeStoreProducts();
+    const products=await getThemeStoreProducts();
     res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
     res.end(JSON.stringify({ok:true,preview_only:true,products}));return;
   }
@@ -222,7 +218,7 @@ const server=http.createServer(async(req,res)=>{
    res.end(JSON.stringify({page:getRegistryPage(previewPage[1]),seeded:false}));return;
   }
   if(pathname==='/api/admin/cms/themes' && req.method==='GET'){
-   const products=await listThemeStoreProducts();
+   const products=await getThemeStoreProducts();
    const themes=products.map(product=>({slug:product.slug,name:product.name,state:'preview'}));
    res.writeHead(200,{'Content-Type':'application/json'});
    res.end(JSON.stringify({ok:true,active_theme:null,preview_theme:null,themes,content_version:1}));return;
@@ -243,7 +239,7 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(302,{Location:'/admin/home'});res.end();return;
   }
   target=path.resolve(target);
-  if(![staticRoot,distRoot,path.join(root,'frontend'),resolvePortalRoot,themePreviewRoot].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
+  if(![staticRoot,distRoot,path.join(root,'frontend'),resolvePortalRoot].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
   let data=await readFile(target);
   const ext=path.extname(target);
   if(ext==='.html'){
@@ -254,9 +250,6 @@ const server=http.createServer(async(req,res)=>{
        // The same manifest-driven embed bridge runs on native Resolve AND portal pages.
        html=html.replace('</body>','<script src="/themes/resolve/demo/portal/preview-settings.js"></script><script src="/admin/js/resolve-preview-bridge.js"></script></body>');
      }
-   }
-   if(pathname==='/themes/resolve/demo/' && new URL(req.url,'http://localhost').searchParams.has('studio_preview')){
-     html=html.replace('</body>','<script src="/themes/resolve/demo/portal/preview-settings.js"></script><script src="/admin/js/resolve-preview-bridge.js"></script></body>');
    }
    html=html.replaceAll('Fuel & Free Time Admin','AgentSam SDK Commerce · Local Preview').replaceAll('Fuel & Free Time','AgentSam SDK');
    data=Buffer.from(html);

@@ -140,7 +140,7 @@ Audit and fix the verified external references:
 
 - `frontend/package.json` → outer `commerce-analytics`.
 - `frontend/src/pages/products/StudioWorkspace.tsx` → outer `agentsam-merch`.
-- `backend/admin/store.js` → outer `heuristic-theme`.
+- `backend/admin/store.js` → site-scoped CMS theme projects and Theme Store release metadata; do not import storefront theme source into the SDK.
 - `backend/cms/registry.js` → outer `theme-contract`.
 - `backend/admin/api.js` → outer merchandising source.
 - `backend/admin/analytics-live-logs.js` → outer analytics source.

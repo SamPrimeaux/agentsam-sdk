@@ -257,10 +257,6 @@ packages:
       name: "@inneranimalmedia/copro-ui"
       path: "packages/copro-ui"
       readiness: unverified
-    - id: "fnf-theme"
-      name: "@inneranimalmedia/fnf-theme"
-      path: "packages/fnf-theme"
-      readiness: unverified
     - id: "iamscene"
       name: "@inneranimalmedia/iamscene"
       path: "packages/iamscene"
@@ -273,58 +269,18 @@ packages:
       name: "@inneranimalmedia/theme-contract"
       path: "packages/theme-contract"
       readiness: unverified
-    - id: "theme-cypress"
-      name: "@inneranimalmedia/theme-cypress"
-      path: "packages/theme-cypress"
-      readiness: unverified
-    - id: "theme-ember"
-      name: "@inneranimalmedia/theme-ember"
-      path: "packages/theme-ember"
-      readiness: unverified
-    - id: "theme-forge"
-      name: "@inneranimalmedia/theme-forge"
-      path: "packages/theme-forge"
-      readiness: unverified
-    - id: "theme-grove"
-      name: "@inneranimalmedia/theme-grove"
-      path: "packages/theme-grove"
-      readiness: unverified
-    - id: "theme-harbor"
-      name: "@inneranimalmedia/theme-harbor"
-      path: "packages/theme-harbor"
-      readiness: unverified
-    - id: "theme-heuristic"
-      name: "@inneranimalmedia/theme-heuristic"
-      path: "packages/heuristic-theme"
-      readiness: unverified
-    - id: "theme-iasf"
-      name: "@inneranimalmedia/theme-iasf"
-      path: "packages/theme-iasf"
-      readiness: unverified
     - id: "theme-plain-jane"
       name: "@inneranimalmedia/theme-plain-jane"
       path: "packages/theme-plain-jane"
-      readiness: unverified
-    - id: "theme-resolve"
-      name: "@inneranimalmedia/theme-resolve"
-      path: "packages/theme-resolve"
       readiness: unverified
     - id: "theme-scenes"
       name: "@inneranimalmedia/theme-scenes"
       path: "packages/theme-scenes"
       readiness: unverified
-    - id: "theme-summit"
-      name: "@inneranimalmedia/theme-summit"
-      path: "packages/theme-summit"
-      readiness: unverified
-    - id: "theme-violet"
-      name: "@inneranimalmedia/theme-violet"
-      path: "packages/theme-violet"
-      readiness: unverified
   # END AGENTSAM GENERATED INVENTORY
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
-    version: "2.6.16"
+    version: "2.6.17"
     path: .
     private: false
     registry: npm
@@ -337,7 +293,7 @@ packages:
       - agentsam-auth-portal
   identity:
     name: "@inneranimalmedia/agentsam-identity"
-    version: "2.6.16"
+    version: "2.6.17"
     path: packages/identity
     private: false
     separately_published: true
@@ -345,19 +301,19 @@ packages:
     public_import_prefix: "@inneranimalmedia/agentsam-sdk/identity"
   agentsam_contracts:
     name: "@inneranimalmedia/agentsam-contracts"
-    version: "2.6.16"
+    version: "2.6.17"
     path: packages/agentsam-contracts
     private: false
     separately_published: true
   agentsam_workbench:
     name: "@inneranimalmedia/agentsam-workbench"
-    version: "2.6.16"
+    version: "2.6.17"
     path: packages/agentsam-workbench
     private: false
     separately_published: true
   shell_kit:
     name: "@inneranimalmedia/agentsam-shell-kit"
-    version: "2.6.16"
+    version: "2.6.17"
     path: packages/agentsam-shell-kit
     private: false
     separately_published: true
@@ -572,7 +528,7 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.6.16"
+    target_version: "2.6.17"
     state: candidate
     registry: npm
     current_latest: "2.6.13"

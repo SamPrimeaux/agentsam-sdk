@@ -164,7 +164,7 @@ function isProtectedAppPath(pathname) {
   return mountRequiresAuth(pathname, APP);
 }
 
-function isSiteScopedCmsAdminApi(pathname) {
+function isSiteScopedCmsAdminApi(pathname, request) {
   const globalCmsRoutes = new Set([
     "/api/admin/cms/registry",
     "/api/admin/cms/embed-catalog",
@@ -172,7 +172,20 @@ function isSiteScopedCmsAdminApi(pathname) {
     "/api/admin/cms/checkout-previews/offers",
   ]);
   if (globalCmsRoutes.has(pathname) || pathname === "/api/admin/cms/sites") return false;
-  return pathname.startsWith("/api/admin/theme-editor/")
+
+  // Account-wide catalog inventory is explicitly read-only. Every product,
+  // collection, variant, and inventory mutation still resolves an authorized
+  // site before the commerce handler receives the request.
+  const accountWideCatalogRead = ["GET", "HEAD"].includes(request?.method)
+    && new URL(request.url).searchParams.get("scope") === "account"
+    && ["/api/admin/products", "/api/admin/collections"].includes(pathname);
+  if (accountWideCatalogRead) return false;
+
+  const siteCommerceRoute = pathname === "/api/admin/products"
+    || /^\/api\/admin\/collections(?:\/[A-Za-z0-9_-]+(?:\/items)?)?$/.test(pathname)
+    || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/\d+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory)$/.test(pathname);
+  return siteCommerceRoute
+    || pathname.startsWith("/api/admin/theme-editor/")
     || pathname.startsWith("/api/admin/store/themes/")
     || pathname.startsWith("/api/admin/cms/");
 }
@@ -1085,15 +1098,7 @@ export default {
       if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
       const principal = await resolveSessionUser(request, env);
       if (!principal) return json({ok:false,error:'unauthorized'},401);
-      const assetURL = new URL(request.url);
-      assetURL.pathname = '/ecommerce-cms-agentsam/admin/data/theme-products.json';
-      assetURL.search = '';
-      const catalogAsset = await env.ASSETS.fetch(new Request(assetURL,request));
-      if (!catalogAsset.ok) return json({ok:false,error:'catalog_not_staged'},503);
-      const catalog = await catalogAsset.json().catch(()=>null);
-      if (!catalog?.ok || !Array.isArray(catalog.products))
-        return json({ok:false,error:'catalog_manifest_invalid'},503);
-      return json(catalog,200);
+      return handleStudioWebsiteThemeCatalog(request, principal?.id || null, env);
     }
 
     if (url.pathname === '/api/admin/platform/products' || url.pathname.startsWith('/api/admin/platform/products/')) {
@@ -1119,7 +1124,7 @@ export default {
         return handleCmsWorkerRequest(new Request(hostUrl, request), env, principal.id);
       }
       let cmsSite = null;
-      if (isSiteScopedCmsAdminApi(url.pathname)) {
+      if (isSiteScopedCmsAdminApi(url.pathname, request)) {
         const selector = await readCmsSiteSelector(request);
         const access = await resolveCmsSiteAccess(env.DB, principal.id, selector,
           /\/(?:publish|rollback)$/.test(url.pathname) ? "publish" : ["GET", "HEAD"].includes(request.method) ? "read" : "write",

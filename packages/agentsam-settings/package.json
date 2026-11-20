@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-settings",
-  "version": "2.6.15",
+  "version": "2.6.17",
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -33,7 +33,7 @@
     "lucide-react": "^0.510.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@inneranimalmedia/agentsam-workbench": "2.6.15"
+    "@inneranimalmedia/agentsam-workbench": "2.6.17"
   },
   "publishConfig": {
     "access": "public"

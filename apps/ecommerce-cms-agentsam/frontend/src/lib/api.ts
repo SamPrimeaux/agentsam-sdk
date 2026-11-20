@@ -85,11 +85,24 @@ async function parseAdminResponse<T>(res: Response): Promise<T> {
 }
 
 function scopedCommercePath(path: string): string {
-  if(typeof window==="undefined"||!/^\/api\/admin\/(?:products|variants|inventory|product-studio)(?:\/|$)/.test(path))return path;
-  const siteId=new URLSearchParams(window.location.search).get("site_id");
-  if(!siteId)return path;
-  const url=new URL(path,window.location.origin);url.searchParams.set("site_id",siteId);
-  return url.pathname+url.search;
+  if (typeof window === "undefined" ||
+      !/^\/api\/admin\/(?:products|variants|inventory|product-studio|collections)(?:\/|$)/.test(path)) return path;
+
+  const url = new URL(path, window.location.origin);
+  if (url.searchParams.get("scope") === "account" || url.searchParams.has("site_id")) return path;
+
+  const pageParams = new URLSearchParams(window.location.search);
+  let siteId = pageParams.get("site_id") || pageParams.get("site") || pageParams.get("site_slug");
+  if (!siteId) {
+    try { siteId = sessionStorage.getItem("agentsam.cms.selected-site.v1"); } catch {}
+  }
+  if (!siteId) {
+    try { siteId = localStorage.getItem("agentsam.cms.selected-site.v1"); } catch {}
+  }
+  if (!siteId) return path;
+
+  url.searchParams.set("site_id", siteId);
+  return url.pathname + url.search;
 }
 
 export async function adminFetch<T = unknown>(

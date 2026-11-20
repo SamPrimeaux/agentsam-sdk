@@ -6,8 +6,7 @@
  */
 import {listCmsComponentCatalog} from './definition-registry.mjs';
 import {PORTABLE_SECTION_STYLES} from './portable-styles.compiled.mjs';
-import '../../packages/theme-contract/runtime/platform-stock-sections.js';
-import '../../packages/theme-contract/runtime/portable-sections.js';
+import {getCmsSectionRenderer,isThemeScenesRenderer,THEME_SCENES_CMS_STYLES} from './section-renderer-runtime.mjs';
 
 const sha256=async value=>Array.from(new Uint8Array(await crypto.subtle.digest(
   'SHA-256',new TextEncoder().encode(value))),byte=>byte.toString(16).padStart(2,'0')).join('');
@@ -15,7 +14,6 @@ const json=raw=>{try{const value=JSON.parse(raw);if(value && typeof value==='obj
   !Array.isArray(value))return value;}catch{}throw new Error('cms_page_section_content_invalid');};
 const fail=code=>{throw new Error(code);};
 const sanitizedKey=key=>typeof key==='string' && /^[a-zA-Z0-9_-]{1,160}$/.test(key);
-const runtime=()=>globalThis.ThemePortableSections;
 
 async function readCurrentSection(env,page,row){
  if(row.r2_bucket!=='cms')fail('cms_page_section_storage_unknown');
@@ -67,6 +65,7 @@ export async function renderSiteOwnedPageSections(env,accountId,site,page){
  const stock=await listCmsComponentCatalog(env,accountId,{itemType:'section'});
  const available=new Map(stock.map(t=>[t.sku,t]));
  const fragments=[],sources=[];
+ let usesThemeScenes=false,usesIamScene=false;
  for(const row of rows){
    if(row.is_visible===0)continue;
    if(!row.template_sku)fail('cms_page_section_renderer_unverified');
@@ -85,9 +84,14 @@ export async function renderSiteOwnedPageSections(env,accountId,site,page){
    await verifyEditorBlocks(env,accountId,row,content);
    const source=structuredClone(content);
    source.__editor={...source.__editor,templateKey:'portable',themePreset:template.rendererKey};
-   if(!runtime()?.validate?.(template.rendererKey,source)?.ok)
+   const renderer=getCmsSectionRenderer(template.rendererKey);
+   if(!renderer?.validate?.(template.rendererKey,source)?.ok)
      fail('cms_page_section_content_invalid');
-   const markup=runtime()?.render?.({key:row.section_key||row.id,content:source});
+   const markup=renderer.render?.({key:row.section_key||row.id,content:source});
+   if(isThemeScenesRenderer(template.rendererKey)){
+     usesThemeScenes=true;
+     usesIamScene=usesIamScene || Boolean(source.sceneDocumentUrl || source.sceneDefinition?.sceneDocument?.ref);
+   }
    if(typeof markup!=='string'||!markup.includes('data-cms-section='))
      fail('cms_page_section_renderer_unavailable');
    if(!hidden)fragments.push(markup);
@@ -95,6 +99,6 @@ export async function renderSiteOwnedPageSections(env,accountId,site,page){
      source_key:key,source_sha256:hash,draft_key:row.draft_r2_key||null,
      draft_hash:row.content_hash||null,rendered:!hidden});
  }
- return {markup:fragments.join(''),css:fragments.length?PORTABLE_SECTION_STYLES:'',
-   sources};
+ return {markup:fragments.join(''),css:fragments.length?PORTABLE_SECTION_STYLES+(usesThemeScenes?'\n'+THEME_SCENES_CMS_STYLES:''):'',
+   scripts:usesIamScene?['/assets/js/iamscene-runtime.js']:[],sources};
 }

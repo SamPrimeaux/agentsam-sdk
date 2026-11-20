@@ -3,6 +3,7 @@
  * Legacy cms_themes rows represent old appearance/selection drafts only,
  * and must not determine whether installed websites are visible.
  */
+import { handleStudioWebsiteThemeCatalog } from './studio-website-theme-catalog.js';
 const answer=(payload,status=200)=>Response.json(payload,{status,headers:{'cache-control':'private, no-store'}});
 // Only historical cms_themes selections are restricted to this legacy catalog.
 // Canonical CMS v2 projects are listed from the account-scoped project store.
@@ -11,7 +12,10 @@ const STORE_ORIGIN='https://themes.inneranimalmedia.com';
 // Theme previews live on the Theme Store, never on this site. Any stored local
 // /themes/<slug>/demo/ link (historical rows, baked catalog) resolves to the store.
 function storePreview(slug,version,stored){
- if(typeof stored==='string'&&stored.startsWith(STORE_ORIGIN+'/theme-packages/'))return stored;
+ if(typeof stored==='string'){
+  try{const url=new URL(stored);if(url.origin===STORE_ORIGIN && !url.username && !url.password && !url.search && !url.hash &&
+   (url.pathname.startsWith('/theme-packages/'+slug+'/'+version+'/preview/') || url.pathname.startsWith('/themes/'+slug+'/presets/'+slug+'/demo/')))return url.href;}catch{}
+ }
  if(!slug||!version)return null;
  return STORE_ORIGIN+'/theme-packages/'+encodeURIComponent(slug)+'/'+encodeURIComponent(version)+'/preview/';
 }
@@ -20,13 +24,13 @@ async function slugFor(accountId,sourceSlug) {
  const owner=Array.from(new Uint8Array(digest)).slice(0,10).map(x=>x.toString(16).padStart(2,'0')).join('');
  return 'draft-'+owner+'-'+sourceSlug;
 }
-async function catalog(env,request){
- const url=new URL(request.url);
- url.pathname='/ecommerce-cms-agentsam/admin/data/theme-products.json';url.search='';
- const res=await env.ASSETS.fetch(new Request(url,{method:'GET'}));
- if(!res.ok)throw new Error('catalog_not_staged');
- const list=await res.json();
- return Array.isArray(list.products)?list.products:[];
+async function catalog(env,request,userId){
+ const response=await handleStudioWebsiteThemeCatalog(new Request(request.url,{method:'GET'}),userId,env);
+ if(!response.ok)throw new Error('theme_store_catalog_unavailable');
+ const result=await response.json();
+ return Array.isArray(result.products)?result.products.map(product=>({
+  ...product,package:'Theme Store',preview_ready:Boolean(product.preview_url)
+ })):[];
 }
 function draft(row) {
  let config={};try{config=JSON.parse(row.config||'{}')}catch{}
@@ -100,7 +104,7 @@ export async function handleStudioThemeDrafts(request,env,userId) {
  if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>k!=='slug') || !legacyCatalogSlug.test(body.slug||''))
   return answer({ok:false,error:'template_not_supported'},400);
  let product;
- try{ product=(await catalog(env,request)).find(p=>p.slug===body.slug && p.preview_ready); }
+ try{ product=(await catalog(env,request,userId)).find(p=>p.slug===body.slug && p.preview_ready); }
  catch{return answer({ok:false,error:'catalog_unavailable'},503)}
  if(!product)return answer({ok:false,error:'template_not_available'},404);
  const slug=await slugFor(userId,body.slug);

@@ -2,12 +2,22 @@
   "schema": "agentsam.package.v1",
   "id": "iamscene",
   "name": "@inneranimalmedia/iamscene",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "class": "package",
   "status": "in-development",
   "catalog_status": "needs-review",
-  "languages": ["typescript", "javascript", "json"],
-  "execution_domains": ["browser", "node", "desktop", "web", "headless"],
+  "languages": [
+    "typescript",
+    "javascript",
+    "json"
+  ],
+  "execution_domains": [
+    "browser",
+    "node",
+    "desktop",
+    "web",
+    "headless"
+  ],
   "purpose": "Portable editable .iamscene.json format, deterministic scene authoring and animation runtime, Three.js presentation, and required AgentSam OCCT geometry pipeline.",
   "install": [
     {
@@ -31,7 +41,16 @@
     "Using a rendered GLB as the only editable source for a scene"
   ],
   "commands": [],
-  "topics": ["3d", "scene-graph", "animation", "gltf", "occt", "threejs", "authoring", "visualization"],
+  "topics": [
+    "3d",
+    "scene-graph",
+    "animation",
+    "gltf",
+    "occt",
+    "threejs",
+    "authoring",
+    "visualization"
+  ],
   "evidence": {
     "directory": "packages/iamscene",
     "schema": "packages/iamscene/schema/iamscene.v1.schema.json",

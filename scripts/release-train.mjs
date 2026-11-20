@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findPrivateWorkspaceDependencyEdges } from './release-train-policy.mjs';
+import { expectedSdkTarballVersion } from '../apps/local-studio/scripts/sdk-package-lock-phase.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -100,6 +101,138 @@ function releaseManifestDrift() {
   return failures;
 }
 
+// Stock feature packets declare the package they ship from; tests assert the
+// packet version equals package.json, so it must move with the release train.
+function featurePacketVersions() {
+  const out = [];
+  for (const { file, manifest } of workspaces) {
+    if (manifest.private === true || isIndependentlyVersioned(manifest)) continue;
+    const features = path.join(path.dirname(file), '.agentsam/features');
+    if (!fs.existsSync(features)) continue;
+    for (const entry of fs.readdirSync(features, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const packet = path.join(features, entry.name, 'agentsam.feature.json');
+      if (!fs.existsSync(packet)) continue;
+      const json = read(packet);
+      if (json.package?.name === manifest.name) out.push({ packet, json });
+    }
+  }
+  return out;
+}
+
+// Apps, source themes and the ecommerce frontend are outside the public train
+// but link to train packages. When their exact first-party pins or lock link
+// metadata lag the packages on disk, `npm ci` fails with "lock file's X@new does
+// not satisfy X@old". Registry-resolved lock entries are never touched.
+const FIRST_PARTY_SCOPE = '@inneranimalmedia/';
+const LOCK_DEP_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies'];
+function appTreeDrift({ write }) {
+  const notes = [];
+  const manifestFiles = [...walkPackageJson(path.join(root, 'apps')), ...walkPackageJson(path.join(root, 'packages'))]
+    .filter((file) => !path.relative(root, file).split(path.sep).includes('reference'));
+  for (const file of manifestFiles) {
+    const dir = path.dirname(file);
+    const lockFiles = ['package-lock.json', 'npm-shrinkwrap.json'].map((name) => path.join(dir, name)).filter((lockFile) => fs.existsSync(lockFile));
+    if (!lockFiles.length) continue;
+    const manifest = read(file);
+    const locks = lockFiles.map((lockFile) => ({ lockFile, lock: read(lockFile), changed: false }));
+    const manifestEdits = [];
+    for (const section of sections) {
+      for (const [name, spec] of Object.entries(manifest[section] || {})) {
+        const linked = workspaceByName.get(name);
+        if (!linked || !/^\d+\.\d+\.\d+/.test(spec) || spec === linked.version) continue;
+        if (!locks.some(({ lock }) => lock.packages?.[`node_modules/${name}`]?.link === true)) continue;
+        notes.push(`${relative(file)}: ${section}.${name}=${spec} != linked workspace ${linked.version}`);
+        manifestEdits.push({ name, from: spec, to: linked.version });
+        manifest[section][name] = linked.version; // keeps the lock comparison below in this same pass
+      }
+    }
+    for (const state of locks) {
+      const { lockFile, lock } = state;
+      const packages = lock.packages || {};
+      const rootEntry = packages[''] || {};
+      for (const section of sections) {
+        for (const [name, spec] of Object.entries(manifest[section] || {})) {
+          if (!name.startsWith(FIRST_PARTY_SCOPE) || rootEntry[section]?.[name] === undefined || rootEntry[section][name] === spec) continue;
+          notes.push(`${relative(lockFile)}: root ${section}.${name}=${rootEntry[section][name]} != ${spec}`);
+          rootEntry[section][name] = spec;
+          state.changed = true;
+        }
+      }
+      for (const [key, entry] of Object.entries(packages)) {
+        if (!key || key.startsWith('node_modules/') || entry.link) continue;
+        const targetFile = path.join(dir, key, 'package.json');
+        if (!fs.existsSync(targetFile)) continue;
+        const diskTarget = read(targetFile);
+        // Read the current on-disk manifest: align() may have just updated a private nested product package.
+        const target = diskTarget;
+        if (target.version && entry.version !== target.version) {
+          notes.push(`${relative(lockFile)}: ${key} version ${entry.version} != ${target.version}`);
+          entry.version = target.version;
+          state.changed = true;
+        }
+        for (const field of LOCK_DEP_FIELDS) {
+          for (const [dep, range] of Object.entries(entry[field] || {})) {
+            const want = target[field]?.[dep];
+            if (!dep.startsWith(FIRST_PARTY_SCOPE) || want === undefined || want === range) continue;
+            notes.push(`${relative(lockFile)}: ${key} ${field}.${dep}=${range} != ${want}`);
+            entry[field][dep] = want;
+            state.changed = true;
+          }
+        }
+      }
+    }
+    if (write && manifestEdits.length) {
+      // Targeted text edit: these manifests are hand-formatted, so never re-serialize them.
+      const esc = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      let text = fs.readFileSync(file, 'utf8');
+      for (const { name, from, to } of manifestEdits) {
+        text = text.replace(new RegExp(`("${esc(name)}"\\s*:\\s*")${esc(from)}(")`, 'g'), `$1${to}$2`);
+      }
+      JSON.parse(text);
+      fs.writeFileSync(file, text);
+    }
+    if (write) for (const { lockFile, lock, changed } of locks) if (changed) fs.writeFileSync(lockFile, `${JSON.stringify(lock, null, 2)}\n`);
+  }
+  return notes;
+}
+
+const localStudioNestedPackageFiles = [
+  'apps/local-studio/frontend/package.json',
+  'apps/local-studio/backend/package.json',
+  'apps/local-studio/shared/agentsam/package.json',
+];
+function localStudioNestedDrift({ write }) {
+  const notes = [];
+  // Before npm publication, Local Studio must resolve the last genuinely
+  // published SDK tarball. Once the release manifest moves to published, it
+  // must resolve the just-published train version instead.
+  const localStudioCandidateVersion = read(path.join(root, 'apps/local-studio/package.json')).version;
+  const localStudioSdkVersion = expectedSdkTarballVersion(root, localStudioCandidateVersion).version;
+  for (const rel of localStudioNestedPackageFiles) {
+    const file = path.join(root, rel);
+    if (!fs.existsSync(file)) continue;
+    const manifest = read(file);
+    const edits = [];
+    if (manifest.version !== targetVersion) {
+      edits.push('version ' + manifest.version + ' -> ' + targetVersion);
+      manifest.version = targetVersion;
+    }
+    if (rel !== 'apps/local-studio/frontend/package.json') {
+      const current = manifest.dependencies?.['@inneranimalmedia/agentsam-sdk'];
+      if (current !== localStudioSdkVersion) {
+        edits.push('dependencies.@inneranimalmedia/agentsam-sdk ' + current + ' -> ' + localStudioSdkVersion);
+        manifest.dependencies ||= {};
+        manifest.dependencies['@inneranimalmedia/agentsam-sdk'] = localStudioSdkVersion;
+      }
+    }
+    if (!edits.length) continue;
+    notes.push(relative(file) + ': ' + edits.join('; '));
+    if (write) fs.writeFileSync(file, JSON.stringify(manifest, null, 2) + '\n');
+  }
+  return notes;
+}
+
 function check() {
   const failures = [];
   let dependencyEdges = 0;
@@ -139,6 +272,8 @@ function check() {
     if (value !== targetVersion) failures.push(`${rel}: version ${value || '<missing>'} != ${targetVersion}`);
   }
   failures.push(...releaseManifestDrift());
+  failures.push(...localStudioNestedDrift({ write: false }));
+  failures.push(...appTreeDrift({ write: false }));
   for (const rel of coordinatedProductVersionFiles) {
     const file = path.join(root, rel);
     if (!fs.existsSync(file)) { failures.push(rel + ': coordinated product metadata missing'); continue; }
@@ -153,6 +288,9 @@ function check() {
 
   const publicCount = workspaces.filter(({ manifest }) => manifest.private !== true && manifest.publishConfig?.access === 'public').length;
   const privateCount = workspaces.filter(({ manifest }) => manifest.private === true).length;
+  for (const { packet, json } of featurePacketVersions()) {
+    if (json.package.version !== targetVersion) failures.push(`${relative(packet)}: feature packet package.version ${json.package.version || '<missing>'} != ${targetVersion}`);
+  }
   console.log(`AgentSam release train ${targetVersion}`);
   console.log(`  workspaces ${workspaces.length} · public ${publicCount} · private ${privateCount} · internal edges ${dependencyEdges}`);
   if (failures.length) {
@@ -196,6 +334,14 @@ function align() {
       console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} ${manifest.name}@${targetVersion} · ${relative(file)}`);
     }
   }
+  for (const { packet, json } of featurePacketVersions()) {
+    if (json.package.version === targetVersion) continue;
+    json.package.version = targetVersion;
+    changedFiles += 1;
+    changedVersions += 1;
+    if (!dryRun) fs.writeFileSync(packet, `${JSON.stringify(json, null, 2)}\n`);
+    console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} feature packet ${targetVersion} · ${relative(packet)}`);
+  }
   for (const rel of candidateVersionJsonFiles) {
     const file = path.join(root, rel);
     if (!fs.existsSync(file)) continue;
@@ -218,6 +364,41 @@ function align() {
     changedVersions += 1;
     if (!dryRun) fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
     console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} coordinated ecommerce product ${rel}@${targetVersion}`);
+  }
+  // Local Studio npm 10 product lock: first-party workspace/link entries follow
+  // the train; registry-resolved entries keep their genuinely published version.
+  {
+    const rel = 'apps/local-studio/package-lock.json';
+    const file = path.join(root, rel);
+    if (fs.existsSync(file)) {
+      const lock = read(file);
+      const from = lock.version;
+      if (from && from !== targetVersion) {
+        const isRegistry = (entry) => typeof entry?.resolved === 'string' && /^https?:/.test(entry.resolved);
+        lock.version = targetVersion;
+        for (const entry of Object.values(lock.packages || {})) {
+          if (isRegistry(entry)) continue;
+          if (entry.version === from) entry.version = targetVersion;
+          for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+            for (const [dep, range] of Object.entries(entry[field] || {})) {
+              if (dep.startsWith('@inneranimalmedia/') && range === from) entry[field][dep] = targetVersion;
+            }
+          }
+        }
+        changedFiles += 1;
+        changedVersions += 1;
+        if (!dryRun) fs.writeFileSync(file, `${JSON.stringify(lock, null, 2)}\n`);
+        console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} local-studio npm10 lock ${from} -> ${targetVersion} · ${rel}`);
+      }
+    }
+  }
+  for (const note of localStudioNestedDrift({ write: !dryRun })) {
+    changedFiles += 1;
+    console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} local-studio nested package ${note}`);
+  }
+  for (const note of appTreeDrift({ write: !dryRun })) {
+    changedFiles += 1;
+    console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} app tree ${note}`);
   }
   console.log(`${dryRun ? 'DRY RUN' : 'DONE'} files=${changedFiles} versions=${changedVersions} dependency_pins=${changedEdges}`);
 }
