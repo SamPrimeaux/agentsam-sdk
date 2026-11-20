@@ -70,7 +70,12 @@ export async function listCmsSites(db, accountId) {
   const { results = [] } = await db.prepare(`
     SELECT id, account_id, name, slug, primary_domain, domain_aliases_json, status, is_default, created_at, updated_at
     FROM cms_sites WHERE account_id = ?
-    ORDER BY is_default DESC, created_at ASC, name ASC
+    ORDER BY
+      CASE status WHEN 'active' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END,
+      is_default DESC,
+      CASE WHEN status = 'active' THEN created_at END DESC,
+      CASE WHEN status = 'draft' THEN created_at END DESC,
+      name ASC
   `).bind(accountId).all();
   return results;
 }
