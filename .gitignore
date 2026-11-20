@@ -48,6 +48,8 @@ __pycache__/
 
 # Package build outputs
 packages/*/dist/
+packages/*/.dist-staging/
+packages/*/.dist-previous/
 examples/*/dist/
 examples/*/.vite/
 apps/local-studio/desktop-dist/
