@@ -356,6 +356,7 @@ export function WorkProduct({
       ) : null}
       {surface === "artifacts" ? <ArtifactsSurface
         artifacts={snapshot.artifacts}
+        onCreateArtifact={onCreateArtifact}
         onOpenArtifact={host.openArtifact}
         onRefresh={async () => { await refreshSnapshot(); }}
         initialSource={(() => {
