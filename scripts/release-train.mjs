@@ -100,6 +100,25 @@ function releaseManifestDrift() {
   return failures;
 }
 
+// Stock feature packets declare the package they ship from; tests assert the
+// packet version equals package.json, so it must move with the release train.
+function featurePacketVersions() {
+  const out = [];
+  for (const { file, manifest } of workspaces) {
+    if (manifest.private === true || isIndependentlyVersioned(manifest)) continue;
+    const features = path.join(path.dirname(file), '.agentsam/features');
+    if (!fs.existsSync(features)) continue;
+    for (const entry of fs.readdirSync(features, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const packet = path.join(features, entry.name, 'agentsam.feature.json');
+      if (!fs.existsSync(packet)) continue;
+      const json = read(packet);
+      if (json.package?.name === manifest.name) out.push({ packet, json });
+    }
+  }
+  return out;
+}
+
 function check() {
   const failures = [];
   let dependencyEdges = 0;
@@ -153,6 +172,9 @@ function check() {
 
   const publicCount = workspaces.filter(({ manifest }) => manifest.private !== true && manifest.publishConfig?.access === 'public').length;
   const privateCount = workspaces.filter(({ manifest }) => manifest.private === true).length;
+  for (const { packet, json } of featurePacketVersions()) {
+    if (json.package.version !== targetVersion) failures.push(`${relative(packet)}: feature packet package.version ${json.package.version || '<missing>'} != ${targetVersion}`);
+  }
   console.log(`AgentSam release train ${targetVersion}`);
   console.log(`  workspaces ${workspaces.length} · public ${publicCount} · private ${privateCount} · internal edges ${dependencyEdges}`);
   if (failures.length) {
@@ -195,6 +217,14 @@ function align() {
       if (!dryRun) fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
       console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} ${manifest.name}@${targetVersion} · ${relative(file)}`);
     }
+  }
+  for (const { packet, json } of featurePacketVersions()) {
+    if (json.package.version === targetVersion) continue;
+    json.package.version = targetVersion;
+    changedFiles += 1;
+    changedVersions += 1;
+    if (!dryRun) fs.writeFileSync(packet, `${JSON.stringify(json, null, 2)}\n`);
+    console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} feature packet ${targetVersion} · ${relative(packet)}`);
   }
   for (const rel of candidateVersionJsonFiles) {
     const file = path.join(root, rel);
