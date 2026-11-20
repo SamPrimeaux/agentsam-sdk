@@ -66,6 +66,7 @@ export function WorkProduct({
   onNavCollapsedChange,
   headerActions,
   knowledgeAction,
+  onCreateArtifact,
 }: {
   host: WorkHost;
   surface: WorkSurfaceId;
