@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   listAccountLibraryResources,
   serveAccountLibraryFile,
@@ -87,14 +88,10 @@ test('archived and unsafe external resources retain safe state without unsafe na
   assert.equal(items[1].preview, null);
 });
 
-test('private artifact delivery is owner-scoped and supports every registered R2 bucket', async () => {
+test('existing first-party artifact delivery remains owner-scoped without adding R2 bindings', async () => {
   const bindings = [
     ['artifacts', 'ARTIFACTS'],
     ['inneranimalmedia-autorag', 'AUTORAG_BUCKET'],
-    ['cms', 'CMS_CONTENT'],
-    ['cad', 'CAD_PROJECT_ASSETS'],
-    ['inneranimalmedia', 'INNERANIMALMEDIA_ASSETS'],
-    ['cajunengravincompany', 'CAJUNENGRAVINCOMPANY_ASSETS'],
   ];
   for (const [bucketName, bindingName] of bindings) {
     const reads = [];
@@ -111,6 +108,77 @@ test('private artifact delivery is owner-scoped and supports every registered R2
     assert.equal(response.headers.get('content-disposition'), 'inline; filename="file.pdf"');
     assert.deepEqual(h.calls[0].values, ['art_1', 'owner_1']);
   }
+});
+
+test('Cloudflare account buckets are not wired as Worker R2 bindings', () => {
+  const config = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+  assert.doesNotMatch(config, /INNERANIMALMEDIA_ASSETS|CAJUNENGRAVINCOMPANY_ASSETS/);
+  assert.match(config, /\"bucket_name\": \"artifacts\"/);
+});
+
+const cfAccount = 'a'.repeat(32);
+const secondAccount = 'b'.repeat(32);
+const oauthConnections = [{status:'connected',cloudflareAccountId:cfAccount}];
+const readyCredential = {
+  status:'ready',accountId:cfAccount,bearerToken:'oauth-only-test-token',
+  grantedScopes:['workers-r2-bucket-item.read'],
+};
+
+test('account-connected R2 objects stream through OAuth, not Worker bucket bindings or CLI tokens', async () => {
+  for (const bucketName of ['cms', 'cad', 'inneranimalmedia', 'cajunengravincompany', 'arbitrary-new-bucket']) {
+    const calls = [];
+    const h = dbHarness({fileRow:{r2_bucket:bucketName,r2_key:'user assets/file name.pdf',
+      mime_type:'application/pdf',name:'file.pdf'}});
+    const response = await serveAccountLibraryFile({DB:h.DB,CLOUDFLARE_API_TOKEN:'must-never-be-used',
+      CLOUDFLARE_ACCOUNT_ID:secondAccount}, 'owner_1', 'art_1', false, {
+      listConnections:async (env,owner) => {assert.equal(owner,'owner_1');return oauthConnections;},
+      resolveCredential:async (options) => {calls.push({credential:options});return readyCredential;},
+      fetchImpl:async (url, init) => {
+        calls.push({url:String(url),authorization:init.headers.authorization});
+        return new Response(new Blob(['owner-only file']).stream(),{headers:{'content-type':'application/pdf'}});
+      },
+    });
+    assert.equal(response.status,200,bucketName);
+    assert.equal(await response.text(),'owner-only file');
+    assert.equal(response.headers.get('cache-control'),'private, no-store');
+    assert.equal(calls[0].credential.authMode,'oauth');
+    assert.equal(calls[0].credential.explicitAccountId,cfAccount);
+    assert.match(calls[1].url,new RegExp('/accounts/'+cfAccount+'/r2/buckets/'+bucketName+'/objects/user%20assets/file%20name\\.pdf$'));
+    assert.equal(calls[1].authorization,'Bearer oauth-only-test-token');
+    assert.deepEqual(h.calls[0].values,['art_1','owner_1']);
+  }
+});
+
+test('OAuth R2 fails closed for missing connection, ambiguous accounts, missing scope, mismatched saved account', async () => {
+  const h = dbHarness({fileRow:{r2_bucket:'inneranimalmedia',r2_key:'one.png',name:'one.png',mime_type:'image/png'}});
+  let fetchCount=0;
+  const failIfFetched=async()=>{fetchCount++;throw Error('must not fetch');};
+  const base={fetchImpl:failIfFetched,resolveCredential:async()=>readyCredential};
+  const noOauth=await serveAccountLibraryFile({DB:h.DB},'owner_1','art_1',false,
+    {...base,listConnections:async()=>[]});
+  assert.equal(noOauth.status,401);
+  const ambiguous=await serveAccountLibraryFile({DB:h.DB},'owner_1','art_1',false,
+    {...base,listConnections:async()=>[...oauthConnections,{status:'connected',cloudflareAccountId:secondAccount}]});
+  assert.equal(ambiguous.status,409);
+  const noScope=await serveAccountLibraryFile({DB:h.DB},'owner_1','art_1',false,
+    {...base,listConnections:async()=>oauthConnections,
+      resolveCredential:async()=>({...readyCredential,grantedScopes:['workers-r2.read']})});
+  assert.equal(noScope.status,403);
+  const mismatched=await serveAccountLibraryFile({DB:dbHarness({fileRow:{r2_bucket:'inneranimalmedia',r2_key:'one.png',name:'one.png',
+    metadata_json:JSON.stringify({cloudflare_account_id:cfAccount})}}).DB},'owner_1','art_1',false,
+    {...base,accountId:secondAccount,listConnections:async()=>[...oauthConnections,{status:'connected',cloudflareAccountId:secondAccount}]});
+  assert.equal(mismatched.status,403);
+  assert.equal(fetchCount,0);
+});
+
+test('OAuth R2 refuses malicious bucket names, paths and wrong-owner records', async () => {
+  for (const [bucket,key] of [['bad/bucket','safe.txt'],['inneranimalmedia','../secret'],['inneranimalmedia','\\\\bad.txt']]) {
+    const h=dbHarness({fileRow:{r2_bucket:bucket,r2_key:key,name:'unsafe'}});
+    const response=await serveAccountLibraryFile({DB:h.DB},'owner_1','art_1',false,{listConnections:async()=>{throw Error('unsafe access');}});
+    assert.equal(response.status,400);
+  }
+  const denied=await serveAccountLibraryFile({DB:dbHarness({fileRow:null}).DB},'wrong_owner','art_1');
+  assert.equal(denied.status,404);
 });
 
 test('preview delivery prefers the thumbnail key and missing or cross-owner artifacts return 404', async () => {
