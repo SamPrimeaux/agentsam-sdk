@@ -5,10 +5,22 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$ROOT/.env.cloudflare"
 if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
-  set +a
+  WRANGLER_BIN="$ROOT/node_modules/.bin/wrangler"
+  if [[ -x "$WRANGLER_BIN" ]] && (cd "$ROOT" && env -u CLOUDFLARE_API_TOKEN "$WRANGLER_BIN" whoami -c backend/wrangler.jsonc >/dev/null 2>&1); then
+    # A verified Wrangler OAuth session is authoritative. Do not let a stale
+    # local CLOUDFLARE_API_TOKEN shadow it, but retain the other optional env.
+    set -a
+    # shellcheck disable=SC1090
+    . <(grep -v '^CLOUDFLARE_API_TOKEN=' "$ENV_FILE")
+    set +a
+    echo "loaded $ENV_FILE (verified Wrangler OAuth takes precedence)"
+  else
+    set -a
+    # shellcheck disable=SC1090
+    . "$ENV_FILE"
+    set +a
+    echo "loaded $ENV_FILE"
+  fi
   LOADED=1
 else
   LOADED=0
