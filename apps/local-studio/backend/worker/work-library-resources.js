@@ -86,7 +86,10 @@ export async function listAccountLibraryResources(db, owner) {
       // generated preview while its source file remains JSON/HTML.
       preview: richPreview || (row.thumbnail_r2_key || row.preview_r2_key
         ? base+'?preview=1' : (kind==='image'?base:null)),
-      open:staticPublic || base, resourceType:'artifact',
+      open:row.artifact_type === 'design-canvas'
+        ? '/admin/canvas?canvas='+encodeURIComponent(row.id)
+        : staticPublic || base,
+      resourceType:'artifact',
     };
   });
   const cms = cmsAssets.map(row => {
