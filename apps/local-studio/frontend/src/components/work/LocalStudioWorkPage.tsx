@@ -431,6 +431,7 @@ export function LocalStudioWorkPage({
         presentation="embedded"
         host={host}
         surface={surface}
+        onCreateArtifact={startArtifactCreation}
         projectId={projectId}
         ticketId={ticketId}
         headerActions={showAutoRag && isPackagedDesktop() ? <button type="button" className="aw-btn aw-knowledge-action" onClick={openAutoRag}>Knowledge</button> : undefined}
