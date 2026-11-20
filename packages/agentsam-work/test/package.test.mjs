@@ -175,6 +175,32 @@ test("Project Gallery uses explicit project-linked media and Work Artifacts sour
   assert.match(artifacts,/onOpenArtifact/);
 });
 
+test('Artifacts is a global Side Stage library with six focused creation routes and responsive menus', () => {
+  const surface = readFileSync(new URL('../src/frontend/surfaces/ArtifactsSurface.tsx', import.meta.url), 'utf8');
+  const stage = readFileSync(new URL('../../../apps/local-studio/frontend/src/components/workbench/artifacts.tsx', import.meta.url), 'utf8');
+  const launcher = readFileSync(new URL('../../../apps/local-studio/frontend/src/lib/work/artifact-launcher.ts', import.meta.url), 'utf8');
+  const mapper = readFileSync(new URL('../../../apps/local-studio/backend/worker/work-library-resources.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/frontend/theme.css', import.meta.url), 'utf8');
+  for (const label of ['All', 'Yours', 'Shared', 'Docs', 'Slides', 'Sheets', 'Design', 'Data', 'Whiteboard']) {
+    assert.match(surface, new RegExp('label: "' + label + '"'));
+  }
+  assert.match(surface, /aria-label="Search artifacts"/);
+  assert.match(surface, /aria-label="Filter artifacts"/);
+  assert.match(surface, /aria-label="Sort artifacts"/);
+  assert.match(surface, /aria-label="Create artifact"/);
+  assert.match(surface, /openInWorkspace/);
+  assert.match(stage, /sharedLiveWorkHost\(\)/);
+  assert.match(stage, /surface: "artifacts"/);
+  assert.doesNotMatch(stage, /NewTabStage|if \(!project\)/);
+  assert.match(stage, /artifactType === "design-canvas"/);
+  assert.match(launcher, /CREATION_PROMPTS/);
+  assert.match(launcher, /openSideTab\("design"/);
+  assert.match(launcher, /setDraft\(chatId/);
+  assert.match(mapper, /row\.artifact_type === 'design-canvas'/);
+  assert.match(css, /@media\(max-width:900px\)/);
+  assert.match(css, /@media\(max-width:560px\)/);
+});
+
 test('Work project timer uses the same transport in hosted and desktop Work', async () => {
   const { createWorkCrud } = await import('../dist/client/index.js');
   const calls=[];
