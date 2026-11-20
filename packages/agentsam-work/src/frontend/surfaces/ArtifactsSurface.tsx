@@ -1,5 +1,5 @@
 import {
-  Archive, ArrowLeft, BarChart3, Box, Check, ChevronDown, Copy, ExternalLink, FileArchive, FileAudio2,
+  Archive, ArrowLeft, BarChart3, Box, Check, Copy, ExternalLink, FileArchive, FileAudio2,
   FileCode2, FileImage, FileText, FileVideo2, Folder, Grid2X2, List, MoreHorizontal, Palette, Pencil,
   Plus, Presentation, RotateCcw, Search, Shapes, SlidersHorizontal, Star, StickyNote, Table2, X,
 } from "lucide-react";
