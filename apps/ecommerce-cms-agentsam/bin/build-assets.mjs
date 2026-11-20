@@ -3,7 +3,7 @@
 import { cp, mkdir, rm, readFile, writeFile } from "node:fs/promises";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { build as bundle } from "esbuild";
 import { execFileSync } from "node:child_process";
 
@@ -20,7 +20,39 @@ const copy = async (from, to) => {
 execFileSync(process.execPath, [source("scripts/sync-theme-embed-catalog.mjs")], { stdio: "inherit" });
 await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
+// theme-scenes is the canonical cross-product scene package. Generate the
+// app-local ESM mirror from that source when building inside the SDK repo;
+// the committed mirror keeps standalone CMS builds independent of the SDK.
+const themeScenesSource = path.resolve(app, "../../packages/theme-scenes/src/cms/index.js");
+const themeScenesRuntime = source("packages/theme-contract/runtime/theme-scenes-sections.mjs");
+if (fs.existsSync(themeScenesSource)) {
+  const built = await bundle({
+    entryPoints: [themeScenesSource], bundle: true, platform: "neutral",
+    format: "esm", target: "es2022", write: false, minify: false,
+  });
+  await writeFile(themeScenesRuntime, built.outputFiles[0].contents);
+}
+if (!fs.existsSync(themeScenesRuntime)) {
+  throw new Error("Incomplete Ecommerce release: theme-scenes CMS runtime is missing");
+}
+// The .iamscene viewer is built from its independent package and loaded only
+// on pages that actually contain an interactive scene document.
+const iamSceneBrowserSource = path.resolve(app, "../../packages/iamscene/src/browser.ts");
+const iamSceneBrowserAsset = source("frontend/static/js/iamscene-runtime.js");
+if (fs.existsSync(iamSceneBrowserSource)) {
+  const built = await bundle({
+    entryPoints: [iamSceneBrowserSource], bundle: true, platform: "browser",
+    format: "iife", globalName: "IamSceneRuntimeBundle", target: "es2022",
+    write: false, minify: true,
+  });
+  await mkdir(path.dirname(iamSceneBrowserAsset), { recursive: true });
+  await writeFile(iamSceneBrowserAsset, built.outputFiles[0].contents);
+}
+if (!fs.existsSync(iamSceneBrowserAsset)) {
+  throw new Error("Incomplete Ecommerce release: iamscene browser runtime is missing");
+}
 await copy(source("frontend/static"), path.join(dest, "admin"));
+await copy(iamSceneBrowserAsset, path.join(dest, "js/iamscene-runtime.js"));
 // The project bootstrap mounts the same editor through this public namespace.
 await copy(source("frontend/theme-editor"),path.join(dest,"theme-editor"));
 for(const [name,input] of [["runtime.js","js/theme-editor.js"],["shared.js","js/pages-shared.js"],["editor.css","css/theme-editor.css"]])
@@ -80,6 +112,26 @@ for (const name of ["js/platform-stock-sections.js", "admin/js/platform-stock-se
   await copy(source("packages/theme-contract/runtime/platform-stock-sections.js"),
     path.join(dest,name));
 }
+// The same scene package renderer runs in Theme Studio, catalog previews and
+// published site sections. Its browser entry is bundled from the generated
+// app-local ESM mirror so the standalone CMS app needs no SDK workspace path.
+const themeScenesBrowser = await bundle({
+  entryPoints: [source("packages/theme-contract/runtime/theme-scenes-browser.mjs")],
+  bundle: true, platform: "browser", format: "iife",
+  globalName: "ThemeScenesSectionsBundle", target: "es2022",
+  write: false, minify: false,
+});
+for (const name of ["js/theme-scenes-sections.js", "admin/js/theme-scenes-sections.js"]) {
+  const out = path.join(dest, name);
+  await mkdir(path.dirname(out), { recursive: true });
+  await writeFile(out, themeScenesBrowser.outputFiles[0].contents);
+}
+const themeScenesModule = await import(pathToFileURL(themeScenesRuntime).href);
+for (const name of ["css/theme-scenes-sections.css", "admin/css/theme-scenes-sections.css"]) {
+  const out = path.join(dest, name);
+  await mkdir(path.dirname(out), { recursive: true });
+  await writeFile(out, themeScenesModule.THEME_SCENES_CMS_STYLES + "\n");
+}
 // PrimeTech portable sections use the original shared Three.js world and
 // the original I.AM Scene circuit source meshes. Both browser runtimes are
 // bundled once and served to the Theme Studio preview and published storefront.
@@ -135,6 +187,9 @@ for (const critical of [
   "admin/js/shell.js", "admin/js/inspector.js",
   "admin/js/revise-atlas.js", "admin/js/portable-sections.js", "admin/js/platform-stock-sections.js",
   "admin/js/primetech-scene.js", "admin/js/primetech-circuit.js", "js/primetech-scene.js", "js/primetech-circuit.js",
+  "admin/js/theme-scenes-sections.js", "js/theme-scenes-sections.js",
+  "admin/js/iamscene-runtime.js", "js/iamscene-runtime.js",
+  "admin/css/theme-scenes-sections.css", "css/theme-scenes-sections.css",
   "primetech/companions/geaux.png", "primetech/companions/meaux.png",
   "primetech/scenes/original-4341/original-4341.iamscene.json",
   "admin/js/cms-authoring-engine.js", "admin/js/theme-preview-registry.js",

@@ -1,37 +1,14 @@
-# Theme package naming & storage
+# Theme distribution ownership
 
-## Where themes live
+`inneranimalmedia-theme-store` is the single source of truth for storefront themes: package source, theme catalog, previews, release assets, versioning and npm publication. The AgentSam SDK must not vendor storefront theme implementations or maintain a second storefront-theme registry.
 
-| Kind | Path (folder) | Canonical npm id | Role |
-| --- | --- | --- | --- |
-| Site themes | `packages/theme-*-site/` + `packages/theme-iasf/` | `@inneranimalmedia/theme-{cypress,violet,grove,ember,forge,harbor,summit,iasf}` | Public-site CSS/content packs |
-| Scenes | `packages/theme-scenes/` | `@inneranimalmedia/theme-scenes` | Composition vocabulary + registry |
-| Storefront shell | `packages/heuristic-theme/` | `@inneranimalmedia/theme-heuristic` | Stock CMS shell |
-| Docs skin | `packages/agentsam-docs-theme/` | `@inneranimalmedia/agentsam-docs-theme` | Docs-only tokens |
-| Gallery demos | `apps/theme-gallery-preview/` | (app) | Preview only |
+## What remains in the SDK
 
-**Stock installable:** `iasf` (`@inneranimalmedia/theme-iasf`) — Inner Animal Storefront normalized from `studio-cms-editor` harvest. Use `agentsam-cms create my-site --starter iasf`.
+| Package | Responsibility | Boundary |
+| --- | --- | --- |
+| `@inneranimalmedia/theme-scenes` | Cross-product scene, shell and block composition; portable CMS section renderers; scene-artifact adapters | Not a storefront theme, storefront theme catalog or theme registry |
+| `@inneranimalmedia/agentsam-docs-theme` | Documentation-only tokens and presentation | Not a merchant theme |
 
-**Folders may keep donor slugs for gallery/static mount compatibility.**
-**Canonical product identity is neutral** (Cypress / Violet / … / IASF). Donor names are private provenance via registry `aliases[]` / `donor`.
+The Ecommerce CMS consumes Theme Store catalog/release metadata and persists site-owned theme projects, pages, sections, revisions and publication state through its existing CMS D1/R2 contracts. It carries only neutral first-run content scaffolding, not theme source.
 
-## How to recognize / reuse
-
-```js
-import { resolveThemePackage, listThemePackages } from "@inneranimalmedia/theme-scenes/registry";
-
-resolveThemePackage("companions"); // → violet (legacy alias)
-resolveThemePackage("cypress");    // → canonical id
-listThemePackages("site-theme");
-```
-
-## Host vs product
-
-- **Host** owns Instrument Sans / Serif / IBM Plex Mono via `--font-sans` / `--font-display` / `--font-mono`.
-- **Product packages** consume host tokens; provider skins (Cloudflare purple / Supabase green) stay scoped.
-
-## Adoption rule
-
-1. Keep existing CSS files and gallery mounts intact.
-2. Prefer canonical ids for new installs/docs.
-3. Legacy donor npm ids remain as aliases until remaster/publish gates complete.
+PrimeTech can author reusable scenes with `@inneranimalmedia/theme-scenes`; the CMS registers those scene definitions as portable sections so any compatible Theme Store theme can host them. Brand tokens and site content remain separate from scene composition.

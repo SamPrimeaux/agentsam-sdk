@@ -1,3 +1,5 @@
+import { listCloudflareConnectionRecords, resolveCloudflareCredential } from '../../../../packages/connectors/cfoa/src/credential.js';
+
 /**
  * One Library discovery adapter. Source ownership stays with existing D1
  * artifacts, CMS sites, and media records; this module owns no resources.
@@ -5,6 +7,7 @@
 const safe = value => String(value ?? '').trim();
 const safeWebUrl = value => {
   const raw = safe(value);
+  if (raw.includes('\\') || /[\u0000-\u001f\u007f]/.test(raw)) return null;
   if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
   try { const parsed = new URL(raw); return parsed.protocol === 'https:' ? parsed.href : null; }
   catch { return null; }
@@ -75,6 +78,13 @@ export async function listAccountLibraryResources(db, owner) {
     const staticPublic = row.is_public ? safeWebUrl(row.public_url) : null;
     let attributes = {};
     try { attributes = JSON.parse(row.metadata_json || '{}') || {}; } catch { /* Leave invalid legacy metadata untouched. */ }
+    // A known OAuth account belongs with the artifact link, never an env
+    // fallback. If unknown and multiple accounts exist, the API fails closed.
+    const recordedCfAccount = safe(attributes.cloudflare_account_id || attributes.cloudflareAccountId);
+    const cfAccountQuery = /^[a-f0-9]{32}$/i.test(recordedCfAccount)
+      ? 'account='+encodeURIComponent(recordedCfAccount) : '';
+    const privateLink = base + (cfAccountQuery ? '?'+cfAccountQuery : '');
+    const privatePreview = base + '?preview=1' + (cfAccountQuery ? '&'+cfAccountQuery : '');
     return {
       starred: attributes.library?.starred === true,
       id:'artifact:'+row.id,name,kind,source:'artifacts',mime:safe(row.mime_type)||null,
@@ -85,10 +95,10 @@ export async function listAccountLibraryResources(db, owner) {
       // original artifact kind. A design or website document can have a
       // generated preview while its source file remains JSON/HTML.
       preview: richPreview || (row.thumbnail_r2_key || row.preview_r2_key
-        ? base+'?preview=1' : (kind==='image'?base:null)),
+        ? privatePreview : (kind==='image'?privateLink:null)),
       open:row.artifact_type === 'design-canvas'
         ? '/admin/canvas?canvas='+encodeURIComponent(row.id)
-        : staticPublic || base,
+        : staticPublic || privateLink,
       resourceType:'artifact',
     };
   });
@@ -134,23 +144,80 @@ export async function listAccountLibraryResources(db, owner) {
   return [...stored,...cms,...registered,...themes];
 }
 
-/** Account-owned private artifact file, resolved in the platform's own bucket. */
-export async function serveAccountLibraryFile(env,owner,id,preview=false) {
+/**
+ * An account's connected Cloudflare R2 assets are read through its OAuth grant.
+ * This is intentionally NOT a Worker R2 binding: buckets are selected at
+ * request time and no ambient CLI/CI token may authorize account-owned reads.
+ */
+async function readOauthR2Artifact(env, owner, row, key, accountId = '', options = {}) {
+  const bucketName = safe(row.r2_bucket);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{2,62}$/.test(bucketName) ||
+      !key || key.length > 1024 || key.startsWith('/') ||
+      /[\\\u0000-\u001f\u007f]/.test(key) || key.split('/').includes('..')) {
+    return Response.json({error:'r2_reference_invalid'},{status:400});
+  }
+  const listConnections = options.listConnections || listCloudflareConnectionRecords;
+  const resolveCredential = options.resolveCredential || resolveCloudflareCredential;
+  const fetchImpl = options.fetchImpl || fetch;
+  const connections = (await listConnections(env, owner)).filter(record =>
+    record.status === 'connected' && /^[a-f0-9]{32}$/i.test(record.cloudflareAccountId || ''));
+  let metadata = {};
+  try { metadata = JSON.parse(row.metadata_json || '{}') || {}; } catch { /* old metadata is optional */ }
+  const recordedAccount = safe(metadata.cloudflare_account_id || metadata.cloudflareAccountId);
+  if (accountId && recordedAccount && accountId !== recordedAccount) {
+    return Response.json({error:'cloudflare_account_mismatch'},{status:403});
+  }
+  const selectedAccount = accountId || recordedAccount ||
+    (connections.length === 1 ? connections[0].cloudflareAccountId : '');
+  if (!selectedAccount) {
+    return Response.json({error:connections.length > 1 ? 'cloudflare_account_selection_required' : 'cloudflare_oauth_required',
+      connect_url:'/api/connections/cloudflare/start?packs=media,data&return_to=/admin/media'},
+    {status:connections.length > 1 ? 409 : 401});
+  }
+  if (!connections.some(record => record.cloudflareAccountId === selectedAccount)) {
+    return Response.json({error:'cloudflare_connection_not_authorized'},{status:403});
+  }
+  const credential = await resolveCredential({
+    env, ownerId:owner, authMode:'oauth', explicitAccountId:selectedAccount, fetchImpl,
+  });
+  if (credential.status !== 'ready' || !credential.bearerToken || credential.accountId !== selectedAccount) {
+    return Response.json({error:'cloudflare_reconnect_required'},{status:401});
+  }
+  if (!credential.grantedScopes?.includes('workers-r2-bucket-item.read')) {
+    return Response.json({error:'cloudflare_r2_permission_missing'},{status:403});
+  }
+  const objectPath = key.split('/').map(encodeURIComponent).join('/');
+  const url = 'https://api.cloudflare.com/client/v4/accounts/' + selectedAccount +
+    '/r2/buckets/' + encodeURIComponent(bucketName) + '/objects/' + objectPath;
+  const response = await fetchImpl(url, {headers:{authorization:'Bearer ' + credential.bearerToken}});
+  if (!response.ok) {
+    return Response.json({error:response.status === 404 ? 'file_unavailable' : 'cloudflare_r2_read_failed'},
+      {status:response.status === 404 ? 404 : response.status === 403 ? 403 : 502});
+  }
+  return {body:response.body,httpMetadata:{contentType:response.headers.get('content-type') || ''}};
+}
+
+/** Verify the artifact's owner in D1, then read the original storage authority. */
+export async function serveAccountLibraryFile(env,owner,id,preview=false,options={}) {
   if (!owner || !env.DB?.prepare || !/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
     return Response.json({error:'not_found'},{status:404});
   }
   const row = await env.DB.prepare(
-    `SELECT r2_bucket,r2_key,preview_r2_key,thumbnail_r2_key,mime_type,name
+    `SELECT r2_bucket,r2_key,preview_r2_key,thumbnail_r2_key,mime_type,name,metadata_json
      FROM agentsam_artifacts WHERE id=? AND user_id=? LIMIT 1`
   ).bind(id,owner).first();
   if (!row) return Response.json({error:'not_found'},{status:404});
   const bucketName = safe(row.r2_bucket || 'artifacts');
+  // Existing first-party runtime buckets remain untouched. User-account R2
+  // buckets MUST NOT be added to wrangler.jsonc to make Library reads work.
   const bucket = bucketName === 'artifacts' ? env.ARTIFACTS
     : bucketName === 'inneranimalmedia-autorag' ? env.AUTORAG_BUCKET : null;
-  if (!bucket?.get) return Response.json({error:'file_unavailable'},{status:404});
   const key = preview ? safe(row.thumbnail_r2_key || row.preview_r2_key || row.r2_key) : safe(row.r2_key);
   if (!key) return Response.json({error:'file_unavailable'},{status:404});
-  const object = await bucket.get(key);
+  const object = bucket?.get
+    ? await bucket.get(key)
+    : await readOauthR2Artifact(env, owner, row, key, options.accountId || '', options);
+  if (object instanceof Response) return object;
   if (!object) return Response.json({error:'file_unavailable'},{status:404});
   const mime = safe(object.httpMetadata?.contentType || (preview ? '' : row.mime_type)).toLowerCase();
   const inline = /^(image\/(png|jpeg|webp|gif|avif)|application\/pdf|video\/(mp4|webm)|audio\/(mpeg|wav|ogg))$/.test(mime);

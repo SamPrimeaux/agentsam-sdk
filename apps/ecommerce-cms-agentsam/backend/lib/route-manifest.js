@@ -84,7 +84,6 @@ export const ADMIN_ROUTE_MANIFEST = [
   coreAdmin({ id: "admin.theme-editor.site-settings", path: "/admin/sites/:siteId/settings/editor", handler: "admin-html", page: "theme-editor", context: "cms.theme-editor" }),
   coreAdmin({ id: "admin.theme-editor.theme", path: "/admin/sites/:siteId/themes/:projectId/editor", handler: "admin-html", page: "theme-editor", context: "cms.theme-editor" }),
   coreAdmin({ id: "admin.theme-editor.theme-page", path: "/admin/sites/:siteId/themes/:projectId/editor/:pageSlug", handler: "admin-html", page: "theme-editor", context: "cms.theme-editor" }),
-  coreAdmin({ id: "admin.theme-workspace", path: "/admin/theme-workspace", handler: "admin-html", page: "theme-workspace", context: "cms.theme-workspace", legacy: ["/admin/theme-workspace.html"] }),
   coreAdmin({ id: "admin.scene-lab", path: "/admin/scene-lab", handler: "admin-html", page: "scene-lab", context: "cms.scene", legacy: ["/admin/scene-lab.html"] }),
   coreAdmin({ id: "admin.bridge-fly-preview", path: "/admin/bridge-fly-preview", handler: "admin-html", page: "bridge-fly-preview", context: "cms.preview", legacy: ["/admin/bridge-fly-preview.html"] }),
   coreAdmin({ id: "admin.store", path: "/admin/store", handler: "admin-html", page: "store", context: "store.settings", legacy: ["/admin/store.html"] }),

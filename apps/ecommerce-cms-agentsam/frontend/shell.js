@@ -174,7 +174,7 @@ function normalizeAdminPath(value) {
 }
 function isAllowlistedAdminPath(pathname, routes) {
   const path = normalizeAdminPath(pathname);
-  if (!path.startsWith("/admin/") || path.startsWith("/admin/theme-editor") || path.startsWith("/admin/theme-workspace")) return false;
+  if (!path.startsWith("/admin/") || path.startsWith("/admin/theme-editor")) return false;
   return (routes || ADMIN_EXIT_ROUTES).some(function(route) {
     return path === route || path.startsWith(route + "/");
   });

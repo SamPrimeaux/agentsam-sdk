@@ -4,6 +4,7 @@
     "headings": [
       "@inneranimalmedia/theme-scenes",
       "Install",
+      "AgentSam CMS integration",
       "Hierarchy",
       "Scene kinds (harvested from Work/Create HTML)",
       "Laws",
@@ -16,7 +17,7 @@
       "Tests"
     ],
     "path": "packages/theme-scenes/README.md",
-    "summary": "Reusable **scene / shell / block** vocabulary for branded website experiences.",
+    "summary": "Reusable scene / shell / block vocabulary and portable renderer for creative website experiences. This is a cross-product creative package, not a storefront theme.",
     "title": "@inneranimalmedia/theme-scenes"
   },
   "registry": {
@@ -26,27 +27,17 @@
       "optionalDependencies": [],
       "peerDependencies": []
     },
-    "description": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
+    "description": "Cross-product creative scene composition contracts and CMS-compatible scene runtime. Not a storefront theme.",
     "exports": [
       ".",
       "./blocks",
+      "./cms",
       "./contracts",
       "./demos",
       "./package.json",
       "./presets",
-      "./registry",
       "./scenes",
       "./shell",
-      "./src/blocks/index.js",
-      "./src/contracts/index.js",
-      "./src/demos/index.js",
-      "./src/index.js",
-      "./src/presets/index.js",
-      "./src/registry.js",
-      "./src/scenes/index.js",
-      "./src/shell/index.js",
-      "./src/themes/index.js",
-      "./src/visuals/index.js",
       "./themes",
       "./visuals"
     ],
@@ -59,7 +50,7 @@
       "test"
     ],
     "types": null,
-    "version": "2.6.12"
+    "version": "2.6.17"
   },
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {

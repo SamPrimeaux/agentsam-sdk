@@ -7,6 +7,7 @@
 import { listCmsComponentCatalog } from './definition-registry.mjs';
 import { selectOwnedPageSite, findSiteOwnedPage } from './site-owned-page-adapter.mjs';
 import { resolveCatalogTemplate, buildCatalogInstanceContent } from './catalog-resource.mjs';
+import { getCmsSectionRenderer } from './section-renderer-runtime.mjs';
 import '../../packages/theme-contract/runtime/platform-stock-sections.js';
 import '../../packages/theme-contract/runtime/portable-sections.js';
 
@@ -37,7 +38,7 @@ function prepareStockInstance(template,settings) {
       !template.rendererKey) return {failure:error('cms_stock_renderer_unavailable',409)};
   const defaults=template.templateData?.default_content;
   if (!plain(defaults) || !plain(defaults.__editor)) return {failure:error('cms_stock_defaults_missing',409)};
-  const runtime=globalThis.ThemePortableSections;
+  const runtime=getCmsSectionRenderer(template.rendererKey);
   if (!runtime?.get?.(template.rendererKey) || !runtime?.validate)
     return {failure:error('cms_stock_renderer_not_loaded',503)};
   const next=structuredClone(defaults);

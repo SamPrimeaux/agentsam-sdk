@@ -1,8 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 const renderIDEWorkspaceMarkdown = (content:string) => <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>;
-import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
+import { WorkspaceEditor, WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
 import type { AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
 import { openExternalUrl, isPackagedDesktop } from '@/lib/desktop/tauri';
 import {
@@ -12,7 +12,6 @@ import {
 import { beginLocalStudioConnectorOAuth, startLocalStudioProviderConnection } from '@/lib/connections/client';
 import { DockerConnectionPanel } from '@/components/runtime/DockerConnectionPanel';
 import { createDockerIDEWorkspace, type DockerSelection } from '@/lib/work/docker-ide-workspace';
-const WorkspaceEditor=lazy(()=>import('@inneranimalmedia/agentsam-ide/surface').then(mod=>({default:mod.WorkspaceEditor})));
 const empty:IDESourceDiscovery={ok:true,googleDrive:[],github:[],cloudflare:[]};
 const info:Record<IDEFileSourceId,string>={
   local:'Authorized local filesystem',
@@ -119,12 +118,10 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
       {monacoFailure?<p role="alert" className="p-3 text-xs text-destructive">Monaco runtime unavailable: {monacoFailure}</p>:null}
       {!monacoReady&&!monacoFailure?<p className="p-3 text-xs text-muted-foreground">Initializing Monaco language workers…</p>:null}
       {monacoReady&&!monacoFailure?<>
-      <Suspense fallback={<p className="p-4 text-xs">Loading IDE…</p>}>
         <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} key={source==='docker'&&dockerSelection?'docker:'+dockerSelection.context+':'+dockerSelection.container+':'+dockerSelection.root:source+':'+account+':'+bucket} workspace={remote}
           workspaceId={source==='docker'&&dockerSelection?'docker:'+dockerSelection.context+':'+dockerSelection.container+':'+dockerSelection.root:source+':'+account+':'+bucket} palette={palette}
           label={source==='docker'?'Docker · '+dockerSelection?.container:source==='drive'?'Google Drive · '+account:source==='github'?'GitHub · '+repository:'R2 · '+bucket}
-          sources={sources} sourceId={source} onSourceSelect={onSelect}/>
-      </Suspense></>:null}
+          sources={sources} sourceId={source} onSourceSelect={onSelect}/></>:null}
     </div>:<div className="min-h-0 flex-1 overflow-y-auto p-4 text-xs">
       <div className="mx-auto flex max-w-lg flex-col gap-4">
         <div><h2 className="text-base font-semibold">{sources.find(s=>s.id===source)?.label}</h2>

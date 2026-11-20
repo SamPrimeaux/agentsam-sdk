@@ -32,7 +32,6 @@ RENAMES = {  # unpublished/pre-publication names that break the grammar -> canon
     "@inneranimalmedia/agentsam-sdk-cad-creator": "@inneranimalmedia/agentsam-cad-creator",
     "@inneranimalmedia/agentsam-sdk-ecommerce": "@inneranimalmedia/ecommerce-cms-agentsam",
     "@inneranimalmedia/work-graph": "@inneranimalmedia/agentsam-work-graph",
-    "@inneranimalmedia/heuristic-theme": "@inneranimalmedia/theme-heuristic",
 }
 DEP_SECTIONS = ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies")
 ROOT = os.getcwd()

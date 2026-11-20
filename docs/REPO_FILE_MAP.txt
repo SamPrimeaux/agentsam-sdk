@@ -56,7 +56,7 @@ this orientation map as revision authority.
   |   `-- theme-* / heuristic-theme / docs-theme
   |       Examples/families, not an exhaustive package list.
   |-- apps/                 PRODUCT APPLICATIONS
-  |   |-- local-studio, project-control, frontend, theme-gallery-preview
+  |   |-- local-studio, project-control, frontend, (Theme Store owns theme gallery/preview)
   |   |-- cad-creator, client-cms-editor, ecommerce-cms-agentsam
   |   |-- agentsam-go-worker, agentsamd
   |   |-- cypress, violet, grove, ember,

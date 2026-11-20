@@ -32,9 +32,6 @@ const loadingScenePackageRoot = resolvePath(
 const workPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-work", import.meta.url)),
 );
-const ideSource = resolvePath(
-  fileURLToPath(new URL("../../packages/agentsam-ide/src", import.meta.url)),
-);
 const workbenchSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-workbench/src", import.meta.url)),
 );
@@ -377,27 +374,6 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: /^@inneranimalmedia\/agentsam-analytics$/,
         replacement: resolvePath(analyticsPackageRoot, "src/index.ts"),
-      },
-      {
-        find: /^@inneranimalmedia\/agentsam-ide\/surface\/workspace-editor\.css$/,
-        replacement: resolvePath(ideSource, "surface/workspace-editor.css"),
-      },
-      {
-        find: /^@inneranimalmedia\/agentsam-ide\/surface$/,
-        replacement: resolvePath(ideSource, "surface/index.ts"),
-      },
-      {
-        find: /^@inneranimalmedia\/agentsam-ide\/lsp$/,
-        replacement: resolvePath(ideSource, "lsp/index.ts"),
-      },
-      {
-        find: /^@inneranimalmedia\/agentsam-ide\/workspace$/,
-        replacement: resolvePath(ideSource, "workspace/index.ts"),
-      },
-      {
-        // Use the canonical SDK source in hosted + desktop builds until the next IDE package release.
-        find: /^@inneranimalmedia\/agentsam-ide\/monaco$/,
-        replacement: resolvePath(ideSource, "monaco/index.ts"),
       },
       {
         find: /^@inneranimalmedia\/agentsam-workbench\/capabilities$/,

@@ -16,11 +16,11 @@
    if(text!==undefined)element.textContent=String(text);
    return element;
  };
- const sameOriginUrl=path=>{
-   if(typeof path!=='string'||!path.startsWith('/')||path.startsWith('//'))return null;
+ const themeStorePreviewUrl=value=>{
+   if(typeof value!=='string'||!value)return null;
    try {
-     const url=new URL(path,location.origin);
-     return url.origin===location.origin?url:null;
+     const url=new URL(value,location.origin);
+     return url.origin===location.origin||url.origin==='https://themes.inneranimalmedia.com'?url:null;
    }catch{return null;}
  };
  const themeStoreImageUrl=value=>{
@@ -68,9 +68,9 @@
    for(const product of visible){
      const card=node('article','theme-marketplace-item');
      const visual=node('div','theme-marketplace-visual');
-     const preview=sameOriginUrl(product.preview_url);
+     const preview=themeStorePreviewUrl(product.preview_url);
      const thumbnail=themeStoreImageUrl(product.thumbnail_url);
-     if(thumbnail && product.preview_ready){
+     if(thumbnail){
        const image=node('img','theme-marketplace-thumb');
        image.loading='lazy';
        image.alt=product.name+' theme artwork';
@@ -79,7 +79,7 @@
      }else{
        visual.append(node('div','theme-marketplace-unavailable','Preview artwork unavailable'));
      }
-     visual.append(node('span','theme-marketplace-state',product.preview_ready?'Preview available':'Source only'));
+     visual.append(node('span','theme-marketplace-state',preview?'Preview available':'Source only'));
      const body=node('div','theme-marketplace-body');
      body.append(node('span','theme-marketplace-category',product.category),node('h3','',product.name),node('p','',product.description));
      const meta=node('div','theme-marketplace-meta',product.package+' · v'+product.version);

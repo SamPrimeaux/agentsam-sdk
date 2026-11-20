@@ -74,7 +74,6 @@ export function ArtifactsSurface({
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
-  const [showFilters, setShowFilters] = useState(false);
   const [failedPreviews, setFailedPreviews] = useState<Set<string>>(() => new Set());
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const focusedArtifact = artifacts.find((artifact) => artifact.id === focusedId);
@@ -99,8 +98,8 @@ export function ArtifactsSurface({
     () => [...new Set(artifacts.map((item) => item.kind))].sort(),
     [artifacts],
   );
-  const visible = useMemo(() => artifacts
-    .filter((item) => {
+  const visible = useMemo(() => {
+    const matching = artifacts.filter((item) => {
       const matchesView =
         view === "all" ||
         view === "recent" ||
@@ -113,12 +112,15 @@ export function ArtifactsSurface({
         (kind === "all" || item.kind === kind) &&
         (view === "trash" ? item.deleted : !item.deleted) &&
         matchesView;
-    })
-    .sort((a, b) => {
+    });
+    const sorted = matching.sort((a, b) => {
+      if (view === "recent") return (b.updatedAt || 0) - (a.updatedAt || 0);
       if (sortBy === "name") return a.name.localeCompare(b.name);
       if (sortBy === "type") return a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name);
       return (b.updatedAt || 0) - (a.updatedAt || 0);
-    }), [artifacts, query, source, kind, view, sortBy]);
+    });
+    return view === "recent" ? sorted.slice(0, 50) : sorted;
+  }, [artifacts, query, source, kind, view, sortBy]);
 
   const assetMutation = async (
     artifact: WorkArtifact,
@@ -278,6 +280,17 @@ export function ArtifactsSurface({
                 </summary>
                 <div className="agentsam-artifact-hub__menu-panel agentsam-artifact-hub__filter-panel">
                   <label>
+                    View
+                    <select aria-label="Filter by view" value={view} onChange={(event) => setView(event.target.value as LibraryView)}>
+                      <option value="all">All artifacts</option>
+                      <option value="yours">Yours</option>
+                      <option value="shared">Shared</option>
+                      <option value="recent">Recent</option>
+                      <option value="starred">Starred</option>
+                      <option value="trash">Trash</option>
+                    </select>
+                  </label>
+                  <label>
                     Type
                     <select aria-label="Filter by type" value={kind} onChange={(event) => setKind(event.target.value as WorkArtifact["kind"] | "all")}>
                       <option value="all">Any type</option>
@@ -380,7 +393,7 @@ export function ArtifactsSurface({
 
             <section className="agentsam-artifact-hub__saved" aria-label="Saved artifacts">
               <div className="agentsam-artifact-hub__section-heading">
-                <h2>{view === "shared" ? "Shared with you" : view === "yours" ? "Yours" : view === "trash" ? "Trash" : "Your artifacts"}</h2>
+                <h2>{view === "shared" ? "Shared with you" : view === "yours" ? "Yours" : view === "recent" ? "Recently updated" : view === "starred" ? "Favorites" : view === "trash" ? "Trash" : "Your artifacts"}</h2>
                 <span>{visible.length} {visible.length === 1 ? "item" : "items"}</span>
               </div>
 
@@ -394,8 +407,8 @@ export function ArtifactsSurface({
               {!visible.length ? (
                 <div className="agentsam-artifact-hub__empty">
                   <Folder size={24} strokeWidth={1.35} aria-hidden="true" />
-                  <strong>{query ? "No matching artifacts" : view === "shared" ? "Nothing shared with you yet" : view === "trash" ? "Trash is empty" : "Nothing here yet"}</strong>
-                  <span>{query ? "Try another search or clear a filter." : view === "shared" ? "Artifacts shared with your account will appear here." : artifacts.length ? "Change the filters to see other saved work." : emptyMessage}</span>
+                  <strong>{query ? "No matching artifacts" : view === "shared" ? "Nothing shared with you yet" : view === "recent" ? "No recent updates" : view === "starred" ? "No favorites yet" : view === "trash" ? "Trash is empty" : "Nothing here yet"}</strong>
+                  <span>{query ? "Try another search or clear a filter." : view === "shared" ? "Artifacts shared with your account will appear here." : view === "recent" ? "Your 50 most recently updated items will appear here." : view === "starred" ? "Favorite an artifact to keep it close." : view === "trash" ? "Deleted artifacts can be restored here." : artifacts.length ? "Change the filters to see other saved work." : emptyMessage}</span>
                 </div>
               ) : (
                 <div className={"agentsam-artifact-hub__items is-" + layout}>

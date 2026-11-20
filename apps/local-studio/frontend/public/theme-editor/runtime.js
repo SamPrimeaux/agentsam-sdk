@@ -574,6 +574,12 @@
     return findSection(activeSectionKey, activeSectionOwner);
   }
 
+  function portableRuntimeFor(preset) {
+    return String(preset || '').startsWith('theme-scenes/')
+      ? window.ThemeScenesSections
+      : window.ThemePortableSections;
+  }
+
   function schemaForSection(section) {
     if (!section) return null;
     // Generated instances bind their precise immutable definition version;
@@ -597,7 +603,8 @@
       };
     }
     if (section.content?.__editor?.templateKey === 'portable') {
-      return window.ThemePortableSections?.schema(section.content.__editor.themePreset) || null;
+      const preset = section.content.__editor.themePreset;
+      return portableRuntimeFor(preset)?.schema(preset) || null;
     }
     const owner = section.__ownerSlug || slug;
     const schemas = window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[owner];
@@ -1043,8 +1050,8 @@
     }
 
     function blockVisual(template) {
-      const api = window.ThemePortableSections;
       const preset = section.content?.__editor?.themePreset;
+      const api = portableRuntimeFor(preset);
       if (!api || section.content?.__editor?.templateKey !== 'portable' || !preset ||
           typeof api.render !== 'function') {
         return '<div class="te-catalog-preview-unavailable"><strong>Preview not available</strong>' +
@@ -1368,8 +1375,8 @@
       if (entry.previewHtml) return '<iframe class="te-catalog-visual" title="Preview of ' +
         cmsEscapeAttr(entry.label || entry.id) + '" sandbox="" loading="lazy" tabindex="-1" srcdoc="' +
         cmsEscapeAttr(entry.previewHtml) + '"></iframe>';
-      const api = window.ThemePortableSections;
       const preset = entry.rendererPreset || entry.preset || entry.id;
+      const api = portableRuntimeFor(preset);
       if (api && typeof api.defaults === 'function' && typeof api.render === 'function') {
         const content = api.defaults(preset);
         if (content) {
@@ -1378,7 +1385,9 @@
             const html = '<!doctype html><html><head><meta charset="utf-8">' +
               '<meta name="viewport" content="width=device-width,initial-scale=1">' +
               '<link rel="stylesheet" href="/js/portable-sections.css">' +
+              '<link rel="stylesheet" href="/js/theme-scenes-sections.css">' +
               '<style>html,body{margin:0;background:#fff}body{pointer-events:none}</style>' +
+              (String(preset).startsWith('theme-scenes/') ? '<script src="/assets/js/iamscene-runtime.js" defer></script>' : '') +
               '</head><body>' + markup + '</body></html>';
             return '<iframe class="te-catalog-visual" title="Preview of ' +
               cmsEscapeAttr(entry.label) + '" sandbox="" loading="lazy" tabindex="-1" ' +

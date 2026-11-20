@@ -2,15 +2,14 @@
  * Side Stage Files is a host of the shared @inneranimalmedia/agentsam-ide UI.
  * It must not maintain a second explorer/Monaco implementation.
  */
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FolderOpen, RefreshCw, Settings2 } from 'lucide-react';
-import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
+import { WorkspaceEditor, WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
 import type { AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
 import { HttpLspTransport, workspaceRootFileUri } from '@inneranimalmedia/agentsam-ide/lsp';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
 import { NativeLspTransport } from '@/lib/desktop/native-lsp';
 import { readTheme, type StoredTheme } from '@/lib/work/theme';
-const WorkspaceEditor = lazy(()=>import('@inneranimalmedia/agentsam-ide/surface').then(mod=>({default:mod.WorkspaceEditor})));
 import '@inneranimalmedia/agentsam-ide/surface/workspace-editor.css';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -163,11 +162,9 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     <div className="min-h-0 flex-1">
       {monacoFailure?<p role="alert" className="p-4 text-sm text-destructive">Monaco unavailable: {monacoFailure}</p>
         :!monacoReady?<p role="status" className="p-4 text-xs text-muted-foreground">Initializing Monaco…</p>
-        :<Suspense fallback={<p className="p-4 text-xs">Loading IDE…</p>}>
-          <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} workspace={browserWorkspace} key={browserWorkspaceKey} workspaceId={browserWorkspaceKey}
+        :<WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} workspace={browserWorkspace} key={browserWorkspaceKey} workspaceId={browserWorkspaceKey}
             label={browserWorkspaceName} palette={palette} sources={sources} sourceId="local"
-            onSourceSelect={setSource} showHostModes onReconnect={()=>setConnectOpen(true)} onConnectionSettings={openRuntimeSettings}/>
-        </Suspense>}
+            onSourceSelect={setSource} showHostModes onReconnect={()=>setConnectOpen(true)} onConnectionSettings={openRuntimeSettings}/>}
     </div>
   </section>;
   const connectDialog = <Dialog open={connectOpen} onOpenChange={setConnectOpen}>
@@ -229,11 +226,9 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     {sourceNotice ? <div role="status" className="border-b border-border px-3 py-2 text-xs text-muted-foreground">{sourceNotice}
       <button type="button" className="ml-3 underline" onClick={()=>setSourceNotice('')}>Dismiss</button></div> : null}
     <div className="min-h-0 flex-1">
-      <Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading AgentSam IDE…</p>}>
       <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} key={project.id} workspace={workspace} workspaceId={project.id}
         label={project.name} palette={palette} lsp={lsp} showHostModes sources={sources} sourceId="local"
         onSourceSelect={id => setSource(id)} onReconnect={()=>setConnectOpen(true)} onConnectionSettings={openRuntimeSettings}/>
-      </Suspense>
     </div>
     {connectDialog}
   </section>;

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cad-creator",
-  "version": "2.6.16",
+  "version": "2.6.17",
   "description": "Prepackaged AgentSam CAD, spatial design, and robotics application kit.",
   "type": "module",
   "license": "FSL-1.1-MIT",
@@ -70,8 +70,7 @@
     "node": ">=20"
   },
   "overrides": {
-    "qs": "6.16.0",
-    "picomatch": "https://raw.githubusercontent.com/SamPrimeaux/agentsam-sdk/85fcc1dd70a8505b5c96e4a090bab3843a7d5fb9/vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
+    "qs": "6.16.0"
   },
   "allowScripts": {
     "fsevents@2.3.3": true,

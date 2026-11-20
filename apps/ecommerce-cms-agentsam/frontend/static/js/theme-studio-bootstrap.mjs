@@ -210,7 +210,7 @@ async function bootProject(route) {
           body: JSON.stringify({ expected_version: current.revision }),
         });
         if (result.archived !== true) throw new Error('theme_archive_failed');
-        location.assign('/admin/theme-workspace');
+        location.assign('/admin/store');
       } catch (error) { showError(error); }
     },
     onEditCode() {

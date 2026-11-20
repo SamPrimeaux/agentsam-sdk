@@ -107,9 +107,6 @@ jobs:
       - name: App boundaries
         run: npm run app:boundaries
 
-      - name: Verify pinned picomatch CVE-2026-112366 security fork
-        run: node --test test/security/picomatch-redos-vendor.test.mjs
-
       - name: Dependency health
         run: node src/security/cli.mjs check --log "$RUNNER_TEMP/npm-ci.log" --json > "$RUNNER_TEMP/dependency-health.json"
 

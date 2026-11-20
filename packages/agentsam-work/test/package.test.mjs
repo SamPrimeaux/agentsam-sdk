@@ -186,6 +186,10 @@ test('Artifacts is a global Side Stage library with six focused creation routes 
   }
   assert.match(surface, /aria-label="Search artifacts"/);
   assert.match(surface, /aria-label="Filter artifacts"/);
+  assert.match(surface, /aria-label="Filter by view"/);
+  assert.match(surface, /sorted\.slice\(0, 50\)/);
+  assert.match(surface, /view === "starred"/);
+  assert.match(surface, /view === "recent"/);
   assert.match(surface, /aria-label="Sort artifacts"/);
   assert.match(surface, /aria-label="Create artifact"/);
   assert.match(surface, /openInWorkspace/);

@@ -189,7 +189,7 @@ export interface ContentRuntime {
   createAsset(input: CreateAssetInput, actor?: ActorRef): Promise<ContentAsset>;
   /**
    * Create asset from bytes/File and optionally run host image optimize + public variant.
-   * Orchestration lives here so UI hosts (Local Studio, web, FnF) do not duplicate pipelines.
+   * Orchestration lives here so UI hosts (Local Studio, web, merchant storefronts) do not duplicate pipelines.
    */
   importAsset(input: ImportAssetInput, actor?: ActorRef): Promise<ContentAsset>;
   /** Run host optimize for an existing asset (images). Emits processing events via variants. */

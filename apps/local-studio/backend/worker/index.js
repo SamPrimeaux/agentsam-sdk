@@ -1098,15 +1098,7 @@ export default {
       if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
       const principal = await resolveSessionUser(request, env);
       if (!principal) return json({ok:false,error:'unauthorized'},401);
-      const assetURL = new URL(request.url);
-      assetURL.pathname = '/ecommerce-cms-agentsam/admin/data/theme-products.json';
-      assetURL.search = '';
-      const catalogAsset = await env.ASSETS.fetch(new Request(assetURL,request));
-      if (!catalogAsset.ok) return json({ok:false,error:'catalog_not_staged'},503);
-      const catalog = await catalogAsset.json().catch(()=>null);
-      if (!catalog?.ok || !Array.isArray(catalog.products))
-        return json({ok:false,error:'catalog_manifest_invalid'},503);
-      return json(catalog,200);
+      return handleStudioWebsiteThemeCatalog(request, principal?.id || null, env);
     }
 
     if (url.pathname === '/api/admin/platform/products' || url.pathname.startsWith('/api/admin/platform/products/')) {

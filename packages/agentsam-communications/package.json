@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-communications",
-  "version": "2.6.16",
+  "version": "2.6.17",
   "description": "Portable account-scoped communications with pluggable email transports and notification outbox support",
   "type": "module",
   "exports": {

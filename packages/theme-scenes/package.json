@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/theme-scenes",
-  "version": "2.6.16",
-  "description": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
+  "version": "2.6.17",
+  "description": "Cross-product creative scene composition contracts and CMS-compatible scene runtime. Not a storefront theme.",
   "type": "module",
   "license": "FSL-1.1-MIT",
   "engines": {
@@ -18,8 +18,8 @@
     "./demos": "./src/demos/index.js",
     "./themes": "./src/themes/index.js",
     "./presets": "./src/presets/index.js",
-    "./registry": "./src/registry.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./cms": "./src/cms/index.js"
   },
   "files": [
     "src",
@@ -37,12 +37,11 @@
     "access": "public"
   },
   "keywords": [
-    "agentsam",
-    "theme",
-    "scenes",
-    "sections",
-    "brand",
-    "cms"
+    "creative-scenes",
+    "cms",
+    "website-composition",
+    "portable-renderer",
+    "interactive-scenes"
   ],
   "agentsam": {
     "kind": "theme-runtime",

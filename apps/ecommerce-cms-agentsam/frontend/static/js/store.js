@@ -20,7 +20,6 @@ renderShell("/admin/store", `
         </button>
         <a class="btn ghost small" id="test-customer-flow-btn" href="/admin/onboarding-preview" target="_top" rel="noopener" title="Test plan selection, checkout review, setup and welcome without a payment provider">Preview checkout</a>
         <button type="button" class="btn ghost small" id="view-storefront-btn" disabled title="Connect a site to preview the published storefront">View site</button>
-        <a class="btn ghost small" id="my-theme-studio-btn" href="/admin/theme-workspace">My Theme Studio</a>
         <button type="button" class="online-store-icon-btn" aria-label="More actions">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
         </button>

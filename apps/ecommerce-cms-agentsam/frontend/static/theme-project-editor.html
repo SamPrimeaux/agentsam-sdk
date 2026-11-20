@@ -22,12 +22,12 @@
         return;
       }
       if (!/^[A-Za-z0-9_-]{1,160}$/.test(siteId || '') || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId || '')) {
-        location.replace('/admin/theme-workspace');
+        location.replace('/admin/store');
         return;
       }
       const page = query.get('page') || 'home';
       if (!/^[A-Za-z0-9_-]{1,160}$/.test(page)) {
-        location.replace('/admin/theme-workspace');
+        location.replace('/admin/store');
         return;
       }
       const target = new URL(`/admin/sites/${encodeURIComponent(siteId)}/themes/${encodeURIComponent(projectId)}/editor/${encodeURIComponent(page)}`, location.origin);

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-analytics",
-  "version": "2.6.16",
+  "version": "2.6.17",
   "description": "Portable AgentSam analytics read models and operational analytics surfaces.",
   "type": "module",
   "files": [
@@ -31,7 +31,7 @@
     }
   },
   "dependencies": {
-    "@inneranimalmedia/analytics-ui": "2.6.16"
+    "@inneranimalmedia/analytics-ui": "2.6.17"
   },
   "peerDependencies": {
     "react": ">=19"

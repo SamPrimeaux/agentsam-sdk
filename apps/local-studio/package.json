@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-local-studio",
-  "version": "2.6.16",
+  "version": "2.6.17",
   "sideEffects": false,
   "type": "module",
   "workspaces": [
@@ -13,17 +13,16 @@
     "lru-cache": "11.5.2",
     "dompurify": "3.4.17",
     "@hono/node-server": "2.1.6",
-    "hono": "4.13.18",
-    "picomatch": "https://raw.githubusercontent.com/SamPrimeaux/agentsam-sdk/85fcc1dd70a8505b5c96e4a090bab3843a7d5fb9/vendor/security/inneranimalmedia-picomatch-redos-patched-4.0.8-iam.1.tgz"
+    "hono": "4.13.18"
   },
   "scripts": {
     "dev": "npm run build:settings && node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
-    "build": "npm run build:settings && node scripts/stage-console-host.mjs && node scripts/ensure-aliased-deps.mjs && NODE_ENV=production node scripts/with-app-env.mjs vite build && node scripts/stage-shell-assets.mjs && node scripts/copy-auth-portal.mjs && node scripts/build-included-apps.mjs --all && node scripts/build-included-apps.mjs --stage && node scripts/stage-console-host.mjs --stage && node scripts/stage-settings-shell.mjs",
-    "build:desktop": "npm run build:settings && node scripts/stage-console-host.mjs && node scripts/generate-routes.mjs && node scripts/ensure-aliased-deps.mjs && NODE_ENV=production vite build --config vite.desktop.config.ts && node scripts/copy-auth-portal.mjs --out=desktop-dist --desktop && node scripts/stage-console-host.mjs --desktop",
-    "build:settings": "node ../../scripts/build-canvas-knowledge.mjs && node scripts/stage-inneranimal-companions.mjs && npm --prefix ../../packages/agentsam-workbench run build && npm --prefix ../../packages/agentsam-settings run build && npm --prefix ../../packages/agentsam-goalguru run build",
+    "build": "npm run build:settings && node scripts/stage-console-host.mjs && NODE_ENV=production node scripts/with-app-env.mjs vite build && node scripts/stage-shell-assets.mjs && node scripts/copy-auth-portal.mjs && node scripts/build-included-apps.mjs --all && node scripts/build-included-apps.mjs --stage && node scripts/stage-console-host.mjs --stage && node scripts/stage-settings-shell.mjs",
+    "build:desktop": "npm run build:settings && node scripts/stage-console-host.mjs && node scripts/generate-routes.mjs && NODE_ENV=production vite build --config vite.desktop.config.ts && node scripts/copy-auth-portal.mjs --out=desktop-dist --desktop && node scripts/stage-console-host.mjs --desktop",
+    "build:settings": "node ../../scripts/build-canvas-knowledge.mjs && node scripts/stage-inneranimal-companions.mjs && npm run build:ide && npm --prefix ../../packages/agentsam-workbench run build && npm --prefix ../../packages/agentsam-settings run build && npm --prefix ../../packages/agentsam-goalguru run build",
     "site:sync": "node ../../scripts/sync-public-site.mjs",
     "site:publish": "node ../../scripts/publish-website-assets.mjs",
-    "build:dev": "node scripts/with-app-env.mjs vite build --mode development",
+    "build:dev": "npm run build:ide && node scripts/with-app-env.mjs vite build --mode development",
     "preview": "node scripts/with-app-env.mjs vite preview",
     "preview:restart": "node scripts/preview.mjs restart",
     "preview:stop": "node scripts/preview.mjs stop",
@@ -66,9 +65,10 @@
     "verify:desktop:cad": "npm run verify:desktop && npm run smoke:desktop-cad",
     "verify:desktop:themes": "npm run verify:desktop && npm run smoke:themes && npm run smoke:cms-site-fidelity",
     "cf:smoke:worker": "node scripts/smoke-worker-routes.mjs",
-    "cf:build": "npm run build:included:all && npm run build && npm run cf:verify-output && npm run cf:smoke:worker",
+    "cf:build": "npm run build:included:all && npm run build && npm run cf:verify-output && npm run test --workspace @inneranimalmedia/agentsam-local-studio-backend && npm run cf:smoke:worker",
     "cf:build:source": "node scripts/cloudflare-source-build.mjs",
-    "dev:media-intake": "npm run build:settings && python3 scripts/unpack-local-media-archives.py && node scripts/build-local-media-intake.mjs && node scripts/build-local-product-intake.mjs && AGENTSAM_MEDIA_INTAKE=1 node scripts/with-app-env.mjs vite dev --host 127.0.0.1 --port 8080"
+    "dev:media-intake": "npm run build:settings && python3 scripts/unpack-local-media-archives.py && node scripts/build-local-media-intake.mjs && node scripts/build-local-product-intake.mjs && AGENTSAM_MEDIA_INTAKE=1 node scripts/with-app-env.mjs vite dev --host 127.0.0.1 --port 8080",
+    "build:ide": "node scripts/ensure-aliased-deps.mjs && npm --prefix ../../packages/agentsam-ide run build"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",

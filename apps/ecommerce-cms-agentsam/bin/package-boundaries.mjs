@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-// Read-only source/package boundary diagnostic. The bundler and clean-room build
-// remain the final authority for all forms of dynamic resolution.
+// Read-only package-boundary diagnostic. Inspect the actual npm distribution
+// allowlist, not monorepo-only tests and preview tooling that cannot ship.
 const SOURCES = /\.(?:[cm]?js|jsx|[cm]?ts|tsx)$/i;
 const IGNORED = new Set(["node_modules", ".git", ".wrangler", "dist", "build", "coverage", ".next", "test-results", "test", "tests", "fixtures"]);
 function within(root, target) {
@@ -11,14 +11,33 @@ function within(root, target) {
 function issue(file, kind, reference, detail) {
   return { file, kind, reference, detail };
 }
+function matchesExclusion(relative, pattern) {
+  const normalized = pattern.replace(/^\.\//, "");
+  if (normalized === "**/*.test.mjs") return /(^|\/)[^/]+\.test\.mjs$/i.test(relative);
+  if (normalized.startsWith("**/")) return relative.endsWith(normalized.slice(3));
+  return relative === normalized;
+}
+function includedInPackage(relative, files) {
+  if (relative === "package.json") return true;
+  if (!Array.isArray(files) || !files.length) return true;
+  const included = files.some((rule) => {
+    if (typeof rule !== "string" || rule.startsWith("!")) return false;
+    const normalized = rule.replace(/^\.\//, "");
+    return normalized.endsWith("/") ? relative.startsWith(normalized) : relative === normalized;
+  });
+  if (!included) return false;
+  return !files.some((rule) => typeof rule === "string" && rule.startsWith("!") && matchesExclusion(relative, rule.slice(1)));
+}
 export function inspectPackageBoundaries(appRoot) {
   const root = fs.realpathSync(path.resolve(appRoot));
+  const rootManifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const packageFiles = rootManifest.files;
   const issues = [];
   let scannedFiles = 0;
   let scannedManifests = 0;
   function checkManifest(abs) {
     scannedManifests++;
-    const relative = path.relative(root, abs);
+    const relative = path.relative(root, abs).split(path.sep).join("/");
     let pkg;
     try { pkg = JSON.parse(fs.readFileSync(abs, "utf8")); }
     catch (error) {
@@ -40,9 +59,8 @@ export function inspectPackageBoundaries(appRoot) {
   }
   function checkSource(abs) {
     scannedFiles++;
-    const relative = path.relative(root, abs);
+    const relative = path.relative(root, abs).split(path.sep).join("/");
     const src = fs.readFileSync(abs, "utf8");
-    // Static/dynamic literal ES imports and CommonJS requires.
     const refs = [
       /\b(?:import|export)\s+(?:type\s+)?(?:[^;\n]*?\s+from\s*)?["']([^"'\n]+)["']/g,
       /\b(?:import|require)\s*\(\s*["']([^"'\n]+)["']\s*\)/g,
@@ -73,6 +91,8 @@ export function inspectPackageBoundaries(appRoot) {
       }
       if (entry.isDirectory()) { walk(abs); continue; }
       if (!entry.isFile()) continue;
+      const relative = path.relative(root, abs).split(path.sep).join("/");
+      if (!includedInPackage(relative, packageFiles)) continue;
       if (entry.name === "package.json") checkManifest(abs);
       else if (SOURCES.test(entry.name)) checkSource(abs);
     }

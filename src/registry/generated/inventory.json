@@ -8,7 +8,7 @@
   "counts": {
     "commands": 80,
     "capabilities": 82,
-    "packages": 66
+    "packages": 55
   },
   "commands": [
     {
@@ -3871,44 +3871,6 @@
       "readiness": "unverified"
     },
     {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/fnf-theme",
-        "purpose_source": "package-manifest-description",
-        "readme": null
-      },
-      "execution_domains": [],
-      "id": "fnf-theme",
-      "install": [],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/fnf-theme",
-      "purpose": "Brand-specific FNF theme renderer consuming portable ThemePreview registry",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/fnf-theme",
-        "public_claim": false
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "Brand-specific FNF theme renderer consuming portable ThemePreview registry"
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
       "avoid_when": [
         "Replacing canonical CAD project history or CAD Creator project authority",
         "Using a rendered GLB as the only editable source for a scene"
@@ -3971,7 +3933,7 @@
         "Using .iamscene.json as the editable source of truth and GLTF/GLB as interchange or presentation assets",
         "Building precise scene geometry through the canonical @inneranimalmedia/agentsam-occt engine"
       ],
-      "version": "0.1.2",
+      "version": "0.1.3",
       "review_required": [],
       "readiness": "unverified"
     },
@@ -4080,314 +4042,6 @@
       "readiness": "unverified"
     },
     {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-cypress",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-cypress/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-cypress",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-cypress",
-          "package": "@inneranimalmedia/theme-cypress",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-cypress",
-      "purpose": "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-cypress",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template."
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-ember",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-ember/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-ember",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-ember",
-          "package": "@inneranimalmedia/theme-ember",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-ember",
-      "purpose": "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-ember",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid."
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-forge",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-forge/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-forge",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-forge",
-          "package": "@inneranimalmedia/theme-forge",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-forge",
-      "purpose": "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-forge",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen."
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-grove",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-grove/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-grove",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-grove",
-          "package": "@inneranimalmedia/theme-grove",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-grove",
-      "purpose": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-grove",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew."
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-harbor",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-harbor/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-harbor",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-harbor",
-          "package": "@inneranimalmedia/theme-harbor",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-harbor",
-      "purpose": "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-harbor",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look."
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/heuristic-theme",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/heuristic-theme/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-heuristic",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-heuristic",
-          "package": "@inneranimalmedia/theme-heuristic",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-heuristic",
-      "purpose": "Stock AgentSam CMS storefront shell theme contract (heuristic-theme).",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-heuristic",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "Resolve the stock AgentSam CMS storefront shell theme contract."
-      ],
-      "version": "2.6.15",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-iasf",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-iasf/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-iasf",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-iasf",
-          "package": "@inneranimalmedia/theme-iasf",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-iasf",
-      "purpose": "IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest).",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-iasf",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest)."
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
       "avoid_when": [
         "A licensed production storefront or a verified CMS installation is required."
       ],
@@ -4435,60 +4089,30 @@
       "readiness": "unverified"
     },
     {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-resolve",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-resolve/README.md"
+      "agentsam": {
+        "depends_on": [
+          "@inneranimalmedia/agentsam-brand"
+        ],
+        "kind": "creative-scene-runtime",
+        "slug": "theme-scenes"
       },
-      "execution_domains": [],
-      "id": "theme-resolve",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-resolve",
-          "package": "@inneranimalmedia/theme-resolve",
-          "type": "npm"
-        }
+      "avoid_when": [
+        "Do not use as a storefront theme or theme catalog; storefront themes are distributed by inneranimalmedia-theme-store."
       ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-resolve",
-      "purpose": "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-resolve",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled."
-      ],
-      "version": "2.6.13",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
+      "catalog_status": "classified",
+      "class": "package",
       "commands": [],
       "evidence": {
         "directory": "packages/theme-scenes",
         "purpose_source": "package-manifest-description",
         "readme": "packages/theme-scenes/README.md"
       },
-      "execution_domains": [],
+      "execution_domains": [
+        "creative",
+        "web",
+        "commerce",
+        "cms"
+      ],
       "id": "theme-scenes",
       "install": [
         {
@@ -4501,113 +4125,27 @@
         "javascript"
       ],
       "name": "@inneranimalmedia/theme-scenes",
-      "purpose": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
+      "purpose": "Cross-product creative scene composition contracts, reusable scene templates and a CMS-compatible portable renderer. Not a storefront theme.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/theme-scenes",
         "public_claim": true
       },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
+      "review_required": [],
       "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
+      "status": "ready",
+      "topics": [
+        "creative-scene",
+        "cms",
+        "website-composition",
+        "interactive-3d"
+      ],
       "use_when": [
-        "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition."
+        "Compose reusable, brand-token-aware scenes from content blocks, media, routes and motion.",
+        "Expose PrimeTech-authored scene compositions as portable sections on site-scoped CMS pages.",
+        "Package reusable scene definitions as CMS scene artifacts without embedding tenant identity."
       ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-summit",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-summit/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-summit",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-summit",
-          "package": "@inneranimalmedia/theme-summit",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-summit",
-      "purpose": "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-summit",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking."
-      ],
-      "version": "2.6.12",
-      "readiness": "unverified"
-    },
-    {
-      "avoid_when": [],
-      "catalog_status": "needs-review",
-      "class": "theme",
-      "commands": [],
-      "evidence": {
-        "directory": "packages/theme-violet",
-        "purpose_source": "package-manifest-description",
-        "readme": "packages/theme-violet/README.md"
-      },
-      "execution_domains": [],
-      "id": "theme-violet",
-      "install": [
-        {
-          "command": "npm install @inneranimalmedia/theme-violet",
-          "package": "@inneranimalmedia/theme-violet",
-          "type": "npm"
-        }
-      ],
-      "languages": [
-        "javascript"
-      ],
-      "name": "@inneranimalmedia/theme-violet",
-      "purpose": "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action.",
-      "registry": {
-        "kind": "npm",
-        "name": "@inneranimalmedia/theme-violet",
-        "public_claim": true
-      },
-      "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
-      ],
-      "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action."
-      ],
-      "version": "2.6.12",
+      "version": "2.6.17",
       "readiness": "unverified"
     }
   ]
