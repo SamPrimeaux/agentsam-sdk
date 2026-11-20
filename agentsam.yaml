@@ -337,7 +337,7 @@ packages:
       - agentsam-auth-portal
   identity:
     name: "@inneranimalmedia/agentsam-identity"
-    version: "2.6.15"
+    version: "2.6.16"
     path: packages/identity
     private: false
     separately_published: true
