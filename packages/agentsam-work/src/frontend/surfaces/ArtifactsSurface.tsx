@@ -332,7 +332,10 @@ export function ArtifactsSurface({
                   {createOptions.map((option) => {
                     const Icon = option.icon;
                     return (
-                      <button key={option.id} type="button" disabled={!onCreateArtifact} onClick={() => onCreateArtifact?.(option.id)}>
+                      <button key={option.id} type="button" disabled={!onCreateArtifact} onClick={(event) => {
+                        onCreateArtifact?.(option.id);
+                        event.currentTarget.closest("details")?.removeAttribute("open");
+                      }}>
                         <Icon size={15} />
                         <span>{option.label}</span>
                       </button>
