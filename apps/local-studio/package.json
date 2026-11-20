@@ -65,7 +65,7 @@
     "verify:desktop:cad": "npm run verify:desktop && npm run smoke:desktop-cad",
     "verify:desktop:themes": "npm run verify:desktop && npm run smoke:themes && npm run smoke:cms-site-fidelity",
     "cf:smoke:worker": "node scripts/smoke-worker-routes.mjs",
-    "cf:build": "npm run build:included:all && npm run build && npm run cf:verify-output && npm run cf:smoke:worker",
+    "cf:build": "npm run build:included:all && npm run build && npm run cf:verify-output && npm run test --workspace @inneranimalmedia/agentsam-local-studio-backend && npm run cf:smoke:worker",
     "cf:build:source": "node scripts/cloudflare-source-build.mjs",
     "dev:media-intake": "npm run build:settings && python3 scripts/unpack-local-media-archives.py && node scripts/build-local-media-intake.mjs && node scripts/build-local-product-intake.mjs && AGENTSAM_MEDIA_INTAKE=1 node scripts/with-app-env.mjs vite dev --host 127.0.0.1 --port 8080"
   },
