@@ -262,6 +262,7 @@ export function ArtifactsSurface({
                   />
                   <button type="button" aria-label="Close search" onClick={() => { setSearchOpen(false); setQuery(""); }}>
                     <X size={15} />
+                    <span className="agentsam-artifact-hub__icon-tooltip">Close search</span>
                   </button>
                 </label>
               ) : <span className="agentsam-artifact-hub__toolbar-spacer" />}
