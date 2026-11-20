@@ -269,6 +269,7 @@ export function ArtifactsSurface({
 
               <button type="button" className="agentsam-artifact-hub__icon-button" aria-label="Search" title="Search" onClick={() => setSearchOpen(true)}>
                 <Search size={17} />
+                <span className="agentsam-artifact-hub__icon-tooltip">Search</span>
               </button>
 
               <details className="agentsam-artifact-hub__menu">
