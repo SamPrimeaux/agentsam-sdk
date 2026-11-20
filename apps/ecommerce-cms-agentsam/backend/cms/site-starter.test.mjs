@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createCmsTestDb } from '../../tests/cms-test-db.mjs';
-import { heuristicStarterPreset } from '@inneranimalmedia/theme-heuristic/commerce/starter';
+import { heuristicStarterPreset } from './site-starter-preset.mjs';
 import { materializeStarterProject, blankThemeProject } from '../../frontend/theme-editor/starter-project.mjs';
 import { ensureCmsSiteStarter } from './site-starter.mjs';
 import { getThemeProject, saveThemeProject, installThemeDraft, createThemeProject } from './theme-project-store.mjs';

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/financial-analytics",
-  "version": "2.6.16",
+  "version": "2.6.17",
   "description": "Provider-neutral financial analytics contracts and adaptive presentation for merchant, SaaS, and service businesses.",
   "type": "module",
   "files": [
@@ -33,7 +33,7 @@
     }
   },
   "dependencies": {
-    "@inneranimalmedia/analytics-ui": "2.6.16"
+    "@inneranimalmedia/analytics-ui": "2.6.17"
   },
   "peerDependencies": {
     "react": ">=19",

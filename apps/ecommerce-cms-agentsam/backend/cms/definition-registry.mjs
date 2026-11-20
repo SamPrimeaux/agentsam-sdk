@@ -5,6 +5,7 @@
  */
 import { normalizeSettingContract, overlayRenderableBlockFields } from "./setting-contract.ts";
 import { installedDefinition } from "./composition-contract.ts";
+import { getCmsSectionRenderer } from "./section-renderer-runtime.mjs";
 const KEY = /^[a-z][a-z0-9-]{0,63}$/;
 const KIND = new Set(["section", "block"]);
 const STATUS = new Set(["active", "draft", "deprecated", "archived"]);
@@ -103,15 +104,7 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
 // an unavailable renderer must NEVER erase a legitimate catalog template.
 // D1 metadata, preview HTML and an R2 URL are not renderer implementations.
 function bundledCmsRendererAvailable(rendererKey) {
-  if (!rendererKey) return false;
-  for (const name of ["ThemePortableSections", "ThemePlatformStock", "ThemeReviseAtlas"]) {
-    const runtime = globalThis[name];
-    if (typeof runtime?.get === "function" &&
-        typeof runtime?.render === "function" &&
-        typeof runtime?.validate === "function" &&
-        runtime.get(rendererKey)) return true;
-  }
-  return false;
+  return getCmsSectionRenderer(rendererKey) !== null;
 }
 
 export function normalizeCmsCatalogTemplate(row, {hasRenderer = bundledCmsRendererAvailable} = {}) {

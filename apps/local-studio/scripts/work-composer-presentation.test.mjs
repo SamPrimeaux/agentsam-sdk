@@ -36,7 +36,10 @@ test('plugins and connected services are available from the plus/@ menu, not per
   assert.equal(COMPOSER_GROUPS[1].kind, 'connection');
   assert.doesNotMatch(picker, /agentsam-plugin-previews/);
   assert.doesNotMatch(styles, /agentsam-plugin-previews/);
-  assert.match(styles, /max-height: min\(520px, 55dvh\)/);
+  assert.match(picker, /--agentsam-plugin-menu-max-height.*menuMaxHeight/);
+  assert.match(picker, /spaceBelow = Math\.max\(0, window\.innerHeight - rect\.bottom - 12\)/);
+  assert.match(picker, /setMenuMaxHeight\(Math\.max\(160, Math\.min\(360, available\)\)\)/);
+  assert.match(styles, /max-height: min\(var\(--agentsam-plugin-menu-max-height, 360px\), calc\(100dvh - 40px\)\)/);
   assert.match(styles, /\.agentsam-conversation-dock \.agentsam-plugin-menu \{ top: auto; bottom: calc\(100% \+ 10px\); \}/);
   assert.match(styles, /\.agentsam-plugin-row \{[^}]*min-height: 44px/);
 });

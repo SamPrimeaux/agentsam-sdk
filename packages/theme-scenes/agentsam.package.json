@@ -1,42 +1,59 @@
 {
-  "avoid_when": [],
-  "catalog_status": "needs-review",
-  "class": "theme",
+  "avoid_when": [
+    "Do not use as a storefront theme or theme catalog; storefront themes are distributed by inneranimalmedia-theme-store."
+  ],
+  "catalog_status": "classified",
+  "class": "package",
   "commands": [],
   "evidence": {
     "directory": "packages/theme-scenes",
     "purpose_source": "package-manifest-description",
     "readme": "packages/theme-scenes/README.md"
   },
-  "execution_domains": [],
+  "execution_domains": [
+    "creative",
+    "web",
+    "commerce",
+    "cms"
+  ],
   "id": "theme-scenes",
   "install": [
     {
-      "command": "npm install @inneranimalmedia/theme-scenes",
+      "type": "npm",
       "package": "@inneranimalmedia/theme-scenes",
-      "type": "npm"
+      "command": "npm install @inneranimalmedia/theme-scenes"
     }
   ],
   "languages": [
     "javascript"
   ],
   "name": "@inneranimalmedia/theme-scenes",
-  "purpose": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
+  "purpose": "Cross-product creative scene composition contracts, reusable scene templates and a CMS-compatible portable renderer. Not a storefront theme.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/theme-scenes",
     "public_claim": true
   },
-  "review_required": [
-    "avoid_when",
-    "execution_domains",
-    "status",
-    "topics",
-    "use_when"
-  ],
+  "review_required": [],
   "schema": "agentsam.package.v1",
-  "status": "unknown",
-  "topics": [],
-  "use_when": [],
-  "version": "2.6.12"
+  "status": "ready",
+  "topics": [
+    "creative-scene",
+    "cms",
+    "website-composition",
+    "interactive-3d"
+  ],
+  "use_when": [
+    "Compose reusable, brand-token-aware scenes from content blocks, media, routes and motion.",
+    "Expose PrimeTech-authored scene compositions as portable sections on site-scoped CMS pages.",
+    "Package reusable scene definitions as CMS scene artifacts without embedding tenant identity."
+  ],
+  "version": "2.6.17",
+  "agentsam": {
+    "kind": "creative-scene-runtime",
+    "slug": "theme-scenes",
+    "depends_on": [
+      "@inneranimalmedia/agentsam-brand"
+    ]
+  }
 }

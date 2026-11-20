@@ -39,9 +39,9 @@ test('Chat and Work share one + picker, project chooser and real speech controls
  assert.match(composer,/onImage=\{\(\) => setImageMode\(true\)\}/);
  assert.match(composer,/onModeChange=\{mode => setRunMode\(targetId,mode\)\}/);
  assert.match(picker,/Add photos & files/);
- assert.match(picker,/Add from library/);
+ assert.match(picker,/Add from Library/);
  assert.match(picker,/Work in a project/);
- assert.match(picker,/Plugins & apps/);
+ assert.match(picker,/entries\.filter\(entry=>entry\.kind!=='skill'\)/);
  assert.match(voice,/recognition\.onresult/);
  assert.match(voice,/useWorkStore\.getState\(\)\.send\(targetId, targetKind, transcript\)/);
  assert.match(voice,/SpeechSynthesisUtterance/);

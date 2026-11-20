@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findPrivateWorkspaceDependencyEdges } from './release-train-policy.mjs';
+import { expectedSdkTarballVersion } from '../apps/local-studio/scripts/sdk-package-lock-phase.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -163,7 +164,8 @@ function appTreeDrift({ write }) {
         const targetFile = path.join(dir, key, 'package.json');
         if (!fs.existsSync(targetFile)) continue;
         const diskTarget = read(targetFile);
-        const target = workspaceByName.get(diskTarget.name) || diskTarget;
+        // Read the current on-disk manifest: align() may have just updated a private nested product package.
+        const target = diskTarget;
         if (target.version && entry.version !== target.version) {
           notes.push(`${relative(lockFile)}: ${key} version ${entry.version} != ${target.version}`);
           entry.version = target.version;
@@ -191,6 +193,42 @@ function appTreeDrift({ write }) {
       fs.writeFileSync(file, text);
     }
     if (write) for (const { lockFile, lock, changed } of locks) if (changed) fs.writeFileSync(lockFile, `${JSON.stringify(lock, null, 2)}\n`);
+  }
+  return notes;
+}
+
+const localStudioNestedPackageFiles = [
+  'apps/local-studio/frontend/package.json',
+  'apps/local-studio/backend/package.json',
+  'apps/local-studio/shared/agentsam/package.json',
+];
+function localStudioNestedDrift({ write }) {
+  const notes = [];
+  // Before npm publication, Local Studio must resolve the last genuinely
+  // published SDK tarball. Once the release manifest moves to published, it
+  // must resolve the just-published train version instead.
+  const localStudioCandidateVersion = read(path.join(root, 'apps/local-studio/package.json')).version;
+  const localStudioSdkVersion = expectedSdkTarballVersion(root, localStudioCandidateVersion).version;
+  for (const rel of localStudioNestedPackageFiles) {
+    const file = path.join(root, rel);
+    if (!fs.existsSync(file)) continue;
+    const manifest = read(file);
+    const edits = [];
+    if (manifest.version !== targetVersion) {
+      edits.push('version ' + manifest.version + ' -> ' + targetVersion);
+      manifest.version = targetVersion;
+    }
+    if (rel !== 'apps/local-studio/frontend/package.json') {
+      const current = manifest.dependencies?.['@inneranimalmedia/agentsam-sdk'];
+      if (current !== localStudioSdkVersion) {
+        edits.push('dependencies.@inneranimalmedia/agentsam-sdk ' + current + ' -> ' + localStudioSdkVersion);
+        manifest.dependencies ||= {};
+        manifest.dependencies['@inneranimalmedia/agentsam-sdk'] = localStudioSdkVersion;
+      }
+    }
+    if (!edits.length) continue;
+    notes.push(relative(file) + ': ' + edits.join('; '));
+    if (write) fs.writeFileSync(file, JSON.stringify(manifest, null, 2) + '\n');
   }
   return notes;
 }
@@ -234,6 +272,7 @@ function check() {
     if (value !== targetVersion) failures.push(`${rel}: version ${value || '<missing>'} != ${targetVersion}`);
   }
   failures.push(...releaseManifestDrift());
+  failures.push(...localStudioNestedDrift({ write: false }));
   failures.push(...appTreeDrift({ write: false }));
   for (const rel of coordinatedProductVersionFiles) {
     const file = path.join(root, rel);
@@ -352,6 +391,10 @@ function align() {
         console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} local-studio npm10 lock ${from} -> ${targetVersion} · ${rel}`);
       }
     }
+  }
+  for (const note of localStudioNestedDrift({ write: !dryRun })) {
+    changedFiles += 1;
+    console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} local-studio nested package ${note}`);
   }
   for (const note of appTreeDrift({ write: !dryRun })) {
     changedFiles += 1;

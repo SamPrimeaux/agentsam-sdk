@@ -1,57 +1,52 @@
 #!/usr/bin/env node
-import fs from 'node:fs';
-import path from 'node:path';
+/**
+ * Enforce the distribution boundary: storefront themes live in
+ * inneranimalmedia-theme-store. The SDK retains only its cross-product
+ * theme-scenes creative runtime, which is not a storefront theme.
+ */
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ids = ['cypress','violet','grove','ember','forge','harbor','summit','resolve'];
-const textExt = new Set(['.html','.css','.js','.json','.svg','.xml','.webmanifest']);
-const staticExt = new Set(['.css','.js','.mjs','.png','.jpg','.jpeg','.webp','.gif','.avif','.svg','.ico','.woff','.woff2','.ttf','.otf','.json','.xml','.webmanifest','.pdf']);
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const readJson = (path) => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
+const storefrontThemePackages = [
+  'packages/heuristic-theme',
+  'packages/theme-cypress',
+  'packages/theme-violet',
+  'packages/theme-grove',
+  'packages/theme-ember',
+  'packages/theme-forge',
+  'packages/theme-iasf',
+  'packages/theme-harbor',
+  'packages/theme-summit',
+  'packages/theme-resolve',
+];
 const failures = [];
-
-function walk(dir) {
-  const out=[];
-  for (const entry of fs.readdirSync(dir,{withFileTypes:true})) {
-    const target=path.join(dir,entry.name);
-    if (entry.isDirectory()) out.push(...walk(target)); else out.push(target);
-  }
-  return out;
+for (const path of storefrontThemePackages) {
+  if (existsSync(resolve(root, path))) failures.push(`${path} still exists in the SDK`);
 }
-
-for (const id of ids) {
-  const pkgRoot=path.join(root,'packages','theme-'+id);
-  const site=path.join(pkgRoot,'site');
-  const pkg=JSON.parse(fs.readFileSync(path.join(pkgRoot,'package.json'),'utf8'));
-  if (pkg.name !== '@inneranimalmedia/theme-'+id) failures.push(id+': wrong package name');
-  if (!pkg.files?.includes('site')) failures.push(id+': npm files does not include site');
-  if (pkg.agentsam?.installable !== true || pkg.agentsam?.portable !== true) failures.push(id+': package is not marked installable+portable');
-  if (!fs.existsSync(path.join(site,'index.html'))) failures.push(id+': missing site/index.html');
-
-  for (const file of walk(site)) {
-    const ext=path.extname(file).toLowerCase();
-    if (!textExt.has(ext)) continue;
-    const text=fs.readFileSync(file,'utf8');
-    if (text.includes('/themes/'+id+'/demo/')) failures.push(id+': hosted gallery path leaked into '+path.relative(site,file));
-    if (text.includes('apps/theme-gallery-preview')) failures.push(id+': repo-local gallery path leaked into '+path.relative(site,file));
-    if (/https?:\/\/(?:[^/]*unsplash|imagedelivery\.net|[^/]*r2\.dev|[^/]*shopify)/i.test(text)) failures.push(id+': external donor/stock media URL in '+path.relative(site,file));
-
-    if (ext !== '.html') continue;
-    const attrs=[...text.matchAll(/(?:src|href|poster|data-src)\s*=\s*["']([^"']+)["']/gi)].map((m)=>m[1]);
-    for (const raw of attrs) {
-      if (/^(?:https?:|mailto:|tel:|data:|javascript:|#)/i.test(raw) || raw.startsWith('/api')) continue;
-      const clean=raw.split(/[?#]/,1)[0];
-      if (!clean) continue;
-      const target=clean.startsWith('/') ? path.join(site,clean.slice(1)) : path.resolve(path.dirname(file),clean);
-      const targetExt=path.extname(clean).toLowerCase();
-      const looksStatic=staticExt.has(targetExt) || /^\/?(?:assets|shared|global|icons|images|media)\//.test(clean);
-      if (looksStatic && !fs.existsSync(target)) failures.push(id+': missing local asset '+clean+' from '+path.relative(site,file));
-    }
-  }
+const manifest = readJson('package.json');
+for (const path of storefrontThemePackages) {
+  if ((manifest.files || []).includes(path)) failures.push(`${path} is still included in npm files`);
+  if ((manifest.workspaces || []).includes(path)) failures.push(`${path} is still an SDK workspace`);
 }
-
+const scenes = readJson('packages/theme-scenes/package.json');
+if (!scenes.exports?.['./cms']) failures.push('theme-scenes CMS adapter export is missing');
+if (scenes.exports?.['./registry']) failures.push('theme-scenes must not own a storefront theme registry');
+if (!/cross-product|creative scene/i.test(scenes.description || '')) {
+  failures.push('theme-scenes is not described as a cross-product creative package');
+}
+if ((manifest.files || []).includes('packages/theme-scenes') === false) {
+  failures.push('theme-scenes must remain in the SDK release package');
+}
+if ((manifest.workspaces || []).includes('packages/theme-scenes') === false) {
+  failures.push('theme-scenes must remain an SDK workspace');
+}
 if (failures.length) {
-  console.error('Theme package verification FAILED ('+failures.length+')');
-  for (const failure of failures.slice(0,200)) console.error('- '+failure);
-  process.exit(1);
+  console.error('[theme ownership verification failed]');
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exitCode = 1;
+} else {
+  console.log('[theme ownership verified] storefront themes are distributed by inneranimalmedia-theme-store; theme-scenes remains in the SDK as a cross-product creative runtime.');
 }
-console.log('Theme package verification PASS · 8 self-contained installable prebuilds');

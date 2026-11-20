@@ -11,7 +11,7 @@ import { handleAdminApi } from '../backend/admin/api.js';
 import { STARTER_PRODUCT_ILLUSTRATIONS } from '../frontend/theme-editor/starter-products.mjs';
 import { materializeStarterProject } from '../frontend/theme-editor/starter-project.mjs';
 import { renderThemePage, createThemeProjectAdapter } from '../frontend/theme-editor/project.mjs';
-import { heuristicStarterPreset } from '../../../packages/heuristic-theme/src/starter.js';
+import { heuristicStarterPreset } from '../backend/cms/site-starter-preset.mjs';
 
 function adapters(db) {
   return {

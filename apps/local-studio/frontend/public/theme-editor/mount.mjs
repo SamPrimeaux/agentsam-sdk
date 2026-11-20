@@ -172,8 +172,14 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
     }
     // srcdoc editor has an independent global namespace: load the same real
     // stock + portable renderers the Worker and external Theme Studio use.
+    const sceneStyles = document.createElement('link');
+    sceneStyles.rel = 'stylesheet';
+    sceneStyles.href = '/admin/css/theme-scenes-sections.css';
+    document.head.append(sceneStyles);
     await load('/admin/js/platform-stock-sections.js');
     await load('/admin/js/portable-sections.js');
+    await load('/admin/js/theme-scenes-sections.js');
+    await load('/admin/js/iamscene-runtime.js');
     await load('runtime.js');
     if(document.querySelector('.theme-studio'))frame.ownerDocument.getElementById('theme-project-loading')?.remove();
     // The platform owns complete panels; every installed theme mounts them.

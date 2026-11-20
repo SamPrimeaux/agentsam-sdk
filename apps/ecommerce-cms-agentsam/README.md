@@ -1,28 +1,14 @@
 # AgentSam Ecommerce + CMS
 
-Fuel & Free Time is customer #1 and the first paying purchaser of
-@inneranimalmedia/ecommerce-cms-agentsam. It is not a donor project.
+A reusable, multi-tenant commerce and website CMS application. Customer identity, catalog, media, campaigns, credentials and provider selections are supplied by account- and site-scoped CMS records and connected services; they are not baked into the application package.
 
-This F&FT repository is the first production customer installation of the
-product. The app owns the shared navigation renderer and contextual inspector.
-React mounts content through a portal into the same shell used by CMS, product
-editor and media pages. The public shell and inspector are generated mirrors.
-
-Customer-specific brand identity, products, media, campaigns, credentials and
-provider selections belong to the F&FT installation. Reusable application
-capabilities belong to @inneranimalmedia/ecommerce-cms-agentsam.
+The app owns the merchant navigation renderer, Page Editor, Theme Studio, site-scoped persistence and storefront delivery. Reusable CMS capabilities belong to this application and its shared contracts; storefront theme source belongs to `inneranimalmedia-theme-store`.
 
 ## Theme packages
 
-The current customer storefront uses the local
-@inneranimalmedia/heuristic-theme. Additional themes are additive packages,
-not replacements for customer data.
+The CMS does not bundle a storefront theme library. Theme Store is the source of truth for installable themes and release assets. The CMS reads Theme Store catalog/release metadata and stores installed, editable site projects in its existing D1/R2 CMS primitives.
 
-The first packaged alternate theme is @inneranimalmedia/revise-theme, backed by
-@inneranimalmedia/site-contracts and
-@inneranimalmedia/section-library. The ecommerce CMS is responsible for theme
-registration/selection and for passing normalized customer content into the
-selected theme.
+First-run site creation uses the customer-neutral `backend/cms/site-starter-preset.mjs` seed to scaffold editable Home, Shop and About pages. That seed is not a theme package or a copy of a customer storefront. Theme package identity remains `@inneranimalmedia/theme-heuristic` and is versioned by Theme Store.
 
 App-local commands:
 

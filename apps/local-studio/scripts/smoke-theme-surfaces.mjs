@@ -3,7 +3,6 @@ import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync, copyFileS
 import { resolve, extname } from 'node:path';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
-import { discoverThemeSurfaces } from './theme-surfaces-plugin.mjs';
 import { changedPixelRatio } from './compare-surface-png.mjs';
 
 const studio = resolve(import.meta.dirname, '..');
@@ -66,18 +65,18 @@ try {
   await mini.getByRole('button', { name: 'Close miniAgentSam' }).click();
   await page.goto(origin + '/index.html#/cms');
   await page.locator('[data-studio-product="cms-home"]').waitFor();
-  const discovered = discoverThemeSurfaces(repo).themes.map((t) => t.id).sort();
   await capture('cms-studio-home');
-  await page.goto(origin + '/index.html#/themes');
+  await page.goto(origin + '/index.html#/admin/themes');
+  await page.locator('[data-theme-store-handoff]').waitFor();
+  const storeLink = page.locator('a[href="https://themes.inneranimalmedia.com/"]');
+  await storeLink.waitFor();
+  assert.equal(await page.locator('[data-theme-id]').count(), 0, 'SDK must not render a duplicate storefront theme catalog');
+  await capture('theme-store-handoff');
+  await page.goto(origin + '/index.html#/admin/settings/themes');
   await page.locator('[data-theme-id]').first().waitFor();
-  assert.deepEqual((await capture('cms-theme-gallery')).themes.sort(), discovered, 'packaged themes remain independently accessible');
-  await page.goto(origin + '/index.html#/store');
-  await page.locator('[data-theme-id]').first().waitFor();
-  const storeState = await capture('theme-store');
-  assert.deepEqual(storeState.themes.sort(), discovered);
-  await page.goto(origin + '/index.html#/settings/themes');
-  await page.locator('[data-theme-id]').first().waitFor();
-  assert.deepEqual((await capture('settings-themes')).themes.sort(), discovered);
+  const appearanceThemes = (await capture('settings-themes')).themes;
+  const storefrontSlugs = new Set(['cypress','ember','forge','grove','harbor','iapj','iasf','plain-jane','resolve','revise','summit','violet']);
+  assert.ok(appearanceThemes.every(id => !storefrontSlugs.has(id)), 'cms_themes must not contain storefront package inventory');
   // Real theme HTML must survive extraction, draft editing, saving and reloading.
   const result = await page.evaluate(async () => {
     const { extractThemePage, renderThemePage, createThemeProjectAdapter, THEME_PROJECT_SCHEMA } = await import('/test-module/project.mjs');
@@ -144,30 +143,11 @@ try {
   await page.reload();
   await editor.locator('.te-tree-row').first().waitFor();
   assert.equal(await editor.locator('.te-field input').first().inputValue(), 'Revised theme hero');
-  await page.goto(origin + '/index.html#/store');
-  const packaged = discoverThemeSurfaces(repo).themes.find((t) => t.capabilities.editable && t.pages.some((p) => p.slug === 'home'));
-  assert.ok(packaged, 'A real packaged home page is required');
-  page.on('pageerror', (error) => console.error('browser-error', error.message));
-  await page.evaluate(() => { window.__themeNavigateEvents = []; window.addEventListener('agentsam:navigate', (event) => window.__themeNavigateEvents.push(event.detail)); });
-  await page.locator(`[data-theme-id="${packaged.id}"]`).getByRole('button', { name: 'Edit', exact: true }).click();
-  await editor.locator('.te-tree-row').first().waitFor({ timeout: 5000 }).catch(async (error) => { console.error('packaged-theme-load', await page.evaluate(() => ({events: window.__themeNavigateEvents, desktop: window.__AGENTSAM_DESKTOP__, hash: location.hash})), page.url(), await page.locator('[role=alert]').allTextContents(), await page.locator('body').innerText()); throw error; });
-  let packagedFieldCount = await editor.locator('.te-field').count();
-  if (!packagedFieldCount && await editor.locator('.te-block-row').count()) {
-    await editor.locator('.te-block-row__main').first().click();
-    packagedFieldCount = await editor.locator('.te-field').count();
+  const localThemeRoot = resolve(root, 'themes');
+  if (existsSync(localThemeRoot)) {
+    const bundledPages = (await import('node:fs/promises')).readdir(localThemeRoot, { withFileTypes: true });
+    assert.ok(!bundledPages.some(entry => entry.isDirectory() && existsSync(resolve(localThemeRoot, entry.name, 'index.html'))),
+      'Storefront package preview pages must not be bundled into Local Studio');
   }
-  if (!packagedFieldCount) {
-    const diagnostic = {
-      tree: await editor.locator('.te-tree-row__name').allTextContents(),
-      blocks: await editor.locator('.te-block-row__copy strong').allTextContents(),
-      inspector: await editor.locator('#te-inspector-body').innerText(),
-      note: await editor.locator('#te-note').innerText(),
-    };
-    assert.fail('Real packaged section/block content is editable: ' + JSON.stringify(diagnostic));
-  }
-  await editor.locator('.te-tree-row__main').first().click();
-  await editor.getByRole('button', { name: 'Layout', exact: true }).click();
-  await editor.locator('[data-field-key="layout_padding"]').waitFor();
-  await capture('packaged-theme-editor');
-  console.log('[theme-surfaces] PASS mini long draft/review, package discovery, persistence, conflict, real preview, editor reload; themes=' + discovered.length);
+  console.log('[theme-surfaces] PASS mini composer, external Theme Store handoff, cms_themes separation, project persistence/conflict and Theme Studio editor; no bundled storefront previews');
 } finally { await browser.close(); await new Promise((r) => server.close(r)); }

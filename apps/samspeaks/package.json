@@ -39,7 +39,5 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
   },
-  "description": "SamSpeaks: guided voice, lighting and camera direction studio. Creative agentic department.",
-  "overrides": {
-  }
+  "description": "SamSpeaks: guided voice, lighting and camera direction studio. Creative agentic department."
 }

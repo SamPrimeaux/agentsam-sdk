@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
-import { heuristicStarterPreset } from '../../../packages/heuristic-theme/src/starter.js';
+import { heuristicStarterPreset } from '../backend/cms/site-starter-preset.mjs';
 import { materializeStarterProject, inheritDefaultTemplates } from '../frontend/theme-editor/starter-project.mjs';
 import { fillMissingThemeChrome } from '../frontend/theme-editor/starter-chrome.mjs';
 import { createThemeProjectAdapter, renderThemePage, sourceSectionTemplateKey } from '../packages/theme-contract/editor/project.mjs';

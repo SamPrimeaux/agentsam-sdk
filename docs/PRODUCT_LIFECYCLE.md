@@ -97,7 +97,7 @@ Scale signal: apps authoring dominates packages (~3k vs ~0.8k source files exclu
 
 ### `packages/` — capabilities (selected)
 
-Identity · vault · settings · database-editor · desktop-shell · work · workbench · nav · shell-kit · contracts · runtime-protocol · content/CMS helpers · repository · knowledge · rapid-rust · brand · heuristic-theme · `theme-*` · …
+Identity · vault · settings · database-editor · desktop-shell · work · workbench · nav · shell-kit · contracts · runtime-protocol · content/CMS helpers · repository · knowledge · rapid-rust · brand · `theme-scenes` creative runtime · … Storefront theme packages are released separately by `inneranimalmedia-theme-store`.
 
 ### App catalog vs package-presented app
 
@@ -282,7 +282,7 @@ starter pack
 new apps/<product> or customer instance
 ```
 
-Declare and prove the relationship so `apps/cypress` and `packages/theme-cypress` cannot silently drift.
+Storefront theme source, preview and release stay in `inneranimalmedia-theme-store`; the SDK/CMS consumes a versioned Theme Store release and must not keep a duplicate `packages/theme-*` implementation.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-embeds",
-  "version": "2.6.16",
+  "version": "2.6.17",
   "description": "Installable storefront embed pack: forms, store chat/inbox and AgentSamGrow capture, with editor field schemas and a dependency-free chat widget.",
   "type": "module",
   "license": "FSL-1.1-MIT",

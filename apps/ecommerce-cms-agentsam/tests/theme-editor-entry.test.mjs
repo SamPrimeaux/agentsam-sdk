@@ -79,45 +79,19 @@ test('one Theme Studio shell verifies site ownership and mounts either target th
 });
 
 
-test('Theme Studio gives every draft an account-owned site route instead of the removed Studio scope',()=>{
-  const workspace=readFileSync(new URL('../frontend/static/js/theme-workspace-loader.js',import.meta.url),'utf8');
+test('Theme Studio uses the site-scoped editor and no longer ships the legacy customer workspace',()=>{
+  const routes=readFileSync(new URL('../backend/lib/route-manifest.js',import.meta.url),'utf8');
   const store=readFileSync(new URL('../frontend/static/js/store.js',import.meta.url),'utf8');
-  assert.match(workspace,/api\/admin\/cms\/theme-projects/);
-  assert.match(workspace,/Array\.isArray\(data\.drafts\)/);
-  assert.match(workspace,/admin\/sites/);
   const editor=readFileSync(new URL('../frontend/static/js/theme-studio-bootstrap.mjs',import.meta.url),'utf8');
-  assert.match(editor,/async onDuplicate\(\)/);
+  const projectEditor=readFileSync(new URL('../frontend/static/theme-project-editor.html',import.meta.url),'utf8');
+  assert.match(routes,/admin\.theme-editor\.theme/);
+  assert.match(routes,/admin\.theme-editor\.theme-page/);
+  assert.doesNotMatch(routes,/admin\.theme-workspace|theme-workspace\.html/);
+  assert.doesNotMatch(store,/theme-workspace|my-theme-studio-btn/);
   assert.match(editor,/themeProjectEditorPath\(siteId, result\.project\.id, 'home'\)/);
-  assert.match(editor,/async onDelete\(\)/);
   assert.match(editor,/result\.archived !== true/);
-  assert.doesNotMatch(editor,/studioMode|scope=studio/);
-  assert.doesNotMatch(workspace,/scope=studio/);
-  assert.match(store,/id="my-theme-studio-btn" href="\/admin\/theme-workspace"/);
-});
-
-test('Theme Studio renders real site-owned drafts and refuses fabricated or missing editor identifiers', async ()=>{
-  const workspace=readFileSync(new URL('../frontend/static/js/theme-workspace-loader.js',import.meta.url),'utf8');
-  const pages=[];
-  const requests=[];
-  const response={ok:true,drafts:[
-    {project_id:'theme_violet',site_id:'site_violet',name:'Violet — Draft',source_kind:'catalog',source_version:'2.6.13',revision:3,updated_at:'2026-11-15T05:00:00Z'},
-    {project_id:'theme_invalid',site_id:null,name:'Invalid ghost',source_kind:'catalog'},
-    {project_id:'<script>',site_id:'site_bad',name:'Unsafe ID',source_kind:'catalog'},
-  ]};
-  runInNewContext(workspace,{
-    URLSearchParams,Date,console:{error(){ }},
-    renderShell(_path,markup){pages.push(markup);},
-    fetch:async (url)=>{requests.push(url);return {ok:true,json:async()=>response};},
-  });
-  for(let n=0;n<8&&pages.length<2;n++)await new Promise(resolve=>setImmediate(resolve));
-  assert.deepEqual(requests,['/api/admin/cms/theme-projects']);
-  assert.equal(pages.length,2);
-  const html=pages.at(-1);
-  assert.match(html,/Violet — Draft/);
-  assert.match(html,/href="\/admin\/sites\/site_violet\/themes\/theme_violet\/editor\/home"/);
-  assert.doesNotMatch(html,/theme-project-editor\?|project=theme_violet/);
-  assert.match(html,/Revision 3/);
-  assert.doesNotMatch(html,/Invalid ghost|Unsafe ID|scope=studio/);
+  assert.match(editor,/location\.assign\('\/admin\/store'\)/);
+  assert.match(projectEditor,/location\.replace\('\/admin\/store'\)/);
 });
 
 test('marketplace intent reaches the authorized page editor with catalog installation support',()=>{
