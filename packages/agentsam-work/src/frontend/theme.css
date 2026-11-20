@@ -1867,7 +1867,7 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 .agentsam-artifact-hub__create-card[data-kind="sheets"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-success) 26%,var(--agentsam-work-panel));color:var(--agentsam-work-success);}
 .agentsam-artifact-hub__create-card[data-kind="design"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-accent) 16%,var(--agentsam-work-panel));color:var(--agentsam-work-accent);}
 .agentsam-artifact-hub__create-card[data-kind="data"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-danger) 26%,var(--agentsam-work-panel));color:var(--agentsam-work-danger);}
-.agentsam-artifact-hub__create-card[data-kind="whiteboard"] .agentsam-artifact-hub__create-art {background:#67264c;color:#ffb5db;}
+.agentsam-artifact-hub__create-card[data-kind="whiteboard"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-warning) 15%,color-mix(in srgb,var(--agentsam-work-accent) 15%,var(--agentsam-work-panel)));color:var(--agentsam-work-text);}
 .agentsam-artifact-hub__create-label {overflow:hidden;color:var(--agentsam-work-muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap;}
 .agentsam-artifact-hub__saved {margin-top:23px;}
 .agentsam-artifact-hub__items {display:grid;gap:10px;margin-top:11px;}
