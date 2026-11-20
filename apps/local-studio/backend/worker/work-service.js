@@ -286,7 +286,7 @@ export async function handleWorkRequest(request, env, accountId, context = {}) {
     if (isWorkCadRequest(url.pathname)) return handleWorkCadRequest(request, env, accountId);
     if (isSamSketchSceneRequest(url.pathname)) return handleSamSketchSceneRequest(request, env, accountId);
     const privateAsset = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)\/file$/.exec(url.pathname);
-    if (privateAsset && method === 'GET') return serveAccountLibraryFile(env, accountId, privateAsset[1], url.searchParams.get('preview') === '1');
+    if (privateAsset && method === 'GET') return serveAccountLibraryFile(env, accountId, privateAsset[1], url.searchParams.get('preview') === '1', { accountId: url.searchParams.get('account') || '' });
     const artifactPatch = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)$/.exec(url.pathname);
     if (artifactPatch && method === 'PATCH') return mutateAccountLibraryArtifact(request, env, accountId, artifactPatch[1]);
     const dataResponse = await handleWorkData(request, env.DB, accountId, url);
