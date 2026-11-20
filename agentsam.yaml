@@ -324,7 +324,7 @@ packages:
   # END AGENTSAM GENERATED INVENTORY
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
-    version: "2.6.15"
+    version: "2.6.16"
     path: .
     private: false
     registry: npm
