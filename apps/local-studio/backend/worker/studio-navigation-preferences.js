@@ -150,7 +150,12 @@ export function withInstalledApps(base, catalog = []) {
   });
   const ids = new Set(apps.map(app => String(app.id || '')));
   const hrefs = new Set(apps.map(app => String(app.href || '')));
+  const onlineStoreIsCanonical = Array.isArray(base?.channels) &&
+    base.channels.some(channel => channel?.id === 'online-store' && channel.href === '/admin/store');
   for (const app of catalog) {
+    // The installed CMS remains available in the Apps manager, but its admin
+    // destination is already represented by Sales channels > Online Store.
+    if (onlineStoreIsCanonical && app?.key === 'ecommerce-cms-agentsam') continue;
     if (!app || app.installed !== true || app.enabled !== true ||
         !Array.isArray(app.surfaces) || !app.surfaces.includes('admin-nav')) continue;
     const href = app.href;
