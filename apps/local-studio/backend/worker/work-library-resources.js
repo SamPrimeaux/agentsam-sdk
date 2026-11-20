@@ -116,7 +116,7 @@ export async function listAccountLibraryResources(db, owner) {
       : row.provider === 'r2' ? 'r2' : row.provider === 'local' ? 'local' : 'artifacts';
     return {
       id:'media:'+row.id,name,kind,source,mime:safe(row.content_type)||null,
-      providerId:row.provider_resource_id||row.id,sizeLabel:readableSize(row.size_bytes),
+      providerId:row.provider_resource_id||row.id,artifactType:safe(row.media_kind)||null,sizeLabel:readableSize(row.size_bytes),
       ...when(row.updated_at),
       preview:kind==='image'&&url?url:null,
       open:url,resourceType:'media',durationMs:Number(row.duration_ms)||null,
