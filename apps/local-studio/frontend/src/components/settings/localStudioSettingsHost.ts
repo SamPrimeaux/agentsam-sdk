@@ -487,6 +487,11 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   snapshot.widgets = settingsWidgets();
   snapshot.plugins = (pluginResult.value?.plugins||[]).map(settingsPlugin);
   snapshot.pluginsError = pluginResult.ok ? null : "Installed connections could not be verified. Try refreshing; existing authorizations are unchanged.";
+  const registryReachable = pluginResult.ok && pluginResult.value?.ok === true;
+  snapshot.network.health = registryReachable ? "healthy" : "attention";
+  snapshot.network.oauth = registryReachable && Array.isArray(pluginResult.value?.connections)
+    ? pluginResult.value.connections.some(conn => conn.provider === "cloudflare" && conn.status === "connected") ? "Connected" : "Not connected"
+    : "Not checked";
   const oauth=pluginResult.value?.oauth_status;
   const repositories=pluginResult.value?.repositories;
   if(oauth||repositories){
