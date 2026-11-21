@@ -52,7 +52,7 @@ func fakeEngine(t *testing.T, written *[]byte) *Client {
 			tr := tar.NewReader(r.Body)
 			h, _ := tr.Next()
 			*written, _ = io.ReadAll(tr)
-			if h.Name != "server.py" || p != "/app" {
+			if p != "/app" || (h.Name != "server.py" && h.Name != "new/") {
 				w.WriteHeader(400)
 			}
 		case http.MethodGet:
