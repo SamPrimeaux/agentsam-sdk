@@ -31,6 +31,7 @@ export type CoProTrackView = {
 
 export type CoProProjectView = {
   id: string;
+  metadata?: Record<string, unknown>;
   tracks: CoProTrackView[];
   canvas?: { width: number; height: number; frameRate?: number };
 };

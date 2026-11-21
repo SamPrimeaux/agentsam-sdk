@@ -31,6 +31,8 @@ export default defineConfig({
     },
   ],
   resolve: {
+    // CoPro source lives outside the app root. Use one React singleton for hooks and the renderer.
+    dedupe: ["react", "react-dom", "react/jsx-runtime"],
     alias: [
       {find:/^@inneranimalmedia\/copro-ui\/styles\.css$/, replacement:repoStyles},
       {find:/^@inneranimalmedia\/copro-ui$/,replacement:repoUi},

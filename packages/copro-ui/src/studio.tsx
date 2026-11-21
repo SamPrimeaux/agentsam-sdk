@@ -1,18 +1,21 @@
 import { IconAction } from "./icon-action.js";
 import type { CoProCreativeAsset, CoProMotionSampler, CoProGraphicSampler, CoProTransitionPreviewFactory } from "./creative-types.js";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, AudioLines, Captions, ChevronRight, Copy, Film,
   Layers, Play, Pause, Redo2, Scissors, SlidersHorizontal, Sparkles,
   Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard, PanelLeftClose, PanelRightClose, PanelsTopLeft, RotateCcw,
-  Sticker, Palette, SlidersVertical, Folder, Download, Film as FilmIcon, GripVertical, PanelsTopLeft as DockIcon, ExternalLink, Box, ZoomIn, Maximize2, Ratio, ChevronDown,
+  Sticker, Palette, Sun, SlidersVertical, Folder, Download, Film as FilmIcon, GripVertical, PanelsTopLeft as DockIcon, ExternalLink, Box, ZoomIn, Maximize2, Ratio, ChevronDown,
 } from "lucide-react";
 import { CoProTimeline, type CoProProjectView } from "./timeline.js";
-import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet.js";
+import { CoProToolPanel, type CoProMediaShelfItem, type CoProClipMask } from "./tool-sheet.js";
+import { colorAdjustmentPreviewFilter, type CoProColorAdjustments } from "./color-adjustments.js";
 import { CoProMediaBrowser, type CoProMediaBrowserSection } from "./media-browser.js";
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
 import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
 import { CoProCreativeWorkspace } from "./creative-workspace.js";
+import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnvironment } from "./stage-environment.js";
+import { CoProStageLookPanel } from "./stage-look-panel.js";
 
 
 export type CoProStudioAction =
@@ -36,9 +39,12 @@ export type CoProStudioAction =
   | { type: "text"; clipId: string; text: string }
   | { type: "effect"; clipId: string; effect: string }
   | { type: "transition"; clipId: string; transition: string; durationUs?: number; direction?:string; easing?:string }
-  | { type: "motion"; clipId: string; motion: string; durationUs?: number }
+  | { type: "motion"; clipId: string; motion: string; durationUs?: number; delayUs?:number; amplitude?:number }
   | { type: "graphic"; clipId: string; graphic: string; text?: string }
   | { type: "creative-parameters"; clipId: string; patch: Record<string, unknown> }
+  | { type: "adjustments"; clipId: string; patch: CoProColorAdjustments }
+  | { type: "mask"; clipId:string; mask:CoProClipMask|null }
+  | { type: "environment"; patch:CoProStageEnvironment|null }
   | { type: "create-text"; kind: "overlay" | "captions"; text: string; atUs: number }
   | { type: "import-media"; file: File; atUs: number }
   | { type: "import-media-batch"; files: File[]; atUs: number }
@@ -73,6 +79,7 @@ export type CoProStudioProps = {
 
 const PRIMARY_TOOLS = [
   ["media", "Media", "+"],
+  ["stage", "Stage Look", "☀"],
   ["audio", "Audio", "♫"],
   ["text", "Text", "T"],
   ["captions", "Captions", "CC"],
@@ -121,6 +128,7 @@ const HANDSET_MORE_TOOLS = [
   ["stickers", "Stickers", "Shapes, arrows and callouts"],
   ["transitions", "Transitions", "Motion between clips"],
   ["filters", "Filters", "Looks and color presets"],
+  ["stage", "Stage Look", "Sky, material swatches and lighting cards"],
   ["adjustments", "Adjustments", "Color and geometry controls"],
   ["templates", "Templates", "Editable starting compositions"],
   ["3d", "3D / Scene", "Model, sculpt, animate, light, render and present"],
@@ -135,6 +143,7 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
     captions: "message",
     stickers: "favorite",
     filters: "filter",
+    stage: "adjust",
     adjustments: "adjust",
     effects: "aperture",
     transitions: "layers",
@@ -159,6 +168,7 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
     case "captions": return <Captions size={size}/>;
     case "stickers": return <Sticker size={size}/>;
     case "filters": return <Palette size={size}/>;
+    case "stage": return <Sun size={size}/>;
     case "adjustments": return <SlidersVertical size={size}/>;
     case "effects": return <Sparkles size={size}/>;
     case "transitions": return <Layers size={size}/>;
@@ -246,21 +256,58 @@ export function CoProStudio({
     } catch {setCoverError("Could not open this image. Choose another cover.");}
   }
 
-  useEffect(() => {
-    if (!workspaceRef.current || typeof ResizeObserver === "undefined") return;
+  useLayoutEffect(() => {
+    const node=workspaceRef.current;
+    if (!node) return;
+    // Match the embedded container before first paint, not a 1440px desktop guess.
+    const rect=node.getBoundingClientRect();
+    if(rect.width>0) setWorkspaceWidth(rect.width);
+    if(rect.height>0) setWorkspaceHeight(rect.height);
+    if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(([entry]) => {
       if (!entry) return;
       setWorkspaceWidth(entry.contentRect.width);
       setWorkspaceHeight(entry.contentRect.height);
     });
-    observer.observe(workspaceRef.current);
+    observer.observe(node);
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => { if (selectedClipId) setPanePreference("inspector"); }, [selectedClipId]);
 
+  const stageEnvironment = project.metadata?.environment as CoProStageEnvironment|undefined;
   const projectDurationUs = Math.max(0,...project.tracks.flatMap(track=>track.clips.map(clip=>clip.startUs+clip.durationUs)));
   const videoRef = useRef<HTMLVideoElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [scopeHistogram,setScopeHistogram] = useState<{red:number[];green:number[];blue:number[]}|null>(null);
+  const [scopeError,setScopeError] = useState<string|null>(null);
+  useEffect(() => {setScopeHistogram(null);setScopeError(null);},[selectedClipId,playheadUs]);
+  function sampleCurrentFrameScopes() {
+    const media = videoRef.current && videoRef.current.readyState >= 2 ? videoRef.current : imageRef.current;
+    if (!media || (media instanceof HTMLImageElement && !media.complete)) {
+      setScopeError("No decoded frame is available at this playhead position.");
+      setScopeHistogram(null);return;
+    }
+    try {
+      const canvas=document.createElement("canvas");
+      canvas.width=160;canvas.height=90;
+      const ctx=canvas.getContext("2d",{willReadFrequently:true});
+      if(!ctx) throw new Error("Canvas readback unavailable");
+      ctx.drawImage(media,0,0,canvas.width,canvas.height);
+      const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      const red=Array<number>(32).fill(0),green=Array<number>(32).fill(0),blue=Array<number>(32).fill(0);
+      for(let i=0;i<pixels.length;i+=4){
+        if(pixels[i+3]===0)continue;
+        red[Math.min(31,pixels[i]>>3)]++;
+        green[Math.min(31,pixels[i+1]>>3)]++;
+        blue[Math.min(31,pixels[i+2]>>3)]++;
+      }
+      setScopeHistogram({red,green,blue});setScopeError(null);
+    } catch {
+      setScopeError("Frame pixels could not be read (source permissions or unsupported format).");
+      setScopeHistogram(null);
+    }
+  }
   const playbackPosition=useRef(playheadUs);playbackPosition.current=playheadUs;
   const audioPlayers=useRef(new Map<string,HTMLAudioElement>());
   useEffect(()=>{
@@ -339,13 +386,13 @@ export function CoProStudio({
     () => new Set(project.tracks.flatMap((track) => track.clips.map((clip) => clip.assetId))),
     [project],
   );
-  const isNarrow = workspaceWidth < 900;
+  const isNarrow = workspaceWidth < 1160;
   const isCompact = workspaceWidth < 600;
   const isHandset = workspaceWidth < 600;
   const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions", "transform", "filters", "adjustments", "video", "animation", "tracking", "adjust", "ai-stylize"];
   const canonicalTool = (tool: string | null) => tool === "filters" ? "effects" : tool === "adjustments" ? "adjust" : tool === "transform" ? "video" : tool;
   const inspectorTool = activeTool === "export" ? "export" : selectedClip
-    ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "video")
+    ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" && !mediaItems.some(item => item.id === selectedClip.assetId && item.kind === "image") ? "text" : "video")
     : "project";
   const inspectorAvailable = Boolean(inspectorTool);
   const showInspector = isHandset ? handsetPanel === "inspector" && inspectorAvailable : inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
@@ -400,11 +447,21 @@ export function CoProStudio({
   const motionTransform = motionSample
     ? ` translate(${motionSample.x}px, ${motionSample.y}px) scale(${motionSample.scale}) scaleX(${motionSample.scaleX}) rotate(${motionSample.rotation}deg)`
     : "";
+  const previewColorFilter = colorAdjustmentPreviewFilter(activeVisualClip?.metadata?.adjustments as CoProColorAdjustments|undefined);
+  const activeMask = activeVisualClip?.metadata?.mask as CoProClipMask|undefined;
+  const radius = Math.max(20,Math.min(100,activeMask?.size??80));
+  const feather = Math.max(0,Math.min(30,activeMask?.feather??0));
+  const maskGradient = activeMask?.shape === "circle"
+    ? "radial-gradient(circle closest-side at center, " + (activeMask.invert?"transparent":"black") +
+      " " + Math.max(0,radius-feather) + "%, " + (activeMask.invert?"black":"transparent") + " " + radius + "%)"
+    : "none";
   const mediaTransformStyle: React.CSSProperties = {
     transform: `translate(${activeTransform.x ?? 0}%, ${activeTransform.y ?? 0}%) scale(${activeTransform.scale ?? 1}) rotate(${activeTransform.rotation ?? 0}deg)${motionTransform}`,
     opacity: (activeTransform.opacity ?? 1) * (motionSample?.opacity ?? 1),
-    filter: motionSample?.blur ? `blur(${motionSample.blur}px)` : "none",
-    clipPath: motionSample?.clipInset ? `inset(0 ${motionSample.clipInset * 100}% 0 0)` : "none",
+    filter: [stageEnvironment?.ambient !== undefined ? "brightness(" + stageEnvironment.ambient + ")" : "", motionSample?.blur ? `blur(${motionSample.blur}px)` : "", previewColorFilter].filter(Boolean).join(" ") || "none",
+    clipPath: motionSample?.clipInset ? "inset(0 " + (motionSample.clipInset * 100) + "% 0 0)" :
+      activeMask?.shape === "rectangle" ? "inset(" + ((100-radius)/2) + "% round 8%)" : "none",
+    maskImage: maskGradient,
     cursor: activeVisualClip ? "grab" : undefined,
     touchAction: "none",
   };
@@ -666,8 +723,10 @@ export function CoProStudio({
             {categoryTool === "media" && <nav className="mm-media-subnav" aria-label="Media collections">
               {([ ["import","Import"], ["media","Media"], ["subprojects","Subprojects"], ["yours","Yours"], ["generate","Generate"], ["spaces","Spaces"], ["library","Library"] ] as const).map(([id,label]) => <button type="button" key={id} className={browserSection===id?"is-active":""} aria-pressed={browserSection===id} onClick={()=>setBrowserSection(id)}>{label}</button>)}
             </nav>}
-            {categoryTool === "3d" ? (
-              <CoProCreativeWorkspace />
+            {categoryTool === "stage" ? (
+              <CoProStageLookPanel environment={stageEnvironment} onChange={patch=>onAction?.({type:"environment",patch})}/>
+            ) : categoryTool === "3d" ? (
+              <CoProCreativeWorkspace environment={stageEnvironment} onEnvironmentChange={patch=>onAction?.({type:"environment",patch})}/>
             ) : categoryTool === "more" ? (
               <section className="mm-more-tools" aria-label="More editing tools">
                 <div className="mm-more-tools-heading"><span>MORE TOOLS</span><strong>Choose a workspace</strong><p>All editing categories stay available here.</p></div>
@@ -746,7 +805,17 @@ export function CoProStudio({
             <div
               className={`copro-preview-device${effectivePreviewSrc?"":" is-empty"}`}
               data-overlay={activeOverlay}
-              style={{"--mm-monitor-width":previewWidth+"px","--mm-monitor-height":previewWidth/canvasRatio+"px","--mm-monitor-ratio":canvasRatio,"--mm-monitor-zoom":`scale(${previewZoom/100})`} as React.CSSProperties}
+              style={{backgroundColor:stageEnvironment?.background,
+                backgroundImage: [
+                  ...(stageEnvironment?.showGrid ? ["linear-gradient(to right,color-mix(in srgb,var(--copro-text) 10%,transparent) 1px,transparent 1px)","linear-gradient(to bottom,color-mix(in srgb,var(--copro-text) 10%,transparent) 1px,transparent 1px)"] : []),
+                  stageLookBackground(stageEnvironment),
+                ].filter(Boolean).join(',') || undefined,
+                backgroundSize:stageEnvironment?.showGrid ? "24px 24px" : undefined,
+                "--copro-stage-fog-color":stageEnvironment?.fogColor??STAGE_ENVIRONMENT_DEFAULTS.fogColor,
+                "--copro-stage-fog-opacity":stageEnvironment?.fogOpacity??0,
+                "--copro-stage-softness":`${stageEnvironment?.shadowSoftness??2.5}px`,
+                boxShadow:stageEnvironment?.shadowSoftness!==undefined ? `0 18px ${20+stageEnvironment.shadowSoftness*5}px rgba(0,0,0,.48)` : undefined,
+                "--mm-monitor-width":previewWidth+"px","--mm-monitor-height":previewWidth/canvasRatio+"px","--mm-monitor-ratio":canvasRatio,"--mm-monitor-zoom":`scale(${previewZoom/100})`} as React.CSSProperties}
             >
               {effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
@@ -760,6 +829,7 @@ export function CoProStudio({
                     "--copro-media-cursor": mediaTransformStyle.cursor ?? "auto",
                     "--copro-media-filter": mediaTransformStyle.filter ?? "none",
                     "--copro-media-clip-path": mediaTransformStyle.clipPath ?? "none",
+                    "--copro-media-mask-image": mediaTransformStyle.maskImage ?? "none",
                   } as React.CSSProperties}
                   onPointerDown={startVisualDrag} onPointerMove={moveVisualDrag} onPointerUp={endVisualDrag} onPointerCancel={endVisualDrag}
                   onLoadedData={event => {
@@ -773,6 +843,7 @@ export function CoProStudio({
                 />
               ) : effectivePreviewSrc && effectivePreviewKind === "image" ? (
                 <img
+                  ref={imageRef}
                   className={"copro-preview-media copro-preview-effect-" + activeEffect.replace(/^overlay:/,"")}
                   src={effectivePreviewSrc}
                   alt="Project footage"
@@ -782,11 +853,19 @@ export function CoProStudio({
                     "--copro-media-cursor": mediaTransformStyle.cursor ?? "auto",
                     "--copro-media-filter": mediaTransformStyle.filter ?? "none",
                     "--copro-media-clip-path": mediaTransformStyle.clipPath ?? "none",
+                    "--copro-media-mask-image": mediaTransformStyle.maskImage ?? "none",
                   } as React.CSSProperties}
                   onPointerDown={startVisualDrag} onPointerMove={moveVisualDrag} onPointerUp={endVisualDrag} onPointerCancel={endVisualDrag}
                 />
               ) : (
-                <div className="copro-preview-placeholder" data-state={hasUnavailableFootage ? "missing" : "empty"}>
+                <div className="copro-preview-placeholder" data-state={hasUnavailableFootage ? "missing" : "empty"}
+                  style={stageLookBackground(stageEnvironment) ? {
+                    backgroundImage:[
+                      ...(stageEnvironment?.showGrid ? ["linear-gradient(to right,#ffffff13 1px,transparent 1px)","linear-gradient(to bottom,#ffffff13 1px,transparent 1px)"] : []),
+                      stageLookBackground(stageEnvironment),
+                    ].filter(Boolean).join(','),
+                    backgroundSize:stageEnvironment?.showGrid ? '24px 24px,24px 24px,cover' : undefined,
+                  } : undefined}>
                   <div className="copro-preview-empty-content">
                     <span className="copro-preview-empty-kicker">{hasUnavailableFootage ? "SOURCE MEDIA" : "MOVIEMODE · NEW SEQUENCE"}</span>
                     <div className="copro-preview-mark">{hasUnavailableFootage ? "Source media needed" : "Your canvas is ready"}</div>
@@ -902,7 +981,7 @@ export function CoProStudio({
                 ]) as Array<[string,string]>).map(([tool,label]) => <button type="button" key={tool}
                   className={inspectorTool===tool?"is-active":""} aria-pressed={inspectorTool===tool}
                   title={"Open "+label+" controls"}
-                  onClick={()=>{setActiveTool(tool);if(tool==="animation")selectCategory(tool);}}>{label}</button>)}
+                  onClick={()=>{setActiveTool(tool);setPanePreference("inspector");if(isHandset)setHandsetPanel("inspector");}}>{label}</button>)}
               </nav>}
               <CoProToolPanel
                 key={selectedClipId??"project"}
@@ -910,9 +989,18 @@ export function CoProStudio({
                 projectCanvas={project.canvas}
                 transitionSettings={selectedClip?.metadata?.transitionOut as any}
                 motionSettings={selectedClip?.metadata?.motion as any}
+                adjustments={selectedClip?.metadata?.adjustments as CoProColorAdjustments|undefined}
+                mask={selectedClip?.metadata?.mask as CoProClipMask|undefined}
+                onMaskChange={mask=>selectedClip&&onAction?.({type:"mask",clipId:selectedClip.id,mask})}
+                onAdjustmentChange={patch=>selectedClip&&onAction?.({type:"adjustments",clipId:selectedClip.id,patch})}
+                scopeHistogram={scopeHistogram}
+                scopeError={scopeError}
+                onSampleScopes={sampleCurrentFrameScopes}
                 onBrowsePresets={()=>selectCategory(inspectorTool==="animation"?"animation":"transitions")}
                 onTransitionSettingsChange={patch=>selectedClip&&onAction?.({type:"transition",clipId:selectedClip.id,transition:String((selectedClip.metadata?.transitionOut as any)?.type??"none"),...(selectedClip.metadata?.transitionOut as any),...patch})}
-                onMotionSettingsChange={durationUs=>selectedClip&&onAction?.({type:"motion",clipId:selectedClip.id,motion:String((selectedClip.metadata?.motion as any)?.id??"none"),durationUs})}
+                onMotionSettingsChange={patch=>selectedClip&&onAction?.({type:"motion",clipId:selectedClip.id,motion:String((selectedClip.metadata?.motion as any)?.id??"none"),
+                  durationUs:(selectedClip.metadata?.motion as any)?.durationUs,delayUs:(selectedClip.metadata?.motion as any)?.delayUs,
+                  amplitude:(selectedClip.metadata?.motion as any)?.amplitude,...patch})}
                 onClose={() => { if (isHandset) setHandsetPanel(null); else setLayout(value => ({ ...value, inspectorOpen: false })); }}
                 selectedClipId={selectedClipId}
                 projectTitle={projectTitle}

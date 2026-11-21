@@ -52,6 +52,38 @@ export function applyCoProCommand(inputProject, command) {
       break;
     }
 
+    case "project.set_environment": {
+      if (payload.patch === null) {
+        project.metadata = {...(project.metadata??{})};
+        delete project.metadata.environment;
+        break;
+      }
+      const patch = payload.patch;
+      if (!patch || typeof patch!=="object" || Array.isArray(patch) ||
+        Object.keys(patch).some(key=>!["background","ambient","fogColor","fogOpacity","showGrid","skyPreset","finish","cloudDensity","stars","glow","lightHue","shadowSoftness","keyAngle"].includes(key)))
+        throw new Error("copro_environment_patch_invalid");
+      for (const [key,value] of Object.entries(patch)) {
+        if (key==="background"||key==="fogColor") {
+          if (typeof value!=="string" || !/^#[0-9a-fA-F]{6}$/.test(value))throw new Error("copro_environment_color_invalid");
+        } else if (["showGrid","stars","glow"].includes(key)) {
+          if (typeof value!=="boolean")throw new Error("copro_environment_toggle_invalid");
+        } else if (key==="skyPreset" || key==="finish") {
+          const options=key==="skyPreset" ? ["studio","night","spiral","aurora","exoplanet","supernova","eclipse","cloudbank"] : ["gold","cryo-titanium","copper","carbon","calacatta","marquina","basalt"];
+          if (typeof value!=="string" || !options.includes(value)) throw new Error("copro_environment_preset_invalid");
+        } else if (typeof value!=="number" || !Number.isFinite(value) ||
+          (key==="ambient" && (value<.2||value>2.5)) ||
+          (key==="fogOpacity" && (value<0||value>.8)) ||
+          (key==="cloudDensity" && (value<0||value>1)) ||
+          (key==="lightHue" && (value<0||value>360)) ||
+          (key==="shadowSoftness" && (value<.5||value>10)) ||
+          (key==="keyAngle" && (value< -90||value>180))) {
+          throw new Error("copro_environment_value_invalid");
+        }
+      }
+      project.metadata={...(project.metadata??{}),environment:{...(project.metadata?.environment??{}),...clone(patch)}};
+      break;
+    }
+
     case "project.set_canvas": {
       const width = Number(payload.width);
       const height = Number(payload.height);
@@ -181,6 +213,105 @@ export function applyCoProCommand(inputProject, command) {
         next[key] = value;
       }
       found.clip.metadata = { ...(found.clip.metadata ?? {}), transform: next };
+      break;
+    }
+
+    case "clip.set_world3d": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      if (found.clip.metadata?.sourceKind !== "samscene-timeline-cue" || found.clip.metadata?.sceneCue?.kind !== "scene-object")
+        throw new Error("copro_world3d_clip_required");
+      const patch = payload.patch;
+      if (!patch || typeof patch !== "object" || Array.isArray(patch) || Object.keys(patch).some(key => !["transform", "visible", "keyframes", "animationIndex"].includes(key)))
+        throw new Error("copro_world3d_patch_invalid");
+      const previous = found.clip.metadata.world3d ?? {};
+      const next = { ...previous };
+      const numericKeys = ["x", "y", "z", "rotationYDeg", "scale", "opacity"];
+      function validate3dNumeric(key, value) {
+        if (typeof value !== "number" || !Number.isFinite(value)) throw new Error("copro_world3d_numeric_invalid");
+        if (key === "scale" && (value < .05 || value > 100)) throw new Error("copro_world3d_scale_invalid");
+        if (key === "opacity" && (value < 0 || value > 1)) throw new Error("copro_world3d_opacity_invalid");
+        if (key === "rotationYDeg" && Math.abs(value) > 36000) throw new Error("copro_world3d_rotation_invalid");
+        if (["x","y","z"].includes(key) && Math.abs(value) > 100000) throw new Error("copro_world3d_position_invalid");
+      }
+      if (patch.transform !== undefined) {
+        if (!patch.transform || typeof patch.transform !== "object" || Array.isArray(patch.transform) || Object.keys(patch.transform).some(key => !numericKeys.includes(key)))
+          throw new Error("copro_world3d_transform_invalid");
+        const transform={...(previous.transform || {})};
+        for (const [key,value] of Object.entries(patch.transform)) {
+          validate3dNumeric(key,value);
+          transform[key]=value;
+        }
+        next.transform=transform;
+      }
+      if (patch.visible !== undefined) {
+        if (typeof patch.visible !== "boolean") throw new Error("copro_world3d_visible_invalid");
+        next.visible=patch.visible;
+      }
+      if (patch.animationIndex !== undefined) {
+        if (!Number.isSafeInteger(patch.animationIndex) || patch.animationIndex < 0 || patch.animationIndex > 4096)
+          throw new Error("copro_world3d_animation_invalid");
+        next.animationIndex=patch.animationIndex;
+      }
+      if (patch.keyframes !== undefined) {
+        if (!Array.isArray(patch.keyframes) || patch.keyframes.length > 2000)
+          throw new Error("copro_world3d_keyframes_invalid");
+        let lastTime=-1;
+        for (const keyframe of patch.keyframes) {
+          if (!keyframe || typeof keyframe !== "object" || Array.isArray(keyframe) ||
+              !Number.isSafeInteger(keyframe.timeUs) || keyframe.timeUs <= lastTime || keyframe.timeUs > 24*60*60*1000000 ||
+              Object.keys(keyframe).some(key => key !== "timeUs" && !numericKeys.includes(key)))
+            throw new Error("copro_world3d_keyframe_invalid");
+          for (const [key,value] of Object.entries(keyframe)) if(key !== "timeUs") validate3dNumeric(key,value);
+          lastTime=keyframe.timeUs;
+        }
+        next.keyframes=clone(patch.keyframes);
+      }
+      found.clip.metadata={...found.clip.metadata,world3d:next};
+      break;
+    }
+
+    case "clip.set_mask": {
+      const found = locateClip(project,payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      if (payload.mask === null) {
+        const metadata = {...(found.clip.metadata??{})};delete metadata.mask;found.clip.metadata=metadata;
+        break;
+      }
+      const mask = payload.mask;
+      if (!mask || typeof mask!=="object" || Array.isArray(mask) ||
+          Object.keys(mask).some(key=>!["shape","size","feather","invert"].includes(key)) ||
+          !["circle","rectangle"].includes(mask.shape) ||
+          typeof mask.size!=="number" || !Number.isFinite(mask.size) || mask.size<20 || mask.size>100 ||
+          typeof mask.feather!=="number" || !Number.isFinite(mask.feather) || mask.feather<0 || mask.feather>30 ||
+          typeof mask.invert!=="boolean" || (mask.shape==="rectangle"&&mask.invert))
+        throw new Error("copro_clip_mask_invalid");
+      found.clip.metadata={...(found.clip.metadata??{}),mask:clone(mask)};
+      break;
+    }
+
+    case "clip.set_adjustments": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const limits = {
+        exposure: [-5, 5], contrast: [-100, 100], saturation: [0, 200],
+        highlights: [-100, 100], shadows: [-100, 100],
+        temperature: [-100, 100], tint: [-100, 100],
+        lift: [-100,100], gamma: [-100,100], gain: [-100,100],
+        hue: [-180,180], luminance: [-100,100],
+      };
+      if (!payload.patch || typeof payload.patch !== "object" || Array.isArray(payload.patch))
+        throw new Error("copro_adjustments_patch_invalid");
+      const next = {...(found.clip.metadata?.adjustments ?? {})};
+      for (const [key, raw] of Object.entries(payload.patch)) {
+        if (!Object.hasOwn(limits, key)) throw new Error("copro_adjustment_key_invalid");
+        const value = Number(raw);
+        const [min,max] = limits[key];
+        if (typeof raw !== "number" || !Number.isFinite(value) || value < min || value > max)
+          throw new Error("copro_adjustment_value_invalid");
+        next[key] = value;
+      }
+      found.clip.metadata = {...(found.clip.metadata ?? {}), adjustments: next};
       break;
     }
 

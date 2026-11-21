@@ -1,0 +1,9 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createCoProProject,createTrack,createClip} from '../../copro-project/src/index.js';
+import {evaluateWorld3DFrame,interpolateWorld3DKeyframes,createWorld3DRenderer} from '../src/world3d.js';
+const example=()=>{const p=createCoProProject({id:'3d-test'});const t=createTrack({id:'objects',kind:'overlay'});t.clips.push(createClip({id:'actor',assetId:'model.glb',startUs:1_000_000,durationUs:3_000_000,playbackRate:2,metadata:{sourceKind:'samscene-timeline-cue',sceneCue:{kind:'scene-object',objectId:'actor-1',animationIndex:0},world3d:{keyframes:[{timeUs:0,x:0,z:0},{timeUs:4_000_000,x:4,z:8}]}}}));p.tracks.push(t);return p;};
+test('CoPro world compositor evaluates a real keyframed 3D object in clip time',()=>{const p=example();assert.equal(evaluateWorld3DFrame(p,0).objects.length,0);const f=evaluateWorld3DFrame(p,2_000_000);assert.equal(f.objects[0].transform.x,2);assert.equal(f.objects[0].transform.z,4);assert.equal(f.objects[0].sourceTimeUs,2_000_000);assert.equal(evaluateWorld3DFrame(p,4_000_000).objects.length,0);});
+test('hidden or muted tracks suppress 3D output',()=>{const p=example();p.tracks[0].muted=true;assert.equal(evaluateWorld3DFrame(p,2_000_000).objects.length,0);});
+test('renderer delegates GPU rasterization but owns frame evaluation/clock',async()=>{let received;const r=createWorld3DRenderer({applyFrame:(frame)=>{received=frame;}});await r.renderFrame(example(),2_000_000);assert.equal(received.objects[0].objectId,'actor-1');});
+test('keyframes interpolate y, yaw, scale, opacity deterministically',()=>{const p=interpolateWorld3DKeyframes([{timeUs:0,y:0,rotationYDeg:0,scale:1,opacity:1},{timeUs:1_000_000,y:10,rotationYDeg:90,scale:2,opacity:0}],500_000);assert.deepEqual([p.y,p.rotationYDeg,p.scale,p.opacity],[5,45,1.5,.5]);});

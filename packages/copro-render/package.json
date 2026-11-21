@@ -10,6 +10,7 @@
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
+    "./world3d": { "types": "./src/world3d.d.ts", "import": "./src/world3d.js" },
     "./package.json": "./package.json",
     "./transitions": "./src/transitions/index.js"
   },
@@ -31,6 +32,7 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": { "webm-muxer": "5.1.4" },
   "keywords": [
     "copro",
     "rendering",

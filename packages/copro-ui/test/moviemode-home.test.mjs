@@ -128,7 +128,7 @@ test('medium workspace uses a 64px rail, one active pane, persistent player and 
   assert.match(medium,/flex-direction:column/);
   assert.match(medium,/grid-area:timeline/);
   const studio = await readFile(new URL('../src/studio.tsx',import.meta.url),'utf8');
-  assert.match(studio,/const isNarrow = workspaceWidth < 900/);
+  assert.match(studio,/const isNarrow = workspaceWidth < 1160/);
   assert.match(studio,/const isCompact = workspaceWidth < 600/);
 });
 

@@ -231,3 +231,64 @@ test("project cover is isolated from templates and persists through undo and red
  assert.deepEqual(session.redo().metadata.cover,cover);
  assert.equal(project.metadata?.cover,undefined);
 });
+
+test("clip color adjustments persist without losing other metadata and support undo/redo", () => {
+  const session = new CoProEditorSession(fixture());
+  const baseline = session.project;
+  session.execute({type:"clip.set_adjustments",payload:{clipId:"clip:1",patch:{exposure:1.25,contrast:-20,saturation:140}}});
+  session.execute({type:"clip.set_adjustments",payload:{clipId:"clip:1",patch:{highlights:-25}}});
+  const adjusted = session.project.tracks[0].clips[0];
+  assert.deepEqual(adjusted.metadata.adjustments,{exposure:1.25,contrast:-20,saturation:140,highlights:-25});
+  assert.deepEqual(baseline.tracks[0].clips[0].metadata,fixture().tracks[0].clips[0].metadata);
+  session.undo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.adjustments.highlights,undefined);
+  session.redo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.adjustments.highlights,-25);
+});
+
+test("clip adjustment commands reject unknown controls and out-of-range values", () => {
+  for (const patch of [{exposure:6},{saturation:201},{temperature:Infinity},{fakeSlider:10},{contrast:"20"}]) {
+    assert.throws(()=>applyCoProCommand(fixture(),{type:"clip.set_adjustments",payload:{clipId:"clip:1",patch}}),/copro_adjustment_(key|value)_invalid/);
+  }
+});
+
+test("clip masks persist as undoable, non-destructive metadata",()=>{
+  const session=new CoProEditorSession(fixture());
+  session.execute({type:"clip.set_mask",payload:{clipId:"clip:1",mask:{shape:"circle",size:70,feather:10,invert:false}}});
+  assert.deepEqual(session.project.tracks[0].clips[0].metadata.mask,{shape:"circle",size:70,feather:10,invert:false});
+  session.undo();assert.equal(session.project.tracks[0].clips[0].metadata.mask,undefined);
+  session.redo();assert.equal(session.project.tracks[0].clips[0].metadata.mask.size,70);
+  session.execute({type:"clip.set_mask",payload:{clipId:"clip:1",mask:null}});
+  assert.equal(session.project.tracks[0].clips[0].metadata.mask,undefined);
+});
+
+test("mask command rejects unimplemented shapes, malformed dimensions and rectangle inversion",()=>{
+  for(const mask of [{shape:"pen",size:70,feather:0,invert:false},
+                     {shape:"circle",size:140,feather:0,invert:false},
+                     {shape:"rectangle",size:70,feather:5,invert:true}]){
+    assert.throws(()=>applyCoProCommand(fixture(),{type:"clip.set_mask",payload:{clipId:"clip:1",mask}}),/copro_clip_mask_invalid/);
+  }
+});
+
+test("stage environment is undoable and survives separate edits without replacing project metadata",()=>{
+  const session = new CoProEditorSession(fixture());
+  const before = session.project;
+  session.execute({type:"project.set_environment",payload:{patch:{background:"#304050",ambient:1.3,showGrid:true}}});
+  session.execute({type:"project.set_environment",payload:{patch:{fogColor:"#b0c0d0",fogOpacity:.3}}});
+  assert.deepEqual(session.project.metadata.environment,{background:"#304050",ambient:1.3,showGrid:true,fogColor:"#b0c0d0",fogOpacity:.3});
+  assert.deepEqual(before.metadata,fixture().metadata);
+  session.undo();
+  assert.equal(session.project.metadata.environment.fogOpacity,undefined);
+  session.redo();
+  assert.equal(session.project.metadata.environment.fogOpacity,.3);
+  session.execute({type:"project.set_environment",payload:{patch:null}});
+  assert.equal(session.project.metadata.environment,undefined);
+  session.undo();
+  assert.equal(session.project.metadata.environment.fogOpacity,.3);
+});
+
+test("stage environment validates colors, limits and unknown controls",()=>{
+  for(const patch of [{background:"red"},{fogColor:"#abc"},{ambient:3},{fogOpacity:-1},{showGrid:1},{fakeProperty:true}]){
+    assert.throws(()=>applyCoProCommand(fixture(),{type:"project.set_environment",payload:{patch}}),/copro_environment_.*invalid/);
+  }
+});

@@ -1,5 +1,6 @@
 import { IconAction } from "./icon-action.js";
 import React, { useMemo, useState } from "react";
+import {STAGE_ENVIRONMENT_DEFAULTS, type CoProStageEnvironment} from "./stage-environment.js";
 import {
   Aperture, Box, Brush, Camera, ChevronDown, Eye, Film, Globe2,
   Grid3X3, Layers, Monitor, Network, Orbit, Palette, Pause, Play, Plus,
@@ -50,7 +51,7 @@ const STARTER_OBJECTS = [
   {id:"ground",name:"Ground",kind:"Mesh"},
 ];
 
-export function CoProCreativeWorkspace() {
+export function CoProCreativeWorkspace({environment,onEnvironmentChange}:{environment?:CoProStageEnvironment;onEnvironmentChange?:(patch:CoProStageEnvironment|null)=>void}) {
   const [department,setDepartment] = useState<Department>("scene");
   const [viewMode,setViewMode] = useState<"Solid"|"Material"|"Rendered">("Material");
   const [projection,setProjection] = useState<"Perspective"|"Orthographic">("Perspective");
@@ -63,7 +64,7 @@ export function CoProCreativeWorkspace() {
   const [showAddMenu,setShowAddMenu] = useState(false);
   const [renderState,setRenderState] = useState<"idle"|"preview">("idle");
   const [playing,setPlaying] = useState(false);
-  const [activeInspector,setActiveInspector] = useState("Object");
+  const [activeInspector,setActiveInspector] = useState("World");
   const [values,setValues] = useState<Record<string,number>>({});
   const [toggles,setToggles] = useState<Record<string,boolean>>({symmetry:true, overlays:true, shadows:true, denoise:true, ambientOcclusion:true, motionBlur:false});
   const config = DEPARTMENT_COPY[department];
@@ -86,7 +87,7 @@ export function CoProCreativeWorkspace() {
   return <section className="mm-creative-workspace" aria-label="3D and creative workspace">
     <header className="mm-creative-workspace-header">
       <div><span>CREATIVE APPLICATION DEPARTMENT</span><strong>3D / Scene Studio</strong><small>Model · Sculpt · Animate · Light · Render · Present</small></div>
-      <div className="mm-creative-workspace-status"><i/> INTERFACE PREVIEW <span>Preview controls</span></div>
+      <div className="mm-creative-workspace-status"><i/> STAGE ENVIRONMENT <span>Project-backed controls</span></div>
     </header>
     <nav className="mm-creative-departments" aria-label="Creative departments" role="tablist">
       {groups.map(group=><div className="mm-creative-department-group" key={group}><span>{group}</span>{DEPARTMENTS.filter(item=>item.group===group).map(item=><button type="button" role="tab" key={item.id} aria-selected={department===item.id} className={department===item.id?"is-active":""} onClick={()=>{setDepartment(item.id);setSelectedTool(DEPARTMENT_COPY[item.id].tools[0]);}}>{item.icon}{item.label}</button>)}</div>)}
@@ -133,10 +134,32 @@ export function CoProCreativeWorkspace() {
         <header><strong>Properties</strong><span>{selected?.name ?? "Scene"}</span></header>
         <nav role="tablist" aria-label="Property contexts">{["Object","Tool","World","View"].map(tab=><button type="button" role="tab" aria-selected={activeInspector===tab} className={activeInspector===tab?"is-active":""} key={tab} onClick={()=>setActiveInspector(tab)}>{tab}</button>)}</nav>
         <div className="mm-creative-inspector-body">
-          <div className="mm-creative-status-note"><Sparkles size={14}/><span>Controls are interactive previews. Engine execution is documented separately.</span></div>
+          <div className="mm-creative-status-note"><Sparkles size={14}/><span>World settings update the CoPro preview and editable project. Other 3D department mockups are not connected to the iamscene renderer.</span></div>
           {activeInspector==="Object"&&<section><h3>Scene Outliner</h3>{objects.map(object=><div role="button" tabIndex={0} key={object.id} className={"mm-creative-object-row "+(selectedObject===object.id?"is-active":"")} onClick={()=>setSelectedObject(object.id)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();setSelectedObject(object.id);}}}><Box size={14}/><span><strong>{object.name}</strong><small>{object.kind}</small></span><IconAction type="button" aria-label={"Toggle visibility of "+object.name} aria-pressed={toggles["visible:"+object.id]!==false} onClick={event=>{event.stopPropagation();toggle("visible:"+object.id);}}><Eye size={13}/></IconAction></div>)}</section>}
           {activeInspector==="Tool"&&<section><h3>{selectedTool} settings</h3>{config.controls.map(control=><label className="mm-creative-control" key={control.label}><span>{control.label}<b>{values[control.label]??control.value}{control.unit??""}</b></span><input type="range" min={control.min} max={control.max} step={control.max <= 10 ? .1 : 1} value={values[control.label]??control.value} onChange={event=>setValue(control.label,Number(event.currentTarget.value))}/></label>)}{["symmetry","shadows","ambientOcclusion","motionBlur"].map(toggleId=><label className="mm-creative-toggle" key={toggleId}><span>{toggleId.replace(/[A-Z]/g," $&")}</span><input type="checkbox" checked={Boolean(toggles[toggleId])} onChange={()=>toggle(toggleId)}/></label>)}</section>}
-          {activeInspector==="World"&&<section><h3>World & render layers</h3>{["World surface","Environment texture","Volumetrics","Color management","View transform"].map(item=><button type="button" className="mm-creative-setting-row" key={item} onClick={()=>setSelectedTool(item)}>{item}<ChevronDown size={13}/></button>)}</section>}
+          {activeInspector==="World"&&<section className="mm-stage-environment" aria-label="Stage environment settings">
+            <h3>Stage & atmosphere</h3>
+            <p>Non-destructive 2D compositor settings for stills, GIFs and video. 3D lighting remains owned by SamScene.</p>
+            <label>Background <input type="color" aria-label="Stage background color"
+              value={environment?.background??STAGE_ENVIRONMENT_DEFAULTS.background}
+              onChange={event=>onEnvironmentChange?.({background:event.currentTarget.value})}/></label>
+            <label>Ambient brightness <output>{(environment?.ambient??1).toFixed(2)}×</output>
+              <input type="range" aria-label="Stage ambient brightness" min=".2" max="2.5" step=".05"
+                value={environment?.ambient??1}
+                onChange={event=>onEnvironmentChange?.({ambient:Number(event.currentTarget.value)})}/></label>
+            <label>Atmosphere tint <input type="color" aria-label="Stage fog color"
+              value={environment?.fogColor??STAGE_ENVIRONMENT_DEFAULTS.fogColor}
+              onChange={event=>onEnvironmentChange?.({fogColor:event.currentTarget.value})}/></label>
+            <label>Atmosphere density <output>{Math.round((environment?.fogOpacity??0)*100)}%</output>
+              <input type="range" aria-label="Stage fog density" min="0" max=".8" step=".02"
+                value={environment?.fogOpacity??0}
+                onChange={event=>onEnvironmentChange?.({fogOpacity:Number(event.currentTarget.value)})}/></label>
+            <label className="mm-stage-grid-setting">Show stage guide grid
+              <input type="checkbox" aria-label="Show stage guide grid"
+                checked={Boolean(environment?.showGrid)}
+                onChange={event=>onEnvironmentChange?.({showGrid:event.currentTarget.checked})}/></label>
+            <button type="button" className="mm-stage-reset" onClick={()=>onEnvironmentChange?.(null)}>Reset stage environment</button>
+          </section>}
           {activeInspector==="View"&&<section><h3>Viewport display</h3>{["Grid","Floor","Camera guides","Safe areas","Selection outline","Gizmos"].map(item=><label className="mm-creative-toggle" key={item}><span>{item}</span><input type="checkbox" defaultChecked onChange={()=>toggle("view:"+item)}/></label>)}</section>}
         </div>
         <footer><button type="button" onClick={()=>setRenderState("preview")}><Sparkles size={14}/> Render preview</button><small>{renderState==="preview"?"Preview only":"Preview only"}</small></footer>

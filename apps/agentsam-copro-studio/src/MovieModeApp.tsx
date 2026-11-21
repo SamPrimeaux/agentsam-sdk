@@ -188,9 +188,7 @@ function makeImportedProject(file: File, media: Pick<SessionMediaItem,"durationU
 let evidenceImportStarted = false;
 
 export function MovieModeApp({ initialScreen = "projects", screen: requestedScreen, onScreenChange, standalone = false }: MovieModeAppProps) {
-  // Creative workspace owns its brand palette; account shell appearance must
-  // not silently turn a media editing product white/blue on the web.
-  const appearanceStyle={'--nav-accent':'var(--copro-theme-accent,#32c6ca)'} as React.CSSProperties;
+  // CoPro derives its palette from the host theme via scoped CSS tokens.
 
   const initialProjectId=useRef(new URLSearchParams(window.location.search).get("project"));
   const [screen, setScreen] = useState<Screen>(requestedScreen ?? (initialProjectId.current?"editor":initialScreen));
@@ -866,6 +864,9 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     if (action.type === "speed") { setProject(session.execute({ type:"clip.set_speed", payload:{ clipId:action.clipId, playbackRate:action.playbackRate } })); return; }
     if (action.type === "volume") { setProject(session.execute({ type:"clip.set_volume", payload:{ clipId:action.clipId, volume:action.volume } })); return; }
     if (action.type === "transform") { setProject(session.execute({ type:"clip.set_transform", payload:{ clipId:action.clipId, ...action.patch } })); return; }
+    if (action.type === "adjustments") { setProject(session.execute({ type:"clip.set_adjustments", payload:{ clipId:action.clipId, patch:action.patch } })); return; }
+    if (action.type === "mask") { setProject(session.execute({ type:"clip.set_mask", payload:{ clipId:action.clipId, mask:action.mask } })); return; }
+    if (action.type === "environment") { setProject(session.execute({ type:"project.set_environment", payload:{patch:action.patch} })); return; }
     if (action.type === "text") { setProject(session.execute({ type:"clip.set_text", payload:{ clipId:action.clipId, text:action.text } })); return; }
     if (action.type === "effect") { setProject(session.execute({ type:"clip.set_effect", payload:{ clipId:action.clipId, effect:action.effect } })); return; }
     if (action.type === "transition") { setProject(session.execute({ type:"clip.set_transition", payload:{ clipId:action.clipId, transition:action.transition, durationUs:action.durationUs, direction:action.direction, easing:action.easing } })); return; }
@@ -878,7 +879,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       const definition = motion.ANIMATIONS.find((item) => item.id === action.motion);
       if (!definition) return;
       setMotionSampler(() => motion.sampleAnimation);
-      setProject(session.execute({type:"clip.set_motion",payload:{clipId:action.clipId,motion:action.motion,durationUs:action.durationUs ?? definition.durationUs}}));
+      setProject(session.execute({type:"clip.set_motion",payload:{clipId:action.clipId,motion:action.motion,durationUs:action.durationUs ?? definition.durationUs,delayUs:action.delayUs,amplitude:action.amplitude}}));
       return;
     }
     if (action.type === "graphic") {
@@ -994,11 +995,11 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   if (!restored) {
-    return <div data-nav-theme="dark" style={appearanceStyle} className="as-nav-scope copro-boot"><span>MovieMode</span><small>Restoring your projects…</small></div>;
+    return <div  className="as-nav-scope copro-boot"><span>MovieMode</span><small>Restoring your projects…</small></div>;
   }
 
   if (screen === "projects") {
-    return <div data-nav-theme="dark" style={appearanceStyle} className="as-nav-scope copro-app-root">
+    return <div  className="as-nav-scope copro-app-root">
       <CoProProjectsScreen
         projects={projects}
         creativeAssets={creativeAssets}
@@ -1026,7 +1027,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     </div>;
   }
 
-  return <div data-nav-theme="dark" style={appearanceStyle} className="as-nav-scope copro-app-root">
+  return <div  className="as-nav-scope copro-app-root">
     {mediaPersistenceError && <div role="alert" className="copro-source-storage-warning">
       <strong>Source storage needs attention. </strong>{mediaPersistenceError}
       <button type="button" onClick={() => setMediaPersistenceError(null)} aria-label="Dismiss storage warning" className="copro-storage-warning-dismiss">Dismiss</button>

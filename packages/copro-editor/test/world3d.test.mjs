@@ -1,0 +1,8 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createCoProProject, createTrack, createClip } from '../../copro-project/src/index.js';
+import { CoProEditorSession } from '../src/index.js';
+function session(){const p=createCoProProject({id:"world-test"});const t=createTrack({id:'object-track',kind:'overlay'});t.clips.push(createClip({id:'actor-1',assetId:'avatar.glb',startUs:0,durationUs:1_000_000,metadata:{sourceKind:'samscene-timeline-cue',sceneCue:{kind:'scene-object',objectId:'obj-1'}}}));p.tracks.push(t);return new CoProEditorSession(p);}
+test('CoPro owns undoable 3D position / animation edits',()=>{const s=session();s.execute({type:'clip.set_world3d',payload:{clipId:'actor-1',patch:{transform:{x:2,z:4,rotationYDeg:90},animationIndex:2}}});assert.equal(s.project.tracks[0].clips[0].metadata.world3d.transform.z,4);s.undo();assert.equal(s.project.tracks[0].clips[0].metadata.world3d,undefined);s.redo();assert.equal(s.project.tracks[0].clips[0].metadata.world3d.animationIndex,2);});
+test('keyframes persist independently per 3D clip',()=>{const s=session();s.execute({type:'clip.set_world3d',payload:{clipId:'actor-1',patch:{keyframes:[{timeUs:0,x:0},{timeUs:500000,x:5}]}}});assert.equal(s.project.tracks[0].clips[0].metadata.world3d.keyframes[1].x,5);});
+test('invalid world transform and time are rejected',()=>{const s=session();assert.throws(()=>s.execute({type:'clip.set_world3d',payload:{clipId:'actor-1',patch:{transform:{x:Infinity}}}}),/numeric_invalid/);assert.throws(()=>s.execute({type:'clip.set_world3d',payload:{clipId:'actor-1',patch:{keyframes:[{timeUs:500000},{timeUs:100000}]}}}),/keyframe_invalid/);});
