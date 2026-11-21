@@ -4,3 +4,6 @@ export * from './validate.js';
 export * from './editor.js';
 export * from './animation.js';
 export * from './runtime.js';
+export * from './gltf.js';
+export * from './geometry.js';
+export * from './format-registry.js';

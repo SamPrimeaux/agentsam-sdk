@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import path from 'node:path';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
+import { createIAMSceneFormatRegistry } from '../dist/src/format-registry.js';
 import { createSceneDocument } from '../dist/src/document.js';
 import { validateSceneDocument } from '../dist/src/validate.js';
-import { loadSceneFile, saveSceneFile, createOcctSceneAsset } from '../dist/src/node.js';
+import { loadSceneFile, saveSceneFile, createOcctSceneAsset, createIAMSceneNativeFormatRegistry } from '../dist/src/node.js';
 
 const [command = 'help', ...args] = process.argv.slice(2);
 const flag = name => { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; };
@@ -14,6 +15,10 @@ function help() {
     `iamscene init <file> [--name <name>]\n` +
     `iamscene validate <file>\n` +
     `iamscene inspect <file>\n` +
+    `iamscene formats [--binary <native-occt>]\n` +
+    `iamscene export <scene.iamscene.json> --out <file.step|file.brep|file.ifc> --binary <native-occt>\n` +
+    `iamscene verify <file> [--units m|cm|mm|in|ft]\n` +
+    `iamscene convert <file> [--units m|cm|mm|in|ft] [--out <scene.iamscene.json>]\n` +
     `iamscene normalize <file>\n` +
     `iamscene build-occt <file> [--binary <absolute-path>] [--output <asset-directory>]\n`);
 }
@@ -21,6 +26,73 @@ function help() {
 try {
   if (command === 'help' || command === '--help' || command === '-h') {
     help();
+  } else if (command === 'formats') {
+    const binary = flag('--binary') ?? process.env.AGENTSAM_OCCT_BIN;
+    const registry = binary ? await createIAMSceneNativeFormatRegistry({binary:path.resolve(binary)}) : createIAMSceneFormatRegistry();
+    process.stdout.write(JSON.stringify(registry.list(), null, 2) + '\n');
+  } else if (command === 'export') {
+    if (!fileArg || !flag('--out')) throw new Error('iamscene_export_input_and_output_required');
+    const binary = flag('--binary') ?? process.env.AGENTSAM_OCCT_BIN;
+    if (!binary) throw new Error('iamscene_export_native_binary_required');
+    const target = path.resolve(flag('--out'));
+    const input = path.resolve(fileArg);
+    if (target===input) throw new Error('iamscene_export_source_overwrite_forbidden');
+    try { await access(target); throw new Error('iamscene_export_destination_exists:' + target); }
+    catch(error) { if(error.code !== 'ENOENT') throw error; }
+    const registry = await createIAMSceneNativeFormatRegistry({binary:path.resolve(binary)});
+    const document = await loadSceneFile(input);
+    const exported = await registry.export(target,{kind:'scene',value:document});
+    await mkdir(path.dirname(target),{recursive:true});
+    await writeFile(target,exported.bytes,{flag:'wx'});
+    process.stdout.write(JSON.stringify({input,target,format:exported.format,bytes:exported.bytes.byteLength,
+      warnings:exported.warnings},null,2)+'\n');
+  } else if (command === 'verify' || command === 'convert') {
+    if (!fileArg) throw new Error('iamscene_format_file_required');
+    const inputPath = path.resolve(fileArg);
+    const registry = createIAMSceneFormatRegistry();
+    const descriptor = registry.identify(inputPath);
+    const source = new Uint8Array(await readFile(inputPath));
+    const outPath = path.resolve(flag('--out') ?? `${inputPath}.iamscene.json`);
+    const outputDir = path.dirname(outPath);
+    const relativeSource = './' + path.relative(outputDir, inputPath).replaceAll('\\','/');
+    const importOptions = { id: path.basename(inputPath).replace(/[^a-zA-Z0-9._:-]/g, '-'),
+      assetUri: relativeSource, ...(flag('--units') ? { sourceUnits: flag('--units') } : {}) };
+    const reference = await registry.reference(inputPath, source);
+    const receipt = { filename: inputPath, format: descriptor.id, operations: descriptor.operations,
+      sourceIntegrity: {sha256: reference.sha256, byteLength: reference.byteLength, scope:'source-bytes-only'},
+      ...(descriptor.operations.import !== 'implemented' ? {semanticImport: 'unavailable', reason: descriptor.limitations} : {}) };
+    if (descriptor.operations.import !== 'implemented') {
+      process.stdout.write(JSON.stringify(receipt, null, 2) + '\n');
+      process.exitCode = 2;
+    } else {
+      const imported = await registry.import(inputPath, source, importOptions);
+      receipt.semanticImport = 'implemented';
+      receipt.importWarnings = imported.warnings;
+      receipt.generatedFiles = imported.generatedFiles?.map(file=>({uri:file.uri,byteLength:file.bytes.byteLength})) ?? [];
+      if (descriptor.operations['round-trip'] === 'implemented') {
+        const resolveUri = async uri => {
+          if (/^[a-z][a-z0-9+.-]*:/i.test(uri) || uri.startsWith('//')) throw new Error('iamscene_external_uri_not_allowed');
+          return new Uint8Array(await readFile(path.resolve(path.dirname(inputPath),uri)));
+        };
+        receipt.roundTrip = await registry.roundTrip(inputPath,source,{...importOptions,resolveUri});
+        if (!receipt.roundTrip.passed) process.exitCode = 1;
+      } else receipt.roundTrip = {status:'unavailable'};
+      if (command === 'convert') {
+        if (imported.document.kind !== 'scene') throw new Error('iamscene_convert_requires_scene');
+        if (outPath === inputPath) throw new Error('iamscene_convert_source_overwrite_forbidden');
+        const targets = (imported.generatedFiles || []).map(f=>({ file:f,path:path.resolve(outputDir,f.uri) }));
+        for (const dest of [outPath,...targets.map(t=>t.path)]) {
+          try { await access(dest); throw new Error('iamscene_convert_destination_exists:' + dest); }
+          catch(error) { if (error.code !== 'ENOENT') throw error; }
+          if (dest !== outPath && !dest.startsWith(outputDir + path.sep)) throw new Error('iamscene_convert_path_escape');
+        }
+        await mkdir(outputDir,{recursive:true});
+        for (const target of targets) await writeFile(target.path,target.file.bytes,{flag:'wx'});
+        await writeFile(outPath, JSON.stringify(imported.document.value,null,2)+'\n',{flag:'wx'});
+        receipt.outputScene = outPath;
+      }
+      process.stdout.write(JSON.stringify(receipt,null,2)+'\n');
+    }
   } else if (command === 'init') {
     if (!fileArg) throw new Error('iamscene_init_file_required');
     const name = flag('--name') ?? path.basename(fileArg).replace(/\.iamscene\.json$/i, '').replaceAll('-', ' ');

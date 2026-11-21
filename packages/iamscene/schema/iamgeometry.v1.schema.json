@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/iamgeometry.schema.json",
+  "title": "InnerAnimalMedia Reusable Geometry Manifest",
+  "description": "A versioned reference to reusable source geometry and portable render representations. Not a new BRep or mesh kernel.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "formatVersion", "id", "name", "units", "representations", "defaultRenderId"],
+  "properties": {
+    "format": { "const": "iamgeometry" },
+    "formatVersion": { "const": "1.0.0" },
+    "id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "units": { "enum": ["m", "cm", "mm", "in", "ft"] },
+    "defaultRenderId": { "type": "string", "minLength": 1 },
+    "representations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "role", "format", "uri"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "role": { "enum": ["render", "source", "collision", "lod"] },
+          "format": { "enum": ["glb", "gltf", "step", "brep", "ifc", "stl", "obj", "ply"] },
+          "uri": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "lod": { "type": "integer", "minimum": 0 },
+          "mediaType": { "type": "string", "minLength": 1 },
+          "units": { "enum": ["m", "cm", "mm", "in", "ft"] }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "uri"],
+      "properties": {
+        "schema": { "type": "string", "minLength": 1 },
+        "uri": { "type": "string", "minLength": 1 },
+        "elementId": { "type": "string" },
+        "revision": { "type": ["string", "number"] }
+      }
+    },
+    "metadata": { "type": "object" }
+  }
+}

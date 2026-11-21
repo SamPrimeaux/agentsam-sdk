@@ -1,11 +1,16 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdtemp } from 'node:fs/promises';
+import { createIAMSceneFormatRegistry, type IAMSceneFormatRegistry } from './format-registry.js';
 import { createOcctSession } from '@inneranimalmedia/agentsam-occt/session';
 import { parseSceneDocument, serializeSceneDocument } from './document.js';
 import type { OcctGeometrySource, SceneDocument } from './types.js';
 
-export type OcctExportFormat = 'gltf' | 'step' | 'brep';
+export type OcctExportFormat = 'gltf' | 'step' | 'brep' | 'ifc';
 export interface CreateOcctSceneAssetOptions {
   binary: string;
   projectId: string;
@@ -31,6 +36,7 @@ const MIME: Record<OcctExportFormat, string> = {
   gltf: 'model/gltf+json',
   step: 'model/step',
   brep: 'application/vnd.opencascade.brep',
+  ifc: 'application/x-step',
 };
 
 function safeStem(value: string): string {
@@ -111,4 +117,47 @@ export async function saveSceneFile(filePath: string, document: SceneDocument): 
     await rm(temporary, { force: true }).catch(() => undefined);
     throw error;
   }
+}
+
+/**
+ * Native format adapters are opt-in for Node/desktop hosts. This keeps the
+ * browser registry honest; a published npm package is not proof that a native
+ * OCCT executable has been installed on every consumer's machine.
+ */
+export async function createIAMSceneNativeFormatRegistry(options: { binary: string }): Promise<IAMSceneFormatRegistry> {
+  if (!path.isAbsolute(options.binary)) throw new Error('iamscene_native_binary_absolute_path_required');
+  const execFileAsync = promisify(execFile);
+  const result = await execFileAsync(options.binary, ['--doctor'], { timeout: 8000, maxBuffer: 1024*1024 });
+  const receiptLine = result.stdout.split(/\r?\n/).find(line=>line.startsWith('AGENTSAM_RESULT='));
+  if (!receiptLine) throw new Error('iamscene_occt_doctor_receipt_missing');
+  const doctor = JSON.parse(receiptLine.slice('AGENTSAM_RESULT='.length));
+  if (!doctor.ok || doctor.engine !== 'occt' || !Array.isArray(doctor.capabilities)) throw new Error('iamscene_occt_doctor_unverified');
+  const registry = createIAMSceneFormatRegistry();
+  const requirements = {
+    step:'solid.export.step',brep:'solid.export.brep',ifc:'bim.export.ifc4',
+  } as const;
+  for (const [format, capability] of Object.entries(requirements) as Array<[keyof typeof requirements, string]>) {
+    if (!doctor.capabilities.includes(capability)) continue;
+    registry.registerAdapter(format, { async export(document) {
+      if (document.kind !== 'scene') throw new Error('iamscene_native_scene_document_required');
+      const target = document.value.scene.nodes.filter(node=>node.geometry?.type === 'occt');
+      if (target.length !== 1) throw new Error('iamscene_native_single_geometry_required');
+      const node = target[0];
+      if (!node.geometry || node.geometry.type !== 'occt') throw new Error('iamscene_native_geometry_missing');
+      const tempDir = await mkdtemp(path.join(os.tmpdir(),'iamscene-export-'));
+      try {
+        const built = await createOcctSceneAsset({ binary: options.binary, projectId: document.value.metadata.id,
+          elementId: node.id, operations: node.geometry.operations, outputDir: tempDir, formats:[format] });
+        const item = built.assets[0];
+        const output = new Uint8Array(await readFile(path.join(tempDir,item.uri)));
+        if (createHash('sha256').update(output).digest('hex') !== item.sha256) throw new Error('iamscene_native_export_hash_mismatch');
+        if (format==='ifc' && !new TextDecoder().decode(output.subarray(0,100)).includes('ISO-10303-21'))
+          throw new Error('iamscene_native_ifc_header_invalid');
+        return { format, bytes: output, warnings:[
+          'Verified OCCT geometry export. This does not claim semantic round-trip or full IFC building-model authoring.',
+        ] };
+      } finally { await rm(tempDir,{recursive:true,force:true}); }
+    }});
+  }
+  return registry;
 }
