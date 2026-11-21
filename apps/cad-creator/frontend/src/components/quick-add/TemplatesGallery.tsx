@@ -67,7 +67,7 @@ export function TemplatesGallery({ open, items, initialTab = 'objects', onClose,
           <div className="qa-gallery-body" ref={body}>
             {!focused.length && <p className="qa-empty">Nothing matches that search.</p>}
             {category && !searching && (
-              <div className="qa-focus-head"><button type="button" aria-label="Back to all categories" onClick={() => setCategory(null)}><ArrowLeft size={15} /></button><h3>{category}</h3></div>
+              <div className="qa-focus-head"><button type="button" aria-label="Back to all categories" onClick={() => setCategory(null)}><ArrowLeft size={15} /><span className="qa-sr">Back</span></button><h3>{category}</h3></div>
             )}
             {focused.map((s) => {
               const showAll = !category && !searching;
