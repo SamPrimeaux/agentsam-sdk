@@ -654,6 +654,7 @@ export function CadCreatorApp({
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
           onNew={startBlankProject} onTemplates={() => {setShowProjectGallery(true);setIsTemplateLibraryOpen(false)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}} onPlaceStock={placeStockPreset} onOpenScene={openTemplateScene}
+          onSketch={()=>setSketchOpen(true)}
           onParametric={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('parametric')}}
           onExport={() => setIsExportPublishOpen(true)}
           onSave={()=>{if(accessMode==='hosted-project'){void saveHostedRevision()}else window.dispatchEvent(new Event('agentsam:cad-save-revision'))}}
