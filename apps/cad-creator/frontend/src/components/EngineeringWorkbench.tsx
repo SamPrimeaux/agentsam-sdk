@@ -5,6 +5,8 @@ import {CadPerformancePanel} from './CadPerformancePanel';
 import {NativeSolidPanel} from './NativeSolidPanel';
 import {WorldViewSection} from './WorldViewSection';
 import {KIT, chooseKitTool, isKitActive, viewerSafe, type Group, type MenuId} from './sketch-kit-catalog';
+import {QuickAddMenu, type QuickAddEntry, type QuickAddItem} from './quick-add';
+import type {FurniturePreset} from './FurniturePicker';
 import {useKit} from '../lib/sketch-kit-store';
 import React, {useMemo, useState} from 'react';
 import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
@@ -306,14 +308,14 @@ export const CAD_STUDIO_TOOLS:{id:ActiveTool;label:string;shortcut:string;tier:1
  {id:'eraser',label:'Erase',shortcut:'E',tier:2,icon:Eraser},
  {id:'pan',label:'Pan',shortcut:'H',tier:2,icon:Hand}
 ];
-export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric}:{
+export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric,onPlaceStock,onOpenScene}:{
  tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model'|'robotics')=>void;
  planLayout:'2d'|'split';onPlanLayout:(v:'2d'|'split')=>void;readOnly:boolean;
  onNew:()=>void;onTemplates:()=>void;onExport:()=>void;onToggleExplorer:()=>void;onToggleInspector:()=>void;
  explorerOpen:boolean;inspectorOpen:boolean;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
+ studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
@@ -359,6 +361,19 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
   };
   window.addEventListener('keydown',keys);return()=>window.removeEventListener('keydown',keys);
  },[onTool,workspace,studioView,readOnly]);
+
+ const quickAddGroups:QuickAddEntry[][]=[
+  KIT.filter(k=>(k.live||k.place)&&k.menus.includes('create')&&k.group==='Draw').map(k=>({id:k.id,label:k.label,icon:<k.icon size={16}/>,kbd:k.key,
+   active:isKitActive(k,tool,kit.tool),disabled:(readOnly&&!viewerSafe(k))||(!!k.place&&!onStock),run:()=>chooseKitTool(k,onTool,onStock)})),
+  [{id:'stock',label:'Stock · architectural assets',icon:<Box size={16}/>,run:()=>onStock()},
+   {id:'parametric',label:'Parametric parts · Libraries',icon:<PencilRuler size={16}/>,run:onParametric}],
+  [{id:'blank',label:'Blank project',icon:<Plus size={16}/>,disabled:readOnly,run:onNew}],
+ ];
+ const pickQuickObject=(item:QuickAddItem)=>{
+  const s=item.specs||{};
+  if(typeof s.type!=='string'||!onPlaceStock)return;
+  onPlaceStock({type:s.type,name:item.title,category:item.category as FurniturePreset['category'],w:Number(s.w),d:Number(s.d),h:Number(s.h),color:String(s.color||''),description:item.description||''});
+ };
  return <div ref={toolbarRef} className="cad-real-toolbar" role="toolbar" aria-label="CAD authoring tools" data-studio-toolbar="progressive">
   <div className="cad-view-tabs" role="group" aria-label="Studio view">
    {(['preview','edit'] as const).map(v=><button key={v} type="button" title={v==='preview'?'Preview current model':'Edit current project'}
@@ -384,16 +399,8 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
    {draft&&(['select','pan','wall','room','door','window','measure','eraser'] as ActiveTool[]).map(direct)}
   </div>
   {studioView==='edit'&&<div className="cad-tool-cluster cad-create-tools" aria-label="Create objects">
-   {menu('Create · templates, parts, stock, project',<Plus size={18}/>,<>
-     <h6 className="cad-menu-head">Templates</h6>
-     {item(<Blocks size={16}/>,'Browse templates',onTemplates,{disabled:readOnly})}
-     <h6 className="cad-menu-head">Parts</h6>
-     {kitItems('create',['Draw'])}
-     {item(<Box size={16}/>,'Stock · architectural assets',onStock)}
-     <h6 className="cad-menu-head">Project</h6>
-     {item(<Plus size={16}/>,'Blank project',onNew,{disabled:readOnly})}
-     {item(<PencilRuler size={16}/>,'Parametric parts · Libraries',onParametric)}
-   </>)}
+   <QuickAddMenu label="Create · templates, parts, stock, project" groups={quickAddGroups}
+    onPickObject={pickQuickObject} onPickScene={item=>{onOpenScene?.(item.ref??null,item.title)}}/>
   </div>}
   <div className="cad-tool-cluster cad-edit-history">
    {button('Undo (⌘Z)',<Undo2 size={16}/>,onUndo,false,!canUndo)}

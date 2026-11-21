@@ -5,6 +5,7 @@
 
 import { listAccountLibraryResources, serveAccountLibraryFile, mutateAccountLibraryArtifact } from './work-library-resources.js';
 import { handleWorkCadRequest, isWorkCadRequest } from './work-cad-models.js';
+import { handleWorkCadCatalogRequest, isWorkCadCatalogRequest } from './work-cad-catalog.js';
 import { handleCanvasRequest, isCanvasRequest } from './work-canvas.js';
 import { handleCanvasCms } from './work-canvas-cms.js';
 import { handleSamSketchSceneRequest, isSamSketchSceneRequest } from './work-samsketch-scenes.js';
@@ -259,6 +260,7 @@ export function isWorkRequest(pathname) {
     isCanvasRequest(pathname) ||
     /^\/api\/work\/canvases\/[A-Za-z0-9_-]+\/cms\/(validate|convert)$/.test(pathname) ||
     isWorkCadRequest(pathname) ||
+    isWorkCadCatalogRequest(pathname) ||
     isSamSketchSceneRequest(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/insights$/.test(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/timer\/(start|stop)$/.test(pathname) ||
@@ -284,6 +286,7 @@ export async function handleWorkRequest(request, env, accountId, context = {}) {
     if (canvasCms) return handleCanvasCms(request, env, accountId, canvasCms[1], canvasCms[2]);
     if (isCanvasRequest(url.pathname)) return handleCanvasRequest(request, env, accountId, context);
     if (isWorkCadRequest(url.pathname)) return handleWorkCadRequest(request, env, accountId);
+    if (isWorkCadCatalogRequest(url.pathname)) return handleWorkCadCatalogRequest(request, env);
     if (isSamSketchSceneRequest(url.pathname)) return handleSamSketchSceneRequest(request, env, accountId);
     const privateAsset = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)\/file$/.exec(url.pathname);
     if (privateAsset && method === 'GET') return serveAccountLibraryFile(env, accountId, privateAsset[1], url.searchParams.get('preview') === '1', { accountId: url.searchParams.get('account') || '' });
