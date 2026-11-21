@@ -9,12 +9,12 @@
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
 | `src/cli/command-catalog.js` | 80 | Registered top-level CLI command entries |
-| `protocol/capabilities/manifest.json` | 88 | Capability and agent-primitive declarations |
+| `protocol/capabilities/manifest.json` | 89 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
 | `packages/catalog/generated/packages.json` | 55 | Package inventory rows (not npm publication proof) |
 
-Manifest status: 56 stable, 32 experimental, 16 explicitly non-deterministic. Host binding and approval remain separate.
+Manifest status: 56 stable, 33 experimental, 17 explicitly non-deterministic. Host binding and approval remain separate.
 
 ## CLI command authority
 
@@ -124,6 +124,7 @@ Manifest status: 56 stable, 32 experimental, 16 explicitly non-deterministic. Ho
 | `brand.plan` | brand | capability | stable | yes | `none` | `agentsam plan brand` |
 | `brand.resolve` | brand | capability | stable | yes | `none` | `agentsam brand resolve` |
 | `brand.scan` | brand | capability | stable | yes | `none` | `agentsam brand scan` |
+| `cad.building.export` | cad-bim | capability | experimental | no | `filesystem-write` | — |
 | `capability.describe` | tool | capability | stable | yes | `none` | — |
 | `capability.invoke` | tool | capability | stable | yes | `delegated-execution` | — |
 | `capability.search` | tool | capability | stable | yes | `none` | — |

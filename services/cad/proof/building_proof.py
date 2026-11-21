@@ -26,8 +26,10 @@ import json
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from typing import TypedDict
 
@@ -92,6 +94,26 @@ PARAMS: BuildingParameters = {
     "fps": 12,
 }
 SELF = Path(__file__).resolve()
+
+# A real cad.project.v2 source is optional at the executable boundary: local
+# files are legitimate inputs without forcing callers to create a new project.
+# The orchestrator transmits the selected source to subprocess engines via an
+# explicit inherited environment variable, not hidden SDK/project root paths.
+SOURCE_EVIDENCE = None
+if os.environ.get("AGENTSAM_CAD_BUILDING_SOURCE"):
+    # Blender --python does not consistently add the script directory to sys.path.
+    sys.path.insert(0, str(SELF.parent))
+    from building_source import load_building_source
+
+    PARAMS, SOURCE_EVIDENCE = load_building_source(os.environ["AGENTSAM_CAD_BUILDING_SOURCE"])
+
+
+def deterministic_guid(entity_id: str) -> str:
+    import ifcopenshell  # type: ignore[import-not-found] -- container-only BIM dependency
+
+    scope = SOURCE_EVIDENCE["source_id"] if SOURCE_EVIDENCE else "cad-toolchain-proof"
+    return ifcopenshell.guid.compress(uuid.uuid5(uuid.NAMESPACE_URL, f"iamscene:ifc:{scope}:{entity_id}").hex)
+
 
 
 def analytic(p: BuildingParameters):
@@ -164,6 +186,7 @@ def stage_ifc(out: Path):
     import ezdxf  # ty: ignore[unresolved-import] -- available inside native CAD container
     import ifcopenshell  # ty: ignore[unresolved-import] -- container only
     import ifcopenshell.geom  # ty: ignore[unresolved-import] -- container only
+    import ifcopenshell.validate  # ty: ignore[unresolved-import] -- independent IFC validator
     import numpy as np  # ty: ignore[unresolved-import] -- available inside native CAD container
     from ifcopenshell import api  # ty: ignore[unresolved-import] -- container only
 
@@ -171,8 +194,9 @@ def stage_ifc(out: Path):
     L, W, H, T = (p["length"] * IN, p["width"] * IN, p["height"] * IN, p["wall"] * IN)
     f = api.run("project.create_file", version="IFC4")
     project = api.run(
-        "root.create_entity", f, ifc_class="IfcProject", name="cad-toolchain-proof"
+        "root.create_entity", f, ifc_class="IfcProject", name=SOURCE_EVIDENCE["source_id"] if SOURCE_EVIDENCE else "cad-toolchain-proof"
     )
+    project.GlobalId = deterministic_guid("project")
     api.run("unit.assign_unit", f, length={"is_metric": True, "raw": "MILLIMETERS"})
     model = api.run("context.add_context", f, context_type="Model")
     body = api.run(
@@ -188,6 +212,34 @@ def stage_ifc(out: Path):
     storey = api.run(
         "root.create_entity", f, ifc_class="IfcBuildingStorey", name="Level 1"
     )
+    structureIds = (SOURCE_EVIDENCE or {})
+    for entity, stable_id in [(site,structureIds.get("site_id","site")),
+                              (building,structureIds.get("building_id","building")),
+                              (storey,structureIds.get("storey_id","storey:level-01"))]:
+        entity.GlobalId = deterministic_guid(stable_id)
+
+    def tag_source(entity, source_id):
+        # The source element remains identifiable after import into an external BIM editor.
+        pset = api.run("pset.add_pset", f, product=entity, name="Pset_IAMSource")
+        pset.GlobalId = deterministic_guid(f"pset:{source_id}")
+        # Architectural shell subfaces are derived objects, not independent
+        # native CAD entities. Preserve the owning source entity and a subkey.
+        canonical_id = source_id
+        if SOURCE_EVIDENCE:
+            if source_id.startswith("Wall-"):
+                canonical_id = SOURCE_EVIDENCE["shell_entity_id"]
+            elif source_id.startswith("Opening-"):
+                canonical_id = source_id.removeprefix("Opening-")
+        api.run("pset.edit_pset", f, pset=pset, properties={
+            "SourceEntityId": str(canonical_id),
+            "SourceComponentKey": str(source_id),
+            "SourceRevision": str((SOURCE_EVIDENCE or {}).get("source_revision", 1)),
+        })
+
+    for entity, sid in [(site,structureIds.get("site_id","site")),
+                        (building,structureIds.get("building_id","building")),
+                        (storey,structureIds.get("storey_id","storey:level-01"))]:
+        tag_source(entity,sid)
     api.run("aggregate.assign_object", f, products=[site], relating_object=project)
     api.run("aggregate.assign_object", f, products=[building], relating_object=site)
     api.run("aggregate.assign_object", f, products=[storey], relating_object=building)
@@ -201,6 +253,8 @@ def stage_ifc(out: Path):
 
     def solid(cls, name, length, height, thickness, x, y, z=0.0, rotate=False):
         e = api.run("root.create_entity", f, ifc_class=cls, name=name)
+        e.GlobalId = deterministic_guid(name)
+        tag_source(e,name)
         rep = api.run(
             "geometry.add_wall_representation",
             f,
@@ -243,6 +297,8 @@ def stage_ifc(out: Path):
             ifc_class="IfcDoor" if o["kind"] == "door" else "IfcWindow",
             name=o["id"],
         )
+        fill.GlobalId = deterministic_guid(o["id"])
+        tag_source(fill,o["id"])
         api.run(
             "spatial.assign_container", f, products=[fill], relating_structure=storey
         )
@@ -250,6 +306,10 @@ def stage_ifc(out: Path):
     f.write(str(out / "shell.ifc"))
 
     g = ifcopenshell.open(str(out / "shell.ifc"))
+    logger=ifcopenshell.validate.json_logger()
+    ifcopenshell.validate.validate(g,logger,express_rules=False)
+    validation_issues=len(logger.statements)
+    root_ids=[entity.GlobalId for entity in g.by_type("IfcRoot")]
     settings = ifcopenshell.geom.settings()
 
     def mesh_volume(geometry):
@@ -282,6 +342,10 @@ def stage_ifc(out: Path):
         "fills": len(g.by_type("IfcRelFillsElement")),
         "storeys": len(g.by_type("IfcBuildingStorey")),
         "ifcopenshell": ifcopenshell.version,
+        "validation_issues":validation_issues,
+        "root_global_ids":len(root_ids),
+        "unique_global_ids":len(set(root_ids)),
+        "source_psets":len([p for p in g.by_type("IfcPropertySet") if p.Name == "Pset_IAMSource"]),
     }
     ifc["volume_in3"] = total_mm3 / IN**3
     (out / "ifc.json").write_text(json.dumps(ifc, indent=2))
@@ -368,6 +432,7 @@ def stage_ifc(out: Path):
         import pymupdf  # ty: ignore[unresolved-import] -- optional native PDF engine
         from ezdxf.addons.drawing import Frontend, RenderContext, config, layout  # ty: ignore[unresolved-import]
         from ezdxf.addons.drawing import pymupdf as ezpdf  # ty: ignore[unresolved-import]
+        from ezdxf.addons.drawing import svg as ezsvg  # ty: ignore[unresolved-import]
 
         def sheet(with_dims):
             d = ezdxf.readfile(str(out / "plan.dxf"))
@@ -396,6 +461,20 @@ def stage_ifc(out: Path):
 
         full, bare = sheet(True), sheet(False)
         (out / "sheet-A101-proof.pdf").write_bytes(full)
+        # SVG is a genuine drawing representation of the same DXF modelspace.
+        svg_backend=ezsvg.SVGBackend()
+        svg_document=ezdxf.readfile(str(out / "plan.dxf"))
+        Frontend(RenderContext(svg_document), svg_backend,
+                 config=config.Configuration(background_policy=config.BackgroundPolicy.WHITE,
+                                            color_policy=config.ColorPolicy.MONOCHROME_LIGHT_BG)
+                 ).draw_layout(svg_document.modelspace())
+        drawing_page=layout.Page(48,36,layout.Units.inch,margins=layout.Margins.all(0.5))
+        svg_text=svg_backend.get_string(drawing_page,
+                        settings=layout.Settings(scale=25.4 / 64,fit_page=False))
+        (out / "plan.svg").write_text(svg_text,encoding="utf-8")
+        import xml.etree.ElementTree as ET
+        svg_root=ET.fromstring(svg_text)
+        svg_shapes=len([node for node in svg_root.iter() if node.tag.endswith(("}path","}polyline","}polygon","}line"))])
         d_full, d_bare = (
             pymupdf.open(stream=full, filetype="pdf"),
             pymupdf.open(stream=bare, filetype="pdf"),
@@ -417,8 +496,13 @@ def stage_ifc(out: Path):
             else None,
             "dark_with_dims": dark_pixels(d_full),
             "dark_without_dims": dark_pixels(d_bare),
+            "drawing_paths_with_dims": len(d_full[0].get_drawings()),
+            "drawing_paths_without_dims": len(d_bare[0].get_drawings()),
+
             "bytes": len(full),
             "pymupdf": pymupdf.__version__,
+            "svg_root":svg_root.tag,
+            "svg_shapes":svg_shapes,
         }
     except Exception as error:  # noqa: BLE001 -- optional native PDF engine; reported in proof, never hidden
         pdf = {"error": f"{type(error).__name__}: {error}"}
@@ -506,11 +590,17 @@ def all_stages(out: Path):
             ],
         ),
     ]
+    mandatory = {"freecad":["shell.step","shell.obj","freecad.json"],
+                 "ifc+dxf":["shell.ifc","plan.dxf","plan.svg","ifc.json","dxf.json","pdf.json"],
+                 "blender":["model.glb","blender.json"]}
     for name, cmd in steps:
         r = run(cmd, env=env)
-        print(f"stage {name}: {'ok' if r.returncode == 0 else 'FAILED'}", flush=True)
-        if r.returncode != 0:
+        produced = all((out / filename).is_file() and (out / filename).stat().st_size > 0 for filename in mandatory[name])
+        passed = r.returncode == 0 and produced
+        print(f"stage {name}: {'ok' if passed else 'FAILED'}", flush=True)
+        if not passed:
             print((r.stdout + r.stderr)[-1800:])
+            print(f"required output files missing: {[p for p in mandatory[name] if not (out / p).is_file()]}")
             sys.exit(1)
 
     want = analytic(PARAMS)
@@ -570,8 +660,10 @@ def all_stages(out: Path):
             ifc["fills"],
             ifc["storeys"],
         )
-        == ("IFC4", 4, 3, 3, 2, 1, 3, 1),
-        "IFC4: 4 walls, 3 openings/voids/fills, 2 windows, 1 door, 1 storey",
+        == ("IFC4", 4, len(PARAMS["openings"]), len(PARAMS["openings"]),
+            sum(o["kind"] == "window" for o in PARAMS["openings"]),
+            sum(o["kind"] == "door" for o in PARAMS["openings"]),len(PARAMS["openings"]),1),
+        f"IFC4: 4 walls, {len(PARAMS['openings'])} openings/voids/fills, typed doors and windows, 1 storey",
         {
             k: ifc[k]
             for k in (
@@ -587,6 +679,13 @@ def all_stages(out: Path):
         },
     )
     check(
+        "ifc-schema-valid-and-global-ids-unique",
+        ifc["validation_issues"] == 0 and ifc["root_global_ids"] == ifc["unique_global_ids"]
+        and ifc["source_psets"] >= 7 + len(PARAMS["openings"]) * 2,
+        "IfcOpenShell validator: 0 issues, all IFC root GlobalIds unique",
+        {"issues":ifc["validation_issues"],"ids":ifc["root_global_ids"],"unique":ifc["unique_global_ids"],"source_psets":ifc["source_psets"]},
+    )
+    check(
         "ifc-meshed-volume-matches-solid",
         rel(ifc["volume_in3"], fc["volume_in3"]) < 1e-4,
         round(fc["volume_in3"], 3),
@@ -597,9 +696,9 @@ def all_stages(out: Path):
         "dxf-inches-and-layers",
         dxf["insunits"] == 1
         and dxf["wall_polylines"] == 2
-        and dxf["opening_polylines"] == 3
+        and dxf["opening_polylines"] == len(PARAMS["openings"])
         and dxf["dimensions"] == 2,
-        "INSUNITS=1, 2 wall + 3 opening polylines, 2 dimensions",
+        f"INSUNITS=1, 2 wall + {len(PARAMS['openings'])} opening polylines, 2 dimensions",
         {
             k: dxf[k]
             for k in ("insunits", "wall_polylines", "opening_polylines", "dimensions")
@@ -630,18 +729,24 @@ def all_stages(out: Path):
     plan = pdf.get("plan_in")
     check(
         "pdf-scale-is-3-16-per-foot",
-        bool(plan) and abs(plan[0] - 7.5) <= 0.03 and abs(plan[1] - 4.5) <= 0.03,
-        "40 x 24 ft plan = 7.500 x 4.500 in on paper",
+        bool(plan) and abs(plan[0] - PARAMS["length"] / 64) <= 0.03
+        and abs(plan[1] - PARAMS["width"] / 64) <= 0.03,
+        f"{PARAMS['length']/12:g} x {PARAMS['width']/12:g} ft plan = {PARAMS['length']/64:.3f} x {PARAMS['width']/64:.3f} in on paper",
         plan or pdf.get("error"),
     )
     check(
         "pdf-dimensions-actually-render",
-        bool(plan) and pdf["dark_with_dims"] > pdf["dark_without_dims"],
-        "more ink with the dimension layer on",
-        f"{pdf.get('dark_with_dims')} vs {pdf.get('dark_without_dims')} dark px"
+        bool(plan) and pdf["drawing_paths_with_dims"] > pdf["drawing_paths_without_dims"],
+        "additional rendered vector paths with dimension layer enabled",
+        f"{pdf.get('drawing_paths_with_dims')} vs {pdf.get('drawing_paths_without_dims')} vector paths"
         if plan
         else pdf.get("error"),
     )
+
+    check("svg-drawing-valid",
+          pdf.get("svg_root")=="{http://www.w3.org/2000/svg}svg" and pdf.get("svg_shapes",0)>0,
+          "valid SVG with independently rendered vector geometry",
+          {"tag":pdf.get("svg_root"),"shapes":pdf.get("svg_shapes")})
 
     frames = sorted((out / "frames").glob("frame_*.png"))
     check(
@@ -651,6 +756,15 @@ def all_stages(out: Path):
         PARAMS["frames"],
         len(frames),
     )
+
+    # Promote the real rendered Blender frame to a directly addressable PNG.
+    if frames:
+        shutil.copyfile(frames[0],out/"preview.png")
+    preview=out/"preview.png"
+    check("blender-preview-png-valid",
+          preview.is_file() and preview.read_bytes().startswith(b"\x89PNG\r\n\x1a\n") and preview.stat().st_size>2000,
+          "decoded render artifact with PNG signature and nonempty payload",
+          preview.stat().st_size if preview.is_file() else 0)
 
     opt = out / "model.opt.glb"
     g = run(
@@ -760,6 +874,8 @@ def all_stages(out: Path):
                 "shell.step",
                 "shell.ifc",
                 "plan.dxf",
+                "plan.svg",
+                "preview.png",
                 "sheet-A101-proof.pdf",
                 "model.glb",
                 "model.opt.glb",
@@ -770,6 +886,7 @@ def all_stages(out: Path):
     ]
     receipt = {
         "schema": "agentsam.cad.toolchain-proof.v1",
+        "source": SOURCE_EVIDENCE or {"schema":"cad.toolchain-fixture.v1","scope":"built-in-test-only"},
         "status": "passed" if all(c["passed"] for c in checks) else "failed",
         "parameters": PARAMS,
         "analytic": want,
@@ -791,6 +908,15 @@ def all_stages(out: Path):
 
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else sys.argv[1:]
+    if "--source" in argv:
+        ix = argv.index("--source")
+        if ix+1 >= len(argv):
+            raise ValueError("cad_building_source_flag_missing_value")
+        os.environ["AGENTSAM_CAD_BUILDING_SOURCE"] = argv[ix+1]
+        from building_source import load_building_source
+
+        expected = argv[argv.index("--base")+1] if "--base" in argv else None
+        PARAMS,SOURCE_EVIDENCE = load_building_source(argv[ix+1],expected_hash=expected)
     if argv[:1] == ["stage"]:
         stage = {"freecad": stage_freecad, "ifc": stage_ifc, "blender": stage_blender}[
             argv[1]

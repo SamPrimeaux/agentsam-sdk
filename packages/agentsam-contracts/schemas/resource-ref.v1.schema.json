@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-contracts/v1/resource-ref.schema.json",
+  "title": "AgentSam ResourceRef v1",
+  "description": "Resource identity only. A grant, project membership or execution engine is not implied.",
+  "oneOf": [
+    {"type":"object","additionalProperties":false,"required":["kind","mount","path"],"properties":{
+      "kind":{"const":"file"},"mount":{"type":"string","pattern":"^[a-z][a-z0-9_-]{0,39}$"},
+      "path":{"type":"string","minLength":1,"maxLength":1024,"pattern":"^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+$"}}},
+    {"type":"object","additionalProperties":false,"required":["kind","id"],"properties":{
+      "kind":{"const":"asset"},"id":{"$ref":"#/$defs/id"}}},
+    {"type":"object","additionalProperties":false,"required":["kind","id"],"properties":{
+      "kind":{"const":"scene"},"id":{"$ref":"#/$defs/id"}}},
+    {"type":"object","additionalProperties":false,"required":["kind","id"],"properties":{
+      "kind":{"const":"project"},"id":{"$ref":"#/$defs/id"},"revision":{"type":"integer","minimum":1}}}
+  ],
+  "$defs":{"id":{"type":"string","pattern":"^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$"}}
+}

@@ -38,6 +38,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     'project.create','project.edit','project.delete','project.restore',
     'agentsam_sqlite_create','agentsam_sqlite_edit','agentsam_sqlite_delete','agentsam_sqlite_restore',
     'agentsam_d1_create',
+    'cad.building.export',
   ]);
   async function authorizedResourceWrite(id,input){
     const capability=getCapability(id);
@@ -140,26 +141,23 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
       return handler(input);
     });
   }
-  // Registry exposes only the first, genuinely bound operation families.
-  // invoke is not a shell escape hatch: it requires the host to authorize the
-  // underlying operation with its actual side-effect profile.
-  const allowAgentInvoke = new Set([
-    ...MCP_D1_TOOLS,
-    ...PLAN_READ_OPERATIONS, ...PLAN_WRITE_OPERATIONS,
-    'project.discover',
-    'project.list','project.get','project.create','project.edit','project.delete','project.restore',
-    'agentsam_sqlite_list','agentsam_sqlite_get','agentsam_sqlite_create',
-    'agentsam_sqlite_edit','agentsam_sqlite_delete','agentsam_sqlite_restore',
-    ...(typeof provisionD1==='function'&&installationContext?.installationId&&installationContext?.actorId
-      ? ['agentsam_d1_create'] : []),
-    'repository.snapshot','repository.intelligence','repository.crawl','repository.mine',
-    'knowledge.index','knowledge.search','context.resolve',
-    'workspace.read','workspace.list','workspace.search','workspace.stat','workspace.write','workspace.patch','workspace.remove','machine.inspect','terminal.exec','test.run','primetech.procedure.run',
-    'cloudflare.d1.schema',
-  ]);
+  // Installed handlers, actual readiness and the existing authorization callback
+  // decide invocation. A declared format extension never becomes an executable
+  // operation just because it appears in the root capability manifest.
+  const hostHandlers = new Map(Object.entries(handlers));
+  const hostReadiness = id => {
+    const handler = hostHandlers.get(id);
+    if (getCapability(id)?.requires_probe && typeof handler?.availability !== 'function')
+      return { readiness:'unavailable',reason:'capability_host_probe_missing' };
+    return typeof handler?.availability === 'function' ? handler.availability() : null;
+  };
   const registry = createRegistry({ capabilityAdapter: {
-    canInvoke: (id) => executable.has(id) && (!['machine.inspect','repository.crawl','repository.mine'].includes(id) || machineAvailable()),
+    canInvoke: (id) => executable.has(id) &&
+      (!hostReadiness(id) || hostReadiness(id).readiness === 'available') &&
+      (!['machine.inspect','repository.crawl','repository.mine'].includes(id) || machineAvailable()),
     availability: (id) => {
+      const hostState = hostReadiness(id);
+      if (hostState) return hostState;
       if(id==='agentsam_d1_create'&&!executable.has(id))
         return {readiness:'unavailable',reason:'d1_create_provider_not_configured',
           next:'Connect a customer-owned Cloudflare provisioning adapter and approve creation'};
@@ -220,8 +218,8 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     return state;
   });
   executable.set('capability.invoke', async (input = {}) => {
-    if (!allowAgentInvoke.has(input.capability_id)) return {
-      ok: false, error: 'capability_not_allowlisted', capability_id: input.capability_id,
+    if(typeof input.capability_id !== 'string' || input.capability_id === 'capability.invoke')return {
+      ok:false,error:'capability_target_invalid',capability_id:input.capability_id,
     };
     return registry.invoke(input.capability_id, input.input || {}, {
       authorize: async (request) =>
@@ -245,7 +243,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     list(options = {}) { return [...listCapabilities(options),...cadDescriptors.filter(t=>(!options.domain||options.domain==='design')&&(!options.kind||options.kind==='tool')&&(!options.status||options.status==='active')),...(samAdapter?.toolDescriptors?.({domain:options.domain,kind:options.kind})||[]).map(t=>({...t,id:t.name,domain:t.category,handler_bound:true,agent_callable:true,readiness:'available'}))]; },
     describe(id) { if (samAdapter?.canInvoke?.(id)) return samAdapter.toolDescriptors().find(t=>t.name===id); return describe(id); },
     toolDescriptors({ domain, kind, includeUnavailable = false } = {}) {
-      const native = [...listCapabilities({ domain, kind, status: null }), ...cadDescriptors.filter(t=>(!domain||domain==='design')&&(!kind||kind==='tool'))].filter((row) => includeUnavailable || (executable.has(row.id) && (!['machine.inspect','repository.crawl','repository.mine'].includes(row.id) || machineAvailable()))).map((row) => ({
+      const native = [...listCapabilities({ domain, kind, status: null }), ...cadDescriptors.filter(t=>(!domain||domain==='design')&&(!kind||kind==='tool'))].filter((row) => includeUnavailable || (executable.has(row.id) && (getCapability(row.id) ? registry.status(row.id).agent_callable : true) && (!['machine.inspect','repository.crawl','repository.mine'].includes(row.id) || machineAvailable()))).map((row) => ({
         name: row.id,
         description: row.description,
         category: row.domain,
@@ -260,12 +258,12 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
         .filter(t=>(!domain||domain===t.category)&&(!kind||kind==='tool'));
       return [...native.filter(row=>!sam.some(tool=>tool.name===row.name)),...sam];
     },
-    canInvoke(id) { const name=String(id || '').trim(); return samAdapter?.canInvoke?.(name) === true || (executable.has(name) && (!['machine.inspect','repository.crawl','repository.mine'].includes(name) || machineAvailable())); },
+    canInvoke(id) { const name=String(id || '').trim(); return samAdapter?.canInvoke?.(name) === true || (executable.has(name) && (getCapability(name) ? registry.status(name).agent_callable : true) && (!['machine.inspect','repository.crawl','repository.mine'].includes(name) || machineAvailable())); },
     async invoke(id, input = {}) {
       if (samAdapter?.canInvoke?.(id)) return samAdapter.invoke(id,input);
       const capability = describe(id);
       const handler = executable.get(capability.id);
-      if (!handler) throw new Error(`capability_handler_unavailable:${capability.id}`);
+      if (!handler || (hostReadiness(capability.id) && hostReadiness(capability.id).readiness !== 'available')) throw new Error(`capability_handler_unavailable:${capability.id}`);
       const value = await handler(input);
       return { capability_id: capability.id, capability_version: capability.version, result: value };
     },
