@@ -103,8 +103,9 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
         {skyList.map(item=><button type="button" key={item.id}
           className={'mm-look-sky-preset'+(current.skyPreset===item.id?' is-active':'')}
           aria-pressed={current.skyPreset===item.id} onClick={()=>onChange({skyPreset:item.id,...(skyDefaults[item.id]??{})})}>
-          <span className="mm-look-sky-preset-preview" style={item.previewUrl?{backgroundImage:`url(${item.previewUrl})`,backgroundSize:'cover',backgroundPosition:'center'}:{background:stageLookBackground({...current,skyPreset:item.id,glow:true},skyList)}}>
-            {!item.previewUrl&&<i style={{background:item.glow}}/>}
+          <span className="mm-look-sky-preset-preview" data-preview={item.previewUrl?"":undefined}
+            style={{"--mm-sky-bg":stageLookBackground({...current,skyPreset:item.id,glow:true},skyList),"--mm-sky-image":item.previewUrl?`url(${item.previewUrl})`:undefined} as React.CSSProperties}>
+            {!item.previewUrl&&<i style={{"--mm-sky-glow":item.glow} as React.CSSProperties}/>}
           </span>
           <strong>{item.name}</strong><small>{item.note}</small>
           {current.skyPreset===item.id&&<Check size={13} className="mm-look-sky-check"/>}
