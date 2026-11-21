@@ -15,7 +15,7 @@
   --copro-hover: var(--copro-theme-hover, var(--nav-hover));
   --copro-selected: var(--copro-theme-selected, var(--nav-selected));
   --copro-danger: var(--copro-theme-danger, var(--nav-danger));
-  --copro-shadow: color-mix(in srgb, var(--copro-bg) 18%, var(--copro-shadow));
+  --copro-shadow: var(--copro-theme-shadow, color-mix(in srgb, var(--copro-bg) 18%, black));
   --copro-accent-deep: color-mix(in srgb, var(--copro-accent) 32%, var(--copro-bg));
   --copro-home-canvas: var(--copro-bg);
   --copro-home-paper: var(--copro-surface);
@@ -678,7 +678,7 @@ body:has(.copro-studio) { margin:0; }
 
 /* MovieMode v3: independent dockable desktop surfaces. This overrides the obsolete
    full-width category ribbon/vertical rail without changing the player/timeline engine. */
-.copro-studio { --copro-surface-0:var(--copro-surface);--copro-surface-1:var(--copro-surface-2);--copro-surface-2:var(--copro-surface-2);--copro-line:var(--copro-line); }
+.copro-studio { --copro-surface-0:var(--copro-surface);--copro-surface-1:var(--copro-surface-2); }
 .copro-studio .copro-workspace>.copro-desktop-rail { display:none!important; }
 .copro-studio .copro-editing-grid { width:100%; height:100%; }
 .copro-studio .copro-editing-grid>.copro-browser-slot { display:grid; grid-template-rows:55px 35px minmax(0,1fr);grid-template-columns:1fr; }
@@ -971,7 +971,7 @@ body:has(.copro-studio) { margin:0; }
 .mm-home-mobile-nav button{color:var(--copro-text);}
 
 /* Authored media and semantic clip colors are independent of editor chrome. */
-.copro-preview-device,.copro-clip{--copro-text:var(--copro-text);--copro-muted:var(--copro-text-2);}
+.copro-preview-device,.copro-clip{--copro-muted:var(--copro-text-2);}
 
 /* MovieMode V2 — native creative library surfaces, preserving the dark editor language. */
 .mm-template-toolbar{display:flex;align-items:center;gap:12px;justify-content:space-between;margin:18px 0 12px;color:var(--copro-muted);font-size:11px;}
