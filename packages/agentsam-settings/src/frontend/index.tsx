@@ -2585,7 +2585,7 @@ function NetworkView({ snapshot }: { snapshot: SettingsSnapshot }) {
         <PreferenceRow label="Browser runtime" description="Browser automation availability." value={snapshot.network.browser} />
         <PreferenceRow label="Device tunnel" description="Local machine reachability." value={snapshot.network.tunnel} />
         <PreferenceRow label="Cloudflare OAuth" description="Connected infrastructure account." value={snapshot.network.oauth} />
-        <PreferenceRow label="Network health" description="Aggregate display only; individual capabilities retain their own status." trailing={<StatusPill status={snapshot.network.health} />} />
+        <PreferenceRow label="Connections API" description="Reachability of the account connections registry during this refresh." trailing={<StatusPill status={snapshot.network.health} />} />
       </div>
     </Section>
   );
