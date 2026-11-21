@@ -92,7 +92,21 @@ export type LocalStudioSideStageRecord = {
   enabled?: boolean;
 };
 
+export type RegisteredMachineConnection = {
+  id: string;
+  name: string;
+  provider: string;
+  last_seen_at: number | null;
+  connection_id: string | null;
+  connection_name: string | null;
+  transport: string | null;
+  runtime_adapter: string | null;
+  health_status: string | null;
+  health_checked_at: number | null;
+};
+
 export type LocalStudioConnectionsResponse = {
+  machines?: {available: boolean; items: RegisteredMachineConnection[]};
   side_stages?: LocalStudioSideStageRecord[];
   side_stage_catalog?: LocalStudioSideStageRecord[];
   ok?: boolean;
