@@ -1,5 +1,4 @@
 {
-  "contract": "cad.project.v1",
   "product": {
     "app_id": "cad-creator",
     "slug": "cad-creator",
@@ -28,7 +27,7 @@
       "description": "Read an editable CAD project revision",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1},\"expected_content_hash\":{\"type\":\"string\",\"pattern\":\"^[a-f0-9]{64}$\"}},\"required\":[\"project_id\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_project_get\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"e8a935e8b74967295a8242d6a34d0d0e01d162685194da321c73b4ca8d3c212c\"}",
+      "handler_config": "{\"operation\":\"design_project_get\",\"execution_lane\":\"local\",\"schema_sha256\":\"e8a935e8b74967295a8242d6a34d0d0e01d162685194da321c73b4ca8d3c212c\"}",
       "capability_key": "design.read",
       "domain": "design",
       "is_active": 0,
@@ -38,7 +37,7 @@
       "risk_level": "low",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     },
     {
       "id": "ast_cad_v1_design_project_validate",
@@ -51,7 +50,7 @@
       "description": "Validate inch-based CAD project geometry and references",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\",\"additionalProperties\":true},\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1}},\"required\":[],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_project_validate\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"62057c988583784d4ea015339f65ee6c89a9b749d45f7568be958f2529223dc2\"}",
+      "handler_config": "{\"operation\":\"design_project_validate\",\"execution_lane\":\"local\",\"schema_sha256\":\"62057c988583784d4ea015339f65ee6c89a9b749d45f7568be958f2529223dc2\"}",
       "capability_key": "design.read",
       "domain": "design",
       "is_active": 0,
@@ -61,7 +60,7 @@
       "risk_level": "low",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     },
     {
       "id": "ast_cad_v1_design_apply_operation",
@@ -74,7 +73,7 @@
       "description": "Apply an atomic typed edit with revision conflict detection",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"operation\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\"}},\"required\":[\"type\"],\"additionalProperties\":true},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project_id\",\"expected_revision\",\"operation\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_apply_operation\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"fbc2d3e2922bfb8ea274dcb16ad8860d575742ecc2caa7b6955bab5ec0e10ede\"}",
+      "handler_config": "{\"operation\":\"design_apply_operation\",\"execution_lane\":\"local\",\"schema_sha256\":\"fbc2d3e2922bfb8ea274dcb16ad8860d575742ecc2caa7b6955bab5ec0e10ede\"}",
       "capability_key": "design.write",
       "domain": "design",
       "is_active": 0,
@@ -84,7 +83,7 @@
       "risk_level": "medium",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     },
     {
       "id": "ast_cad_v1_design_project_save",
@@ -97,7 +96,7 @@
       "description": "Save an immutable CAD project revision",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\",\"additionalProperties\":true},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project\",\"expected_revision\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_project_save\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"037207fc63bd15e70de43347802064dd057715302b6a25c71a7c7bf451e6f0a8\"}",
+      "handler_config": "{\"operation\":\"design_project_save\",\"execution_lane\":\"local\",\"schema_sha256\":\"037207fc63bd15e70de43347802064dd057715302b6a25c71a7c7bf451e6f0a8\"}",
       "capability_key": "design.write",
       "domain": "design",
       "is_active": 0,
@@ -107,7 +106,7 @@
       "risk_level": "medium",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     },
     {
       "id": "ast_cad_v1_design_project_restore",
@@ -120,7 +119,7 @@
       "description": "Restore saved geometry as a new revision",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0}},\"required\":[\"project_id\",\"revision\",\"expected_revision\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_project_restore\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"32a70218cdf2c7785d11187436dbd481556a711646470e57d277530fcf0cb003\"}",
+      "handler_config": "{\"operation\":\"design_project_restore\",\"execution_lane\":\"local\",\"schema_sha256\":\"32a70218cdf2c7785d11187436dbd481556a711646470e57d277530fcf0cb003\"}",
       "capability_key": "design.write",
       "domain": "design",
       "is_active": 0,
@@ -130,7 +129,7 @@
       "risk_level": "medium",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     },
     {
       "id": "ast_cad_v1_design_model_build",
@@ -143,7 +142,7 @@
       "description": "Build a revision model using Blender or a persistent native OCCT feature log",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1},\"engine\":{\"type\":\"string\",\"enum\":[\"occt\",\"blender\"]},\"parametric_object_id\":{\"type\":\"string\",\"minLength\":1},\"element_id\":{\"type\":\"string\",\"minLength\":1}},\"required\":[\"project_id\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_model_build\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"0964676416debddf37d8c6dfb048ccc5a1d29e7469e9b2bad154fd7320317957\"}",
+      "handler_config": "{\"operation\":\"design_model_build\",\"execution_lane\":\"local\",\"schema_sha256\":\"0964676416debddf37d8c6dfb048ccc5a1d29e7469e9b2bad154fd7320317957\"}",
       "capability_key": "design.write",
       "domain": "design",
       "is_active": 0,
@@ -153,7 +152,7 @@
       "risk_level": "medium",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     },
     {
       "id": "ast_cad_v1_design_model_inspect",
@@ -166,7 +165,7 @@
       "description": "Inspect a verified revision model",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1},\"engine\":{\"type\":\"string\",\"enum\":[\"occt\",\"blender\"]}},\"required\":[\"project_id\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_model_inspect\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"7c18ddee1e4b79018f6164270132731f0ce48b3f0f30b0b0bca12815c176be79\"}",
+      "handler_config": "{\"operation\":\"design_model_inspect\",\"execution_lane\":\"local\",\"schema_sha256\":\"7c18ddee1e4b79018f6164270132731f0ce48b3f0f30b0b0bca12815c176be79\"}",
       "capability_key": "design.read",
       "domain": "design",
       "is_active": 0,
@@ -176,7 +175,7 @@
       "risk_level": "low",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     },
     {
       "id": "ast_cad_v1_design_model_render",
@@ -189,7 +188,7 @@
       "description": "Render a courtyard PNG from a revision model",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1}},\"required\":[\"project_id\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_model_render\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"9974c3cba8e6f76552f1766608354ff4bb120688bcd857f8bd20899479e55def\"}",
+      "handler_config": "{\"operation\":\"design_model_render\",\"execution_lane\":\"local\",\"schema_sha256\":\"9974c3cba8e6f76552f1766608354ff4bb120688bcd857f8bd20899479e55def\"}",
       "capability_key": "design.export",
       "domain": "design",
       "is_active": 0,
@@ -199,7 +198,7 @@
       "risk_level": "medium",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     },
     {
       "id": "ast_cad_v1_design_model_export",
@@ -212,7 +211,7 @@
       "description": "Export a Blender or native OCCT revision model",
       "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1},\"format\":{\"type\":\"string\",\"enum\":[\"glb\",\"stl\",\"obj\",\"step\",\"brep\",\"gltf\",\"ifc\"]},\"engine\":{\"type\":\"string\",\"enum\":[\"occt\",\"blender\"]},\"element_id\":{\"type\":\"string\",\"minLength\":1}},\"required\":[\"project_id\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_model_export\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"777a830b3ab72f6f8de485b2bbf60ae1bf688e42ea57915609d7465d50f41a28\"}",
+      "handler_config": "{\"operation\":\"design_model_export\",\"execution_lane\":\"local\",\"schema_sha256\":\"777a830b3ab72f6f8de485b2bbf60ae1bf688e42ea57915609d7465d50f41a28\"}",
       "capability_key": "design.export",
       "domain": "design",
       "is_active": 0,
@@ -222,7 +221,7 @@
       "risk_level": "medium",
       "dispatch_target": "internal",
       "route_key": "design_studio",
-      "notes": "cad.project.v1: local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
+      "notes": "local SDK execution verified; hosted binding deployment and end-to-end proof required before activation"
     }
   ],
   "workflows": [
@@ -238,7 +237,7 @@
         "lifecycle": "draft",
         "input_schema_json": "{\"type\":\"object\",\"required\":[\"sdk_root\",\"project_root\",\"project\"]}",
         "output_schema_json": "{\"type\":\"object\"}",
-        "metadata_json": "{\"contract\":\"cad.project.v1\",\"goap\":{\"requires\":[\"project.valid_candidate\",\"native.blender.available\"],\"provides\":[\"project.saved\",\"model.inspected\",\"preview.rendered\",\"export.glb\"],\"effects_require_completed_execution\":true},\"activation\":{\"local\":\"verified\",\"hosted\":\"pending\"}}"
+        "metadata_json": "{\"goap\":{\"requires\":[\"project.valid_candidate\",\"native.blender.available\"],\"provides\":[\"project.saved\",\"model.inspected\",\"preview.rendered\",\"export.glb\"],\"effects_require_completed_execution\":true},\"activation\":{\"local\":\"verified\",\"hosted\":\"pending\"}}"
       },
       "nodes": [
         {
@@ -417,7 +416,7 @@
         "lifecycle": "draft",
         "input_schema_json": "{\"type\":\"object\",\"required\":[\"sdk_root\",\"project_root\",\"project_id\",\"expected_revision\",\"operation\"]}",
         "output_schema_json": "{\"type\":\"object\"}",
-        "metadata_json": "{\"contract\":\"cad.project.v1\",\"goap\":{\"requires\":[\"project.saved\",\"project.expected_revision\",\"native.blender.available\"],\"provides\":[\"project.revised\",\"model.inspected\",\"preview.rendered\",\"export.glb\"],\"effects_require_completed_execution\":true},\"activation\":{\"local\":\"verified\",\"hosted\":\"pending\"}}"
+        "metadata_json": "{\"goap\":{\"requires\":[\"project.saved\",\"project.expected_revision\",\"native.blender.available\"],\"provides\":[\"project.revised\",\"model.inspected\",\"preview.rendered\",\"export.glb\"],\"effects_require_completed_execution\":true},\"activation\":{\"local\":\"verified\",\"hosted\":\"pending\"}}"
       },
       "nodes": [
         {

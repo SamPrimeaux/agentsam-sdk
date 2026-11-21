@@ -27,7 +27,7 @@ Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Ho
 | `agentsam autorag` | work | AutoRAG configure/probe helpers |
 | `agentsam billing` | runtime | Billing account relationships (not --billing-project) |
 | `agentsam brand` | work | Deterministic brand intelligence |
-| `agentsam cad` | work | CAD: cad.project.v1 tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build |
+| `agentsam cad` | work | CAD: project tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build |
 | `agentsam capabilities` | create | Inspect capability contracts |
 | `agentsam cheat-sheet` | start | Organized command groups (gcloud-like) |
 | `agentsam choose` | start | Choose an execution runtime from explicit goals |

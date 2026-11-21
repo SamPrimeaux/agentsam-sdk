@@ -118,7 +118,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'plan', summary: 'Durable project-local work plans + domain plans', topic: 'work', skill: 'agentsam-app-fundamentals' },
   { id: 'security', aliases: ['sca'], summary: 'Dependency + trust-boundary scan', topic: 'work', skill: 'agentsam-progression-guard', operation: 'security.scan', common: true },
   { id: 'merkle', summary: 'File integrity snapshots and explorer', topic: 'work', skill: 'agentsam-app-fundamentals' },
-  { id: 'cad', summary: 'CAD: cad.project.v1 tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'cad.blender.inspect' },
+  { id: 'cad', summary: 'CAD: project tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'cad.blender.inspect' },
   { id: 'robotics', summary: 'SAM Robotics: robotics.scene.inspect/object.locate/grasp.plan/motion.plan/validate/simulate/execute/verify, robot.home, execution.cancel (model: never)', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'robotics.scene.inspect' },
   { id: 'dockerize', summary: 'Build/run supported containers', topic: 'create', skill: 'agentsam-app-fundamentals' },
   { id: 'mini', summary: 'Create a small local gadget', topic: 'create', skill: 'agentsam-jr-dev' },

@@ -29,7 +29,7 @@ export class D1ProjectStore {
   await this.objects.put(key,JSON.stringify(saved),{httpMetadata:{contentType:'application/json'}});
   const statements=[];
   if(expectedRevision===0){
-   statements.push(this.db.prepare("INSERT INTO designstudio_design_blueprints (id,tenant_id,workspace_id,title,intent_json,sketch_json,generation_config_json,status) VALUES (?,?,?,?,?,?,?,'structured')").bind(p.id,s.tenant_id,s.workspace_id,p.name,JSON.stringify({account_id:s.account_id,contract:'cad.project.v1'}),JSON.stringify(p),JSON.stringify({project_revision:revision,content_hash:saved.content_hash})));
+   statements.push(this.db.prepare("INSERT INTO designstudio_design_blueprints (id,tenant_id,workspace_id,title,intent_json,sketch_json,generation_config_json,status) VALUES (?,?,?,?,?,?,?,'structured')").bind(p.id,s.tenant_id,s.workspace_id,p.name,JSON.stringify({account_id:s.account_id,...(p.schema?{contract:p.schema}:{})}),JSON.stringify(p),JSON.stringify({project_revision:revision,content_hash:saved.content_hash})));
   }else{
    statements.push(this.db.prepare("UPDATE designstudio_design_blueprints SET title=?,sketch_json=?,generation_config_json=json_set(generation_config_json,'$.project_revision',?,'$.content_hash',?),updated_at=datetime('now') WHERE id=? AND tenant_id=? AND workspace_id=? AND json_extract(intent_json,'$.account_id')=? AND json_extract(generation_config_json,'$.project_revision')=?").bind(p.name,JSON.stringify(p),revision,saved.content_hash,p.id,s.tenant_id,s.workspace_id,s.account_id,expectedRevision));
   }
