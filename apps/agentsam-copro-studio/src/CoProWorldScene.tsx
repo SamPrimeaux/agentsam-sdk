@@ -7,7 +7,7 @@ import { STAGE_FINISHES, type CoProStageEnvironment } from '@inneranimalmedia/co
 // second look-alike shader. Keep this behind UI acceptance before packaging.
 import { SkyGenerator } from './samscene/skyGenerator.ts';
 
-import { SAMSCENE_SKY_IDS } from './SamSceneSkyBridge';
+import { resolveSamSceneSkyId } from './SamSceneSkyBridge';
 
 
 type SceneTransform = {x?:number;y?:number;scale?:number;rotation?:number;opacity?:number};
@@ -176,7 +176,7 @@ export function CoProWorldScene({src,title,timeUs,environment,transform,world3dT
   useEffect(()=>{
     const handle=world.current;
     if(!handle)return;
-    const preset=SAMSCENE_SKY_IDS[(environment?.skyPreset??'studio') as keyof typeof SAMSCENE_SKY_IDS]??SAMSCENE_SKY_IDS.studio;
+    const preset=resolveSamSceneSkyId(environment?.skyPreset);
     handle.sky.setPreset(preset);
     handle.sky.applyConfig({
       cloudDensity:environment?.cloudDensity??handle.sky.getConfig().cloudDensity,

@@ -26,7 +26,8 @@ export const STAGE_ENVIRONMENT_DEFAULTS = Object.freeze({
   skyPreset: 'studio', finish: 'original', cloudDensity: .26,
   stars: false, glow: true, lightHue: 37, shadowSoftness: 2.5, keyAngle: 35,
 });
-export const STAGE_SKIES = [
+export type StageSky = {id:string;name:string;note:string;top:string;bottom:string;glow:string;previewUrl?:string};
+export const STAGE_SKIES: readonly StageSky[] = [
   {id:'studio',name:'Studio',note:'Controlled neutral backdrop',top:'#303948',bottom:'#171b25',glow:'#d2dbec'},
   {id:'night',name:'Diurnal Cirrus',note:'Starry night · rose dawn',top:'#202755',bottom:'#b37b99',glow:'#f7aace'},
   {id:'spiral',name:'Spiral Galaxy',note:'Deep-space nebula',top:'#151334',bottom:'#5c4188',glow:'#9f80ed'},
@@ -35,7 +36,7 @@ export const STAGE_SKIES = [
   {id:'supernova',name:'Supernova Lens',note:'Plasma glow',top:'#28162c',bottom:'#913653',glow:'#f96a88'},
   {id:'eclipse',name:'Solar Eclipse',note:'Twilight corona',top:'#131925',bottom:'#515977',glow:'#ecd6a8'},
   {id:'cloudbank',name:'Cinema Cloudbank',note:'Cobalt & peach cumulus',top:'#354b80',bottom:'#f4a481',glow:'#fbd9bf'},
-] as const;
+] ;
 export const STAGE_FINISHES = [
   {id:'gold',name:'24K Brushed Gold',note:'Warm metallic stage',swatch:'linear-gradient(135deg,#fff1b3,#ab752c 50%,#e9ba59)',color:'#c59b50'},
   {id:'cryo-titanium',name:'Cryo Titanium',note:'Cool satin metal',swatch:'linear-gradient(135deg,#e6edf4,#657586 52%,#c4d0e1)',color:'#798899'},
@@ -52,9 +53,9 @@ export const STAGE_MOODS = [
   {id:'noir',name:'Noir',skyPreset:'eclipse',finish:'carbon',ambient:.7,cloudDensity:.12,glow:false,stars:false,lightHue:210},
   {id:'dawn',name:'Dawn',skyPreset:'cloudbank',finish:'calacatta',ambient:1.1,cloudDensity:.64,glow:true,stars:false,lightHue:20},
 ] as const;
-export function stageLookBackground(env:CoProStageEnvironment|undefined): string | undefined {
+export function stageLookBackground(env:CoProStageEnvironment|undefined, skies:readonly StageSky[]=STAGE_SKIES): string | undefined {
   if (!env?.skyPreset && !env?.finish) return undefined;
-  const sky = STAGE_SKIES.find(item=>item.id===(env.skyPreset??'studio')) ?? STAGE_SKIES[0];
+  const sky = skies.find(item=>item.id===(env.skyPreset??'studio')) ?? skies[0] ?? STAGE_SKIES[0];
   const finish = STAGE_FINISHES.find(item=>item.id===env.finish) ?? STAGE_FINISHES[1];
   const clouds = Math.max(0,Math.min(1,env.cloudDensity??.26));
   const glow = env.glow !== false;

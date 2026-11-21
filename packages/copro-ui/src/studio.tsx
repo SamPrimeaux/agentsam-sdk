@@ -14,7 +14,7 @@ import { CoProMediaBrowser, type CoProMediaBrowserSection, type LocalSceneSource
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
 import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
 
-import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnvironment } from "./stage-environment.js";
+import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnvironment, type StageSky } from "./stage-environment.js";
 import { CoProStageLookPanel } from "./stage-look-panel.js";
 
 
@@ -58,6 +58,7 @@ export type CoProStudioProps = {
   project: CoProProjectView;
   initialTool?: "text" | "captions" | null;
   initialStudioMode?: "scene" | "design" | "generate" | "video";
+  stageSkies?:readonly StageSky[];
   samSceneSkyDefaults?:Record<string,Pick<CoProStageEnvironment,'skyProgression'|'cloudDensity'|'starIntensity'|'galaxyIntensity'|'auroraIntensity'|'stars'>>;
   playheadUs: number;
   selectedClipId?: string | null;
@@ -204,6 +205,7 @@ export function CoProStudio({
   initialTool = null,
   initialStudioMode = "video",
   samSceneSkyDefaults,
+  stageSkies,
   playheadUs,
   selectedClipId,
   canUndo = false,
@@ -1013,7 +1015,7 @@ export function CoProStudio({
               style={{backgroundColor:stageEnvironment?.background,
                 backgroundImage: [
                   ...(stageEnvironment?.showGrid ? ["linear-gradient(to right,color-mix(in srgb,var(--copro-text) 10%,transparent) 1px,transparent 1px)","linear-gradient(to bottom,color-mix(in srgb,var(--copro-text) 10%,transparent) 1px,transparent 1px)"] : []),
-                  stageLookBackground(stageEnvironment),
+                  stageLookBackground(stageEnvironment,stageSkies),
                 ].filter(Boolean).join(',') || undefined,
                 backgroundSize:stageEnvironment?.showGrid ? "24px 24px" : undefined,
                 "--copro-stage-fog-color":stageEnvironment?.fogColor??STAGE_ENVIRONMENT_DEFAULTS.fogColor,
@@ -1068,10 +1070,10 @@ export function CoProStudio({
                 />
               ) : (
                 <div className="copro-preview-placeholder" data-state={hasUnavailableFootage ? "missing" : "empty"}
-                  style={stageLookBackground(stageEnvironment) ? {
+                  style={stageLookBackground(stageEnvironment,stageSkies) ? {
                     backgroundImage:[
                       ...(stageEnvironment?.showGrid ? ["linear-gradient(to right,#ffffff13 1px,transparent 1px)","linear-gradient(to bottom,#ffffff13 1px,transparent 1px)"] : []),
-                      stageLookBackground(stageEnvironment),
+                      stageLookBackground(stageEnvironment,stageSkies),
                     ].filter(Boolean).join(','),
                     backgroundSize:stageEnvironment?.showGrid ? '24px 24px,24px 24px,cover' : undefined,
                   } : undefined}>
@@ -1199,7 +1201,7 @@ export function CoProStudio({
                   }}>{label}</button>)}
               </nav>}
               {inspectorTool==="stage"
-                ? <CoProStageLookPanel environment={stageEnvironment} skyDefaults={samSceneSkyDefaults}
+                ? <CoProStageLookPanel environment={stageEnvironment} skyDefaults={samSceneSkyDefaults} skies={stageSkies}
                     videoSources={mediaItems.filter(item=>item.kind==="video").map(item=>({id:item.id,name:item.name}))}
                     onChange={patch=>onAction?.({type:"environment",patch})}/>
                 : <CoProToolPanel
