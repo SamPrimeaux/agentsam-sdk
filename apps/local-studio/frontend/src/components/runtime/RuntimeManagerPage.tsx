@@ -43,6 +43,7 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
   async function refresh() {
     setLoading(true);
     setMessage(null);
+    const registry = listLocalStudioConnections().then(result => result.machines, () => undefined);
     const invoke = getTauriInvoke();
     if (invoke) {
       try {
