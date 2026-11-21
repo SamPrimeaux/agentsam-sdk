@@ -57,7 +57,7 @@ export function TemplatesGallery({ open, items, initialTab = 'objects', onClose,
           <label className="qa-search"><Search size={15} aria-hidden="true" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" aria-label="Search templates" autoFocus />
           </label>
-          <button type="button" className="qa-close" aria-label="Close templates" onClick={onClose}><X size={16} /></button>
+          <button type="button" className="qa-close" aria-label="Close templates" onClick={onClose}><X size={16} /><span className="qa-sr">Close</span></button>
         </header>
         <div className="qa-gallery-main">
           <nav className="qa-rail" aria-label="Categories">
