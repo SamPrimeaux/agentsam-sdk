@@ -14,6 +14,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
 }) {
   const [contexts,setContexts]=useState<DockerContext[]>([]);
   const [installation,setInstallation]=useState<'checking'|'installed'|'not_installed'|'disabled'|'error'>('checking');
+  const [installationId,setInstallationId]=useState('');
   const [context,setContext]=useState('');
   const [containers,setContainers]=useState<DockerContainer[]>([]);
   const [container,setContainer]=useState('');
