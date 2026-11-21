@@ -202,7 +202,7 @@ async function resolveOauthMediaClient(env, ownerId, url, capabilityId = "cloudf
   } catch (err) {
     return {
       ok: false,
-      error: err?.code || err?.message || "cloudflare_oauth_required",
+      error: KNOWN_MEDIA_ERRORS.has(err?.code) ? err.code : "cloudflare_reconnect_required",
       status: err?.code === "cloudflare_account_selection_required" ? 409
         : err?.code === "cloudflare_reconnect_required" ? 401
           : 401,
@@ -211,6 +211,11 @@ async function resolveOauthMediaClient(env, ownerId, url, capabilityId = "cloudf
     };
   }
 }
+
+const KNOWN_MEDIA_ERRORS = new Set([
+  "cloudflare_reconnect_required", "cloudflare_authorization_required", "cloudflare_credential_required",
+  "cloudflare_token_required", "cloudflare_account_selection_required", "cloudflare_oauth_required",
+]);
 
 function parseR2AssetId(id) {
   const raw = String(id || "");

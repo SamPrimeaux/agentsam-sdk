@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Cloud } from "lucide-react";
+import { HardDrive } from "lucide-react";
 import { formatCount, type CfFamily, type CfResources } from "./media-utils";
 
 function familyText(fam: CfFamily | undefined, detail?: string) {
@@ -46,12 +46,12 @@ export function ConnectionStatus({
   const tone = status === "connected" || status === "empty" ? "ok"
     : status === "checking" ? "idle"
       : status === "not_connected" || status === "error" ? "bad" : "warn";
-  const label = status === "checking" ? "Checking Cloudflare…"
-    : status === "not_connected" ? "Cloudflare not connected"
-      : status === "needs_scope" ? "Cloudflare · permissions needed"
-        : status === "partial" ? "Cloudflare · partly available"
-          : status === "error" ? "Cloudflare · error"
-            : "Cloudflare connected";
+  const label = status === "checking" ? "Checking storage…"
+    : status === "not_connected" ? "Storage not connected"
+      : status === "needs_scope" ? "Storage · permissions needed"
+        : status === "partial" ? "Storage · partly available"
+          : status === "error" ? "Storage · error"
+            : "Storage connected";
   const account = resources?.account?.id;
   const missing = resources?.missing_scopes || [];
 
@@ -64,20 +64,20 @@ export function ConnectionStatus({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="agentsam-media-status__dot" aria-hidden="true" />
-        <Cloud size={14} aria-hidden="true" />
+        <HardDrive size={14} aria-hidden="true" />
         <span>{label}</span>
       </button>
       {open && resources ? (
-        <div className="agentsam-media-status__panel" role="dialog" aria-label="Cloudflare connection">
+        <div className="agentsam-media-status__panel" role="dialog" aria-label="Storage connection">
           {account ? <p className="agentsam-media-status__account">Account <code>{account}</code></p> : null}
           <dl>
-            <div><dt>R2</dt><dd>{familyText(resources.r2, `${formatCount(bucketCount) ?? 0} bucket${bucketCount === 1 ? "" : "s"}`)}</dd></div>
-            <div><dt>Images</dt><dd>{familyText(resources.images, formatCount(resources.images?.count) ? `${formatCount(resources.images?.count)} images` : undefined)}</dd></div>
-            <div><dt>Stream</dt><dd>{familyText(resources.stream, formatCount(resources.stream?.count) ? `${formatCount(resources.stream?.count)} videos` : undefined)}</dd></div>
+            <div><dt>Files</dt><dd>{familyText(resources.r2, `${formatCount(bucketCount) ?? 0} bucket${bucketCount === 1 ? "" : "s"}`)}</dd></div>
+            <div><dt>Photos</dt><dd>{familyText(resources.images, formatCount(resources.images?.count) ? `${formatCount(resources.images?.count)} images` : undefined)}</dd></div>
+            <div><dt>Video</dt><dd>{familyText(resources.stream, formatCount(resources.stream?.count) ? `${formatCount(resources.stream?.count)} videos` : undefined)}</dd></div>
           </dl>
           {missing.length ? <p className="agentsam-media-status__warn">Missing scopes: {missing.slice(0, 6).join(", ")}</p> : null}
           <a className="agentsam-media-btn" href={connectUrl}>
-            {status === "not_connected" ? "Connect Cloudflare" : "Reconnect or expand scopes"}
+            {status === "not_connected" ? "Connect storage" : "Reconnect or expand scopes"}
           </a>
         </div>
       ) : null}

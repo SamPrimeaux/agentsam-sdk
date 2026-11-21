@@ -1,9 +1,11 @@
 /**
  * Docker IDE host — uses the installed Tauri Docker bridge and existing
  * shared WorkspaceEditor. SSH/TLS remain configured Docker contexts on the
- * customer's own machine. No fake files or browser-socket access.
+ * customer's own machine. No fake files or browser-socket access. Outside the desktop
+ * app, engine and container operations run through the user's paired agentsamd.
  */
 import { getTauriInvoke, isPackagedDesktop } from '@/lib/desktop/tauri';
+import { dockerViaAgentsamd } from '@/lib/work/docker-agentsamd';
 import type {
   FileWorkspace, WorkspaceEntry, WorkspaceFile, WorkspaceSearchHit,
   WorkspaceWriteResult, WorkspacePreview,
@@ -21,7 +23,7 @@ type DockerResponse = {
 export type DockerSelection = {context:string;container:string;root:string;allowWrites:boolean};
 
 export async function dockerBridge(action:DockerAction, fields:Record<string,unknown> = {}):Promise<DockerResponse> {
-  if(!isPackagedDesktop())throw Error('Docker requires an authorized Desktop runtime. Connect a device in Machines & Runtimes.');
+  if(!isPackagedDesktop())return await dockerViaAgentsamd(action,fields) as DockerResponse;
   const invoke=getTauriInvoke();
   if(!invoke)throw Error('Native Docker bridge unavailable in this host.');
   const result=await invoke('docker_bridge',{request:{action,...fields}}) as DockerResponse;

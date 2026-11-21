@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Container, RefreshCw, ShieldCheck, HardDrive, Server, ExternalLink } from 'lucide-react';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
+import { getAgentsamdToken, setAgentsamdToken, probeAgentsamd } from '@/lib/work/agentsamd-client';
 import { listLocalStudioConnections, installLocalStudioPublicPlugin } from '@/lib/connections/client';
 import {
   dockerBridge, dockerEngineHealth, listDockerContexts, listDockerContainers,
@@ -27,6 +28,19 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
   const [remoteName,setRemoteName]=useState('');
   const [remoteEndpoint,setRemoteEndpoint]=useState('');
   const desktop=isPackagedDesktop();
+  const [host,setHost]=useState<'checking'|'ready'|'needs_pairing'|'offline'>(desktop?'ready':'checking');
+  const [pairToken,setPairToken]=useState('');
+  const detectHost=useCallback(async()=>{
+    if(desktop){setHost('ready');return;}
+    setHost('checking');
+    if(!(await probeAgentsamd())){setHost('offline');return;}
+    setHost(getAgentsamdToken()?'ready':'needs_pairing');
+  },[desktop]);
+  useEffect(()=>{void detectHost();},[detectHost]);
+  const pair=()=>{
+    if(!setAgentsamdToken(pairToken)){setError('That is not a pairing token. It is 64 characters.');return;}
+    setPairToken('');setError('');void detectHost();
+  };
   const refreshInstall=useCallback(async()=>{
     setInstallation('checking');
     try {
@@ -49,13 +63,16 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
   };
 
   const refresh=useCallback(async()=>{
-    if(!desktop)return;
+    if(host!=='ready')return;
     setLoading(true);setError('');
     try{const items=await listDockerContexts();setContexts(items);
       setContext(value=>items.some(item=>item.name===value)?value:'');
-    }catch(e){setError(e instanceof Error?e.message:String(e));}
+    }catch(e){
+      if((e as {code?:string})?.code==='agentsamd_pairing_required')void detectHost();
+      setError(e instanceof Error?e.message:String(e));
+    }
     finally{setLoading(false);}
-  },[desktop]);
+  },[host,detectHost]);
   useEffect(()=>{void refresh();},[refresh]);
   const check=async(chosen=context)=>{
     if(!chosen)return;
@@ -111,10 +128,24 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
     </div>
   </section>;
 
-  if(!desktop)return <section className="space-y-3 rounded-lg border border-border bg-card p-4 text-sm">
+  if(host!=='ready')return <section className="space-y-3 rounded-lg border border-border bg-card p-4 text-sm" aria-label="Docker Engine connection manager">
     <div className="flex items-center gap-2"><Container size={17}/><strong>Docker Engine</strong></div>
-    <p className="text-muted-foreground">Docker is an installable integration, but this browser has no native Docker engine access. Use AgentSam Desktop with your own Docker installation or an enrolled host runtime. No engine is being reported as connected.</p>
-    <a href="/admin/settings/network" className="inline-flex items-center gap-1 text-xs underline underline-offset-4">Manage device connection <ExternalLink size={12}/></a>
+    {host==='checking'?<p className="text-muted-foreground">Looking for AgentSam on this computer…</p>:null}
+    {host==='offline'?<>
+      <p className="text-muted-foreground">AgentSam can’t see your computer yet. Open AgentSam Desktop or start the local runtime, then check again.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={()=>void detectHost()} className="rounded-md border border-border px-3 py-2 text-xs hover:bg-muted">Check again</button>
+        <a href="/admin/settings/network" className="inline-flex items-center gap-1 text-xs underline underline-offset-4">Manage device connection <ExternalLink size={12}/></a>
+      </div></>:null}
+    {host==='needs_pairing'?<>
+      <p className="text-muted-foreground">Connect this browser to your computer to use your Docker engines. Paste the pairing token from your local runtime.</p>
+      <div className="flex gap-2">
+        <input type="password" autoComplete="off" spellCheck={false} value={pairToken} onChange={e=>setPairToken(e.target.value)}
+          onKeyDown={e=>{if(e.key==='Enter')pair();}} aria-label="Pairing token" placeholder="Pairing token"
+          className="min-h-10 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm text-foreground"/>
+        <button type="button" onClick={pair} disabled={!pairToken.trim()} className="rounded-md border border-border px-3 py-2 text-xs hover:bg-muted disabled:opacity-50">Connect</button>
+      </div>
+      {error&&<p role="alert" className="text-xs text-destructive">{error}</p>}</>:null}
   </section>;
 
   return <section className="space-y-4 rounded-lg border border-border bg-card p-4 text-sm" aria-label="Docker Engine connection manager">

@@ -636,7 +636,6 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                 </label>
               </div>
               <div className="agentsam-media-options__links">
-                <a href="/admin/moviemode">Open MovieMode</a>
                 <a href="/admin/settings/storage">Storage settings</a>
               </div>
             </div>

@@ -19,7 +19,7 @@ import type { Project, ShellEffect } from "@inneranimalmedia/agentsam-local-shar
 import type { Terminal } from "@xterm/xterm";
 import type { FitAddon } from "@xterm/addon-fit";
 
-const AGENTSAMD_TOKEN_KEY = "agentsamd_pairing_token";
+import { AGENTSAMD_TOKEN_KEY } from "./agentsamd-client.ts";
 
 function getStoredAgentsamdToken(): string | null {
   try {
