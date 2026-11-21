@@ -198,7 +198,7 @@
 
 /* Real save/build workflow, docked behind its relevant project control. */
 .cad-project-menu .cad-runtime-slot{min-width:min(85vw,24rem)}
-.cad-project-runtime-shell{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-width:0;font-size:var(--text-sm)}
+.cad-project-runtime-shell{display:flex;flex-direction:column;align-items:stretch;gap:.5rem;min-width:0;font-size:var(--text-sm)}
 .cad-project-runtime-shell>div:first-child{display:flex;flex-wrap:wrap;min-width:0}
 .cad-project-runtime-shell>details>summary{white-space:nowrap;font-size:var(--text-sm)}
 .cad-project-runtime-shell>details>div{right:0;max-width:min(85vw,25rem)}
