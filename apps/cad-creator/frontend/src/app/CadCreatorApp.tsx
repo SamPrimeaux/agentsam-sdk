@@ -12,6 +12,7 @@ import {recordNativePlanChange} from '../lib/native-engine';
 
 import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
 import type {DesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
+import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   ProjectState,
@@ -246,6 +247,12 @@ export function CadCreatorApp({
   const [leftPanelTab,setLeftPanelTab]=useState<'objects'|'assets'|'libraries'>('objects');
   // Hosted mode only: name of the unsaved template copy being edited. Null means no copy is open.
   const [templateCopyName, setTemplateCopyName] = useState<string | null>(null);
+  const solidWidthInput = useRef<HTMLInputElement>(null);
+  const sketchDialog = useRef<HTMLDialogElement>(null);
+  const [sketchOpen, setSketchOpen] = useState(false);
+  useEffect(() => {
+    if (sketchOpen) sketchDialog.current?.showModal();
+  }, [sketchOpen]);
   const [isExportPublishOpen, setIsExportPublishOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   useEffect(()=>{const onSave=(event:Event)=>setToastMessage((event as CustomEvent<string>).detail);window.addEventListener('agentsam:cad-save-status',onSave);return()=>window.removeEventListener('agentsam:cad-save-status',onSave)},[]);
@@ -648,6 +655,16 @@ export function CadCreatorApp({
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
           onNew={startBlankProject} onTemplates={() => {setShowProjectGallery(true);setIsTemplateLibraryOpen(false)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}} onPlaceStock={placeStockPreset} onOpenScene={openTemplateScene}
+          onSketch={()=>setSketchOpen(true)}
+          onOpenSolid={accessMode === 'hosted-project' ? undefined : () => {
+            const width = solidWidthInput.current;
+            if (!width) return;
+            for (let element: HTMLElement | null = width; element; element = element.parentElement) {
+              if (element instanceof HTMLDetailsElement) element.open = true;
+            }
+            width.focus();
+            width.select();
+          }}
           onParametric={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('parametric')}}
           onExport={() => setIsExportPublishOpen(true)}
           onSave={()=>{if(accessMode==='hosted-project'){void saveHostedRevision()}else window.dispatchEvent(new Event('agentsam:cad-save-revision'))}}
@@ -662,7 +679,7 @@ export function CadCreatorApp({
           onViewportMode={mode=>{setStudioView('edit');if(mode==='3d'){handleSelectWorkspace('model')}else{handleSelectWorkspace('plan');setPlanLayout(mode)}}}
           projectSlot={accessMode === 'hosted-project' ? (hostedWritable
             ? <div className="flex items-center gap-2 text-xs text-slate-300"><span>{hostedDirty ? 'Unsaved changes' : 'All changes saved'} · {hostedSelection?.revision.label || hostedSelection?.revision.revision}</span><button type="button" disabled={!hostedDirty || hostedSaving} onClick={() => void saveHostedRevision()}>{hostedSaving ? 'Saving…' : 'Save revision'}</button></div>
-            : <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered source · editing unavailable for this revision'}</span>) : <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
+            : <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered source · editing unavailable for this revision'}</span>) : <ProjectRuntimePanel widthInputRef={solidWidthInput} project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
           runtimeSlot={<CadStatusStrip workspace={currentWorkspaceDescriptor} activeTool={activeTool} unit={unit}
             selectionCount={currentUser.selectedIds.length} jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
             isSynced={isSynced} isDarkMode={isDarkMode} capabilities={liveCapabilities}/>}
@@ -896,6 +913,20 @@ export function CadCreatorApp({
       </aside>}
 
 
+      {sketchOpen && <dialog ref={sketchDialog} aria-label="Native sketch" onClose={()=>setSketchOpen(false)}
+        className="m-auto h-[90dvh] w-[96vw] max-w-screen-xl overflow-hidden rounded-lg border border-slate-700 bg-slate-950 p-0 text-slate-100 backdrop:bg-black/60">
+        <div className="flex h-full flex-col">
+          <header className="flex items-center justify-between border-b border-slate-700 px-3 py-2">
+            <strong>Native sketch</strong>
+            <button type="button" onClick={()=>sketchDialog.current?.close()}>Back to project</button>
+          </header>
+          <div className="min-h-0 flex-1">
+            <NativeSketchCanvas key={project.id} project={project} canEdit={!isViewer}
+              selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
+              onUpdateProject={next=>updateProject(previous=>previous===project?next:previous)}/>
+          </div>
+        </div>
+      </dialog>}
       <ExportPublishModal
         isOpen={isExportPublishOpen}
         onClose={() => setIsExportPublishOpen(false)}

@@ -198,10 +198,10 @@
 
 /* Real save/build workflow, docked behind its relevant project control. */
 .cad-project-menu .cad-runtime-slot{min-width:min(85vw,24rem)}
-.cad-project-runtime-shell{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-width:0;font-size:var(--text-sm)}
+.cad-project-runtime-shell{display:flex;flex-direction:column;align-items:stretch;gap:.5rem;min-width:0;font-size:var(--text-sm)}
 .cad-project-runtime-shell>div:first-child{display:flex;flex-wrap:wrap;min-width:0}
 .cad-project-runtime-shell>details>summary{white-space:nowrap;font-size:var(--text-sm)}
-.cad-project-runtime-shell>details>div{right:0;max-width:min(85vw,25rem)}
+.cad-project-runtime-shell>details>div{position:static;width:100%;margin-top:.5rem;max-width:100%}
 .cad-world-menu{position:absolute;inset-block-start:clamp(.45rem,1cqw,.8rem);inset-inline-start:clamp(.45rem,1cqw,.8rem);z-index:45;min-width:0;max-width:calc(100% - 1rem);font-family:var(--font-sans);font-size:var(--text-sm)}
 .cad-world-menu>summary{list-style:none;display:flex;align-items:center;gap:.3rem;padding:.55rem .8rem;border:1px solid #ffffff29;border-radius:.75rem;background:#172032ed;color:#e7eaf1;cursor:pointer;backdrop-filter:blur(1rem);box-shadow:0 .25rem .8rem #0004}
 .cad-world-menu>summary::-webkit-details-marker{display:none}
@@ -518,6 +518,13 @@
 }
 .cad-resource-card:hover .cad-resource-card__actions,
 .cad-resource-card:focus-within .cad-resource-card__actions{opacity:1;transform:none}
+@media(max-width:660px) and (orientation:portrait){
+ .cad-real-toolbar{display:flex;flex-wrap:wrap;gap:.2rem;justify-content:flex-start}
+ .cad-real-toolbar>.cad-tool-cluster,.cad-view-tabs,.cad-viewport-modes{flex:0 0 auto;max-width:100%}
+ .cad-real-toolbar>.cad-direct-tools{order:1;width:100%;overflow-x:auto}
+ .cad-real-toolbar>.cad-edit-history{display:flex}
+ .cad-real-toolbar>.cad-tool-actions{margin-inline-start:auto}
+}
 @media (hover:none){.cad-resource-card__actions{opacity:1;transform:none}}
 .cad-resource-card__open,.cad-resource-card__ghost{
   display:inline-flex;align-items:center;gap:.3rem;min-height:2rem;padding:.35rem .65rem;border-radius:8px;

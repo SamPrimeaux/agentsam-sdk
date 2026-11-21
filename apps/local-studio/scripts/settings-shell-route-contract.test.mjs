@@ -74,7 +74,9 @@ test('Settings subpages stay in one canonical shell and use router navigation',(
  const runtime=readFileSync(path.join(root,'frontend/src/routes/(apps)/admin/settings/runtime.tsx'),'utf8');
  assert.ok(runtime.includes('LocalStudioSettingsPage'));
  const integrations=readFileSync(path.join(root,'frontend/src/routes/(apps)/admin/settings/integrations.tsx'),'utf8');
- assert.ok(integrations.includes('Navigate to="/admin/settings/customize"'));
+ assert.ok(integrations.includes('Navigate to="/admin/settings/$unit"'));
+ assert.ok(integrations.includes('params={{ unit: "customize" }}'));
+ assert.ok(integrations.includes('search={{ view: "plugins" }}'));
  const host=readFileSync(path.join(root,'frontend/src/components/settings/localStudioSettingsHost.ts'),'utf8');
  assert.ok(host.includes('return_to=%2Fadmin%2Fsettings%2Fstorage'));
  assert.ok(host.includes('startsWith("/admin/settings/storage")'));

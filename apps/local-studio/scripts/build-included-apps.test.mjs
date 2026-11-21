@@ -110,26 +110,27 @@ test('an unscoped included app invocation refuses a broad rebuild', () => {
   const all = JSON.parse(execFileSync(process.execPath,[command,'--dry-run','--all'],{encoding:'utf8'}));
   assert.deepEqual(all.map(p=>p.id),planIncludedApps().plans.map(p=>p.id));
 });
-test('default desktop/host build scripts never rebuild included apps implicitly',()=>{
+test('production host builds regenerate and stage all included apps; scoped builds remain separate',()=>{
   const scripts=JSON.parse(fs.readFileSync(path.join(LOCAL_STUDIO,'package.json'),'utf8')).scripts;
-  assert.doesNotMatch(scripts.build,/node scripts\/build-included-apps\.mjs(?! --stage)/);
+  assert.match(scripts.build,/node scripts\/build-included-apps\.mjs --all && node scripts\/build-included-apps\.mjs --stage/);
+  assert.doesNotMatch(scripts['build:dev'],/node scripts\/build-included-apps\.mjs/);
   assert.doesNotMatch(scripts['build:desktop'],/node scripts\/build-included-apps\.mjs/);
-  assert.match(scripts['build:included:all'],/--all/);
+  assert.match(scripts['build:included:all'],/node scripts\/build-included-apps\.mjs --all/);
 });
 
-test('a normal host build does not sync websites or test theme catalogs automatically',()=>{
+test('production host builds do not trigger unrelated website sync or broad theme suites',()=>{
   const scripts=JSON.parse(fs.readFileSync(path.join(LOCAL_STUDIO,'package.json'),'utf8')).scripts;
-  assert.doesNotMatch(scripts.build,/sync-public-site|build-included-apps\.mjs(?! --stage)/);
+  assert.doesNotMatch(scripts.build,/sync-public-site|smoke:themes|smoke:cms-site-fidelity|smoke:creator-suite/);
   assert.doesNotMatch(scripts['verify:desktop'],/smoke:themes|smoke:cms-site-fidelity|smoke:creator-suite/);
   assert.match(scripts['verify:desktop:all'],/smoke:themes/);
 });
 
-test('explicit Cloudflare release commands build every registered included app before verification',()=>{
+test('Cloudflare release builds all included apps exactly once, stages them and verifies the shipped bundle',()=>{
   const scripts=JSON.parse(fs.readFileSync(path.join(LOCAL_STUDIO,'package.json'),'utf8')).scripts;
-  assert.match(scripts['cf:build'],/npm run build:included:all/);
-  assert.match(scripts['cf:build'],/npm run build && npm run cf:verify-output && npm run cf:smoke:worker/);
+  assert.match(scripts.build,/node scripts\/build-included-apps\.mjs --all && node scripts\/build-included-apps\.mjs --stage/);
+  assert.match(scripts['cf:build'],/^npm run build && npm run cf:verify-output && npm run test --workspace @inneranimalmedia\/agentsam-local-studio-backend && npm run cf:smoke:worker$/);
+  assert.doesNotMatch(scripts['cf:build'],/build:included:all|build-included-apps\.mjs/,'avoid rebuilding every included app twice');
   assert.match(scripts['cf:dry-run'],/npm run cf:build/);
   assert.match(scripts['cf:deploy'],/npm run cf:build/);
-  assert.doesNotMatch(scripts.build,/build:included:all/,'ordinary development builds remain scoped');
   assert.doesNotMatch(scripts['build:desktop'],/build:included:all/,'desktop builds remain scoped');
 });

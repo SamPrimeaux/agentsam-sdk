@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Container, RefreshCw, ShieldCheck, HardDrive, Server, ExternalLink } from 'lucide-react';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
 import { getAgentsamdToken, setAgentsamdToken, probeAgentsamd } from '@/lib/work/agentsamd-client';
-import { listLocalStudioConnections, installLocalStudioPublicPlugin } from '@/lib/connections/client';
+import { listLocalStudioConnections, installLocalStudioPublicPlugin, updateLocalStudioPlugin } from '@/lib/connections/client';
 import {
   dockerBridge, dockerEngineHealth, listDockerContexts, listDockerContainers,
   dockerContainerAction, dockerContainerLogs, type DockerContext,
@@ -14,6 +14,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
 }) {
   const [contexts,setContexts]=useState<DockerContext[]>([]);
   const [installation,setInstallation]=useState<'checking'|'installed'|'not_installed'|'disabled'|'error'>('checking');
+  const [installationId,setInstallationId]=useState('');
   const [context,setContext]=useState('');
   const [containers,setContainers]=useState<DockerContainer[]>([]);
   const [container,setContainer]=useState('');
@@ -46,6 +47,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
     try {
       const registry=await listLocalStudioConnections();
       const installed=registry.plugins?.find(row=>row.plugin_key==='agentsam-docker-engine');
+      setInstallationId(installed?.id || '');
       setInstallation(!installed?'not_installed':installed.is_enabled?'installed':'disabled');
     } catch {
       setInstallation('error');
@@ -55,7 +57,8 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
   const install=async()=>{
     setLoading(true);setError('');
     try {
-      await installLocalStudioPublicPlugin('agentsam-docker-engine');
+      if(installation==='disabled') await updateLocalStudioPlugin(installationId,{enabled:true});
+      else await installLocalStudioPublicPlugin('agentsam-docker-engine');
       await refreshInstall();
       setNotice('Docker integration installed. Engine authorization is a separate step.');
     }catch(e){setError(e instanceof Error?e.message:String(e));}
@@ -119,10 +122,10 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
     {error&&<p role="alert" className="text-xs text-destructive">{error}</p>}
     {installation==='checking'?<p role="status" className="text-muted-foreground">Checking your account's installed plugins…</p>:
       installation==='error'?<p role="alert" className="text-muted-foreground">Plugin status could not be verified. Docker access has not been granted.</p>:
-      installation==='disabled'?<p className="text-muted-foreground">Docker is installed but disabled for this account. Enable it in Plugins to use your engines.</p>:
+      installation==='disabled'?<p className="text-muted-foreground">Docker is disabled for this account. Enable it to choose and verify an engine.</p>:
       <p className="text-muted-foreground">Install Docker for this account. Installation does not connect to an engine or grant host access.</p>}
     <div className="flex gap-2">
-      {installation==='not_installed'?<button type="button" className="rounded-md border border-border px-3 py-2 hover:bg-muted" disabled={loading} onClick={()=>void install()}>Install Docker plugin</button>:null}
+      {installation==='not_installed'||installation==='disabled'?<button type="button" className="rounded-md border border-border px-3 py-2 hover:bg-muted" disabled={loading} onClick={()=>void install()}>{installation==='disabled'?'Enable Docker plugin':'Install Docker plugin'}</button>:null}
       <a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/admin/settings/customize?view=plugins">Manage plugins</a>
       {installation==='error'?<button type="button" onClick={()=>void refreshInstall()} className="rounded-md border border-border px-3 py-2">Retry</button>:null}
     </div>
@@ -195,7 +198,8 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
         <button className="rounded-md border border-border px-3 py-1.5 text-xs" disabled={loading} onClick={()=>void manage('restart')}>Restart</button>
       </div>}
       {logs&&<pre className="max-h-48 overflow-auto rounded-md border border-border bg-background p-3 text-xs whitespace-pre-wrap break-all">{logs}</pre>}
-      {onOpenWorkspace&&container&&<div className="space-y-3 border-t border-border pt-3">
+      {onOpenWorkspace&&container&&!desktop&&<p className="text-xs text-muted-foreground">Open AgentSam Desktop to browse and edit container files.</p>}
+      {onOpenWorkspace&&container&&desktop&&<div className="space-y-3 border-t border-border pt-3">
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Authorized container workspace directory
           <input className="min-h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground"
             value={root} onChange={e=>setRoot(e.target.value)} placeholder="/app or /work"/>

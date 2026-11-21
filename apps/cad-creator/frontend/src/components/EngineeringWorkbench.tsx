@@ -308,14 +308,14 @@ export const CAD_STUDIO_TOOLS:{id:ActiveTool;label:string;shortcut:string;tier:1
  {id:'eraser',label:'Erase',shortcut:'E',tier:2,icon:Eraser},
  {id:'pan',label:'Pan',shortcut:'H',tier:2,icon:Hand}
 ];
-export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric,onPlaceStock,onOpenScene}:{
+export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric,onSketch,onOpenSolid,onPlaceStock,onOpenScene}:{
  tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model'|'robotics')=>void;
  planLayout:'2d'|'split';onPlanLayout:(v:'2d'|'split')=>void;readOnly:boolean;
  onNew:()=>void;onTemplates:()=>void;onExport:()=>void;onToggleExplorer:()=>void;onToggleInspector:()=>void;
  explorerOpen:boolean;inspectorOpen:boolean;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
+ studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onSketch:()=>void;onOpenSolid?:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
@@ -324,7 +324,7 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
   const closeMenus=(except?:HTMLDetailsElement)=>root.querySelectorAll<HTMLDetailsElement>('details.cad-toolbar-menu[open]').forEach(menu=>{if(menu!==except)menu.open=false});
   const onToggle=(event:Event)=>{
    const menu=event.target;
-   if(menu instanceof HTMLDetailsElement&&menu.open)closeMenus(menu);
+   if(menu instanceof HTMLDetailsElement && menu.matches('.cad-toolbar-menu') && menu.open)closeMenus(menu);
   };
   const onOutside=(event:PointerEvent)=>{if(!root.contains(event.target as Node))closeMenus()};
   const onEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')closeMenus()};
@@ -365,7 +365,9 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  const quickAddGroups:QuickAddEntry[][]=[
   KIT.filter(k=>(k.live||k.place)&&k.menus.includes('create')&&k.group==='Draw').map(k=>({id:k.id,label:k.label,icon:<k.icon size={16}/>,kbd:k.key,
    active:isKitActive(k,tool,kit.tool),disabled:(readOnly&&!viewerSafe(k))||(!!k.place&&!onStock),run:()=>chooseKitTool(k,onTool,onStock)})),
-  [{id:'stock',label:'Stock · architectural assets',icon:<Box size={16}/>,run:()=>onStock()},
+  [...(onOpenSolid ? [{id:'occt-box',label:'Box · native solid',icon:<Box size={16}/>,disabled:readOnly,run:onOpenSolid}] : []),
+   {id:'native-sketch',label:'Native sketch · lines and rectangles',icon:<PencilRuler size={16}/>,disabled:readOnly,run:onSketch},
+   {id:'stock',label:'Stock · architectural assets',icon:<Box size={16}/>,run:()=>onStock()},
    {id:'parametric',label:'Parametric parts · Libraries',icon:<PencilRuler size={16}/>,run:onParametric}],
   [{id:'blank',label:'Blank project',icon:<Plus size={16}/>,disabled:readOnly,run:onNew}],
  ];

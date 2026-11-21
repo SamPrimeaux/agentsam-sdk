@@ -406,7 +406,7 @@ function emptySnapshot(): SettingsSnapshot {
       policy: "Not checked",
     },
     network: {
-      browser: "Available",
+      browser: "Not checked",
       tunnel: "Not checked",
       oauth: "Not checked",
       health: "unknown",
@@ -487,6 +487,18 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   snapshot.widgets = settingsWidgets();
   snapshot.plugins = (pluginResult.value?.plugins||[]).map(settingsPlugin);
   snapshot.pluginsError = pluginResult.ok ? null : "Installed connections could not be verified. Try refreshing; existing authorizations are unchanged.";
+  const machines = pluginResult.value?.machines;
+  if (machines?.available) {
+    const local = machines.items.filter(machine => machine.provider === "local" && machine.connection_id);
+    snapshot.network.tunnel = local.length
+      ? local.map(machine => `${machine.name} · ${machine.health_status || "unknown"} (last recorded)`).join(", ")
+      : "No registered local connection";
+  }
+  const registryReachable = pluginResult.ok && pluginResult.value?.ok === true;
+  snapshot.network.health = registryReachable ? "healthy" : "attention";
+  snapshot.network.oauth = registryReachable && Array.isArray(pluginResult.value?.connections)
+    ? pluginResult.value.connections.some(conn => conn.provider === "cloudflare" && conn.status === "connected") ? "Connected" : "Not connected"
+    : "Not checked";
   const oauth=pluginResult.value?.oauth_status;
   const repositories=pluginResult.value?.repositories;
   if(oauth||repositories){
@@ -501,9 +513,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     snapshot.git.repository=linkedRepo?.fullName||"No registered repository";
     snapshot.git.branch=linkedRepo?.defaultBranch||"—";
     snapshot.git.pullRequests="Not checked";
-    snapshot.network.oauth=(pluginResult.value?.connections||[]).some(
-      conn=>conn.provider==="cloudflare"&&conn.status==="connected"
-    )?"Connected":"Not connected";
+
   }
   snapshot.skills = skillsResult.value?.items || [];
   snapshot.rules = rulesResult.value?.items || [];
@@ -569,7 +579,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   snapshot.general.runtime = desktop
     ? `Desktop runtime · ${runnable} runnable models`
     : `Web runtime · ${runnable} runnable models`;
-  snapshot.network.health = health;
+
 
   return applyCatalogOverlay(snapshot);
 }
