@@ -37,18 +37,46 @@ For local development: `cd python && pip install -e .` then
 
 ### `AgentSamClient.invoke()`
 
-Repository, data, hooks, workspace and bounded argv execution work in Python
-without Node. Other `AgentSamClient.invoke()`
-operations still delegate to the existing Node SAM kernel, requiring Node 20+
-and the npm SDK available to that authorized host:
+Workspace, repository inspection, hook execution, and the bounded native process
+runtime work in Python **without Node**. D1 audit commands are separate: their
+current D1Adapter invokes Wrangler and therefore need the appropriate installed
+Cloudflare/Node tooling. The Node bridge is an optional interoperability path,
+not a required Python SDK runtime.
+
+If Node 20+ and the npm AgentSam SDK are installed, the Python client can also
+invoke **explicitly opted-in Core SAM operations**:
 
 ```bash
 npm install @inneranimalmedia/agentsam-sdk
 ```
 
-The bridge is found automatically from the working directory. It is read-only by design:
-write, D1, CMS and terminal operations are refused (`sam_bridge_operation_not_allowed`).
-Without the npm package, `invoke()` raises `sam_bridge_not_installed`.
+```python
+from agentsam_sdk import AgentSamClient
+
+client = AgentSamClient(cwd=".", bridge_timeout_seconds=300)
+
+# Python-native; works when Node is absent.
+local = client.invoke("workspace.list", {"path": ".", "depth": 1})
+
+# Optional JS bridge; requires Node/npm installation.
+status = client.invoke("arch.capabilities.status", {})
+assert status["ok"] is True
+```
+
+Bridge exposure comes from the canonical operation's `interop.stdio` contract
+(`pure`, `workspace_read`, or local `decision`), with fail-closed
+execution-policy checks. It is not an independent tool registry: the bridge
+discovers permitted operations in `createSamOS()`. It deliberately does not
+accept terminal, D1, CMS, arbitrary subprocess, or host-privileged operations.
+An operation must have its real authorized host configured to run outside this
+local compatibility transport.
+
+Set `bridge_timeout_seconds` per client, or
+`AGENTSAM_BRIDGE_TIMEOUT_SECONDS` (1–3600 seconds). This affects only
+bridge-backed operations; it is not a general AgentSam job timeout.
+Without Node/the bridge, Python-native `invoke()` operations continue working,
+while JS-only operations return `sam_node_required` or
+`sam_bridge_not_installed`.
 
 
 Protocol: [`../protocol/README.md`](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/protocol/README.md). 

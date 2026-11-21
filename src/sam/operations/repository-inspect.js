@@ -36,6 +36,7 @@ export const repositoryInspect = defineSamOperation({
     provider_spend: 'never',
   },
   risk: 'read_only',
+  interop: { stdio: 'workspace_read' },
   capabilities: ['repository.snapshot', 'repository.ast', 'repository.merkle'],
   artifacts: ['repository.snapshot', 'evidence.refs'],
   cli: { command: [['inspect']] },

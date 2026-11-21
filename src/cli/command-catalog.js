@@ -88,6 +88,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'rust', aliases: ['wasm', 'rapid-rust'], summary: 'Rust/Wasm scaffold, doctor, check, build, dev, explicit deploy', topic: 'runtime', skill: 'agentsam-cloudflare-workers' },
   { id: 'mcp', summary: 'MCP server catalog and client adapters', topic: 'runtime', skill: 'agentsam-cloudflare-workers' },
   { id: 'eval', summary: 'Context fixtures and live eval telemetry', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
+  { id: 'ast', summary: 'Inspect live code AST and creative resource objects without an index', topic: 'work', common: true, usage: ['agentsam ast symbols NAME [--cwd PATH]', 'agentsam ast match --pattern PATTERN --lang python [--cwd PATH]', 'agentsam ast scene FILE.gltf [--cwd PATH]', 'agentsam ast cad FILE.json [--cwd PATH]'] },
   { id: 'index', summary: 'Plan/run incremental AST (+ optional embeddings)', topic: 'work', skill: 'agentsam-codebaseindex', operation: 'codebaseindex.ingest' },
   { id: 'search', summary: 'Retrieve indexed code/text', topic: 'work', skill: 'agentsam-codebaseindex' },
   { id: 'memory', summary: 'Source-backed long-horizon memory via authorized remote MCP', topic: 'work',

@@ -451,6 +451,7 @@ cli:
     - rust
     - mcp
     - eval
+    - ast
     - index
     - search
     - memory

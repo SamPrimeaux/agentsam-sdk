@@ -902,7 +902,7 @@ class NativeRuntime:
             "status": "completed" if error_code is None else "failed",
         }
         response: dict[str, Any] = {
-            "schema": "sam.result.v1",
+            "schema": "agentsam.result.v1",
             "operation": operation,
             "ok": error_code is None,
             "data": result_data if error_code is None or (operation == "terminal.exec" and error_code == "sam_operation_failed") else None,

@@ -19,6 +19,14 @@
     "purpose": { "type": "string" },
     "outcome": { "type": "string" },
     "description": { "type": "string" },
+    "interop": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stdio": { "enum": ["pure", "workspace_read", "decision"] }
+      },
+      "description": "Explicit local read-only stdio interoperability grant; no inherited host authority."
+    },
     "execution": {
       "type": "object",
       "additionalProperties": false,

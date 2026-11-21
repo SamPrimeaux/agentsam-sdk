@@ -24,6 +24,7 @@ export const decisionEvaluateOp = defineSamOperation({
     provider_spend: 'optional',
   },
   risk: 'read_only',
+  interop: { stdio: 'decision' },
   capabilities: ['decision.evaluate', 'planning.goap'],
   artifacts: ['decision.evaluation', 'decision.receipt'],
   cli: { command: [] },

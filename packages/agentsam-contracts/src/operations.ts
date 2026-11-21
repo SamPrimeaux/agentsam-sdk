@@ -74,6 +74,8 @@ export interface AgentOperationDocs {
  * The host runtime binds this contract to an executable handler.
  */
 export interface AgentOperationContract {
+  /** Explicit local stdio interoperability grant, never inferred from risk alone. */
+  interop?: { stdio?: 'pure' | 'workspace_read' | 'decision' };
   id: string;
   version: number;
   module: string;
@@ -178,6 +180,12 @@ export function assertAgentOperationContract(value: unknown): asserts value is A
   }
   if (value.status!==undefined && !enumValue(value.status,AGENT_OPERATION_STATUSES)) {
     throw new TypeError(`operation ${value.id} has invalid status`);
+  }
+  if (value.interop!==undefined) {
+    if (!isRecord(value.interop) || (value.interop.stdio!==undefined &&
+        !enumValue(value.interop.stdio,['pure','workspace_read','decision']))) {
+      throw new TypeError(`operation ${value.id} has invalid stdio interoperability policy`);
+    }
   }
   if (value.authority!==undefined) {
     if (!Array.isArray(value.authority)) throw new TypeError(`operation ${value.id} authority must be an array`);

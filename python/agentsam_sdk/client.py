@@ -11,6 +11,7 @@ import asyncio
 from dataclasses import dataclass
 import json
 import inspect
+import math
 import os
 from pathlib import Path
 import shutil
@@ -170,7 +171,8 @@ class AgentSamClient:
     """Synchronous local machine client; no implicit remote credentials."""
     def __init__(
         self, *, cwd: str | Path = ".", node: str | None = None,
-        bridge: str | None = None, control_plane_url: str | None = None,
+        bridge: str | None = None, bridge_timeout_seconds: float | None = None,
+        control_plane_url: str | None = None,
         control_plane_token: str | None = None,
         workspace_root: str | Path | None = None,
         receipt_dir: str | Path | None = None,
@@ -183,6 +185,16 @@ class AgentSamClient:
         # pip-only install; only bridge-only operations require Node.
         self._node_explicit = node
         self._bridge_explicit = bridge
+        # Only bridge-backed operations use this deadline. Python-native work
+        # does not depend on Node or the presence of this bridge.
+        setting = (env or os.environ).get("AGENTSAM_BRIDGE_TIMEOUT_SECONDS", "120")
+        try:
+            timeout = float(bridge_timeout_seconds if bridge_timeout_seconds is not None else setting)
+        except (TypeError, ValueError) as exc:
+            raise SamClientError("sam_bridge_timeout_invalid") from exc
+        if not math.isfinite(timeout) or not 1 <= timeout <= 3600:
+            raise SamClientError("sam_bridge_timeout_invalid")
+        self.bridge_timeout_seconds = timeout
         self.native_runtime = NativeRuntime(
             workspace_root=workspace_root or self.cwd,
             receipt_dir=receipt_dir,
@@ -222,7 +234,7 @@ class AgentSamClient:
         try:
             result = subprocess.run(
                 [node, bridge], input=json.dumps({"method":method,**kwargs}),
-                text=True, capture_output=True, cwd=self.cwd, timeout=120, check=False,
+                text=True, capture_output=True, cwd=self.cwd, timeout=self.bridge_timeout_seconds, check=False,
             )
         except FileNotFoundError as exc:
             raise SamClientError("sam_node_required", "Node.js is required for this operation.") from exc
@@ -261,7 +273,9 @@ class AgentSamClient:
 
     def discover(self, **query):
         try:
-            bridged = self._request("discover", query=query)
+            # Fetch the bridge's full bounded candidate set, then apply the
+            # Python caller's limit after native+bridge merging.
+            bridged = self._request("discover", query={**query, "limit": 1000})
             rows = list(bridged.get("operations", [])) if isinstance(bridged, dict) else []
         except SamClientError as exc:
             if exc.code not in ("sam_node_required", "sam_bridge_not_installed"):
@@ -277,10 +291,15 @@ class AgentSamClient:
         if isinstance(search, str) and search.strip():
             needle = search.casefold()
             native_rows = [row for row in native_rows if needle in (row["id"] + " " + row["description"]).casefold()]
-        rows.extend(native_rows)
+        # Native operations must not disappear when optional JS packs grow.
+        module = query.get("module")
+        if isinstance(module, str) and module:
+            native_rows = [row for row in native_rows if row["domain"] == module]
+        rows = native_rows + rows
         limit = query.get("limit", 20)
         limit = max(0, min(1000, limit if isinstance(limit, int) and not isinstance(limit, bool) else 20))
-        return {"ok": True, "count": min(limit, len(rows)), "operations": rows[:limit]}
+        return {"ok": True, "count": min(limit, len(rows)), "total": len(rows),
+                "truncated": len(rows) > limit, "operations": rows[:limit]}
 
     def describe(self, operation_id: str):
         if operation_id in NATIVE_OPERATION_SPECS:
@@ -339,7 +358,7 @@ class AsyncAgentSamClient(AgentSamClient):
             raise SamClientError("sam_node_required", "Node.js is required for this operation.") from exc
         try:
             out, err = await asyncio.wait_for(
-                proc.communicate(json.dumps({"method":method,**kwargs}).encode()), 120,
+                proc.communicate(json.dumps({"method":method,**kwargs}).encode()), self.bridge_timeout_seconds,
             )
         except asyncio.TimeoutError as exc:
             proc.kill()
@@ -352,21 +371,28 @@ class AsyncAgentSamClient(AgentSamClient):
 
     async def discover(self, **query):
         try:
-            bridged = await self._request_async("discover", query=query)
+            bridged = await self._request_async("discover", query={**query, "limit": 1000})
             rows = list(bridged.get("operations", [])) if isinstance(bridged, dict) else []
         except SamClientError as exc:
             if exc.code not in ("sam_node_required", "sam_bridge_not_installed"):
                 raise
             rows = []
         existing = {row.get("id") for row in rows if isinstance(row, dict)}
-        rows.extend(self._native_descriptor(operation_id) for operation_id in NATIVE_OPERATION_SPECS if operation_id not in existing)
+        native_rows = [self._native_descriptor(operation_id)
+                       for operation_id in NATIVE_OPERATION_SPECS if operation_id not in existing]
         search = query.get("query")
         if isinstance(search, str) and search.strip():
             needle = search.casefold()
-            rows = [row for row in rows if needle in (str(row.get("id", "")) + " " + str(row.get("description", ""))).casefold()]
+            native_rows = [row for row in native_rows
+                           if needle in (row["id"] + " " + row["description"]).casefold()]
+        module = query.get("module")
+        if isinstance(module, str) and module:
+            native_rows = [row for row in native_rows if row["domain"] == module]
+        rows = native_rows + rows
         limit = query.get("limit", 20)
         limit = max(0, min(1000, limit if isinstance(limit, int) and not isinstance(limit, bool) else 20))
-        return {"ok": True, "count": min(limit, len(rows)), "operations": rows[:limit]}
+        return {"ok": True, "count": min(limit, len(rows)), "total": len(rows),
+                "truncated": len(rows) > limit, "operations": rows[:limit]}
 
     async def describe(self, operation_id: str):
         if operation_id in NATIVE_OPERATION_SPECS:

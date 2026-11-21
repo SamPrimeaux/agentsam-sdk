@@ -15,6 +15,19 @@ class PublicClientContractTests(unittest.TestCase):
         self.assertTrue(result['ok'])
         self.assertIn('<!doctype html>',result['data']['files']['report.html'])
         self.assertIn('# Python delivered',result['data']['files']['report.md'])
+    def test_extended_js_bridge_and_native_discovery(self):
+        operations = self.sam.discover(limit=100)
+        ids = {row["id"] for row in operations["operations"]}
+        self.assertIn("workspace.read", ids)
+        self.assertIn("arch.capabilities.status", ids)
+        self.assertIn("robotics.motion.validate", ids)
+        self.assertNotIn("cad.blender.inspect", ids)
+        self.assertNotIn("planning.astar", ids)
+        self.assertEqual(operations["total"], len(ids))
+        result = self.sam.invoke("arch.capabilities.status", {})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["schema"], "agentsam.result.v1")
+
     def test_decide_from_facts(self):
         result=self.sam.decide(state={'facts':{'choose.intent':'inspect'}},
             questions={'intent':Choose(['inspect','publish'])})

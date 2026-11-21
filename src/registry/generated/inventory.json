@@ -6,7 +6,7 @@
     "packages/catalog/generated/packages.json"
   ],
   "counts": {
-    "commands": 80,
+    "commands": 81,
     "capabilities": 93,
     "packages": 55
   },
@@ -644,6 +644,19 @@
       "topic": "runtime",
       "usage": [
         "agentsam eval"
+      ],
+      "operation": null
+    },
+    {
+      "id": "ast",
+      "aliases": [],
+      "summary": "Inspect live code AST and creative resource objects without an index",
+      "topic": "work",
+      "usage": [
+        "agentsam ast symbols NAME [--cwd PATH]",
+        "agentsam ast match --pattern PATTERN --lang python [--cwd PATH]",
+        "agentsam ast scene FILE.gltf [--cwd PATH]",
+        "agentsam ast cad FILE.json [--cwd PATH]"
       ],
       "operation": null
     },

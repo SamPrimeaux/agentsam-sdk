@@ -23,6 +23,7 @@ export const architecturalKnowledgeOps=tools.map(tool=>defineSamOperation({
   skill:skills[tool.name],
   execution:{lanes:['local','remote','sandbox'],model:'never',network:'none',sideEffects:'none'},
   risk:'read_only',
+  interop:{stdio:'pure'},
   capabilities:[tool.name],
   docs:{section:'Architectural Knowledge'},
   status:'stable',

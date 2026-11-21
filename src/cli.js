@@ -346,7 +346,10 @@ if (catalogEntry && command !== 'help' && !rest.includes('--help') &&
 }
 
 try {
-if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
+if (command === 'ast') {
+  try { await (await import('./commands/ast.js')).runAst(rest); }
+  catch (e) { reportCliError(e); process.exitCode = Number.isInteger(e?.exitCode) ? e.exitCode : 1; }
+} else if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
   // Keep the existing inspect path/world-state help authoritative instead of a
   // generic registry stub that hides its positional argument and safety boundary.
   await runInspect(rest);

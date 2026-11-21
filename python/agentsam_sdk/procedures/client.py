@@ -43,7 +43,7 @@ class ProcedureClient:
             error = result.get("error") or {}
             code = error.get("code") if isinstance(error, dict) else str(error)
             raise ProcedureClientError(code or "primetech_procedure_failed")
-        payload = result.get("data") if result.get("schema") == "sam.result.v1" else result
+        payload = result.get("data") if result.get("schema") in ("sam.result.v1", "agentsam.result.v1") else result
         if not isinstance(payload, dict) or payload.get("schema") != "inneranimalmedia.primetech.procedure-run.v1":
             raise ProcedureClientError("primetech_procedure_response_invalid")
         if payload.get("status") != "completed" or not (payload.get("verification") or {}).get("ok"):

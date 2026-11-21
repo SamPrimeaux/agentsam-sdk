@@ -66,6 +66,30 @@ History    generations, Git evidence, and Merkle checkpoints
 
 Parser technology, dimensions, vector tables, queue topology, generation internals, and storage adapters belong under advanced/debug surfaces.
 
+## Immediate live AST (no index needed)
+
+The SDK also exposes a live parser lane, independent of local or hosted
+knowledge index generations:
+
+```sh
+agentsam init . --yes
+agentsam ast symbols MyFunction
+agentsam ast match --pattern 'def $NAME($$$ARGS): $$$BODY' --lang python
+agentsam ast scene assets/model.gltf
+agentsam ast cad .agentsam/cad/projects/house/1.json
+```
+
+JS/TS symbol inspection uses the bundled TypeScript compiler; grammar-based
+patterns for other languages require an installed `ast-grep`/`sg` binary.
+glTF scene inspection returns typed object references and JSON Pointers, not
+text-only matches. The native CAD v1/v2 adapter inspects existing editable
+project entities, assemblies, units and references. This initial local capability does not replace the
+generation-scoped `agentsam_codebase_retrieve` host tool or implement IFC,
+OCCT/BRep, USD, and other native creative parsers yet.
+
+See [Live AST and creative resource graph](architecture/LIVE_AST_AND_CREATIVE_RESOURCE_GRAPH.md)
+for supported formats, provenance, and planned host boundaries.
+
 ## Local SDK implementation
 
 The current SDK contains a portable/local knowledge slice with deterministic repository intelligence, lightweight JS/TS structural parsing, bounded chunks, local SQLite, optional Postgres/pgvector, optional embeddings, generations, and Merkle evidence.

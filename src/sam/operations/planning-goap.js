@@ -27,6 +27,7 @@ export const planningGoapOp = defineSamOperation({
     provider_spend: 'never',
   },
   risk: 'read_only',
+  interop: { stdio: 'pure' },
   capabilities: ['planning.goap', 'planning.astar'],
   artifacts: ['planning.goap.plan', 'planning.receipt'],
   cli: { command: [['plan', 'brand', '--goap']] },

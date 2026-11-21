@@ -8,7 +8,7 @@ const cache = new MotionCache();
 const exec = { lanes: ['local', 'sandbox'], model: 'never', embedding: 'never', network: 'none', sideEffects: 'none', provider_spend: 'never' };
 const mk = (id, action, summary, handler) => defineSamOperation({
   id, version: 1, module: 'robotics', action, summary, purpose: summary, outcome: 'Deterministic robotics evidence; zero model calls.',
-  skill: { id: 'agentsam-app-fundamentals', help: true }, execution: exec, risk: 'read_only',
+  skill: { id: 'agentsam-app-fundamentals', help: true }, execution: exec, risk: 'read_only', interop: { stdio: 'pure' },
   capabilities: [id], artifacts: ['robotics.receipt'], status: 'stable', handler,
 });
 const needWorld = (i) => { if (!i?.world?.objects) throw new Error('invalid_input:world_required'); };

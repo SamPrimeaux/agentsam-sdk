@@ -8,7 +8,7 @@
 
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
-| `src/cli/command-catalog.js` | 80 | Registered top-level CLI command entries |
+| `src/cli/command-catalog.js` | 81 | Registered top-level CLI command entries |
 | `protocol/capabilities/manifest.json` | 93 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
@@ -24,6 +24,7 @@ Manifest status: 56 stable, 37 experimental, 17 explicitly non-deterministic. Ho
 | `agentsam api-key` | start | Create/list/rotate AgentSam API keys (aak_*) |
 | `agentsam app` | create | Bundled AgentSam apps launcher |
 | `agentsam assist` | start | Choose software architecture using deterministic questions |
+| `agentsam ast` | work | Inspect live code AST and creative resource objects without an index |
 | `agentsam autorag` | work | AutoRAG configure/probe helpers |
 | `agentsam billing` | runtime | Billing account relationships (not --billing-project) |
 | `agentsam brand` | work | Deterministic brand intelligence |

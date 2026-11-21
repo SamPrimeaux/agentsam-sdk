@@ -38,6 +38,12 @@ class ProcedureClientTests(unittest.TestCase):
             raw = client.invoke("primetech.procedure.run", {"id": "repo.asset.inventory", "version": "0.1.0", "input": {}})
             self.assertEqual(raw["operation"], "primetech.procedure.run")
 
+    def test_accepts_canonical_js_result_schema(self):
+        canonical = procedure_result()
+        canonical["schema"] = "agentsam.result.v1"
+        result = ProcedureClient(lambda _: canonical).run("repo.asset.inventory", "0.1.0", {})
+        self.assertEqual(result["id"], "repo.asset.inventory")
+
     def test_no_host_binding_fails_closed_without_node_bridge(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = AgentSamClient(cwd=tmp, node="/missing/node", bridge="/missing/stdio.mjs")

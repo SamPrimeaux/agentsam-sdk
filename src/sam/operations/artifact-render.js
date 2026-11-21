@@ -8,6 +8,7 @@ export const artifactRenderOp = defineSamOperation({
   outcome: 'Return an in-memory HTML/Markdown bundle and SHA-256 manifest; no implicit filesystem writes.',
   description: 'Deterministic SAM artifact composition; caller owns findings, evidence and storage.',
   execution: { lanes: ['local','remote','sandbox'], model:'never', embedding:'never',network:'none',sideEffects:'none',provider_spend:'never' },
-  risk: 'read_only', capabilities: ['artifact.render'], artifacts:['sam.artifact.bundle.v1'],
+  risk: 'read_only',
+  interop: { stdio: 'pure' }, capabilities: ['artifact.render'], artifacts:['sam.artifact.bundle.v1'],
   status:'stable', handler(input={}) {return renderSamArtifact(input);}
 });

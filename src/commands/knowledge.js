@@ -91,7 +91,7 @@ export async function runRepositoryInit(argv) {
     dimensions: Number(dimensions || 768),
     repositoryId: projectRepositoryId,
   });
-  show({ root, config: CONFIG_PATH, storage: config.storage.driver, next: config.storage.driver === 'postgres' ? ['agentsam index setup-store', 'agentsam index plan', 'agentsam index run'] : ['agentsam index plan', 'agentsam index run', 'agentsam search "your symbol"'], note: 'No indexing, credentials, network calls, or source-file changes during setup.' });
+  show({ root, config: CONFIG_PATH, storage: config.storage.driver, next: config.storage.driver === 'postgres' ? ['agentsam ast symbols NAME', 'agentsam index setup-store', 'agentsam index plan', 'agentsam index run'] : ['agentsam ast symbols NAME', 'agentsam index plan', 'agentsam index run', 'agentsam search "your symbol"'], note: 'No indexing, credentials, network calls, or source-file changes during setup. Live AST is immediately available with agentsam ast symbols NAME or agentsam ast match --pattern PATTERN --lang LANGUAGE.' });
 }
 
 export async function runKnowledge(argv) {
