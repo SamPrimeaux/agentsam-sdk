@@ -65,3 +65,30 @@ test('one Products route with Create and bundled Completeful discovered from man
   assert.equal(supplier?.provenance,'ecommerce-bundled-manifest');
   assert.equal(supplier?.href,'/admin/products/create?app=completeful');
 });
+
+
+test('mobile global header uses one navigation bubble and two AgentSam contextual actions', () => {
+  const host = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../frontend/agentsam/shared-nav-host.css', import.meta.url), 'utf8');
+  const page = readFileSync(new URL('../frontend/agentsam/AgentSamPage.tsx', import.meta.url), 'utf8');
+  const pageCss = readFileSync(new URL('../frontend/agentsam/shell.css', import.meta.url), 'utf8');
+  const nav = readFileSync(new URL('../../../packages/agentsam-nav/src/Surfaces.tsx', import.meta.url), 'utf8');
+
+  assert.match(host, /data-shared-nav-toggle/, 'single global navigation trigger stays owned by hosted shell');
+  assert.match(css, /body\.agentsam-shared-navigation \.console-topbar \{\s*background: var\(--c-bg\);\s*border-bottom: 0;/);
+  assert.match(css, /\[data-shared-nav-toggle\] \{[^}]*aspect-ratio: 1;/s, 'mobile leading control is a circular bubble');
+  assert.match(page, /hostLeadingSlot && !isMobile \? createPortal\(leadingControls/, 'mobile does not suppress the global host nav toggle with an empty portal');
+  assert.match(page, /const headerActions = isMobile \? <div/, 'responsive AgentSam trailing actions are explicitly separated from desktop browser toolbar');
+  assert.match(page, /className="agentsam-mobile-header-action-pill"/);
+  assert.match(page, /label="New chat" hint="New chat \(⌘N\)"/);
+  assert.match(page, /<Nav\.OverflowMenu id="agentsam-start-actions" label="More options" actions=\{mobileMoreActions\}/);
+  assert.match(page, /<Nav\.ConversationActions additionalActions=\{mobileMoreActions\}/);
+  assert.match(pageCss, /\.agentsam-mobile-header-action-pill \{[^}]*border-radius: 999px/s);
+  assert.match(nav, /additionalActions\.forEach/, 'More retains existing conversation actions while adding browser and annotation commands');
+  assert.match(page, /id: 'annotate-page'/);
+  assert.match(page, /id: 'new-browser-tab'/);
+  assert.match(page, /id: 'assistant'/);
+  assert.match(page, /id: 'pinned-resources'/);
+  assert.match(page, /\.\.\.\(pinned\.outputActions \|\| \[\]\)/);
+  assert.match(page, /\.\.\.\(pinned\.sourceActions \|\| \[\]\)/);
+});

@@ -511,6 +511,28 @@
   .agentsam-header-utilities { gap: 4px; }
 }
 
+/* The same floating, two-button mobile header in Chat and Work.
+   The mode switch is separately hosted and only shown before the first message. */
+.agentsam-mobile-header-action-pill {
+  display: inline-flex; align-items: center; gap: .125rem;
+  padding: .25rem; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--c-ink, currentColor) 12%, transparent);
+  background: color-mix(in srgb, var(--c-surface, var(--nav-surface)) 90%, transparent);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--c-ink, currentColor) 8%, transparent),
+              0 .25rem 1rem color-mix(in srgb, #000 18%, transparent);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+}
+.agentsam-mobile-header-action-pill > :is(.agentsam-header-action, .as-nav-button) {
+  display: inline-grid; place-items:center;
+  min-inline-size: 2.75rem; min-block-size: 2.75rem; aspect-ratio:1;
+  inline-size: auto; block-size: auto; padding: .5rem; border:0;
+  border-radius: 50%; background: transparent; color:var(--c-ink, var(--nav-text));
+}
+.agentsam-mobile-header-action-pill > :is(.agentsam-header-action, .as-nav-button):hover,
+.agentsam-mobile-header-action-pill > :is(.agentsam-header-action, .as-nav-button):focus-visible {
+  background: color-mix(in srgb, var(--c-ink, currentColor) 10%, transparent);
+}
+
 /* Conversation-specific compact controls: startup mode, then contextual actions. */
 .agentsam-header-action-pill {
   display: inline-flex; align-items: center; gap: 2px; padding: 4px;

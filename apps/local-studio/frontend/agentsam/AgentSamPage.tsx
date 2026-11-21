@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Compass, Maximize2, Minimize2, Plus, MessageSquarePlus } from 'lucide-react';
-import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
+import { ArrowLeft, ArrowRight, BookOpen, Bot, Compass, Files, Maximize2, Minimize2, MousePointer2, Plus, Share2, SquarePen } from 'lucide-react';
+import { Nav, useNav, type NavAction } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { IconAction } from '@/components/ui/icon-action';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -11,7 +11,6 @@ import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
 import { WorkSurfaceBar } from '@/components/workbench/work-surface-bar';
 
-import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { useActiveCompanion, useCompanionSettings } from './CompanionContext';
 import { companionStateAsset } from './companions';
 import { emitCompanionHandoff } from './companion-events';
@@ -101,6 +100,44 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     state.openSideTab('browser', { ephemeral: false });
     setWorkFocused(fullView);
   };
+  // Preserve the existing browser, annotation, pinned resources and conversation
+  // capabilities behind the mobile header's one contextual More trigger.
+  const pinned = data.pinnedSummary;
+  const pinnedItems: NavAction[] = pinned ? [
+    ...(pinned.subagents || []).map(agent => ({
+      id: 'subagent:' + agent.id, label: agent.label + (agent.status ? ' · ' + agent.status : ''),
+      icon: <Bot />, onSelect: agent.onSelect,
+    })),
+    ...(pinned.outputs || []).map((item,index) => typeof item === 'string'
+      ? { id: 'output:' + index, label: item, icon: <BookOpen /> }
+      : { id: 'output:' + item.id, label: item.label, icon: <BookOpen />, onSelect: item.onSelect }),
+    ...(pinned.sources || []).map((item,index) => typeof item === 'string'
+      ? { id: 'source:' + index, label: item, icon: <Files /> }
+      : { id: 'source:' + item.id, label: item.label, icon: <Files />, onSelect: item.onSelect }),
+    ...(pinned.outputActions || []), ...(pinned.sourceActions || []),
+  ] : [];
+  const mobileMoreActions: NavAction[] = [
+    { id: 'new-browser-tab', label: 'New browser tab', icon: <Plus />, onSelect: () => openBrowserTab(false) },
+    { id: 'new-browser-fullview', label: 'New browser tab in full view', icon: <Maximize2 />, onSelect: () => openBrowserTab(true) },
+    { id: 'toggle-work-view', label: workFocused ? 'Exit full view' : 'Enter full view',
+      icon: workFocused ? <Minimize2 /> : <Maximize2 />, onSelect: () => {
+        if (!workFocused) {
+          if (!state.sideTabs.length) state.openSideTab('browser', { ephemeral: false });
+          else state.setSideOpen(true);
+        }
+        setWorkFocused(focused => !focused);
+      } },
+    { id: 'annotate-page', label: 'Annotate page', icon: <MousePointer2 />,
+      onSelect: () => window.dispatchEvent(new Event('agentsam:annotate')) },
+    { id: 'assistant', label: 'Open AgentSam assistant', icon: <Bot />,
+      onSelect: () => window.dispatchEvent(new Event('agentsam:assistant:activate')) },
+    { id: 'files-and-sources', label: 'Files and sources', icon: <Files />,
+      onSelect: () => { state.openSideTab('files', { ephemeral: false }); state.setSideOpen(true); } },
+    ...(pinnedItems.length ? [{ id: 'pinned-resources', label: 'Sources and outputs',
+      icon: <BookOpen />, children: pinnedItems }] : []),
+    ...(data.onShare ? [{ id: 'share-chat', label: 'Share conversation', icon: <Share2 />,
+      onSelect: () => data.onShare?.() }] : []),
+  ];
 
   if (!chat) return <div className="agentsam-welcome"><h1>Conversation unavailable</h1><button type="button" className="as-nav-button" onClick={startNewChat}>New chat</button></div>;
 
@@ -122,7 +159,14 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     {!hostLeadingSlot ? <Nav.Trigger aria-label="Toggle global navigation" /> : null}
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
-  const headerActions = <div className="agentsam-header-utilities">
+  const headerActions = isMobile ? <div className="agentsam-header-utilities">
+    <div className="agentsam-mobile-header-action-pill" role="group" aria-label="Conversation and workspace actions">
+      <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
+      {empty
+        ? <Nav.OverflowMenu id="agentsam-start-actions" label="More options" actions={mobileMoreActions} />
+        : <Nav.ConversationActions additionalActions={mobileMoreActions} />}
+    </div>
+  </div> : <div className="agentsam-header-utilities">
     <div className="agentsam-topbar-browser-actions" role="group" aria-label="Browser and annotation controls">
       <DropdownMenu>
         <DropdownMenuTrigger asChild><IconAction label="New browser tab" hint="New tab or new tab in full view"><Plus size={18} /></IconAction></DropdownMenuTrigger>
@@ -141,8 +185,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       <AnnotationToggle />
     </div>
     {!empty && <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
-      {isMobile ? <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} /> : null}
-      <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><MessageSquarePlus size={20} aria-hidden="true" /></IconAction>
+      <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
       <Nav.ConversationActions />
       <Nav.ShareButton />
       <Nav.PinnedSummary />
@@ -150,7 +193,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   </div>;
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
     {hostModeSlot && empty ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
-    {hostLeadingSlot ? createPortal(leadingControls, hostLeadingSlot) : null}
+    {hostLeadingSlot && !isMobile ? createPortal(leadingControls, hostLeadingSlot) : null}
     {hostActionsSlot ? createPortal(headerActions, hostActionsSlot) : null}
     {!hostModeSlot ? <Nav.Topbar className="agentsam-conversation-topbar">
       {leadingControls}

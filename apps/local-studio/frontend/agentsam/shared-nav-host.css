@@ -81,7 +81,40 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
   /* The packaged Console's existing slot is now occupied on AgentSam routes.
      Keep the switch centered without allocating a second chat-only header. */
   body.agentsam-conversation-route .console-topbar {
-    padding-inline: 12px;
+    padding-inline: max(.75rem, env(safe-area-inset-left, 0px)) max(.75rem, env(safe-area-inset-right, 0px));
+  }
+
+  /* Floating mobile header: the global shell supplies the left nav bubble.
+     AgentSam supplies a contextual two-action pill in the trailing slot.
+     Neither control is its own toolbar or secondary navigation system. */
+  body.agentsam-shared-navigation .console-topbar {
+    background: var(--c-bg);
+    border-bottom: 0;
+    padding-inline: max(.75rem, env(safe-area-inset-left, 0px)) max(.75rem, env(safe-area-inset-right, 0px));
+  }
+  body.agentsam-shared-navigation .console-topbar .console-topbar-spacer {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle] {
+    inline-size: auto;
+    block-size: auto;
+    min-inline-size: 2.75rem;
+    min-block-size: 2.75rem;
+    aspect-ratio: 1;
+    padding: .625rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--c-surface) 90%, var(--c-bg));
+    box-shadow: inset 0 1px color-mix(in srgb, var(--c-ink) 9%, transparent),
+      0 .25rem 1rem color-mix(in srgb, #000 14%, transparent);
+  }
+  body.agentsam-shared-navigation .console-topbar-center .as-nav-mode-switch {
+    max-inline-size: 100%;
+    border-radius: 999px;
+  }
+  body.agentsam-shared-navigation .console-topbar-center .as-nav-mode-switch button {
+    padding-inline: clamp(.5rem, 2vw, 1rem);
+    border-radius: 999px;
   }
 }
 

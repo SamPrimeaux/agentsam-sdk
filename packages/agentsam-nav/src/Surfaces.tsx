@@ -200,7 +200,7 @@ export function NavShareIcon() {
 }
 
 /** One action contract for the topbar, fallback header, and independent consumers. */
-export function NavConversationActions() {
+export function NavConversationActions({ additionalActions = [] }: { additionalActions?: NavAction[] } = {}) {
   const { data } = useNav();
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -213,6 +213,7 @@ export function NavConversationActions() {
   if (data.onRenameConversation) add({ id: 'rename', label: 'Rename', icon: <Pencil />, onSelect: () => setRenaming(true) });
   if (data.onPinConversation) add({ id: 'pin', label: conversation.pinned ? 'Unpin' : 'Pin', icon: <Pin />, onSelect: () => data.onPinConversation?.(conversation.id) });
   extras.forEach((action, index) => add({ ...action, separatorBefore: action.separatorBefore || (index === 0 && actions.length > 0) }));
+  additionalActions.forEach((action, index) => add({ ...action, separatorBefore: action.separatorBefore || (index === 0 && actions.length > 0) }));
   if (data.onArchiveConversation) add({ id: 'archive', label: 'Archive', icon: <Archive />, separatorBefore: true, onSelect: () => data.onArchiveConversation?.(conversation.id) });
   else if (data.onDeleteConversation) add({ id: 'archive', label: 'Archive (save to account first)', icon: <Archive />, separatorBefore: true, disabled: true });
   if (data.onDeleteConversation) add({ id: 'delete', label: 'Delete', icon: <Trash2 />, destructive: true, separatorBefore: !data.onArchiveConversation && !actions.some(item => item.id === 'archive'), onSelect: () => setDeleting(true) });
