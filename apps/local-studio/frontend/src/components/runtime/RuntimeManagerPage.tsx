@@ -61,6 +61,7 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
       // Tauri-specific probes are not evidence that a hosted lane is unavailable.
       setNativeStatus(null);
     }
+    setMachines(await registry);
     setLoading(false);
   }
 
