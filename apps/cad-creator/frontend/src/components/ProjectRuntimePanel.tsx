@@ -103,7 +103,7 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
         </p>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {(['width','depth','height'] as const).map(key=><label key={key} className="flex min-w-0 flex-col gap-1 capitalize">{key}
-            <input aria-label={'OCCT box '+key+' in inches'} type="number" min="0.001" step="any"
+            <input ref={key==='width'?widthInputRef:undefined} aria-label={'OCCT box '+key+' in inches'} type="number" min="0.001" step="any"
               className="min-h-9 min-w-0 rounded-md border border-white/20 bg-[#0f1727] px-2 text-slate-100" value={solidDimensions[key]}
               onChange={e=>setSolidDimensions(old=>({...old,[key]:e.target.value}))}/></label>)}
         </div>
