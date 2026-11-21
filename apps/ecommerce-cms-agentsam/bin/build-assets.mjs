@@ -38,21 +38,29 @@ if (!fs.existsSync(themeScenesRuntime)) {
 // The .iamscene viewer is built from its independent package and loaded only
 // on pages that actually contain an interactive scene document.
 const iamSceneBrowserSource = path.resolve(app, "../../packages/iamscene/src/browser.ts");
-const iamSceneBrowserAsset = source("frontend/static/js/iamscene-runtime.js");
+const iamSceneBrowserMirror = source("frontend/static/js/iamscene-runtime.js");
+let iamSceneBrowserBytes;
 if (fs.existsSync(iamSceneBrowserSource)) {
   const built = await bundle({
     entryPoints: [iamSceneBrowserSource], bundle: true, platform: "browser",
     format: "iife", globalName: "IamSceneRuntimeBundle", target: "es2022",
     write: false, minify: true,
   });
-  await mkdir(path.dirname(iamSceneBrowserAsset), { recursive: true });
-  await writeFile(iamSceneBrowserAsset, built.outputFiles[0].contents);
-}
-if (!fs.existsSync(iamSceneBrowserAsset)) {
+  iamSceneBrowserBytes = built.outputFiles[0].contents;
+} else if (fs.existsSync(iamSceneBrowserMirror)) {
+  // A standalone npm installation has the committed mirror, not the SDK source.
+  iamSceneBrowserBytes = await readFile(iamSceneBrowserMirror);
+} else {
   throw new Error("Incomplete Ecommerce release: iamscene browser runtime is missing");
 }
 await copy(source("frontend/static"), path.join(dest, "admin"));
-await copy(iamSceneBrowserAsset, path.join(dest, "js/iamscene-runtime.js"));
+// Generated releases belong in dist, not the tracked frontend/static mirror.
+// Both public URLs must contain the exact same source-derived runtime bytes.
+for (const asset of ["admin/js/iamscene-runtime.js", "js/iamscene-runtime.js"]) {
+  const output = path.join(dest, asset);
+  await mkdir(path.dirname(output), { recursive: true });
+  await writeFile(output, iamSceneBrowserBytes);
+}
 // The project bootstrap mounts the same editor through this public namespace.
 await copy(source("frontend/theme-editor"),path.join(dest,"theme-editor"));
 for(const [name,input] of [["runtime.js","js/theme-editor.js"],["shared.js","js/pages-shared.js"],["editor.css","css/theme-editor.css"]])

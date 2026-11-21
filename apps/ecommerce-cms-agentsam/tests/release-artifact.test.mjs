@@ -36,6 +36,22 @@ test("full-stack source and generated assets are part of the release contract", 
   }
   assert.equal(pkg.bin["agentsam-ecommerce"], "bin/ecommerce.mjs");
 });
+test("CMS IAMScene release build never mutates its committed browser-runtime fallback", () => {
+  const mirror = path.join(app, "frontend/static/js/iamscene-runtime.js");
+  const before = fs.readFileSync(mirror);
+  // This is the real release builder, not a static assertion about a script.
+  execFileSync(process.execPath, [path.join(app, "bin/build-assets.mjs")], {
+    cwd: app, encoding: "utf8", timeout: 30000, maxBuffer: 8 * 1024 * 1024,
+  });
+  assert.deepEqual(fs.readFileSync(mirror), before,
+    "building the CMS package must not overwrite tracked frontend/static source");
+  const admin = fs.readFileSync(path.join(app, "dist/assets/admin/js/iamscene-runtime.js"));
+  const publicRuntime = fs.readFileSync(path.join(app, "dist/assets/js/iamscene-runtime.js"));
+  assert.ok(admin.byteLength > 0);
+  assert.deepEqual(admin, publicRuntime,
+    "both public IAMScene routes must publish identical browser runtime bytes");
+});
+
 test("npm release list includes backend, frontend, modules, schemas, and built assets", () => {
   const output = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
     cwd: app, encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 30000,
