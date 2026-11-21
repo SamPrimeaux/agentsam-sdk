@@ -219,6 +219,7 @@ export async function loadConnectionsRegistry(env, userId) {
   }
 
   return {
+    machines: machineRegistry,
     plugins: settingsPlugins,
     tools_verified:pluginRegistry.toolsVerified !== false,
     // Independent views of the SAME registry, never a second authority.
