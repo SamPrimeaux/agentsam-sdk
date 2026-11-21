@@ -171,7 +171,7 @@ export function CoProProjectsScreen({
         <div className="mm-prime-account-title"><span className="mm-prime-mark" aria-hidden="true">{appIconUrl?<img src={appIconUrl} alt=""/>:<Clapperboard size={21}/>}</span><div><strong>PrimeTech Account</strong><small>{onboardedName ? `Setup complete · ${onboardedName}` : "Onboarding portal"}</small></div></div>
         <div className="mm-prime-account-actions">
           <a href={onboardingUrl || "/auth/login?next=/admin/moviemode"}><UserRound size={14}/> {onboardingUrl ? (onboardedName ? "Account setup" : "Get started") : "Sign in"} <ArrowUpRight size={13}/></a>
-          <a className="is-primary" href={onboardingUrl ? "/primetech-onboarding/index.html#tour" : "/auth/signup?next=/admin/moviemode"}>{onboardingUrl ? "Explore PrimeTech" : "Join Pro"} <ArrowUpRight size={13}/></a>
+          <a className="is-primary" href={onboardingUrl ? onboardingUrl.replace(/\/?$/,"/")+"#tour" : "/auth/signup?next=/admin/moviemode"}>{onboardingUrl ? "Explore PrimeTech" : "Join Pro"} <ArrowUpRight size={13}/></a>
         </div>
       </div>
       <span className="mm-sidebar-caption">CREATIVE STUDIO</span>
@@ -292,7 +292,7 @@ export function CoProProjectsScreen({
         {active === "home" && <section className="mm-prime-home-start" aria-label="Start creating">
           <div className="mm-prime-entry-row">
             <button type="button" className="mm-prime-create-hero" onClick={onCreate}><span className="mm-prime-hero-icon"><Plus size={22}/></span><span><strong>Create project</strong><small>One creative workspace for 3D, design, generation and video</small></span><ArrowUpRight size={22}/></button>
-            {onboardingUrl&&<a className="mm-prime-tour-entry" href="/primetech-onboarding/index.html#tour"
+            {onboardingUrl&&<a className="mm-prime-tour-entry" href={onboardingUrl.replace(/\/?$/,"/")+"#tour"}
               aria-label="Explore the full PrimeTech immersive 3D tour">
               <span className="mm-prime-tour-symbol"><img src={appIconUrl||"/brand/p-prime-electric.svg"} alt=""/></span>
               <span className="mm-prime-tour-copy"><small>PRIMETECH / CREATIVE ENGINEERING</small><strong>Explore PrimeTech</strong><span>Experience the original immersive 3D tour</span></span>

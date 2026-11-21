@@ -43,6 +43,13 @@ declare global {
   }
 }
 
+/** The fetch bridge only exists on a developer's own machine; a hosted origin has no local runtime to reach. */
+function hasNoLocalRuntime(): boolean {
+  if (typeof window === "undefined" || isTauri()) return false;
+  const host = window.location.hostname;
+  return !(host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host.endsWith(".localhost"));
+}
+
 function isTauri(): boolean {
   return Boolean(
     typeof window !== "undefined" &&
@@ -91,6 +98,7 @@ async function invokeBridge(payload: BridgeRequest): Promise<Record<string, unkn
 export function createLocalStudioLocalHost(options: LocalStudioLocalHostOptions = {}): LocalDatabaseHost {
   return {
     async status(): Promise<LocalRuntimeStatus> {
+      if (hasNoLocalRuntime()) return "attachable";
       try {
         const body = await invokeBridge(await withResolvedCwd({ op: "status" }, options));
         const status = String(body.status || "");
@@ -103,6 +111,7 @@ export function createLocalStudioLocalHost(options: LocalStudioLocalHostOptions 
     },
 
     async list(): Promise<LocalDatabaseRef[]> {
+      if (hasNoLocalRuntime()) return [];
       try {
         const body = await invokeBridge(await withResolvedCwd({ op: "list" }, options));
         return Array.isArray(body.refs) ? (body.refs as LocalDatabaseRef[]) : [];
