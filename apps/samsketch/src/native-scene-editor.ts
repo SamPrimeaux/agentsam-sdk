@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createThreeViewport } from '@inneranimalmedia/agentsam-3d-viewer';
 import { SceneEditor } from '../../../packages/iamscene/src/editor';
 import type { SceneDocument, SceneNode, SceneTransform } from '../../../packages/iamscene/src/types';
@@ -86,6 +87,7 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
   gltfLoader.setDRACOLoader(dracoLoader);
+  gltfLoader.setMeshoptDecoder(MeshoptDecoder);
   const ambient = new THREE.AmbientLight('#ffffff',Math.max(0.5,editor.document.environment.ambientIntensity));
   viewport.scene.add(ambient);
   const keyLight = new THREE.DirectionalLight('#ffffff',2.1);keyLight.position.set(7,15,10);viewport.scene.add(keyLight);
@@ -98,7 +100,7 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
   const resizeObserver = new ResizeObserver(()=>viewport.resize());
   resizeObserver.observe(root);
   function notify(message:string){status.textContent=message;}
-  function updateEmptyState(){emptyState.hidden=editor.document.assets.some(asset=>asset.mediaType==='model/gltf-binary'&&asset.role==='presentation');}
+  function updateEmptyState(){emptyState.hidden=editor.document.assets.some(asset=>asset.mediaType==='model/gltf-binary');}
   function lookup(id:string|null){return editor.document.scene.nodes.find(node=>node.id===id)||null;}
   function updateNode(id:string,patch:Partial<Omit<SceneNode,'id'>>){
     editor.updateNode(id,patch);
@@ -231,7 +233,8 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
     model.add(root);loadedAssets.set(asset.id,root);
   }
   async function reconcileAssets(document: SceneDocument){
-    const presentation=document.assets.filter(asset=>asset.mediaType==='model/gltf-binary'&&asset.role==='presentation');
+    const preferred=document.assets.filter(asset=>asset.mediaType==='model/gltf-binary'&&asset.role==='presentation');
+    const presentation=preferred.length?preferred:document.assets.filter(asset=>asset.mediaType==='model/gltf-binary');
     const wanted=new Set(presentation.map(asset=>asset.id));
     for(const [id,object] of loadedAssets)object.visible=wanted.has(id);
     for(const asset of presentation){
