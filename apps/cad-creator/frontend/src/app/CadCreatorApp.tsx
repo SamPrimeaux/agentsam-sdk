@@ -247,6 +247,7 @@ export function CadCreatorApp({
   const [leftPanelTab,setLeftPanelTab]=useState<'objects'|'assets'|'libraries'>('objects');
   // Hosted mode only: name of the unsaved template copy being edited. Null means no copy is open.
   const [templateCopyName, setTemplateCopyName] = useState<string | null>(null);
+  const solidWidthInput = useRef<HTMLInputElement>(null);
   const sketchDialog = useRef<HTMLDialogElement>(null);
   const [sketchOpen, setSketchOpen] = useState(false);
   useEffect(() => {
