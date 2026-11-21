@@ -795,7 +795,10 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
                 <strong>{error.kind === "account" ? "Choose an account" : error.kind === "session" ? "Sign in to Studio" : "Couldn’t load media"}</strong>
                 <p>{error.message}</p>
                 {error.kind === "session" ? <a className="agentsam-media-btn" href="/auth/login">Sign in</a>
-                  : <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Try again</button>}
+                  : <div className="agentsam-media-connect-actions">
+                    <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Try again</button>
+                    <a className="agentsam-media-btn" href="/admin/settings/storage">Open storage settings</a>
+                  </div>}
               </div>
             ) : source === "local" && !localDirectory ? (
               <div className="agentsam-media-state">
