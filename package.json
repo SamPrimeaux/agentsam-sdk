@@ -414,7 +414,8 @@
     "verify:run": "npm run brand:check && npm run release:train:check && npm run errors:check && npm run proto:check && npm run verify:scene-formats && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
     "verify:release:run": "npm run verify:widgets:portable && npm run verify && npm run verify:packages:public && npm run verify:knowledge-package && npm run test:python && npm run security:release",
     "prepublishOnly:run": "node scripts/prepublish-gate.mjs",
-    "verify:scene-formats": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-format-contract-alignment.test.mjs && npm --prefix packages/iamscene test"
+    "verify:scene-formats": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-format-contract-alignment.test.mjs && npm --prefix packages/iamscene test",
+    "verify:scene-v2": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-v2-authoring-alignment.test.mjs && npm --prefix packages/agentsam-contracts test && npm --prefix packages/iamscene test"
   },
   "engines": {
     "node": ">=22"

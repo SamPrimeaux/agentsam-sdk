@@ -9,12 +9,12 @@
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
 | `src/cli/command-catalog.js` | 80 | Registered top-level CLI command entries |
-| `protocol/capabilities/manifest.json` | 88 | Capability and agent-primitive declarations |
+| `protocol/capabilities/manifest.json` | 92 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
 | `packages/catalog/generated/packages.json` | 55 | Package inventory rows (not npm publication proof) |
 
-Manifest status: 56 stable, 32 experimental, 16 explicitly non-deterministic. Host binding and approval remain separate.
+Manifest status: 56 stable, 36 experimental, 16 explicitly non-deterministic. Host binding and approval remain separate.
 
 ## CLI command authority
 
@@ -140,6 +140,10 @@ Manifest status: 56 stable, 32 experimental, 16 explicitly non-deterministic. Ho
 | `iamscene.format.reference` | scene-interchange | capability | experimental | yes | `none` | — |
 | `iamscene.format.round-trip` | scene-interchange | capability | experimental | yes | `none` | — |
 | `iamscene.native.export` | scene-interchange | capability | experimental | no | `local_write` | — |
+| `iamscene.v2.create` | scene-authoring | capability | experimental | yes | `none` | — |
+| `iamscene.v2.edit` | scene-authoring | capability | experimental | yes | `none` | — |
+| `iamscene.v2.migrate` | scene-authoring | capability | experimental | yes | `none` | — |
+| `iamscene.v2.validate` | scene-authoring | capability | experimental | yes | `none` | — |
 | `identity.init` | app | capability | stable | yes | `filesystem` | `agentsam identity init` |
 | `knowledge.index` | repository | capability | stable | yes | `local-state` | `agentsam index run` |
 | `knowledge.search` | repository | capability | stable | yes | `none` | `agentsam search "query"` |
@@ -277,7 +281,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `copro-templates` | `@inneranimalmedia/copro-templates` | needs-review | Structured CoPro creative template contracts for canvas, slots, track skeletons, captions, transitions, audio cues… |
 | `copro-timeline` | `@inneranimalmedia/copro-timeline` | needs-review | Headless CoPro timeline projection, ordering, duration, and viewport math. |
 | `copro-ui` | `@inneranimalmedia/copro-ui` | needs-review | Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, … |
-| `iamscene` | `@inneranimalmedia/iamscene` | needs-review | Native editable IAMScene authoring plus separately reusable IAMGeometry assets, glTF/GLB and triangle-mesh interch… |
+| `iamscene` | `@inneranimalmedia/iamscene` | needs-review | Portable scene v1 runtime and verified file interchange; experimental IAMScene v2 multi-scene authoring model, ind… |
 | `primetech-procedures` | `@inneranimalmedia/primetech-procedures` | classified | Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset in… |
 | `theme-contract` | `@inneranimalmedia/theme-contract` | needs-review | Portable provider-neutral theme preview registry and composition contracts |
 | `theme-plain-jane` | `@inneranimalmedia/theme-plain-jane` | needs-review | Read-only editorial journal and photography CMS starter with externally editable manifest. |

@@ -14,6 +14,12 @@ conventional client variable for that machinery, never a human identity. Prefer 
 
 ## Source-format contract alignment
 
+When handling IAMScene projects, explicitly distinguish the stable v1
+document/runtime from the experimental v2 multi-scene authoring contract.
+V2 serialization and SDK creation commands are not proof that a renderer,
+physics engine, event executor, or GUI inspector is installed. See
+`docs/architecture/PRIMETECH_SCENE_V2_READINESS.md`.
+
 For scene, CAD, BIM, animation and media tasks: identify bytes using the
 canonical `contracts/source-types.v2.json` catalog, then query the
 **installed format adapter** for import, export, live-reference and

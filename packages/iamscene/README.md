@@ -278,3 +278,41 @@ from `packages/iamscene`. The native test is skipped only when no test engine
 was supplied; browser/portable tests never require OCCT. Each new importer and
 exporter must add a real fixture and a loss-aware round-trip or format-specific
 export check before its capability is advertised.
+
+## IAMScene v2 authoring (experimental; v1 runtime unchanged)
+
+`formatVersion: 2.0.0` is a new **scene file schema version**, independent
+of the npm package and root SDK versions. It does not silently replace
+`1.0.0`. A v2 document can hold multiple independently identified scenes,
+objects, geometry, material assets, frames, cameras, skies, fog, lights,
+shadows, physics settings, effects, pipelines, states, events, variables and
+data sources. The schema lives at `schema/iamscene.v2.schema.json`, exported
+as `@inneranimalmedia/iamscene/schema-v2`.
+
+The v2 API exposes `createSceneV2Document`, `validateSceneV2Document`,
+`parseSceneV2Document`, `serializeSceneV2Document`,
+`migrateSceneV1ToV2`, `createSceneV2Editor`, and
+`IAMSCENE_V2_CREATE_OBJECTS`. V2 editor transactions reject broken
+cross-references before commit; objects and scene systems have independent
+IDs and undo/redo histories. Migration is forward-only; an original v1 file
+is never overwritten by the `migrate-v2` command.
+
+```sh
+iamscene init draft.iamscene.json --format-version 2 --name "Draft Scene"
+iamscene validate draft.iamscene.json
+iamscene inspect draft.iamscene.json
+iamscene migrate-v2 existing.iamscene.json --out migrated.iamscene.json
+```
+
+**Runtime boundary:** The existing Three.js runtime and OCCT integrations
+currently implement supported **v1** operations. Do not pass a v2 document to
+`createSceneRuntime` or describe v2 particle/physics/interaction fields as
+working simulations merely because the schema accepts them. A v2 object
+adapter must explicitly provide verified create/inspect/render/serialize
+handlers. The root SDK declares these authoring APIs as `api_only`, not
+automatically authorized agent tools. The requested Spline inventory is
+tracked in the repository's [PrimeTech v2 readiness spec](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/docs/architecture/PRIMETECH_SCENE_V2_READINESS.md).
+
+The public v2 `$id` is reserved for versioned schema publication; **do not
+claim the R2 URL is live** until published and read back. The v1 schema and
+public consumers remain unchanged.

@@ -50,14 +50,9 @@ PACKAGE_SPECS = [
     ("agentsam-queue-control", "@inneranimalmedia/agentsam-queue-control", "packages/agentsam-queue-control/package.json", "npm", "agentsam.queue-control", "1.0.0", "v1", [
         ("packages/agentsam-queue-control/schemas/job-envelope.schema.json", "job-envelope.v1.schema.json"),
     ]),
-    ("theme-heuristic", "@inneranimalmedia/theme-heuristic", "packages/heuristic-theme/package.json", "npm", "theme.heuristic", "1.0.0", "v1", [
-        ("packages/heuristic-theme/theme.schema.json", "theme.schema.json"),
-        ("packages/heuristic-theme/contracts/block.schema.json", "contracts/block.schema.json"),
-        ("packages/heuristic-theme/contracts/page.schema.json", "contracts/page.schema.json"),
-        ("packages/heuristic-theme/contracts/preset.schema.json", "contracts/preset.schema.json"),
-        ("packages/heuristic-theme/contracts/section.schema.json", "contracts/section.schema.json"),
-        ("packages/heuristic-theme/tokens.schema.json", "tokens.schema.json"),
-    ]),
+    # The old theme-heuristic package is no longer in this repository. Keep its
+    # existing R2 objects untouched; do not synthesize missing schema sources or
+    # represent it as an active source-backed package in new registry snapshots.
     ("theme-contract", "@inneranimalmedia/theme-contract", "packages/theme-contract/package.json", "npm", "theme.contract", "1.0.0", "v1", [
         ("packages/theme-contract/schemas/template-contract.v1.schema.json", "template-contract.v1.schema.json"),
         ("packages/theme-contract/schemas/theme-package-contract.v1.schema.json", "theme-package-contract.v1.schema.json"),
@@ -75,6 +70,13 @@ PACKAGE_SPECS = [
         ("packages/iamscene/schema/iamscene.v1.schema.json", "scene.canonical.schema.json"),
         ("packages/iamscene/schema/iamgeometry.v1.schema.json", "iamgeometry.schema.json"),
     ]),
+    # Distinct versioned schema packs, but the canonical URLs use their owning package prefix.
+    ("iamscene-v2", "@inneranimalmedia/iamscene", "packages/iamscene/package.json", "npm", "iamscene.v2", "2.0.0", "v2", [
+        ("packages/iamscene/schema/iamscene.v2.schema.json", "scene.canonical.schema.json"),
+    ], "iamscene"),
+    ("agentsam-contracts-scene-v2", "@inneranimalmedia/agentsam-contracts", "packages/agentsam-contracts/package.json", "npm", "agentsam.contracts.scene-document.v2", "2.0.0", "v2", [
+        ("packages/agentsam-contracts/schemas/scene-document.v2.schema.json", "scene-document.schema.json"),
+    ], "agentsam-contracts"),
 ]
 
 SPECIAL_PACKS = [
@@ -303,20 +305,22 @@ def build(account_id: str) -> tuple[dict, dict[str, tuple[pathlib.Path, str]], l
         raise ValueError(f"Expected 81 unique shared protocol schemas, found {len(protocol_modules)}")
 
     root_version = load_json(ROOT / "package.json").get("version", "unknown")
-    specs = [("agentsam-protocol", "@inneranimalmedia/agentsam-protocol", "protocol", "agentsam.protocol", "1.0.0", "v1", "protocol/", protocol_modules, root_version)]
+    specs = [("agentsam-protocol", "@inneranimalmedia/agentsam-protocol", "protocol", "agentsam.protocol", "1.0.0", "v1", "protocol/", protocol_modules, root_version, "agentsam-protocol")]
 
-    for slug, expected_name, package_json, kind, pack_id, pack_version, version_path, files in PACKAGE_SPECS:
+    for spec in PACKAGE_SPECS:
+        slug, expected_name, package_json, kind, pack_id, pack_version, version_path, files, *alias = spec
+        publication_slug = alias[0] if alias else slug
         package_meta = load_json(ROOT / package_json)
         package_name = package_meta.get("name", expected_name)
         package_version = package_meta.get("version", "unknown")
         modules = []
         for source_rel, filename in files:
-            key = f"packages/{slug}/{version_path}/{filename}"
+            key = f"packages/{publication_slug}/{version_path}/{filename}"
             add_module(objects, modules, source_rel, key, filename)
-        specs.append((slug, package_name, kind, pack_id, pack_version, version_path, package_json.rsplit("/", 1)[0], modules, package_version))
+        specs.append((slug, package_name, kind, pack_id, pack_version, version_path, package_json.rsplit("/", 1)[0], modules, package_version, publication_slug))
 
-    for slug, package_name, kind, pack_id, pack_version, version_path, source_path, modules, package_version in specs:
-        manifest_key = f"packages/{slug}/{version_path}/schema-pack.manifest.json"
+    for slug, package_name, kind, pack_id, pack_version, version_path, source_path, modules, package_version, publication_slug in specs:
+        manifest_key = f"packages/{publication_slug}/{version_path}/schema-pack.manifest.json"
         manifest = {
             "$schema": GENERIC_PACK_SCHEMA_URI,
             "schema": "agentsam.schema-pack.v1",
@@ -339,7 +343,7 @@ def build(account_id: str) -> tuple[dict, dict[str, tuple[pathlib.Path, str]], l
             "version": package_version,
             "kind": kind,
             "manifestUri": f"{BASE}/{manifest_key}",
-            "objectPrefix": f"packages/{slug}/{version_path}/",
+            "objectPrefix": f"packages/{publication_slug}/{version_path}/",
             "schemaPackVersion": pack_version,
             "schemaCount": len(modules),
             "manifestSha256": sha(manifest_bytes),

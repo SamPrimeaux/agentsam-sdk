@@ -106,7 +106,12 @@
       "types": "./dist/scene-format.d.ts",
       "import": "./dist/scene-format.js"
     },
-    "./scene-format/schema": "./schemas/scene-format.v1.schema.json"
+    "./scene-format/schema": "./schemas/scene-format.v1.schema.json",
+    "./scene-document": {
+      "types": "./dist/scene-document.d.ts",
+      "import": "./dist/scene-document.js"
+    },
+    "./scene-document/schema": "./schemas/scene-document.v2.schema.json"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

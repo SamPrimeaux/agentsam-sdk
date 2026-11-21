@@ -18,7 +18,7 @@
     "web",
     "headless"
   ],
-  "purpose": "Native editable IAMScene authoring plus separately reusable IAMGeometry assets, glTF/GLB and triangle-mesh interchange, four independent format operations, optional verified OCCT exports, scene animation and browser presentation. Not a universal format converter or another CAD kernel.",
+  "purpose": "Portable scene v1 runtime and verified file interchange; experimental IAMScene v2 multi-scene authoring model, independent scene-system records, and migration, with renderer support explicitly separate.",
   "install": [
     {
       "type": "npm",
@@ -49,7 +49,9 @@
     "iamscene formats",
     "iamscene verify <file>",
     "iamscene convert <file> --out <scene.iamscene.json>",
-    "iamscene export <scene.iamscene.json> --out <file.step|file.brep|file.ifc> --binary <occt-path>"
+    "iamscene export <scene.iamscene.json> --out <file.step|file.brep|file.ifc> --binary <occt-path>",
+    "iamscene init <file> --format-version 2",
+    "iamscene migrate-v2 <old.iamscene.json> --out <new.iamscene.json>"
   ],
   "topics": [
     "3d",
@@ -61,10 +63,15 @@
     "ifc4",
     "interchange",
     "mesh-import",
+    "migration",
+    "multi-scene",
     "native-export",
+    "object-catalog",
     "occt",
     "round-trip",
     "scene-graph",
+    "scene-systems",
+    "scene-v2",
     "source-integrity",
     "threejs",
     "visualization"
@@ -81,10 +88,13 @@
       "packages/iamscene/test/format-registry.test.mjs",
       "packages/iamscene/test/geometry.test.mjs",
       "packages/iamscene/test/native-format-adapters.test.mjs",
-      "packages/iamscene/test/occt.test.mjs"
+      "packages/iamscene/test/occt.test.mjs",
+      "packages/iamscene/test/v2-authoring.test.mjs"
     ],
     "geometry_schema": "packages/iamscene/schema/iamgeometry.v1.schema.json",
-    "format_registry": "packages/iamscene/src/format-registry.ts"
+    "format_registry": "packages/iamscene/src/format-registry.ts",
+    "v2_schema": "packages/iamscene/schema/iamscene.v2.schema.json",
+    "v2_source": "packages/iamscene/src/v2.ts"
   },
   "format_registry": {
     "contract": "agentsam.scene-format.v1",
@@ -99,5 +109,21 @@
     ],
     "support": "runtime-adapter-detection-not-file-extension",
     "identity_authority": "contracts/source-types.v2.json"
-  }
+  },
+  "scene_document_versions": [
+    {
+      "formatVersion": "1.0.0",
+      "schema": "packages/iamscene/schema/iamscene.v1.schema.json",
+      "authoring": "implemented",
+      "renderer": "implemented-for-supported-v1-features",
+      "status": "stable"
+    },
+    {
+      "formatVersion": "2.0.0",
+      "schema": "packages/iamscene/schema/iamscene.v2.schema.json",
+      "authoring": "experimental",
+      "renderer": "unavailable",
+      "status": "experimental"
+    }
+  ]
 }

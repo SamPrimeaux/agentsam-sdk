@@ -563,11 +563,14 @@
         "directory": "packages/agentsam-contracts",
         "purpose_source": "package-manifest-description",
         "readme": "packages/agentsam-contracts/README.md",
+        "scene_document_contract": "packages/agentsam-contracts/src/scene-document.ts",
+        "scene_document_schema": "packages/agentsam-contracts/schemas/scene-document.v2.schema.json",
         "scene_format_contract": "packages/agentsam-contracts/src/scene-format.ts",
         "scene_format_schema": "packages/agentsam-contracts/schemas/scene-format.v1.schema.json",
         "tests": [
-          "packages/agentsam-contracts/test/scene-format.test.mjs",
-          "packages/agentsam-contracts/test/design-workspace.test.mjs"
+          "packages/agentsam-contracts/test/design-workspace.test.mjs",
+          "packages/agentsam-contracts/test/scene-document.test.mjs",
+          "packages/agentsam-contracts/test/scene-format.test.mjs"
         ]
       },
       "execution_domains": [
@@ -601,15 +604,18 @@
       "schema": "agentsam.package.v1",
       "status": "unknown",
       "topics": [
-        "contracts",
-        "resource-scope",
-        "design-workspace",
-        "scene-format",
-        "interchange",
-        "tools",
         "authority",
+        "contracts",
+        "design-workspace",
+        "events",
+        "interchange",
         "providers",
-        "events"
+        "resource-scope",
+        "runtime-capability",
+        "scene-document",
+        "scene-format",
+        "scene-v2",
+        "tools"
       ],
       "use_when": [
         "Type-checking cross-application scene-format operation availability and loss-aware round-trip receipts without importing a scene engine.",
@@ -2253,7 +2259,9 @@
         "iamscene formats",
         "iamscene verify <file>",
         "iamscene convert <file> --out <scene.iamscene.json>",
-        "iamscene export <scene.iamscene.json> --out <file.step|file.brep|file.ifc> --binary <occt-path>"
+        "iamscene export <scene.iamscene.json> --out <file.step|file.brep|file.ifc> --binary <occt-path>",
+        "iamscene init <file> --format-version 2",
+        "iamscene migrate-v2 <old.iamscene.json> --out <new.iamscene.json>"
       ],
       "evidence": {
         "directory": "packages/iamscene",
@@ -2269,8 +2277,11 @@
           "packages/iamscene/test/format-registry.test.mjs",
           "packages/iamscene/test/geometry.test.mjs",
           "packages/iamscene/test/native-format-adapters.test.mjs",
-          "packages/iamscene/test/occt.test.mjs"
-        ]
+          "packages/iamscene/test/occt.test.mjs",
+          "packages/iamscene/test/v2-authoring.test.mjs"
+        ],
+        "v2_schema": "packages/iamscene/schema/iamscene.v2.schema.json",
+        "v2_source": "packages/iamscene/src/v2.ts"
       },
       "execution_domains": [
         "browser",
@@ -2307,12 +2318,28 @@
         "json"
       ],
       "name": "@inneranimalmedia/iamscene",
-      "purpose": "Native editable IAMScene authoring plus separately reusable IAMGeometry assets, glTF/GLB and triangle-mesh interchange, four independent format operations, optional verified OCCT exports, scene animation and browser presentation. Not a universal format converter or another CAD kernel.",
+      "purpose": "Portable scene v1 runtime and verified file interchange; experimental IAMScene v2 multi-scene authoring model, independent scene-system records, and migration, with renderer support explicitly separate.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/iamscene",
         "public_claim": true
       },
+      "scene_document_versions": [
+        {
+          "authoring": "implemented",
+          "formatVersion": "1.0.0",
+          "renderer": "implemented-for-supported-v1-features",
+          "schema": "packages/iamscene/schema/iamscene.v1.schema.json",
+          "status": "stable"
+        },
+        {
+          "authoring": "experimental",
+          "formatVersion": "2.0.0",
+          "renderer": "unavailable",
+          "schema": "packages/iamscene/schema/iamscene.v2.schema.json",
+          "status": "experimental"
+        }
+      ],
       "schema": "agentsam.package.v1",
       "status": "in-development",
       "topics": [
@@ -2325,10 +2352,15 @@
         "ifc4",
         "interchange",
         "mesh-import",
+        "migration",
+        "multi-scene",
         "native-export",
+        "object-catalog",
         "occt",
         "round-trip",
         "scene-graph",
+        "scene-systems",
+        "scene-v2",
         "source-integrity",
         "threejs",
         "visualization"
