@@ -189,17 +189,28 @@ export function toLibraryError(status: number, body: Record<string, unknown> | n
   const b = body || {};
   const connectUrl = mediaConnectUrl(String(b.connect_url || b.reconnect_url || "") || null);
   const code = String(b.error || "");
+  // Provider auth text must never surface as a raw error: treat it as a storage reconnect.
+  if (/authentication error|invalid.*token|unauthori[sz]ed.*cloudflare/i.test(code) && status !== 409) {
+    return { kind: "reconnect", message: "Storage needs authorization again. Your saved media remains unchanged.", connectUrl };
+  }
   // An expired Studio session is not a revoked Cloudflare OAuth grant.
   // Avoid sending an authenticated account through OAuth for every 401.
   if (code === "authentication_required" || code === "unauthorized" || (status === 401 && !code)) {
-    return { kind: "session", message: "Your Studio session needs sign-in. Your Cloudflare authorization is unchanged." };
+    return { kind: "session", message: "Your Studio session needs sign-in. Your storage connection is unchanged." };
+  }
+  if (code === "cloudflare_scope_missing") {
+    const what = b.source === "stream" ? "Video" : b.source === "r2" ? "File storage" : "Photos";
+    return { kind: "reconnect", message: what + " need one more permission on your storage connection. Your saved media remains unchanged.", connectUrl };
+  }
+  if (code === "cloudflare_permission_denied") {
+    return { kind: "reconnect", message: "Storage did not accept this connection. Reconnect to restore access.", connectUrl };
   }
   if (code === "cloudflare_reconnect_required" || code === "cloudflare_authorization_required"
       || code === "cloudflare_credential_required" || code === "cloudflare_token_required") {
-    return { kind: "reconnect", message: "Cloudflare needs authorization again. Your saved media remains unchanged.", connectUrl };
+    return { kind: "reconnect", message: "Storage needs authorization again. Your saved media remains unchanged.", connectUrl };
   }
   if (status === 409 || code === "cloudflare_account_selection_required") {
-    return { kind: "account", message: "Choose which Cloudflare account to browse." };
+    return { kind: "account", message: "Choose which storage account to browse." };
   }
   return { kind: "generic", message: String(b.message || code || `Request failed (${status})`), connectUrl };
 }

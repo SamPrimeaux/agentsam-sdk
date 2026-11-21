@@ -769,6 +769,22 @@ function PluginCustomizeView({
     const key = new URLSearchParams(window.location.search).get("plugin");
     return key && /^[a-z0-9][a-z0-9_.-]{1,100}$/i.test(key) ? key : null;
   });
+  // Keep ?plugin=<key> in step with the open plugin so every plugin has a shareable URL and Back works.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if ((url.searchParams.get("plugin") || null) === selectedKey) return;
+    if (selectedKey) url.searchParams.set("plugin", selectedKey); else url.searchParams.delete("plugin");
+    window.history.pushState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, [selectedKey]);
+  useEffect(() => {
+    const onPop = () => {
+      const key = new URLSearchParams(window.location.search).get("plugin");
+      setSelectedKey(key && /^[a-z0-9][a-z0-9_.-]{1,100}$/i.test(key) ? key : null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [directoryTab, setDirectoryTab] = useState<"public" | "personal">("public");

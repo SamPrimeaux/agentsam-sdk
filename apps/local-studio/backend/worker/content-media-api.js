@@ -202,7 +202,7 @@ async function resolveOauthMediaClient(env, ownerId, url, capabilityId = "cloudf
   } catch (err) {
     return {
       ok: false,
-      error: err?.code || err?.message || "cloudflare_oauth_required",
+      error: KNOWN_MEDIA_ERRORS.has(err?.code) ? err.code : "cloudflare_reconnect_required",
       status: err?.code === "cloudflare_account_selection_required" ? 409
         : err?.code === "cloudflare_reconnect_required" ? 401
           : 401,
@@ -211,6 +211,12 @@ async function resolveOauthMediaClient(env, ownerId, url, capabilityId = "cloudf
     };
   }
 }
+
+const KNOWN_MEDIA_ERRORS = new Set([
+  "cloudflare_reconnect_required", "cloudflare_authorization_required", "cloudflare_credential_required",
+  "cloudflare_token_required", "cloudflare_account_selection_required", "cloudflare_oauth_required",
+  "cloudflare_scope_missing",
+]);
 
 function parseR2AssetId(id) {
   const raw = String(id || "");
@@ -232,6 +238,21 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
   const resolved = await resolveOauthMediaClient(env, ownerId, url, capabilityId);
   if (!resolved.ok) return resolved;
   const client = resolved.client;
+  // Ask Cloudflare only for products the grant actually covers; otherwise say exactly what is missing.
+  const { getCloudflareCapability } = await import("../../../../packages/connectors/cfoa/src/capabilities.js");
+  const needed = getCloudflareCapability(capabilityId)?.oauthScopes || [];
+  const granted = Array.isArray(client.grantedScopes) ? client.grantedScopes : [];
+  const missing = granted.length ? needed.filter((scope) => !granted.includes(scope)) : [];
+  if (missing.length) {
+    return {
+      ok: false,
+      error: "cloudflare_scope_missing",
+      status: 403,
+      missing_scopes: missing,
+      source,
+      connect_url: "/api/connections/cloudflare/start?capabilities=" + encodeURIComponent(capabilityId) + "&return_to=/media",
+    };
+  }
 
   const markOauth = (shape, extra = {}) => {
     shape.capabilities = { ...shape.capabilities, provider_api: "cloudflare_oauth", ...extra.capabilities };
@@ -501,12 +522,18 @@ async function listMedia(env, request, url, principal = null) {
       const oauthSource = source === "all"
         ? (kind === "video" || folder === "videos" ? "stream" : source === "r2" ? "r2" : "cf_images")
         : source;
-      const oauth = await listViaCloudflareOauth(env, principal.id, url, {
+      const oauthArgs = {
         source: oauthSource === "drive" ? "cf_images" : (oauthSource === "all" ? "cf_images" : oauthSource),
         page,
         pageSize,
         query,
-      });
+      };
+      let oauth = await listViaCloudflareOauth(env, principal.id, url, oauthArgs);
+      // Default (all-sources) view: if the grant lacks Images, show the storage it does cover instead of an error.
+      if (!oauth.ok && oauth.error === "cloudflare_scope_missing" && source === "all" && oauthArgs.source === "cf_images") {
+        const fallback = await listViaCloudflareOauth(env, principal.id, url, { ...oauthArgs, source: "r2" });
+        if (fallback.ok) oauth = fallback;
+      }
       if (oauth.ok && oauth.shape) {
         if (recovery) oauth.shape.recovery = recovery;
         return json(oauth.shape);
@@ -516,6 +543,8 @@ async function listMedia(env, request, url, principal = null) {
         error: oauth.error || "cloudflare_media_list_failed",
         message: "Connect or re-authorize Cloudflare OAuth to browse your Images, Stream, and R2 media. InnerAnimalMedia is optional and only used when provider=inneranimalmedia.",
         accounts: oauth.accounts,
+        missing_scopes: oauth.missing_scopes,
+        source: oauth.source,
         connect_url: oauth.connect_url || "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
       }, oauth.status || 502);
     } catch (err) {
