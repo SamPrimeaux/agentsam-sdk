@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Container, RefreshCw, ShieldCheck, HardDrive, Server, ExternalLink } from 'lucide-react';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
-import { getAgentsamdToken, setAgentsamdToken, probeAgentsamd } from '@/lib/work/agentsamd-client';
+import { getAgentsamdToken, setAgentsamdToken, probeAgentsamd, requestAgentsamdPairing } from '@/lib/work/agentsamd-client';
 import { listLocalStudioConnections, installLocalStudioPublicPlugin, updateLocalStudioPlugin } from '@/lib/connections/client';
 import {
   dockerBridge, dockerEngineHealth, listDockerContexts, listDockerContainers,
@@ -38,9 +38,19 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
     setHost(getAgentsamdToken()?'ready':'needs_pairing');
   },[desktop]);
   useEffect(()=>{void detectHost();},[detectHost]);
+  const [approving,setApproving]=useState(false);
+  const [needsToken,setNeedsToken]=useState(false);
   const pair=()=>{
     if(!setAgentsamdToken(pairToken)){setError('That is not a pairing token. It is 64 characters.');return;}
     setPairToken('');setError('');void detectHost();
+  };
+  const connectComputer=async()=>{
+    setApproving(true);setError('');
+    const result=await requestAgentsamdPairing();
+    setApproving(false);
+    if(result.ok){void detectHost();return;}
+    setError(result.message);
+    if(result.reason==='unavailable')setNeedsToken(true);
   };
   const refreshInstall=useCallback(async()=>{
     setInstallation('checking');
@@ -141,13 +151,17 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
         <a href="/admin/settings/network" className="inline-flex items-center gap-1 text-xs underline underline-offset-4">Manage device connection <ExternalLink size={12}/></a>
       </div></>:null}
     {host==='needs_pairing'?<>
-      <p className="text-muted-foreground">Connect this browser to your computer to use your Docker engines. Paste the pairing token from your local runtime.</p>
-      <div className="flex gap-2">
+      <p className="text-muted-foreground">Connect this browser to your computer to use your Docker engines. A prompt will appear on your computer; choose Allow.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={()=>void connectComputer()} disabled={approving} className="rounded-md border border-border px-3 py-2 text-xs hover:bg-muted disabled:opacity-50">{approving?'Waiting for approval on your computer…':'Connect this computer'}</button>
+        {!needsToken&&<button type="button" onClick={()=>setNeedsToken(true)} className="text-xs underline underline-offset-4">Use a pairing token instead</button>}
+      </div>
+      {needsToken&&<div className="flex gap-2">
         <input type="password" autoComplete="off" spellCheck={false} value={pairToken} onChange={e=>setPairToken(e.target.value)}
           onKeyDown={e=>{if(e.key==='Enter')pair();}} aria-label="Pairing token" placeholder="Pairing token"
           className="min-h-10 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm text-foreground"/>
         <button type="button" onClick={pair} disabled={!pairToken.trim()} className="rounded-md border border-border px-3 py-2 text-xs hover:bg-muted disabled:opacity-50">Connect</button>
-      </div>
+      </div>}
       {error&&<p role="alert" className="text-xs text-destructive">{error}</p>}</>:null}
   </section>;
 
