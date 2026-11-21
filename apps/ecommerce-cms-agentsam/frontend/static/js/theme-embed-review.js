@@ -123,7 +123,7 @@
     '<input type="text" data-embed-input="'+esc(key)+'" value="'+esc(value||'')+'" placeholder="/media/… or https://…" aria-label="'+esc(label+' link')+'">'+
     (hint ? '<p class="ter-muted">'+esc(hint)+'</p>' : '')+'<p class="ter-muted" data-embed-image-note role="status"></p></div>';
   function chatSettings(app, config) {
-    const fields = (app.editor_fields || []).filter(spec => spec.key !== 'agent_replies');
+    const fields = (app.editor_fields || []).filter(spec => !spec.owner_only);
     const render = spec => {
       const {key,label,type}=spec;
       const value=config[key];

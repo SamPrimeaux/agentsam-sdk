@@ -536,7 +536,8 @@
             "off",
             "draft",
             "auto"
-          ]
+          ],
+          "owner_only": true
         }
       ]
     },
