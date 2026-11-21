@@ -57,7 +57,8 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
   const install=async()=>{
     setLoading(true);setError('');
     try {
-      await installLocalStudioPublicPlugin('agentsam-docker-engine');
+      if(installation==='disabled') await updateLocalStudioPlugin(installationId,{enabled:true});
+      else await installLocalStudioPublicPlugin('agentsam-docker-engine');
       await refreshInstall();
       setNotice('Docker integration installed. Engine authorization is a separate step.');
     }catch(e){setError(e instanceof Error?e.message:String(e));}
