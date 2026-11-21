@@ -1,5 +1,5 @@
-/** Local PrimeTech UI integration: actual SamScene sky system, not a second copy. */
-import { SKY_PRESET_MAP } from '../../../../samscenev2/src/constants.ts';
+/** PrimeTech UI integration: the SamScene sky presets, vendored unchanged under ./samscene (origin: samscenev2). */
+import { SKY_PRESET_MAP } from './samscene/constants.ts';
 import type { CoProStageEnvironment } from '@inneranimalmedia/copro-ui';
 
 export const SAMSCENE_SKY_IDS = {

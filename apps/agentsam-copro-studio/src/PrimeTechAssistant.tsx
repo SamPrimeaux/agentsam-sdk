@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState, type FormEvent, type KeyboardEvent} from 'react';
 import {Maximize2, Minimize2, Minus, Send, X} from 'lucide-react';
+import {IconAction} from '@inneranimalmedia/copro-ui';
 import './PrimeTechAssistant.css';
 
 const greeting = "Hi, I'm AgentSam Assistant. How can I help you today?";
@@ -46,15 +47,15 @@ export function PrimeTechAssistant() {
     if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();if(draft.trim())event.currentTarget.form?.requestSubmit();}
   }
   return <div className="pt-assistant" data-open={open}>
-    {!open&&hint&&<div className="pt-assistant-hint"><button type="button" className="pt-assistant-hint-dismiss" aria-label="Dismiss assistant greeting" onClick={dismissHint}><X size={14}/></button><strong>Hi, I'm AgentSam Assistant</strong><span>How can I help you today?</span></div>}
+    {!open&&hint&&<div className="pt-assistant-hint"><IconAction className="pt-assistant-hint-dismiss" aria-label="Dismiss assistant greeting" onClick={dismissHint}><X size={14}/></IconAction><strong>Hi, I'm AgentSam Assistant</strong><span>How can I help you today?</span></div>}
     {open&&<section className={'pt-assistant-panel'+(expanded?' is-expanded':'')} role="dialog" aria-label="AgentSam Assistant" aria-modal="false">
       <header className="pt-assistant-header">
         <img src="/brand/copro-trigger.svg" alt=""/>
         <strong>AgentSam Assistant</strong>
         <div className="pt-assistant-controls">
-          <button type="button" data-tip="Minimize" aria-label="Minimize" onClick={()=>setOpen(false)}><Minus size={20}/></button>
-          <button type="button" data-tip={expanded?'Collapse':'Expand'} aria-label={expanded?'Collapse':'Expand'} onClick={()=>setExpanded(value=>!value)}>{expanded?<Minimize2 size={19}/>:<Maximize2 size={19}/>}</button>
-          <button ref={closeRef} type="button" data-tip="Close" aria-label="Close" onClick={()=>setConfirmEnd(true)}><X size={20}/></button>
+          <IconAction data-tip="Minimize" aria-label="Minimize" onClick={()=>setOpen(false)}><Minus size={20}/></IconAction>
+          <IconAction data-tip={expanded?'Collapse':'Expand'} aria-label={expanded?'Collapse':'Expand'} onClick={()=>setExpanded(value=>!value)}>{expanded?<Minimize2 size={19}/>:<Maximize2 size={19}/>}</IconAction>
+          <IconAction ref={closeRef} data-tip="Close" aria-label="Close" onClick={()=>setConfirmEnd(true)}><X size={20}/></IconAction>
         </div>
       </header>
       <div className="pt-assistant-body" aria-live="polite">
@@ -62,14 +63,14 @@ export function PrimeTechAssistant() {
 
       </div>
       <form className="pt-assistant-form" onSubmit={submitLocalDraft}>
-        <label className="pt-assistant-input"><span className="pt-assistant-sr">Your message to AgentSam</span><textarea ref={inputRef} rows={2} maxLength={2000} placeholder="Ask AgentSam Assistant" value={draft} onChange={event=>{setDraft(event.currentTarget.value);setSendError(false);}} onKeyDown={onInputKeyDown}/><button type="submit" disabled={!draft.trim()} aria-label="Send message" data-tip="Send message"><Send size={19}/></button></label>
+        <label className="pt-assistant-input"><span className="pt-assistant-sr">Your message to AgentSam</span><textarea ref={inputRef} rows={2} maxLength={2000} placeholder="Ask AgentSam Assistant" value={draft} onChange={event=>{setDraft(event.currentTarget.value);setSendError(false);}} onKeyDown={onInputKeyDown}/><IconAction type="submit" disabled={!draft.trim()} aria-label="Send message" data-tip="Send message"><Send size={19}/></IconAction></label>
         {sendError&&<p className="pt-assistant-feedback" role="status">Assistant isn't connected in this local build. Your draft is still here.</p>}
         <p className="pt-assistant-disclaimer">AI content may be incomplete or inaccurate. Review results before use.</p>
       </form>
       {confirmEnd&&<div className="pt-assistant-scrim"><div className="pt-assistant-confirm" role="alertdialog" aria-modal="true" aria-labelledby="pt-end-heading" aria-describedby="pt-end-description"><h3 id="pt-end-heading">End Chat</h3><p id="pt-end-description">Close the assistant and clear your draft?</p><div><button ref={noRef} type="button" onClick={()=>setConfirmEnd(false)}>No</button><button type="button" onClick={endChat}>Yes</button></div></div></div>}
     </section>}
-    <button type="button" className="pt-assistant-launcher" onClick={()=>open?setOpen(false):openChat()} aria-label={open?'Minimize AgentSam Assistant':'Open AgentSam Assistant'} aria-expanded={open}>
+    <IconAction className="pt-assistant-launcher" onClick={()=>open?setOpen(false):openChat()} aria-label={open?'Minimize AgentSam Assistant':'Open AgentSam Assistant'} aria-expanded={open}>
       <img src="/brand/copro-trigger.svg" alt=""/>
-    </button>
+    </IconAction>
   </div>;
 }

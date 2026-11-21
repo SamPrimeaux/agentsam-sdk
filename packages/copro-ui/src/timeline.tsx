@@ -416,7 +416,7 @@ export function CoProTimeline({
         </div>
       </div>
       {clipMenu&&<div ref={menuRef} className="mm-timeline-context-menu" role="menu"
-        style={{left:Math.max(8,clipMenu.x),top:Math.max(8,clipMenu.y)}}>
+        style={{"--mm-menu-x":Math.max(8,clipMenu.x)+"px","--mm-menu-y":Math.max(8,clipMenu.y)+"px"} as React.CSSProperties}>
         <strong>Clip actions</strong>
         {([
           ["split","Split at playhead","⌘B"],["duplicate","Duplicate clip",""],["trim","Trim & timing",""],

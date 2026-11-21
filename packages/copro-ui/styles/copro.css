@@ -3018,6 +3018,7 @@ body:has(.copro-studio) { margin:0; }
 .copro-studio .mm-look-finish{display:flex;align-items:center;gap:9px;min-width:0;width:100%;text-align:left;padding:7px 8px;background:var(--copro-surface-2);border:1px solid var(--copro-line);color:var(--copro-text);border-radius:7px;cursor:pointer;}
 .copro-studio .mm-look-finish:hover{border-color:var(--copro-text);}
 .copro-studio .mm-look-finish.is-active{border-color:var(--copro-accent);background:var(--copro-surface-2);}
+.copro-studio .mm-look-finish-swatch-original{background:linear-gradient(135deg,color-mix(in srgb, var(--copro-muted) 70%, var(--copro-bg)),color-mix(in srgb, var(--copro-surface) 80%, var(--copro-bg)));}
 .copro-studio .mm-look-finish-swatch{width:30px;height:30px;border-radius:50%;flex:0 0 30px;border:1px solid color-mix(in srgb, var(--copro-text) 33%, transparent);box-shadow:inset 0 0 9px color-mix(in srgb, var(--copro-shadow) 47%, transparent),0 1px 5px color-mix(in srgb, var(--copro-shadow) 40%, transparent);}
 .copro-studio .mm-look-finish-description{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px;}
 .copro-studio .mm-look-finish-description strong{font-size:10px;}
@@ -3364,7 +3365,7 @@ body:has(.copro-studio) { margin:0; }
 
 /* CapCut-style contextual editing, using the existing CoPro clip command dispatcher. */
 .copro-studio .mm-timeline-context-menu {
-  position:fixed;z-index:1000;display:grid;gap:1px;min-width:195px;
+  position:fixed;left:var(--mm-menu-x,8px);top:var(--mm-menu-y,8px);z-index:1000;display:grid;gap:1px;min-width:195px;
   padding:6px;background:var(--copro-surface-1,var(--copro-surface));
   border:1px solid var(--copro-line,var(--copro-line));border-radius:9px;
   color:var(--copro-text,var(--copro-text));box-shadow:0 16px 48px color-mix(in srgb, var(--copro-shadow) 67%, transparent);

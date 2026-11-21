@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STAGE_FINISHES, type CoProStageEnvironment } from '@inneranimalmedia/copro-ui';
 // LOCAL-ONLY engine integration. Consume the actual SamScene sky renderer, not a
 // second look-alike shader. Keep this behind UI acceptance before packaging.
-import { SkyGenerator } from '../../../../samscenev2/src/studio/skyGenerator.ts';
+import { SkyGenerator } from './samscene/skyGenerator.ts';
 
 import { SAMSCENE_SKY_IDS } from './SamSceneSkyBridge';
 

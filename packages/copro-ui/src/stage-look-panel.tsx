@@ -1,3 +1,4 @@
+import {IconAction} from './icon-action.js';
 import React, {useState} from 'react';
 import { CloudSun, Layers3, RotateCcw, SlidersHorizontal, Sparkles, Sun, Check } from 'lucide-react';
 import {
@@ -53,7 +54,7 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
     <header className="mm-look-header">
       <div className="mm-look-eyebrow"><Sun size={13}/> SCENE <span>PROJECT</span></div>
       <div className="mm-look-title-row"><div><h2>Scene environment</h2><p>SamScene sky · project-owned controls</p></div>
-        <button type="button" title="Reset scene settings" aria-label="Reset scene settings" onClick={()=>onChange(null)}><RotateCcw size={15}/></button>
+        <IconAction title="Reset scene settings" aria-label="Reset scene settings" onClick={()=>onChange(null)}><RotateCcw size={15}/></IconAction>
       </div>
     </header>
     <nav className="mm-scene-tabs" aria-label="Scene settings categories">
@@ -129,7 +130,7 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
       </div>
       <button type="button" className={'mm-look-finish mm-look-source-finish'+(current.finish==='original'?' is-active':'')}
         aria-pressed={current.finish==='original'} onClick={()=>onChange({finish:'original'})}>
-        <span className="mm-look-finish-swatch" style={{background:'linear-gradient(135deg,#64748b,#28313c)'}}/>
+        <span className="mm-look-finish-swatch mm-look-finish-swatch-original"/>
         <span className="mm-look-finish-description"><strong>Original GLB materials</strong><small>Restore the imported mesh materials</small></span>
         {current.finish==='original'&&<Check size={15}/>}
       </button>

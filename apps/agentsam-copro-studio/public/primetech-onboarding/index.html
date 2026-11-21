@@ -89,6 +89,9 @@
   .input::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); font-weight: 500; }
   .input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 22%, transparent), 0 0 28px color-mix(in srgb, var(--blue) 25%, transparent); }
   .input.bad { border-color: var(--red); box-shadow: 0 0 0 4px color-mix(in srgb, var(--red) 20%, transparent); }
+  .svg-sprite { position: absolute; }
+  .sr-only { position: absolute; left: -9999px; }
+  .msg-flush { margin: 0; }
   .msg { min-height: 20px; margin: 10px 0 0; font-size: 14px; font-weight: 500; color: var(--red); }
   .quiet { margin-top: 2px; background: none; border: 0; color: var(--muted); font: 500 14px var(--font); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
   .quiet:hover { color: var(--text); }
@@ -538,7 +541,7 @@
 <body data-view="setup">
 
 <!-- PrimeTech P mark, five shards. Fills are the brand tokens above. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<svg width="0" height="0" class="svg-sprite" aria-hidden="true">
   <defs>
     <symbol id="logo" viewBox="0 0 520 612">
       <path d="M140 140 L240 2 L342 2 L376 140 Z" fill="var(--red)"/>
@@ -573,7 +576,7 @@
   <div class="panel" id="panel">
     <section data-step="0">
       <div class="field-wrap">
-        <label for="name" style="position:absolute;left:-9999px">Your name</label>
+        <label for="name" class="sr-only">Your name</label>
         <input class="input" id="name" type="text" placeholder="Your name" autocomplete="name" maxlength="60">
         <p class="msg" id="msg-name" role="alert"></p>
       </div>
@@ -581,7 +584,7 @@
 
     <section data-step="1">
       <div class="field-wrap">
-        <label for="company" style="position:absolute;left:-9999px">Company or studio name</label>
+        <label for="company" class="sr-only">Company or studio name</label>
         <input class="input" id="company" type="text" placeholder="Company or studio name" autocomplete="organization" maxlength="80">
         <p class="msg" id="msg-company" role="alert"></p>
         <button class="quiet" type="button" id="solo">I work independently</button>
@@ -593,7 +596,7 @@
       <div class="other">
         <label class="pill"><input type="radio" name="focus" value="other" id="focus-other"><span>Other</span></label>
         <input class="input" id="other-text" type="text" placeholder="Describe your focus" maxlength="80" hidden aria-label="Describe your focus">
-        <p class="msg" id="msg-focus" role="alert" style="margin:0"></p>
+        <p class="msg msg-flush" id="msg-focus" role="alert"></p>
       </div>
     </section>
   </div>
