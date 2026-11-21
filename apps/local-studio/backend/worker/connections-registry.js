@@ -117,7 +117,7 @@ export function safePluginSettingsRecord(plugin, tools = []) {
 }
 
 export async function loadConnectionsRegistry(env, userId) {
-  const [cloudflareRow, secretsResult, oauthRecords, repositories, oauthTokenRows, machineRegistry] = await Promise.all([
+  const [machineRegistry, cloudflareRow, secretsResult, oauthRecords, repositories, oauthTokenRows] = await Promise.all([
     env.DB.prepare(`SELECT i.id, i.name, i.provider, i.last_seen_at,
         c.id AS connection_id, c.name AS connection_name, c.transport, c.runtime_adapter,
         c.health_status, c.health_checked_at
