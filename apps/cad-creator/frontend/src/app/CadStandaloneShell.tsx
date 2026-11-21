@@ -38,21 +38,24 @@ export function CadStandaloneShell() {
       {id:'cad',label:'CAD Creator',href:'/cad',icon:<img src="/studio/samsketch-icon.png" alt="" width={20} height={20} className="rounded-md"/>,active:true},
       {id:'dreamhouse',label:ownerLocal?'DreamHouse · V1 schematic':'DreamHouse · Public Example',href:'/cad/world',icon:<LayoutGrid/>},
       {id:'new',label:'New CAD project',href:'/cad/new',icon:<Plus/>},
-      {id:'projects',label:'Projects',href:'/projects',icon:<FolderOpen/>},
-      {id:'library',label:'Library',href:'/artifacts',icon:<BookOpen/>},
-      {id:'sites',label:'Sites',href:'/cms',icon:<Globe/>},
-      {id:'work',label:'AgentSam Work',href:'/agentsam',icon:<LayoutGrid/>},
+      // Hosted AgentSam destinations only exist for the owner; the public studio never links out to another app.
+      ...(ownerLocal?[
+        {id:'projects',label:'Projects',href:'/projects',icon:<FolderOpen/>},
+        {id:'library',label:'Library',href:'/artifacts',icon:<BookOpen/>},
+        {id:'sites',label:'Sites',href:'/cms',icon:<Globe/>},
+        {id:'work',label:'AgentSam Work',href:'/agentsam',icon:<LayoutGrid/>},
+      ]:[]),
     ],
     onNavigate:go,
     onCreateConversation:()=>go('/agentsam'),
-    accountActions:[{id:'signin',label:'Open AgentSam account',icon:<Settings2/>,onSelect:()=>go('/settings/general')}]
+    accountActions:ownerLocal?[{id:'signin',label:'Open AgentSam account',icon:<Settings2/>,onSelect:()=>go('/settings/general')}]:[]
   };
   return <Nav.Provider value={data} theme={theme} accentColor={accent} defaultOpen={false} resizable storageKey="agentsam-nav:local">
     <Nav.Scope className="cad-platform-shell" data-agentsam-app-shell="cad-creator">
       <Nav.Sidenav />
       <div className="cad-platform-main">
         <Nav.Topbar showNavigationTrigger showAccount={false}
-          rightSlot={<a className="cad-platform-open-account" href={hosted+'/agentsam'} target="_blank" rel="noreferrer">Open AgentSam <span aria-hidden>↗</span></a>}/>
+          rightSlot={ownerLocal?<a className="cad-platform-open-account" href={hosted+'/agentsam'} target="_blank" rel="noreferrer">Open AgentSam <span aria-hidden>↗</span></a>:undefined}/>
         <div className="cad-platform-content" data-mode={mode}>
           {mode === 'chat' && <section className="cad-platform-chat" aria-label="CAD conversation">
             <div className="cad-platform-chat-center">
