@@ -12,6 +12,7 @@ import {recordNativePlanChange} from '../lib/native-engine';
 
 import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
 import type {DesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
+import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   ProjectState,
