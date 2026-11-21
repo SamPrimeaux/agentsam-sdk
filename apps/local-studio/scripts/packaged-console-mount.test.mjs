@@ -101,7 +101,7 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.equal((shell.match(/<Nav\.Sidenav \/>/g) || []).length, 1);
   assert.doesNotMatch(shell, /includeMobileDrawer|renderShell\(/);
   assert.doesNotMatch(shell, /href: '\/cli'/);
-  assert.match(shell, /defaultOpen resizable/);
+  assert.match(shell, /defaultOpen mobileBreakpoint=\{901\} resizable/);
   assert.doesNotMatch(shell, /defaultOpen peekable/);
   assert.match(shell, /fetch\('\/admin\/data\/navigation\.json'/);
   assert.match(shell, /navigation\.primary/);
@@ -321,7 +321,7 @@ test('hosted AgentSam renders Chat/Work in its single packaged Console header', 
   assert.match(ecommerce, /id="console-search-trigger"/);
   assert.match(ecommerce, /id="console-notifications-trigger"/);
   assert.match(ecommerce, /id="console-notifications-menu"/);
-  assert.match(workspace, /hostModeSlot \? createPortal\(<div className="agentsam-mode-host"><Nav\.ModeSwitcher \/><\/div>, hostModeSlot\)/);
+  assert.match(workspace, /hostModeSlot && empty \? createPortal\(<div className="agentsam-mode-host"><Nav\.ModeSwitcher \/><\/div>, hostModeSlot\)/);
   assert.match(workspace, /!hostModeSlot \? <Nav\.Topbar className="agentsam-conversation-topbar"/);
   assert.match(workspace, /empty \? <div className="agentsam-topbar-mode"><Nav\.ModeSwitcher \/><\/div>/);
   assert.match(workspace, /<Nav\.ModeSwitcher \/>/);
