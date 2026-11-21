@@ -87,6 +87,6 @@ export function TemplatesGallery({ open, items, initialTab = 'objects', onClose,
         </div>
       </div>
     </div>,
-    document.body,
+    document.querySelector<HTMLElement>('.cad-workspace-ui') ?? document.body,
   );
 }
