@@ -315,7 +315,7 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  explorerOpen:boolean;inspectorOpen:boolean;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
+ studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onSketch:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
