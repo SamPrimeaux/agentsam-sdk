@@ -14,7 +14,7 @@ import { CoProMediaBrowser, type CoProMediaBrowserSection, type LocalSceneSource
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
 import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
 
-import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnvironment } from "./stage-environment.js";
+import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnvironment, type StageSky } from "./stage-environment.js";
 import { CoProStageLookPanel } from "./stage-look-panel.js";
 
 
@@ -58,6 +58,7 @@ export type CoProStudioProps = {
   project: CoProProjectView;
   initialTool?: "text" | "captions" | null;
   initialStudioMode?: "scene" | "design" | "generate" | "video";
+  stageSkies?:readonly StageSky[];
   samSceneSkyDefaults?:Record<string,Pick<CoProStageEnvironment,'skyProgression'|'cloudDensity'|'starIntensity'|'galaxyIntensity'|'auroraIntensity'|'stars'>>;
   playheadUs: number;
   selectedClipId?: string | null;
@@ -204,6 +205,7 @@ export function CoProStudio({
   initialTool = null,
   initialStudioMode = "video",
   samSceneSkyDefaults,
+  stageSkies,
   playheadUs,
   selectedClipId,
   canUndo = false,
@@ -1010,16 +1012,15 @@ export function CoProStudio({
             <div
               className={`copro-preview-device${effectivePreviewSrc?"":" is-empty"}`}
               data-overlay={activeOverlay}
-              style={{backgroundColor:stageEnvironment?.background,
-                backgroundImage: [
-                  ...(stageEnvironment?.showGrid ? ["linear-gradient(to right,color-mix(in srgb,var(--copro-text) 10%,transparent) 1px,transparent 1px)","linear-gradient(to bottom,color-mix(in srgb,var(--copro-text) 10%,transparent) 1px,transparent 1px)"] : []),
-                  stageLookBackground(stageEnvironment),
-                ].filter(Boolean).join(',') || undefined,
-                backgroundSize:stageEnvironment?.showGrid ? "24px 24px" : undefined,
+              data-stage-bg={stageEnvironment?.background?"":undefined}
+              data-look={stageLookBackground(stageEnvironment,stageSkies)?"":undefined}
+              data-grid={stageEnvironment?.showGrid?"":undefined}
+              data-shadow={stageEnvironment?.shadowSoftness!==undefined?"":undefined}
+              style={{"--mm-stage-bg":stageEnvironment?.background,"--mm-look-bg":stageLookBackground(stageEnvironment,stageSkies),
                 "--copro-stage-fog-color":stageEnvironment?.fogColor??STAGE_ENVIRONMENT_DEFAULTS.fogColor,
                 "--copro-stage-fog-opacity":stageEnvironment?.fogOpacity??0,
                 "--copro-stage-softness":`${stageEnvironment?.shadowSoftness??2.5}px`,
-                boxShadow:stageEnvironment?.shadowSoftness!==undefined ? `0 18px ${20+stageEnvironment.shadowSoftness*5}px rgba(0,0,0,.48)` : undefined,
+                "--mm-stage-shadow":stageEnvironment?.shadowSoftness!==undefined ? `0 18px ${20+stageEnvironment.shadowSoftness*5}px rgba(0,0,0,.48)` : undefined,
                 "--mm-monitor-width":previewWidth+"px","--mm-monitor-height":previewWidth/canvasRatio+"px","--mm-monitor-ratio":canvasRatio,"--mm-monitor-zoom":`scale(${previewZoom/100})`} as React.CSSProperties}
             >
               {activeMedia?.kind === "scene" && activeVisualClip && render3DScene ? (
@@ -1068,13 +1069,9 @@ export function CoProStudio({
                 />
               ) : (
                 <div className="copro-preview-placeholder" data-state={hasUnavailableFootage ? "missing" : "empty"}
-                  style={stageLookBackground(stageEnvironment) ? {
-                    backgroundImage:[
-                      ...(stageEnvironment?.showGrid ? ["linear-gradient(to right,#ffffff13 1px,transparent 1px)","linear-gradient(to bottom,#ffffff13 1px,transparent 1px)"] : []),
-                      stageLookBackground(stageEnvironment),
-                    ].filter(Boolean).join(','),
-                    backgroundSize:stageEnvironment?.showGrid ? '24px 24px,24px 24px,cover' : undefined,
-                  } : undefined}>
+                  data-look={stageLookBackground(stageEnvironment,stageSkies)?"":undefined}
+                  data-grid={stageEnvironment?.showGrid?"":undefined}
+                  style={{"--mm-look-bg":stageLookBackground(stageEnvironment,stageSkies)} as React.CSSProperties}>
                   <div className="copro-preview-empty-content">
                     <span className="copro-preview-empty-kicker">{hasUnavailableFootage ? "SOURCE MEDIA" : "NEW SEQUENCE"}</span>
                     <div className="copro-preview-mark">{hasUnavailableFootage ? "Source media needed" : "Your canvas is ready"}</div>
@@ -1199,7 +1196,7 @@ export function CoProStudio({
                   }}>{label}</button>)}
               </nav>}
               {inspectorTool==="stage"
-                ? <CoProStageLookPanel environment={stageEnvironment} skyDefaults={samSceneSkyDefaults}
+                ? <CoProStageLookPanel environment={stageEnvironment} skyDefaults={samSceneSkyDefaults} skies={stageSkies}
                     videoSources={mediaItems.filter(item=>item.kind==="video").map(item=>({id:item.id,name:item.name}))}
                     onChange={patch=>onAction?.({type:"environment",patch})}/>
                 : <CoProToolPanel

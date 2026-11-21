@@ -8,11 +8,14 @@ import {
   STAGE_MOODS,
   stageLookBackground,
   type CoProStageEnvironment,
+  type StageSky,
 } from './stage-environment.js';
 
 type StageLookPanelProps = {
   environment?: CoProStageEnvironment;
   videoSources?:Array<{id:string;name:string}>;
+  /** Sky looks to offer; defaults to the built-in set when the registry is unavailable. */
+  skies?:readonly StageSky[];
   skyDefaults?:Record<string,Pick<CoProStageEnvironment,'skyProgression'|'cloudDensity'|'starIntensity'|'galaxyIntensity'|'auroraIntensity'|'stars'>>;
   onChange: (patch:CoProStageEnvironment|null)=>void;
 };
@@ -43,11 +46,12 @@ function LookToggle({label,detail,checked,onChange}: {
   </label>;
 }
 
-export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDefaults={}}:StageLookPanelProps) {
+export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDefaults={},skies}:StageLookPanelProps) {
+  const skyList=skies?.length?skies:STAGE_SKIES;
   const [activeSection,setActiveSection]=useState<'scene'|'environment'|'lighting'|'materials'>('scene');
   const [finishGroup,setFinishGroup]=useState<(typeof FINISH_GROUPS)[number]>('All');
   const current={...defaults,...(skyDefaults[environment?.skyPreset??defaults.skyPreset]??{}),...environment};
-  const sky=STAGE_SKIES.find(entry=>entry.id===current.skyPreset) || STAGE_SKIES[0];
+  const sky=skyList.find(entry=>entry.id===current.skyPreset) || skyList[0];
   const selectedFinish=STAGE_FINISHES.find(entry=>entry.id===current.finish);
   const update=<K extends keyof CoProStageEnvironment>(key:K,value:CoProStageEnvironment[K])=>onChange({[key]:value});
   return <div className="mm-stage-look" aria-label="Scene settings">
@@ -94,13 +98,14 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
     </section>
 
     <section className="mm-look-card" aria-label="Sky presets">
-      <div className="mm-look-card-head"><span><CloudSun size={13}/> SAMSCENE SKY GENERATOR</span><small>{STAGE_SKIES.length} looks</small></div>
+      <div className="mm-look-card-head"><span><CloudSun size={13}/> SAMSCENE SKY GENERATOR</span><small>{skyList.length} looks</small></div>
       <div className="mm-look-sky-grid">
-        {STAGE_SKIES.map(item=><button type="button" key={item.id}
+        {skyList.map(item=><button type="button" key={item.id}
           className={'mm-look-sky-preset'+(current.skyPreset===item.id?' is-active':'')}
           aria-pressed={current.skyPreset===item.id} onClick={()=>onChange({skyPreset:item.id,...(skyDefaults[item.id]??{})})}>
-          <span className="mm-look-sky-preset-preview" style={{background:stageLookBackground({...current,skyPreset:item.id,glow:true})}}>
-            <i style={{background:item.glow}}/>
+          <span className="mm-look-sky-preset-preview" data-preview={item.previewUrl?"":undefined}
+            style={{"--mm-sky-bg":stageLookBackground({...current,skyPreset:item.id,glow:true},skyList),"--mm-sky-image":item.previewUrl?`url(${item.previewUrl})`:undefined} as React.CSSProperties}>
+            {!item.previewUrl&&<i style={{"--mm-sky-glow":item.glow} as React.CSSProperties}/>}
           </span>
           <strong>{item.name}</strong><small>{item.note}</small>
           {current.skyPreset===item.id&&<Check size={13} className="mm-look-sky-check"/>}

@@ -23,6 +23,7 @@ import {
 import { evaluateWorld3DFrame } from '@inneranimalmedia/copro-render/world3d';
 import { CoProWorldScene } from './CoProWorldScene';
 import { SAMSCENE_SKY_DEFAULTS } from './SamSceneSkyBridge';
+import { useRegistrySkies } from './skyRegistry';
 import { PrimeTechAssistant } from './PrimeTechAssistant';
 import "@inneranimalmedia/copro-ui/styles.css";
 
@@ -194,6 +195,7 @@ function makeImportedProject(file: File, media: Pick<SessionMediaItem,"durationU
 let evidenceImportStarted = false;
 
 export function MovieModeApp({ initialScreen = "projects", screen: requestedScreen, onScreenChange, standalone = false }: MovieModeAppProps) {
+  const registrySkies = useRegistrySkies();
   // CoPro derives its palette from the host theme via scoped CSS tokens.
 
   const initialProjectId=useRef(new URLSearchParams(window.location.search).get("project"));
@@ -1117,6 +1119,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     initialTool={initialTool}
     initialStudioMode={studioEntryMode}
     samSceneSkyDefaults={SAMSCENE_SKY_DEFAULTS}
+    stageSkies={registrySkies}
     project={project as any}
     projectTitle={project.title}
     playheadUs={playheadUs}
