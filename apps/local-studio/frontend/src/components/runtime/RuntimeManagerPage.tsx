@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Cloud, Container, Cpu, Loader2, Monitor, RefreshCw, TerminalSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { listLocalStudioConnections, type LocalStudioConnectionsResponse } from "@/lib/connections/client";
 import { DockerConnectionPanel } from "./DockerConnectionPanel";
 import { getTauriInvoke } from "@/lib/desktop/tauri";
 import { isConnectedRuntimeSession, type RuntimeKind } from "./runtime-sessions";
