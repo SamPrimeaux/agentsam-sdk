@@ -153,6 +153,22 @@ export async function prepareModelImports(files: File[], onProgress?: (status: s
         sha256: await sha256(raw),
       }, bytes: raw });
     }
+    // Retain companion resources once per batch, even after embedding them into
+    // the presentation GLB. Users can download the original authoring source.
+    if (i===0) {
+      const companions=files.filter(candidate=>!isModelFile(candidate)&&SOURCE_MIME[extOf(candidate.name)]);
+      if (companions.length+uploads.length+models.length*2>100) throw new Error('Too many source/companion files for one scene.');
+      for (const companion of companions) {
+        if (!companion.size || companion.size > LIMIT_BYTES) throw new Error(companion.name+' exceeds the supported 25 MB source limit.');
+        const raw=new Uint8Array(await companion.arrayBuffer());
+        const cid=newAssetId();
+        const cext=extOf(companion.name);
+        uploads.push({asset:{
+          id:cid,uri:'assets/'+cid+'.'+cext,mediaType:SOURCE_MIME[cext],
+          role:'reference',sha256:await sha256(raw),
+        },bytes:raw});
+      }
+    }
     results.push({
       title: cleanName(file.name), format: sourceExt, uploads,
       nodes: geometry.nodes, materials: geometry.materials, rootId: geometry.rootId,
