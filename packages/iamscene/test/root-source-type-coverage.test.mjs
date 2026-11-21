@@ -40,7 +40,7 @@ test('native IAM format identities and schema publishing stay aligned with the s
   assert.deepEqual(scene?.extensions, ['.iamscene', '.iamscene.json']);
   assert.deepEqual(geometry?.extensions, ['.iamgeometry']);
   assert.equal(scene?.family, 'model.scene');
-  assert.equal(geometry?.family, 'model.mesh');
+  assert.equal(geometry?.family, 'model.geometry');
   assert.equal(geometry?.mediaTypes[0], 'application/vnd.inneranimalmedia.iamgeometry+json');
   assert.ok(manifest.commands.some(value => value.startsWith('iamscene formats')));
   const publisher = readFileSync(path.join(root, 'scripts/schema-registry/publish_package_schemas.py'), 'utf8');
