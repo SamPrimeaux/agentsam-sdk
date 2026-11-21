@@ -50,6 +50,19 @@ Portable public CMS authority covers editable public websites, branding, media, 
 
 ## Scene and source-format interoperability
 
+**IAMScene v2 authoring is an experimental, separate file-version contract.**
+The v1 JSON document and v1 Three.js runtime remain the active render path.
+`@inneranimalmedia/iamscene` now exposes independently keyed v2 scenes,
+objects, geometry/material assets, environments, cameras, lights, simulation
+settings, states, events, animations and data sources. Its v2 create, validate,
+migrate and edit SDK APIs are declared `api_only`; render/simulation/event
+execution and selection-aware host inspector are **not** declared working.
+`agentsam.scene-document.v2` from `@inneranimalmedia/agentsam-contracts`
+is the shared operation/receipt vocabulary. The full Spline-to-PrimeTech
+capability audit and acceptance gates are in
+`docs/architecture/PRIMETECH_SCENE_V2_READINESS.md`.
+
+
 **Authority is split by responsibility, not duplicated by app.** The root
 `contracts/source-types.v2.json` is the universal format/detection identity
 catalog; the published `@inneranimalmedia/agentsam-contracts/source-types`

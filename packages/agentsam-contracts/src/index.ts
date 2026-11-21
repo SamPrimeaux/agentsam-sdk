@@ -23,3 +23,4 @@ export * from './design-workspace-registry';
 export * from './design-workspace-bridge';
 export * from './scene-format';
 export * from './resource-ref';
+export * from './scene-document';

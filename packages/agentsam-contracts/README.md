@@ -81,3 +81,17 @@ provided and authorized by the runtime; the contract is not itself an access
 grant, arbitrary filesystem path or storage implementation. A file's SHA-256
 is the natural optimistic concurrency token, while a project may use its
 separate native revision history.
+
+## Scene-document v2 execution/authoring contract
+
+`src/scene-document.ts` is the shared `agentsam.scene-document.v2`
+capability vocabulary. It reports create, validate, migrate, edit, render,
+simulate, execute-events and inspect **independently**, with receipt and
+verification validators. It is exported from
+`@inneranimalmedia/agentsam-contracts/scene-document` and has a portable
+Draft 2020-12 descriptor schema at `scene-document/schema`.
+
+IAMScene owns the actual v2 document schema and authoring implementation.
+An app must bind and test the renderer, simulator and inspector before those
+operations can be declared implemented. A file loading successfully or a
+form being rendered is not evidence of an executable tool.

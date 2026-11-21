@@ -14,11 +14,14 @@
     "tests": [
       "packages/agentsam-contracts/test/scene-format.test.mjs",
       "packages/agentsam-contracts/test/design-workspace.test.mjs",
-      "packages/agentsam-contracts/test/resource-ref.test.mjs"
+      "packages/agentsam-contracts/test/resource-ref.test.mjs",
+      "packages/agentsam-contracts/test/scene-document.test.mjs"
     ],
     "scene_format_schema": "packages/agentsam-contracts/schemas/scene-format.v1.schema.json",
     "resource_ref_contract": "packages/agentsam-contracts/src/resource-ref.ts",
-    "resource_ref_schema": "packages/agentsam-contracts/schemas/resource-ref.v1.schema.json"
+    "resource_ref_schema": "packages/agentsam-contracts/schemas/resource-ref.v1.schema.json",
+    "scene_document_contract": "packages/agentsam-contracts/src/scene-document.ts",
+    "scene_document_schema": "packages/agentsam-contracts/schemas/scene-document.v2.schema.json"
   },
   "execution_domains": [
     "browser",
@@ -60,7 +63,10 @@
     "resource-ref",
     "resource-scope",
     "scene-format",
-    "tools"
+    "tools",
+    "runtime-capability",
+    "scene-document",
+    "scene-v2"
   ],
   "use_when": [
     "Type-checking cross-application scene-format operation availability and loss-aware round-trip receipts without importing a scene engine.",

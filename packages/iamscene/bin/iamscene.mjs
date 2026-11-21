@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import { createIAMSceneFormatRegistry } from '../dist/src/format-registry.js';
 import { createSceneDocument } from '../dist/src/document.js';
 import { validateSceneDocument } from '../dist/src/validate.js';
+import { createSceneV2Document, validateSceneV2Document, parseSceneV2Document, serializeSceneV2Document, migrateSceneV1ToV2 } from '../dist/src/v2.js';
 import { loadSceneFile, saveSceneFile, createOcctSceneAsset, createIAMSceneNativeFormatRegistry } from '../dist/src/node.js';
 
 const [command = 'help', ...args] = process.argv.slice(2);
@@ -12,9 +13,10 @@ const fileArg = args.find(value => !value.startsWith('--'));
 
 function help() {
   process.stdout.write(`InnerAnimalMedia Scene Toolkit\n\n` +
-    `iamscene init <file> [--name <name>]\n` +
+    `iamscene init <file> [--name <name>] [--format-version 1|2]\n` +
     `iamscene validate <file>\n` +
     `iamscene inspect <file>\n` +
+    `iamscene migrate-v2 <v1-file> --out <v2-file> (source unchanged)\n` +
     `iamscene formats [--binary <native-occt>]\n` +
     `iamscene export <scene.iamscene.json> --out <file.step|file.brep|file.ifc> --binary <native-occt>\n` +
     `iamscene verify <file> [--units m|cm|mm|in|ft]\n` +
@@ -96,33 +98,77 @@ try {
   } else if (command === 'init') {
     if (!fileArg) throw new Error('iamscene_init_file_required');
     const name = flag('--name') ?? path.basename(fileArg).replace(/\.iamscene\.json$/i, '').replaceAll('-', ' ');
-    const document = createSceneDocument({ id: path.basename(fileArg).replace(/[^a-zA-Z0-9._:-]/g, '-').replace(/\.iamscene\.json$/i, ''), name: name || 'New Scene' });
-    await saveSceneFile(fileArg, document);
+    const formatVersion = flag('--format-version') || '1';
+    const options = { id: path.basename(fileArg).replace(/[^a-zA-Z0-9._:-]/g, '-').replace(/\.iamscene\.json$/i, ''), name: name || 'New Scene' };
+    if(formatVersion==='2'){
+      await mkdir(path.dirname(path.resolve(fileArg)),{recursive:true});
+      await writeFile(fileArg,serializeSceneV2Document(createSceneV2Document(options)),{flag:'wx'});
+    }else if(formatVersion==='1'){
+      await saveSceneFile(fileArg,createSceneDocument(options));
+    }else throw new Error('iamscene_format_version_unsupported:'+formatVersion);
     process.stdout.write(`Created ${path.resolve(fileArg)}\n`);
+  } else if (command === 'migrate-v2') {
+    if(!fileArg || !flag('--out'))throw new Error('iamscene_migrate_v2_source_and_output_required');
+    const input = path.resolve(fileArg);
+    const output = path.resolve(flag('--out'));
+    if(input===output)throw new Error('iamscene_migrate_v2_source_overwrite_forbidden');
+    const original=await loadSceneFile(input); // v1-only, fail closed
+    const migrated=migrateSceneV1ToV2(original);
+    await mkdir(path.dirname(output),{recursive:true});
+    await writeFile(output,serializeSceneV2Document(migrated),{flag:'wx'});
+    process.stdout.write(JSON.stringify({input,output,fromVersion:original.formatVersion,toVersion:migrated.formatVersion,
+      sourceUnmodified:true,objectCount:migrated.objects.length,runtimeSupport:'not-verified'},null,2)+'\n');
   } else if (command === 'validate') {
     if (!fileArg) throw new Error('iamscene_validate_file_required');
-    const document = await loadSceneFile(fileArg);
-    const result = validateSceneDocument(document);
-    process.stdout.write(JSON.stringify({ valid: result.valid, sceneId: document.metadata.id, nodeCount: document.scene.nodes.length, animationCount: document.animations.length, errors: result.errors }, null, 2) + '\n');
-    if (!result.valid) process.exitCode = 1;
+    const raw=JSON.parse(await readFile(fileArg,'utf8'));
+    if(raw.formatVersion==='2.0.0'){
+      const result=validateSceneV2Document(raw);
+      process.stdout.write(JSON.stringify({valid:result.valid,formatVersion:'2.0.0',
+        sceneId:raw.metadata?.id??null,sceneCount:raw.scenes?.length??0,objectCount:raw.objects?.length??0,
+        runtimeSupport:'not-verified',errors:result.errors},null,2)+'\n');
+      if(!result.valid)process.exitCode=1;
+    }else{
+      const result=validateSceneDocument(raw);
+      process.stdout.write(JSON.stringify({valid:result.valid,formatVersion:raw.formatVersion,
+        sceneId:raw.metadata?.id??null,nodeCount:raw.scene?.nodes?.length??0,
+        animationCount:raw.animations?.length??0,errors:result.errors},null,2)+'\n');
+      if(!result.valid)process.exitCode=1;
+    }
   } else if (command === 'inspect') {
     if (!fileArg) throw new Error('iamscene_inspect_file_required');
-    const document = await loadSceneFile(fileArg);
-    process.stdout.write(JSON.stringify({
-      format: document.format,
-      formatVersion: document.formatVersion,
-      id: document.metadata.id,
-      name: document.metadata.name,
-      coordinateSystem: document.coordinateSystem,
-      nodes: document.scene.nodes.length,
-      assets: document.assets.length,
-      occtGeometryNodes: document.scene.nodes.filter(node => node.geometry?.type === 'occt').length,
-      animations: document.animations.map(animation => ({ id: animation.id, name: animation.name, duration: animation.duration, tracks: animation.tracks.length })),
-    }, null, 2) + '\n');
+    const raw=JSON.parse(await readFile(fileArg,'utf8'));
+    if(raw.formatVersion==='2.0.0'){
+      const doc=parseSceneV2Document(JSON.stringify(raw));
+      process.stdout.write(JSON.stringify({format:doc.format,formatVersion:doc.formatVersion,
+        id:doc.metadata.id,name:doc.metadata.name,sceneCount:doc.scenes.length,objectCount:doc.objects.length,
+        objectKinds:[...new Set(doc.objects.map(item=>item.kind))],
+        geometryResources:doc.resources.geometry.length,assets:doc.resources.assets.length,
+        systems:Object.fromEntries(Object.entries(doc.systems).map(([key,rows])=>[key,rows.length])),
+        behaviors:Object.fromEntries(Object.entries(doc.behaviors).map(([key,rows])=>[key,rows.length])),
+        runtimeSupport:'not-verified'},null,2)+'\n');
+    }else{
+      const document = await loadSceneFile(fileArg);
+      process.stdout.write(JSON.stringify({
+        format: document.format,
+        formatVersion: document.formatVersion,
+        id: document.metadata.id,
+        name: document.metadata.name,
+        coordinateSystem: document.coordinateSystem,
+        nodes: document.scene.nodes.length,
+        assets: document.assets.length,
+        occtGeometryNodes: document.scene.nodes.filter(node => node.geometry?.type === 'occt').length,
+        animations: document.animations.map(animation => ({ id: animation.id, name: animation.name, duration: animation.duration, tracks: animation.tracks.length })),
+      }, null, 2) + '\n');
+    }
   } else if (command === 'normalize') {
     if (!fileArg) throw new Error('iamscene_normalize_file_required');
-    const document = await loadSceneFile(fileArg);
-    await saveSceneFile(fileArg, document);
+    const raw=JSON.parse(await readFile(fileArg,'utf8'));
+    if(raw.formatVersion==='2.0.0'){
+      await writeFile(fileArg,serializeSceneV2Document(parseSceneV2Document(JSON.stringify(raw))));
+    }else{
+      const document=await loadSceneFile(fileArg);
+      await saveSceneFile(fileArg,document);
+    }
     process.stdout.write(`Normalized ${path.resolve(fileArg)}\n`);
   } else if (command === 'build-occt') {
     if (!fileArg) throw new Error('iamscene_build_file_required');

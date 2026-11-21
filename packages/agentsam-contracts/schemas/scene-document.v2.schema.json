@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-contracts/v2/scene-document.schema.json",
+  "title": "AgentSam scene document v2 capability descriptor",
+  "description": "Operation support requires a bound runtime; a schema accepting data does not imply an installed renderer, simulator, inspector or event interpreter.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "schemaUri",
+    "format",
+    "formatVersion",
+    "operations",
+    "requirements",
+    "limitations"
+  ],
+  "properties": {
+    "contract": {
+      "const": "agentsam.scene-document.v2"
+    },
+    "schemaUri": {
+      "type": "string",
+      "minLength": 1
+    },
+    "format": {
+      "const": "iamscene"
+    },
+    "formatVersion": {
+      "const": "2.0.0"
+    },
+    "operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "create",
+        "validate",
+        "migrate",
+        "edit",
+        "render",
+        "simulate",
+        "execute-events",
+        "inspect"
+      ],
+      "properties": {
+        "create": {
+          "enum": [
+            "implemented",
+            "unavailable"
+          ]
+        },
+        "validate": {
+          "enum": [
+            "implemented",
+            "unavailable"
+          ]
+        },
+        "migrate": {
+          "enum": [
+            "implemented",
+            "unavailable"
+          ]
+        },
+        "edit": {
+          "enum": [
+            "implemented",
+            "unavailable"
+          ]
+        },
+        "render": {
+          "enum": [
+            "implemented",
+            "unavailable"
+          ]
+        },
+        "simulate": {
+          "enum": [
+            "implemented",
+            "unavailable"
+          ]
+        },
+        "execute-events": {
+          "enum": [
+            "implemented",
+            "unavailable"
+          ]
+        },
+        "inspect": {
+          "enum": [
+            "implemented",
+            "unavailable"
+          ]
+        }
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "operationReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract",
+        "operation",
+        "status",
+        "preserved",
+        "lost",
+        "warnings"
+      ],
+      "properties": {
+        "contract": {
+          "const": "agentsam.scene-document.v2"
+        },
+        "operation": {
+          "enum": [
+            "create",
+            "validate",
+            "migrate",
+            "edit",
+            "render",
+            "simulate",
+            "execute-events",
+            "inspect"
+          ]
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "unavailable"
+          ]
+        },
+        "inputHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "outputHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "preserved": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lost": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "passed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "lost": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "outputHash"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
