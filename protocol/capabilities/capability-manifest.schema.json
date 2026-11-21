@@ -116,6 +116,10 @@
           "package_subpath": {
             "type": "string",
             "description": "Declared package export subpath; package remains the canonical package name."
+          },
+          "requires_probe": {
+            "type": "boolean",
+            "description": "An injected host handler must supply readiness/engine probe evidence before it becomes callable."
           }
         }
       }

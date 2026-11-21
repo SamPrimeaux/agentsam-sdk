@@ -132,3 +132,30 @@ When connecting documents, record `sourceUri`, `sourceRevision`, `format`, `sha2
 8. **Evidence:** Publish receipt records Git SHA, schema URI, object key, version, SHA-256, timestamp, response status and consumer smoke results.
 
 Keep one source owner per schema, and use redirects/mirrors only for compatibility. New URLs should be created because of meaningful domain distinctions—not merely because another feature needed a schema file.
+
+## CAD v2 source-driven building export (bounded execution slice)
+
+`src/lib/cad/project-v2.js` and `protocol/cad/v2/` continue to own the
+source-of-truth document. `services/cad/proof/building_source.py` accepts
+only a source-hashed, recognized v2 rectangular building shell with typed
+openings referenced by stable geometry IDs; unsupported geometry is rejected.
+`services/cad/proof/building_proof.py` drives the real FreeCAD/OCCT/IfcOpenShell,
+ezDXF, Blender and FFmpeg tools. `services/cad/server.py` exposes the same
+pipeline through authenticated `/v1/cad/building/export`, retaining the source
+file and returning isolated derived artifacts with integrity receipts.
+
+`packages/iamscene/src/cad-host.ts` is an **optional** probeable Node host
+transport, exported from `@inneranimalmedia/iamscene/node`.
+`python/agentsam_sdk/cad/building.py` is the Python-only transport.
+Neither introduces another CAD kernel, source document type, IAMScene format
+registry, blanket agent permission or a mandatory project container.
+The root `cad.building.export` capability is only callable when a host binds a
+verified handler and authorizes the specific resource operation.
+
+The current acceptance scope is one rectangular shell and north/south wall
+openings. **Do not claim whole-model DreamHouse BIM coverage, general IFC
+import/export, a hosted Cloudflare deployment or installed native runtime**
+without corresponding independent tests. The existing `inneranimalmedia`
+`iam-cad-worker` image is a separate deployment owner; its current Dockerfile
+lacks OCCT/IfcOpenShell/ezdxf, so it must be updated, tested and deployed
+separately before hosted availability can be claimed.

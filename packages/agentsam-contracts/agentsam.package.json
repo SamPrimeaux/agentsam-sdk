@@ -13,9 +13,12 @@
     "scene_format_contract": "packages/agentsam-contracts/src/scene-format.ts",
     "tests": [
       "packages/agentsam-contracts/test/scene-format.test.mjs",
-      "packages/agentsam-contracts/test/design-workspace.test.mjs"
+      "packages/agentsam-contracts/test/design-workspace.test.mjs",
+      "packages/agentsam-contracts/test/resource-ref.test.mjs"
     ],
-    "scene_format_schema": "packages/agentsam-contracts/schemas/scene-format.v1.schema.json"
+    "scene_format_schema": "packages/agentsam-contracts/schemas/scene-format.v1.schema.json",
+    "resource_ref_contract": "packages/agentsam-contracts/src/resource-ref.ts",
+    "resource_ref_schema": "packages/agentsam-contracts/schemas/resource-ref.v1.schema.json"
   },
   "execution_domains": [
     "browser",
@@ -48,19 +51,21 @@
   "schema": "agentsam.package.v1",
   "status": "unknown",
   "topics": [
-    "contracts",
-    "resource-scope",
-    "design-workspace",
-    "scene-format",
-    "interchange",
-    "tools",
     "authority",
+    "contracts",
+    "design-workspace",
+    "events",
+    "interchange",
     "providers",
-    "events"
+    "resource-ref",
+    "resource-scope",
+    "scene-format",
+    "tools"
   ],
   "use_when": [
     "Type-checking cross-application scene-format operation availability and loss-aware round-trip receipts without importing a scene engine.",
-    "Sharing AgentSam tool, agent, event, workspace, context and resource-scope contracts across independently packaged products."
+    "Sharing AgentSam tool, agent, event, workspace, context and resource-scope contracts across independently packaged products.",
+    "Representing loose file, asset, scene and optional project references without treating project membership as an authorization grant."
   ],
   "version": "2.6.17"
 }

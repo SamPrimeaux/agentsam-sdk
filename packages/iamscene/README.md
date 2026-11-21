@@ -278,3 +278,60 @@ from `packages/iamscene`. The native test is skipped only when no test engine
 was supplied; browser/portable tests never require OCCT. Each new importer and
 exporter must add a real fixture and a loss-aware round-trip or format-specific
 export check before its capability is advertised.
+
+## CAD v2 source-driven export service (optional host adapter)
+
+An installed, authorized Python CAD service can now export a **single rectangular
+building shell with north/south door and window openings** from an existing
+`cad.project.v2` resource, without requiring callers to create an additional
+project or provide `sdk_root` / `project_root`. This is intentionally a bounded
+verified vertical slice, **not full BIM authoring or generic `.ifc` export**.
+
+The implementation uses the existing authoritative CAD v2 project in
+`src/lib/cad/project-v2.js`, its strict architecture module, and the existing
+FreeCAD/OCCT, IfcOpenShell, ezdxf, Blender, glTF-Transform and FFmpeg engines.
+The source extension `iamscene.building-shell.v1` references separately
+addressable geometry entity IDs and declares a rendering frame budget. Unsupported
+geometry rejects with an explicit error rather than silently disappearing.
+
+The callable Node host is exported from `@inneranimalmedia/iamscene/node`:
+
+```ts
+import { createIAMSceneCadBuildingHost } from '@inneranimalmedia/iamscene/node';
+const handler = createIAMSceneCadBuildingHost({
+  endpoint: cadHostUrl, token: cadHostCredential,
+});
+const ready = await handler.probe(); // checks actual installed service engines
+if (ready.readiness !== 'available') throw new Error(ready.reason);
+const result = await handler({
+  source: {kind: 'file', mount: 'work', path: 'models/building.cad.project.v2.json'},
+  base: expectedSourceSha256, // optimistic content-hash concurrency without another project
+});
+if (!result.ok) throw new Error(result.error);
+const ifc = await handler.downloadArtifact(result.result.files.find(x => x.path === 'shell.ifc'));
+```
+
+A language-independent `agentsam.resource-ref.v1` type/schema lives in
+`@inneranimalmedia/agentsam-contracts/resource-ref`. A Python-only equivalent,
+`agentsam_sdk.cad.CadBuildingClient`, communicates with the same service
+through Python's standard library without installing Node.
+
+`services/cad/server.py` has authenticated `POST /v1/cad/building/export` and
+returns **nine source-hashed derived artifacts**: STEP, IFC, DXF, SVG, PDF,
+PNG, GLB, optimized GLB and H.264 MP4. Each receipt links back to the original
+source hash, revision and stable object IDs. `Pset_IAMSource` properties and
+stable source-derived IFC GlobalIds support downstream inspection. Actual
+IfcOpenShell schema validation, analytic geometry comparisons, CAD STEP
+reopening, drawing scale checks, and media decoding are run as acceptance checks.
+
+**Important:** the Python server and installed local `agentsam-cad` image were
+proven separately; the live Cloudflare `iam-cad-worker` image has **not** been
+rebuilt, probed or deployed with these dependencies. `createIAMSceneFormatRegistry()`
+continues to label unsupported generic IFC/DXF/SVG/PNG import/export operations
+as unavailable. The authorized `cad.building.export` operation is a specific
+multi-artifact service, not evidence of universal format support.
+
+Run `npm run verify:cad-building` from the SDK root to cover the portable
+contracts, the installed-host authorization seam, Python source parser and
+CAD service HTTP security. The multi-engine Docker proof requires a real
+compatible image; see `services/cad/proof/README.md`.

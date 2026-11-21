@@ -84,8 +84,14 @@ export function validateCadProjectV2(project) {
   if (requiredModule && !isRecord(project.modules?.[requiredModule])) errors.push('domain_module_required:' + requiredModule);
   if (project.domain === 'architecture.building' && isRecord(project.modules?.architecture)) {
     const a = project.modules.architecture;
-    if (!isRecord(a.site) || !Array.isArray(a.spaces) || !Array.isArray(a.openings)
-        || !(Array.isArray(a.walls) || Array.isArray(a.wings)))
+    const legacy = isRecord(a.site) && Array.isArray(a.spaces) && Array.isArray(a.openings)
+      && (Array.isArray(a.walls) || Array.isArray(a.wings));
+    // The separately versioned architecture module uses sites/buildings/storeys.
+    // Preserve legacy sources without rejecting a valid strict v1 module.
+    const strict = a.schema === 'cad.module.architecture.v1' && a.version === 1
+      && Array.isArray(a.sites) && Array.isArray(a.buildings) && Array.isArray(a.storeys)
+      && Array.isArray(a.spaces) && Array.isArray(a.relationships);
+    if (!legacy && !strict)
       errors.push('architecture_site_spaces_openings_and_massing_required');
   }
   for (const key of ['assets', 'views', 'sheets', 'scenes', 'productions', 'outputs', 'packages', 'receipts', 'revisions']) {

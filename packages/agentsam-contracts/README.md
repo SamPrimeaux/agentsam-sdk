@@ -67,3 +67,17 @@ and mirrored into this package during build. Identifying a file by suffix,
 media type or magic bytes cannot imply that a format adapter is available.
 The root capability manifest is a discoverable SDK API directory, not a
 hosted execution grant.
+
+## ResourceRef — independent file/asset/scene/project identity
+
+The `agentsam.resource-ref.v1` contract lives at `src/resource-ref.ts` and is
+available at `@inneranimalmedia/agentsam-contracts/resource-ref`, with a
+Draft 2020-12 JSON Schema at `./resource-ref/schema`.
+
+The supported resource variants are `file(mount,path)`, `asset(id)`,
+`scene(id)` and `project(id, revision?)`. There is **no mandatory project ID**
+for a loose-file operation. File references are relative to mounts explicitly
+provided and authorized by the runtime; the contract is not itself an access
+grant, arbitrary filesystem path or storage implementation. A file's SHA-256
+is the natural optimistic concurrency token, while a project may use its
+separate native revision history.

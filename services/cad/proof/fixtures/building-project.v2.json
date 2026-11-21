@@ -1,0 +1,153 @@
+{
+  "schema": "cad.project.v2",
+  "id": "cad-proof-shell-01",
+  "name": "CAD Building Pipeline Fixture",
+  "domain": "architecture.building",
+  "revision": 1,
+  "coordinateSystem": {
+    "unit": "in",
+    "upAxis": "Z",
+    "handedness": "right",
+    "origin": [
+      0,
+      0,
+      0
+    ]
+  },
+  "geometry": {
+    "entities": [
+      {
+        "id": "shell-01",
+        "kind": "architecture.shell",
+        "name": "Main shell",
+        "sourceRevision": 1,
+        "properties": {
+          "length": 480,
+          "width": 288,
+          "height": 120,
+          "wallThickness": 6
+        }
+      },
+      {
+        "id": "door-south",
+        "kind": "architecture.opening",
+        "properties": {
+          "type": "door",
+          "wall": "south",
+          "x": 60,
+          "sill": 0,
+          "width": 36,
+          "height": 80
+        }
+      },
+      {
+        "id": "window-south",
+        "kind": "architecture.opening",
+        "properties": {
+          "type": "window",
+          "wall": "south",
+          "x": 240,
+          "sill": 36,
+          "width": 48,
+          "height": 48
+        }
+      },
+      {
+        "id": "window-north",
+        "kind": "architecture.opening",
+        "properties": {
+          "type": "window",
+          "wall": "north",
+          "x": 120,
+          "sill": 36,
+          "width": 48,
+          "height": 48
+        }
+      }
+    ],
+    "relationships": [],
+    "constraints": []
+  },
+  "modules": {
+    "architecture": {
+      "schema": "cad.module.architecture.v1",
+      "version": 1,
+      "sites": [
+        {
+          "id": "site-01",
+          "name": "Site",
+          "frameId": "world-01",
+          "buildingIds": [
+            "building-01"
+          ]
+        }
+      ],
+      "buildings": [
+        {
+          "id": "building-01",
+          "siteId": "site-01",
+          "name": "Building",
+          "storeyIds": [
+            "level-01"
+          ]
+        }
+      ],
+      "storeys": [
+        {
+          "id": "level-01",
+          "buildingId": "building-01",
+          "name": "Level 1",
+          "elevation": {
+            "value": 0,
+            "unit": "in"
+          },
+          "elementIds": [
+            "shell-01",
+            "door-south",
+            "window-south",
+            "window-north"
+          ],
+          "spaceIds": []
+        }
+      ],
+      "spaces": [],
+      "relationships": [],
+      "extensions": {
+        "iamscene.building-shell.v1": {
+          "shellEntityId": "shell-01",
+          "openingEntityIds": [
+            "door-south",
+            "window-south",
+            "window-north"
+          ],
+          "frames": 8,
+          "fps": 8
+        }
+      }
+    }
+  },
+  "intent": {
+    "references": [],
+    "decisions": [],
+    "assumptions": []
+  },
+  "assets": [],
+  "views": [],
+  "sheets": [],
+  "scenes": [],
+  "productions": [],
+  "outputs": [],
+  "packages": [],
+  "receipts": [],
+  "revisions": [],
+  "execution": {
+    "jobs": [],
+    "providerPreferences": []
+  },
+  "professionalReview": {
+    "permitReady": false,
+    "sealed": false,
+    "issues": [],
+    "reviews": []
+  }
+}

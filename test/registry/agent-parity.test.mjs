@@ -12,10 +12,12 @@ test('agent can search and describe real CLI/product capabilities without execut
  assert.equal(unavailable.agent_callable,false);
  assert.equal(unavailable.reason,'capability_handler_unavailable');
 });
-test('dynamic invocation is allowlisted and requires host authorization',async()=>{
+test('dynamic invocation requires a declared bound handler and host authorization',async()=>{
  const adapter=createCapabilityAdapter({projectRoot:process.cwd()});
- const unknown=(await adapter.invoke('capability.invoke',{capability_id:'cloudflare.wrangler.native'})).result;
- assert.equal(unknown.error,'capability_not_allowlisted');
+ const native=(await adapter.invoke('capability.invoke',{capability_id:'cloudflare.wrangler.native'})).result;
+ assert.equal(native.error,'capability_not_authorized');
+ const missing=(await adapter.invoke('capability.invoke',{capability_id:'iamscene.format.import'})).result;
+ assert.equal(missing.error,'capability_handler_unavailable');
  const unapproved=(await adapter.invoke('capability.invoke',{capability_id:'repository.snapshot'})).result;
  assert.equal(unapproved.error,'capability_not_authorized');
 });

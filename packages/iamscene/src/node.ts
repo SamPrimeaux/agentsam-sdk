@@ -161,3 +161,6 @@ export async function createIAMSceneNativeFormatRegistry(options: { binary: stri
   }
   return registry;
 }
+
+export { createIAMSceneCadBuildingHost } from './cad-host.js';
+export type { CadFileResourceRef, CadBuildingRequest, CadBuildingExportReceipt, CadBuildingHostHandler, CadHostAvailability } from './cad-host.js';

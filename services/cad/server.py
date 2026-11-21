@@ -22,7 +22,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 # Reuse the published Python SDK's portable native host adapter. Keep the
 # existing Linux compatibility path for images not yet carrying SDK >=0.2.
@@ -222,6 +222,10 @@ def _capabilities() -> dict[str, Any]:
         "version": "1",
         "tools": tools,
         "endpoints": {
+            "cad_building_export": {"operation":"cad.building.export", "scope":"single_rectangular_shell_with_north_south_openings",
+                "handler_installed": (Path(__file__).resolve().parent/"proof"/"building_proof.py").is_file(),
+                "requires": ["freecad","occt","ifc","blender","media"],
+                "status": "requires-runtime-proof"},
             "openscad_compile": tools["openscad"]["installed"],
             "freecad_execute": tools["freecad"].get("ready", tools["freecad"]["installed"]),
             "blender_execute": tools["blender"]["installed"],
@@ -623,6 +627,84 @@ def _file_target(url_path: str) -> tuple[str, Path, Path]:
     return alias, root, target
 
 
+def _cad_building_export(payload: dict[str, Any]) -> dict[str, Any]:
+    """Export a bounded CAD v2 rectangular shell using the six verified engines.
+
+    Source paths are *resource references* to pre-authorized runtime mounts,
+    never arbitrary host paths. No project ID is required by this operation.
+    Outputs are isolated runtime-derived artifacts, not edits to source files.
+    """
+    source = payload.get("source")
+    if not isinstance(source,dict) or source.get("kind") != "file":
+        raise ValueError("cad_building_file_ref_required")
+    mount,relative = source.get("mount"),source.get("path")
+    if not isinstance(mount,str) or not isinstance(relative,str) or not relative or relative.startswith("/") or "\\" in relative or "\x00" in relative or any(p in (".","..") for p in relative.split("/")):
+        raise ValueError("cad_building_file_ref_invalid")
+    roots = _file_roots()
+    if mount not in roots or "work" not in roots or roots["work"] != WORK_ROOT.resolve():
+        raise ValueError("cad_building_runtime_mount_unavailable")
+    _,_,source_path = _file_target(f"/v1/files/{mount}/{quote(relative,safe='/')}")
+    if not source_path.is_file():
+        raise ValueError("cad_building_source_file_not_found")
+    import importlib.util
+    parser_path=Path(__file__).resolve().parent/"proof"/"building_source.py"
+    if not parser_path.is_file():
+        raise RuntimeError("cad_building_parser_unavailable")
+    parser_spec=importlib.util.spec_from_file_location("agentsam_cad_building_source",parser_path)
+    if parser_spec is None or parser_spec.loader is None:
+        raise RuntimeError("cad_building_parser_unavailable")
+    parser_module=importlib.util.module_from_spec(parser_spec)
+    parser_spec.loader.exec_module(parser_module)
+    base=payload.get("base")
+    if base is not None and (not isinstance(base,str) or not re.fullmatch(r"[a-fA-F0-9]{64}",base)):
+        raise ValueError("cad_building_base_must_be_sha256")
+    params,evidence=parser_module.load_building_source(source_path,expected_hash=base)
+    if len(params["openings"])>80:
+        raise ValueError("cad_building_unsupported_geometry")
+    proof_script=Path(__file__).resolve().parent/"proof"/"building_proof.py"
+    if not proof_script.is_file():
+        raise RuntimeError("cad_building_export_engine_unavailable")
+    derived=WORK_ROOT/"derived"
+    derived.mkdir(parents=True,exist_ok=True)
+    folder=Path(tempfile.mkdtemp(prefix="building-",dir=derived))
+    # The child verifies `base` again before touching an output, closing the
+    # revision race between authorization, validation and execution.
+    argv=[sys.executable,str(proof_script),"all","--source",str(source_path),
+          "--base",evidence["source_sha256"],"--out",str(folder)]
+    env={**os.environ,"QT_QPA_PLATFORM":"offscreen"}
+    env.pop("AGENTSAM_CAD_BUILDING_SOURCE",None)
+    try:
+        result=subprocess.run(argv,capture_output=True,text=True,env=env,check=False,
+                              timeout=MAX_TIMEOUT_SECONDS)
+        if result.returncode != 0:
+            raise RuntimeError("cad_building_export_failed: " + (result.stdout+result.stderr)[-1200:])
+        receipt_file=folder/"receipt.json"
+        if not receipt_file.is_file():
+            raise RuntimeError("cad_building_receipt_missing")
+        receipt=json.loads(receipt_file.read_text())
+        if receipt.get("status")!="passed" or receipt.get("source",{}).get("source_sha256")!=evidence["source_sha256"]:
+            raise RuntimeError("cad_building_receipt_unverified")
+        files=[]
+        for artifact in receipt["artifacts"]:
+            filename=artifact["path"]
+            if Path(filename).name != filename:
+                raise RuntimeError("cad_building_artifact_path_invalid")
+            item=folder/filename
+            if not item.is_file() or item.stat().st_size>MAX_ARTIFACT_BYTES:
+                raise RuntimeError("cad_building_artifact_missing_or_oversize")
+            metadata=_file_metadata(item)
+            if metadata["sha256"]!=artifact["sha256"] or metadata["bytes"]!=artifact["bytes"]:
+                raise RuntimeError("cad_building_artifact_integrity_failed")
+            files.append({**artifact,"uri":f"/v1/files/work/derived/{folder.name}/{filename}"})
+        return {"ok":True,"schema":"agentsam.cad.building-export.v1",
+                "source":{"kind":"file","mount":mount,"path":relative,**evidence},
+                "output_scope":"runtime-derived","job_id":folder.name,
+                "files":files,"receipt":receipt}
+    except BaseException:
+        shutil.rmtree(folder,ignore_errors=True)
+        raise
+
+
 def _file_metadata(target: Path) -> dict[str, Any]:
     raw = target.read_bytes()
     if len(raw) > MAX_ARTIFACT_BYTES:
@@ -801,6 +883,9 @@ class Handler(BaseHTTPRequestHandler):
             if urlsplit(self.path).path.startswith("/v1/files/"):
                 self._handle_file_action(payload)
                 return
+            if self.path == "/v1/cad/building/export":
+                self._json(HTTPStatus.OK,_cad_building_export(payload))
+                return
             if self.path == "/v1/openscad/compile":
                 self._json(HTTPStatus.OK, _compile_openscad(payload))
                 return
@@ -812,7 +897,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
         except ValueError as exc:
-            self._json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
+            status=HTTPStatus.CONFLICT if str(exc)=="cad_building_source_revision_conflict" else HTTPStatus.BAD_REQUEST
+            self._json(status, {"ok": False, "error": str(exc)})
         except RuntimeError as exc:
             self._json(HTTPStatus.UNPROCESSABLE_ENTITY, {"ok": False, "error": str(exc)})
         except Exception as exc:
