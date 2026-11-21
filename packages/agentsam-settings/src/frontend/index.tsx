@@ -1092,11 +1092,17 @@ function PluginCustomizeView({
           </div>
           {filteredInstalled.length ? (
             <div className="flex flex-wrap gap-2.5" aria-label="Installed plugin shortcuts">
-              {filteredInstalled.map(plugin=>{
+              {filteredInstalled.filter((plugin,index,list)=>{
+                // One chip per plugin; several accounts/instances of it show as a count, not as duplicates.
+                const peers = list.filter(other=>other.pluginKey===plugin.pluginKey);
+                const lead = peers.find(isConnected) ?? peers[0];
+                return lead.id===plugin.id;
+              }).map(plugin=>{
                 const matched = discovered.find(entry=>entry.pluginKey===plugin.pluginKey);
+                const accounts = filteredInstalled.filter(other=>other.pluginKey===plugin.pluginKey).length;
                 return (
                   <button key={plugin.id} type="button" onClick={()=>selectPlugin(plugin.id)}
-                    title={plugin.name+" · "+installedState(plugin)}
+                    title={plugin.name+" · "+installedState(plugin)+(accounts>1?" · "+accounts+" accounts":"")}
                     aria-label={"View "+plugin.name+" settings · "+installedState(plugin)}
                     className="group relative flex size-12 shrink-0 items-center justify-center rounded-[13px] border border-border/80 bg-muted/15 text-foreground transition hover:-translate-y-0.5 hover:border-foreground/35 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40">
                     {plugin.iconUrl ? <img src={plugin.iconUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true;}}
@@ -1104,6 +1110,7 @@ function PluginCustomizeView({
                       : iconFor(matched ?? plugin,"size-5")}
                     <span aria-hidden="true" className={cx("absolute -bottom-1 -right-1 size-2.5 rounded-full border-2 border-background",
                       isConnected(plugin)?"bg-emerald-500":"bg-amber-500")}/>
+                    {accounts>1 ? <span aria-hidden="true" className="absolute -right-1.5 -top-1.5 flex min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[9px] font-semibold leading-4 text-background">{accounts}</span> : null}
                   </button>
                 );
               })}
@@ -1403,6 +1410,7 @@ function PluginCustomizeView({
                 <button type="button" disabled={busy} onClick={()=>void run(()=>host.beginPluginSetup!(installed.id))}
                   className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-violet-600 text-[11px] font-semibold text-white hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:opacity-40">
                   {installed.installationKey==="catalog-v1" ? "Connect read-only" :
+                    installed.kind!=="oauth" && /^\/(?!\/)/.test(installed.setupUrl||"") ? "Open settings" :
                     installed.setupStatus==="connected"?"Reconnect":"Connect plugin"} <ArrowUpRight className="size-3.5"/>
                 </button>
               ) : null}
