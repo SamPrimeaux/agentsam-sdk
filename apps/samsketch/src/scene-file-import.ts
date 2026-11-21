@@ -84,7 +84,7 @@ async function convertToGlb(file: File, batch: File[]): Promise<Uint8Array> {
   } else if (ext === 'dae') {
     const result = new ColladaLoader().parse(await file.text(), '');
     root = result.scene;
-    animations = result.animations || [];
+    animations = result.scene.animations || [];
   } else {
     throw new Error('Unsupported 3D model format: ' + file.name);
   }
