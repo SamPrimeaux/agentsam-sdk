@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 const cwd = fileURLToPath(new URL('../', import.meta.url));
-const modules = ['index','agent','events','run','tools','operations','source-types','authority','execution','providers','hooks','artifacts','context','adapter','models','identity','repository','errors','widgets','spawn-policy','resource-scope','design-workspace','design-workspace-registry'];
+const modules = ['index','agent','events','run','tools','operations','source-types','authority','execution','providers','hooks','artifacts','context','adapter','models','identity','repository','errors','widgets','spawn-policy','resource-scope','design-workspace','design-workspace-registry','scene-format'];
 // Build into a staging directory and swap it in, so concurrent readers (tests,
 // packed consumers) never observe a missing dist/ while this package rebuilds.
 const live = `${cwd}/dist`;

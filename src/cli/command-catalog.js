@@ -28,7 +28,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'package', summary: 'Audit, verify, and plan publication of distributable packages', topic: 'work', skill: 'agentsam-progression-guard', operation: 'package.audit', common: true, usage: ['agentsam package audit [--public] [--offline] [--json]', 'agentsam package status <name> [--offline] [--json]', 'agentsam package verify <name> [--offline] [--json]', 'agentsam package publish-plan [--offline] [--json]'] },
   { id: 'merch', summary: 'Preflight designs against portable manufacturing profiles', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'merch.preflight', common: true, usage: ['agentsam merch profiles', 'agentsam merch build <manifest.json> [--all-compatible]'] },
   { id: 'receipts', summary: 'Inspect receipt proofs and prune ephemeral AgentSam workdirs', topic: 'runtime', skill: 'agentsam-progression-guard', operation: 'receipts.inspect', common: true, usage: ['agentsam receipts list [--limit 20] [--repo <id>]', 'agentsam receipts show <receipt-id>', 'agentsam receipts failures [--repo <id>]', 'agentsam receipts prune [--max-tmp-gb 1.0] [--dry-run]'] },
-  { id: 'capabilities', summary: 'Inspect capability contracts', topic: 'create', skill: 'agentsam-app-fundamentals' },
+  { id: 'capabilities', summary: 'Inspect capability contracts, including experimental and package-only APIs', topic: 'create', skill: 'agentsam-app-fundamentals', usage: ['agentsam capabilities', 'agentsam capabilities --all', 'agentsam capabilities --inventory --search iamscene', 'agentsam capabilities iamscene.format.import --json'] },
   {
     id: 'setup',
     summary: 'Discover → plan → approve → install capabilities (Homebrew-style)',

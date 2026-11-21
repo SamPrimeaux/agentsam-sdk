@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-contracts/v1/scene-format.schema.json",
+  "title": "AgentSam Scene Format Capability Contract v1",
+  "description": "Describes independently available scene-format operations. This document does not implement codecs or grant host execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "family",
+    "extensions",
+    "operations",
+    "limitations"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "family": {
+      "type": "string",
+      "minLength": 1
+    },
+    "extensions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^\\.[a-z0-9.]+$"
+      }
+    },
+    "operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "import",
+        "export",
+        "live-reference",
+        "round-trip"
+      ],
+      "properties": {
+        "import": {
+          "$ref": "#/$defs/availability"
+        },
+        "export": {
+          "$ref": "#/$defs/availability"
+        },
+        "live-reference": {
+          "$ref": "#/$defs/availability"
+        },
+        "round-trip": {
+          "$ref": "#/$defs/availability"
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sourceTypeIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9.-]*$"
+      },
+      "description": "References to canonical agentsam.source-types.v2 identity records; not evidence of a codec."
+    }
+  },
+  "$defs": {
+    "availability": {
+      "enum": [
+        "implemented",
+        "unavailable"
+      ]
+    },
+    "roundTripReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "passed",
+        "preserved",
+        "lost",
+        "warnings"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "preserved": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lost": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "passed": {
+            "const": true
+          }
+        },
+        "required": [
+          "passed"
+        ]
+      },
+      "then": {
+        "properties": {
+          "lost": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    "referenceReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri",
+        "identification",
+        "format",
+        "sha256",
+        "byteLength"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "revision": {
+          "type": "string"
+        },
+        "identification": {
+          "const": "extension-hint",
+          "description": "Bytes were verified but file identity remains a filename-suffix candidate."
+        }
+      }
+    }
+  }
+}

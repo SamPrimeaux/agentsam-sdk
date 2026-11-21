@@ -63,6 +63,7 @@ test('glTF text and binary preserve editable hierarchy through import and round-
 test('reference hashes verify content and refresh detects a changed external revision', async () => {
   const registry=createIAMSceneFormatRegistry();
   const first=await registry.reference('https://example.org/scan.e57',new Uint8Array([1,2,3]));
+  assert.equal(first.identification,'extension-hint');
   assert.equal(first.byteLength,3);
   assert.equal(first.sha256.length,64);
   await assert.rejects(registry.reference(first.uri,new Uint8Array([1,2,4]),{expectedSha256:first.sha256}),/hash_mismatch/);

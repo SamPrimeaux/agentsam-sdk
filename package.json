@@ -343,7 +343,7 @@
     "smoke:widgets:browser": "node scripts/smoke-widget-browser.mjs",
     "verify:release": "npm run verify:widgets:portable && npm run verify && npm run verify:packages:public && npm run verify:knowledge-package && npm run test:python && npm run security:release",
     "pack:check": "node scripts/verify-pack.mjs",
-    "verify": "npm run brand:check && npm run release:train:check && npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
+    "verify": "npm run brand:check && npm run release:train:check && npm run errors:check && npm run proto:check && npm run verify:scene-formats && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
     "publish:identity-alpha": "bash scripts/publish-identity-alpha.sh",
     "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
     "publish:identity-alpha:publish-only": "bash scripts/publish-identity-alpha.sh --publish-only",
@@ -404,7 +404,8 @@
     "sam:machine:verify": "bash scripts/sam-machine/verify.sh",
     "test:primetech-procedures": "npm --prefix packages/primetech-procedures test",
     "wip:audit": "node scripts/wip-landscape.mjs",
-    "build:contracts": "npm --prefix packages/agentsam-contracts run build"
+    "build:contracts": "npm --prefix packages/agentsam-contracts run build",
+    "verify:scene-formats": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-format-contract-alignment.test.mjs && npm --prefix packages/iamscene test"
   },
   "engines": {
     "node": ">=22"

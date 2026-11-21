@@ -18,6 +18,8 @@ export interface FormatRegistration {
   family: FormatFamily;
   extensions: string[];
   limitations?: string[];
+  /** Canonical source-type identities; discovery and codec support remain separate. */
+  sourceTypeIds?: string[];
 }
 export interface FormatDescriptor {
   id: string;
@@ -26,6 +28,8 @@ export interface FormatDescriptor {
   operations: Record<FormatOperation, FormatStatus>;
   /** Specific constraints for this format, never a promise of feature parity. */
   limitations: readonly string[];
+  /** References root source-types.v2 identities, not an imported second catalog. */
+  sourceTypeIds?: readonly string[];
 }
 export interface FormatImport {
   format: string;
@@ -43,6 +47,8 @@ export interface FormatExport {
 }
 export interface FormatReference {
   uri: string;
+  /** Selected format is a filename candidate, not semantic identification. */
+  identification: 'extension-hint';
   format: string;
   sha256: string;
   byteLength: number;
@@ -134,41 +140,41 @@ function gltfAdapter(format: 'gltf' | 'glb'): FormatAdapter {
   };
 }
 const formats: FormatRegistration[] = [
-  { id:'iamscene', family:'native', extensions:['.iamscene', '.iamscene.json'] },
-  { id:'iamgeometry', family:'native', extensions:['.iamgeometry'] },
-  { id:'gltf', family:'gltf', extensions:['.gltf'], limitations:['Preserves opaque source payloads; not all mesh and animation internals are directly editable'] },
-  { id:'glb', family:'gltf', extensions:['.glb'], limitations:['Preserves opaque source payloads; not all mesh and animation internals are directly editable'] },
-  { id:'step', family:'cad', extensions:['.step','.stp'] },
-  { id:'iges', family:'cad', extensions:['.iges','.igs'] },
-  { id:'brep', family:'cad', extensions:['.brep'] },
-  { id:'stl', family:'fabrication', extensions:['.stl'], limitations:['Triangles only; requires source units; no parametric topology round-trip'] },
-  { id:'3mf', family:'fabrication', extensions:['.3mf'] },
-  { id:'obj', family:'fabrication', extensions:['.obj'], limitations:['Triangle mesh conversion; MTL and texture sidecars are not resolved'] },
-  { id:'ply', family:'fabrication', extensions:['.ply'], limitations:['Triangle mesh conversion; point cloud without faces is not supported'] },
-  { id:'ifc', family:'bim', extensions:['.ifc'] },
-  { id:'ifczip', family:'bim', extensions:['.ifczip'] },
-  { id:'usd', family:'usd', extensions:['.usd','.usda','.usdc','.usdz'] },
-  { id:'blend', family:'dcc', extensions:['.blend'] },
-  { id:'fbx', family:'dcc', extensions:['.fbx'] },
-  { id:'dae', family:'dcc', extensions:['.dae'] },
-  { id:'abc', family:'vfx', extensions:['.abc'] },
-  { id:'vdb', family:'vfx', extensions:['.vdb'] },
-  { id:'dxf', family:'drawings', extensions:['.dxf'] },
-  { id:'dwg', family:'drawings', extensions:['.dwg'] },
-  { id:'svg', family:'drawings', extensions:['.svg'] },
-  { id:'las', family:'scan', extensions:['.las','.laz'] },
-  { id:'e57', family:'scan', extensions:['.e57'] },
-  { id:'png', family:'image', extensions:['.png'] },
-  { id:'jpg', family:'image', extensions:['.jpg','.jpeg'] },
-  { id:'exr', family:'image', extensions:['.exr'] },
-  { id:'hdr', family:'image', extensions:['.hdr'] },
-  { id:'ktx2', family:'image', extensions:['.ktx2'] },
-  { id:'mp4', family:'media', extensions:['.mp4','.m4v'] },
-  { id:'mov', family:'media', extensions:['.mov'] },
-  { id:'mkv', family:'media', extensions:['.mkv'] },
-  { id:'wav', family:'media', extensions:['.wav'] },
-  { id:'flac', family:'media', extensions:['.flac'] },
-  { id:'otio', family:'editorial', extensions:['.otio','.otioz'] },
+  { id:'iamscene', sourceTypeIds:['model.iamscene'], family:'native', extensions:['.iamscene', '.iamscene.json'] },
+  { id:'iamgeometry', sourceTypeIds:['model.iamgeometry'], family:'native', extensions:['.iamgeometry'] },
+  { id:'gltf', sourceTypeIds:['model.gltf'], family:'gltf', extensions:['.gltf'], limitations:['Preserves opaque source payloads; not all mesh and animation internals are directly editable'] },
+  { id:'glb', sourceTypeIds:['model.glb'], family:'gltf', extensions:['.glb'], limitations:['Preserves opaque source payloads; not all mesh and animation internals are directly editable'] },
+  { id:'step', sourceTypeIds:['cad.step'], family:'cad', extensions:['.step','.stp'] },
+  { id:'iges', sourceTypeIds:['cad.iges'], family:'cad', extensions:['.iges','.igs'] },
+  { id:'brep', sourceTypeIds:['cad.opencascade-brep'], family:'cad', extensions:['.brep'] },
+  { id:'stl', sourceTypeIds:['model.stl'], family:'fabrication', extensions:['.stl'], limitations:['Triangles only; requires source units; no parametric topology round-trip'] },
+  { id:'3mf', sourceTypeIds:['model.3mf'], family:'fabrication', extensions:['.3mf'] },
+  { id:'obj', sourceTypeIds:['model.wavefront-obj'], family:'fabrication', extensions:['.obj'], limitations:['Triangle mesh conversion; MTL and texture sidecars are not resolved'] },
+  { id:'ply', sourceTypeIds:['model.ply'], family:'fabrication', extensions:['.ply'], limitations:['Triangle mesh conversion; point cloud without faces is not supported'] },
+  { id:'ifc', sourceTypeIds:['bim.ifc'], family:'bim', extensions:['.ifc'] },
+  { id:'ifczip', sourceTypeIds:['bim.ifczip'], family:'bim', extensions:['.ifczip'] },
+  { id:'usd', sourceTypeIds:['model.usd','model.usda','model.usdc','model.usdz'], family:'usd', extensions:['.usd','.usda','.usdc','.usdz'] },
+  { id:'blend', sourceTypeIds:['model.blender'], family:'dcc', extensions:['.blend'] },
+  { id:'fbx', sourceTypeIds:['model.fbx'], family:'dcc', extensions:['.fbx'] },
+  { id:'dae', sourceTypeIds:['model.collada'], family:'dcc', extensions:['.dae'] },
+  { id:'abc', sourceTypeIds:['model.alembic'], family:'vfx', extensions:['.abc'] },
+  { id:'vdb', sourceTypeIds:['model.openvdb'], family:'vfx', extensions:['.vdb'] },
+  { id:'dxf', sourceTypeIds:['cad.dxf'], family:'drawings', extensions:['.dxf'] },
+  { id:'dwg', sourceTypeIds:['cad.dwg'], family:'drawings', extensions:['.dwg'] },
+  { id:'svg', sourceTypeIds:['image.svg'], family:'drawings', extensions:['.svg'] },
+  { id:'las', sourceTypeIds:['pointcloud.las','pointcloud.laz'], family:'scan', extensions:['.las','.laz'] },
+  { id:'e57', sourceTypeIds:['pointcloud.e57'], family:'scan', extensions:['.e57'] },
+  { id:'png', sourceTypeIds:['image.png'], family:'image', extensions:['.png'] },
+  { id:'jpg', sourceTypeIds:['image.jpeg'], family:'image', extensions:['.jpg','.jpeg'] },
+  { id:'exr', sourceTypeIds:['image.exr'], family:'image', extensions:['.exr'] },
+  { id:'hdr', sourceTypeIds:['image.hdr'], family:'image', extensions:['.hdr'] },
+  { id:'ktx2', sourceTypeIds:['game.texture-ktx2'], family:'image', extensions:['.ktx2'] },
+  { id:'mp4', sourceTypeIds:['video.mp4'], family:'media', extensions:['.mp4','.m4v'] },
+  { id:'mov', sourceTypeIds:['video.quicktime'], family:'media', extensions:['.mov'] },
+  { id:'mkv', sourceTypeIds:['video.matroska'], family:'media', extensions:['.mkv'] },
+  { id:'wav', sourceTypeIds:['audio.wav'], family:'media', extensions:['.wav'] },
+  { id:'flac', sourceTypeIds:['audio.flac'], family:'media', extensions:['.flac'] },
+  { id:'otio', sourceTypeIds:['media.otio','media.otioz'], family:'editorial', extensions:['.otio','.otioz'] },
 ];
 
 /** Adapter registration is explicit. A format listing is not an adapter. */
@@ -193,6 +199,8 @@ export class IAMSceneFormatRegistry {
       if (!/^\.[a-z0-9.]+$/.test(ext) || this.#extensions.has(ext) || normalized.filter(x=>x===ext).length!==1)
         throw new Error('iamscene_format_duplicate_or_invalid_extension:' + ext);
     }
+    if (entry.sourceTypeIds && (entry.sourceTypeIds.some(id=>!/^[-a-z0-9.]+$/.test(id)) || new Set(entry.sourceTypeIds).size !== entry.sourceTypeIds.length))
+      throw new Error('iamscene_format_source_types_invalid');
     this.#entries.set(entry.id,{...entry,extensions:normalized});
     for (const ext of normalized) this.#extensions.set(ext,entry.id);
   }
@@ -202,6 +210,7 @@ export class IAMSceneFormatRegistry {
     if (!adapter.import && !adapter.export && !adapter.roundTrip) throw new Error('iamscene_format_adapter_empty');
     this.#adapters.set(id, adapter);
   }
+  /** Filename suffix hint only; semantic identification belongs to source-types evidence. */
   identify(input: string): FormatDescriptor {
     const stripped = input.split(/[?#]/)[0].toLowerCase();
     const extension = [...this.#extensions.keys()].sort((a,b)=>b.length-a.length).find(x => stripped.endsWith(x));
@@ -213,6 +222,7 @@ export class IAMSceneFormatRegistry {
     if (!entry) throw new Error('iamscene_format_unknown:' + id);
     const adapter = this.#adapters.get(id);
     return { id, family: entry.family, extensions: [...entry.extensions],
+      ...(entry.sourceTypeIds ? {sourceTypeIds:[...entry.sourceTypeIds]} : {}),
       operations: { import: adapter?.import ? 'implemented' : 'unavailable', export: adapter?.export ? 'implemented' : 'unavailable',
         'live-reference': 'implemented', 'round-trip': adapter?.roundTrip ? 'implemented' : 'unavailable' },
       limitations: [...(entry.limitations || []), ...(!adapter?.import ? ['No native semantic importer registered; linked source bytes are not editable scene elements'] : [])] };
@@ -243,7 +253,7 @@ export class IAMSceneFormatRegistry {
     const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', raw as Uint8Array<ArrayBuffer>)))
       .map(n=>n.toString(16).padStart(2,'0')).join('');
     if (options.expectedSha256 && sha256 !== options.expectedSha256.toLowerCase()) throw new Error('iamscene_format_reference_hash_mismatch');
-    return { uri, format: descriptor.id, sha256, byteLength: raw.byteLength, ...(options.revision ? { revision: options.revision } : {}) };
+    return { uri, identification: 'extension-hint', format: descriptor.id, sha256, byteLength: raw.byteLength, ...(options.revision ? { revision: options.revision } : {}) };
   }
   /** Caller re-resolves bytes on access; the format registry never silently fetches URLs or runs programs. */
   async refreshReference(reference: FormatReference, resolve: (uri: string) => Promise<Uint8Array>): Promise<{ reference: FormatReference; changed: boolean }> {

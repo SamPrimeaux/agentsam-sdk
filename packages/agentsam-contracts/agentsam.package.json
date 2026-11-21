@@ -1,14 +1,28 @@
 {
-  "avoid_when": [],
+  "avoid_when": [
+    "Using contracts declarations as evidence that a codec, importer, native runtime or hosted agent dispatcher exists.",
+    "Duplicating IAMScene file-format registration, actual geometry operations, or tenant/project persistence in the contracts package."
+  ],
   "catalog_status": "needs-review",
   "class": "package",
   "commands": [],
   "evidence": {
     "directory": "packages/agentsam-contracts",
     "purpose_source": "package-manifest-description",
-    "readme": "packages/agentsam-contracts/README.md"
+    "readme": "packages/agentsam-contracts/README.md",
+    "scene_format_contract": "packages/agentsam-contracts/src/scene-format.ts",
+    "tests": [
+      "packages/agentsam-contracts/test/scene-format.test.mjs",
+      "packages/agentsam-contracts/test/design-workspace.test.mjs"
+    ],
+    "scene_format_schema": "packages/agentsam-contracts/schemas/scene-format.v1.schema.json"
   },
-  "execution_domains": [],
+  "execution_domains": [
+    "browser",
+    "node",
+    "desktop",
+    "headless"
+  ],
   "id": "agentsam-contracts",
   "install": [
     {
@@ -22,22 +36,31 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-contracts",
-  "purpose": "Single portable source of truth for AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts.",
+  "purpose": "Portable contracts for AgentSam operations, tools, authority, providers, workspaces, and scene-format capability/round-trip receipts; does not implement codecs, renderers, authorization or asset storage.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-contracts",
     "public_claim": true
   },
   "review_required": [
-    "avoid_when",
-    "execution_domains",
-    "status",
-    "topics",
-    "use_when"
+    "status"
   ],
   "schema": "agentsam.package.v1",
   "status": "unknown",
-  "topics": [],
-  "use_when": [],
-  "version": "2.6.15"
+  "topics": [
+    "contracts",
+    "resource-scope",
+    "design-workspace",
+    "scene-format",
+    "interchange",
+    "tools",
+    "authority",
+    "providers",
+    "events"
+  ],
+  "use_when": [
+    "Type-checking cross-application scene-format operation availability and loss-aware round-trip receipts without importing a scene engine.",
+    "Sharing AgentSam tool, agent, event, workspace, context and resource-scope contracts across independently packaged products."
+  ],
+  "version": "2.6.17"
 }

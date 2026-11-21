@@ -43,6 +43,21 @@ const repo = await sam.invoke('repository.inspect', { root: '.' });
 console.log(repo.data.summary, repo.receipt.id);
 ```
 
+AgentSam also exposes the package capability and contract inventory without
+assuming an installed runtime can execute a declaration:
+
+```sh
+agentsam capabilities --inventory --search iamscene
+agentsam capabilities --all
+# The separately installable IAMScene package verifies actual file adapters:
+iamscene formats
+```
+
+The [IAMScene capability authorities](docs/architecture/SCHEMA_AUTHORITIES.md#iamgeometry-source-identity-and-format-interoperability)
+distinguish source identification, package metadata, SDK API discovery and
+actual import/export/round-trip adapters. No third-party format is labeled
+editable or exportable solely because its extension is recognized.
+
 See [SAM Kernel](docs/architecture/SAM_KERNEL.md) for `invoke` / `describe` / `discover`,
 operation IDs, and the universal `SamResult` envelope.
 

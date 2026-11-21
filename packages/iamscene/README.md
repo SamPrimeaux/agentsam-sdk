@@ -186,6 +186,15 @@ and `round-trip` operations. Use `describe(id)`, `identify(filename)` or `list()
 to discover **actual registered adapters**, rather than inferring functionality
 from a filename extension or a viewer that can display a mesh.
 
+Each built-in descriptor includes `sourceTypeIds` linking it to the existing
+`agentsam.source-types.v2` identity catalog. For example, `obj` maps to
+`model.wavefront-obj`, not the unrelated COFF `.obj`; `stl` maps to
+`model.stl`, not the EBU subtitle `.stl`. **`identify()` only supplies a
+filename-based adapter candidate.** The host must use the universal source
+identification evidence (signature/content/context/user choice) when suffixes
+are ambiguous; an import only succeeds if the selected adapter parses the
+actual input. A successful SHA-256 reference never certifies file identity.
+
 `implemented` means the SDK provides an operation with an executable adapter;
 `unavailable` means **do not call it or label it supported**. A positive
 round-trip receipt describes only its named preserved properties. It does not

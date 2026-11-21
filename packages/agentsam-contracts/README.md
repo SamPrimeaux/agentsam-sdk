@@ -44,3 +44,26 @@ An operation is a product capability with a stable identity and execution policy
 - The package build copies the canonical catalog and schema into `schemas/` for npm consumers; those package files are generated mirrors, not a second authority.
 - The catalog describes identity and detection evidence only. Runtime adapters separately declare real inspect, import, preview, validate, convert, transcode and export capabilities.
 - V1 identifiers remain available through the explicit `compatibility.legacyIdMappings` map.
+
+## Scene-format capability contract
+
+The portable `agentsam.scene-format.v1` contract lives in
+`src/scene-format.ts` and is exported from both the package root and
+`@inneranimalmedia/agentsam-contracts/scene-format`.
+
+It defines four independent operations—`import`, `export`, `live-reference`,
+and `round-trip`—plus optional `sourceTypeIds` linking to the existing
+source-type identity catalog, a typed capability descriptor, a SHA-256 source-reference
+receipt (explicitly labeled `identification: extension-hint`), and a semantic round-trip receipt. `assertSceneFormatCapability()`
+rejects missing operation declarations; `assertSceneFormatRoundTripReceipt()`
+rejects reports that simultaneously claim a successful round-trip and
+lost properties. This is a **contract only**: no parsers, geometry kernels,
+renderers, filesystem access, account identity or tool permissions are created
+by importing it.
+
+Use `@inneranimalmedia/iamscene` for actual format adapters. The universal
+file-identity catalog is separately owned by `contracts/source-types.v2.json`
+and mirrored into this package during build. Identifying a file by suffix,
+media type or magic bytes cannot imply that a format adapter is available.
+The root capability manifest is a discoverable SDK API directory, not a
+hosted execution grant.
