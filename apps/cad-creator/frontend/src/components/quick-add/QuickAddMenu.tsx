@@ -49,7 +49,7 @@ export function QuickAddMenu({ groups, label = 'Add', disabled = false, onPickOb
     <div className="qa-root" ref={root}>
       <button type="button" className={`qa-trigger${open ? ' on' : ''}`} aria-label={label} title={label} aria-haspopup="menu" aria-expanded={open}
         disabled={disabled} onClick={() => setOpen((v) => !v)}>
-        <Plus size={18} /><ChevronDown size={11} className="qa-caret" />
+        <Plus size={18} /><ChevronDown size={11} className="qa-caret" /><span className="qa-sr">{label}</span>
       </button>
       {open && (
         <div className="qa-pop" role="menu" aria-label={label}>
