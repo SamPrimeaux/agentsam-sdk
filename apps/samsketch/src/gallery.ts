@@ -26,6 +26,7 @@ export type GalleryApi = {
   hide: () => void;
   isVisible: () => boolean;
   refresh: () => void;
+  setImportStatus: (message: string) => void;
 };
 
 type GalleryOptions = {
@@ -34,6 +35,7 @@ type GalleryOptions = {
   listSaved: () => Array<{ id: string; name: string; category: SketchProjectCategory; itemCount: number; updatedAt: string; preview?: string | null }>;
   onOpenDraft: () => void;
   onOpenBlank: () => void;
+  onImportModels: (files: File[]) => void;
   onOpenTypeface: () => void;
   onOpenSaved: (id: string) => void;
   onOpenStarter: (starterId: string, name: string, category: SketchProjectCategory) => void;
@@ -85,6 +87,8 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
   let filter: "all" | "drafts" | "starters" = "drafts";
   let query = "";
   let menuId: string | null = null;
+  let importStatus = '';
+  let dragDepth = 0;
 
   function buildCards(): SketchProjectCard[] {
     const draft = options.getActiveDraft();
@@ -173,6 +177,8 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
         </div>
         <div class="ss-gallery__actions">
           <button type="button" class="ss-gallery__primary" data-gallery-action="blank">${icon("plus", 15)} New canvas</button>
+          <button type="button" class="ss-gallery__secondary" data-gallery-action="import">${icon("upload", 15)} Import 3D models</button>
+          <input type="file" id="ss-gallery-import-input" accept=".glb,.gltf,.obj,.stl,.ply,.fbx,.dae,.bin,.png,.jpg,.jpeg,.webp,.mtl" multiple hidden aria-label="Import 3D models and companion files">
           <button type="button" class="ss-gallery__secondary" data-gallery-action="continue">${icon("folder", 15)} Continue draft</button>
           <button type="button" class="ss-gallery__secondary" data-gallery-action="typeface">${icon("type", 15)} Typeface Studio</button>
         </div>
@@ -193,6 +199,8 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
           <button type="button" data-filter="starters" class="${filter === "starters" ? "is-active" : ""}">Starters</button>
         </div>
       </div>
+      ${importStatus ? `<p class="ss-gallery__import-status" role="status">${safe(importStatus)}</p>` : ""}
+      <div class="ss-gallery__drop" id="ss-gallery-drop" hidden><strong>Drop your 3D models here</strong><span>Multiple GLB, glTF, OBJ, STL, PLY, FBX, DAE files supported</span></div>
       <div class="ss-gallery__grid" role="list">${cards.map(cardMarkup).join("") || `<div class="ss-gallery__empty">${icon("search", 22)}<strong>No matching canvases</strong><span>Try another search or filter.</span></div>`}</div>
       <footer class="ss-gallery__foot"><span>SamSketch · Creative Department</span><span>Saved scenes and source-backed starters are organized separately</span></footer>
     `;
@@ -227,6 +235,7 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
     const galleryAction = target.closest<HTMLButtonElement>("[data-gallery-action]");
     if (galleryAction) {
       if (galleryAction.dataset.galleryAction === "blank") options.onOpenBlank();
+      if (galleryAction.dataset.galleryAction === "import") root.querySelector<HTMLInputElement>("#ss-gallery-import-input")?.click();
       if (galleryAction.dataset.galleryAction === "continue") options.onOpenDraft();
       if (galleryAction.dataset.galleryAction === "typeface") options.onOpenTypeface();
       return;
@@ -261,6 +270,42 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
     }
   });
 
+  root.addEventListener("change", event => {
+    const input = event.target as HTMLInputElement;
+    if (input.id !== "ss-gallery-import-input") return;
+    const files = Array.from(input.files || []);
+    input.value = "";
+    if (files.length) options.onImportModels(files);
+  });
+  const isFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types || []).includes("Files");
+  root.addEventListener("dragenter", event => {
+    if (!isFiles(event)) return;
+    event.preventDefault(); dragDepth++;
+    const overlay = root.querySelector<HTMLElement>("#ss-gallery-drop");
+    if (overlay) overlay.hidden = false;
+  });
+  root.addEventListener("dragover", event => {
+    if (!isFiles(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  });
+  root.addEventListener("dragleave", event => {
+    if (!isFiles(event)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) {
+      const overlay = root.querySelector<HTMLElement>("#ss-gallery-drop");
+      if (overlay) overlay.hidden = true;
+    }
+  });
+  root.addEventListener("drop", event => {
+    if (!isFiles(event)) return;
+    event.preventDefault(); event.stopPropagation();
+    dragDepth = 0;
+    const overlay = root.querySelector<HTMLElement>("#ss-gallery-drop");
+    if (overlay) overlay.hidden = true;
+    const files = Array.from(event.dataTransfer?.files || []);
+    if (files.length) options.onImportModels(files);
+  });
   render();
 
   return {
@@ -277,5 +322,6 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
       return !root.hidden;
     },
     refresh: render,
+    setImportStatus(message: string) { importStatus = message; if (!root.hidden) render(); },
   };
 }
