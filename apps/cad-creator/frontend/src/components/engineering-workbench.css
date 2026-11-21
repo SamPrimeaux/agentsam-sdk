@@ -518,6 +518,13 @@
 }
 .cad-resource-card:hover .cad-resource-card__actions,
 .cad-resource-card:focus-within .cad-resource-card__actions{opacity:1;transform:none}
+@media(max-width:660px) and (orientation:portrait){
+ .cad-real-toolbar{display:flex;flex-wrap:wrap;gap:.2rem;justify-content:flex-start}
+ .cad-real-toolbar>.cad-tool-cluster,.cad-view-tabs,.cad-viewport-modes{flex:0 0 auto;max-width:100%}
+ .cad-real-toolbar>.cad-direct-tools{order:1;width:100%;overflow-x:auto}
+ .cad-real-toolbar>.cad-edit-history{display:flex}
+ .cad-real-toolbar>.cad-tool-actions{margin-inline-start:auto}
+}
 @media (hover:none){.cad-resource-card__actions{opacity:1;transform:none}}
 .cad-resource-card__open,.cad-resource-card__ghost{
   display:inline-flex;align-items:center;gap:.3rem;min-height:2rem;padding:.35rem .65rem;border-radius:8px;
