@@ -91,15 +91,22 @@
 .agentsam-start-context .as-nav-title, .agentsam-start-context .as-nav-separator, .agentsam-start-context .as-nav-mode-label { display: none; }
 .agentsam-plugin-host { position: relative; width: 100%; max-width: 1120px; margin: 0 auto; }
 .agentsam-plugin-menu {
-  position: absolute; z-index: 120; left: 0; width: min(576px, calc(100vw - 24px)); bottom: calc(100% + 10px);
-  max-height: min(var(--agentsam-plugin-menu-max-height, 360px), calc(100dvh - 40px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+  position: absolute; z-index: 120; inset-inline-start: 0; inline-size: min(100%, 36rem); bottom: calc(100% + .5rem);
+  max-block-size: var(--agentsam-plugin-menu-max-height, 0px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
   padding: 6px; border: 1px solid var(--nav-border, var(--border)); border-radius: 18px;
   background: var(--nav-popover); color: var(--nav-text);
   box-shadow: 0 24px 64px #00000066; backdrop-filter: blur(22px);
 }
-.agentsam-plugin-menu[data-placement="below"] { top: calc(100% + 10px); bottom: auto; }
-.agentsam-conversation-dock .agentsam-plugin-menu { top: auto; bottom: calc(100% + 10px); }
-.agentsam-conversation-dock .agentsam-plugin-menu[data-placement="below"] { top: calc(100% + 10px); bottom: auto; }
+.agentsam-plugin-menu[data-placement="below"] { top: calc(100% + .5rem); bottom: auto; }
+.agentsam-conversation-dock .agentsam-plugin-menu { top: auto; bottom: calc(100% + .5rem); }
+.agentsam-conversation-dock .agentsam-plugin-menu[data-placement="below"] { top: calc(100% + .5rem); bottom: auto; }
+/* Search stays accessible while the capability results scroll independently. */
+.agentsam-plugin-menu[data-section="mention"] { display:flex; flex-direction:column; overflow:hidden; }
+.agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-heading,
+.agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-search { flex:0 0 auto; }
+.agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-results {
+  flex:1 1 auto; min-block-size:0; overflow-y:auto; overscroll-behavior:contain;
+}
 .agentsam-plugin-root-list { display: flex; flex-direction: column; gap: 2px; }
 .agentsam-plugin-section-divider { height: 1px; flex: 0 0 1px; margin: 5px 7px; background: var(--nav-border); }
 .agentsam-plugin-heading {
@@ -729,21 +736,45 @@
 /* Work composer: one quiet elevated input with contextual project navigation below. */
 .agentsam-page-layout[data-composer-mode="work"] .agentsam-composer-shell { max-width:100%; }
 .agentsam-page-layout[data-composer-mode="work"] .as-work-composer-surface {
-  padding:10px 12px 8px; border:1px solid color-mix(in srgb,var(--nav-border) 84%,transparent);
-  border-radius:17px; background:color-mix(in srgb,var(--nav-surface) 93%,transparent);
+  /* Work keeps its expanded, two-row input — unlike the compact Chat pill. */
+  padding:clamp(.625rem,2cqi,.875rem);
+  border:1px solid color-mix(in srgb,var(--nav-border) 84%,transparent);
+  border-radius:clamp(1.125rem,5cqi,2rem);
+  background:color-mix(in srgb,var(--nav-surface) 93%,transparent);
   box-shadow:0 2px 16px #0001; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
 }
 .agentsam-page-layout[data-composer-mode="work"] .as-work-composer-surface:focus-within {
   border-color:color-mix(in srgb,var(--nav-accent) 48%,var(--nav-border));
 }
-.agentsam-page-layout[data-composer-mode="work"] .as-work-composer-surface textarea { min-height:46px; padding:7px 5px 9px; }
+.agentsam-page-layout[data-composer-mode="work"] .as-work-composer-surface textarea {
+  flex:1 1 auto; min-inline-size:0; min-block-size:2lh; padding-block:.45rem .6rem;
+}
 .as-work-composer-surface .agentsam-composer-actions { display:flex;align-items:center;gap:4px;padding-top:2px; }
 .as-work-mode-indicator {display:inline-flex;align-items:center;gap:6px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 7px;border-radius:7px;font:500 11px/1.4 var(--nav-font,inherit);color:var(--nav-muted);}
 .as-work-mode-indicator:hover{color:var(--nav-text);background:var(--nav-hover)}
+.as-work-shortcuts {
+  display:flex; flex-wrap:wrap; align-items:center;
+  column-gap:clamp(.25rem,1cqi,.75rem); row-gap:.125rem;
+  padding-block:.25rem; padding-inline:clamp(.25rem,1cqi,.75rem);
+}
+.as-work-shortcuts button {
+  display:inline-flex; align-items:center; gap:.5em; justify-content:center;
+  min-block-size:2.75rem; max-inline-size:100%;
+  padding-inline:clamp(.35rem,1cqi,.75rem);
+  border-radius:999px; font:500 .875rem/1.25 var(--nav-font);
+  color:var(--nav-muted); background:transparent; white-space:nowrap;
+}
+.as-work-shortcuts button:hover, .as-work-shortcuts button:focus-visible {
+  color:var(--nav-text); background:var(--nav-selected);
+}
 .as-work-composer-under {display:flex;align-items:center;gap:5px;padding:5px 8px 0;margin:0;min-height:28px;color:var(--nav-muted)}
 .as-work-composer-under .agentsam-project-trigger {height:29px;min-height:29px;padding:4px 7px;font-size:12px;border-radius:7px}
 .as-work-composer-under .agentsam-project-trigger svg:last-child {opacity:.75}
-.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu {width:min(405px,calc(100vw - 32px));max-height:min(530px,62dvh);border-radius:12px;padding:6px;background:color-mix(in srgb,var(--nav-popover) 96%,transparent);box-shadow:0 16px 55px #0006;}
+.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu {
+  inline-size:min(100%,36rem); max-block-size:var(--agentsam-plugin-menu-max-height,0px);
+  border-radius:clamp(.875rem,4cqi,1.5rem); padding:.375rem;
+  background:color-mix(in srgb,var(--nav-popover) 96%,transparent);box-shadow:0 16px 55px #0006;
+}
 .agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-heading {display:none}
 .agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row {min-height:37px;gap:9px;padding:6px 9px;border-radius:7px}
 .agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row > svg {height:16px;width:16px;flex:0 0 16px;color:var(--nav-muted)}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, ImagePlus, Maximize2, Mic, Paperclip, Pause, Play, Square, Target, Trash2, X } from "lucide-react";
+import { ArrowUp, FolderOpen, ImagePlus, Maximize2, Mic, Paperclip, Pause, Play, Plug, Square, Target, Trash2, X } from "lucide-react";
 import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
@@ -37,6 +37,7 @@ export function Composer({
   busy,
   contextLabel,
   workMode = false,
+  showWorkShortcuts = false,
 }: {
   targetId: string;
   targetKind: "chat" | "side";
@@ -46,6 +47,8 @@ export function Composer({
   busy?: boolean;
   contextLabel?: string;
   workMode?: boolean;
+  /** Work landing view quick actions; the composer remains the canonical input. */
+  showWorkShortcuts?: boolean;
 }) {
   const value = useWorkStore((s) => s.drafts[targetId] ?? "");
   const { user } = useCurrentUserState();
@@ -362,7 +365,13 @@ export function Composer({
         onProject={targetKind === 'chat' ? openProject : undefined}
         activeMode={runMode}
         onModeChange={mode => setRunMode(targetId,mode)}
-        contextLabel={contextLabel}>{({ trigger, onKeyDown, onSelect }) => <><AgentComposer
+        contextLabel={contextLabel}>{({ trigger, onKeyDown, onSelect, openPlugins }) => <>
+        {workMode && showWorkShortcuts && <div className="as-work-shortcuts" role="group" aria-label="Work context and attachments">
+          <button type="button" onClick={openProject}><FolderOpen size={17} aria-hidden="true"/> Choose project</button>
+          <button type="button" onClick={()=>fileRef.current?.click()}><Paperclip size={17} aria-hidden="true"/> Files</button>
+          <button type="button" onClick={openPlugins}><Plug size={17} aria-hidden="true"/> Plugins</button>
+        </div>}
+        <AgentComposer
         value={value}
         runMode={runMode}
         onChange={(next) => setDraft(targetId, next)}

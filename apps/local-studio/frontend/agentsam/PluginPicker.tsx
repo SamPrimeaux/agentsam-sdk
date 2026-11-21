@@ -8,6 +8,7 @@ import { sideStageComposerWidgets, sideStageRegistrySnapshot } from './side-stag
 import { useWorkStore } from '@/lib/work/store';
 import { openBrowserSideStage } from '@/lib/work/open-browser-side-stage';
 import { SETTINGS_CATALOG_CHANGED_EVENT } from '@/lib/desktop/connection-deep-link';
+import { resolveComposerPopoverLayout } from './composer-popover-layout';
 
 /** A single compact capability/context picker for both + and typed @. */
 function PlusMenuRow({ icon, title, hint, onClick, meta }: { icon: ReactNode; title: string; hint: string; onClick: () => void; meta?: string }) {
@@ -33,6 +34,7 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
     trigger: ReactNode;
     onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
     onSelect: (position: number) => void;
+    openPlugins: () => void;
   }) => ReactNode;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -48,9 +50,10 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
   const [revision,setRevision] = useState(0);
   const [section,setSection] = useState<'root'|'mention'|'skills'|'modes'|'browser-tabs'>('root');
   const [placement,setPlacement] = useState<'above'|'below'>('above');
-  const [menuMaxHeight,setMenuMaxHeight] = useState(360);
+  const [menuMaxHeight,setMenuMaxHeight] = useState(0);
   const [browserTabs,setBrowserTabs] = useState<Array<{id:string;title:string;url:string}>>([]);
   const [query,setQuery] = useState('');
+  const [mentionFromComposer,setMentionFromComposer] = useState(false);
   const [skills,setSkills] = useState<Array<{id:string;name:string;trigger:string;description?:string}>>([]);
   const [skillsError,setSkillsError] = useState('');
   const [skillsLoading,setSkillsLoading] = useState(false);
@@ -65,8 +68,8 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
       .finally(() => {if(!controller.signal.aborted)setSkillsLoading(false);});
     return () => controller.abort();
   }, [open,section,revision]);
-  const match=value.slice(0,cursor).match(/(?:^|\s)@([\w-]*)$/);
-  const filtered=filterComposerCatalog(entries,match?.[1]||query);
+  const match=mentionFromComposer ? value.slice(0,cursor).match(/(?:^|\s)@([\w-]*)$/) : null;
+  const filtered=filterComposerCatalog(entries,match ? match[1] : query);
   const shown=filtered.slice(0,60);
 
   useEffect(() => {
@@ -100,21 +103,33 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
     const updatePlacement = () => {
       const rect = root.current?.getBoundingClientRect();
       if (!rect) return;
-      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - 12);
-      const spaceAbove = Math.max(0, rect.top - 12);
-      const nextPlacement = spaceBelow >= Math.min(360, spaceAbove) ? 'below' : 'above';
-      const available = nextPlacement === 'below' ? spaceBelow : spaceAbove;
+      const visual = window.visualViewport;
+      const { placement: nextPlacement, maxHeight } = resolveComposerPopoverLayout({
+        anchorTop: rect.top,
+        anchorBottom: rect.bottom,
+        visibleTop: visual?.offsetTop ?? 0,
+        visibleBottom: visual ? visual.offsetTop + visual.height : window.innerHeight,
+      });
       setPlacement(nextPlacement);
-      setMenuMaxHeight(Math.max(160, Math.min(360, available)));
+      setMenuMaxHeight(maxHeight);
     };
     updatePlacement();
+    const frame = requestAnimationFrame(updatePlacement);
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updatePlacement) : null;
+    if (root.current) observer?.observe(root.current);
     window.addEventListener('resize', updatePlacement);
     window.addEventListener('scroll', updatePlacement, true);
+    window.visualViewport?.addEventListener('resize', updatePlacement);
+    window.visualViewport?.addEventListener('scroll', updatePlacement);
     return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
       window.removeEventListener('resize', updatePlacement);
       window.removeEventListener('scroll', updatePlacement, true);
+      window.visualViewport?.removeEventListener('resize', updatePlacement);
+      window.visualViewport?.removeEventListener('scroll', updatePlacement);
     };
-  }, [open]);
+  }, [open, section]);
 
   function replaceMention(entry:ComposerCatalogEntry, insert:boolean) {
     if(!match)return;
@@ -239,22 +254,24 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
   return <div className="agentsam-plugin-host" ref={root}>
     {children({
       trigger:<IconAction type="button" className="as-nav-button" label="Add tools and plugins" hint="Add tools and plugins" aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
-        onClick={()=>{setOpen(!open);setSection('root');setQuery('');setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></IconAction>,
+        onClick={()=>{setOpen(!open);setMentionFromComposer(false);setSection('root');setQuery('');setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></IconAction>,
       onKeyDown,
+      openPlugins:()=>{setOpen(true);setMentionFromComposer(false);setSection('mention');setQuery('');setActive(0);setRevision(n=>n+1);},
       onSelect:(position)=>{
         setCursor(position);
         setActive(0);
         const textarea=root.current?.querySelector('textarea');
         const typingMention=Boolean(textarea?.value.slice(0,position).match(/(?:^|\s)@([\w-]*)$/));
         if(typingMention&&!open)setRevision(n=>n+1);
+        setMentionFromComposer(typingMention);
         if(typingMention)setSection('mention');
         setOpen(typingMention);
       },
     })}
     {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message" data-placement={placement} data-section={section} style={{'--agentsam-plugin-menu-max-height':`${menuMaxHeight}px`} as CSSProperties}>
       {section!=='root'&&<div className="agentsam-plugin-heading">
-        <button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');setActive(0);}}>Back</button>
-        <strong>{section==='skills'?'Skills':section==='modes'?'Agent mode':section==='browser-tabs'?'Add browser tabs':'Mention'}</strong>
+        {!(section==='mention' && match) && <button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');setActive(0);}}>Back</button>}
+        <strong>{section==='skills'?'Skills':section==='modes'?'Agent mode':section==='browser-tabs'?'Add browser tabs':'Plugins and tools'}</strong>
         <IconAction type="button" className="as-nav-button" label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></IconAction>
       </div>}
       {section==='root' ? <div className="agentsam-plugin-sections agentsam-plugin-root-list" data-work-plus-menu="">
@@ -265,17 +282,13 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
         {onWebSearch&&<PlusMenuRow icon={<Globe size={17}/>} title="Web search" hint="Find current information" onClick={()=>{setOpen(false);onWebSearch();}}/>}
         {onProject&&<PlusMenuRow icon={<Folder size={17}/>} title="Work in a project" hint="Start or continue work in a project" onClick={()=>{setOpen(false);onProject();}}/>}
         <div className="agentsam-plugin-section-divider" />
-        {error&&<p role="status" className="agentsam-plugin-notice">Some connected services could not be loaded. Installed tools remain available in Settings.</p>}
-        {loading&&<p role="status" className="agentsam-plugin-notice">Loading installed plugins and tools…</p>}
-        {entries.filter(entry=>entry.kind!=='skill').map(entry=><PlusMenuRow key={entry.id} icon={rowIcon(entry)} title={entry.label}
-          hint={entry.description||entry.status} meta={entry.ready?undefined:(entry.status==='enable'?'Enable':entry.status==='reconnect'?'Reconnect':entry.status==='connect'?'Connect':entry.status==='check status'?'Check':entry.status==='hidden from New tab'?'Show':'Set up')}
-          onClick={()=>choose(entry)}/>)}
-        {!entries.length&&!loading&&<p className="agentsam-plugin-notice">No installed plugins or workspace tools are available.</p>}
+        <PlusMenuRow icon={<Plug size={17}/>} title="Plugins and tools" hint="Search installed tools and connected services"
+          onClick={()=>{setMentionFromComposer(false);setSection('mention');setQuery('');setActive(0);}}/>
         <div className="agentsam-plugin-section-divider" />
         {onModeChange&&<PlusMenuRow icon={<Bot size={17}/>} title={`Mode · ${(activeMode||'agent').replace(/^./,letter=>letter.toUpperCase())}`}
           hint="Agent, Ask, Plan, Debug or Multitask" onClick={()=>setSection('modes')}/>}
         <PlusMenuRow icon={<Sparkles size={17}/>} title="Skills" hint="Private instructions and knowledge" onClick={()=>setSection('skills')}/>
-        <PlusMenuRow icon={<Plug size={17}/>} title="Browse plugins" hint="Discover public plugins and manage connections"
+        <PlusMenuRow icon={<Plug size={17}/>} title="Manage plugins" hint="Install, enable and connect plugins"
           onClick={()=>{setOpen(false);window.dispatchEvent(new CustomEvent('agentsam:navigate',{detail:{to:'/admin/settings/customize?view=plugins'}}));}}/>
       </div> : section==='modes' ? <div className="agentsam-plugin-sections" data-work-plus-menu="">
         {([['agent','Execute and open surfaces'],['plan','Design technical plans'],['debug','Inspect, prove and fix'],['multitask','Coordinate managed workflows'],['ask','Answer questions']] as const).map(([mode,description])=><button key={mode} type="button" className="agentsam-plugin-row agentsam-plugin-row--compact" aria-pressed={activeMode===mode} onClick={()=>{onModeChange?.(mode);setOpen(false);}}><Bot size={16}/><span className="agentsam-plugin-row-copy"><strong>{mode[0].toUpperCase()+mode.slice(1)}</strong><small>{description}</small></span>{activeMode===mode?<Check size={16}/>:null}</button>)}
@@ -287,7 +300,15 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
           <PlusMenuRow icon={<Globe size={17}/>} title="Open Browser" hint="Open a browser workspace" onClick={()=>{setOpen(false);openBrowserSideStage();}}/>
         </>}
       </div> : <>
-        <input type="search" aria-label={'Search '+section} placeholder={'Search '+section+'…'} value={query} onChange={event=>{setQuery(event.target.value);setActive(0);}} className="agentsam-plugin-search"/>
+        {!(section==='mention' && match) && <input type="search" aria-label={'Search '+section} placeholder={section==='mention'?'Search plugins and tools…':'Search '+section+'…'} value={query} onChange={event=>{setQuery(event.target.value);setActive(0);}} className="agentsam-plugin-search" onKeyDown={event=>{
+          if(event.key==='Escape'){event.preventDefault();setOpen(false);}
+          if(section==='mention'&&(event.key==='ArrowDown'||event.key==='ArrowUp')){
+            event.preventDefault();setActive(index=>Math.max(0,Math.min(shown.length-1,index+(event.key==='ArrowDown'?1:-1))));
+          }
+          if(section==='mention'&&event.key==='Enter'&&shown[active]){
+            event.preventDefault();choose(shown[active]);
+          }
+        }}/>}
         {section==='skills' ? <>
           {skillsLoading&&<p role="status" className="agentsam-plugin-notice">Loading your skills…</p>}
           {skillsError&&<p role="alert" className="agentsam-plugin-notice">{skillsError} <button type="button" onClick={()=>setRevision(n=>n+1)}>Retry</button></p>}
@@ -295,13 +316,15 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
           {skills.filter(skill=>(skill.name+' '+skill.description+' '+skill.trigger).toLowerCase().includes(query.toLowerCase())).map(skill=><button type="button" key={skill.id} aria-label={skill.name} className="agentsam-plugin-row agentsam-plugin-row--compact" onClick={()=>{onChange(value+(value?' ':'')+'[skill:'+skill.id+'] '+skill.trigger+' ');setOpen(false);}}><Sparkles size={17}/><span className="agentsam-plugin-row-copy">{skill.name}<small>{skill.description||skill.trigger}</small></span></button>)}
           <a className="agentsam-plugin-row agentsam-plugin-row--compact" href="/admin/settings/skills"><Wrench size={17}/><span className="agentsam-plugin-row-copy"><strong>Manage skills</strong></span></a>
         </> : <>
-          {error&&<p role="status" className="agentsam-plugin-notice">Some connected services couldn't be loaded. Available tools are still shown.</p>}
-          {loading&&<p role="status" className="agentsam-plugin-notice">Loading your plugins and tools…</p>}
-          {!shown.length&&!loading&&<p className="agentsam-plugin-notice">No matching capabilities.</p>}
-          {shown.map((entry,index)=><button type="button" key={entry.id} className="agentsam-plugin-row agentsam-plugin-row--compact" data-active={index===active} onClick={()=>choose(entry)}>
-            {rowIcon(entry)}<span className="agentsam-plugin-row-copy"><strong>{entry.label}</strong><small>{entry.description||entry.status}</small></span>
-            {!entry.ready?<small className="agentsam-plugin-row-meta">Set up</small>:null}
-          </button>)}
+          <div className="agentsam-plugin-results" role="listbox" aria-label="Available plugins and tools">
+            {error&&<p role="status" className="agentsam-plugin-notice">Some connected services couldn't be loaded. Available tools are still shown.</p>}
+            {loading&&<p role="status" className="agentsam-plugin-notice">Loading your plugins and tools…</p>}
+            {!shown.length&&!loading&&<p className="agentsam-plugin-notice">No matching capabilities.</p>}
+            {shown.map((entry,index)=><button type="button" key={entry.id} role="option" aria-selected={index===active} className="agentsam-plugin-row agentsam-plugin-row--compact" data-active={index===active} onClick={()=>choose(entry)}>
+              {rowIcon(entry)}<span className="agentsam-plugin-row-copy"><strong>{entry.label}</strong><small>{entry.description||entry.status}</small></span>
+              {!entry.ready?<small className="agentsam-plugin-row-meta">{entry.status==='enable'?'Enable':entry.status==='reconnect'?'Reconnect':'Set up'}</small>:null}
+            </button>)}
+          </div>
         </>}
       </>}
     </div>}

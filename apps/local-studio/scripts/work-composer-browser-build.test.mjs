@@ -41,7 +41,10 @@ test('Chat and Work share one + picker, project chooser and real speech controls
  assert.match(picker,/Add photos & files/);
  assert.match(picker,/Add from Library/);
  assert.match(picker,/Work in a project/);
- assert.match(picker,/entries\.filter\(entry=>entry\.kind!=='skill'\)/);
+ assert.match(picker,/title="Plugins and tools"/);
+ assert.match(picker,/shown\.map\(\(entry,index\)=>/);
+ assert.doesNotMatch(picker,/entries\.filter\(entry=>entry\.kind!=='skill'\)/);
+ assert.match(composer,/showWorkShortcuts/);
  assert.match(voice,/recognition\.onresult/);
  assert.match(voice,/useWorkStore\.getState\(\)\.send\(targetId, targetKind, transcript\)/);
  assert.match(voice,/SpeechSynthesisUtterance/);
