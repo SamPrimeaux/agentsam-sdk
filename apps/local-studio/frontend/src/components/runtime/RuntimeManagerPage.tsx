@@ -103,6 +103,18 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
           <a className="inline-flex min-h-9 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted" href="/admin/settings/customize?view=plugins">Manage connected providers</a>
         </div>
       </div>
+      <section aria-label="Registered machines" className="grid gap-2">
+        <h2 className="text-sm font-semibold">Registered machines</h2>
+        {loading ? <p role="status">Checking machines…</p> : !machines?.available ? <p>Machine registry unavailable.</p>
+          : machines.items.length === 0 ? <p>No machines registered for this account.</p>
+          : machines.items.map(machine => <div className="rounded-lg border border-border p-3 text-sm" key={JSON.stringify([machine.id,machine.connection_id])}>
+            <strong>{machine.name}</strong>
+            <p>{machine.connection_name || "No active connection"} · {machine.runtime_adapter || machine.provider}</p>
+            {machine.connection_id && <p>{machine.transport} · Last recorded health: {machine.health_status || "unknown"}
+              {machine.health_checked_at ? " · " + new Date(machine.health_checked_at * 1000).toLocaleString() : ""}</p>}
+            <p className="text-xs text-muted-foreground">Last seen {machine.last_seen_at ? new Date(machine.last_seen_at * 1000).toLocaleString() : "unknown"}</p>
+          </div>)}
+      </section>
       <div className="grid gap-3">
         {runtimes.map((runtime) => {
           const Icon = runtime.icon;
