@@ -702,6 +702,11 @@ export const localStudioSettingsHost: SettingsHost = {
       return;
     }
     if (!plugin.setupUrl) throw new Error("plugin_setup_unavailable");
+    // Same-origin setup pages (e.g. Docker -> Machines & Runtimes) are real settings panels.
+    if (/^\/(?!\/)/.test(plugin.setupUrl)) {
+      window.location.assign(plugin.setupUrl);
+      return;
+    }
     if (/^https:\/\//i.test(plugin.setupUrl)) {
       await openExternalUrl(plugin.setupUrl);
       return;
