@@ -2,6 +2,6 @@ export { QuickAddMenu, type QuickAddEntry, type QuickAddMenuProps } from './Quic
 export { TemplatesGallery, type TemplatesGalleryProps } from './TemplatesGallery';
 export { QuickAddPreview } from './QuickAddPreview';
 export { useQuickAddCatalog } from './useQuickAddCatalog';
-export { builtinQuickAddCatalog, fetchQuickAddCatalog, sectionsFor, categoryLabel, QUICK_ADD_CATALOG_URL } from './catalog';
+export { builtinQuickAddCatalog, fetchQuickAddCatalog, sectionsFor, categoryLabel, QUICK_ADD_CATALOG_URL, cadCanAct, type QuickAddFetchOptions } from './catalog';
 export type { QuickAddItem, QuickAddTab, QuickAddSource } from './types';
 import './quick-add.css';

@@ -16,12 +16,25 @@ export const categoryLabel = (raw: string): string => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
-export async function fetchQuickAddCatalog(fetcher: typeof fetch = fetch, signal?: AbortSignal): Promise<QuickAddItem[]> {
-  const res = await fetcher(QUICK_ADD_CATALOG_URL, { credentials: 'same-origin', signal });
+export interface QuickAddFetchOptions {
+  /** Ask the registry for rows compatible with this app (rows marked "*" are compatible with every app). */
+  app?: string;
+  /** The host's own capability check: keep only items it can act on, so no tile is a dead click. */
+  accepts?: (item: QuickAddItem) => boolean;
+}
+
+export async function fetchQuickAddCatalog(fetcher: typeof fetch = fetch, signal?: AbortSignal, options: QuickAddFetchOptions = {}): Promise<QuickAddItem[]> {
+  const url = options.app ? `${QUICK_ADD_CATALOG_URL}?app=${encodeURIComponent(options.app)}` : QUICK_ADD_CATALOG_URL;
+  const res = await fetcher(url, { credentials: 'same-origin', signal });
   if (!res.ok) throw new Error(`catalog_${res.status}`);
   const body = (await res.json()) as { items?: unknown };
-  return Array.isArray(body.items) ? body.items.filter(isItem) : [];
+  const items = Array.isArray(body.items) ? body.items.filter(isItem) : [];
+  return options.accepts ? items.filter(options.accepts) : items;
 }
+
+/** CAD Creator can place stock fixtures (specs.type) and open scenes that resolve to a project template (ref). */
+export const cadCanAct = (item: QuickAddItem): boolean =>
+  item.tab === 'scenes' ? !!item.ref : typeof item.specs?.type === 'string';
 
 /** Same shape the DB serves, so the menu works offline, in local studio and for any SDK install. */
 export function builtinQuickAddCatalog(): QuickAddItem[] {
