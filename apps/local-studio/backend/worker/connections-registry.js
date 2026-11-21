@@ -117,7 +117,15 @@ export function safePluginSettingsRecord(plugin, tools = []) {
 }
 
 export async function loadConnectionsRegistry(env, userId) {
-  const [cloudflareRow, secretsResult, oauthRecords, repositories, oauthTokenRows] = await Promise.all([
+  const [cloudflareRow, secretsResult, oauthRecords, repositories, oauthTokenRows, machineRegistry] = await Promise.all([
+    env.DB.prepare(`SELECT i.id, i.name, i.provider, i.last_seen_at,
+        c.id AS connection_id, c.name AS connection_name, c.transport, c.runtime_adapter,
+        c.health_status, c.health_checked_at
+      FROM terminal_instances i LEFT JOIN terminal_connections c
+        ON c.instance_id = i.id AND c.account_id = i.account_id AND c.is_active = 1
+      WHERE i.account_id = ? ORDER BY i.name, i.id, c.name, c.id`)
+      .bind(userId).all().then(value => ({available:true, items:value.results || []}),
+        () => ({available:false, items:[]})),
     loadCloudflareConnectionRecord(env, userId).catch(error=>{
       console.warn('cloudflare_connection_status_unavailable',String(error?.message||error).slice(0,120));
       return null;
