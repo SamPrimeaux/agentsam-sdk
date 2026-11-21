@@ -247,6 +247,11 @@ export function CadCreatorApp({
   const [leftPanelTab,setLeftPanelTab]=useState<'objects'|'assets'|'libraries'>('objects');
   // Hosted mode only: name of the unsaved template copy being edited. Null means no copy is open.
   const [templateCopyName, setTemplateCopyName] = useState<string | null>(null);
+  const sketchDialog = useRef<HTMLDialogElement>(null);
+  const [sketchOpen, setSketchOpen] = useState(false);
+  useEffect(() => {
+    if (sketchOpen) sketchDialog.current?.showModal();
+  }, [sketchOpen]);
   const [isExportPublishOpen, setIsExportPublishOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   useEffect(()=>{const onSave=(event:Event)=>setToastMessage((event as CustomEvent<string>).detail);window.addEventListener('agentsam:cad-save-status',onSave);return()=>window.removeEventListener('agentsam:cad-save-status',onSave)},[]);
