@@ -110,6 +110,6 @@ export default defineConfig({
   optimizeDeps: { exclude:["@inneranimalmedia/copro-ui","@inneranimalmedia/copro-storage","@inneranimalmedia/copro-editor","@inneranimalmedia/copro-media"] },
   // The active cms_themes registry is served by local-studio (its dev port); standalone CoPro reads it, never owns it.
   server: { fs:{allow:[fileURLToPath(new URL('../../',import.meta.url)),localSamSceneRoot]}, watch:{usePolling:true,interval:400},
-    proxy:{'/api/studio':{target:'http://127.0.0.1:8080',changeOrigin:true}} },
+    proxy:{'/api/studio':{target:'http://127.0.0.1:8080',changeOrigin:true},'/admin/js':{target:'http://127.0.0.1:8080',changeOrigin:true}} },
   build: { target:"esnext" },
 });
