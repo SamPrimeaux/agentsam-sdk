@@ -58,7 +58,7 @@ export function createProjectRuntime({store,artifactRoot,native={blenderBuild,bl
     return {...prior,operation:name};
    }
    const created=await occt.execute('design_model_build',{kind:'features',units:'mm',operations:history.operations,cursor:history.cursor,elementId:args.element_id,format},{artifactRoot:dir,projectId:row.project.id});
-   const out={...created,operation:name,project_id:row.project.id,revision:row.revision,content_hash:row.content_hash,source:'cad.project.v1'};
+   const out={...created,operation:name,project_id:row.project.id,revision:row.revision,content_hash:row.content_hash,source:row.project.schema??'cad.project'};
    fs.renameSync(out.artifact.path,final);out.artifact.path=final;
    fs.writeFileSync(final+'.json',JSON.stringify(out,null,2));return out;
   }
@@ -78,7 +78,7 @@ export function createProjectRuntime({store,artifactRoot,native={blenderBuild,bl
    fs.renameSync(created.artifact.path,stepFile);
    const out={...created,artifact:{...created.artifact,path:stepFile},
     project_id:row.project.id,revision:row.revision,content_hash:row.content_hash,
-    parametric_object_id:object.id,source:'cad.project.v1'};
+    parametric_object_id:object.id,source:row.project.schema??'cad.project'};
    fs.writeFileSync(occtReceipt,JSON.stringify(out,null,2));
    return out;
   }

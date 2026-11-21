@@ -32,7 +32,7 @@ export function installProjectRoutes(app: Express) {
   try{
    const native=await runtime.nativeDoctor();
    return res.json({
-    ok:true,contract:'cad.project.v1',execution_lane:'local',
+    ok:true,execution_lane:'local',
     tools:runtime.catalog().map(({name,description,capability_key,input_schema})=>({
      name,description,capability_key,input_schema,local_available:true,
      hosted_available:false,

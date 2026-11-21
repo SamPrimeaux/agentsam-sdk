@@ -766,7 +766,7 @@
     {
       "id": "cad",
       "aliases": [],
-      "summary": "CAD: cad.project.v1 tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build",
+      "summary": "CAD: project tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build",
       "topic": "work",
       "usage": [
         "agentsam cad"

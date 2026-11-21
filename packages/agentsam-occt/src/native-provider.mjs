@@ -52,7 +52,7 @@ function scopedFile(file, root) {
 }
 
 
-/** Native-only, fail-closed implementation of a small subset of cad.project.v1 operations.
+/** Native-only, fail-closed implementation of a small subset of the design_model_* project operations.
  * Engine availability is established from a real process receipt, never a UI claim.
  */
 export function createOcctNativeProvider({
