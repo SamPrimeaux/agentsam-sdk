@@ -903,6 +903,20 @@ export function CadCreatorApp({
       </aside>}
 
 
+      {sketchOpen && <dialog ref={sketchDialog} aria-label="Native sketch" onClose={()=>setSketchOpen(false)}
+        className="m-auto h-[90dvh] w-[96vw] max-w-screen-xl overflow-hidden rounded-lg border border-slate-700 bg-slate-950 p-0 text-slate-100 backdrop:bg-black/60">
+        <div className="flex h-full flex-col">
+          <header className="flex items-center justify-between border-b border-slate-700 px-3 py-2">
+            <strong>Native sketch</strong>
+            <button type="button" onClick={()=>sketchDialog.current?.close()}>Back to project</button>
+          </header>
+          <div className="min-h-0 flex-1">
+            <NativeSketchCanvas key={project.id} project={project} canEdit={!isViewer}
+              selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
+              onUpdateProject={next=>updateProject(previous=>previous===project?next:previous)}/>
+          </div>
+        </div>
+      </dialog>}
       <ExportPublishModal
         isOpen={isExportPublishOpen}
         onClose={() => setIsExportPublishOpen(false)}
