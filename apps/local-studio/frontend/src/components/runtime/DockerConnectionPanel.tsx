@@ -122,7 +122,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
     {error&&<p role="alert" className="text-xs text-destructive">{error}</p>}
     {installation==='checking'?<p role="status" className="text-muted-foreground">Checking your account's installed plugins…</p>:
       installation==='error'?<p role="alert" className="text-muted-foreground">Plugin status could not be verified. Docker access has not been granted.</p>:
-      installation==='disabled'?<p className="text-muted-foreground">Docker is installed but disabled for this account. Enable it in Plugins to use your engines.</p>:
+      installation==='disabled'?<p className="text-muted-foreground">Docker is disabled for this account. Enable it to choose and verify an engine.</p>:
       <p className="text-muted-foreground">Install Docker for this account. Installation does not connect to an engine or grant host access.</p>}
     <div className="flex gap-2">
       {installation==='not_installed'?<button type="button" className="rounded-md border border-border px-3 py-2 hover:bg-muted" disabled={loading} onClick={()=>void install()}>Install Docker plugin</button>:null}
