@@ -34,6 +34,7 @@
 .qa-section+.qa-section{margin-top:1.1rem}
 .qa-section-head,.qa-focus-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem}
 .qa-focus-head{justify-content:flex-start;gap:.5rem}
+.qa-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .qa-section-head h3,.qa-focus-head h3{margin:0;font-size:var(--text-sm);font-weight:var(--fw-strong)}
 .qa-section-head button,.qa-focus-head button{display:inline-flex;align-items:center;gap:.25rem;border:0;background:transparent;color:var(--cad-muted);font:inherit;font-size:var(--text-xs);cursor:pointer}
 .qa-section-head button:hover,.qa-focus-head button:hover{color:var(--cad-ink)}
