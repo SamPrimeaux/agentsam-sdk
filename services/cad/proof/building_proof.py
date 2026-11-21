@@ -31,7 +31,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, cast
 
 IN = 25.4  # mm per inch
 
@@ -105,11 +105,12 @@ if os.environ.get("AGENTSAM_CAD_BUILDING_SOURCE"):
     sys.path.insert(0, str(SELF.parent))
     from building_source import load_building_source
 
-    PARAMS, SOURCE_EVIDENCE = load_building_source(os.environ["AGENTSAM_CAD_BUILDING_SOURCE"])
+    raw_params, SOURCE_EVIDENCE = load_building_source(os.environ["AGENTSAM_CAD_BUILDING_SOURCE"])
+    PARAMS = cast(BuildingParameters,raw_params)
 
 
 def deterministic_guid(entity_id: str) -> str:
-    import ifcopenshell  # type: ignore[import-not-found] -- container-only BIM dependency
+    import ifcopenshell  # ty: ignore[unresolved-import] -- container-only BIM dependency
 
     scope = SOURCE_EVIDENCE["source_id"] if SOURCE_EVIDENCE else "cad-toolchain-proof"
     return ifcopenshell.guid.compress(uuid.uuid5(uuid.NAMESPACE_URL, f"iamscene:ifc:{scope}:{entity_id}").hex)
@@ -916,7 +917,8 @@ if __name__ == "__main__":
         from building_source import load_building_source
 
         expected = argv[argv.index("--base")+1] if "--base" in argv else None
-        PARAMS,SOURCE_EVIDENCE = load_building_source(argv[ix+1],expected_hash=expected)
+        raw_params,SOURCE_EVIDENCE = load_building_source(argv[ix+1],expected_hash=expected)
+        PARAMS = cast(BuildingParameters,raw_params)
     if argv[:1] == ["stage"]:
         stage = {"freecad": stage_freecad, "ifc": stage_ifc, "blender": stage_blender}[
             argv[1]

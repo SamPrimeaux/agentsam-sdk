@@ -18,12 +18,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import uuid
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlsplit, quote
+from urllib.parse import quote, unquote, urlsplit
 
 # Reuse the published Python SDK's portable native host adapter. Keep the
 # existing Linux compatibility path for images not yet carrying SDK >=0.2.

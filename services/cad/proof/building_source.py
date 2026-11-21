@@ -60,11 +60,11 @@ def load_building_source(path: str | Path, expected_hash: str | None = None) -> 
     geometry = doc.get("geometry") or {}
     entities = geometry.get("entities")
     if not isinstance(entities, list):
-        raise ValueError("cad_building_geometry_entities_required")
+        raise ValueError("cad_building_geometry_entities_required")  # noqa: TRY004 -- return structured HTTP 400
     by_id: dict[str, dict] = {}
     for entity in entities:
         if not isinstance(entity, dict):
-            raise ValueError("cad_building_geometry_entity_invalid")
+            raise ValueError("cad_building_geometry_entity_invalid")  # noqa: TRY004 -- return structured HTTP 400
         key = _identifier(entity.get("id"), "entity_id")
         if key in by_id:
             raise ValueError("cad_building_duplicate_entity")
@@ -74,7 +74,7 @@ def load_building_source(path: str | Path, expected_hash: str | None = None) -> 
         raise ValueError("cad_building_architecture_module_required")
     spec = (architecture.get("extensions") or {}).get("iamscene.building-shell.v1")
     if not isinstance(spec, dict):
-        raise ValueError("cad_building_shell_extension_required")
+        raise ValueError("cad_building_shell_extension_required")  # noqa: TRY004 -- return structured HTTP 400
     shell_id = _identifier(spec.get("shellEntityId"), "shell_ref")
     shell = by_id.get(shell_id)
     if not shell or shell.get("kind") != "architecture.shell" or not isinstance(shell.get("properties"), dict):
