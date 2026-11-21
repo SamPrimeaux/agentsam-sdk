@@ -9,6 +9,23 @@ const respond = (body,status=200,headers={}) => Response.json(body,{
 });
 const MAX_DOCUMENT_BYTES=1_500_000;
 const MAX_SCENE_ASSET_BYTES=25_000_000;
+// Keep binary source files independently downloadable. The presentation mesh
+// is always a verified GLB, but imported OBJ/FBX/glTF etc. remain intact.
+const NATIVE_ASSET_MIME = Object.freeze({
+ glb:'model/gltf-binary', gltf:'model/gltf+json',
+ obj:'model/obj', stl:'model/stl', ply:'model/ply',
+ fbx:'model/fbx', dae:'model/vnd.collada+xml',
+ bin:'application/octet-stream', png:'image/png',
+ jpg:'image/jpeg', jpeg:'image/jpeg', webp:'image/webp',
+ mtl:'text/plain',
+});
+const nativeAssetExt=asset=>{
+ if(typeof asset?.uri!=='string')return null;
+ const match=/^assets\/[a-z0-9_.-]+\.([a-z0-9]+)$/i.exec(asset.uri);
+ if(!match)return null;
+ const ext=match[1].toLowerCase();
+ return NATIVE_ASSET_MIME[ext]===asset.mediaType?ext:null;
+};
 const KIND=new Set(['desktop','phone','panel','orb','box','ring','cad','template','prop']);
 const FINISH=new Set(['gold','titanium','obsidian','copper','iridescent']);
 const MOOD=new Set(['studio','sunset','twilight','noir','dawn']);
@@ -34,7 +51,7 @@ function validateNativeSceneDocument(doc){
  const ids=new Set(),assetIds=new Set();
  for(const asset of doc.assets){
   if(!asset||typeof asset.id!=='string'||!/^[a-z0-9_-]{6,100}$/.test(asset.id)||assetIds.has(asset.id)
-    ||asset.mediaType!=='model/gltf-binary'||!/^assets\/[a-z0-9_.-]+\.glb$/i.test(asset.uri)
+    ||!nativeAssetExt(asset)
     ||typeof asset.sha256!=='string'||! /^[0-9a-f]{64}$/i.test(asset.sha256))return false;
   assetIds.add(asset.id);
  }
@@ -138,7 +155,7 @@ const summary=row=>({
  contentHash:row.content_hash,
  preview:row.thumbnail_r2_key?'/api/work/library/artifacts/'+encodeURIComponent(row.id)+'/file?preview=1':null,
 });
-const assetObjectKey=(owner,id,asset)=>'samsketch/'+encodeURIComponent(owner)+'/'+encodeURIComponent(id)+'/assets/'+asset.id+'-'+asset.sha256+'.glb';
+const assetObjectKey=(owner,id,asset)=>'samsketch/'+encodeURIComponent(owner)+'/'+encodeURIComponent(id)+'/assets/'+asset.id+'-'+asset.sha256+'.'+nativeAssetExt(asset);
 const recordQuery="SELECT id,user_id,name,r2_key,content_hash,updated_at,metadata_json,thumbnail_r2_key FROM agentsam_artifacts WHERE id=? AND user_id=? AND artifact_type='samsketch-scene' AND archived_at IS NULL";
 const objectKey=(owner,id,rev)=>'samsketch/'+encodeURIComponent(owner)+'/'+encodeURIComponent(id)+'/rev-'+rev+'-'+crypto.randomUUID()+'.json';
 const toBytes=string=>new TextEncoder().encode(string);
@@ -233,18 +250,18 @@ export async function handleSamSketchSceneRequest(request,env,owner){
    const key=assetObjectKey(owner,id,asset);
    if(method==='PUT'){
     if(Number(request.headers.get('content-length')||0)>MAX_SCENE_ASSET_BYTES)return respond({ok:false,error:'asset_too_large'},413);
-    if(request.headers.get('content-type')?.split(';')[0]!=='model/gltf-binary')return respond({ok:false,error:'invalid_asset_type'},415);
+    if(request.headers.get('content-type')?.split(';')[0]!==asset.mediaType)return respond({ok:false,error:'invalid_asset_type'},415);
     const bytes=await request.arrayBuffer();
-    if(bytes.byteLength<20||bytes.byteLength>MAX_SCENE_ASSET_BYTES)return respond({ok:false,error:'asset_too_large'},413);
+    if(bytes.byteLength<1||bytes.byteLength>MAX_SCENE_ASSET_BYTES)return respond({ok:false,error:'asset_too_large'},413);
     if(await sha(bytes)!==asset.sha256)return respond({ok:false,error:'asset_hash_mismatch'},400);
-    await bucket.put(key,bytes,{httpMetadata:{contentType:'model/gltf-binary'}});
+    await bucket.put(key,bytes,{httpMetadata:{contentType:asset.mediaType}});
     const check=await bucket.get(key);
     if(!check||await sha(await check.arrayBuffer())!==asset.sha256){await bucket.delete?.(key);return respond({ok:false,error:'scene_asset_write_unverified'},502);}
     return respond({ok:true,assetId,sha256:asset.sha256,bytes:bytes.byteLength},201);
    }
    const obj=await bucket.get(key);
    if(!obj)return respond({ok:false,error:'scene_asset_not_found'},404);
-   const headers={'cache-control':'private, max-age=300','content-type':'model/gltf-binary','x-content-type-options':'nosniff','etag':'"'+asset.sha256+'"'};
+   const headers={'cache-control':'private, max-age=300','content-type':asset.mediaType,'x-content-type-options':'nosniff','etag':'"'+asset.sha256+'"'};
    return new Response(method==='HEAD'?null:obj.body,{status:200,headers});
   }
   if(method==='GET'){
