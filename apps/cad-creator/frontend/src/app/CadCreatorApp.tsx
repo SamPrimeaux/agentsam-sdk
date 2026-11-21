@@ -655,6 +655,15 @@ export function CadCreatorApp({
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
           onNew={startBlankProject} onTemplates={() => {setShowProjectGallery(true);setIsTemplateLibraryOpen(false)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}} onPlaceStock={placeStockPreset} onOpenScene={openTemplateScene}
           onSketch={()=>setSketchOpen(true)}
+          onOpenSolid={accessMode === 'hosted-project' ? undefined : () => {
+            const width = solidWidthInput.current;
+            if (!width) return;
+            for (let element: HTMLElement | null = width; element; element = element.parentElement) {
+              if (element instanceof HTMLDetailsElement) element.open = true;
+            }
+            width.focus();
+            width.select();
+          }}
           onParametric={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('parametric')}}
           onExport={() => setIsExportPublishOpen(true)}
           onSave={()=>{if(accessMode==='hosted-project'){void saveHostedRevision()}else window.dispatchEvent(new Event('agentsam:cad-save-revision'))}}
