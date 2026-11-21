@@ -48,4 +48,21 @@ SSOT: [`docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md`](../docs/architectur
 
 `npm install` is inert. AgentSam activates features after validation → plan → operator approval → receipt.
 
+### Canonical source formats versus implemented scene adapters
+
+- **Format identity:** `contracts/source-types.v2.json` and its schema are
+  the only canonical definitions of file identity and extension evidence.
+  `@inneranimalmedia/agentsam-contracts/source-types/catalog` contains a
+  generated release copy.
+- **Operation vocabulary:** `@inneranimalmedia/agentsam-contracts/scene-format`
+  defines independent import, export, live-reference and round-trip capability
+  contracts, with loss reporting. It does not perform conversions.
+- **Implementation:** `packages/iamscene/src/format-registry.ts` declares the
+  real installed adapters, including which operations fail closed. Displaying
+  a linked model or verifying its hash is not semantic editable import.
+- **Discovery:** `protocol/capabilities/manifest.json` and the generated
+  root SDK inventory advertise API capabilities separately from verified host
+  bindings/authorization. Schema publication under `packages/iamscene/v1/`
+  is mapped by `scripts/schema-registry/publish_package_schemas.py`.
+
 The root npm identity remains `@inneranimalmedia/agentsam-sdk`. Package boundaries can evolve, but portable code should have one canonical owner and host applications should depend on it rather than mirror it.
