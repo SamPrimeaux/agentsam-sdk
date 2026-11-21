@@ -1,6 +1,6 @@
 import React, {useState,useEffect,useRef} from 'react';
 import type {DesignProject} from '@inneranimalmedia/agentsam-cad-shared';
-export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRevision}:{project:DesignProject;onLoad:(p:DesignProject)=>void;readOnly?:boolean;onVerifiedRevision?:(revision:number|null,projectId:string)=>void}){
+export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRevision,widthInputRef}:{widthInputRef?:React.Ref<HTMLInputElement>;project:DesignProject;onLoad:(p:DesignProject)=>void;readOnly?:boolean;onVerifiedRevision?:(revision:number|null,projectId:string)=>void}){
  const [revision,setRevision]=useState(0),[status,setStatus]=useState('Unsaved'),[busy,setBusy]=useState(false),[loadId,setLoadId]=useState(project.id),[restoreRevision,setRestoreRevision]=useState('1');
  const [artifact,setArtifact]=useState('');
  const [artifactLabel,setArtifactLabel]=useState('View courtyard render');
