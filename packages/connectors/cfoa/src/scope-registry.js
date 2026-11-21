@@ -52,3 +52,30 @@ export async function activeGrantedScopes(env, ownerId, providerKey = 'cloudflar
     return [];
   }
 }
+
+/**
+ * Scopes a plugin pack declares in `agentsam_plugins.config_json`
+ * (`oauth_scopes` + `oauth_scopes_edit`), e.g. pack `create` -> plugin `cloudflare-create`.
+ * Returns null when no pack row exists so callers can fall back.
+ */
+export async function pluginPackScopes(env, packs, providerKey = 'cloudflare') {
+  if (!env?.DB?.prepare || !packs?.length) return null;
+  const keys = packs.map((pack) => `${providerKey}-${String(pack).toLowerCase()}`);
+  try {
+    const marks = keys.map(() => '?').join(',');
+    const { results } = await env.DB.prepare(
+      `SELECT plugin_key, config_json FROM agentsam_plugins WHERE provider_key = ? AND plugin_key IN (${marks})`,
+    ).bind(providerKey, ...keys).all();
+    const out = new Set();
+    let found = 0;
+    for (const row of results || []) {
+      let cfg = {};
+      try { cfg = JSON.parse(row.config_json || '{}'); } catch { /* ignore */ }
+      found += 1;
+      for (const scope of [...(cfg.oauth_scopes || []), ...(cfg.oauth_scopes_edit || [])]) out.add(scope);
+    }
+    return found ? [...out] : null;
+  } catch {
+    return null;
+  }
+}

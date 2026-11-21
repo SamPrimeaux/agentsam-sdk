@@ -421,7 +421,9 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       packs: requestedPacks,
     });
     const alreadyGranted = await activeGrantedScopes(env, ownerId);
-    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra])]);
+    // Pack scopes are declared by the plugin rows (agentsam_plugins.config_json); code catalog is the fallback.
+    const packScopes = (await pluginPackScopes(env, requestedPacks)) || [];
+    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra, ...packScopes])]);
     const saved = await saveOAuthState(env, {
       state,
       ownerId,
