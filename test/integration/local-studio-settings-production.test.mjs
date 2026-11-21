@@ -20,7 +20,8 @@ test('production Settings never mounts fixture data', () => {
   assert.match(settingsHost, /identitySessionExists/);
   assert.match(settingsHost, /getDesktopWorkspaceContext/);
   assert.match(settingsHost, /repositoryLabel:\s*["']Local runtime["']/);
-  assert.match(settingsHost, /browser:\s*["']Available["']/);
+  assert.match(settingsHost, /browser:\s*["']Not checked["']/);
+  assert.doesNotMatch(settingsHost, /snapshot\.network\.health\s*=\s*health\b/);
   assert.match(settingsHost, /health:\s*["']unknown["']/);
   assert.doesNotMatch(settingsFrontend, /demo-app|Demo Org/);
 });
