@@ -44,6 +44,9 @@
 /* Work already provides primary navigation. Never squeeze MovieMode's second
    desktop sidebar into its resizable embedded panel. */
 .agentsam-moviemode.is-work-pane .mm-home-sidebar { display:none; }
+/* With the sidebar hidden, the main column must span the grid or it auto-places into the sidebar's track. */
+.agentsam-moviemode.is-work-pane .mm-home { grid-template-columns:minmax(0,1fr); }
+.agentsam-moviemode.is-work-pane .mm-home-main { grid-column:1 / -1; }
 .agentsam-moviemode.is-work-pane .mm-home-main {
   width:100%; min-width:0; max-width:none; flex:1;
 }
@@ -56,6 +59,8 @@
 }
 @container (max-width: 760px) {
   .agentsam-moviemode .mm-home { width:100%; min-width:0; }
+  .agentsam-moviemode .mm-home { grid-template-columns:minmax(0,1fr); }
+  .agentsam-moviemode .mm-home-main { grid-column:1 / -1; }
   .agentsam-moviemode .mm-home-sidebar { display:none; }
   .agentsam-moviemode .mm-home-main { width:100%; max-width:none; min-width:0; padding:0 12px 20px; }
   .agentsam-moviemode .mm-home-quick-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
