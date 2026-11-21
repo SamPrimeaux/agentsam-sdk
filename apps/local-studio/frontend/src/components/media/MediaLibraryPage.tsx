@@ -388,7 +388,8 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const viewerIndex = visible.findIndex((a) => a.id === viewerId);
   const viewing = viewerIndex >= 0 ? visible[viewerIndex] : null;
   const connectUrl = mediaConnectUrl(resources?.connect_url || resources?.reconnect_url, returnTo);
-  const notConnected = source !== "local" && source !== "intake" && (resources?.status === "not_connected" || error?.kind === "reconnect");
+  // Only a truly missing connection takes the page; a missing permission is an inline banner so tabs and other sources stay usable.
+  const notConnected = source !== "local" && source !== "intake" && resources?.status === "not_connected";
 
   const counts = {
     cf_images: resources?.images?.count ?? null,
@@ -646,7 +647,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
       {notConnected ? (
         <div className="agentsam-media-body">
           <div className="agentsam-media-state">
-            <strong>{error?.kind === "reconnect" ? "Reconnect Cloudflare" : "Connect Cloudflare"}</strong>
+            <strong>Connect Cloudflare</strong>
             <p>
               {error?.kind === "reconnect"
                 ? error.message
@@ -768,6 +769,12 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
             <div className="agentsam-media-banner is-error" role="status">
               <span>Cloudflare status could not be verified: {connectionError}. Your account authorization has not been cleared.</span>
               <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Retry</button>
+            </div>
+          ) : null}
+          {error?.kind === "reconnect" && source !== "local" && source !== "intake" ? (
+            <div className="agentsam-media-banner" role="status">
+              <span>{error.message}</span>
+              <a className="agentsam-media-btn is-primary" href={error.connectUrl || connectUrl}>Grant permission</a>
             </div>
           ) : null}
           {resources?.status === "needs_scope" ? (

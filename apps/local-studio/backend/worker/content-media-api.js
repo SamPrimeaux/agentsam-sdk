@@ -240,7 +240,8 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
   const client = resolved.client;
   // Ask Cloudflare only for products the grant actually covers; otherwise say exactly what is missing.
   const { getCloudflareCapability } = await import("../../../../packages/connectors/cfoa/src/capabilities.js");
-  const needed = getCloudflareCapability(capabilityId)?.oauthScopes || [];
+  const { registryScopesForCapability } = await import("../../../../packages/connectors/cfoa/src/scope-registry.js");
+  const needed = (await registryScopesForCapability(env, capabilityId)) || getCloudflareCapability(capabilityId)?.oauthScopes || [];
   const granted = Array.isArray(client.grantedScopes) ? client.grantedScopes : [];
   const missing = granted.length ? needed.filter((scope) => !granted.includes(scope)) : [];
   if (missing.length) {

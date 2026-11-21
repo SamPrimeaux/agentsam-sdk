@@ -409,10 +409,19 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const capabilitySet = requested.length
       ? requested
       : (requestedPacks.length ? [] : hostDefaultCapabilities);
-    const scopes = requestedCloudflareScopes({
+    // Grants are additive: Cloudflare reissues the token with exactly the scopes asked for,
+    // so carry the active grant forward and add only what this request needs (from the D1 registry).
+    const registryExtra = [];
+    for (const id of capabilitySet) {
+      const fromRegistry = await registryScopesForCapability(env, id);
+      if (fromRegistry) registryExtra.push(...fromRegistry);
+    }
+    const requestedScopes = requestedCloudflareScopes({
       capabilities: capabilitySet,
       packs: requestedPacks,
     });
+    const alreadyGranted = await activeGrantedScopes(env, ownerId);
+    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra])]);
     const saved = await saveOAuthState(env, {
       state,
       ownerId,
