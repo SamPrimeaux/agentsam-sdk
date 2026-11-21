@@ -188,3 +188,35 @@ test('native I.AM Scene and GLB assets are owner-scoped, hash-verified and reloa
  const reopen=await handleSamSketchSceneRequest(req('GET','/'+nativeId),h.env,'owner_one');
  assert.deepEqual((await reopen.json()).document,document);
 });
+
+test('native source assets survive account-scoped R2 upload with exact MIME, checksum and extension',async()=>{
+ const h=harness();
+ const glb=new Uint8Array(24);glb.set([0x67,0x6c,0x54,0x46]);
+ const document=await nativeSource(glb);
+ const raw=new TextEncoder().encode('v 0 0 0\nv 0 1 0\nv 1 0 0\nf 1 2 3\n');
+ const sha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',raw))].map(n=>n.toString(16).padStart(2,'0')).join('');
+ const assetId='model_original_obj_01';
+ document.assets.push({id:assetId,uri:'assets/original.obj',mediaType:'model/obj',sha256,role:'geometry-source'});
+ assert.equal(validateSamSketchDocument(document),true);
+ assert.equal(validateSamSketchDocument({...document,assets:[document.assets[0],{...document.assets[1],uri:'../../original.obj'}]}),false);
+ assert.equal(validateSamSketchDocument({...document,assets:[document.assets[0],{...document.assets[1],mediaType:'text/html'}]}),false);
+ const create=await handleSamSketchSceneRequest(req('POST','',{id:nativeId,document}),h.env,'owner_one');
+ assert.equal(create.status,201);
+ const assetPath='/'+nativeId+'/assets/'+assetId;
+ const write=(owner,mime,bytes)=>handleSamSketchSceneRequest(new Request(url(assetPath),{
+   method:'PUT',headers:{'content-type':mime},body:bytes,
+ }),h.env,owner);
+ assert.equal((await write('owner_two','model/obj',raw)).status,404);
+ assert.equal((await write('owner_one','model/gltf-binary',raw)).status,415);
+ const corrupt=raw.slice();corrupt[4]^=1;
+ assert.equal((await write('owner_one','model/obj',corrupt)).status,400);
+ assert.equal((await write('owner_one','model/obj',raw)).status,201);
+ const stored=[...h.objects.keys()].find(key=>key.includes(assetId));
+ assert.ok(stored?.endsWith('.obj'));
+ const downloaded=await handleSamSketchSceneRequest(req('GET',assetPath),h.env,'owner_one');
+ assert.equal(downloaded.status,200);
+ assert.equal(downloaded.headers.get('content-type'),'model/obj');
+ assert.deepEqual(new Uint8Array(await downloaded.arrayBuffer()),raw);
+ const reopened=await handleSamSketchSceneRequest(req('GET','/'+nativeId),h.env,'owner_one');
+ assert.equal((await reopened.json()).document.assets.length,2);
+});

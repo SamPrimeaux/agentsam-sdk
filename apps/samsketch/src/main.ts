@@ -14,7 +14,9 @@ import { mountSettingsDrawer } from "./settings-drawer";
 import { CAMERA_SHOTS, DEFAULT_SCENE_SETTINGS, DEFAULT_STORYBOARD, FINISHES, MOODS, SCENE_PROFILES, SCENERY_PROPS, TRANSITIONS, type BrushStroke, type CameraShotId, type FinishId, type MoodId, type SceneProfileId, type SceneSettings, type SceneryPropId, type StoryBeat, type TransitionId } from "./samspeaks-controls";
 import { mountProgressiveStudio } from "./progressive";
 import { mountSketchGallery, type SketchProjectCategory } from "./gallery";
-import { listScenes, openScene, createScene, updateScene, removeScene, type SceneSummary } from "./scene-api";
+import { listScenes, openScene, createScene, updateScene, removeScene, uploadSceneAsset, type SceneSummary } from "./scene-api";
+import { createSceneDocument } from "../../../packages/iamscene/src/document";
+import { prepareModelImports, appendModelImports, MODEL_IMPORT_ACCEPT } from "./scene-file-import";
 import { mountNativeSceneEditor, type NativeSceneEditorHandle } from "./native-scene-editor";
 import type { SceneDocument as NativeSceneDocument } from "../../../packages/iamscene/src/types";
 import { resolveSceneHit, exactSelectionRoot } from "./scene-selection";
@@ -119,13 +121,13 @@ function announce(t:string){const target=document.getElementById("notice");if(ta
 const app=document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML='<div class="app">'+
   '<header class="top"><div class="top-left">'+iconButton("gallery-home","house","Back to SamSketch gallery")+'<span class="studio-app-mark">SamSketch</span><button class="project" id="project-name">Untitled scene</button><span class="studio-save-state" id="save-state" role="status">Draft in browser</span></div>'+
-  '<div class="top-right">'+iconButton("layers-toggle","layers","Toggle model library")+iconButton("inspector-toggle","sliders","Toggle properties inspector")+iconButton("undo","undo","Undo")+iconButton("redo","redo","Redo")+iconButton("snapshot","capture","Capture PNG")+iconButton("export-json","export","Export scene JSON")+iconButton("save-project","save","Save scene to account")+iconButton("settings-toggle","sliders","Scene settings")+'</div></header>'+
+  '<div class="top-right"><button type="button" id="import-view-models" class="studio-import-models" title="Import one or more 3D models into an editable account-owned scene">+ Import models</button>'+iconButton("layers-toggle","layers","Toggle model library")+iconButton("inspector-toggle","sliders","Toggle properties inspector")+iconButton("undo","undo","Undo")+iconButton("redo","redo","Redo")+iconButton("snapshot","capture","Capture PNG")+iconButton("export-json","export","Export scene JSON")+iconButton("save-project","save","Save scene to account")+iconButton("settings-toggle","sliders","Scene settings")+'</div></header>'+
   '<aside class="left" id="left">'+
   '<div class="library-tabs" role="tablist" aria-label="Scene library"><button type="button" data-library="templates" role="tab">Models</button><button type="button" data-library="objects" role="tab">Objects</button><button type="button" data-library="shapes" role="tab">Shapes</button><button type="button" data-library="icons" role="tab">Icons</button></div>'+
   '<div id="templates-section" class="library-pane"><div class="library-intro"><div><strong>Model inventory</strong><span id="model-inventory-count">Reading source library…</span></div><button class="library-build-button" id="start-build" type="button">'+icon("sparkles",14)+' Let’s build</button></div><div class="build-starter"><strong>Start with a skill</strong><div class="skill-chips"><button type="button" data-build-skill="Sculpt">Sculpt</button><button type="button" data-build-skill="Draft">Draft</button><button type="button" data-build-skill="Model">Model</button><button type="button" data-build-skill="Animate">Animate</button><button type="button" data-build-skill="Vector">Vector</button><button type="button" data-build-skill="Scene">Scene</button></div></div><label class="search-shell">'+icon("search",15)+'<input id="template-search" type="search" placeholder="Search model, part, SKU…" aria-label="Search models and source parts"></label><div class="model-filters" role="group" aria-label="Filter model inventory"><button type="button" data-model-filter="all" class="active">All</button><button type="button" data-model-filter="composition">Compositions</button><button type="button" data-model-filter="source-part">Source parts</button></div><div class="inventory-summary" id="model-inventory-summary"></div><div class="template-catalog" id="template-catalog"></div><p class="library-footnote">Source geometry is read-only. Add an instance to the scene to transform, recolor, hide, duplicate or remove it without altering the source file.</p></div>'+
-  '<div id="objects-section" class="library-pane" hidden><div class="section"><div class="section-title">Scene objects <button id="add-panel" aria-label="Add panel">'+icon("plus",14)+'</button></div><div id="layers"></div></div></div>'+
+  '<div id="objects-section" class="library-pane" hidden><div class="section"><div class="section-title">Scene objects <button id="add-panel" aria-label="Add panel">'+icon("plus",14)+'</button></div><button type="button" id="import-side-models" class="studio-import-models">+ Import 3D model</button><div class="studio-import-description">GLB, glTF, OBJ, STL, PLY, FBX, DAE · multiple files</div><div id="layers"></div></div></div>'+
   '<div id="shapes-section" class="library-pane" hidden><div class="section"><div class="section-title">Create shape</div><div id="primitives"></div></div></div><div id="icons-section" class="library-pane" hidden><div class="library-intro"><div><strong>2D iconography</strong><span id="icon-count">85 semantic tools</span></div><button class="library-build-button" id="export-icon-pack" type="button">'+icon("download",14)+' Export SVG</button></div><label class="search-shell">'+icon("search",15)+'<input id="icon-search" type="search" placeholder="Search icon names…" aria-label="Search iconography"></label><div class="icon-library-selection" id="icon-selection">Icon reference · choose a glyph to inspect. Only tools wired into the editor perform modeling actions.</div><div class="icon-library" id="icon-catalog"></div></div></aside>'+
-  '<main class="canvas-wrap"><div class="canvas-header"><div class="tag" id="chapter-label">Product World / 01</div><h1 id="stage-title">Products with presence</h1><p id="stage-subtitle">Examine every layer of the experience.</p></div>'+
+  '<main class="canvas-wrap"><div id="ss-legacy-import-empty" class="ss-legacy-import-empty"><strong>Bring your models into the scene</strong><span>Drag and drop GLB, glTF, OBJ, STL, PLY, FBX or DAE, or browse for files.</span><button type="button" id="import-stage-models" class="studio-import-models">Choose models</button></div><div id="ss-legacy-drop" class="ss-legacy-drop" hidden><strong>Drop your 3D models here</strong><span>Source files remain intact · imported scene objects remain editable</span></div><div class="canvas-header"><div class="tag" id="chapter-label">Product World / 01</div><h1 id="stage-title">Products with presence</h1><p id="stage-subtitle">Examine every layer of the experience.</p></div>'+
   '<div class="canvas-tools" role="toolbar" aria-label="Drawing and scene tools"><span class="tool-cluster" data-cluster="Navigate">'+iconButton("mode-select","select","Select exact object or source part (Q)")+iconButton("transform-move","move","Move selected object (W)")+iconButton("transform-rotate","rotate","Rotate selected object (E)")+iconButton("transform-scale","scale","Scale selected object (R)")+iconButton("mode-orbit","orbit","Orbit camera")+iconButton("mode-story","story","Story navigation")+'</span><span class="toolbar-separator" aria-hidden="true"></span><span class="tool-cluster" data-cluster="Canvas">'+iconButton("frame","frame","Frame scene")+iconButton("grid","grid","Toggle grid")+iconButton("wireframe","cube","Toggle wireframe")+'</span></div>'+
   '<div class="canvas-status"><span class="dot"></span><span id="notice">Scene ready</span></div><div class="view-gizmo" role="group" aria-label="Camera orientation and navigation"><div class="view-gizmo-orientation" aria-hidden="true"><svg viewBox="0 0 72 66" width="72" height="66"><path d="M36 5 58 17 36 29 14 17 36 5Z" fill="#eef3ff" stroke="#9aaed4" stroke-width="1.3"/><path d="M14 17v25l22 13V29L14 17Z" fill="#dfe8fa" stroke="#9aaed4" stroke-width="1.3"/><path d="M58 17v25L36 55V29l22-12Z" fill="#c8d8f3" stroke="#9aaed4" stroke-width="1.3"/><path d="M36 29v26" stroke="#9aaed4" stroke-width="1.3"/><circle cx="36" cy="29" r="3" fill="#5277d9"/></svg></div><div class="view-gizmo-copy"><span class="view-gizmo-label">View</span><div class="view-gizmo-presets"><button type="button" data-view="top" aria-pressed="false">Top</button><button type="button" data-view="front" aria-pressed="false">Front</button><button type="button" data-view="right" aria-pressed="false">Right</button><button type="button" data-view="iso" class="is-active" aria-pressed="true">Iso</button></div><div class="view-gizmo-zoom"><button type="button" data-camera-action="zoom-in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-camera-action="zoom-out" aria-label="Zoom out" title="Zoom out">−</button><button type="button" data-camera-action="focus" aria-label="Focus selected object" title="Focus selection">Focus</button></div></div></div></main>'+
   '<section class="timeline" id="timeline-dock"><div class="studio-timeline-resize" id="timeline-resize" role="separator" aria-orientation="horizontal" aria-label="Resize scene timeline" tabindex="0"></div><div class="timeline-top"><span class="tag">Story chapters / scroll scenes</span><div class="btn-group"><button class="pill" id="timeline-collapse" type="button" aria-label="Collapse timeline" title="Collapse timeline">'+icon("chevron",13)+'</button><button class="pill" id="stop-story">Stop</button><button class="pill" id="play-story">Play story ▶</button></div></div><div class="timeline-strip" id="chapters"></div></section>'+
@@ -243,6 +245,46 @@ function newHostedScene(next:DocumentInput){
  enterStudio();
  void saveToCloud(true);
 }
+let sceneImportBusy=false;
+async function importModelsIntoNewNativeScene(files:File[]):Promise<void>{
+ if(sceneImportBusy){gallery?.setImportStatus("A model import is already running.");return;}
+ sceneImportBusy=true;
+ let createdSceneId:string|null=null;
+ try{
+  const imports=await prepareModelImports(files,status=>{gallery?.setImportStatus(status);announce(status);});
+  const sceneId='sketch_'+crypto.randomUUID();
+  const title=imports.length===1?imports[0].title:"Imported 3D scene";
+  const base=createSceneDocument({id:sceneId,name:title,description:"SamSketch account-owned 3D scene"});
+  const imported=appendModelImports(base,imports);
+  gallery?.setImportStatus("Creating account-owned scene…");
+  const created=await createScene(sceneId,imported);
+  if(!created.created)throw new Error("The selected scene identifier already exists.");
+  createdSceneId=sceneId;
+  for(const entry of imports){
+   for(const asset of entry.uploads){
+    gallery?.setImportStatus("Saving "+entry.title+" to R2…");
+    const blob=new Blob([asset.bytes.slice().buffer as ArrayBuffer],{type:asset.asset.mediaType});
+    await uploadSceneAsset(sceneId,asset.asset.id,blob,asset.asset.mediaType);
+   }
+  }
+  const reopened=await openScene(sceneId);
+  nativeSceneEditor?.dispose();
+  gallery?.hide();
+  nativeSceneEditor=mountNativeSceneEditor({
+   host:shell,sceneId,document:reopened.document as NativeSceneDocument,
+   contentHash:reopened.scene.contentHash,onBack:()=>showGallery(),
+   onSaved:()=>{void refreshHostedScenes();gallery?.refresh();},
+  });
+  sendHostMessage("surface",{surface:"studio"});
+  cloudState("Native scene · saved to account");
+  gallery?.setImportStatus("");
+  await refreshHostedScenes();
+ }catch(error){
+  if(createdSceneId)await removeScene(createdSceneId).catch(()=>{});
+  const message="Model import failed: "+(error instanceof Error?error.message:String(error));
+  gallery?.setImportStatus(message);announce(message);
+ }finally{sceneImportBusy=false;}
+}
 gallery=mountSketchGallery({
  host:shell,
  getActiveDraft:()=>{
@@ -256,6 +298,7 @@ gallery=mountSketchGallery({
  ],
  onOpenDraft:()=>{enterStudio();cloudState(activeSceneHash?"Draft in browser · cloud revision known":"Draft in browser");},
  onOpenBlank:()=>newHostedScene(freshDoc(doc.brand)),
+ onImportModels:files=>{void importModelsIntoNewNativeScene(files);},
  onOpenTypeface:()=>{const url=new URL(window.location.href);url.searchParams.set("workspace","typeface");window.location.assign(url.toString());},
  onOpenSaved:(id)=>{
   if(id.startsWith("sketch_")){
@@ -852,7 +895,7 @@ function renderBrand(){
  document.documentElement.style.setProperty("--accent",brandInfo[doc.brand].accent);
  document.getElementById("project-name")!.textContent=doc.name+" ▾";
 }
-function renderAll(){renderBrand();renderPrimitives();renderInspector();renderChapters();redraw();renderLayers();progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
+function renderAll(){renderBrand();renderPrimitives();renderInspector();renderChapters();redraw();renderLayers();const empty=document.getElementById("ss-legacy-import-empty");if(empty)empty.hidden=doc.items.length>0;progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
 function setBackdrop(preset:string){
  const colors:Record<string,string>={blue:"#e8effb",studio:"#202c40",neutral:"#e9e4dd",slate:"#252d3d",paper:"#f7f4ee",daylight:"#e7eff7",overcast:"#d8dfe8",night:"#242b3a"};
  const color=colors[preset]||preset||colors.blue;currentBackdrop=preset;
@@ -1240,6 +1283,7 @@ document.addEventListener("click",e=>{
  if(id==="generate-cad"){void generateCAD();return;}
  if(id==="inspector-toggle"){toggleInspectorPanel();return;}
  if(id==="layers-toggle"){toggleLibraryPanel();return;}
+ if(["import-view-models","import-side-models","import-stage-models"].includes(id)){openModelPicker();return;}
  if(id==="gallery-home"){showGallery();return;}
  if(id==="save-project"){saveCurrentToGallery();return;}
  if(id==="play-story"){
@@ -1293,6 +1337,39 @@ document.addEventListener("keydown",e=>{
  if(e.key==="Delete"||e.key==="Backspace"){e.preventDefault();(document.getElementById("delete") as HTMLButtonElement|null)?.click();}
  if(e.key==="Escape"&&autoPlay!==null){window.clearInterval(autoPlay);autoPlay=null;}
  if(e.key==="Escape"&&armedPropType){armedPropType=null;announce("Scenery placement cancelled.");}
+});
+const sceneImportPicker=document.createElement("input");
+sceneImportPicker.type="file";sceneImportPicker.accept=MODEL_IMPORT_ACCEPT;
+sceneImportPicker.multiple=true;sceneImportPicker.hidden=true;
+sceneImportPicker.setAttribute("aria-label","Import 3D model files");
+appFrame.append(sceneImportPicker);
+function openModelPicker(){sceneImportPicker.click();}
+sceneImportPicker.addEventListener("change",()=>{
+ const files=Array.from(sceneImportPicker.files||[]);sceneImportPicker.value="";
+ if(files.length)void importModelsIntoNewNativeScene(files);
+});
+const importCanvas=appFrame.querySelector<HTMLElement>(".canvas-wrap")!;
+const importOverlay=appFrame.querySelector<HTMLElement>("#ss-legacy-drop")!;
+let importDragDepth=0;
+const isFileDrop=(event:DragEvent)=>Array.from(event.dataTransfer?.types||[]).includes("Files");
+importCanvas.addEventListener("dragenter",event=>{
+ if(!isFileDrop(event))return;
+ event.preventDefault();importDragDepth++;importOverlay.hidden=false;
+});
+importCanvas.addEventListener("dragover",event=>{
+ if(!isFileDrop(event))return;
+ event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect="copy";
+});
+importCanvas.addEventListener("dragleave",event=>{
+ if(!isFileDrop(event))return;
+ importDragDepth=Math.max(0,importDragDepth-1);
+ if(!importDragDepth)importOverlay.hidden=true;
+});
+importCanvas.addEventListener("drop",event=>{
+ if(!isFileDrop(event))return;
+ event.preventDefault();event.stopPropagation();importDragDepth=0;importOverlay.hidden=true;
+ const files=Array.from(event.dataTransfer?.files||[]);
+ if(files.length)void importModelsIntoNewNativeScene(files);
 });
 document.getElementById("mode-select")!.classList.add("active");
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(button=>button.addEventListener("click",()=>setCameraView(button.dataset.view||"iso")));
