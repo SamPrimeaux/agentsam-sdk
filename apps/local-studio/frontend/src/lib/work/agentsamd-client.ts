@@ -79,3 +79,34 @@ export async function agentsamdExec(
     stdout: String(body.stdout ?? ""), stderr: String(body.stderr ?? ""), timed_out: Boolean(body.timed_out),
   };
 }
+
+/** Authenticated JSON call to any agentsamd route (used by the native Docker API). */
+export async function agentsamdRequest(
+  route: string,
+  body: Record<string, unknown> = {},
+  options: { token?: string | null; fetchImpl?: FetchLike; store?: TokenStore | null } = {},
+): Promise<Record<string, unknown>> {
+  const store = options.store === undefined ? defaultStore() : options.store;
+  const token = options.token === undefined ? getAgentsamdToken(store) : options.token;
+  if (!token) throw new AgentsamdError("agentsamd_pairing_required", "Connect this browser to your computer first.");
+  const fetchImpl = options.fetchImpl || fetch;
+  let response: Response;
+  try {
+    response = await fetchImpl(AGENTSAMD_BASE + route, {
+      method: "POST",
+      headers: { "content-type": "application/json", [TOKEN_HEADER]: token },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new AgentsamdError("agentsamd_unreachable", "AgentSam cannot reach this computer.");
+  }
+  if (response.status === 401) {
+    clearAgentsamdToken(store);
+    throw new AgentsamdError("agentsamd_pairing_required", "That pairing token was not accepted.");
+  }
+  const parsed = await response.json().catch(() => null) as Record<string, unknown> | null;
+  if (!response.ok || !parsed || parsed.ok === false) {
+    throw new AgentsamdError("agentsamd_request_failed", String(parsed?.message || parsed?.error || "Request failed (" + response.status + ")"));
+  }
+  return parsed;
+}

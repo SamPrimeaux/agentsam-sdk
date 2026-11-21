@@ -54,8 +54,8 @@ test("remote engines are ssh-only and need approval", async () => {
   assert.deepEqual(calls[0].args, ["context", "create", "r", "--docker", "host=ssh://u@h.example:22"]);
 });
 
-test("container file operations are not offered over agentsamd", async () => {
-  await assert.rejects(dockerViaAgentsamd("write", { context: "c", container: "x" }, recorder().exec), /docker_files_require_desktop/);
+test("unknown actions are refused", async () => {
+  await assert.rejects(dockerViaAgentsamd("format-disk", { context: "c", container: "x" }, recorder().exec), /docker_action_unsupported/);
 });
 
 test("a failing docker command surfaces its first stderr line", async () => {
