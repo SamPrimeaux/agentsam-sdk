@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Container, RefreshCw, ShieldCheck, HardDrive, Server, ExternalLink } from 'lucide-react';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
 import { getAgentsamdToken, setAgentsamdToken, probeAgentsamd } from '@/lib/work/agentsamd-client';
-import { listLocalStudioConnections, installLocalStudioPublicPlugin } from '@/lib/connections/client';
+import { listLocalStudioConnections, installLocalStudioPublicPlugin, updateLocalStudioPlugin } from '@/lib/connections/client';
 import {
   dockerBridge, dockerEngineHealth, listDockerContexts, listDockerContainers,
   dockerContainerAction, dockerContainerLogs, type DockerContext,
