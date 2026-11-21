@@ -110,3 +110,34 @@ export async function agentsamdRequest(
   }
   return parsed;
 }
+
+export type PairingResult = { ok: true } | { ok: false; reason: "denied" | "cooldown" | "pending" | "unavailable" | "unreachable"; message: string };
+
+/**
+ * One-click pairing: agentsamd shows an Allow/Deny prompt on this computer and
+ * returns the token only if the person allows it. The token is stored in this browser.
+ */
+export async function requestAgentsamdPairing(
+  options: { fetchImpl?: FetchLike; store?: TokenStore | null } = {},
+): Promise<PairingResult> {
+  const fetchImpl = options.fetchImpl || fetch;
+  let response: Response;
+  try {
+    response = await fetchImpl(AGENTSAMD_BASE + "/v1/pair/request", { method: "POST", signal: AbortSignal.timeout(70000) });
+  } catch {
+    return { ok: false, reason: "unreachable", message: "AgentSam cannot reach this computer." };
+  }
+  const body = await response.json().catch(() => null) as { ok?: boolean; token?: string; error?: string } | null;
+  if (response.ok && body?.ok && typeof body.token === "string") {
+    const store = options.store === undefined ? defaultStore() : options.store;
+    return setAgentsamdToken(body.token, store)
+      ? { ok: true }
+      : { ok: false, reason: "unavailable", message: "This browser could not save the connection." };
+  }
+  switch (body?.error) {
+    case "approval_denied": return { ok: false, reason: "denied", message: "The connection was not approved on your computer." };
+    case "approval_cooldown": return { ok: false, reason: "cooldown", message: "Please wait a moment before trying again." };
+    case "approval_pending": return { ok: false, reason: "pending", message: "A prompt is already open on your computer. Answer it, then try again." };
+    default: return { ok: false, reason: "unavailable", message: "Your computer could not show the approval prompt. Use a pairing token below instead." };
+  }
+}

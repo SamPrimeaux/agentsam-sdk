@@ -87,3 +87,11 @@ func (s *Store) Verify(presented string) bool {
 	}
 	return subtle.ConstantTimeCompare([]byte(presented), []byte(s.token)) == 1
 }
+
+// Token returns the loaded pairing token. Callers must release it only after
+// the person at this computer has approved the request.
+func (s *Store) Token() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.token
+}

@@ -94,3 +94,21 @@ test("an unreachable daemon is reported distinctly from a bad token", async () =
   const fetchImpl = async () => { throw new TypeError("Failed to fetch"); };
   await assert.rejects(agentsamdExec("docker", [], { fetchImpl, store }), (e: unknown) => e instanceof AgentsamdError && e.code === "agentsamd_unreachable");
 });
+
+import { requestAgentsamdPairing } from "./agentsamd-client.ts";
+const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+
+test("one-click pairing stores the token only when approved", async () => {
+  const store = memory();
+  const token = "a".repeat(64);
+  const approved = await requestAgentsamdPairing({ store, fetchImpl: async () => json(200, { ok: true, token }) });
+  assert.deepEqual(approved, { ok: true });
+  assert.equal(getAgentsamdToken(store), token);
+
+  const empty = memory();
+  const denied = await requestAgentsamdPairing({ store: empty, fetchImpl: async () => json(403, { ok: false, error: "approval_denied" }) });
+  assert.equal(denied.ok, false);
+  assert.equal(getAgentsamdToken(empty), null);
+  const down = await requestAgentsamdPairing({ store: empty, fetchImpl: async () => { throw new Error("offline"); } });
+  assert.equal(down.ok === false && down.reason, "unreachable");
+});
