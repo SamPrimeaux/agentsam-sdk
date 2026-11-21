@@ -324,7 +324,7 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
   const closeMenus=(except?:HTMLDetailsElement)=>root.querySelectorAll<HTMLDetailsElement>('details.cad-toolbar-menu[open]').forEach(menu=>{if(menu!==except)menu.open=false});
   const onToggle=(event:Event)=>{
    const menu=event.target;
-   if(menu instanceof HTMLDetailsElement&&menu.open)closeMenus(menu);
+   if(menu instanceof HTMLDetailsElement && menu.matches('.cad-toolbar-menu') && menu.open)closeMenus(menu);
   };
   const onOutside=(event:PointerEvent)=>{if(!root.contains(event.target as Node))closeMenus()};
   const onEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')closeMenus()};
