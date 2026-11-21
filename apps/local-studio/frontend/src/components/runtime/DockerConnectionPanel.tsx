@@ -195,7 +195,8 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
         <button className="rounded-md border border-border px-3 py-1.5 text-xs" disabled={loading} onClick={()=>void manage('restart')}>Restart</button>
       </div>}
       {logs&&<pre className="max-h-48 overflow-auto rounded-md border border-border bg-background p-3 text-xs whitespace-pre-wrap break-all">{logs}</pre>}
-      {onOpenWorkspace&&container&&<div className="space-y-3 border-t border-border pt-3">
+      {onOpenWorkspace&&container&&!desktop&&<p className="text-xs text-muted-foreground">Open AgentSam Desktop to browse and edit container files.</p>}
+      {onOpenWorkspace&&container&&desktop&&<div className="space-y-3 border-t border-border pt-3">
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Authorized container workspace directory
           <input className="min-h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground"
             value={root} onChange={e=>setRoot(e.target.value)} placeholder="/app or /work"/>
