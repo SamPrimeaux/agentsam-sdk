@@ -108,20 +108,44 @@
     '<label class="ter-field"><span>'+esc(label)+'</span><select data-embed-select="'+esc(name)+'">'+
     options.map(option=>'<option value="'+esc(option)+'"'+(option===value?' selected':'')+'>'+esc(option.replace(/-/g,' '))+'</option>').join('')+
     '</select></label>';
+  const hexValue = value => /^#[0-9a-f]{6}$/i.test(value || '') ? value : '';
+  const colorField = (key,label,value) =>
+    '<div class="ter-field"><span>'+esc(label)+'</span><div class="ter-color">'+
+    '<input type="color" aria-label="'+esc(label+' picker')+'" data-embed-swatch="'+esc(key)+'" value="'+esc(hexValue(value)||'#000000')+'">'+
+    '<input type="text" data-embed-input="'+esc(key)+'" value="'+esc(value||'')+'" placeholder="Theme color" pattern="#[a-fA-F0-9]{6}" aria-label="'+esc(label)+'">'+
+    '<button type="button" data-embed-color-clear="'+esc(key)+'">Use theme</button></div></div>';
+  const imageField = (key,label,value,hint) =>
+    '<div class="ter-field ter-image"><span>'+esc(label)+'</span>'+
+    '<div class="ter-image-drop" data-embed-drop="'+esc(key)+'" tabindex="0" role="button" aria-label="Drop or choose an image">'+
+    (value ? '<img src="'+esc(value)+'" alt="">' : '<em>Drop an image here, or choose one</em>')+'</div>'+
+    '<div class="ter-image-actions"><label class="ter-upload">Choose image<input type="file" accept="image/*" data-embed-file="'+esc(key)+'" hidden></label>'+
+    (value ? '<button type="button" data-embed-image-clear="'+esc(key)+'">Remove</button>' : '')+'</div>'+
+    '<input type="text" data-embed-input="'+esc(key)+'" value="'+esc(value||'')+'" placeholder="/media/… or https://…" aria-label="'+esc(label+' link')+'">'+
+    (hint ? '<p class="ter-muted">'+esc(hint)+'</p>' : '')+'<p class="ter-muted" data-embed-image-note role="status"></p></div>';
   function chatSettings(app, config) {
     const fields = (app.editor_fields || []).filter(spec => spec.key !== 'agent_replies');
-    return '<details open><summary>Chat settings</summary>'+checkbox('enabled','Show online store chat',config.enabled===true)+
-      fields.map(spec => {
-        const {key,label,type}=spec;
-        const value=config[key];
-        if(type==='toggle') return checkbox(key,label,value);
-        if(type==='select'||type==='radio') return select(key,label,value,spec.options);
-        if(type==='range') return field(key,label,value,'number','min="'+esc(spec.min)+'" max="'+esc(spec.max)+'" step="1"');
-        if(type==='textarea') return '<label class="ter-field"><span>'+esc(label)+'</span><textarea rows="3" maxlength="400" data-embed-input="'+esc(key)+'">'+esc(value)+'</textarea></label>';
-        if(type==='product_picker') return field(key,'Featured product IDs',Array.isArray(value)?value.join(', '):'')+
-          '<p class="ter-muted">Enter up to four published product IDs from this site.</p>';
-        return field(key,label,value||'','text',type==='color'?'placeholder="Theme color" pattern="#[a-fA-F0-9]{6}"':'');
-      }).join('')+'</details>';
+    const render = spec => {
+      const {key,label,type}=spec;
+      const value=config[key];
+      if(type==='toggle') return checkbox(key,label,value);
+      if(type==='select'||type==='radio') return select(key,label,value,spec.options);
+      if(type==='range') return field(key,label,value,'number','min="'+esc(spec.min)+'" max="'+esc(spec.max)+'" step="1"');
+      if(type==='textarea') return '<label class="ter-field"><span>'+esc(label)+'</span><textarea rows="3" maxlength="400" data-embed-input="'+esc(key)+'">'+esc(value)+'</textarea></label>';
+      if(type==='product_picker') return field(key,'Featured product IDs',Array.isArray(value)?value.join(', '):'')+
+        '<p class="ter-muted">Enter up to four published product IDs from this site.</p>';
+      if(type==='color') return colorField(key,label,value||'');
+      if(type==='image') return imageField(key,label,value||'',spec.hint);
+      return field(key,label,value||'');
+    };
+    const groups = new Map();
+    for (const spec of fields) {
+      const name = spec.group || 'Chat settings';
+      if (!groups.has(name)) groups.set(name, []);
+      groups.get(name).push(spec);
+    }
+    return checkbox('enabled','Show online store chat',config.enabled===true)+
+      [...groups.entries()].map(([name,specs],index) =>
+        '<details'+(index===0?' open':'')+'><summary>'+esc(name)+'</summary>'+specs.map(render).join('')+'</details>').join('');
   }
   const installedFor = key => installed.filter(item => item.catalog_key === key);
 
@@ -149,6 +173,21 @@
       throw error;
     }
     return payload;
+  }
+
+  // Images go through the site's own media library; the stored value is the
+  // delivery path the media API returns, never a browser-local data URL.
+  async function uploadImage(file) {
+    const form = new FormData();
+    form.append('files', file);
+    form.append('category', 'embed');
+    form.append('folder', 'images');
+    const response = await fetch('/api/admin/media', {method:'POST', body:form, credentials:'same-origin'});
+    const payload = await response.json().catch(() => ({}));
+    const asset = Array.isArray(payload.assets) ? payload.assets[0] : null;
+    const url = asset && (asset.url || asset.delivery_url);
+    if (!response.ok || !url) throw new Error(payload.error || 'Upload failed. Paste an image link instead.');
+    return url;
   }
 
   async function refreshInstalled() {
@@ -321,16 +360,65 @@
         const key=input.dataset.embedInput||input.dataset.embedSelect;
         let value=input.value;
         if(key==='delay_ms')value=Math.max(0,Math.min(60000,Number(value)||0));
-        else if(key==='font_size'||key==='border_radius') {
+        else if(key==='font_size'||key==='border_radius'||key==='heading_weight') {
           if(!input.validity.valid||!Number.isFinite(input.valueAsNumber))return;
           value=input.valueAsNumber;
         } else if(key==='featured_products') {
           value=[...new Set(value.split(',').map(id=>id.trim()).filter(id=>/^[a-z0-9_-]{1,160}$/i.test(id)))].slice(0,4);
-        } else if(app.key==='store_chat' && ['background','font_color','accent'].includes(key)) {
+        } else if(app.key==='store_chat' && ['background','font_color','accent','icon_color','icon_background'].includes(key)) {
           if(value&&!/^#[0-9a-f]{6}$/i.test(value))return;
+        } else if(app.key==='store_chat' && key==='image') {
+          value=value.trim().slice(0,500);
         } else value=value.slice(0, ['subtitle','greeting'].includes(key)?400:160);
         c[key]=value;
         note(instance ? 'Draft settings changed · Save to persist' : 'Template settings updated');
+      });
+    });
+    pane.querySelectorAll('[data-embed-swatch]').forEach(input => input.addEventListener('input', () => {
+      const key=input.dataset.embedSwatch;
+      c[key]=input.value;
+      const text=pane.querySelector('[data-embed-input="'+key+'"]');
+      if(text)text.value=input.value;
+      note(instance ? 'Draft settings changed · Save to persist' : 'Template settings updated');
+    }));
+    pane.querySelectorAll('[data-embed-color-clear]').forEach(button => button.addEventListener('click', () => {
+      c[button.dataset.embedColorClear]='';
+      open(app.key, instance);
+      note('Using the theme color');
+    }));
+    pane.querySelectorAll('[data-embed-image-clear]').forEach(button => button.addEventListener('click', () => {
+      c[button.dataset.embedImageClear]='';
+      if(c.icon==='image')c.icon='chat_bubble';
+      open(app.key, instance);
+      note('Image removed');
+    }));
+    const takeImage = async (key,file) => {
+      const status=pane.querySelector('[data-embed-image-note]');
+      if(!file||!file.type.startsWith('image/')){if(status)status.textContent='Choose an image file.';return;}
+      if(file.size>5*1024*1024){if(status)status.textContent='Choose an image under 5 MB.';return;}
+      if(status)status.textContent='Uploading…';
+      try{
+        const url=await uploadImage(file);
+        c[key]=url;
+        if(key==='image'&&c.icon!=='image')c.icon='image';
+        open(app.key, instance);
+        note('Image added · '+(instance?'Save to persist':'Install to publish'));
+      }catch(error){
+        if(status)status.textContent=error.message||'Upload failed. Paste an image link instead.';
+      }
+    };
+    pane.querySelectorAll('[data-embed-file]').forEach(input => input.addEventListener('change', () => {
+      void takeImage(input.dataset.embedFile, input.files?.[0]);
+    }));
+    pane.querySelectorAll('[data-embed-drop]').forEach(zone => {
+      const key=zone.dataset.embedDrop;
+      zone.addEventListener('click',()=>pane.querySelector('[data-embed-file="'+key+'"]')?.click());
+      zone.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();zone.click();}});
+      zone.addEventListener('dragover',event=>{event.preventDefault();zone.classList.add('is-over');});
+      zone.addEventListener('dragleave',()=>zone.classList.remove('is-over'));
+      zone.addEventListener('drop',event=>{
+        event.preventDefault();zone.classList.remove('is-over');
+        void takeImage(key,event.dataTransfer?.files?.[0]);
       });
     });
     pane.querySelectorAll('[data-embed-check]').forEach(input => input.addEventListener('change', () => {
@@ -449,9 +537,31 @@
     }
   }
 
-  function preview(key) {
+  // The chat preview mounts the packaged widget itself, so what the merchant
+  // sees is exactly what visitors get. Messages are accepted locally only.
+  async function previewChat(item) {
+    const {app,config:c}=item;
+    try {
+      await import('/admin/theme-editor/embeds/chat-widget.js');
+    } catch { return false; }
+    dialog.innerHTML='<div class="ter-dialog-head"><div><small>AgentSam · Interactive preview</small><strong>'+esc(app.name)+'</strong>'+
+      '</div><button type="button" data-embed-dismiss aria-label="Close preview">×</button></div>'+
+      '<div class="ter-dialog-content"><p>The chat launcher appears where visitors will see it. Open it and send a test message.</p>'+
+      '<p role="status">Preview only. Nothing is sent to your inbox.</p></div>';
+    const element=document.createElement('agentsam-store-chat');
+    element.submitMessage=async()=>({id:'preview',status:'received'});
+    element.setAttribute('config',JSON.stringify({...c,enabled:true}));
+    dialog.append(element);
+    dialog.querySelectorAll('[data-embed-dismiss]').forEach(button => button.addEventListener('click',()=>dialog.close()));
+    dialog.addEventListener('close',()=>element.remove(),{once:true});
+    dialog.showModal();
+    return true;
+  }
+
+  async function preview(key) {
     const item=get(key);
     if(!item)return;
+    if(key==='store_chat'&&await previewChat(item))return;
     const {app,config:c}=item;
     const fields=Array.isArray(c.fields)?c.fields.filter(f=>editableFields.includes(f)):[];
     const required=new Set(c.required_fields||[]);

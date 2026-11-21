@@ -86,3 +86,12 @@
 /* Chat is configured in the App embeds rail, keeping the preview visible. */
 .te-embed-review-inspector.ter-left-inspector{position:static;border-left:0;border-top:1px solid var(--te-border,#e4e0e8)}
 .ter-left-inspector .ter-field textarea{box-sizing:border-box;width:100%;resize:vertical;padding:8px;border:1px solid #ded9e5;border-radius:7px;font:inherit}
+.ter-color{display:grid;grid-template-columns:38px 1fr auto;gap:6px;align-items:center}
+.ter-color input[type=text]{min-width:0}
+.ter-color button,.ter-image-actions button,.ter-upload{min-height:35px;border:1px solid #ded9e5;border-radius:7px;padding:0 10px;font-size:11px;font-weight:600;background:#fff;color:#232128;cursor:pointer;display:inline-flex;align-items:center}
+.ter-color button:hover,.ter-image-actions button:hover,.ter-upload:hover,.ter-image-drop:hover{border-color:#7954bb}
+.ter-image-drop{display:grid;place-items:center;min-height:96px;border:1.5px dashed #c9c2d4;border-radius:10px;background:#faf9fc;color:#595260;font-size:11px;cursor:pointer;overflow:hidden}
+.ter-image-drop.is-over{border-color:#7954bb;background:#f1ecfa}
+.ter-image-drop img{max-width:100%;max-height:140px;object-fit:contain}
+.ter-image-drop em{font-style:normal;padding:12px;text-align:center}
+.ter-image-actions{display:flex;gap:6px;flex-wrap:wrap}

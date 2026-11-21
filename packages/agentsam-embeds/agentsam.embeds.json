@@ -303,82 +303,75 @@
         "featured_products": [],
         "require_email": true,
         "agent_replies": "draft",
-        "endpoint": ""
+        "endpoint": "",
+        "icon_color": "",
+        "icon_background": "",
+        "image": "",
+        "font_family": "inherit",
+        "heading_weight": 600,
+        "header_style": "filled",
+        "header_label": "Chat with us",
+        "placeholder": "",
+        "email_label": "Email",
+        "message_label": "Message",
+        "send_label": "Send message",
+        "success_message": "Message received."
       },
       "editor_fields": [
-        {
-          "key": "greeting",
-          "label": "Greeting message",
-          "type": "textarea"
-        },
-        {
-          "key": "show_featured_products",
-          "label": "Show featured products",
-          "type": "toggle"
-        },
-        {
-          "key": "featured_products",
-          "label": "Featured products",
-          "type": "product_picker",
-          "hint": "Defaults to best sellers"
-        },
-        {
-          "key": "accent",
-          "label": "Accent",
-          "type": "color",
-          "theme_token": true
-        },
-        {
-          "key": "background",
-          "label": "Background",
-          "type": "color",
-          "theme_token": true
-        },
-        {
-          "key": "font_color",
-          "label": "Font color",
-          "type": "color",
-          "theme_token": true
-        },
-        {
-          "key": "invert_colors",
-          "label": "Invert widget colors",
-          "type": "toggle"
-        },
         {
           "key": "style",
           "label": "Style",
           "type": "radio",
+          "group": "Launcher",
           "options": [
             "button",
             "message_bar"
           ]
         },
         {
+          "key": "label",
+          "label": "Launcher label",
+          "type": "text",
+          "group": "Launcher"
+        },
+        {
           "key": "icon",
           "label": "Icon",
           "type": "select",
+          "group": "Launcher",
           "options": [
             "chat_bubble",
             "message",
-            "help"
+            "help",
+            "image"
           ]
         },
         {
-          "key": "label",
-          "label": "Label",
-          "type": "select",
-          "options": [
-            "Chat",
-            "Message us",
-            "Help",
-            "Ask"
-          ]
+          "key": "image",
+          "label": "Image",
+          "type": "image",
+          "group": "Launcher",
+          "hint": "Upload or paste a link. Used as the launcher icon when Icon is Image, and as the avatar in the chat header."
+        },
+        {
+          "key": "icon_color",
+          "label": "Icon color",
+          "type": "color",
+          "group": "Launcher",
+          "theme_token": true
+        },
+        {
+          "key": "icon_background",
+          "label": "Icon background",
+          "type": "color",
+          "group": "Launcher",
+          "theme_token": true
         },
         {
           "key": "horizontal_position",
           "label": "Horizontal position",
           "type": "radio",
+          "group": "Launcher",
           "options": [
             "left",
             "center",
@@ -389,6 +382,7 @@
           "key": "vertical_position",
           "label": "Vertical position",
           "type": "radio",
+          "group": "Launcher",
           "options": [
             "lowest",
             "higher",
@@ -396,14 +390,107 @@
           ]
         },
         {
-          "key": "inherit_typography",
-          "label": "Inherit typography from theme",
-          "type": "toggle"
+          "key": "header_label",
+          "label": "Chat title",
+          "type": "text",
+          "group": "Messages"
+        },
+        {
+          "key": "greeting",
+          "label": "Greeting message",
+          "type": "textarea",
+          "group": "Messages"
+        },
+        {
+          "key": "placeholder",
+          "label": "Message placeholder",
+          "type": "text",
+          "group": "Messages"
+        },
+        {
+          "key": "email_label",
+          "label": "Email label",
+          "type": "text",
+          "group": "Messages"
+        },
+        {
+          "key": "message_label",
+          "label": "Message label",
+          "type": "text",
+          "group": "Messages"
+        },
+        {
+          "key": "send_label",
+          "label": "Send button label",
+          "type": "text",
+          "group": "Messages"
+        },
+        {
+          "key": "success_message",
+          "label": "Sent confirmation",
+          "type": "text",
+          "group": "Messages"
+        },
+        {
+          "key": "require_email",
+          "label": "Ask for email first",
+          "type": "toggle",
+          "group": "Messages"
+        },
+        {
+          "key": "accent",
+          "label": "Accent",
+          "type": "color",
+          "group": "Colors",
+          "theme_token": true
+        },
+        {
+          "key": "background",
+          "label": "Background",
+          "type": "color",
+          "group": "Colors",
+          "theme_token": true
+        },
+        {
+          "key": "font_color",
+          "label": "Font color",
+          "type": "color",
+          "group": "Colors",
+          "theme_token": true
+        },
+        {
+          "key": "invert_colors",
+          "label": "Invert widget colors",
+          "type": "toggle",
+          "group": "Colors"
+        },
+        {
+          "key": "font_family",
+          "label": "Font",
+          "type": "select",
+          "group": "Typography and shape",
+          "options": [
+            "inherit",
+            "system",
+            "serif",
+            "rounded",
+            "mono"
+          ]
+        },
+        {
+          "key": "heading_weight",
+          "label": "Title weight",
+          "type": "range",
+          "group": "Typography and shape",
+          "min": 400,
+          "max": 800,
+          "unit": ""
         },
         {
           "key": "font_size",
           "label": "Widget font size",
           "type": "range",
+          "group": "Typography and shape",
           "min": 12,
           "max": 22,
           "unit": "px"
@@ -412,19 +499,39 @@
           "key": "border_radius",
           "label": "Border radius",
           "type": "range",
+          "group": "Typography and shape",
           "min": 0,
           "max": 32,
           "unit": "px"
         },
         {
-          "key": "require_email",
-          "label": "Ask for email first",
-          "type": "toggle"
+          "key": "header_style",
+          "label": "Header",
+          "type": "radio",
+          "group": "Chat window",
+          "options": [
+            "filled",
+            "plain"
+          ]
+        },
+        {
+          "key": "show_featured_products",
+          "label": "Show featured products",
+          "type": "toggle",
+          "group": "Chat window"
+        },
+        {
+          "key": "featured_products",
+          "label": "Featured products",
+          "type": "product_picker",
+          "group": "Chat window",
+          "hint": "Defaults to best sellers"
         },
         {
           "key": "agent_replies",
           "label": "Agent replies",
           "type": "select",
+          "group": "Behavior",
           "options": [
             "off",
             "draft",
