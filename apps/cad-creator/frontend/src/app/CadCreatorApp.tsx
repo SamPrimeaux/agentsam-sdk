@@ -23,7 +23,9 @@ import {
 } from '@inneranimalmedia/agentsam-cad-shared';
 import type {CadSceneElement} from '@inneranimalmedia/agentsam-cad-shared';
 import {reconcileSceneElements,sceneReviewContext} from '../lib/scene-document';
-import { TEMPLATES } from '../lib/templates';
+import { TEMPLATES, TEMPLATE_METADATA_LIST } from '../lib/templates';
+import { cloneTemplateProject } from '../components/TemplateStarterGrid';
+import type { FurniturePreset } from '../components/FurniturePicker';
 import { createEmptyCadProject } from '../lib/create-empty-project';
 import { loadDreamHouseProject } from '../lib/dreamhouse-source';
 import { loadOwnerDreamHouseProject } from '../lib/owner-project-source';
@@ -488,6 +490,20 @@ export function CadCreatorApp({
 
   // Hosted mode, nothing registered open: a chosen starter becomes an explicit, unsaved local copy.
   // It never stands in for a registered project; picking one from the Project menu clears it again.
+  const placeStockPreset = (preset: FurniturePreset) => {
+    if (isViewer) return;
+    setSelectedFurnitureType(preset.type);
+    setActiveTool('furniture');
+    setStudioView('edit');
+    handleSelectWorkspace('plan');
+    setPlanLayout('split');
+    showToast('Click the 2D plan to place ' + preset.name);
+  };
+  const openTemplateScene = (ref: string | null, title: string) => {
+    const tpl = TEMPLATE_METADATA_LIST.find((entry) => entry.id === ref);
+    if (!tpl) { showToast(`"${title}" could not be opened`); return; }
+    startFromTemplate(cloneTemplateProject(tpl), tpl.name);
+  };
   const startFromTemplate = (copy: ProjectState, name: string) => {
     setTemplateCopyName(name);
     setProject(copy);
@@ -631,7 +647,7 @@ export function CadCreatorApp({
           canUndo={history.length > 0 && !isViewer} canRedo={redoStack.length > 0 && !isViewer}
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
-          onNew={startBlankProject} onTemplates={() => {setShowProjectGallery(true);setIsTemplateLibraryOpen(false)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}}
+          onNew={startBlankProject} onTemplates={() => {setShowProjectGallery(true);setIsTemplateLibraryOpen(false)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}} onPlaceStock={placeStockPreset} onOpenScene={openTemplateScene}
           onParametric={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('parametric')}}
           onExport={() => setIsExportPublishOpen(true)}
           onSave={()=>{if(accessMode==='hosted-project'){void saveHostedRevision()}else window.dispatchEvent(new Event('agentsam:cad-save-revision'))}}
@@ -684,7 +700,7 @@ export function CadCreatorApp({
                       sceneInventory={sceneInventory} onClose={()=>setExplorerOpen(false)}
                       onSelect={next=>{setUiSelection(next);setInspectorOpen(true);if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}
                       onOpenTemplates={()=>setIsTemplateLibraryOpen(true)}
-                      onPlaceStock={preset=>{if(isViewer)return;setSelectedFurnitureType(preset.type);setActiveTool('furniture');setStudioView('edit');handleSelectWorkspace('plan');setPlanLayout('split');showToast('Click the 2D plan to place '+preset.name);}}
+                      onPlaceStock={placeStockPreset}
                       onCreateParametric={key=>{
                         if(isViewer)return;
                         const template=OPENSCAD_PARAMETRIC_TEMPLATES[key];
