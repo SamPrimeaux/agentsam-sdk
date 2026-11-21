@@ -9,13 +9,17 @@ function link(path,params) {
   for(const [k,v] of Object.entries(params))if(v!==null&&v!==undefined&&v!=='')url.searchParams.set(k,String(v));
   return url.pathname+url.search;
 }
-export function chooseThemeEditorSite({sites=[],requestedSiteId='',rememberedSiteId=''}) {
-  const owned=(Array.isArray(sites)?sites:[]).filter(s=>s&&ID.test(String(s.id||'')));
+export function selectableThemeEditorSites(sites) {
+  return (Array.isArray(sites)?sites:[]).filter(s=>s&&ID.test(String(s.id||''))&&s.status!=='archived');
+}
+export function chooseThemeEditorSite({sites=[],requestedSiteId='',rememberedSiteId='',requireSelection=false}) {
+  const owned=selectableThemeEditorSites(sites);
   if(requestedSiteId){
     if(!ID.test(requestedSiteId))return {kind:'unavailable',reason:'invalid_site_id'};
     const site=owned.find(s=>s.id===requestedSiteId);
     return site?{kind:'site',site}:{kind:'unavailable',reason:'site_not_owned'};
   }
+  if(requireSelection)return {kind:'unavailable',reason:owned.length?'site_selection_required':'no_sites'};
   const remembered=owned.find(s=>s.id===rememberedSiteId);
   if(remembered)return {kind:'site',site:remembered};
   if(owned.length===1)return {kind:'site',site:owned[0]};

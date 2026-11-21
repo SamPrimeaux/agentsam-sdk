@@ -115,3 +115,18 @@ test('site-owned Theme Editor previews resolve canonical route_path on the selec
   assert.doesNotMatch(route, /activeCmsSite\?\.id !== ["']app-store["']/,
     'ordinary sites must not fall back to an admin-origin relative live_route');
 });
+
+
+test('marketplace handoff asks for explicit site even when a prior selection exists',()=>{
+  const archived={id:'old',status:'archived'};
+  assert.equal(chooseThemeEditorSite({sites:[siteA,siteB,archived],rememberedSiteId:'site_b',requireSelection:true}).reason,'site_selection_required');
+  assert.equal(chooseThemeEditorSite({sites:[siteA],requireSelection:true}).reason,'site_selection_required');
+  assert.equal(chooseThemeEditorSite({sites:[siteA,siteB],requestedSiteId:'site_b',requireSelection:true}).site.id,'site_b');
+  assert.equal(chooseThemeEditorSite({sites:[archived],requireSelection:true}).reason,'no_sites');
+  assert.equal(chooseThemeEditorSite({sites:[siteA,archived],requestedSiteId:'old'}).reason,'site_not_owned');
+  const next=planThemeEditorEntry({site:siteA,location:'/admin/theme-editor?marketplace_kind=cms_embed&marketplace_key=store_chat',projects:[project],pages:[home,about]});
+  assert.equal(next.to,'/admin/sites/site_a/pages/cmsp_home_a/editor?marketplace_kind=cms_embed&marketplace_key=store_chat');
+  const shell=readFileSync(new URL('../frontend/static/theme-editor.html',import.meta.url),'utf8');
+  assert.match(shell,/#theme-project-loading\[hidden\]/);
+  assert.match(shell,/id="theme-project-site-picker"/);
+});

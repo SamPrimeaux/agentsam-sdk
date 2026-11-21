@@ -17,7 +17,16 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg, #191919)}
 #theme-project-editor-frame{display:block;width:100%;height:100%;border:0}
 #theme-project-error{position:fixed;inset:12px 12px auto;z-index:10;max-width:760px;padding:12px 14px;border:1px solid var(--line, #313131);border-radius:10px;background:var(--surface, #262626);color:var(--text, #e5e5e5);font:13px/1.5 system-ui;white-space:pre-wrap}
-#theme-project-error[hidden]{display:none}
+#theme-project-error[hidden],#theme-project-loading[hidden],#theme-project-editor-frame[hidden],#theme-project-site-picker[hidden]{display:none}
+#theme-project-site-picker{position:fixed;inset:0;overflow:auto;box-sizing:border-box;display:grid;place-items:center;padding:24px 16px;background:var(--bg,#191919);color:var(--text,#eee);font:15px/1.45 system-ui}
+#theme-project-site-picker .site-picker-card{box-sizing:border-box;width:min(100%,520px);padding:24px;border:1px solid var(--line,#383838);border-radius:18px;background:var(--surface,#262626)}
+#theme-project-site-picker h1{font-size:24px;line-height:1.2;margin:0 0 8px}
+#theme-project-site-picker p{color:#bcbcbc;margin:0 0 20px}
+#theme-project-site-picker [data-site-list]{display:grid;gap:8px}
+#theme-project-site-picker button,#theme-project-site-picker a{box-sizing:border-box;display:grid;gap:3px;width:100%;text-align:left;border:1px solid #494949;border-radius:10px;padding:12px 14px;background:#303030;color:#fff;font:inherit;cursor:pointer;text-decoration:none}
+#theme-project-site-picker button span{font-size:12px;color:#c8c8c8;overflow-wrap:anywhere}
+#theme-project-site-picker button:hover,#theme-project-site-picker a:hover{background:#393939}
+#theme-project-site-picker button:focus-visible,#theme-project-site-picker a:focus-visible{outline:2px solid #83aaff;outline-offset:2px}
 #theme-project-loading{position:fixed;inset:0;z-index:5;display:grid;grid-template:54px 1fr/300px 1fr;gap:8px;padding:8px;box-sizing:border-box;background:var(--bg, #191919)}
 #theme-project-loading span{border-radius:10px;background:linear-gradient(100deg,var(--surface, #262626),var(--surface-2, #2a2a2a),var(--surface, #262626));background-size:200% 100%;animation:editor-loading 1.4s ease infinite}
 #theme-project-loading span:first-child{grid-column:1/-1}
@@ -42,6 +51,13 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg, #
 <div id="theme-project-loading" role="status" aria-label="Loading theme" aria-busy="true"><span></span><span></span><span></span></div>
 <iframe id="theme-project-editor-frame" title="Theme Studio editor"></iframe>
 <pre id="theme-project-error" role="alert" hidden></pre>
+<section id="theme-project-site-picker" aria-labelledby="site-picker-heading" hidden>
+  <div class="site-picker-card">
+    <h1 id="site-picker-heading" tabindex="-1">Choose a website</h1>
+    <p data-site-description>Select a website to open its editor. Nothing is installed until you confirm in the editor.</p>
+    <div data-site-list></div>
+  </div>
+</section>
 <script src="js/platform-stock-sections.js"></script>
     <script src="js/cms-site-public-url.js"></script>
 <script type="module" src="js/theme-studio-bootstrap.mjs"></script>

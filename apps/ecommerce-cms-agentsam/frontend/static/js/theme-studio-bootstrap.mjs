@@ -4,7 +4,7 @@ import { mountThemeEditor } from '/theme-editor/mount.mjs';
 import { blankThemeProject, inheritDefaultTemplates } from '/theme-editor/starter-project.mjs';
 import { fillMissingThemeChrome } from '/theme-editor/starter-chrome.mjs';
 import { createCmsPageThemeEditorAdapter } from '/ecommerce-cms-agentsam/theme-editor/cms-page-adapter.mjs';
-import { chooseThemeEditorSite, planThemeEditorEntry } from './theme-editor-entry-resolution.mjs';
+import { chooseThemeEditorSite, planThemeEditorEntry, selectableThemeEditorSites } from './theme-editor-entry-resolution.mjs';
 import {
   parseThemeEditorLocation,
   themeProjectEditorPath,
@@ -304,23 +304,64 @@ async function bootCmsPage(route) {
   mount(adapter, host);
 }
 
-async function bootLegacyPage(route) {
-  const siteList = await jsonRequest('/api/admin/cms/sites');
+/** A missing site is a normal entry state, not an editor crash. */
+async function chooseSiteForEntry(route, { marketplace = false } = {}) {
+  const data = await jsonRequest('/api/admin/cms/sites');
+  const sites = selectableThemeEditorSites(data.sites);
   const rememberedSiteId = (() => { try { return sessionStorage.getItem(LEGACY_SITE_SELECTION_KEY); } catch { return null; } })();
-  const choice = chooseThemeEditorSite({
-    sites: siteList.sites || [],
-    requestedSiteId: route.siteId || null,
-    rememberedSiteId,
+  const choice = chooseThemeEditorSite({sites, requestedSiteId:route.siteId||null,
+    rememberedSiteId, requireSelection:marketplace && !route.siteId});
+  if (choice.site) return choice.site;
+  if (!['site_selection_required','no_sites'].includes(choice.reason)) throw new Error(choice.reason);
+  const picker = document.getElementById('theme-project-site-picker');
+  if (!picker) throw new Error('theme_editor_site_picker_missing');
+  if (loading) loading.hidden = true;
+  if (errorNode) errorNode.hidden = true;
+  frame.hidden = true;
+  picker.hidden = false;
+  picker.querySelector('h1').focus();
+  const list = picker.querySelector('[data-site-list]');
+  list.replaceChildren();
+  if (!sites.length) {
+    picker.querySelector('[data-site-description]').textContent = 'Create a website before configuring an app embed.';
+    const link = document.createElement('a');
+    link.href = '/admin/pages';
+    link.textContent = 'Go to Pages';
+    list.append(link);
+    return null;
+  }
+  return new Promise(resolve => {
+    for (const site of sites) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      const name = document.createElement('strong');
+      name.textContent = site.name || site.slug || 'Website';
+      const detail = document.createElement('span');
+      detail.textContent = [site.primary_domain || site.slug,site.status === 'draft' ? 'Draft' : ''].filter(Boolean).join(' · ');
+      button.append(name,detail);
+      button.addEventListener('click',()=>{
+        picker.hidden = true;
+        frame.hidden = false;
+        if (loading) loading.hidden = false;
+        resolve(site);
+      },{once:true});
+      list.append(button);
+    }
   });
-  if (!choice.site?.id) throw new Error(choice.error || 'theme_editor_site_selection_required');
-  const siteId = choice.site.id;
+}
+
+async function bootLegacyPage(route) {
+  const marketplace = new URLSearchParams(location.search).get('marketplace_kind') === 'cms_embed';
+  const site = await chooseSiteForEntry(route,{marketplace});
+  if (!site) return;
+  const siteId = site.id;
   const listing = await jsonRequest(`/api/admin/cms/pages?site_id=${encodeURIComponent(siteId)}`);
-  const projectsResult = await jsonRequest(`${API}?site_id=${encodeURIComponent(siteId)}`);
+  const projectsResult = marketplace ? {projects:[]} : await jsonRequest(`${API}?site_id=${encodeURIComponent(siteId)}`);
   const slug = route.pageSlug || 'home';
   if (slug === 'site') return bootCmsPage({ mode: 'page', siteId, pageId: null, pageSlug: 'site' });
   try { sessionStorage.setItem(LEGACY_SITE_SELECTION_KEY, siteId); } catch { /* Selection is still explicit in the canonical route. */ }
   const plan = planThemeEditorEntry({
-    site: choice.site,
+    site,
     location: location.href,
     projects: projectsResult.projects || [],
     pages: listing.pages || [],
@@ -338,20 +379,10 @@ async function bootLegacyPage(route) {
 }
 
 async function bootNewTheme(route) {
-  const siteList = await jsonRequest('/api/admin/cms/sites');
-  const rememberedSiteId = (() => {
-    try { return sessionStorage.getItem(LEGACY_SITE_SELECTION_KEY); }
-    catch { return null; }
-  })();
-  const choice = chooseThemeEditorSite({
-    sites: siteList.sites || [],
-    requestedSiteId: route.siteId || null,
-    rememberedSiteId,
-  });
-  if (!choice.site?.id) throw new Error(choice.error || 'theme_editor_site_selection_required');
-
-  const siteId = choice.site.id;
-  const siteName = String(choice.site.name || 'My website').trim() || 'My website';
+  const site = await chooseSiteForEntry(route);
+  if (!site) return;
+  const siteId = site.id;
+  const siteName = String(site.name || 'My website').trim() || 'My website';
   // A new theme is an account-owned editable project, not a prewritten
   // merchant website. Reuse the existing stock chrome and system templates;
   // AgentSam opens to author the design after the draft has been created.
