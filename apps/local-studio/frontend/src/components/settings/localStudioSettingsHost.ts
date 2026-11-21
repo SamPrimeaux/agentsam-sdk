@@ -506,9 +506,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     snapshot.git.repository=linkedRepo?.fullName||"No registered repository";
     snapshot.git.branch=linkedRepo?.defaultBranch||"—";
     snapshot.git.pullRequests="Not checked";
-    snapshot.network.oauth=(pluginResult.value?.connections||[]).some(
-      conn=>conn.provider==="cloudflare"&&conn.status==="connected"
-    )?"Connected":"Not connected";
+
   }
   snapshot.skills = skillsResult.value?.items || [];
   snapshot.rules = rulesResult.value?.items || [];
