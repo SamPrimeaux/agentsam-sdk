@@ -47,6 +47,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
     try {
       const registry=await listLocalStudioConnections();
       const installed=registry.plugins?.find(row=>row.plugin_key==='agentsam-docker-engine');
+      setInstallationId(installed?.id || '');
       setInstallation(!installed?'not_installed':installed.is_enabled?'installed':'disabled');
     } catch {
       setInstallation('error');
