@@ -125,7 +125,7 @@ export function DockerConnectionPanel({onOpenWorkspace}:{
       installation==='disabled'?<p className="text-muted-foreground">Docker is disabled for this account. Enable it to choose and verify an engine.</p>:
       <p className="text-muted-foreground">Install Docker for this account. Installation does not connect to an engine or grant host access.</p>}
     <div className="flex gap-2">
-      {installation==='not_installed'?<button type="button" className="rounded-md border border-border px-3 py-2 hover:bg-muted" disabled={loading} onClick={()=>void install()}>Install Docker plugin</button>:null}
+      {installation==='not_installed'||installation==='disabled'?<button type="button" className="rounded-md border border-border px-3 py-2 hover:bg-muted" disabled={loading} onClick={()=>void install()}>Install Docker plugin</button>:null}
       <a className="rounded-md border border-border px-3 py-2 hover:bg-muted" href="/admin/settings/customize?view=plugins">Manage plugins</a>
       {installation==='error'?<button type="button" onClick={()=>void refreshInstall()} className="rounded-md border border-border px-3 py-2">Retry</button>:null}
     </div>
