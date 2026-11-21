@@ -365,7 +365,8 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  const quickAddGroups:QuickAddEntry[][]=[
   KIT.filter(k=>(k.live||k.place)&&k.menus.includes('create')&&k.group==='Draw').map(k=>({id:k.id,label:k.label,icon:<k.icon size={16}/>,kbd:k.key,
    active:isKitActive(k,tool,kit.tool),disabled:(readOnly&&!viewerSafe(k))||(!!k.place&&!onStock),run:()=>chooseKitTool(k,onTool,onStock)})),
-  [{id:'native-sketch',label:'Native sketch · lines and rectangles',icon:<PencilRuler size={16}/>,disabled:readOnly,run:onSketch},
+  [...(onOpenSolid ? [{id:'occt-box',label:'Box · native solid',icon:<Box size={16}/>,disabled:readOnly,run:onOpenSolid}] : []),
+   {id:'native-sketch',label:'Native sketch · lines and rectangles',icon:<PencilRuler size={16}/>,disabled:readOnly,run:onSketch},
    {id:'stock',label:'Stock · architectural assets',icon:<Box size={16}/>,run:()=>onStock()},
    {id:'parametric',label:'Parametric parts · Libraries',icon:<PencilRuler size={16}/>,run:onParametric}],
   [{id:'blank',label:'Blank project',icon:<Plus size={16}/>,disabled:readOnly,run:onNew}],
