@@ -12,8 +12,8 @@ test('Library presents Work artifacts and Cloudflare media through one shared ro
   assert.match(libraryRoute, /<UnifiedLibraryPage view="artifacts" \/>/);
   assert.match(library, /LocalStudioWorkPage surface="artifacts"/);
   assert.match(library, /<MediaLibraryPage \/>/);
-  assert.match(library, /to="\/admin\/media"/);
-  assert.match(library, /to="\/admin\/library"/);
+  assert.match(library, /navigate\(\{ to: '\/admin\/media' \}\)/);
+  assert.match(library, /navigate\(\{ to: '\/admin\/library' \}\)/);
   assert.match(media, /<UnifiedLibraryPage view="media" \/>/);
   assert.match(media, /: <Outlet \/>/, 'nested media routes are still mounted by their owner');
   assert.match(nav, /to: "\/admin\/library", label: "Library"/);

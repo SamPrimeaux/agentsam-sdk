@@ -5,12 +5,12 @@ import { readFileSync } from 'node:fs';
 const source = readFileSync(new URL('../../ecommerce-cms-agentsam/frontend/static/products.html', import.meta.url), 'utf8');
 
 test('the canonical merchant Products screen preserves the selected site across reads and edits', () => {
-  assert.match(source, /const catalogSiteId\s*=\s*new URLSearchParams\(location\.search\)\.get\('site_id'\)/);
+  assert.match(source, /(?:let|const)\s+catalogSiteId\s*=\s*new URLSearchParams\(location\.search\)\.get\('site_id'\)/);
   assert.match(source, /function catalogFetch\(path,\s*options\)/);
   assert.match(source, /if\s*\(catalogSiteId\)url\.searchParams\.set\('site_id',\s*catalogSiteId\)/);
-  assert.match(source, /function catalogLink\(path\)/);
-  assert.match(source, /const d = await catalogFetch\('\/api\/admin\/products'\)/);
-  assert.match(source, /catalogLink\('\/admin\/product-edit\?id='/);
+  assert.match(source, /function catalogLink\(path,\s*productSiteId=null\)/);
+  assert.match(source, /catalogFetch\(catalogSiteId \? '\/api\/admin\/products' : '\/api\/admin\/products\?scope=account'\)/);
+  assert.match(source, /catalogLink\('\/admin\/product-edit\?id='\+encodeURIComponent\(p\.id\),p\.site_id\)/);
 });
 
 test('merchant products are not silently replaced by platform packages or an obsolete collection form', () => {
