@@ -201,7 +201,7 @@
 .cad-project-runtime-shell{display:flex;flex-direction:column;align-items:stretch;gap:.5rem;min-width:0;font-size:var(--text-sm)}
 .cad-project-runtime-shell>div:first-child{display:flex;flex-wrap:wrap;min-width:0}
 .cad-project-runtime-shell>details>summary{white-space:nowrap;font-size:var(--text-sm)}
-.cad-project-runtime-shell>details>div{right:0;max-width:min(85vw,25rem)}
+.cad-project-runtime-shell>details>div{position:static;width:100%;margin-top:.5rem;max-width:100%}
 .cad-world-menu{position:absolute;inset-block-start:clamp(.45rem,1cqw,.8rem);inset-inline-start:clamp(.45rem,1cqw,.8rem);z-index:45;min-width:0;max-width:calc(100% - 1rem);font-family:var(--font-sans);font-size:var(--text-sm)}
 .cad-world-menu>summary{list-style:none;display:flex;align-items:center;gap:.3rem;padding:.55rem .8rem;border:1px solid #ffffff29;border-radius:.75rem;background:#172032ed;color:#e7eaf1;cursor:pointer;backdrop-filter:blur(1rem);box-shadow:0 .25rem .8rem #0004}
 .cad-world-menu>summary::-webkit-details-marker{display:none}
