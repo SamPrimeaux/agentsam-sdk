@@ -266,6 +266,7 @@ export function CoProStudio({
   const { layout, setLayout, resetLayout } = useWorkspaceLayout();
   const workspaceRef = useRef<HTMLElement>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(1440);
+  const [workspaceBox, setWorkspaceBox] = useState({left:0,top:0,right:Number.POSITIVE_INFINITY,bottom:Number.POSITIVE_INFINITY});
   const [workspaceHeight, setWorkspaceHeight] = useState(800);
   const [playbackQuality, setPlaybackQuality] = useState<"Full"|"High"|"Medium"|"Low">("High");
   const [previewZoom, setPreviewZoom] = useState(100);
@@ -309,17 +310,21 @@ export function CoProStudio({
     const node=workspaceRef.current;
     if (!node) return;
     // Match the embedded container before first paint, not a 1440px desktop guess.
+    const measureBox=()=>{const r=node.getBoundingClientRect();if(r.width>0&&r.height>0)setWorkspaceBox({left:r.left,top:r.top,right:r.right,bottom:r.bottom});};
     const rect=node.getBoundingClientRect();
     if(rect.width>0) setWorkspaceWidth(rect.width);
     if(rect.height>0) setWorkspaceHeight(rect.height);
-    if (typeof ResizeObserver === "undefined") return;
+    measureBox();
+    window.addEventListener("resize",measureBox);
+    if (typeof ResizeObserver === "undefined") return () => window.removeEventListener("resize",measureBox);
     const observer = new ResizeObserver(([entry]) => {
       if (!entry) return;
       setWorkspaceWidth(entry.contentRect.width);
       setWorkspaceHeight(entry.contentRect.height);
+      measureBox();
     });
     observer.observe(node);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); window.removeEventListener("resize",measureBox); };
   }, []);
 
   useEffect(() => {
@@ -468,6 +473,11 @@ export function CoProStudio({
   const browserWidth = clampWorkspaceSize(layout.browserWidth, 260, Math.min(640, Math.max(260, workspaceWidth * .42), Math.max(260, workspaceWidth - (dockInspector ? layout.inspectorWidth : 0) - 380)));
   const inspectorWidth = clampWorkspaceSize(layout.inspectorWidth, 260, Math.min(360, Math.max(260, workspaceWidth - (dockBrowser ? browserWidth : 0) - 380)));
   const timelineHeight = clampWorkspaceSize(layout.timelineHeight || Math.round(workspaceHeight * .25), isCompact ? 115 : 150, Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 300 : 225)));
+  /** Floating panels are viewport-positioned; keep them inside the editor so an embedded host's navigation is never covered. */
+  const floatAt=(x:number,y:number,width:number)=>({
+    x:Math.max(workspaceBox.left,Math.min(x,Math.max(workspaceBox.left,workspaceBox.right-Math.min(width,workspaceBox.right-workspaceBox.left)))),
+    y:Math.max(workspaceBox.top,Math.min(y,Math.max(workspaceBox.top,workspaceBox.bottom-90))),
+  });
   const gridStyle = {
     "--copro-browser-width": dockBrowser ? `${browserWidth}px` : "0px",
     "--copro-browser-handle": dockBrowser ? "8px" : "0px",
@@ -835,8 +845,8 @@ export function CoProStudio({
         } as React.CSSProperties} data-layout-mode={isCompact ? "mobile" : isNarrow ? "single-pane" : "wide"} data-active-pane={isHandset ? (handsetPanel ?? "closed") : undefined}>
           {showBrowser && <aside id="copro-tool-browser" className={`copro-browser-slot mm-browser${browserFloating ? " is-floating" : ""}`} aria-label={`${categoryTool} browser`}
             style={{
-              "--copro-floating-left": layout.browserX + "px",
-              "--copro-floating-top": layout.browserY + "px",
+              "--copro-floating-left": floatAt(layout.browserX,layout.browserY,browserWidth).x + "px",
+              "--copro-floating-top": floatAt(layout.browserX,layout.browserY,browserWidth).y + "px",
               "--copro-floating-width": browserWidth + "px",
               "--copro-floating-height": layout.browserFloatHeight + "px",
             } as React.CSSProperties}
@@ -997,8 +1007,8 @@ export function CoProStudio({
 
           <section ref={playerPaneRef} className={`mm-player-pane${layout.playerFloating && !isNarrow?" is-floating":""}${viewportFullscreen?" is-viewport-fullscreen":""}`} aria-label="PrimeTech preview player"
             style={{
-              "--copro-floating-left": layout.playerX + "px",
-              "--copro-floating-top": layout.playerY + "px",
+              "--copro-floating-left": floatAt(layout.playerX,layout.playerY,layout.playerFloatWidth).x + "px",
+              "--copro-floating-top": floatAt(layout.playerX,layout.playerY,layout.playerFloatWidth).y + "px",
               "--copro-floating-width": layout.playerFloatWidth + "px",
               "--copro-floating-height": layout.playerFloatHeight + "px",
             } as React.CSSProperties}
@@ -1164,8 +1174,8 @@ export function CoProStudio({
           {showInspector && inspectorTool && (
             <aside id="copro-tool-inspector" className={`copro-inspector-slot${inspectorFloating?" is-floating":""}`} data-inspector-tool={inspectorTool} aria-label={`${inspectorTool} inspector`}
               style={{
-                "--copro-floating-left": layout.inspectorX + "px",
-                "--copro-floating-top": layout.inspectorY + "px",
+                "--copro-floating-left": floatAt(layout.inspectorX,layout.inspectorY,inspectorWidth).x + "px",
+                "--copro-floating-top": floatAt(layout.inspectorX,layout.inspectorY,inspectorWidth).y + "px",
                 "--copro-floating-width": inspectorWidth + "px",
                 "--copro-floating-height": layout.inspectorFloatHeight + "px",
               } as React.CSSProperties}
