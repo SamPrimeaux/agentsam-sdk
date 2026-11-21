@@ -16,6 +16,9 @@ import { previewMerchantPage, publishMerchantPage } from "./page-publication.mjs
 import {handleCheckoutPreviewApi} from "./checkout-preview.mjs";
 import {
   buildCatalogInstanceContent,
+  catalogInstallSettings,
+  guardCatalogContent,
+  sectionKeyBase,
   isCatalogInstalledContent,
   resolveCatalogTemplate,
   loadEmbedCatalog,
@@ -1012,10 +1015,13 @@ async function updateCanonicalPageSection(env, scope, sectionKey, body = {}) {
     "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
   ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
   if (!row) return { error: "Section not found", status: 404 };
-  const content = body?.content;
+  let content = body?.content;
   if (!content || typeof content !== "object" || Array.isArray(content)) {
     return { error: "content object required", status: 400 };
   }
+  const guarded = guardCatalogContent(sectionKey, content);
+  if (guarded.error) return guarded;
+  content = guarded.content;
   const currentVersion = Number(row.content_version || 0);
   const expectedVersion = Number(body.expected_version ?? body.expectedVersion ?? currentVersion);
   if (!Number.isInteger(expectedVersion) || expectedVersion !== currentVersion) {
@@ -1542,10 +1548,13 @@ export async function updateSection(env, slug, sectionKey, body) {
     seededNow = true;
   }
 
-  const content = body?.content;
+  let content = body?.content;
   if (!content || typeof content !== "object" || Array.isArray(content)) {
     return { error: "content object required", status: 400 };
   }
+  const guarded = guardCatalogContent(sectionKey, content);
+  if (guarded.error) return guarded;
+  content = guarded.content;
 
   if (slug === "site" && sectionKey === "brand" && content.__editor?.themeSettings !== undefined) {
     const checked = validateThemeSettings(content.__editor.themeSettings);
@@ -1605,14 +1614,6 @@ export async function updateSection(env, slug, sectionKey, body) {
   return { ok: true, version: meta.version, updated_at: meta.updated_at, canonical: meta.canonical };
 }
 
-function sectionKeyBase(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 48) || "section";
-}
 
 async function ensurePage(env, slug) {
   let page = await loadPageRow(env, slug);
@@ -1853,7 +1854,9 @@ export async function installCatalogResource(env, slug, accountId, body = {}) {
     sectionKey = `${base}-${crypto.randomUUID().slice(0, 8)}`;
   }
   const sortOrder = rows.length ? Math.max(...rows.map((row) => Number(row.sort_order || 0))) + 10 : 0;
-  const content = buildCatalogInstanceContent(template, body.settings || body.config || {});
+  const installSettings = catalogInstallSettings(template, body.settings || body.config || {});
+  if (installSettings.error) return installSettings;
+  const content = buildCatalogInstanceContent(template, installSettings.settings);
   const meta = await persistSectionDraft(env, slug, page.id, sectionKey, content, sortOrder);
   if (meta.error) return meta;
   if (meta.canonical?.status !== "linked") {
@@ -1905,7 +1908,9 @@ async function installCanonicalCatalogResource(env, scope, body = {}) {
   while ((rows.results || []).some(row => row.section_key === sectionKey)) {
     sectionKey = `${base}-${crypto.randomUUID().slice(0, 8)}`;
   }
-  const content = buildCatalogInstanceContent(template, body.settings || body.config || {});
+  const installSettings = catalogInstallSettings(template, body.settings || body.config || {});
+  if (installSettings.error) return installSettings;
+  const content = buildCatalogInstanceContent(template, installSettings.settings);
   const id = "cmss_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20);
   const ordered = [...(rows.results || []).map(row => ({ id: row.id }))];
   const requestedIndex = Number(body.toIndex);

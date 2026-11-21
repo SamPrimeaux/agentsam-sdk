@@ -47,3 +47,39 @@ export async function acceptSubmission(transport, data) {
   }
   return receipt;
 }
+
+/** Site-local path or https URL for a merchant-supplied image; anything else is dropped. */
+export function widgetImage(value) {
+  if (typeof value !== 'string') return '';
+  const candidate = value.trim();
+  if (localPath(candidate)) return candidate;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === 'https:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+/** Trimmed, length-capped label text with a fallback for empty values. */
+export function widgetText(value, fallback, max = 120) {
+  const text = typeof value === 'string' ? value.trim().slice(0, max) : '';
+  return text || fallback;
+}
+
+const FONT_STACKS = new Map([
+  ['system', 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif'],
+  ['serif', 'Georgia,"Times New Roman",serif'],
+  ['rounded', 'ui-rounded,"SF Pro Rounded","Nunito","Segoe UI",sans-serif'],
+  ['mono', 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'],
+]);
+export const WIDGET_FONT_FAMILIES = ['inherit', ...FONT_STACKS.keys()];
+
+/**
+ * `inherit` follows the host theme. The legacy `inherit_typography:false`
+ * flag keeps meaning "system font" when no explicit family is chosen.
+ */
+export function widgetFont(family, inheritTypography) {
+  if (FONT_STACKS.has(family)) return FONT_STACKS.get(family);
+  return inheritTypography === false ? FONT_STACKS.get('system') : 'inherit';
+}
