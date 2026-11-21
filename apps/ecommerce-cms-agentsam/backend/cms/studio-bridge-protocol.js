@@ -28,6 +28,7 @@ export function isAllowedStudioCmsBridgeRoute(tail,method) {
   if(rest.length===0)return ['GET','PUT'].includes(method);
   if(rest.length===1&&['publish','generated-accept','seed','import-live'].includes(rest[0]))return method==='POST';
   if(rest.length===1&&rest[0]==='catalog-resources')return ['GET','POST'].includes(method);
+  if(rest.length===3&&rest[0]==='catalog-resources'&&/^[a-z][a-z0-9_]{0,63}$/.test(rest[1])&&rest[2]==='preview')return method==='GET';
   if(rest[0]!=='sections')return false;
   if(rest.length===1)return method==='POST';
   if(!SEG.test(rest[1]||''))return false;

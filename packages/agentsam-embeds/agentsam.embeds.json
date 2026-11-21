@@ -269,6 +269,7 @@
     },
     {
       "key": "store_chat",
+      "registry_required": true,
       "name": "Online store chat",
       "icon": "chat",
       "tagline": "Chat icon and popup that lands conversations in the site inbox.",

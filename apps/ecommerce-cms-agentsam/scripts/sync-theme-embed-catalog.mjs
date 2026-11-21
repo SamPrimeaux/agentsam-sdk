@@ -27,18 +27,13 @@ for (const file of manifests) {
       key: embed.key, name: embed.name, icon: embed.icon, tagline: embed.tagline,
       category: embed.category, provider: manifest.name || manifest.id || 'core',
       default_config: embed.default_config,
+      ...(embed.registry_required ? { registry_required: true } : {}),
       surfaces: embed.surfaces,
       ...(embed.editor_fields ? { editor_fields: embed.editor_fields } : {}),
     });
   }
 }
 const target = resolve(app, 'frontend/static/theme-editor/embed-catalog.json');
-// The editor previews the packaged chat widget itself; ship the exact package
-// sources beside the catalog so preview and storefront can never drift.
-const packageSrc = resolve(dirname(embedPack), 'src');
-const widgetCopies = ['chat-widget.js', 'widget-transport.js'].map(name => ({
-  name, target: resolve(app, 'frontend/static/theme-editor/embeds', name), source: resolve(packageSrc, name),
-}));
 const output = JSON.stringify({ schema:'agentsam.theme-embed-ui-catalog.v1', source:'package-manifests',
   preview_only:false, installable:true, apps }, null, 2) + '\n';
 if (process.argv.includes('--check')) {
@@ -46,17 +41,9 @@ if (process.argv.includes('--check')) {
     console.error('Theme embed UI catalog out of sync with packaged manifests');
     process.exitCode = 1;
   } else console.log('Theme embed catalog matches source manifests (' + apps.length + ')');
-  for (const copy of widgetCopies) {
-    const current = await readFile(copy.target, 'utf8').catch(() => null);
-    if (current !== await readFile(copy.source, 'utf8')) {
-      console.error('Theme editor widget copy out of sync: ' + copy.name);
-      process.exitCode = 1;
-    }
-  }
+
 } else {
   await mkdir(dirname(target), { recursive:true });
   await writeFile(target, output);
-  await mkdir(dirname(widgetCopies[0].target), { recursive:true });
-  for (const copy of widgetCopies) await writeFile(copy.target, await readFile(copy.source, 'utf8'));
   console.log('Generated ' + apps.length + ' manifest-backed Theme Studio embed UI entries');
 }

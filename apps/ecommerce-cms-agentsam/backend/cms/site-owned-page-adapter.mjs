@@ -2,6 +2,8 @@ import { resolveCmsSite } from "./site-context.mjs";
 import { normalizeSeo } from "./seo.mjs";
 import { validateSectionStyles } from "./theme-style-contract.mjs";
 import {listCmsComponentCatalog} from './definition-registry.mjs';
+import {registeredEmbed} from './registered-embed.mjs';
+import {resolveCatalogTemplate, buildCatalogInstanceContent, catalogInstallSettings, templateForSectionKey} from './catalog-resource.mjs';
 import '../../packages/theme-contract/runtime/platform-stock-sections.js';
 import '../../packages/theme-contract/runtime/portable-sections.js';
 
@@ -372,20 +374,36 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
   const page = await findSiteOwnedPage(env, site, slug, pageId);
   if (!page) return problem("cms_page_not_found", 404);
   const section = await env.DB.prepare(`
-    SELECT id, section_key, draft_r2_key, r2_bucket, template_sku FROM cms_page_sections
+    SELECT id, section_key, section_type, draft_r2_key, published_r2_key, r2_bucket, template_sku, definition_id, metadata_json FROM cms_page_sections
     WHERE page_id=? AND (section_key=? OR id=?) LIMIT 1
   `).bind(page.id, sectionKey, sectionKey).first();
   if (!section) return problem("cms_section_not_found", 404);
   if (section.r2_bucket !== "cms") return problem("cms_section_bucket_not_supported", 409);
-  const content = body.content;
+  let content = body.content;
   if (!content || typeof content !== "object" || Array.isArray(content)) {
     return problem("cms_section_content_invalid", 400);
+  }
+  if (section.section_type === 'storefront_embed') {
+    // Resolve identity from the persisted row, never from merchant input.
+    const identity=templateForSectionKey(section.section_key)?.key||parse(section.metadata_json).catalogKey;
+    const registered=await registeredEmbed(env,accountId,identity);
+    const packaged=resolveCatalogTemplate(identity);
+    const template=registered||packaged;
+    if((section.template_sku||packaged?.registry_required)&&(!registered||
+      registered.registration.sku!==section.template_sku||registered.registration.definitionId!==section.definition_id))
+      return problem('cms_embed_registry_identity_mismatch',409);
+    if(!template || content.__editor?.catalogKey && content.__editor.catalogKey!==template.key)
+      return problem('cms_embed_identity_changed',422);
+    const checked=catalogInstallSettings(template,Object.fromEntries(Object.entries(content).filter(([k])=>k!=='__editor'&&k!=='embed-root')));
+    if(checked.error)return problem(checked.error,checked.status);
+    content=buildCatalogInstanceContent(template,checked.settings);
+    if(registered)content.__editor={...content.__editor,definitionVersion:registered.registration.definitionVersion,rendererKey:registered.registration.rendererKey,artifactSha256:registered.registration.manifestSha256};
   }
   const styles = validateSectionStyles(content);
   if (!styles.ok) return problem(styles.error, 422);
   let blocks;
   try {
-    await validateCatalogStockDraft(env,accountId,section,content);
+    if(section.section_type!=='storefront_embed')await validateCatalogStockDraft(env,accountId,section,content);
     blocks=await catalogBlockStatements(env.DB,accountId,section,content);
   }catch(e){return problem(String(e.message||e),422);}
   const serialized = JSON.stringify(content);
@@ -410,9 +428,9 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
   try {
     await env.DB.batch([
       env.DB.prepare(`
-        UPDATE cms_page_sections SET draft_r2_key=?,content_hash=?,updated_at=datetime('now')
+        UPDATE cms_page_sections SET draft_r2_key=?,content_hash=?,is_visible=CASE WHEN ? IS NULL THEN is_visible ELSE ? END,updated_at=datetime('now')
         WHERE id=? AND page_id=? AND draft_r2_key IS ?`)
-        .bind(key,hash,section.id,page.id,section.draft_r2_key),
+        .bind(key,hash,section.section_type==='storefront_embed'?(content.enabled===false?0:1):null,content.enabled===false?0:1,section.id,page.id,section.draft_r2_key),
       env.DB.prepare(`
         INSERT INTO cms_revisions
         (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,

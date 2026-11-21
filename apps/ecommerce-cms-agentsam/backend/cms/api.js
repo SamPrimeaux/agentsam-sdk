@@ -25,6 +25,7 @@ import {
 } from "./catalog-resource.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
+import { registeredEmbed, readRegisteredEmbedRuntime } from './registered-embed.mjs';
 import { installSiteOwnedStockOrEmbed, listSiteOwnedStockCatalog } from './site-owned-component-install.mjs';
 import { validateThemeSettings, validateThemeCss, validateSectionStyles } from "./theme-style-contract.mjs";
 import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
@@ -2003,13 +2004,18 @@ export async function listInstalledCatalogResources(env, slug, accountId, siteId
   const storageMode = await cmsPageStorageMode(env.DB);
   if (storageMode === "site-owned" || storageMode === "site-owned-legacy") {
     const stock = await listSiteOwnedStockCatalog(env,accountId).catch(()=>[]);
-    const allCatalog = [...catalog,...stock];
+    const registered = (await Promise.all(loadEmbedCatalog().apps.filter(app=>app.registry_required)
+      .map(app=>registeredEmbed(env,accountId,app.key)))).filter(Boolean);
+    const allCatalog = [...catalog.map(app=>{
+      const entry=registered.find(item=>item.key===app.key);
+      return entry?{...app,installable:entry.registration.artifactReady}:app;
+    }),...stock];
     const result = await getSiteOwnedPage(env, accountId, slug, siteId, pageId);
     if (!result) return { error: "cms_page_not_found", status: 404 };
     const installed = result.page.sections
       .filter(section => isCatalogInstalledContent(section.content) || typeof section.content?.__editor?.catalogSku === 'string')
       .map(section => catalogResourceDetails(section, section.content));
-    return { ok: true, slug: result.page.slug, catalog:allCatalog, installed, authority: result.source };
+    return { ok: true, slug: result.page.slug, catalog:allCatalog, registered_embeds:registered, installed, authority: result.source };
   }
   const scope = await resolveCmsPageScope(env, accountId, { siteId, pageId, slug });
   if (scope.error) {
@@ -3204,6 +3210,20 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     const result = await importLivePageDraft(env, mode.scope.page.slug, body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
+  }
+
+  const embedPreview = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/catalog-resources\/([a-z][a-z0-9_]{0,63})\/preview$/);
+  if(embedPreview && method==='GET'){
+    if(!context.accountId||!siteId)return json({error:'cms_site_required'},{status:403});
+    try{
+      const site=await selectOwnedPageSite(env,context.accountId,siteId);
+      const page=await findSiteOwnedPage(env,site,embedPreview[1],pageId);
+      if(!page||page.slug!==embedPreview[1]||page.status==='archived')return json({error:'cms_page_not_found'},{status:404});
+      const entry=await registeredEmbed(env,context.accountId,embedPreview[2]);
+      if(!entry)return json({error:'cms_embed_registration_required'},{status:404});
+      const runtime=await readRegisteredEmbedRuntime(entry,env.EMBED_ARTIFACT_FETCH||fetch);
+      return json({ok:true,...runtime},{headers:{'cache-control':'private, no-store'}});
+    }catch(e){return json({error:String(e.message||e)},{status:503});}
   }
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/catalog-resources$/);

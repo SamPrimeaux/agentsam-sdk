@@ -194,6 +194,8 @@
     if (!canInstall) { installed = []; return {installed:[],can_install:false}; }
     const payload = await api('/api/admin/cms/pages/' + encodeURIComponent(pageSlug()) + '/catalog-resources');
     installed = Array.isArray(payload.installed) ? payload.installed : [];
+    const registered = new Map((payload.registered_embeds || []).map(entry=>[entry.key,entry]));
+    catalog = catalog.map(app=>registered.has(app.key)?{...app,...registered.get(app.key)}:app);
     return payload;
   }
 
@@ -537,31 +539,40 @@
     }
   }
 
-  // The chat preview mounts the packaged widget itself, so what the merchant
-  // sees is exactly what visitors get. Messages are accepted locally only.
-  async function previewChat(item) {
+  // Preview the registry-resolved, hash-verified artifact in an opaque-origin
+  // sandbox. The CMS editor never imports executable release code into itself.
+  async function previewRegisteredEmbed(item) {
     const {app,config:c}=item;
-    try {
-      await import('/admin/theme-editor/embeds/chat-widget.js');
-    } catch { return false; }
-    dialog.innerHTML='<div class="ter-dialog-head"><div><small>AgentSam · Interactive preview</small><strong>'+esc(app.name)+'</strong>'+
+    dialog.innerHTML='<div class="ter-dialog-head"><div><small>AgentSam · Release preview</small><strong>'+esc(app.name)+'</strong>'+
       '</div><button type="button" data-embed-dismiss aria-label="Close preview">×</button></div>'+
-      '<div class="ter-dialog-content"><p>The chat launcher appears where visitors will see it. Open it and send a test message.</p>'+
-      '<p role="status">Preview only. Nothing is sent to your inbox.</p></div>';
-    const element=document.createElement('agentsam-store-chat');
-    element.submitMessage=async()=>({id:'preview',status:'received'});
-    element.setAttribute('config',JSON.stringify({...c,enabled:true}));
-    dialog.append(element);
-    dialog.querySelectorAll('[data-embed-dismiss]').forEach(button => button.addEventListener('click',()=>dialog.close()));
-    dialog.addEventListener('close',()=>element.remove(),{once:true});
+      '<div class="ter-dialog-content"><p role="status">Loading the registered component…</p></div>';
+    dialog.querySelector('[data-embed-dismiss]').addEventListener('click',()=>dialog.close());
     dialog.showModal();
+    const body=dialog.querySelector('.ter-dialog-content');
+    try{
+      const entry=await api('/api/admin/cms/pages/'+encodeURIComponent(pageSlug())+'/catalog-resources/'+encodeURIComponent(app.key)+'/preview');
+      if(typeof entry.source!=='string'||!/^agentsam-[a-z0-9-]+$/.test(entry.element))throw Error('Invalid component artifact');
+      const frame=document.createElement('iframe');
+      frame.setAttribute('sandbox','allow-scripts allow-forms');
+      frame.title=app.name+' interactive preview';
+      frame.style.cssText='display:block;width:100%;height:550px;max-height:65vh;border:0;background:#f3f4f6;border-radius:10px';
+      const scriptJson=value=>JSON.stringify(value).replace(/</g,'\\u003c');
+      frame.srcdoc='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+        '<meta http-equiv="Content-Security-Policy" content="default-src &apos;none&apos;; script-src &apos;unsafe-inline&apos;; style-src &apos;unsafe-inline&apos;; img-src https: data:; connect-src &apos;none&apos;; form-action &apos;none&apos;; base-uri &apos;none&apos;">'+
+        '<style>body{margin:0;font:14px system-ui;color:#495365;padding:20px}p{max-width:360px;line-height:1.5}</style></head><body><p>Interactive draft preview. Messages stay in this frame.</p>'+
+        '<script>'+entry.source.replace(/<\/script/gi,'<\\/script')+
+        '\n;const element=document.createElement('+scriptJson(entry.element)+');element.submitMessage=async()=>({id:"preview",status:"received"});element.setAttribute("config",JSON.stringify('+scriptJson({...c,enabled:true})+'));document.body.append(element);<\/script></body></html>';
+      const note=document.createElement('p');
+      note.textContent=entry.previewOnly?'Draft release · no production delivery':'Isolated preview · no production delivery';
+      body.replaceChildren(note,frame);
+    }catch(error){body.textContent=error.message||'Registered artifact unavailable.';}
     return true;
   }
 
   async function preview(key) {
     const item=get(key);
     if(!item)return;
-    if(key==='store_chat'&&await previewChat(item))return;
+    if(item.app.registry_required||item.app.registration){await previewRegisteredEmbed(item);return;}
     const {app,config:c}=item;
     const fields=Array.isArray(c.fields)?c.fields.filter(f=>editableFields.includes(f)):[];
     const required=new Set(c.required_fields||[]);

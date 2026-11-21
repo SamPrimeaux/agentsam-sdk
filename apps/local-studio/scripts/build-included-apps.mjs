@@ -163,6 +163,8 @@ function stage(plan) {
   if (!existsSync(plan.publicDir)) {
     throw new Error(`${plan.publicDir} is missing — run without --stage first`);
   }
+  // A stage is an owned app release, not an overlay; removed assets must not survive.
+  rmSync(plan.stagedDir, { recursive: true, force: true });
   mkdirSync(path.dirname(plan.stagedDir), { recursive: true });
   cpSync(plan.publicDir, plan.stagedDir, { recursive: true, mode: constants.COPYFILE_FICLONE });
   if (plan.gzipOversizedWasm) {

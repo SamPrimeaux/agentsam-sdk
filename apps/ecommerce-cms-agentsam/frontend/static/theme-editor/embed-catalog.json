@@ -452,6 +452,7 @@
         "send_label": "Send message",
         "success_message": "Message received."
       },
+      "registry_required": true,
       "surfaces": [
         "storefront_embed"
       ],

@@ -6,7 +6,8 @@
  */
 import { listCmsComponentCatalog } from './definition-registry.mjs';
 import { selectOwnedPageSite, findSiteOwnedPage } from './site-owned-page-adapter.mjs';
-import { resolveCatalogTemplate, buildCatalogInstanceContent } from './catalog-resource.mjs';
+import { resolveCatalogTemplate, buildCatalogInstanceContent, catalogInstallSettings, sectionKeyBase } from './catalog-resource.mjs';
+import { registeredEmbed, readRegisteredEmbedRuntime } from './registered-embed.mjs';
 import { getCmsSectionRenderer } from './section-renderer-runtime.mjs';
 import '../../packages/theme-contract/runtime/platform-stock-sections.js';
 import '../../packages/theme-contract/runtime/portable-sections.js';
@@ -63,8 +64,12 @@ function prepareStockInstance(template,settings) {
 
 function prepareEmbedInstance(template,settings) {
   if(!template) return {failure:error('cms_catalog_template_not_found',404)};
-  return {content:buildCatalogInstanceContent(template,settings),sectionType:'storefront_embed',
-    definitionId:null,templateSku:null,sectionName:template.name,rendererKey:null};
+  const checked=catalogInstallSettings(template,settings);
+  if(checked.error)return {failure:error(checked.error,checked.status)};
+  const content=buildCatalogInstanceContent(template,checked.settings),r=template.registration;
+  if(r)content.__editor={...content.__editor,definitionVersion:r.definitionVersion,rendererKey:r.rendererKey,artifactSha256:r.manifestSha256};
+  return {content,sectionType:'storefront_embed',
+    definitionId:r?.definitionId||null,templateSku:r?.sku||null,sectionName:template.name,rendererKey:r?.rendererKey||null};
 }
 
 function blockSpecs(content) {
@@ -94,9 +99,15 @@ export async function installSiteOwnedStockOrEmbed(env,accountId,slug,siteId,pag
   const requested=body.catalogKey||body.catalog_key||body.key;
   if(typeof requested!=='string' || requested.length>160) return error('cms_catalog_key_invalid',400);
   let prepared,sourceKey=requested;
-  // The packaged EMBED catalog is a separate application integration, not
-  // cms_component_templates. Preserve its existing installation behavior.
-  const embed=resolveCatalogTemplate(requested);
+  // Registry-owned releases take precedence over compatibility catalog entries.
+  const packaged=resolveCatalogTemplate(requested);
+  const registered=await registeredEmbed(env,accountId,requested);
+  if(packaged?.registry_required&&!registered)return error('cms_embed_registration_required',409);
+  const embed=registered||packaged;
+  if(registered) {
+    try {await readRegisteredEmbedRuntime(registered,env.EMBED_ARTIFACT_FETCH||fetch);}
+    catch(e){return error(String(e.message||e),503);}
+  }
   if(embed) {
     prepared=prepareEmbedInstance(embed,body.settings||body.config||{});
   } else {
@@ -113,7 +124,7 @@ export async function installSiteOwnedStockOrEmbed(env,accountId,slug,siteId,pag
   if(new TextEncoder().encode(serialized).length>524288) return error('cms_section_content_too_large',413);
   const nonce=crypto.randomUUID().replaceAll('-','');
   const id='cmss_'+nonce.slice(0,20);
-  const sectionKey=(templateSku?'stock-':'catalog-')+nonce.slice(0,16);
+  const sectionKey=embed ? sectionKeyBase(embed.key)+'-'+nonce.slice(0,8) : 'stock-'+nonce.slice(0,16);
   const digest=await sha256(serialized);
   const key='cms/sections/drafts/'+encodeURIComponent(page.id)+'/'+id+
     '/revision-000001-'+digest.slice(0,16)+'.json';

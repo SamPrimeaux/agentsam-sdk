@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {loadEmbedCatalog} from '../backend/cms/catalog-resource.mjs';
 import {createSiteOwnedFixture} from './fixtures/site-owned-cms.mjs';
 import {handleAdminCmsApi} from '../backend/cms/api.js';
 import {getSiteOwnedPage} from '../backend/cms/site-owned-page-adapter.mjs';
@@ -293,4 +295,50 @@ test('concurrent section edit during release cannot publish a stale page or part
   assert.equal(db.prepare("SELECT published_r2_key key FROM cms_page_sections WHERE id=?")
     .get(installed.section_id).key,null);
  }finally{db.close();}
+});
+
+
+test('site-owned store chat install and save enforce manifest-owned settings and identity', async()=>{
+ const {db,env}=stockFixture();
+ try {
+  const missing=await invoke(env,'merchant','POST',{catalogKey:'store_chat'});
+  assert.equal(missing.status,409);
+  const app=loadEmbedCatalog().apps.find(a=>a.key==='store_chat');
+  const hash=text=>createHash('sha256').update(text).digest('hex');
+  const source='customElements.define("agentsam-store-chat",class extends HTMLElement{})';
+  const sha=hash(source), objectKey='blobs/sha256/'+sha.slice(0,2)+'/'+sha;
+  const manifestKey='packages/platform/store-chat/1.0.0-preview.1/manifest.json';
+  const manifest=JSON.stringify({schema:'inneranimalmedia.cms-component-package.v2',embed_key:'store_chat',renderer_key:'agentsam-embeds:store-chat',element:'agentsam-store-chat',entrypoint:'chat-widget.js',files:[{path:'chat-widget.js',sha256:sha,bytes:Buffer.byteLength(source),content_type:'text/javascript',object_key:objectKey}]});
+  db.prepare("INSERT INTO cms_definitions VALUES ('def-chat','merchant','store_chat','component','Online store chat','','Customer Service','package','1.0.0','draft','{}','[]',0,?)").run(JSON.stringify({element:'agentsam-store-chat',owner_only_fields:['agent_replies','endpoint']}));
+  db.prepare("INSERT INTO cms_components VALUES ('cmp-chat','def-chat','agentsam-embeds:store-chat','unverified','isolated_embed','chat-widget.js',NULL,'theme-store',?,?)").run(manifestKey,hash(manifest));
+  db.prepare("INSERT INTO cms_component_templates(id,sku,template_name,status,template_data,item_type,definition_id,definition_key,definition_version,editor_schema_json) VALUES ('tpl-chat','SKU-EMB-STORE-CHAT','Online store chat','draft',?,'ui_component','def-chat','store_chat','1.0.0',?)").run(JSON.stringify(app.default_config),JSON.stringify({fields:app.editor_fields}));
+  const assets=new Map([[manifestKey,manifest],[objectKey,source]]);
+  env.EMBED_ARTIFACT_FETCH=async url=>{const raw=assets.get(new URL(url).pathname.slice(1));return new Response(raw||'',{status:raw?200:404});};
+  const list=await (await invoke(env,'merchant','GET')).json();
+  assert.equal(list.registered_embeds[0].registration.definitionId,'def-chat');
+  const previewUrl=resource.replace('catalog-resources?','catalog-resources/store_chat/preview?');
+  const preview=await invoke(env,'merchant','GET',undefined,previewUrl);
+  assert.equal(preview.status,200);assert.equal((await preview.json()).source,source);
+  assets.set(objectKey,'corrupt');
+  const corrupt=await invoke(env,'merchant','POST',{catalogKey:'store_chat'});
+  assert.equal(corrupt.status,503);
+  assets.set(objectKey,source);
+  const invalid=await invoke(env,'merchant','POST',{catalogKey:'store_chat',settings:{accent:'not-a-color'}});
+  assert.equal(invalid.status,422);
+  const installed=await invoke(env,'merchant','POST',{catalogKey:'store_chat',settings:{enabled:true,greeting:'Welcome',agent_replies:'auto',endpoint:'/arbitrary'}});
+  const result=await installed.json(); assert.equal(installed.status,201,JSON.stringify(result));
+  assert.match(result.section_key,/^store-chat-[0-9a-f]{8}$/);
+  assert.equal(db.prepare('SELECT definition_id FROM cms_page_sections WHERE id=?').get(result.section_id).definition_id,'def-chat');
+  assert.equal(db.prepare('SELECT template_sku FROM cms_page_sections WHERE id=?').get(result.section_id).template_sku,'SKU-EMB-STORE-CHAT');
+  assert.equal(result.instance.settings.agent_replies,'draft'); assert.equal(result.instance.settings.endpoint,'');
+  const target='https://cms.test/api/admin/cms/pages/home/sections/'+result.section_key+'?site_id=main&page_id=home';
+  const bad=await invoke(env,'merchant','PUT',{content:{...result.instance.settings,__editor:{catalogKey:'form_inline'}}},target);
+  assert.equal(bad.status,422);
+  const saved=await invoke(env,'merchant','PUT',{content:{...result.instance.settings,greeting:'Updated',agent_replies:'auto',endpoint:'/arbitrary'}},target);
+  assert.equal(saved.status,200,JSON.stringify(await saved.clone().json()));
+  const page=(await getSiteOwnedPage(env,'merchant','home','main','home')).page;
+  const content=page.sections.find(section=>section.key===result.section_key).content;
+  assert.equal(content.greeting,'Updated'); assert.equal(content.agent_replies,'draft'); assert.equal(content.endpoint,'');
+  assert.equal(content['embed-root'].greeting,'Updated');
+ } finally {db.close();}
 });
