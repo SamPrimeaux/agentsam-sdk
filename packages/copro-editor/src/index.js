@@ -60,20 +60,22 @@ export function applyCoProCommand(inputProject, command) {
       }
       const patch = payload.patch;
       if (!patch || typeof patch!=="object" || Array.isArray(patch) ||
-        Object.keys(patch).some(key=>!["background","ambient","fogColor","fogOpacity","showGrid","skyPreset","finish","cloudDensity","stars","glow","lightHue","shadowSoftness","keyAngle"].includes(key)))
+        Object.keys(patch).some(key=>!["background","ambient","fogColor","fogOpacity","showGrid","skyPreset","finish","cloudDensity","skyProgression","starIntensity","galaxyIntensity","auroraIntensity","stars","glow","lightHue","shadowSoftness","keyAngle","skyVideoAssetId"].includes(key)))
         throw new Error("copro_environment_patch_invalid");
       for (const [key,value] of Object.entries(patch)) {
         if (key==="background"||key==="fogColor") {
           if (typeof value!=="string" || !/^#[0-9a-fA-F]{6}$/.test(value))throw new Error("copro_environment_color_invalid");
         } else if (["showGrid","stars","glow"].includes(key)) {
           if (typeof value!=="boolean")throw new Error("copro_environment_toggle_invalid");
+        } else if (key==="skyVideoAssetId") {
+          if (typeof value !== "string" || value.length > 512 || (value && !value.startsWith("asset:"))) throw new Error("copro_environment_sky_video_invalid");
         } else if (key==="skyPreset" || key==="finish") {
-          const options=key==="skyPreset" ? ["studio","night","spiral","aurora","exoplanet","supernova","eclipse","cloudbank"] : ["gold","cryo-titanium","copper","carbon","calacatta","marquina","basalt"];
+          const options=key==="skyPreset" ? ["studio","night","spiral","aurora","exoplanet","supernova","eclipse","cloudbank"] : ["original","gold","cryo-titanium","copper","carbon","calacatta","marquina","basalt"];
           if (typeof value!=="string" || !options.includes(value)) throw new Error("copro_environment_preset_invalid");
         } else if (typeof value!=="number" || !Number.isFinite(value) ||
           (key==="ambient" && (value<.2||value>2.5)) ||
           (key==="fogOpacity" && (value<0||value>.8)) ||
-          (key==="cloudDensity" && (value<0||value>1)) ||
+          (["cloudDensity","skyProgression","starIntensity","galaxyIntensity","auroraIntensity"].includes(key) && (value<0||value>1)) ||
           (key==="lightHue" && (value<0||value>360)) ||
           (key==="shadowSoftness" && (value<.5||value>10)) ||
           (key==="keyAngle" && (value< -90||value>180))) {

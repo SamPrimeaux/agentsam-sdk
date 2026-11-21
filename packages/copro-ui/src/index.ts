@@ -12,3 +12,5 @@ export * from "./capabilities";
 export { IconAction } from "./icon-action.js";
 export type { CoProCreativeAsset, CoProCreativeCategory, CoProMotionSample, CoProMotionSampler, CoProGraphicSample, CoProGraphicSampler } from "./creative-types.js";
 export * from "./creative-workspace";
+
+export * from "./stage-environment";

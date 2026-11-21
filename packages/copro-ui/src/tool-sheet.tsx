@@ -7,7 +7,7 @@ import { FileAudio, Film, Upload, X, Sparkles } from "lucide-react";
 export type CoProMediaShelfItem = {
   id: string;
   name: string;
-  kind: "video" | "audio" | "image";
+  kind: "video" | "audio" | "image" | "scene";
   url: string;
   durationUs?: number;
   thumbnails?: string[];
@@ -37,6 +37,9 @@ export type CoProToolPanelProps = {
   onBrowsePresets?:()=>void;
   transform?: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number };
   onTransformChange?: (patch: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number }) => void;
+  world3dTransform?:{x?:number;y?:number;z?:number;rotationYDeg?:number;scale?:number;opacity?:number};
+  world3dVisible?:boolean;
+  onWorld3DChange?:(patch:{transform?:{x?:number;y?:number;z?:number;rotationYDeg?:number;scale?:number;opacity?:number};visible?:boolean})=>void;
   onSpeedChange?: (rate: number) => void;
   onVolumeChange?: (volume: number) => void;
   onTrimChange?: (patch: { startUs?: number; durationUs?: number }) => void;
@@ -79,6 +82,7 @@ const DESCRIPTION: Record<string, string> = {
   captions: "Write captions that remain editable as timeline clips.",
   trim: "Precisely adjust the selected clip's time and duration.",
   transform: "Position, scale and rotate the selected visual layer using exact values.",
+  world3d: "Edit the selected GLB object in scene coordinates, not video-layer percentages.",
   speed: "Change the selected clip's playback rate.",
   volume: "Adjust the selected clip's audio level.",
   effects: "Choose a visual treatment for the selected clip.",
@@ -120,6 +124,43 @@ function TransformEditor({transform,onTransformChange}:TransformEditorProps){
     })}
     <p className="copro-panel-note">Changes update the selected clip, preview and editable project history. Drag the image to reposition it.</p>
   </div>;
+}
+
+/** Real scene-space controls, backed by CoPro clip.set_world3d (not video-layer percentages). */
+function World3DTransformEditor({transform={},visible=true,onChange}:{
+  transform?:CoProToolPanelProps['world3dTransform'];
+  visible?:boolean;
+  onChange?:CoProToolPanelProps['onWorld3DChange'];
+}) {
+  const axes=[
+    {key:'x',label:'X',unit:'Scene units',step:.1,min:-100000,max:100000,defaultValue:0},
+    {key:'y',label:'Y',unit:'Scene units',step:.1,min:-100000,max:100000,defaultValue:0},
+    {key:'z',label:'Z',unit:'Scene units',step:.1,min:-100000,max:100000,defaultValue:0},
+    {key:'rotationYDeg',label:'Yaw (Y)',unit:'°',step:1,min:-36000,max:36000,defaultValue:0},
+    {key:'scale',label:'Uniform scale',unit:'×',step:.05,min:.05,max:100,defaultValue:1},
+    {key:'opacity',label:'Opacity',unit:'×',step:.05,min:0,max:1,defaultValue:1},
+  ] as const;
+  return <section className="mm-world3d-properties" aria-label="Spatial object transform">
+    <div className="mm-world3d-properties-title">
+      <strong>Spatial transform</strong>
+      <small>CoPro world3d · editable project values</small>
+    </div>
+    <div className="mm-world3d-axis-grid">
+      {axes.map(axis=><label key={axis.key} className="mm-world3d-axis">
+        <span>{axis.label}</span>
+        <div><input type="number" value={transform?.[axis.key]??axis.defaultValue}
+          min={axis.min} max={axis.max} step={axis.step} aria-label={axis.label+" world3d"}
+          onChange={event=>{
+            const value=Number(event.currentTarget.value);
+            if(Number.isFinite(value)&&value>=axis.min&&value<=axis.max)onChange?.({transform:{[axis.key]:value}});
+          }}/><small>{axis.unit}</small></div>
+      </label>)}
+    </div>
+    <label className="mm-world3d-visibility"><span>Visible in scene</span>
+      <input type="checkbox" checked={visible} aria-label="3D object visible"
+        onChange={event=>onChange?.({visible:event.currentTarget.checked})}/></label>
+    <p>Position is relative to the imported model center. Rotation is around the vertical Y axis. Changes affect the selected 3D object, not the entire video layer.</p>
+  </section>;
 }
 
 function VideoTools({transform,onTransformChange,mask,onMaskChange}:TransformEditorProps&Pick<CoProToolPanelProps,"mask"|"onMaskChange">){
@@ -278,6 +319,9 @@ export function CoProToolPanel({
   onTrimChange,
   transform,
   onTransformChange,
+  world3dTransform,
+  world3dVisible,
+  onWorld3DChange,
   onProjectExport,
   onTextCommit,
   onMediaPicked,
@@ -320,9 +364,9 @@ export function CoProToolPanel({
   useEffect(() => setEffectTab("looks"), [tool, selectedClipId]);
 
   if (!tool) return null;
-  const title = tool.charAt(0).toUpperCase() + tool.slice(1);
+  const title = tool==="world3d" ? "3D object" : tool.charAt(0).toUpperCase() + tool.slice(1);
   const isText = tool === "text" || tool === "captions";
-  const needSelection = ["trim", "speed", "volume", "effects", "transitions", "transform", "video", "animation", "tracking", "adjust", "ai-stylize"].includes(tool);
+  const needSelection = ["trim", "speed", "volume", "effects", "transitions", "transform", "world3d", "video", "animation", "tracking", "adjust", "ai-stylize"].includes(tool);
   const isAudio = tool === "audio" || tool === "volume";
   const showMedia = tool === "media" || tool === "audio";
 
@@ -332,13 +376,14 @@ export function CoProToolPanel({
   };
 
   return (
-    <section className="copro-tool-panel" aria-labelledby={titleId} data-active-tool={tool}>
-      <header className="copro-tool-panel-header">
+    <section className="copro-tool-panel" aria-labelledby={tool==="world3d"?undefined:titleId}
+      aria-label={tool==="world3d"?"3D object properties":undefined} data-active-tool={tool}>
+      {tool!=="world3d"&&<header className="copro-tool-panel-header">
         <div><span className="copro-panel-eyebrow">EDITING TOOLS</span><h2 id={titleId}>{title}</h2></div>
         <button className="copro-panel-close" aria-label={"Close " + title + " panel"} onClick={onClose}><X size={20}/></button>
-      </header>
+      </header>}
       <div className="copro-tool-panel-body">
-        <p className="copro-tool-intro">{DESCRIPTION[tool] ?? "Choose settings for the selected clip."}</p>
+        {tool!=="world3d"&&<p className="copro-tool-intro">{DESCRIPTION[tool] ?? "Choose settings for the selected clip."}</p>}
         {needSelection && !hasSelectedClip ? (
           <div className="copro-inspector-guidance">
             <Film size={23}/>
@@ -357,6 +402,8 @@ export function CoProToolPanel({
           </dl>
         ) : tool === "video" ? (
           <VideoTools transform={transform} onTransformChange={onTransformChange} mask={mask} onMaskChange={onMaskChange}/>
+        ) : tool === "world3d" ? (
+          <World3DTransformEditor transform={world3dTransform} visible={world3dVisible} onChange={onWorld3DChange}/>
         ) : tool === "transform" ? (
           <TransformEditor transform={transform} onTransformChange={onTransformChange}/>
         ) : tool === "animation" ? (
@@ -518,7 +565,7 @@ export function CoProToolPanel({
                 {mediaItems.filter((item)=>!isAudio||item.kind==="audio").map((item)=>(
                   <article className="copro-media-shelf-item" key={item.id}>
                     <div className="copro-media-shelf-preview">
-                      {item.kind==="image"?<img src={item.url} alt=""/>:item.kind==="video" && item.thumbnails?.length?<img src={item.thumbnails[0]} alt="Video frame preview"/>:item.kind==="video"?<video src={item.url} muted playsInline preload="auto"/>:<FileAudio size={25}/>}
+                      {item.kind==="image"?<img src={item.url} alt=""/>:(item.kind==="video"||item.kind==="scene") && item.thumbnails?.length?<img src={item.thumbnails[0]} alt="Imported asset cover"/>:item.kind==="video"?<video src={item.url} muted playsInline preload="auto"/>:<FileAudio size={25}/>}
                     </div>
                     <div className="copro-media-shelf-copy"><strong>{item.name}</strong><small>{item.kind}{item.durationUs?" · "+formatDuration(item.durationUs):""}</small></div>
                     <button onClick={()=>onMediaAdd?.(item.id)}>Add</button>
@@ -530,7 +577,7 @@ export function CoProToolPanel({
           </div>
         ) : <div className="copro-inspector-guidance">
           <strong>{tool === "templates" ? "Browse editable compositions" : "Not yet available"}</strong>
-          <p>{tool === "templates" ? "Open Template Studio from the MovieMode workspace to browse, preview and start an editable composition." : "This capability isn't enabled in the current local editor."}</p>
+          <p>{tool === "templates" ? "Choose Templates in the left tool browser to preview and apply an editable composition." : "This capability isn't enabled in the current local editor."}</p>
         </div>}
         {tool === "audio" && !(hasSelectedClip && selectedClipKind === "audio") && <p className="copro-panel-note">Select an audio clip to adjust its volume.</p>}
       </div>

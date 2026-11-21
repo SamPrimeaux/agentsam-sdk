@@ -18,7 +18,12 @@ import {
   type CoProCreativeAsset,
   type CoProMotionSampler,
   type CoProGraphicSampler,
+  type LocalSceneSource,
 } from "@inneranimalmedia/copro-ui";
+import { evaluateWorld3DFrame } from '@inneranimalmedia/copro-render/world3d';
+import { CoProWorldScene } from './CoProWorldScene';
+import { SAMSCENE_SKY_DEFAULTS } from './SamSceneSkyBridge';
+import { PrimeTechAssistant } from './PrimeTechAssistant';
 import "@inneranimalmedia/copro-ui/styles.css";
 
 export type MovieModeScreen = "projects" | "editor";
@@ -33,10 +38,7 @@ type SessionMediaItem = CoProMediaShelfItem & {
   height?: number;
 };
 
-const FIXTURE_PROJECTS: CoProProjectSummary[] = [
-  { id:"demo:weekend", title:"Weekend cut", subtitle:"Sample timeline · no video supplied", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"cyan", example:true },
-  { id:"demo:caption", title:"Caption layout", subtitle:"Sample tracks & captions", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"violet", example:true },
-];
+
 /* Batch 1: gallery cards synthesize lightweight SVG covers from tone/title — no live decode in the grid. */
 
 /** Discover from catalog previews + authoritative CREATIVE_TEMPLATES metadata (no UI-owned ID list). */
@@ -61,6 +63,9 @@ const CREATIVE_ASSET_SEED: CoProCreativeAsset[] = (creativeCatalog as any).items
 
 function installCoProBrandIcons() {
   if (typeof document === "undefined") return;
+  // First-party local identity ships with this application, not CDN fallbacks.
+  const localIcon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (localIcon?.getAttribute("href") === "/favicon.ico") return;
   const base = coproAppManifest.iconBaseUrl;
   if (!base) return;
   const setLink = (rel: string, size: string) => {
@@ -178,7 +183,8 @@ function makeImportedProject(file: File, media: Pick<SessionMediaItem,"durationU
     assetId:mediaIdForFile(file),
     startUs:0,
     durationUs:media.durationUs ?? 8_000_000,
-    metadata:{fileName:file.name,mimeType:file.type,sourceWidth:media.width,sourceHeight:media.height},
+          metadata:{fileName:file.name,mimeType:file.type,sourceWidth:media.width,sourceHeight:media.height,
+        ...(/\.glb$/i.test(file.name)?{sourceKind:'samscene-timeline-cue',sceneCue:{kind:'scene-object',objectId:mediaIdForFile(file)},world3d:{visible:true}}:{})},
   }));
   project.tracks.push(track);
   return project;
@@ -219,7 +225,17 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   const [mediaItems, setMediaItems] = useState<SessionMediaItem[]>([]);
   const mediaUrlsRef = useRef(new Map<string,string>());
   const thumbnailPreparationRef = useRef(new Set<string>());
+  const scenePosterRef=useRef(new Set<string>());
   const [mediaPersistenceError, setMediaPersistenceError] = useState<string | null>(null);
+  const [localSceneSources,setLocalSceneSources]=useState<LocalSceneSource[]>([]);
+  const [localSceneSourceBusyId,setLocalSceneSourceBusyId]=useState<string|null>(null);
+  useEffect(()=>{
+    let cancelled=false;
+    fetch('/api/local-samscene/sources').then(response=>response.ok?response.json():{items:[]})
+      .then(data=>{if(!cancelled&&Array.isArray(data.items))setLocalSceneSources(data.items);})
+      .catch(()=>{});
+    return ()=>{cancelled=true;};
+  },[]);
 
   const [savedProjects, setSavedProjects] = useState<CoProProjectSummary[]>([]);
   const [homeSection, setHomeSection] = useState<"home" | "templates">("home");
@@ -230,6 +246,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   const [graphicSampler, setGraphicSampler] = useState<CoProGraphicSampler | null>(null);
   const [transitionFactory,setTransitionFactory]=useState<any>();
   const [initialTool, setInitialTool] = useState<"text" | "captions" | null>(null);
+  const [studioEntryMode,setStudioEntryMode]=useState<"scene"|"design"|"generate"|"video">("video");
 
   async function refreshSavedProjects() {
     const [saved,mediaRecords,thumbnailModule] = await Promise.all([
@@ -256,10 +273,10 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         const key=templateAsset.previewFile.split("/").pop() ?? "";
         thumbnailUrl=(thumbnailModule.CREATIVE_THUMBNAILS as Record<string,string>)[key] || undefined;
       }
-      const visualRecord = clips.map((clip:any)=>mediaById.get(clip.assetId) as any).find((record:any)=>record && (record.kind==="video"||record.kind==="image"||record.type?.startsWith("video/")||record.type?.startsWith("image/")));
+      const visualRecord = clips.map((clip:any)=>mediaById.get(clip.assetId) as any).find((record:any)=>record && (record.kind==="video"||record.kind==="image"||record.kind==="scene"||record.type?.startsWith("video/")||record.type?.startsWith("image/")));
       if (!thumbnailUrl && visualRecord) {
         const kind=visualRecord.kind || (visualRecord.type?.startsWith("image/")?"image":"video");
-        if (kind==="video" && visualRecord.thumbnails?.[0]) thumbnailUrl=visualRecord.thumbnails[0];
+        if ((kind==="video" || kind==="scene") && visualRecord.thumbnails?.[0]) thumbnailUrl=visualRecord.thumbnails[0];
         if (kind==="image" && visualRecord.file instanceof Blob) {
           const existing=mediaUrlsRef.current.get(visualRecord.id);
           const file=visualRecord.file instanceof File?visualRecord.file:new File([visualRecord.file],visualRecord.name||visualRecord.id,{type:visualRecord.type||"image/png",lastModified:visualRecord.lastModified||Date.now()});
@@ -302,7 +319,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     setSavedProjects(summaries.sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)));
   }
 
-  const projects = useMemo(() => [...savedProjects, ...FIXTURE_PROJECTS], [savedProjects]);
+  const projects = useMemo(() => savedProjects, [savedProjects]);
 
   useEffect(() => {
     let cancelled = false;
@@ -393,7 +410,8 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         const url = existingUrl ?? URL.createObjectURL(file);
         if (!existingUrl) mediaUrlsRef.current.set(record.id, url);
         return {
-          id:record.id, name:record.name || file.name, kind, url,
+          id:record.id, name:record.name || file.name,
+          kind:/\.glb$/i.test(file.name)?'scene':kind, url,
           durationUs:record.durationUs, file, waveform:record.waveform, thumbnails:record.thumbnails,
           width:record.width, height:record.height,
         };
@@ -431,7 +449,21 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     void refreshSavedProjects();
     let cancelled = false;
     void (initialProjectId.current?store.load(initialProjectId.current):store.loadRecent()).then((recent) => {
-      if (cancelled || !recent) {
+      if (cancelled) return;
+      if (!recent) {
+        // A generated deep link may be opened in a fresh browser without any
+        // saved record. Create that project instead of silently editing an
+        // unsavable throwaway session whose URL cannot be reopened.
+        if (initialProjectId.current?.startsWith('project:new:')) {
+          const next=createCoProProject({id:initialProjectId.current,title:'Untitled project'});
+          autosaveProjectId.current=next.id;
+          sessionRef.current=new CoProEditorSession(next);
+          setProject(sessionRef.current.project);
+          void store.save(next).then(()=>refreshSavedProjects()).catch(error=>{
+            setMediaPersistenceError('The new project could not be saved locally. Check browser storage.');
+            console.error('MovieMode project creation failed',error);
+          });
+        }
         setRestored(true);
         return;
       }
@@ -581,6 +613,45 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     showScreen("editor");
   }
 
+  const onboardingStudioOpened = useRef(false);
+  useEffect(() => {
+    if (!standalone || !restored || onboardingStudioOpened.current) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('studio') !== 'new') return;
+    onboardingStudioOpened.current = true;
+    url.searchParams.delete('studio');
+    window.history.replaceState(window.history.state, '', url);
+    void createBlank().catch(error => console.error('PrimeTech onboarding studio handoff failed', error));
+  }, [restored, standalone]);
+
+  function cacheScenePoster(id:string,dataUrl:string) {
+    if(scenePosterRef.current.has(id)||!dataUrl.startsWith('data:image/'))return;
+    const item=mediaItems.find(media=>media.id===id);
+    if(!item||item.kind!=='scene')return;
+    scenePosterRef.current.add(id);
+    const updated={...item,thumbnails:[dataUrl]};
+    setMediaItems(current=>current.map(media=>media.id===id?updated:media));
+    if(sourceStore)void sourceStore.put({id:item.id,name:item.name,kind:item.kind,file:item.file,
+      durationUs:item.durationUs,width:item.width,height:item.height,thumbnails:updated.thumbnails})
+      .catch(error=>console.warn('3D cover persistence unavailable',error));
+  }
+
+  async function importLocalSamSceneSource(source:LocalSceneSource) {
+    if(localSceneSourceBusyId)return;
+    setLocalSceneSourceBusyId(source.id);
+    try {
+      const response=await fetch(source.url);
+      if(!response.ok)throw new Error(`Local SamScene source could not load (${response.status})`);
+      const blob=await response.blob();
+      const type=source.kind==='scene'?'model/gltf-binary':source.name.toLowerCase().endsWith('.mov')?'video/quicktime':'video/mp4';
+      const file=new File([blob],source.name,{type,lastModified:Date.now()});
+      const item=await registerSessionMedia(file);
+      addSessionMediaToTimeline(item,playheadUs);
+      setMediaPersistenceError(null);
+    }catch(error){setMediaPersistenceError(error instanceof Error?error.message:String(error));}
+    finally{setLocalSceneSourceBusyId(null);}
+  }
+
   async function importFile(file: File) {
     setCreativeRenderer(null);
     const item = await registerSessionMedia(file);
@@ -678,7 +749,12 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   async function registerSessionMedia(file: File): Promise<SessionMediaItem> {
+    if (!file.type.startsWith('audio/') && !file.type.startsWith('image/') &&
+        !file.type.startsWith('video/') && !/\.glb$/i.test(file.name)) {
+      throw new Error('Unsupported media type. Import a GLB scene, video, audio, or image.');
+    }
     const kind: SessionMediaItem["kind"] =
+      /\.glb$/i.test(file.name) ? "scene" :
       file.type.startsWith("audio/") ? "audio" :
       file.type.startsWith("image/") ? "image" :
       "video";
@@ -698,7 +774,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       return refreshed;
     }
 
-    const probed = await probeMediaMetadata(file);
+    const probed = kind==='scene' ? {durationUs:8_000_000} : await probeMediaMetadata(file);
     let durationUs = probed.durationUs;
     let waveform: number[] | undefined;
 
@@ -716,8 +792,8 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       kind,
       url:mediaUrlsRef.current.get(id) ?? URL.createObjectURL(file),
       durationUs,
-      width:probed.width,
-      height:probed.height,
+      width:'width' in probed?probed.width:undefined,
+      height:'height' in probed?probed.height:undefined,
       file,
       waveform,
     };
@@ -784,7 +860,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       metadata:{
         fileName:item.name,
         mimeType:item.file.type,
-        localSessionOnly:true,
+        ...(item.kind==='scene'?{sourceKind:'samscene-timeline-cue',sceneCue:{kind:'scene-object',objectId:item.id},world3d:{visible:true}}:{}),
         ...(item.waveform ? { waveform:item.waveform } : {}),
       },
     });
@@ -864,6 +940,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     if (action.type === "speed") { setProject(session.execute({ type:"clip.set_speed", payload:{ clipId:action.clipId, playbackRate:action.playbackRate } })); return; }
     if (action.type === "volume") { setProject(session.execute({ type:"clip.set_volume", payload:{ clipId:action.clipId, volume:action.volume } })); return; }
     if (action.type === "transform") { setProject(session.execute({ type:"clip.set_transform", payload:{ clipId:action.clipId, ...action.patch } })); return; }
+    if (action.type === "world3d") { setProject(session.execute({ type:"clip.set_world3d", payload:{clipId:action.clipId,patch:action.patch} })); return; }
     if (action.type === "adjustments") { setProject(session.execute({ type:"clip.set_adjustments", payload:{ clipId:action.clipId, patch:action.patch } })); return; }
     if (action.type === "mask") { setProject(session.execute({ type:"clip.set_mask", payload:{ clipId:action.clipId, mask:action.mask } })); return; }
     if (action.type === "environment") { setProject(session.execute({ type:"project.set_environment", payload:{patch:action.patch} })); return; }
@@ -995,18 +1072,19 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   if (!restored) {
-    return <div  className="as-nav-scope copro-boot"><span>MovieMode</span><small>Restoring your projects…</small></div>;
+    return <div  className="as-nav-scope copro-boot"><span>PrimeTech</span><small>Restoring your projects…</small></div>;
   }
 
   if (screen === "projects") {
-    return <div  className="as-nav-scope copro-app-root">
+    return <div  className="as-nav-scope copro-app-root" data-standalone={standalone?"true":undefined}>
       <CoProProjectsScreen
         projects={projects}
         creativeAssets={creativeAssets}
         onOpenCreativeTemplate={(id) => void openCreativeTemplate(id)}
         initialSection={homeSection}
         onOpenProject={openProject}
-        onCreate={() => void createBlank()}
+        onCreate={() => {setStudioEntryMode("video"); void createBlank();}}
+        onOpenStudioMode={(mode) => {setStudioEntryMode(mode); void createBlank();}}
         onImport={() => homeFileRef.current?.click()}
         recording={recording}
         onRecord={() => void startScreenRecording()}
@@ -1015,19 +1093,21 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         onRenameProject={renameProject}
         onDeleteProject={deleteSavedProject}
         onDuplicateProject={(id) => void duplicateSavedProject(id)}
-        appIconUrl={coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
+        appIconUrl={standalone ? "/brand/p-prime-spectrum-128.avif" : coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
+        onboardingUrl={standalone ? "/primetech-onboarding/" : undefined}
         systemIcons={MOVIEMODE_SYSTEM_ICONS}
       />
-      <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*" className="copro-hidden-source-input" aria-label="Select a video, image or audio file" onChange={(event) => {
+      <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*,.glb,model/gltf-binary" className="copro-hidden-source-input" aria-label="Select a video, 3D GLB scene, image or audio file" onChange={(event) => {
         const file = event.currentTarget.files?.[0];
         if (file) void importFile(file);
         event.currentTarget.value = "";
       }}/>
       {captureError && <div role="alert" className="mm-capture-error">{captureError}<button onClick={() => setCaptureError(null)} aria-label="Dismiss error">×</button></div>}
+      {standalone && <PrimeTechAssistant/>}
     </div>;
   }
 
-  return <div  className="as-nav-scope copro-app-root">
+  return <div  className="as-nav-scope copro-app-root" data-standalone={standalone?"true":undefined}>
     {mediaPersistenceError && <div role="alert" className="copro-source-storage-warning">
       <strong>Source storage needs attention. </strong>{mediaPersistenceError}
       <button type="button" onClick={() => setMediaPersistenceError(null)} aria-label="Dismiss storage warning" className="copro-storage-warning-dismiss">Dismiss</button>
@@ -1035,6 +1115,8 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     <CoProStudio
     key={projectSeed}
     initialTool={initialTool}
+    initialStudioMode={studioEntryMode}
+    samSceneSkyDefaults={SAMSCENE_SKY_DEFAULTS}
     project={project as any}
     projectTitle={project.title}
     playheadUs={playheadUs}
@@ -1044,6 +1126,21 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     previewSrc={previewSrc}
     previewKind={previewKind}
     mediaItems={mediaItems}
+    localSceneSources={localSceneSources}
+    localSceneSourceBusyId={localSceneSourceBusyId}
+    onImportLocalSceneSource={source=>void importLocalSamSceneSource(source)}
+    render3DScene={({url,name,assetId,timeUs,playing,environment,transform})=>{
+      // The same CoPro world3d evaluator that drives world export resolves which
+      // scene object is active and its source-animation time at this playhead.
+      const frame=evaluateWorld3DFrame(project,playheadUs);
+      const active=frame.objects.find(object=>mediaItems.some(media=>media.id===object.assetId&&media.url===url));
+      return <CoProWorldScene src={url} title={name} timeUs={active?.sourceTimeUs??timeUs}
+        playing={playing} skyVideoSrc={mediaItems.find(item=>item.kind==='video'&&item.id===environment?.skyVideoAssetId)?.url}
+        environment={environment} transform={transform}
+        world3dTransform={(project.tracks.flatMap(track=>track.clips).find(clip=>clip.id===active?.clipId)?.metadata?.world3d as {transform?:{x?:number;y?:number;z?:number;rotationYDeg?:number;scale?:number;opacity?:number}}|undefined)?.transform}
+        world3dVisible={active?.visible!==false}
+        onThumbnail={dataUrl=>cacheScenePoster(assetId,dataUrl)} />;
+    }}
     creativeAssets={creativeAssets}
     systemIcons={MOVIEMODE_SYSTEM_ICONS}
     onOpenCreativeTemplate={(id) => void commit({type:"apply-template",id})}

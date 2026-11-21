@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CoPro assistant">
+  <circle cx="256" cy="256" r="238" fill="#0b0d12" stroke="#00b3f0" stroke-width="14"/>
+  <g transform="translate(116 90) scale(0.54)">
+    <path d="M140 140 L240 2 L342 2 L376 140 Z" fill="#ff2d3d"/>
+    <path d="M370 2 L520 140 L520 270 L421 270 L440 220 Z" fill="#ff7a1f"/>
+    <path d="M0 142 L140 184 L140 222 L0 449 Z" fill="#8a4fff"/>
+    <path d="M146 282 L146 612 L6 502 Z" fill="#22c55e"/>
+    <path d="M270 302 L502 302 L314 440 L178 440 Z" fill="#00b3f0"/>
+  </g>
+</svg>

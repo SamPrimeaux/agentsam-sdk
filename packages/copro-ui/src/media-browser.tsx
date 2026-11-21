@@ -13,6 +13,7 @@ import {
   Play,
   Pencil,
   Trash2,
+  Box,
 } from "lucide-react";
 import type { CoProMotionSampler, CoProCreativeAsset, CoProTransitionPreviewFactory } from "./creative-types.js";
 import type { CoProMediaShelfItem } from "./tool-sheet.js";
@@ -20,6 +21,7 @@ import { CoProAssetPreview } from "./asset-preview.js";
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
 
 export type CoProMediaBrowserSection = "import" | "media" | "subprojects" | "yours" | "generate" | "spaces" | "library";
+export type LocalSceneSource = {id:string;name:string;kind:"scene"|"video";source:string;url:string;sizeBytes:number};
 
 type CreativeCategory = "all" | CoProCreativeAsset["category"];
 
@@ -36,6 +38,9 @@ type CoProMediaBrowserProps = {
   selectedClipId?: string | null;
   previewMediaPair?: { before?:string; after?:string };
   onImportFiles: (files: File[]) => void;
+  localSceneSources?: LocalSceneSource[];
+  onImportLocalSceneSource?: (source:LocalSceneSource)=>void;
+  localSceneSourceBusyId?:string|null;
   onAddMedia: (id: string) => void;
   onUseCreativeAsset: (asset: CoProCreativeAsset) => void;
   onOpenCreativeTemplate?: (id: string) => void;
@@ -70,8 +75,8 @@ function formatDuration(durationUs?: number) {
 }
 
 function MediaKindIcon({ kind, systemIcons }: { kind: CoProMediaShelfItem["kind"]; systemIcons?: CoProSystemIconMap }) {
-  const name = kind === "audio" ? "audio" : kind === "image" ? "camera" : "film";
-  const fallback = kind === "audio"
+  const name = kind === "audio" ? "audio" : kind === "image" ? "camera" : kind === "scene" ? "3d" : "film";
+  const fallback = kind === "scene" ? <Box size={19} aria-hidden="true" /> : kind === "audio"
     ? <AudioLines size={19} aria-hidden="true" />
     : kind === "image"
       ? <ImageIcon size={19} aria-hidden="true" />
@@ -84,7 +89,7 @@ function MediaPreview({ item, systemIcons }: { item: CoProMediaShelfItem; system
   if (item.kind === "image") {
     return <img src={item.url} alt="" loading="lazy" />;
   }
-  if (item.kind === "video" && thumbnail) {
+  if ((item.kind === "video" || item.kind === "scene") && thumbnail) {
     return <img src={thumbnail} alt="" loading="lazy" />;
   }
   return <MediaKindIcon kind={item.kind} systemIcons={systemIcons} />;
@@ -119,6 +124,9 @@ export function CoProMediaBrowser({
   selectedClipId,
   previewMediaPair,
   onImportFiles,
+  localSceneSources=[],
+  onImportLocalSceneSource,
+  localSceneSourceBusyId,
   onAddMedia,
   onUseCreativeAsset,
   onOpenCreativeTemplate,
@@ -182,7 +190,7 @@ export function CoProMediaBrowser({
     const files = Array.from(fileList).filter((file) =>
       file.type.startsWith("video/") ||
       file.type.startsWith("audio/") ||
-      file.type.startsWith("image/"),
+      file.type.startsWith("image/") || /\.glb$/i.test(file.name),
     );
     if (files.length) onImportFiles(files);
   }
@@ -225,7 +233,7 @@ export function CoProMediaBrowser({
             id={uploadId}
             className="mm-import-input"
             type="file"
-            accept="video/*,audio/*,image/*"
+            accept="video/*,audio/*,image/*,.glb,model/gltf-binary"
             multiple
             onChange={(event) => {
               if (event.currentTarget.files) importFiles(event.currentTarget.files);
@@ -235,11 +243,20 @@ export function CoProMediaBrowser({
           <label htmlFor={uploadId} className="mm-import-dropzone-label">
             <span className="mm-import-icon"><CoProSystemIcon name="attachment" icons={systemIcons} size={27} fallback={<UploadCloud size={27} />} /></span>
             <strong>Drop files here or browse</strong>
-            <span>Video · Audio · Images</span>
+            <span>Video · Audio · Images · GLB 3D scenes</span>
             <span className="mm-import-button">Choose files</span>
           </label>
         </div>
-
+        {localSceneSources.length>0 && <section className="mm-local-scenes" aria-label="Local SamScene source library">
+          <header className="mm-local-scenes-header"><div><strong>SamScene · Local sources</strong><span>Real scene geometry and sky reference footage from your development library</span></div><small>{localSceneSources.length} sources</small></header>
+          <div className="mm-local-scenes-grid">
+            {localSceneSources.map(source=><article className="mm-local-scene" key={source.id}>
+              <div className="mm-local-scene-icon">{source.kind==="scene"?<Box size={20}/>:<Film size={20}/>}</div>
+              <div className="mm-local-scene-info"><strong title={source.name}>{source.name.replace(/[-_]/g," ")}</strong><span>{source.kind==="scene"?"Editable GLB scene":"Original sky reference video"} · {source.sizeBytes>=1048576?(source.sizeBytes/1048576).toFixed(1)+' MB':(source.sizeBytes/1024).toFixed(1)+' KB'}</span></div>
+              <button type="button" disabled={Boolean(localSceneSourceBusyId)} onClick={()=>onImportLocalSceneSource?.(source)}>{localSceneSourceBusyId===source.id?"Importing…":"Add"}</button>
+            </article>)}
+          </div>
+        </section>}
       </section>
     );
   }
@@ -329,7 +346,7 @@ export function CoProMediaBrowser({
                 </div>
                 <div className="mm-media-card-copy">
                   <strong title={item.name}>{item.name}</strong>
-                  <span>{item.kind === "audio" ? "Audio" : item.kind === "image" ? "Image" : "Video"}</span>
+                  <span>{item.kind === "audio" ? "Audio" : item.kind === "image" ? "Image" : item.kind === "scene" ? "3D Scene" : "Video"}</span>
                 </div>
                 <div className="mm-media-card-actions">
                   <button type="button" className="mm-media-add-action" onClick={() => onAddMedia(item.id)}>

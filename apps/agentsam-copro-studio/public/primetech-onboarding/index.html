@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0b13">
+<title>PrimeTech Onboarding</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  /* One :root block holds every color. Brand hues come from the PrimeTech P mark; a theme overrides only this block. */
+  :root {
+    --bg: #0a0b13;
+    --surface: #14151f;
+    --surface-hi: #1b1d2b;
+    --line: rgba(255, 255, 255, 0.09);
+    --text: #f5f6fb;
+    --muted: #a9acbf;
+    --red: #ff2d3d;
+    --orange: #ff7a1f;
+    --purple: #8a4fff;
+    --green: #22c55e;
+    --blue: #00b3f0;
+    --pink: color-mix(in srgb, var(--red) 55%, var(--purple));
+    --head: #05060b;
+    --page: #f4f4ef;
+    --hero-ink: #17233b;
+    --hero-sky: #e7eff1;
+    --paper: #ffffff;
+    --paper-sub: #f0f1f6;
+    --paper-ink: #1b1d2b;
+    --paper-muted: #6b6f85;
+    --paper-line: #dfe1ea;
+    --scrim: rgba(10, 11, 19, 0.62);
+    --cta: linear-gradient(90deg, var(--purple), var(--pink) 50%, var(--orange));
+    --lit: linear-gradient(135deg, var(--purple), var(--blue) 55%, var(--green));
+    --font: "Montserrat", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --radius: 16px;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  html, body { margin: 0; }
+  body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  [hidden] { display: none !important; }
+
+  /* ---------- Background shards ---------- */
+  .field { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; opacity: .72; transition: opacity .5s; }
+  .shard { position: absolute; animation: drift 14s ease-in-out infinite alternate; }
+  .shard i { display: block; width: 100%; height: 100%; }
+  .s-purple { left: -9vw; top: 20vh; width: 34vw; height: 62vh; filter: drop-shadow(0 0 60px color-mix(in srgb, var(--purple) 55%, transparent)); }
+  .s-purple i { background: linear-gradient(160deg, color-mix(in srgb, var(--purple) 90%, #fff) 0%, var(--purple) 45%, color-mix(in srgb, var(--purple) 30%, var(--bg)) 100%); clip-path: polygon(0 0, 100% 42%, 62% 100%, 0 100%); }
+  .s-green { left: -3vw; bottom: -14vh; width: 22vw; height: 56vh; animation-delay: -4s; filter: drop-shadow(0 0 50px color-mix(in srgb, var(--green) 55%, transparent)); }
+  .s-green i { background: linear-gradient(180deg, var(--green), color-mix(in srgb, var(--green) 40%, var(--bg))); clip-path: polygon(46% 0, 100% 12%, 28% 100%, 0 100%); }
+  .s-red { right: 8vw; top: -8vh; width: 36vw; height: 34vh; animation-delay: -7s; filter: drop-shadow(0 0 60px color-mix(in srgb, var(--red) 50%, transparent)); }
+  .s-red i { background: linear-gradient(120deg, color-mix(in srgb, var(--red) 85%, #fff), var(--red) 40%, color-mix(in srgb, var(--red) 30%, var(--orange))); clip-path: polygon(30% 0, 100% 0, 92% 62%, 0 100%); }
+  .s-orange { right: -8vw; top: 4vh; width: 26vw; height: 58vh; animation-delay: -2s; filter: drop-shadow(0 0 60px color-mix(in srgb, var(--orange) 55%, transparent)); }
+  .s-orange i { background: linear-gradient(200deg, var(--orange), color-mix(in srgb, var(--orange) 55%, var(--red))); clip-path: polygon(46% 0, 100% 0, 100% 100%, 0 62%); }
+  .s-blue { right: -4vw; bottom: -12vh; width: 36vw; height: 46vh; animation-delay: -9s; filter: drop-shadow(0 0 60px color-mix(in srgb, var(--blue) 55%, transparent)); }
+  .s-blue i { background: linear-gradient(20deg, color-mix(in srgb, var(--blue) 70%, var(--purple)), var(--blue) 60%, color-mix(in srgb, var(--blue) 80%, #fff)); clip-path: polygon(24% 0, 100% 0, 100% 80%, 0 100%); }
+  @keyframes drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -14px, 0) rotate(0.6deg); } }
+
+  /* ---------- Setup view ---------- */
+  body[data-view="tour"] .stage { display: none; }
+  body[data-view="setup"] .tour { display: none; }
+  .stage { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px 32px; text-align: center; }
+  .brand { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 26px; }
+  .brand svg { width: 66px; height: 78px; overflow: visible; filter: drop-shadow(0 6px 24px rgba(0,0,0,.5)); }
+  .wordmark { font-weight: 700; font-size: 32px; letter-spacing: -0.01em; }
+
+  h1 { margin: 0; font-size: clamp(26px, 4.4vw, 36px); font-weight: 700; letter-spacing: -0.015em; text-wrap: balance; }
+  .sub { margin: 10px 0 0; color: var(--muted); font-size: 17px; font-weight: 500; text-wrap: balance; }
+
+  .panel { width: 100%; max-width: 760px; margin-top: 28px; min-height: 236px; display: flex; flex-direction: column; align-items: center; }
+  .panel > section { width: 100%; display: none; flex-direction: column; align-items: center; }
+  .panel > section.on { display: flex; animation: rise .45s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .head { animation: rise .45s cubic-bezier(.2,.7,.2,1) both; }
+
+  .field-wrap { width: 100%; max-width: 460px; padding-top: 18px; }
+  .input {
+    width: 100%; height: 60px; padding: 0 22px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    border: 1.5px solid var(--line); border-radius: var(--radius);
+    color: var(--text); font: 600 18px var(--font); text-align: center;
+    backdrop-filter: blur(10px);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .input::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); font-weight: 500; }
+  .input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 22%, transparent), 0 0 28px color-mix(in srgb, var(--blue) 25%, transparent); }
+  .input.bad { border-color: var(--red); box-shadow: 0 0 0 4px color-mix(in srgb, var(--red) 20%, transparent); }
+  .svg-sprite { position: absolute; }
+  .sr-only { position: absolute; left: -9999px; }
+  .msg-flush { margin: 0; }
+  .msg { min-height: 20px; margin: 10px 0 0; font-size: 14px; font-weight: 500; color: var(--red); }
+  .quiet { margin-top: 2px; background: none; border: 0; color: var(--muted); font: 500 14px var(--font); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .quiet:hover { color: var(--text); }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; width: 100%; }
+  .card { position: relative; display: block; }
+  .card input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .card .face {
+    height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    padding: 12px 8px;
+    border: 2px solid transparent; border-radius: var(--radius);
+    background: linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(var(--line), var(--line)) border-box;
+    font-size: 15px; font-weight: 600; line-height: 1.25; color: var(--text);
+    box-shadow: 0 10px 26px rgba(0,0,0,.35);
+    transition: transform .2s, box-shadow .25s, background .25s;
+  }
+  .card svg { width: 38px; height: 38px; fill: none; stroke: var(--ic); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ic) 55%, transparent)); }
+  .card:hover .face { transform: translateY(-3px); background: linear-gradient(var(--surface-hi), var(--surface-hi)) padding-box, linear-gradient(color-mix(in srgb, var(--ic) 55%, transparent), var(--line)) border-box; }
+  .card input:checked + .face {
+    background: linear-gradient(var(--surface-hi), var(--surface-hi)) padding-box, var(--lit) border-box;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--blue) 30%, transparent), 0 0 30px color-mix(in srgb, var(--blue) 38%, transparent), 0 0 46px color-mix(in srgb, var(--green) 22%, transparent);
+  }
+  .card input:focus-visible + .face { outline: 2px solid var(--text); outline-offset: 3px; }
+
+  .other { margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+  .pill { position: relative; display: inline-block; }
+  .pill input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .pill span { display: inline-block; padding: 11px 34px; border-radius: 12px; border: 1.5px solid var(--line); background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--muted); font-weight: 600; font-size: 15px; transition: all .2s; }
+  .pill:hover span { color: var(--text); background: var(--surface-hi); }
+  .pill input:checked + span { color: var(--text); border-color: var(--blue); box-shadow: 0 0 22px color-mix(in srgb, var(--blue) 32%, transparent); }
+  .pill input:focus-visible + span { outline: 2px solid var(--text); outline-offset: 3px; }
+  .other .input { max-width: 380px; height: 50px; font-size: 16px; }
+
+  .controls { width: 100%; max-width: 458px; margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+  .row { display: flex; width: 100%; gap: 10px; }
+  .next, .btn-cta {
+    flex: 1; height: 52px; border: 0; border-radius: 12px; background: var(--cta); color: #fff;
+    font: 700 18px var(--font); display: inline-flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;
+    box-shadow: 0 10px 34px color-mix(in srgb, var(--pink) 32%, transparent);
+    transition: transform .2s, box-shadow .2s, filter .2s;
+  }
+  .next:hover, .btn-cta:hover { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 14px 40px color-mix(in srgb, var(--pink) 42%, transparent); }
+  .next:active, .btn-cta:active { transform: translateY(0); }
+  .next svg, .btn-cta svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
+  .next:hover svg, .btn-cta:hover svg { transform: translateX(3px); }
+  .back { width: 52px; height: 52px; border-radius: 12px; border: 1.5px solid var(--line); background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background .2s; }
+  .back:hover { background: var(--surface-hi); }
+  .back svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+  .dots { display: flex; gap: 10px; }
+  .dot { width: 30px; height: 6px; padding: 0; border: 0; border-radius: 4px; background: color-mix(in srgb, var(--muted) 45%, transparent); cursor: default; transition: all .3s; }
+  .dot.done { cursor: pointer; background: color-mix(in srgb, var(--muted) 80%, transparent); }
+  .dot.now { background: var(--text); }
+
+  /* Launch scene */
+  .launch { position: fixed; inset: 0; z-index: 5; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(14px); text-align: center; padding: 24px; }
+  .launch.on { display: flex; animation: fade .5s ease both; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .launch .logo-wrap { position: relative; width: 120px; height: 120px; display: grid; place-items: center; }
+  .launch .logo-wrap svg { width: 62px; height: 74px; overflow: visible; animation: breathe 2.2s ease-in-out infinite; }
+  .launch .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; background: var(--lit) border-box; -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: spin 2.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes breathe { 50% { transform: scale(1.07); } }
+  .launch h2 { margin: 0; font-size: clamp(24px, 4vw, 32px); font-weight: 700; letter-spacing: -0.015em; text-wrap: balance; }
+  .launch p { margin: 0; color: var(--muted); font-size: 16px; font-weight: 500; min-height: 24px; }
+  .bar { width: min(320px, 80vw); height: 5px; border-radius: 4px; background: color-mix(in srgb, var(--muted) 30%, transparent); overflow: hidden; }
+  .bar b { display: block; height: 100%; width: 0; background: var(--cta); border-radius: 4px; transition: width .6s ease; }
+  .launch-actions { display: none; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .launch.ready .ring, .launch.ready .bar { display: none; }
+  .launch.ready .logo-wrap svg { animation: none; }
+  .launch.ready .launch-actions { display: flex; }
+  .launch-actions .btn-cta { flex: none; padding: 0 28px; height: 48px; font-size: 16px; }
+  .btn-ghost { height: 48px; padding: 0 26px; border-radius: 12px; border: 1.5px solid var(--line); background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--text); font: 600 16px var(--font); cursor: pointer; transition: background .2s; }
+  .btn-ghost:hover { background: var(--surface-hi); }
+  .restart { display: none; background: none; border: 0; color: var(--muted); font: 500 14px var(--font); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .launch.ready .restart { display: inline; }
+  .restart:hover { color: var(--text); }
+
+  /* ---------- Landing (light page, black bands, brand-color accents) ---------- */
+  body[data-view="tour"] .field { opacity: 0; }
+  .tour { position: relative; z-index: 1; min-height: 100vh; background: var(--page); color: var(--paper-ink); }
+  .topbar { position: sticky; top: 0; z-index: 10; height: 68px; display: flex; align-items: center; gap: 16px; padding: 0 clamp(16px, 4vw, 40px); background: var(--head); color: #fff; }
+  .topbar .id { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 19px; letter-spacing: -0.01em; margin-right: auto; }
+  .topbar .id svg { width: 28px; height: 33px; overflow: visible; }
+  .topbar .quiet { color: #b9bbc7; }
+  .topbar .quiet:hover { color: #fff; }
+  .btn-white, .btn-dark { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 44px; padding: 0 22px; border: 2px solid transparent; border-radius: 8px; font: 700 15px var(--font); cursor: pointer; transition: background .2s, color .2s, border-color .2s, transform .2s; }
+  .btn-white { background: #fff; color: #05060b; }
+  .btn-white:hover { background: transparent; color: #fff; border-color: #fff; }
+  .btn-dark { background: var(--head); color: #fff; }
+  .btn-dark:hover { background: transparent; color: var(--head); border-color: var(--head); }
+  .btn-white svg, .btn-dark svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn-out-d { display: inline-flex; align-items: center; height: 44px; padding: 0 22px; border: 2px solid #fff; border-radius: 8px; background: transparent; color: #fff; font: 700 15px var(--font); cursor: pointer; transition: background .2s, color .2s; }
+  .btn-out-d:hover { background: #fff; color: #05060b; }
+
+  /* [01] Hero: the PrimeTech scene (assets/scene.js) behind the headline, full screen below the top bar */
+  .hero { position: relative; overflow: hidden; background: var(--hero-sky); color: var(--hero-ink); min-height: max(620px, calc(100vh - 68px - 73px)); display: flex; flex-direction: column; justify-content: center; }
+  .environment { position: absolute; inset: 0; z-index: 0; }
+  .environment canvas { display: block; width: 100%; height: 100%; }
+  .sky-wash { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, color-mix(in srgb, var(--page) 86%, transparent) 0%, color-mix(in srgb, var(--page) 52%, transparent) 40%, transparent 72%); }
+  .hero-in { position: relative; z-index: 2; width: 100%; max-width: 1472px; margin: 0 auto; padding: 96px clamp(16px, 4vw, 40px) 120px; }
+  .hero .eyebrow { margin: 0 0 28px; color: var(--hero-ink); font-size: 14px; letter-spacing: .1em; }
+  .hero h1 { margin: 0; max-width: none; text-align: left; font-size: clamp(44px, 6.4vw, 104px); line-height: .98; letter-spacing: -0.055em; font-weight: 600; color: var(--hero-ink); text-wrap: balance; }
+  .hero h1 span { display: block; white-space: nowrap; }
+  .hero p.lead { margin: 40px 0 0; max-width: 40ch; color: color-mix(in srgb, var(--hero-ink) 86%, transparent); font-size: clamp(17px, 1.5vw, 22px); font-weight: 500; line-height: 1.55; }
+  .hero-caps { position: absolute; z-index: 2; left: 0; right: 0; bottom: 30px; max-width: 1472px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); display: flex; justify-content: space-between; gap: 24px; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--hero-ink); }
+  .hero-caps span:last-child { font-size: 16px; font-weight: 500; letter-spacing: 0; text-transform: none; text-align: right; }
+  .hero-bar { position: relative; z-index: 3; height: 73px; background: var(--head); color: #fff; }
+  .hero-bar > div { max-width: 1472px; height: 100%; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .hero-bar .explore { display: inline-flex; align-items: center; gap: 12px; border: 0; background: none; color: #fff; font: 500 17px var(--font); cursor: pointer; }
+  .hero-bar .explore svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
+  .hero-bar .explore:hover svg { transform: translateY(3px); }
+  .hero-bar .hb-cta { display: flex; gap: 12px; }
+
+  .tour-wrap { max-width: 1180px; margin: 0 auto; padding: 64px clamp(16px, 4vw, 40px) 120px; display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 56px; align-items: start; }
+
+  /* Side nav */
+  .snav { position: sticky; top: 92px; padding: 14px 12px 12px; border-radius: 22px; background: #1d1d23; color: #fff; box-shadow: 0 18px 44px rgba(0,0,0,.18); transition: width .25s; }
+  .snav-top { display: flex; justify-content: flex-end; padding: 2px 6px 10px; }
+  .snav-collapse { width: 30px; height: 30px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #b9bbc7; cursor: pointer; transition: background .2s, color .2s; }
+  .snav-collapse:hover { background: #2a2a32; color: #fff; }
+  .snav-collapse svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .25s; }
+  .snav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .snav a, .snav .snav-act { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; border: 0; border-radius: 10px; background: none; color: #b9bbc7; font: 600 14.5px var(--font); text-align: left; text-decoration: none; cursor: pointer; transition: color .2s, background .2s; }
+  .snav a:hover, .snav .snav-act:hover { color: #fff; background: #2a2a32; }
+  .snav a i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: transparent; transition: background .2s, box-shadow .2s; }
+  .snav a[aria-current="true"] { color: #fff; }
+  .snav a[aria-current="true"] i { background: var(--blue); box-shadow: 0 0 12px color-mix(in srgb, var(--blue) 70%, transparent); }
+  .snav hr { border: 0; border-top: 1px solid #34343d; margin: 10px 8px; }
+  .snav .snav-act svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .snav.collapsed { width: 60px; }
+  .snav.collapsed .lbl { display: none; }
+  .snav.collapsed .snav-collapse svg { transform: rotate(180deg); }
+  .snav.collapsed a, .snav.collapsed .snav-act { justify-content: center; padding: 11px 0; }
+
+  .content { min-width: 0; display: flex; flex-direction: column; gap: 130px; }
+  .content section { scroll-margin-top: 96px; }
+  .eyebrow { margin: 0 0 14px; font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: color-mix(in srgb, var(--blue) 72%, #000); }
+  .content h2 { margin: 0; font-size: clamp(28px, 3.6vw, 44px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; text-wrap: balance; color: var(--paper-ink); }
+  .lede { margin: 16px 0 0; max-width: 58ch; color: var(--paper-muted); font-size: 18px; font-weight: 500; line-height: 1.6; }
+  .sec-head { max-width: 62ch; }
+
+  /* Key benefits */
+  .benefits { display: flex; flex-direction: column; gap: 110px; }
+  .bene { display: grid; grid-template-columns: minmax(0, 1fr) 376px; gap: 56px; align-items: center; }
+  .bene:nth-child(even) { grid-template-columns: 376px minmax(0, 1fr); }
+  .bene:nth-child(even) .media { order: -1; }
+  .bene h2 { font-size: clamp(26px, 3.2vw, 38px); }
+  .media { position: relative; width: 100%; max-width: 376px; aspect-ratio: 376 / 502; border-radius: 20px; overflow: hidden; background: var(--head); box-shadow: 0 24px 60px rgba(10,11,19,.22); justify-self: center; }
+  .media svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .media.paused svg.scene * { animation-play-state: paused !important; }
+  .pp { position: absolute; left: 14px; bottom: 14px; width: 44px; height: 44px; border: 0; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #05060b; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,.4); transition: transform .2s; }
+  .pp:hover { transform: scale(1.06); }
+  .pp svg { width: 18px; height: 18px; fill: currentColor; }
+  .pp .i-play { display: none; }
+  .media.paused .pp .i-play { display: block; }
+  .media.paused .pp .i-pause { display: none; }
+
+  .sh { transform-box: fill-box; transform-origin: center; animation: assemble 7s cubic-bezier(.6,0,.2,1) infinite; animation-delay: var(--d, 0s); }
+  @keyframes assemble {
+    0%, 8% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(.6); opacity: 0; }
+    32%, 72% { transform: none; opacity: 1; }
+    96%, 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(.6); opacity: 0; }
+  }
+  .bx { animation: slide 2.4s linear infinite alternate; }
+  .by { animation: bounce 1.2s cubic-bezier(.45,0,.55,1) infinite alternate; }
+  .bs { transform-box: fill-box; transform-origin: 50% 100%; animation: squash 1.2s ease-in-out infinite alternate; }
+  @keyframes slide { from { transform: translateX(0); } to { transform: translateX(250px); } }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-290px); } }
+  @keyframes squash { 0% { transform: scale(1.25, .7); } 18% { transform: scale(.92, 1.1); } 100% { transform: scale(.92, 1.1); } }
+  .cell { transform-box: fill-box; transform-origin: center; animation: pulse 3.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
+  @keyframes pulse { 0%, 100% { transform: scale(.3) rotate(0deg); opacity: .5; } 50% { transform: scale(1) rotate(90deg); opacity: 1; } }
+  .orbit { transform-origin: 188px 251px; animation: spin 22s linear infinite; }
+  .orbit .chip { transform-box: fill-box; transform-origin: center; animation: spin 22s linear infinite reverse; }
+  .halo { animation: halo 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes halo { 50% { transform: scale(1.12); opacity: .55; } }
+
+  /* Cards (features, community) */
+  .fgrid { margin-top: 40px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .fcard { position: relative; display: flex; flex-direction: column; gap: 16px; padding: 28px 24px 28px; min-height: 270px; border-radius: 16px; border: 1px solid var(--paper-line); background: var(--paper); overflow: hidden; transition: transform .25s, box-shadow .25s; }
+  .fcard::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--ic); transform: scaleX(.18); transform-origin: left; transition: transform .35s; }
+  .fcard:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(10,11,19,.1); }
+  .fcard:hover::before { transform: scaleX(1); }
+  .ficon { width: 60px; height: 60px; display: grid; place-items: center; border-radius: 14px; background: color-mix(in srgb, var(--ic) 12%, #fff); border: 1px solid color-mix(in srgb, var(--ic) 28%, #fff); }
+  .ficon svg { width: 30px; height: 30px; fill: none; stroke: var(--ic); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .fcard h3 { margin: auto 0 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .fcard p { margin: 0; color: var(--paper-muted); font-size: 15px; font-weight: 500; line-height: 1.6; }
+  .btn-line { margin-top: 36px; display: inline-flex; align-items: center; height: 48px; padding: 0 24px; border-radius: 8px; border: 2px solid var(--paper-ink); background: transparent; color: var(--paper-ink); font: 700 15px var(--font); cursor: pointer; transition: background .2s, color .2s; }
+  .btn-line:hover { background: var(--paper-ink); color: #fff; }
+
+  /* Workflows */
+  .wf { margin-top: 36px; display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 36px; align-items: start; }
+  .wf-tabs { display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; border: 1px solid var(--paper-line); background: var(--paper); }
+  .wf-tab { position: relative; padding: 20px 22px; border: 0; border-bottom: 1px solid var(--paper-line); background: transparent; color: var(--paper-muted); font: 600 16px var(--font); text-align: left; cursor: pointer; transition: background .2s, color .2s; }
+  .wf-tab:last-child { border-bottom: 0; }
+  .wf-tab:hover { background: var(--paper-sub); color: var(--paper-ink); }
+  .wf-tab[aria-selected="true"] { background: var(--paper-sub); color: var(--paper-ink); }
+  .wf-tab[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--blue); }
+  .wf-view { min-width: 0; }
+  .wf-art { position: relative; border-radius: 16px; overflow: hidden; background: var(--head); padding: 34px 24px; display: grid; place-items: center; }
+  .wf-art::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--lit); }
+  .steps { position: relative; z-index: 1; width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+  .steps::before { content: ""; position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; background: rgba(255,255,255,.14); z-index: -1; }
+  .stp { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px 8px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,.14); background: #14151d; color: #fff; text-align: center; font-weight: 700; font-size: 15px; animation: lit 6.4s ease-in-out infinite; animation-delay: calc(var(--n) * 1.6s); }
+  .stp b { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--c) 24%, #14151d); color: var(--c); font-size: 14px; }
+  @keyframes lit { 0%, 30%, 100% { border-color: rgba(255,255,255,.14); box-shadow: none; transform: none; } 6%, 24% { border-color: var(--c); box-shadow: 0 0 30px color-mix(in srgb, var(--c) 40%, transparent); transform: translateY(-4px); } }
+  .wf-view h3 { margin: 26px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.015em; }
+  .wf-view p { margin: 10px 0 0; max-width: 56ch; color: var(--paper-muted); font-size: 17px; font-weight: 500; line-height: 1.6; }
+  .wf-view .btn-line { margin-top: 24px; }
+
+  /* Success story (black feature band) */
+  .story { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 44px; align-items: center; padding: clamp(28px, 4vw, 52px); border-radius: 24px; background: var(--head); color: #fff; overflow: hidden; }
+  .story::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--lit); }
+  .story .eyebrow { color: color-mix(in srgb, var(--blue) 85%, #fff); }
+  .story h2 { color: #fff; }
+  .story .lede { color: #c4c6d3; }
+  .story-pts { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 12px; }
+  .story-pts li { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; color: #fff; }
+  .story-pts i { width: 10px; height: 10px; flex: none; border-radius: 3px; background: var(--c); }
+  .plan { width: 100%; height: auto; display: block; border-radius: 14px; background: #101119; border: 1px solid rgba(255,255,255,.1); }
+  .plan .w { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 6s ease-in-out infinite; }
+  .plan .w2 { stroke: var(--blue); stroke-width: 2; animation-delay: .8s; }
+  .plan .w3 { stroke: var(--orange); stroke-width: 2; animation-delay: 1.4s; }
+  .plan .d { stroke: rgba(255,255,255,.35); stroke-width: 1.5; fill: none; }
+  @keyframes draw { 0% { stroke-dashoffset: 1; } 45%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -1; } }
+
+  /* Bundle */
+  .bgrid { margin-top: 40px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .bcard { padding: 26px 24px; border-radius: 16px; border: 1px solid var(--paper-line); background: var(--paper); }
+  .bcard h3 { margin: 0 0 4px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--paper-muted); }
+  .bcard h3 i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+  .bcard ul { list-style: none; margin: 14px 0 0; padding: 0; }
+  .bcard li { padding: 16px 0; border-top: 1px solid var(--paper-line); }
+  .bcard li:first-child { border-top: 0; padding-top: 4px; }
+  .bcard li b { display: block; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .bcard li span { display: block; margin-top: 4px; color: var(--paper-muted); font-size: 14.5px; font-weight: 500; line-height: 1.55; }
+
+  /* Community and learning */
+  .cgrid { margin-top: 40px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .ccard { padding: 28px 24px; border-radius: 16px; background: var(--head); color: #fff; }
+  .ccard .n { font-size: 13px; font-weight: 700; letter-spacing: .14em; color: var(--c); }
+  .ccard h3 { margin: 18px 0 10px; font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+  .ccard p { margin: 0; color: #c4c6d3; font-size: 15px; font-weight: 500; line-height: 1.6; }
+
+  /* Compare */
+  .cmp { margin-top: 40px; border-radius: 16px; overflow: hidden; border: 1px solid var(--paper-line); background: var(--paper); }
+  .cmp table { width: 100%; border-collapse: collapse; }
+  .cmp th, .cmp td { padding: 18px 22px; text-align: left; vertical-align: top; font-size: 15px; font-weight: 500; line-height: 1.5; }
+  .cmp thead th { background: var(--head); color: #fff; font-weight: 700; font-size: 14px; letter-spacing: .04em; }
+  .cmp tbody th { width: 30%; font-weight: 700; color: var(--paper-ink); }
+  .cmp tbody tr + tr > * { border-top: 1px solid var(--paper-line); }
+  .cmp td.pt { color: var(--paper-ink); font-weight: 600; background: color-mix(in srgb, var(--blue) 6%, #fff); }
+  .cmp td.ot { color: var(--paper-muted); }
+
+  /* FAQ */
+  .faq { margin-top: 36px; border-top: 1px solid var(--paper-line); }
+  .faq details { border-bottom: 1px solid var(--paper-line); }
+  .faq summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 4px; cursor: pointer; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary:hover { color: color-mix(in srgb, var(--blue) 60%, #000); }
+  .faq summary i { position: relative; width: 20px; height: 20px; flex: none; }
+  .faq summary i::before, .faq summary i::after { content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 2px; margin: -1px 0 0 -7px; background: currentColor; transition: transform .25s; }
+  .faq summary i::after { transform: rotate(90deg); }
+  .faq details[open] summary i::after { transform: rotate(0); }
+  .faq details p { margin: 0; padding: 0 4px 24px; max-width: 70ch; color: var(--paper-muted); font-size: 16px; font-weight: 500; line-height: 1.65; }
+  .faq summary:focus-visible { outline: 2px solid var(--paper-ink); outline-offset: 2px; }
+
+  /* System requirements */
+  .req { margin-top: 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .req div { padding: 22px 22px; border-radius: 14px; border: 1px solid var(--paper-line); background: var(--paper); }
+  .req b { display: block; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--paper-muted); }
+  .req span { display: block; margin-top: 8px; font-size: 16px; font-weight: 600; line-height: 1.5; }
+
+  /* Closing band + footer */
+  .cta-band { position: relative; background: var(--head); color: #fff; text-align: center; padding: clamp(64px, 9vw, 110px) 20px; overflow: hidden; }
+  .cta-band::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--lit); }
+  .cta-band svg { width: 48px; height: 57px; margin-bottom: 22px; overflow: visible; }
+  .cta-band h2 { margin: 0 auto; max-width: 22ch; font-size: clamp(30px, 4.4vw, 52px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; text-wrap: balance; }
+  .cta-band p { margin: 18px auto 0; max-width: 52ch; color: #c4c6d3; font-size: 18px; font-weight: 500; line-height: 1.6; }
+  .cta-band .btn-white { margin-top: 32px; height: 52px; padding: 0 30px; font-size: 17px; }
+  .foot { background: #000; color: #8b8d9c; text-align: center; padding: 26px 20px; font-size: 14px; font-weight: 500; }
+
+  /* ---------- Layout scale (modeled on the reference page: 130px lead-in, 157px row gap, 48/24 type) ---------- */
+  .tour-wrap { max-width: 1472px; padding: 130px clamp(16px, 4vw, 40px) 160px; grid-template-columns: 218px minmax(0, 1fr); gap: 70px; }
+  .snav { top: 94px; }
+  .content { gap: 170px; }
+  .content h2 { font-size: clamp(32px, 3.8vw, 48px); }
+  .lede { font-size: clamp(18px, 1.6vw, 22px); line-height: 1.55; }
+  #benefits { min-height: 0; }
+  .benefits { gap: 157px; }
+  .bene { grid-template-columns: minmax(0, 1fr) 379px; gap: 72px; }
+  .bene:nth-child(even) { grid-template-columns: 379px minmax(0, 1fr); }
+  .bene h2 { font-size: clamp(32px, 3.8vw, 48px); margin-top: 6px; }
+  .bene .lede { margin-top: 18px; max-width: 30em; font-size: clamp(19px, 1.8vw, 24px); }
+  .bene .credit { margin: 22px 0 0; font-size: 14px; font-weight: 500; color: var(--paper-muted); }
+  .bene .btn-line { margin-top: 28px; height: 52px; }
+  .media { max-width: 379px; aspect-ratio: 379 / 505; }
+  #features { min-height: 860px; }
+  .fgrid { margin-top: 64px; gap: 30px; }
+  .fcard { min-height: 325px; padding: 32px 30px; border-radius: 18px; background: color-mix(in srgb, var(--ic) 7%, #fff); border-color: color-mix(in srgb, var(--ic) 22%, #fff); }
+  .ficon { width: 76px; height: 76px; background: transparent; border: 0; }
+  .ficon svg { width: 58px; height: 58px; stroke-width: 1.4; }
+  .fcard h3 { font-size: 22px; }
+  .fcard p { font-size: 16.5px; }
+  .btn-line { margin-top: 56px; height: 52px; padding: 0 26px; }
+  #workflows { min-height: 900px; }
+  .wf { grid-template-columns: 362px minmax(0, 1fr); gap: 66px; margin-top: 56px; }
+  .wf-tab { padding: 25px 26px; font-size: 18px; }
+  .wf-art { min-height: 425px; padding: 40px 28px; border-radius: 14px; }
+  .stp { padding: 40px 10px; font-size: 17px; gap: 16px; }
+  .stp b { width: 46px; height: 46px; font-size: 17px; }
+  .wf-view h3 { font-size: 30px; margin-top: 34px; }
+  .wf-view p { font-size: 18px; }
+  #stories { min-height: 760px; display: flex; }
+  .story { width: 100%; padding: clamp(32px, 5vw, 72px); }
+  #bundle { min-height: 720px; }
+  .bcard { padding: 34px 30px; }
+  .bcard li { padding: 20px 0; }
+  .bcard li b { font-size: 19px; }
+  .bcard li span { font-size: 16px; }
+  #learning { min-height: 560px; }
+  .ccard { min-height: 300px; padding: 34px 30px; }
+  .ccard h3 { font-size: 24px; }
+  .ccard p { font-size: 17px; }
+  #compare { min-height: 640px; }
+  .cmp th, .cmp td { padding: 26px 30px; font-size: 17px; }
+  #faqs { min-height: 640px; }
+  .faq summary { padding: 30px 4px; font-size: 20px; }
+  .faq details p { font-size: 17px; }
+  #requirements { min-height: 360px; }
+  .req div { padding: 32px 28px; }
+  .req span { font-size: 18px; }
+  .cta-band { min-height: 520px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+  /* Section markers: press Shift+N to show each section's number */
+  .secbadge { position: absolute; z-index: 60; top: 0; left: 0; padding: 6px 10px; border-radius: 0 0 8px 0; background: var(--red); color: #fff; font: 700 12px/1 var(--font); letter-spacing: .04em; pointer-events: none; }
+  body.show-sec [data-sec] { position: relative; outline: 1px dashed color-mix(in srgb, var(--red) 55%, transparent); outline-offset: -1px; }
+
+  /* ---------- AgentSam Assistant ---------- */
+  .ast { position: fixed; right: clamp(14px, 2.4vw, 32px); bottom: clamp(14px, 2.4vw, 32px); z-index: 30; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
+  .ast-btn { position: relative; width: 62px; height: 62px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 0 color-mix(in srgb, var(--blue) 50%, transparent); transition: transform .2s, box-shadow .3s; animation: ping 3.2s ease-out infinite; }
+  .ast-btn:hover { transform: scale(1.07); }
+  .ast-btn img { width: 100%; height: 100%; display: block; }
+  @keyframes ping { 0% { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 0 color-mix(in srgb, var(--blue) 45%, transparent); } 70%, 100% { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 16px color-mix(in srgb, var(--blue) 0%, transparent); } }
+  .ast-bubble { position: relative; width: min(300px, 80vw); padding: 16px 40px 16px 18px; border-radius: 16px; background: var(--surface-hi); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.5); animation: rise .4s ease both; }
+  .ast-bubble strong { display: block; font-size: 15px; margin-bottom: 4px; }
+  .ast-bubble p { margin: 0; color: var(--muted); font-size: 13.5px; font-weight: 500; line-height: 1.5; }
+  .ast-x { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+  .ast-x:hover { background: var(--surface); color: var(--text); }
+  .ast-x svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+  .ast-panel { position: relative; width: min(440px, calc(100vw - 28px)); height: min(640px, 78vh); display: flex; flex-direction: column; border-radius: 18px; background: var(--paper); color: var(--paper-ink); box-shadow: 0 28px 80px rgba(0,0,0,.6); animation: rise .3s ease both; transition: width .25s ease, height .25s ease; }
+  .ast-panel.big { width: min(860px, calc(100vw - 28px)); height: min(740px, 86vh); }
+  .ast-head { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; height: 60px; flex: none; padding: 0 14px 0 20px; border-radius: 18px 18px 0 0; background: var(--head); color: #fff; }
+  .ast-head img { width: 30px; height: 30px; }
+  .ast-head b { font-size: 16px; font-weight: 600; flex: 1; }
+  .ast-ctl { display: flex; gap: 6px; }
+  .ast-ic { position: relative; width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #fff; cursor: pointer; transition: background .15s; }
+  .ast-ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ast-ic:hover { background: #26272f; outline: 2px solid color-mix(in srgb, #fff 55%, transparent); outline-offset: -2px; }
+  .ast-ic:focus-visible { background: #26272f; outline: 2px solid var(--blue); outline-offset: -2px; }
+  [data-tip]::after { content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); padding: 6px 10px; border-radius: 6px; background: #14151c; color: #fff; font: 500 13px var(--font); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .15s; z-index: 5; }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; }
+  .ast-ctl .ast-ic:last-child::after { left: auto; right: 0; transform: none; }
+  .ast-log { flex: 1; overflow-y: auto; padding: 22px 26px 10px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+  .ast-m { max-width: 88%; font-size: 15px; font-weight: 500; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ast-m.bot { align-self: flex-start; color: var(--paper-ink); }
+  .ast-m.me { align-self: flex-end; padding: 10px 14px; border-radius: 14px 14px 4px 14px; background: var(--paper-sub); }
+  .ast-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 26px 16px; }
+  .ast-chip { padding: 9px 14px; border-radius: 999px; border: 1.5px solid var(--paper-line); background: var(--paper); color: var(--paper-ink); font: 600 13px var(--font); cursor: pointer; transition: border-color .15s, background .15s; }
+  .ast-chip:hover { border-color: var(--paper-ink); background: var(--paper-sub); }
+  .ast-chip:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .ast-form { flex: none; padding: 16px 26px 14px; border-top: 1px solid var(--paper-line); border-radius: 0 0 18px 18px; }
+  .ast-box { position: relative; border: 1.5px solid var(--paper-muted); border-radius: 8px; background: var(--paper); transition: border-color .15s, box-shadow .15s; }
+  .ast-box:focus-within { border-color: var(--paper-ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 35%, transparent); }
+  .ast-box textarea { display: block; width: 100%; min-height: 64px; max-height: 140px; padding: 12px 52px 12px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--paper-ink); font: 500 15px/1.45 var(--font); resize: none; }
+  .ast-box textarea::placeholder { color: var(--paper-muted); }
+  .ast-box textarea:focus { outline: none; }
+  .ast-send { position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--paper-ink); cursor: pointer; transition: background .15s, color .15s; }
+  .ast-send:hover:not(:disabled) { background: var(--paper-sub); }
+  .ast-send:focus-visible { outline: 2px solid var(--blue); }
+  .ast-send:disabled { color: color-mix(in srgb, var(--paper-muted) 55%, var(--paper)); cursor: default; }
+  .ast-send svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .ast-note { margin: 10px 0 0; color: var(--paper-muted); font-size: 13px; font-weight: 500; line-height: 1.4; }
+  .ast-send[data-tip]::after { top: auto; bottom: calc(100% + 6px); }
+  .ast-scrim { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; padding: 20px; border-radius: 18px; background: var(--scrim); animation: fade .2s ease both; }
+  .ast-dlg { width: min(400px, 100%); padding: 26px 26px 24px; border-radius: 10px; background: var(--paper); color: var(--paper-ink); box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+  .ast-dlg h3 { margin: 0 0 14px; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+  .ast-dlg p { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.55; }
+  .ast-dbtn { display: flex; gap: 12px; margin-top: 24px; }
+  .ast-dbtn button { flex: 1; height: 46px; border-radius: 6px; border: 2px solid var(--paper-ink); font: 600 16px var(--font); cursor: pointer; transition: background .15s, color .15s, transform .15s; }
+  #ast-no { background: var(--paper); color: var(--paper-ink); }
+  #ast-no:hover { background: var(--paper-sub); }
+  #ast-yes { background: var(--paper-ink); color: var(--paper); }
+  #ast-yes:hover { background: color-mix(in srgb, var(--paper-ink) 82%, var(--paper)); }
+  .ast-dbtn button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+  @media (max-width: 960px) {
+    .tour-wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 20px; }
+    .snav { position: sticky; top: 76px; z-index: 5; padding: 6px; border-radius: 14px; }
+    .snav { display: flex; align-items: center; }
+    .snav-top, .snav hr { display: none; }
+    .snav ul { flex: 1; min-width: 0; }
+    .snav ul { flex-direction: row; overflow-x: auto; gap: 4px; }
+    .snav a, .snav .snav-act { width: auto; flex: none; white-space: nowrap; padding: 10px 14px; }
+    .bene, .bene:nth-child(even) { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    .bene:nth-child(even) .media { order: 0; }
+    .fgrid, .bgrid, .cgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hero-caps span:first-child { display: none; }
+    .hero-caps { justify-content: flex-start; }
+    .hero-caps span:last-child { text-align: left; }
+    .tour-wrap { padding-top: 64px; }
+    .content { gap: 110px; }
+    .benefits { gap: 90px; }
+    .bene, .bene:nth-child(even) { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    #features, #workflows, #stories, #bundle, #learning, #compare, #faqs { min-height: 0; }
+    .story { grid-template-columns: minmax(0, 1fr); }
+    .wf { grid-template-columns: minmax(0, 1fr); }
+    .wf-tabs { flex-direction: row; overflow-x: auto; }
+    .wf-tab { flex: none; border-bottom: 0; border-right: 1px solid var(--line); }
+    .wf-tab[aria-selected="true"]::before { left: 0; right: 0; bottom: auto; top: 0; height: 4px; width: auto; }
+    .content { gap: 90px; }
+  }
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .shard { opacity: .7; }
+    .brand svg { width: 56px; height: 66px; }
+    .wordmark { font-size: 27px; }
+    .fgrid, .bgrid, .cgrid, .req { grid-template-columns: minmax(0, 1fr); }
+    .fcard { min-height: 0; }
+    .cmp th, .cmp td { padding: 14px 14px; font-size: 14px; }
+    .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .steps::before { display: none; }
+    .wf-art { aspect-ratio: auto; }
+    .topbar .setup-link { display: none; }
+    .topbar .btn-white { padding: 0 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .shard, .launch .ring, .launch .logo-wrap svg, .ast-btn, .stp { animation: none; }
+    .media svg.scene * { animation: none !important; }
+    .panel > section.on, .head { animation: none; }
+    * { transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body data-view="setup">
+
+<!-- PrimeTech P mark, five shards. Fills are the brand tokens above. -->
+<svg width="0" height="0" class="svg-sprite" aria-hidden="true">
+  <defs>
+    <symbol id="logo" viewBox="0 0 520 612">
+      <path d="M140 140 L240 2 L342 2 L376 140 Z" fill="var(--red)"/>
+      <path d="M370 2 L520 140 L520 270 L421 270 L440 220 Z" fill="var(--orange)"/>
+      <path d="M0 142 L140 184 L140 222 L0 449 Z" fill="var(--purple)"/>
+      <path d="M146 282 L146 612 L6 502 Z" fill="var(--green)"/>
+      <path d="M270 302 L502 302 L314 440 L178 440 Z" fill="var(--blue)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="field" aria-hidden="true">
+  <div class="shard s-purple"><i></i></div>
+  <div class="shard s-green"><i></i></div>
+  <div class="shard s-red"><i></i></div>
+  <div class="shard s-orange"><i></i></div>
+  <div class="shard s-blue"><i></i></div>
+</div>
+
+<!-- ============ Setup ============ -->
+<main class="stage">
+  <div class="brand">
+    <svg viewBox="0 0 520 612" role="img" aria-label="PrimeTech logo"><use href="#logo"/></svg>
+    <div class="wordmark">PrimeTech</div>
+  </div>
+
+  <div class="head">
+    <h1 id="title"></h1>
+    <p class="sub" id="subtitle"></p>
+  </div>
+
+  <div class="panel" id="panel">
+    <section data-step="0">
+      <div class="field-wrap">
+        <label for="name" class="sr-only">Your name</label>
+        <input class="input" id="name" type="text" placeholder="Your name" autocomplete="name" maxlength="60">
+        <p class="msg" id="msg-name" role="alert"></p>
+      </div>
+    </section>
+
+    <section data-step="1">
+      <div class="field-wrap">
+        <label for="company" class="sr-only">Company or studio name</label>
+        <input class="input" id="company" type="text" placeholder="Company or studio name" autocomplete="organization" maxlength="80">
+        <p class="msg" id="msg-company" role="alert"></p>
+        <button class="quiet" type="button" id="solo">I work independently</button>
+      </div>
+    </section>
+
+    <section data-step="2">
+      <div class="grid" id="grid" role="radiogroup" aria-label="Primary production focus"></div>
+      <div class="other">
+        <label class="pill"><input type="radio" name="focus" value="other" id="focus-other"><span>Other</span></label>
+        <input class="input" id="other-text" type="text" placeholder="Describe your focus" maxlength="80" hidden aria-label="Describe your focus">
+        <p class="msg msg-flush" id="msg-focus" role="alert"></p>
+      </div>
+    </section>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <button class="back" type="button" id="back" aria-label="Back" hidden>
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+      </button>
+      <button class="next" type="button" id="next"><span id="next-label">Next</span>
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+    <div class="dots" id="dots"></div>
+  </div>
+</main>
+
+<div class="launch" id="launch" role="status" aria-live="polite">
+  <div class="logo-wrap"><div class="ring"></div><svg viewBox="0 0 520 612" aria-hidden="true"><use href="#logo"/></svg></div>
+  <h2 id="launch-title"></h2>
+  <p id="launch-line"></p>
+  <div class="bar"><b id="bar"></b></div>
+  <div class="launch-actions">
+    <button class="btn-cta" type="button" id="go-tour">Take the tour</button>
+    <button class="btn-ghost" type="button" id="go-enter">Enter Studio</button>
+  </div>
+  <button class="restart" type="button" id="restart">Start over</button>
+</div>
+
+<!-- ============ Landing ============ -->
+<div class="tour" id="tour">
+  <!-- [00] TOP BAR -->
+  <header class="topbar" data-sec="00" data-name="Top bar">
+    <div class="id"><svg viewBox="0 0 520 612" aria-hidden="true"><use href="#logo"/></svg><span>PrimeTech</span></div>
+    <button class="quiet setup-link" type="button" id="to-setup">Back to setup</button>
+    <button class="btn-white" type="button" data-enter>Enter Studio
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </header>
+
+  <!-- [01] HERO · scene from assets/scene.js (hero flythrough only) -->
+  <section class="hero" id="hero" data-sec="01" data-name="Hero" aria-labelledby="hero-h">
+    <div class="environment" aria-hidden="true"><canvas id="world"></canvas><div class="sky-wash"></div></div>
+    <div class="hero-in">
+      <p class="eyebrow" id="hero-eyebrow"></p>
+      <h1 id="hero-h"></h1>
+      <p class="lead" id="hero-lead"></p>
+    </div>
+    <div class="hero-caps" aria-hidden="true"><span id="hero-cap-a"></span><span id="hero-cap-b"></span></div>
+  </section>
+  <!-- [01.1] HERO BAR -->
+  <div class="hero-bar" data-sec="01.1" data-name="Hero bar"><div>
+    <button class="explore" type="button" id="hero-more"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>Explore PrimeTech</button>
+    <div class="hb-cta">
+      <button class="btn-white" type="button" data-enter>Enter Studio <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <button class="btn-out-d" type="button" id="hero-flows">See workflows</button>
+    </div>
+  </div></div>
+
+  <div class="tour-wrap">
+    <nav class="snav" id="snav" data-sec="NAV" data-name="Side nav" aria-label="Sections">
+      <div class="snav-top">
+        <button class="snav-collapse" type="button" id="snav-toggle" aria-label="Collapse navigation" aria-expanded="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+        </button>
+      </div>
+      <ul id="snav-list"></ul>
+      <hr>
+      <button class="snav-act" type="button" id="snav-req">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+        <span class="lbl">System Requirements</span>
+      </button>
+    </nav>
+
+    <div class="content">
+      <!-- [02] KEY BENEFITS (rows 02.1-02.4 generated from CONFIG.benefits) -->
+      <section id="benefits" data-sec="02" data-name="Key benefits" aria-label="Key benefits"><div class="benefits" id="benefits-list"></div></section>
+
+      <!-- [03] FEATURES -->
+      <section id="features" data-sec="03" data-name="Features" aria-labelledby="features-h">
+        <div class="sec-head"><h2 id="features-h">Features for your creativity</h2><p class="lede" id="features-lede"></p></div>
+        <div class="fgrid" id="fgrid"></div>
+        <button class="btn-line" type="button" id="see-bundle">Explore the full bundle</button>
+      </section>
+
+      <!-- [04] WORKFLOWS -->
+      <section id="workflows" data-sec="04" data-name="Workflows" aria-labelledby="wf-h">
+        <div class="sec-head"><h2 id="wf-h">Powerful workflows</h2><p class="lede" id="wf-lede"></p></div>
+        <div class="wf">
+          <div class="wf-tabs" id="wf-tabs" role="tablist" aria-label="Workflows"></div>
+          <div class="wf-view" id="wf-view" role="tabpanel"></div>
+        </div>
+      </section>
+
+      <!-- [05] SUCCESS STORY -->
+      <section id="stories" data-sec="05" data-name="Success story" aria-labelledby="story-h">
+        <div class="story">
+          <div>
+            <p class="eyebrow" id="story-eyebrow"></p>
+            <h2 id="story-h"></h2>
+            <p class="lede" id="story-text"></p>
+            <ul class="story-pts" id="story-pts"></ul>
+          </div>
+          <svg class="plan" viewBox="0 0 420 300" role="img" aria-label="Floor plan being drawn">
+            <path class="d" d="M60 40v220M140 40v220M220 40v220M300 40v220M360 40v220M30 90h360M30 170h360M30 230h360" opacity=".25"/>
+            <path class="w" pathLength="1" d="M60 60h300v180H60z"/>
+            <path class="w w2" pathLength="1" d="M60 150h140M200 150v90M200 150h70M270 60v90"/>
+            <path class="w w3" pathLength="1" d="M60 195a22 22 0 0 1 22 -22M270 105a22 22 0 0 0 22 -22M330 240a26 26 0 0 0 -26 -26"/>
+          </svg>
+        </div>
+      </section>
+
+      <!-- [06] BUNDLE -->
+      <section id="bundle" data-sec="06" data-name="Bundle" aria-labelledby="bundle-h">
+        <div class="sec-head"><h2 id="bundle-h">The PrimeTech bundle</h2><p class="lede" id="bundle-lede"></p></div>
+        <div class="bgrid" id="bgrid"></div>
+      </section>
+
+      <!-- [07] COMMUNITY AND LEARNING -->
+      <section id="learning" data-sec="07" data-name="Community and learning" aria-labelledby="learn-h">
+        <div class="sec-head"><h2 id="learn-h">Community and learning</h2><p class="lede" id="learn-lede"></p></div>
+        <div class="cgrid" id="cgrid"></div>
+      </section>
+
+      <!-- [08] COMPARE -->
+      <section id="compare" data-sec="08" data-name="Compare" aria-labelledby="cmp-h">
+        <div class="sec-head"><h2 id="cmp-h">PrimeTech vs. a patchwork of tools</h2><p class="lede" id="cmp-lede"></p></div>
+        <div class="cmp"><table id="cmp-table"></table></div>
+      </section>
+
+      <!-- [09] FAQS -->
+      <section id="faqs" data-sec="09" data-name="FAQs" aria-labelledby="faq-h">
+        <div class="sec-head"><h2 id="faq-h">FAQs</h2></div>
+        <div class="faq" id="faq"></div>
+      </section>
+
+      <!-- [10] SYSTEM REQUIREMENTS -->
+      <section id="requirements" data-sec="10" data-name="System requirements" aria-labelledby="req-h">
+        <div class="sec-head"><h2 id="req-h">System requirements</h2><p class="lede" id="req-lede"></p></div>
+        <div class="req" id="req"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- [11] CLOSING BAND -->
+  <section class="cta-band" data-sec="11" data-name="Closing band" aria-labelledby="cta-h">
+    <svg viewBox="0 0 520 612" aria-hidden="true"><use href="#logo"/></svg>
+    <h2 id="cta-h"></h2>
+    <p id="cta-text"></p>
+    <button class="btn-white" type="button" data-enter>Enter Studio
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </section>
+  <!-- [12] FOOTER -->
+  <footer class="foot" id="foot" data-sec="12" data-name="Footer"></footer>
+</div>
+
+<!-- ============ AgentSam Assistant ============ -->
+<div class="ast" id="ast">
+  <div class="ast-bubble" id="ast-bubble" hidden>
+    <button class="ast-x" type="button" id="ast-bubble-x" aria-label="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <strong>Hi, I'm AgentSam Assistant</strong>
+    <p>How can I help you today?</p>
+  </div>
+  <section class="ast-panel" id="ast-panel" role="dialog" aria-label="AgentSam Assistant" hidden>
+    <div class="ast-head">
+      <img src="copro-trigger.svg" alt="">
+      <b>AgentSam Assistant</b>
+      <div class="ast-ctl">
+        <button class="ast-ic" type="button" id="ast-min" data-tip="Minimize" aria-label="Minimize"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+        <button class="ast-ic" type="button" id="ast-exp" data-tip="Expand" aria-label="Expand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6"/></svg></button>
+        <button class="ast-ic" type="button" id="ast-close" data-tip="Close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </div>
+    <div class="ast-log" id="ast-log" aria-live="polite"></div>
+    <form class="ast-form" id="ast-form" autocomplete="off">
+      <div class="ast-box">
+        <textarea id="ast-input" rows="2" placeholder="Ask AgentSam Assistant" maxlength="300" aria-label="Ask AgentSam Assistant"></textarea>
+        <button class="ast-send" type="submit" id="ast-send" data-tip="Send" aria-label="Send" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 4.5l17 7.5-17 7.5 3-7.5z"/><path d="M6.5 12h8"/></svg></button>
+      </div>
+      <p class="ast-note">AI content may be incomplete or inaccurate. Review results before use.</p>
+    </form>
+    <div class="ast-scrim" id="ast-end" hidden>
+      <div class="ast-dlg" role="alertdialog" aria-modal="true" aria-labelledby="ast-end-t" aria-describedby="ast-end-d">
+        <h3 id="ast-end-t">End Chat</h3>
+        <p id="ast-end-d">Closing this window clears your chat history and ends your session. Are you sure you want to end this chat session?</p>
+        <div class="ast-dbtn"><button type="button" id="ast-no">No</button><button type="button" id="ast-yes">Yes</button></div>
+      </div>
+    </div>
+  </section>
+  <button class="ast-btn" type="button" id="ast-btn" aria-label="Open AgentSam Assistant" aria-expanded="false">
+    <img src="copro-trigger.svg" alt="">
+  </button>
+</div>
+
+<script>
+(function () {
+  // All content and behavior hooks live here. Nothing below this block is brand-specific.
+  var CONFIG = {
+    storageKey: "primetech.onboarding",
+    studioUrl: "/?studio=new",   // local MovieMode onboarding handoff: opens the actual CoPro editor
+    focus: [
+      { id: "architecture", label: "Architecture & BIM",       color: "var(--purple)", icon: '<path d="M4 21V7l8-4 8 4v14"/><path d="M3 21h18"/><path d="M9.5 21v-5h5v5"/><path d="M8 10h2M14 10h2M8 13.5h2M14 13.5h2"/>' },
+      { id: "product",      label: "Product Design",           color: "var(--red)",    icon: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>' },
+      { id: "motion",       label: "Motion & Media",           color: "var(--blue)",   icon: '<rect x="3" y="4" width="18" height="13" rx="2.5"/><path d="M10 8.5l5 3-5 3z"/><path d="M8 21h8M12 17v4"/>' },
+      { id: "interactive",  label: "Interactive Experiences",  color: "var(--orange)", icon: '<path d="M3 9.5A2.5 2.5 0 015.5 7h13A2.5 2.5 0 0121 9.5v4a2.5 2.5 0 01-2.5 2.5H16l-1.6-2.5H9.6L8 16H5.5A2.5 2.5 0 013 13.5z"/>' },
+      { id: "brand",        label: "Brand & Marketing",        color: "var(--green)",  icon: '<path d="M4 10v4l11 4V6z"/><path d="M18 9.5a3.5 3.5 0 010 5"/><path d="M7 15.5l1 4.5h3l-1-3.5"/><path d="M19.5 6l1.5-1.5M21 12h1.5"/>' },
+      { id: "robotics",     label: "Robotics & Automation",    color: "var(--blue)",   icon: '<path d="M4 21h9"/><path d="M8.5 21v-5.5l5-6"/><circle cx="8.5" cy="15.5" r="1.3"/><circle cx="13.5" cy="9.5" r="1.3"/><path d="M13.5 9.5L18 4l3 1.5-1 3.5"/>' },
+      { id: "learning",     label: "Learning & Development",   color: "var(--purple)", icon: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.5"/><path d="M22 9v6"/>' },
+      { id: "industrial",   label: "Industrial & Manufacturing", color: "var(--red)",  icon: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5l1.6 2.4 2.8-.6.9 2.7 2.7.9-.6 2.8 2.1 1.7-2.1 1.7.6 2.8-2.7.9-.9 2.7-2.8-.6L12 21.5l-1.6-2.4-2.8.6-.9-2.7-2.7-.9.6-2.8L2.5 12l2.1-1.7-.6-2.8 2.7-.9.9-2.7 2.8.6z"/>' }
+    ],
+    sections: [
+      { id: "benefits",  label: "Key benefits" },
+      { id: "features",  label: "Features" },
+      { id: "workflows", label: "Workflows" },
+      { id: "stories",   label: "Success stories" },
+      { id: "bundle",    label: "The bundle" },
+      { id: "learning",  label: "Community and learning" },
+      { id: "compare",   label: "PrimeTech vs. patchwork" },
+      { id: "faqs",      label: "FAQs" }
+    ],
+    hero: {
+      eyebrow: "PrimeTech / Creative engineering",
+      lines: ["Our mission is to", "redefine", "impossible."],
+      lead: "We create complete software systems, dimensional tools, brands, merchandise and immersive experiences, all connected by one creative practice.",
+      capA: "Software × Spatial design × Brand × Creative",
+      capB: "From concept to a world of possibility."
+    },
+    featuresLede: "CAD, sketching, sculpting and scenes are lanes of one studio, so a model never has to leave the place you made it.",
+    workflowsLede: "Pick the path that matches how you work. Each one runs start to finish inside PrimeTech.",
+    story: {
+      eyebrow: "Success story",
+      title: "DreamHouse: transforming dreams into reality",
+      text: "DreamHouse is a real home, not a demo. AgentSam's CAD tools, through an agent named Astra, produce the model, drawings, IFC, renders and walkthrough video from the SD-02-RC1 design, and the whole build is captured as it happens.",
+      points: [
+        { c: "var(--purple)", t: "A dimensioned plan that drives the 3D model" },
+        { c: "var(--red)",    t: "BIM and IFC kept inside the CAD app" },
+        { c: "var(--orange)", t: "Renders and a walkthrough video from the same project" },
+        { c: "var(--blue)",   t: "Every step documented as a chapter you can learn from" }
+      ]
+    },
+    bundleLede: "PrimeTech is a family of tools that share one project, one library and one assistant.",
+    bundle: [
+      { c: "var(--purple)", title: "Design", items: [
+        { n: "CAD Creator", d: "Plans, walls, stock parts and dimensions that drive the 3D model and cost estimate live." },
+        { n: "SamSketch",   d: "Drafting and BIM, with a typography surface for custom fonts and icons." },
+        { n: "Architectural intelligence", d: "Architecture-aware tools that help CAD understand what it is drawing." } ] },
+      { c: "var(--red)", title: "Create", items: [
+        { n: "SamSculpt & SamSpeaks", d: "The creative department: sculpt forms and give scenes a voice." },
+        { n: "SamScene",    d: "Stage, light and animate scenes, saved as portable .iamscene files." },
+        { n: "CoPro",       d: "A video editor with AgentSam as co-producer for walkthroughs and reels." } ] },
+      { c: "var(--blue)", title: "Run the project", items: [
+        { n: "Project Control", d: "Track work, time and progress for every project in one place." },
+        { n: "Merch",       d: "Take designs from the screen into manufacturing." },
+        { n: "AgentSam",    d: "One assistant across every tool in the bundle." } ] }
+    ],
+    learningLede: "PrimeTech is built by someone learning the craft in public, so the journey is part of the product.",
+    learning: [
+      { c: "var(--purple)", n: "01", t: "Beyond the blueprint", d: "An inspirational process piece for people with zero know-how who turn an idea into a real result with AgentSam." },
+      { c: "var(--orange)", n: "02", t: "Learn by doing", d: "Each leap of work becomes a chapter and each chapter a lesson, from first sketch to finished render." },
+      { c: "var(--blue)",   n: "03", t: "The DreamHouse case study", d: "Follow a real home from idea to drawings, IFC, renders and video, inside the CAD app." }
+    ],
+    compare: {
+      lede: "Most creative work is spread across separate apps. PrimeTech keeps the stages together.",
+      cols: ["", "PrimeTech", "A patchwork of tools"],
+      rows: [
+        ["Where work lives", "One project and one library of models, scenes, templates and BIMs", "Files scattered across apps and folders"],
+        ["From plan to scene", "A plan drives the 3D model, the estimate and the scene", "Export, import and rebuild at every handoff"],
+        ["Assistant", "AgentSam inside every tool, aware of the project", "Separate assistants that start from nothing"],
+        ["Your files", "Open formats such as glTF and IFC, plus portable .iamscene scenes", "Formats tied to each app"]
+      ]
+    },
+    faqs: [
+      { q: "What is PrimeTech?", a: "PrimeTech is the name for Inner Animal Media's CAD, sculpting, sketching, BIM and creative lanes, gathered into one studio." },
+      { q: "Who is it for?", a: "People who design and make things: architecture and BIM, product design, motion, interactive work, brand, robotics, learning and manufacturing. You pick your focus during setup." },
+      { q: "What is AgentSam?", a: "AgentSam is the assistant built into every tool. It works alongside you, handles repetitive steps and keeps the project in context." },
+      { q: "Which file formats can I use?", a: "PrimeTech works with open formats such as glTF and IFC, and scenes are saved as portable .iamscene files." },
+      { q: "Is DreamHouse a real project?", a: "Yes. DreamHouse is an actual home design, and it is the first full proof of the CAD app, from plan to renders and walkthrough." },
+      { q: "Where are my models stored?", a: "Models, scenes, templates and BIMs live in one library rather than being split up by app." }
+    ],
+    requirements: {
+      lede: "PrimeTech runs where you already work.",
+      items: [
+        { k: "In the browser", v: "Open the CAD app at cad.inneranimalmedia.com." },
+        { k: "On your desktop", v: "AgentSam Local Studio brings the studio to your machine." },
+        { k: "Your files", v: "glTF, IFC and .iamscene, stored in your project library." }
+      ]
+    },
+    footer: "PrimeTech is a product of Inner Animal Media.",
+    benefits: [
+      { scene: "assemble",   eyebrow: "Design & model", title: "From first sketch to finished form", credit: "Scene: shards assembling into the PrimeTech mark", cta: { label: "See the workflow", wf: "plan" },
+        text: "Draft floor plans, sculpt forms and sketch ideas in one studio, with CAD, BIM and scene tools sharing a single canvas." },
+      { scene: "motion",     eyebrow: "Animate",        title: "Give your designs motion", credit: "Scene: a shape in motion along a camera path", cta: { label: "See the workflow", wf: "scene" },
+        text: "Set camera paths, add simple movement and preview a scene in real time long before you render it." },
+      { scene: "parametric", eyebrow: "Parametric",     title: "Change one number, update everything", credit: "Scene: a parametric grid updating together", cta: { label: "See the workflow", wf: "sketch" },
+        text: "Live dimensions and parametric parts keep every edit non-destructive, so a revision never means starting over." },
+      { scene: "agent",      eyebrow: "Assistant",      title: "Put AgentSam to work", credit: "Scene: AgentSam at the center of your tools", cta: { label: "See the workflow", wf: "agent" },
+        text: "Ask for a layout, a material pass or a cleanup and let AgentSam handle the repetitive steps while you stay in the design." }
+    ],
+    features: [
+      { color: "var(--purple)", title: "CAD Creator",  text: "Draw walls, place stock parts and generate plans with exact dimensions.",
+        icon: '<path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-6h6v6"/>' },
+      { color: "var(--red)",    title: "Sketching",    text: "Capture ideas fast with freehand and vector tools that turn into geometry.",
+        icon: '<path d="M4 20l1-4L16.5 4.5a2 2 0 013 3L8 19z"/><path d="M14 7l3 3"/>' },
+      { color: "var(--orange)", title: "Sculpting",    text: "Push and pull organic forms with brushes built for concept models.",
+        icon: '<path d="M12 3c4 0 7 3 7 7 0 3-1.5 4-1.5 6.5S15 21 12 21s-5.5-2-5.5-4.5S5 13 5 10c0-4 3-7 7-7z"/>' },
+      { color: "var(--blue)",   title: "Scenes",       text: "Light, stage and animate scenes, then share them as portable files.",
+        icon: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4 4 3 3-2 4 3"/>' },
+      { color: "var(--green)",  title: "Open formats", text: "Bring in glTF models and keep every project in files you own.",
+        icon: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>' },
+      { color: "var(--pink)",   title: "AgentSam",     text: "A built-in assistant that understands your project and works alongside you.",
+        icon: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>' }
+    ],
+    workflows: [
+      { id: "plan",   label: "Plan to render",    title: "Plan to render",
+        text: "Jumping between apps breaks creative flow. Go from a dimensioned plan to a finished render without leaving the studio.",
+        steps: ["Draw the plan", "Place parts", "Set materials", "Render"] },
+      { id: "sketch", label: "Sketch to model",   title: "Sketch to model",
+        text: "Start loose. Trace a sketch into clean geometry, extrude it and refine the form while the original idea stays in view.",
+        steps: ["Sketch", "Trace", "Extrude", "Refine"] },
+      { id: "scene",  label: "Scene to share",    title: "Scene to share",
+        text: "Stage a model, light it, add motion and publish the result as a portable scene anyone can open.",
+        steps: ["Stage", "Light", "Animate", "Share"] },
+      { id: "agent",  label: "Work with AgentSam", title: "Work with AgentSam",
+        text: "Describe what you need in plain words, review the result, adjust it and approve. AgentSam does the repetitive work between each step.",
+        steps: ["Describe", "Review", "Adjust", "Approve"] }
+    ]
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var NS = "http://www.w3.org/2000/svg";
+  var state = { step: 0, name: "", company: "", focus: "", other: "" };
+  var STEPS = 3;
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var BRAND = ["var(--red)", "var(--orange)", "var(--purple)", "var(--green)", "var(--blue)"];
+
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem(CONFIG.storageKey) || "null"); } catch (e) {}
+  if (saved) { state.name = saved.name || ""; state.company = saved.company || ""; }
+
+  var STYLED = { fill: 1, stroke: 1, "stop-color": 1 };
+  function svgEl(tag, attrs, html) {
+    var n = document.createElementNS(NS, tag);
+    for (var k in (attrs || {})) {
+      var v = attrs[k];
+      // var(--token) colors only resolve through CSS, not presentation attributes
+      if (STYLED[k] && String(v).indexOf("var(") === 0) n.style.setProperty(k, v); else n.setAttribute(k, v);
+    }
+    if (html != null) n.innerHTML = html;
+    return n;
+  }
+  function first(name) { return (name || "").trim().split(/\s+/)[0]; }
+
+  /* ---------- Setup ---------- */
+  var grid = $("grid");
+  CONFIG.focus.forEach(function (f) {
+    var l = document.createElement("label");
+    l.className = "card";
+    l.style.setProperty("--ic", f.color);
+    l.innerHTML = '<input type="radio" name="focus" value="' + f.id + '"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true">' + f.icon + '</svg>' + f.label.replace("&", "&amp;") + '</span>';
+    grid.appendChild(l);
+  });
+
+  var dots = $("dots");
+  for (var i = 0; i < STEPS; i++) {
+    var d = document.createElement("button");
+    d.type = "button"; d.className = "dot"; d.setAttribute("aria-label", "Step " + (i + 1) + " of " + STEPS);
+    (function (n) { d.addEventListener("click", function () { if (n < state.step) go(n); }); })(i);
+    dots.appendChild(d);
+  }
+
+  function copy() {
+    if (state.step === 0) return ["Welcome to PrimeTech", "First, what should we call you?"];
+    if (state.step === 1) return ["Nice to meet you, " + first(state.name), "What is your company or studio called?"];
+    return ["How do you want to use PrimeTech?", "Choose your primary production focus."];
+  }
+
+  function render() {
+    var c = copy();
+    $("title").textContent = c[0];
+    $("subtitle").textContent = c[1];
+    Array.prototype.forEach.call(document.querySelectorAll(".panel > section"), function (s) {
+      s.classList.toggle("on", +s.getAttribute("data-step") === state.step);
+    });
+    Array.prototype.forEach.call(dots.children, function (d, n) {
+      d.classList.toggle("now", n === state.step);
+      d.classList.toggle("done", n < state.step);
+      if (n === state.step) d.setAttribute("aria-current", "step"); else d.removeAttribute("aria-current");
+    });
+    $("back").hidden = state.step === 0;
+    $("next-label").textContent = state.step === STEPS - 1 ? "Enter Studio" : "Next";
+    ["msg-name", "msg-company", "msg-focus"].forEach(function (id) { $(id).textContent = ""; });
+    $("name").classList.remove("bad"); $("company").classList.remove("bad");
+    var f = document.querySelector('.panel > section.on input[type="text"]');
+    if (f && state.step < 2 && document.body.dataset.view === "setup") setTimeout(function () { f.focus(); }, 60);
+  }
+
+  function go(n) { state.step = n; render(); }
+  function fail(inputId, msgId, text) { var inp = $(inputId); if (inp) inp.classList.add("bad"); $(msgId).textContent = text; if (inp) inp.focus(); }
+
+  function focusLabel() {
+    if (state.focus === "other") return state.other.trim() || "your own";
+    var f = CONFIG.focus.filter(function (x) { return x.id === state.focus; })[0];
+    return f ? f.label : "";
+  }
+
+  function next() {
+    if (state.step === 0) {
+      state.name = $("name").value.trim();
+      if (!state.name) return fail("name", "msg-name", "Enter your name to continue.");
+      return go(1);
+    }
+    if (state.step === 1) {
+      state.company = $("company").value.trim();
+      if (!state.company) return fail("company", "msg-company", "Enter a company name, or choose “I work independently.”");
+      return go(2);
+    }
+    var sel = document.querySelector('input[name="focus"]:checked');
+    if (!sel) { $("msg-focus").textContent = "Pick the focus that fits your work best."; return; }
+    state.focus = sel.value;
+    state.other = $("other-text").value;
+    if (state.focus === "other" && !state.other.trim()) { $("msg-focus").textContent = "Tell us what you work on, or pick a focus above."; $("other-text").focus(); return; }
+    finish();
+  }
+
+  function detail() { return { name: state.name, company: state.company, focus: state.focus === "other" ? state.other.trim() : state.focus }; }
+
+  function finish() {
+    try { localStorage.setItem(CONFIG.storageKey, JSON.stringify({ name: state.name, company: state.company, focus: detail().focus, done: true })); } catch (e) {}
+    var L = $("launch"), bar = $("bar");
+    L.classList.remove("ready"); L.classList.add("on");
+    bar.style.width = "0";
+    $("launch-title").textContent = "Setting up your studio, " + first(state.name);
+    var lines = ["Creating the " + state.company + " workspace", "Loading " + focusLabel() + " tools", "Connecting AgentSam"];
+    var k = 0;
+    $("launch-line").textContent = lines[0]; setTimeout(function () { bar.style.width = "30%"; }, 50);
+    var t = setInterval(function () {
+      k++;
+      if (k < lines.length) { $("launch-line").textContent = lines[k]; bar.style.width = (30 + k * 30) + "%"; return; }
+      clearInterval(t);
+      bar.style.width = "100%";
+      setTimeout(ready, 600);
+    }, 900);
+  }
+
+  function ready() {
+    $("launch-title").textContent = "You're in, " + first(state.name);
+    $("launch-line").textContent = "Your " + focusLabel() + " studio is ready.";
+    $("launch").classList.add("ready");
+    document.dispatchEvent(new CustomEvent("primetech:onboarded", { detail: detail() }));
+  }
+
+  function returnDestination() {
+    // A tour launched from an editor must return to THAT project, never create
+    // another draft. Only same-origin application paths are accepted.
+    var raw = new URLSearchParams(window.location.search).get("returnTo");
+    if (raw && raw.length < 2048 && raw.charAt(0) === "/" && raw.charAt(1) !== "/" &&
+        raw.charAt(1) !== "\\" && !/[\r\n]/.test(raw)) {
+      try {
+        var candidate = new URL(raw, window.location.origin);
+        if (candidate.origin === window.location.origin &&
+            candidate.pathname !== window.location.pathname) return candidate.pathname + candidate.search + candidate.hash;
+      } catch (e) { /* Invalid resume URL: use the standard studio entry instead. */ }
+    }
+    return CONFIG.studioUrl;
+  }
+
+  function enterStudio(workflow) {
+    var d = detail();
+    if (workflow) d.workflow = workflow;
+    document.dispatchEvent(new CustomEvent("primetech:enter", { detail: d }));
+    var destination = returnDestination();
+    if (destination) window.location.assign(destination);
+  }
+
+  // Returning visitors can take the full tour without losing their project.
+  if (new URLSearchParams(window.location.search).has("returnTo")) {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-enter]"), function (button) {
+      for (var child = button.firstChild; child; child = child.nextSibling) {
+        if (child.nodeType === 3 && child.nodeValue.trim()) {
+          child.nodeValue = "Return to project ";
+          break;
+        }
+      }
+    });
+    $("go-enter").textContent = "Return to project";
+  }
+
+  /* ---------- View routing (#tour shows the tour directly) ---------- */
+  function view() {
+    var tour = location.hash === "#tour";
+    document.body.dataset.view = tour ? "tour" : "setup";
+    $("launch").classList.remove("on", "ready");
+    window.scrollTo(0, 0);
+    if (tour) { setupScroll(); setTimeout(function () { window.dispatchEvent(new Event("resize")); }, 30); } else render();
+  }
+  function showTour() { if (location.hash === "#tour") view(); else location.hash = "tour"; }
+  function showSetup() { history.replaceState(null, "", location.pathname + location.search); view(); }
+
+  /* ---------- Scenes ---------- */
+  var shardPaths = [
+    { d: "M140 140 L240 2 L342 2 L376 140 Z", c: "var(--red)",    dx: "-120px", dy: "-90px", r: "-25deg" },
+    { d: "M370 2 L520 140 L520 270 L421 270 L440 220 Z", c: "var(--orange)", dx: "140px", dy: "-70px", r: "30deg" },
+    { d: "M0 142 L140 184 L140 222 L0 449 Z", c: "var(--purple)", dx: "-150px", dy: "40px", r: "-40deg" },
+    { d: "M146 282 L146 612 L6 502 Z", c: "var(--green)", dx: "-80px", dy: "150px", r: "35deg" },
+    { d: "M270 302 L502 302 L314 440 L178 440 Z", c: "var(--blue)", dx: "170px", dy: "110px", r: "-30deg" }
+  ];
+
+  var gid = 0;
+  function sceneBase(svg, tint) {
+    var id = "scene-g" + (gid++);
+    var defs = svgEl("defs");
+    var lg = svgEl("linearGradient", { id: id, x1: 0, y1: 0, x2: 1, y2: 1 });
+    lg.appendChild(svgEl("stop", { offset: 0, "stop-color": tint, "stop-opacity": ".30" }));
+    lg.appendChild(svgEl("stop", { offset: 1, "stop-color": "var(--surface)" }));
+    defs.appendChild(lg); svg.appendChild(defs);
+    svg.appendChild(svgEl("rect", { width: 376, height: 502, fill: "var(--surface)" }));
+    svg.appendChild(svgEl("rect", { width: 376, height: 502, fill: "url(#" + id + ")" }));
+  }
+
+  var scenes = {
+    assemble: function (svg) {
+      sceneBase(svg, "var(--purple)");
+      var g = svgEl("g", { transform: "translate(86 130) scale(.39)" });
+      shardPaths.forEach(function (s, i) {
+        var p = svgEl("path", { d: s.d, fill: s.c, "class": "sh" });
+        p.style.setProperty("--dx", s.dx); p.style.setProperty("--dy", s.dy); p.style.setProperty("--r", s.r); p.style.setProperty("--d", (i * .12) + "s");
+        g.appendChild(p);
+      });
+      svg.appendChild(svgEl("path", { d: "M30 440h316", stroke: "var(--line)", "stroke-width": 2 }));
+      svg.appendChild(g);
+    },
+    motion: function (svg) {
+      sceneBase(svg, "var(--orange)");
+      svg.appendChild(svgEl("path", { d: "M40 420 C 110 80, 266 80, 336 420", fill: "none", stroke: "var(--line)", "stroke-width": 2, "stroke-dasharray": "4 8" }));
+      svg.appendChild(svgEl("path", { d: "M20 440h336", stroke: "var(--line)", "stroke-width": 2 }));
+      svg.appendChild(svgEl("ellipse", { cx: 188, cy: 442, rx: 70, ry: 7, fill: "var(--bg)", opacity: ".6" }));
+      var gx = svgEl("g", { "class": "bx", transform: "translate(0 0)" });
+      var gy = svgEl("g", { "class": "by" });
+      var gs = svgEl("g", { "class": "bs" });
+      gs.appendChild(svgEl("polygon", { points: "63,380 93,430 33,430", fill: "var(--orange)" }));
+      gs.appendChild(svgEl("polygon", { points: "63,380 93,430 63,430", fill: "var(--red)", opacity: ".9" }));
+      gy.appendChild(gs); gx.appendChild(gy); svg.appendChild(gx);
+    },
+    parametric: function (svg) {
+      sceneBase(svg, "var(--green)");
+      var cols = 6, rows = 8, size = 36, gap = 14, x0 = (376 - (cols * size + (cols - 1) * gap)) / 2, y0 = (502 - (rows * size + (rows - 1) * gap)) / 2;
+      for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
+        var rect = svgEl("rect", { x: x0 + c * (size + gap), y: y0 + r * (size + gap), width: size, height: size, rx: 8, fill: BRAND[(r + c) % BRAND.length], "class": "cell" });
+        rect.style.setProperty("--d", ((r + c) * .14) + "s");
+        svg.appendChild(rect);
+      }
+    },
+    agent: function (svg) {
+      sceneBase(svg, "var(--blue)");
+      svg.appendChild(svgEl("circle", { cx: 188, cy: 251, r: 130, fill: "none", stroke: "var(--line)", "stroke-width": 2, "stroke-dasharray": "3 9" }));
+      var orbit = svgEl("g", { "class": "orbit" });
+      for (var i = 0; i < 5; i++) {
+        var a = (Math.PI * 2 / 5) * i - Math.PI / 2, x = 188 + 130 * Math.cos(a), y = 251 + 130 * Math.sin(a);
+        orbit.appendChild(svgEl("line", { x1: 188, y1: 251, x2: x, y2: y, stroke: "var(--line)", "stroke-width": 2 }));
+        var chip = svgEl("g", { "class": "chip" });
+        chip.appendChild(svgEl("circle", { cx: x, cy: y, r: 24, fill: "var(--surface-hi)", stroke: BRAND[i], "stroke-width": 2.5 }));
+        chip.appendChild(svgEl("circle", { cx: x, cy: y, r: 8, fill: BRAND[i] }));
+        orbit.appendChild(chip);
+      }
+      svg.appendChild(orbit);
+      svg.appendChild(svgEl("circle", { cx: 188, cy: 251, r: 64, fill: "var(--blue)", opacity: ".18", "class": "halo" }));
+      svg.appendChild(svgEl("circle", { cx: 188, cy: 251, r: 52, fill: "var(--bg)", stroke: "var(--blue)", "stroke-width": 3 }));
+      svg.appendChild(svgEl("use", { href: "#logo", x: 164, y: 224, width: 48, height: 56 }));
+    }
+  };
+
+  function buildBenefits() {
+    var host = $("benefits-list");
+    CONFIG.benefits.forEach(function (b) {
+      var row = document.createElement("div"); row.className = "bene";
+      row.dataset.sec = "02." + (host.children.length + 1); row.dataset.name = b.title;
+      var text = document.createElement("div");
+      var ey = document.createElement("p"); ey.className = "eyebrow"; ey.textContent = b.eyebrow;
+      var h = document.createElement("h2"); h.textContent = b.title;
+      var p = document.createElement("p"); p.className = "lede"; p.textContent = b.text;
+      text.appendChild(ey); text.appendChild(h); text.appendChild(p);
+      if (b.credit) { var cr = document.createElement("p"); cr.className = "credit"; cr.textContent = b.credit; text.appendChild(cr); }
+      if (b.cta) {
+        var cb = document.createElement("button"); cb.type = "button"; cb.className = "btn-line"; cb.textContent = b.cta.label;
+        cb.addEventListener("click", function () {
+          var wi = CONFIG.workflows.map(function (w) { return w.id; }).indexOf(b.cta.wf);
+          if (wi > -1) selectWf(wi);
+          jump("workflows");
+        });
+        text.appendChild(cb);
+      }
+
+      var media = document.createElement("div"); media.className = "media";
+      var svg = svgEl("svg", { "class": "scene", viewBox: "0 0 376 502", preserveAspectRatio: "xMidYMid slice", role: "img", "aria-label": b.title });
+      scenes[b.scene](svg);
+      var btn = document.createElement("button"); btn.type = "button"; btn.className = "pp";
+      btn.setAttribute("aria-label", "Pause animation"); btn.setAttribute("aria-pressed", "false");
+      btn.innerHTML = '<svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+      btn.addEventListener("click", function () {
+        var p2 = media.classList.toggle("paused");
+        btn.setAttribute("aria-pressed", String(p2));
+        btn.setAttribute("aria-label", p2 ? "Play animation" : "Pause animation");
+      });
+      media.appendChild(svg); media.appendChild(btn);
+      row.appendChild(text); row.appendChild(media);
+      host.appendChild(row);
+    });
+  }
+
+  function buildFeatures() {
+    var host = $("fgrid");
+    CONFIG.features.forEach(function (f) {
+      var c = document.createElement("article"); c.className = "fcard"; c.style.setProperty("--ic", f.color);
+      c.innerHTML = '<div class="ficon"><svg viewBox="0 0 24 24" aria-hidden="true">' + f.icon + '</svg></div>';
+      var h = document.createElement("h3"); h.textContent = f.title;
+      var p = document.createElement("p"); p.textContent = f.text;
+      c.appendChild(h); c.appendChild(p); host.appendChild(c);
+    });
+  }
+
+  /* ---------- Workflows ---------- */
+  var wfIndex = 0;
+  function buildWorkflows() {
+    var tabs = $("wf-tabs");
+    CONFIG.workflows.forEach(function (w, i) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "wf-tab"; b.id = "wf-tab-" + w.id;
+      b.setAttribute("role", "tab"); b.setAttribute("aria-controls", "wf-view"); b.textContent = w.label;
+      b.addEventListener("click", function () { selectWf(i); });
+      b.addEventListener("keydown", function (e) {
+        var n = CONFIG.workflows.length, t = null;
+        if (e.key === "ArrowDown" || e.key === "ArrowRight") t = (wfIndex + 1) % n;
+        if (e.key === "ArrowUp" || e.key === "ArrowLeft") t = (wfIndex + n - 1) % n;
+        if (t !== null) { e.preventDefault(); selectWf(t); tabs.children[t].focus(); }
+      });
+      tabs.appendChild(b);
+    });
+    selectWf(0);
+  }
+  function selectWf(i) {
+    wfIndex = i;
+    var w = CONFIG.workflows[i];
+    Array.prototype.forEach.call($("wf-tabs").children, function (b, n) {
+      b.setAttribute("aria-selected", String(n === i)); b.tabIndex = n === i ? 0 : -1;
+    });
+    var v = $("wf-view");
+    v.setAttribute("aria-labelledby", "wf-tab-" + w.id);
+    v.innerHTML = "";
+    var art = document.createElement("div"); art.className = "wf-art";
+    var steps = document.createElement("div"); steps.className = "steps";
+    w.steps.forEach(function (s, n) {
+      var st = document.createElement("div"); st.className = "stp";
+      st.style.setProperty("--n", n); st.style.setProperty("--c", BRAND[(n + i) % BRAND.length]);
+      var num = document.createElement("b"); num.textContent = n + 1;
+      var lb = document.createElement("span"); lb.textContent = s;
+      st.appendChild(num); st.appendChild(lb); steps.appendChild(st);
+    });
+    art.appendChild(steps);
+    var h = document.createElement("h3"); h.textContent = w.title;
+    var p = document.createElement("p"); p.textContent = w.text;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "btn-line"; btn.textContent = "Start this workflow";
+    btn.addEventListener("click", function () { enterStudio(w.id); });
+    v.appendChild(art); v.appendChild(h); v.appendChild(p); v.appendChild(btn);
+  }
+
+  /* ---------- Landing content ---------- */
+  function txt(id, v) { var n = $(id); if (n) n.textContent = v; }
+  function mk(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+  function buildStatic() {
+    var h = CONFIG.hero;
+    txt("hero-eyebrow", h.eyebrow);
+    h.lines.forEach(function (ln) { $("hero-h").appendChild(mk("span", null, ln)); });
+    txt("hero-lead", h.lead); txt("hero-cap-a", h.capA); txt("hero-cap-b", h.capB);
+    txt("features-lede", CONFIG.featuresLede); txt("wf-lede", CONFIG.workflowsLede);
+    var st = CONFIG.story;
+    txt("story-eyebrow", st.eyebrow); txt("story-h", st.title); txt("story-text", st.text);
+    st.points.forEach(function (p) {
+      var li = mk("li"); var i = mk("i"); i.style.setProperty("--c", p.c);
+      li.appendChild(i); li.appendChild(mk("span", null, p.t)); $("story-pts").appendChild(li);
+    });
+    txt("bundle-lede", CONFIG.bundleLede); txt("learn-lede", CONFIG.learningLede);
+    txt("cmp-lede", CONFIG.compare.lede);
+    txt("req-lede", CONFIG.requirements.lede);
+    txt("cta-h", "Ready to start" + (first(state.name) ? ", " + first(state.name) : "") + "?");
+    txt("cta-text", "Your studio is set up. Step in and start with the workflow that fits your work.");
+    txt("foot", CONFIG.footer);
+    $("hero-more").addEventListener("click", function () { jump("benefits"); });
+    $("hero-flows").addEventListener("click", function () { jump("workflows"); });
+    $("see-bundle").addEventListener("click", function () { jump("bundle"); });
+    $("snav-req").addEventListener("click", function () { jump("requirements"); });
+  }
+  function buildBundle() {
+    CONFIG.bundle.forEach(function (g) {
+      var c = mk("div", "bcard");
+      var h = mk("h3"); var i = mk("i"); i.style.setProperty("--c", g.c); h.appendChild(i); h.appendChild(document.createTextNode(g.title));
+      var ul = mk("ul");
+      g.items.forEach(function (it) {
+        var li = mk("li"); li.appendChild(mk("b", null, it.n)); li.appendChild(mk("span", null, it.d)); ul.appendChild(li);
+      });
+      c.appendChild(h); c.appendChild(ul); $("bgrid").appendChild(c);
+    });
+  }
+  function buildLearning() {
+    CONFIG.learning.forEach(function (l) {
+      var c = mk("article", "ccard"); c.style.setProperty("--c", l.c);
+      c.appendChild(mk("div", "n", l.n)); c.appendChild(mk("h3", null, l.t)); c.appendChild(mk("p", null, l.d));
+      $("cgrid").appendChild(c);
+    });
+  }
+  function buildCompare() {
+    var t = $("cmp-table"), cp = CONFIG.compare;
+    var thead = mk("thead"), tr = mk("tr");
+    cp.cols.forEach(function (c) { tr.appendChild(mk("th", null, c)); });
+    thead.appendChild(tr); t.appendChild(thead);
+    var tb = mk("tbody");
+    cp.rows.forEach(function (r) {
+      var row = mk("tr"); row.appendChild(mk("th", null, r[0]));
+      row.appendChild(mk("td", "pt", r[1])); row.appendChild(mk("td", "ot", r[2])); tb.appendChild(row);
+    });
+    t.appendChild(tb);
+  }
+  function buildFaq() {
+    CONFIG.faqs.forEach(function (f) {
+      var d = mk("details"); var s = mk("summary"); s.appendChild(mk("span", null, f.q)); s.appendChild(mk("i"));
+      d.appendChild(s); d.appendChild(mk("p", null, f.a)); $("faq").appendChild(d);
+    });
+  }
+  function buildReq() {
+    CONFIG.requirements.items.forEach(function (r) {
+      var d = mk("div"); d.appendChild(mk("b", null, r.k)); d.appendChild(mk("span", null, r.v)); $("req").appendChild(d);
+    });
+  }
+
+  /* ---------- Side nav + scroll spy ---------- */
+  var spy = null;
+  function jump(id) {
+    var t = $(id); if (!t) return;
+    t.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+  }
+  function buildNav() {
+    var ul = $("snav-list");
+    CONFIG.sections.forEach(function (s) {
+      var li = document.createElement("li");
+      var a = document.createElement("a"); a.href = "#" + s.id; a.dataset.id = s.id;
+      a.innerHTML = '<i></i><span class="lbl"></span>'; a.lastChild.textContent = s.label; a.title = s.label;
+      a.addEventListener("click", function (e) { e.preventDefault(); jump(s.id); });
+      li.appendChild(a); ul.appendChild(li);
+    });
+    $("snav-toggle").addEventListener("click", function () {
+      var c = $("snav").classList.toggle("collapsed");
+      this.setAttribute("aria-expanded", String(!c));
+      this.setAttribute("aria-label", c ? "Expand navigation" : "Collapse navigation");
+    });
+  }
+  function mark(id) {
+    Array.prototype.forEach.call(document.querySelectorAll("#snav-list a"), function (a) {
+      if (a.dataset.id === id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+    });
+  }
+  function setupScroll() {
+    if (spy) spy.disconnect();
+    if (!("IntersectionObserver" in window)) { mark("benefits"); return; }
+    spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) mark(e.target.id); });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    CONFIG.sections.forEach(function (s) { spy.observe($(s.id)); });
+    mark("benefits");
+  }
+
+  /* ---------- AgentSam Assistant ---------- */
+  var sample = null, busy = false, transcript = [];
+  try {
+    if (window.claude && window.claude.use) window.claude.use("sample").then(function (s) { sample = s; }).catch(function () {});
+  } catch (e) {}
+  if (!sample && !window.claude) {
+    $("ast-panel").querySelector(".ast-note").textContent = "AI content may be incomplete or inaccurate. Review results before use.";
+  }
+
+  function say(text, who) {
+    var m = document.createElement("div"); m.className = "ast-m " + who; m.textContent = text;
+    $("ast-log").appendChild(m); $("ast-log").scrollTop = $("ast-log").scrollHeight; return m;
+  }
+  function context() {
+    var d = detail();
+    var tools = CONFIG.features.map(function (f) { return f.title + " (" + f.text + ")"; }).join("; ");
+    var flows = CONFIG.workflows.map(function (w) { return w.title; }).join(", ");
+    var faqs = CONFIG.faqs.map(function (f) { return f.q + " " + f.a; }).join(" ");
+    return "You are AgentSam Assistant, shown on the PrimeTech landing page. " + CONFIG.hero.lead +
+      " Features: " + tools + ". Workflows: " + flows + ". " + faqs +
+      " Reply in at most three short sentences, plain text, no markdown. Only describe what is listed here; if asked about anything else (pricing, release dates, other features), say you can't confirm it here." +
+      (d.name ? " The person is " + first(d.name) + (d.focus ? ", focused on " + d.focus : "") + "." : "");
+  }
+  function ask(q) {
+    q = (q || "").trim();
+    if (!q || busy) return;
+    say(q, "me");
+    if (!sample) {
+      say('Assistant isn\'t connected in this local build. Your message wasn\'t sent.', 'bot');
+      return;
+    }
+    busy = true; syncSend();
+    transcript.push("Person: " + q);
+    var bot = say("…", "bot");
+    var prompt = context() + "\n\nConversation so far:\n" + transcript.slice(-8).join("\n") + "\n\nWrite only your next reply.";
+    sample(prompt, { cache: false, modelTier: "quick", onText: function (r) { bot.textContent = r.text || "…"; $("ast-log").scrollTop = $("ast-log").scrollHeight; } })
+      .then(function (r) { var t = (r && r.text) || bot.textContent; bot.textContent = t; transcript.push("Assistant: " + t); })
+      .catch(function () { bot.textContent = "I can't reach the assistant right now. Try again in a moment."; })
+      .then(function () { busy = false; syncSend(); $("ast-input").focus(); });
+  }
+  function openPanel() {
+    $("ast-bubble").hidden = true; $("ast-panel").hidden = false; $("ast-btn").setAttribute("aria-expanded", "true");
+    if (!$("ast-log").children.length) {
+      say("Hi, I'm AgentSam Assistant. How can I help you today?", "bot");
+    }
+    setTimeout(function () { $("ast-input").focus(); }, 50);
+  }
+  function closePanel() { $("ast-panel").hidden = true; $("ast-btn").setAttribute("aria-expanded", "false"); }
+  var big = false;
+  function setBig(v) {
+    big = v; $("ast-panel").classList.toggle("big", v);
+    var b = $("ast-exp"); b.dataset.tip = v ? "Collapse" : "Expand"; b.setAttribute("aria-label", v ? "Collapse" : "Expand");
+    b.firstChild.innerHTML = v ? '<path d="M20 10h-6V4M4 14h6v6"/>' : '<path d="M14 4h6v6M10 20H4v-6"/>';
+  }
+  function endOpen() { $("ast-end").hidden = false; $("ast-no").focus(); }
+  function endClose() { $("ast-end").hidden = true; }
+  function endChat() {
+    transcript = []; $("ast-log").innerHTML = ""; $("ast-input").value = ""; syncSend();
+    endClose(); setBig(false); closePanel(); $("ast-btn").focus();
+  }
+  function syncSend() { $("ast-send").disabled = busy || !$("ast-input").value.trim(); }
+  $("ast-btn").addEventListener("click", function () { if ($("ast-panel").hidden) openPanel(); else closePanel(); });
+  $("ast-min").addEventListener("click", function () { closePanel(); $("ast-btn").focus(); });
+  $("ast-exp").addEventListener("click", function () { setBig(!big); });
+  $("ast-close").addEventListener("click", endOpen);
+  $("ast-no").addEventListener("click", function () { endClose(); $("ast-close").focus(); });
+  $("ast-yes").addEventListener("click", endChat);
+  $("ast-bubble-x").addEventListener("click", function () { $("ast-bubble").hidden = true; try { sessionStorage.setItem("primetech.ast", "1"); } catch (e) {} });
+  $("ast-form").addEventListener("submit", function (e) { e.preventDefault(); var v = $("ast-input").value; $("ast-input").value = ""; syncSend(); ask(v); });
+  $("ast-input").addEventListener("input", syncSend);
+  $("ast-input").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!$("ast-send").disabled) $("ast-form").requestSubmit(); } });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape" || $("ast-panel").hidden) return;
+    if (!$("ast-end").hidden) { endClose(); $("ast-close").focus(); } else { closePanel(); $("ast-btn").focus(); }
+  });
+  var seen = false; try { seen = sessionStorage.getItem("primetech.ast") === "1"; } catch (e) {}
+  if (!seen) setTimeout(function () { if ($("ast-panel").hidden) $("ast-bubble").hidden = false; }, 1400);
+
+  /* ---------- Wiring ---------- */
+  $("next").addEventListener("click", next);
+  $("back").addEventListener("click", function () { if (state.step > 0) go(state.step - 1); });
+  $("solo").addEventListener("click", function () { $("company").value = "Independent"; next(); });
+  $("restart").addEventListener("click", function () { $("launch").classList.remove("on", "ready"); go(0); });
+  $("go-tour").addEventListener("click", showTour);
+  $("go-enter").addEventListener("click", function () { enterStudio(); });
+  $("to-setup").addEventListener("click", showSetup);
+  Array.prototype.forEach.call(document.querySelectorAll("[data-enter]"), function (b) { b.addEventListener("click", function () { enterStudio(); }); });
+  ["name", "company", "other-text"].forEach(function (id) {
+    $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); next(); } });
+    $(id).addEventListener("input", function () { $(id).classList.remove("bad"); var m = $("msg-" + id); if (m) m.textContent = ""; });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="focus"]'), function (r) {
+    r.addEventListener("change", function () {
+      var other = $("focus-other").checked;
+      $("other-text").hidden = !other;
+      $("msg-focus").textContent = "";
+      if (other) $("other-text").focus();
+    });
+  });
+  window.addEventListener("hashchange", view);
+  document.addEventListener("keydown", function (e) {
+    if (!e.shiftKey || (e.key !== "N" && e.key !== "n")) return;
+    var t = e.target && e.target.tagName; if (t === "INPUT" || t === "TEXTAREA") return;
+    var on = document.body.classList.toggle("show-sec");
+    Array.prototype.forEach.call(document.querySelectorAll(".secbadge"), function (n) { n.remove(); });
+    if (!on) return;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-sec]"), function (n) {
+      var b = document.createElement("b"); b.className = "secbadge"; b.textContent = n.dataset.sec + (n.dataset.name ? "  " + n.dataset.name : "");
+      n.insertBefore(b, n.firstChild);
+    });
+  });
+
+  $("name").value = state.name;
+  $("company").value = state.company;
+  buildBenefits(); buildFeatures(); buildWorkflows(); buildNav(); buildStatic(); buildBundle(); buildLearning(); buildCompare(); buildFaq(); buildReq();
+  view();
+})();
+</script>
+<script type="module" src="assets/scene.js"></script>
+</body>
+</html>

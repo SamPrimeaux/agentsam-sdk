@@ -39,7 +39,7 @@ test("Import is a real multi-file dropzone with explicit supported media types",
   assert.ok(html.includes("Drop files here or browse"));
   assert.ok(html.includes('type="file"'));
   assert.ok(html.includes('multiple=""'));
-  assert.ok(html.includes('accept="video/*,audio/*,image/*"'));
+  assert.ok(html.includes('accept="video/*,audio/*,image/*,.glb,model/gltf-binary"'));
   assert.ok(!html.includes("Originals stay intact"));
   assert.ok(!html.includes("device&apos;s media store"));
 });

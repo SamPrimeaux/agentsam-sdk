@@ -1,5 +1,5 @@
 import { IconAction } from "./icon-action.js";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   collectSnapPointsUs,
   projectDurationUs,
@@ -48,6 +48,7 @@ type TimelineProps = {
   onAddTrack?: () => void;
   onTrackState?: (trackId: string, patch: { visible?: boolean; muted?: boolean; locked?: boolean }) => void;
   onTrackReorder?: (trackId: string, index: number) => void;
+  onClipContextAction?: (action: "split"|"duplicate"|"delete"|"trim"|"speed"|"animation"|"adjust", clipId:string, atUs:number) => void;
 };
 
 const MIN_CLIP_US = 100_000;
@@ -66,8 +67,21 @@ export function CoProTimeline({
   onAddTrack,
   onTrackState,
   onTrackReorder,
+  onClipContextAction,
 }: TimelineProps) {
   const scroller = useRef<HTMLDivElement>(null);
+  const menuRef=useRef<HTMLDivElement>(null);
+  const [clipMenu,setClipMenu]=useState<{clipId:string;locked:boolean;x:number;y:number;atUs:number}|null>(null);
+  useEffect(()=>{
+    if(!clipMenu)return;
+    const dismiss=(event:PointerEvent)=>{
+      if(!menuRef.current?.contains(event.target as Node))setClipMenu(null);
+    };
+    const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setClipMenu(null);};
+    document.addEventListener("pointerdown",dismiss);
+    document.addEventListener("keydown",escape);
+    return()=>{document.removeEventListener("pointerdown",dismiss);document.removeEventListener("keydown",escape);};
+  },[clipMenu]);
   const pinchStart = useRef<{ distance: number; pixelsPerSecond: number } | null>(null);
   const [pixelsPerSecond, setPixelsPerSecond] = useState(76);
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -257,7 +271,16 @@ export function CoProTimeline({
                         className={"copro-clip copro-clip-" + track.kind + " " + (selected ? "is-selected" : "")}
                         style={{ "--copro-clip-left": left + "px", "--copro-clip-width": width + "px" } as React.CSSProperties}
                         title={text ?? clip.assetId.replace(/^asset:/, "")}
+                        onContextMenu={event=>{
+                          event.preventDefault();event.stopPropagation();
+                          onSelectClip?.(clip.id);
+                          setClipMenu({clipId:clip.id,locked:Boolean(track.locked),
+                            x:Math.min(event.clientX,window.innerWidth-218),
+                            y:Math.min(event.clientY,window.innerHeight-305),
+                            atUs:Math.max(clip.startUs,Math.min(clip.startUs+clip.durationUs,playheadUs))});
+                        }}
                         onPointerDown={(event) => {
+                          if(event.button!==0)return;
                           event.stopPropagation();
                           if (track.locked) return;
                           onSelectClip?.(clip.id);
@@ -392,6 +415,19 @@ export function CoProTimeline({
           </div>
         </div>
       </div>
+      {clipMenu&&<div ref={menuRef} className="mm-timeline-context-menu" role="menu"
+        style={{"--mm-menu-x":Math.max(8,clipMenu.x)+"px","--mm-menu-y":Math.max(8,clipMenu.y)+"px"} as React.CSSProperties}>
+        <strong>Clip actions</strong>
+        {([
+          ["split","Split at playhead","⌘B"],["duplicate","Duplicate clip",""],["trim","Trim & timing",""],
+          ["speed","Speed",""],["animation","Animation",""],["adjust","Adjust",""],["delete","Delete clip",""]
+        ] as const).map(([id,label,shortcut])=><button type="button" key={id} role="menuitem"
+          className={id==="delete"?"is-danger":""} disabled={clipMenu.locked}
+          onClick={()=>{onClipContextAction?.(id,clipMenu.clipId,clipMenu.atUs);setClipMenu(null);}}>
+          <span>{label}</span>{shortcut&&<kbd>{shortcut}</kbd>}
+        </button>)}
+        {clipMenu.locked&&<small>Unlock the track to edit this clip.</small>}
+      </div>}
     </section>
   );
 }

@@ -31,14 +31,13 @@ export function auditUiSource(source, file) {
     ts.isJsxAttribute(p) && p.name.getText(sf) === name);
   const hasContent = (node) => {
     if (!ts.isJsxOpeningElement(node)) return false;
-    return node.parent.children.some((child) => {
+    const carriesContent = (child) => {
       if (ts.isJsxText(child)) return child.text.trim().length > 0;
       if (ts.isJsxExpression(child)) return !!child.expression;
-      if (ts.isJsxElement(child)) return child.children.some((grandchild) =>
-        (ts.isJsxText(grandchild) && !!grandchild.text.trim()) ||
-        (ts.isJsxExpression(grandchild) && !!grandchild.expression));
+      if (ts.isJsxElement(child) || ts.isJsxFragment(child)) return child.children.some(carriesContent);
       return false;
-    });
+    };
+    return node.parent.children.some(carriesContent);
   };
   const hasTooltipAncestor = (node) => {
     let parent = node.parent;

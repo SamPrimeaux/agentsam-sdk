@@ -53,3 +53,10 @@ test('resolves literal custom-property const bindings without accepting opaque s
     'let appearance = { "--accent": "red" }; const Bad = () => <div style={appearance} />;',
   ]) assert.deepEqual(auditUiSource(source, 'Bad.tsx').map((f) => f.rule), ['inline-style']);
 });
+
+test('a button with text nested inside wrapper elements is not icon-only', () => {
+  const input = [
+    'export const Card = () => <button type="button"><Icon /><span><strong>Create project</strong></span></button>;',
+  ].join('\n');
+  assert.deepEqual(auditUiSource(input, 'Card.tsx'), []);
+});

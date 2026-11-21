@@ -6,8 +6,15 @@ export type CoProStageEnvironment = {
   fogOpacity?: number;
   showGrid?: boolean;
   skyPreset?: string;
+  /** Optional imported footage used as a background plate behind real 3D geometry. */
+  skyVideoAssetId?: string;
   finish?: string;
   cloudDensity?: number;
+  /** SamScene SkyGenerator's authored 0..1 sky time and volumetric layers. */
+  skyProgression?: number;
+  starIntensity?: number;
+  galaxyIntensity?: number;
+  auroraIntensity?: number;
   stars?: boolean;
   glow?: boolean;
   lightHue?: number;
@@ -16,7 +23,7 @@ export type CoProStageEnvironment = {
 };
 export const STAGE_ENVIRONMENT_DEFAULTS = Object.freeze({
   background: '#191919', ambient: 1, fogColor: '#999999', fogOpacity: 0, showGrid: false,
-  skyPreset: 'studio', finish: 'cryo-titanium', cloudDensity: .26,
+  skyPreset: 'studio', finish: 'original', cloudDensity: .26,
   stars: false, glow: true, lightHue: 37, shadowSoftness: 2.5, keyAngle: 35,
 });
 export const STAGE_SKIES = [

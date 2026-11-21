@@ -26,7 +26,7 @@ export type CoProStoredMedia = {
 export type CoProStoredMediaItem = {
   id: string;
   name: string;
-  kind: "video" | "image" | "audio";
+  kind: "video" | "image" | "audio" | "scene";
   file: File | Blob;
   durationUs?: number;
   waveform?: number[];
