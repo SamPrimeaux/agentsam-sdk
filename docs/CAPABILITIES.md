@@ -48,6 +48,49 @@ AgentSam CLI/SDK orchestrates substantial existing applications and domain packa
 
 Portable public CMS authority covers editable public websites, branding, media, sections, navigation, drafts, previews and publications; CAD, commerce, manufacturing and machine data keep separate product-domain ownership. An app-local `packages/` path is a packaging location, not automatic evidence that each module is intentionally private or unavailable for future public SDK reuse.
 
+## Scene and source-format interoperability
+
+**Authority is split by responsibility, not duplicated by app.** The root
+`contracts/source-types.v2.json` is the universal format/detection identity
+catalog; the published `@inneranimalmedia/agentsam-contracts/source-types`
+build mirrors it. These records do **not** imply a working importer, editor,
+renderer, exporter or round-trip converter.
+
+`@inneranimalmedia/iamscene` owns its own real
+`createIAMSceneFormatRegistry()` adapters and portable editable
+`.iamscene` / `.iamgeometry` documents. It reports four independent
+operations—**import, export, live-reference, round-trip**—and concrete
+limitations. An extension can be recognized and its source bytes verified
+without any ability to import or export its semantics. The native OCCT
+operations depend on a separately verified, selected runtime; STEP/BREP/IFC
+export is not a claim that full CAD/BIM import or authoring is implemented.
+
+Root `protocol/capabilities/manifest.json` is the public discovery
+authority for capabilities exposed by this package. `api_only: true` means
+an SDK interface is declared, **not** that an agent or hosted tool dispatcher
+has a bound and authorized handler. Runtime agent availability must still be
+probed through the actual host adapter.
+
+`packages/iamscene/agentsam.package.json` is the package-catalog entry;
+`scripts/catalog/build_catalog.py` and `scripts/registry/generate.mjs`
+generate `packages/catalog/generated/packages.json`,
+`src/registry/generated/inventory.json` and `agentsam.yaml`. **Edit the
+source manifests, then regenerate and check**, never manually patch only a
+generated view. Source schema IDs and publishing paths are registered in
+`scripts/schema-registry/publish_package_schemas.py`.
+
+```sh
+iamscene formats
+iamscene verify ./asset.glb
+npm --prefix packages/iamscene test
+npm run verify:registry
+```
+
+See `packages/iamscene/README.md` and
+`packages/iamscene/test/root-source-type-coverage.test.mjs` for the
+package-owned contract and verification. Neither an npm build nor a
+registered extension is a proof of deployment or end-user host support.
+
 ## repository.snapshot
 
 `repository.snapshot` is the first canonical composition primitive. It performs one read-only evidence collection pass over the current checkout and combines existing SDK mechanics:

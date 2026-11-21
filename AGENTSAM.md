@@ -12,6 +12,19 @@ conventional client variable for that machinery, never a human identity. Prefer 
 
 **Delivery closure law:** Follow [docs/standards/DELIVERY_CLOSURE.md](docs/standards/DELIVERY_CLOSURE.md) for every owner-led branch. Feature branch ≠ shipped. Check existing branches first, complete real runtime validation, merge, prove the deployed revision and route, then safely prune merged worktrees. Agents own that whole lifecycle, including merging their own PRs; hand back only for blockers and owner-auth publishing (npm, PyPI). A PR, standalone Vite screenshot, or doc-only handoff never completes a functional user request.
 
+## Source-format contract alignment
+
+For scene, CAD, BIM, animation and media tasks: identify bytes using the
+canonical `contracts/source-types.v2.json` catalog, then query the
+**installed format adapter** for import, export, live-reference and
+round-trip independently. Never infer editor support, conversion fidelity,
+or agent authorization from a recognized extension or successful preview.
+The portable operation vocabulary is owned by
+`@inneranimalmedia/agentsam-contracts`; concrete scene interchange
+lives in `@inneranimalmedia/iamscene`. Root capability declarations are
+not proof of a bound handler. Update package manifests and regenerate the
+SDK inventory when adapter capabilities change. See `docs/CAPABILITIES.md`.
+
 ## AgentSam system model: deterministic machinery + LLM augmentation
 
 AgentSam is deliberately **not** “an LLM with tools.” It is a layered system:

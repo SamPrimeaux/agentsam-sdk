@@ -73,6 +73,7 @@ PACKAGE_SPECS = [
     ]),
     ("iamscene", "@inneranimalmedia/iamscene", "packages/iamscene/package.json", "npm", "iamscene", "1.0.0", "v1", [
         ("packages/iamscene/schema/iamscene.v1.schema.json", "scene.canonical.schema.json"),
+        ("packages/iamscene/schema/iamgeometry.v1.schema.json", "iamgeometry.schema.json"),
     ]),
 ]
 
