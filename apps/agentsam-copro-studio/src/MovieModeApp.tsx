@@ -196,6 +196,9 @@ let evidenceImportStarted = false;
 
 export function MovieModeApp({ initialScreen = "projects", screen: requestedScreen, onScreenChange, standalone = false }: MovieModeAppProps) {
   /** Standalone dev serves the tour at the root; embedded hosts stage it under /moviemode/. */
+  /** `.as-nav-scope` re-declares every --nav-* token with the neutral/violet defaults. Embedded in a host shell that already
+   *  carries the active theme, a nested scope would reset the theme for the whole editor, so only a standalone app owns one. */
+  const navScope = standalone ? "as-nav-scope " : "";
   const onboardingBase = standalone ? "/primetech-onboarding/" : "/moviemode/primetech-onboarding/";
   const registrySkies = useRegistrySkies();
   // CoPro derives its palette from the host theme via scoped CSS tokens.
@@ -1078,11 +1081,11 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   if (!restored) {
-    return <div  className="as-nav-scope copro-boot"><span>PrimeTech</span><small>Restoring your projects…</small></div>;
+    return <div  className={navScope+"copro-boot"}><span>PrimeTech</span><small>Restoring your projects…</small></div>;
   }
 
   if (screen === "projects") {
-    return <div  className="as-nav-scope copro-app-root" data-standalone={standalone?"true":undefined}>
+    return <div  className={navScope+"copro-app-root"} data-standalone={standalone?"true":undefined}>
       <CoProProjectsScreen
         projects={projects}
         creativeAssets={creativeAssets}
@@ -1113,7 +1116,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     </div>;
   }
 
-  return <div  className="as-nav-scope copro-app-root" data-standalone={standalone?"true":undefined}>
+  return <div  className={navScope+"copro-app-root"} data-standalone={standalone?"true":undefined}>
     {mediaPersistenceError && <div role="alert" className="copro-source-storage-warning">
       <strong>Source storage needs attention. </strong>{mediaPersistenceError}
       <button type="button" onClick={() => setMediaPersistenceError(null)} aria-label="Dismiss storage warning" className="copro-storage-warning-dismiss">Dismiss</button>
