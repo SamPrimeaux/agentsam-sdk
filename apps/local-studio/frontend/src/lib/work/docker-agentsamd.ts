@@ -2,9 +2,11 @@
  * Docker over the local agentsamd daemon, for browsers that are not the desktop app.
  * Mirrors the desktop bridge's validation (same identifier rules, same approval gates)
  * and only runs `docker` on the user's own computer through their paired agentsamd.
- * Container file editing is not offered here: agentsamd exec has no stdin channel.
+ * Container files go through agentsamd's native Docker API (docker-agentsamd-files.ts),
+ * which needs no stdin: it talks to the engine's archive endpoints directly.
  */
 import { agentsamdExec, AgentsamdError, type ExecResult } from "./agentsamd-client.ts";
+import { dockerFilesViaAgentsamd, FILE_ACTIONS } from "./docker-agentsamd-files.ts";
 
 export type DockerEngineAction =
   "contexts" | "createContext" | "health" | "containers" | "images" | "logs" | "start" | "stop" | "restart";
@@ -49,7 +51,8 @@ export async function dockerViaAgentsamd(
   fields: Record<string, unknown> = {},
   exec: Exec = agentsamdExec,
 ): Promise<Record<string, unknown>> {
-  if (!isDockerEngineAction(action)) throw new Error("docker_files_require_desktop");
+  if (FILE_ACTIONS.has(action)) return dockerFilesViaAgentsamd(action, fields);
+  if (!isDockerEngineAction(action)) throw new Error("docker_action_unsupported");
   if (action === "contexts") {
     const rows = lines((await docker(exec, ["context", "ls", "--format", "{{json .}}"])).stdout) as Record<string, unknown>[];
     return { ok: true, contexts: rows.map(row => ({ name: row.Name, current: row.Current, description: row.Description })) };

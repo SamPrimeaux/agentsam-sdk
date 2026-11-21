@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/inneranimalmedia/agentsam-go-worker/internal/dockerapi"
 	"github.com/inneranimalmedia/agentsam-go-worker/internal/execapi"
 	"github.com/inneranimalmedia/agentsam-go-worker/internal/health"
 	"github.com/inneranimalmedia/agentsam-go-worker/internal/localauth"
@@ -118,6 +119,7 @@ func main() {
 			"process":    true,
 			"hash":       true,
 			"inspect":    true,
+			"docker":     true,
 		}
 		for k, v := range langState {
 			caps[k] = v.Status
@@ -134,6 +136,14 @@ func main() {
 	// Real exec/pty surfaces. Both require the local pairing token.
 	mux.HandleFunc("/v1/exec", execapi.ExecHandler(checkHeaderAuth))
 	mux.HandleFunc("/v1/pty", execapi.PTYHandler(checkQueryAuth))
+	// Native Docker engine API (container list/lifecycle and file browse/edit via archive endpoints).
+	mux.Handle("/v1/docker/", dockerapi.Handler(checkHeaderAuth, func() (*dockerapi.Client, error) {
+		sock, err := dockerapi.DiscoverSocket()
+		if err != nil {
+			return nil, err
+		}
+		return dockerapi.NewClient(sock), nil
+	}))
 
 	handler := corsMiddleware(mux)
 
