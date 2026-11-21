@@ -13,6 +13,7 @@
  */
 
 import { oauthAad, sealOauthToken } from '../../../agentsam-vault/src/crypto/oauth-envelope.js';
+import { getCloudflareCapability } from './capabilities.js';
 
 const PROVIDER = 'cloudflare';
 
@@ -155,9 +156,16 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
 
   const priorMeta = parseMeta(existing?.metadata_json);
   const clientId = clean(input.clientId) || clean(priorMeta.connected_via_client_id) || null;
-  const capabilitySet = Array.isArray(input.capabilitySet)
+  // A capability is recorded as granted only when every scope it needs is in the token's real scopes.
+  // Requested-but-denied capabilities (e.g. Images/Stream) must not be advertised as available.
+  const grantedSet = new Set(grantedScopes);
+  const capabilitySet = (Array.isArray(input.capabilitySet)
     ? input.capabilitySet
-    : (Array.isArray(priorMeta.granted_at_capability_set) ? priorMeta.granted_at_capability_set : []);
+    : (Array.isArray(priorMeta.granted_at_capability_set) ? priorMeta.granted_at_capability_set : [])
+  ).filter((id) => {
+    const needed = getCloudflareCapability(id)?.oauthScopes;
+    return !Array.isArray(needed) || !needed.length || needed.every((scope) => grantedSet.has(scope));
+  });
 
   let metadataJson = null;
   try {
