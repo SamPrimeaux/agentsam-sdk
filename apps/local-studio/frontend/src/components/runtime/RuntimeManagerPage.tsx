@@ -34,6 +34,7 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
   const [loading, setLoading] = useState(true);
   const [nativeStatus, setNativeStatus] = useState<{ online: boolean; dockerAvailable: boolean } | null>(null);
   const sessions = useTerminalSessionStore((state) => state.sessions);
+  const [machines, setMachines] = useState<LocalStudioConnectionsResponse["machines"]>();
   const [message, setMessage] = useState<string | null>(null);
   const [expandedRuntime, setExpandedRuntime] = useState<string | null>(null);
   const activeProject = useWorkStore((state) => state.projects.find((item) => item.id === state.activeProjectId));
