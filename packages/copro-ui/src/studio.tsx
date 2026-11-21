@@ -2,7 +2,7 @@ import { IconAction } from "./icon-action.js";
 import type { CoProCreativeAsset, CoProMotionSampler, CoProGraphicSampler, CoProTransitionPreviewFactory } from "./creative-types.js";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft, AudioLines, Captions, ChevronRight, Copy, Film,
+  ArrowLeft, AudioLines, Captions, ChevronRight, Copy, Film, Move3D,
   Layers, Play, Pause, Redo2, Scissors, SlidersHorizontal, Sparkles,
   Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard, PanelLeftClose, PanelRightClose, PanelsTopLeft, RotateCcw,
   Sticker, Palette, Sun, SlidersVertical, Folder, Download, Film as FilmIcon, GripVertical, PanelsTopLeft as DockIcon, ExternalLink, Box, ZoomIn, Maximize2, Ratio, ChevronDown,
@@ -10,10 +10,10 @@ import {
 import { CoProTimeline, type CoProProjectView } from "./timeline.js";
 import { CoProToolPanel, type CoProMediaShelfItem, type CoProClipMask } from "./tool-sheet.js";
 import { colorAdjustmentPreviewFilter, type CoProColorAdjustments } from "./color-adjustments.js";
-import { CoProMediaBrowser, type CoProMediaBrowserSection } from "./media-browser.js";
+import { CoProMediaBrowser, type CoProMediaBrowserSection, type LocalSceneSource } from "./media-browser.js";
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
 import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
-import { CoProCreativeWorkspace } from "./creative-workspace.js";
+
 import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnvironment } from "./stage-environment.js";
 import { CoProStageLookPanel } from "./stage-look-panel.js";
 
@@ -36,6 +36,7 @@ export type CoProStudioAction =
   | { type: "speed"; clipId: string; playbackRate: number }
   | { type: "volume"; clipId: string; volume: number }
   | { type: "transform"; clipId: string; patch: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number } }
+  | { type: "world3d"; clipId:string; patch:{transform?:{x?:number;y?:number;z?:number;rotationYDeg?:number;scale?:number;opacity?:number};visible?:boolean} }
   | { type: "text"; clipId: string; text: string }
   | { type: "effect"; clipId: string; effect: string }
   | { type: "transition"; clipId: string; transition: string; durationUs?: number; direction?:string; easing?:string }
@@ -56,6 +57,8 @@ export type CoProStudioAction =
 export type CoProStudioProps = {
   project: CoProProjectView;
   initialTool?: "text" | "captions" | null;
+  initialStudioMode?: "scene" | "design" | "generate" | "video";
+  samSceneSkyDefaults?:Record<string,Pick<CoProStageEnvironment,'skyProgression'|'cloudDensity'|'starIntensity'|'galaxyIntensity'|'auroraIntensity'|'stars'>>;
   playheadUs: number;
   selectedClipId?: string | null;
   canUndo?: boolean;
@@ -64,6 +67,10 @@ export type CoProStudioProps = {
   previewSrc?: string | null;
   previewKind?: "video" | "image" | null;
   mediaItems?: CoProMediaShelfItem[];
+  localSceneSources?:LocalSceneSource[];
+  localSceneSourceBusyId?:string|null;
+  onImportLocalSceneSource?: (source:LocalSceneSource)=>void;
+  render3DScene?: (args:{url:string;name:string;assetId:string;timeUs:number;playing:boolean;environment?:CoProStageEnvironment;transform:{scale?:number;x?:number;y?:number;rotation?:number;opacity?:number}})=>React.ReactNode;
   creativeAssets?: CoProCreativeAsset[];
   systemIcons?: CoProSystemIconMap;
   createTransitionPreview?:CoProTransitionPreviewFactory;
@@ -79,17 +86,20 @@ export type CoProStudioProps = {
 
 const PRIMARY_TOOLS = [
   ["media", "Media", "+"],
-  ["stage", "Stage Look", "☀"],
+  ["stage", "Scene", "☀"],
   ["audio", "Audio", "♫"],
   ["text", "Text", "T"],
   ["captions", "Captions", "CC"],
-  ["stickers", "Stickers", "☆"],
   ["effects", "Effects", "✦"],
-  ["filters", "Filters", "◐"],
-  ["adjustments", "Adjustment", "☷"],
   ["transitions", "Transitions", "◇"],
   ["templates", "Templates", "▦"],
-  ["3d", "3D / Scene", "◇"],
+  ["3d", "3D Tools", "◇"],
+  ["scenes", "Beats", "▤"],
+  ["models", "Models", "◈"],
+] as const;
+
+const SECONDARY_TOOLS = [
+  ["stickers", "Stickers"], ["filters", "Filters"], ["adjustments", "Adjustments"],
 ] as const;
 
 const CLIP_TOOLS = [
@@ -128,10 +138,12 @@ const HANDSET_MORE_TOOLS = [
   ["stickers", "Stickers", "Shapes, arrows and callouts"],
   ["transitions", "Transitions", "Motion between clips"],
   ["filters", "Filters", "Looks and color presets"],
-  ["stage", "Stage Look", "Sky, material swatches and lighting cards"],
+  ["stage", "Scene", "Environment, lighting and scene materials"],
   ["adjustments", "Adjustments", "Color and geometry controls"],
   ["templates", "Templates", "Editable starting compositions"],
-  ["3d", "3D / Scene", "Model, sculpt, animate, light, render and present"],
+  ["3d", "3D Tools", "Object and scene creation tools"],
+  ["scenes", "Beats", "Imported models and timeline scene cues"],
+  ["models", "Models", "Browse available editable GLB model sources"],
 ] as const;
 
 function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
@@ -149,6 +161,8 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
     transitions: "layers",
     templates: "film",
     "3d": "layers",
+    scenes: "layers",
+    models: "layers",
     split: "cut",
     trim: "select",
     speed: "time",
@@ -174,6 +188,7 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
     case "transitions": return <Layers size={size}/>;
     case "templates": return <Clapperboard size={size}/>;
     case "3d": return <Box size={size}/>;
+    case "models": return <Box size={size}/>;
     case "split": return <Scissors size={size}/>;
     case "trim": return <Replace size={size}/>;
     case "speed": return <Gauge size={size}/>;
@@ -187,6 +202,8 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
 export function CoProStudio({
   project,
   initialTool = null,
+  initialStudioMode = "video",
+  samSceneSkyDefaults,
   playheadUs,
   selectedClipId,
   canUndo = false,
@@ -195,6 +212,10 @@ export function CoProStudio({
   previewSrc,
   previewKind,
   mediaItems = [],
+  localSceneSources=[],
+  localSceneSourceBusyId,
+  onImportLocalSceneSource,
+  render3DScene,
   creativeAssets = [],
   systemIcons,
   sampleMotion,
@@ -211,6 +232,32 @@ export function CoProStudio({
   const [previewDecodeWarning, setPreviewDecodeWarning] = useState<string|null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(initialTool);
   const [categoryTool, setCategoryTool] = useState<string>(initialTool ?? "media");
+  // One project, one editing runtime. These modes select existing capabilities
+  // instead of routing to separate Design/Generate/3D applications.
+  const [studioMode,setStudioMode] = useState<"scene"|"design"|"generate"|"video">(() => {
+    try {
+      const saved=window.localStorage.getItem("primetech.studio.mode:"+project.id);
+      return saved==="scene"||saved==="design"||saved==="generate"||saved==="video" ? saved : initialStudioMode;
+    } catch { return initialStudioMode; }
+  });
+  useEffect(()=>{
+    try { window.localStorage.setItem("primetech.studio.mode:"+project.id,studioMode); } catch { /* Optional view preference. */ }
+  },[project.id,studioMode]);
+
+  const [showMoreTools,setShowMoreTools]=useState(false);
+  const moreToolsRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if(!showMoreTools)return;
+    const dismiss=(event:PointerEvent)=>{
+      if(!moreToolsRef.current?.contains(event.target as Node))setShowMoreTools(false);
+    };
+    const escape=(event:KeyboardEvent)=>{
+      if(event.key==='Escape')setShowMoreTools(false);
+    };
+    document.addEventListener('pointerdown',dismiss);
+    document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',dismiss);document.removeEventListener('keydown',escape);};
+  },[showMoreTools]);
   const [browserSection, setBrowserSection] = useState<CoProMediaBrowserSection>("import");
   const [panePreference, setPanePreference] = useState<"browser" | "inspector">("browser");
   const [handsetPanel, setHandsetPanel] = useState<"browser" | "inspector" | null>(null);
@@ -273,7 +320,14 @@ export function CoProStudio({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => { if (selectedClipId) setPanePreference("inspector"); }, [selectedClipId]);
+  useEffect(() => {
+    if (selectedClipId) {
+      setPanePreference("inspector");
+      // The selected object becomes the inspector context. Do not leave an
+      // unrelated scene/project panel active from a previous selection.
+      setActiveTool(null);
+    }
+  }, [selectedClipId]);
 
   const stageEnvironment = project.metadata?.environment as CoProStageEnvironment|undefined;
   const projectDurationUs = Math.max(0,...project.tracks.flatMap(track=>track.clips.map(clip=>clip.startUs+clip.durationUs)));
@@ -382,6 +436,10 @@ export function CoProStudio({
   useEffect(()=>{if(selectedClipId&&!selectedEntry)onSelectClip?.(null);},[selectedClipId,selectedEntry,onSelectClip]);
   const selectedClip = selectedEntry?.clip ?? null;
   const selectedTrack = selectedEntry?.track ?? null;
+  const selectedIs3DObject=Boolean(selectedClip && (
+    selectedClip.metadata?.sourceKind === "samscene-timeline-cue" ||
+    mediaItems.some(item=>item.id===selectedClip.assetId && item.kind==="scene")
+  ));
   const projectMediaIds = useMemo(
     () => new Set(project.tracks.flatMap((track) => track.clips.map((clip) => clip.assetId))),
     [project],
@@ -391,8 +449,12 @@ export function CoProStudio({
   const isHandset = workspaceWidth < 600;
   const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions", "transform", "filters", "adjustments", "video", "animation", "tracking", "adjust", "ai-stylize"];
   const canonicalTool = (tool: string | null) => tool === "filters" ? "effects" : tool === "adjustments" ? "adjust" : tool === "transform" ? "video" : tool;
-  const inspectorTool = activeTool === "export" ? "export" : selectedClip
-    ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" && !mediaItems.some(item => item.id === selectedClip.assetId && item.kind === "image") ? "text" : "video")
+  const inspectorTool = activeTool === "export" ? "export"
+    : activeTool === "stage" ? "stage"
+    : !selectedClip && studioMode === "scene" ? "stage" : selectedClip
+    ? selectedIs3DObject
+      ? (activeTool && ["animation","speed"].includes(activeTool) ? activeTool : "world3d")
+      : (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" && !mediaItems.some(item => item.id === selectedClip.assetId && item.kind === "image") ? "text" : "video")
     : "project";
   const inspectorAvailable = Boolean(inspectorTool);
   const showInspector = isHandset ? handsetPanel === "inspector" && inspectorAvailable : inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
@@ -401,8 +463,8 @@ export function CoProStudio({
   const inspectorFloating = !isNarrow && showInspector && layout.inspectorFloating;
   const dockBrowser = showBrowser && !browserFloating;
   const dockInspector = showInspector && !inspectorFloating;
-  const browserWidth = clampWorkspaceSize(layout.browserWidth, 260, Math.max(260, workspaceWidth - (dockInspector ? layout.inspectorWidth : 0) - 330));
-  const inspectorWidth = clampWorkspaceSize(layout.inspectorWidth, 260, Math.max(260, workspaceWidth - (dockBrowser ? browserWidth : 0) - 330));
+  const browserWidth = clampWorkspaceSize(layout.browserWidth, 260, Math.min(640, Math.max(260, workspaceWidth * .42), Math.max(260, workspaceWidth - (dockInspector ? layout.inspectorWidth : 0) - 380)));
+  const inspectorWidth = clampWorkspaceSize(layout.inspectorWidth, 260, Math.min(360, Math.max(260, workspaceWidth - (dockBrowser ? browserWidth : 0) - 380)));
   const timelineHeight = clampWorkspaceSize(layout.timelineHeight || Math.round(workspaceHeight * .25), isCompact ? 115 : 150, Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 300 : 225)));
   const gridStyle = {
     "--copro-browser-width": dockBrowser ? `${browserWidth}px` : "0px",
@@ -637,11 +699,37 @@ export function CoProStudio({
   }
 
   function selectCategory(id: string) {
+    setShowMoreTools(false);
+    // Color/geometry adjustment is a contextual clip inspector, not a second,
+    // competing full-size control panel in the media browser.
+    if (id === "stage") {
+      // Scene/environment lives in the one contextual inspector, never a second
+      // full inspector in the left asset browser.
+      setActiveTool("stage");
+      setLayout(value=>({...value,inspectorOpen:true}));
+      setPanePreference("inspector");
+      if (isHandset) setHandsetPanel("inspector");
+      return;
+    }
+    if (id === "adjustments" && selectedClip) {
+      setActiveTool("adjust");
+      setPanePreference("inspector");
+      if (isHandset) setHandsetPanel("inspector");
+      setLayout(value=>({...value,browserOpen:false,inspectorOpen:true}));
+      return;
+    }
     setCategoryTool(id);
     if (isHandset) setHandsetPanel("browser");
     setLayout(value => ({...value,browserOpen:true}));
     setPanePreference("browser");
     if (selectedClip && ["effects","transitions","animation","filters","adjustments"].includes(id)) setActiveTool(id);
+  }
+
+  function activateStudioMode(mode:"scene"|"design"|"generate"|"video") {
+    setStudioMode(mode);
+    const destinations={scene:"scenes",design:"stickers",generate:"models",video:"media"} as const;
+    selectCategory(destinations[mode]);
+    if (mode==="scene") setActiveTool("stage");
   }
 
   function useCreativeAsset(asset: CoProCreativeAsset) {
@@ -666,12 +754,12 @@ export function CoProStudio({
   }
 
   return (
-    <section className="copro-studio" data-inspector-open={Boolean(activeTool)} data-handset={isHandset}>
+    <section className="copro-studio" data-inspector-open={Boolean(activeTool)} data-handset={isHandset} data-studio-mode={studioMode}>
       <header className="copro-topbar">
         <IconAction className="copro-icon-button" aria-label="Back to projects" onClick={() => onAction?.({ type: "back" })}><CoProSystemIcon name="back" icons={systemIcons} size={22} fallback={<ArrowLeft size={22}/>} /></IconAction>
         <div className="copro-title-block">
           <strong>{projectTitle}</strong>
-          <span>MovieMode</span>
+          <span>PrimeTech Studio</span>
         </div>
         <div className="copro-topbar-actions">
           <IconAction className="copro-icon-button copro-history-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}><Undo2 size={20}/></IconAction>
@@ -698,6 +786,43 @@ export function CoProStudio({
       </header>
 
       {project.tracks.flatMap(track=>track.clips.filter(clip=>mediaItems.some(item=>item.id===clip.assetId&&item.kind==="audio")).map(clip=><audio key={clip.id} ref={element=>{if(element)audioPlayers.current.set(clip.id,element);else audioPlayers.current.delete(clip.id);}} src={mediaItems.find(item=>item.id===clip.assetId)?.url} preload="metadata"/>))}
+      <div className="mm-studio-commandbar" aria-label="PrimeTech unified editing workspace">
+        <nav className="mm-studio-modes" aria-label="PrimeTech studio modes">
+          {([
+            ["scene","3D Scene",<Box size={17}/>],
+            ["design","Design",<Palette size={17}/>],
+            ["generate","Generate",<Sparkles size={17}/>],
+            ["video","Video",<Film size={17}/>],
+          ] as const).map(([mode,label,icon])=>
+            <button key={mode} type="button" className={studioMode===mode?"is-active":""}
+              aria-current={studioMode===mode?"page":undefined} aria-pressed={studioMode===mode}
+              onClick={()=>activateStudioMode(mode)}>{icon}<span>{label}</span></button>
+          )}
+        </nav>
+        <nav className="mm-editor-categories" aria-label="PrimeTech editing categories">
+        <div className="mm-tools-scroll">
+        {PRIMARY_TOOLS.map(([id,label]) => <button key={id} type="button" className={(id==="stage"?inspectorTool==="stage":categoryTool===id)?"is-active":""}
+          aria-pressed={id==="stage"?inspectorTool==="stage":categoryTool===id}
+          title={id==="stage"?"Edit sky, lighting and model finishes in the inspector":id==="templates"?"Browse editable composition templates":`${label}: open the creation browser`} onClick={()=>selectCategory(id)}>
+          {renderToolIcon(id,systemIcons)}<span>{label}</span>
+        </button>)}
+        </div>
+        <div ref={moreToolsRef} className="mm-tools-more-wrap">
+          <button type="button" className={SECONDARY_TOOLS.some(([id])=>categoryTool===id)?'is-active':''}
+            aria-expanded={showMoreTools} aria-haspopup="menu" onClick={()=>setShowMoreTools(open=>!open)}
+            title="More editing tools"><SlidersHorizontal size={18}/><span>More</span></button>
+          {showMoreTools&&<div className="mm-tools-more-menu" role="menu" aria-label="Additional editing tools">
+            {SECONDARY_TOOLS.map(([id,label])=><button type="button" role="menuitem" key={id}
+              onClick={()=>selectCategory(id)}>{renderToolIcon(id,systemIcons)}<span>{label}</span></button>)}
+          </div>}
+        </div>
+        </nav>
+        <a className="mm-studio-tour-trigger"
+          title="Experience the full PrimeTech 3D tour and return to this project"
+          href={"/primetech-onboarding/index.html?returnTo="+encodeURIComponent(
+            typeof window==="undefined" ? "/" : window.location.pathname+window.location.search
+          )+"#tour"}>Explore PrimeTech <ChevronRight size={15}/></a>
+      </div>
       <main className="copro-workspace" ref={workspaceRef}>
         <div className={["copro-editing-grid", showBrowser ? "has-browser" : "", showInspector ? "has-inspector" : "", isNarrow ? "is-narrow" : "", isCompact ? "is-compact" : "", layout.reversed ? "is-reversed" : ""].filter(Boolean).join(" ")} style={{
           "--copro-browser-width": dockBrowser ? browserWidth + "px" : "0px",
@@ -714,19 +839,96 @@ export function CoProStudio({
               "--copro-floating-height": layout.browserFloatHeight + "px",
             } as React.CSSProperties}
             onPointerUp={browserFloating ? (event) => saveFloatingSize(event,"browser") : undefined}>
-      <nav className="mm-editor-categories" aria-label="MovieMode editing categories">
-        {PRIMARY_TOOLS.map(([id,label]) => <button key={id} type="button" className={categoryTool===id?"is-active":""} aria-pressed={categoryTool===id} title={id==="templates"?"Browse editable composition templates":`${label}: open the creation browser`} onClick={()=>selectCategory(id)}>
-          {renderToolIcon(id,systemIcons)}<span>{label}</span>
-        </button>)}
-      </nav>
+
             <div className="mm-browser-top" onPointerDown={browserFloating ? event => moveFloating(event,"browser") : undefined}><span>{browserFloating && <GripVertical size={14} aria-hidden="true"/>}<strong>{categoryTool.charAt(0).toUpperCase()+categoryTool.slice(1)}</strong></span><div className="mm-panel-window-buttons"><button type="button" aria-label={browserFloating ? "Dock Media browser" : "Undock Media browser"} title={browserFloating ? "Dock Media browser back into workspace" : "Float and drag Media browser"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,browserFloating:!value.browserFloating}))}>{browserFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button><button type="button" aria-label="Collapse media browser" title="Collapse panel" onPointerDown={event=>event.stopPropagation()} onClick={()=>{if(isHandset)setHandsetPanel(null);else setLayout(value=>({...value,browserOpen:false}));}}>×</button></div></div>
             {categoryTool === "media" && <nav className="mm-media-subnav" aria-label="Media collections">
-              {([ ["import","Import"], ["media","Media"], ["subprojects","Subprojects"], ["yours","Yours"], ["generate","Generate"], ["spaces","Spaces"], ["library","Library"] ] as const).map(([id,label]) => <button type="button" key={id} className={browserSection===id?"is-active":""} aria-pressed={browserSection===id} onClick={()=>setBrowserSection(id)}>{label}</button>)}
+              {([ ["import","Import"], ["media","In project"], ["yours","My assets"], ["library","Templates"] ] as const).map(([id,label]) => <button type="button" key={id} className={browserSection===id?"is-active":""} aria-pressed={browserSection===id} onClick={()=>setBrowserSection(id)}>{label}</button>)}
             </nav>}
-            {categoryTool === "stage" ? (
-              <CoProStageLookPanel environment={stageEnvironment} onChange={patch=>onAction?.({type:"environment",patch})}/>
+            {categoryTool === "models" ? (
+              <section className="mm-model-gallery" aria-label="PrimeTech 3D model gallery">
+                <header>
+                  <span>GENERATE / MODEL LIBRARY</span>
+                  <h2>3D Models</h2>
+                  <p>Choose an existing GLB source and add it to this project's timeline. The model remains editable as a linked 3D clip.</p>
+                </header>
+                {mediaItems.some(item=>item.kind==="scene")&&<>
+                  <div className="mm-model-gallery-heading">In this project</div>
+                  <div className="mm-model-gallery-grid">
+                    {mediaItems.filter(item=>item.kind==="scene").map(item=>
+                      <article className="mm-model-gallery-card" key={item.id}>
+                        <div className="mm-model-gallery-art">{item.thumbnails?.[0]
+                          ? <img src={item.thumbnails[0]} alt={item.name+" scene preview"}/>
+                          : <Box size={30} aria-hidden="true"/>}<span>GLB</span></div>
+                        <strong title={item.name}>{item.name}</strong>
+                        <small>Project asset</small>
+                        <button type="button" onClick={()=>onMediaAdd?.(item.id,playheadUs)}>Add to timeline</button>
+                      </article>)}
+                  </div>
+                </>}
+                <div className="mm-model-gallery-heading">Local PrimeTech sources <small>{localSceneSources.filter(item=>item.kind==="scene").length} available</small></div>
+                {localSceneSources.some(item=>item.kind==="scene")
+                  ? <div className="mm-model-gallery-grid">
+                    {localSceneSources.filter(item=>item.kind==="scene").map(item=>
+                      <article className="mm-model-gallery-card" key={item.id}>
+                        <div className="mm-model-gallery-art" aria-hidden="true"><Box size={30}/><span>GLB</span></div>
+                        <strong title={item.name}>{item.name}</strong>
+                        <small>{item.sizeBytes > 0 ? (item.sizeBytes/1024).toFixed(0)+" KB" : "Local 3D source"}</small>
+                        <button type="button" disabled={Boolean(localSceneSourceBusyId)}
+                          onClick={()=>onImportLocalSceneSource?.(item)}>
+                          {localSceneSourceBusyId===item.id?"Importing…":"Import into project"}
+                        </button>
+                      </article>)}
+                  </div>
+                  : <div className="mm-model-gallery-empty"><Box size={24}/>
+                      <strong>No local model sources connected</strong>
+                      <p>Import a GLB from your device or connect the SamScene source library. Nothing is generated or uploaded automatically.</p>
+                    </div>}
+                <button className="mm-model-gallery-add" type="button" onClick={()=>{setBrowserSection("import");selectCategory("media");}}>
+                  <Box size={16}/> Import a GLB file
+                </button>
+              </section>
             ) : categoryTool === "3d" ? (
-              <CoProCreativeWorkspace environment={stageEnvironment} onEnvironmentChange={patch=>onAction?.({type:"environment",patch})}/>
+              <section className="mm-scene-command-browser" aria-label="Connected 3D authoring tools">
+                <header><strong>3D authoring</strong><small>One project · SamScene sky · CoPro object commands</small></header>
+                <div className="mm-scene-command-list">
+                  <button type="button" onClick={()=>selectCategory("models")}><Box size={20}/>
+                    <span><strong>3D models</strong><small>Import GLB geometry into the current project</small></span><ChevronRight size={16}/></button>
+                  <button type="button" onClick={()=>selectCategory("scenes")}><Layers size={20}/>
+                    <span><strong>Scene objects &amp; beats</strong><small>Navigate linked 3D objects and timeline beats</small></span><ChevronRight size={16}/></button>
+                  <button type="button" onClick={()=>selectCategory("stage")}><Sun size={20}/>
+                    <span><strong>Sky, lighting &amp; materials</strong><small>Use the SamScene engine in the contextual inspector</small></span><ChevronRight size={16}/></button>
+                  <button type="button" disabled={!selectedIs3DObject}
+                    onClick={()=>{setActiveTool("world3d");setPanePreference("inspector");setLayout(value=>({...value,inspectorOpen:true}));if(isHandset)setHandsetPanel("inspector");}}>
+                    <Move3D size={20}/><span><strong>Spatial transform</strong><small>{selectedIs3DObject?"Edit X, Y, Z, yaw, scale and visibility":"Select a 3D object from the timeline"}</small></span><ChevronRight size={16}/></button>
+                </div>
+                <p className="mm-scene-command-note">Sculpt brushes, mesh editing and camera authoring remain owned by SamScene. They are not shown here as nonfunctional controls.</p>
+              </section>
+            ) : categoryTool === "scenes" ? (
+              <section className="mm-scene-browser" aria-label="Timeline scenes and model sources">
+                <header><strong>Scenes &amp; beats</strong><small>Select a timeline beat to navigate or edit it</small></header>
+                <div className="mm-scene-browser-heading">Timeline beats</div>
+                {project.tracks.flatMap(track=>track.clips).filter(clip=>mediaItems.some(item=>item.id===clip.assetId&&['scene','video','image'].includes(item.kind))||Boolean(clip.metadata?.sceneCue)).length===0
+                  ? <p className="mm-scene-browser-empty">No visual clips yet. Add footage or a 3D scene to start a beat.</p>
+                  : project.tracks.flatMap(track=>track.clips).filter(clip=>mediaItems.some(item=>item.id===clip.assetId&&['scene','video','image'].includes(item.kind))||Boolean(clip.metadata?.sceneCue)).map(clip=><button type="button" key={clip.id}
+                      className={'mm-scene-browser-row'+(selectedClipId===clip.id?' is-selected':'')}
+                      onClick={()=>{onSelectClip?.(clip.id);onSeek?.(clip.startUs);}}>
+                      <Layers size={16}/><span><strong>{mediaItems.find(item=>item.id===clip.assetId)?.name??'Scene cue'}</strong>
+                      <small>{formatTime(clip.startUs)} · {(clip.durationUs/1_000_000).toFixed(1)}s</small></span><ChevronRight size={14}/></button>)}
+                <div className="mm-scene-browser-heading">Project 3D assets</div>
+                {mediaItems.filter(item=>item.kind==='scene').length===0
+                  ? <p className="mm-scene-browser-empty">Import a GLB in Media to make it available here.</p>
+                  : mediaItems.filter(item=>item.kind==='scene').map(item=><div className="mm-scene-browser-row" key={item.id}>
+                      <Layers size={16}/><span><strong>{item.name}</strong><small>3D scene · imported</small></span>
+                      <button type="button" onClick={()=>onMediaAdd?.(item.id,playheadUs)}>Add</button></div>)}
+                {localSceneSources.filter(item=>item.kind==='scene').length>0&&<>
+                  <div className="mm-scene-browser-heading">Local SamScene sources</div>
+                  {localSceneSources.filter(item=>item.kind==='scene').map(item=><div className="mm-scene-browser-row" key={item.id}>
+                    <Layers size={16}/><span><strong>{item.name}</strong><small>Source GLB · local</small></span>
+                    <button type="button" disabled={Boolean(localSceneSourceBusyId)} onClick={()=>onImportLocalSceneSource?.(item)}>
+                      {localSceneSourceBusyId===item.id?'Importing…':'Import'}</button></div>)}
+                </>}
+                <button type="button" className="mm-scene-browser-import" onClick={()=>{setBrowserSection('import');selectCategory('media');}}>Import scene or footage</button>
+              </section>
             ) : categoryTool === "more" ? (
               <section className="mm-more-tools" aria-label="More editing tools">
                 <div className="mm-more-tools-heading"><span>MORE TOOLS</span><strong>Choose a workspace</strong><p>All editing categories stay available here.</p></div>
@@ -751,6 +953,9 @@ export function CoProStudio({
               <CoProMediaBrowser
                 section={browserSection}
                 mediaItems={mediaItems}
+                localSceneSources={localSceneSources}
+                localSceneSourceBusyId={localSceneSourceBusyId}
+                onImportLocalSceneSource={onImportLocalSceneSource}
                 projectMediaIds={projectMediaIds}
                 creativeAssets={creativeAssets}
                 selectedClipId={selectedClipId}
@@ -788,7 +993,7 @@ export function CoProStudio({
           </aside>}
           {dockBrowser && !isNarrow && <ResizeHandle axis="x" className="copro-browser-divider" label="Resize tool browser" value={browserWidth} min={240} max={Math.max(260,workspaceWidth - (showInspector ? inspectorWidth : 0) - 410)} direction={layout.reversed ? -1 : 1} onChange={width => setLayout(value => ({ ...value, browserWidth: width }))}/>}
 
-          <section ref={playerPaneRef} className={`mm-player-pane${layout.playerFloating && !isNarrow?" is-floating":""}${viewportFullscreen?" is-viewport-fullscreen":""}`} aria-label="MovieMode player"
+          <section ref={playerPaneRef} className={`mm-player-pane${layout.playerFloating && !isNarrow?" is-floating":""}${viewportFullscreen?" is-viewport-fullscreen":""}`} aria-label="PrimeTech preview player"
             style={{
               "--copro-floating-left": layout.playerX + "px",
               "--copro-floating-top": layout.playerY + "px",
@@ -798,7 +1003,7 @@ export function CoProStudio({
             onPointerUp={layout.playerFloating && !isNarrow?event=>saveFloatingSize(event,"player"):undefined}
             onPointerMove={()=>{if(isFullscreen)setFullscreenHudVisible(true);}}>
             <div className="mm-player-pane-header" onPointerDown={layout.playerFloating && !isNarrow?event=>moveFloating(event,"player"):undefined}>
-              <span>{layout.playerFloating && !isNarrow && <GripVertical size={14}/>}Player · Timeline 01</span>
+              <span>{layout.playerFloating && !isNarrow && <GripVertical size={14}/>}Preview · Timeline</span>
               <button type="button" aria-label={layout.playerFloating ? "Dock player" : "Undock player"} title={layout.playerFloating ? "Dock player" : "Float and drag player"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(old=>({...old,playerFloating:!old.playerFloating}))}>{layout.playerFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
             </div>
             <section ref={previewStageRef} className="copro-preview-stage">
@@ -817,7 +1022,11 @@ export function CoProStudio({
                 boxShadow:stageEnvironment?.shadowSoftness!==undefined ? `0 18px ${20+stageEnvironment.shadowSoftness*5}px rgba(0,0,0,.48)` : undefined,
                 "--mm-monitor-width":previewWidth+"px","--mm-monitor-height":previewWidth/canvasRatio+"px","--mm-monitor-ratio":canvasRatio,"--mm-monitor-zoom":`scale(${previewZoom/100})`} as React.CSSProperties}
             >
-              {effectivePreviewSrc && effectivePreviewKind === "video" ? (
+              {activeMedia?.kind === "scene" && activeVisualClip && render3DScene ? (
+                render3DScene({url:activeMedia.url,name:activeMedia.name,assetId:activeMedia.id,playing,
+                  timeUs:Math.max(0,(playheadUs-activeVisualClip.startUs)*(activeVisualClip.playbackRate??1)+(activeVisualClip.inUs??0)),
+                  environment:stageEnvironment,transform:activeTransform})
+              ) : effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
                   ref={videoRef}
                   className={"copro-preview-media copro-preview-effect-" + activeEffect.replace(/^overlay:/,"")}
@@ -867,7 +1076,7 @@ export function CoProStudio({
                     backgroundSize:stageEnvironment?.showGrid ? '24px 24px,24px 24px,cover' : undefined,
                   } : undefined}>
                   <div className="copro-preview-empty-content">
-                    <span className="copro-preview-empty-kicker">{hasUnavailableFootage ? "SOURCE MEDIA" : "MOVIEMODE · NEW SEQUENCE"}</span>
+                    <span className="copro-preview-empty-kicker">{hasUnavailableFootage ? "SOURCE MEDIA" : "NEW SEQUENCE"}</span>
                     <div className="copro-preview-mark">{hasUnavailableFootage ? "Source media needed" : "Your canvas is ready"}</div>
                     <p className="copro-preview-empty-description">
                       {hasUnavailableFootage
@@ -897,7 +1106,6 @@ export function CoProStudio({
                   <span className="mm-center-cross"/>
                 </div>
                 <div className="mm-playback-hud" aria-hidden="true">
-                  <span className="mm-playback-hud-chip">MovieMode</span>
                   <span className="mm-playback-hud-chip is-timecode">{formatTime(playheadUs)}</span>
                   <span className={`mm-playback-hud-chip${playing ? " is-live" : ""}`}>{playing ? "REC PREVIEW" : "MONITOR"}</span>
                 </div>
@@ -966,24 +1174,35 @@ export function CoProStudio({
               } as React.CSSProperties}
               onPointerUp={inspectorFloating ? event => saveFloatingSize(event,"inspector") : undefined}>
               <div className="mm-inspector-dock-header" onPointerDown={inspectorFloating ? event=>moveFloating(event,"inspector") : undefined}>
-                <span>{inspectorFloating && <GripVertical size={14}/>}<strong>{selectedTrack?.kind === "audio"?"Audio":selectedClip?"Clip properties":"Project Details"}</strong></span>
+                <span>{inspectorFloating && <GripVertical size={14}/>}<strong>{inspectorTool==="stage"?"Scene environment":selectedIs3DObject?"3D object":selectedTrack?.kind === "audio"?"Audio":selectedClip?"Clip properties":"Project Details"}</strong></span>
                 <div className="mm-inspector-window-actions">
                   <button type="button" aria-label={inspectorFloating?"Dock inspector":"Undock inspector"} title={inspectorFloating?"Dock inspector":"Float and drag inspector"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,inspectorFloating:!value.inspectorFloating}))}>{inspectorFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
                   <button type="button" aria-label="Collapse inspector" title="Collapse panel" onPointerDown={event=>event.stopPropagation()} onClick={()=>{if(isHandset)setHandsetPanel(null);else setLayout(value=>({...value,inspectorOpen:false}));}}>×</button>
                 </div>
               </div>
               {selectedClip && <nav className="mm-selection-tabs" aria-label="Selected clip property categories">
-                {((selectedTrack?.kind === "audio" ? [
-                  ["volume","Audio"], ["speed","Speed"], ["animation","Animation"], ["tracking","Tracking"]
+                {((selectedIs3DObject ? [
+                  ["world3d","Transform"], ["animation","Animation"],
+                  ["speed","Playback"], ["stage","Scene look"]
+                ] : selectedTrack?.kind === "audio" ? [
+                  ["volume","Audio"], ["speed","Speed"], ["animation","Animation"]
                 ] : [
                   ["video","Video"], ["speed","Speed"], ["animation","Animation"],
-                  ["tracking","Tracking"], ["adjust","Adjust"], ["ai-stylize","AI stylize"]
+                  ["adjust","Color"], ["effects","Effects"]
                 ]) as Array<[string,string]>).map(([tool,label]) => <button type="button" key={tool}
-                  className={inspectorTool===tool?"is-active":""} aria-pressed={inspectorTool===tool}
+                  className={inspectorTool===tool?"is-active":""}
+                  aria-pressed={inspectorTool===tool}
                   title={"Open "+label+" controls"}
-                  onClick={()=>{setActiveTool(tool);setPanePreference("inspector");if(isHandset)setHandsetPanel("inspector");}}>{label}</button>)}
+                  onClick={()=>{
+                    if(tool==="stage"){selectCategory("stage");return;}
+                    setActiveTool(tool);setPanePreference("inspector");if(isHandset)setHandsetPanel("inspector");
+                  }}>{label}</button>)}
               </nav>}
-              <CoProToolPanel
+              {inspectorTool==="stage"
+                ? <CoProStageLookPanel environment={stageEnvironment} skyDefaults={samSceneSkyDefaults}
+                    videoSources={mediaItems.filter(item=>item.kind==="video").map(item=>({id:item.id,name:item.name}))}
+                    onChange={patch=>onAction?.({type:"environment",patch})}/>
+                : <CoProToolPanel
                 key={selectedClipId??"project"}
                 tool={inspectorTool}
                 projectCanvas={project.canvas}
@@ -1014,6 +1233,9 @@ export function CoProStudio({
                 initialSpeed={selectedClip?.playbackRate ?? 1}
                 initialVolume={selectedClip?.volume ?? 1}
                 transform={selectedClip?.metadata?.transform as {scale?:number;x?:number;y?:number;rotation?:number;opacity?:number}|undefined}
+                world3dTransform={(selectedClip?.metadata?.world3d as {transform?:{x?:number;y?:number;z?:number;rotationYDeg?:number;scale?:number;opacity?:number}}|undefined)?.transform}
+                world3dVisible={(selectedClip?.metadata?.world3d as {visible?:boolean}|undefined)?.visible!==false}
+                onWorld3DChange={patch=>selectedClip&&onAction?.({type:"world3d",clipId:selectedClip.id,patch})}
                 onTransformChange={(patch) => selectedClip && onAction?.({type:"transform",clipId:selectedClip.id,patch})}
                 initialText={typeof selectedClip?.metadata?.text === "string" ? selectedClip.metadata.text : ""}
                 hasSelection={Boolean(selectedClip &&
@@ -1046,7 +1268,7 @@ export function CoProStudio({
                 onGraphicChange={(graphic,text) => selectedClip && onAction?.({type:"graphic",clipId:selectedClip.id,graphic,text})}
                 onCreativeParametersChange={(patch) => selectedClip && onAction?.({type:"creative-parameters",clipId:selectedClip.id,patch})}
                 onProjectExport={() => onAction?.({type:"export-project"})}
-              />
+              />}
             </aside>
           )}
 
@@ -1064,6 +1286,18 @@ export function CoProStudio({
             onAddTrack={() => onAction?.({ type: "add-track" })}
             onTrackState={(trackId, patch) => onAction?.({ type: "track-state", trackId, patch })}
             onTrackReorder={(trackId, index) => onAction?.({ type: "track-reorder", trackId, index })}
+            onClipContextAction={(action,clipId,atUs)=>{
+              onSelectClip?.(clipId);
+              if(action==="split")onAction?.({type:"split",clipId,atUs});
+              else if(action==="duplicate")onAction?.({type:"duplicate",clipId});
+              else if(action==="delete")onAction?.({type:"delete",clipId});
+              else {
+                setActiveTool(action==="adjust"?"adjust":action);
+                setPanePreference("inspector");
+                if(isHandset)setHandsetPanel("inspector");
+                setLayout(value=>({...value,inspectorOpen:true}));
+              }
+            }}
           />
 
           <section className={"copro-context-tools" + (isHandset ? " is-handset" : "") + (selectedClip ? " is-contextual" : "")} aria-label={selectedClip ? "Selected clip actions" : "Editing destinations"}>
@@ -1083,6 +1317,7 @@ export function CoProStudio({
           </section>
         </div>
       </main>
+
 
     </section>
   );

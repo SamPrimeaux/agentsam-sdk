@@ -64,7 +64,7 @@ test('empty editor retains project details and full tool navigation without a cr
     project:{id:'project:blank',tracks:[{id:'v1',kind:'video',clips:[]}]},
     selectedClipId:null,playheadUs:0,projectTitle:'Launch walkthrough',
   }));
-  for (const label of ['MovieMode editing categories','Media collections','Import','Media','Subprojects','Yours','Generate','Spaces','Library','Project information','Launch walkthrough','Project details']) {
+  for (const label of ['PrimeTech editing categories','PrimeTech studio modes','Media collections','Import','Media','Generate','Project information','Launch walkthrough','Project details']) {
     const match = label==='Project details'? /aria-label="project settings"|>Project</i : label;
     assert.ok(typeof match==='string' ? html.includes(match) : match.test(html), label);
   }
@@ -91,7 +91,10 @@ test('reference-first desktop default is dense but fully user-adjustable',()=>{
   const browserStart=html.indexOf('id="copro-tool-browser"');
   const categories=html.indexOf('class="mm-editor-categories"');
   const inspector=html.indexOf('id="copro-tool-inspector"');
-  assert.ok(browserStart!==-1 && categories>browserStart && inspector>categories);
+  assert.ok(browserStart!==-1 && categories!==-1 && categories<browserStart && inspector>browserStart,
+    'creation toolbar must be outside and ahead of the collapsible browser');
+  assert.match(html,/aria-label="PrimeTech studio modes"/);
+  assert.match(html,/data-studio-mode="video"/);
   assert.match(html,/aria-label="Undock Media browser"/);
   assert.match(html,/aria-label="Undock inspector"/);
   assert.match(html,/aria-label="Workspace layout preset"/);
@@ -130,4 +133,41 @@ test('timeline toolbar exposes playhead readout and refined chrome', () => {
   assert.match(html,/mm-playhead-stem/);
   assert.match(html,/aria-label="Timeline zoom"/);
   assert.match(html,/>0:05</);
+});
+
+
+test('PrimeTech preserves one project workspace across scene, design, generate and video destinations',()=>{
+  const html=renderToStaticMarkup(React.createElement(CoProStudio,{
+    project:{id:'single-project',tracks:[{id:'video',kind:'video',clips:[]}]},
+    projectTitle:'One studio',playheadUs:0,
+  }));
+  assert.match(html,/aria-label="PrimeTech studio modes"/);
+  for(const label of ['3D Scene','Design','Generate','Video','Scene','Audio','Captions','Effects','Transitions','Templates','3D Tools']){
+    assert.ok(html.includes(label),label);
+  }
+  assert.equal((html.match(/class="mm-editor-categories"/g)||[]).length,1);
+  assert.ok(html.indexOf('class="mm-editor-categories"')<html.indexOf('id="copro-tool-browser"'));
+  assert.match(html,/href="\/primetech-onboarding\/index\.html\?returnTo=/);
+  assert.match(html,/Explore PrimeTech/);
+  assert.doesNotMatch(html,/mm-studio-tour-dialog|iframe|aria-modal="true"/);
+});
+
+
+test('a selected GLB clip exposes real 3D transform, animation and scene look editing in the shared inspector',()=>{
+  const sceneProject={
+    id:'scene-fixture',tracks:[{id:'scene-track',kind:'video',clips:[{
+      id:'scene-clip',assetId:'model:real-glb',startUs:0,durationUs:3_000_000,
+      metadata:{sourceKind:'samscene-timeline-cue',world3d:{visible:true}},
+    }]}],
+  };
+  const html=renderToStaticMarkup(React.createElement(CoProStudio,{
+    project:sceneProject,playheadUs:0,selectedClipId:'scene-clip',
+    mediaItems:[{id:'model:real-glb',name:'editable-model.glb',kind:'scene',url:'blob:test'}],
+  }));
+  assert.match(html,/3D object/);
+  assert.match(html,/data-inspector-tool="world3d"/);
+  for(const label of ['Transform','Animation','Playback','Scene look','Spatial transform','X world3d','Y world3d','Z world3d','Yaw \(Y\) world3d','3D object visible']) {
+    assert.ok(html.includes(label),label);
+  }
+  assert.doesNotMatch(html,/Background removal/);
 });

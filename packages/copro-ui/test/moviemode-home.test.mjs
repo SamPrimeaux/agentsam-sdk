@@ -11,11 +11,11 @@ test('MovieMode home prioritizes saved projects with one create action and no pr
   const html = renderToStaticMarkup(React.createElement(CoProProjectsScreen,{
     ...actions, projects:[{id:'project:1',title:'Dashboard Walkthrough',kind:'video',status:'draft',updatedAt:'2026-10-16T12:00:00Z',durationMs:25000}],
   }));
-  for(const label of ['MovieMode','Create project','Your projects','Dashboard Walkthrough','Import','Templates','Search projects','Grid view','List view']) assert.ok(html.includes(label),label);
+  for(const label of ['PrimeTech','Create project','Your projects','Dashboard Walkthrough','Import','Templates','Search projects','Grid view','List view']) assert.ok(html.includes(label),label);
   assert.doesNotMatch(html,/Create project<\/strong><small>Open the full timeline editor/);
-  assert.doesNotMatch(html,/Video Studio|More tools|Template Studio/);
+  assert.doesNotMatch(html,/Template Studio/);
   assert.doesNotMatch(html,/copro-sheet-backdrop|aria-modal="true"/);
-  assert.match(html,/aria-label="MovieMode navigation"/);
+  assert.match(html,/aria-label="PrimeTech navigation"/);
   assert.match(html,/aria-label="Project actions for Dashboard Walkthrough"/);
   const createButtons = html.split('Create project').length - 1;
   assert.ok(createButtons <= 3, 'home must not spam redundant create CTAs');
@@ -75,7 +75,7 @@ test('MovieMode project cards meet the creative resource-card standard', () => {
     projects:[{id:'project:1',title:'Dashboard Walkthrough',kind:'video',status:'draft',updatedAt:'2026-10-16T12:00:00Z',durationMs:25000,aspectRatio:'9:16',thumbnailTone:'cyan',subtitle:'Night edit'}],
   }));
   assert.match(html,/mm-resource-card/);
-  assert.match(html,/MovieMode · Draft/);
+  assert.match(html,/PrimeTech · Draft/);
   assert.match(html,/Open edit/);
   assert.match(html,/aria-label="Edit Dashboard Walkthrough"/);
   assert.match(html,/mm-project-cover-art/);
