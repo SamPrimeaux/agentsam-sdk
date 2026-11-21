@@ -1,0 +1,1130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/packages/iamscene/v2/scene.canonical.schema.json",
+  "title": "InnerAnimalMedia Scene Document v2 \u2014 editable multi-scene authoring model",
+  "description": "Versioned authoring data contract; registration of object types and settings does not imply a bound renderer, physics simulator, event executor, or UI control.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "format",
+    "formatVersion",
+    "metadata",
+    "coordinateSystem",
+    "scenes",
+    "objects",
+    "resources",
+    "systems",
+    "behaviors",
+    "views",
+    "extensionsUsed",
+    "extensionsRequired"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.inneranimalmedia.com/packages/iamscene/v2/scene.canonical.schema.json"
+    },
+    "format": {
+      "const": "iamscene"
+    },
+    "formatVersion": {
+      "const": "2.0.0"
+    },
+    "metadata": {
+      "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/properties/metadata"
+    },
+    "coordinateSystem": {
+      "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/properties/coordinateSystem"
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "rootObjectIds"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rootObjectIds": {
+            "type": "array",
+            "items": {
+              "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+            },
+            "uniqueItems": true
+          },
+          "frameRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "environmentRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "simulationRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "playCameraRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "pipelineRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "effectIds": {
+            "type": "array",
+            "items": {
+              "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sceneId",
+          "name",
+          "kind",
+          "transform",
+          "visible"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "sceneId": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "rectangle",
+              "ellipse",
+              "triangle",
+              "pentagon",
+              "star",
+              "text",
+              "input",
+              "path",
+              "shape-blend",
+              "decal",
+              "particle-emitter",
+              "particle-force",
+              "hair-system",
+              "plane",
+              "backdrop",
+              "cube",
+              "sphere",
+              "cylinder",
+              "torus",
+              "helix",
+              "cone",
+              "pyramid",
+              "icosahedron",
+              "dodecahedron",
+              "torus-knot",
+              "lathe",
+              "bunny",
+              "teapot",
+              "group",
+              "camera",
+              "point-light",
+              "directional-light",
+              "spot-light",
+              "mesh",
+              "pulse",
+              "light"
+            ]
+          },
+          "parentId": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "transform": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/transform"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "geometryRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "materialRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "cameraRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "lightRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "text": {
+            "$ref": "#/$defs/text"
+          },
+          "emitter": {
+            "$ref": "#/$defs/emitter"
+          },
+          "stateIds": {
+            "type": "array",
+            "items": {
+              "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+            },
+            "uniqueItems": true
+          },
+          "eventIds": {
+            "type": "array",
+            "items": {
+              "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+            },
+            "uniqueItems": true
+          },
+          "userData": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [],
+            "properties": {}
+          },
+          "pathRef": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "renderOrder": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assets",
+        "materials",
+        "geometry",
+        "materialTextures"
+      ],
+      "properties": {
+        "assets": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/asset"
+          }
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/material"
+          }
+        },
+        "geometry": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "primitive",
+                  "vector",
+                  "mesh",
+                  "cad",
+                  "text",
+                  "occt",
+                  "polyline",
+                  "sphere"
+                ]
+              },
+              "primitiveType": {
+                "type": "string",
+                "minLength": 1
+              },
+              "assetRef": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "sourceUri": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parameters": {
+                "$ref": "#/$defs/parameters"
+              },
+              "legacyDefinition": {
+                "type": "object",
+                "additionalProperties": true,
+                "required": [],
+                "properties": {}
+              }
+            }
+          }
+        },
+        "materialTextures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "materialRef",
+              "assetRef",
+              "slot"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "materialRef": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "assetRef": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "slot": {
+                "enum": [
+                  "baseColor",
+                  "normal",
+                  "roughness",
+                  "metalness",
+                  "emissive",
+                  "opacity",
+                  "environment"
+                ]
+              },
+              "uvSet": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "systems": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frames",
+        "cameras",
+        "lights",
+        "environments",
+        "skies",
+        "fogs",
+        "shadows",
+        "simulations",
+        "effects",
+        "pipelines",
+        "modifiers"
+      ],
+      "properties": {
+        "frames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "mode"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "mode": {
+                "enum": [
+                  "responsive",
+                  "custom",
+                  "preset"
+                ]
+              },
+              "preset": {
+                "type": "string",
+                "minLength": 1
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "autoZoom": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "cameras": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "projection",
+              "position",
+              "target",
+              "near",
+              "far"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "projection": {
+                "enum": [
+                  "perspective",
+                  "orthographic"
+                ]
+              },
+              "position": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/vec3"
+              },
+              "target": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/vec3"
+              },
+              "fov": {
+                "type": "number"
+              },
+              "frustumHeight": {
+                "type": "number"
+              },
+              "zoom": {
+                "type": "number"
+              },
+              "near": {
+                "type": "number",
+                "minimum": 0
+              },
+              "far": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        },
+        "lights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "color",
+              "intensity",
+              "position"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "directional",
+                  "point",
+                  "spot",
+                  "area"
+                ]
+              },
+              "color": {
+                "type": "string",
+                "minLength": 1
+              },
+              "intensity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit": {
+                "enum": [
+                  "relative",
+                  "lux",
+                  "lumens",
+                  "watts"
+                ]
+              },
+              "position": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/vec3"
+              },
+              "castShadow": {
+                "type": "boolean"
+              },
+              "angle": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "background",
+              "ambientIntensity",
+              "lightIds"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "background": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ambientIntensity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "ambientColor": {
+                "type": "string",
+                "minLength": 1
+              },
+              "skyRef": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "fogRef": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "shadowRef": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "lightIds": {
+                "type": "array",
+                "items": {
+                  "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+                },
+                "uniqueItems": true
+              }
+            }
+          }
+        },
+        "skies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "mode"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "mode": {
+                "enum": [
+                  "physical",
+                  "hdri"
+                ]
+              },
+              "assetRef": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "rotation": {
+                "type": "number"
+              },
+              "blur": {
+                "type": "number"
+              },
+              "showBackground": {
+                "type": "boolean"
+              },
+              "lightingInfluence": {
+                "type": "number"
+              },
+              "intensity": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "fogs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "mode",
+              "color"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "mode": {
+                "enum": [
+                  "linear",
+                  "height",
+                  "both"
+                ]
+              },
+              "color": {
+                "type": "string",
+                "minLength": 1
+              },
+              "near": {
+                "type": "number",
+                "minimum": 0
+              },
+              "far": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "heightDensity": {
+                "type": "number"
+              },
+              "useBackground": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "shadows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "quality": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "intensity": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "simulations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "enabled",
+              "gravity"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "gravity": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/vec3"
+              },
+              "solver": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "enabled"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "depth-of-field",
+                  "pixelation",
+                  "aberration",
+                  "bloom",
+                  "hue",
+                  "brightness",
+                  "vignette",
+                  "noise"
+                ]
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "intensity": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "pipelines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "mode"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "mode": {
+                "enum": [
+                  "classic",
+                  "linear",
+                  "aces"
+                ]
+              },
+              "exposure": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "targetObjectId",
+              "kind"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "targetObjectId": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parameters": {
+                "$ref": "#/$defs/parameters"
+              }
+            }
+          }
+        }
+      }
+    },
+    "behaviors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "animations",
+        "states",
+        "events",
+        "variables",
+        "dataSources"
+      ],
+      "properties": {
+        "animations": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/animation"
+          }
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "targetObjectId",
+              "overrides"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "targetObjectId": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "overrides": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "path",
+                    "value"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "value": {
+                      "$ref": "#/$defs/value"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "trigger",
+              "actions"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "targetObjectId": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "trigger": {
+                "enum": [
+                  "start",
+                  "pointerenter",
+                  "pointerleave",
+                  "click",
+                  "custom"
+                ]
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type"
+                  ],
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "transition",
+                        "scene-transition",
+                        "animation",
+                        "timeline-animation",
+                        "sound",
+                        "particles-control",
+                        "create-object",
+                        "destroy-object",
+                        "switch-camera",
+                        "reset-scene",
+                        "set-variable",
+                        "variable-control",
+                        "conditional",
+                        "clear-local-storage",
+                        "api-request",
+                        "play-animation"
+                      ]
+                    },
+                    "targetObjectId": {
+                      "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+                    },
+                    "animationId": {
+                      "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+                    },
+                    "variableId": {
+                      "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+                    },
+                    "dataSourceId": {
+                      "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+                    },
+                    "parameters": {
+                      "$ref": "#/$defs/parameters"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "type"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": {
+                "enum": [
+                  "number",
+                  "boolean",
+                  "string",
+                  "time",
+                  "counter",
+                  "random"
+                ]
+              },
+              "value": {
+                "$ref": "#/$defs/value"
+              }
+            }
+          }
+        },
+        "dataSources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "webhook",
+                  "api",
+                  "ai-text",
+                  "ai-voice"
+                ]
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scope": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "views": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "activeSceneId": {
+          "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+        },
+        "personalCamera": {
+          "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/properties/camera"
+        },
+        "gridPlane": {
+          "enum": [
+            "XZ",
+            "XY",
+            "YZ"
+          ]
+        },
+        "snapping": {
+          "enum": [
+            "object",
+            "grid",
+            "off"
+          ]
+        }
+      }
+    },
+    "extensionsUsed": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "extensionsRequired": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "value": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/vec3"
+        },
+        {
+          "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/quat"
+        }
+      ]
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/value"
+      }
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "fontAssetRef": {
+          "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+        },
+        "size": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "fontSize": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "lineHeight": {
+          "type": "number"
+        },
+        "spacing": {
+          "type": "number"
+        },
+        "weight": {
+          "type": "string",
+          "minLength": 1
+        },
+        "horizontal": {
+          "enum": [
+            "left",
+            "center",
+            "right",
+            "justify"
+          ]
+        },
+        "vertical": {
+          "enum": [
+            "top",
+            "middle",
+            "bottom"
+          ]
+        },
+        "case": {
+          "enum": [
+            "original",
+            "upper",
+            "lower"
+          ]
+        },
+        "extrusion": {
+          "type": "number"
+        },
+        "bevel": {
+          "type": "number"
+        }
+      }
+    },
+    "emitter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shape"
+      ],
+      "properties": {
+        "shape": {
+          "enum": [
+            "sphere",
+            "plane",
+            "box",
+            "mesh"
+          ]
+        },
+        "size": {
+          "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/vec3"
+        },
+        "autoPlay": {
+          "type": "boolean"
+        },
+        "emitTime": {
+          "type": "number"
+        },
+        "forceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.inneranimalmedia.com/packages/iamscene/v1/scene.canonical.schema.json#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "noise": {
+          "$ref": "#/$defs/parameters"
+        },
+        "randomness": {
+          "$ref": "#/$defs/parameters"
+        }
+      }
+    }
+  }
+}

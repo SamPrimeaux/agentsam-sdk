@@ -7,3 +7,5 @@ export * from './runtime.js';
 export * from './gltf.js';
 export * from './geometry.js';
 export * from './format-registry.js';
+export * from './object-catalog.js';
+export * from './v2.js';
