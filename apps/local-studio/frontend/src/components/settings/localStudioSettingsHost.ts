@@ -406,7 +406,7 @@ function emptySnapshot(): SettingsSnapshot {
       policy: "Not checked",
     },
     network: {
-      browser: "Available",
+      browser: "Not checked",
       tunnel: "Not checked",
       oauth: "Not checked",
       health: "unknown",
