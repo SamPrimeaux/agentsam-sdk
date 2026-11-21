@@ -128,3 +128,153 @@ legacy R2 mirrors must publish the exact same verified schema bytes.
 - no Spline runtime or Spline scene file is required by the format or runtime
 
 See `examples/retrofuturistic-circuit-loop/` for the first authored scene and its native geometry sources.
+
+## IAMGeometry: independent reusable geometry assets
+
+A `.iamgeometry` file is a UTF-8 JSON manifest of **references**, not a new mesh or
+CAD engine. This allows independent versioning, reuse, and runtime geometry
+swapping while keeping the editable source owned by CAD Creator/OCCT (or
+another native authoring tool). glTF/GLB remains the interoperable render format.
+The schema is exported from `@inneranimalmedia/iamscene/geometry-schema`.
+
+For example `assets/chair.iamgeometry`:
+
+```json
+{
+  "format": "iamgeometry",
+  "formatVersion": "1.0.0",
+  "id": "chair-01",
+  "name": "Chair",
+  "units": "mm",
+  "source": {
+    "schema": "cad.project.v2",
+    "uri": "../cad/chair-project.json",
+    "elementId": "chair-01",
+    "revision": 3
+  },
+  "defaultRenderId": "web",
+  "representations": [
+    { "id": "native", "role": "source", "format": "brep", "uri": "./chair.brep" },
+    { "id": "web", "role": "render", "format": "glb", "uri": "./chair.glb" },
+    { "id": "mobile", "role": "lod", "lod": 1, "format": "glb", "uri": "./chair-mobile.glb" }
+  ]
+}
+```
+
+Attach it to the **existing** `.iamscene` document's `assets` list using
+`mediaType: "application/vnd.inneranimalmedia.iamgeometry+json"` and set any
+mesh node's `assetRef` to its asset ID. The browser runtime resolves the
+manifest's `defaultRenderId` glTF/GLB relative to the manifest URI. It does
+not read BREP/STEP as a web render asset.
+
+Use `SceneEditor.setNodeGeometryAsset(nodeId, assetRef)` to commit a
+geometry-only authoring change with undo/redo. Use
+`SceneRuntimeHandle.swapGeometry(nodeId, assetOrRef)` to replace the loaded
+mesh at runtime. The node's identity, transform, parent, and animation target
+remain unchanged. Save the document to persist a swap; runtime-only swaps
+do not mutate the authoring document.
+
+A manifest provides reference integrity and metadata validation. Actual
+asset bytes/hash verification, authorization, persistence, shared-geometry
+caching, LOD selection and full browser end-to-end testing must be handled
+separately. No new database catalog or geometry engine is required.
+
+## Formal interchange registry (incremental IAMScene v2 work)
+
+`createIAMSceneFormatRegistry()` has independent `import`, `export`, `live-reference`,
+and `round-trip` operations. Use `describe(id)`, `identify(filename)` or `list()`
+to discover **actual registered adapters**, rather than inferring functionality
+from a filename extension or a viewer that can display a mesh.
+
+Each built-in descriptor includes `sourceTypeIds` linking it to the existing
+`agentsam.source-types.v2` identity catalog. For example, `obj` maps to
+`model.wavefront-obj`, not the unrelated COFF `.obj`; `stl` maps to
+`model.stl`, not the EBU subtitle `.stl`. **`identify()` only supplies a
+filename-based adapter candidate.** The host must use the universal source
+identification evidence (signature/content/context/user choice) when suffixes
+are ambiguous; an import only succeeds if the selected adapter parses the
+actual input. A successful SHA-256 reference never certifies file identity.
+
+`implemented` means the SDK provides an operation with an executable adapter;
+`unavailable` means **do not call it or label it supported**. A positive
+round-trip receipt describes only its named preserved properties. It does not
+claim that unspecified features survive. An asset being hash-verifiable as a
+live reference does **not** mean it is semantically importable or renderable.
+
+| Input/output | Import | Export | Source reference | Round-trip | Limitations |
+| --- | --- | --- | --- | --- | --- |
+| `.iamscene`, `.iamscene.json` | Yes | Yes | Yes | Yes | Current canonical v1 document contract, not the future C++ scene-core v2 |
+| `.iamgeometry` | Yes | Yes | Yes | Yes | Manifest + linked representations, not a mesh/BRep kernel |
+| `.gltf`, `.glb` | Yes | Yes | Yes | Tested | Source-backed hierarchy/material edits; opaque animation/skin/extension data retained, not independently editable |
+| `.stl`, `.obj`, `.ply` | Yes | No | Yes | No | Triangle-mesh import into individually addressable `.iamgeometry` + GLB sidecars; explicit units required, no CAD feature history |
+| `.step`, `.stp`, `.brep`, `.ifc` | No | **Native OCCT opt-in** | Yes | No | Exports one authorized OCCT geometry node via verified native executable; IFC4 geometric export does not certify BIM completeness |
+| `.iges`, `.igs`, `.3mf`, `.ifczip`, `.usd`, `.usda`, `.usdc`, `.usdz`, `.blend`, `.fbx`, `.dae`, `.abc`, `.vdb`, `.dxf`, `.dwg`, `.svg`, `.las`, `.laz`, `.e57` | No | No | Byte-integrity reference only | No | No native semantic adapter registered yet |
+| `.png`, `.jpg`, `.jpeg`, `.exr`, `.hdr`, `.ktx2`, `.mp4`, `.m4v`, `.mov`, `.mkv`, `.wav`, `.flac`, `.otio`, `.otioz` | No | No | Byte-integrity reference only | No | Media codecs/editorial interchange remain in their specialist packages until adapters are registered and tested |
+
+`.ifczip` is intentionally distinct from `.ifc`: producing an IFC file is not
+proof that a correctly packaged ZIP archive can be exported. Likewise, `.ply`
+point clouds without faces are rejected by the triangle-mesh importer rather
+than silently treated as triangles. More formats are added with
+`registry.registerFormat()` and `registry.registerAdapter()`; none becomes
+"supported" by registration of a suffix alone.
+
+### Portable browser / Node APIs
+
+```ts
+import { createIAMSceneFormatRegistry } from '@inneranimalmedia/iamscene';
+
+const registry = createIAMSceneFormatRegistry();
+const descriptor = registry.identify('warehouse.glb');
+console.log(descriptor.operations); // four independently reported operations
+
+const imported = await registry.import('warehouse.glb', originalGlb, {
+  id: 'warehouse',
+  assetUri: './warehouse.glb',
+});
+// Consumer persists imported.document and keeps originalGlb at assetUri.
+
+// STL/OBJ/PLY have no reliable built-in distance unit. Supply it explicitly.
+const mesh = await registry.import('bracket.stl', stlBytes, {
+  id: 'bracket', assetUri: './bracket.stl', sourceUnits: 'mm',
+});
+// Persist EVERY mesh.generatedFiles entry (GLB + .iamgeometry) next to the scene.
+// The source file stays independently linked and is never silently replaced.
+
+// Live references re-resolve bytes through the caller's authorized storage API.
+const original = await registry.reference('r2-assets/model.usdz', usdzBytes);
+const refreshed = await registry.refreshReference(original, resolveFromAuthorizedStorage);
+console.log(refreshed.changed, refreshed.reference.sha256);
+```
+
+For optional native CAD/BIM exports **on a machine where the actual executable
+is available**, use `createIAMSceneNativeFormatRegistry({ binary })` from
+`@inneranimalmedia/iamscene/node`. It checks the real OCCT `--doctor` receipt
+before registering STEP, BRep and IFC exporters. Browser-only consumers do not
+load or require any native binary; users are never forced to have FreeCAD or
+Blender installed.
+
+### CLI: inspect actual capabilities and verify real files
+
+```sh
+iamscene formats
+# Native exports are advertised only after a successful executable doctor:
+iamscene formats --binary /path/to/agentsam-occt
+
+iamscene verify ./scene.iamscene.json
+iamscene verify ./assembly.glb
+iamscene convert ./bracket.stl --units mm --out ./bracket.iamscene.json
+iamscene export ./wall.iamscene.json --out ./wall.ifc --binary /path/to/agentsam-occt
+```
+
+`verify` emits a structured JSON receipt with source SHA-256, actual import
+status, explicit warnings and (if available) semantic round-trip evidence.
+A referenced but unimplemented format reports `semanticImport: unavailable`
+and exits with status `2` (not false success). Conversion refuses to overwrite
+an existing destination. The source is never replaced. Native exports return
+bytes only after the OCCT executable has produced a checked artifact.
+
+For CI and release acceptance, run `AGENTSAM_OCCT_BIN=/absolute/occt npm test`
+from `packages/iamscene`. The native test is skipped only when no test engine
+was supplied; browser/portable tests never require OCCT. Each new importer and
+exporter must add a real fixture and a loss-aware round-trip or format-specific
+export check before its capability is advertised.

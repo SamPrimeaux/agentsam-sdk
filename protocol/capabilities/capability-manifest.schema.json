@@ -4,31 +4,119 @@
   "title": "AgentSam capability manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "package", "capabilities"],
+  "required": [
+    "schema_version",
+    "package",
+    "capabilities"
+  ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "package": { "type": "string", "minLength": 1 },
+    "schema_version": {
+      "const": 1
+    },
+    "package": {
+      "type": "string",
+      "minLength": 1
+    },
     "capabilities": {
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["id", "kind", "version", "domain", "runtime", "description", "deterministic", "model_required", "side_effects", "status"],
+        "required": [
+          "id",
+          "kind",
+          "version",
+          "domain",
+          "runtime",
+          "description",
+          "deterministic",
+          "model_required",
+          "side_effects",
+          "status"
+        ],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]+$" },
-          "kind": { "enum": ["capability", "agent_primitive"] },
-          "version": { "type": "integer", "minimum": 1 },
-          "domain": { "type": "string", "minLength": 1 },
-          "runtime": { "type": "string", "minLength": 1 },
-          "package": { "type": "string" },
-          "export": { "type": "string" },
-          "cli": { "type": "string" },
-          "description": { "type": "string", "minLength": 1 },
-          "deterministic": { "type": "boolean" },
-          "model_required": { "type": "boolean" },
-          "side_effects": { "type": "string" },
-          "input_schema": { "type": "string" },
-          "output_schema": { "type": "string" },
-          "status": { "enum": ["stable", "experimental", "deprecated"] }
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]+$"
+          },
+          "kind": {
+            "enum": [
+              "capability",
+              "agent_primitive"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runtime": {
+            "type": "string",
+            "minLength": 1
+          },
+          "package": {
+            "type": "string"
+          },
+          "export": {
+            "type": "string"
+          },
+          "cli": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deterministic": {
+            "type": "boolean"
+          },
+          "model_required": {
+            "type": "boolean"
+          },
+          "side_effects": {
+            "type": "string"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "stable",
+              "experimental",
+              "deprecated"
+            ]
+          },
+          "api_only": {
+            "type": "boolean",
+            "description": "SDK API discovery; no implied host handler or agent-callable authority."
+          },
+          "contract": {
+            "type": "string",
+            "description": "Optional portable SDK contract vocabulary ID."
+          },
+          "package_subpath": {
+            "type": "string",
+            "description": "Declared package export subpath; package remains the canonical package name."
+          }
         }
       }
     }

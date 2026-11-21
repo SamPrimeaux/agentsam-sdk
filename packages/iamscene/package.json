@@ -20,6 +20,7 @@
       "import": "./dist/src/node.js"
     },
     "./schema": "./schema/iamscene.v1.schema.json",
+    "./geometry-schema": "./schema/iamgeometry.v1.schema.json",
     "./package.json": "./package.json",
     "./browser": {
       "types": "./dist/src/browser.d.ts",

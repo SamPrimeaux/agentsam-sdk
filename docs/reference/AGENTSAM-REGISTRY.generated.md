@@ -9,12 +9,12 @@
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
 | `src/cli/command-catalog.js` | 80 | Registered top-level CLI command entries |
-| `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
+| `protocol/capabilities/manifest.json` | 88 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
 | `packages/catalog/generated/packages.json` | 55 | Package inventory rows (not npm publication proof) |
 
-Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Host binding and approval remain separate.
+Manifest status: 56 stable, 32 experimental, 16 explicitly non-deterministic. Host binding and approval remain separate.
 
 ## CLI command authority
 
@@ -28,7 +28,7 @@ Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Ho
 | `agentsam billing` | runtime | Billing account relationships (not --billing-project) |
 | `agentsam brand` | work | Deterministic brand intelligence |
 | `agentsam cad` | work | CAD: project tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build |
-| `agentsam capabilities` | create | Inspect capability contracts |
+| `agentsam capabilities` | create | Inspect capability contracts, including experimental and package-only APIs |
 | `agentsam cheat-sheet` | start | Organized command groups (gcloud-like) |
 | `agentsam choose` | start | Choose an execution runtime from explicit goals |
 | `agentsam cloudflare` | runtime | Wrangler reads + Worker CPU profiles |
@@ -134,6 +134,12 @@ Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Ho
 | `cloudflare.wrangler.native` | cloudflare | capability | experimental | no | `network-read` | `agentsam cloudflare run <command>` |
 | `context.resolve` | agent | capability | experimental | yes | `none` | — |
 | `deploy.receipt` | delivery | capability | stable | yes | `local-state` | `agentsam deploy-receipt capture` |
+| `iamscene.format.export` | scene-interchange | capability | experimental | yes | `none` | — |
+| `iamscene.format.import` | scene-interchange | capability | experimental | yes | `none` | — |
+| `iamscene.format.list` | scene-interchange | capability | experimental | yes | `none` | — |
+| `iamscene.format.reference` | scene-interchange | capability | experimental | yes | `none` | — |
+| `iamscene.format.round-trip` | scene-interchange | capability | experimental | yes | `none` | — |
+| `iamscene.native.export` | scene-interchange | capability | experimental | no | `local_write` | — |
 | `identity.init` | app | capability | stable | yes | `filesystem` | `agentsam identity init` |
 | `knowledge.index` | repository | capability | stable | yes | `local-state` | `agentsam index run` |
 | `knowledge.search` | repository | capability | stable | yes | `none` | `agentsam search "query"` |
@@ -233,7 +239,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `agentsam-connector-cloudflare` | `@inneranimalmedia/agentsam-connector-cloudflare` | needs-review | Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not aff… |
 | `agentsam-content` | `@inneranimalmedia/agentsam-content` | needs-review | Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContent… |
 | `agentsam-content-studio` | `@inneranimalmedia/agentsam-content-studio` | needs-review | Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRu… |
-| `agentsam-contracts` | `@inneranimalmedia/agentsam-contracts` | needs-review | Single portable source of truth for AgentSam operation, tool, authority, provider, event, hook, execution, identit… |
+| `agentsam-contracts` | `@inneranimalmedia/agentsam-contracts` | needs-review | Portable contracts for AgentSam operations, tools, authority, providers, workspaces, and scene-format capability/r… |
 | `agentsam-database-editor` | `@inneranimalmedia/agentsam-database-editor` | active | Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashbo… |
 | `agentsam-desktop-shell` | `@inneranimalmedia/agentsam-desktop-shell` | needs-review | Tauri desktop application and downloadable AgentSam Local Studio .app/.dmg packaging, including native bridges, bu… |
 | `agentsam-docs-theme` | `@inneranimalmedia/agentsam-docs-theme` | needs-review | Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery). |
@@ -271,7 +277,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `copro-templates` | `@inneranimalmedia/copro-templates` | needs-review | Structured CoPro creative template contracts for canvas, slots, track skeletons, captions, transitions, audio cues… |
 | `copro-timeline` | `@inneranimalmedia/copro-timeline` | needs-review | Headless CoPro timeline projection, ordering, duration, and viewport math. |
 | `copro-ui` | `@inneranimalmedia/copro-ui` | needs-review | Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, … |
-| `iamscene` | `@inneranimalmedia/iamscene` | needs-review | Portable editable .iamscene.json format, deterministic scene authoring and animation runtime, Three.js presentatio… |
+| `iamscene` | `@inneranimalmedia/iamscene` | needs-review | Native editable IAMScene authoring plus separately reusable IAMGeometry assets, glTF/GLB and triangle-mesh interch… |
 | `primetech-procedures` | `@inneranimalmedia/primetech-procedures` | classified | Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset in… |
 | `theme-contract` | `@inneranimalmedia/theme-contract` | needs-review | Portable provider-neutral theme preview registry and composition contracts |
 | `theme-plain-jane` | `@inneranimalmedia/theme-plain-jane` | needs-review | Read-only editorial journal and photography CMS starter with externally editable manifest. |

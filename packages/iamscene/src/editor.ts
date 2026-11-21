@@ -58,6 +58,17 @@ export class SceneEditor {
     });
   }
 
+  /** Swap presentation geometry without replacing the node or its transforms/history. */
+  setNodeGeometryAsset(id: string, assetRef: string): SceneEditorSnapshot {
+    return this.transact(draft => {
+      const node = draft.scene.nodes.find(item => item.id === id);
+      if (!node || node.kind !== 'mesh') throw new Error(`iamscene_mesh_node_not_found:${id}`);
+      if (!draft.assets.some(asset => asset.id === assetRef))
+        throw new Error(`iamscene_asset_not_found:${assetRef}`);
+      node.assetRef = assetRef;
+    });
+  }
+
   setNodeTransform(id: string, transform: SceneTransform): SceneEditorSnapshot {
     return this.updateNode(id, { transform: structuredClone(transform) });
   }

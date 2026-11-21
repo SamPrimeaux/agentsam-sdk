@@ -164,18 +164,18 @@ export async function runCapabilities(argv = []) {
     return rows;
   }
   if (argv.includes('--help')) {
-    console.log('agentsam capabilities [capability-id] [--json]');
+    console.log('agentsam capabilities [capability-id] [--all] [--json]');
     console.log('agentsam capabilities --inventory [--commands|--packages] [--search <text>] [--json]');
     return null;
   }
-  const id = opts.positionals[0] || '';
+  const id = opts.positionals.find(value => value !== '--all') || '';
   const result = id ? getCapability(id) : getCapabilityManifest();
   if (id && !result) throw new Error(`unknown_capability:${id}`);
   if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   else if (id) console.log(`${result.id}\n  ${result.description}\n  cli: ${result.cli || '(library only)'}\n  model required: ${result.model_required ? 'yes' : 'no'}`);
   else {
-    console.log('\nAgentSam deterministic capabilities\n');
-    for (const row of listCapabilities()) console.log(`  ${row.id.padEnd(26)} ${row.description}`);
+    console.log(argv.includes('--all') ? '\nAgentSam declared capabilities (including experimental package APIs)\n' : '\nAgentSam stable capabilities\n');
+    for (const row of listCapabilities({status:argv.includes('--all') ? null : 'stable'})) console.log(`  ${row.id.padEnd(26)} ${row.description}${row.api_only ? ' (package API; no host handler)' : ''}`);
     console.log('');
   }
   return result;

@@ -7,7 +7,7 @@
   ],
   "counts": {
     "commands": 80,
-    "capabilities": 82,
+    "capabilities": 88,
     "packages": 55
   },
   "commands": [
@@ -252,10 +252,13 @@
     {
       "id": "capabilities",
       "aliases": [],
-      "summary": "Inspect capability contracts",
+      "summary": "Inspect capability contracts, including experimental and package-only APIs",
       "topic": "create",
       "usage": [
-        "agentsam capabilities"
+        "agentsam capabilities",
+        "agentsam capabilities --all",
+        "agentsam capabilities --inventory --search iamscene",
+        "agentsam capabilities iamscene.format.import --json"
       ],
       "operation": null
     },
@@ -1555,6 +1558,54 @@
       "cli": null,
       "agent_callable": "requires-handler-check",
       "status": "experimental"
+    },
+    {
+      "id": "iamscene.format.list",
+      "description": "List independently registered IAMScene file formats and their import, export, live-reference and round-trip availability. File-extension recognition is not proof of codec support.",
+      "package": "@inneranimalmedia/iamscene",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "iamscene.format.import",
+      "description": "Import a supported file into a native IAMScene document or IAMGeometry manifest through an explicitly registered adapter; unsupported formats fail closed. Standalone npm package API, not a hosted agent tool.",
+      "package": "@inneranimalmedia/iamscene",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "iamscene.format.export",
+      "description": "Export a supported native scene/geometry document through an explicitly registered format adapter; supported output depends on format and source provenance. Standalone package API only.",
+      "package": "@inneranimalmedia/iamscene",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "iamscene.format.reference",
+      "description": "Verify the identity of externally supplied source bytes with SHA-256 and detect changes to live-linked assets. This does not imply semantic import, editability or renderability.",
+      "package": "@inneranimalmedia/iamscene",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "iamscene.format.round-trip",
+      "description": "Run an adapter-specific semantic round-trip check and report preserved, lost and unsupported fields separately. Only registered formats can be checked; this is not universal fidelity.",
+      "package": "@inneranimalmedia/iamscene",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "iamscene.native.export",
+      "description": "Opt-in Node/desktop OCCT STEP, BREP and geometric IFC4 export, after an installed native engine passes doctor. Does not provide import, full BIM semantics or universal conversion.",
+      "package": "@inneranimalmedia/iamscene",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
     }
   ],
   "packages": [
@@ -2132,16 +2183,30 @@
       "readiness": "unverified"
     },
     {
-      "avoid_when": [],
+      "avoid_when": [
+        "Using contracts declarations as evidence that a codec, importer, native runtime or hosted agent dispatcher exists.",
+        "Duplicating IAMScene file-format registration, actual geometry operations, or tenant/project persistence in the contracts package."
+      ],
       "catalog_status": "needs-review",
       "class": "package",
       "commands": [],
       "evidence": {
         "directory": "packages/agentsam-contracts",
         "purpose_source": "package-manifest-description",
-        "readme": "packages/agentsam-contracts/README.md"
+        "readme": "packages/agentsam-contracts/README.md",
+        "scene_format_contract": "packages/agentsam-contracts/src/scene-format.ts",
+        "scene_format_schema": "packages/agentsam-contracts/schemas/scene-format.v1.schema.json",
+        "tests": [
+          "packages/agentsam-contracts/test/scene-format.test.mjs",
+          "packages/agentsam-contracts/test/design-workspace.test.mjs"
+        ]
       },
-      "execution_domains": [],
+      "execution_domains": [
+        "browser",
+        "node",
+        "desktop",
+        "headless"
+      ],
       "id": "agentsam-contracts",
       "install": [
         {
@@ -2155,25 +2220,33 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-contracts",
-      "purpose": "Single portable source of truth for AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts.",
+      "purpose": "Portable contracts for AgentSam operations, tools, authority, providers, workspaces, and scene-format capability/round-trip receipts; does not implement codecs, renderers, authorization or asset storage.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-contracts",
         "public_claim": true
       },
       "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
+        "status"
       ],
       "schema": "agentsam.package.v1",
       "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "Single portable source of truth for AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts."
+      "topics": [
+        "contracts",
+        "resource-scope",
+        "design-workspace",
+        "scene-format",
+        "interchange",
+        "tools",
+        "authority",
+        "providers",
+        "events"
       ],
-      "version": "2.6.15",
+      "use_when": [
+        "Type-checking cross-application scene-format operation availability and loss-aware round-trip receipts without importing a scene engine.",
+        "Sharing AgentSam tool, agent, event, workspace, context and resource-scope contracts across independently packaged products."
+      ],
+      "version": "2.6.17",
       "readiness": "unverified"
     },
     {
@@ -3872,20 +3945,34 @@
     },
     {
       "avoid_when": [
-        "Replacing canonical CAD project history or CAD Creator project authority",
-        "Using a rendered GLB as the only editable source for a scene"
+        "Claiming .blend/.dwg/.usd/.ifc import or other reference-only extensions are semantically editable or exportable without registered and tested adapters.",
+        "Treating an integrity-checked live reference as proof of parse, render, edit or semantic round-trip support.",
+        "Replacing CAD Creator project authority, OCCT parametric modeling source or CoPro media timeline authority.",
+        "Assuming a host has a native OCCT binary, Node.js, Blender or FreeCAD installed without an explicit runtime probe.",
+        "Using a flattened GLB as the sole authoritative editable source for a scene or BIM project."
       ],
       "catalog_status": "needs-review",
       "class": "package",
-      "commands": [],
+      "commands": [
+        "iamscene convert <file> --out <scene.iamscene.json>",
+        "iamscene export <scene.iamscene.json> --out <file.step|file.brep|file.ifc> --binary <occt-path>",
+        "iamscene formats",
+        "iamscene verify <file>"
+      ],
       "evidence": {
         "directory": "packages/iamscene",
+        "format_registry": "packages/iamscene/src/format-registry.ts",
+        "geometry_schema": "packages/iamscene/schema/iamgeometry.v1.schema.json",
         "reference_scene": "packages/iamscene/examples/retrofuturistic-circuit-loop/retrofuturistic-circuit-loop.iamscene.json",
         "schema": "packages/iamscene/schema/iamscene.v1.schema.json",
         "tests": [
+          "packages/iamscene/test/animation.test.mjs",
           "packages/iamscene/test/document.test.mjs",
           "packages/iamscene/test/editor.test.mjs",
-          "packages/iamscene/test/animation.test.mjs",
+          "packages/iamscene/test/format-cli.test.mjs",
+          "packages/iamscene/test/format-registry.test.mjs",
+          "packages/iamscene/test/geometry.test.mjs",
+          "packages/iamscene/test/native-format-adapters.test.mjs",
           "packages/iamscene/test/occt.test.mjs"
         ]
       },
@@ -3896,6 +3983,20 @@
         "web",
         "headless"
       ],
+      "format_registry": {
+        "authority": "packages/iamscene/src/format-registry.ts",
+        "contract": "agentsam.scene-format.v1",
+        "identity_authority": "contracts/source-types.v2.json",
+        "native_package_export": "createIAMSceneNativeFormatRegistry",
+        "operations": [
+          "import",
+          "export",
+          "live-reference",
+          "round-trip"
+        ],
+        "package_export": "createIAMSceneFormatRegistry",
+        "support": "runtime-adapter-detection-not-file-extension"
+      },
       "id": "iamscene",
       "install": [
         {
@@ -3910,7 +4011,7 @@
         "json"
       ],
       "name": "@inneranimalmedia/iamscene",
-      "purpose": "Portable editable .iamscene.json format, deterministic scene authoring and animation runtime, Three.js presentation, and required AgentSam OCCT geometry pipeline.",
+      "purpose": "Native editable IAMScene authoring plus separately reusable IAMGeometry assets, glTF/GLB and triangle-mesh interchange, four independent format operations, optional verified OCCT exports, scene animation and browser presentation. Not a universal format converter or another CAD kernel.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/iamscene",
@@ -3920,18 +4021,34 @@
       "status": "in-development",
       "topics": [
         "3d",
-        "scene-graph",
         "animation",
-        "gltf",
-        "occt",
-        "threejs",
         "authoring",
+        "format-registry",
+        "gltf",
+        "iamgeometry",
+        "ifc4",
+        "interchange",
+        "mesh-import",
+        "native-export",
+        "occt",
+        "round-trip",
+        "scene-graph",
+        "source-integrity",
+        "threejs",
         "visualization"
       ],
       "use_when": [
-        "Creating, editing, validating, versioning, animating and showcasing portable 3D scenes in any supported JavaScript application",
-        "Using .iamscene.json as the editable source of truth and GLTF/GLB as interchange or presentation assets",
-        "Building precise scene geometry through the canonical @inneranimalmedia/agentsam-occt engine"
+        "Authoring and versioning editable scenes and individually addressable geometry assets without losing native source references.",
+        "Discovering true per-format import, export, live-reference and round-trip capabilities through createIAMSceneFormatRegistry().",
+        "Importing glTF/GLB with source-backed node hierarchy and limited editable material properties, or importing STL/OBJ/PLY triangles into linked .iamgeometry plus GLB representations.",
+        "Exporting exact geometry as STEP/BREP and geometric IFC4 through a verified optional OCCT native executable on an authorized host.",
+        "Integrating IAMScene scenes into browser/Node editors while preserving imported source files and reporting conversion losses.",
+        "List independently registered IAMScene file formats and their import, export, live-reference and round-trip availability. File-extension recognition is not proof of codec support.",
+        "Import a supported file into a native IAMScene document or IAMGeometry manifest through an explicitly registered adapter; unsupported formats fail closed. Standalone npm package API, not a hosted agent tool.",
+        "Export a supported native scene/geometry document through an explicitly registered format adapter; supported output depends on format and source provenance. Standalone package API only.",
+        "Verify the identity of externally supplied source bytes with SHA-256 and detect changes to live-linked assets. This does not imply semantic import, editability or renderability.",
+        "Run an adapter-specific semantic round-trip check and report preserved, lost and unsupported fields separately. Only registered formats can be checked; this is not universal fidelity.",
+        "Opt-in Node/desktop OCCT STEP, BREP and geometric IFC4 export, after an installed native engine passes doctor. Does not provide import, full BIM semantics or universal conversion."
       ],
       "version": "0.1.3",
       "review_required": [],

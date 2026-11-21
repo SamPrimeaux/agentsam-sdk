@@ -312,7 +312,7 @@
     "verify:ui-quality:source": "node scripts/ui-quality/check-source.mjs --changed-from origin/main",
     "docs:registry": "node scripts/registry/generate-docs.mjs",
     "docs:registry:check": "node scripts/registry/generate-docs.mjs --check",
-    "verify:registry": "node scripts/registry/generate-docs.mjs --check && node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && node --test test/registry/*.test.mjs && python3 -m unittest discover -s scripts/schema-registry -p 'test_*.py'",
+    "verify:registry": "node scripts/registry/generate-docs.mjs --check && node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/*.test.mjs && python3 -m unittest discover -s scripts/schema-registry -p 'test_*.py'",
     "catalog:check": "python3 scripts/catalog/build_catalog.py --repo . --check",
     "test": "node scripts/with-ephemeral-tmpdir.mjs -- npm run test:run",
     "test:brand": "npm --prefix packages/agentsam-brand test",
@@ -411,9 +411,10 @@
     "test:cli:run": "node --test test/cli/*.test.mjs",
     "test:integration:mock:run": "npm run build -w @inneranimalmedia/agentsam-provider-completeful && node scripts/run-sdk-integration-tests.mjs && npm run verify:cms:canonical",
     "test:terminal:mock:run": "node --test test/terminal/*.test.mjs",
-    "verify:run": "npm run brand:check && npm run release:train:check && npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
+    "verify:run": "npm run brand:check && npm run release:train:check && npm run errors:check && npm run proto:check && npm run verify:scene-formats && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
     "verify:release:run": "npm run verify:widgets:portable && npm run verify && npm run verify:packages:public && npm run verify:knowledge-package && npm run test:python && npm run security:release",
-    "prepublishOnly:run": "node scripts/prepublish-gate.mjs"
+    "prepublishOnly:run": "node scripts/prepublish-gate.mjs",
+    "verify:scene-formats": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-format-contract-alignment.test.mjs && npm --prefix packages/iamscene test"
   },
   "engines": {
     "node": ">=22"

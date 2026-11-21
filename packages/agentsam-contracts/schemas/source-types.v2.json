@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.inneranimalmedia.com/contracts/source-types.v2.schema.json",
   "schema": "agentsam.source-types.v2",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Universal AgentSam source-kind and file-format identity catalog. Presence in this catalog does not imply that an installed runtime can import, preview, convert or export the format.",
   "detectionPolicy": {
     "extensionMatching": "longest-suffix",
@@ -189,6 +189,10 @@
     {
       "id": "font",
       "label": "Font and typography files"
+    },
+    {
+      "id": "model.geometry",
+      "label": "Reusable 3D geometry sources, assemblies and representations"
     },
     {
       "id": "model.mesh",
@@ -3971,6 +3975,49 @@
       "proprietary": false
     },
     {
+      "id": "model.iamscene",
+      "label": "InnerAnimalMedia editable IAMScene project",
+      "family": "model.scene",
+      "kind": "native-project",
+      "extensions": [
+        ".iamscene",
+        ".iamscene.json"
+      ],
+      "mediaTypes": [
+        "application/vnd.inneranimalmedia.iamscene+json"
+      ],
+      "identificationSignals": [
+        "extension",
+        "media-type",
+        "content",
+        "application-context"
+      ],
+      "proprietary": true,
+      "vendor": "InnerAnimalMedia",
+      "notes": "Native editable scene document, identified by format=iamscene and a supported formatVersion. Extension and media type are hints, not proof of parse/edit/export support."
+    },
+    {
+      "id": "model.iamgeometry",
+      "label": "InnerAnimalMedia reusable IAMGeometry asset manifest",
+      "family": "model.geometry",
+      "kind": "container",
+      "extensions": [
+        ".iamgeometry"
+      ],
+      "mediaTypes": [
+        "application/vnd.inneranimalmedia.iamgeometry+json"
+      ],
+      "identificationSignals": [
+        "extension",
+        "media-type",
+        "content",
+        "application-context"
+      ],
+      "proprietary": true,
+      "vendor": "InnerAnimalMedia",
+      "notes": "Versioned reusable geometry manifest linking authoritative source and optional render representations; it is not itself a mesh or BRep kernel."
+    },
+    {
       "id": "model.glb",
       "label": "glTF binary model",
       "family": "model.mesh",
@@ -4585,6 +4632,26 @@
       ],
       "proprietary": false,
       "notes": "Surface and curve exchange; do not assume feature history is preserved."
+    },
+    {
+      "id": "cad.opencascade-brep",
+      "label": "OpenCascade BRep exact geometry",
+      "family": "cad",
+      "kind": "exchange",
+      "extensions": [
+        ".brep"
+      ],
+      "mediaTypes": [
+        "application/vnd.opencascade.brep"
+      ],
+      "identificationSignals": [
+        "extension",
+        "media-type",
+        "content",
+        "application-context"
+      ],
+      "proprietary": false,
+      "notes": "Exact geometric boundary representation; does not by itself encode complete BIM semantics or parametric project history."
     },
     {
       "id": "cad.acis-sat",
@@ -8397,6 +8464,24 @@
         "application-context"
       ],
       "proprietary": false
+    },
+    {
+      "id": "media.otioz",
+      "label": "OpenTimelineIO compressed timeline archive",
+      "family": "video",
+      "kind": "archive",
+      "extensions": [
+        ".otioz"
+      ],
+      "mediaTypes": [],
+      "identificationSignals": [
+        "extension",
+        "container",
+        "content",
+        "application-context"
+      ],
+      "proprietary": false,
+      "notes": "Editorial interchange archive; identifying an OTIOZ does not grant video decoding or timeline editing."
     },
     {
       "id": "media.edl",

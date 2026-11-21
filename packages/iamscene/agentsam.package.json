@@ -18,7 +18,7 @@
     "web",
     "headless"
   ],
-  "purpose": "Portable editable .iamscene.json format, deterministic scene authoring and animation runtime, Three.js presentation, and required AgentSam OCCT geometry pipeline.",
+  "purpose": "Native editable IAMScene authoring plus separately reusable IAMGeometry assets, glTF/GLB and triangle-mesh interchange, four independent format operations, optional verified OCCT exports, scene animation and browser presentation. Not a universal format converter or another CAD kernel.",
   "install": [
     {
       "type": "npm",
@@ -32,23 +32,41 @@
     "public_claim": true
   },
   "use_when": [
-    "Creating, editing, validating, versioning, animating and showcasing portable 3D scenes in any supported JavaScript application",
-    "Using .iamscene.json as the editable source of truth and GLTF/GLB as interchange or presentation assets",
-    "Building precise scene geometry through the canonical @inneranimalmedia/agentsam-occt engine"
+    "Authoring and versioning editable scenes and individually addressable geometry assets without losing native source references.",
+    "Discovering true per-format import, export, live-reference and round-trip capabilities through createIAMSceneFormatRegistry().",
+    "Importing glTF/GLB with source-backed node hierarchy and limited editable material properties, or importing STL/OBJ/PLY triangles into linked .iamgeometry plus GLB representations.",
+    "Exporting exact geometry as STEP/BREP and geometric IFC4 through a verified optional OCCT native executable on an authorized host.",
+    "Integrating IAMScene scenes into browser/Node editors while preserving imported source files and reporting conversion losses."
   ],
   "avoid_when": [
-    "Replacing canonical CAD project history or CAD Creator project authority",
-    "Using a rendered GLB as the only editable source for a scene"
+    "Claiming .blend/.dwg/.usd/.ifc import or other reference-only extensions are semantically editable or exportable without registered and tested adapters.",
+    "Treating an integrity-checked live reference as proof of parse, render, edit or semantic round-trip support.",
+    "Replacing CAD Creator project authority, OCCT parametric modeling source or CoPro media timeline authority.",
+    "Assuming a host has a native OCCT binary, Node.js, Blender or FreeCAD installed without an explicit runtime probe.",
+    "Using a flattened GLB as the sole authoritative editable source for a scene or BIM project."
   ],
-  "commands": [],
+  "commands": [
+    "iamscene formats",
+    "iamscene verify <file>",
+    "iamscene convert <file> --out <scene.iamscene.json>",
+    "iamscene export <scene.iamscene.json> --out <file.step|file.brep|file.ifc> --binary <occt-path>"
+  ],
   "topics": [
     "3d",
-    "scene-graph",
     "animation",
-    "gltf",
-    "occt",
-    "threejs",
     "authoring",
+    "format-registry",
+    "gltf",
+    "iamgeometry",
+    "ifc4",
+    "interchange",
+    "mesh-import",
+    "native-export",
+    "occt",
+    "round-trip",
+    "scene-graph",
+    "source-integrity",
+    "threejs",
     "visualization"
   ],
   "evidence": {
@@ -56,10 +74,30 @@
     "schema": "packages/iamscene/schema/iamscene.v1.schema.json",
     "reference_scene": "packages/iamscene/examples/retrofuturistic-circuit-loop/retrofuturistic-circuit-loop.iamscene.json",
     "tests": [
+      "packages/iamscene/test/animation.test.mjs",
       "packages/iamscene/test/document.test.mjs",
       "packages/iamscene/test/editor.test.mjs",
-      "packages/iamscene/test/animation.test.mjs",
+      "packages/iamscene/test/format-cli.test.mjs",
+      "packages/iamscene/test/format-registry.test.mjs",
+      "packages/iamscene/test/geometry.test.mjs",
+      "packages/iamscene/test/native-format-adapters.test.mjs",
       "packages/iamscene/test/occt.test.mjs"
-    ]
+    ],
+    "geometry_schema": "packages/iamscene/schema/iamgeometry.v1.schema.json",
+    "format_registry": "packages/iamscene/src/format-registry.ts"
+  },
+  "format_registry": {
+    "contract": "agentsam.scene-format.v1",
+    "authority": "packages/iamscene/src/format-registry.ts",
+    "package_export": "createIAMSceneFormatRegistry",
+    "native_package_export": "createIAMSceneNativeFormatRegistry",
+    "operations": [
+      "import",
+      "export",
+      "live-reference",
+      "round-trip"
+    ],
+    "support": "runtime-adapter-detection-not-file-extension",
+    "identity_authority": "contracts/source-types.v2.json"
   }
 }

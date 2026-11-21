@@ -22,7 +22,7 @@ Authority: `src/cli/command-catalog.js` (a command being listed does not guarant
 | `agentsam plugins` | — | Install and manage AgentSam plugins |
 | `agentsam plugin` | — | Inspect and verify governed plugin products |
 | `agentsam install` | — | Install an explicitly selected plugin |
-| `agentsam capabilities` | — | Inspect capability contracts |
+| `agentsam capabilities` | — | Inspect capability contracts, including experimental and package-only APIs |
 | `agentsam skills` | skill | List or load portable skill instructions |
 | `agentsam init` | — | Knowledge setup or local scaffold |
 | `agentsam dockerize` | — | Build/run supported containers |
@@ -112,7 +112,7 @@ Authority: `src/cli/command-catalog.js` (a command being listed does not guarant
 | `agentsam plan` | — | Durable project-local work plans + domain plans |
 | `agentsam security` | sca | Dependency + trust-boundary scan |
 | `agentsam merkle` | — | File integrity snapshots and explorer |
-| `agentsam cad` | — | CAD: cad.project.v1 tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build |
+| `agentsam cad` | — | CAD: project tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build |
 | `agentsam robotics` | — | SAM Robotics: robotics.scene.inspect/object.locate/grasp.plan/motion.plan/validate/simulate/execute/verify, robot.home, execution.cancel (model: never) |
 | `agentsam recon` | — | Bounded-worker packets + finding reports |
 | `agentsam autorag` | — | AutoRAG configure/probe helpers |
@@ -243,7 +243,7 @@ Authority: `packages/catalog/generated/packages.json`. `catalog_status` and `sta
 | `@inneranimalmedia/agentsam-connector-cloudflare` | Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not affiliated with Cloudflare, Inc.. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-content` | Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-content-studio` | Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRuntime; the UI never knows their names. | needs-review | unknown |
-| `@inneranimalmedia/agentsam-contracts` | Single portable source of truth for AgentSam operation, tool, authority, provider, event, hook, execution, identity and repository contracts. | needs-review | unknown |
+| `@inneranimalmedia/agentsam-contracts` | Portable contracts for AgentSam operations, tools, authority, providers, workspaces, and scene-format capability/round-trip receipts; does not implement codecs, renderers, authorization or asset storage. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-database-editor` | Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase. | active | active |
 | `@inneranimalmedia/agentsam-desktop-shell` | Tauri desktop application and downloadable AgentSam Local Studio .app/.dmg packaging, including native bridges, bundled frontend and agentsamd sidecar. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-docs-theme` | Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery). | needs-review | unknown |
@@ -280,7 +280,7 @@ Authority: `packages/catalog/generated/packages.json`. `catalog_status` and `sta
 | `@inneranimalmedia/copro-templates` | Structured CoPro creative template contracts for canvas, slots, track skeletons, captions, transitions, audio cues, styles, and generation slots. | needs-review | unknown |
 | `@inneranimalmedia/copro-timeline` | Headless CoPro timeline projection, ordering, duration, and viewport math. | needs-review | unknown |
 | `@inneranimalmedia/copro-ui` | Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, and responsive desktop composition. | needs-review | unknown |
-| `@inneranimalmedia/iamscene` | Portable editable .iamscene.json format, deterministic scene authoring and animation runtime, Three.js presentation, and required AgentSam OCCT geometry pipeline. | needs-review | in-development |
+| `@inneranimalmedia/iamscene` | Native editable IAMScene authoring plus separately reusable IAMGeometry assets, glTF/GLB and triangle-mesh interchange, four independent format operations, optional verified OCCT exports, scene animation and browser presentation. Not a univ | needs-review | in-development |
 | `@inneranimalmedia/primetech-procedures` | Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset inventory, run receipts, output hashes, and performance evidence without creating a second runtime or database registry. | classified | experimental-private-workspace |
 | `@inneranimalmedia/theme-contract` | Portable provider-neutral theme preview registry and composition contracts | needs-review | unknown |
 | `@inneranimalmedia/theme-plain-jane` | Read-only editorial journal and photography CMS starter with externally editable manifest. | needs-review | review |

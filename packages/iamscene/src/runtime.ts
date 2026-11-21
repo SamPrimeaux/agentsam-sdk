@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createThreeViewport, type ThreeViewportHandle } from '@inneranimalmedia/agentsam-3d-viewer';
 import { sampleAnimation } from './animation.js';
+import { IAMGEOMETRY_MEDIA_TYPE, getIAMGeometryRender, parseIAMGeometry } from './geometry.js';
 import { assertValidSceneDocument } from './validate.js';
 import type { SceneAsset, SceneDocument, SceneMaterial, SceneNode } from './types.js';
 
@@ -34,6 +35,8 @@ export interface SceneRuntimeHandle {
   /** Drive a mesh's authored radial reveal from UI, scroll, or pointer interaction. */
   setRevealRadius(nodeId: string, radius: number): void;
   setPlaybackRate(rate: number): void;
+  /** Hot-swap one node's mesh asset without losing its transforms or animation target. */
+  swapGeometry(nodeId: string, asset: SceneAsset | string): Promise<void>;
   render(): void;
   dispose(): void;
 }
@@ -363,6 +366,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
   const paths = new Map<string, THREE.CatmullRomCurve3>();
   const pulseProgress = new Map<string, number>();
   const assetMap = new Map(document.assets.map(asset => [asset.id, asset]));
+  const meshModels = new Map<string, THREE.Object3D>();
   const baseUrl = resolveBaseUrl(document, options.assetBaseUrl);
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
@@ -386,17 +390,64 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
     parent.add(object);
   }
 
-  const loadAsset = async (asset: SceneAsset): Promise<THREE.Object3D> => {
-    const source = options.resolveAsset
+  const loadAsset = async (asset: SceneAsset, meshIndex?: number): Promise<THREE.Object3D> => {
+    let source = options.resolveAsset
       ? await options.resolveAsset(asset)
       : new URL(asset.uri, baseUrl).toString();
+    let assetUrl = new URL(asset.uri, baseUrl);
+    if (asset.mediaType === IAMGEOMETRY_MEDIA_TYPE || /\.iamgeometry(?:\?.*)?$/i.test(asset.uri)) {
+      // .iamgeometry is a lightweight manifest, NOT another rendering engine.
+      let bytes: ArrayBuffer;
+      if (typeof source === 'string' || source instanceof URL) {
+        assetUrl = new URL(source, baseUrl);
+        const response = await fetch(assetUrl);
+        if (!response.ok) throw new Error(`iamgeometry_fetch_failed:${response.status}`);
+        bytes = await response.arrayBuffer();
+      } else if (source instanceof Blob) {
+        bytes = await source.arrayBuffer();
+      } else {
+        bytes = asArrayBuffer(source);
+      }
+      const geometry = parseIAMGeometry(new Uint8Array(bytes));
+      const renderAsset = getIAMGeometryRender(geometry);
+      const renderUrl = new URL(renderAsset.uri, assetUrl);
+      const meshAsset: SceneAsset = {
+        id: `${asset.id}:${renderAsset.id}`,
+        uri: renderUrl.toString(),
+        mediaType: renderAsset.mediaType || (renderAsset.format === 'glb' ? 'model/gltf-binary' : 'model/gltf+json'),
+        role: 'presentation',
+        units: renderAsset.units === 'cm' || renderAsset.units === 'mm' ? renderAsset.units : 'm',
+        ...(renderAsset.sha256 ? { sha256: renderAsset.sha256 } : {}),
+      };
+      source = options.resolveAsset ? await options.resolveAsset(meshAsset) : renderUrl.toString();
+      assetUrl = renderUrl;
+    }
     const basePath = typeof source === 'string' || source instanceof URL
       ? new URL('.', source instanceof URL ? source : new URL(source, baseUrl)).toString()
-      : baseUrl.toString();
+      : new URL('.', assetUrl).toString();
     const gltf = typeof source === 'string' || source instanceof URL
       ? await loader.loadAsync(String(source))
       : await loader.parseAsync(await (source instanceof Blob ? source.arrayBuffer() : Promise.resolve(asArrayBuffer(source))), basePath);
+    // Imported glTF nodes bind to an individual mesh index. Never mount the
+    // entire GLB under every imported mesh node (duplicates all geometry).
+    if (meshIndex !== undefined) {
+      if (!Number.isInteger(meshIndex) || meshIndex < 0) throw new Error('iamscene_gltf_mesh_index_invalid');
+      const mesh = await gltf.parser.getDependency('mesh', meshIndex);
+      if (!mesh) throw new Error('iamscene_gltf_mesh_dependency_missing:' + meshIndex);
+      return mesh;
+    }
     return gltf.scene;
+  };
+
+  const prepareMesh = async (node: SceneNode, asset: SceneAsset): Promise<THREE.Object3D> => {
+    const binding = node.userData?.iamGltf as { meshIndex?: number } | undefined;
+    const model = await loadAsset(asset, binding?.meshIndex);
+    const material = node.materialRef ? materials.get(node.materialRef) : undefined;
+    if (node.materialRef && !material) throw new Error(`iamscene_material_not_found:${node.materialRef}`);
+    if (material) applyMaterial(model, material);
+    else applyAssetMaterials(model, materials);
+    model.userData.iamSceneNodeId = node.id;
+    return model;
   };
 
   const assetLoads: Promise<void>[] = [];
@@ -414,16 +465,15 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
         mesh.userData.iamSceneNodeId = node.id;
         mesh.renderOrder = node.renderOrder ?? 0;
         object.add(mesh);
+        meshModels.set(node.id, mesh);
       } else {
         if (!node.assetRef) throw new Error(`iamscene_mesh_asset_required:${node.id}`);
         const asset = assetMap.get(node.assetRef);
         if (!asset) throw new Error(`iamscene_asset_not_found:${node.assetRef}`);
         if (node.materialRef && !material) throw new Error(`iamscene_material_not_found:${node.materialRef}`);
-        assetLoads.push(loadAsset(asset).then(model => {
-          if (material) applyMaterial(model, material);
-          else applyAssetMaterials(model, materials);
-          model.userData.iamSceneNodeId = node.id;
+        assetLoads.push(prepareMesh(node, asset).then(model => {
           object.add(model);
+          meshModels.set(node.id, model);
         }));
       }
     } else if (node.kind === 'path') {
@@ -630,6 +680,30 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
       if (!objects.has(nodeId)) throw new Error(`iamscene_node_not_found:${nodeId}`);
       if (!Number.isFinite(radius) || radius < 0) throw new Error('iamscene_reveal_radius_invalid');
       applyTrack(nodeId, 'material.revealRadius', radius);
+      render();
+    },
+    async swapGeometry(nodeId: string, replacement: SceneAsset | string): Promise<void> {
+      const node = nodes.get(nodeId);
+      const target = objects.get(nodeId);
+      if (!node || node.kind !== 'mesh' || !target) throw new Error(`iamscene_mesh_node_not_found:${nodeId}`);
+      const asset = typeof replacement === 'string' ? assetMap.get(replacement) : replacement;
+      if (!asset) throw new Error(`iamscene_asset_not_found:${replacement}`);
+      const model = await prepareMesh(node, asset);
+      if (disposed) throw new Error('iamscene_runtime_disposed');
+      const previous = meshModels.get(nodeId);
+      target.add(model);
+      meshModels.set(nodeId, model);
+      if (previous) {
+        target.remove(previous);
+        previous.traverse(item => {
+          if (item instanceof THREE.Mesh) {
+            item.geometry.dispose();
+            const mats = Array.isArray(item.material) ? item.material : [item.material];
+            for (const mat of mats) mat.dispose();
+          }
+        });
+      }
+      if (typeof replacement !== 'string') assetMap.set(replacement.id, replacement);
       render();
     },
     setPlaybackRate(rate: number) {
