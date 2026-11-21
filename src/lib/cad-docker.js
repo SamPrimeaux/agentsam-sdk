@@ -5,13 +5,14 @@ import { fileURLToPath } from 'node:url';
 
 const sdkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CAD_SERVER_FILE = 'services/cad/server.py';
+const OCCT_NATIVE_FILES = Object.freeze(['CMakeLists.txt', 'main.cpp', 'engine.cpp', 'engine.hpp', 'sketch_solver.cpp', 'sketch_solver.hpp']);
 
 export const CAD_TOOLS = Object.freeze(['openscad', 'freecad', 'blender', 'ifc', 'media', 'occt']);
 
 // Pinned so every build, on any machine, gets the same toolchain. ifcopenshell 0.9.x wheels need a newer
 // glibc than Debian 12 ships; 0.8.4.post1 is the newest that imports on bookworm. The distro Node is too
 // old for current glTF tooling, so Node is installed from a checksum-verified tarball.
-export const CAD_PINS = Object.freeze({ ifcopenshell: '0.8.4.post1', ezdxf: '1.4.5', pymupdf: '1.28.2', pillow: '13.0.0', gltfTransformCli: '4.5.1', node: 'v20.20.2' });
+export const CAD_PINS = Object.freeze({ ifcopenshell: '0.8.4.post1', ezdxf: '1.4.5', pymupdf: '1.28.2', pillow: '13.0.0', gltfTransformCli: '4.5.1', node: 'v20.20.2', occt: '7.9.3', occtCommit: 'a016080bf6738d6aeae020badee4e888ad1540a5', boost: '1.84.0', boostSha256: 'cc4b893acf645c9d4b698e9a0f08ca8846aa5d6c68275c14c3e7949c24109454' });
 
 const APT_PACKAGES = Object.freeze({
   openscad: ['openscad', 'xvfb', 'xauth'],
@@ -19,7 +20,7 @@ const APT_PACKAGES = Object.freeze({
   blender: ['blender'],
   ifc: ['python3-venv', 'fonts-dejavu-core'],
   media: ['ffmpeg'],
-  occt: ['libocct-data-exchange-7.6', 'libocct-modeling-algorithms-7.6', 'libocct-modeling-data-7.6', 'libocct-foundation-7.6'],
+  occt: ['libfreetype6', 'libfontconfig1', 'libx11-6', 'libxext6'],
 });
 
 export function normalizeCadTools(input) {
@@ -73,7 +74,7 @@ export function cadDefaultResources(tools) {
 function runtimeDigest() {
   const digest = createHash('sha256');
   digest.update(CAD_SERVER_FILE).update('\0').update(fs.readFileSync(path.join(sdkRoot, CAD_SERVER_FILE))).update('\0');
-  for (const extra of ['services/cad/provision/install_node.py', 'packages/agentsam-occt/native/main.cpp', 'packages/agentsam-occt/native/CMakeLists.txt']) {
+  for (const extra of ['services/cad/provision/install_node.py', ...OCCT_NATIVE_FILES.map(file => `packages/agentsam-occt/native/${file}`)]) {
     const file = path.join(sdkRoot, extra);
     if (fs.existsSync(file)) digest.update(extra).update('\0').update(fs.readFileSync(file)).update('\0');
   }
@@ -104,18 +105,36 @@ export function generateCadDocker(opts = {}) {
     provision.push('COPY provision/install_node.py /tmp/install_node.py');
     provision.push(`RUN python3 /tmp/install_node.py ${CAD_PINS.node} /opt/node \\\n && PATH=/opt/node/bin:$PATH npm install -g --no-audit --no-fund @gltf-transform/cli@${CAD_PINS.gltfTransformCli} \\\n && rm -rf /tmp/install_node.py /root/.npm`);
   }
-  if (tools.includes('occt')) provision.push('COPY --from=occt-build /build/agentsam-occt /usr/local/bin/agentsam-occt');
+  if (tools.includes('occt')) {
+    provision.push('COPY --from=occt-build /opt/occt/lib /opt/occt/lib');
+    // Register the kernel libraries with the dynamic linker so the engine runs for any user and any exec path.
+    provision.push("RUN echo /opt/occt/lib > /etc/ld.so.conf.d/occt.conf && ldconfig");
+    provision.push('COPY --from=occt-build /build/agentsam-occt /usr/local/bin/agentsam-occt');
+  }
   const extraEnv = [
     tools.includes('media') ? 'PATH=/opt/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' : '',
     tools.includes('ifc') ? 'AGENTSAM_CAD_PYTHON=/opt/agentsam-venv/bin/python' : '',
   ].filter(Boolean);
-  const occtStage = tools.includes('occt') ? `FROM debian:bookworm-slim AS occt-build
+  const occtStage = tools.includes('occt') ? `FROM debian:bookworm-slim AS occt-kernel
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \\
- && apt-get install -y --no-install-recommends ca-certificates g++ cmake ninja-build libocct-data-exchange-dev libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-foundation-dev \\
+ && apt-get install -y --no-install-recommends ca-certificates git curl bzip2 g++ cmake ninja-build libfreetype-dev libfontconfig-dev libgl-dev libglu1-mesa-dev libx11-dev libxext-dev libxmu-dev libxi-dev \\
  && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch V${CAD_PINS.occt.replaceAll('.', '_')} https://github.com/Open-Cascade-SAS/OCCT.git /src/occt-kernel \\
+ && test "$(git -C /src/occt-kernel rev-parse HEAD)" = "${CAD_PINS.occtCommit}" \\
+ && cmake -S /src/occt-kernel -B /build-kernel -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/occt -DBUILD_LIBRARY_TYPE=Shared -DBUILD_MODULE_Draw=OFF -DBUILD_DOC_Overview=OFF -DUSE_TBB=OFF -DUSE_RAPIDJSON=OFF -DUSE_DRACO=OFF -DUSE_FFMPEG=OFF -DUSE_VTK=OFF -DUSE_TK=OFF -DUSE_FREEIMAGE=OFF \\
+ && cmake --build /build-kernel -j6 \\
+ && cmake --install /build-kernel \\
+ && rm -rf /src/occt-kernel /build-kernel
+
+FROM occt-kernel AS occt-build
+RUN curl -fsSL -o /tmp/boost.tar.bz2 https://archives.boost.io/release/${CAD_PINS.boost}/source/boost_${CAD_PINS.boost.replaceAll('.', '_')}.tar.bz2 \\
+ && echo "${CAD_PINS.boostSha256}  /tmp/boost.tar.bz2" | sha256sum -c - \\
+ && mkdir -p /opt/boost/include \\
+ && tar -xjf /tmp/boost.tar.bz2 -C /opt/boost/include --strip-components=1 boost_${CAD_PINS.boost.replaceAll('.', '_')}/boost \\
+ && rm /tmp/boost.tar.bz2
 COPY occt/ /src/occt/
-RUN cmake -S /src/occt -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAGENTSAM_OCCT_PREFIX=/usr -DAGENTSAM_OCCT_LIBDIR=/usr/lib/$(gcc -dumpmachine) \\
+RUN cmake -S /src/occt -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/boost -DAGENTSAM_OCCT_PREFIX=/opt/occt -DAGENTSAM_OCCT_LIBDIR=/opt/occt/lib \\
  && cmake --build /build
 
 ` : '';
@@ -221,7 +240,7 @@ export function stageCadContext(versionDir, opts = {}) {
   }
   if (tools.includes('occt')) {
     fs.mkdirSync(path.join(context, 'occt'), { recursive: true });
-    for (const file of ['main.cpp', 'CMakeLists.txt']) fs.copyFileSync(path.join(sdkRoot, 'packages/agentsam-occt/native', file), path.join(context, 'occt', file));
+    for (const file of OCCT_NATIVE_FILES) fs.copyFileSync(path.join(sdkRoot, 'packages/agentsam-occt/native', file), path.join(context, 'occt', file));
   }
   if (tools.includes('blender')) {
     const blenderAdapter = path.join(sdkRoot, 'services/cad/blender/adapter.py');

@@ -156,12 +156,19 @@ test('all-tools image pins every production dependency and verifies Node by chec
   assert.match(dockerfile, /AGENTSAM_CAD_PYTHON=\/opt\/agentsam-venv\/bin\/python/);
 });
 
-test('OCCT is compiled in a builder stage and only the binary reaches the runtime image', () => {
+test('OCCT kernel is built from a pinned source tag; only the binary and kernel libs reach the runtime image', () => {
   const { dockerfile } = generateCadDocker({ appSlug: 'agentsam-cad', tools: 'occt' });
-  assert.match(dockerfile, /FROM debian:bookworm-slim AS occt-build/);
+  assert.match(dockerfile, /AS occt-kernel/);
+  assert.match(dockerfile, /--branch V7_9_3 /, 'kernel version is pinned by tag');
+  assert.match(dockerfile, /rev-parse HEAD\)" = "[0-9a-f]{40}"/, 'kernel tag is verified against a pinned commit');
+  assert.match(dockerfile, /sha256sum -c/, 'Boost headers are checksum-verified');
+  assert.match(dockerfile, /FROM occt-kernel AS occt-build/);
+  assert.match(dockerfile, /COPY --from=occt-build \/opt\/occt\/lib \/opt\/occt\/lib/);
   assert.match(dockerfile, /COPY --from=occt-build \/build\/agentsam-occt \/usr\/local\/bin\/agentsam-occt/);
+  assert.match(dockerfile, /echo \/opt\/occt\/lib > \/etc\/ld\.so\.conf\.d\/occt\.conf && ldconfig/);
+  assert.doesNotMatch(dockerfile, /libocct-/, 'no distro OCCT: kernel version must not depend on the base image');
   const runtime = dockerfile.slice(dockerfile.lastIndexOf('FROM debian:bookworm-slim\n'));
-  assert.doesNotMatch(runtime, /\bg\+\+\b|\bcmake\b|libocct-[a-z-]+-dev/, 'compiler and headers stay out of the runtime image');
+  assert.doesNotMatch(runtime, /\bg\+\+\b|\bcmake\b|-dev\b/, 'compiler and headers stay out of the runtime image');
 });
 
 test('tool selection stays minimal: openscad-only image has no production toolchain', () => {
@@ -204,4 +211,17 @@ test('Node installer allows the symlinks Node ships (contained) and refuses hard
     'sys.exit(0 if all(checks) else 1)',
   ].join('\n');
   execFileSync('python3', ['-c', script], { stdio: 'pipe' });
+});
+
+test('stageCadContext stages every native engine source, so the image never builds a stale engine', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cad-stage-'));
+  try {
+    const context = stageCadContext(dir, { tools: 'occt' });
+    const nativeDir = new URL('../packages/agentsam-occt/native/', import.meta.url);
+    const sources = fs.readdirSync(nativeDir).filter(name => /\.(cpp|hpp)$|^CMakeLists\.txt$/.test(name));
+    assert.ok(sources.includes('engine.cpp'), 'engine.cpp exists upstream');
+    for (const name of sources) {
+      assert.equal(fs.readFileSync(path.join(context, 'occt', name), 'utf8'), fs.readFileSync(new URL(name, nativeDir), 'utf8'), `${name} staged unchanged`);
+    }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
