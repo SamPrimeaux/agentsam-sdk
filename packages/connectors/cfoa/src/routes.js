@@ -18,6 +18,7 @@ import {
 } from './index.js';
 import { cloudflareMediaConnectUrl, discoverCloudflareMedia, listCloudflareR2Objects } from './families/media.js';
 import { resolveAuthenticatedOwner } from './owner.js';
+import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, pluginPackScopes } from './scope-registry.js';
 import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
 
 const OAUTH_STATE_PROVIDER = 'cloudflare';
@@ -409,10 +410,21 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const capabilitySet = requested.length
       ? requested
       : (requestedPacks.length ? [] : hostDefaultCapabilities);
-    const scopes = requestedCloudflareScopes({
+    // Grants are additive: Cloudflare reissues the token with exactly the scopes asked for,
+    // so carry the active grant forward and add only what this request needs (from the D1 registry).
+    const registryExtra = [];
+    for (const id of capabilitySet) {
+      const fromRegistry = await registryScopesForCapability(env, id);
+      if (fromRegistry) registryExtra.push(...fromRegistry);
+    }
+    const requestedScopes = requestedCloudflareScopes({
       capabilities: capabilitySet,
       packs: requestedPacks,
     });
+    const alreadyGranted = await activeGrantedScopes(env, ownerId);
+    // Pack scopes are declared by the plugin rows (agentsam_plugins.config_json); code catalog is the fallback.
+    const packScopes = (await pluginPackScopes(env, requestedPacks)) || [];
+    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra, ...packScopes])]);
     const saved = await saveOAuthState(env, {
       state,
       ownerId,
