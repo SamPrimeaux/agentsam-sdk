@@ -37,6 +37,10 @@ export type StorageSettingsResponse = {
 };
 
 const MANAGE_PLUGINS="/admin/settings/customize?view=plugins";
+const STORAGE_RETURN=encodeURIComponent("/admin/settings/storage");
+/** One-click Cloudflare authorization for a specific service, returning the user to Storage settings. */
+const grantUrl=(capability:string)=>"/api/connections/cloudflare/start?capabilities="+encodeURIComponent(capability)+"&return_to="+STORAGE_RETURN;
+const connectUrl="/api/connections/cloudflare/start?packs=media,data&return_to="+STORAGE_RETURN;
 function familyHealth(family: StorageFamily | undefined): HealthState {
   if (!family) return "unknown";
   if (["needs_scope","not_connected","unavailable"].includes(family.status||"")) return "attention";
@@ -68,9 +72,9 @@ export function projectSettingsStorageTargets(
 
   const connected=Boolean(cloudflare?.account?.id && cloudflare.ok!==false);
   const serviceSpec=[
-    {id:"cloudflare-r2",name:"Cloudflare R2",kind:"Object buckets",brand:"cloudflare-r2" as const,family:cloudflare?.r2,noun:"bucket",pref:"artifacts_r2" as const},
-    {id:"cloudflare-images",name:"Cloudflare Images",kind:"Managed images & delivery",brand:"cloudflare-images" as const,family:cloudflare?.images,noun:"image"},
-    {id:"cloudflare-stream",name:"Cloudflare Stream",kind:"Managed video",brand:"cloudflare-stream" as const,family:cloudflare?.stream,noun:"video"},
+    {id:"cloudflare-r2",name:"Cloudflare R2",kind:"Object buckets",brand:"cloudflare-r2" as const,family:cloudflare?.r2,noun:"bucket",pref:"artifacts_r2" as const,capability:"cloudflare.r2",label:"Files"},
+    {id:"cloudflare-images",name:"Cloudflare Images",kind:"Managed images & delivery",brand:"cloudflare-images" as const,family:cloudflare?.images,noun:"image",capability:"cloudflare.images",label:"Photos"},
+    {id:"cloudflare-stream",name:"Cloudflare Stream",kind:"Managed video",brand:"cloudflare-stream" as const,family:cloudflare?.stream,noun:"video",capability:"cloudflare.stream",label:"Video"},
   ];
   const cloud:SettingsStorageTarget[]=serviceSpec.map(spec=>{
     const access=connected
@@ -80,7 +84,12 @@ export function projectSettingsStorageTargets(
     const target:SettingsStorageTarget={
       id:spec.id,name:spec.name,kind:spec.kind,brand:spec.brand,group:"cloudflare",
       status:connected?familyHealth(spec.family):access==="not_configured"?"attention":"unknown",
-      access,actionHref:MANAGE_PLUGINS,actionLabel:"Manage connection",
+      access,
+      ...(access==="needs_scope"
+        ? {actionHref:grantUrl(spec.capability),actionLabel:"Grant "+spec.label+" permission"}
+        : access==="not_configured"
+          ? {actionHref:connectUrl,actionLabel:"Connect Cloudflare"}
+          : {actionHref:MANAGE_PLUGINS,actionLabel:"Manage connection"}),
       detail:connected
         ? spec.family?.available ? countDetail(spec.family,spec.noun)
           : spec.family?.status==="needs_scope" ? "The current Cloudflare grant lacks this service permission."
