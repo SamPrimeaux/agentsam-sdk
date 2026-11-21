@@ -195,6 +195,8 @@ function makeImportedProject(file: File, media: Pick<SessionMediaItem,"durationU
 let evidenceImportStarted = false;
 
 export function MovieModeApp({ initialScreen = "projects", screen: requestedScreen, onScreenChange, standalone = false }: MovieModeAppProps) {
+  /** Standalone dev serves the tour at the root; embedded hosts stage it under /moviemode/. */
+  const onboardingBase = standalone ? "/primetech-onboarding/" : "/moviemode/primetech-onboarding/";
   const registrySkies = useRegistrySkies();
   // CoPro derives its palette from the host theme via scoped CSS tokens.
 
@@ -233,6 +235,8 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   const [localSceneSourceBusyId,setLocalSceneSourceBusyId]=useState<string|null>(null);
   useEffect(()=>{
     let cancelled=false;
+    // Dev-server middleware only (vite.config.ts); deployed hosts have no such route.
+    if (!standalone) return () => { cancelled=true; };
     fetch('/api/local-samscene/sources').then(response=>response.ok?response.json():{items:[]})
       .then(data=>{if(!cancelled&&Array.isArray(data.items))setLocalSceneSources(data.items);})
       .catch(()=>{});
@@ -1096,7 +1100,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         onDeleteProject={deleteSavedProject}
         onDuplicateProject={(id) => void duplicateSavedProject(id)}
         appIconUrl={standalone ? "/brand/p-prime-spectrum-128.avif" : coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
-        onboardingUrl={standalone ? "/primetech-onboarding/" : undefined}
+        onboardingUrl={onboardingBase}
         systemIcons={MOVIEMODE_SYSTEM_ICONS}
       />
       <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*,.glb,model/gltf-binary" className="copro-hidden-source-input" aria-label="Select a video, 3D GLB scene, image or audio file" onChange={(event) => {
@@ -1116,6 +1120,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     </div>}
     <CoProStudio
     key={projectSeed}
+    onboardingUrl={onboardingBase}
     initialTool={initialTool}
     initialStudioMode={studioEntryMode}
     samSceneSkyDefaults={SAMSCENE_SKY_DEFAULTS}

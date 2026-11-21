@@ -55,6 +55,8 @@ export type CoProStudioAction =
   | { type: "set-canvas"; canvas: { width: number; height: number; frameRate?: number } };
 
 export type CoProStudioProps = {
+  /** Where the PrimeTech onboarding/tour is mounted for this host (standalone dev root vs embedded /moviemode/). */
+  onboardingUrl?: string;
   project: CoProProjectView;
   initialTool?: "text" | "captions" | null;
   initialStudioMode?: "scene" | "design" | "generate" | "video";
@@ -201,6 +203,7 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
 }
 
 export function CoProStudio({
+  onboardingUrl = "/moviemode/primetech-onboarding/",
   project,
   initialTool = null,
   initialStudioMode = "video",
@@ -831,7 +834,7 @@ export function CoProStudio({
         </nav>
         <a className="mm-studio-tour-trigger"
           title="Experience the full PrimeTech 3D tour and return to this project"
-          href={"/primetech-onboarding/index.html?returnTo="+encodeURIComponent(
+          href={onboardingUrl.replace(/\/?$/,"/")+"?returnTo="+encodeURIComponent(
             typeof window==="undefined" ? "/" : window.location.pathname+window.location.search
           )+"#tour"}>Explore PrimeTech <ChevronRight size={15}/></a>
       </div>
