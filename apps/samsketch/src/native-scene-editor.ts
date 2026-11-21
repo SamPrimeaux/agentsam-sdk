@@ -4,10 +4,12 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { createThreeViewport } from '@inneranimalmedia/agentsam-3d-viewer';
 import { SceneEditor } from '../../../packages/iamscene/src/editor';
 import type { SceneDocument, SceneNode, SceneTransform } from '../../../packages/iamscene/src/types';
-import { sceneAssetUrl, updateScene } from './scene-api';
+import { sceneAssetUrl, updateScene, uploadSceneAsset } from './scene-api';
+import { MODEL_IMPORT_ACCEPT, prepareModelImports, appendModelImports, type ModelImport } from './scene-file-import';
 import './native-scene-editor.css';
 
 export interface NativeSceneEditorHandle { dispose(): void; }
@@ -33,8 +35,11 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
   let disposed = false;
   let selectedId: string | null = null;
   let saving: Promise<void> | null = null;
-  let model: THREE.Object3D | null = null;
+  const model = new THREE.Group();
+  const loadedAssets = new Map<string,THREE.Object3D>();
   const nodeObjects = new Map<string,THREE.Object3D>();
+  let importing: Promise<void> | null = null;
+  let dragDepth = 0;
   const host = document.createElement('section');
   host.className = 'ss-native-editor';
   host.setAttribute('aria-label','Native I.AM Scene editor');
@@ -44,19 +49,21 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
       <div class="ss-native-title"><strong>${escape(options.document.metadata.name)}</strong><span>Native I.AM Scene · account-owned</span></div>
       <div class="ss-native-buttons">
         <span id="ss-native-status" role="status">Loading source asset…</span>
+        <button type="button" data-action="import" class="ss-native-primary" title="Add models to this scene">+ Import models</button>
+        <input type="file" id="ss-native-file-input" accept="${MODEL_IMPORT_ACCEPT}" multiple hidden aria-label="Choose 3D models and their companion files">
         <button type="button" data-action="undo" class="ss-native-action" title="Undo">Undo</button>
         <button type="button" data-action="redo" class="ss-native-action" title="Redo">Redo</button>
         <button type="button" data-action="save" class="ss-native-primary">Save scene</button>
       </div>
     </header>
     <div class="ss-native-body">
-      <aside class="ss-native-layers"><div class="ss-native-pane-header">Scene objects <small id="ss-native-count"></small></div><div id="ss-native-tree" class="ss-native-tree"></div></aside>
+      <aside class="ss-native-layers"><div class="ss-native-pane-header">Scene objects <small id="ss-native-count"></small></div><div class="ss-native-rail-import"><button type="button" data-action="import" class="ss-native-action">+ Add model to scene</button><small>GLB · glTF · OBJ · STL · PLY · FBX · DAE</small></div><div id="ss-native-tree" class="ss-native-tree"></div></aside>
       <main class="ss-native-stage"><div class="ss-native-tools" role="toolbar" aria-label="Scene transform tools">
         <button type="button" data-action="move" class="is-active">Move</button>
         <button type="button" data-action="rotate">Rotate</button>
         <button type="button" data-action="scale">Scale</button>
         <button type="button" data-action="frame">Frame scene</button>
-      </div><div id="ss-native-viewport" class="ss-native-viewport"></div><div class="ss-native-hint">Drag to orbit · Select a part to edit · Transform with the gizmo</div></main>
+      </div><div id="ss-native-viewport" class="ss-native-viewport"></div><div class="ss-native-empty" id="ss-native-empty" hidden><strong>Bring your models into the scene</strong><span>Drop 3D models here or choose files. Models are saved to your account, with editable parts and their original source files.</span><button type="button" data-action="import" class="ss-native-primary">Choose models</button><small>GLB · glTF · OBJ · STL · PLY · FBX · DAE</small></div><div class="ss-native-drop-overlay" id="ss-native-drop" hidden><strong>Drop models to add them</strong><span>Multiple files supported · same scene · editable hierarchy</span></div><div class="ss-native-hint">Drag to orbit · Select a part to edit · Transform with the gizmo</div></main>
       <aside class="ss-native-inspector"><div class="ss-native-pane-header">Properties</div><div id="ss-native-props"></div></aside>
     </div>`;
   options.host.append(host);
@@ -64,12 +71,21 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
   const tree = host.querySelector<HTMLElement>('#ss-native-tree')!;
   const props = host.querySelector<HTMLElement>('#ss-native-props')!;
   const status = host.querySelector<HTMLElement>('#ss-native-status')!;
+  const fileInput = host.querySelector<HTMLInputElement>('#ss-native-file-input')!;
+  const emptyState = host.querySelector<HTMLElement>('#ss-native-empty')!;
+  const dropOverlay = host.querySelector<HTMLElement>('#ss-native-drop')!;
+  const stage = host.querySelector<HTMLElement>('.ss-native-stage')!;
   const viewport = createThreeViewport(root,{THREE,OrbitControls},{
     wrapper:false,background:editor.document.environment.background,controls:true,
     autoRender:true,preserveDrawingBuffer:true,antialias:true,lights:false,shadowMap:{enabled:true},
     maxPixelRatio:2,fov:editor.document.camera.fov,near:0.01,far:100000,
   });
   viewport.scene.background = new THREE.Color(editor.document.environment.background);
+  viewport.scene.add(model);
+  const gltfLoader = new GLTFLoader();
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+  gltfLoader.setDRACOLoader(dracoLoader);
   const ambient = new THREE.AmbientLight('#ffffff',Math.max(0.5,editor.document.environment.ambientIntensity));
   viewport.scene.add(ambient);
   const keyLight = new THREE.DirectionalLight('#ffffff',2.1);keyLight.position.set(7,15,10);viewport.scene.add(keyLight);
@@ -82,6 +98,7 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
   const resizeObserver = new ResizeObserver(()=>viewport.resize());
   resizeObserver.observe(root);
   function notify(message:string){status.textContent=message;}
+  function updateEmptyState(){emptyState.hidden=editor.document.assets.some(asset=>asset.mediaType==='model/gltf-binary'&&asset.role==='presentation');}
   function lookup(id:string|null){return editor.document.scene.nodes.find(node=>node.id===id)||null;}
   function updateNode(id:string,patch:Partial<Omit<SceneNode,'id'>>){
     editor.updateNode(id,patch);
@@ -123,6 +140,7 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
     }
     tree.innerHTML=rows('root',0);
     host.querySelector<HTMLElement>('#ss-native-count')!.textContent=`${document.scene.nodes.length} nodes`;
+    updateEmptyState();
   }
   function renderProperties(){
     const node=lookup(selectedId);
@@ -143,15 +161,19 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
     if(object)transform.attach(object);else transform.detach();
     renderTree();renderProperties();viewport.render();
   }
-  function frame(selected=false){const item=selected&&selectedId?nodeObjects.get(selectedId):model;if(item)viewport.fit(item,1.5);viewport.render();}
+  function frame(selected=false){const item=selected&&selectedId?nodeObjects.get(selectedId):model;if(item&&((item!==model)||model.children.length))viewport.fit(item,1.5);viewport.render();}
   function applyDocument(next:SceneDocument){
     const definitions=new Map(next.scene.nodes.map(node=>[node.id,node]));
-    for(const [id,object] of nodeObjects){const n=definitions.get(id);if(!n)continue;
-      object.visible=n.visible;
-      if(n.transform.position)object.position.fromArray(n.transform.position);
-      if(n.transform.rotation)object.quaternion.fromArray(n.transform.rotation);
-      if(n.transform.scale)object.scale.fromArray(n.transform.scale);
+    if(selectedId&&!definitions.has(selectedId)){selectedId=null;transform.detach();}
+    for(const [id,object] of nodeObjects){
+      const node=definitions.get(id);
+      if(!node){object.visible=false;continue;}
+      object.visible=node.visible;
+      if(node.transform.position)object.position.fromArray(node.transform.position);
+      if(node.transform.rotation)object.quaternion.fromArray(node.transform.rotation);
+      if(node.transform.scale)object.scale.fromArray(node.transform.scale);
     }
+    void reconcileAssets(next).catch(error=>notify(error instanceof Error?error.message:String(error)));
     renderTree();renderProperties();viewport.render();
   }
   function undo(redo=false){if(loading)return;const result=redo?editor.redo():editor.undo();applyDocument(result.document);notify('Unsaved changes');}
@@ -177,33 +199,109 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
     if(editor.revision!==savedRevision){try{await save();}catch(error){notify('Save failed — scene kept open');return;}}
     options.onBack();
   }
+  async function loadModelAsset(asset: SceneDocument['assets'][number], document: SceneDocument){
+    const url=sceneAssetUrl(options.sceneId,asset.id);
+    const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});
+    if(!response.ok)throw new Error('Cannot retrieve '+asset.id+' (HTTP '+response.status+')');
+    const binary=await response.arrayBuffer();
+    const gltf=await gltfLoader.parseAsync(binary,url.slice(0,url.lastIndexOf('/')+1));
+    if(disposed)return;
+    const root=gltf.scene;
+    const associations=(gltf.parser as unknown as {associations?:Map<THREE.Object3D,{nodes?:number}>}).associations;
+    const byIndex=new Map<number,THREE.Object3D>();
+    root.traverse(object=>{
+      const nodeIndex=associations?.get(object)?.nodes;
+      if(typeof nodeIndex==='number')byIndex.set(nodeIndex,object);
+      if(object instanceof THREE.Mesh){object.castShadow=true;object.receiveShadow=true;}
+      const authored=object.userData?.iamSceneNodeId;
+      if(typeof authored==='string'&&document.scene.nodes.some(node=>node.id===authored))nodeObjects.set(authored,object);
+    });
+    for(const node of document.scene.nodes){
+      const binding=node.userData?.iamGltf as {assetId?:string;nodeIndex?:number}|undefined;
+      if(binding?.assetId!==asset.id)continue;
+      const object=typeof binding.nodeIndex==='number'?byIndex.get(binding.nodeIndex):root;
+      if(!object)continue;
+      nodeObjects.set(node.id,object);
+      object.userData.iamSceneNodeId=node.id;
+      if(node.transform.position)object.position.fromArray(node.transform.position);
+      if(node.transform.rotation)object.quaternion.fromArray(node.transform.rotation);
+      if(node.transform.scale)object.scale.fromArray(node.transform.scale);
+      object.visible=node.visible;
+    }
+    model.add(root);loadedAssets.set(asset.id,root);
+  }
+  async function reconcileAssets(document: SceneDocument){
+    const presentation=document.assets.filter(asset=>asset.mediaType==='model/gltf-binary'&&asset.role==='presentation');
+    const wanted=new Set(presentation.map(asset=>asset.id));
+    for(const [id,object] of loadedAssets)object.visible=wanted.has(id);
+    for(const asset of presentation){
+      if(!loadedAssets.has(asset.id))await loadModelAsset(asset,document);
+    }
+    for(const node of document.scene.nodes){
+      const object=nodeObjects.get(node.id);
+      if(!object)continue;
+      const binding=node.userData?.iamGltf as {assetId?:string}|undefined;
+      if(binding?.assetId&&!wanted.has(binding.assetId))continue;
+      if(node.transform.position)object.position.fromArray(node.transform.position);
+      if(node.transform.rotation)object.quaternion.fromArray(node.transform.rotation);
+      if(node.transform.scale)object.scale.fromArray(node.transform.scale);
+      object.visible=node.visible;
+    }
+    updateEmptyState();viewport.render();
+  }
+  async function importModels(files: File[]){
+    if(disposed||loading)return;
+    if(saving)await saving;
+    const imported=await prepareModelImports(files,notify);
+    const before=editor.document;
+    const merged=appendModelImports(before,imported);
+    const updated=await updateScene(options.sceneId,currentHash,merged);
+    currentHash=updated.scene.contentHash;
+    try{
+      for(const item of imported)for(const upload of item.uploads){
+        notify('Saving '+item.title+' · '+upload.asset.mediaType);
+        const blob=new Blob([upload.bytes.slice().buffer as ArrayBuffer],{type:upload.asset.mediaType});
+        await uploadSceneAsset(options.sceneId,upload.asset.id,blob,upload.asset.mediaType);
+      }
+    }catch(error){
+      try{
+        const rollback=await updateScene(options.sceneId,currentHash,before);
+        currentHash=rollback.scene.contentHash;
+      }catch(rollbackError){
+        notify('Import failed and scene rollback failed. Reopen this scene before editing.');
+        throw new Error('Import storage rollback failed: '+String(rollbackError));
+      }
+      throw error;
+    }
+    editor.transact(draft=>{
+      draft.assets=merged.assets;
+      draft.materials=merged.materials;
+      draft.scene=merged.scene;
+      draft.metadata=merged.metadata;
+    });
+    notify('Loading '+imported.length+' model'+(imported.length===1?'':'s')+'…');
+    await reconcileAssets(editor.document);
+    selectedId=imported[imported.length-1]?.rootId||null;
+    selectNode(selectedId);
+    frame(true);
+    await save(); // Captures a real preview and refreshes account/gallery state.
+    notify('Saved '+imported.length+' model'+(imported.length===1?'':'s')+' to your scene.');
+  }
+  function queueModelImport(files:File[]){
+    if(importing){notify('A model import is already running.');return;}
+    importing=importModels(files).catch(error=>notify('Import failed: '+(error instanceof Error?error.message:String(error)))).finally(()=>{importing=null;});
+  }
   async function load(){
     try{
-      const doc=editor.document;
-      const asset=doc.assets.find(item=>item.mediaType==='model/gltf-binary'&&item.role==='presentation')||doc.assets.find(item=>item.mediaType==='model/gltf-binary');
-      if(!asset)throw new Error('This scene has no presentation asset');
-      const url=sceneAssetUrl(options.sceneId,asset.id);
-      const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});
-      if(!response.ok)throw new Error(`Cannot retrieve the scene asset (HTTP ${response.status})`);
-      const binary=await response.arrayBuffer();
-      const gltf=await new GLTFLoader().parseAsync(binary,url.slice(0,url.lastIndexOf('/')+1));
-      if(disposed)return;
-      model=gltf.scene;
-      model.traverse(object=>{
-        const id=object.userData?.iamSceneNodeId;
-        if(typeof id==='string')nodeObjects.set(id,object);
-        if(object instanceof THREE.Mesh){object.castShadow=true;object.receiveShadow=true;}
-      });
-      for(const node of doc.scene.nodes){
-        const object=nodeObjects.get(node.id);if(!object)continue;
-        if(node.transform.position)object.position.fromArray(node.transform.position);
-        if(node.transform.rotation)object.quaternion.fromArray(node.transform.rotation);
-        if(node.transform.scale)object.scale.fromArray(node.transform.scale);
-        object.visible=node.visible;
-      }
-      viewport.scene.add(model);frame();
-      loading=false;notify('Ready · native scene');renderTree();renderProperties();
-    }catch(error){loading=false;notify(error instanceof Error?error.message:String(error));}
+      await reconcileAssets(editor.document);
+      loading=false;
+      notify(model.children.length?'Ready · native scene':'Ready · add or drop 3D models');
+      if(model.children.length)frame();
+      renderTree();renderProperties();
+    }catch(error){
+      loading=false;notify('Scene load failed: '+(error instanceof Error?error.message:String(error)));
+      renderTree();renderProperties();
+    }
   }
   function clickHandler(event:MouseEvent){
     const element=event.target as HTMLElement;
@@ -212,6 +310,8 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
     const row=element.closest<HTMLElement>('[data-node]');if(row){selectNode(row.dataset.node!);return;}
     const action=element.closest<HTMLElement>('[data-action]')?.dataset.action;
     if(!action)return;
+    if(action==='import'){fileInput.click();return;}
+    if(importing){notify('Finish importing models before changing the scene.');return;}
     if(action==='back')void back();
     else if(action==='save')void save().catch(()=>{});
     else if(action==='undo')undo();else if(action==='redo')undo(true);
@@ -247,9 +347,35 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
     while(object&&(!object.userData?.iamSceneNodeId||!lookup(object.userData.iamSceneNodeId)))object=object.parent;
     if(object)selectNode(object.userData.iamSceneNodeId);
   }
+  fileInput.addEventListener('change',()=>{
+    const files=Array.from(fileInput.files||[]);
+    fileInput.value='';
+    if(files.length)queueModelImport(files);
+  });
+  const isFileDrag=(event:DragEvent)=>Array.from(event.dataTransfer?.types||[]).includes('Files');
+  stage.addEventListener('dragenter',event=>{
+    if(!isFileDrag(event))return;
+    event.preventDefault();dragDepth++;dropOverlay.hidden=false;
+  });
+  stage.addEventListener('dragover',event=>{
+    if(!isFileDrag(event))return;
+    event.preventDefault();
+    if(event.dataTransfer)event.dataTransfer.dropEffect='copy';
+  });
+  stage.addEventListener('dragleave',event=>{
+    if(!isFileDrag(event))return;
+    dragDepth=Math.max(0,dragDepth-1);
+    if(!dragDepth)dropOverlay.hidden=true;
+  });
+  stage.addEventListener('drop',event=>{
+    if(!isFileDrag(event))return;
+    event.preventDefault();event.stopPropagation();dragDepth=0;dropOverlay.hidden=true;
+    const files=Array.from(event.dataTransfer?.files||[]);
+    if(files.length)queueModelImport(files);
+  });
   host.addEventListener('click',clickHandler);
   host.addEventListener('change',changeHandler);
   viewport.renderer.domElement.addEventListener('pointerup',selectFromCanvas);
   renderTree();renderProperties();void load();
-  return {dispose(){if(disposed)return;disposed=true;resizeObserver.disconnect();host.removeEventListener('click',clickHandler);host.removeEventListener('change',changeHandler);viewport.renderer.domElement.removeEventListener('pointerup',selectFromCanvas);transform.detach();transform.dispose();viewport.dispose();host.remove();}};
+  return {dispose(){if(disposed)return;disposed=true;resizeObserver.disconnect();host.removeEventListener('click',clickHandler);host.removeEventListener('change',changeHandler);viewport.renderer.domElement.removeEventListener('pointerup',selectFromCanvas);transform.detach();transform.dispose();dracoLoader.dispose();viewport.dispose();host.remove();}};
 }
