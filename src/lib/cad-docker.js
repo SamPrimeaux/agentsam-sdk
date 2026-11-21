@@ -107,6 +107,8 @@ export function generateCadDocker(opts = {}) {
   }
   if (tools.includes('occt')) {
     provision.push('COPY --from=occt-build /opt/occt/lib /opt/occt/lib');
+    // Register the kernel libraries with the dynamic linker so the engine runs for any user and any exec path.
+    provision.push("RUN echo /opt/occt/lib > /etc/ld.so.conf.d/occt.conf && ldconfig");
     provision.push('COPY --from=occt-build /build/agentsam-occt /usr/local/bin/agentsam-occt');
   }
   const extraEnv = [

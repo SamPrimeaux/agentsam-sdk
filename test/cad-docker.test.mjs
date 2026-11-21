@@ -165,6 +165,7 @@ test('OCCT kernel is built from a pinned source tag; only the binary and kernel 
   assert.match(dockerfile, /FROM occt-kernel AS occt-build/);
   assert.match(dockerfile, /COPY --from=occt-build \/opt\/occt\/lib \/opt\/occt\/lib/);
   assert.match(dockerfile, /COPY --from=occt-build \/build\/agentsam-occt \/usr\/local\/bin\/agentsam-occt/);
+  assert.match(dockerfile, /echo \/opt\/occt\/lib > \/etc\/ld\.so\.conf\.d\/occt\.conf && ldconfig/);
   assert.doesNotMatch(dockerfile, /libocct-/, 'no distro OCCT: kernel version must not depend on the base image');
   const runtime = dockerfile.slice(dockerfile.lastIndexOf('FROM debian:bookworm-slim\n'));
   assert.doesNotMatch(runtime, /\bg\+\+\b|\bcmake\b|-dev\b/, 'compiler and headers stay out of the runtime image');
