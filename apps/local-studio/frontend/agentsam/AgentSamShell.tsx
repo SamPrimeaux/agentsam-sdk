@@ -698,7 +698,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     window.dispatchEvent(new Event('agentsam:workspace-navigation'));
     return () => {if(host.__agentsamWorkspaceNavigation===projection)delete host.__agentsamWorkspaceNavigation;};
   },[state.chats,state.activeChatId,workProjects,historyStatus]);
-  return <CompanionProvider accountKey={user?.id || "anonymous"}><ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
+  return <CompanionProvider accountKey={user?.id || "anonymous"}><ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen mobileBreakpoint={901} resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
     <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
       {!embedded ? <Nav.Sidenav /> : null}
       {embedded && !isConversation ? <HostedCompanionHeader state={petState} /> : null}

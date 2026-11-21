@@ -432,13 +432,20 @@
     const leading = document.querySelector('.console-topbar-spacer');
     if (leading) {
       leading.removeAttribute('aria-hidden');
-      leading.innerHTML = '<button type="button" class="console-icon-btn" data-shared-nav-toggle aria-label="Toggle sidebar" title="Toggle sidebar">' + icon('textAlignStart') + '</button><div class="console-route-label"></div>';
+      leading.innerHTML = '<button type="button" class="console-icon-btn" data-shared-nav-toggle aria-label="Open navigation" title="Open navigation" aria-controls="agentsam-global-navigation" aria-expanded="false"><span class="as-host-nav-morph" aria-hidden="true"><i></i><i></i><i></i></span></button><div class="console-route-label"></div>';
     }
+    aside.id = 'agentsam-global-navigation';
     sharedNavigation = window.AgentSamNav.mountNav({
       breadcrumbs: leading?.querySelector('.console-route-label'),
       sidenav: aside, value: navigationValue(), resizable: true, mobileBreakpoint: 901,
       stateStore: window.__agentsamNavigationStore,
-      onStateChange: ({open}) => leading?.querySelector('[data-shared-nav-toggle]')?.setAttribute('aria-expanded', String(open)),
+      onStateChange: ({open}) => {
+        const toggle = leading?.querySelector('[data-shared-nav-toggle]');
+        if (!toggle) return;
+        toggle.setAttribute('aria-expanded', String(open));
+        toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+        toggle.setAttribute('title', open ? 'Close navigation' : 'Open navigation');
+      },
       storageKey: 'agentsam-nav:' + (window.__shellUser?.id || 'local'),
       ...(sharedAppearance || appearanceModule.projectStudioShellAppearance(null, {theme:document.documentElement.dataset.theme || readConsoleAppearance(), accentColor:preferredDashboardAppearance()?.accent}))
     });
@@ -498,8 +505,20 @@
   window.addEventListener?.('agentsam:theme-applied', event => acceptShellAppearance(event.detail));
   if (typeof MutationObserver !== 'undefined') new MutationObserver(() => updateSharedNavigation()).observe(document.documentElement, {attributes:true,attributeFilter:['data-theme']});
   if (typeof document !== 'undefined') document.addEventListener('click', event => {
-    if (!sharedNavigation || !event.target?.closest?.('[data-shared-nav-toggle], [data-console-nav-toggle], #admin-menu-toggle')) return;
-    event.preventDefault(); event.stopImmediatePropagation(); sharedNavigation.toggle();
+    if (!sharedNavigation) return;
+    const toggle = event.target?.closest?.('[data-shared-nav-toggle], [data-console-nav-toggle], #admin-menu-toggle');
+    if (toggle) {
+      event.preventDefault(); event.stopImmediatePropagation(); sharedNavigation.toggle();
+      return;
+    }
+    // Mobile reveal navigation keeps a visible portion of the page at the right.
+    // Tapping that foreground closes the menu without activating page controls.
+    if (window.matchMedia('(max-width: 900px)').matches &&
+        document.querySelector('.as-nav-mobile-push-shell[data-open="true"]') &&
+        event.target?.closest?.('.console-workspace')) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      sharedNavigation.setOpen(false);
+    }
   }, true);
   const originalProfile = typeof hydrateShellProfile === 'function' ? hydrateShellProfile : null;
   if (originalProfile) hydrateShellProfile = function (user) {

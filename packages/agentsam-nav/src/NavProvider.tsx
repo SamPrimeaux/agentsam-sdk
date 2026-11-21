@@ -63,6 +63,7 @@ export function NavProvider({
   }, [input]);
   const [ownedStore] = useState(() => createNavState({
     desktopOpen: defaultOpen && (typeof window === 'undefined' || window.innerWidth >= 1024),
+    isMobile: typeof window !== 'undefined' && window.innerWidth < mobileBreakpoint,
   }));
   // Hosted Ecommerce navigation is a separately bundled React root. Normalize
   // external snapshots once per store identity before subscribing to them.

@@ -77,7 +77,7 @@ export function NavTopbarLogo({ variant = 'mark', onClick, toggle = false }: { v
             src={data.brand.lightLogo ?? data.brand.logo} alt="" onError={() => setLogoFailed(true)} />
         </> : <PanelLeft />}
       </span>
-      <span className="as-nav-work-brand-toggle__control" aria-hidden="true"><PanelLeft size={20}/></span>
+      <span className="as-nav-work-brand-toggle__control" aria-hidden="true">{open ? <X size={20}/> : <PanelLeft size={20}/>}</span>
     </button>;
   return <button type="button" className="as-nav-button as-nav-brand" aria-label={label} title={label} onClick={onClick ?? (() => data.brand?.home && data.onNavigate?.(data.brand.home))}>
     <span className="as-nav-brand-mark">{data.brand?.logo && !logoFailed ? <><img className="as-nav-logo-dark" src={data.brand.logo} alt="" onError={() => setLogoFailed(true)} /><img className="as-nav-logo-light" data-fallback={!data.brand.lightLogo || undefined} src={data.brand.lightLogo ?? data.brand.logo} alt="" onError={() => setLogoFailed(true)} /></> : <PanelLeft />}</span>

@@ -30,7 +30,10 @@ export function mountNav(options: MountNavOptions) {
   anchor.style.display = 'contents';
   (options.sidenav ?? options.topbar ?? options.breadcrumbs)!.parentElement!.appendChild(anchor);
   const root = createRoot(anchor, { identifierPrefix: 'agentsam-host-nav-' + crypto.randomUUID() + '-' });
-  const stateStore = options.stateStore ?? createNavState({ desktopOpen: (options.defaultOpen ?? true) && window.innerWidth >= 1024 });
+  const stateStore = options.stateStore ?? createNavState({
+    desktopOpen: (options.defaultOpen ?? true) && window.innerWidth >= 1024,
+    isMobile: window.innerWidth < (options.mobileBreakpoint ?? 768),
+  });
   let current = { ...options, stateStore };
   let controls: { toggle: () => void; setOpen: (open: boolean) => void } | undefined;
   function StateBridge() {

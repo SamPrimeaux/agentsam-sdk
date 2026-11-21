@@ -449,6 +449,35 @@
 @media (max-width:650px){ .as-apps-picker-item{flex-wrap:wrap}.as-apps-picker-actions{width:100%;justify-content:flex-end}.as-apps-picker-controls,.as-apps-picker-list{padding-left:14px;padding-right:14px} }
 
 
+/* One stateful icon in both packaged and React shell headers. */
+.agentsam-nav__trigger-morph {
+  position: relative; display: block; width: 20px; height: 20px;
+}
+.agentsam-nav__trigger-morph > span {
+  position: absolute; top: 9px; left: 2px; width: 16px; height: 1.8px;
+  background: currentColor; border-radius: 999px;
+  transition: transform 180ms ease, opacity 120ms ease;
+}
+.agentsam-nav__trigger-morph > span:first-child { transform: translateY(-5px); }
+.agentsam-nav__trigger-morph > span:last-child { transform: translateY(5px); }
+.agentsam-nav__trigger[aria-expanded="true"] .agentsam-nav__trigger-morph > span:first-child { transform: rotate(45deg); }
+.agentsam-nav__trigger[aria-expanded="true"] .agentsam-nav__trigger-morph > span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.agentsam-nav__trigger[aria-expanded="true"] .agentsam-nav__trigger-morph > span:last-child { transform: rotate(-45deg); }
+@media (prefers-reduced-motion: reduce) {
+  .agentsam-nav__trigger-morph > span { transition: none; }
+}
+@media (max-width: 900px) {
+  .as-nav-mobile-push-shell .as-nav-mobile-drawer {
+    min-height: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overscroll-behavior: contain;
+  }
+  .as-nav-mobile-push-shell .as-nav-sidenav-main { min-height: 0; }
+  .as-nav-mobile-push-shell .as-nav-sidenav-foot { flex: none; }
+  .as-nav-mobile-push-shell .as-nav-work-brand-toggle__mark { opacity: 0; }
+  .as-nav-mobile-push-shell .as-nav-work-brand-toggle__control { opacity: 1; }
+}
+
 /* Shared mobile navigation slides as an off-canvas, non-modal drawer.
    Host shells can shift their workspace; no scrim or dialog focus lock. */
 .as-nav-mobile-push-shell {
@@ -463,8 +492,9 @@
   top: var(--nav-mobile-drawer-top, 0px);
   bottom: 0;
   z-index: 160;
-  width: min(304px, calc(100dvw - 68px));
-  max-width: min(304px, calc(100dvw - 68px));
+  /* Shares one geometry token with the host foreground translation. */
+  width: var(--agentsam-mobile-push-width, min(80dvw, 20rem));
+  max-width: var(--agentsam-mobile-push-width, min(80dvw, 20rem));
   height: auto;
   overflow: hidden;
   border-right: 1px solid var(--nav-border);

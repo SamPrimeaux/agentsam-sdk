@@ -86,26 +86,62 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
 }
 
 
+/* Authored once for the packaged console and its mirrored public stylesheet. */
+body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle] {
+  display: inline-grid; place-items: center; cursor: pointer;
+}
+body.agentsam-shared-navigation .console-topbar .as-host-nav-morph {
+  display: block; position: relative; width: 20px; height: 20px;
+}
+body.agentsam-shared-navigation .console-topbar .as-host-nav-morph i {
+  position: absolute; top: 9px; left: 2px;
+  width: 16px; height: 1.8px; border-radius: 999px;
+  background: currentColor;
+  transition: transform 180ms ease, opacity 120ms ease;
+}
+body.agentsam-shared-navigation .console-topbar .as-host-nav-morph i:first-child { transform: translateY(-5px); }
+body.agentsam-shared-navigation .console-topbar .as-host-nav-morph i:last-child { transform: translateY(5px); }
+body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle][aria-expanded="true"] .as-host-nav-morph i:first-child { transform: rotate(45deg); }
+body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle][aria-expanded="true"] .as-host-nav-morph i:nth-child(2) { transform: scaleX(0); opacity: 0; }
+body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle][aria-expanded="true"] .as-host-nav-morph i:last-child { transform: rotate(-45deg); }
+@media (prefers-reduced-motion: reduce) {
+  body.agentsam-shared-navigation .console-topbar .as-host-nav-morph i { transition: none; }
+}
+
 /* The shared nav owns mobile drawer presentation; the host owns the canvas
    geometry. Slide the canvas aside instead of painting a modal overlay. */
 @media (max-width: 900px) {
   body.agentsam-shared-navigation {
-    --agentsam-mobile-push-width: min(304px, calc(100dvw - 68px));
+    --agentsam-mobile-push-width: min(80dvw, 20rem);
     overflow-x: clip;
   }
   body.agentsam-shared-navigation .as-nav-mobile-push-shell {
     --nav-mobile-drawer-top: var(--c-topbar-h, 56px);
   }
   body.agentsam-shared-navigation .console-body { overflow-x: clip; }
-  body.agentsam-shared-navigation .console-workspace {
-    flex: 0 0 100%;
-    width: 100%;
-    min-width: 100%;
-    transform: translate3d(0,0,0);
-    transition: transform 230ms cubic-bezier(.2,.8,.2,1);
+  body.agentsam-shared-navigation .console-sidenav.admin-sidebar:has(.as-nav-mobile-push-shell) {
+    display: block !important;
+    flex: 0 0 0 !important;
+    min-width: 0 !important;
+    overflow: visible !important;
   }
-  body.agentsam-shared-navigation:has(.as-nav-mobile-push-shell[data-open="true"]) .console-workspace {
+  /* Outrank the legacy Console's .console-theme:not(.console-nav-collapsed)
+     push rule. Only the shared nav state may move the foreground. */
+  body.console-theme.agentsam-shared-navigation .console-workspace {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 0%;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    transform: translate3d(0,0,0);
+    transition: transform 230ms cubic-bezier(.2,.8,.2,1), border-radius 230ms ease;
+  }
+  body.console-theme.agentsam-shared-navigation:has(.as-nav-mobile-push-shell[data-open="true"]) .console-workspace {
     transform: translate3d(var(--agentsam-mobile-push-width),0,0);
+    border-radius: 18px 0 0 18px;
+    box-shadow: -12px 0 36px color-mix(in srgb, #000 35%, transparent);
+    overflow: clip;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -6,9 +6,9 @@ export function NavTrigger({ className, onClick, 'aria-label': ariaLabel = 'Togg
   const { open, toggle } = useNav();
   return (
     <button type="button" aria-label={ariaLabel} aria-expanded={open} className={cx('agentsam-nav__trigger', className)} {...props} onClick={(event) => { toggle(); onClick?.(event); }}>
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-        <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
+      <span className="agentsam-nav__trigger-morph" aria-hidden="true">
+        <span /><span /><span />
+      </span>
       <span className="agentsam-nav__trigger-help" aria-hidden="true">Navigation</span>
     </button>
   );
