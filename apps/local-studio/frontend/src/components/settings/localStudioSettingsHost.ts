@@ -572,7 +572,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   snapshot.general.runtime = desktop
     ? `Desktop runtime · ${runnable} runnable models`
     : `Web runtime · ${runnable} runnable models`;
-  snapshot.network.health = health;
+
 
   return applyCatalogOverlay(snapshot);
 }
