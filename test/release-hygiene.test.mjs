@@ -23,11 +23,13 @@ test('release candidate metadata and public terminal vocabulary are aligned', ()
   assert.match(manifest, /state: (candidate|published)/);
   assert.match(manifest, /current_latest: "\d+\.\d+\.\d+"/);
   assert.match(manifest, /verification_command: npm run verify:release/);
-  // The desktop-first CLI explicitly retains a separate, functional TUI
-  // command; a removed branded splash is not a reason to hide that CLI route.
-  assert.match(manifest, /^\s*- tui\s*$/m);
-  assert.match(read('src/cli.js'), /command === 'tui'/);
-  assert.match(read('src/cli/command-catalog.js'), /id: 'tui'/);
+  // Bare `agentsam` is the terminal home; the desktop app is `agentsam open`.
+  // There is no separate `tui` command to keep in sync.
+  assert.match(manifest, /^\s*- open\s*$/m);
+  assert.doesNotMatch(manifest, /^\s*- tui\s*$/m);
+  assert.match(read('src/cli.js'), /await runTuiCommand\(\);/);
+  assert.doesNotMatch(read('src/cli.js'), /command === 'tui'/);
+  assert.match(read('src/cli/command-catalog.js'), /id: 'open'/);
   assert.doesNotMatch(readme, /CLI\/TUI/);
 });
 
