@@ -52,6 +52,7 @@ test('the native app, desktop manifest, lockfiles and updater share the desktop 
   for (const [name, actual] of Object.entries({
     desktopManifest: manifest.version,
     appManifest: app.version,
+    studioHostPackage: studioPackage.version,
     tauriConfig: tauri.version,
     desktopLock: shellLock.version,
     desktopLockRoot: shellLock.packages[''].version,
