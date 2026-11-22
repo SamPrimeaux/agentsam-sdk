@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useState,type CSSProperties} from 'react';
 import {Clapperboard} from 'lucide-react';
 import type {CadCameraBeat,ProjectState} from '@inneranimalmedia/agentsam-cad-shared';
 import {savedDimension,rememberDimension} from '../lib/workbench-layout';
@@ -38,7 +38,7 @@ export function CadSequenceDock({project,readOnly,onChange,onClose}:{
     const timer=window.setTimeout(()=>setPlaying(playing+1<beats.length?playing+1:null),beat.duration*1000);
     return ()=>{window.clearTimeout(timer);worldView.stopTransition()};
   },[playing,beats,canPlay,world.kind]);
-  return <section className="cad-sequence-dock" aria-label="Camera timeline" style={{height}}>
+  return <section className="cad-sequence-dock" aria-label="Camera timeline" style={{"--cad-timeline-height":height+"px"} as CSSProperties}>
     <ResizableStageHandle label="Resize camera timeline" className="cad-timeline-handle" axis="y" value={height} min={80} max={600}
       onDrag={delta=>setHeight(previous=>Math.max(80,Math.min(600,previous-delta)))} onDoubleClick={()=>setHeight(144)}/>
     <header><strong><Clapperboard size={16}/> Camera timeline</strong>

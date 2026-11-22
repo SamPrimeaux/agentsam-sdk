@@ -6,7 +6,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { createThreeViewport } from '@inneranimalmedia/agentsam-3d-viewer';
+import { createThreeViewport, createConfiguredGLTFLoader } from '@inneranimalmedia/agentsam-3d-viewer';
 import { SceneEditor } from '../../../packages/iamscene/src/editor';
 import type { SceneDocument, SceneNode, SceneTransform } from '../../../packages/iamscene/src/types';
 import { sceneAssetUrl, updateScene, uploadSceneAsset } from './scene-api';
@@ -83,10 +83,7 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
   });
   viewport.scene.background = new THREE.Color(editor.document.environment.background);
   viewport.scene.add(model);
-  const gltfLoader = new GLTFLoader();
-  const dracoLoader = new DRACOLoader();
-  dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
-  gltfLoader.setDRACOLoader(dracoLoader);
+  const gltfLoader = createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader}) as GLTFLoader;
   gltfLoader.setMeshoptDecoder(MeshoptDecoder);
   const ambient = new THREE.AmbientLight('#ffffff',Math.max(0.5,editor.document.environment.ambientIntensity));
   viewport.scene.add(ambient);
@@ -380,5 +377,5 @@ export function mountNativeSceneEditor(options: NativeSceneEditorOptions): Nativ
   host.addEventListener('change',changeHandler);
   viewport.renderer.domElement.addEventListener('pointerup',selectFromCanvas);
   renderTree();renderProperties();void load();
-  return {dispose(){if(disposed)return;disposed=true;resizeObserver.disconnect();host.removeEventListener('click',clickHandler);host.removeEventListener('change',changeHandler);viewport.renderer.domElement.removeEventListener('pointerup',selectFromCanvas);transform.detach();transform.dispose();dracoLoader.dispose();viewport.dispose();host.remove();}};
+  return {dispose(){if(disposed)return;disposed=true;resizeObserver.disconnect();host.removeEventListener('click',clickHandler);host.removeEventListener('change',changeHandler);viewport.renderer.domElement.removeEventListener('pointerup',selectFromCanvas);transform.detach();transform.dispose();viewport.dispose();host.remove();}};
 }

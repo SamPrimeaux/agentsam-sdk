@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useState,type CSSProperties} from 'react';
 import {worldView, useWorldView, WORLD_ENVIRONMENT_PRESETS, type WorldViewPreset} from '../lib/world-view-store';
 
 const VIEWS: {id: WorldViewPreset; label: string}[] = [
@@ -86,7 +86,7 @@ export function WorldViewSection({family}: {family: 'camera'|'environment'|'ligh
         <div className="cad-world-presets" role="group" aria-label="Environment lighting setups">
           {WORLD_ENVIRONMENT_PRESETS.map(preset=><button key={preset.id} type="button" className="cad-world-preset"
             aria-pressed={w.environmentPresetId===preset.id} title={preset.description} disabled={!canEdit||!w.ready}
-            style={{background:preset.preview}} onClick={()=>worldView.setEnvironmentPreset(preset.id)}>{preset.label}</button>)}
+            style={{"--cad-environment-preview":preset.preview} as CSSProperties} onClick={()=>worldView.setEnvironmentPreset(preset.id)}>{preset.label}</button>)}
         </div>
         <ColorSetting label="Sky / ambient color" value={w.skyColor} disabled={!canEdit||!w.ready} onChange={worldView.setSkyColor}/>
         <ColorSetting label="Ground bounce color" value={w.groundColor} disabled={!canEdit||!w.ready} onChange={worldView.setGroundColor}/>

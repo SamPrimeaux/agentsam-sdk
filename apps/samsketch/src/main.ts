@@ -3,8 +3,9 @@ import '../../../packages/agentsam-nav/src/shell.css';
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
-import { createThreeViewport } from "@inneranimalmedia/agentsam-3d-viewer";
+import { createThreeViewport, createConfiguredGLTFLoader } from "@inneranimalmedia/agentsam-3d-viewer";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { createBooleanGLB, type CadParameters } from "./cad";
 import { templateCatalog, findTemplate, getTemplateModel, instanceTemplateModel } from "./templates";
@@ -525,7 +526,7 @@ function ensureCadGeometry(item:Item){
  if(cadLoads.has(item.id)||failedCad.has(item.id+identity))return;
  generatedCad.delete(item.id);
  const run=createBooleanGLB(item.cadParams).then(async binary=>{
-  const parsed=await new GLTFLoader().parseAsync(binary,"");
+  const parsed=await createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader}).parseAsync(binary,"");
   const current=doc.items.find(candidate=>candidate.id===item.id);
   if(!current||JSON.stringify(current.cadParams)!==identity)return;
   generatedCad.set(item.id,parsed.scene);
@@ -1211,7 +1212,7 @@ async function generateCAD(){
   const val=(id:string,fallback:number)=>{const n=Number((document.getElementById(id) as HTMLInputElement|null)?.value);return Number.isFinite(n)?n:fallback};
   const params:CadParameters={outerRadius:Math.max(.1,val("outer-radius",1.2)),cutterRadius:Math.max(.1,val("cut-radius",.78)),cutX:val("cut-x",.65),cutY:0,cutZ:.2};
   const binary=await createBooleanGLB(params);
-  const parsed=await new GLTFLoader().parseAsync(binary,"");
+  const parsed=await createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader}).parseAsync(binary,"");
   let target=sel();
   if(!target||target.kind!=="cad"){addItem("cad");target=sel();}
   const item=target!;

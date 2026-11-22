@@ -28,5 +28,5 @@ export function StudioCommandItem({icon,label,onRun,active,disabled,shortcut}:{
 }
 
 export function StudioGlyph({name,size=17}:{name:string;size?:number}) {
-  return <span aria-hidden="true" style={{display:'inline-flex'}} dangerouslySetInnerHTML={{__html:icon(name,size)}}/>;
+  return <span aria-hidden="true" className="studio-glyph" dangerouslySetInnerHTML={{__html:icon(name,size)}}/>;
 }

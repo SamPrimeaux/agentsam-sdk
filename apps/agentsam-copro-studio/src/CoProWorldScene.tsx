@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { createConfiguredGLTFLoader } from '@inneranimalmedia/agentsam-3d-viewer';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STAGE_FINISHES, type CoProStageEnvironment } from '@inneranimalmedia/copro-ui';
 // LOCAL-ONLY engine integration. Consume the actual SamScene sky renderer, not a
@@ -110,7 +112,8 @@ export function CoProWorldScene({src,title,timeUs,environment,transform,world3dT
       renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
     };
     fit();resize=new ResizeObserver(fit);resize.observe(node);
-    new GLTFLoader().load(src,(gltf)=>{
+    const loader=createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader}) as GLTFLoader;
+    loader.load(src,(gltf)=>{
       if(disposed){gltf.scene.traverse(child=>{if(child instanceof THREE.Mesh){child.geometry?.dispose();}});return;}
       root=gltf.scene;
       stage.add(root);
