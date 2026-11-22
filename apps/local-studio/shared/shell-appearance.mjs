@@ -130,7 +130,7 @@ export function projectStudioShellAppearance(record, fallback = {}) {
   if (font) tokens.font = font;
   const accentColor = pick('--nav-accent', '--accent', '--color-primary', '--accent-primary')
     || fallback.accentColor
-    || '#8b5cf6';
+    || tokens.ink;
   return {
     theme,
     tokens,
