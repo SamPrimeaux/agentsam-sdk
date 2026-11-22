@@ -306,6 +306,32 @@ changes. Revive, reboot-wipe and the `startup.sh` worked example:
    preview. **Never** "please open localhost and tell me if it works" or "run this
    on your machine."
 
+### Desktop and mobile viewport acceptance (embedded applications)
+
+Never use 1600 × 900 as the only desktop acceptance viewport. Test all four
+browser CSS viewport sizes:
+
+| Device | CSS viewport |
+| --- | --- |
+| Primary 27-inch Retina 5K iMac, scaled | **2560 × 1440** |
+| Secondary monitor | 1920 × 1080 |
+| Compact desktop | 1600 × 900 |
+| iPhone 13 Pro | 390 × 844 |
+
+For CAD Creator, SamSketch, SamSpeaks, Theme Studio, and related editors:
+- Record window.innerWidth and window.innerHeight from each actual browser run;
+  macOS scaling and browser chrome mean display settings are not browser bounds.
+- Size the workspace from the available shell stage after its headers,
+  navigation and resizable panels, not from a hardcoded 1440px height.
+- Inspect panel resize, canvas, text, overflow, and interaction at every target.
+  The primary desktop should use the additional working room purposefully,
+  not merely stretch the compact interface.
+- Run: node scripts/smoke-embedded-editor-viewports.mjs
+  Use --live for an additional real standalone SamSpeaks canvas test.
+- The synthetic host test and standalone test do NOT establish acceptance of an
+  authenticated /admin/samspeaks session: inspect that separately before
+  declaring the hosted interface visually accepted.
+
 ### Browser QA (the user is not your QA)
 
 You drive the browser yourself, in the sandbox, against
