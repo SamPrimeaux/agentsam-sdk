@@ -43,6 +43,7 @@ test('the native app, desktop manifest, lockfiles and updater share the desktop 
   const json = (relative) => JSON.parse(readFileSync(path.resolve(shellRoot, relative), 'utf8'));
   const pkg = json('package.json');
   const app = json('../../apps/local-studio/agentsam.app.json');
+  const studioPackage = json('../../apps/local-studio/package.json');
   const tauri = json('src-tauri/tauri.conf.json');
   const shellLock = json('package-lock.json');
   const rootLock = json('../../package-lock.json');
