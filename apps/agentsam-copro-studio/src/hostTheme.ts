@@ -2,7 +2,6 @@
 type ThemeRecord = { id: string; themeFamily?: string; cssVars?: Record<string, string> };
 // Resolve the shared workbench appearance source until the next package release.
 // The standalone editor never imports another application or owns a second palette.
-// @ts-expect-error The shared workbench source is authored in JavaScript.
 import * as host from "../../../packages/agentsam-workbench/src/shell/appearance.mjs";
 
 /**

@@ -1,4 +1,4 @@
-import { Muxer, ArrayBufferTarget } from 'webm-muxer';
+import { Output, WebMOutputFormat, BufferTarget, EncodedVideoPacketSource, EncodedPacket } from 'mediabunny';
 /**
  * Browser-safe CoPro world compositor. One CoPro project owns time, layers, clip
  * transforms and source animations. The host GPU runtime supplies frame
@@ -70,24 +70,35 @@ async function encodeWorld3DWebM(project, {canvas,applyFrame,onFrame,frameRate,s
     throw new Error('copro_world3d_webcodecs_unavailable');
   const width=canvas.width, height=canvas.height;
   const supportedCodec=await Promise.all([
-    ['vp8','V_VP8'],['vp09.00.10.08','V_VP9']
-  ].map(async ([codec,webmCodec])=>({codec,webmCodec,supported:(await VideoEncoder.isConfigSupported({codec,width,height,bitrate:2_000_000,framerate:frameRate})).supported})));
+    ['vp8','vp8'],['vp09.00.10.08','vp9']
+  ].map(async ([codec,mediaCodec])=>({codec,mediaCodec,supported:(await VideoEncoder.isConfigSupported({codec,width,height,bitrate:2_000_000,framerate:frameRate})).supported})));
   const choice=supportedCodec.find(item=>item.supported);
   if(!choice) throw new Error('copro_world3d_webcodecs_codec_unavailable');
   const outputCanvas=document.createElement('canvas');outputCanvas.width=width;outputCanvas.height=height;
   const ctx=outputCanvas.getContext('2d',{alpha:false});
   if(!ctx)throw new Error('copro_world3d_capture_context_unavailable');
-  const target=new ArrayBufferTarget();
-  const muxer=new Muxer({target,video:{codec:choice.webmCodec,width,height,frameRate}});
+  // Mediabunny owns the WebM container; WebCodecs still owns actual frame
+  // encoding so CoPro's timeline supplies exact presentation timestamps.
+  const target=new BufferTarget();
+  const output=new Output({target,format:new WebMOutputFormat()});
+  const packetSource=new EncodedVideoPacketSource(choice.mediaCodec);
+  output.addVideoTrack(packetSource);
   let encodingError=null;
+  let pendingPackets=Promise.resolve();
   const encoder=new VideoEncoder({
-    output:(chunk,metadata)=>{try{muxer.addVideoChunk(chunk,metadata);}catch(e){encodingError=e;}},
+    output:(chunk,metadata)=>{
+      // VideoEncoder callbacks cannot await. Serialize packets in decode order
+      // and observe backpressure/rejections before adding further frames.
+      pendingPackets=pendingPackets.then(()=>packetSource.add(EncodedPacket.fromEncodedChunk(chunk),metadata))
+        .catch(error=>{encodingError=error;});
+    },
     error:e=>{encodingError=e;},
   });
   encoder.configure({codec:choice.codec,width,height,bitrate:2_000_000,framerate:frameRate,latencyMode:'quality'});
   const durationUs=Math.max(0,...project.tracks.flatMap(t=>t.clips.map(c=>c.startUs+c.durationUs)));
   const frames=Math.max(2,Math.ceil(durationUs/1_000_000*frameRate));
   try {
+    await output.start();
     for(let index=0;index<frames;index++) {
       if(signal?.aborted)throw new Error('copro_world3d_recording_cancelled');
       if(encodingError)throw encodingError;
@@ -98,15 +109,24 @@ async function encodeWorld3DWebM(project, {canvas,applyFrame,onFrame,frameRate,s
       // Encoded timestamps come from the CoPro timeline—not GPU frame delivery.
       const source=new VideoFrame(outputCanvas,{timestamp:Math.round(index*1_000_000/frameRate),duration:Math.round(1_000_000/frameRate)});
       try{encoder.encode(source,{keyFrame:index%Math.round(frameRate*2)===0});}finally{source.close();}
-      if(encoder.encodeQueueSize>6)await encoder.flush();
+      if(encoder.encodeQueueSize>6){
+        await encoder.flush();
+        await pendingPackets;
+        if(encodingError)throw encodingError;
+      }
       onProgress?.((index+1)/frames);
     }
     await encoder.flush();
+    await pendingPackets;
     if(encodingError)throw encodingError;
-    muxer.finalize();
+    packetSource.close();
+    await output.finalize();
     const blob=new Blob([target.buffer],{type:'video/webm'});
     if(!blob.size)throw new Error('copro_world3d_empty_export');
     return {blob,mimeType:'video/webm',width,height,frameRate,durationUs,frameCount:frames,renderBackend:'webcodecs'};
+  } catch(error) {
+    await output.cancel().catch(()=>{});
+    throw error;
   } finally {encoder.close();}
 }
 
