@@ -7,7 +7,8 @@
   "workspaces": [
     "frontend",
     "backend",
-    "shared/*"
+    "shared/*",
+    "../../packages/agentsam-3d-viewer"
   ],
   "bin": {
     "agentsam-cad-creator": "bin/agentsam-cad-creator.mjs"

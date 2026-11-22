@@ -16,7 +16,7 @@
     "typography:lint": "node --experimental-strip-types ../scripts/verify-typography.ts && npm run typography:check"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-3d-viewer": "file:../../../packages/agentsam-3d-viewer",
+    "@inneranimalmedia/agentsam-3d-viewer": "2.6.18",
     "@inneranimalmedia/agentsam-cad-shared": "2.6.17",
     "@inneranimalmedia/agentsam-workbench": "file:../../../packages/agentsam-workbench",
     "chess.js": "^1.4.0",
@@ -31,9 +31,9 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
     "@types/node": "^22.14.0",
     "@types/three": "^0.185.4",
+    "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
