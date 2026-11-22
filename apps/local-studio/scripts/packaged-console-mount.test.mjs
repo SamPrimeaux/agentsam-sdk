@@ -338,8 +338,8 @@ test('CAD inherits the full hosted canvas height without another global sidebar'
   const css = readFileSync(new URL('../frontend/agentsam/packaged-console-frame.css', import.meta.url), 'utf8');
   const frame = readFileSync(new URL('../frontend/src/routes/(apps)/admin/cad.tsx', import.meta.url), 'utf8');
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
-  assert.match(css, /\.agentsam-route:has\(\[data-cad-studio-host\]\) \{\s*position: relative/);
-  assert.match(css, /\[data-cad-studio-host\] \{\s*position: absolute;\s*inset: 0/);
+  assert.match(css, /\.agentsam-route:has\(\[data-cad-studio-host\]\),\s*#agentsam-host-workspace \.agentsam-route:has\(\[data-hosted-app-stage\]\) \{\s*position: relative/);
+  assert.match(css, /\[data-cad-studio-host\],\s*#agentsam-host-workspace \[data-hosted-app-stage\] \{\s*position: absolute;\s*inset: 0/);
   assert.match(css, /\[data-cad-iframe-region\] iframe \{\s*position: absolute;\s*inset: 0/);
   assert.match(frame, /data-cad-studio-host/);
   assert.match(frame, /data-cad-editor-stage/);
@@ -347,6 +347,19 @@ test('CAD inherits the full hosted canvas height without another global sidebar'
   assert.match(frame, /className="absolute inset-0 block h-full w-full border-0"/);
   assert.match(frame, /presentation=embedded|cadEmbeddedUrl/);
   assert.match(shell, /!embedded \? <Nav\.Sidenav \/>/);
+});
+
+test('SamSpeaks fills the existing hosted editor stage without a second shell or clipped iframe', () => {
+  const css = readFileSync(new URL('../frontend/agentsam/packaged-console-frame.css', import.meta.url), 'utf8');
+  const route = readFileSync(new URL('../frontend/src/routes/(apps)/admin/samspeaks.tsx', import.meta.url), 'utf8');
+  assert.match(route, /data-hosted-app-stage="samspeaks"/);
+  assert.match(route, /className="relative flex size-full min-h-0 min-w-0 overflow-hidden bg-background"/);
+  assert.match(route, /className="absolute inset-0 block size-full border-0"/);
+  assert.match(route, /src="\/samspeaks\/"/);
+  assert.match(css, /\.platform-console-stage:has\(\[data-hosted-app-stage\]\) \{\s*flex: 1 1 0%;\s*min-height: 0;\s*overflow: hidden/);
+  assert.match(css, /\.agentsam-route:has\(\[data-hosted-app-stage\]\) \{\s*position: relative;\s*flex: 1 1 0%;/);
+  assert.match(css, /\[data-hosted-app-stage\] \{\s*position: absolute;\s*inset: 0;[\s\S]*?height: 100%/);
+  assert.doesNotMatch(route, /<Nav\.Provider|<Nav\.Sidenav|<Nav\.Topbar/);
 });
 
 test('embedded desktop navigation reaches its parent and API requests use the native host', async () => {
