@@ -625,8 +625,12 @@
 }
 .cad-hosted-chrome__browse:hover{background:var(--cad-hover,#293347)}
 
-.cad-properties .studio-inspector-picker { display:flex; align-items:center; gap:.6rem; padding:.45rem .75rem; border-bottom:1px solid var(--cad-border, #64748b44); }
-.studio-inspector-picker select { flex:1; min-width:0; padding:.4rem; font:inherit; color:inherit; background:var(--cad-panel,Canvas); border:1px solid var(--cad-border,#64748b44); border-radius:.35rem; color-scheme:inherit; }
+.cad-properties .studio-inspector-picker {
+  --studio-inspector-border:var(--cad-line);
+  --studio-inspector-muted:var(--cad-muted);
+  --studio-inspector-hover:var(--cad-hover);
+  --studio-inspector-active:var(--cad-input);
+}
 
 .cad-sequence-dock {flex:none; min-height:5rem; height:var(--cad-timeline-height,9rem); max-height:40%; overflow:auto; color:var(--cad-ink); background:var(--cad-surface);border-top:1px solid var(--cad-line)}
 .cad-sequence-dock header,.cad-sequence-dock header strong,.cad-sequence-track,.cad-sequence-track fieldset {display:flex;align-items:center;gap:.5rem}
@@ -643,7 +647,6 @@
   .cad-workspace-body>.cad-properties {width:var(--cad-right-width)}
 }
 .cad-return-from-sim {position:absolute;inset-block-end:.6rem;inset-inline-start:.6rem;z-index:60;padding:.45rem .75rem;background:var(--cad-surface);color:var(--cad-ink);border:1px solid var(--cad-line);border-radius:.4rem}
-.cad-properties .studio-inspector-picker select {background:var(--cad-input);color:var(--cad-ink)}
 
 .qa-group>strong {display:block;padding:.4rem .6rem .15rem;color:var(--cad-muted);font-size:var(--text-xs)}
 @media(max-width:920px){.cad-workspace-body>.cad-properties {left:auto;right:.35rem;direction:ltr}}

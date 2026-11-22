@@ -77,6 +77,7 @@
       "types": "./dist/design/index.d.ts",
       "import": "./dist/design/index.js"
     },
+    "./shell/inspector-picker.css": "./dist/shell/inspector-picker.css",
     "./design/design-workspace.css": "./dist/design/design-workspace.css"
   },
   "scripts": {

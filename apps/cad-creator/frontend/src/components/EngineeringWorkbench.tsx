@@ -18,6 +18,7 @@ import {Layers3, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen,
  Search, ChevronRight, ChevronDown, Box, Plus,  Grid2X2,
  MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks, Undo2, Redo2, Bot, Activity,
  BrickWall, AppWindow, RectangleHorizontal, PenTool, LayoutPanelLeft, History, Download, Save, Sofa} from 'lucide-react';
+import '@inneranimalmedia/agentsam-workbench/shell/inspector-picker.css';
 import './engineering-workbench.css';
 import {patchSceneElement} from '../lib/scene-document';
 import {SidePanel} from '@inneranimalmedia/agentsam-workbench/shell';

@@ -52,3 +52,5 @@ execFileSync('tsc', ['-p', 'tsconfig.build.json'], { cwd, stdio: 'inherit' });
 
 mkdirSync(`${cwd}/dist/design`, { recursive: true });
 copyFileSync(`${cwd}/src/design/design-workspace.css`, `${cwd}/dist/design/design-workspace.css`);
+mkdirSync(`${cwd}/dist/shell`, { recursive: true });
+copyFileSync(`${cwd}/src/shell/inspector-picker.css`, `${cwd}/dist/shell/inspector-picker.css`);
