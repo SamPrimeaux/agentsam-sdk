@@ -144,3 +144,13 @@ The pinned package.json declares MIT. No standalone LICENSE file is present in t
 ## Per-shader BSD notices
 
 InvertedPageCurl (BSD 3-Clause) and StereoViewer (BSD 2-Clause) retain their full license and copyright text verbatim inside the distributed shader source in src/transitions/catalog.js. All other imported shaders have their original author and MIT headers retained. GL Transitions' repository-level MIT notice is reproduced above.
+
+## Runtime dependency: Mediabunny
+
+Package: `mediabunny@1.66.2` (unmodified npm dependency)
+
+License: Mozilla Public License 2.0 (`MPL-2.0`)
+
+Upstream: https://github.com/Vanilagy/mediabunny
+
+Used by `src/world3d.js` for WebCodecs packet muxing into WebM. Mediabunny is installed separately by the package manager; its upstream `LICENSE` file is distributed with the dependency.

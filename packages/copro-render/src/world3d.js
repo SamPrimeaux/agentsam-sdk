@@ -1,4 +1,4 @@
-import { Muxer, ArrayBufferTarget } from 'webm-muxer';
+import { Output, WebMOutputFormat, BufferTarget, EncodedVideoPacketSource, EncodedPacket } from 'mediabunny';
 /**
  * Browser-safe CoPro world compositor. One CoPro project owns time, layers, clip
  * transforms and source animations. The host GPU runtime supplies frame
@@ -70,24 +70,35 @@ async function encodeWorld3DWebM(project, {canvas,applyFrame,onFrame,frameRate,s
     throw new Error('copro_world3d_webcodecs_unavailable');
   const width=canvas.width, height=canvas.height;
   const supportedCodec=await Promise.all([
-    ['vp8','V_VP8'],['vp09.00.10.08','V_VP9']
-  ].map(async ([codec,webmCodec])=>({codec,webmCodec,supported:(await VideoEncoder.isConfigSupported({codec,width,height,bitrate:2_000_000,framerate:frameRate})).supported})));
+    ['vp8','vp8'],['vp09.00.10.08','vp9']
+  ].map(async ([codec,containerCodec])=>({codec,containerCodec,supported:(await VideoEncoder.isConfigSupported({codec,width,height,bitrate:2_000_000,framerate:frameRate})).supported})));
   const choice=supportedCodec.find(item=>item.supported);
   if(!choice) throw new Error('copro_world3d_webcodecs_codec_unavailable');
   const outputCanvas=document.createElement('canvas');outputCanvas.width=width;outputCanvas.height=height;
   const ctx=outputCanvas.getContext('2d',{alpha:false});
   if(!ctx)throw new Error('copro_world3d_capture_context_unavailable');
-  const target=new ArrayBufferTarget();
-  const muxer=new Muxer({target,video:{codec:choice.webmCodec,width,height,frameRate}});
+  const target=new BufferTarget();
+  const output=new Output({format:new WebMOutputFormat(),target});
+  const videoSource=new EncodedVideoPacketSource(choice.containerCodec);
+  output.addVideoTrack(videoSource,{frameRate});
+  let encoder;
   let encodingError=null;
-  const encoder=new VideoEncoder({
-    output:(chunk,metadata)=>{try{muxer.addVideoChunk(chunk,metadata);}catch(e){encodingError=e;}},
-    error:e=>{encodingError=e;},
-  });
-  encoder.configure({codec:choice.codec,width,height,bitrate:2_000_000,framerate:frameRate,latencyMode:'quality'});
+  let packetChain=Promise.resolve();
+  let finalized=false;
   const durationUs=Math.max(0,...project.tracks.flatMap(t=>t.clips.map(c=>c.startUs+c.durationUs)));
   const frames=Math.max(2,Math.ceil(durationUs/1_000_000*frameRate));
   try {
+    await output.start();
+    encoder=new VideoEncoder({
+      output:(chunk,metadata)=>{
+        packetChain=packetChain.then(()=>{
+          if(encodingError) return;
+          return videoSource.add(EncodedPacket.fromEncodedChunk(chunk),metadata);
+        }).catch(error=>{encodingError=error;});
+      },
+      error:error=>{encodingError=error;},
+    });
+    encoder.configure({codec:choice.codec,width,height,bitrate:2_000_000,framerate:frameRate,latencyMode:'quality'});
     for(let index=0;index<frames;index++) {
       if(signal?.aborted)throw new Error('copro_world3d_recording_cancelled');
       if(encodingError)throw encodingError;
@@ -98,16 +109,27 @@ async function encodeWorld3DWebM(project, {canvas,applyFrame,onFrame,frameRate,s
       // Encoded timestamps come from the CoPro timeline—not GPU frame delivery.
       const source=new VideoFrame(outputCanvas,{timestamp:Math.round(index*1_000_000/frameRate),duration:Math.round(1_000_000/frameRate)});
       try{encoder.encode(source,{keyFrame:index%Math.round(frameRate*2)===0});}finally{source.close();}
-      if(encoder.encodeQueueSize>6)await encoder.flush();
+      if(encoder.encodeQueueSize>6) {
+        await encoder.flush();
+        await packetChain;
+        if(encodingError)throw encodingError;
+      }
       onProgress?.((index+1)/frames);
     }
     await encoder.flush();
+    await packetChain;
     if(encodingError)throw encodingError;
-    muxer.finalize();
-    const blob=new Blob([target.buffer],{type:'video/webm'});
+    videoSource.close();
+    await output.finalize();
+    finalized=true;
+    const mimeType=await output.getMimeType();
+    const blob=new Blob([target.buffer],{type:mimeType || 'video/webm'});
     if(!blob.size)throw new Error('copro_world3d_empty_export');
-    return {blob,mimeType:'video/webm',width,height,frameRate,durationUs,frameCount:frames,renderBackend:'webcodecs'};
-  } finally {encoder.close();}
+    return {blob,mimeType:mimeType || 'video/webm',width,height,frameRate,durationUs,frameCount:frames,renderBackend:'webcodecs'};
+  } finally {
+    encoder?.close();
+    if(!finalized && output.state!=='canceled' && output.state!=='finalized') await output.cancel();
+  }
 }
 
 export function createWorld3DRenderer({applyFrame, canvas, onFrame, mediaRecorderFactory} = {}) {

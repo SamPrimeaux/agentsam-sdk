@@ -36,7 +36,7 @@
     "access": "public"
   },
   "dependencies": {
-    "webm-muxer": "5.1.4"
+    "mediabunny": "1.66.2"
   },
   "keywords": [
     "copro",
