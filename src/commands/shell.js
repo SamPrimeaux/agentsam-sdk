@@ -5,6 +5,7 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { confirm, isCancel, select } from '@clack/prompts';
 import { SLASH_COMMANDS, SHELL_PHASES } from '../lib/slash-commands.js';
+import { installPromptBox, renderInputPrompt } from '../ui/cli/prompt-box.js';
 import { runContext } from './context.js';
 import { runDb } from './db.js';
 import { runDeploy } from './deploy.js';
@@ -1241,7 +1242,7 @@ export async function dispatchShellLine(line, state = {}) {
   }
   const skipFooter = state.wroteTurnFooter;
   state.wroteTurnFooter = false;
-  if (state.persistFooter && !skipFooter) {
+  if (state.persistFooter && !skipFooter && !state.richPrompt) {
     writeLine(write, renderShellSessionFooter(state));
     writeLine(write, '');
   }
@@ -1349,12 +1350,20 @@ export async function runShell(argv = [], options = {}) {
     writeLine(write, '  Interactive shell ready. Type / for the command picker; /exit to return to your host shell.\n');
   }
   state.persistFooter = options.persistFooter !== false;
-  writeLine(write, renderShellSessionFooter(state));
-  writeLine(write, '');
+  const richPrompt = state.richPrompt = Boolean(process.stdin.isTTY && process.stdout.isTTY) && typeof options.prompt !== 'function' && typeof options.prompt !== 'string';
+  if (!richPrompt) { writeLine(write, renderShellSessionFooter(state)); writeLine(write, ''); }
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY && process.stdout.isTTY) });
   state.rl = rl;
   let promptTextRef = () => renderShellPrompt(state.cwd);
   const restorePaste = installPasteCollapse(rl, { output: process.stdout });
+  const promptBox = richPrompt ? installPromptBox(rl, {
+    output: process.stdout,
+    getStatus: () => {
+      const preferences = readCliPreferences(state.cwd) || {};
+      const model = state.session?.provider_model_id || state.session?.model_key || (preferences.modelPreference && preferences.modelPreference !== 'auto' ? preferences.modelPreference : 'auto model');
+      return { model, cwd: compactCwd(state.cwd) };
+    },
+  }) : null;
   let interrupted = false;
   let lastSigintAt = 0;
   const SIGINT_EXIT_WINDOW_MS = 2000;
@@ -1375,16 +1384,16 @@ export async function runShell(argv = [], options = {}) {
     write('\n  (Ctrl+C again within 2s to exit)\n');
     rl.line = '';
     rl.cursor = 0;
-    if (rl.terminal) { rl.setPrompt(promptTextRef()); rl.prompt(); }
+    if (rl.terminal) { rl.setPrompt(promptTextRef()); rl.prompt(); promptBox?.redraw(); }
   });
   const promptText = () => {
     if (typeof options.prompt === 'function') return options.prompt(state);
     if (typeof options.prompt === 'string' && options.prompt) return options.prompt;
-    return renderShellPrompt(state.cwd);
+    return richPrompt ? renderInputPrompt() : renderShellPrompt(state.cwd);
   };
   promptTextRef = promptText;
   try {
-    if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
+    if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); promptBox?.redraw(); }
     for await (const line of rl) {
       recordSessionInput(state, line);
       const result = await dispatchShellLine(line, state);
@@ -1392,9 +1401,10 @@ export async function runShell(argv = [], options = {}) {
       if (process.stdin.isPaused()) {
         process.stdin.resume();
       }
-      if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
+      if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); promptBox?.redraw(); }
     }
   } finally {
+    promptBox?.uninstall();
     restorePaste();
     state.rl = null;
   }
