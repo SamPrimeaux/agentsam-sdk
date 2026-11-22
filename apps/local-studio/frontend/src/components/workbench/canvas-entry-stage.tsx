@@ -84,7 +84,6 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
  current.current={document,canvas,saved};
  const cursor=useRef(0);
  const created=useRef("");
- const directionRequested=useRef("");
  const executeAbort=useRef<AbortController|null>(null);
  const dirty=Boolean(document&&JSON.stringify(document)!==saved);
  const busy=Boolean(run&&!terminalRun(run.status));
@@ -186,11 +185,6 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
   }catch(cause){setDirectionError(message(cause));}
   finally{setPreparing(false);}
  }
- useEffect(()=>{
-  if(!canvas||!document||document.artboards.length||directions.length||!model.model_id||preparing||showSources)return;
-  if(directionRequested.current===canvas.id)return;
-  directionRequested.current=canvas.id;void prepareDirections();
- },[canvas?.id,model.provider,model.model_id,loading,showSources,document?.artboards.length]);
  async function save():Promise<CanvasMeta|null> {
   const state=current.current;
   if(!state.canvas||!state.document)return null;
@@ -380,8 +374,8 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
     <span/><IconAction label="Zoom out" onClick={()=>setZoom(z=>Math.max(.08,z/1.2))}><ZoomOut size={15}/></IconAction><button className="cv-zoom-value" title="Fit artboards (1)" onClick={()=>setFitToken(n=>n+1)}>{Math.round(zoom*100)}%</button><IconAction label="Zoom in" onClick={()=>setZoom(z=>Math.min(3,z*1.2))}><ZoomIn size={15}/></IconAction>
     {preview&&<select aria-label="Preview width" value={previewWidth} onChange={e=>setPreviewWidth(Number(e.target.value))}><option value={0}>Desktop</option><option value={768}>Tablet · 768</option><option value={390}>Phone · 390</option></select>}
    </div>
-   {!document.artboards.length&&<div className="cv-invitation"><div className="cv-invitation-heading"><span className="cv-eyebrow">A new beginning</span><h1>What kind of direction are you feeling?</h1><p>Choose a direction. AgentSam will build it here, with room for you to shape every detail.</p></div>
-    {preparing?<div className="cv-preparing" role="status"><span className="cv-loading-mark"/><p>Preparing four creative directions from your context…</p></div>:directions.length===4?<div className="cv-directions">{directions.map((direction,index)=><button key={direction.id} disabled={busy} onClick={()=>void startRun("",direction.id).catch(()=>{})}><span className="cv-direction-number">0{index+1}</span><h2>{direction.title}</h2><p>{direction.description}</p><span className="cv-direction-go">Explore this direction <ArrowRight size={15}/></span></button>)}</div>:<div className="cv-directions-empty"><p>{directionError||"AgentSam is ready to prepare your directions."}</p><ModelSelect compact/><button className="cv-toolbar-button" disabled={preparing} onClick={()=>void prepareDirections()}>Prepare directions</button></div>}
+   {!document.artboards.length&&<div className="cv-invitation"><div className="cv-invitation-heading"><span className="cv-eyebrow">Design Canvas</span><h1>Start with a blank artboard</h1><p>Author directly, import a source artboard, or optionally ask AgentSam to prepare creative directions.</p><div className="cv-entry-actions"><button type="button" className="cv-primary" disabled={busy||preparing} onClick={addBoard}>Create blank artboard</button><button type="button" className="cv-toolbar-button" disabled={busy||preparing} onClick={()=>setShowSources(true)}>Browse source artboards</button></div></div>
+    {preparing?<div className="cv-preparing" role="status"><span className="cv-loading-mark"/><p>Preparing four creative directions from your context…</p></div>:directions.length===4?<div className="cv-directions">{directions.map((direction,index)=><button key={direction.id} disabled={busy} onClick={()=>void startRun("",direction.id).catch(()=>{})}><span className="cv-direction-number">0{index+1}</span><h2>{direction.title}</h2><p>{direction.description}</p><span className="cv-direction-go">Explore this direction <ArrowRight size={15}/></span></button>)}</div>:<div className="cv-directions-empty"><p>{directionError||"Optional: prepare creative directions with AgentSam."}</p><ModelSelect compact/><button className="cv-toolbar-button" disabled={preparing} onClick={()=>void prepareDirections()}>Prepare directions</button></div>}
     {directions.length===4&&<details className="cv-context-details"><summary>Add context or explore other directions</summary><textarea aria-label="Creative context" value={context} onChange={e=>setContext(e.target.value)} placeholder="A little about what you have in mind…" rows={2}/><div><ModelSelect compact/><button disabled={preparing||busy} onClick={()=>void prepareDirections()}><RefreshCw size={12}/> Prepare new directions</button></div></details>}
     {directionError&&directions.length===4&&<p role="alert" className="cv-error-text">{directionError}</p>}
    </div>}
