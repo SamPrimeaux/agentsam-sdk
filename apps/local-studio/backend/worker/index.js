@@ -50,7 +50,7 @@ import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections
 import { readAccountSideStageCatalog, updateAccountSideStage } from "./plugin-side-stages.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
-import { handleSamSpeaksRequest } from "../../../../src/models/samspeaks-runtime.js";
+import { handleSamSpeaksRequest } from "../../../../packages/agentsam-communications/src/samspeaks-runtime.js";
 import { handleStudioChatHistory } from "./studio-chat-history.js";
 import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
 import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES } from "../../shared/studio-admin-routes.mjs";

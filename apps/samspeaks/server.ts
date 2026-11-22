@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 3000);
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-import { handleSamSpeaksRequest } from '../../src/models/samspeaks-runtime.js';
+import { handleSamSpeaksRequest } from '../../packages/agentsam-communications/src/samspeaks-runtime.js';
 
 async function createServer() {
   const app = express();

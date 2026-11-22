@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.js",
     "./adapters": "./src/adapters.js",
-    "./outbox": "./src/outbox.js"
+    "./outbox": "./src/outbox.js",
+    "./samspeaks": "./src/samspeaks-runtime.js"
   },
   "files": [
     "src",
