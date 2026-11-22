@@ -18,6 +18,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@inneranimalmedia/agentsam-3d-viewer": [
+        "../../../packages/agentsam-3d-viewer/src/index.d.ts"
       ]
     },
     "allowImportingTsExtensions": true,

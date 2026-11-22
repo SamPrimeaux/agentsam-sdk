@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handleSamSpeaksRequest } from '../../../../src/models/samspeaks-runtime.js';
+import { handleSamSpeaksRequest } from '../../../../packages/agentsam-communications/src/samspeaks-runtime.js';
 const post=(op,body)=>new Request('https://studio.test/api/samspeaks/'+op,{method:'POST',body:JSON.stringify(body)});
 const reply=parts=>Response.json({candidates:[{content:{parts}}]});
 test('not connected, validation and unknown operation are truthful',async()=>{

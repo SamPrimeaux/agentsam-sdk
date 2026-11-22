@@ -11,9 +11,15 @@ export default defineConfig(() => {
     build: { target: 'es2022' },
     resolve: {
       dedupe: ['react', 'react-dom'],
-      alias: {
-        '@': path.resolve(__dirname, 'src'),
-      },
+      alias: [
+        // Exact root entrypoint override: preserve the published /occt subpath.
+        // Bundle unreleased in-repo viewer features without publishing or
+        // lying about the app's exact registry dependency pin.
+        { find: /^@inneranimalmedia\/agentsam-3d-viewer$/, replacement: path.resolve(
+          __dirname, '../../../packages/agentsam-3d-viewer/src/index.js'
+        ) },
+        { find: '@', replacement: path.resolve(__dirname, 'src') },
+      ],
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

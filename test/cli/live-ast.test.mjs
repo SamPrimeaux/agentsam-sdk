@@ -9,11 +9,11 @@ import {
   searchLiveAst,
   matchLiveAst,
   createLiveAstRepositoryProvider,
-} from '../src/indexing/live-ast.js';
-import { assertRepositoryKnowledgeProvider } from '../src/indexing/provider.js';
-import { inspectLiveGltf } from '../src/indexing/live-resource-graph.js';
-import { inspectLiveCadProject } from '../src/indexing/live-cad-graph.js';
-import { createCadProjectV2 } from '../src/lib/cad/project-v2.js';
+} from '../../src/indexing/live-ast.js';
+import { assertRepositoryKnowledgeProvider } from '../../src/indexing/provider.js';
+import { inspectLiveGltf } from '../../src/indexing/live-resource-graph.js';
+import { inspectLiveCadProject } from '../../src/indexing/live-cad-graph.js';
+import { createCadProjectV2 } from '../../src/lib/cad/project-v2.js';
 
 function project(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-live-ast-'));
