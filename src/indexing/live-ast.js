@@ -133,8 +133,21 @@ export function matchLiveAst(root, pattern, options = {}) {
   }
   const scope = scopedPath(base, options.path || '.');
   if (!fs.existsSync(scope)) throw new Error('AST path does not exist');
-  const binary = String(options.binary || 'sg');
-  if (!/^(?:sg|ast-grep)$/.test(binary)) throw new Error('AST binary must be sg or ast-grep');
+  const requestedBinary = String(options.binary || 'sg');
+  if (!/^(?:sg|ast-grep)$/.test(requestedBinary)) throw new Error('AST binary must be sg or ast-grep');
+  // On Linux, /usr/bin/sg is often the shadow-utils group command, not ast-grep.
+  // Never interpret that unrelated program's empty stdout as no AST matches.
+  const isAstGrep = (candidate) => {
+    const result = spawnSync(candidate, ['--version'], {
+      cwd: base, encoding: 'utf8', timeout: 3000, shell: false,
+    });
+    return !result.error && result.status === 0 &&
+      /\bast-grep\s+\d/i.test(String(result.stdout || '') + String(result.stderr || ''));
+  };
+  const binary = isAstGrep(requestedBinary)
+    ? requestedBinary
+    : requestedBinary === 'sg' && isAstGrep('ast-grep') ? 'ast-grep' : null;
+  if (!binary) throw new Error('ast-grep unavailable: install sg/ast-grep for this language; no lexical fallback performed');
   const args = ['run', '--pattern', p, '--lang', language, '--json=compact', scope];
   const run = spawnSync(binary, args, {
     cwd: base, encoding: 'utf8', timeout: 30000, maxBuffer: 8 * 1024 * 1024, shell: false,
