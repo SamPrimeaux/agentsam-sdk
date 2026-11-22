@@ -1,9 +1,6 @@
-import { createRequire } from "node:module";
-import { dirname as peerDirname } from "node:path";
 import { existsSync, readdirSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
-const resolveReactPeer = (name: string) => peerDirname(createRequire(import.meta.url).resolve(name + "/package.json"));
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -282,14 +279,10 @@ export default defineConfig(({ command, isPreview }) => ({
     strictPort: true,
   },
   resolve: {
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     tsconfigPaths: true,
     preserveSymlinks: true,
     alias: [
-      // Linked workspaces can have their own installed peers. Pin every React
-      // subpath to the consuming app's instance, not the linked package's copy.
-      { find: /^react(?=\/|$)/, replacement: resolveReactPeer("react") },
-      { find: /^react-dom(?=\/|$)/, replacement: resolveReactPeer("react-dom") },
       // Runtime JS is required here; the frontend tsconfig intentionally names
       // the adjacent .d.ts for typechecking, which Vite must never execute.
       {
@@ -541,6 +534,10 @@ export default defineConfig(({ command, isPreview }) => ({
     },
   },
   ssr: {
+    // Keep bare React peer imports external at the Vite SSR boundary. Nitro
+    // owns their final bundling together with the TanStack server renderer.
+    // Absolute-path React aliases here inline a second hook dispatcher.
+    external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "react-dom/server", "react-dom/client", "react-dom/server.browser", "react-dom/server.node"],
     noExternal: [/^@radix-ui\//],
   },
   plugins: [
