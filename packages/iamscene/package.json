@@ -44,8 +44,8 @@
     "@inneranimalmedia/agentsam-3d-viewer"
   ],
   "dependencies": {
-    "@inneranimalmedia/agentsam-3d-viewer": "2.6.17",
-    "@inneranimalmedia/agentsam-occt": "2.6.17",
+    "@inneranimalmedia/agentsam-3d-viewer": "2.6.18",
+    "@inneranimalmedia/agentsam-occt": "2.6.18",
     "@types/three": "^0.187.0",
     "ajv": "^8.20.0",
     "three": "^0.187.0"
