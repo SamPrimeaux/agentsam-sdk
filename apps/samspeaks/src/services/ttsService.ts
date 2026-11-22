@@ -55,7 +55,7 @@ const VALID_MOODS = new Set<AtmosphereMoodId>([
 ]);
 
 export async function synthesizeSpeech(payload: TtsRequest): Promise<TtsResponse> {
-  const response = await fetch('/api/tts', {
+  const response = await fetch('/api/samspeaks/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -79,7 +79,7 @@ export async function assistScript(params: {
   topic?: string;
 }): Promise<string> {
   const subject = SUBJECT_MAP[params.subjectId];
-  const response = await fetch('/api/script-assist', {
+  const response = await fetch('/api/samspeaks/script-assist', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -104,7 +104,7 @@ export async function composeWithMiniAgentSam(params: {
   images: DroppedImageAsset[];
 }): Promise<ComposeResponse> {
   const subject = SUBJECT_MAP[params.subjectId];
-  const response = await fetch('/api/compose', {
+  const response = await fetch('/api/samspeaks/compose', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

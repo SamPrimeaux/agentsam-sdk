@@ -50,6 +50,7 @@ import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections
 import { readAccountSideStageCatalog, updateAccountSideStage } from "./plugin-side-stages.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
+import { handleSamSpeaksRequest } from "../../../../src/models/samspeaks-runtime.js";
 import { handleStudioChatHistory } from "./studio-chat-history.js";
 import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
 import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES } from "../../shared/studio-admin-routes.mjs";
@@ -854,6 +855,10 @@ export default {
         location:new URL('/canvas?library=sources',url).toString(), 'cache-control':'no-store',
       }});
     }
+    if (url.pathname === "/samspeaks" && ["GET","HEAD"].includes(request.method)) {
+      const target=new URL("/admin/samspeaks", request.url);target.search=url.search;
+      return new Response(null,{status:302,headers:{location:target.toString(),"cache-control":"no-store"}});
+    }
     const designCanvasAdmin = await serveDesignCanvasAdminRoute(request, env, guardStudioDocument);
     if (designCanvasAdmin) return designCanvasAdmin;
     // Only published forms are exposed publicly; account-owned management uses
@@ -1373,6 +1378,15 @@ export default {
     async function sessionAccount() {
       if (sessionAccountId === undefined) sessionAccountId = await resolveStudioAccountIdForUser(env.DB, await sessionUser());
       return sessionAccountId;
+    }
+
+    if (url.pathname.startsWith("/api/samspeaks/")) {
+      const accountId = await sessionAccount();
+      if (!accountId) return json({ok:false,error:"authenticated_account_required"},401);
+      let apiKey;
+      try { apiKey = (await loadVaultCredentialsForAccount(env, accountId)).get("gemini")?.value; }
+      catch { return json({ok:false,error:"credential_vault_unavailable"},503); }
+      return handleSamSpeaksRequest(request,{apiKey,ttsModel:env.SAMSPEAKS_TTS_MODEL,textModel:env.SAMSPEAKS_TEXT_MODEL});
     }
 
     if(workspaceMatch) {

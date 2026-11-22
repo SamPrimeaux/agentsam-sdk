@@ -63,7 +63,7 @@
   "runtime": {
     "local_preview": "ready",
     "source_scaffold": "ready",
-    "cloudflare": "unsupported",
+    "cloudflare": "scaffold",
     "type": "spa",
     "assetRoot": "dist",
     "shell": "index.html"
@@ -72,5 +72,34 @@
     "server_only": [
       "GEMINI_API_KEY"
     ]
+  },
+  "embed": {
+    "stage": "samspeaks",
+    "build": {
+      "cwd": ".",
+      "install": {
+        "lockfile": "package-lock.json",
+        "check": [
+          "node_modules/vite/package.json",
+          "node_modules/xrblocks/package.json",
+          "node_modules/@inneranimalmedia/agentsam-3d-viewer/package.json"
+        ],
+        "command": [
+          "npm",
+          "ci",
+          "--ignore-scripts",
+          "--no-audit",
+          "--no-fund"
+        ]
+      },
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "--",
+        "--base={base}"
+      ],
+      "output": "dist"
+    }
   }
 }

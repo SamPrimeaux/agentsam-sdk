@@ -175,6 +175,11 @@
         "path": "/samsketch",
         "auth": "optional",
         "spa": true
+      },
+      {
+        "path": "/samspeaks",
+        "auth": "optional",
+        "spa": true
       }
     ]
   },

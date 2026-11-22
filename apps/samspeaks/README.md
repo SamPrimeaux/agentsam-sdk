@@ -42,3 +42,8 @@ Rule: a piece leaves this app only when a second app needs it.
 
 Known gaps: `runtime.cloudflare` is `unsupported` until `server.ts` is replaced (Slice 2).
 Vite HMR uses a fixed port (24678), so two instances at once collide.
+
+
+## Hosted runtime
+
+Local Studio builds and bundles SamSpeaks at `/samspeaks/`; open the authenticated editor at `/admin/samspeaks`. Voice generation, script assistance and storyboard composition use the same `/api/samspeaks/*` protocol in the Worker and the standalone Express server. Hosted credentials come exclusively from the signed-in account's Gemini key in Settings > Keys. Local development uses `GEMINI_API_KEY`. Neither runtime sends the key to the browser. Optional `SAMSPEAKS_TTS_MODEL` and `SAMSPEAKS_TEXT_MODEL` settings override the preferred provider model. The Worker never falls back to another account's key.
