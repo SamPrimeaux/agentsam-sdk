@@ -279,7 +279,7 @@ export default defineConfig(({ command, isPreview }) => ({
     strictPort: true,
   },
   resolve: {
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     tsconfigPaths: true,
     preserveSymlinks: true,
     alias: [
@@ -534,6 +534,10 @@ export default defineConfig(({ command, isPreview }) => ({
     },
   },
   ssr: {
+    // Keep bare React peer imports external at the Vite SSR boundary. Nitro
+    // owns their final bundling together with the TanStack server renderer.
+    // Absolute-path React aliases here inline a second hook dispatcher.
+    external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "react-dom/server", "react-dom/client", "react-dom/server.browser", "react-dom/server.node"],
     noExternal: [/^@radix-ui\//],
   },
   plugins: [
