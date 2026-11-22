@@ -1,3 +1,5 @@
+import { formatCapabilities } from './core/capabilities.js';
+
 /**
  * Color / token helpers — pure, deterministic.
  */
@@ -122,5 +124,8 @@ export function isComponentPath(relPath) {
 }
 
 export function isAssetPath(relPath) {
-  return /\.(svg|png|jpe?g|webp|ico|gif|woff2?|ttf|otf)$/i.test(relPath || '');
+  const value = String(relPath || '');
+  const ext = value.split('/').pop()?.split('.').pop()?.toLowerCase() || '';
+  const capabilities = formatCapabilities(ext);
+  return capabilities.unknown !== true && capabilities.ingest === true;
 }
