@@ -37,7 +37,6 @@ ROLLUP_HINTS: dict[str, str] = {
     "agentsam_tool_call_log": "Archive/purge output_json + input_json >30d; keep output_summary + ids.",
     "agentsam_tool_chain": "result_json dominates — rollup to R2 or truncate; keep summaries.",
     "agentsam_tool_cache": "Enforce TTL + max rows; output_json must not grow unbounded.",
-    "agentsam_mcp_tool_execution": "Archive old output_json; mirror tool_call_log policy.",
     "agentsam_execution_steps": "Archive input/output JSON after workflow completes.",
     "agentsam_workflow_runs": "Move step_results_json to R2; D1 row = pointer + status + cost.",
     "agentsam_webhook_events": "Rollup payload_json; retain type + ts + external id.",
