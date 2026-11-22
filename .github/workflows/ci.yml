@@ -121,13 +121,32 @@ jobs:
           }
           NODE
 
-      - name: Verify stable release-train and dependency publication order
+      # The release-train guard checks manifests, lockfiles and publish order, so it
+      # only runs when one of those can have changed (or when run by hand).
+      - name: Detect release-train changes
+        id: release_train
         run: |
-          npm run release:train:check
-          node scripts/sdk-release-publish.mjs --plan
+          changed=true
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            base="origin/$GITHUB_BASE_REF"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            base="${{ github.event.before }}"
+          else
+            base=""
+          fi
+          if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            if git diff --name-only "$base"...HEAD 2>/dev/null | grep -qE '(^|/)(package\.json|package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$|^scripts/(release|sdk-release|verify-registry-train)|^test/release/|^\.changeset/|^\.github/workflows/ci\.yml$'; then
+              changed=true
+            else
+              changed=false
+            fi
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "release-train guard needed: $changed"
 
-      - name: Verify manual and CI publishing safeguards
-        run: node --test scripts/sdk-release-publish.test.mjs
+      - name: Verify release train, dependency pins and publishing safeguards
+        if: steps.release_train.outputs.changed == 'true'
+        run: npm run release:train:guard
 
       # Canvas Work is hosted inside the standalone Local Studio workspace.
       # Its runtime imports the published SDK through that app's own lockfile,
