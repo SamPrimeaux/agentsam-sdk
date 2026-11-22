@@ -2419,9 +2419,9 @@
       "id": "primetech-procedures",
       "install": [
         {
-          "command": "npm install --workspace @inneranimalmedia/primetech-procedures",
+          "command": "npm install @inneranimalmedia/primetech-procedures",
           "package": "@inneranimalmedia/primetech-procedures",
-          "type": "workspace"
+          "type": "npm"
         }
       ],
       "languages": [
@@ -2432,12 +2432,12 @@
       "name": "@inneranimalmedia/primetech-procedures",
       "purpose": "Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset inventory, run receipts, output hashes, and performance evidence without creating a second runtime or database registry.",
       "registry": {
-        "kind": "npm-workspace",
+        "kind": "npm",
         "name": "@inneranimalmedia/primetech-procedures",
-        "public_claim": false
+        "public_claim": true
       },
       "schema": "agentsam.package.v1",
-      "status": "experimental-private-workspace",
+      "status": "public-package",
       "topics": [
         "primetech",
         "procedures",
@@ -2453,7 +2453,7 @@
         "Composing existing SAM operations with pinned Bash, Python, and native-tool steps",
         "Capturing procedure, entrypoint, input, output and artifact hashes with verification receipts"
       ],
-      "version": "0.1.0"
+      "version": "2.6.17"
     },
     {
       "avoid_when": [],
@@ -2489,11 +2489,12 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.14"
+      "version": "2.6.17"
     },
     {
       "avoid_when": [
-        "A licensed production storefront or a verified CMS installation is required."
+        "A licensed production storefront or a verified CMS installation is required.",
+        "Selecting the default starter for a new CMS site."
       ],
       "catalog_status": "needs-review",
       "class": "theme",
@@ -2512,7 +2513,7 @@
         "javascript"
       ],
       "name": "@inneranimalmedia/theme-plain-jane",
-      "purpose": "Read-only editorial journal and photography CMS starter with externally editable manifest.",
+      "purpose": "Legacy editorial journal and photography reference; not the canonical CMS starter or default theme.",
       "registry": {
         "kind": "local-package",
         "name": "@inneranimalmedia/theme-plain-jane",
@@ -2533,7 +2534,7 @@
         "theme"
       ],
       "use_when": [
-        "Review a source-driven editorial journal and photography starter."
+        "Review or maintain existing Plain Jane editorial projects and source provenance."
       ],
       "version": "0.1.0"
     },

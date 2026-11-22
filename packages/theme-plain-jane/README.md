@@ -1,3 +1,5 @@
+> **Legacy reference only.** Plain Jane is an archival editorial journal starter, not the canonical CMS starter or default theme. Preserve existing theme/project compatibility; use the current site-owned CMS theme registry for new sites.
+
 # Plain Jane Journal — SDK product staging
 
 Source of truth: https://github.com/SamPrimeaux/inneranimalmedia-blog-template

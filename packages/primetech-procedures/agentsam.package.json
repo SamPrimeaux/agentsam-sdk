@@ -2,10 +2,10 @@
   "schema": "agentsam.package.v1",
   "id": "primetech-procedures",
   "name": "@inneranimalmedia/primetech-procedures",
-  "version": "0.1.0",
+  "version": "2.6.17",
   "catalog_status": "classified",
   "class": "package",
-  "status": "experimental-private-workspace",
+  "status": "public-package",
   "languages": [
     "javascript",
     "python",
@@ -19,9 +19,9 @@
   "purpose": "Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset inventory, run receipts, output hashes, and performance evidence without creating a second runtime or database registry.",
   "install": [
     {
-      "type": "workspace",
+      "type": "npm",
       "package": "@inneranimalmedia/primetech-procedures",
-      "command": "npm install --workspace @inneranimalmedia/primetech-procedures"
+      "command": "npm install @inneranimalmedia/primetech-procedures"
     }
   ],
   "use_when": [
@@ -46,9 +46,9 @@
     "bim"
   ],
   "registry": {
-    "kind": "npm-workspace",
+    "kind": "npm",
     "name": "@inneranimalmedia/primetech-procedures",
-    "public_claim": false
+    "public_claim": true
   },
   "evidence": {
     "directory": "packages/primetech-procedures",
