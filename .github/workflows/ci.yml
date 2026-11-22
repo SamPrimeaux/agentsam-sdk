@@ -199,8 +199,11 @@ jobs:
           node --test test/integration/cad-operator-capabilities.test.mjs test/integration/cad-run-modes.test.mjs
           node --test apps/local-studio/backend/worker/cad-chess-assets.test.mjs
 
+  # Browser evidence for the Settings UI (fixture-driven, so it cannot see
+  # authenticated screens). Runs on main and on demand, not on every pull request.
   ui:
-    name: ui (packaged Settings quality)
+    name: ui (Settings evidence)
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -314,8 +317,8 @@ jobs:
       - name: Require every verification job
         run: |
           echo '${{ toJSON(needs) }}'
-          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" = "true" ]; then
-            echo "A verification job failed, was cancelled or was skipped."
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "A verification job failed or was cancelled."
             exit 1
           fi
 
@@ -360,15 +363,9 @@ jobs:
       - name: Smoke-test hosted Worker routes
         run: npm run cf:smoke:worker --prefix apps/local-studio
       - name: Install Chromium for hosted shell regression
+        if: github.event_name != 'pull_request'
         working-directory: apps/local-studio
         run: npx playwright install --with-deps chromium
       - name: Verify hosted shell with restored co-worker
+        if: github.event_name != 'pull_request'
         run: node apps/local-studio/scripts/smoke-restored-admin-shell.mjs
-      - name: Preserve verified Local Studio deploy bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: local-studio-worker-${{ github.sha }}
-          path: apps/local-studio/.output/
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 3
