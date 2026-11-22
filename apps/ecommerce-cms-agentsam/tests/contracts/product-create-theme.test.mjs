@@ -36,7 +36,7 @@ test("navigation toggle morphs in place at upper-left, with persistent DOM and a
   assert.match(css, /\.console-nav-ghost-toggle--persistent\s*\{[^}]*left: 0;/s);
   assert.match(css, /console-nav-morph > span:first-child/);
   assert.match(css, /prefers-reduced-motion: reduce/);
-  assert.match(shell, /toggle\.setAttribute\("aria-label", open \? "Close sidebar" : "Show sidebar"\)/);
+  assert.match(shell, /const label = collapsed \? "Show sidebar" : \(window\.matchMedia\?\.\("\(max-width: 900px\)"\)\?\.matches \? "Close sidebar" : "Collapse sidebar"\);\s*button\.setAttribute\("aria-label", label\)/);
 });
 
 test("Product Create uses existing account product endpoint and Completeful catalog", () => {
