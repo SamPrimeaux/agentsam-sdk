@@ -2,6 +2,7 @@ import { configureCliPreferences } from './preferences.js';
 import { runShell } from './shell.js';
 import { detectCliProject, readCliPreferences } from '../lib/cli-preferences.js';
 import { runBootScene } from '../ui/boot.js';
+import { checkForUpdate, promptForUpdate } from '../lib/update-check.js';
 import { select, isCancel } from '@clack/prompts';
 import { discoverProjectCapabilities } from '../agent/project-discovery.js';
 
@@ -32,6 +33,10 @@ export async function runInteractive(options = {}) {
         console.log('  No provider, index, deploy or workspace settings were changed.\n');
       }
     }
+  }
+  if (process.stdin.isTTY && process.stderr.isTTY) {
+    const update = await checkForUpdate().catch(() => null);
+    if (update) await promptForUpdate(update).catch(() => {});
   }
   await runBootScene({ identity, preferences, animate: options.animate !== false });
   await runShell([], { cwd: identity.root, intro: 'quiet' });

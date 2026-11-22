@@ -39,10 +39,45 @@ export function availableShells(env = process.env) {
   return values.length ? values : ['shell'];
 }
 
-export function modelOptions(status) {
+
+const NON_CHAT_MODEL = /(tts|embed|transcrib|banana|imagen|veo|lyria|robotics|whisper|audio|realtime|moderation|dall-e|image|computer[- ]use|deep[- ]research|antigravity|latest)/i;
+const PER_PROVIDER_LIMIT = 3;
+
+function modelVersion(label) {
+  const m = String(label).match(/(\d+(?:\.\d+)*)/);
+  return m ? m[1].split('.').map(Number) : [];
+}
+function compareVersionArrays(a, b) {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) - (b[i] || 0);
+  return 0;
+}
+const createdAt = (model) => Date.parse(model.metadata?.created_at || '') || 0;
+
+/**
+ * Newest chat-capable model per family (e.g. "Claude Opus"), newest first.
+ * Hides embedding/voice/image/preview-only rows and superseded versions.
+ */
+export function curateModels(models = [], { perProvider = 0 } = {}) {
+  const best = new Map();
+  for (const model of models) {
+    if (NON_CHAT_MODEL.test(`${model.label} ${model.provider_model_id}`)) continue;
+    const family = `${model.provider}|${String(model.label).replace(/\d+(?:\.\d+)*/g, '').replace(/\s+/g, ' ').trim().toLowerCase()}`;
+    const cur = best.get(family);
+    const newer = !cur || compareVersionArrays(modelVersion(model.label), modelVersion(cur.label)) > 0
+      || (compareVersionArrays(modelVersion(model.label), modelVersion(cur.label)) === 0 && createdAt(model) > createdAt(cur));
+    if (newer) best.set(family, model);
+  }
+  const sorted = [...best.values()].sort((a, b) => createdAt(b) - createdAt(a));
+  if (!perProvider) return sorted;
+  const counts = {};
+  return sorted.filter((x) => (counts[x.provider] = (counts[x.provider] || 0) + 1) <= perProvider);
+}
+
+export function modelOptions(status, { all = false } = {}) {
   const options = [{ value: 'auto', label: 'Automatic', hint: 'runtime chooses from this credential\'s verified inventory', model: null }];
-  for (const model of status.availableModels || []) {
-    if (model.provider === 'openai' && model.capabilities?.agent_runtime !== true) continue;
+  const pool = (status.availableModels || []).filter((m) => !(m.provider === 'openai' && m.capabilities?.agent_runtime !== true));
+  const shown = all ? pool : curateModels(pool, { perProvider: PER_PROVIDER_LIMIT });
+  for (const model of shown) {
     const context = Number(model.context_window) > 0 ? ` · ctx ${Math.round(Number(model.context_window) / 1000)}k` : ' · ctx unknown';
     options.push({
       value: model.model_key,
@@ -52,7 +87,7 @@ export function modelOptions(status) {
     });
   }
   if (status.local?.online) {
-    for (const row of status.local.models || []) if (row?.name) options.push({
+    for (const row of status.local.models || []) if (row?.name && !NON_CHAT_MODEL.test(row.name)) options.push({
       value: `ollama:${row.name}`,
       label: `Ollama · ${row.name}`,
       hint: 'local',
@@ -62,6 +97,9 @@ export function modelOptions(status) {
         max_output_tokens: null, max_output_tokens_source: 'unknown', reasoning_efforts: ['auto'], service_tiers: ['default'], capabilities: { chat: true },
       },
     });
+  }
+  if (!all && curateModels(pool).length > shown.length) {
+    options.push({ value: '__show_all__', label: 'Show all models…', hint: 'older versions and specialty models', model: null });
   }
   options.push({
     value: '__configure_provider__',
@@ -108,9 +146,13 @@ function serviceTierOptions(modelPreference, modelSnapshot) {
 async function promptModelPreferences(identity, existing, options = {}) {
   let status = { providers: [], availableModels: [], local: { online: false, models: [] } };
   try { status = await collectModelsStatus(options.modelStatusOptions || {}); } catch { /* inventory remains best-effort */ }
-  const models = modelOptions(status);
+  let models = modelOptions(status);
   const initialModel = models.some((row) => row.value === existing.modelPreference) ? existing.modelPreference : 'auto';
-  const modelPreference = stopIfCancelled(await select({ message: 'Model', initialValue: initialModel, options: models.map(({ model, ...row }) => row) }));
+  let modelPreference = stopIfCancelled(await select({ message: 'Model', initialValue: initialModel, maxItems: 10, options: models.map(({ model, ...row }) => row) }));
+  if (modelPreference === '__show_all__') {
+    models = modelOptions(status, { all: true });
+    modelPreference = stopIfCancelled(await select({ message: 'Model (all)', initialValue: 'auto', maxItems: 10, options: models.map(({ model, ...row }) => row) }));
+  }
   if (modelPreference === '__configure_provider__') {
     const { runProviders } = await import('./providers.js');
     await runProviders([], { interactive: true, ...(options.modelStatusOptions || {}) });
