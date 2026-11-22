@@ -5,52 +5,55 @@ import readline from 'node:readline';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
+export const LOGIN_PROVIDERS = Object.freeze([
+  { id: 'google', label: 'Google', aliases: ['1', 'google'] },
+  { id: 'github', label: 'GitHub', aliases: ['2', 'github', 'gh'] },
+  { id: 'cloudflare', label: 'Cloudflare', aliases: ['3', 'cloudflare', 'cf'] },
+  { id: 'inneranimalmedia', label: 'Inner Animal Media account', aliases: ['4', 'iam', 'inneranimalmedia', 'agentsam'] },
+]);
+
+export function resolveLoginProvider(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return LOGIN_PROVIDERS.find((p) => p.aliases.includes(raw))?.id || null;
+}
+
 /**
- * Interactive provider picker for `agentsam login`.
- * @returns {Promise<'inneranimalmedia'|'google'|'cloudflare'>}
+ * Interactive provider picker for `agentsam login`. Provider-first: the user
+ * signs in with an account they already have; Inner Animal Media is one option.
+ * @returns {Promise<'google'|'github'|'cloudflare'|'inneranimalmedia'>}
  */
 export async function promptLoginProvider(options = {}) {
   const input = options.input || process.stdin;
   const output = options.output || process.stdout;
   const write = options.write || ((text) => output.write(text));
 
-  if (options.provider) {
-    const p = String(options.provider).trim().toLowerCase();
-    if (p === 'iam' || p === 'inneranimalmedia' || p === '1') return 'inneranimalmedia';
-    if (p === 'google' || p === '2') return 'google';
-    if (p === 'cloudflare' || p === 'cf' || p === '3') return 'cloudflare';
-  }
+  const preset = resolveLoginProvider(options.provider);
+  if (preset) return preset;
 
-  // Non-interactive / CI: default to Inner Animal Media AS (CLI OAuth).
-  if (!input?.isTTY || !output?.isTTY || options.skipPrompt === true) {
-    return 'inneranimalmedia';
-  }
+  // Non-interactive / CI: default to the AgentSam CLI OAuth client.
+  if (!input?.isTTY || !output?.isTTY || options.skipPrompt === true) return 'inneranimalmedia';
 
   writeLine(write, '');
-  writeLine(write, '  How do you want to sign in?');
-  writeLine(write, '    [1] Inner Animal Media   (IAM_CLIENT_ID + IAM_OAUTH_ISSUER)');
-  writeLine(write, '    [2] Google OAuth         (GOOGLE_CLIENT_ID or GOOGLE_DESKTOP_CLIENT_ID)');
-  writeLine(write, '    [3] Cloudflare OAuth     (CLOUDFLARE_OAUTH_CLIENT_ID)');
+  writeLine(write, '  Sign in with');
+  LOGIN_PROVIDERS.forEach((p, i) => writeLine(write, `    [${i + 1}] ${p.label}`));
   writeLine(write, '');
 
   const rl = readline.createInterface({ input, output });
   try {
-    const answer = await new Promise((resolve) => {
-      rl.question('  Choose [1/2/3] (default 1): ', resolve);
-    });
-    const raw = String(answer || '').trim().toLowerCase();
-    if (!raw || raw === '1' || raw === 'iam' || raw === 'inneranimalmedia') return 'inneranimalmedia';
-    if (raw === '2' || raw === 'google') return 'google';
-    if (raw === '3' || raw === 'cloudflare' || raw === 'cf') return 'cloudflare';
-    writeLine(write, `  Unknown choice "${raw}" — using Inner Animal Media.`);
-    return 'inneranimalmedia';
+    const answer = await new Promise((resolve) => rl.question('  Choose [1-4] (default 1): ', resolve));
+    const raw = String(answer || '').trim();
+    if (!raw) return 'google';
+    const chosen = resolveLoginProvider(raw);
+    if (chosen) return chosen;
+    writeLine(write, `  Unknown choice "${raw}" — using Google.`);
+    return 'google';
   } finally {
     rl.close();
   }
 }
 
 export async function runLogin(argv = [], options = {}) {
-  const allowed = new Set(['--json', '--provider', '--iam', '--google', '--cloudflare']);
+  const allowed = new Set(['--json', '--provider', '--iam', '--google', '--github', '--cloudflare']);
   const unknown = argv.filter((arg) => {
     if (allowed.has(arg)) return false;
     if (arg.startsWith('--provider=')) return false;
@@ -64,6 +67,7 @@ export async function runLogin(argv = [], options = {}) {
   for (const arg of argv) {
     if (arg === '--iam') providerFlag = 'inneranimalmedia';
     if (arg === '--google') providerFlag = 'google';
+    if (arg === '--github') providerFlag = 'github';
     if (arg === '--cloudflare') providerFlag = 'cloudflare';
     if (arg.startsWith('--provider=')) providerFlag = arg.slice('--provider='.length);
   }
@@ -76,6 +80,12 @@ export async function runLogin(argv = [], options = {}) {
     output: options.output,
     skipPrompt: argv.includes('--json') || options.skipPrompt === true,
   });
+
+  if (provider === 'cloudflare') {
+    // Cloudflare is a connector grant (feature packs), not an AgentSam account login.
+    const { runCloudflareBrowserOAuthLogin } = await import('./cloudflare-login.js');
+    return runCloudflareBrowserOAuthLogin([], { ...options, write });
+  }
 
   const session = await authenticate({
     home: options.home,
