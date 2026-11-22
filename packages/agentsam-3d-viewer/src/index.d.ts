@@ -4,7 +4,8 @@ export type ModelFormat = 'glb' | 'gltf' | 'stl';
 export interface ThreeRuntime {
   THREE: any;
   OrbitControls?: new (camera: any, element: HTMLElement) => any; // required unless controls:false
-  GLTFLoader?: new () => any;
+  GLTFLoader?: new (manager?: any) => any;
+  DRACOLoader?: new (manager?: any) => any;
   STLLoader?: new () => any;
 }
 
@@ -80,6 +81,11 @@ export interface ModelViewerOptions extends ThreeViewportOptions {
   autoRotateSpeed?: number;
   onLoad?: (model: any) => void;
   onError?: (error: unknown) => void;
+  draco?: boolean;
+  dracoDecoderPath?: string;
+  requireDraco?: boolean;
+  withCredentials?: boolean;
+  crossOrigin?: string;
 }
 
 export interface ModelViewerHandle extends ThreeViewportHandle {
@@ -100,5 +106,31 @@ export function mountModelViewer(
   options?: ModelViewerOptions,
 ): ModelViewerHandle;
 
+export function createConfiguredGLTFLoader(runtime: ThreeRuntime, options?: {
+  manager?: any; draco?: boolean; decoderPath?: string; requireDraco?: boolean;
+  withCredentials?: boolean; crossOrigin?: string;
+}): any;
+export const DEFAULT_DRACO_DECODER_PATH: string;
 export function inferModelFormat(source: unknown, explicitFormat?: string): ModelFormat;
 export const SUPPORTED_MODEL_FORMATS: readonly ModelFormat[];
+
+export type ProceduralPbrCategory = 'all' | 'metal' | 'stone' | 'glass' | 'organic';
+export type ProceduralPbrPattern = 'brushed-metal' | 'veined-marble' | 'hex-carbon' | 'hammered-copper' | 'frosted-crystal' | 'walnut-grain' | 'iridescent-pearl' | 'lava-basalt' | 'architectural-brick' | 'concrete' | 'wood-panel' | 'clear-glass' | 'ceramic' | 'polished-concrete' | 'anodized-frame' | 'slate';
+export interface ProceduralPbrMaterialPreset {
+  id:string; label:string; category:Exclude<ProceduralPbrCategory,'all'>; description:string;
+  swatchGradient:string; colorHex:string; secondaryHex:string; emissiveHex:string; emissiveIntensity:number;
+  metalness:number; roughness:number; clearcoat:number; clearcoatRoughness:number; iridescence:number;
+  anisotropy:number; transmission:number; ior:number; patternType:ProceduralPbrPattern; bumpScale:number; opacity?:number; thickness?:number;
+}
+export interface StudioTextureSet {
+  radialShadow:any; brushedRoughness:any; turntableDial:any; studioFloor:any; micGrillBump:any;
+  stoneBump:any; waterRippleBump:any; hexDeckBump:any; marbleVeinMap:any; hammeredBump:any;
+  walnutGrainMap:any; lavaFissureMap:any; dispose():void;
+}
+export const PROCEDURAL_PBR_MATERIALS: readonly ProceduralPbrMaterialPreset[];
+export const PROCEDURAL_PBR_MATERIAL_MAP: Readonly<Record<string,ProceduralPbrMaterialPreset>>;
+export const CAD_MATERIAL_PRESET_MAP: Readonly<Record<string,string>>;
+export function createStudioTextures(THREE:any,maxAnisotropy:number):StudioTextureSet;
+export function createProceduralPbrMaterial(THREE:any,preset:ProceduralPbrMaterialPreset,textures:StudioTextureSet,isSoftwareGl?:boolean):any;
+
+export function isSoftwareWebGLRenderer(renderer: {getContext():any}|null|undefined): boolean;

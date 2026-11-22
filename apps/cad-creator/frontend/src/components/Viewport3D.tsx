@@ -1,4 +1,4 @@
-import {createThreeViewport} from '@inneranimalmedia/agentsam-3d-viewer';
+import {createThreeViewport,createStudioTextures,createProceduralPbrMaterial,PROCEDURAL_PBR_MATERIAL_MAP,CAD_MATERIAL_PRESET_MAP,isSoftwareWebGLRenderer} from '@inneranimalmedia/agentsam-3d-viewer';
 import {trackCadRenderer} from '../lib/cad/scene-performance';
 import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -6,12 +6,13 @@ import { ViewCube } from './ViewCube';
 import { CadViewportOverlay } from './CadViewportOverlay';
 import { publishWorldView, registerWorldView, type WorldViewCommands } from '../lib/world-view-store';
 import * as THREE from 'three';
-import { DoorElement, FurnitureElement, ProjectState, WallElement, WindowElement, ParametricObject } from '@inneranimalmedia/agentsam-cad-shared';
+import { DoorElement, FurnitureElement, ProjectState, WallElement, WindowElement, ParametricObject, type CadSceneSettings } from '@inneranimalmedia/agentsam-cad-shared';
 
 interface Props {
   project: ProjectState;
   onSnapshotTaken?: (dataUrl: string) => void;
   onLightingChange?: (updates: Partial<ProjectState['lighting']>) => void;
+  onSceneSettingsChange?: (updates:Partial<CadSceneSettings>)=>void;
 }
 
 const SCALE = 0.0254; // 1 inch = 0.0254 meters
@@ -20,7 +21,9 @@ export const Viewport3D: React.FC<Props> = ({
   project,
   onSnapshotTaken,
   onLightingChange,
+  onSceneSettingsChange,
 }) => {
+  const canEditScene=Boolean(onSceneSettingsChange);
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -57,97 +60,37 @@ export const Viewport3D: React.FC<Props> = ({
 
   // Dynamic materials cache
   const materialsRef = useRef<{ [key: string]: THREE.Material }>({});
+  const pbrTexturesRef = useRef<ReturnType<typeof createStudioTextures>|null>(null);
 
   // Initialize Materials
-  const getMaterial = useCallback((type: string, colorHex?: string): THREE.Material => {
-    const key = `${type}_${colorHex || ''}`;
+  const getMaterial = useCallback((type: string, colorHex?: string, presetId?: string): THREE.Material => {
+    const key = `${type}_${colorHex || ''}_${presetId || ''}`;
     if (materialsRef.current[key]) return materialsRef.current[key];
 
     let mat: THREE.Material;
-    switch (type) {
-      case 'brick':
-        mat = new THREE.MeshStandardMaterial({
-          color: colorHex ? new THREE.Color(colorHex) : new THREE.Color('#9a3412'),
-          roughness: 0.85,
-          metalness: 0.05,
-        });
-        break;
-      case 'concrete':
-        mat = new THREE.MeshStandardMaterial({
-          color: colorHex ? new THREE.Color(colorHex) : new THREE.Color('#94a3b8'),
-          roughness: 0.6,
-          metalness: 0.1,
-        });
-        break;
-      case 'wood_panel':
-      case 'hardwood':
-        mat = new THREE.MeshStandardMaterial({
-          color: colorHex ? new THREE.Color(colorHex) : new THREE.Color('#b45309'),
-          roughness: 0.45,
-          metalness: 0.05,
-        });
-        break;
-      case 'glass':
-        mat = new THREE.MeshPhysicalMaterial({
-          color: new THREE.Color('#bae6fd'),
-          transparent: true,
-          opacity: 0.35,
-          roughness: 0.1,
-          transmission: 0.8,
-          thickness: 0.5,
-        });
-        break;
-      case 'marble':
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#f8fafc'),
-          roughness: 0.2,
-          metalness: 0.1,
-        });
-        break;
-      case 'tile':
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#e2e8f0'),
-          roughness: 0.3,
-          metalness: 0.05,
-        });
-        break;
-      case 'polished_concrete':
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#64748b'),
-          roughness: 0.35,
-          metalness: 0.2,
-        });
-        break;
-      case 'steel':
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#334155'),
-          roughness: 0.3,
-          metalness: 0.8,
-        });
-        break;
-      case 'door_wood':
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#78350f'),
-          roughness: 0.4,
-        });
-        break;
-      case 'window_frame':
-        mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#0f172a'),
-          roughness: 0.2,
-          metalness: 0.7,
-        });
-        break;
-      default:
-        mat = new THREE.MeshStandardMaterial({
-          color: colorHex ? new THREE.Color(colorHex) : new THREE.Color('#cbd5e1'),
-          roughness: 0.6,
-          metalness: 0.05,
-        });
+    const resolvedPresetId = presetId || CAD_MATERIAL_PRESET_MAP[type];
+    const pbrPreset = resolvedPresetId ? PROCEDURAL_PBR_MATERIAL_MAP[resolvedPresetId] : undefined;
+    if (pbrPreset) {
+      if (!pbrTexturesRef.current) pbrTexturesRef.current = createStudioTextures(THREE, rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1);
+      mat = createProceduralPbrMaterial(THREE, pbrPreset, pbrTexturesRef.current, isSoftwareWebGLRenderer(rendererRef.current)) as THREE.Material;
+      if (colorHex && 'color' in mat) (mat as THREE.MeshPhysicalMaterial).color.set(colorHex);
+    } else {
+      mat = new THREE.MeshStandardMaterial({
+        color: colorHex ? new THREE.Color(colorHex) : new THREE.Color('#cbd5e1'),
+        roughness: 0.6,
+        metalness: 0.05,
+      });
     }
 
     materialsRef.current[key] = mat;
     return mat;
+  }, []);
+
+  useEffect(() => () => {
+    Object.values(materialsRef.current).forEach(material => material.dispose());
+    materialsRef.current = {};
+    pbrTexturesRef.current?.dispose();
+    pbrTexturesRef.current = null;
   }, []);
 
   // Set up Three.js Scene and Render Loop
@@ -382,7 +325,7 @@ export const Viewport3D: React.FC<Props> = ({
         shape.closePath();
 
         const geo = new THREE.ShapeGeometry(shape);
-        const mat = getMaterial(rm.floorMaterial || 'hardwood');
+        const mat = getMaterial(rm.floorMaterial || 'hardwood', rm.floorMaterialPresetId ? undefined : rm.color, rm.floorMaterialPresetId);
         const mesh = new THREE.Mesh(geo, mat);
         mesh.rotation.x = Math.PI / 2;
         mesh.position.y = 0.01;
@@ -407,7 +350,7 @@ export const Viewport3D: React.FC<Props> = ({
       const wallDoors = project.doors.filter((d) => d.wallId === wall.id);
       const wallWindows = project.windows.filter((w) => w.wallId === wall.id);
 
-      const wallMat = getMaterial(wall.material, wall.color);
+      const wallMat = getMaterial(wall.material, wall.materialPresetId ? undefined : wall.color, wall.materialPresetId);
 
       // If no doors/windows, build solid wall
       if (wallDoors.length === 0 && wallWindows.length === 0) {
@@ -604,7 +547,7 @@ export const Viewport3D: React.FC<Props> = ({
     scene.add(bimRoot);
     let cancelled=false,nativeLayer:THREE.Group|undefined;
     if(project.walls.length){setNativeStatus('Evaluating OCCT solid…');
-      void nativePlanLayer(project,wall=>getMaterial(wall.material,wall.color),1).then(layer=>{
+      void nativePlanLayer(project,wall=>getMaterial(wall.material,wall.materialPresetId?undefined:wall.color,wall.materialPresetId),1).then(layer=>{
         if(cancelled){disposeNativeLayer(layer);return;}nativeLayer=layer;bimRoot.remove(previewWalls);
         previewWalls.traverse(node=>{if(node instanceof THREE.Mesh)node.geometry.dispose();});
         bimRoot.add(layer);setNativeStatus('OCCT solids · mesh from BRep');
@@ -695,6 +638,7 @@ export const Viewport3D: React.FC<Props> = ({
   const viewApi = useRef<Partial<WorldViewCommands>>({});
   viewApi.current = {
     setCamera: id => setCameraMode(id as typeof cameraMode),
+    setCameraFov: value => {const next=THREE.MathUtils.clamp(value,20,90);const camera=cameraRef.current;if(camera){camera.fov=next;camera.updateProjectionMatrix();}onSceneSettingsChange?.({cameraFov:next});publishWorldView({cameraFov:next});},
     toggleRoof: () => setShowRoof(v => !v),
     capture: () => {
       const url = takeSnapshot();
@@ -705,13 +649,17 @@ export const Viewport3D: React.FC<Props> = ({
   };
   useEffect(() => {
     const unregister = registerWorldView(() => viewApi.current);
-    publishWorldView({ kind: 'model', ready: true, cameras: [
+    publishWorldView({ kind: 'model', ready: true, canEditScene, cameraFov:project.sceneSettings?.cameraFov??45, cameras: [
       { id: 'orbit', label: 'Orbit' }, { id: 'firstperson', label: 'Walkthrough' },
       { id: 'topdown', label: 'Top' }, { id: 'isometric', label: 'Isometric' },
     ]});
     return unregister;
   }, []);
-  useEffect(() => { publishWorldView({ cameraId: cameraMode, roofVisible: showRoof }); }, [cameraMode, showRoof]);
+  useEffect(() => {
+    const camera=cameraRef.current;const next=THREE.MathUtils.clamp(project.sceneSettings?.cameraFov??45,20,90);
+    if(camera&&camera.fov!==next){camera.fov=next;camera.updateProjectionMatrix();}
+    publishWorldView({cameraFov:next,cameraId:cameraMode,roofVisible:showRoof,canEditScene});
+  }, [cameraMode,showRoof,project.sceneSettings?.cameraFov,canEditScene]);
 
   return (
     <div className="w-full h-full relative bg-[#121212] flex flex-col select-none overflow-hidden group">
@@ -761,7 +709,7 @@ export const Viewport3D: React.FC<Props> = ({
 // Helper: Procedural 3D Furniture Meshes (Sofas, Beds, Tables, Kitchen, Baths, Plants)
 function create3DFurnitureMesh(
   item: FurnitureElement,
-  getMaterial: (type: string, color?: string) => THREE.Material
+  getMaterial: (type: string, color?: string, presetId?: string) => THREE.Material
 ): THREE.Group {
   const group = new THREE.Group();
   group.position.set(item.x * SCALE, 0, item.y * SCALE);
@@ -771,7 +719,7 @@ function create3DFurnitureMesh(
   const d = (item.d || 36) * SCALE;
   const h = (item.h || 30) * SCALE;
 
-  const mainMat = getMaterial('furniture', item.color || '#334155');
+  const mainMat = getMaterial(item.material || 'furniture', item.materialPresetId ? undefined : item.color || '#334155', item.materialPresetId);
   const woodMat = getMaterial('wood_panel');
   const metalMat = getMaterial('steel');
 
@@ -888,7 +836,7 @@ function create3DFurnitureMesh(
 
 function createParametricObjectMesh(
   item: ParametricObject,
-  getMaterial: (type: string, color?: string) => THREE.Material
+  getMaterial: (type: string, color?: string, presetId?: string) => THREE.Material
 ): THREE.Group {
   const group = new THREE.Group();
   group.position.set(item.transform.x * SCALE, (item.transform.z || 0) * SCALE, item.transform.y * SCALE);

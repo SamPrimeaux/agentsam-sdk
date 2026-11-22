@@ -1,4 +1,5 @@
 import type {CadSceneElement, CadSceneSource, ProjectState} from '@inneranimalmedia/agentsam-cad-shared';
+import {PROCEDURAL_PBR_MATERIAL_MAP} from '@inneranimalmedia/agentsam-3d-viewer';
 
 /** Reconcile actual imported element IDs without replacing saved edits or the source binding. */
 export function reconcileSceneElements(project:ProjectState, source:CadSceneSource, actual:CadSceneElement[]):ProjectState {
@@ -8,7 +9,9 @@ export function reconcileSceneElements(project:ProjectState, source:CadSceneSour
   const next=actual.map(element=>{
     const previous=saved.get(element.id);
     return previous ? {...element,offset:previous.offset,rotation:previous.rotation,visible:previous.visible,
-      ...(previous.color?{color:previous.color}:{}),...(previous.note?{note:previous.note}:{}),name:previous.name} : element;
+      ...(previous.color?{color:previous.color}:{}),...(previous.materialPresetId?{materialPresetId:previous.materialPresetId}:{}),
+      ...(previous.finish?{finish:previous.finish}:{}),
+      ...(previous.note?{note:previous.note}:{}),name:previous.name} : element;
   });
   if(project.sceneSource && JSON.stringify(next)===JSON.stringify(project.sceneElements))return project;
   return {...project,sceneSource:source,sceneElements:next};
@@ -20,6 +23,17 @@ export function patchSceneElement(project:ProjectState,id:string,updates:Partial
   const next={...element,...updates,id:element.id,bounds:element.bounds,category:element.category,source:element.source};
   if(!next.offset.every(n=>Number.isFinite(n)&&Math.abs(n)<=100000)||!Number.isFinite(next.rotation))throw new Error('Enter finite scene coordinates.');
   if(next.color && !/^#[0-9a-f]{6}$/i.test(next.color))throw new Error('Choose a valid finish color.');
+  if(next.materialPresetId && !PROCEDURAL_PBR_MATERIAL_MAP[next.materialPresetId])throw new Error('Choose a registered PBR material preset.');
+  if(next.finish){
+    for(const [key,value] of Object.entries(next.finish)){
+      if(key==='colorHex'||key==='emissiveHex'){
+        if(typeof value!=='string'||!/^#[0-9a-f]{6}$/i.test(value))throw new Error('Invalid finish color.');
+      } else if(!['metalness','roughness','opacity','emissiveIntensity'].includes(key)||typeof value!=='number'||
+        !Number.isFinite(value)||value<0||value>(key==='emissiveIntensity'?10:1)){
+        throw new Error('Invalid finish parameter.');
+      }
+    }
+  }
   return {...project,sceneElements:project.sceneElements!.map(row=>row.id===id?next:row),updatedAt:Date.now()};
 }
 

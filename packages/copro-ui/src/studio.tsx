@@ -16,6 +16,9 @@ import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspac
 
 import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnvironment, type StageSky } from "./stage-environment.js";
 import { CoProStageLookPanel } from "./stage-look-panel.js";
+import { syncVideoPlayback } from "./video-playback.js";
+import {SidePanel} from "@inneranimalmedia/agentsam-workbench/shell";
+import { normalizeOnboardingUrl } from "./onboarding-url.js";
 
 
 export type CoProStudioAction =
@@ -203,7 +206,7 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
 }
 
 export function CoProStudio({
-  onboardingUrl = "/moviemode/primetech-onboarding/",
+  onboardingUrl = "/primetech-onboarding/index.html",
   project,
   initialTool = null,
   initialStudioMode = "video",
@@ -596,6 +599,14 @@ export function CoProStudio({
 
   useEffect(() => {
     const video = videoRef.current;
+    if (!video || effectivePreviewKind !== "video" || !effectivePreviewSrc) return;
+    return syncVideoPlayback(video, playing, () => {
+      setPreviewDecodeWarning("Playback could not start after switching clips. Try again or relink this source.");
+    });
+  }, [effectivePreviewSrc, effectivePreviewKind, activeVisualClip?.id, playing]);
+
+  useEffect(() => {
+    const video = videoRef.current;
     if (!video) return;
     const seekSeconds = activeVisualClip
       ? ((playheadUs - activeVisualClip.startUs) * (activeVisualClip.playbackRate ?? 1) + (activeVisualClip.inUs ?? 0)) / 1_000_000
@@ -834,7 +845,7 @@ export function CoProStudio({
         </nav>
         <a className="mm-studio-tour-trigger"
           title="Experience the full PrimeTech 3D tour and return to this project"
-          href={onboardingUrl.replace(/\/?$/,"/")+"?returnTo="+encodeURIComponent(
+          href={normalizeOnboardingUrl(onboardingUrl)+"?returnTo="+encodeURIComponent(
             typeof window==="undefined" ? "/" : window.location.pathname+window.location.search
           )+"#tour"}>Explore PrimeTech <ChevronRight size={15}/></a>
       </div>
@@ -846,13 +857,8 @@ export function CoProStudio({
           "--copro-inspector-handle": dockInspector ? "8px" : "0px",
           "--copro-timeline-height": timelineHeight + "px",
         } as React.CSSProperties} data-layout-mode={isCompact ? "mobile" : isNarrow ? "single-pane" : "wide"} data-active-pane={isHandset ? (handsetPanel ?? "closed") : undefined}>
-          {showBrowser && <aside id="copro-tool-browser" className={`copro-browser-slot mm-browser${browserFloating ? " is-floating" : ""}`} aria-label={`${categoryTool} browser`}
-            style={{
-              "--copro-floating-left": floatAt(layout.browserX,layout.browserY,browserWidth).x + "px",
-              "--copro-floating-top": floatAt(layout.browserX,layout.browserY,browserWidth).y + "px",
-              "--copro-floating-width": browserWidth + "px",
-              "--copro-floating-height": layout.browserFloatHeight + "px",
-            } as React.CSSProperties}
+          {showBrowser && <SidePanel id="copro-tool-browser" className={`copro-browser-slot mm-browser${browserFloating ? " is-floating" : ""}`} ariaLabel={`${categoryTool} browser`}
+            floatingBounds={{left:floatAt(layout.browserX,layout.browserY,browserWidth).x,top:floatAt(layout.browserX,layout.browserY,browserWidth).y,width:browserWidth,height:layout.browserFloatHeight}}
             onPointerUp={browserFloating ? (event) => saveFloatingSize(event,"browser") : undefined}>
 
             <div className="mm-browser-top" onPointerDown={browserFloating ? event => moveFloating(event,"browser") : undefined}><span>{browserFloating && <GripVertical size={14} aria-hidden="true"/>}<strong>{categoryTool.charAt(0).toUpperCase()+categoryTool.slice(1)}</strong></span><div className="mm-panel-window-buttons"><button type="button" aria-label={browserFloating ? "Dock Media browser" : "Undock Media browser"} title={browserFloating ? "Dock Media browser back into workspace" : "Float and drag Media browser"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,browserFloating:!value.browserFloating}))}>{browserFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button><button type="button" aria-label="Collapse media browser" title="Collapse panel" onPointerDown={event=>event.stopPropagation()} onClick={()=>{if(isHandset)setHandsetPanel(null);else setLayout(value=>({...value,browserOpen:false}));}}>×</button></div></div>
@@ -1005,7 +1011,7 @@ export function CoProStudio({
                 onProjectExport={() => onAction?.({type:"export-project"})}
               />
             )}
-          </aside>}
+          </SidePanel>}
           {dockBrowser && !isNarrow && <ResizeHandle axis="x" className="copro-browser-divider" label="Resize tool browser" value={browserWidth} min={240} max={Math.max(260,workspaceWidth - (showInspector ? inspectorWidth : 0) - 410)} direction={layout.reversed ? -1 : 1} onChange={width => setLayout(value => ({ ...value, browserWidth: width }))}/>}
 
           <section ref={playerPaneRef} className={`mm-player-pane${layout.playerFloating && !isNarrow?" is-floating":""}${viewportFullscreen?" is-viewport-fullscreen":""}`} aria-label="PrimeTech preview player"
@@ -1175,13 +1181,8 @@ export function CoProStudio({
           </section>{/* Player and transport remain one resizable, movable unit. */}
 
           {showInspector && inspectorTool && (
-            <aside id="copro-tool-inspector" className={`copro-inspector-slot${inspectorFloating?" is-floating":""}`} data-inspector-tool={inspectorTool} aria-label={`${inspectorTool} inspector`}
-              style={{
-                "--copro-floating-left": floatAt(layout.inspectorX,layout.inspectorY,inspectorWidth).x + "px",
-                "--copro-floating-top": floatAt(layout.inspectorX,layout.inspectorY,inspectorWidth).y + "px",
-                "--copro-floating-width": inspectorWidth + "px",
-                "--copro-floating-height": layout.inspectorFloatHeight + "px",
-              } as React.CSSProperties}
+            <SidePanel id="copro-tool-inspector" className={`copro-inspector-slot${inspectorFloating?" is-floating":""}`} dataAttributes={{"data-inspector-tool":inspectorTool}} ariaLabel={`${inspectorTool} inspector`}
+              floatingBounds={{left:floatAt(layout.inspectorX,layout.inspectorY,inspectorWidth).x,top:floatAt(layout.inspectorX,layout.inspectorY,inspectorWidth).y,width:inspectorWidth,height:layout.inspectorFloatHeight}}
               onPointerUp={inspectorFloating ? event => saveFloatingSize(event,"inspector") : undefined}>
               <div className="mm-inspector-dock-header" onPointerDown={inspectorFloating ? event=>moveFloating(event,"inspector") : undefined}>
                 <span>{inspectorFloating && <GripVertical size={14}/>}<strong>{inspectorTool==="stage"?"Scene environment":selectedIs3DObject?"3D object":selectedTrack?.kind === "audio"?"Audio":selectedClip?"Clip properties":"Project Details"}</strong></span>
@@ -1279,7 +1280,7 @@ export function CoProStudio({
                 onCreativeParametersChange={(patch) => selectedClip && onAction?.({type:"creative-parameters",clipId:selectedClip.id,patch})}
                 onProjectExport={() => onAction?.({type:"export-project"})}
               />}
-            </aside>
+            </SidePanel>
           )}
 
           {dockInspector && !isNarrow && <ResizeHandle axis="x" className="copro-inspector-divider" label="Resize clip inspector" value={inspectorWidth} min={250} max={Math.max(270, workspaceWidth - (showBrowser ? browserWidth : 0) - 410)} direction={layout.reversed ? 1 : -1} onChange={width => setLayout(value => ({ ...value, inspectorWidth: width }))}/>}

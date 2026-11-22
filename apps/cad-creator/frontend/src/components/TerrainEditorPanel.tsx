@@ -11,7 +11,6 @@ type Props = {
   onBrushRadius(value: number): void;
   brushStrength: number;
   onBrushStrength(value: number): void;
-  onClose(): void;
   onFitSite(): void;
 };
 
@@ -29,7 +28,7 @@ function Numeric({label,value,onChange,min,max,step=1}:{
 const covers:GroundCover[]=['woodland','meadow','rock','arid'];
 
 export function TerrainEditorPanel({document,onChange,sculptMode,onSculptMode,
-  brushRadius,onBrushRadius,brushStrength,onBrushStrength,onClose,onFitSite}:Props){
+  brushRadius,onBrushRadius,brushStrength,onBrushStrength,onFitSite}:Props){
   const [selectedId,setSelectedId]=useState(document.landforms[0]?.id||'');
   const [message,setMessage]=useState('');
   const importRef=useRef<HTMLInputElement>(null);
@@ -71,12 +70,11 @@ export function TerrainEditorPanel({document,onChange,sculptMode,onSculptMode,
       setMessage('Metric terrain document imported.');
     }catch(error){setMessage('Import failed: '+String(error))}
   };
-  return <aside className="pointer-events-auto absolute right-3 top-16 z-30 flex max-h-[calc(100%-7rem)] w-[min(345px,calc(100vw-5rem))] flex-col rounded-xl border border-white/20 bg-[#101a2b]/95 text-slate-100 shadow-2xl backdrop-blur-md"
+  return <aside className="min-w-0 w-full"
     aria-label="Site terrain editor">
     <header className="flex items-center justify-between border-b border-white/15 px-3 py-2">
       <div><h3 className="font-semibold text-sm">Site &amp; Terrain</h3>
       <p className="text-[length:var(--text-xs)] text-slate-400">Metric landforms · editable scene geometry</p></div>
-      <button type="button" onClick={onClose} aria-label="Close terrain tools" className="rounded p-2 hover:bg-white/10">×</button>
     </header>
     <div className="space-y-3 overflow-auto px-3 py-3 text-xs">
       <section className="space-y-2">

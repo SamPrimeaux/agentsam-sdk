@@ -22,6 +22,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "@inneranimalmedia/copro-templates": "2.6.14",
+    "@inneranimalmedia/agentsam-3d-viewer": "file:../../packages/agentsam-3d-viewer",
     "three": "^0.187.0"
   },
   "devDependencies": {

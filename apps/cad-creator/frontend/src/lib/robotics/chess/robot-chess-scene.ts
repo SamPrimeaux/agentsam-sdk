@@ -3,6 +3,8 @@
  */
 import { Chess, type Square, type Move } from 'chess.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { createConfiguredGLTFLoader } from '@inneranimalmedia/agentsam-3d-viewer';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as THREE from 'three';
 import { SQUARE_M, ornatePieceUrl } from './frankaChessScene';
@@ -113,7 +115,7 @@ export class RobotChessScene {
    * A failed download stays explicit in the caller's retry UI.
    */
   async loadBaroquePieces(onProgress?: (done: number, total: number) => void): Promise<void> {
-    const loader = new GLTFLoader();
+    const loader = createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader});
     loader.setMeshoptDecoder(MeshoptDecoder);
     const variants = BAROQUE_TYPES.flatMap(type =>
       (['w','b'] as const).map(color => ({ type, color, key: type + color }))

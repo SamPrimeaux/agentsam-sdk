@@ -7,14 +7,15 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 4340",
     "build": "node scripts/verify-assets.mjs && tsc --noEmit && vite build",
-    "precheck": "npm --prefix ../../packages/agentsam-occt run build",
+    "precheck": "npm run prebuild",
     "check": "node scripts/verify-assets.mjs && tsc --noEmit",
     "test": "node scripts/verify-assets.mjs && node --test test/*.test.mjs",
-    "prebuild": "npm --prefix ../../packages/agentsam-occt run build"
+    "prebuild": "npm --prefix ../../packages/agentsam-occt run build && npm --prefix ../../packages/agentsam-workbench run build"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-3d-viewer": "2.6.18",
     "@inneranimalmedia/agentsam-occt": "2.6.18",
+    "@inneranimalmedia/agentsam-workbench": "file:../../packages/agentsam-workbench",
     "ajv": "^8.20.0",
     "fflate": "^0.8.2",
     "opencascade.js": "^2.0.0-beta.b5ff984",

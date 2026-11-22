@@ -23,6 +23,8 @@ import { useSimulationStats } from './useSimulationStats';
 import { RobotChessMatch } from './RobotChessMatch';
 
 interface RoboticsWorkspaceProps {
+  allowChess?: boolean;
+  initialExperience?: 'chess'|'sandbox';
   containerRef: React.RefObject<HTMLDivElement | null>;
   simProviderRef?: React.MutableRefObject<SimulationProvider | null>;
   simRef?: React.MutableRefObject<MujocoSim | null>;
@@ -44,6 +46,7 @@ interface RoboticsWorkspaceProps {
 }
 
 export function RoboticsWorkspace({
+  initialExperience='chess',allowChess=true,
   containerRef,
   simProviderRef,
   simRef,
@@ -55,6 +58,7 @@ export function RoboticsWorkspace({
   onOpenToolIntegration,
   toolCapabilities,
 }: RoboticsWorkspaceProps) {
+  const [retry,setRetry]=useState(0);
   const isMounted = useRef(true);
   const fallbackProviderRef = useRef<SimulationProvider | null>(null);
   const activeSimProvider = simProviderRef || fallbackProviderRef;
@@ -69,7 +73,7 @@ export function RoboticsWorkspace({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isPaused, setIsPaused] = useState(false);
-  const [experience, setExperience] = useState<'chess' | 'sandbox'>('chess');
+  const [experience, setExperience] = useState<'chess' | 'sandbox'>(initialExperience);
   const [simRevision, setSimRevision] = useState(0);
   const [showSidebar, setShowSidebar] = useState(() => window.innerWidth >= 660);
 
@@ -185,7 +189,7 @@ export function RoboticsWorkspace({
       activeSimProvider.current = null;
       if (simRef) simRef.current = null;
     };
-  }, [experience]);
+  }, [experience,retry]);
 
   // Keyboard shortcut: 'D' for diagnostics
   useEffect(() => {
@@ -314,7 +318,7 @@ export function RoboticsWorkspace({
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden select-none pointer-events-none">
+    <div className="cad-simulation-overlay relative w-full h-full overflow-hidden select-none pointer-events-none">
       {/* Visual Flash Effect on Perception snapshot */}
       <div className={`absolute inset-0 bg-white pointer-events-none transition-opacity duration-300 z-50 ${flash ? 'opacity-30' : 'opacity-0'}`} />
 
@@ -341,7 +345,7 @@ export function RoboticsWorkspace({
             <h3 className="text-2xl text-slate-800 font-bold mb-2">Simulation Halted</h3>
             <p className="text-slate-500 mb-8 leading-relaxed text-xs">{loadError}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => setRetry(attempt=>attempt+1)}
               className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-xl active:scale-95 text-xs"
             >
               Restart Simulation
@@ -357,7 +361,7 @@ export function RoboticsWorkspace({
           onLeave={() => setExperience('sandbox')}
         />
       )}
-      {!isLoading && !loadError && experience === 'sandbox' && (
+      {allowChess && !isLoading && !loadError && experience === 'sandbox' && (
         <button type="button" onClick={() => setExperience('chess')}
           className="pointer-events-auto absolute right-3 top-3 z-30 rounded-xl border border-amber-300/30 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-amber-200 shadow-lg hover:bg-slate-800 focus-visible:outline focus-visible:outline-2">
           Play chess vs Franka
