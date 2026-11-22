@@ -1,9 +1,9 @@
 /** The host-appearance contract the AgentSam host serves; CoPro loads it, it never copies or owns it. */
 type ThemeRecord = { id: string; themeFamily?: string; cssVars?: Record<string, string> };
-// The same source module used by the hosted shell is bundled with the standalone
-// editor so a missing local HTTP proxy cannot leave its semantic tokens unset.
-// @ts-expect-error The shared host module is authored in JavaScript.
-import * as host from "../../local-studio/shared/shell-appearance.mjs";
+// Resolve the shared workbench appearance source until the next package release.
+// The standalone editor never imports another application or owns a second palette.
+// @ts-expect-error The shared workbench source is authored in JavaScript.
+import * as host from "../../../packages/agentsam-workbench/src/shell/appearance.mjs";
 
 /**
  * Standalone CoPro has no palette of its own. It does exactly what the AgentSam

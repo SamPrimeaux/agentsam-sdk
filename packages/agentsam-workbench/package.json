@@ -29,6 +29,10 @@
       "types": "./dist/shell/index.d.ts",
       "import": "./dist/shell/index.js"
     },
+    "./shell/appearance": {
+      "types": "./dist/shell/appearance.d.mts",
+      "import": "./dist/shell/appearance.mjs"
+    },
     "./browser": {
       "types": "./dist/browser/index.d.ts",
       "import": "./dist/browser/index.js"

@@ -54,3 +54,5 @@ mkdirSync(`${cwd}/dist/design`, { recursive: true });
 copyFileSync(`${cwd}/src/design/design-workspace.css`, `${cwd}/dist/design/design-workspace.css`);
 mkdirSync(`${cwd}/dist/shell`, { recursive: true });
 copyFileSync(`${cwd}/src/shell/inspector-picker.css`, `${cwd}/dist/shell/inspector-picker.css`);
+copyFileSync(`${cwd}/src/shell/appearance.mjs`, `${cwd}/dist/shell/appearance.mjs`);
+copyFileSync(`${cwd}/src/shell/appearance.d.mts`, `${cwd}/dist/shell/appearance.d.mts`);

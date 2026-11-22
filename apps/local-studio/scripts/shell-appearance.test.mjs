@@ -9,6 +9,13 @@ import {
   bootstrapStudioAppearanceFromCache,
   FIRST_PAINT_BOOTSTRAP_SCRIPT,
 } from '../shared/shell-appearance.mjs';
+import * as canonicalWorkbenchAppearance from '../../../packages/agentsam-workbench/src/shell/appearance.mjs';
+
+test('shared workbench owns the canonical appearance module and the host only re-exports it', () => {
+  assert.equal(projectStudioShellAppearance, canonicalWorkbenchAppearance.projectStudioShellAppearance);
+  assert.equal(applyStudioShellAppearance, canonicalWorkbenchAppearance.applyStudioShellAppearance);
+  assert.equal(FIRST_PAINT_BOOTSTRAP_SCRIPT, canonicalWorkbenchAppearance.FIRST_PAINT_BOOTSTRAP_SCRIPT);
+});
 
 test('CMS roles project identically into navigation and Console chrome', () => {
   const appearance = projectStudioShellAppearance({
