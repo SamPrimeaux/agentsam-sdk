@@ -174,9 +174,10 @@ export async function listCloudflareImages(client, opts = {}) {
   client.requireAccount('cloudflare.images.list');
   const perPage = Math.min(Math.max(Number(opts.perPage) || 48, 1), 100);
   const params = new URLSearchParams({ per_page: String(perPage) });
-  if (opts.page) params.set('page', String(opts.page));
+  // Images V2 is continuation-token based, not offset/page based.
+  // It has no generic filename search parameter; filter the returned page
+  // without losing its cursor so consumers can search the entire listing.
   if (opts.continuationToken) params.set('continuation_token', String(opts.continuationToken));
-  if (opts.search) params.set('search', String(opts.search));
   const res = await client.request(
     'GET',
     client.accountPath(`/images/v2?${params}`),
@@ -203,17 +204,20 @@ export async function listCloudflareImages(client, opts = {}) {
       meta: img.meta && typeof img.meta === 'object' ? img.meta : {},
     };
   }).filter((row) => row.id);
+  // Cloudflare's documented V2 envelope puts the cursor in result.
+  // Accept the old result_info envelope for backward compatibility.
+  const continuationToken = res?.result?.continuation_token || info.continuation_token || null;
+  const q = String(opts.search || '').trim().toLowerCase();
+  const matches = q ? mapped.filter(img =>
+    [img.filename, img.id, JSON.stringify(img.meta)].some(value => String(value || '').toLowerCase().includes(q))
+  ) : mapped;
   return {
-    images: mapped,
+    images: matches,
     delivery_hash: deliveryHash,
     count: Number(info.total_count ?? info.count ?? mapped.length) || mapped.length,
-    continuation_token: info.continuation_token || null,
-    truncated: Boolean(
-      info.continuation_token
-      ?? info.truncated
-      ?? info.is_truncated
-      ?? false,
-    ),
+    total_exact: !q && Number.isFinite(Number(info.total_count)) && info.total_count != null,
+    continuation_token: continuationToken,
+    truncated: Boolean(continuationToken || info.truncated || info.is_truncated),
     page: Number(info.page || opts.page || 1) || 1,
     per_page: perPage,
   };

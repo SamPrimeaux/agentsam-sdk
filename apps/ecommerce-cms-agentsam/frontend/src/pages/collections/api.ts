@@ -1,4 +1,4 @@
-import { adminFetch } from "../../lib/api";
+import { adminFetch, adminFormFetch } from "../../lib/api";
 import type { Collection, CollectionForm, Product, MediaAsset, SupplierBlank, CollectionStatus, MerchCollectionRules } from "./model";
 import { serializeCollection, collectionSiteId } from "./model";
 import { normalizeCollectionRules } from "@inneranimalmedia/agentsam-merch/collection-planning";
@@ -6,6 +6,26 @@ import { normalizeCollectionRules } from "@inneranimalmedia/agentsam-merch/colle
 // The existing Collections Studio UI speaks the FNF merchandising contract.
 // This is its site-scoped AgentSam CMS adapter; never write legacy store_* tables.
 type Ok = { ok: boolean; error?: string };
+export type MediaProvider = "default" | "inneranimalmedia";
+export type MediaPageRequest = { page: number; cursor: string | null };
+export type CollectionMediaPage = {
+  assets: MediaAsset[];
+  next: MediaPageRequest | null;
+  total: number | null;
+  cursorSearch: boolean;
+  hosted: boolean;
+};
+type MediaResponse = Ok & {
+  assets?: MediaAsset[];
+  items?: MediaAsset[];
+  pagination?: { page?: number; total?: number; total_exact?: boolean; has_next?: boolean; cursor?: string | null; search_mode?: string };
+  capabilities?: { provider_api?: string; source_provider?: string };
+};
+function mediaPath(params: URLSearchParams, provider: MediaProvider) {
+  if (provider === "inneranimalmedia") params.set("provider", provider);
+  const query = params.toString();
+  return scoped("/api/admin/media" + (query ? "?" + query : ""));
+}
 type CmsRow = {
   id: string; site_id?: string; site_name?: string; name: string; slug: string; description?: string; status: CollectionStatus;
   visibility?: string; sort_order?: number; seo_title?: string | null; seo_description?: string | null;
@@ -119,10 +139,37 @@ export const collectionsApi = {
     ));
     return { ok: true, product_ids: response.items.filter(item => item.item_type === "product").map(item => Number(item.item_ref)) };
   },
-  async media(q = ""): Promise<MediaAsset[]> {
-    const params = new URLSearchParams({ view: "images", page_size: "60", page: "1", ...(q ? { q } : {}) });
-    const result = accepted(await adminFetch<Ok & { assets?: MediaAsset[]; items?: MediaAsset[] }>(scoped(`/api/admin/media?${params}`)));
-    return result.assets || result.items || [];
+  async media(q: string, request: MediaPageRequest, provider: MediaProvider, signal?: AbortSignal): Promise<CollectionMediaPage> {
+    const params = new URLSearchParams({
+      view: "images", kind: "image", page_size: "60", page: String(request.page),
+      ...(q ? { q } : {}), ...(request.cursor ? { cursor: request.cursor } : {}),
+    });
+    const result = accepted(await adminFetch<MediaResponse>(mediaPath(params, provider), { signal }));
+    const pagination = result.pagination;
+    const hosted = result.capabilities?.provider_api === "cloudflare_oauth" ||
+      result.capabilities?.source_provider === "iam_registry";
+    const cursorSearch = pagination?.search_mode === "cursor_scan" ||
+      result.capabilities?.provider_api === "cloudflare_oauth";
+    const cursor = pagination?.cursor || null;
+    if (pagination?.has_next && ((cursor && cursor === request.cursor) || (cursorSearch && !cursor))) {
+      throw new Error("The media provider did not return a new page cursor. Retry to continue.");
+    }
+    return {
+      assets: result.assets || result.items || [],
+      next: pagination?.has_next ? { page: request.page + 1, cursor } : null,
+      total: !cursorSearch && pagination?.total_exact !== false &&
+        typeof pagination?.total === "number" ? pagination.total : null,
+      cursorSearch, hosted,
+    };
+  },
+  async uploadMedia(file: File, provider: MediaProvider): Promise<MediaAsset> {
+    const form = new FormData();
+    form.append("files", file, file.name);
+    form.append("folder", "images");
+    const result = accepted(await adminFormFetch<MediaResponse>(mediaPath(new URLSearchParams(), provider), form));
+    const asset = result.assets?.[0] || result.items?.[0];
+    if (!asset?.url) throw new Error("The upload did not return an image delivery URL.");
+    return asset;
   },
   async scaffold(id: string): Promise<{ created: {catalog_product_id:string;product_id:number;draft_id:string;variant_count:number}[]; reused: {catalog_product_id:string;product_id:number;draft_id:string}[]; unavailable: {catalog_product_id:string;reason:string}[] }> {
     return accepted(await adminFetch<Ok & { created: {catalog_product_id:string;product_id:number;draft_id:string;variant_count:number}[]; reused: {catalog_product_id:string;product_id:number;draft_id:string}[]; unavailable: {catalog_product_id:string;reason:string}[] }>(
