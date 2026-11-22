@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/iamscene",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "Portable editable 3D scene format, authoring API, animation runtime, Three.js presentation and AgentSam OCCT geometry pipeline.",
   "license": "FSL-1.1-MIT",
