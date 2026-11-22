@@ -1,6 +1,9 @@
+import { createRequire } from "node:module";
+import { dirname as peerDirname } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
+const resolveReactPeer = (name: string) => peerDirname(createRequire(import.meta.url).resolve(name + "/package.json"));
 import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
 import { join, extname, basename } from "node:path";
 
@@ -100,6 +103,10 @@ export default defineConfig({
     // CoPro source lives outside the app root. Use one React singleton for hooks and the renderer.
     dedupe: ["react", "react-dom", "react/jsx-runtime", "three"],
     alias: [
+      // Linked workspaces can have their own installed peers. Pin every React
+      // subpath to the consuming app's instance, not the linked package's copy.
+      { find: /^react(?=\/|$)/, replacement: resolveReactPeer("react") },
+      { find: /^react-dom(?=\/|$)/, replacement: resolveReactPeer("react-dom") },
       {find:/^@inneranimalmedia\/copro-ui\/styles\.css$/, replacement:repoStyles},
       {find:/^@inneranimalmedia\/copro-ui$/,replacement:repoUi},
       {find:/^@inneranimalmedia\/copro-storage$/,replacement:repoStorage},

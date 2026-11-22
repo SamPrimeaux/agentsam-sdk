@@ -150,3 +150,13 @@ test('MovieMode receives explicit account theme tokens at runtime, without repai
   assert.doesNotThrow(() => new Function(FIRST_PAINT_BOOTSTRAP_SCRIPT.replaceAll(String.fromCharCode(0), '\uFFFD')), 'script must parse after HTML tokenization');
   assert.match(FIRST_PAINT_BOOTSTRAP_SCRIPT, /productTokens/, 'first paint hydrates product colors');
 });
+
+test('without a selected accent both appearance families use a neutral semantic ink accent', () => {
+  for (const theme of ['dark','light']) {
+    const appearance = projectStudioShellAppearance(null, {theme});
+    assert.equal(appearance.accentColor, appearance.tokens.ink);
+    assert.notEqual(appearance.accentColor, appearance.accentInk);
+  }
+  const chosen = projectStudioShellAppearance({ themeFamily:'dark', cssVars:{'--nav-accent':'#117755'} });
+  assert.equal(chosen.accentColor, '#117755');
+});
