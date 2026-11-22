@@ -22,7 +22,7 @@ from typing import Any
 SERVER = Path(__file__).resolve().parents[1] / "server.py"
 spec = importlib.util.spec_from_file_location("cad_server_under_test", SERVER)
 assert spec and spec.loader
-server = importlib.util.module_from_spec(spec)
+server: Any = importlib.util.module_from_spec(spec)
 sys.modules["cad_server_under_test"] = server
 spec.loader.exec_module(server)
 
