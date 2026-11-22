@@ -149,6 +149,31 @@ test('#419 default Cloudflare gallery never calls IAM_API when OAuth client is a
   assert.equal(data.source, 'cf_images');
 });
 
+test('Cloudflare image listing accepts a read-only grant and rejects grants without image read access', async () => {
+  let requests = 0;
+  const client = {
+    accountId: 'acct_user_owned', authSource: 'oauth', grantedScopes: ['images.read'],
+    requireAccount() {},
+    accountPath(suffix) { return '/accounts/acct_user_owned' + suffix; },
+    async request(method, path) {
+      requests++;
+      assert.equal(method, 'GET');
+      assert.match(path, /images\/v2/);
+      return { result: { images: [] }, result_info: { count: 0 } };
+    },
+  };
+  const env = { __agentsamTestCfClient: client };
+  const request = mediaRequest('/api/admin/media?provider=cloudflare&source=cf_images');
+  const allowed = await handleStudioContentMediaApi(request, env, principal);
+  assert.equal(allowed.status, 200);
+  assert.equal(requests, 1);
+  client.grantedScopes = ['stream.read'];
+  const denied = await handleStudioContentMediaApi(request, env, principal);
+  assert.equal(denied.status, 403);
+  assert.deepEqual((await denied.json()).missing_scopes, ['images.read']);
+  assert.equal(requests, 1);
+});
+
 test('#419 Stream gallery works without IAM_API via user OAuth client', async () => {
   const env = {
     __agentsamTestCfClient: {
