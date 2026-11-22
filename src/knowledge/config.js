@@ -35,7 +35,7 @@ export function validateConfig(input) {
   allowed(c.scope, ['name', 'include', 'exclude'], 'scope');
   allowed(c.chunking, ['max_chars'], 'chunking');
   allowed(c.embedding, ['provider', 'model', 'revision', 'dimensions', 'parameters'], 'embedding');
-  allowed(c.storage, ['driver', 'connection_env'], 'storage');
+  allowed(c.storage, ['driver', 'connection_env', 'database', 'binding', 'config', 'environment'], 'storage');
   if (c.lane != null) allowed(c.lane, ['id', 'backend', 'resource', 'binding', 'index', 'metric'], 'lane');
   if (![1, 2].includes(c.version)) throw new Error('Unsupported knowledge configuration version.');
   if (typeof c.repository_id !== 'string' || !c.repository_id.trim()) throw new Error('repository_id is required.');
@@ -49,7 +49,8 @@ export function validateConfig(input) {
   const disabledEmbedding = e?.provider === 'none' && e?.model === 'none' && e?.dimensions === 0;
   if (!e || ['provider', 'model', 'revision'].some(k => typeof e[k] !== 'string' || !e[k].trim()) || !Number.isInteger(e.dimensions) || (!disabledEmbedding && (e.dimensions < 1 || e.dimensions > 3072))) throw new Error('Embedding provider, model, revision and dimensions (1..3072, or explicit none/0) are required.');
   if (!e.parameters || typeof e.parameters !== 'object' || Array.isArray(e.parameters)) throw new Error('Embedding parameters must be an object.');
-  if (!['sqlite', 'postgres'].includes(c.storage?.driver)) throw new Error('storage.driver must be sqlite or postgres.');
+  if (!['sqlite', 'd1', 'postgres'].includes(c.storage?.driver)) throw new Error('storage.driver must be sqlite, d1 or postgres.');
+  if (c.storage.driver === 'd1' && (typeof c.storage.database !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(c.storage.database))) throw new Error('D1 storage requires the database name from this project\'s wrangler config.');
   if (c.storage.driver === 'postgres' && !/^[A-Z_][A-Z0-9_]*$/.test(c.storage.connection_env || '')) throw new Error('Postgres requires a connection_env name, never a connection string in config.');
   if (c.lane) {
     if (typeof c.lane.id !== 'string' || !c.lane.id.trim() || !['local_exact', 'postgres_pgvector', 'supabase_pgvector', 'cloudflare_vectorize'].includes(c.lane.backend)) throw new Error('Knowledge lane requires an explicit supported backend.');
@@ -62,8 +63,8 @@ export function defaultConfig({ include = ['.'], exclude = [], scope = 'default'
   return validateConfig({ version: 2, repository_id: String(repositoryId || '').trim() || randomUUID(), project_key: String(repositoryId || '').trim() || undefined,
     scope: { name: scope, include, exclude }, chunking: { max_chars: 4000 },
     embedding: { provider: 'gemini', model: 'gemini-embedding-2', revision: '1', dimensions, parameters: { task: 'code retrieval' } },
-    storage: target === 'local' ? { driver: 'sqlite' } : { driver: 'postgres', connection_env: 'AGENTSAM_DATABASE_URL' },
-    lane: { id: `${scope}-default`, backend: target === 'local' ? 'local_exact' : 'postgres_pgvector', resource: null, binding: null, index: null, metric: 'cosine' } });
+    storage: { driver: 'sqlite' },
+    lane: { id: `${scope}-default`, backend: 'local_exact', resource: null, binding: null, index: null, metric: 'cosine' } });
 }
 export function readConfig(root) { return validateConfig(JSON.parse(fs.readFileSync(path.join(root, CONFIG_PATH), 'utf8'))); }
 export function initRepository(root, options = {}) {
