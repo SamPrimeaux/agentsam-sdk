@@ -16,7 +16,7 @@ export interface QuickAddEntry {
 
 export interface QuickAddMenuProps {
   /** Rows of the flat list. Groups are separated by a hairline, exactly like the reference menu. */
-  groups: QuickAddEntry[][];
+  groups: {label:string; entries:QuickAddEntry[]}[];
   label?: string;
   disabled?: boolean;
   onPickObject: (item: QuickAddItem) => void;
@@ -54,7 +54,7 @@ export function QuickAddMenu({ groups, label = 'Add', disabled = false, onPickOb
       {open && (
         <div className="qa-pop" role="menu" aria-label={label}>
           {row({ id: 'templates', label: 'Templates', icon: <Blocks size={16} />, run: () => setGallery(true) })}
-          {groups.filter((g) => g.length).map((g, i) => <div className="qa-group" role="group" key={i}>{g.map(row)}</div>)}
+          {groups.filter(group=>group.entries.length).map(group=><div className="qa-group" role="group" aria-label={group.label} key={group.label}><strong>{group.label}</strong>{group.entries.map(row)}</div>)}
         </div>
       )}
       <TemplatesGallery open={gallery} items={catalog.items} onClose={() => setGallery(false)}

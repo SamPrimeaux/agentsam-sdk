@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { createThreeViewport, type ThreeViewportHandle } from '@inneranimalmedia/agentsam-3d-viewer';
+import { createThreeViewport, createConfiguredGLTFLoader, type ThreeViewportHandle } from '@inneranimalmedia/agentsam-3d-viewer';
 import { sampleAnimation } from './animation.js';
 import { IAMGEOMETRY_MEDIA_TYPE, getIAMGeometryRender, parseIAMGeometry } from './geometry.js';
 import { assertValidSceneDocument } from './validate.js';
@@ -368,7 +369,7 @@ export async function createSceneRuntime(options: SceneRuntimeOptions): Promise<
   const assetMap = new Map(document.assets.map(asset => [asset.id, asset]));
   const meshModels = new Map<string, THREE.Object3D>();
   const baseUrl = resolveBaseUrl(document, options.assetBaseUrl);
-  const loader = new GLTFLoader();
+  const loader = createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader});
   loader.setMeshoptDecoder(MeshoptDecoder);
 
   for (const node of document.scene.nodes) {

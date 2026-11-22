@@ -25,6 +25,8 @@ export interface WallElement {
   thickness: number; // in inches (e.g. 6)
   height3D: number; // in inches (e.g. 96 or 108)
   material: WallMaterial;
+  /** Optional renderer-level PBR finish; structural wall material remains unchanged. */
+  materialPresetId?:string;
   assembly?: WallAssembly;
   color?: string;
   exterior?: boolean;
@@ -70,6 +72,7 @@ export interface FurnitureElement {
   rotation: number; // in degrees
   color: string;
   material?: string;
+  materialPresetId?:string;
   icon?: string;
   parametricObjectId?: string;
   sourceSketchShapeIds?: string[];
@@ -81,6 +84,7 @@ export interface RoomZone {
   points: [number, number][]; // Polygon vertices in inches
   areaSqFt: number;
   floorMaterial: FloorMaterial;
+  floorMaterialPresetId?:string;
   color: string;
   sourceSketchShapeIds?: string[];
 }
@@ -188,7 +192,16 @@ export interface SketchDocumentRef {
 /** Registered scene bindings and reversible presentation edits in the same project document.
  * These never assert that an imported mesh has acquired a parametric BIM feature history.
  */
+export interface CadFinishSettings {
+  colorHex?:string;
+  emissiveHex?:string;
+  metalness?:number;
+  roughness?:number;
+  opacity?:number;
+  emissiveIntensity?:number;
+}
 export interface CadSceneElement {
+  finish?:CadFinishSettings;
   id:string;
   name:string;
   category:string;
@@ -198,6 +211,8 @@ export interface CadSceneElement {
   rotation:number; // degrees about the vertical world axis, around the element centre
   visible:boolean;
   color?:string;
+  /** Stable shared PBR preset identifier; the source model remains untouched. */
+  materialPresetId?:string;
   note?:string;
 }
 export interface CadSceneSource {
@@ -207,9 +222,60 @@ export interface CadSceneSource {
   units:'m';
   axes:'gltf-y-up';
 }
+export type CadToneMapping = 'aces' | 'reinhard' | 'neutral' | 'none';
+export type CadShadowQuality = 'low' | 'medium' | 'high';
+
+export interface CadCameraBeat {
+  transition?: 'cut'|'glide';
+  id: string;
+  view: string;
+  duration: number;
+}
+export interface CadSceneLight {
+  id:string;
+  name:string;
+  kind:'directional'|'point'|'spot';
+  color:string;
+  intensity:number;
+  position:[number,number,number];
+  target:[number,number,number];
+  range:number;
+  cone:number;
+  shadows:boolean;
+}
 export interface CadSceneSettings {
-  shading?:'lit'|'color';exposure?:number;sun?:number;ambient?:number;sky?:boolean;
-  daylight?:boolean;roofVisible?:boolean;terrain?:unknown;
+  lights?: CadSceneLight[];
+  cameraSequence?: CadCameraBeat[];
+  savedCameras?: {id:string;label:string;target:[number,number,number];az:number;el:number;distance:number;fov:number}[];
+  fog?:{enabled:boolean;near:number;far:number};
+  shadowBias?:number;
+  projection?:'perspective'|'orthographic';
+  clipNear?: number;
+  clipFar?: number;
+  shading?:'lit'|'color';
+  exposure?:number;
+  sun?:number;
+  ambient?:number;
+  sky?:boolean;
+  daylight?:boolean;
+  roofVisible?:boolean;
+  /** Solar direction in the CAD viewport's Y-up world coordinates. */
+  sunAltitude?:number;
+  sunAzimuth?:number;
+  /** Actual Three.js light and hemisphere colors, persisted with the scene. */
+  sunColor?:string;
+  skyColor?:string;
+  groundColor?:string;
+  environmentPresetId?:string;
+  cameraFov?:number;
+  skyTurbidity?:number;
+  skyRayleigh?:number;
+  skyMieCoefficient?:number;
+  skyMieDirectionalG?:number;
+  shadows?:boolean;
+  shadowQuality?:CadShadowQuality;
+  toneMapping?:CadToneMapping;
+  terrain?:unknown;
 }
 
 export interface DesignProject {

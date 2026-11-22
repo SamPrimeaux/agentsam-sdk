@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, PointerEventHandler, ReactNode } from 'react';
 
-export function SidePanel({ header, children, footer, className }: { header?: ReactNode; children: ReactNode; footer?: ReactNode; className?: string }) {
-  return <aside className={className} data-workbench-side-panel="">{header}{children}{footer}</aside>;
+export function SidePanel({ header, children, footer, id, className, ariaLabel, floatingBounds, onPointerUp, dataAttributes }: { header?: ReactNode; children: ReactNode; footer?: ReactNode; id?: string; className?: string; ariaLabel?: string; floatingBounds?: { left: number; top: number; width: number; height: number }; onPointerUp?: PointerEventHandler<HTMLElement>; dataAttributes?: Record<string, string | undefined> }) {
+  return <aside id={id} className={className} aria-label={ariaLabel} style={{"--workbench-panel-left":floatingBounds ? floatingBounds.left+"px" : undefined,"--workbench-panel-top":floatingBounds ? floatingBounds.top+"px" : undefined,"--workbench-panel-width":floatingBounds ? floatingBounds.width+"px" : undefined,"--workbench-panel-height":floatingBounds ? floatingBounds.height+"px" : undefined} as CSSProperties} onPointerUp={onPointerUp} data-workbench-side-panel="" {...dataAttributes}>{header}{children}{footer}</aside>;
 }

@@ -1,8 +1,9 @@
 import {useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {createThreeViewport} from '@inneranimalmedia/agentsam-3d-viewer';
+import {createThreeViewport,createConfiguredGLTFLoader} from '@inneranimalmedia/agentsam-3d-viewer';
 import {Box,Code,ExternalLink,FileDown,FolderOpen,Image as ImageIcon,RefreshCw} from 'lucide-react';
 
 export type CadDiscoveredSource={
@@ -32,7 +33,7 @@ function VerifiedGlbPreview({id}:{id:string}){
   setError('');
   const viewport=createThreeViewport(host,{THREE,OrbitControls},{wrapper:false,background:'#151e2b',
     near:.01,far:20000,fov:48,maxPixelRatio:2,enableDamping:true,lights:true});
-  new GLTFLoader().load(url(id,'preview'),gltf=>{
+  createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader},{withCredentials:true}).load(url(id,'preview'),gltf=>{
    if(!active){disposeScene(gltf.scene);return}
    model=gltf.scene;viewport.scene.add(model);viewport.fit(model);
   },undefined,()=>{if(active)setError('Could not load this GLB source.')});

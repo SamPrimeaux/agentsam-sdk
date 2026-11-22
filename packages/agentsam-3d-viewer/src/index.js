@@ -1,6 +1,15 @@
 import { inferModelFormat } from './format.js';
+import { createConfiguredGLTFLoader } from './gltf-loader.js';
+import { createStudioTextures } from './procedural-textures.js';
+import { createProceduralPbrMaterial } from './procedural-material.js';
+import { isSoftwareWebGLRenderer } from './renderer-capabilities.js';
 
 export { inferModelFormat, SUPPORTED_MODEL_FORMATS } from './format.js';
+export { createConfiguredGLTFLoader, DEFAULT_DRACO_DECODER_PATH } from './gltf-loader.js';
+export { createStudioTextures } from './procedural-textures.js';
+export { createProceduralPbrMaterial } from './procedural-material.js';
+export { isSoftwareWebGLRenderer } from './renderer-capabilities.js';
+export { PROCEDURAL_PBR_MATERIALS, PROCEDURAL_PBR_MATERIAL_MAP, CAD_MATERIAL_PRESET_MAP } from './pbr-materials.js';
 
 function validateRuntime(runtime, needsControls = true) {
   if (!runtime?.THREE || typeof runtime.THREE.Scene !== 'function' || (needsControls && typeof runtime.OrbitControls !== 'function')) {
@@ -213,10 +222,10 @@ export function createThreeViewport(container, runtime, options = {}) {
  * The returned `ready` promise resolves with the loaded Three.js Object3D.
  */
 export function mountModelViewer(container, source, runtime, options = {}) {
-  const { THREE, GLTFLoader, STLLoader } = validateRuntime(runtime);
+  const { THREE, STLLoader } = validateRuntime(runtime, false);
   const format = inferModelFormat(source, options.format);
   if (format === 'stl' && typeof STLLoader !== 'function') throw new Error('agentsam_3d_stl_loader_required');
-  if (format !== 'stl' && typeof GLTFLoader !== 'function') throw new Error('agentsam_3d_gltf_loader_required');
+  if (format !== 'stl' && typeof runtime?.GLTFLoader !== 'function') throw new Error('agentsam_3d_gltf_loader_required');
   const viewport = createThreeViewport(container, runtime, {
     ...options,
     ariaLabel: options.ariaLabel ?? 'Interactive 3D model viewer',
@@ -240,7 +249,10 @@ export function mountModelViewer(container, source, runtime, options = {}) {
 
   let model = null;
   let disposed = false;
-  const loader = format === 'stl' ? new STLLoader() : new GLTFLoader();
+  const loader = format === 'stl' ? new STLLoader() : createConfiguredGLTFLoader(runtime, {
+    draco: options.draco, decoderPath: options.dracoDecoderPath, requireDraco: options.requireDraco,
+    withCredentials: options.withCredentials, crossOrigin: options.crossOrigin,
+  });
   const ready = (async () => {
     let object;
     if (format === 'stl') {

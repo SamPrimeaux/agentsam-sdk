@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import {ResizableStageHandle} from "@inneranimalmedia/agentsam-workbench/shell";
 
 export type WorkspaceLayout = {
   browserWidth: number;
@@ -95,44 +96,19 @@ type ResizeHandleProps = {
   className?: string;
 };
 
-/** Pointer, keyboard and accessible separator. No drag library or additional editor state. */
+/** Thin value adapter over the shared AgentSam workbench resize primitive. */
 export function ResizeHandle({ axis, label, value, min, max, direction = 1, onChange, className = "" }: ResizeHandleProps) {
-  function begin(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    const start = axis === "x" ? event.clientX : event.clientY;
-    const initial = value;
-    const priorCursor = document.body.style.cursor;
-    const priorSelection = document.body.style.userSelect;
-    document.body.style.cursor = axis === "x" ? "col-resize" : "row-resize";
-    document.body.style.userSelect = "none";
-    function move(next: PointerEvent) {
-      onChange(clampWorkspaceSize(initial + ((axis === "x" ? next.clientX : next.clientY) - start) * direction, min, max));
-    }
-    function finish() {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", finish);
-      window.removeEventListener("pointercancel", finish);
-      document.body.style.cursor = priorCursor;
-      document.body.style.userSelect = priorSelection;
-    }
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", finish);
-    window.addEventListener("pointercancel", finish);
-  }
-  function keyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    const step = event.shiftKey ? 32 : 12;
-    const delta = axis === "x" ? (event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0) :
-      (event.key === "ArrowDown" ? step : event.key === "ArrowUp" ? -step : 0);
-    if (!delta && event.key !== "Home" && event.key !== "End") return;
-    event.preventDefault();
-    onChange(event.key === "Home" ? min : event.key === "End" ? max : clampWorkspaceSize(value + delta * direction, min, max));
-  }
-  return <div
-    role="separator" tabIndex={0} aria-label={label} aria-orientation={axis === "x" ? "vertical" : "horizontal"}
-    aria-valuenow={Math.round(value)} aria-valuemin={min} aria-valuemax={max}
+  const current = useRef(value);
+  useEffect(() => { current.current = value; }, [value]);
+  const onDrag = (deltaPx: number) => {
+    const next = clampWorkspaceSize(current.current + deltaPx * direction, min, max);
+    current.current = next;
+    onChange(next);
+  };
+  return <ResizableStageHandle axis={axis} label={label}
     title={`${label} — drag or use arrow keys; Shift for larger steps`}
+    value={value} min={min} max={max}
     className={`copro-resize-handle copro-resize-${axis} ${className}`}
-    onPointerDown={begin} onKeyDown={keyDown}
-  ><span aria-hidden="true"/></div>;
+    bodyResizeAttribute="data-copro-resizing" bodyHoverAttribute="data-copro-resize-hover"
+    onDrag={onDrag}/>;
 }

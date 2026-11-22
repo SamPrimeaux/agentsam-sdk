@@ -24,7 +24,6 @@ import { evaluateWorld3DFrame } from '@inneranimalmedia/copro-render/world3d';
 import { CoProWorldScene } from './CoProWorldScene';
 import { SAMSCENE_SKY_DEFAULTS } from './SamSceneSkyBridge';
 import { useRegistrySkies } from './skyRegistry';
-import { PrimeTechAssistant } from './PrimeTechAssistant';
 import "@inneranimalmedia/copro-ui/styles.css";
 
 export type MovieModeScreen = "projects" | "editor";
@@ -1112,7 +1111,6 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         event.currentTarget.value = "";
       }}/>
       {captureError && <div role="alert" className="mm-capture-error">{captureError}<button onClick={() => setCaptureError(null)} aria-label="Dismiss error">×</button></div>}
-      {standalone && <PrimeTechAssistant/>}
     </div>;
   }
 
