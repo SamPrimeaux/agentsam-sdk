@@ -38,7 +38,12 @@ Rule: a piece leaves this app only when a second app needs it.
 | `server.ts` (Express, `GEMINI_API_KEY` env) | Worker / agentsamd route + vault BYOK | Slice 2 |
 | `ttsService.ts`, `audioEngine.ts`, `studio/cameraDirector.ts` | voice and direction layer | Slice 2 |
 | `studio/sculptBrush.ts` | SamSculpt seed | Slice 3 |
-| `studio/environment.ts`, `scenery.ts`, `subjects.ts`, `materials.ts`, `textures.ts` | consume `agentsam-3d-viewer` instead of a private scene | after Slice 1 |
+| `studio/environment.ts`, `scenery.ts`, `subjects.ts`, `materials.ts`, `textures.ts` | consume `agentsam-3d-viewer` instead of a private scene | shared textures, 5 atmosphere presets, 5 studio finishes, 2 additional PBR recipes, and brush tube geometry consumed from the viewer package; XR lifecycle and branded scenery remain local |
 
 Known gaps: `runtime.cloudflare` is `unsupported` until `server.ts` is replaced (Slice 2).
 Vite HMR uses a fixed port (24678), so two instances at once collide.
+
+
+## Hosted runtime
+
+Local Studio builds and bundles SamSpeaks at `/samspeaks/`; open the authenticated editor at `/admin/samspeaks`. Voice generation, script assistance and storyboard composition use the same `/api/samspeaks/*` protocol in the Worker and the standalone Express server. Hosted credentials come exclusively from the signed-in account's Gemini key in Settings > Keys. Local development uses `GEMINI_API_KEY`. Neither runtime sends the key to the browser. Optional `SAMSPEAKS_TTS_MODEL` and `SAMSPEAKS_TEXT_MODEL` settings override the preferred provider model. The Worker never falls back to another account's key.

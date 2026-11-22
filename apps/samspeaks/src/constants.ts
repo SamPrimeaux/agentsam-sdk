@@ -1,10 +1,8 @@
 import type {
   AtmosphereMoodId,
-  AtmospherePreset,
   CameraShotId,
   CameraShotPreset,
   FinishId,
-  FinishPreset,
   MovieBeat,
   SceneryPropType,
   StudioSubjectId,
@@ -12,6 +10,12 @@ import type {
   TransitionType,
   VoiceName,
 } from './types.ts';
+import {
+  ATMOSPHERE_MAP as SHARED_ATMOSPHERE_MAP,
+  ATMOSPHERE_PRESETS as SHARED_ATMOSPHERE_PRESETS,
+  STUDIO_FINISH_MAP,
+  STUDIO_FINISH_PRESETS,
+} from '@inneranimalmedia/agentsam-3d-viewer';
 
 export const SUBJECT_LIST: SubjectMetadata[] = [
   {
@@ -67,162 +71,13 @@ export const SUBJECT_MAP: Record<StudioSubjectId, SubjectMetadata> = {
   terrarium: SUBJECT_LIST[3],
 };
 
-export const FINISH_LIST: FinishPreset[] = [
-  {
-    id: 'gold',
-    label: 'Gold',
-    swatchHex: '#e5b85c',
-    color: 0xe8b954,
-    metalness: 0.94,
-    roughness: 0.18,
-    anisotropy: 0.8,
-    iridescence: 0.0,
-    emissive: 0x332200,
-    emissiveIntensity: 0.08,
-  },
-  {
-    id: 'titanium',
-    label: 'Titanium',
-    swatchHex: '#aeb9c8',
-    color: 0xbac4d2,
-    metalness: 0.92,
-    roughness: 0.22,
-    anisotropy: 0.85,
-    iridescence: 0.0,
-    emissive: 0x0c1420,
-    emissiveIntensity: 0.05,
-  },
-  {
-    id: 'obsidian',
-    label: 'Obsidian',
-    swatchHex: '#252a36',
-    color: 0x1c202a,
-    metalness: 0.72,
-    roughness: 0.14,
-    anisotropy: 0.2,
-    iridescence: 0.15,
-    emissive: 0x091124,
-    emissiveIntensity: 0.12,
-  },
-  {
-    id: 'copper',
-    label: 'Copper',
-    swatchHex: '#d47952',
-    color: 0xd87a4e,
-    metalness: 0.94,
-    roughness: 0.2,
-    anisotropy: 0.75,
-    iridescence: 0.05,
-    emissive: 0x2a0f04,
-    emissiveIntensity: 0.06,
-  },
-  {
-    id: 'iridescent',
-    label: 'Prism',
-    swatchHex: '#8d7eff',
-    color: 0x8b9bff,
-    metalness: 0.88,
-    roughness: 0.16,
-    anisotropy: 0.35,
-    iridescence: 1.0,
-    emissive: 0x18103c,
-    emissiveIntensity: 0.18,
-  },
-];
+export const FINISH_LIST = STUDIO_FINISH_PRESETS;
+export const FINISH_MAP = STUDIO_FINISH_MAP;
 
-export const FINISH_MAP: Record<FinishId, FinishPreset> = {
-  gold: FINISH_LIST[0],
-  titanium: FINISH_LIST[1],
-  obsidian: FINISH_LIST[2],
-  copper: FINISH_LIST[3],
-  iridescent: FINISH_LIST[4],
-};
-
-export const ATMOSPHERE_LIST: AtmospherePreset[] = [
-  {
-    id: 'studio',
-    label: 'Studio',
-    swatchHex: '#0a84ff',
-    fogColor: 0x131314,
-    fogDensity: 0.05,
-    keyColor: 0xfff0da,
-    keyIntensity: 2.6,
-    hemiSky: 0xd0e2ff,
-    hemiGround: 0x171719,
-    hemiIntensity: 1.15,
-    rimColor: 0x409cff,
-    rimIntensity: 1.35,
-    exposure: 1.12,
-  },
-  {
-    id: 'sunset',
-    label: 'Golden',
-    swatchHex: '#e69951',
-    fogColor: 0x211415,
-    fogDensity: 0.06,
-    keyColor: 0xffb36b,
-    keyIntensity: 3.1,
-    hemiSky: 0xffcda3,
-    hemiGround: 0x26161b,
-    hemiIntensity: 1.05,
-    rimColor: 0xff6e54,
-    rimIntensity: 1.5,
-    exposure: 1.18,
-  },
-  {
-    id: 'twilight',
-    label: 'Twilight',
-    swatchHex: '#6e76d6',
-    fogColor: 0x0e1026,
-    fogDensity: 0.075,
-    keyColor: 0xb7c6ff,
-    keyIntensity: 2.1,
-    hemiSky: 0x7d8be8,
-    hemiGround: 0x0e1020,
-    hemiIntensity: 1.0,
-    rimColor: 0x9c7aff,
-    rimIntensity: 1.9,
-    exposure: 1.08,
-  },
-  {
-    id: 'noir',
-    label: 'Noir',
-    swatchHex: '#434b5c',
-    fogColor: 0x06080d,
-    fogDensity: 0.085,
-    keyColor: 0xf4f7ff,
-    keyIntensity: 3.2,
-    hemiSky: 0x5c6882,
-    hemiGround: 0x080a0f,
-    hemiIntensity: 0.65,
-    rimColor: 0x4cc9f0,
-    rimIntensity: 2.1,
-    exposure: 1.04,
-  },
-  {
-    id: 'dawn',
-    label: 'Dawn',
-    swatchHex: '#5fc29c',
-    fogColor: 0x101c1c,
-    fogDensity: 0.052,
-    keyColor: 0xffe8cc,
-    keyIntensity: 2.5,
-    hemiSky: 0xa6ebd6,
-    hemiGround: 0x16241f,
-    hemiIntensity: 1.25,
-    rimColor: 0x5be3b7,
-    rimIntensity: 1.4,
-    exposure: 1.16,
-  },
-];
-
-export const ATMOSPHERE_MAP: Record<AtmosphereMoodId, AtmospherePreset> = {
-  studio: ATMOSPHERE_LIST[0],
-  sunset: ATMOSPHERE_LIST[1],
-  twilight: ATMOSPHERE_LIST[2],
-  noir: ATMOSPHERE_LIST[3],
-  dawn: ATMOSPHERE_LIST[4],
-};
+/** Single source of truth lives in @inneranimalmedia/agentsam-3d-viewer (atmosphere.js).
+ * These aliases preserve the StudioApp and MiniAgentSam call sites. */
+export const ATMOSPHERE_LIST = SHARED_ATMOSPHERE_PRESETS;
+export const ATMOSPHERE_MAP = SHARED_ATMOSPHERE_MAP;
 
 export const CAMERA_SHOTS: CameraShotPreset[] = [
   {

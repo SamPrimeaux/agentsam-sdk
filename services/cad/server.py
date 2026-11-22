@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -108,17 +109,21 @@ def _extended_tool_version(name: str) -> dict[str, Any]:
             "detail": receipt.get("detail"),
         }
     if name == "ifc":
-        python = os.environ.get("AGENTSAM_CAD_PYTHON", "/opt/agentsam-venv/bin/python")
-        if not Path(python).is_file():
-            return {"installed": False, "binary": None, "version": None}
-        probe = _probe([python, "-c", "import ifcopenshell, ezdxf\ntry:\n import pymupdf; p = pymupdf.__version__\nexcept Exception:\n p = '-'\ntry:\n import PIL; q = PIL.__version__\nexcept Exception:\n q = '-'\nprint(ifcopenshell.version, ezdxf.__version__, p, q)"])
-        if probe.returncode != 0:
-            return {"installed": False, "binary": python, "version": None, "error": (probe.stderr or "import failed")[-300:]}
-        ifc_version, dxf_version, pdf_version, pil_version = probe.stdout.split()
-        pdf_ready = pdf_version != "-" and pil_version != "-"
-        return {"installed": True, "binary": python, "version": f"ifcopenshell {ifc_version}; ezdxf {dxf_version}" + (f"; pymupdf {pdf_version}" if pdf_ready else ""),
-                "pdf": pdf_ready,
-                "modules": {"ifcopenshell": ifc_version, "ezdxf": dxf_version, "pymupdf": pdf_version, "pillow": pil_version}}
+        runtime = _ifc_runtime()
+        modules = runtime["modules"]
+        installed = modules["ifcopenshell"] is not None
+        missing = [key for key, version in modules.items() if version is None]
+        dxf = modules["ezdxf"] is not None
+        pdf = modules["pymupdf"] is not None and modules["pillow"] is not None
+        if not installed:
+            return {"installed": False, "ready": False, "binary": runtime["python"], "version": None, "dxf": dxf, "pdf": pdf,
+                    "modules": modules, "missing": missing, "searched": runtime["searched"],
+                    "error": "no Python interpreter with ifcopenshell was found"}
+        parts = [f"{key} {version}" for key, version in modules.items() if version is not None]
+        # installed: IFC read/write works. ready: the whole production toolchain
+        # (IFC + DXF + PDF) is present, which the building export additionally needs.
+        return {"installed": True, "ready": not missing, "binary": runtime["python"], "source": runtime["source"],
+                "version": "; ".join(parts), "dxf": dxf, "pdf": pdf, "modules": modules, "missing": missing}
     if name == "media":
         ffmpeg, gltf = shutil.which("ffmpeg"), shutil.which("gltf-transform")
         if not ffmpeg or not gltf:
@@ -229,6 +234,7 @@ def _capabilities() -> dict[str, Any]:
             "openscad_compile": tools["openscad"]["installed"],
             "freecad_execute": tools["freecad"].get("ready", tools["freecad"]["installed"]),
             "blender_execute": tools["blender"]["installed"],
+            "ifc_execute": tools["ifc"]["installed"],
         },
         "limits": {
             "max_source_chars": MAX_SOURCE_CHARS,
@@ -396,6 +402,164 @@ def _blender_command(adapter_path: Path, request_path: Path, operation: str = "b
         if binary or Path(cmd).exists():
             return [binary or cmd, "-b", "--python", str(adapter_path), "--", "--operation", operation, "--request", str(request_path)]
     raise RuntimeError("Blender runtime binary not found in container")
+
+
+IFC_OPERATIONS = ("inspect",)
+IFC_DEFAULT_MAX_ELEMENTS = 50_000
+
+
+def _find_ifc_adapter() -> Path:
+    candidates = [
+        Path("/srv/ifc/adapter.py"),
+        Path("/srv/services/cad/ifc/adapter.py"),
+        Path(__file__).parent / "ifc" / "adapter.py",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    raise RuntimeError("IFC adapter script not found in CAD service container")
+
+
+IFC_MODULE_KEYS = ("ifcopenshell", "ezdxf", "pymupdf", "pillow")
+CONTAINER_VENV_PYTHON = "/opt/agentsam-venv/bin/python"
+IFC_RUNTIME_TTL_SECONDS = 30
+_IFC_PROBE_SCRIPT = (
+    "import importlib, json\n"
+    "out = {}\n"
+    "for name in ('ifcopenshell', 'ezdxf', 'pymupdf', 'PIL'):\n"
+    "    try:\n"
+    "        mod = importlib.import_module(name)\n"
+    "        out[name] = str(getattr(mod, '__version__', None) or getattr(mod, 'version', None) or 'unknown')\n"
+    "    except Exception:\n"
+    "        out[name] = None\n"
+    "print(json.dumps(out))\n"
+)
+_IFC_RUNTIME: tuple[float, dict[str, Any]] | None = None
+
+
+def _ifc_candidates() -> list[tuple[str, dict[str, str], str]]:
+    """Every interpreter that might carry the IFC libraries, most deliberate first."""
+    base = os.environ.copy()
+    found: list[tuple[str, dict[str, str], str]] = []
+    override = os.environ.get("AGENTSAM_CAD_PYTHON")
+    if override and Path(override).is_file():
+        found.append((override, base, "AGENTSAM_CAD_PYTHON"))
+    if Path(CONTAINER_VENV_PYTHON).is_file():
+        found.append((CONTAINER_VENV_PYTHON, base, "container venv"))
+    found.append((sys.executable, base, "service interpreter"))
+    host = discover_freecad() if discover_freecad is not None else None
+    if host is not None and getattr(host, "mode", None) == "python":
+        found.append((host.executable, host.environment(), "FreeCAD python"))
+    return found
+
+
+def _probe_ifc_modules(python: str, env: dict[str, str]) -> dict[str, str | None] | None:
+    """Import each library independently in this interpreter; None if it cannot run at all."""
+    try:
+        proc = _probe([python, "-c", _IFC_PROBE_SCRIPT], env=env, timeout=30)
+        raw = json.loads(proc.stdout.strip().splitlines()[-1])
+    except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
+        return None
+    if proc.returncode != 0 or not isinstance(raw, dict):
+        return None
+    return {"ifcopenshell": raw.get("ifcopenshell"), "ezdxf": raw.get("ezdxf"),
+            "pymupdf": raw.get("pymupdf"), "pillow": raw.get("PIL")}
+
+
+def _ifc_runtime() -> dict[str, Any]:
+    """The most capable interpreter for IFC work. The probe and the route share this answer,
+    so what the service reports is what it runs. Cached briefly; a fresh install is picked up
+    within IFC_RUNTIME_TTL_SECONDS without a restart."""
+    global _IFC_RUNTIME
+    now = time.monotonic()
+    if _IFC_RUNTIME is not None and now - _IFC_RUNTIME[0] < IFC_RUNTIME_TTL_SECONDS:
+        return _IFC_RUNTIME[1]
+    searched: list[str] = []
+    best: dict[str, Any] | None = None
+    best_rank: tuple[int, int] = (-1, -1)
+    seen: set[str] = set()
+    for index, (python, env, source) in enumerate(_ifc_candidates()):
+        if python in seen:
+            continue
+        seen.add(python)
+        searched.append(source)
+        modules = _probe_ifc_modules(python, env)
+        if modules is None:
+            continue
+        # IFC support outranks everything; then the number of toolchain libraries; then order.
+        rank = (int(modules["ifcopenshell"] is not None), sum(v is not None for v in modules.values()) * 10 - index)
+        if rank > best_rank:
+            best_rank, best = rank, {"python": python, "env": env, "source": source, "modules": modules}
+    runtime = {**best, "searched": searched} if best else {
+        "python": None, "env": None, "source": None, "modules": dict.fromkeys(IFC_MODULE_KEYS), "searched": searched}
+    _IFC_RUNTIME = (now, runtime)
+    return runtime
+
+
+def _execute_ifc(payload: dict[str, Any]) -> dict[str, Any]:
+    operation = str(payload.get("operation", "inspect"))
+    if operation not in IFC_OPERATIONS:
+        raise ValueError(f"unsupported IFC operation: {operation}")
+    ref = payload.get("input")
+    if not isinstance(ref, dict) or ref.get("kind") != "file" or set(ref) - {"kind", "mount", "path"}:
+        raise ValueError("ifc_input_must_be_file_ref")
+    mount, relative = str(ref.get("mount", "")), str(ref.get("path", ""))
+    _, _, source_path = _file_target(f"/v1/files/{mount}/{quote(relative, safe='/')}")
+    if not source_path.is_file():
+        raise ValueError("ifc_input_not_found")
+
+    try:
+        timeout = int(payload.get("timeout_seconds", 60))
+    except (TypeError, ValueError):
+        timeout = 60
+    timeout = max(1, min(timeout, MAX_TIMEOUT_SECONDS))
+    try:
+        max_elements = int(payload.get("max_elements", IFC_DEFAULT_MAX_ELEMENTS))
+    except (TypeError, ValueError):
+        max_elements = IFC_DEFAULT_MAX_ELEMENTS
+
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="ifc-", dir=WORK_ROOT) as temp:
+        temp_path = Path(temp)
+        request_path, output_path = temp_path / "request.json", temp_path / "model.json"
+        request_path.write_text(json.dumps({
+            "schema_version": 1, "input": str(source_path), "output": str(output_path),
+            "max_elements": max_elements,
+        }), encoding="utf-8")
+        runtime = _ifc_runtime()
+        if runtime["modules"]["ifcopenshell"] is None:
+            raise RuntimeError("ifcopenshell is not installed for the CAD service (looked in: "
+                               + ", ".join(runtime["searched"]) + "). Install it with: pip install ifcopenshell")
+        command = [runtime["python"], str(_find_ifc_adapter()), "--operation", operation, "--request", str(request_path)]
+        try:
+            proc = subprocess.run(command, cwd=temp, env=runtime["env"], capture_output=True,
+                                  text=True, timeout=timeout, check=False)
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(f"IFC {operation} exceeded {timeout}s") from exc
+
+        envelope = None
+        for line in reversed((proc.stdout or "").splitlines()):
+            if line.startswith("AGENTSAM_RESULT="):
+                try:
+                    envelope = json.loads(line[len("AGENTSAM_RESULT="):])
+                    break
+                except json.JSONDecodeError:
+                    pass
+        if not envelope or not envelope.get("ok"):
+            err_msg = envelope.get("error") if envelope else f"exit {proc.returncode}"
+            raise RuntimeError(f"IFC {operation} failed ({err_msg}): {(proc.stderr or '')[-2000:]}")
+        if not output_path.is_file():
+            raise RuntimeError("IFC adapter reported success but wrote no model")
+        raw = output_path.read_bytes()
+        if len(raw) > MAX_ARTIFACT_BYTES:
+            raise RuntimeError(f"model is {len(raw)} bytes; exceeds {MAX_ARTIFACT_BYTES} bytes")
+        model = json.loads(raw)
+        return {
+            "ok": True, "tool": "ifc", "operation": operation, "schema": model.get("schema"),
+            "source_sha256": model["source"]["sha256"], "model_sha256": hashlib.sha256(raw).hexdigest(),
+            "metrics": envelope.get("metrics", {}), "ifcopenshell": envelope.get("ifcopenshell"),
+            "model": model,
+        }
 
 
 def _execute_freecad(payload: dict[str, Any]) -> dict[str, Any]:
@@ -894,6 +1058,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self.path == "/v1/blender/execute":
                 self._json(HTTPStatus.OK, _execute_blender(payload))
+                return
+            if self.path == "/v1/ifc/execute":
+                self._json(HTTPStatus.OK, _execute_ifc(payload))
                 return
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
         except ValueError as exc:

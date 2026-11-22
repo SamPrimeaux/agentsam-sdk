@@ -309,6 +309,16 @@ export const PROCEDURAL_PBR_MATERIALS = [
     swatchGradient: 'linear-gradient(135deg,#778391 0%,#475569 50%,#1e293b 100%)', colorHex: '#475569', secondaryHex: '#1e293b', emissiveHex: '#000000', emissiveIntensity: 0,
     metalness: 0.02, roughness: 0.76, clearcoat: 0.08, clearcoatRoughness: 0.6, iridescence: 0, anisotropy: 0, transmission: 0, ior: 1.46, patternType: 'slate', bumpScale: 0.1,
   },
+  {
+    id: 'pbr-studio-travertine', label: 'Honed travertine', category: 'stone', description: 'Matte honey travertine mined from the SamSpeaks studio library with fine brushed micro-surface.',
+    swatchGradient: 'linear-gradient(135deg,#e7dcc4 0%,#d9d0c1 55%,#a89a80 100%)', colorHex: '#d9d0c1', secondaryHex: '#a89a80', emissiveHex: '#000000', emissiveIntensity: 0,
+    metalness: 0.02, roughness: 0.82, clearcoat: 0, clearcoatRoughness: 0, iridescence: 0, anisotropy: 0, transmission: 0, ior: 1.46, patternType: 'brushed-metal', bumpScale: 0.003,
+  },
+  {
+    id: 'pbr-studio-perforated-mesh', label: 'Perforated metal mesh', category: 'metal', description: 'Perforated microphone-grille metal mined from the SamSpeaks studio library, driven by the shared grille bump map.',
+    swatchGradient: 'linear-gradient(135deg,#e2e8f0 0%,#c2c8d2 55%,#6b7484 100%)', colorHex: '#c2c8d2', secondaryHex: '#6b7484', emissiveHex: '#000000', emissiveIntensity: 0,
+    metalness: 0.86, roughness: 0.35, clearcoat: 0, clearcoatRoughness: 0, iridescence: 0, anisotropy: 0, transmission: 0, ior: 1.46, patternType: 'micro-perforated', bumpScale: 0.012,
+  },
 ];
 export const PROCEDURAL_PBR_MATERIAL_MAP = Object.freeze(Object.fromEntries(PROCEDURAL_PBR_MATERIALS.map(preset => [preset.id, preset])));
 export const CAD_MATERIAL_PRESET_MAP = Object.freeze({

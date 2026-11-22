@@ -40,8 +40,22 @@ export function inspectBrandEvidence(scan, options = {}) {
   };
 }
 
+function assetRows(scan) {
+  const source = scan.assets;
+  if (Array.isArray(source)) return source;
+  if (Array.isArray(source?.items)) return source.items;
+  // Older repository scans exposed only a path sample. Keep those references
+  // visible rather than returning a misleading empty inventory.
+  if (Array.isArray(source?.sample)) {
+    return source.sample.map((entry) => typeof entry === 'string'
+      ? { path: entry, label: entry.split('/').pop(), provenance: { source: 'repository.snapshot.sample', needs_review: true } }
+      : entry);
+  }
+  return [];
+}
+
 export function listBrandAssetEvidence(scan) {
-  return rows(assertScan(scan).assets).map((asset, index) => ({
+  return assetRows(assertScan(scan)).map((asset, index) => ({
     id: assetId(asset, index),
     ...asset,
   }));

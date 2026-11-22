@@ -99,13 +99,29 @@ export interface DimensionAnnotation {
   sourceSketchShapeIds?: string[];
 }
 
+/** Canonical project-wide lighting, environment and renderer configuration. */
 export interface LightingConfig {
-  sunAltitude: number; // 10 to 90 degrees
+  sunAltitude: number; // 0 to 90 degrees
   sunAzimuth: number; // 0 to 360 degrees
-  intensity: number; // 0.2 to 2.0
+  intensity: number; // directional/key light multiplier
   timeOfDay: 'morning' | 'noon' | 'sunset' | 'night';
   shadows: boolean;
   ambientColor: string;
+  ambientIntensity?:number;
+  sunColor?:string;
+  skyColor?:string;
+  groundColor?:string;
+  skyVisible?:boolean;
+  environmentPresetId?:string;
+  skyTurbidity?:number;
+  skyRayleigh?:number;
+  skyMieCoefficient?:number;
+  skyMieDirectionalG?:number;
+  exposure?:number;
+  shading?:'lit'|'color';
+  shadowQuality?:CadShadowQuality;
+  toneMapping?:CadToneMapping;
+  shadowBias?:number;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,32 +264,52 @@ export interface CadSceneSettings {
   cameraSequence?: CadCameraBeat[];
   savedCameras?: {id:string;label:string;target:[number,number,number];az:number;el:number;distance:number;fov:number}[];
   fog?:{enabled:boolean;near:number;far:number};
+  /** @deprecated Migrated to DesignProject.lighting.shadowBias on the next lighting edit. */
   shadowBias?:number;
   projection?:'perspective'|'orthographic';
   clipNear?: number;
   clipFar?: number;
+  /** @deprecated Migrated to DesignProject.lighting.shading on the next lighting edit. */
   shading?:'lit'|'color';
+  /** @deprecated Migrated to DesignProject.lighting.exposure on the next lighting edit. */
   exposure?:number;
+  /** @deprecated Migrated to DesignProject.lighting.intensity on the next lighting edit. */
   sun?:number;
+  /** @deprecated Migrated to DesignProject.lighting.ambientIntensity on the next lighting edit. */
   ambient?:number;
+  /** @deprecated Migrated to DesignProject.lighting.skyVisible on the next lighting edit. */
   sky?:boolean;
+  /** @deprecated Migrated to DesignProject.lighting.timeOfDay on the next lighting edit. */
   daylight?:boolean;
   roofVisible?:boolean;
   /** Solar direction in the CAD viewport's Y-up world coordinates. */
+  /** @deprecated Migrated to DesignProject.lighting.sunAltitude on the next lighting edit. */
   sunAltitude?:number;
+  /** @deprecated Migrated to DesignProject.lighting.sunAzimuth on the next lighting edit. */
   sunAzimuth?:number;
   /** Actual Three.js light and hemisphere colors, persisted with the scene. */
+  /** @deprecated Migrated to DesignProject.lighting.sunColor on the next lighting edit. */
   sunColor?:string;
+  /** @deprecated Migrated to DesignProject.lighting.skyColor on the next lighting edit. */
   skyColor?:string;
+  /** @deprecated Migrated to DesignProject.lighting.groundColor on the next lighting edit. */
   groundColor?:string;
+  /** @deprecated Migrated to DesignProject.lighting.environmentPresetId on the next lighting edit. */
   environmentPresetId?:string;
   cameraFov?:number;
+  /** @deprecated Migrated to DesignProject.lighting.skyTurbidity on the next lighting edit. */
   skyTurbidity?:number;
+  /** @deprecated Migrated to DesignProject.lighting.skyRayleigh on the next lighting edit. */
   skyRayleigh?:number;
+  /** @deprecated Migrated to DesignProject.lighting.skyMieCoefficient on the next lighting edit. */
   skyMieCoefficient?:number;
+  /** @deprecated Migrated to DesignProject.lighting.skyMieDirectionalG on the next lighting edit. */
   skyMieDirectionalG?:number;
+  /** @deprecated Migrated to DesignProject.lighting.shadows on the next lighting edit. */
   shadows?:boolean;
+  /** @deprecated Migrated to DesignProject.lighting.shadowQuality on the next lighting edit. */
   shadowQuality?:CadShadowQuality;
+  /** @deprecated Migrated to DesignProject.lighting.toneMapping on the next lighting edit. */
   toneMapping?:CadToneMapping;
   terrain?:unknown;
 }

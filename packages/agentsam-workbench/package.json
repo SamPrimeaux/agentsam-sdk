@@ -29,6 +29,10 @@
       "types": "./dist/shell/index.d.ts",
       "import": "./dist/shell/index.js"
     },
+    "./shell/appearance": {
+      "types": "./dist/shell/appearance.d.mts",
+      "import": "./dist/shell/appearance.mjs"
+    },
     "./browser": {
       "types": "./dist/browser/index.d.ts",
       "import": "./dist/browser/index.js"
@@ -77,6 +81,7 @@
       "types": "./dist/design/index.d.ts",
       "import": "./dist/design/index.js"
     },
+    "./shell/inspector-picker.css": "./dist/shell/inspector-picker.css",
     "./design/design-workspace.css": "./dist/design/design-workspace.css"
   },
   "scripts": {

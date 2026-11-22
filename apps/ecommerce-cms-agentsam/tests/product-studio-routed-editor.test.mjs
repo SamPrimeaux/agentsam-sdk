@@ -6,14 +6,15 @@ function source(path) {
   return readFileSync(new URL('../frontend/src/' + path, import.meta.url), 'utf8');
 }
 
-test('application cards navigate to a real registered editor URL instead of scrolling to the bottom', () => {
-  const platform = source('pages/products/PlatformProductCatalog.tsx');
-  assert.match(platform, /navigateHostedStudioRoute\("\/admin" \+ route\)/);
-  assert.match(platform, /\/products\/create\/.*encodeURIComponent\(p\.id\)/);
-  assert.match(platform, /id="studio-product-editor"/);
-  assert.doesNotMatch(platform, /scrollIntoView/);
-  assert.match(platform, /"PATCH"/);
-  assert.match(platform, /revision: selected\.revision/);
+test('merchant cards use the owned products catalog and site-scoped product editor', () => {
+  const merchant = source('pages/products/MerchantProductCatalog.tsx');
+  assert.match(merchant, /\/api\/admin\/products\?scope=account/);
+  assert.match(merchant, /\/api\/admin\/products\?site_id=/);
+  assert.match(merchant, /\/admin\/product-edit\?/);
+  assert.match(merchant, /openProduct\(p\.site_id, p\.id\)/);
+  assert.match(merchant, /\/api\/admin\/cms\/sites/);
+  assert.doesNotMatch(merchant, /\/api\/admin\/platform\/products/);
+  assert.doesNotMatch(merchant, /scrollIntoView/);
 });
 
 test('registered AgentSam products do not enter Completeful catalog detail or design canvas', () => {
@@ -21,7 +22,7 @@ test('registered AgentSam products do not enter Completeful catalog detail or de
   assert.match(product, /registeredProductId\s*=\s*productId\s*&&\s*\/\^prod_/);
   assert.match(product, /if \(!productId \|\| registeredProductId\) return;/);
   assert.match(product, /registeredProductId \? \(/);
-  assert.match(product, /productId=\{registeredProductId\}/);
+  assert.match(product, /registryId=\{registeredProductId\}/);
   assert.match(product, /: designing && detail \? \(/);
 });
 

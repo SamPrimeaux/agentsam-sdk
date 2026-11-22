@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 dev = ["ty==0.0.88", "ruff==0.17.1"]
 
 [tool.ty.environment]
-# typings/: FreeCAD/bpy stubs for adapters that run inside native hosts.
+# typings/: FreeCAD/bpy and IfcOpenShell shims for adapters executed inside\n# native/optional runtimes. These are static checker-only, not runtime engines.
 # ../../python: sibling agentsam_sdk source so server.py can resolve
 # agentsam_sdk.cad without requiring a published wheel in CI.
 extra-paths = ["typings", "../../python"]
@@ -26,6 +26,7 @@ target-version = "py311"
 # structured {ok:false,error} responses; narrowing them would leak tracebacks.
 "blender/adapter.py" = ["TRY004", "BLE001", "FURB192"]  # FURB192: min() would change empty-selection error type
 "freecad/adapter.py" = ["TRY004", "BLE001", "I001"]  # I001: FreeCAD must import before Part (native load order)
+"ifc/adapter.py" = ["TRY004", "BLE001"]  # structured {ok:false,error} results, no tracebacks
 "server.py" = ["TRY004", "BLE001"]
 # Native FreeCAD requires FreeCAD before Part; standard import sorting cannot reorder it.
 "proof/*.py" = ["I001"]

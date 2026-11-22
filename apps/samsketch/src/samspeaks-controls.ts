@@ -1,5 +1,6 @@
-export type FinishId = "gold" | "titanium" | "obsidian" | "copper" | "iridescent";
-export type MoodId = "studio" | "sunset" | "twilight" | "noir" | "dawn";
+import { ATMOSPHERE_PRESETS, STUDIO_FINISH_PRESETS, type AtmosphereMoodId, type StudioFinishId } from '@inneranimalmedia/agentsam-3d-viewer';
+export type FinishId = StudioFinishId;
+export type MoodId = AtmosphereMoodId;
 export type CameraShotId = "establishing" | "hero" | "closeup" | "lowAngle" | "overhead" | "leftProp" | "rightProp";
 export type TransitionId = "glide" | "dolly" | "orbit" | "crane" | "cut";
 export type SceneProfileId = "astrolabe" | "pavilion" | "vox" | "terrarium";
@@ -113,21 +114,37 @@ export interface SceneryPropPreset {
   color: string;
 }
 
-export const FINISHES: FinishPreset[] = [
-  { id: "gold", label: "Gold", swatchHex: "#e5b85c", metalness: .94, roughness: .18, anisotropy: .8, iridescence: 0, emissive: "#332200", emissiveIntensity: .08 },
-  { id: "titanium", label: "Titanium", swatchHex: "#aeb9c8", metalness: .92, roughness: .22, anisotropy: .85, iridescence: 0, emissive: "#0c1420", emissiveIntensity: .05 },
-  { id: "obsidian", label: "Obsidian", swatchHex: "#252a36", metalness: .72, roughness: .14, anisotropy: .2, iridescence: .15, emissive: "#091124", emissiveIntensity: .12 },
-  { id: "copper", label: "Copper", swatchHex: "#d47952", metalness: .94, roughness: .2, anisotropy: .75, iridescence: .05, emissive: "#2a0f04", emissiveIntensity: .06 },
-  { id: "iridescent", label: "Prism", swatchHex: "#8d7eff", metalness: .88, roughness: .16, anisotropy: .35, iridescence: 1, emissive: "#18103c", emissiveIntensity: .18 },
-];
+const toHex = (color: number) => '#' + color.toString(16).padStart(6, '0');
 
-export const MOODS: MoodPreset[] = [
-  { id: "studio", label: "Studio", swatchHex: "#0a84ff", backdrop: "#202c40", keyColor: "#fff0da", fillColor: "#409cff", ambientColor: "#d0e2ff", ambientGroundColor: "#171719", ambientHue: 214, ambientSaturation: 100, keyIntensity: 2.6, fillIntensity: 1.35, ambientIntensity: 1.15, exposure: 1.12, fogColor: "#131314", fogDensity: .012 },
-  { id: "sunset", label: "Golden", swatchHex: "#e69951", backdrop: "#39231f", keyColor: "#ffb36b", fillColor: "#ff6e54", ambientColor: "#ffcda3", ambientGroundColor: "#26161b", ambientHue: 25, ambientSaturation: 100, keyIntensity: 3.1, fillIntensity: 1.5, ambientIntensity: 1.05, exposure: 1.18, fogColor: "#211415", fogDensity: .018 },
-  { id: "twilight", label: "Twilight", swatchHex: "#6e76d6", backdrop: "#171c38", keyColor: "#b7c6ff", fillColor: "#9c7aff", ambientColor: "#7d8be8", ambientGroundColor: "#0e1020", ambientHue: 232, ambientSaturation: 66, keyIntensity: 2.1, fillIntensity: 1.9, ambientIntensity: 1, exposure: 1.08, fogColor: "#0e1026", fogDensity: .022 },
-  { id: "noir", label: "Noir", swatchHex: "#434b5c", backdrop: "#10151f", keyColor: "#f4f7ff", fillColor: "#4cc9f0", ambientColor: "#5c6882", ambientGroundColor: "#080a0f", ambientHue: 218, ambientSaturation: 18, keyIntensity: 3.2, fillIntensity: 2.1, ambientIntensity: .65, exposure: 1.04, fogColor: "#06080d", fogDensity: .026 },
-  { id: "dawn", label: "Dawn", swatchHex: "#5fc29c", backdrop: "#1b302b", keyColor: "#ffe8cc", fillColor: "#5be3b7", ambientColor: "#a6ebd6", ambientGroundColor: "#16241f", ambientHue: 157, ambientSaturation: 60, keyIntensity: 2.5, fillIntensity: 1.4, ambientIntensity: 1.25, exposure: 1.16, fogColor: "#101c1c", fogDensity: .015 },
-];
+export const FINISHES: FinishPreset[] = STUDIO_FINISH_PRESETS.map(
+  ({ color: _color, emissive, ...preset }) => ({ ...preset, emissive: toHex(emissive) }),
+);
+
+// SamSketch-specific viewport defaults. Keep the existing fog response and backdrop
+// while inheriting the actual lighting recipe from the shared viewer.
+const VIEWPORT_MOOD_DEFAULTS: Record<MoodId, Pick<MoodPreset,'backdrop' | 'ambientHue' | 'ambientSaturation' | 'fogDensity'>> = {
+  studio: { backdrop: "#202c40", ambientHue: 214, ambientSaturation: 100, fogDensity: .012 },
+  sunset: { backdrop: "#39231f", ambientHue: 25, ambientSaturation: 100, fogDensity: .018 },
+  twilight: { backdrop: "#171c38", ambientHue: 232, ambientSaturation: 66, fogDensity: .022 },
+  noir: { backdrop: "#10151f", ambientHue: 218, ambientSaturation: 18, fogDensity: .026 },
+  dawn: { backdrop: "#1b302b", ambientHue: 157, ambientSaturation: 60, fogDensity: .015 },
+};
+
+export const MOODS: MoodPreset[] = ATMOSPHERE_PRESETS.map(preset => ({
+  id: preset.id,
+  label: preset.label,
+  swatchHex: preset.swatchHex,
+  keyColor: toHex(preset.keyColor),
+  fillColor: toHex(preset.rimColor),
+  ambientColor: toHex(preset.hemiSky),
+  ambientGroundColor: toHex(preset.hemiGround),
+  keyIntensity: preset.keyIntensity,
+  fillIntensity: preset.rimIntensity,
+  ambientIntensity: preset.hemiIntensity,
+  exposure: preset.exposure,
+  fogColor: toHex(preset.fogColor),
+  ...VIEWPORT_MOOD_DEFAULTS[preset.id],
+}));
 
 export const SCENE_PROFILES: SceneProfile[] = [
   { id: "astrolabe", label: "Astrolabe", subtitle: "Kinetic sound sculpture", finish: "gold", mood: "studio", color: "#e5b85c" },

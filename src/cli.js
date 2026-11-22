@@ -365,13 +365,11 @@ if (command === 'ast') {
   printHelp();
 } else if (!command) {
   if (process.stdin.isTTY && process.stdout.isTTY) {
-    runDesktopCommand(null);
+    await runTuiCommand();
   } else {
     printHelp();
   }
-} else if (command === 'tui') {
-  await runTuiCommand();
-} else if (command === 'studio') {
+} else if (command === 'open' || command === 'desktop' || command === 'studio') {
   runDesktopCommand(rest.find((a) => !a.startsWith('-')) ?? null);
 } else if (isDirectoryArg(command)) {
   runDesktopCommand(command);

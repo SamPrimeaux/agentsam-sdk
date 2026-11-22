@@ -10,8 +10,8 @@ import {recordNativePlanChange} from '../lib/native-engine';
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
-import type {DesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
+import {applyDesignOperation,updateCadLightingProject} from '@inneranimalmedia/agentsam-cad-shared';
+import type {DesignOperation,ResolvedCadLighting} from '@inneranimalmedia/agentsam-cad-shared';
 import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
@@ -45,7 +45,7 @@ import {CadSequenceDock} from '../components/CadSequenceDock';
 import {CadWorldViewport} from '../components/CadWorldViewport';
 import {CadResourcesPane} from '../components/CadResourcesPane';
 import {cloneAssembly,validateWallAssembly,wallAssemblyTotal} from '../lib/cad/wall-assemblies';
-import { canEditHostedCadSelection, listHostedProjects, loadHostedProject, saveHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
+import { canEditHostedCadSelection, listHostedProjects, loadHostedProject, saveHostedProject, seedSceneProjectWithBim, type CadHostedSelection } from '../lib/hosted-project-source';
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
@@ -57,6 +57,7 @@ import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge, type CadOutbound } from '../lib/agentsam-preview-bridge';
 import { MiniAgentSam } from '@inneranimalmedia/agentsam-workbench/agent';
 import {ResizableStageHandle} from '@inneranimalmedia/agentsam-workbench/shell';
+import {resizePanelPercent} from '../lib/workbench-layout';
 import '@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css';
 import { buildSelectionContext, verifiedSelectionRevision, type CadSelectionContext } from '../lib/cad/selection';
 import { useCadTools } from '../lib/execution/useCadTools';
@@ -199,6 +200,7 @@ export function CadCreatorApp({
   const [splitRatio, setSplitRatio] = useState(()=>savedDimension('split',50,25,75));
   const [splitAxis,setSplitAxis]=useState<'x'|'y'>('x');
   const stageRef=useRef<HTMLElement|null>(null);
+  const workspaceBodyRef=useRef<HTMLDivElement|null>(null);
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [explorerOpen, setExplorerOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
   const [inspectorOpen, setInspectorOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
@@ -207,10 +209,11 @@ export function CadCreatorApp({
   const [rightWidth,setRightWidth]=useState(()=>savedDimension('properties',23,12,42));
   const [simulationOpen,setSimulationOpen]=useState(false);
   useEffect(()=>rememberDimension('split',splitRatio),[splitRatio]);
-  const rememberPanel=(node:HTMLElement,key:string,apply:(width:number)=>void)=>{
-    if(!node.style.width||!node.parentElement||window.matchMedia('(max-width: 920px)').matches)return;
-    const width=node.offsetWidth/node.parentElement.clientWidth*100;
-    if(Number.isFinite(width)&&width>0){rememberDimension(key,width);apply(width)}
+  const resizeDock=(side:'left'|'right',deltaPx:number)=>{
+    const width=workspaceBodyRef.current?.clientWidth??0;
+    if(width<=0)return;
+    if(side==='left')setLeftWidth(value=>resizePanelPercent(value,deltaPx,width,inspectorOpen?rightWidth:0));
+    else setRightWidth(value=>resizePanelPercent(value,-deltaPx,width,explorerOpen&&(activeWorkspace==='plan'||activeWorkspace==='model')?leftWidth:0));
   };
   const [timelineOpen,setTimelineOpen]=useState(false);
   const [terrainHost,setTerrainHost]=useState<HTMLDivElement|null>(null);
@@ -452,6 +455,21 @@ export function CadCreatorApp({
   const updateSceneSettings=useCallback((updates:Partial<NonNullable<ProjectState['sceneSettings']>>)=>{
     updateProject(previous=>({...previous,sceneSettings:{...previous.sceneSettings,...updates}}));
   },[updateProject]);
+  const updateLightingSettings=useCallback((updates:Partial<ResolvedCadLighting>)=>{
+    updateProject(previous=>updateCadLightingProject(previous,updates));
+  },[updateProject]);
+  const seedExampleBim = useCallback(async () => {
+    if (isViewer) return;
+    try {
+      // Same authority rule as opening the DreamHouse: owner runtime first, public example otherwise.
+      const bim = accessMode === 'owner' ? await loadOwnerDreamHouseProject() : await loadDreamHouseProject();
+      updateProject(previous => seedSceneProjectWithBim(previous, bim));
+      setUiSelection(null);
+      showToast('Seeded BIM from DreamHouse example · save to persist the revision');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'DreamHouse example unavailable');
+    }
+  }, [accessMode, isViewer, updateProject]);
   const selectSceneElement=useCallback(({designId}:{designId:string})=>{
     const group=project.sceneElements?.some(element=>element.id===designId)?'sceneElements':
       (['walls','doors','windows','rooms','furniture','parametricObjects'] as const).find(key=>project[key]?.some(element=>element.id===designId));
@@ -727,12 +745,12 @@ export function CadCreatorApp({
       )}
       </>)}
       {/* 3. Main Stage (canvas-first, no assistant sidebar) */}
-      <main className="flex-1 flex overflow-hidden relative min-h-0">
-        <div className="cad-workspace-body" style={{'--cad-left-width':leftWidth+'%','--cad-right-width':rightWidth+'%'} as React.CSSProperties}>
+      <main className="flex-1 flex overflow-hidden relative min-h-0 min-w-0">
+        <div ref={workspaceBodyRef} className="cad-workspace-body" style={{'--cad-left-width':leftWidth+'%','--cad-right-width':rightWidth+'%'} as React.CSSProperties}>
           {(explorerOpen || inspectorOpen) && <button type="button" className="cad-panel-scrim" aria-label="Close open CAD panels"
             onClick={()=>{setExplorerOpen(false);setInspectorOpen(false)}} />}
           {(activeWorkspace === 'plan' || activeWorkspace === 'model') && explorerOpen && (
-            <div className="cad-left-dock" onPointerUp={event=>rememberPanel(event.currentTarget,'explorer',setLeftWidth)}>
+            <div className="cad-left-dock">
               <div className="cad-dock-tabs" role="tablist" aria-label="Left panel">
                 {(['objects','assets','libraries'] as const).map(tab=><button type="button" key={tab} role="tab"
                   aria-selected={leftPanelTab===tab} onClick={()=>{setLeftPanelTab(tab);setIsTemplateLibraryOpen(false);}}>
@@ -804,6 +822,12 @@ export function CadCreatorApp({
 
             </div>
           )}
+          {(activeWorkspace==='plan'||activeWorkspace==='model')&&explorerOpen&&<ResizableStageHandle
+            axis="x" label="Resize objects and assets panel" title="Drag to resize · double-click to reset"
+            className="cad-panel-resize-handle" value={leftWidth} min={12} max={42}
+            bodyResizeAttribute="data-cad-panel-resizing" onDrag={delta=>resizeDock('left',delta)}
+            onDragEnd={()=>rememberDimension('explorer',leftWidth)}
+            onDoubleClick={()=>{setLeftWidth(20);rememberDimension('explorer',20)}}/>}
         {/* PRIMARY VIEWPORT STAGE */}
         <section ref={stageRef} className={'cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]'+(activeWorkspace==='plan'&&planLayout==='split'?' cad-stage-split':'')}
           style={{'--cad-split':splitRatio+'%'} as React.CSSProperties}>
@@ -887,10 +911,10 @@ export function CadCreatorApp({
                     ? <CadWorldViewport terrainHost={terrainHost} modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
                         readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
                         sceneElements={project.sceneElements} selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
-                        layoutProject={project} onSceneSettings={updateSceneSettings} onSelect={selectSceneElement}/>
+                        layoutProject={project} onSceneSettings={updateSceneSettings} onLightingChange={isViewer?undefined:updateLightingSettings} onSelect={selectSceneElement}/>
                     : accessMode === 'hosted-project' && !templateCopyName && !hostedWritable
                       ? hostedEmptyPane
-                    : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
+                    : <Viewport3D project={project} onLightingChange={isViewer?undefined:updateLightingSettings} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
                 </div>
               )}
 
@@ -906,10 +930,10 @@ export function CadCreatorApp({
                 ? <CadWorldViewport terrainHost={terrainHost} modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
                     readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
                     sceneElements={project.sceneElements} selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
-                    layoutProject={project} onSceneSettings={updateSceneSettings} onSelect={selectSceneElement}/>
+                    layoutProject={project} onSceneSettings={updateSceneSettings} onLightingChange={isViewer?undefined:updateLightingSettings} onSelect={selectSceneElement}/>
                 : accessMode === 'hosted-project' && !templateCopyName
                   ? hostedEmptyPane
-                : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
+                : <Viewport3D project={project} onLightingChange={isViewer?undefined:updateLightingSettings} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
             </div>
           )}
 
@@ -919,20 +943,26 @@ export function CadCreatorApp({
                     {/* Rendering now shows the current project instead of opening disconnected prototype dialogs. */}
           {activeWorkspace === 'render' && (
             <div className="w-full h-full">
-              <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>
+              <Viewport3D project={project} onLightingChange={isViewer?undefined:updateLightingSettings} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>
             </div>
           )}
           </>}
         </section>
+          {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'render') && inspectorOpen && <ResizableStageHandle
+            axis="x" label="Resize properties inspector" title="Drag to resize · double-click to reset"
+            className="cad-panel-resize-handle" value={rightWidth} min={12} max={42}
+            bodyResizeAttribute="data-cad-panel-resizing" onDrag={delta=>resizeDock('right',delta)}
+            onDragEnd={()=>rememberDimension('properties',rightWidth)}
+            onDoubleClick={()=>{setRightWidth(23);rememberDimension('properties',23)}}/>}
           {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'render') && inspectorOpen && (
             <CadPropertyInspector project={project} selection={uiSelection}
               onSelect={setUiSelection} onChange={updateProject}
               onClose={() => setInspectorOpen(false)} readOnly={isViewer} onReview={reviewSelectedElement}
-              familyRequest={familyRequest} onResizeEnd={node=>rememberPanel(node,'properties',setRightWidth)}
+              familyRequest={familyRequest}
               onSimulation={()=>{void preloadRoboticsWorkspace().then(()=>{
                 setSimulationOpen(true);setTimelineOpen(false);setInspectorOpen(false);
               }).catch(()=>showToast('Robotics workspace could not load.'))}}
-              sourceRequest={sourceRequest} onTimeline={()=>setTimelineOpen(true)} onTerrainHost={setTerrainHost}/>
+              sourceRequest={sourceRequest} onTimeline={()=>setTimelineOpen(true)} onTerrainHost={setTerrainHost} onSeedExampleBim={()=>void seedExampleBim()}/>
           )}
         </div>
       </main>

@@ -33,6 +33,7 @@ import { Route as appsMailRouteImport } from './routes/(apps)/mail'
 import { Route as appsMediaRouteImport } from './routes/(apps)/media'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
 import { Route as appsSamsketchRouteImport } from './routes/(apps)/samsketch'
+import { Route as appsSamspeaksRouteImport } from './routes/(apps)/samspeaks'
 import { Route as appsSettingsRouteImport } from './routes/(apps)/settings'
 import { Route as appsShipRouteImport } from './routes/(apps)/ship'
 import { Route as appsSitesRouteImport } from './routes/(apps)/sites'
@@ -70,6 +71,7 @@ import { Route as appsAdminMoviemodeRouteImport } from './routes/(apps)/admin/mo
 import { Route as appsAdminOnboardingPreviewRouteImport } from './routes/(apps)/admin/onboarding-preview'
 import { Route as appsAdminProjectsRouteImport } from './routes/(apps)/admin/projects'
 import { Route as appsAdminSamsketchRouteImport } from './routes/(apps)/admin/samsketch'
+import { Route as appsAdminSamspeaksRouteImport } from './routes/(apps)/admin/samspeaks'
 import { Route as appsAdminSettingsRouteImport } from './routes/(apps)/admin/settings'
 import { Route as appsAdminShipRouteImport } from './routes/(apps)/admin/ship'
 import { Route as appsAdminSitesRouteImport } from './routes/(apps)/admin/sites'
@@ -244,6 +246,11 @@ const appsProjectsRoute = appsProjectsRouteImport.update({
 const appsSamsketchRoute = appsSamsketchRouteImport.update({
   id: '/(apps)/samsketch',
   path: '/samsketch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsSamspeaksRoute = appsSamspeaksRouteImport.update({
+  id: '/(apps)/samspeaks',
+  path: '/samspeaks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsSettingsRoute = appsSettingsRouteImport.update({
@@ -430,6 +437,11 @@ const appsAdminProjectsRoute = appsAdminProjectsRouteImport.update({
 const appsAdminSamsketchRoute = appsAdminSamsketchRouteImport.update({
   id: '/samsketch',
   path: '/samsketch',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
+const appsAdminSamspeaksRoute = appsAdminSamspeaksRouteImport.update({
+  id: '/samspeaks',
+  path: '/samspeaks',
   getParentRoute: () => appsAdminRouteRoute,
 } as any)
 const appsAdminSettingsRoute = appsAdminSettingsRouteImport.update({
@@ -744,6 +756,7 @@ export interface FileRoutesByFullPath {
   '/media': typeof appsMediaRouteWithChildren
   '/projects': typeof appsProjectsRouteWithChildren
   '/samsketch': typeof appsSamsketchRoute
+  '/samspeaks': typeof appsSamspeaksRoute
   '/settings': typeof appsSettingsRouteWithChildren
   '/ship': typeof appsShipRoute
   '/sites': typeof appsSitesRoute
@@ -780,6 +793,7 @@ export interface FileRoutesByFullPath {
   '/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/admin/samsketch': typeof appsAdminSamsketchRoute
+  '/admin/samspeaks': typeof appsAdminSamspeaksRoute
   '/admin/settings': typeof appsAdminSettingsRouteWithChildren
   '/admin/ship': typeof appsAdminShipRoute
   '/admin/sites': typeof appsAdminSitesRoute
@@ -859,6 +873,7 @@ export interface FileRoutesByTo {
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
   '/samsketch': typeof appsSamsketchRoute
+  '/samspeaks': typeof appsSamspeaksRoute
   '/ship': typeof appsShipRoute
   '/sites': typeof appsSitesRoute
   '/store': typeof appsStoreRoute
@@ -892,6 +907,7 @@ export interface FileRoutesByTo {
   '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/admin/samsketch': typeof appsAdminSamsketchRoute
+  '/admin/samspeaks': typeof appsAdminSamspeaksRoute
   '/admin/ship': typeof appsAdminShipRoute
   '/admin/sites': typeof appsAdminSitesRoute
   '/admin/store': typeof appsAdminStoreRoute
@@ -972,6 +988,7 @@ export interface FileRoutesById {
   '/(apps)/media': typeof appsMediaRouteWithChildren
   '/(apps)/projects': typeof appsProjectsRouteWithChildren
   '/(apps)/samsketch': typeof appsSamsketchRoute
+  '/(apps)/samspeaks': typeof appsSamspeaksRoute
   '/(apps)/settings': typeof appsSettingsRouteWithChildren
   '/(apps)/ship': typeof appsShipRoute
   '/(apps)/sites': typeof appsSitesRoute
@@ -1008,6 +1025,7 @@ export interface FileRoutesById {
   '/(apps)/admin/onboarding-preview': typeof appsAdminOnboardingPreviewRoute
   '/(apps)/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/(apps)/admin/samsketch': typeof appsAdminSamsketchRoute
+  '/(apps)/admin/samspeaks': typeof appsAdminSamspeaksRoute
   '/(apps)/admin/settings': typeof appsAdminSettingsRouteWithChildren
   '/(apps)/admin/ship': typeof appsAdminShipRoute
   '/(apps)/admin/sites': typeof appsAdminSitesRoute
@@ -1092,6 +1110,7 @@ export interface FileRouteTypes {
     | '/media'
     | '/projects'
     | '/samsketch'
+    | '/samspeaks'
     | '/settings'
     | '/ship'
     | '/sites'
@@ -1128,6 +1147,7 @@ export interface FileRouteTypes {
     | '/admin/onboarding-preview'
     | '/admin/projects'
     | '/admin/samsketch'
+    | '/admin/samspeaks'
     | '/admin/settings'
     | '/admin/ship'
     | '/admin/sites'
@@ -1207,6 +1227,7 @@ export interface FileRouteTypes {
     | '/mail'
     | '/media'
     | '/samsketch'
+    | '/samspeaks'
     | '/ship'
     | '/sites'
     | '/store'
@@ -1240,6 +1261,7 @@ export interface FileRouteTypes {
     | '/admin/moviemode'
     | '/admin/onboarding-preview'
     | '/admin/samsketch'
+    | '/admin/samspeaks'
     | '/admin/ship'
     | '/admin/sites'
     | '/admin/store'
@@ -1319,6 +1341,7 @@ export interface FileRouteTypes {
     | '/(apps)/media'
     | '/(apps)/projects'
     | '/(apps)/samsketch'
+    | '/(apps)/samspeaks'
     | '/(apps)/settings'
     | '/(apps)/ship'
     | '/(apps)/sites'
@@ -1355,6 +1378,7 @@ export interface FileRouteTypes {
     | '/(apps)/admin/onboarding-preview'
     | '/(apps)/admin/projects'
     | '/(apps)/admin/samsketch'
+    | '/(apps)/admin/samspeaks'
     | '/(apps)/admin/settings'
     | '/(apps)/admin/ship'
     | '/(apps)/admin/sites'
@@ -1438,6 +1462,7 @@ export interface RootRouteChildren {
   appsMediaRoute: typeof appsMediaRouteWithChildren
   appsProjectsRoute: typeof appsProjectsRouteWithChildren
   appsSamsketchRoute: typeof appsSamsketchRoute
+  appsSamspeaksRoute: typeof appsSamspeaksRoute
   appsSettingsRoute: typeof appsSettingsRouteWithChildren
   appsShipRoute: typeof appsShipRoute
   appsSitesRoute: typeof appsSitesRoute
@@ -1627,6 +1652,13 @@ declare module '@tanstack/react-router' {
       path: '/samsketch'
       fullPath: '/samsketch'
       preLoaderRoute: typeof appsSamsketchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/samspeaks': {
+      id: '/(apps)/samspeaks'
+      path: '/samspeaks'
+      fullPath: '/samspeaks'
+      preLoaderRoute: typeof appsSamspeaksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/settings': {
@@ -1886,6 +1918,13 @@ declare module '@tanstack/react-router' {
       path: '/samsketch'
       fullPath: '/admin/samsketch'
       preLoaderRoute: typeof appsAdminSamsketchRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
+    '/(apps)/admin/samspeaks': {
+      id: '/(apps)/admin/samspeaks'
+      path: '/samspeaks'
+      fullPath: '/admin/samspeaks'
+      preLoaderRoute: typeof appsAdminSamspeaksRouteImport
       parentRoute: typeof appsAdminRouteRoute
     }
     '/(apps)/admin/settings': {
@@ -2397,6 +2436,7 @@ interface appsAdminRouteRouteChildren {
   appsAdminOnboardingPreviewRoute: typeof appsAdminOnboardingPreviewRoute
   appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
   appsAdminSamsketchRoute: typeof appsAdminSamsketchRoute
+  appsAdminSamspeaksRoute: typeof appsAdminSamspeaksRoute
   appsAdminSettingsRoute: typeof appsAdminSettingsRouteWithChildren
   appsAdminShipRoute: typeof appsAdminShipRoute
   appsAdminSitesRoute: typeof appsAdminSitesRoute
@@ -2437,6 +2477,7 @@ const appsAdminRouteRouteChildren: appsAdminRouteRouteChildren = {
   appsAdminOnboardingPreviewRoute: appsAdminOnboardingPreviewRoute,
   appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
   appsAdminSamsketchRoute: appsAdminSamsketchRoute,
+  appsAdminSamspeaksRoute: appsAdminSamspeaksRoute,
   appsAdminSettingsRoute: appsAdminSettingsRouteWithChildren,
   appsAdminShipRoute: appsAdminShipRoute,
   appsAdminSitesRoute: appsAdminSitesRoute,
@@ -2576,6 +2617,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsMediaRoute: appsMediaRouteWithChildren,
   appsProjectsRoute: appsProjectsRouteWithChildren,
   appsSamsketchRoute: appsSamsketchRoute,
+  appsSamspeaksRoute: appsSamspeaksRoute,
   appsSettingsRoute: appsSettingsRouteWithChildren,
   appsShipRoute: appsShipRoute,
   appsSitesRoute: appsSitesRoute,

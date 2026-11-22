@@ -31,6 +31,9 @@ jobs:
       - name: Require an alpha version
         run: node -e 'if (!/^\d+\.\d+\.\d+-alpha\./.test(require("./package.json").version)) throw new Error("Alpha workflow requires an alpha version; stable releases are published manually")'
 
+      - name: Verify release train and dependency pins
+        run: npm run release:train:guard
+
       - name: Verify SDK
         run: npm run verify
 

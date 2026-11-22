@@ -6,7 +6,7 @@ import { ViewCube } from './ViewCube';
 import { CadViewportOverlay } from './CadViewportOverlay';
 import { publishWorldView, registerWorldView, type WorldViewCommands } from '../lib/world-view-store';
 import * as THREE from 'three';
-import { DoorElement, FurnitureElement, ProjectState, WallElement, WindowElement, ParametricObject, type CadSceneSettings } from '@inneranimalmedia/agentsam-cad-shared';
+import { resolveCadLighting, DoorElement, FurnitureElement, ProjectState, WallElement, WindowElement, ParametricObject, type CadSceneSettings } from '@inneranimalmedia/agentsam-cad-shared';
 
 interface Props {
   project: ProjectState;
@@ -37,8 +37,7 @@ export const Viewport3D: React.FC<Props> = ({
   const [showRoof, setShowRoof] = useState(false);
   const [showDimensions3D, setShowDimensions3D] = useState(true);
   // The canonical project, not viewport-local state, owns persisted scene lighting.
-  const timeOfDay = project.lighting.timeOfDay || 'noon';
-  const sunIntensity = project.lighting.intensity ?? 1.1;
+  const lighting = React.useMemo(() => resolveCadLighting(project), [project.lighting, project.sceneSettings]);
   const [nativeStatus,setNativeStatus]=useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fpHelp, setFpHelp] = useState(true);
@@ -243,57 +242,25 @@ export const Viewport3D: React.FC<Props> = ({
     };
   }, [cameraMode]);
 
-  // Adjust Lighting depending on Time of Day & sunIntensity
+  // Both CAD viewport families read the same project-owned lighting settings.
   useEffect(() => {
-    if (!dirLightRef.current || !hemiLightRef.current || !sceneRef.current) return;
-
-    let skyColor = '#090d16';
-    let dirColor = '#fffbeb';
-    let dirPos = new THREE.Vector3(15, 20, 10);
-    let intensity = sunIntensity;
-
-    switch (timeOfDay) {
-      case 'morning':
-        skyColor = '#1e293b';
-        dirColor = '#ffedd5';
-        dirPos.set(25, 12, 20);
-        hemiLightRef.current.intensity = 0.7;
-        break;
-      case 'noon':
-        skyColor = '#0f172a';
-        dirColor = '#ffffff';
-        dirPos.set(5, 28, 5);
-        hemiLightRef.current.intensity = 0.9;
-        break;
-      case 'sunset':
-        skyColor = '#31101f';
-        dirColor = '#fb923c';
-        dirPos.set(-20, 6, -15);
-        intensity = sunIntensity * 1.3;
-        hemiLightRef.current.intensity = 0.5;
-        break;
-      case 'night':
-        skyColor = '#020617';
-        dirColor = '#38bdf8';
-        dirPos.set(10, 15, 10);
-        intensity = 0.3;
-        hemiLightRef.current.intensity = 0.2;
-        break;
+    const sun = dirLightRef.current, hemi = hemiLightRef.current, scene = sceneRef.current, renderer = rendererRef.current;
+    if (!sun || !hemi || !scene || !renderer) return;
+    const altitude = THREE.MathUtils.degToRad(lighting.sunAltitude);
+    const azimuth = THREE.MathUtils.degToRad(lighting.sunAzimuth);
+    sun.position.set(30*Math.cos(altitude)*Math.sin(azimuth), 30*Math.sin(altitude), 30*Math.cos(altitude)*Math.cos(azimuth));
+    sun.color.set(lighting.sunColor); sun.intensity = lighting.intensity;
+    hemi.color.set(lighting.ambientColor); hemi.groundColor.set(lighting.groundColor); hemi.intensity = lighting.ambientIntensity;
+    scene.background = new THREE.Color(lighting.skyVisible ? lighting.skyColor : '#090d16');
+    sun.castShadow = lighting.shadows; sun.shadow.bias = lighting.shadowBias;
+    renderer.shadowMap.enabled = lighting.shadows;
+    const size = lighting.shadowQuality === 'low' ? 512 : lighting.shadowQuality === 'medium' ? 1024 : 2048;
+    if (sun.shadow.mapSize.x !== size) {
+      sun.shadow.map?.dispose(); sun.shadow.map = null; sun.shadow.mapSize.set(size,size);
     }
-
-    const altitude = THREE.MathUtils.degToRad(project.lighting.sunAltitude);
-    const azimuth = THREE.MathUtils.degToRad(project.lighting.sunAzimuth);
-    if (Number.isFinite(altitude) && Number.isFinite(azimuth)) {
-      dirPos.set(30*Math.cos(altitude)*Math.sin(azimuth), 30*Math.sin(altitude), 30*Math.cos(altitude)*Math.cos(azimuth));
-    }
-    sceneRef.current.background = new THREE.Color(skyColor);
-    hemiLightRef.current.color.set(project.lighting.ambientColor || '#ffffff');
-    dirLightRef.current.color.set(dirColor);
-    dirLightRef.current.position.copy(dirPos);
-    dirLightRef.current.castShadow = project.lighting.shadows;
-    if (rendererRef.current) rendererRef.current.shadowMap.enabled = project.lighting.shadows;
-    dirLightRef.current.intensity = intensity;
-  }, [timeOfDay, sunIntensity, project.lighting.sunAltitude, project.lighting.sunAzimuth, project.lighting.shadows, project.lighting.ambientColor]);
+    const mapping = {aces:THREE.ACESFilmicToneMapping,reinhard:THREE.ReinhardToneMapping,neutral:THREE.NeutralToneMapping,none:THREE.NoToneMapping};
+    renderer.toneMapping = mapping[lighting.toneMapping]; renderer.toneMappingExposure = lighting.exposure;
+  }, [lighting, cameraMode]);
 
   // Build / Reconstruct 3D BIM Elements in Scene
   useEffect(() => {

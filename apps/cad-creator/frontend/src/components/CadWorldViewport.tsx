@@ -1,6 +1,6 @@
 import {trackCadRenderer} from '../lib/cad/scene-performance';
 import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
@@ -13,6 +13,7 @@ import {ViewCube} from './ViewCube';
 import {publishWorldView,registerWorldView,WORLD_ENVIRONMENT_PRESETS,type WorldEnvironmentPresetId,type WorldViewCommands} from '../lib/world-view-store';
 import {createTerrainProjection,type TerrainProjection} from '../lib/world-terrain-three';
 import type {CadSceneElement,CadSceneSettings,CadShadowQuality,CadToneMapping,ProjectState} from '@inneranimalmedia/agentsam-cad-shared';
+import {DEFAULT_CAD_LIGHTING,resolveCadLighting,type ResolvedCadLighting} from '@inneranimalmedia/agentsam-cad-shared';
 import {indexSceneElements,applySceneElementEdits,sceneElementBounds,type SceneBinding} from '../lib/scene-elements-three';
 
 type Zone={roomId:string;label:string;candidateCameraBlenderXYZMetres?:number[];anchorStatus?:string};
@@ -46,8 +47,9 @@ export interface CadWorldViewportProps {
  selectedElementId?:string;
  layoutProject?:ProjectState;
  onSceneSettings?:(updates:Partial<CadSceneSettings>)=>void;
+ onLightingChange?:(updates:Partial<ResolvedCadLighting>)=>void;
 }
-export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect,onSceneInventory,onSceneElements,sceneElements=[],selectedElementId,layoutProject,onSceneSettings}:CadWorldViewportProps) {
+export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect,onSceneInventory,onSceneElements,sceneElements=[],selectedElementId,layoutProject,onSceneSettings,onLightingChange}:CadWorldViewportProps) {
  const mount=useRef<HTMLDivElement>(null),renderer=useRef<THREE.WebGLRenderer|null>(null),
  sceneRef=useRef<THREE.Scene|null>(null),cameraRef=useRef<THREE.PerspectiveCamera|null>(null);
  const renderCamera=useRef<THREE.PerspectiveCamera|THREE.OrthographicCamera|null>(null);
@@ -60,16 +62,24 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
  const touchPointers=useRef(new Map<number,{x:number;y:number}>()),pinchDistance=useRef<number|null>(null);
  const terrainProjection=useRef<TerrainProjection|null>(null);
  const terrainOrigin=useRef(new THREE.Vector3());
- const terrainDocRef=useRef<TerrainDocument>(createTerrainDocument());
+ const settings=layoutProject?.sceneSettings;
+ const lighting=useMemo(()=>resolveCadLighting(layoutProject),[layoutProject?.lighting,layoutProject?.sceneSettings]);
+ const terrainProjectKey=`${layoutProject?.id??sceneLabel??modelUrl??'new'}:${revision??''}`;
+ const terrainInitialRef=useRef<{key:string;document:TerrainDocument}|null>(null);
+ if(!terrainInitialRef.current||terrainInitialRef.current.key!==terrainProjectKey){
+  terrainInitialRef.current={key:terrainProjectKey,document:settings?.terrain?validateTerrainDocument(settings.terrain):createTerrainDocument()};
+ }
+ const initialTerrain=terrainInitialRef.current.document;
+ const terrainDocRef=useRef<TerrainDocument>(initialTerrain);
  const terrainBrushRef=useRef<{mode:SculptMode|null;radius:number;strength:number}>({mode:null,radius:12,strength:3});
  const lastBrushAt=useRef(0);
  const [mode,setMode]=useState<CameraMode>('orbit'),[ready,setReady]=useState(false),
  [error,setError]=useState(''),[progress,setProgress]=useState('Resolving project geometry…'),
  [handoff,setHandoff]=useState<Handoff|null>(null),[selection,setSelection]=useState<Selected|null>(null),
- [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>('day');
+ [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>(lighting.timeOfDay==='sunset'||lighting.timeOfDay==='night'?'evening':'day');
  const [nativeStatus,setNativeStatus]=useState('');
  const [wireframe,setWireframe]=useState(false),[viewPreset,setViewPreset]=useState<ViewPreset>('iso');
- const [terrain,setTerrain]=useState<TerrainDocument>(()=>createTerrainDocument());
+ const [terrain,setTerrain]=useState<TerrainDocument>(initialTerrain);
  const terrainOpen=Boolean(terrainHost)&&siteEditable;
  const [sculptMode,setSculptMode]=useState<SculptMode|null>(null);
  useEffect(()=>{if(!terrainOpen)setSculptMode(null)},[terrainOpen]);
@@ -83,37 +93,32 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
  const materialSets=useRef(new Map<THREE.Mesh,{lit:THREE.Material|THREE.Material[];color:THREE.Material|THREE.Material[]}>());
  const pbrTextures=useRef<ReturnType<typeof createStudioTextures>|null>(null);
  const pbrMaterials=useRef(new Map<string,THREE.MeshPhysicalMaterial>());
- const [shading,setShading]=useState<'lit'|'color'>('lit');
- const [exposure,setExposure]=useState(.72),[sunStrength,setSunStrength]=useState(1),[fillStrength,setFillStrength]=useState(.55);
- const [skyVisible,setSkyVisible]=useState(true);
- const [sunAltitude,setSunAltitude]=useState(54),[sunAzimuth,setSunAzimuth]=useState(55);
- const [sunColor,setSunColor]=useState('#fff0d7'),[skyColor,setSkyColor]=useState('#dceeff'),[groundColor,setGroundColor]=useState('#53644d');
- const [environmentPresetId,setEnvironmentPresetId]=useState<WorldEnvironmentPresetId|'custom'>('daylight');
+ const [shading,setShading]=useState<'lit'|'color'>(lighting.shading);
+ const [exposure,setExposure]=useState(lighting.exposure),[sunStrength,setSunStrength]=useState(lighting.intensity),[fillStrength,setFillStrength]=useState(lighting.ambientIntensity);
+ const [skyVisible,setSkyVisible]=useState(lighting.skyVisible);
+ const [sunAltitude,setSunAltitude]=useState(lighting.sunAltitude),[sunAzimuth,setSunAzimuth]=useState(lighting.sunAzimuth);
+ const [sunColor,setSunColor]=useState(lighting.sunColor),[skyColor,setSkyColor]=useState(lighting.skyColor),[groundColor,setGroundColor]=useState(lighting.groundColor);
+ const [environmentPresetId,setEnvironmentPresetId]=useState<WorldEnvironmentPresetId|'custom'>(lighting.environmentPresetId as WorldEnvironmentPresetId|'custom');
  const [cameraFov,setCameraFov]=useState(45);
- const [skyTurbidity,setSkyTurbidity]=useState(3.5),[skyRayleigh,setSkyRayleigh]=useState(2.1),[skyMieCoefficient,setSkyMieCoefficient]=useState(.005),[skyMieDirectionalG,setSkyMieDirectionalG]=useState(.78);
- const [shadows,setShadows]=useState(true);
- const [shadowQuality,setShadowQuality]=useState<CadShadowQuality>(()=>typeof window!=='undefined'&&window.innerWidth<768?'medium':'high');
- const [toneMapping,setToneMapping]=useState<CadToneMapping>('aces');
- const settings=layoutProject?.sceneSettings;
+ const [skyTurbidity,setSkyTurbidity]=useState(lighting.skyTurbidity),[skyRayleigh,setSkyRayleigh]=useState(lighting.skyRayleigh),[skyMieCoefficient,setSkyMieCoefficient]=useState(lighting.skyMieCoefficient),[skyMieDirectionalG,setSkyMieDirectionalG]=useState(lighting.skyMieDirectionalG);
+ const [shadows,setShadows]=useState(lighting.shadows);
+ const [shadowQuality,setShadowQuality]=useState<CadShadowQuality>(lighting.shadowQuality);
+ const [toneMapping,setToneMapping]=useState<CadToneMapping>(lighting.toneMapping);
  const projection=settings?.projection??'perspective';
  const projectionRef=useRef(projection);
  useEffect(()=>{projectionRef.current=projection},[projection]);
  const clipNear=settings?.clipNear??.06,clipFar=settings?.clipFar??2400;
  const [activeCamera,setActiveCamera]=useState('iso');
  useEffect(()=>{
-  if(!onSceneSettings&&!settings)return;
-  setShading(settings?.shading??'lit');
-  setExposure(settings?.exposure??.72);setSunStrength(settings?.sun??1);setFillStrength(settings?.ambient??.55);
-  setSkyVisible(settings?.sky??true);setHour(settings?.daylight===false?'evening':'day');
-  setSunAltitude(settings?.sunAltitude??(settings?.daylight===false?11:54));
-  setSunAzimuth(settings?.sunAzimuth??(settings?.daylight===false?309:55));
-  setSunColor(settings?.sunColor??'#fff0d7');setSkyColor(settings?.skyColor??'#dceeff');setGroundColor(settings?.groundColor??'#53644d');
-  setEnvironmentPresetId((settings?.environmentPresetId??'daylight') as WorldEnvironmentPresetId|'custom');
-  setSkyTurbidity(settings?.skyTurbidity??3.5);
-  setSkyRayleigh(settings?.skyRayleigh??2.1);setSkyMieCoefficient(settings?.skyMieCoefficient??.005);
-  setSkyMieDirectionalG(settings?.skyMieDirectionalG??.78);setShadows(settings?.shadows??true);
-  setShadowQuality(settings?.shadowQuality??(window.innerWidth<768?'medium':'high'));setToneMapping(settings?.toneMapping??'aces');setRoofVisible(settings?.roofVisible??true);
- },[settings,onSceneSettings]);
+  setShading(lighting.shading);setExposure(lighting.exposure);setSunStrength(lighting.intensity);setFillStrength(lighting.ambientIntensity);
+  setSkyVisible(lighting.skyVisible);setHour(lighting.timeOfDay==='sunset'||lighting.timeOfDay==='night'?'evening':'day');
+  setSunAltitude(lighting.sunAltitude);setSunAzimuth(lighting.sunAzimuth);
+  setSunColor(lighting.sunColor);setSkyColor(lighting.skyColor);setGroundColor(lighting.groundColor);
+  setEnvironmentPresetId(lighting.environmentPresetId as WorldEnvironmentPresetId|'custom');
+  setSkyTurbidity(lighting.skyTurbidity);setSkyRayleigh(lighting.skyRayleigh);setSkyMieCoefficient(lighting.skyMieCoefficient);
+  setSkyMieDirectionalG(lighting.skyMieDirectionalG);setShadows(lighting.shadows);
+  setShadowQuality(lighting.shadowQuality);setToneMapping(lighting.toneMapping);setRoofVisible(settings?.roofVisible??true);
+ },[lighting,settings?.roofVisible]);
  useEffect(()=>{if(onSceneSettings||settings?.cameraFov!=null)setCameraFov(settings?.cameraFov??45)},[onSceneSettings,settings?.cameraFov]);
  useEffect(()=>{
   if(settings?.terrain)setTerrain(validateTerrainDocument(settings.terrain));
@@ -201,42 +206,42 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
   toggleDaylight:()=>{
    const next=hour!=='day',altitude=next?54:11,azimuth=next?55:309,color=next?'#fff0d7':'#ffc18d';
    setHour(next?'day':'evening');setSunAltitude(altitude);setSunAzimuth(azimuth);setSunColor(color);
-   setEnvironmentPresetId('custom');onSceneSettings?.({environmentPresetId:'custom',daylight:next,sunAltitude:altitude,sunAzimuth:azimuth,sunColor:color});
+   setEnvironmentPresetId('custom');onLightingChange?.({environmentPresetId:'custom',timeOfDay:next?'noon':'sunset',sunAltitude:altitude,sunAzimuth:azimuth,sunColor:color});
   },
   toggleWireframe:()=>setWireframe(v=>!v),
   visitRoom:id=>{const z=handoff?.zones.find(x=>x.roomId===id);if(z)visit(z)},
   capture:exportSnapshot,
-  setShading:value=>{setShading(value);onSceneSettings?.({shading:value})},
-  setExposure:value=>{setExposure(value);onSceneSettings?.({exposure:value})},
-  setSun:value=>{setSunStrength(value);setEnvironmentPresetId('custom');onSceneSettings?.({sun:value,environmentPresetId:'custom'})},
-  setAmbient:value=>{setFillStrength(value);setEnvironmentPresetId('custom');onSceneSettings?.({ambient:value,environmentPresetId:'custom'})},
-  setSky:value=>{setSkyVisible(value);setEnvironmentPresetId('custom');onSceneSettings?.({sky:value,environmentPresetId:'custom'})},
-  setSunAltitude:value=>{setSunAltitude(value);setHour(value<25?'evening':'day');setEnvironmentPresetId('custom');onSceneSettings?.({sunAltitude:value,daylight:value>=25,environmentPresetId:'custom'})},
-  setSunAzimuth:value=>{setSunAzimuth(value);setEnvironmentPresetId('custom');onSceneSettings?.({sunAzimuth:value,environmentPresetId:'custom'})},
-  setSunColor:value=>{setSunColor(value);setEnvironmentPresetId('custom');onSceneSettings?.({sunColor:value,environmentPresetId:'custom'})},
-  setSkyColor:value=>{setSkyColor(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyColor:value,environmentPresetId:'custom'})},
-  setGroundColor:value=>{setGroundColor(value);setEnvironmentPresetId('custom');onSceneSettings?.({groundColor:value,environmentPresetId:'custom'})},
+  setShading:value=>{setShading(value);onLightingChange?.({shading:value})},
+  setExposure:value=>{setExposure(value);onLightingChange?.({exposure:value})},
+  setSun:value=>{setSunStrength(value);setEnvironmentPresetId('custom');onLightingChange?.({intensity:value,environmentPresetId:'custom'})},
+  setAmbient:value=>{setFillStrength(value);setEnvironmentPresetId('custom');onLightingChange?.({ambientIntensity:value,environmentPresetId:'custom'})},
+  setSky:value=>{setSkyVisible(value);setEnvironmentPresetId('custom');onLightingChange?.({skyVisible:value,environmentPresetId:'custom'})},
+  setSunAltitude:value=>{setSunAltitude(value);setHour(value<25?'evening':'day');setEnvironmentPresetId('custom');onLightingChange?.({sunAltitude:value,timeOfDay:value<25?'sunset':'noon',environmentPresetId:'custom'})},
+  setSunAzimuth:value=>{setSunAzimuth(value);setEnvironmentPresetId('custom');onLightingChange?.({sunAzimuth:value,environmentPresetId:'custom'})},
+  setSunColor:value=>{setSunColor(value);setEnvironmentPresetId('custom');onLightingChange?.({sunColor:value,environmentPresetId:'custom'})},
+  setSkyColor:value=>{setSkyColor(value);setEnvironmentPresetId('custom');onLightingChange?.({skyColor:value,environmentPresetId:'custom'})},
+  setGroundColor:value=>{setGroundColor(value);setEnvironmentPresetId('custom');onLightingChange?.({groundColor:value,environmentPresetId:'custom'})},
   setCameraFov:value=>{const next=THREE.MathUtils.clamp(value,20,90);setCameraFov(next);onSceneSettings?.({cameraFov:next})},
   setEnvironmentPreset:id=>{
    const preset=WORLD_ENVIRONMENT_PRESETS.find(item=>item.id===id);if(!preset)return;
    setEnvironmentPresetId(id);setHour(preset.daylight?'day':'evening');setSunAltitude(preset.sunAltitude);setSunAzimuth(preset.sunAzimuth);
    setSunStrength(preset.sun);setFillStrength(preset.ambient);setSkyVisible(preset.sky);setSunColor(preset.sunColor);setSkyColor(preset.skyColor);setGroundColor(preset.groundColor);
    setSkyTurbidity(preset.skyTurbidity);setSkyRayleigh(preset.skyRayleigh);setSkyMieCoefficient(preset.skyMieCoefficient);setSkyMieDirectionalG(preset.skyMieDirectionalG);
-   onSceneSettings?.({environmentPresetId:id,daylight:preset.daylight,sunAltitude:preset.sunAltitude,sunAzimuth:preset.sunAzimuth,sun:preset.sun,ambient:preset.ambient,sky:preset.sky,sunColor:preset.sunColor,skyColor:preset.skyColor,groundColor:preset.groundColor,skyTurbidity:preset.skyTurbidity,skyRayleigh:preset.skyRayleigh,skyMieCoefficient:preset.skyMieCoefficient,skyMieDirectionalG:preset.skyMieDirectionalG});
+   onLightingChange?.({environmentPresetId:id,timeOfDay:preset.daylight?'noon':'sunset',sunAltitude:preset.sunAltitude,sunAzimuth:preset.sunAzimuth,intensity:preset.sun,ambientIntensity:preset.ambient,skyVisible:preset.sky,sunColor:preset.sunColor,skyColor:preset.skyColor,groundColor:preset.groundColor,skyTurbidity:preset.skyTurbidity,skyRayleigh:preset.skyRayleigh,skyMieCoefficient:preset.skyMieCoefficient,skyMieDirectionalG:preset.skyMieDirectionalG});
   },
-  setSkyTurbidity:value=>{setSkyTurbidity(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyTurbidity:value,environmentPresetId:'custom'})},
-  setSkyRayleigh:value=>{setSkyRayleigh(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyRayleigh:value,environmentPresetId:'custom'})},
-  setSkyMieCoefficient:value=>{setSkyMieCoefficient(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyMieCoefficient:value,environmentPresetId:'custom'})},
-  setSkyMieDirectionalG:value=>{setSkyMieDirectionalG(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyMieDirectionalG:value,environmentPresetId:'custom'})},
-  setShadows:value=>{setShadows(value);onSceneSettings?.({shadows:value})},
-  setShadowQuality:value=>{setShadowQuality(value);onSceneSettings?.({shadowQuality:value})},
-  setToneMapping:value=>{setToneMapping(value);onSceneSettings?.({toneMapping:value})},
+  setSkyTurbidity:value=>{setSkyTurbidity(value);setEnvironmentPresetId('custom');onLightingChange?.({skyTurbidity:value,environmentPresetId:'custom'})},
+  setSkyRayleigh:value=>{setSkyRayleigh(value);setEnvironmentPresetId('custom');onLightingChange?.({skyRayleigh:value,environmentPresetId:'custom'})},
+  setSkyMieCoefficient:value=>{setSkyMieCoefficient(value);setEnvironmentPresetId('custom');onLightingChange?.({skyMieCoefficient:value,environmentPresetId:'custom'})},
+  setSkyMieDirectionalG:value=>{setSkyMieDirectionalG(value);setEnvironmentPresetId('custom');onLightingChange?.({skyMieDirectionalG:value,environmentPresetId:'custom'})},
+  setShadows:value=>{setShadows(value);onLightingChange?.({shadows:value})},
+  setShadowQuality:value=>{setShadowQuality(value);onLightingChange?.({shadowQuality:value})},
+  setToneMapping:value=>{setToneMapping(value);onLightingChange?.({toneMapping:value})},
   resetLight:()=>{
    setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');
    setSunAltitude(54);setSunAzimuth(55);setSunColor('#fff0d7');setSkyColor('#dceeff');setGroundColor('#53644d');setEnvironmentPresetId('daylight');
    setSkyTurbidity(3.5);setSkyRayleigh(2.1);setSkyMieCoefficient(.005);setSkyMieDirectionalG(.78);
    setShadows(true);setShadowQuality(typeof window!=='undefined'&&window.innerWidth<768?'medium':'high');setToneMapping('aces');
-   onSceneSettings?.({shading:'lit',exposure:.72,sun:1,ambient:.55,sky:true,daylight:true,environmentPresetId:'daylight',sunAltitude:54,sunAzimuth:55,sunColor:'#fff0d7',skyColor:'#dceeff',groundColor:'#53644d',skyTurbidity:3.5,skyRayleigh:2.1,skyMieCoefficient:.005,skyMieDirectionalG:.78,shadows:true,shadowQuality:typeof window!=='undefined'&&window.innerWidth<768?'medium':'high',toneMapping:'aces'});
+   onLightingChange?.({...DEFAULT_CAD_LIGHTING});
   },
  };
  useEffect(()=>registerWorldView(()=>worldApi.current as Partial<WorldViewCommands>),[]);
@@ -560,7 +565,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
   uniforms['sunPosition'].value.copy(environment.sun.position);
   uniforms['turbidity'].value=skyTurbidity;uniforms['rayleigh'].value=skyRayleigh;
   uniforms['mieCoefficient'].value=skyMieCoefficient;uniforms['mieDirectionalG'].value=skyMieDirectionalG;
-  scene.fog=(settings?.fog?.enabled??skyVisible)?new THREE.Fog(skyColor,settings?.fog?.near??260,settings?.fog?.far??1150):null;
+  scene.fog=(settings?.fog?.enabled??true)?new THREE.Fog(skyColor,settings?.fog?.near??260,settings?.fog?.far??1150):null;
  },[settings?.fog,ready,sunAltitude,sunAzimuth,sunStrength,sunColor,fillStrength,skyColor,groundColor,skyVisible,skyTurbidity,skyRayleigh,skyMieCoefficient,skyMieDirectionalG]);
  useEffect(()=>{
   for(const mesh of materialSets.current.keys()){
@@ -573,11 +578,11 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
  useEffect(()=>{
   const webgl=renderer.current,environment=environmentRef.current;if(!webgl||!environment)return;
   const size=shadowQuality==='low'?512:shadowQuality==='medium'?1024:2048;
-  environment.sun.shadow.bias=settings?.shadowBias??-.0002;
+  environment.sun.shadow.bias=lighting.shadowBias;
   environment.sun.castShadow=shadows;webgl.shadowMap.enabled=shadows;
   environment.sun.shadow.map?.dispose();environment.sun.shadow.map=null;
   environment.sun.shadow.mapSize.set(size,size);environment.sun.shadow.needsUpdate=true;webgl.shadowMap.needsUpdate=true;
- },[ready,settings?.shadowBias,shadows,shadowQuality]);
+ },[ready,lighting.shadowBias,shadows,shadowQuality]);
  useEffect(()=>{
   const webgl=renderer.current;if(!webgl)return;
   const mapping:Record<CadToneMapping,THREE.ToneMapping>={aces:THREE.ACESFilmicToneMapping,reinhard:THREE.ReinhardToneMapping,neutral:THREE.NeutralToneMapping,none:THREE.NoToneMapping};
@@ -682,7 +687,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
        className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
-   {siteEditable&&terrainHost&&createPortal(<TerrainEditorPanel document={terrain} onChange={changeTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
+   {siteEditable&&terrainHost&&createPortal(<TerrainEditorPanel document={terrain} resetDocument={terrainInitialRef.current.document} onChange={changeTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
      brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
      onFitSite={fitSite}/>,terrainHost)}
    {!terrainOpen&&selection&&!onSelect&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">

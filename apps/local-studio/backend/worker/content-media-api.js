@@ -238,10 +238,12 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
   const resolved = await resolveOauthMediaClient(env, ownerId, url, capabilityId);
   if (!resolved.ok) return resolved;
   const client = resolved.client;
-  // Ask Cloudflare only for products the grant actually covers; otherwise say exactly what is missing.
-  const { getCloudflareCapability } = await import("../../../../packages/connectors/cfoa/src/capabilities.js");
-  const { registryScopesForCapability } = await import("../../../../packages/connectors/cfoa/src/scope-registry.js");
-  const needed = (await registryScopesForCapability(env, capabilityId)) || getCloudflareCapability(capabilityId)?.oauthScopes || [];
+  // Listing is a read operation, not the complete media capability pack.
+  // A read-only Images or Stream grant must be allowed to browse; upload and
+  // other mutations still use their separate provider authorization paths.
+  const needed = source === "stream" ? ["stream.read"]
+    : source === "r2" ? ["workers-r2.read", ...(url.searchParams.get("r2_bucket") ? ["workers-r2-bucket-item.read"] : [])]
+      : ["images.read"];
   const granted = Array.isArray(client.grantedScopes) ? client.grantedScopes : [];
   const missing = granted.length ? needed.filter((scope) => !granted.includes(scope)) : [];
   if (missing.length) {

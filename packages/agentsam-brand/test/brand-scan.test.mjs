@@ -18,6 +18,8 @@ function fixtureRepo() {
   fs.writeFileSync(path.join(root, '.gitignore'), 'ignored/\nnode_modules/\n');
   fs.mkdirSync(path.join(root, 'src/styles'), { recursive: true });
   fs.mkdirSync(path.join(root, 'src/components'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'public/brand'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
   fs.mkdirSync(path.join(root, 'ignored'), { recursive: true });
   fs.writeFileSync(
     path.join(root, 'src/styles/theme.css'),
@@ -31,6 +33,13 @@ function fixtureRepo() {
     path.join(root, 'src/components/Header.tsx'),
     `export function Header() { return <header style={{ background: '#0f172a' }}>Nav</header>; }\n`,
   );
+  fs.writeFileSync(path.join(root, 'public/brand/inneranimal-logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  fs.writeFileSync(path.join(root, 'public/brand/brand-font.woff2'), 'font-bytes');
+  fs.writeFileSync(path.join(root, 'public/brand/identity-guide.pdf'), '%PDF-1.4');
+  fs.writeFileSync(path.join(root, 'public/brand/brand-loop.mp4'), 'video-bytes');
+  fs.writeFileSync(path.join(root, 'public/brand/brand-scene.glb'), 'glb-bytes');
+  fs.writeFileSync(path.join(root, 'public/brand/brand-kit.zip'), 'zip-bytes');
+  fs.writeFileSync(path.join(root, 'docs/brand-guidelines.docx'), 'docx-bytes');
   fs.writeFileSync(path.join(root, 'ignored/secret.css'), `:root { --should-not-see: #ff0000; }\n`);
   execFileSync('git', ['add', '.'], { cwd: root, stdio: 'ignore' });
   execFileSync('git', ['commit', '-m', 'init'], { cwd: root, stdio: 'ignore' });
@@ -55,6 +64,19 @@ test('brand.scan derives stable brand evidence from repository snapshot', async 
   assert.deepEqual(one.tokens.colors.map((c) => c.normalized_value), two.tokens.colors.map((c) => c.normalized_value));
   assert.ok(one.tokens.colors.length >= 2);
   assert.equal(one.sources.css >= 1, true);
+  assert.ok(one.assets.items.some((asset) => asset.path === 'public/brand/inneranimal-logo.svg'));
+  assert.ok(one.assets.items.some((asset) => asset.path === 'public/brand/brand-font.woff2'));
+  assert.ok(one.assets.items.some((asset) => asset.path === 'public/brand/identity-guide.pdf'));
+  assert.ok(one.assets.items.some((asset) => asset.path === 'public/brand/brand-loop.mp4'));
+  assert.ok(one.assets.items.some((asset) => asset.path === 'public/brand/brand-scene.glb'));
+  assert.ok(one.assets.items.some((asset) => asset.path === 'public/brand/brand-kit.zip'));
+  assert.ok(one.assets.items.some((asset) => asset.path === 'docs/brand-guidelines.docx'));
+  assert.equal(one.assets.items.find((asset) => asset.path === 'public/brand/brand-font.woff2').role, 'type.body');
+  assert.equal(one.assets.items.find((asset) => asset.path === 'public/brand/brand-kit.zip').role, 'source.archive');
+  assert.equal(one.assets.items.find((asset) => asset.path === 'public/brand/inneranimal-logo.svg').capabilities.operations.preview, true);
+  assert.equal(one.assets.items.find((asset) => asset.path === 'public/brand/brand-font.woff2').capabilities.operations.edit, false);
+  assert.equal(one.assets.items.find((asset) => asset.path === 'public/brand/identity-guide.pdf').capabilities.operations.inspect, false);
+  assert.equal(one.assets.items.find((asset) => asset.path === 'public/brand/brand-kit.zip').capabilities.operations.inspect, true);
 });
 
 test('brand scan and repository inspection share one file authority', async (t) => {

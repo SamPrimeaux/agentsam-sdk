@@ -7,6 +7,8 @@ import {
   isComponentPath,
   isStylePath,
 } from './extract.js';
+import { classifyAssetRole } from './core/v2/roles.js';
+import { formatCapabilities } from './core/capabilities.js';
 
 function sha256Json(value) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -52,6 +54,7 @@ function stableSortTokens(arr) {
  *   repositorySnapshot?: (opts: object) => Promise<object>,
  *   onEvent?: (ev: object) => void,
  *   maxFiles?: number,
+ *   maxAssetItems?: number,
  * }} opts
  */
 export async function brandScan(opts = {}) {
@@ -185,6 +188,47 @@ export async function brandScan(opts = {}) {
   }
   conflicts.sort((a, b) => (b.occurrences || 0) - (a.occurrences || 0));
 
+  const assetItemLimit = Math.max(1, Math.min(2500, Number(opts.maxAssetItems) || 500));
+  const fileMetadata = new Map((snapshot.tree.files || []).map((entry) => [entry.path, entry]));
+  const assetItems = assetPaths.slice(0, assetItemLimit).map((rel) => {
+    const file = fileMetadata.get(rel) || {};
+    const extension = path.extname(rel).slice(1).toLowerCase();
+    const format = formatCapabilities(extension);
+    const classification = format.container
+      ? { role: 'source.archive', family: 'archive', label: 'Source archive', confidence: 1, needs_review: false }
+      : classifyAssetRole({ path: rel });
+    return {
+      id: `repo-asset:${rel}`,
+      role: classification.role,
+      family: classification.family || format.family || 'other',
+      label: classification.label || path.basename(rel),
+      path: rel,
+      format: extension || null,
+      bytes: Number.isSafeInteger(file.size) ? file.size : null,
+      sha256: typeof file.hash === 'string' ? file.hash : null,
+      capabilities: {
+        ingest: format.ingest === true,
+        edit: format.edit === true,
+        resize_ladder: format.resize_ladder === true,
+        poster_frame: format.poster_frame === true,
+        recolorable: format.recolorable === true,
+        preserve_original: format.preserve === true || format.ingest === true,
+        container: format.container === true,
+        licensing_required: format.licensing_required === true,
+        operations: format.operations,
+        inspection_level: format.inspection_level,
+      },
+      provenance: {
+        source: 'repository.snapshot',
+        snapshot_id: snapshot.snapshot_id,
+        repository_id: snapshot.repository?.repository_id || null,
+        revision_sha: snapshot.repository?.revision_sha || null,
+        confidence: classification.confidence,
+        needs_review: classification.needs_review,
+      },
+    };
+  });
+
   const body = {
     schema_version: 1,
     capability: 'brand.scan',
@@ -216,6 +260,9 @@ export async function brandScan(opts = {}) {
     assets: {
       count: assetPaths.length,
       sample: assetPaths.slice(0, 24),
+      items: assetItems,
+      truncated: assetPaths.length > assetItems.length,
+      inventory_source: 'repository.snapshot',
     },
     conflicts: conflicts.slice(0, 50),
     evidence: [],

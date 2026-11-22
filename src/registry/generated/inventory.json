@@ -6,7 +6,7 @@
     "packages/catalog/generated/packages.json"
   ],
   "counts": {
-    "commands": 81,
+    "commands": 80,
     "capabilities": 93,
     "packages": 55
   },
@@ -453,25 +453,16 @@
       "operation": null
     },
     {
-      "id": "studio",
-      "aliases": [],
-      "summary": "Open AgentSam Local Studio (desktop app); bare agentsam does the same",
+      "id": "open",
+      "aliases": [
+        "desktop",
+        "studio"
+      ],
+      "summary": "Open AgentSam Local Studio (desktop app) here or at a directory",
       "topic": "start",
       "usage": [
-        "agentsam",
-        "agentsam .",
-        "agentsam <directory>",
-        "agentsam studio [directory]"
-      ],
-      "operation": null
-    },
-    {
-      "id": "tui",
-      "aliases": [],
-      "summary": "Full-screen terminal agent (separate from the desktop app)",
-      "topic": "inside",
-      "usage": [
-        "agentsam tui"
+        "agentsam open [directory]",
+        "agentsam desktop [directory]"
       ],
       "operation": null
     },

@@ -69,7 +69,7 @@ test('launchDesktop uses argv (no shell) pinned to the discovered app', () => {
 
 test('launchDesktop reports missing app and unsupported platform actionably', () => {
   assert.throws(() => launchDesktop({ platform: 'darwin', find: () => null }),
-    (e) => e instanceof DesktopLaunchError && e.code === 'app_not_installed' && /agentsam tui/.test(e.message));
+    (e) => e instanceof DesktopLaunchError && e.code === 'app_not_installed' && /Terminal agent/.test(e.message));
   assert.throws(() => launchDesktop({ platform: 'linux' }), (e) => e.code === 'unsupported_platform');
   assert.throws(() => launchDesktop({ platform: 'darwin', find: () => '/x.app', run: () => { throw new Error('boom'); } }),
     (e) => e.code === 'launch_failed');

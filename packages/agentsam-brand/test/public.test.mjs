@@ -60,3 +60,30 @@ test('evaluates candidate consistency from contract evidence', () => {
   assert.equal(result.score, 1);
   assert.equal(result.verdict, 'consistent');
 });
+
+test('public asset listing supports the repository scanner inventory object shape', () => {
+  const repositoryScan = {
+    ...scan,
+    assets: {
+      count: 2,
+      sample: ['public/logo.svg', 'public/type.woff2'],
+      items: [
+        { id: 'logo', path: 'public/logo.svg', role: 'logo.primary', format: 'svg' },
+        { id: 'font', path: 'public/type.woff2', role: 'type.body', format: 'woff2' },
+      ],
+      truncated: false,
+    },
+  };
+  const assets = listBrandAssetEvidence(repositoryScan);
+  assert.equal(assets.length, 2);
+  assert.equal(assets[0].id, 'logo');
+  assert.equal(assets[1].role, 'type.body');
+});
+
+test('public asset listing retains legacy path-only scan samples', () => {
+  const legacyScan = { ...scan, assets: { count: 2, sample: ['public/logo.svg', 'public/icon.png'] } };
+  const assets = listBrandAssetEvidence(legacyScan);
+  assert.equal(assets.length, 2);
+  assert.equal(assets[0].path, 'public/logo.svg');
+  assert.equal(assets[0].provenance.needs_review, true);
+});

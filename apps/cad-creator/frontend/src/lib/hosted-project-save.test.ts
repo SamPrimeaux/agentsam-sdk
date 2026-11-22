@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { saveHostedProject } from './hosted-project-source';
+import {createTerrainDocument} from './world-terrain';
 
-const project = { id: 'p', walls: [], rooms: [] } as never;
+const project = { id: 'p', walls: [], rooms: [], sceneSettings:{terrain:createTerrainDocument()} } as never;
 const receipt = { revisionId: 'd1', projectId: 'p1', revisionNumber: 1, timestamp: 1, message: 'm', wallsCount: 0, roomsCount: 0, parametricCount: 0, assetId: 'a', sha256: 's', bytes: 1, verified: true };
 
 describe('saveHostedProject', () => {
@@ -16,7 +17,7 @@ describe('saveHostedProject', () => {
     const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('/api/work/projects/p1/cad/documents?base=v1.2');
     expect(init.method).toBe('PUT');
-    expect(JSON.parse(init.body as string)).toEqual({ id: 'p', walls: [], rooms: [] });
+    expect(JSON.parse(init.body as string)).toEqual(project);
   });
   it('reports the server error and claims nothing changed', async () => {
     const fetcher = vi.fn(async () => Response.json({ ok: false, error: 'cad_document_shape_invalid' }, { status: 400 }));

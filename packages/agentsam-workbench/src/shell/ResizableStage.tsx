@@ -6,6 +6,7 @@ type SeamState = 'inactive' | 'hover' | 'active';
 export interface ResizableStageHandleProps {
   axis?: Axis;
   onDrag: (deltaPx: number) => void;
+  onDragEnd?: () => void;
   onDoubleClick?: () => void;
   label: string;
   title?: string;
@@ -26,6 +27,7 @@ function setBodyFlag(name: string | undefined, on: boolean) {
 export function ResizableStageHandle({
   axis = 'x',
   onDrag,
+  onDragEnd,
   onDoubleClick,
   label,
   title,
@@ -38,14 +40,23 @@ export function ResizableStageHandle({
 }: ResizableStageHandleProps) {
   const last = useRef(0);
   const dragging = useRef(false);
+  const onDragEndRef=useRef(onDragEnd);
   const [state, setState] = useState<SeamState>('inactive');
+  useEffect(()=>{onDragEndRef.current=onDragEnd},[onDragEnd]);
+
+  const notifyDragEnd=useCallback(()=>{
+    if(typeof window!=='undefined')window.requestAnimationFrame(()=>onDragEndRef.current?.());
+    else onDragEndRef.current?.();
+  },[]);
 
   const stop = useCallback(() => {
+    const wasDragging=dragging.current;
     dragging.current = false;
     setState('inactive');
     setBodyFlag(bodyResizeAttribute, false);
     setBodyFlag(bodyHoverAttribute, false);
-  }, [bodyResizeAttribute, bodyHoverAttribute]);
+    if(wasDragging)notifyDragEnd();
+  }, [bodyResizeAttribute, bodyHoverAttribute,notifyDragEnd]);
 
   useEffect(() => () => stop(), [stop]);
   const clientOf = (event: { clientX: number; clientY: number }) => axis === 'x' ? event.clientX : event.clientY;
@@ -97,11 +108,11 @@ export function ResizableStageHandle({
         const amount = event.shiftKey ? 24 : 8;
         if ((axis === 'x' && event.key === 'ArrowLeft') || (axis === 'y' && event.key === 'ArrowUp')) {
           event.preventDefault();
-          onDrag(-amount);
+          onDrag(-amount);notifyDragEnd();
         }
         if ((axis === 'x' && event.key === 'ArrowRight') || (axis === 'y' && event.key === 'ArrowDown')) {
           event.preventDefault();
-          onDrag(amount);
+          onDrag(amount);notifyDragEnd();
         }
       }}
     />

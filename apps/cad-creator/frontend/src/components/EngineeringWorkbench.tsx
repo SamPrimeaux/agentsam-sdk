@@ -6,6 +6,7 @@ import {NativeSolidPanel} from './NativeSolidPanel';
 import {InspectorPicker,StudioGlyph,StudioCommandItem,StudioCommandMenu,StudioToolButton} from '@inneranimalmedia/agentsam-workbench/shell';
 import {studioInspectorFamilies,type StudioInspectorFamily} from '@inneranimalmedia/agentsam-workbench/studio-panels';
 import {useWorldView} from '../lib/world-view-store';
+import {resolveCadLighting,updateCadLightingProject,cadTimeOfDayLighting} from '@inneranimalmedia/agentsam-cad-shared';
 import {WorldViewSection} from './WorldViewSection';
 import {KIT, chooseKitTool, isKitActive, viewerSafe, type Group, type MenuId} from './sketch-kit-catalog';
 import {QuickAddMenu, type QuickAddEntry, type QuickAddItem} from './quick-add';
@@ -18,6 +19,7 @@ import {Layers3, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen,
  Search, ChevronRight, ChevronDown, Box, Plus,  Grid2X2,
  MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks, Undo2, Redo2, Bot, Activity,
  BrickWall, AppWindow, RectangleHorizontal, PenTool, LayoutPanelLeft, History, Download, Save, Sofa} from 'lucide-react';
+import '@inneranimalmedia/agentsam-workbench/shell/inspector-picker.css';
 import './engineering-workbench.css';
 import {patchSceneElement} from '../lib/scene-document';
 import {SidePanel} from '@inneranimalmedia/agentsam-workbench/shell';
@@ -96,9 +98,9 @@ function Numeric({label,value,onCommit,min,unit='in'}:{
    onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&(min==null||n>=min)&&n!==value)onCommit(n);else e.target.value=String(value)}}/>
    <small>{unit}</small></div></label>;
 }
-export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,sourceRequest,onTerrainHost,onTimeline,onSimulation,onResizeEnd,familyRequest}:{
+export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,sourceRequest,onTerrainHost,onTimeline,onSimulation,familyRequest,onSeedExampleBim}:{
  project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onChange:Update;
- onClose:()=>void;readOnly:boolean;onReview?:()=>void;familyRequest?:{id:StudioInspectorFamily};sourceRequest?:number;onTimeline?:()=>void;onSimulation?:()=>void;onResizeEnd?:(node:HTMLElement)=>void;onTerrainHost?:(node:HTMLDivElement|null)=>void
+ onClose:()=>void;readOnly:boolean;onReview?:()=>void;familyRequest?:{id:StudioInspectorFamily};sourceRequest?:number;onTimeline?:()=>void;onSimulation?:()=>void;onTerrainHost?:(node:HTMLDivElement|null)=>void;onSeedExampleBim?:()=>void
 }) {
  const [tab,setTab]=useState<StudioInspectorFamily>(selection?'object':'project');
  const world=useWorldView();
@@ -106,15 +108,17 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
  React.useEffect(()=>{if(sourceRequest)setTab('source')},[sourceRequest]);
  React.useEffect(()=>{if(familyRequest)setTab(familyRequest.id)},[familyRequest]);
  const sceneSettings=project.sceneSettings??{};
- const fog=sceneSettings.fog??{enabled:sceneSettings.sky??true,near:260,far:1150};
+ const lighting=resolveCadLighting(project);
+ const fog=sceneSettings.fog??{enabled:true,near:260,far:1150};
  const setFog=(patch:Partial<typeof fog>)=>{
   const next={...fog,...patch};
   if(next.near<0||next.far<=next.near){setOperationError('Fog end must be farther than fog start.');return}
   setOperationError(null);onChange(previous=>({...previous,sceneSettings:{...previous.sceneSettings,fog:next}}));
  };
- const patchLighting=(updates:Partial<ProjectState['lighting']>)=>onChange(p=>({...p,lighting:{...p.lighting,...updates}}));
+ const patchLighting=(updates:Partial<ProjectState['lighting']>)=>onChange(p=>updateCadLightingProject(p,updates));
  const [operationError,setOperationError]=useState<string|null>(null);
  const record=(selection&&(project[selection.group]||[]).find(x=>x.id===selection.id)) as unknown as (Record<string, unknown> & {id:string})|null;
+ const showSeedBim=Boolean(onSeedExampleBim)&&!readOnly&&Boolean(project.sceneSource)&&!project.walls.length&&!project.rooms.length;
  const parametric=selection?.group==='parametricObjects'?project.parametricObjects?.find(x=>x.id===selection.id):undefined;
  const patchParameter=(parameterName:string,value:number|string|boolean)=>{
   if(!parametric)return;
@@ -190,7 +194,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
  };
  const num=(label:string,key:string,min?:number,unit='in')=>record&&typeof record[key as keyof typeof record]==='number'?
   <Numeric key={key} label={label} value={Number(record[key])} min={min} unit={unit} onCommit={n=>update(key,n)}/>:null;
- return <SidePanel className="cad-work-pane cad-properties" onPointerUp={event=>onResizeEnd?.(event.currentTarget)} ariaLabel="CAD inspector">
+ return <SidePanel className="cad-work-pane cad-properties" ariaLabel="CAD inspector">
   <header className="cad-pane-head"><span><SlidersHorizontal size={16}/> Properties</span>
    <button aria-label="Hide property inspector" title="Hide property inspector" onClick={onClose}><PanelRightClose size={17}/><span className="cad-focus-help">Hide property inspector</span></button></header>
   <InspectorPicker<StudioInspectorFamily> families={studioInspectorFamilies} value={tab} onChange={setTab}/>
@@ -207,16 +211,26 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
      <Numeric label="Fog end" unit="m" min={0} value={fog.far} onCommit={far=>setFog({far})}/></>:
    tab==='lighting'&&world.kind==='world'&&world.ready?<><CadLightingPanel lights={sceneSettings.lights??[]}
      change={edit=>onChange(previous=>({...previous,sceneSettings:{...previous.sceneSettings,lights:edit(previous.sceneSettings?.lights??[])}}))}/>
-     <Numeric label="Shadow bias" unit="" value={sceneSettings.shadowBias??-.0002}
-     onCommit={value=>onChange(previous=>({...previous,sceneSettings:{...previous.sceneSettings,shadowBias:Math.max(-.1,Math.min(.1,value))}}))}/></>:
+     <Numeric label="Shadow bias" unit="" value={lighting.shadowBias}
+     onCommit={value=>patchLighting({shadowBias:Math.max(-.1,Math.min(.1,value))})}/></>:
    tab==='lighting'&&!project.sceneSource?<>
-   <label className="cad-property"><span>Time of day</span><select aria-label="Scene time of day" value={project.lighting.timeOfDay} onChange={e=>patchLighting({timeOfDay:e.target.value as ProjectState['lighting']['timeOfDay']})}>
+   <label className="cad-property"><span>Time of day</span><select aria-label="Scene time of day" value={lighting.timeOfDay} onChange={e=>{const timeOfDay=e.target.value as ProjectState['lighting']['timeOfDay'];patchLighting(cadTimeOfDayLighting(timeOfDay))}}>
     {(['morning','noon','sunset','night'] as const).map(v=><option key={v} value={v}>{v[0].toUpperCase()+v.slice(1)}</option>)}</select></label>
-   <Numeric label="Sun intensity" unit="×" min={0.2} value={project.lighting.intensity} onCommit={n=>patchLighting({intensity:Math.min(2,n)})}/>
-   <Numeric label="Sun altitude" unit="°" min={0} value={project.lighting.sunAltitude} onCommit={n=>patchLighting({sunAltitude:Math.min(90,n)})}/>
-   <Numeric label="Sun azimuth" unit="°" min={0} value={project.lighting.sunAzimuth} onCommit={n=>patchLighting({sunAzimuth:Math.min(360,n)})}/>
-   <label className="cad-property"><span>Shadows</span><input aria-label="Scene shadows" type="checkbox" checked={project.lighting.shadows} onChange={e=>patchLighting({shadows:e.target.checked})}/></label>
-   <label className="cad-property"><span>Ambient color</span><input aria-label="Scene ambient color" type="color" value={/^#[0-9a-f]{6}$/i.test(project.lighting.ambientColor)?project.lighting.ambientColor:'#ffffff'} onChange={e=>patchLighting({ambientColor:e.target.value})}/></label>
+   <Numeric label="Sun intensity" unit="×" min={0.2} value={lighting.intensity} onCommit={n=>patchLighting({intensity:Math.min(2,n)})}/>
+   <Numeric label="Sun altitude" unit="°" min={0} value={lighting.sunAltitude} onCommit={n=>patchLighting({sunAltitude:Math.min(90,n)})}/>
+   <Numeric label="Sun azimuth" unit="°" min={0} value={lighting.sunAzimuth} onCommit={n=>patchLighting({sunAzimuth:Math.min(360,n)})}/>
+   <label className="cad-property"><span>Shadows</span><input aria-label="Scene shadows" type="checkbox" checked={lighting.shadows} onChange={e=>patchLighting({shadows:e.target.checked})}/></label>
+   <label className="cad-property"><span>Ambient color</span><input aria-label="Scene ambient color" type="color" value={/^#[0-9a-f]{6}$/i.test(lighting.ambientColor)?lighting.ambientColor:'#ffffff'} onChange={e=>patchLighting({ambientColor:e.target.value})}/></label>
+   <Numeric label="Ambient intensity" unit="×" min={0} value={lighting.ambientIntensity} onCommit={n=>patchLighting({ambientIntensity:Math.min(3,n)})}/>
+   <Numeric label="Exposure" unit="EV" min={0} value={lighting.exposure} onCommit={n=>patchLighting({exposure:Math.min(3,n)})}/>
+   <label className="cad-property"><span>Sun color</span><input aria-label="Sun color" type="color" value={lighting.sunColor} onChange={e=>patchLighting({sunColor:e.target.value})}/></label>
+   <label className="cad-property"><span>Sky visible</span><input aria-label="Sky visible" type="checkbox" checked={lighting.skyVisible} onChange={e=>patchLighting({skyVisible:e.target.checked})}/></label>
+   <label className="cad-property"><span>Sky color</span><input aria-label="Sky color" type="color" value={lighting.skyColor} onChange={e=>patchLighting({skyColor:e.target.value})}/></label>
+   <label className="cad-property"><span>Ground color</span><input aria-label="Ground color" type="color" value={lighting.groundColor} onChange={e=>patchLighting({groundColor:e.target.value})}/></label>
+   <label className="cad-property"><span>Shadow quality</span><select aria-label="Shadow quality" value={lighting.shadowQuality} onChange={e=>patchLighting({shadowQuality:e.target.value as 'low'|'medium'|'high'})}>
+    <option value="low">Low · 512px</option><option value="medium">Medium · 1024px</option><option value="high">High · 2048px</option></select></label>
+   <label className="cad-property"><span>Tone mapping</span><select aria-label="Tone mapping" value={lighting.toneMapping} onChange={e=>patchLighting({toneMapping:e.target.value as 'aces'|'reinhard'|'neutral'|'none'})}>
+    <option value="aces">ACES</option><option value="reinhard">Reinhard</option><option value="neutral">Neutral</option><option value="none">None</option></select></label>
   </>:tab==='environment'&&!project.sceneSource?<><h4>Building envelope</h4>
    <label className="cad-property"><span>Roof profile</span><select aria-label="Roof profile" value={project.roofType} onChange={e=>onChange(p=>({...p,roofType:e.target.value as ProjectState['roofType']}))}>
     <option value="none">No roof</option><option value="flat">Flat</option><option value="gable">Gable</option></select></label>
@@ -232,6 +246,9 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
     onChange={e=>onChange(p=>({...p,snapToGrid:e.target.checked}))}/></label>
    <h4>Composition</h4>
    {groups(project).map(g=><div className="cad-property-summary" key={g.id}><span>{g.title}</span><b>{g.entries.length}</b></div>)}
+   {showSeedBim&&<><h4>Scene without BIM</h4>
+    <p className="cad-property-help">This scene has no editable walls or spaces. Seed its design document from the DreamHouse example BIM, then save as a new revision.</p>
+    <button type="button" className="cad-clear-selection" onClick={onSeedExampleBim}>Seed BIM from DreamHouse example</button></>}
 
   </>:
   !selection||!record?<p className="cad-property-help">Select an element in the viewport or hierarchy.</p>:
