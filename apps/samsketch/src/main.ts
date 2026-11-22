@@ -3,7 +3,7 @@ import '../../../packages/agentsam-nav/src/shell.css';
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
-import { createThreeViewport, createConfiguredGLTFLoader } from "@inneranimalmedia/agentsam-3d-viewer";
+import { createThreeViewport, createConfiguredGLTFLoader, createStrokeTubeGeometry } from "@inneranimalmedia/agentsam-3d-viewer";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
@@ -651,8 +651,7 @@ function renderBrushStrokes(){
  for(const stroke of doc.brushStrokes||[]){
   if(stroke.points.length<2)continue;
   const points=stroke.points.map(point=>new THREE.Vector3(...point));
-  const curve=new THREE.CatmullRomCurve3(points);
-  const geometry=new THREE.TubeGeometry(curve,Math.max(12,points.length*4),Math.max(.012,stroke.width*.012),8,false);
+  const geometry=createStrokeTubeGeometry(THREE,points,{segments:Math.max(12,points.length*4),radius:Math.max(.012,stroke.width*.012)});
   const material=new THREE.MeshPhysicalMaterial({color:stroke.color,emissive:stroke.color,emissiveIntensity:.35,metalness:.68,roughness:.22,clearcoat:.8,clearcoatRoughness:.1});
   const ribbon=new THREE.Mesh(geometry,material);
   ribbon.name="SamSpeaks paint ribbon · "+stroke.id;ribbon.castShadow=true;ribbon.receiveShadow=false;brushGroup.add(ribbon);

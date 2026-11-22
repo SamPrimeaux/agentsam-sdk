@@ -115,7 +115,7 @@ export function inferModelFormat(source: unknown, explicitFormat?: string): Mode
 export const SUPPORTED_MODEL_FORMATS: readonly ModelFormat[];
 
 export type ProceduralPbrCategory = 'all' | 'metal' | 'stone' | 'glass' | 'organic';
-export type ProceduralPbrPattern = 'brushed-metal' | 'veined-marble' | 'hex-carbon' | 'hammered-copper' | 'frosted-crystal' | 'walnut-grain' | 'iridescent-pearl' | 'lava-basalt' | 'architectural-brick' | 'concrete' | 'wood-panel' | 'clear-glass' | 'ceramic' | 'polished-concrete' | 'anodized-frame' | 'slate';
+export type ProceduralPbrPattern = 'brushed-metal' | 'veined-marble' | 'hex-carbon' | 'hammered-copper' | 'frosted-crystal' | 'walnut-grain' | 'iridescent-pearl' | 'lava-basalt' | 'architectural-brick' | 'concrete' | 'wood-panel' | 'clear-glass' | 'ceramic' | 'polished-concrete' | 'anodized-frame' | 'slate' | 'micro-perforated';
 export interface ProceduralPbrMaterialPreset {
   id:string; label:string; category:Exclude<ProceduralPbrCategory,'all'>; description:string;
   swatchGradient:string; colorHex:string; secondaryHex:string; emissiveHex:string; emissiveIntensity:number;
@@ -130,6 +130,26 @@ export interface StudioTextureSet {
 export const PROCEDURAL_PBR_MATERIALS: readonly ProceduralPbrMaterialPreset[];
 export const PROCEDURAL_PBR_MATERIAL_MAP: Readonly<Record<string,ProceduralPbrMaterialPreset>>;
 export const CAD_MATERIAL_PRESET_MAP: Readonly<Record<string,string>>;
+export type StudioFinishId = 'gold' | 'titanium' | 'obsidian' | 'copper' | 'iridescent';
+export interface StudioFinishPreset {
+  id:StudioFinishId; label:string; swatchHex:string; color:number;
+  metalness:number; roughness:number; anisotropy:number; iridescence:number;
+  emissive:number; emissiveIntensity:number;
+}
+export const STUDIO_FINISH_PRESETS: readonly Readonly<StudioFinishPreset>[];
+export const STUDIO_FINISH_MAP: Readonly<Record<StudioFinishId,Readonly<StudioFinishPreset>>>;
+export type AtmosphereMoodId = 'studio' | 'sunset' | 'twilight' | 'noir' | 'dawn';
+export interface AtmospherePreset {
+  id:AtmosphereMoodId; label:string; swatchHex:string;
+  fogColor:number; fogDensity:number;
+  keyColor:number; keyIntensity:number;
+  hemiSky:number; hemiGround:number; hemiIntensity:number;
+  rimColor:number; rimIntensity:number;
+  exposure:number;
+}
+export const ATMOSPHERE_PRESETS: readonly Readonly<AtmospherePreset>[];
+export const ATMOSPHERE_MAP: Readonly<Record<AtmosphereMoodId,Readonly<AtmospherePreset>>>;
+export function createStrokeTubeGeometry<T>(THREE: { CatmullRomCurve3: new (...args:any[]) => any; TubeGeometry: new (...args:any[]) => T }, points: readonly unknown[], options: { radius:number; segments:number; radialSegments?:number }): T;
 export function createStudioTextures(THREE:any,maxAnisotropy:number):StudioTextureSet;
 export function createProceduralPbrMaterial(THREE:any,preset:ProceduralPbrMaterialPreset,textures:StudioTextureSet,isSoftwareGl?:boolean):any;
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { FinishPreset } from '../types.ts';
-import type { StudioTextureSet } from './textures.ts';
+import { PROCEDURAL_PBR_MATERIAL_MAP, type StudioTextureSet } from '@inneranimalmedia/agentsam-3d-viewer';
 
 export function detectSoftwareWebGL(): boolean {
   try {
@@ -99,12 +99,13 @@ export class StudioMaterialLibrary {
       bumpScale: 0.004,
     });
 
+    const travertinePreset = PROCEDURAL_PBR_MATERIAL_MAP['pbr-studio-travertine'];
     this.travertine = new THREE.MeshStandardMaterial({
-      color: 0xd9d0c1,
-      metalness: 0.02,
-      roughness: 0.82,
+      color: travertinePreset.colorHex,
+      metalness: travertinePreset.metalness,
+      roughness: travertinePreset.roughness,
       bumpMap: textures.brushedRoughness,
-      bumpScale: 0.003,
+      bumpScale: travertinePreset.bumpScale,
     });
 
     this.emissiveAccent = new THREE.MeshStandardMaterial({
@@ -121,12 +122,13 @@ export class StudioMaterialLibrary {
       metalness: 0.12,
     });
 
+    const micMeshPreset = PROCEDURAL_PBR_MATERIAL_MAP['pbr-studio-perforated-mesh'];
     this.micMesh = new THREE.MeshStandardMaterial({
-      color: 0xc2c8d2,
-      metalness: 0.86,
-      roughness: 0.35,
+      color: micMeshPreset.colorHex,
+      metalness: micMeshPreset.metalness,
+      roughness: micMeshPreset.roughness,
       bumpMap: textures.micGrillBump,
-      bumpScale: 0.012,
+      bumpScale: micMeshPreset.bumpScale,
     });
 
     this.foliage = new THREE.MeshStandardMaterial({

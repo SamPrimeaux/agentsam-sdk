@@ -25,16 +25,17 @@
   flex: 1;
   overflow: auto;
 }
-/* Hosted CAD owns its canvas, explorer, and inspector; the packaged Console
-   alone owns global chrome. A *definite positioning context*, not a chain of
-   percentage-height flex items, determines the CAD canvas rectangle. This also
-   keeps opening the contextual Side Assistant from collapsing the editor. */
-#agentsam-host-workspace .platform-console-stage:has([data-cad-studio-host]) {
+/* Embedded editor stages need a definite viewport rectangle. The Console owns
+   global chrome; CAD and other hosted apps own the content of that rectangle.
+   A percentage-height iframe alone cannot fill this flex layout reliably. */
+#agentsam-host-workspace .platform-console-stage:has([data-cad-studio-host]),
+#agentsam-host-workspace .platform-console-stage:has([data-hosted-app-stage]) {
   flex: 1 1 0%;
   min-height: 0;
   overflow: hidden;
 }
-#agentsam-host-workspace .agentsam-route:has([data-cad-studio-host]) {
+#agentsam-host-workspace .agentsam-route:has([data-cad-studio-host]),
+#agentsam-host-workspace .agentsam-route:has([data-hosted-app-stage]) {
   position: relative;
   flex: 1 1 0%;
   min-width: 0;
@@ -42,7 +43,8 @@
   overflow: hidden;
   background: var(--nav-canvas);
 }
-#agentsam-host-workspace [data-cad-studio-host] {
+#agentsam-host-workspace [data-cad-studio-host],
+#agentsam-host-workspace [data-hosted-app-stage] {
   position: absolute;
   inset: 0;
   display: flex;

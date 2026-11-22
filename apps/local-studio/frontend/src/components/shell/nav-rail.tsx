@@ -88,11 +88,12 @@ export function NavRail() {
           <Nav.GroupLabel>Apps</Nav.GroupLabel>
           <Nav.Menu>
             <Nav.MenuItem>
-              <Nav.Collapsible defaultOpen={pathname.startsWith("/admin/cad") || pathname.startsWith("/admin/samsketch") || pathname.startsWith("/admin/apps/")}>
-                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Blocks} active={pathname.startsWith("/admin/cad") || pathname.startsWith("/admin/samsketch") || pathname.startsWith("/admin/apps/")}>Installed apps <Nav.MenuChevron /></Nav.MenuButton>} />
+              <Nav.Collapsible defaultOpen={pathname.startsWith("/admin/cad") || pathname.startsWith("/admin/samsketch") || pathname.startsWith("/admin/samspeaks") || pathname.startsWith("/admin/apps/")}>
+                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Blocks} active={pathname.startsWith("/admin/cad") || pathname.startsWith("/admin/samsketch") || pathname.startsWith("/admin/samspeaks") || pathname.startsWith("/admin/apps/")}>Installed apps <Nav.MenuChevron /></Nav.MenuButton>} />
                 <Nav.CollapsibleContent>
                   <Nav.MenuSub>
                     <li><Nav.MenuSubButton href="/admin/samsketch" active={pathname.startsWith("/admin/samsketch")}><span className="inline-flex items-center gap-2"><SamSketchIcon className="size-4" />SamSketch</span></Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/admin/samspeaks" active={pathname.startsWith("/admin/samspeaks")}><span className="inline-flex items-center gap-2"><MessageSquare className="size-4" />SamSpeaks</span></Nav.MenuSubButton></li>
                     <li><Nav.MenuSubButton href="/admin/cad" active={pathname.startsWith("/admin/cad")}><span className="inline-flex items-center gap-2"><Box className="size-4" />CAD Creator</span></Nav.MenuSubButton></li>
                     <li><Nav.MenuSubButton href="/admin/apps/ecommerce-cms-agentsam" active={pathname.startsWith("/admin/apps/ecommerce-cms-agentsam")}>Commerce CMS</Nav.MenuSubButton></li>
                   </Nav.MenuSub>

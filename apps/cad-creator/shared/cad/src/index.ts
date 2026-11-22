@@ -4,3 +4,4 @@ export * from './domain/validation';
 export * from './robotics/types';
 
 export * from './native-plan';
+export * from './lighting';

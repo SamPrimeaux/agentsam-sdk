@@ -20,7 +20,7 @@ test('MovieMode uses host semantic roles in every mode instead of a second produ
   const standalone = load('../../agentsam-copro-studio/src/hostTheme.ts');
   const css = load('../../../packages/copro-ui/styles/copro.css');
   assert.doesNotMatch(movie, /data-nav-theme="dark"/);
-  assert.match(standalone, /from "\.\.\/\.\.\/local-studio\/shared\/shell-appearance\.mjs"/);
+  assert.match(standalone, /from "\.\.\/\.\.\/\.\.\/packages\/agentsam-workbench\/src\/shell\/appearance\.mjs"/);
   for (const [role, host] of [['bg','canvas'],['accent','accent'],['text','ink']]) {
     assert.ok(css.includes(`--copro-${role}: var(--copro-theme-${role}, var(--nav-${host}))`));
   }

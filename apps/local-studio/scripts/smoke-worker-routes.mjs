@@ -119,7 +119,7 @@ try {
     '/admin/media', '/admin/media/images', '/admin/media/videos',
     '/admin/forms', '/admin/chats', '/admin/settings/general',
     '/admin/analytics', '/admin/themes', '/admin/projects',
-    '/admin/library', '/admin/samsketch',
+    '/admin/library', '/admin/samsketch', '/admin/samspeaks',
     '/admin/apps/ecommerce-cms-agentsam',
   ];
   for (const pathname of protectedAdminRoutes) {
@@ -168,6 +168,14 @@ try {
     }
     console.log('PASS ' + legacyPath + ' -> ' + canonicalPath + ' -> identity login');
   }
+  for (const op of ['health','tts','script-assist','compose']) {
+    const response=await request('/api/samspeaks/'+op,op==='health'?{}:{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+    if(response.status!==401)throw new Error('SamSpeaks '+op+' must require verified account; got '+response.status);
+    console.log('PASS SamSpeaks '+op+': anonymous request denied');
+  }
+  const samSpeaksEntry=await request('/samspeaks/');
+  if(!samSpeaksEntry.ok || !(await samSpeaksEntry.text()).includes('/samspeaks/assets/'))throw new Error('SamSpeaks embedded frontend not staged');
+  console.log('PASS /samspeaks/: embedded application');
   const publicForm = await request('/forms/embed/form-smoke');
   if (publicForm.status === 301 ||
       (publicForm.headers.get('location') || '').includes('/admin/forms')) {
