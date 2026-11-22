@@ -56,3 +56,8 @@ Robotics `RenderSystem` now uses this shared viewport lifecycle with Z-up
 camera initialization; robot motion/physics and transform controls stay in
 robotics. Next work is consolidating scene picking, section planes and BIM
 inspection extensions. The viewer does **not** execute a C++ kernel in-browser.
+
+
+## Shared studio capabilities
+
+SamSpeaks and SamSketch consume `ATMOSPHERE_PRESETS` / `ATMOSPHERE_MAP`, `STUDIO_FINISH_PRESETS` / `STUDIO_FINISH_MAP`, and `createStrokeTubeGeometry(THREE, points, options)`. The catalogs are immutable; hosts retain their own backdrop, fog scale, interaction and document policies. Stroke geometry is visual only, not an authoritative CAD solid. The caller disposes each returned geometry. Shared procedural textures and PBR recipes remain available for both studio and engineering surfaces.

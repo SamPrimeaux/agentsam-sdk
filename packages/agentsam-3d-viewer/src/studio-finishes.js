@@ -1,0 +1,67 @@
+// Tuned studio finish recipes; separate from the general PBR pattern catalog.
+export const STUDIO_FINISH_PRESETS = Object.freeze([
+  {
+    id: 'gold',
+    label: 'Gold',
+    swatchHex: '#e5b85c',
+    color: 0xe8b954,
+    metalness: 0.94,
+    roughness: 0.18,
+    anisotropy: 0.8,
+    iridescence: 0.0,
+    emissive: 0x332200,
+    emissiveIntensity: 0.08,
+  },
+  {
+    id: 'titanium',
+    label: 'Titanium',
+    swatchHex: '#aeb9c8',
+    color: 0xbac4d2,
+    metalness: 0.92,
+    roughness: 0.22,
+    anisotropy: 0.85,
+    iridescence: 0.0,
+    emissive: 0x0c1420,
+    emissiveIntensity: 0.05,
+  },
+  {
+    id: 'obsidian',
+    label: 'Obsidian',
+    swatchHex: '#252a36',
+    color: 0x1c202a,
+    metalness: 0.72,
+    roughness: 0.14,
+    anisotropy: 0.2,
+    iridescence: 0.15,
+    emissive: 0x091124,
+    emissiveIntensity: 0.12,
+  },
+  {
+    id: 'copper',
+    label: 'Copper',
+    swatchHex: '#d47952',
+    color: 0xd87a4e,
+    metalness: 0.94,
+    roughness: 0.2,
+    anisotropy: 0.75,
+    iridescence: 0.05,
+    emissive: 0x2a0f04,
+    emissiveIntensity: 0.06,
+  },
+  {
+    id: 'iridescent',
+    label: 'Prism',
+    swatchHex: '#8d7eff',
+    color: 0x8b9bff,
+    metalness: 0.88,
+    roughness: 0.16,
+    anisotropy: 0.35,
+    iridescence: 1.0,
+    emissive: 0x18103c,
+    emissiveIntensity: 0.18,
+  },
+].map(Object.freeze));
+
+export const STUDIO_FINISH_MAP = Object.freeze(
+  Object.fromEntries(STUDIO_FINISH_PRESETS.map(preset => [preset.id, preset]))
+);

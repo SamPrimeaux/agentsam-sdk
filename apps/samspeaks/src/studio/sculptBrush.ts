@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as xb from 'xrblocks';
+import { createStrokeTubeGeometry } from '@inneranimalmedia/agentsam-3d-viewer';
 
 interface ActiveStroke {
   points: THREE.Vector3[];
@@ -85,8 +86,7 @@ export class SpatialBrush extends xb.Script {
     const startPt = this.getBrushPoint(event);
     const secondPt = startPt.clone().add(new THREE.Vector3(0.002, 0.002, 0));
 
-    const curve = new THREE.CatmullRomCurve3([startPt, secondPt]);
-    const geometry = new THREE.TubeGeometry(curve, 8, 0.011, 8, false);
+    const geometry = createStrokeTubeGeometry(THREE, [startPt, secondPt], { segments: 8, radius: 0.011 });
     const mesh = new THREE.Mesh(geometry, this.material);
     mesh.castShadow = true;
     mesh.xb = { pointerEvents: 'none' };
@@ -112,8 +112,7 @@ export class SpatialBrush extends xb.Script {
 
     stroke.points.push(nextPt);
     const segments = Math.min(220, Math.max(8, stroke.points.length * 4));
-    const curve = new THREE.CatmullRomCurve3(stroke.points);
-    const nextGeo = new THREE.TubeGeometry(curve, segments, 0.011, 8, false);
+    const nextGeo = createStrokeTubeGeometry(THREE, stroke.points, { segments, radius: 0.011 });
     stroke.mesh.geometry = nextGeo;
     stroke.geometry.dispose();
     stroke.geometry = nextGeo;
@@ -136,8 +135,7 @@ export class SpatialBrush extends xb.Script {
     if (!this.enabled) return;
     const startPt = point.clone();
     const secondPt = startPt.clone().add(new THREE.Vector3(0.002, 0.002, 0));
-    const curve = new THREE.CatmullRomCurve3([startPt, secondPt]);
-    const geometry = new THREE.TubeGeometry(curve, 8, 0.011, 8, false);
+    const geometry = createStrokeTubeGeometry(THREE, [startPt, secondPt], { segments: 8, radius: 0.011 });
     const mesh = new THREE.Mesh(geometry, this.material);
     mesh.castShadow = true;
     mesh.xb = { pointerEvents: 'none' };
@@ -153,8 +151,7 @@ export class SpatialBrush extends xb.Script {
 
     stroke.points.push(point.clone());
     const segments = Math.min(220, Math.max(8, stroke.points.length * 4));
-    const curve = new THREE.CatmullRomCurve3(stroke.points);
-    const nextGeo = new THREE.TubeGeometry(curve, segments, 0.011, 8, false);
+    const nextGeo = createStrokeTubeGeometry(THREE, stroke.points, { segments, radius: 0.011 });
     stroke.mesh.geometry = nextGeo;
     stroke.geometry.dispose();
     stroke.geometry = nextGeo;

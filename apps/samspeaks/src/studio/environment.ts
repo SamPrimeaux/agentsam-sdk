@@ -14,7 +14,7 @@ import type {
 } from '../types.ts';
 import { detectSoftwareWebGL, StudioMaterialLibrary } from './materials.ts';
 import { createStudioSubject } from './subjects.ts';
-import { createStudioTextures, type StudioTextureSet } from './textures.ts';
+import { createStudioTextures, type StudioTextureSet } from '@inneranimalmedia/agentsam-3d-viewer';
 
 export const STAGE_POSITION = new THREE.Vector3(0, 0, -1.25);
 const PLATTER_HEIGHT = 0.88;
@@ -114,7 +114,7 @@ export class StudioStage extends xb.Script {
       pmrem.dispose();
     }
 
-    this.textures = createStudioTextures(maxAnisotropy);
+    this.textures = createStudioTextures(THREE, maxAnisotropy);
     this.materials = new StudioMaterialLibrary(this.textures, this.isSoftwareGl);
 
     this.setupLighting();

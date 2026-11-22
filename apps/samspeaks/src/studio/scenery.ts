@@ -3,7 +3,7 @@ import * as xb from 'xrblocks';
 import type { DroppedImageAsset, SceneryPropType } from '../types.ts';
 import { STAGE_POSITION } from './environment.ts';
 import type { StudioMaterialLibrary } from './materials.ts';
-import type { StudioTextureSet } from './textures.ts';
+import type { StudioTextureSet } from '@inneranimalmedia/agentsam-3d-viewer';
 
 export interface PlacedPropItem {
   id: string;

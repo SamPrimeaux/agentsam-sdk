@@ -2,7 +2,8 @@ import type * as THREE from 'three';
 
 export type StudioSubjectId = 'astrolabe' | 'pavilion' | 'vox' | 'terrarium';
 
-export type FinishId = 'gold' | 'titanium' | 'obsidian' | 'copper' | 'iridescent';
+import type { StudioFinishId, AtmosphereMoodId as SharedAtmosphereMoodId } from '@inneranimalmedia/agentsam-3d-viewer';
+export type FinishId = StudioFinishId;
 
 export type VoiceName =
   | 'Kore'
@@ -34,7 +35,7 @@ export type CameraShotId =
 
 export type TransitionType = 'glide' | 'dolly' | 'orbit' | 'crane' | 'cut';
 
-export type AtmosphereMoodId = 'studio' | 'sunset' | 'twilight' | 'noir' | 'dawn';
+export type AtmosphereMoodId = SharedAtmosphereMoodId;
 
 export type SceneryPropType = 'pine' | 'boulders' | 'lantern' | 'arch';
 
@@ -47,34 +48,7 @@ export interface SubjectMetadata {
   defaultDualScript: string;
 }
 
-export interface FinishPreset {
-  id: FinishId;
-  label: string;
-  swatchHex: string;
-  color: number;
-  metalness: number;
-  roughness: number;
-  anisotropy: number;
-  iridescence: number;
-  emissive: number;
-  emissiveIntensity: number;
-}
-
-export interface AtmospherePreset {
-  id: AtmosphereMoodId;
-  label: string;
-  swatchHex: string;
-  fogColor: number;
-  fogDensity: number;
-  keyColor: number;
-  keyIntensity: number;
-  hemiSky: number;
-  hemiGround: number;
-  hemiIntensity: number;
-  rimColor: number;
-  rimIntensity: number;
-  exposure: number;
-}
+export type { StudioFinishPreset as FinishPreset, AtmospherePreset } from '@inneranimalmedia/agentsam-3d-viewer';
 
 export interface CameraShotPreset {
   id: CameraShotId;

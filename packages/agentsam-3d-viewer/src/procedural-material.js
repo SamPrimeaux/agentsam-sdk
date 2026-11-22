@@ -54,6 +54,10 @@ export function createProceduralPbrMaterial(THREE, preset, textures, isSoftwareG
       bumpMap = textures.brushedRoughness;
       roughnessMap = textures.brushedRoughness;
       break;
+    case 'micro-perforated':
+      bumpMap = textures.micGrillBump;
+      roughnessMap = textures.micGrillBump;
+      break;
     case 'clear-glass':
     case 'ceramic':
     case 'iridescent-pearl':

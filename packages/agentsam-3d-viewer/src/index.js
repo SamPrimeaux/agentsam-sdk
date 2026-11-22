@@ -10,6 +10,9 @@ export { createStudioTextures } from './procedural-textures.js';
 export { createProceduralPbrMaterial } from './procedural-material.js';
 export { isSoftwareWebGLRenderer } from './renderer-capabilities.js';
 export { PROCEDURAL_PBR_MATERIALS, PROCEDURAL_PBR_MATERIAL_MAP, CAD_MATERIAL_PRESET_MAP } from './pbr-materials.js';
+export { ATMOSPHERE_PRESETS, ATMOSPHERE_MAP } from './atmosphere.js';
+export { STUDIO_FINISH_PRESETS, STUDIO_FINISH_MAP } from './studio-finishes.js';
+export { createStrokeTubeGeometry } from './stroke-geometry.js';
 
 function validateRuntime(runtime, needsControls = true) {
   if (!runtime?.THREE || typeof runtime.THREE.Scene !== 'function' || (needsControls && typeof runtime.OrbitControls !== 'function')) {
