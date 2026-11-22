@@ -11,7 +11,7 @@ const props: React.ComponentProps<typeof CadEngineeringToolbar> = {
   onToggleExplorer:noop, onToggleInspector:noop,
   explorerOpen:false, inspectorOpen:true, onStock:noop, onParametric:noop,
   onUndo:noop, onRedo:noop, canUndo:true, canRedo:false,
-  onToggleDiagnostics:noop, showDiagnostics:false,
+  onToggleDiagnostics:noop, showDiagnostics:false, onSketch:noop,
   studioView:'edit', onStudioView:noop,
   viewportMode:'split', onViewportMode:noop,
   runtimeSlot:null, projectSlot:null, onSave:noop,

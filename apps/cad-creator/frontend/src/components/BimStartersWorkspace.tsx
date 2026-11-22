@@ -1,10 +1,11 @@
-import {createThreeViewport} from '@inneranimalmedia/agentsam-3d-viewer';
+import {createThreeViewport,createConfiguredGLTFLoader} from '@inneranimalmedia/agentsam-3d-viewer';
 import {CadSourceInspector} from './CadSourceInspector';
 import {CadResourceCard} from './CadResourceCard';
 import {CadPreviewImage, CadPreview3DStatic} from './CadPreviewTreatments';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 type SourceObject = { name: string; label: string; type: string; visible: boolean; inPreview: boolean; parents: string[]; children: string[] };
@@ -68,7 +69,7 @@ function BimViewport({ id, version, focused, hidden, isolated, onPick }: {
     renderer.domElement.addEventListener('pointerup', onUp);
     let alive = true;
     let preview: THREE.Object3D | null = null;
-    new GLTFLoader().load(asset(id, 'preview') + '?v=' + encodeURIComponent(version), (gltf) => {
+    createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader},{withCredentials:true}).load(asset(id, 'preview') + '?v=' + encodeURIComponent(version), (gltf) => {
       if (!alive) return;
       preview = gltf.scene;
       scene.add(preview);

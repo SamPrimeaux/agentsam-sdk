@@ -13,6 +13,7 @@ await build({
     'agent/index': 'src/agent/index.ts',
     'agent/SelectionToolbar': 'src/agent/SelectionToolbar.tsx',
     'agent/capability-catalog': 'src/agent/capability-catalog.ts',
+    'shell/studio-icons': 'src/shell/studio-icons.ts',
     'shell/index': 'src/shell/index.ts',
     'browser/index': 'src/browser/index.ts',
     'terminal/index': 'src/terminal/index.ts',

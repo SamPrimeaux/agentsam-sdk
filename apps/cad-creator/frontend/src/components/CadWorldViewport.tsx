@@ -1,16 +1,18 @@
-import {createThreeViewport} from '@inneranimalmedia/agentsam-3d-viewer';
 import {trackCadRenderer} from '../lib/cad/scene-performance';
 import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
+import {createThreeViewport,createConfiguredGLTFLoader,createStudioTextures,createProceduralPbrMaterial,PROCEDURAL_PBR_MATERIAL_MAP,isSoftwareWebGLRenderer} from '@inneranimalmedia/agentsam-3d-viewer';
 import {Sky} from 'three/addons/objects/Sky.js';
+import {createPortal} from 'react-dom';
 import {TerrainEditorPanel} from './TerrainEditorPanel';
 import {createTerrainDocument,addSculptStroke,validateTerrainDocument,type TerrainDocument,type SculptMode} from '../lib/world-terrain';
 import {ViewCube} from './ViewCube';
-import {publishWorldView,registerWorldView,type WorldViewCommands} from '../lib/world-view-store';
+import {publishWorldView,registerWorldView,WORLD_ENVIRONMENT_PRESETS,type WorldEnvironmentPresetId,type WorldViewCommands} from '../lib/world-view-store';
 import {createTerrainProjection,type TerrainProjection} from '../lib/world-terrain-three';
-import type {CadSceneElement,CadSceneSettings,ProjectState} from '@inneranimalmedia/agentsam-cad-shared';
+import type {CadSceneElement,CadSceneSettings,CadShadowQuality,CadToneMapping,ProjectState} from '@inneranimalmedia/agentsam-cad-shared';
 import {indexSceneElements,applySceneElementEdits,sceneElementBounds,type SceneBinding} from '../lib/scene-elements-three';
 
 type Zone={roomId:string;label:string;candidateCameraBlenderXYZMetres?:number[];anchorStatus?:string};
@@ -21,6 +23,7 @@ type ViewPreset='iso'|'plan'|'front'|'side';
 export type CadSceneInventoryGroup = {category:string; count:number};
 const POSKEY='agentsam.dreamhouse.camera.v1.1';
 const ORBIT_SPEED=0.007;
+
 const fitDistance=(size:THREE.Vector3,camera:THREE.PerspectiveCamera|null)=>{
  const halfVertical=THREE.MathUtils.degToRad((camera?.fov||56)/2);
  const halfLimit=Math.atan(Math.tan(halfVertical)*Math.min(1,camera?.aspect||1));
@@ -28,6 +31,7 @@ const fitDistance=(size:THREE.Vector3,camera:THREE.PerspectiveCamera|null)=>{
 };
 
 export interface CadWorldViewportProps {
+ terrainHost?: HTMLDivElement|null;
  modelUrl:string;
  manifestUrl?:string;
  sceneLabel:string;
@@ -43,11 +47,14 @@ export interface CadWorldViewportProps {
  layoutProject?:ProjectState;
  onSceneSettings?:(updates:Partial<CadSceneSettings>)=>void;
 }
-export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect,onSceneInventory,onSceneElements,sceneElements=[],selectedElementId,layoutProject,onSceneSettings}:CadWorldViewportProps) {
+export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect,onSceneInventory,onSceneElements,sceneElements=[],selectedElementId,layoutProject,onSceneSettings}:CadWorldViewportProps) {
  const mount=useRef<HTMLDivElement>(null),renderer=useRef<THREE.WebGLRenderer|null>(null),
  sceneRef=useRef<THREE.Scene|null>(null),cameraRef=useRef<THREE.PerspectiveCamera|null>(null);
+ const renderCamera=useRef<THREE.PerspectiveCamera|THREE.OrthographicCamera|null>(null);
  const assetRef=useRef<THREE.Object3D|null>(null),collidersRef=useRef<THREE.Object3D[]>([]);
  const target=useRef(new THREE.Vector3()),orbit=useRef({az:0.9,el:0.65,distance:65});
+ const glide=useRef<{start:number;duration:number;from:typeof orbit.current;to:typeof orbit.current;
+  fromTarget:THREE.Vector3;toTarget:THREE.Vector3}|null>(null);
  const walk=useRef({yaw:0,pitch:0,position:new THREE.Vector3(),active:false});
  const pressed=useRef(new Set<string>()),pointer=useRef<{x:number;y:number;id:number;distance:number}|null>(null);
  const touchPointers=useRef(new Map<number,{x:number;y:number}>()),pinchDistance=useRef<number|null>(null);
@@ -63,8 +70,9 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  const [nativeStatus,setNativeStatus]=useState('');
  const [wireframe,setWireframe]=useState(false),[viewPreset,setViewPreset]=useState<ViewPreset>('iso');
  const [terrain,setTerrain]=useState<TerrainDocument>(()=>createTerrainDocument());
- const [terrainOpen,setTerrainOpen]=useState(false);
+ const terrainOpen=Boolean(terrainHost)&&siteEditable;
  const [sculptMode,setSculptMode]=useState<SculptMode|null>(null);
+ useEffect(()=>{if(!terrainOpen)setSculptMode(null)},[terrainOpen]);
  const [brushRadius,setBrushRadius]=useState(12),[brushStrength,setBrushStrength]=useState(3);
  const bounds=useRef(new THREE.Box3());
  const modelBounds=useRef(new THREE.Box3());
@@ -73,26 +81,50 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  const sourceColors=useRef(new Map<THREE.Material,THREE.Color>());
  const environmentRef=useRef<{sky:Sky;sun:THREE.DirectionalLight;fill:THREE.HemisphereLight}|null>(null);
  const materialSets=useRef(new Map<THREE.Mesh,{lit:THREE.Material|THREE.Material[];color:THREE.Material|THREE.Material[]}>());
+ const pbrTextures=useRef<ReturnType<typeof createStudioTextures>|null>(null);
+ const pbrMaterials=useRef(new Map<string,THREE.MeshPhysicalMaterial>());
  const [shading,setShading]=useState<'lit'|'color'>('lit');
  const [exposure,setExposure]=useState(.72),[sunStrength,setSunStrength]=useState(1),[fillStrength,setFillStrength]=useState(.55);
  const [skyVisible,setSkyVisible]=useState(true);
+ const [sunAltitude,setSunAltitude]=useState(54),[sunAzimuth,setSunAzimuth]=useState(55);
+ const [sunColor,setSunColor]=useState('#fff0d7'),[skyColor,setSkyColor]=useState('#dceeff'),[groundColor,setGroundColor]=useState('#53644d');
+ const [environmentPresetId,setEnvironmentPresetId]=useState<WorldEnvironmentPresetId|'custom'>('daylight');
+ const [cameraFov,setCameraFov]=useState(45);
+ const [skyTurbidity,setSkyTurbidity]=useState(3.5),[skyRayleigh,setSkyRayleigh]=useState(2.1),[skyMieCoefficient,setSkyMieCoefficient]=useState(.005),[skyMieDirectionalG,setSkyMieDirectionalG]=useState(.78);
+ const [shadows,setShadows]=useState(true);
+ const [shadowQuality,setShadowQuality]=useState<CadShadowQuality>(()=>typeof window!=='undefined'&&window.innerWidth<768?'medium':'high');
+ const [toneMapping,setToneMapping]=useState<CadToneMapping>('aces');
  const settings=layoutProject?.sceneSettings;
+ const projection=settings?.projection??'perspective';
+ const projectionRef=useRef(projection);
+ useEffect(()=>{projectionRef.current=projection},[projection]);
+ const clipNear=settings?.clipNear??.06,clipFar=settings?.clipFar??2400;
+ const [activeCamera,setActiveCamera]=useState('iso');
  useEffect(()=>{
-  if(settings?.shading)setShading(settings.shading);
-  if(settings?.exposure!=null)setExposure(settings.exposure);
-  if(settings?.sun!=null)setSunStrength(settings.sun);
-  if(settings?.ambient!=null)setFillStrength(settings.ambient);
-  if(settings?.sky!=null)setSkyVisible(settings.sky);
-  if(settings?.daylight!=null)setHour(settings.daylight?'day':'evening');
-  if(settings?.roofVisible!=null)setRoofVisible(settings.roofVisible);
- },[settings]);
- useEffect(()=>{if(settings?.terrain)setTerrain(validateTerrainDocument(settings.terrain))},[settings?.terrain]);
+  if(!onSceneSettings&&!settings)return;
+  setShading(settings?.shading??'lit');
+  setExposure(settings?.exposure??.72);setSunStrength(settings?.sun??1);setFillStrength(settings?.ambient??.55);
+  setSkyVisible(settings?.sky??true);setHour(settings?.daylight===false?'evening':'day');
+  setSunAltitude(settings?.sunAltitude??(settings?.daylight===false?11:54));
+  setSunAzimuth(settings?.sunAzimuth??(settings?.daylight===false?309:55));
+  setSunColor(settings?.sunColor??'#fff0d7');setSkyColor(settings?.skyColor??'#dceeff');setGroundColor(settings?.groundColor??'#53644d');
+  setEnvironmentPresetId((settings?.environmentPresetId??'daylight') as WorldEnvironmentPresetId|'custom');
+  setSkyTurbidity(settings?.skyTurbidity??3.5);
+  setSkyRayleigh(settings?.skyRayleigh??2.1);setSkyMieCoefficient(settings?.skyMieCoefficient??.005);
+  setSkyMieDirectionalG(settings?.skyMieDirectionalG??.78);setShadows(settings?.shadows??true);
+  setShadowQuality(settings?.shadowQuality??(window.innerWidth<768?'medium':'high'));setToneMapping(settings?.toneMapping??'aces');setRoofVisible(settings?.roofVisible??true);
+ },[settings,onSceneSettings]);
+ useEffect(()=>{if(onSceneSettings||settings?.cameraFov!=null)setCameraFov(settings?.cameraFov??45)},[onSceneSettings,settings?.cameraFov]);
+ useEffect(()=>{
+  if(settings?.terrain)setTerrain(validateTerrainDocument(settings.terrain));
+  else if(onSceneSettings)setTerrain(createTerrainDocument());
+ },[settings?.terrain,onSceneSettings]);
  const changeTerrain=(next:TerrainDocument|((previous:TerrainDocument)=>TerrainDocument))=>{
   const value=typeof next==='function'?next(terrainDocRef.current):next;
   terrainDocRef.current=value;setTerrain(value);onSceneSettings?.({terrain:value});
  };
- const displayRef=useRef({mode,roofVisible,hour});
- useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
+ const displayRef=useRef({mode,roofVisible});
+ useEffect(()=>{displayRef.current={mode,roofVisible}},[mode,roofVisible]);
  useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
  useEffect(()=>{terrainBrushRef.current={mode:sculptMode,radius:brushRadius,strength:brushStrength}},[sculptMode,brushRadius,brushStrength]);
  const visit=(zone:Zone)=>{
@@ -123,10 +155,10 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
     :preset==='front'?{az:0,el:.075,distance}
     :preset==='side'?{az:Math.PI/2,el:.075,distance}
     :{az:.88,el:.49,distance};
-  setViewPreset(preset);setMode('orbit');
+  setViewPreset(preset);setActiveCamera(preset);setMode('orbit');
  };
  const exportSnapshot=()=>{
-  const webgl=renderer.current,scene=sceneRef.current,camera=cameraRef.current;
+  const webgl=renderer.current,scene=sceneRef.current,camera=renderCamera.current;
   if(!webgl||!scene||!camera||!ready)return;
   webgl.render(scene,camera);
   const link=document.createElement('a');
@@ -142,23 +174,76 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  worldApi.current={
   setMode:next=>{if(next==='walk')walk.current.active=false;setMode(next)},
   setView,frame:reset,
+  transitionCamera:(id,duration)=>{
+   const from={...orbit.current},fromTarget=target.current.clone();
+   if(['iso','plan','front','side'].includes(id))setView(id as ViewPreset);
+   else worldApi.current?.setCamera?.(id);
+   glide.current={from,fromTarget,to:{...orbit.current},toTarget:target.current.clone(),
+     start:performance.now(),duration:Math.max(.1,duration)*1000};
+  },
+  stopTransition:()=>{glide.current=null},
+  saveCamera:label=>{
+   if(readOnly||mode!=='orbit'||!ready||!label.trim()||!onSceneSettings)return;
+   const shot={id:crypto.randomUUID(),label:label.trim().slice(0,96),target:target.current.toArray() as [number,number,number],...orbit.current,fov:cameraFov};
+   onSceneSettings({savedCameras:[...(settings?.savedCameras??[]),shot]});setActiveCamera(shot.id);
+  },
+  setCamera:id=>{
+   const shot=settings?.savedCameras?.find(camera=>camera.id===id);
+   if(!shot)return;
+   target.current.fromArray(shot.target);orbit.current={az:shot.az,el:shot.el,distance:shot.distance};
+   setMode('orbit');setCameraFov(shot.fov);setActiveCamera(shot.id);
+  },
+  setProjection:projection=>{if(!readOnly)onSceneSettings?.({projection})},
+  setClip:(near,far)=>{
+   if(!readOnly&&near>0&&far>near&&Number.isFinite(far))onSceneSettings?.({clipNear:near,clipFar:far});
+  },
   toggleRoof:()=>{setRoofVisible(!roofVisible);onSceneSettings?.({roofVisible:!roofVisible})},
-  toggleDaylight:()=>{setHour(hour==='day'?'evening':'day');onSceneSettings?.({daylight:hour!=='day'})},
+  toggleDaylight:()=>{
+   const next=hour!=='day',altitude=next?54:11,azimuth=next?55:309,color=next?'#fff0d7':'#ffc18d';
+   setHour(next?'day':'evening');setSunAltitude(altitude);setSunAzimuth(azimuth);setSunColor(color);
+   setEnvironmentPresetId('custom');onSceneSettings?.({environmentPresetId:'custom',daylight:next,sunAltitude:altitude,sunAzimuth:azimuth,sunColor:color});
+  },
   toggleWireframe:()=>setWireframe(v=>!v),
   visitRoom:id=>{const z=handoff?.zones.find(x=>x.roomId===id);if(z)visit(z)},
   capture:exportSnapshot,
-  toggleSite:()=>{setTerrainOpen(v=>!v);setSelection(null);window.dispatchEvent(new Event('cad:terrain-inspect'))},
   setShading:value=>{setShading(value);onSceneSettings?.({shading:value})},
   setExposure:value=>{setExposure(value);onSceneSettings?.({exposure:value})},
-  setSun:value=>{setSunStrength(value);onSceneSettings?.({sun:value})},
-  setAmbient:value=>{setFillStrength(value);onSceneSettings?.({ambient:value})},
-  setSky:value=>{setSkyVisible(value);onSceneSettings?.({sky:value})},
-  resetLight:()=>{setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');onSceneSettings?.({shading:'lit',exposure:.72,sun:1,ambient:.55,sky:true,daylight:true});},
+  setSun:value=>{setSunStrength(value);setEnvironmentPresetId('custom');onSceneSettings?.({sun:value,environmentPresetId:'custom'})},
+  setAmbient:value=>{setFillStrength(value);setEnvironmentPresetId('custom');onSceneSettings?.({ambient:value,environmentPresetId:'custom'})},
+  setSky:value=>{setSkyVisible(value);setEnvironmentPresetId('custom');onSceneSettings?.({sky:value,environmentPresetId:'custom'})},
+  setSunAltitude:value=>{setSunAltitude(value);setHour(value<25?'evening':'day');setEnvironmentPresetId('custom');onSceneSettings?.({sunAltitude:value,daylight:value>=25,environmentPresetId:'custom'})},
+  setSunAzimuth:value=>{setSunAzimuth(value);setEnvironmentPresetId('custom');onSceneSettings?.({sunAzimuth:value,environmentPresetId:'custom'})},
+  setSunColor:value=>{setSunColor(value);setEnvironmentPresetId('custom');onSceneSettings?.({sunColor:value,environmentPresetId:'custom'})},
+  setSkyColor:value=>{setSkyColor(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyColor:value,environmentPresetId:'custom'})},
+  setGroundColor:value=>{setGroundColor(value);setEnvironmentPresetId('custom');onSceneSettings?.({groundColor:value,environmentPresetId:'custom'})},
+  setCameraFov:value=>{const next=THREE.MathUtils.clamp(value,20,90);setCameraFov(next);onSceneSettings?.({cameraFov:next})},
+  setEnvironmentPreset:id=>{
+   const preset=WORLD_ENVIRONMENT_PRESETS.find(item=>item.id===id);if(!preset)return;
+   setEnvironmentPresetId(id);setHour(preset.daylight?'day':'evening');setSunAltitude(preset.sunAltitude);setSunAzimuth(preset.sunAzimuth);
+   setSunStrength(preset.sun);setFillStrength(preset.ambient);setSkyVisible(preset.sky);setSunColor(preset.sunColor);setSkyColor(preset.skyColor);setGroundColor(preset.groundColor);
+   setSkyTurbidity(preset.skyTurbidity);setSkyRayleigh(preset.skyRayleigh);setSkyMieCoefficient(preset.skyMieCoefficient);setSkyMieDirectionalG(preset.skyMieDirectionalG);
+   onSceneSettings?.({environmentPresetId:id,daylight:preset.daylight,sunAltitude:preset.sunAltitude,sunAzimuth:preset.sunAzimuth,sun:preset.sun,ambient:preset.ambient,sky:preset.sky,sunColor:preset.sunColor,skyColor:preset.skyColor,groundColor:preset.groundColor,skyTurbidity:preset.skyTurbidity,skyRayleigh:preset.skyRayleigh,skyMieCoefficient:preset.skyMieCoefficient,skyMieDirectionalG:preset.skyMieDirectionalG});
+  },
+  setSkyTurbidity:value=>{setSkyTurbidity(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyTurbidity:value,environmentPresetId:'custom'})},
+  setSkyRayleigh:value=>{setSkyRayleigh(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyRayleigh:value,environmentPresetId:'custom'})},
+  setSkyMieCoefficient:value=>{setSkyMieCoefficient(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyMieCoefficient:value,environmentPresetId:'custom'})},
+  setSkyMieDirectionalG:value=>{setSkyMieDirectionalG(value);setEnvironmentPresetId('custom');onSceneSettings?.({skyMieDirectionalG:value,environmentPresetId:'custom'})},
+  setShadows:value=>{setShadows(value);onSceneSettings?.({shadows:value})},
+  setShadowQuality:value=>{setShadowQuality(value);onSceneSettings?.({shadowQuality:value})},
+  setToneMapping:value=>{setToneMapping(value);onSceneSettings?.({toneMapping:value})},
+  resetLight:()=>{
+   setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');
+   setSunAltitude(54);setSunAzimuth(55);setSunColor('#fff0d7');setSkyColor('#dceeff');setGroundColor('#53644d');setEnvironmentPresetId('daylight');
+   setSkyTurbidity(3.5);setSkyRayleigh(2.1);setSkyMieCoefficient(.005);setSkyMieDirectionalG(.78);
+   setShadows(true);setShadowQuality(typeof window!=='undefined'&&window.innerWidth<768?'medium':'high');setToneMapping('aces');
+   onSceneSettings?.({shading:'lit',exposure:.72,sun:1,ambient:.55,sky:true,daylight:true,environmentPresetId:'daylight',sunAltitude:54,sunAzimuth:55,sunColor:'#fff0d7',skyColor:'#dceeff',groundColor:'#53644d',skyTurbidity:3.5,skyRayleigh:2.1,skyMieCoefficient:.005,skyMieDirectionalG:.78,shadows:true,shadowQuality:typeof window!=='undefined'&&window.innerWidth<768?'medium':'high',toneMapping:'aces'});
+  },
  };
  useEffect(()=>registerWorldView(()=>worldApi.current as Partial<WorldViewCommands>),[]);
- useEffect(()=>{publishWorldView({kind:'world',ready,mode,viewPreset,roofVisible,daylight:hour==='day',wireframe,shading,exposure,sun:sunStrength,ambient:fillStrength,sky:skyVisible,
-  rooms:(handoff?.zones??[]).map(z=>({id:z.roomId,label:z.label})),siteOpen:terrainOpen,canEditSite:siteEditable,label:sceneLabel,revision})},
-  [ready,mode,viewPreset,roofVisible,hour,wireframe,handoff,terrainOpen,siteEditable,sceneLabel,revision,shading,exposure,sunStrength,fillStrength,skyVisible]);
+ useEffect(()=>{publishWorldView({kind:'world',cameras:(settings?.savedCameras??[]).map(({id,label})=>({id,label})),cameraId:activeCamera,projection,clipNear,clipFar,ready,mode,viewPreset,roofVisible,daylight:hour==='day',wireframe,shading,exposure,sun:sunStrength,ambient:fillStrength,sky:skyVisible,
+  sunAltitude,sunAzimuth,sunColor,skyColor,groundColor,environmentPresetId,cameraFov,skyTurbidity,skyRayleigh,skyMieCoefficient,skyMieDirectionalG,shadows,shadowQuality,toneMapping,
+  rooms:(handoff?.zones??[]).map(z=>({id:z.roomId,label:z.label})),siteOpen:terrainOpen,canEditSite:siteEditable,canEditScene:!readOnly,label:sceneLabel,revision})},
+  [activeCamera,settings?.savedCameras,projection,clipNear,clipFar,ready,mode,viewPreset,roofVisible,hour,wireframe,handoff,terrainOpen,siteEditable,readOnly,sceneLabel,revision,shading,exposure,sunStrength,fillStrength,skyVisible,sunAltitude,sunAzimuth,sunColor,skyColor,groundColor,environmentPresetId,cameraFov,skyTurbidity,skyRayleigh,skyMieCoefficient,skyMieDirectionalG,shadows,shadowQuality,toneMapping]);
  // Site edits persist on this device per project revision until a revision host is connected.
  const terrainKey=`cad.terrain.v1:${sceneLabel}:${revision}`;
  useEffect(()=>{if(onSceneSettings)return;try{const raw=localStorage.getItem(terrainKey);if(raw)setTerrain(validateTerrainDocument(JSON.parse(raw)))}catch{/* storage unavailable or invalid */}},[terrainKey,onSceneSettings]);
@@ -167,7 +252,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   const host=mount.current;if(!host)return;
   let alive=true;
   let gltfRoot:THREE.Object3D|null=null;
-  // Shared renderer lifecycle; the DreamHouse orbit/walk camera controller remains native to CAD.
+  // Shared renderer lifecycle; the CAD orbit/walk camera controller remains native to this workspace.
   const viewport=createThreeViewport(host,{THREE},{
     wrapper:false,controls:false,autoRender:false,lights:false,
     fov:56,near:.06,far:2400,maxPixelRatio:2,background:'#0a1420',
@@ -177,6 +262,8 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   });
   const scene=viewport.scene as THREE.Scene;sceneRef.current=scene;
   const camera=viewport.camera as THREE.PerspectiveCamera;cameraRef.current=camera;
+  const ortho=new THREE.OrthographicCamera();
+  renderCamera.current=camera;
   const context=viewport.renderer as unknown as THREE.WebGLRenderer;renderer.current=context;
   const sun=new THREE.DirectionalLight('#fff0d7',1.05);sun.position.set(80,125,55);sun.castShadow=true;
   const shadowSize=window.innerWidth<768?1024:2048;
@@ -197,12 +284,22 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   const ray=new THREE.Raycaster();const floorRay=new THREE.Raycaster();
   let animation=0,last=performance.now();
   let loaded=false;
-  const measureScene=trackCadRenderer("Registered DreamHouse scene",context,host);
+  const measureScene=trackCadRenderer("Registered CAD scene",context,host);
   const animate=(now:number)=>{
    if(!alive)return;
    const delta=Math.min((now-last)/1000,.075);last=now;
    const state=displayRef.current;
    if(state.mode==='orbit'){
+    const move=glide.current;
+    if(move){
+      const elapsed=Math.min(1,(now-move.start)/move.duration);
+      const t=THREE.MathUtils.smootherstep(elapsed,0,1);
+      const arc=Math.atan2(Math.sin(move.to.az-move.from.az),Math.cos(move.to.az-move.from.az));
+      orbit.current={az:move.from.az+t*arc,el:THREE.MathUtils.lerp(move.from.el,move.to.el,t),
+        distance:THREE.MathUtils.lerp(move.from.distance,move.to.distance,t)};
+      target.current.lerpVectors(move.fromTarget,move.toTarget,t);
+      if(elapsed>=1)glide.current=null;
+    }
     const o=orbit.current;
     camera.position.set(
       target.current.x+Math.sin(o.az)*Math.cos(o.el)*o.distance,
@@ -245,7 +342,13 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
     camera.rotation.order='YXZ';
     camera.rotation.y=view.yaw;camera.rotation.x=view.pitch;camera.rotation.z=0;
    }
-   context.render(scene,camera);
+   if(projectionRef.current==='orthographic'&&state.mode==='orbit'){
+    const halfHeight=orbit.current.distance*Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+    ortho.top=halfHeight;ortho.bottom=-halfHeight;ortho.right=halfHeight*camera.aspect;ortho.left=-ortho.right;
+    ortho.near=camera.near;ortho.far=camera.far;ortho.updateProjectionMatrix();
+    ortho.position.copy(camera.position);ortho.quaternion.copy(camera.quaternion);renderCamera.current=ortho;
+   } else renderCamera.current=camera;
+   context.render(scene,renderCamera.current);
    measureScene(now);
    animation=requestAnimationFrame(animate);
   };
@@ -263,7 +366,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
      }
     }
     if(!alive)return;setProgress('Streaming registered model geometry…');
-    new GLTFLoader().setWithCredentials(modelUrl.startsWith('/')).load(modelUrl, gltf=>{
+    createConfiguredGLTFLoader({THREE,GLTFLoader,DRACOLoader},{withCredentials:modelUrl.startsWith('/')}).load(modelUrl, gltf=>{
       if(!alive)return;
       gltfRoot=gltf.scene;
       const box=new THREE.Box3().setFromObject(gltfRoot);
@@ -349,25 +452,29 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
    }catch(e){if(alive){setError(String(e));setProgress('')}}
   };
   void fetchWorld();
-  const onKey=(e:KeyboardEvent)=>{if(!(e.target instanceof HTMLInputElement)&&!(e.target instanceof HTMLTextAreaElement)){pressed.current.add(e.code);if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();}};
+  const onKey=(e:KeyboardEvent)=>{if(e.target instanceof HTMLElement&&!e.target.closest('input,textarea,select,button,summary,[contenteditable=true]')){pressed.current.add(e.code);if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();}};
   const onKeyUp=(e:KeyboardEvent)=>pressed.current.delete(e.code);
   window.addEventListener('keydown',onKey);window.addEventListener('keyup',onKeyUp);
   return()=>{
    alive=false;cancelAnimationFrame(animation);
    window.removeEventListener('keydown',onKey);window.removeEventListener('keyup',onKeyUp);
    terrainProjection.current?.dispose();terrainProjection.current=null;
-   gltfRoot?.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}});
+   const sharedPbr=new Set<THREE.Material>(pbrMaterials.current.values());
+   gltfRoot?.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{if(!sharedPbr.has(m))m.dispose()})}});
+   pbrMaterials.current.forEach(material=>material.dispose());pbrMaterials.current.clear();
+   pbrTextures.current?.dispose();pbrTextures.current=null;
    sky.geometry.dispose();sky.material.dispose();
    environmentRef.current=null;
    materialSets.current.clear();
    bindings.current.clear();sourceColors.current.clear();
    if(selectedBox.current){selectedBox.current.geometry.dispose();(selectedBox.current.material as THREE.Material).dispose();selectedBox.current=null;}
-   viewport.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
+   viewport.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;renderCamera.current=null;
   };
  },[modelUrl,manifestUrl]);
  useEffect(()=>{
   if(!ready)return;
   applySceneElementEdits(bindings.current,sceneElements,roofVisible);
+  const usedMaterials=new Set<string>();
   const edits=new Map(sceneElements.map(element=>[element.id,element]));
   for(const [mesh,variants] of materialSets.current){
     const element=edits.get(String(mesh.userData.CadElementId));
@@ -375,14 +482,32 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
       const colored=mat as THREE.MeshStandardMaterial;
       if(!colored.color)continue;
       if(!sourceColors.current.has(mat))sourceColors.current.set(mat,colored.color.clone());
-      colored.color.copy(element?.color?new THREE.Color(element.color):sourceColors.current.get(mat)!);
+      colored.color.copy(element?.color&&!element.materialPresetId?new THREE.Color(element.color):sourceColors.current.get(mat)!);
     }
+    const preset=element?.materialPresetId?PROCEDURAL_PBR_MATERIAL_MAP[element.materialPresetId]:undefined;
+    let pbrMaterial:THREE.MeshPhysicalMaterial|undefined;
+    if(preset){
+      if(!pbrTextures.current)pbrTextures.current=createStudioTextures(THREE,renderer.current?.capabilities.getMaxAnisotropy()??1);
+      const finish=element?.finish;
+      const key=finish?preset.id+JSON.stringify(finish):preset.id;
+      usedMaterials.add(key);
+      pbrMaterial=pbrMaterials.current.get(key);
+      if(!pbrMaterial){
+        pbrMaterial=createProceduralPbrMaterial(THREE,{...preset,...finish},pbrTextures.current,isSoftwareWebGLRenderer(renderer.current)) as THREE.MeshPhysicalMaterial;
+        if(finish?.opacity!==undefined){pbrMaterial.opacity=finish.opacity;pbrMaterial.transparent=finish.opacity<1||preset.transmission>0}
+        pbrMaterials.current.set(key,pbrMaterial);
+      }
+    }
+    mesh.material=shading==='color'?variants.color:pbrMaterial?(Array.isArray(variants.lit)?variants.lit.map(()=>pbrMaterial!):pbrMaterial):variants.lit;
+  }
+  for(const [key,material] of pbrMaterials.current){
+    if(!usedMaterials.has(key)){material.dispose();pbrMaterials.current.delete(key)}
   }
   const scene=sceneRef.current;if(!scene)return;
   if(selectedBox.current){scene.remove(selectedBox.current);selectedBox.current.geometry.dispose();(selectedBox.current.material as THREE.Material).dispose();selectedBox.current=null;}
   const binding=selectedElementId?bindings.current.get(selectedElementId):undefined;
   if(binding){const helper=new THREE.Box3Helper(sceneElementBounds(binding),new THREE.Color('#82a7fb'));scene.add(helper);selectedBox.current=helper;}
- },[sceneElements,selectedElementId,roofVisible,ready]);
+ },[sceneElements,selectedElementId,roofVisible,ready,shading]);
  useEffect(()=>{
   const focus=(event:Event)=>{
     const binding=bindings.current.get((event as CustomEvent<string>).detail);if(!binding)return;
@@ -402,27 +527,63 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   return()=>{cancelled=true;if(layer){scene.remove(layer);disposeNativeLayer(layer);}material.dispose();};
  },[ready,layoutProject?.walls,layoutProject?.doors,layoutProject?.windows,layoutProject?.nativeHistory,layoutProject?.sceneSource]);
  useEffect(()=>{
+  const camera=cameraRef.current;if(!ready||!camera)return;
+  camera.near=clipNear;camera.far=clipFar;camera.fov=THREE.MathUtils.clamp(cameraFov,20,90);camera.updateProjectionMatrix();
+ },[ready,cameraFov,clipNear,clipFar]);
+
+ useEffect(()=>{
+  const scene=sceneRef.current;if(!ready||!scene||!settings?.lights?.length)return;
+  const group=new THREE.Group();
+  const lights=settings.lights.map(spec=>{
+   const light=spec.kind==='point'?new THREE.PointLight(spec.color,spec.intensity,spec.range):
+    spec.kind==='spot'?new THREE.SpotLight(spec.color,spec.intensity,spec.range,THREE.MathUtils.degToRad(spec.cone)):
+    new THREE.DirectionalLight(spec.color,spec.intensity);
+   light.name=spec.name;light.position.fromArray(spec.position);light.castShadow=spec.shadows;
+   if('target' in light){light.target.position.fromArray(spec.target);group.add(light.target)}
+   group.add(light);return light;
+  });
+  scene.add(group);
+  return ()=>{group.removeFromParent();lights.forEach(light=>light.dispose())};
+ },[ready,settings?.lights,modelUrl]);
+ useEffect(()=>{
   const environment=environmentRef.current,scene=sceneRef.current;
   if(!environment||!scene)return;
-  const evening=hour==='evening';
-  environment.sun.position.set(evening?-80:80,evening?20:125,evening?65:55);
-  environment.sun.intensity=(evening?0.55:1.05)*sunStrength;
-  environment.sun.color.set(evening?'#ffc18d':'#fff0d7');
-  environment.fill.intensity=(evening?0.5:1)*fillStrength;
+  const altitude=THREE.MathUtils.degToRad(sunAltitude),azimuth=THREE.MathUtils.degToRad(sunAzimuth);
+  environment.sun.position.set(Math.sin(azimuth)*Math.cos(altitude),Math.sin(altitude),Math.cos(azimuth)*Math.cos(altitude)).multiplyScalar(160);
+  environment.sun.intensity=sunStrength;
+  environment.sun.color.set(sunColor);
+  environment.fill.intensity=fillStrength;
+  environment.fill.color.set(skyColor);
+  environment.fill.groundColor.set(groundColor);
   environment.sky.visible=skyVisible;
-  environment.sky.material.uniforms['sunPosition'].value.copy(environment.sun.position);
-  scene.fog=skyVisible?new THREE.Fog(evening?'#596575':'#b5c5cb',260,1150):null;
- },[hour,sunStrength,fillStrength,skyVisible]);
+  const uniforms=environment.sky.material.uniforms;
+  uniforms['sunPosition'].value.copy(environment.sun.position);
+  uniforms['turbidity'].value=skyTurbidity;uniforms['rayleigh'].value=skyRayleigh;
+  uniforms['mieCoefficient'].value=skyMieCoefficient;uniforms['mieDirectionalG'].value=skyMieDirectionalG;
+  scene.fog=(settings?.fog?.enabled??skyVisible)?new THREE.Fog(skyColor,settings?.fog?.near??260,settings?.fog?.far??1150):null;
+ },[settings?.fog,ready,sunAltitude,sunAzimuth,sunStrength,sunColor,fillStrength,skyColor,groundColor,skyVisible,skyTurbidity,skyRayleigh,skyMieCoefficient,skyMieDirectionalG]);
  useEffect(()=>{
-  // Switching rendering modes never modifies saved geometry or Blender materials.
-  for(const [mesh,variants] of materialSets.current){
-   mesh.material=variants[shading];
-   const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
-   for(const mat of mats)if('wireframe' in mat)(mat as THREE.MeshStandardMaterial).wireframe=wireframe;
+  for(const mesh of materialSets.current.keys()){
+   for(const material of Array.isArray(mesh.material)?mesh.material:[mesh.material]){
+    if('wireframe' in material)(material as THREE.MeshStandardMaterial).wireframe=wireframe;
+   }
   }
- },[shading,wireframe,ready]);
+ },[sceneElements,shading,wireframe,ready]);
  useEffect(()=>{if(renderer.current)renderer.current.toneMappingExposure=exposure;},[exposure]);
- useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(skyVisible?(hour==='day'?'#0b1928':'#21172a'):'#26313b');},[hour,skyVisible]);
+ useEffect(()=>{
+  const webgl=renderer.current,environment=environmentRef.current;if(!webgl||!environment)return;
+  const size=shadowQuality==='low'?512:shadowQuality==='medium'?1024:2048;
+  environment.sun.shadow.bias=settings?.shadowBias??-.0002;
+  environment.sun.castShadow=shadows;webgl.shadowMap.enabled=shadows;
+  environment.sun.shadow.map?.dispose();environment.sun.shadow.map=null;
+  environment.sun.shadow.mapSize.set(size,size);environment.sun.shadow.needsUpdate=true;webgl.shadowMap.needsUpdate=true;
+ },[ready,settings?.shadowBias,shadows,shadowQuality]);
+ useEffect(()=>{
+  const webgl=renderer.current;if(!webgl)return;
+  const mapping:Record<CadToneMapping,THREE.ToneMapping>={aces:THREE.ACESFilmicToneMapping,reinhard:THREE.ReinhardToneMapping,neutral:THREE.NeutralToneMapping,none:THREE.NoToneMapping};
+  webgl.toneMapping=mapping[toneMapping];webgl.toneMappingExposure=exposure;
+ },[toneMapping,exposure]);
+ useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(skyVisible?skyColor:'#26313b');},[skyVisible,skyColor]);
  // Editing always regenerates the complete terrain projection from the same
  // document, so exported JSON and visible relief cannot diverge.
  useEffect(()=>{
@@ -434,9 +595,9 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   scene.add(projected.root);terrainProjection.current=projected;
  },[terrain,ready]);
  const pick=useCallback((event:React.PointerEvent<HTMLDivElement>)=>{
-  if(!ready||!assetRef.current||!cameraRef.current||!renderer.current)return;
+  if(!ready||!assetRef.current||!renderCamera.current||!renderer.current)return;
   const rect=renderer.current.domElement.getBoundingClientRect(),nx=(event.clientX-rect.left)/rect.width*2-1,ny=-(event.clientY-rect.top)/rect.height*2+1;
-  const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(nx,ny),cameraRef.current);
+  const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(nx,ny),renderCamera.current);
   const hit=ray.intersectObject(assetRef.current,true)[0]?.object;
   if(!hit)return;
   let o:THREE.Object3D|null=hit;
@@ -446,7 +607,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   setSelection(selected);onSelect?.(selected);
  },[ready,onSelect]);
  const sculptAt=useCallback((event:React.PointerEvent<HTMLDivElement>,force=false)=>{
-  const brush=terrainBrushRef.current,projection=terrainProjection.current,camera=cameraRef.current,webgl=renderer.current;
+  const brush=terrainBrushRef.current,projection=terrainProjection.current,camera=renderCamera.current,webgl=renderer.current;
   if(!brush.mode||!projection||!camera||!webgl)return;
   const now=performance.now();
   if(!force&&now-lastBrushAt.current<90)return;
@@ -460,6 +621,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   changeTerrain(current=>addSculptStroke(current,local.x,local.z,brush.radius,brush.strength,brush.mode!));
  },[onSceneSettings]);
  const start=useCallback((e:React.PointerEvent<HTMLDivElement>)=>{
+  glide.current=null;
   if(e.button!==0&&e.pointerType==='mouse')return;
   if(e.pointerType==='touch'){
    touchPointers.current.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -500,6 +662,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
      onPointerDown={start} onPointerMove={drag} onPointerUp={stop}
      onWheel={e=>{
+       glide.current=null;
        if(displayRef.current.mode!=='orbit')return;
        const extent=modelBounds.current.getSize(new THREE.Vector3()).length();
        const minDistance=selectedElementId?1.5:Math.max(6,extent*.45);
@@ -519,9 +682,9 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
        className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
-   {siteEditable&&terrainOpen&&<TerrainEditorPanel document={terrain} onChange={changeTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
+   {siteEditable&&terrainHost&&createPortal(<TerrainEditorPanel document={terrain} onChange={changeTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
      brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
-     onFitSite={fitSite} onClose={()=>{setTerrainOpen(false);setSculptMode(null)}}/>}
+     onFitSite={fitSite}/>,terrainHost)}
    {!terrainOpen&&selection&&!onSelect&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
      <div className="flex justify-between gap-2"><strong>BIM · {selection.category}</strong><button onClick={()=>setSelection(null)} aria-label="Close BIM inspector">×</button></div>
      <p className="mt-1 break-all font-mono text-sky-200">{selection.designId}</p>

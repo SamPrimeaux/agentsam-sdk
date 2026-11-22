@@ -3,6 +3,9 @@ import {CadInspectorSource} from './CadInspectorSource';
 import {WALL_MATERIALS,defaultWallAssembly,wallAssemblyTotal,validateWallAssembly,cloneAssembly} from '../lib/cad/wall-assemblies';
 import {CadPerformancePanel} from './CadPerformancePanel';
 import {NativeSolidPanel} from './NativeSolidPanel';
+import {InspectorPicker,StudioGlyph,StudioCommandItem,StudioCommandMenu,StudioToolButton} from '@inneranimalmedia/agentsam-workbench/shell';
+import {cadInspectorFamilies,type CadInspectorFamily} from './cad-inspector-families';
+import {useWorldView} from '../lib/world-view-store';
 import {WorldViewSection} from './WorldViewSection';
 import {KIT, chooseKitTool, isKitActive, viewerSafe, type Group, type MenuId} from './sketch-kit-catalog';
 import {QuickAddMenu, type QuickAddEntry, type QuickAddItem} from './quick-add';
@@ -17,6 +20,9 @@ import {Layers3, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen,
  BrickWall, AppWindow, RectangleHorizontal, PenTool, LayoutPanelLeft, History, Download, Save, Sofa} from 'lucide-react';
 import './engineering-workbench.css';
 import {patchSceneElement} from '../lib/scene-document';
+import {SidePanel} from '@inneranimalmedia/agentsam-workbench/shell';
+import {CadLightingPanel} from './CadLightingPanel';
+import {PbrFinishControls,PbrMaterialPicker} from './PbrMaterialPicker';
 
 export type CadElementGroup = 'walls'|'doors'|'windows'|'rooms'|'furniture'|'parametricObjects'|'sceneElements';
 export type CadElementSelection = {group:CadElementGroup;id:string}|null;
@@ -46,7 +52,7 @@ export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInve
   objects:project.walls.length+project.doors.length+project.windows.length+project.rooms.length+project.furniture.length+(project.parametricObjects?.length||0)+(project.sceneElements?.length||0),
   groups:data.filter(g=>g.entries.length).length,
  }),[project,data]);
- return <aside className="cad-work-pane" aria-label="CAD project explorer">
+ return <SidePanel className="cad-work-pane" ariaLabel="CAD project explorer">
   <header className="cad-pane-head"><span><Layers3 size={16}/> Objects</span>
    <button aria-label="Hide project explorer" title="Hide project explorer" onClick={onClose}><PanelLeftClose size={17}/><span className="cad-focus-help">Hide project explorer</span></button></header>
   <label className="cad-tree-search"><Search size={15}/><input aria-label="Filter project objects" value={filter}
@@ -78,7 +84,7 @@ export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInve
   })}
   </div>
   <footer className="cad-pane-note">{sceneInventory ? 'Scene inspection only. Editing requires the reconciled FreeCAD/IFC document.' : `${totals.groups} groups · select an element to edit document properties.`}</footer>
- </aside>;
+ </SidePanel>;
 }
 
 function Numeric({label,value,onCommit,min,unit='in'}:{
@@ -90,13 +96,22 @@ function Numeric({label,value,onCommit,min,unit='in'}:{
    onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&(min==null||n>=min)&&n!==value)onCommit(n);else e.target.value=String(value)}}/>
    <small>{unit}</small></div></label>;
 }
-export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,sourceRequest}:{
+export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,sourceRequest,onTerrainHost,onTimeline,onSimulation,onResizeEnd,familyRequest}:{
  project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onChange:Update;
- onClose:()=>void;readOnly:boolean;onReview?:()=>void;sourceRequest?:number
+ onClose:()=>void;readOnly:boolean;onReview?:()=>void;familyRequest?:{id:CadInspectorFamily};sourceRequest?:number;onTimeline?:()=>void;onSimulation?:()=>void;onResizeEnd?:(node:HTMLElement)=>void;onTerrainHost?:(node:HTMLDivElement|null)=>void
 }) {
- const [tab,setTab]=useState<'object'|'project'|'scene'|'source'>('object');
- React.useEffect(()=>{if(selection)setTab('object')},[selection?.group,selection?.id]);
+ const [tab,setTab]=useState<CadInspectorFamily>(selection?'object':'project');
+ const world=useWorldView();
+ React.useEffect(()=>{setTab(selection?'object':'project')},[selection?.group,selection?.id]);
  React.useEffect(()=>{if(sourceRequest)setTab('source')},[sourceRequest]);
+ React.useEffect(()=>{if(familyRequest)setTab(familyRequest.id)},[familyRequest]);
+ const sceneSettings=project.sceneSettings??{};
+ const fog=sceneSettings.fog??{enabled:sceneSettings.sky??true,near:260,far:1150};
+ const setFog=(patch:Partial<typeof fog>)=>{
+  const next={...fog,...patch};
+  if(next.near<0||next.far<=next.near){setOperationError('Fog end must be farther than fog start.');return}
+  setOperationError(null);onChange(previous=>({...previous,sceneSettings:{...previous.sceneSettings,fog:next}}));
+ };
  const patchLighting=(updates:Partial<ProjectState['lighting']>)=>onChange(p=>({...p,lighting:{...p.lighting,...updates}}));
  const [operationError,setOperationError]=useState<string|null>(null);
  const record=(selection&&(project[selection.group]||[]).find(x=>x.id===selection.id)) as unknown as (Record<string, unknown> & {id:string})|null;
@@ -121,11 +136,15 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
  const paramDefs:ParametricParameterDef[]=parametric?.parameterDefs?.length?parametric.parameterDefs:
   Object.entries(parametric?.parameters||{}).map(([name,value])=>({name,label:name,type:typeof value==='number'?'number':typeof value==='boolean'?'boolean':'string',value}));
 
+ const updateSceneElement=(updates:Partial<import('@inneranimalmedia/agentsam-cad-shared').CadSceneElement>)=>{
+  if(selection?.group!=='sceneElements')return;
+  try{const next=patchSceneElement(project,selection.id,updates);setOperationError(null);onChange(()=>next);}
+  catch(error){setOperationError(error instanceof Error?error.message:String(error))}
+ };
  const update=(key:string,value:unknown)=>{
   if(!selection)return;
   if(selection.group==='sceneElements'){
-    try{const next=patchSceneElement(project,selection.id,{[key]:value});setOperationError(null);onChange(()=>next);}
-    catch(error){setOperationError(error instanceof Error?error.message:String(error))}
+    updateSceneElement({[key]:value});
     return;
   }
   const mapping={
@@ -171,15 +190,26 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
  };
  const num=(label:string,key:string,min?:number,unit='in')=>record&&typeof record[key as keyof typeof record]==='number'?
   <Numeric key={key} label={label} value={Number(record[key])} min={min} unit={unit} onCommit={n=>update(key,n)}/>:null;
- return <aside className="cad-work-pane cad-properties" aria-label="CAD inspector">
+ return <SidePanel className="cad-work-pane cad-properties" onPointerUp={event=>onResizeEnd?.(event.currentTarget)} ariaLabel="CAD inspector">
   <header className="cad-pane-head"><span><SlidersHorizontal size={16}/> Properties</span>
    <button aria-label="Hide property inspector" title="Hide property inspector" onClick={onClose}><PanelRightClose size={17}/><span className="cad-focus-help">Hide property inspector</span></button></header>
-  <div className="cad-pane-tabs" role="tablist" aria-label="Inspector">
-   {(['object','project','scene','source'] as const).map(view=><button key={view} role="tab" aria-selected={tab===view}
-    className={tab===view?'active':''} onClick={()=>setTab(view)}>{view[0].toUpperCase()+view.slice(1)}</button>)}</div>
-  <div className="cad-property-scroll">{readOnly&&<p role="status" className="cad-inspector-readonly">This revision is view-only. Open the current verified project with write access to edit and save scene changes. Native BIM geometry must be changed through an authorized CAD modeling operation.</p>}{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='source'?<CadInspectorSource project={project} selection={selection} onChange={onChange} readOnly={readOnly}/>:<>{tab==='scene'&&<WorldViewSection/>}<fieldset disabled={readOnly}>
-  {tab==='scene'?project.sceneSource?<p className="cad-property-help">View, lighting and site controls save with this project revision.</p>:
-  <><h4>Environment & lighting</h4>
+  <InspectorPicker<CadInspectorFamily> families={cadInspectorFamilies} value={tab} onChange={setTab}/>
+  <div className="cad-property-scroll">{readOnly&&<p role="status" className="cad-inspector-readonly">This revision is view-only. Open the current verified project with write access to edit and save scene changes. Native BIM geometry must be changed through an authorized CAD modeling operation.</p>}{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='source'?<CadInspectorSource project={project} selection={selection} onChange={onChange} readOnly={readOnly}/>:<>{(tab==='camera'||tab==='lighting'||tab==='environment'||tab==='rendering')&&<WorldViewSection family={tab}/>}
+  {tab==='simulation'&&<><p className="cad-property-help">Run robot kinematics and physics in the MuJoCo workspace.</p><button type="button" className="cad-clear-selection" onClick={onSimulation}>Open robotics simulation</button></>}
+  {tab==='motion'&&<button type="button" className="cad-clear-selection" onClick={onTimeline}>Open camera timeline</button>}
+  <fieldset disabled={readOnly}>
+  {tab==='motion'?null:tab==='analysis'?<CadProjectTakeoff project={project}/>:
+   tab==='terrain'?world.canEditSite?<div ref={onTerrainHost}/>:<p className="cad-property-help">Terrain editing requires a writable site in the 3D viewport.</p>:
+   tab==='simulation'?null:
+   tab==='environment'&&world.kind==='world'&&world.ready?<><h4>Distance fog</h4>
+     <label className="cad-property"><span>Enable fog</span><input type="checkbox" checked={fog.enabled} onChange={e=>setFog({enabled:e.target.checked})}/></label>
+     <Numeric label="Fog start" unit="m" min={0} value={fog.near} onCommit={near=>setFog({near})}/>
+     <Numeric label="Fog end" unit="m" min={0} value={fog.far} onCommit={far=>setFog({far})}/></>:
+   tab==='lighting'&&world.kind==='world'&&world.ready?<><CadLightingPanel lights={sceneSettings.lights??[]}
+     change={edit=>onChange(previous=>({...previous,sceneSettings:{...previous.sceneSettings,lights:edit(previous.sceneSettings?.lights??[])}}))}/>
+     <Numeric label="Shadow bias" unit="" value={sceneSettings.shadowBias??-.0002}
+     onCommit={value=>onChange(previous=>({...previous,sceneSettings:{...previous.sceneSettings,shadowBias:Math.max(-.1,Math.min(.1,value))}}))}/></>:
+   tab==='lighting'&&!project.sceneSource?<>
    <label className="cad-property"><span>Time of day</span><select aria-label="Scene time of day" value={project.lighting.timeOfDay} onChange={e=>patchLighting({timeOfDay:e.target.value as ProjectState['lighting']['timeOfDay']})}>
     {(['morning','noon','sunset','night'] as const).map(v=><option key={v} value={v}>{v[0].toUpperCase()+v.slice(1)}</option>)}</select></label>
    <Numeric label="Sun intensity" unit="×" min={0.2} value={project.lighting.intensity} onCommit={n=>patchLighting({intensity:Math.min(2,n)})}/>
@@ -187,12 +217,13 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
    <Numeric label="Sun azimuth" unit="°" min={0} value={project.lighting.sunAzimuth} onCommit={n=>patchLighting({sunAzimuth:Math.min(360,n)})}/>
    <label className="cad-property"><span>Shadows</span><input aria-label="Scene shadows" type="checkbox" checked={project.lighting.shadows} onChange={e=>patchLighting({shadows:e.target.checked})}/></label>
    <label className="cad-property"><span>Ambient color</span><input aria-label="Scene ambient color" type="color" value={/^#[0-9a-f]{6}$/i.test(project.lighting.ambientColor)?project.lighting.ambientColor:'#ffffff'} onChange={e=>patchLighting({ambientColor:e.target.value})}/></label>
-   <h4>Building envelope</h4>
+  </>:tab==='environment'&&!project.sceneSource?<><h4>Building envelope</h4>
    <label className="cad-property"><span>Roof profile</span><select aria-label="Roof profile" value={project.roofType} onChange={e=>onChange(p=>({...p,roofType:e.target.value as ProjectState['roofType']}))}>
     <option value="none">No roof</option><option value="flat">Flat</option><option value="gable">Gable</option></select></label>
    <p className="cad-property-help">Scene changes live in the current CAD project and participate in its undo and save history.</p>
   </>:
-  tab==='project'||!selection||!record?
+  ['environment','lighting','rendering','camera'].includes(tab)?null:
+  tab==='project'?
   <><h4>Document</h4>
    <label className="cad-property"><span>Project name</span><input aria-label="Project name" value={project.name} onChange={e=>onChange(p=>({...p,name:e.target.value}))}/></label>
    <Numeric label="Grid spacing" value={project.gridSize} min={1} onCommit={n=>onChange(p=>({...p,gridSize:n}))}/>
@@ -201,34 +232,50 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
     onChange={e=>onChange(p=>({...p,snapToGrid:e.target.checked}))}/></label>
    <h4>Composition</h4>
    {groups(project).map(g=><div className="cad-property-summary" key={g.id}><span>{g.title}</span><b>{g.entries.length}</b></div>)}
-   <CadProjectTakeoff project={project}/>
+
   </>:
+  !selection||!record?<p className="cad-property-help">Select an element in the viewport or hierarchy.</p>:
+  tab==='geometry'&&selection.group==='sceneElements'?<>
+    <h4>Source bounds</h4>
+    {(['X','Y','Z'] as const).map((axis,index)=>{
+      const bounds=(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').CadSceneElement).bounds;
+      return <div className="cad-property-summary" key={axis}><span>{axis} extent</span><b>{(bounds.max[index]-bounds.min[index]).toFixed(3)} m</b></div>
+    })}
+    <button type="button" className="cad-clear-selection" onClick={()=>setTab('source')}>Inspect source binding</button>
+  </>:
+  tab==='bim'&&!['walls','doors','windows','rooms'].includes(selection.group)?<p className="cad-property-help">Select a native wall, opening or space to inspect building properties.</p>:
+  tab==='materials'&&!['walls','rooms','sceneElements','furniture'].includes(selection.group)?<p className="cad-property-help">This element has no editable finish.</p>:
   <><div className="cad-inspected-id"><small>{selection.group}</small><strong>{record.id}</strong></div>
    {selection.group==='sceneElements'&&<>
-    <h4>Scene element</h4>
+{tab==='object'&&<>     <h4>Scene element</h4>
     <label className="cad-property"><span>Name</span><input aria-label="Element name" value={String(record.name)} onChange={event=>update('name',event.target.value)}/></label>
     <label className="cad-property"><span>Visible</span><input aria-label="Element visible" type="checkbox" checked={Boolean(record.visible)} onChange={event=>update('visible',event.target.checked)}/></label>
     <h4>Placement · metres</h4>
     {(['X','Y','Z'] as const).map((axis,index)=><Numeric key={axis} label={'Offset '+axis} unit="m" value={(record.offset as number[])[index]}
       onCommit={value=>{const offset=[...(record.offset as number[])];offset[index]=value;update('offset',offset)}}/>)}
     <Numeric label="Vertical rotation" unit="°" value={Number(record.rotation)} onCommit={value=>update('rotation',value)}/>
-    <h4>Finish</h4>
-    <label className="cad-property"><span>Color override</span><input aria-label="Element finish color" type="color" value={String(record.color||'#cccccc')} onChange={event=>update('color',event.target.value)}/></label>
-    <button className="cad-clear-selection" type="button" disabled={!record.color} onClick={()=>update('color',undefined)}>Restore source material color</button>
-    <h4>Review note</h4>
+</>}{tab==='materials'&&<>     <PbrMaterialPicker value={String(record.materialPresetId||'')} disabled={readOnly}
+      onChange={value=>updateSceneElement({materialPresetId:value,finish:undefined,...(!value?{color:undefined}:{})})}/>
+    {Boolean(record.materialPresetId)&&<PbrFinishControls presetId={String(record.materialPresetId)}
+      finish={record.finish as import('@inneranimalmedia/agentsam-cad-shared').CadFinishSettings|undefined}
+      onChange={finish=>updateSceneElement({finish})}/>}
+    {!record.materialPresetId&&<label className="cad-property"><span>Color override</span><input aria-label="Element finish color" type="color" value={String(record.color||'#cccccc')} onChange={event=>update('color',event.target.value)}/></label>}
+</>}{tab==='object'&&<>     <h4>Review note</h4>
     <textarea aria-label="Element review note" rows={3} maxLength={2000} value={String(record.note||'')} onChange={event=>update('note',event.target.value)}/>
     <button className="cad-clear-selection" type="button" onClick={()=>window.dispatchEvent(new CustomEvent('cad:frame-element',{detail:record.id}))}>Frame selected element</button>
     {onReview&&<button className="cad-clear-selection" type="button" onClick={onReview}>Sketch a fix for this element</button>}
     <h4>Source binding</h4>
     <p className="cad-property-help">{String(record.category)} · {String(record.source)}</p>
     <p className="cad-property-help">Placement and finish edits save with this project. Native BIM dimensions are changed through the modeling operation.</p>
-   </>}
-   {selection.group==='walls'&&<><h4>Wall geometry</h4>{num('Start X','x1')}{num('Start Y','y1')}
+</>}   </>}
+   {selection.group==='walls'&&<>{(tab==='geometry'||tab==='object')&&<> <h4>Wall geometry</h4>{num('Start X','x1')}{num('Start Y','y1')}
     {num('End X','x2')}{num('End Y','y2')}{!record.assembly&&num('Thickness','thickness',0.1)}{num('Height','height3D',1)}
-    {!record.assembly&&<label className="cad-property"><span>Material</span><select value={String(record.material)} onChange={e=>update('material',e.target.value as WallMaterial)}>
+</>}{tab==='materials'&&<>     {!record.assembly&&<label className="cad-property"><span>Material</span><select disabled={Boolean(record.materialPresetId)} value={String(record.material)} onChange={e=>update('material',e.target.value as WallMaterial)}>
      {['drywall','brick','concrete','glass','wood_panel','steel'].map(v=><option key={v} value={v}>{v.replace('_',' ')}</option>)}</select></label>}
-    <label className="cad-property"><span>Finish color</span><input type="color" aria-label="Wall finish color" value={typeof record.color==='string'&&/^#[0-9a-f]{6}$/i.test(record.color)?record.color:'#cccccc'} onChange={e=>update('color',e.target.value)}/></label>
-    <label className="cad-property"><span>Exterior</span><input type="checkbox" checked={!!record.exterior} onChange={e=>update('exterior',e.target.checked)}/></label>
+    { !record.materialPresetId && <label className="cad-property"><span>Finish color</span><input type="color" aria-label="Wall finish color" value={typeof record.color==='string'&&/^#[0-9a-f]{6}$/i.test(record.color)?record.color:'#cccccc'} onChange={e=>update('color',e.target.value)}/></label> }
+    <PbrMaterialPicker value={String(record.materialPresetId||'')} disabled={readOnly} onChange={value=>update('materialPresetId',value)}/>
+    {record.materialPresetId&&<p className="cad-property-help">The selected PBR finish supplies the wall's base color and surface maps. Clear it to restore the custom finish color.</p>}
+</>}{tab==='bim'&&<>     <label className="cad-property"><span>Exterior</span><input type="checkbox" checked={!!record.exterior} onChange={e=>update('exterior',e.target.checked)}/></label>
     <h4>BIM construction assembly</h4>
     <label className="cad-property"><span>Assembly name</span><input aria-label="Wall assembly name" value={defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).name}
       onChange={e=>patchAssembly({...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement),name:e.target.value})}/></label>
@@ -248,27 +295,31 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
     <button className="cad-clear-selection" type="button" onClick={()=>patchAssembly({...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement),layers:[...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).layers,{id:'layer-'+Date.now(),name:'New layer',material:'wood_panel',thickness:0.5}]})}>+ Add material layer</button>
     <div className="cad-property-summary"><span>Assembly total</span><b>{wallAssemblyTotal(defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement))} in</b></div>
     <p className="cad-property-help">Layer metadata is saved with this wall. The native solid uses the summed wall thickness; individual ply solids are not yet evaluated.</p>
-    </>}
+</>}    </>}
    {selection.group==='doors'&&<><h4>Opening</h4>{num('Width','width',1)}{num('Height','height',1)}
     {num('Position on wall','distanceAlongWall',0,'ratio')}
     {num('Open angle','openAngle',0,'°')}
     <label className="cad-property"><span>Swing</span><select value={String(record.swing)} onChange={e=>update('swing',e.target.value)}>{['left','right','sliding','double','pocket'].map(v=><option key={v}>{v}</option>)}</select></label>
     <p className="cad-property-help">Host wall: {String(record.wallId)}</p></>}
-   {selection.group==='windows'&&<><h4>Opening</h4>{num('Width','width',1)}{num('Height','height',1)}
+   {selection.group==='windows'&&<><h4>Opening</h4><p className="cad-property-help">Host wall · {String(record.wallId)}</p>{num('Width','width',1)}{num('Height','height',1)}
     {num('Sill elevation','elevation',0)}{num('Position on wall','distanceAlongWall',0,'ratio')}
     <label className="cad-property"><span>Style</span><select value={String(record.style)} onChange={e=>update('style',e.target.value)}>{['casement','sliding','picture','hung'].map(v=><option key={v}>{v}</option>)}</select></label></>}
-   {selection.group==='rooms'&&<><h4>Space</h4><label className="cad-property"><span>Room name</span><input value={String(record.name)} onChange={e=>update('name',e.target.value)}/></label>
-    <label className="cad-property"><span>Floor material</span><select value={String(record.floorMaterial)} onChange={e=>update('floorMaterial',e.target.value)}>
+   {selection.group==='rooms'&&<>{(tab==='object'||tab==='bim')&&<> <h4>Space</h4><label className="cad-property"><span>Room name</span><input value={String(record.name)} onChange={e=>update('name',e.target.value)}/></label>
+</>}{tab==='materials'&&<>     <label className="cad-property"><span>Floor material</span><select disabled={Boolean(record.floorMaterialPresetId)} value={String(record.floorMaterial)} onChange={e=>update('floorMaterial',e.target.value)}>
      {['hardwood','marble','tile','polished_concrete','carpet','terrazzo'].map(v=><option key={v} value={v}>{v.replaceAll('_',' ')}</option>)}</select></label>
-    <label className="cad-property"><span>Floor color</span><input type="color" aria-label="Space floor color" value={String(record.color||'#aaaaaa')} onChange={e=>update('color',e.target.value)}/></label>
-    <div className="cad-property-summary"><span>Recorded area</span><b>{String(record.areaSqFt)} ft²</b></div></>}
-   {selection.group==='furniture'&&<><h4>Fixture placement</h4>
+    {!record.floorMaterialPresetId&&<label className="cad-property"><span>Floor color</span><input type="color" aria-label="Space floor color" value={String(record.color||'#aaaaaa')} onChange={e=>update('color',e.target.value)}/></label>}
+    <PbrMaterialPicker value={String(record.floorMaterialPresetId||'')} label="Floor PBR library" disabled={readOnly} onChange={value=>update('floorMaterialPresetId',value)}/>
+    {record.floorMaterialPresetId&&<p className="cad-property-help">The selected PBR finish supplies the floor's base color and surface maps. Clear it to restore the custom floor color.</p>}
+</>}    <div className="cad-property-summary"><span>Recorded area</span><b>{String(record.areaSqFt)} ft²</b></div></>}
+   {selection.group==='furniture'&&<>{(tab==='geometry'||tab==='object')&&<> <h4>Fixture placement</h4>
     <label className="cad-property"><span>Name</span><input aria-label="Fixture name" value={String(record.name)} onChange={e=>update('name',e.target.value)}/></label>
     {num('X','x')}{num('Y','y')}
     {num('Width','w',0.1)}{num('Depth','d',0.1)}{num('Height','h',0.1)}{num('Rotation','rotation',undefined,'°')}
-    <h4>Material & finish</h4>
-    <label className="cad-property"><span>Finish color</span><input aria-label="Fixture color" type="color" value={String(record.color||'#aaaaaa')} onChange={e=>update('color',e.target.value)}/></label>
-    <label className="cad-property"><span>Material</span><input aria-label="Fixture material" value={String(record.material||'')} onChange={e=>update('material',e.target.value)}/></label></>}
+</>}{tab==='materials'&&<>     <h4>Material & finish</h4>
+    {!record.materialPresetId&&<label className="cad-property"><span>Finish color</span><input aria-label="Fixture color" type="color" value={String(record.color||'#aaaaaa')} onChange={e=>update('color',e.target.value)}/></label>}
+    <label className="cad-property"><span>Material</span><input aria-label="Fixture material" disabled={Boolean(record.materialPresetId)} value={String(record.material||'')} onChange={e=>update('material',e.target.value)}/></label>
+    <PbrMaterialPicker value={String(record.materialPresetId||'')} label="Fixture PBR library" disabled={readOnly} onChange={value=>update('materialPresetId',value)}/>
+    {record.materialPresetId&&<p className="cad-property-help">The selected PBR finish supplies the fixture's base color and surface maps. Clear it to restore the custom finish color.</p>}</>}</>}
    {selection.group==='parametricObjects'&&parametric&&<><h4>Parametric feature</h4>
     <div className="cad-property-summary"><span>Generator</span><b>{String(record.generator)}</b></div>
     <h4>Placement</h4>
@@ -289,13 +340,13 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
      </label>;
     }):<p className="cad-property-help">This feature has no editable generator parameters in the project.</p>}
     <p className="cad-property-help">Parameters are applied to the canonical generator recipe. Use Parametric tools to edit source code and regenerate artifacts.</p></>}
-   {selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection" onClick={()=>setTab('source')}>Edit selected element source</button>}
-   {(['walls','doors','windows'].includes(selection.group))&&<NativeSolidPanel project={project} elementId={selection.group==='walls'?selection.id:String(record.wallId)}/>}
-   {selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection cad-delete-element" onClick={deleteSelection}>Delete selected element</button>}
+   {tab==='object'&&selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection" onClick={()=>setTab('source')}>Edit selected element source</button>}
+   {tab==='geometry'&&(['walls','doors','windows'].includes(selection.group))&&<NativeSolidPanel project={project} elementId={selection.group==='walls'?selection.id:String(record.wallId)}/>}
+   {tab==='object'&&selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection cad-delete-element" onClick={deleteSelection}>Delete selected element</button>}
    <button type="button" className="cad-clear-selection" onClick={()=>onSelect(null)}>Clear selection</button></>}
   </fieldset></>}</div>
-  <footer className="cad-pane-note">Edits use the current project, undo history, and save workflow.</footer>
- </aside>;
+
+ </SidePanel>;
 }
 /** One typed tool contract for shortcuts, compact toolbar and advanced disclosure. */
 export const CAD_STUDIO_TOOLS:{id:ActiveTool;label:string;shortcut:string;tier:1|2;icon:React.ComponentType<{size?:number}>}[]=[
@@ -308,14 +359,14 @@ export const CAD_STUDIO_TOOLS:{id:ActiveTool;label:string;shortcut:string;tier:1
  {id:'eraser',label:'Erase',shortcut:'E',tier:2,icon:Eraser},
  {id:'pan',label:'Pan',shortcut:'H',tier:2,icon:Hand}
 ];
-export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric,onSketch,onOpenSolid,onPlaceStock,onOpenScene}:{
+export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric,onSketch,onOpenSolid,onPlaceStock,onOpenScene,onOpenFamily,onTimeline}:{
  tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model'|'robotics')=>void;
  planLayout:'2d'|'split';onPlanLayout:(v:'2d'|'split')=>void;readOnly:boolean;
  onNew:()=>void;onTemplates:()=>void;onExport:()=>void;onToggleExplorer:()=>void;onToggleInspector:()=>void;
  explorerOpen:boolean;inspectorOpen:boolean;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onSketch:()=>void;onOpenSolid?:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
+ studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onSketch:()=>void;onOpenFamily?:(id:CadInspectorFamily)=>void;onTimeline?:()=>void;onOpenSolid?:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
@@ -333,18 +384,19 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
   document.addEventListener('keydown',onEscape);
   return ()=>{root.removeEventListener('toggle',onToggle,true);document.removeEventListener('pointerdown',onOutside,true);document.removeEventListener('keydown',onEscape)};
  },[]);
- const button=(label:string,icon:React.ReactNode,handler:()=>void,active=false,disabled=false)=><button
-  type="button" aria-label={label} title={label} aria-pressed={active} className={active?'active':''}
-  disabled={disabled} onClick={handler}>{icon}</button>;
-
- const menu=(label:string,icon:React.ReactNode,items:React.ReactNode,active=false)=><details className="cad-toolbar-menu cad-tool-menu">
-  <summary aria-label={label} title={label} className={active?'active':''}>{icon}<ChevronDown size={11} className="cad-menu-caret"/></summary>
-  <div className="cad-toolbar-popover" role="group" aria-label={label}>{items}</div></details>;
- const item=(icon:React.ReactNode,label:string,run:()=>void,opts:{active?:boolean;disabled?:boolean;kbd?:string}={})=><button type="button" key={label}
-  aria-pressed={opts.active} disabled={opts.disabled} onClick={e=>{run();e.currentTarget.closest('details')?.removeAttribute('open')}}>{icon}{label}{opts.kbd&&<kbd>{opts.kbd}</kbd>}</button>;
- const direct=(id:ActiveTool)=>{const t=CAD_STUDIO_TOOLS.find(x=>x.id===id)!;
-  return <button key={id} type="button" title={`${t.label} (${t.shortcut})`} aria-label={`${t.label} (${t.shortcut})`} aria-pressed={tool===id}
-   className={tool===id?'active':''} disabled={readOnly&&!['select','measure','pan'].includes(id)} onClick={()=>onTool(id)}><t.icon size={17}/><span className="cad-focus-help">{t.label} ({t.shortcut})</span></button>};
+ const button=(label:string,icon:React.ReactNode,handler:()=>void,active=false,disabled=false)=>
+  <StudioToolButton label={label} icon={icon} onRun={handler} active={active} disabled={disabled}/>;
+ const menu=(label:string,icon:React.ReactNode,children:React.ReactNode,active=false)=>
+  <StudioCommandMenu label={label} icon={icon} active={active} className="cad-toolbar-menu cad-tool-menu" popoverClassName="cad-toolbar-popover">{children}</StudioCommandMenu>;
+ const item=(icon:React.ReactNode,label:string,onRun:()=>void,opts:{active?:boolean;disabled?:boolean;kbd?:string}={})=>
+  <StudioCommandItem key={label} icon={icon} label={label} onRun={onRun} active={opts.active} disabled={opts.disabled} shortcut={opts.kbd}/>;
+ const direct=(id:ActiveTool)=>{
+  const entry=CAD_STUDIO_TOOLS.find(candidate=>candidate.id===id)!;
+  const label=`${entry.label} (${entry.shortcut})`;
+  return <StudioToolButton key={id} label={label} icon={<entry.icon size={17}/>} active={tool===id}
+    disabled={readOnly&&!['select','measure','pan'].includes(id)} onRun={()=>onTool(id)}>
+    <span className="cad-focus-help">{label}</span></StudioToolButton>;
+ };
  const draft=workspace==='plan'&&studioView==='edit';
 
  const kit=useKit();
@@ -362,14 +414,24 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
   window.addEventListener('keydown',keys);return()=>window.removeEventListener('keydown',keys);
  },[onTool,workspace,studioView,readOnly]);
 
- const quickAddGroups:QuickAddEntry[][]=[
-  KIT.filter(k=>(k.live||k.place)&&k.menus.includes('create')&&k.group==='Draw').map(k=>({id:k.id,label:k.label,icon:<k.icon size={16}/>,kbd:k.key,
-   active:isKitActive(k,tool,kit.tool),disabled:(readOnly&&!viewerSafe(k))||(!!k.place&&!onStock),run:()=>chooseKitTool(k,onTool,onStock)})),
-  [...(onOpenSolid ? [{id:'occt-box',label:'Box · native solid',icon:<Box size={16}/>,disabled:readOnly,run:onOpenSolid}] : []),
-   {id:'native-sketch',label:'Native sketch · lines and rectangles',icon:<PencilRuler size={16}/>,disabled:readOnly,run:onSketch},
-   {id:'stock',label:'Stock · architectural assets',icon:<Box size={16}/>,run:()=>onStock()},
-   {id:'parametric',label:'Parametric parts · Libraries',icon:<PencilRuler size={16}/>,run:onParametric}],
-  [{id:'blank',label:'Blank project',icon:<Plus size={16}/>,disabled:readOnly,run:onNew}],
+ const quickAddGroups:{label:string;entries:QuickAddEntry[]}[]=[
+  {label:'Common',entries:[{id:'blank',label:'Blank project',icon:<Plus size={16}/>,disabled:readOnly,run:onNew}]},
+  {label:'Geometry & Drawing',entries:[
+    {id:'native-sketch',label:'Native sketch',icon:<PencilRuler size={16}/>,disabled:readOnly,run:onSketch},
+    ...(onOpenSolid?[{id:'occt-box',label:'Native solid · box',icon:<Box size={16}/>,disabled:readOnly,run:onOpenSolid}]:[])
+  ]},
+  {label:'Architecture & Engineering',entries:[
+    ...KIT.filter(entry=>entry.live&&entry.group==='Draw'&&entry.menus.includes('2d')).map(entry=>({
+      id:entry.id,label:entry.label,icon:<entry.icon size={16}/>,kbd:entry.key,disabled:readOnly,
+      run:()=>{onViewportMode('2d');chooseKitTool(entry,onTool,onStock)}
+    })),
+    {id:'stock',label:'Place architectural fixture',icon:<Sofa size={16}/>,disabled:readOnly,run:onStock},
+    {id:'parametric',label:'Parametric parts library',icon:<Blocks size={16}/>,run:onParametric}
+  ]},
+  {label:'Scene & Presentation',entries:[
+    ...(onOpenFamily?[{id:'camera',label:'Camera views',icon:<StudioGlyph name="camera"/>,run:()=>onOpenFamily('camera')}]:[]),
+    ...(onTimeline?[{id:'sequence',label:'Camera sequence',icon:<StudioGlyph name="play"/>,run:onTimeline}]:[])
+  ]}
  ];
  const pickQuickObject=(item:QuickAddItem)=>{
   const s=item.specs||{};
@@ -398,7 +460,10 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
    {button('Properties / contextual inspector',<PanelRightOpen size={18}/>,onToggleInspector,inspectorOpen)}
   </div>
   <div className="cad-tool-cluster cad-direct-tools" aria-label="Pointer tools">
-   {draft&&(['select','pan','wall','room','door','window','measure','eraser'] as ActiveTool[]).map(direct)}
+   {draft&&(['select','pan'] as ActiveTool[]).map(direct)}
+   {draft&&menu('Draw',<PencilRuler size={17}/>,kitItems('2d',['Draw','Annotate','Place']))}
+   {draft&&direct('measure')}
+   {draft&&direct('eraser')}
   </div>
   {studioView==='edit'&&<div className="cad-tool-cluster cad-create-tools" aria-label="Create objects">
    <QuickAddMenu label="Create · templates, parts, stock, project" groups={quickAddGroups}

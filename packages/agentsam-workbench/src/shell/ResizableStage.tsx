@@ -8,6 +8,10 @@ export interface ResizableStageHandleProps {
   onDrag: (deltaPx: number) => void;
   onDoubleClick?: () => void;
   label: string;
+  title?: string;
+  value?: number;
+  min?: number;
+  max?: number;
   className?: string;
   bodyResizeAttribute?: string;
   bodyHoverAttribute?: string;
@@ -24,6 +28,10 @@ export function ResizableStageHandle({
   onDrag,
   onDoubleClick,
   label,
+  title,
+  value,
+  min = 0,
+  max = 100,
   className,
   bodyResizeAttribute,
   bodyHoverAttribute,
@@ -47,8 +55,10 @@ export function ResizableStageHandle({
       role="separator"
       aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
       aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
+      title={title}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value === undefined ? undefined : Math.max(min, Math.min(max, value))}
       tabIndex={0}
       data-separator={state}
       data-axis={axis}

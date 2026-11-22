@@ -16,6 +16,20 @@ describe('one project scene document',()=>{
   expect(()=>reconcileSceneElements(edited,{...source,contentHash:'b'.repeat(64)},[element])).toThrow('source changed');
   expect(sceneReviewContext(edited,'door').element?.note).toBe('Widen this opening');
  });
+ it('persists registered PBR material assignments across scene reconciliation and rejects unknown presets',()=>{
+  const project=reconcileSceneElements(createEmptyCadProject(),source,[element]);
+  const edited=patchSceneElement(project,'door',{materialPresetId:'pbr-brushed-gold'});
+  expect(edited.sceneElements?.[0].materialPresetId).toBe('pbr-brushed-gold');
+  expect(reconcileSceneElements(edited,source,[element]).sceneElements?.[0].materialPresetId).toBe('pbr-brushed-gold');
+  expect(()=>patchSceneElement(project,'door',{materialPresetId:'made-up-material'})).toThrow('registered PBR material');
+ });
+ it('keeps element finish parameters through scene reconciliation and rejects invalid values',()=>{
+  const project=reconcileSceneElements(createEmptyCadProject(),source,[element]);
+  const finish={roughness:0.23,metalness:0.6,colorHex:'#3a5650'};
+  const edited=patchSceneElement(project,element.id,{materialPresetId:'pbr-brushed-gold',finish});
+  expect(reconcileSceneElements(edited,source,[element]).sceneElements?.[0].finish).toEqual(finish);
+  expect(()=>patchSceneElement(edited,element.id,{finish:{opacity:2}})).toThrow('Invalid finish parameter');
+ });
  it('updates every part of a shared DesignId in world metres and restores its original transform',()=>{
   const root=new THREE.Group();root.rotation.y=.4;
   for(const x of [0,4]){const mesh=new THREE.Mesh(new THREE.BoxGeometry(2,3,.2));mesh.position.x=x;mesh.userData.DesignId='door';root.add(mesh);}

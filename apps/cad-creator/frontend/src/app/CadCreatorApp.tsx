@@ -39,7 +39,10 @@ import { getPermissions } from '../lib/permissions';
 import { collaborationClient } from '../lib/socket';
 import { Canvas2D } from '../components/Canvas2D';
 import { Viewport3D } from '../components/Viewport3D';
-import {CadWorldViewport} from '../components/DreamHouseWorldViewport';
+import {savedDimension,rememberDimension} from '../lib/workbench-layout';
+import type {CadInspectorFamily} from '../components/cad-inspector-families';
+import {CadSequenceDock} from '../components/CadSequenceDock';
+import {CadWorldViewport} from '../components/CadWorldViewport';
 import {CadResourcesPane} from '../components/CadResourcesPane';
 import {cloneAssembly,validateWallAssembly,wallAssemblyTotal} from '../lib/cad/wall-assemblies';
 import { canEditHostedCadSelection, listHostedProjects, loadHostedProject, saveHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
@@ -53,6 +56,7 @@ import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge, type CadOutbound } from '../lib/agentsam-preview-bridge';
 import { MiniAgentSam } from '@inneranimalmedia/agentsam-workbench/agent';
+import {ResizableStageHandle} from '@inneranimalmedia/agentsam-workbench/shell';
 import '@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css';
 import { buildSelectionContext, verifiedSelectionRevision, type CadSelectionContext } from '../lib/cad/selection';
 import { useCadTools } from '../lib/execution/useCadTools';
@@ -192,14 +196,41 @@ export function CadCreatorApp({
   // 2. Workspace & Layout State
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(initialWorkspace === 'parametric' || initialWorkspace === 'render' ? 'model' : initialWorkspace);
   const [planLayout, setPlanLayout] = useState<'2d' | 'split'>('split');
-  const [splitRatio, setSplitRatio] = useState(50);
+  const [splitRatio, setSplitRatio] = useState(()=>savedDimension('split',50,25,75));
+  const [splitAxis,setSplitAxis]=useState<'x'|'y'>('x');
+  const stageRef=useRef<HTMLElement|null>(null);
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [explorerOpen, setExplorerOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
   const [inspectorOpen, setInspectorOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
   const [studioView,setStudioView]=useState<'preview'|'edit'>('edit');
+  const [leftWidth,setLeftWidth]=useState(()=>savedDimension('explorer',20,12,42));
+  const [rightWidth,setRightWidth]=useState(()=>savedDimension('properties',23,12,42));
+  const [simulationOpen,setSimulationOpen]=useState(false);
+  useEffect(()=>rememberDimension('split',splitRatio),[splitRatio]);
+  const rememberPanel=(node:HTMLElement,key:string,apply:(width:number)=>void)=>{
+    if(!node.style.width||!node.parentElement||window.matchMedia('(max-width: 920px)').matches)return;
+    const width=node.offsetWidth/node.parentElement.clientWidth*100;
+    if(Number.isFinite(width)&&width>0){rememberDimension(key,width);apply(width)}
+  };
+  const [timelineOpen,setTimelineOpen]=useState(false);
+  const [terrainHost,setTerrainHost]=useState<HTMLDivElement|null>(null);
+  const [familyRequest,setFamilyRequest]=useState<{id:CadInspectorFamily}>();
   const [sourceRequest,setSourceRequest]=useState(0);
   const [libraryPreferredSection,setLibraryPreferredSection]=useState<'assemblies'|'stock'|'parametric'|'openscad'>('assemblies');
   const [uiSelection, setUiSelection] = useState<CadElementSelection>(null);
+  useEffect(()=>{
+    const query=window.matchMedia('(max-width: 660px) and (orientation: portrait)');
+    const update=()=>setSplitAxis(query.matches?'y':'x');
+    update();
+    query.addEventListener('change',update);
+    return()=>query.removeEventListener('change',update);
+  },[]);
+  const resizeSplit=(deltaPx:number)=>{
+    const rect=stageRef.current?.getBoundingClientRect();
+    const extent=splitAxis==='y'?rect?.height:rect?.width;
+    if(!extent)return;
+    setSplitRatio(current=>Math.max(25,Math.min(75,current+deltaPx/extent*100)));
+  };
   // Embedded CAD starts with the model as the stage. Show one contextual drawer
   // only when the user selects an element or requests a panel.
   useEffect(() => {
@@ -304,9 +335,7 @@ export function CadCreatorApp({
 
   // Preload robotics when user hovers or selects robotics
   const handleSelectWorkspace = (wsId: WorkspaceId) => {
-    if (wsId === 'robotics') {
-      preloadRoboticsWorkspace();
-    }
+    setSimulationOpen(false);
     // Legacy 'parametric' prototype surface removed; real OCCT parametric objects live in the model workspace.
     setActiveWorkspace(wsId === 'parametric' ? 'model' : wsId);
   };
@@ -619,7 +648,17 @@ export function CadCreatorApp({
 
   return (
     <div data-appearance={isDarkMode ? 'dark' : 'light'} data-nav-theme={appearance.theme}
-      style={{'--cad-accent': cadAccent, '--nav-accent': appearance.accent} as React.CSSProperties}
+      style={{
+        '--cad-accent': cadAccent,
+        '--nav-accent': appearance.accent,
+        '--cad-surface': 'var(--color-card, var(--dashboard-canvas, #151c29))',
+        '--cad-ink': 'var(--dashboard-text, var(--color-foreground, #d9e2f1))',
+        '--cad-muted': 'var(--dashboard-text-muted, var(--color-muted-foreground, #97a4b7))',
+        '--cad-line': 'var(--dashboard-border, var(--color-border, #303b4b))',
+        '--cad-hover': 'var(--nav-selected, var(--color-muted, #293347))',
+        '--cad-input': 'var(--color-input, var(--color-card, #1c2636))',
+        '--cad-accent-ink': 'var(--nav-accent, var(--color-accent, #8cb9ff))',
+      } as React.CSSProperties}
       className={`as-nav-scope cad-workspace-ui relative flex flex-col h-full w-full min-w-0 min-h-0 font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {accessMode === 'hosted-project' && (
         <div className="cad-hosted-chrome" aria-label="Registered CAD project and revision">
@@ -674,7 +713,8 @@ export function CadCreatorApp({
           onToggleInspector={() => {if(window.matchMedia('(max-width: 660px)').matches&&!inspectorOpen)setExplorerOpen(false);setInspectorOpen(v => !v);}}
           explorerOpen={explorerOpen} inspectorOpen={inspectorOpen}
           studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else {handleSelectWorkspace('plan')}}}
-          onOpenSource={()=>{setStudioView('edit');setSourceRequest(n=>n+1);setInspectorOpen(true);if(activeWorkspace==='robotics')handleSelectWorkspace('model');if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}
+          onTimeline={()=>setTimelineOpen(true)} onOpenFamily={id=>{handleSelectWorkspace('model');setFamilyRequest({id});setInspectorOpen(true);if(window.matchMedia('(max-width:660px)').matches)setExplorerOpen(false)}}
+          onOpenSource={()=>{setFamilyRequest(undefined);setStudioView('edit');setSourceRequest(n=>n+1);setInspectorOpen(true);if(activeWorkspace==='robotics')handleSelectWorkspace('model');if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}
           viewportMode={activeWorkspace==='plan'?(planLayout==='split'?'split':'2d'):'3d'}
           onViewportMode={mode=>{setStudioView('edit');if(mode==='3d'){handleSelectWorkspace('model')}else{handleSelectWorkspace('plan');setPlanLayout(mode)}}}
           projectSlot={accessMode === 'hosted-project' ? (hostedWritable
@@ -688,11 +728,11 @@ export function CadCreatorApp({
       </>)}
       {/* 3. Main Stage (canvas-first, no assistant sidebar) */}
       <main className="flex-1 flex overflow-hidden relative min-h-0">
-        <div className="cad-workspace-body">
+        <div className="cad-workspace-body" style={{'--cad-left-width':leftWidth+'%','--cad-right-width':rightWidth+'%'} as React.CSSProperties}>
           {(explorerOpen || inspectorOpen) && <button type="button" className="cad-panel-scrim" aria-label="Close open CAD panels"
             onClick={()=>{setExplorerOpen(false);setInspectorOpen(false)}} />}
           {(activeWorkspace === 'plan' || activeWorkspace === 'model') && explorerOpen && (
-            <div className="cad-left-dock">
+            <div className="cad-left-dock" onPointerUp={event=>rememberPanel(event.currentTarget,'explorer',setLeftWidth)}>
               <div className="cad-dock-tabs" role="tablist" aria-label="Left panel">
                 {(['objects','assets','libraries'] as const).map(tab=><button type="button" key={tab} role="tab"
                   aria-selected={leftPanelTab===tab} onClick={()=>{setLeftPanelTab(tab);setIsTemplateLibraryOpen(false);}}>
@@ -765,7 +805,7 @@ export function CadCreatorApp({
             </div>
           )}
         {/* PRIMARY VIEWPORT STAGE */}
-        <section className={'cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]'+(activeWorkspace==='plan'&&planLayout==='split'?' cad-stage-split':'')}
+        <section ref={stageRef} className={'cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]'+(activeWorkspace==='plan'&&planLayout==='split'?' cad-stage-split':'')}
           style={{'--cad-split':splitRatio+'%'} as React.CSSProperties}>
           {sourceStatus === 'unavailable' && sourceError && (
             <div role="alert" className="absolute left-3 top-3 z-40 max-w-[min(430px,calc(100%-24px))] rounded-xl border border-amber-400/35 bg-slate-950/95 p-3 text-xs text-slate-100 shadow-xl">
@@ -787,6 +827,15 @@ export function CadCreatorApp({
             </div>
           )}
 
+          {simulationOpen?<div className="relative flex-1 min-w-0 h-full">
+            <div ref={roboticsContainerRef} className="absolute inset-0" aria-label="Robotics simulation viewport"/>
+            <button className="cad-return-from-sim" type="button" onClick={()=>setSimulationOpen(false)}>Return to CAD</button>
+            <React.Suspense fallback={<p role="status">Loading robotics simulation…</p>}>
+              <LazyRoboticsWorkspace allowChess={false} initialExperience="sandbox" containerRef={roboticsContainerRef} isDarkMode={roboticsDarkMode}
+                toggleDarkMode={()=>setRoboticsDarkMode(value=>!value)} showDiagnostics={showRoboticsDiagnostics}
+                setShowDiagnostics={setShowRoboticsDiagnostics}/>
+            </React.Suspense>
+          </div>:<>
           {/* WORKSPACE 1: PLAN */}
           {activeWorkspace === 'plan' && !showProjectGallery && (
             <>
@@ -829,37 +878,19 @@ export function CadCreatorApp({
                 </div>
               )}
 
-              {planLayout === 'split' && <div className="cad-split-handle" role="separator" tabIndex={0}
-                aria-label="Resize linked 2D and 3D views" aria-valuemin={25} aria-valuemax={75} aria-valuenow={Math.round(splitRatio)}
-                aria-valuetext={Math.round(splitRatio)+'% 2D, '+Math.round(100-splitRatio)+'% 3D'}
-                style={{left:splitRatio+'%'}}
-                onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId)}}
-                onPointerMove={event=>{
-                  if(!event.currentTarget.hasPointerCapture(event.pointerId))return;
-                  const rect=event.currentTarget.parentElement?.getBoundingClientRect();
-                  if(!rect)return;
-                  const vertical=window.matchMedia('(max-width: 660px) and (orientation: portrait)').matches;
-                  const fraction=vertical?(event.clientY-rect.top)/rect.height:(event.clientX-rect.left)/rect.width;
-                  setSplitRatio(Math.max(25,Math.min(75,Math.round(fraction*100))));
-                }}
-                onPointerUp={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId)}}
-                onKeyDown={event=>{
-                  const shift=event.key==='ArrowLeft'||event.key==='ArrowUp'?-5:event.key==='ArrowRight'||event.key==='ArrowDown'?5:0;
-                  if(shift||event.key==='Home'||event.key==='End'){
-                    event.preventDefault();
-                    setSplitRatio(current=>event.key==='Home'?25:event.key==='End'?75:Math.max(25,Math.min(75,current+shift)));
-                  }
-                }}><span aria-hidden="true"/></div>}
+              {planLayout === 'split' && <ResizableStageHandle axis={splitAxis}
+                className="cad-split-handle" label="Resize linked 2D and 3D views"
+                value={splitRatio} min={25} max={75} onDrag={resizeSplit} onDoubleClick={()=>setSplitRatio(50)}/>}
               {(planLayout === 'split') && (
                 <div className="cad-world-pane h-full relative min-w-0" style={{width:(100-splitRatio)+'%',flex:'none'}}>
                   {hostedSelection && sourceStatus==='loaded'
-                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
+                    ? <CadWorldViewport terrainHost={terrainHost} modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
                         readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
                         sceneElements={project.sceneElements} selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
                         layoutProject={project} onSceneSettings={updateSceneSettings} onSelect={selectSceneElement}/>
                     : accessMode === 'hosted-project' && !templateCopyName && !hostedWritable
                       ? hostedEmptyPane
-                    : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
+                    : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
                 </div>
               )}
 
@@ -872,13 +903,13 @@ export function CadCreatorApp({
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
-                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
+                ? <CadWorldViewport terrainHost={terrainHost} modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
                     readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
                     sceneElements={project.sceneElements} selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
                     layoutProject={project} onSceneSettings={updateSceneSettings} onSelect={selectSceneElement}/>
                 : accessMode === 'hosted-project' && !templateCopyName
                   ? hostedEmptyPane
-                : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
+                : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
             </div>
           )}
 
@@ -888,18 +919,24 @@ export function CadCreatorApp({
                     {/* Rendering now shows the current project instead of opening disconnected prototype dialogs. */}
           {activeWorkspace === 'render' && (
             <div className="w-full h-full">
-              <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>
+              <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>
             </div>
           )}
+          </>}
         </section>
           {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'render') && inspectorOpen && (
             <CadPropertyInspector project={project} selection={uiSelection}
               onSelect={setUiSelection} onChange={updateProject}
               onClose={() => setInspectorOpen(false)} readOnly={isViewer} onReview={reviewSelectedElement}
-              sourceRequest={sourceRequest}/>
+              familyRequest={familyRequest} onResizeEnd={node=>rememberPanel(node,'properties',setRightWidth)}
+              onSimulation={()=>{void preloadRoboticsWorkspace().then(()=>{
+                setSimulationOpen(true);setTimelineOpen(false);setInspectorOpen(false);
+              }).catch(()=>showToast('Robotics workspace could not load.'))}}
+              sourceRequest={sourceRequest} onTimeline={()=>setTimelineOpen(true)} onTerrainHost={setTerrainHost}/>
           )}
         </div>
       </main>
+      {timelineOpen&&<CadSequenceDock key={project.id} project={project} readOnly={isViewer} onChange={updateProject} onClose={()=>setTimelineOpen(false)}/>}
 
       {/* Reuse the SDK's real miniAgentSam selection/composer. The CAD host
           owns conversation transport and every geometry-changing operation. */}

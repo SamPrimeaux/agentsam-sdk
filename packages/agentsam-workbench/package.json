@@ -17,6 +17,10 @@
       "types": "./dist/agent/index.d.ts",
       "import": "./dist/agent/index.js"
     },
+    "./studio-icons": {
+      "types": "./dist/shell/studio-icons.d.ts",
+      "import": "./dist/shell/studio-icons.js"
+    },
     "./shell": {
       "types": "./dist/shell/index.d.ts",
       "import": "./dist/shell/index.js"
