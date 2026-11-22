@@ -110,7 +110,7 @@ if os.environ.get("AGENTSAM_CAD_BUILDING_SOURCE"):
 
 
 def deterministic_guid(entity_id: str) -> str:
-    import ifcopenshell  # ty: ignore[unresolved-import] -- container-only BIM dependency
+    import ifcopenshell
 
     scope = SOURCE_EVIDENCE["source_id"] if SOURCE_EVIDENCE else "cad-toolchain-proof"
     return ifcopenshell.guid.compress(uuid.uuid5(uuid.NAMESPACE_URL, f"iamscene:ifc:{scope}:{entity_id}").hex)
@@ -185,11 +185,11 @@ def stage_freecad(out: Path):
 # --------------------------------------------------------------------------- stage: ifc + dxf (venv interpreter)
 def stage_ifc(out: Path):
     import ezdxf  # ty: ignore[unresolved-import] -- available inside native CAD container
-    import ifcopenshell  # ty: ignore[unresolved-import] -- container only
-    import ifcopenshell.geom  # ty: ignore[unresolved-import] -- container only
-    import ifcopenshell.validate  # ty: ignore[unresolved-import] -- independent IFC validator
+    import ifcopenshell
+    import ifcopenshell.geom
+    import ifcopenshell.validate
     import numpy as np  # ty: ignore[unresolved-import] -- available inside native CAD container
-    from ifcopenshell import api  # ty: ignore[unresolved-import] -- container only
+    from ifcopenshell import api
 
     p = PARAMS
     L, W, H, T = (p["length"] * IN, p["width"] * IN, p["height"] * IN, p["wall"] * IN)
