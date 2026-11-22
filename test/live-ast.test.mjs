@@ -78,8 +78,14 @@ test('invalid syntax is reported without returning misleading symbol matches', (
 });
 
 test('optional ast-grep uses a real non-JS grammar on a local file', (t) => {
-  const sg = spawnSync('sg', ['--version'], { encoding: 'utf8' });
-  if (sg.error) return t.skip('ast-grep binary not available on this machine');
+  // Linux supplies a different /usr/bin/sg (shadow-utils group launcher).
+  // Only exercise AST grammar matching when a real ast-grep executable exists.
+  const available = ['sg', 'ast-grep'].some((command) => {
+    const probe = spawnSync(command, ['--version'], { encoding: 'utf8' });
+    return !probe.error && probe.status === 0 &&
+      /\bast-grep\s+\d/i.test(String(probe.stdout || '') + String(probe.stderr || ''));
+  });
+  if (!available) return t.skip('optional ast-grep grammar engine is not installed');
   const root = project(t);
   const out = matchLiveAst(root, 'def $NAME($$$ARGS): $$$BODY', { language: 'python', path: 'src/module.py' });
   assert.equal(out.index_required, false);
