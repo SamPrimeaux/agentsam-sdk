@@ -40,7 +40,7 @@ import { collaborationClient } from '../lib/socket';
 import { Canvas2D } from '../components/Canvas2D';
 import { Viewport3D } from '../components/Viewport3D';
 import {savedDimension,rememberDimension} from '../lib/workbench-layout';
-import type {CadInspectorFamily} from '../components/cad-inspector-families';
+import type {StudioInspectorFamily} from '@inneranimalmedia/agentsam-workbench/studio-panels';
 import {CadSequenceDock} from '../components/CadSequenceDock';
 import {CadWorldViewport} from '../components/CadWorldViewport';
 import {CadResourcesPane} from '../components/CadResourcesPane';
@@ -214,7 +214,7 @@ export function CadCreatorApp({
   };
   const [timelineOpen,setTimelineOpen]=useState(false);
   const [terrainHost,setTerrainHost]=useState<HTMLDivElement|null>(null);
-  const [familyRequest,setFamilyRequest]=useState<{id:CadInspectorFamily}>();
+  const [familyRequest,setFamilyRequest]=useState<{id:StudioInspectorFamily}>();
   const [sourceRequest,setSourceRequest]=useState(0);
   const [libraryPreferredSection,setLibraryPreferredSection]=useState<'assemblies'|'stock'|'parametric'|'openscad'>('assemblies');
   const [uiSelection, setUiSelection] = useState<CadElementSelection>(null);

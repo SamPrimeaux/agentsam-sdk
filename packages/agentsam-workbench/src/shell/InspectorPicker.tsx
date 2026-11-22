@@ -1,10 +1,10 @@
-import type {ComponentType} from 'react';
+import {StudioGlyph} from './StudioCommands';
 
 export interface InspectorFamily<Id extends string> {
   id: Id;
   label: string;
   group: string;
-  icon: ComponentType<{size?: number}>;
+  glyph:string;
 }
 
 export function InspectorPicker<Id extends string>({families, value, onChange, label = 'Properties panel'}: {
@@ -15,9 +15,8 @@ export function InspectorPicker<Id extends string>({families, value, onChange, l
 }) {
   const current = families.find(family => family.id === value);
   const groups = [...new Set(families.map(family => family.group))];
-  const Icon = current?.icon;
   return <label className="studio-inspector-picker">
-    {Icon && <span aria-hidden="true"><Icon size={16}/></span>}
+    {current && <StudioGlyph name={current.glyph} size={16}/>}
     <select aria-label={label} value={value} onChange={event => {
       const next = families.find(family => family.id === event.currentTarget.value);
       if (next) onChange(next.id);

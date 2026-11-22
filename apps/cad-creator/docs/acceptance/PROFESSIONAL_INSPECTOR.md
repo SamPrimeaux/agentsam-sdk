@@ -1,6 +1,6 @@
 # CAD Creator professional inspector
 
-The editor entry point is `frontend/src/app/CadCreatorApp.tsx`. The right dock selects families from `cad-inspector-families.ts`. Native project records and imported scene elements retain separate edit paths. The active viewport registers its camera and renderer commands with `world-view-store.ts`.
+The editor entry point is `frontend/src/app/CadCreatorApp.tsx`. The right dock selects families from the shared `@inneranimalmedia/agentsam-workbench/studio-panels` catalog. Native project records and imported scene elements retain separate edit paths. The active viewport registers its camera and renderer commands with `world-view-store.ts`.
 
 | Family | Implementation and binding | Document or runtime result | Remaining coverage |
 | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ The editor entry point is `frontend/src/app/CadCreatorApp.tsx`. The right dock s
 
 ## Shared controls
 
-`@inneranimalmedia/agentsam-workbench/shell` exports InspectorPicker, StudioToolButton, StudioCommandMenu, StudioCommandItem, StudioGlyph and ResizableStageHandle. A host supplies command handlers and permissions. The framework-independent `/studio-icons` entry point is consumed by SamSketch and the CAD timeline. The Create menu groups common, drawing, architecture and presentation commands. Each actionable CAD row calls its workspace handler.
+`@inneranimalmedia/agentsam-workbench/shell` exports InspectorPicker, StudioToolButton, StudioCommandMenu, StudioCommandItem, StudioGlyph and ResizableStageHandle. A host supplies command handlers and permissions. SamSketch consumes the same Materials, Camera and Lighting panel definitions. The framework-independent `/studio-icons` entry point is consumed by SamSketch and the CAD timeline. The Create menu groups common, drawing, architecture and presentation commands. Each actionable CAD row calls its workspace handler.
 
 ## Local acceptance
 

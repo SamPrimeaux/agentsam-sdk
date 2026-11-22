@@ -1,3 +1,4 @@
+import {studioInspectorFamily} from '@inneranimalmedia/agentsam-workbench/studio-panels';
 import { icon } from "./icons";
 import {
   CAMERA_SHOTS, DEFAULT_SCENE_SETTINGS, DEFAULT_STORYBOARD, FINISHES, MOODS, SCENE_PROFILES,
@@ -26,9 +27,9 @@ type HostWindow = Window & {
 const tabs: { id: Tab; label: string; glyph: string }[] = [
   { id: "samspeaks", label: "SamSpeaks", glyph: "sparkles" },
   { id: "scene", label: "Scene", glyph: "cube" },
-  { id: "finish", label: "Finish", glyph: "palette" },
-  { id: "camera", label: "Camera", glyph: "camera" },
-  { id: "light", label: "Lighting", glyph: "sun" },
+  { ...studioInspectorFamily("materials"), id: "finish" },
+  { ...studioInspectorFamily("camera"), id: "camera" },
+  { ...studioInspectorFamily("lighting"), id: "light" },
   { id: "advanced", label: "Advanced", glyph: "settings" },
 ];
 const steps: { id: SamStep; label: string }[] = [

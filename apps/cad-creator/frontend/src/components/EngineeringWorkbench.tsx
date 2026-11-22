@@ -4,7 +4,7 @@ import {WALL_MATERIALS,defaultWallAssembly,wallAssemblyTotal,validateWallAssembl
 import {CadPerformancePanel} from './CadPerformancePanel';
 import {NativeSolidPanel} from './NativeSolidPanel';
 import {InspectorPicker,StudioGlyph,StudioCommandItem,StudioCommandMenu,StudioToolButton} from '@inneranimalmedia/agentsam-workbench/shell';
-import {cadInspectorFamilies,type CadInspectorFamily} from './cad-inspector-families';
+import {studioInspectorFamilies,type StudioInspectorFamily} from '@inneranimalmedia/agentsam-workbench/studio-panels';
 import {useWorldView} from '../lib/world-view-store';
 import {WorldViewSection} from './WorldViewSection';
 import {KIT, chooseKitTool, isKitActive, viewerSafe, type Group, type MenuId} from './sketch-kit-catalog';
@@ -98,9 +98,9 @@ function Numeric({label,value,onCommit,min,unit='in'}:{
 }
 export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,sourceRequest,onTerrainHost,onTimeline,onSimulation,onResizeEnd,familyRequest}:{
  project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onChange:Update;
- onClose:()=>void;readOnly:boolean;onReview?:()=>void;familyRequest?:{id:CadInspectorFamily};sourceRequest?:number;onTimeline?:()=>void;onSimulation?:()=>void;onResizeEnd?:(node:HTMLElement)=>void;onTerrainHost?:(node:HTMLDivElement|null)=>void
+ onClose:()=>void;readOnly:boolean;onReview?:()=>void;familyRequest?:{id:StudioInspectorFamily};sourceRequest?:number;onTimeline?:()=>void;onSimulation?:()=>void;onResizeEnd?:(node:HTMLElement)=>void;onTerrainHost?:(node:HTMLDivElement|null)=>void
 }) {
- const [tab,setTab]=useState<CadInspectorFamily>(selection?'object':'project');
+ const [tab,setTab]=useState<StudioInspectorFamily>(selection?'object':'project');
  const world=useWorldView();
  React.useEffect(()=>{setTab(selection?'object':'project')},[selection?.group,selection?.id]);
  React.useEffect(()=>{if(sourceRequest)setTab('source')},[sourceRequest]);
@@ -193,7 +193,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
  return <SidePanel className="cad-work-pane cad-properties" onPointerUp={event=>onResizeEnd?.(event.currentTarget)} ariaLabel="CAD inspector">
   <header className="cad-pane-head"><span><SlidersHorizontal size={16}/> Properties</span>
    <button aria-label="Hide property inspector" title="Hide property inspector" onClick={onClose}><PanelRightClose size={17}/><span className="cad-focus-help">Hide property inspector</span></button></header>
-  <InspectorPicker<CadInspectorFamily> families={cadInspectorFamilies} value={tab} onChange={setTab}/>
+  <InspectorPicker<StudioInspectorFamily> families={studioInspectorFamilies} value={tab} onChange={setTab}/>
   <div className="cad-property-scroll">{readOnly&&<p role="status" className="cad-inspector-readonly">This revision is view-only. Open the current verified project with write access to edit and save scene changes. Native BIM geometry must be changed through an authorized CAD modeling operation.</p>}{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='source'?<CadInspectorSource project={project} selection={selection} onChange={onChange} readOnly={readOnly}/>:<>{(tab==='camera'||tab==='lighting'||tab==='environment'||tab==='rendering')&&<WorldViewSection family={tab}/>}
   {tab==='simulation'&&<><p className="cad-property-help">Run robot kinematics and physics in the MuJoCo workspace.</p><button type="button" className="cad-clear-selection" onClick={onSimulation}>Open robotics simulation</button></>}
   {tab==='motion'&&<button type="button" className="cad-clear-selection" onClick={onTimeline}>Open camera timeline</button>}
@@ -366,7 +366,7 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  explorerOpen:boolean;inspectorOpen:boolean;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onSketch:()=>void;onOpenFamily?:(id:CadInspectorFamily)=>void;onTimeline?:()=>void;onOpenSolid?:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
+ studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onSketch:()=>void;onOpenFamily?:(id:StudioInspectorFamily)=>void;onTimeline?:()=>void;onOpenSolid?:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
