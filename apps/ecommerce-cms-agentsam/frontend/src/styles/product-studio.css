@@ -241,7 +241,7 @@
 }
 .ps-collections {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: 10px;
   margin: 0 0 48px;
 }
@@ -2615,3 +2615,7 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 @media (max-width:650px) {
   .ps-platform-fields { grid-template-columns: 1fr; }
 }
+
+.ps-catalog-heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ps-catalog-heading-actions label { display: flex; align-items: center; gap: 8px; }
+.ps-catalog-heading-actions select { background: inherit; color: inherit; border: 1px solid var(--ps-line); padding: 8px; border-radius: 8px; max-width: 200px; }

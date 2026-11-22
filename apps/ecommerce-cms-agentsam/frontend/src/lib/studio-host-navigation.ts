@@ -27,7 +27,7 @@ function validCommerceRoute(candidate: string): string | null {
       if (url.searchParams.has("resume") && !/^psd_[A-Za-z0-9_-]+$/.test(url.searchParams.get("resume") || "")) return null;
       if (url.searchParams.has("collection_id") && !/^[A-Za-z0-9_-]{1,128}$/.test(url.searchParams.get("collection_id") || "")) return null;
     } else if (EDIT_ROUTE.test(url.pathname)) {
-      if (!/^\d+$/.test(url.searchParams.get("id") || "")) return null;
+      if (url.searchParams.has("id") && !/^\d+$/.test(url.searchParams.get("id") || "")) return null;
       if (!onlySearchKeys(url.searchParams, ["id", "site_id"])) return null;
     } else return null;
     return url.pathname + url.search;

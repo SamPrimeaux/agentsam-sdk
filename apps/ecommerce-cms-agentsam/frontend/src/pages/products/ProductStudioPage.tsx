@@ -4,7 +4,7 @@ import { adminFetch } from "../../lib/api";
 import { navigateHostedStudioRoute, syncHostedStudioRoute } from "../../lib/studio-host-navigation";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
-import PlatformProductCatalog from "./PlatformProductCatalog";
+import MerchantProductCatalog from "./MerchantProductCatalog";
 import {
   catalogProductId,
   catalogVariantId,
@@ -31,6 +31,7 @@ type CatalogSyncHealth = { status: string; updated_at?: string | null;
   last_error_message?: string | null; page_count?: number; product_count?: number };
 
 const collections = [
+  { name: "My products", key: "all", caption: "Your store catalog" },
   { name: "Applications", key: "applications", caption: "Apps and software" },
   { name: "Apparel", key: "apparel", caption: "Clothing and garments" },
   { name: "Accessories", key: "accessories", caption: "Goods and objects" },
@@ -50,8 +51,8 @@ export default function ProductStudioPage() {
     syncHostedStudioRoute("/admin" + location.pathname + location.search);
   }, [location.pathname, location.search]);
   const [query, setQuery] = useState("");
-  const [creationCategory, setCreationCategory] = useState<CreationCategory>("applications");
-  const isPlatformCategory = creationCategory === "applications" || creationCategory === "automations" || creationCategory === "templates";
+  const [creationCategory, setCreationCategory] = useState<CreationCategory>("all");
+  const isMerchantCategory = creationCategory !== "apparel" && creationCategory !== "accessories";
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
@@ -81,7 +82,7 @@ export default function ProductStudioPage() {
     return () => clearTimeout(timer);
   }, [query]);
   useEffect(() => {
-    if (productId || isPlatformCategory) return;
+    if (productId || isMerchantCategory) return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
@@ -115,7 +116,7 @@ export default function ProductStudioPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [search, offset, refresh, productId, category, isPlatformCategory]);
+  }, [search, offset, refresh, productId, category, isMerchantCategory]);
   useEffect(() => {
     if (!productId || registeredProductId) return;
     const controller = new AbortController();
@@ -272,7 +273,7 @@ export default function ProductStudioPage() {
     >
       {registeredProductId ? (
         <div className="ps-container">
-          <PlatformProductCatalog kind="applications" search="" refresh={refresh} productId={registeredProductId} />
+          <MerchantProductCatalog kind="all" search="" refresh={refresh} registryId={registeredProductId} />
         </div>
       ) : designing && detail ? (
         <Suspense fallback={<div className="ps-workspace-loading" role="status">Loading studio…</div>}>
@@ -368,17 +369,17 @@ export default function ProductStudioPage() {
                   </button>
                 ))}
               </div>
-              {isPlatformCategory ? (
+              {isMerchantCategory ? (
                 <>
                   <div className="ps-search-row">
                     <label className="ps-search">
                       <StudioIcon name="search" />
-                      <input type="search" aria-label="Search AgentSam products"
-                        placeholder="Search your products, packages, templates…"
+                      <input type="search" aria-label="Search your products"
+                        placeholder="Search your products…"
                         value={query} onChange={(e) => setQuery(e.target.value)} />
                     </label>
                   </div>
-                  <PlatformProductCatalog kind={creationCategory as "applications" | "automations" | "templates"} search={query} refresh={refresh} />
+                  <MerchantProductCatalog kind={creationCategory} search={query} refresh={refresh} />
                 </>
               ) : (
                 <>

@@ -3,6 +3,7 @@ export class AdminApiError extends Error {
   contentType: string;
   requestId: string | null;
   responsePreview: string | null;
+  details?: { error?: string; message?: string; missing_scopes?: string[]; connect_url?: string };
 
   constructor(
     message: string,
@@ -11,11 +12,13 @@ export class AdminApiError extends Error {
       contentType,
       requestId,
       responsePreview,
+      details,
     }: {
       status: number;
       contentType: string;
       requestId: string | null;
       responsePreview: string | null;
+      details?: AdminApiError["details"];
     },
   ) {
     super(message);
@@ -24,6 +27,7 @@ export class AdminApiError extends Error {
     this.contentType = contentType;
     this.requestId = requestId;
     this.responsePreview = responsePreview;
+    this.details = details;
   }
 }
 
@@ -57,6 +61,8 @@ async function parseAdminResponse<T>(res: Response): Promise<T> {
     const data = (await res.json().catch(() => ({}))) as T & {
       error?: string;
       message?: string;
+      missing_scopes?: string[];
+      connect_url?: string;
     };
     if (!res.ok) {
       throw new AdminApiError(data.error || data.message || `Request failed (${res.status})`, {
@@ -64,6 +70,7 @@ async function parseAdminResponse<T>(res: Response): Promise<T> {
         contentType,
         requestId,
         responsePreview: null,
+        details: { error: data.error, message: data.message, missing_scopes: data.missing_scopes, connect_url: data.connect_url },
       });
     }
     return data;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import StudioIcon from "../products/StudioIcon";
 import { collectionsApi } from "./api";
+import { AdminApiError } from "../../lib/api";
 import type { MediaPageRequest, MediaProvider } from "./api";
 import type { MediaAsset } from "./model";
 import { safeMediaUrl } from "./model";
@@ -59,8 +60,16 @@ export default function CollectionMediaPicker({ title, open, onClose, onSelect }
       } catch (caught) {
         if (controller.signal.aborted) return;
         const message = caught instanceof Error ? caught.message : "Media unavailable";
-        if (/cloudflare|oauth|account_selection/i.test(message)) setHosted(true);
-        setError(message); setBusy(false);
+        if (caught instanceof AdminApiError && caught.status === 403) {
+          setHosted(true);
+          const missing = caught.details?.missing_scopes;
+          const reason = missing?.length ? "Missing Cloudflare permissions: " + missing.join(", ") : caught.details?.message || message;
+          setError(provider === "default" ? reason + " Reconnect Cloudflare or choose Registered media, then retry." : reason);
+        } else {
+          if (/cloudflare|oauth|account_selection/i.test(message)) setHosted(true);
+          setError(message);
+        }
+        setBusy(false);
       }
     }, query.trim() && request.page === 1 ? 240 : 0);
     return () => { controller.abort(); clearTimeout(handle); };
