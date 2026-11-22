@@ -1083,6 +1083,9 @@ mod tests {
                 body:None,body_base64:None,content_type:None,path:Some(path.into()),method:Some(method.into())};
             assert!(studio_service_route(&request).is_err());
         }
+        let forged=StudioServiceBridgeRequest{operation:"apps".into(),account_id:Some("another-account".into()),
+            body:None,body_base64:None,content_type:None,path:Some("/api/apps/launcher".into()),method:Some("GET".into())};
+        assert_eq!(studio_service_route(&forged).unwrap_err(),"studio_service_apps_account_override_forbidden");
     }
 
     #[test]
