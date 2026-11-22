@@ -178,6 +178,11 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             Ok((method,path.to_string()))
         }
         "apps" => {
+            // Installed Apps belong to the verified server-side session account.
+            // Never let a desktop caller nominate a different account identity.
+            if request.account_id.is_some() {
+                return Err("studio_service_apps_account_override_forbidden".into());
+            }
             // Only the account Apps launcher, lifecycle, and recent-open routes
             // are permitted. This is not a generic service proxy.
             let path = request.path.as_deref().unwrap_or("").trim();
