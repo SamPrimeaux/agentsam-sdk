@@ -347,6 +347,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
         source,
         provider: "cloudflare", // user-owned Cloudflare media; never depends on IAM_API
       }));
+      if (append && cursorRef.current) qs.set("cursor", cursorRef.current);
       const { res, body } = await getJson(`/api/admin/media?${qs}`);
       if (ticket !== requestRef.current) return;
       if (Array.isArray(body?.accounts) && body.accounts.length) setAccountChoices(body.accounts);
@@ -358,7 +359,8 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
       const rows = rowsFrom(body);
       setAssets((prev) => (append ? mergeById(prev, rows) : rows));
       pageRef.current = nextPage;
-      setTotal(typeof body?.total === "number" ? body.total : null);
+      cursorRef.current = body?.pagination?.cursor || null;
+      setTotal(body?.pagination?.total_exact !== false && typeof body?.total === "number" ? body.total : null);
       setHasMore(Boolean(body?.pagination?.has_next));
     } catch (err) {
       if (ticket === requestRef.current) setError({ kind: "generic", message: String(err instanceof Error ? err.message : err) });

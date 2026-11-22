@@ -286,7 +286,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `iamscene` | `@inneranimalmedia/iamscene` | needs-review | Portable scene v1 runtime and verified file interchange; experimental IAMScene v2 multi-scene authoring model, ind… |
 | `primetech-procedures` | `@inneranimalmedia/primetech-procedures` | classified | Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset in… |
 | `theme-contract` | `@inneranimalmedia/theme-contract` | needs-review | Portable provider-neutral theme preview registry and composition contracts |
-| `theme-plain-jane` | `@inneranimalmedia/theme-plain-jane` | needs-review | Read-only editorial journal and photography CMS starter with externally editable manifest. |
+| `theme-plain-jane` | `@inneranimalmedia/theme-plain-jane` | needs-review | Legacy editorial journal and photography reference; not the canonical CMS starter or default theme. |
 | `theme-scenes` | `@inneranimalmedia/theme-scenes` | classified | Cross-product creative scene composition contracts, reusable scene templates and a CMS-compatible portable rendere… |
 
 Packages may be public distributions, shared implementation, local application dependencies, or infrastructure. Directory placement alone does not define the intent or distribution status. The package catalog is a projection, not platform `agentsam_products` or install-state authority.

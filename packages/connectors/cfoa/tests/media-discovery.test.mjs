@@ -199,6 +199,36 @@ describe('cloudflare media discovery', () => {
     assert.equal(stream.truncated, true);
   });
 
+  it('uses result.continuation_token and keeps traversing pages with zero filename matches', async () => {
+    const client = mockClient({
+      scopes: ['images.read'],
+      responses: {
+        'GET /accounts/acct123/images/v2': {
+          result: { continuation_token: 'page-two', images: [
+            { id: 'a', filename: 'first.png', variants: [] },
+          ] },
+        },
+      },
+    });
+    const first = await listCloudflareImages(client, { perPage: 60, search: 'target' });
+    assert.deepEqual(first.images, []);
+    assert.equal(first.continuation_token, 'page-two');
+    assert.equal(first.truncated, true);
+    assert.equal(first.total_exact, false);
+    const target = mockClient({
+      scopes: ['images.read'],
+      responses: {
+        'GET /accounts/acct123/images/v2': {
+          result: { images: [{ id: 'b', filename: 'target.png', variants: [] }] },
+        },
+      },
+    });
+    const last = await listCloudflareImages(target, { perPage: 60, continuationToken: first.continuation_token, search: 'TARGET' });
+    assert.equal(last.images[0].id, 'b');
+    assert.equal(last.continuation_token, null);
+    assert.equal(last.truncated, false);
+  });
+
   it('uploads Images and creates Stream direct-upload URLs through OAuth client', async () => {
     const calls = [];
     const client = mockClient({

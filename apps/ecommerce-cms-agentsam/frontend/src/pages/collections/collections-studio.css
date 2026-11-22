@@ -308,3 +308,20 @@
 .cs-pack-slot strong { font-size: 13px; overflow-wrap: anywhere; }
 .cs-pack-slot span { font-size: 11px; color: var(--cs-sub); }
 .cs-pack-slot .cs-button { align-self: flex-start; margin-top: auto; }
+
+/* In-place collection asset picker; all chrome inherits the editor theme. */
+.cs-media-dialog{color:var(--cs-ink)}
+.cs-media-toolbar,.cs-media-sources{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.cs-media-toolbar .cs-input-search{flex:1 1 200px;min-width:0}
+.cs-media-upload{display:inline-flex;position:relative;align-items:center;cursor:pointer;overflow:hidden}
+.cs-media-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.cs-media-upload:focus-within{outline:2px solid var(--cs-accent)}
+.cs-media-sources button[aria-pressed="true"]{border-color:var(--cs-accent);background:color-mix(in srgb,var(--cs-accent) 12%,var(--cs-card));color:var(--cs-ink)}
+.cs-media-sources a{font-size:12px;color:var(--cs-accent)}
+.cs-media-dialog .cs-media-tile{background:var(--cs-bg);border-color:var(--cs-line)}
+.cs-media-dialog .cs-media-tile img{background:var(--cs-soft)}
+.cs-media-dialog .cs-media-tile.selected{border-color:var(--cs-accent);box-shadow:inset 0 0 0 1px var(--cs-accent)}
+.cs-media-dialog .cs-dialog-foot{border-color:var(--cs-line)}
+.cs-media-page-end{grid-column:1/-1;text-align:center;justify-self:center;padding:12px}
+.cs-dialog-foot .cs-media-count{display:grid;gap:4px;min-width:0}
+.cs-media-selected-name{max-width:32ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--cs-ink)}

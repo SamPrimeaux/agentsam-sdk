@@ -1,6 +1,7 @@
 {
   "avoid_when": [
-    "A licensed production storefront or a verified CMS installation is required."
+    "A licensed production storefront or a verified CMS installation is required.",
+    "Selecting the default starter for a new CMS site."
   ],
   "catalog_status": "needs-review",
   "class": "theme",
@@ -19,7 +20,7 @@
     "javascript"
   ],
   "name": "@inneranimalmedia/theme-plain-jane",
-  "purpose": "Read-only editorial journal and photography CMS starter with externally editable manifest.",
+  "purpose": "Legacy editorial journal and photography reference; not the canonical CMS starter or default theme.",
   "registry": {
     "kind": "local-package",
     "name": "@inneranimalmedia/theme-plain-jane",
@@ -40,7 +41,7 @@
     "theme"
   ],
   "use_when": [
-    "Review a source-driven editorial journal and photography starter."
+    "Review or maintain existing Plain Jane editorial projects and source provenance."
   ],
   "version": "0.1.0"
 }
