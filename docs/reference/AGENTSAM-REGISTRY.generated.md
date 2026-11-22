@@ -8,7 +8,7 @@
 
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
-| `src/cli/command-catalog.js` | 81 | Registered top-level CLI command entries |
+| `src/cli/command-catalog.js` | 80 | Registered top-level CLI command entries |
 | `protocol/capabilities/manifest.json` | 93 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 9 | APP manifests discoverable from this checkout |
@@ -71,6 +71,7 @@ Manifest status: 56 stable, 37 experimental, 17 explicitly non-deterministic. Ho
 | `agentsam mini` | create | Create a small local gadget |
 | `agentsam models` | start | Probe hosted/local model availability |
 | `agentsam ollama` | runtime | Local Ollama setup/status/models |
+| `agentsam open` | start | Open AgentSam Local Studio (desktop app) here or at a directory |
 | `agentsam package` | work | Audit, verify, and plan publication of distributable packages |
 | `agentsam plan` | work | Durable project-local work plans + domain plans |
 | `agentsam plugin` | create | Inspect and verify governed plugin products |
@@ -95,9 +96,7 @@ Manifest status: 56 stable, 37 experimental, 17 explicitly non-deterministic. Ho
 | `agentsam skills` | create | List or load portable skill instructions |
 | `agentsam start-local` | runtime | Local PTY WebSocket service |
 | `agentsam status` | runtime | Account, models, terminal, and live deploy awareness |
-| `agentsam studio` | start | Open AgentSam Local Studio (desktop app); bare agentsam does the same |
 | `agentsam terminal` | runtime | Manage terminal identity and enrollment, distinct from PTY sessions |
-| `agentsam tui` | inside | Full-screen terminal agent (separate from the desktop app) |
 | `agentsam tunnel` | runtime | Cloudflare Tunnel via Wrangler |
 | `agentsam update` | runtime | Component update preview (gcloud-like) |
 | `agentsam whoami` | start | Authenticated account + tokenPermissions |

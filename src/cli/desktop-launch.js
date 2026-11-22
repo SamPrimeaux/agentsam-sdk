@@ -90,14 +90,14 @@ export function launchDesktop({
 } = {}) {
   if (platform !== 'darwin') {
     throw new DesktopLaunchError('unsupported_platform',
-      `Desktop launch is currently supported on macOS only (this is ${platform}). Use: agentsam tui`);
+      `Desktop launch is currently supported on macOS only (this is ${platform}). Use: agentsam`);
   }
   const app = find({ platform });
   if (!app) {
     throw new DesktopLaunchError('app_not_installed',
       'AgentSam Local Studio is not installed.\n' +
       '  Install the desktop app, then run agentsam again.\n' +
-      '  Terminal agent (separate from the desktop app): agentsam tui');
+      '  Terminal agent (no desktop app needed): agentsam');
   }
   const args = ['-a', app];
   if (projectDir) args.push(buildOpenUrl(projectDir, token));
