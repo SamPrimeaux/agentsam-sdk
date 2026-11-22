@@ -1,14 +1,20 @@
 /** The host-appearance contract the AgentSam host serves; CoPro loads it, it never copies or owns it. */
 type ThemeRecord = { id: string; themeFamily?: string; cssVars?: Record<string, string> };
-// The same source module used by the hosted shell is bundled with the standalone
-// editor so a missing local HTTP proxy cannot leave its semantic tokens unset.
-// @ts-expect-error The shared host module is authored in JavaScript.
-import * as host from "../../local-studio/shared/shell-appearance.mjs";
+type Appearance = Record<string, unknown>;
+type HostAppearance = {
+  applyStudioShellAppearance(appearance: Appearance, root: HTMLElement): void;
+  bootstrapStudioAppearanceFromCache(accountId: string, root: HTMLElement): boolean;
+  projectStudioShellAppearance(record: ThemeRecord | null, fallback: { theme: string }): Appearance;
+  writeStudioAppearanceCache(accountId: string, appearance: Appearance): void;
+};
+
+const HOST_APPEARANCE_MODULE = "/admin/js/shell-appearance.mjs";
 
 /**
  * Standalone CoPro has no palette of its own. It does exactly what the AgentSam
  * host does: project the account's active `cms_themes` record onto :root
- * (--nav-*, --color-*, --copro-theme-*) through the shared host applier bundled at build time, so a theme edited in
+ * (--nav-*, --color-*, --copro-theme-*) through the host's own applier (served
+ * at the host origin, so apps never import each other), so a theme edited in
  * Settings repaints this app live. When the registry is
  * unreachable the last-known-good appearance stays; with no cache the host's
  * own default palette applies (never a CoPro-local preset).
@@ -28,15 +34,18 @@ async function fetchActiveTheme(): Promise<ThemeRecord | null> {
 }
 
 export async function startHostTheme(root: HTMLElement = document.documentElement): Promise<void> {
+  let host: HostAppearance;
+  try {
+    host = (await import(/* @vite-ignore */ HOST_APPEARANCE_MODULE)) as HostAppearance;
+  } catch (error) {
+    console.warn("[copro/host-theme] theme host unavailable, appearance not applied", error);
+    return;
+  }
   const systemTheme = () => (window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark");
-  const apply = (appearance: ReturnType<typeof host.projectStudioShellAppearance>) => {
-    host.applyStudioShellAppearance(appearance, root);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", appearance.tokens.canvas);
-  };
-  // Only a selected account theme is durable. Old anonymous fallback palettes
-  // must not override a new host default or the current OS appearance.
-  const cached = host.readStudioAppearanceCache(CACHE_ACCOUNT);
-  apply(cached?.themeId ? cached : host.projectStudioShellAppearance(null, { theme: systemTheme() }));
+  const painted = host.bootstrapStudioAppearanceFromCache(CACHE_ACCOUNT, root);
+  if (!painted) {
+    host.applyStudioShellAppearance(host.projectStudioShellAppearance(null, { theme: systemTheme() }), root);
+  }
   let revision = 0;
   const sync = async () => {
     const mine = ++revision;
@@ -44,7 +53,7 @@ export async function startHostTheme(root: HTMLElement = document.documentElemen
       const record = await fetchActiveTheme();
       if (mine !== revision) return;
       const appearance = host.projectStudioShellAppearance(record, { theme: systemTheme() });
-      apply(appearance);
+      host.applyStudioShellAppearance(appearance, root);
       host.writeStudioAppearanceCache(CACHE_ACCOUNT, appearance);
       window.dispatchEvent(new CustomEvent("agentsam:theme-applied", { detail: appearance }));
     } catch (error) {
@@ -52,11 +61,8 @@ export async function startHostTheme(root: HTMLElement = document.documentElemen
     }
   };
   void sync();
-  window.matchMedia?.("(prefers-color-scheme: light)").addEventListener("change", () => {
-    const latest = host.readStudioAppearanceCache(CACHE_ACCOUNT);
-    if (!latest?.themeId) apply(host.projectStudioShellAppearance(null, { theme: systemTheme() }));
-    void sync();
-  });
   window.addEventListener("focus", sync);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) void sync(); });
 }
+
+// Keep this as a host-served platform contract; never import Local Studio source from the CoPro app.
