@@ -10,6 +10,26 @@ function withNeutralSite(project: ProjectState): ProjectState {
   return {...project, sceneSettings: {...project.sceneSettings, terrain: createTerrainDocument()}};
 }
 
+/** Seed a scene-only hosted project with BIM geometry from an explicit example document.
+ * Keeps the scene's identity, name, source binding, elements and settings; takes only
+ * the editable BIM geometry (walls, openings, spaces, fixtures, parametric parts and
+ * plan metadata) from the provided BIM project. Never invents geometry: the caller
+ * supplies a real BIM document (e.g. the DreamHouse example the user chose). */
+export function seedSceneProjectWithBim(scene: ProjectState, bim: ProjectState): ProjectState {
+  return {
+    ...bim,
+    id: scene.id,
+    name: scene.name,
+    units: scene.units ?? bim.units,
+    sceneSource: scene.sceneSource,
+    sceneElements: scene.sceneElements ?? bim.sceneElements,
+    sceneSettings: scene.sceneSettings ?? bim.sceneSettings,
+    lighting: scene.lighting ?? bim.lighting,
+    metadata: scene.metadata ?? bim.metadata,
+    updatedAt: Date.now(),
+  };
+}
+
 export interface CadAsset { id: string; name: string; status: string; validationStatus: string; contentHash: string | null; stale?: boolean }
 export interface CadRevision { revision: string; status: string; updatedAt: number; label?: string; parentRevision?: string; bimRevision?: string | null; sceneRevision?: string | null; models: CadAsset[]; documents: CadAsset[]; native: CadAsset[] }
 export interface CadRegistry { project: { id: string; name: string }; access?: { canWrite: boolean }; revisions: CadRevision[] }

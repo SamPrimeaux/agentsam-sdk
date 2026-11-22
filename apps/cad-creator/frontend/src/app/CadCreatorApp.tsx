@@ -10,8 +10,8 @@ import {recordNativePlanChange} from '../lib/native-engine';
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
-import type {DesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
+import {applyDesignOperation,updateCadLightingProject} from '@inneranimalmedia/agentsam-cad-shared';
+import type {DesignOperation,ResolvedCadLighting} from '@inneranimalmedia/agentsam-cad-shared';
 import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
@@ -45,7 +45,7 @@ import {CadSequenceDock} from '../components/CadSequenceDock';
 import {CadWorldViewport} from '../components/CadWorldViewport';
 import {CadResourcesPane} from '../components/CadResourcesPane';
 import {cloneAssembly,validateWallAssembly,wallAssemblyTotal} from '../lib/cad/wall-assemblies';
-import { canEditHostedCadSelection, listHostedProjects, loadHostedProject, saveHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
+import { canEditHostedCadSelection, listHostedProjects, loadHostedProject, saveHostedProject, seedSceneProjectWithBim, type CadHostedSelection } from '../lib/hosted-project-source';
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
@@ -455,6 +455,21 @@ export function CadCreatorApp({
   const updateSceneSettings=useCallback((updates:Partial<NonNullable<ProjectState['sceneSettings']>>)=>{
     updateProject(previous=>({...previous,sceneSettings:{...previous.sceneSettings,...updates}}));
   },[updateProject]);
+  const updateLightingSettings=useCallback((updates:Partial<ResolvedCadLighting>)=>{
+    updateProject(previous=>updateCadLightingProject(previous,updates));
+  },[updateProject]);
+  const seedExampleBim = useCallback(async () => {
+    if (isViewer) return;
+    try {
+      // Same authority rule as opening the DreamHouse: owner runtime first, public example otherwise.
+      const bim = accessMode === 'owner' ? await loadOwnerDreamHouseProject() : await loadDreamHouseProject();
+      updateProject(previous => seedSceneProjectWithBim(previous, bim));
+      setUiSelection(null);
+      showToast('Seeded BIM from DreamHouse example · save to persist the revision');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'DreamHouse example unavailable');
+    }
+  }, [accessMode, isViewer, updateProject]);
   const selectSceneElement=useCallback(({designId}:{designId:string})=>{
     const group=project.sceneElements?.some(element=>element.id===designId)?'sceneElements':
       (['walls','doors','windows','rooms','furniture','parametricObjects'] as const).find(key=>project[key]?.some(element=>element.id===designId));
@@ -896,10 +911,10 @@ export function CadCreatorApp({
                     ? <CadWorldViewport terrainHost={terrainHost} modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
                         readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
                         sceneElements={project.sceneElements} selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
-                        layoutProject={project} onSceneSettings={updateSceneSettings} onSelect={selectSceneElement}/>
+                        layoutProject={project} onSceneSettings={updateSceneSettings} onLightingChange={isViewer?undefined:updateLightingSettings} onSelect={selectSceneElement}/>
                     : accessMode === 'hosted-project' && !templateCopyName && !hostedWritable
                       ? hostedEmptyPane
-                    : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
+                    : <Viewport3D project={project} onLightingChange={isViewer?undefined:updateLightingSettings} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
                 </div>
               )}
 
@@ -915,10 +930,10 @@ export function CadCreatorApp({
                 ? <CadWorldViewport terrainHost={terrainHost} modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
                     readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
                     sceneElements={project.sceneElements} selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
-                    layoutProject={project} onSceneSettings={updateSceneSettings} onSelect={selectSceneElement}/>
+                    layoutProject={project} onSceneSettings={updateSceneSettings} onLightingChange={isViewer?undefined:updateLightingSettings} onSelect={selectSceneElement}/>
                 : accessMode === 'hosted-project' && !templateCopyName
                   ? hostedEmptyPane
-                : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
+                : <Viewport3D project={project} onLightingChange={isViewer?undefined:updateLightingSettings} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>}
             </div>
           )}
 
@@ -928,7 +943,7 @@ export function CadCreatorApp({
                     {/* Rendering now shows the current project instead of opening disconnected prototype dialogs. */}
           {activeWorkspace === 'render' && (
             <div className="w-full h-full">
-              <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>
+              <Viewport3D project={project} onLightingChange={isViewer?undefined:updateLightingSettings} onSceneSettingsChange={isViewer?undefined:updateSceneSettings}/>
             </div>
           )}
           </>}
@@ -947,7 +962,7 @@ export function CadCreatorApp({
               onSimulation={()=>{void preloadRoboticsWorkspace().then(()=>{
                 setSimulationOpen(true);setTimelineOpen(false);setInspectorOpen(false);
               }).catch(()=>showToast('Robotics workspace could not load.'))}}
-              sourceRequest={sourceRequest} onTimeline={()=>setTimelineOpen(true)} onTerrainHost={setTerrainHost}/>
+              sourceRequest={sourceRequest} onTimeline={()=>setTimelineOpen(true)} onTerrainHost={setTerrainHost} onSeedExampleBim={()=>void seedExampleBim()}/>
           )}
         </div>
       </main>
