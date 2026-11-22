@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "npm --prefix ../../../packages/agentsam-workbench run build",
+    "predev": "npm --prefix ../../../packages/agentsam-workbench run build",
     "dev": "npm run typography:generate && vite",
     "build": "npm run typography:generate && npm run typography:lint && vite build",
     "preview": "vite preview",
