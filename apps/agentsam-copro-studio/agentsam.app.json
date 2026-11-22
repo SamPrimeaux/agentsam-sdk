@@ -4,7 +4,7 @@
   "name": "MovieMode / CoPro Studio",
   "kind": "app",
   "package": "@inneranimalmedia/agentsam-copro-studio",
-  "version": "2.6.13",
+  "version": "2.6.17",
   "entrypoints": {
     "frontend": "./src/main.tsx"
   },

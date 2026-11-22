@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cad-frontend",
-  "version": "2.6.14",
+  "version": "2.6.17",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-3d-viewer": "file:../../../packages/agentsam-3d-viewer",
-    "@inneranimalmedia/agentsam-cad-shared": "2.6.14",
+    "@inneranimalmedia/agentsam-cad-shared": "2.6.17",
     "@inneranimalmedia/agentsam-workbench": "file:../../../packages/agentsam-workbench",
     "chess.js": "^1.4.0",
     "lucide-react": "^0.546.0",
