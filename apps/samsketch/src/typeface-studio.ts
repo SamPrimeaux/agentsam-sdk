@@ -1,10 +1,19 @@
 import "../../../packages/agentsam-nav/src/shell.css";
 import { observeShellAppearance } from "./shell-appearance";
 import * as opentype from "opentype.js";
+import { zipSync, strToU8 } from "fflate";
 import { createInitialTypeface, validateTypeface, type Point, type GlyphContour, type TypefaceDocument, type TypefaceGlyph } from "./typeface/model";
 import "./typeface-studio.css";
 
 const KEY = "agentsam:samsketch:inneranimal-typeface-001:v1";
+// The public Theme Store is the same source of truth used by CMS Theme Settings.
+const FONT_MANIFEST = "https://themes.inneranimalmedia.com/fonts/manifest.json";
+const FONT_STYLESHEET = "https://themes.inneranimalmedia.com/fonts/css";
+const FONT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+type CatalogFamily = { id:string; family:string; category:string; license:string; weights:number[] };
+const catalog = new Map<string,CatalogFamily>();
+let selectedReference = "inter";
+
 const VIEW = { x: 80, baseline: 760, scale: 0.78 };
 const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("SamSketch root is missing");
@@ -99,8 +108,7 @@ function download(blob: Blob, filename: string): void {
 function exportSource(): void {
   download(new Blob([JSON.stringify(doc,null,2)],{type:"application/json"}),"inneranimal-typeface-001.source.json");
 }
-function exportFont(): void {
-  try {
+function buildFont(): opentype.Font {
     const nd = new opentype.Path();
     nd.moveTo(70,0); nd.lineTo(70,700); nd.lineTo(530,700); nd.lineTo(530,0); nd.close();
     nd.moveTo(150,80); nd.lineTo(450,80); nd.lineTo(450,620); nd.lineTo(150,620); nd.close();
@@ -112,10 +120,75 @@ function exportFont(): void {
       familyName:doc.familyName, styleName:doc.styleName, unitsPerEm:doc.unitsPerEm,
       ascender:doc.metrics.ascender, descender:doc.metrics.descender, glyphs,
     });
-    download(new Blob([font.toArrayBuffer()],{type:"font/ttf"}),"inneranimal-display-regular.ttf");
+    return font;
+}
+function exportFont(): void {
+  try {
+    download(new Blob([buildFont().toArrayBuffer()],{type:"font/ttf"}),"inneranimal-display-regular.ttf");
     saveState("TTF exported");
-  } catch (error) {
-    saveState(error instanceof Error ? error.message : "Font export failed");
+  } catch (error) { saveState(error instanceof Error ? error.message : "Font export failed"); }
+}
+function exportPackage(): void {
+  try {
+    const font = new Uint8Array(buildFont().toArrayBuffer());
+    const manifest = {
+      schema:"agentsam.typeface-package.v1", family:doc.familyName, style:doc.styleName,
+      glyph_count:Object.keys(doc.glyphs).length, source:"source/typeface.source.json",
+      font:"fonts/inneranimal-custom.ttf", specimen:"specimen.html",
+    };
+    const html = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Typeface specimen</title><style>@font-face{font-family:"InnerAnimal Custom";src:url("./fonts/inneranimal-custom.ttf") format("truetype")}body{font-family:"InnerAnimal Custom",sans-serif;font-size:64px;padding:48px}</style><p>INNERANIMAL</p><p>ABCDEFGHIJKLMNOPQRSTUVWXYZ</p><p>0123456789</p></html>`;
+    const bundle = zipSync({
+      "manifest.json":strToU8(JSON.stringify(manifest,null,2)),
+      "source/typeface.source.json":strToU8(JSON.stringify(doc,null,2)),
+      "fonts/inneranimal-custom.ttf":font,
+      "specimen.html":strToU8(html),
+      "README.txt":strToU8("Editable source, TTF font, and specimen exported from Typeface Studio. Confirm ownership and licensing before redistribution.\n"),
+    });
+    download(new Blob([new Uint8Array(bundle)],{type:"application/zip"}),"inneranimal-typeface-package.zip");
+    saveState("Typography package exported");
+  } catch (error) { saveState(error instanceof Error ? error.message : "Package export failed"); }
+}
+function renderReferenceFonts(query=""):void {
+  const select = root!.querySelector<HTMLSelectElement>("[data-font-library]");
+  if(!select)return;
+  const previous=selectedReference;
+  const matches=[...catalog.values()].filter(item=>!query || `${item.family} ${item.category}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>a.family.localeCompare(b.family));
+  const options=matches.map(item=>{const o=document.createElement("option");o.value=item.id;o.textContent=`${item.family} · ${item.category}`;return o;});
+  select.replaceChildren(...options);
+  if(matches.some(item=>item.id===previous))select.value=previous;
+  else if(matches.length)select.value=matches[0].id;
+  const status=root!.querySelector<HTMLElement>("[data-font-library-count]");
+  if(status)status.textContent=`${matches.length} of ${catalog.size} licensed families`;
+  if(matches.length)showReferenceFont(select.value);
+}
+function showReferenceFont(id:string):void {
+  const item=catalog.get(id);if(!item)return;
+  selectedReference=id;
+  const specimen=root!.querySelector<HTMLElement>("[data-font-reference-specimen]");
+  const license=root!.querySelector<HTMLAnchorElement>("[data-font-license]");
+  if(specimen){specimen.textContent=previewText || "InnerAnimal Typography";specimen.style.fontFamily=`${JSON.stringify(item.family)}, sans-serif`;}
+  if(license){license.href=`https://themes.inneranimalmedia.com/fonts/${item.id}/LICENSE.txt`;license.textContent=`${item.license} · View license`;license.hidden=false;}
+  let sheet=document.querySelector<HTMLLinkElement>("#tf-reference-font-stylesheet");
+  if(!sheet){sheet=document.createElement("link");sheet.id="tf-reference-font-stylesheet";sheet.rel="stylesheet";document.head.append(sheet);}
+  sheet.href=`${FONT_STYLESHEET}?families=${encodeURIComponent(item.id)}`;
+}
+async function loadReferenceFonts():Promise<void> {
+  const status=root!.querySelector<HTMLElement>("[data-font-library-count]");
+  try {
+    const response=await fetch(FONT_MANIFEST,{mode:"cors",credentials:"omit"});
+    if(!response.ok)throw new Error(`catalog_http_${response.status}`);
+    const manifest:unknown=await response.json();
+    if(!manifest||typeof manifest!=="object"||!("families" in manifest)||!Array.isArray(manifest.families))throw new Error("invalid_font_manifest");
+    for(const value of manifest.families){
+      if(!value||typeof value!=="object")continue;
+      const f=value as Record<string,unknown>;
+      if(typeof f.id!=="string"||!FONT_ID.test(f.id)||typeof f.family!=="string"||!Array.isArray(f.files)||!f.files.length)continue;
+      catalog.set(f.id,{id:f.id,family:f.family,category:typeof f.category==="string"?f.category:"typeface",license:typeof f.license==="string"?f.license:"See license",weights:Array.isArray(f.weights)?f.weights.filter((w):w is number=>typeof w==="number"):[]});
+    }
+    if(!catalog.size)throw new Error("empty_font_catalog");
+    renderReferenceFonts();
+  }catch {
+    if(status)status.textContent="Font catalog unavailable · Current glyph editing remains available";
   }
 }
 function importSource(file: File): void {
@@ -223,11 +296,17 @@ function mount():void {
   document.title="Typeface Studio · SamSketch";
   root!.innerHTML =
     '<div class="tf-app"><header class="tf-topbar"><div class="tf-brand"><button data-action="back">← <span>SamSketch</span></button><i></i><div><strong>Typeface Studio</strong><small>InnerAnimal · Typeface 001</small></div></div>' +
-    '<div class="tf-actions"><span data-save role="status">Saved in this browser</span><button data-action="source">Source JSON</button><button data-action="font" class="tf-primary">Export TTF</button><label class="tf-import">Import source<input type="file" accept=".json,application/json" data-import hidden></label></div></header>' +
+    '<div class="tf-actions"><span data-save role="status">Saved in this browser</span><button data-action="font-library">Browse fonts</button><button data-action="source">Source JSON</button><button data-action="font" class="tf-primary">Export TTF</button><button data-action="package">Export package</button><label class="tf-import">Import source<input type="file" accept=".json,application/json" data-import hidden></label></div></header>' +
     '<div class="tf-layout"><aside class="tf-glyph-panel"><div class="tf-panel-title"><div><small>CHARACTER SET</small><strong>Glyph inventory</strong></div><span data-count></span></div>' +
     '<nav class="tf-tabs"><button data-group="uppercase" class="is-active">A–Z</button><button data-group="lowercase">a–z</button><button data-group="numbers">0–9</button><button data-group="symbols">Symbols</button></nav>' +
     '<div class="tf-rail" data-rail></div><p class="tf-source-note">Seven original glyphs are traced from your wordmark. All remaining characters are custom constructions in the same design system.</p>' +
-    '<label class="tf-family">Font family<input data-family value="' + esc(doc.familyName) + '"></label></aside>' +
+    '<label class="tf-family">Font family<input data-family value="' + esc(doc.familyName) + '"></label>' +
+    '<section class="tf-font-library"><small>SHARED FONT LIBRARY</small><strong>Compare with real typefaces</strong>' +
+    '<label>Search families<input data-font-library-search type="search" placeholder="Search font families…"></label>' +
+    '<label>Reference typeface<select data-font-library><option>Loading catalog…</option></select></label>' +
+    '<p data-font-reference-specimen>InnerAnimal Typography</p><span data-font-library-count role="status">Loading font catalog…</span>' +
+    '<a data-font-license target="_blank" rel="noopener noreferrer" hidden>View license</a>' +
+    '<p class="tf-source-note">References use licensed Theme Store fonts. Selecting one does not copy its outlines into your editable custom typeface.</p></section></aside>' +
     '<main class="tf-editor"><div class="tf-editor-head"><div><small>EDITING GLYPH</small><strong data-current>A</strong><span data-current-meta></span></div>' +
     '<div class="tf-tools"><button data-tool="select" class="is-active">Select nodes</button><button data-tool="draw">Draw contour</button><button data-action="finish" hidden>Finish contour</button><button data-action="undo">Undo</button><button data-action="redo">Redo</button></div></div>' +
     '<div class="tf-canvas-wrap"><svg data-canvas viewBox="0 0 920 930" role="img" aria-label="Drag glyph nodes to edit vector outlines" tabindex="0"></svg></div>' +
@@ -243,7 +322,12 @@ function mount():void {
     if(toolBtn){tool=toolBtn.dataset.tool==="draw"?"draw":"select";draft=[];selectedNode=null;renderCanvas();return;}
     const action=t.closest<HTMLButtonElement>("[data-action]"); if(!action)return;
     if(action.dataset.action==="back") location.assign(location.pathname);
+    if(action.dataset.action==="font-library"){
+      root!.querySelector<HTMLInputElement>("[data-font-library-search]")?.scrollIntoView({behavior:"smooth",block:"center"});
+      root!.querySelector<HTMLInputElement>("[data-font-library-search]")?.focus();
+    }
     if(action.dataset.action==="font") exportFont();
+    if(action.dataset.action==="package") exportPackage();
     if(action.dataset.action==="source") exportSource();
     if(action.dataset.action==="finish") finishContour();
     if(action.dataset.action==="undo") undo();
@@ -254,6 +338,8 @@ function mount():void {
     }
   });
   root!.addEventListener("change",(e)=>{
+    const changed=e.target as HTMLSelectElement;
+    if(changed.matches("[data-font-library]")){showReferenceFont(changed.value);return;}
     const t=e.target as HTMLInputElement;
     if(t.matches("[data-import]")){const f=t.files?.[0];if(f)importSource(f);t.value="";return;}
     if(t.matches("[data-family]")){doc.familyName=t.value.trim()||"InnerAnimal";scheduleSave();return;}
@@ -276,7 +362,8 @@ function mount():void {
   });
   root!.addEventListener("input",(e)=>{
     const t=e.target as HTMLInputElement;
-    if(t.matches("[data-preview-input]")){previewText=t.value;renderPreview();}
+    if(t.matches("[data-preview-input]")){previewText=t.value;renderPreview();const sample=root!.querySelector<HTMLElement>("[data-font-reference-specimen]");if(sample)sample.textContent=previewText || "InnerAnimal Typography";}
+    if(t.matches("[data-font-library-search]")){renderReferenceFonts(t.value);return;}
     if(t.matches("[data-family]")){doc.familyName=t.value.trim()||"InnerAnimal";scheduleSave();}
   });
   const svg=root!.querySelector<SVGSVGElement>("[data-canvas]")!;
@@ -308,5 +395,6 @@ function mount():void {
   });
   window.addEventListener("beforeunload",()=>{stopAppearance();window.clearTimeout(saveTimer);},{once:true});
   render();save();
+  void loadReferenceFonts();
 }
 mount();
