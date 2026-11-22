@@ -433,8 +433,7 @@ cli:
     - whoami
     - resume
     - exec
-    - studio
-    - tui
+    - open
     - shell
     - start-local
     - ollama
