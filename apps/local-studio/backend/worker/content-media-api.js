@@ -390,9 +390,11 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
     source: "cf_images",
   }), {
     pagination: {
-      has_next: Boolean(pageData.truncated),
+      has_next: Boolean(pageData.continuation_token),
       cursor: pageData.continuation_token || null,
       truncated: Boolean(pageData.truncated),
+      total_exact: pageData.total_exact === true,
+      search_mode: "cursor_scan",
     },
   });
 }
