@@ -13,8 +13,8 @@
     "prebuild": "npm --prefix ../../packages/agentsam-occt run build && npm --prefix ../../packages/agentsam-workbench run build"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-3d-viewer": "2.6.17",
-    "@inneranimalmedia/agentsam-occt": "2.6.17",
+    "@inneranimalmedia/agentsam-3d-viewer": "2.6.18",
+    "@inneranimalmedia/agentsam-occt": "2.6.18",
     "@inneranimalmedia/agentsam-workbench": "file:../../packages/agentsam-workbench",
     "ajv": "^8.20.0",
     "fflate": "^0.8.2",

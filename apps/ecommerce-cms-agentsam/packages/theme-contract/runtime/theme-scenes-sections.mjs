@@ -1,7 +1,7 @@
 // ../../packages/theme-scenes/package.json
 var package_default = {
   name: "@inneranimalmedia/theme-scenes",
-  version: "2.6.17",
+  version: "2.6.18",
   description: "Cross-product creative scene composition contracts and CMS-compatible scene runtime. Not a storefront theme.",
   type: "module",
   license: "FSL-1.1-MIT",

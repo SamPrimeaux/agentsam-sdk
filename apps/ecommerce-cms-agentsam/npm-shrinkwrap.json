@@ -1,17 +1,17 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "2.6.17",
+  "version": "2.6.18",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-      "version": "2.6.17",
+      "version": "2.6.18",
       "license": "SEE LICENSE IN LICENSE.md",
       "dependencies": {
         "@inneranimalmedia/agentsam-3d-viewer": "2.6.15",
-        "@inneranimalmedia/agentsam-cms": "2.6.17",
-        "@inneranimalmedia/agentsam-merch": "2.6.17",
+        "@inneranimalmedia/agentsam-cms": "2.6.18",
+        "@inneranimalmedia/agentsam-merch": "2.6.18",
         "@inneranimalmedia/revise-theme": "0.2.0",
         "@inneranimalmedia/section-library": "0.1.0",
         "@jsquash/jpeg": "1.6.0",
@@ -36,10 +36,10 @@
     },
     "../../packages/agentsam-cms": {
       "name": "@inneranimalmedia/agentsam-cms",
-      "version": "2.6.17",
+      "version": "2.6.18",
       "license": "FSL-1.1-MIT",
       "dependencies": {
-        "@inneranimalmedia/agentsam-contracts": "2.6.17"
+        "@inneranimalmedia/agentsam-contracts": "2.6.18"
       },
       "engines": {
         "node": ">=22"
@@ -47,7 +47,7 @@
     },
     "../../packages/agentsam-merch": {
       "name": "@inneranimalmedia/agentsam-merch",
-      "version": "2.6.17",
+      "version": "2.6.18",
       "license": "FSL-1.1-MIT",
       "bin": {
         "agentsam-merch": "bin/agentsam-merch.mjs"

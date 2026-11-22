@@ -2301,7 +2301,7 @@
         "Sharing AgentSam tool, agent, event, workspace, context and resource-scope contracts across independently packaged products.",
         "Representing loose file, asset, scene and optional project references without treating project membership as an authorization grant."
       ],
-      "version": "2.6.17",
+      "version": "2.6.18",
       "readiness": "unverified"
     },
     {
@@ -4149,7 +4149,7 @@
         "Explicitly migrate an IAMScene 1.0 document to a separate 2.0 authoring document; preserve source, with no in-place overwrite and no claim of a semantic reverse conversion.",
         "Transactionally edit individual IAMScene 2.0 objects, linked geometry and scene-system records with undo/redo and validation. Host inspector and runtime handlers are separately required."
       ],
-      "version": "0.1.3",
+      "version": "0.1.4",
       "review_required": [],
       "readiness": "unverified"
     },

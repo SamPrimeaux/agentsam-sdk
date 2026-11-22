@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.6.17",
+  "version": "2.6.18",
   "description": "Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence, incremental indexing, identity adapters, and verified dependency maintenance.",
   "type": "module",
   "main": "./src/index.js",
@@ -418,7 +418,9 @@
     "prepublishOnly:run": "node scripts/prepublish-gate.mjs",
     "verify:scene-formats": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-format-contract-alignment.test.mjs && npm --prefix packages/iamscene test",
     "verify:cad-building": "node --test test/agent/cad-building-capability.test.mjs test/integration/cad-project-v2.test.mjs && python3 test/cad-building-source.test.py && python3 test/cad-building-http.test.py && PYTHONPATH=python python3 python/tests/test_cad_building_client.py",
-    "verify:scene-v2": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-v2-authoring-alignment.test.mjs && npm --prefix packages/agentsam-contracts test && npm --prefix packages/iamscene test"
+    "verify:scene-v2": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-v2-authoring-alignment.test.mjs && npm --prefix packages/agentsam-contracts test && npm --prefix packages/iamscene test",
+    "verify:release:incremental": "node scripts/with-ephemeral-tmpdir.mjs -- npm run verify:release:incremental:run",
+    "verify:release:incremental:run": "npm run verify:widgets:portable && npm run verify && node --test test/integration/ops-trail-single-tool-call-source.test.mjs && npm --prefix packages/copro-render test && npm run verify:knowledge-package && npm run test:python && npm run security:release"
   },
   "engines": {
     "node": ">=22"
@@ -426,8 +428,8 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@grpc/grpc-js": "^1.14.4",
-    "@inneranimalmedia/agentsam-contracts": "2.6.17",
-    "@inneranimalmedia/agentsam-errors": "2.6.17",
+    "@inneranimalmedia/agentsam-contracts": "2.6.18",
+    "@inneranimalmedia/agentsam-errors": "2.6.18",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "fast-xml-parser": "^5.12.0",
     "google-protobuf": "^3.21.4",
