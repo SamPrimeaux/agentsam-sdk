@@ -178,8 +178,8 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             Ok((method,path.to_string()))
         }
         "apps" => {
-            // The account Apps registry has two exact endpoints. Native clients
-            // may install and launch products, but this is not a generic proxy.
+            // Only the account Apps launcher, lifecycle, and recent-open routes
+            // are permitted. This is not a generic service proxy.
             let path = request.path.as_deref().unwrap_or("").trim();
             let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
                 "GET" => Method::GET,
@@ -190,7 +190,8 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             };
             let write = method == Method::POST || method == Method::DELETE || method == Method::PATCH;
             if (path == "/api/apps/launcher" && method == Method::GET)
-                || (path == "/api/apps/install" && write) {
+                || (path == "/api/apps/install" && write)
+                || (path == "/api/apps/open" && method == Method::POST) {
                 Ok((method,path.to_string()))
             } else {
                 Err("studio_service_apps_path_invalid".into())
@@ -1064,12 +1065,14 @@ mod tests {
     #[test]
     fn native_apps_service_bridge_allowlist_is_exact() {
         for (path,method) in [("/api/apps/launcher","GET"),("/api/apps/install","POST"),
-            ("/api/apps/install","PATCH"),("/api/apps/install","DELETE")] {
+            ("/api/apps/install","PATCH"),("/api/apps/install","DELETE"),
+            ("/api/apps/open","POST")] {
             let request=StudioServiceBridgeRequest{operation:"apps".into(),account_id:None,
                 body:None,body_base64:None,content_type:None,path:Some(path.into()),method:Some(method.into())};
             assert_eq!(studio_service_route(&request).unwrap().0.as_str(),method);
         }
         for (path,method) in [("/api/apps/launcher","DELETE"),("/api/apps/install","GET"),
+            ("/api/apps/open","GET"),("/api/apps/open","DELETE"),
             ("/api/apps/install/../vault","GET"),("https://bad.example/api/apps/install","POST")] {
             let request=StudioServiceBridgeRequest{operation:"apps".into(),account_id:None,
                 body:None,body_base64:None,content_type:None,path:Some(path.into()),method:Some(method.into())};

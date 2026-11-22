@@ -33,6 +33,21 @@ export type UseAdminAppsOptions = Pick<AdminAppsDirectoryProps, 'loadApps' | 'in
   initialView?: AdminAppsView;
 };
 
+/** User-facing failure states must not confuse an unverified inventory with zero installs. */
+export function accountAppsErrorMessage(error: unknown): string {
+  const code = error instanceof Error ? error.message : String(error ?? '');
+  if (/unsupported_studio_service_operation|studio_service_apps_(?:path|method)_invalid|studio_service_bridge_unavailable/.test(code)) {
+    return 'This AgentSam Desktop build cannot load account Apps. Update the desktop app; no installations were changed.';
+  }
+  if (code.includes('apps_account_sign_in_required')) {
+    return 'AgentSam Desktop needs a valid account session. Sign in again to verify your Apps; no installations were changed.';
+  }
+  if (code.includes('apps_account_service_unavailable')) {
+    return 'The account Apps service is temporarily unavailable. Retry; no installations were changed.';
+  }
+  return 'Could not verify account Apps. Retry; no installations were changed.';
+}
+
 /**
  * Account Apps state + lifecycle. One implementation shared by every surface
  * (Settings directory, the + dialog, the Side Stage App library) so install,
@@ -52,7 +67,7 @@ export function useAdminApps({ loadApps, installApp, removeApp, updateApp, onIns
     let cancelled = false;
     setLoading(true); setError('');
     void loadApps().then(next => { if (!cancelled) setApps(next); })
-      .catch(() => { if (!cancelled) setError('Could not verify account Apps. Retry; no installations were changed.'); })
+      .catch((error) => { if (!cancelled) setError(accountAppsErrorMessage(error)); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [loadApps, reload]);

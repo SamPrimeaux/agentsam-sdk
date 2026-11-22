@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
 import { navigateApp } from "@/lib/work/navigate";
-import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
+import { invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 type Method = "GET" | "POST" | "DELETE" | "PATCH";
 
@@ -10,17 +10,20 @@ type Method = "GET" | "POST" | "DELETE" | "PATCH";
  * go through these calls so the catalog, installs and enable state have one
  * client path.
  */
-async function appsRequest(method: Method, body?: Record<string, unknown>) {
-  const path = method === "GET" ? "/api/apps/launcher" : "/api/apps/install";
+async function appsRequest(method: Method, body?: Record<string, unknown>, pathOverride?: "/api/apps/open") {
+  const path = pathOverride ?? (method === "GET" ? "/api/apps/launcher" : "/api/apps/install");
   if (isPackagedDesktop()) {
-    // The packaged app has no same-origin session cookie: the native bridge
-    // carries the signed-in account to the exact same two endpoints.
+    // The packaged app has no same-origin session cookie. Native attaches its
+    // verified bearer session; the server resolves the account from that token.
+    // Never send a client-provided X-User-Id (or the studio-local fallback).
     const native = await invokeStudioService({
-      operation: "apps", path, method, account_id: await resolveDesktopStudioAccountId(),
+      operation: "apps", path, method,
       ...(body === undefined ? {} : { body }),
     });
     let nativePayload: any = null;
     try { nativePayload = JSON.parse(native.body || "null"); } catch { /* handled below */ }
+    if (native.status === 401) throw new Error("apps_account_sign_in_required");
+    if (native.status === 503) throw new Error("apps_account_service_unavailable");
     if (native.status >= 400 || !nativePayload?.ok) throw new Error("apps_account_request_failed");
     return nativePayload;
   }
@@ -56,14 +59,8 @@ export async function pinAccountApp(key: string, pinned: boolean): Promise<void>
 
 /** Stamps last_opened_at for ranking recents. Never blocks opening an app. */
 export async function markAccountAppOpened(key: string): Promise<void> {
-  try {
-    await fetch("/api/apps/open", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
-  } catch { /* ranking is best-effort */ }
+  try { await appsRequest("POST", { key }, "/api/apps/open"); }
+  catch { /* ranking is best-effort */ }
 }
 
 type AccountAppsState = { apps: AdminInstallableApp[]; loaded: boolean; error: boolean };
