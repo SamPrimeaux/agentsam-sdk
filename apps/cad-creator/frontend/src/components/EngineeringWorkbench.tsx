@@ -97,9 +97,9 @@ function Numeric({label,value,onCommit,min,unit='in'}:{
    onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&(min==null||n>=min)&&n!==value)onCommit(n);else e.target.value=String(value)}}/>
    <small>{unit}</small></div></label>;
 }
-export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,sourceRequest,onTerrainHost,onTimeline,onSimulation,onResizeEnd,familyRequest}:{
+export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,sourceRequest,onTerrainHost,onTimeline,onSimulation,familyRequest}:{
  project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onChange:Update;
- onClose:()=>void;readOnly:boolean;onReview?:()=>void;familyRequest?:{id:StudioInspectorFamily};sourceRequest?:number;onTimeline?:()=>void;onSimulation?:()=>void;onResizeEnd?:(node:HTMLElement)=>void;onTerrainHost?:(node:HTMLDivElement|null)=>void
+ onClose:()=>void;readOnly:boolean;onReview?:()=>void;familyRequest?:{id:StudioInspectorFamily};sourceRequest?:number;onTimeline?:()=>void;onSimulation?:()=>void;onTerrainHost?:(node:HTMLDivElement|null)=>void
 }) {
  const [tab,setTab]=useState<StudioInspectorFamily>(selection?'object':'project');
  const world=useWorldView();
@@ -191,7 +191,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
  };
  const num=(label:string,key:string,min?:number,unit='in')=>record&&typeof record[key as keyof typeof record]==='number'?
   <Numeric key={key} label={label} value={Number(record[key])} min={min} unit={unit} onCommit={n=>update(key,n)}/>:null;
- return <SidePanel className="cad-work-pane cad-properties" onPointerUp={event=>onResizeEnd?.(event.currentTarget)} ariaLabel="CAD inspector">
+ return <SidePanel className="cad-work-pane cad-properties" ariaLabel="CAD inspector">
   <header className="cad-pane-head"><span><SlidersHorizontal size={16}/> Properties</span>
    <button aria-label="Hide property inspector" title="Hide property inspector" onClick={onClose}><PanelRightClose size={17}/><span className="cad-focus-help">Hide property inspector</span></button></header>
   <InspectorPicker<StudioInspectorFamily> families={studioInspectorFamilies} value={tab} onChange={setTab}/>

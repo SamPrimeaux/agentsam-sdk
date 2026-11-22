@@ -57,6 +57,7 @@ import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge, type CadOutbound } from '../lib/agentsam-preview-bridge';
 import { MiniAgentSam } from '@inneranimalmedia/agentsam-workbench/agent';
 import {ResizableStageHandle} from '@inneranimalmedia/agentsam-workbench/shell';
+import {resizePanelPercent} from '../lib/workbench-layout';
 import '@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css';
 import { buildSelectionContext, verifiedSelectionRevision, type CadSelectionContext } from '../lib/cad/selection';
 import { useCadTools } from '../lib/execution/useCadTools';
@@ -199,6 +200,7 @@ export function CadCreatorApp({
   const [splitRatio, setSplitRatio] = useState(()=>savedDimension('split',50,25,75));
   const [splitAxis,setSplitAxis]=useState<'x'|'y'>('x');
   const stageRef=useRef<HTMLElement|null>(null);
+  const workspaceBodyRef=useRef<HTMLDivElement|null>(null);
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [explorerOpen, setExplorerOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
   const [inspectorOpen, setInspectorOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
@@ -207,10 +209,11 @@ export function CadCreatorApp({
   const [rightWidth,setRightWidth]=useState(()=>savedDimension('properties',23,12,42));
   const [simulationOpen,setSimulationOpen]=useState(false);
   useEffect(()=>rememberDimension('split',splitRatio),[splitRatio]);
-  const rememberPanel=(node:HTMLElement,key:string,apply:(width:number)=>void)=>{
-    if(!node.style.width||!node.parentElement||window.matchMedia('(max-width: 920px)').matches)return;
-    const width=node.offsetWidth/node.parentElement.clientWidth*100;
-    if(Number.isFinite(width)&&width>0){rememberDimension(key,width);apply(width)}
+  const resizeDock=(side:'left'|'right',deltaPx:number)=>{
+    const width=workspaceBodyRef.current?.clientWidth??0;
+    if(width<=0)return;
+    if(side==='left')setLeftWidth(value=>resizePanelPercent(value,deltaPx,width,inspectorOpen?rightWidth:0));
+    else setRightWidth(value=>resizePanelPercent(value,-deltaPx,width,explorerOpen&&(activeWorkspace==='plan'||activeWorkspace==='model')?leftWidth:0));
   };
   const [timelineOpen,setTimelineOpen]=useState(false);
   const [terrainHost,setTerrainHost]=useState<HTMLDivElement|null>(null);
@@ -727,12 +730,12 @@ export function CadCreatorApp({
       )}
       </>)}
       {/* 3. Main Stage (canvas-first, no assistant sidebar) */}
-      <main className="flex-1 flex overflow-hidden relative min-h-0">
-        <div className="cad-workspace-body" style={{'--cad-left-width':leftWidth+'%','--cad-right-width':rightWidth+'%'} as React.CSSProperties}>
+      <main className="flex-1 flex overflow-hidden relative min-h-0 min-w-0">
+        <div ref={workspaceBodyRef} className="cad-workspace-body" style={{'--cad-left-width':leftWidth+'%','--cad-right-width':rightWidth+'%'} as React.CSSProperties}>
           {(explorerOpen || inspectorOpen) && <button type="button" className="cad-panel-scrim" aria-label="Close open CAD panels"
             onClick={()=>{setExplorerOpen(false);setInspectorOpen(false)}} />}
           {(activeWorkspace === 'plan' || activeWorkspace === 'model') && explorerOpen && (
-            <div className="cad-left-dock" onPointerUp={event=>rememberPanel(event.currentTarget,'explorer',setLeftWidth)}>
+            <div className="cad-left-dock">
               <div className="cad-dock-tabs" role="tablist" aria-label="Left panel">
                 {(['objects','assets','libraries'] as const).map(tab=><button type="button" key={tab} role="tab"
                   aria-selected={leftPanelTab===tab} onClick={()=>{setLeftPanelTab(tab);setIsTemplateLibraryOpen(false);}}>
@@ -804,6 +807,12 @@ export function CadCreatorApp({
 
             </div>
           )}
+          {(activeWorkspace==='plan'||activeWorkspace==='model')&&explorerOpen&&<ResizableStageHandle
+            axis="x" label="Resize objects and assets panel" title="Drag to resize · double-click to reset"
+            className="cad-panel-resize-handle" value={leftWidth} min={12} max={42}
+            bodyResizeAttribute="data-cad-panel-resizing" onDrag={delta=>resizeDock('left',delta)}
+            onDragEnd={()=>rememberDimension('explorer',leftWidth)}
+            onDoubleClick={()=>{setLeftWidth(20);rememberDimension('explorer',20)}}/>}
         {/* PRIMARY VIEWPORT STAGE */}
         <section ref={stageRef} className={'cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]'+(activeWorkspace==='plan'&&planLayout==='split'?' cad-stage-split':'')}
           style={{'--cad-split':splitRatio+'%'} as React.CSSProperties}>
@@ -924,11 +933,17 @@ export function CadCreatorApp({
           )}
           </>}
         </section>
+          {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'render') && inspectorOpen && <ResizableStageHandle
+            axis="x" label="Resize properties inspector" title="Drag to resize · double-click to reset"
+            className="cad-panel-resize-handle" value={rightWidth} min={12} max={42}
+            bodyResizeAttribute="data-cad-panel-resizing" onDrag={delta=>resizeDock('right',delta)}
+            onDragEnd={()=>rememberDimension('properties',rightWidth)}
+            onDoubleClick={()=>{setRightWidth(23);rememberDimension('properties',23)}}/>}
           {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'render') && inspectorOpen && (
             <CadPropertyInspector project={project} selection={uiSelection}
               onSelect={setUiSelection} onChange={updateProject}
               onClose={() => setInspectorOpen(false)} readOnly={isViewer} onReview={reviewSelectedElement}
-              familyRequest={familyRequest} onResizeEnd={node=>rememberPanel(node,'properties',setRightWidth)}
+              familyRequest={familyRequest}
               onSimulation={()=>{void preloadRoboticsWorkspace().then(()=>{
                 setSimulationOpen(true);setTimelineOpen(false);setInspectorOpen(false);
               }).catch(()=>showToast('Robotics workspace could not load.'))}}

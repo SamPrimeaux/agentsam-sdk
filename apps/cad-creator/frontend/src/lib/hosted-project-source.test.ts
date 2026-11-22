@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { cadAssetUrl, cadRegistryUrl, canEditHostedCadSelection, listHostedProjects, loadHostedProject } from './hosted-project-source';
+import {createTerrainDocument} from './world-terrain';
 const id = 'proj_123';
 const rev = { revision: 'v1.2', status: 'draft', updatedAt: 123, models: [{id:'model',name:'sample.glb',validationStatus:'asset-verified',status:'draft',contentHash:null}], documents:[{id:'document',name:'sample.design.json',validationStatus:'asset-verified',status:'draft',contentHash:null}],native:[] };
 const project = { id:'sample-design', name:'Sample design', walls:[], rooms:[] };
@@ -9,9 +10,22 @@ describe('hosted CAD representation resolution', () => {
    const fetcher=vi.fn(async()=>({ok:true,json:async()=>({project:{id,name:'Sample'},access:{canWrite:true},revisions:[current,rev]})}));
    const result=await loadHostedProject(id,undefined,fetcher as never);
    expect(result.project?.id).toBe(id);expect(result.project?.walls).toEqual([]);
+   expect(result.project?.sceneSettings?.terrain).toEqual(createTerrainDocument());
    expect(result.project?.sceneSource).toMatchObject({assetId:'model',contentHash:'a'.repeat(64),revision:'V1.5'});
    expect(fetcher).toHaveBeenCalledTimes(1);
    expect(canEditHostedCadSelection(result)).toBe(true);
+ });
+ it('defaults any project without stored terrain to the neutral site, including DreamHouse',async()=>{
+   const current={...rev,revision:'current',sceneRevision:'V1.5',documents:[],models:[{...rev.models[0],contentHash:'a'.repeat(64)}]};
+   const fetcher=vi.fn(async()=>({ok:true,json:async()=>({project:{id:'dreamhouse-v1-wip',name:'DreamHouse'},access:{canWrite:true},revisions:[current]})}));
+   const result=await loadHostedProject('dreamhouse-v1-wip',undefined,fetcher as never);
+   expect(result.project?.sceneSettings?.terrain).toEqual(createTerrainDocument());
+ });
+ it('preserves stored terrain instead of replacing it with the neutral site',async()=>{
+   const terrain=createTerrainDocument();
+   const fetcher=vi.fn(async (url:string)=>({ ok:true, json:async()=>url===cadRegistryUrl(id)?{project:{id,name:'Sample'},revisions:[rev]}:{...project,sceneSettings:{terrain}} }));
+   const result=await loadHostedProject(id,undefined,fetcher as unknown as typeof fetch);
+   expect(result.project?.sceneSettings?.terrain).toBe(terrain);
  });
  it('does not unlock an unverified scene or grant writes to a viewer',async()=>{
    const current={...rev,revision:'current',documents:[],models:[{...rev.models[0],contentHash:'b'.repeat(64),validationStatus:'untested'}]};
@@ -26,7 +40,8 @@ describe('hosted CAD representation resolution', () => {
    const fetcher=vi.fn(async (url:string)=>({ ok:true, json:async()=>url===cadRegistryUrl(id)?{project:{id,name:'Sample'},revisions:[rev]}:project }));
    const result=await loadHostedProject(id,undefined,fetcher as unknown as typeof fetch);
    expect(result.modelUrl).toBe(cadAssetUrl(id,'model'));
-   expect(result.project).toEqual({...project,id});
+   expect(result.project).toMatchObject({...project,id});
+   expect(result.project?.sceneSettings?.terrain).toEqual(createTerrainDocument());
    expect(fetcher).toHaveBeenCalledWith(cadRegistryUrl(id),{credentials:'same-origin'});
    expect(fetcher).toHaveBeenCalledWith(cadAssetUrl(id,'document'),{credentials:'same-origin'});
  });

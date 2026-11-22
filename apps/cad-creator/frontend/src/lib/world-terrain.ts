@@ -52,7 +52,17 @@ const finite = (x: unknown, fallback: number) =>
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 export const terrainSchema = 'agentsam.cad.terrain.v1' as const;
 
+/** A genuinely project-neutral site: flat, empty and free of demo/customer content. */
 export function createTerrainDocument(baseElevation = 0): TerrainDocument {
+  return {
+    schema: terrainSchema, units: 'm', width: 100, depth: 100, resolution: 64,
+    baseElevation, protectedRadius: 0, cover: 'meadow', seed: 1,
+    treeCount: 0, rockCount: 0, treeScale: 1, rockScale: 1, strokes: [], landforms: [],
+  };
+}
+
+/** Historical DreamHouse landscape, now attached only by its project source loader. */
+export function createDreamHouseTerrainDocument(baseElevation = 0): TerrainDocument {
   return {
     schema: terrainSchema, units: 'm', width: 420, depth: 420, resolution: 96,
     baseElevation, protectedRadius: 73, cover: 'woodland', seed: 12571,
@@ -113,7 +123,8 @@ export function addLandform(doc: TerrainDocument, kind: LandformKind): TerrainDo
   const index = doc.landforms.length + 1;
   const next: Landform = {
     id: kind + '-' + index,kind,
-    x: index % 2 ? 115 : -120,z:index % 3 ? -110 : 105,
+    x: index % 2 ? doc.width * .22 : -doc.width * .22,
+    z:index % 3 ? -doc.depth * .22 : doc.depth * .22,
     radiusX:kind === 'mountain' ? 65 : 50,
     radiusZ:kind === 'mountain' ? 65 : 50,
     elevation:kind === 'valley' ? -8 : kind === 'mountain' ? 35 : 12,

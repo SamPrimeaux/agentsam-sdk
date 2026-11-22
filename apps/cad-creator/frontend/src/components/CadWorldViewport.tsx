@@ -60,7 +60,14 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
  const touchPointers=useRef(new Map<number,{x:number;y:number}>()),pinchDistance=useRef<number|null>(null);
  const terrainProjection=useRef<TerrainProjection|null>(null);
  const terrainOrigin=useRef(new THREE.Vector3());
- const terrainDocRef=useRef<TerrainDocument>(createTerrainDocument());
+ const settings=layoutProject?.sceneSettings;
+ const terrainProjectKey=`${layoutProject?.id??sceneLabel??modelUrl??'new'}:${revision??''}`;
+ const terrainInitialRef=useRef<{key:string;document:TerrainDocument}|null>(null);
+ if(!terrainInitialRef.current||terrainInitialRef.current.key!==terrainProjectKey){
+  terrainInitialRef.current={key:terrainProjectKey,document:settings?.terrain?validateTerrainDocument(settings.terrain):createTerrainDocument()};
+ }
+ const initialTerrain=terrainInitialRef.current.document;
+ const terrainDocRef=useRef<TerrainDocument>(initialTerrain);
  const terrainBrushRef=useRef<{mode:SculptMode|null;radius:number;strength:number}>({mode:null,radius:12,strength:3});
  const lastBrushAt=useRef(0);
  const [mode,setMode]=useState<CameraMode>('orbit'),[ready,setReady]=useState(false),
@@ -69,7 +76,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
  [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>('day');
  const [nativeStatus,setNativeStatus]=useState('');
  const [wireframe,setWireframe]=useState(false),[viewPreset,setViewPreset]=useState<ViewPreset>('iso');
- const [terrain,setTerrain]=useState<TerrainDocument>(()=>createTerrainDocument());
+ const [terrain,setTerrain]=useState<TerrainDocument>(initialTerrain);
  const terrainOpen=Boolean(terrainHost)&&siteEditable;
  const [sculptMode,setSculptMode]=useState<SculptMode|null>(null);
  useEffect(()=>{if(!terrainOpen)setSculptMode(null)},[terrainOpen]);
@@ -94,7 +101,6 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
  const [shadows,setShadows]=useState(true);
  const [shadowQuality,setShadowQuality]=useState<CadShadowQuality>(()=>typeof window!=='undefined'&&window.innerWidth<768?'medium':'high');
  const [toneMapping,setToneMapping]=useState<CadToneMapping>('aces');
- const settings=layoutProject?.sceneSettings;
  const projection=settings?.projection??'perspective';
  const projectionRef=useRef(projection);
  useEffect(()=>{projectionRef.current=projection},[projection]);
@@ -682,7 +688,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
        className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
-   {siteEditable&&terrainHost&&createPortal(<TerrainEditorPanel document={terrain} onChange={changeTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
+   {siteEditable&&terrainHost&&createPortal(<TerrainEditorPanel document={terrain} resetDocument={terrainInitialRef.current.document} onChange={changeTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
      brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
      onFitSite={fitSite}/>,terrainHost)}
    {!terrainOpen&&selection&&!onSelect&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">

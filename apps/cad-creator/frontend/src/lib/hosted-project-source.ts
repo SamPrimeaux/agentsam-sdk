@@ -1,5 +1,14 @@
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
 import {createEmptyCadProject} from './create-empty-project';
+import {createTerrainDocument} from './world-terrain';
+
+/** Generic site default: a project without stored terrain starts on a neutral blank site.
+ * No demo or single-project landscape is baked in here; a project's own historical
+ * landscape belongs to that project's source loader, never to this generic path. */
+function withNeutralSite(project: ProjectState): ProjectState {
+  if (project.sceneSettings?.terrain) return project;
+  return {...project, sceneSettings: {...project.sceneSettings, terrain: createTerrainDocument()}};
+}
 
 export interface CadAsset { id: string; name: string; status: string; validationStatus: string; contentHash: string | null; stale?: boolean }
 export interface CadRevision { revision: string; status: string; updatedAt: number; label?: string; parentRevision?: string; bimRevision?: string | null; sceneRevision?: string | null; models: CadAsset[]; documents: CadAsset[]; native: CadAsset[] }
@@ -55,8 +64,8 @@ export async function loadHostedProject(projectId: string, requestedRevision?: s
   // Never load an older drafting document and mislabel it as aligned V1.5 geometry.
   if (revision.revision === 'current' && !revision.documents.length) {
     if(!model.contentHash)throw new Error('The registered scene needs its source hash before edits can be saved.');
-    const project:ProjectState={...createEmptyCadProject(),id:registry.project.id,name:registry.project.name,
-      sceneSource:{assetId:model.id,contentHash:model.contentHash,revision:revision.sceneRevision||revision.revision,units:'m',axes:'gltf-y-up'},sceneElements:[]};
+    const project=withNeutralSite({...createEmptyCadProject(),id:registry.project.id,name:registry.project.name,
+      sceneSource:{assetId:model.id,contentHash:model.contentHash,revision:revision.sceneRevision||revision.revision,units:'m',axes:'gltf-y-up'},sceneElements:[]});
     return {project,registry,revision,modelUrl:cadAssetUrl(projectId,model.id)};
   }
   const document = revision.documents.find((a) => a.validationStatus === 'asset-verified') || revision.documents[0];
@@ -65,7 +74,7 @@ export async function loadHostedProject(projectId: string, requestedRevision?: s
     throw new Error('Saved CAD source is not an editable design document. The current canvas was retained.');
   if(source.sceneSource && (source.sceneSource.assetId!==model.id || source.sceneSource.contentHash!==model.contentHash))
     throw new Error('This document belongs to a different model source. Reconcile its scene binding before editing.');
-  return { project: {...source,id:registry.project.id}, registry, revision, modelUrl: cadAssetUrl(projectId, model.id) };
+  return { project: withNeutralSite({...source,id:registry.project.id}), registry, revision, modelUrl: cadAssetUrl(projectId, model.id) };
 }
 
 export interface HostedSaveReceipt {
