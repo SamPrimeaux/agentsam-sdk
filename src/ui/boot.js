@@ -1,7 +1,7 @@
 import path from 'node:path';
 import pc from 'picocolors';
 import pkg from '../../package.json' with { type: 'json' };
-import { brandedTerminalHeader } from './companion-art.js';
+import { renderHomeScreen } from './home-screen.js';
 
 
 function compactHome(value) {
@@ -34,22 +34,20 @@ export function renderBootSummary({ identity, preferences }) {
 }
 
 export async function runBootScene({
-  identity, preferences,
+  identity,
   write = process.stderr.write.bind(process.stderr),
 }) {
   // Presentation belongs on stderr and never pollutes data-oriented stdout.
   if (!process.stderr.isTTY || process.env.CI) return;
-  const useColor = !process.env.NO_COLOR && process.env.TERM !== 'dumb';
-  const heading = brandedTerminalHeader({
-    project: identity.project + (identity.branch ? ' · ' + identity.branch : ''),
-    model: modelLine(preferences),
-    cwd: compactHome(identity.root),
+  const color = !process.env.NO_COLOR && process.env.TERM !== 'dumb';
+  const rows = process.stderr.rows || 24;
+  // Scroll earlier output into scrollback instead of erasing it, then draw from the top.
+  write('\n'.repeat(rows) + '\x1b[H' + renderHomeScreen({
     version: pkg.version,
-    width: process.stderr.columns || 80,
-    color: useColor,
-  });
-  write('\n' + heading + '\n');
-  write('  ' + (preferences.runtime || 'local') + ' · ' +
-    (preferences.terminal || path.basename(process.env.SHELL || '') || 'shell') + '\n');
-  write('  Type / and press Enter for the command menu.\n\n');
+    cwd: compactHome(identity.root),
+    branch: identity.branch || '',
+    cols: process.stderr.columns || 80,
+    rows,
+    color,
+  }));
 }
