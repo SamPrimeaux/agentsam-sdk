@@ -24,3 +24,4 @@ export * from './design-workspace-bridge';
 export * from './scene-format';
 export * from './resource-ref';
 export * from './scene-document';
+export * from './bim-model';
