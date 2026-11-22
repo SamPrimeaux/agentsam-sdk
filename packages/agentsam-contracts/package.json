@@ -116,7 +116,12 @@
       "types": "./dist/scene-document.d.ts",
       "import": "./dist/scene-document.js"
     },
-    "./scene-document/schema": "./schemas/scene-document.v2.schema.json"
+    "./scene-document/schema": "./schemas/scene-document.v2.schema.json",
+    "./bim-model": {
+      "types": "./dist/bim-model.d.ts",
+      "import": "./dist/bim-model.js"
+    },
+    "./bim-model/schema": "./schemas/bim-model.v1.schema.json"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

@@ -229,6 +229,7 @@ def _capabilities() -> dict[str, Any]:
             "openscad_compile": tools["openscad"]["installed"],
             "freecad_execute": tools["freecad"].get("ready", tools["freecad"]["installed"]),
             "blender_execute": tools["blender"]["installed"],
+            "ifc_execute": tools["ifc"]["installed"],
         },
         "limits": {
             "max_source_chars": MAX_SOURCE_CHARS,
@@ -396,6 +397,90 @@ def _blender_command(adapter_path: Path, request_path: Path, operation: str = "b
         if binary or Path(cmd).exists():
             return [binary or cmd, "-b", "--python", str(adapter_path), "--", "--operation", operation, "--request", str(request_path)]
     raise RuntimeError("Blender runtime binary not found in container")
+
+
+IFC_OPERATIONS = ("inspect",)
+IFC_DEFAULT_MAX_ELEMENTS = 50_000
+
+
+def _find_ifc_adapter() -> Path:
+    candidates = [
+        Path("/srv/ifc/adapter.py"),
+        Path("/srv/services/cad/ifc/adapter.py"),
+        Path(__file__).parent / "ifc" / "adapter.py",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    raise RuntimeError("IFC adapter script not found in CAD service container")
+
+
+def _ifc_python() -> str:
+    """The interpreter that carries ifcopenshell: the container venv, else this one."""
+    configured = os.environ.get("AGENTSAM_CAD_PYTHON", "/opt/agentsam-venv/bin/python")
+    return configured if Path(configured).is_file() else sys.executable
+
+
+def _execute_ifc(payload: dict[str, Any]) -> dict[str, Any]:
+    operation = str(payload.get("operation", "inspect"))
+    if operation not in IFC_OPERATIONS:
+        raise ValueError(f"unsupported IFC operation: {operation}")
+    ref = payload.get("input")
+    if not isinstance(ref, dict) or ref.get("kind") != "file" or set(ref) - {"kind", "mount", "path"}:
+        raise ValueError("ifc_input_must_be_file_ref")
+    mount, relative = str(ref.get("mount", "")), str(ref.get("path", ""))
+    _, _, source_path = _file_target(f"/v1/files/{mount}/{quote(relative, safe='/')}")
+    if not source_path.is_file():
+        raise ValueError("ifc_input_not_found")
+
+    try:
+        timeout = int(payload.get("timeout_seconds", 60))
+    except (TypeError, ValueError):
+        timeout = 60
+    timeout = max(1, min(timeout, MAX_TIMEOUT_SECONDS))
+    try:
+        max_elements = int(payload.get("max_elements", IFC_DEFAULT_MAX_ELEMENTS))
+    except (TypeError, ValueError):
+        max_elements = IFC_DEFAULT_MAX_ELEMENTS
+
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="ifc-", dir=WORK_ROOT) as temp:
+        temp_path = Path(temp)
+        request_path, output_path = temp_path / "request.json", temp_path / "model.json"
+        request_path.write_text(json.dumps({
+            "schema_version": 1, "input": str(source_path), "output": str(output_path),
+            "max_elements": max_elements,
+        }), encoding="utf-8")
+        command = [_ifc_python(), str(_find_ifc_adapter()), "--operation", operation, "--request", str(request_path)]
+        try:
+            proc = subprocess.run(command, cwd=temp, env=os.environ.copy(), capture_output=True,
+                                  text=True, timeout=timeout, check=False)
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(f"IFC {operation} exceeded {timeout}s") from exc
+
+        envelope = None
+        for line in reversed((proc.stdout or "").splitlines()):
+            if line.startswith("AGENTSAM_RESULT="):
+                try:
+                    envelope = json.loads(line[len("AGENTSAM_RESULT="):])
+                    break
+                except json.JSONDecodeError:
+                    pass
+        if not envelope or not envelope.get("ok"):
+            err_msg = envelope.get("error") if envelope else f"exit {proc.returncode}"
+            raise RuntimeError(f"IFC {operation} failed ({err_msg}): {(proc.stderr or '')[-2000:]}")
+        if not output_path.is_file():
+            raise RuntimeError("IFC adapter reported success but wrote no model")
+        raw = output_path.read_bytes()
+        if len(raw) > MAX_ARTIFACT_BYTES:
+            raise RuntimeError(f"model is {len(raw)} bytes; exceeds {MAX_ARTIFACT_BYTES} bytes")
+        model = json.loads(raw)
+        return {
+            "ok": True, "tool": "ifc", "operation": operation, "schema": model.get("schema"),
+            "source_sha256": model["source"]["sha256"], "model_sha256": hashlib.sha256(raw).hexdigest(),
+            "metrics": envelope.get("metrics", {}), "ifcopenshell": envelope.get("ifcopenshell"),
+            "model": model,
+        }
 
 
 def _execute_freecad(payload: dict[str, Any]) -> dict[str, Any]:
@@ -894,6 +979,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self.path == "/v1/blender/execute":
                 self._json(HTTPStatus.OK, _execute_blender(payload))
+                return
+            if self.path == "/v1/ifc/execute":
+                self._json(HTTPStatus.OK, _execute_ifc(payload))
                 return
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
         except ValueError as exc:
