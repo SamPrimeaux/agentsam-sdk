@@ -25,20 +25,28 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, unquote, urlsplit
 
-# Reuse the published Python SDK's portable native host adapter. Keep the
-# existing Linux compatibility path for images not yet carrying SDK >=0.2.
+# One implementation of native host discovery: the SDK's agentsam_sdk.cad. The container
+# context stages it next to this file; a source checkout resolves it from ../../python.
 try:
     from agentsam_sdk.cad import (
         discover_freecad,
         discover_occt,
+        freecad_adapter_path,
         probe_freecad,
         probe_occt,
     )
 except ImportError:
-    discover_freecad = None
-    probe_freecad = None
-    discover_occt = None
-    probe_occt = None
+    _checkout_python = Path(__file__).resolve().parents[2] / "python"
+    if not (_checkout_python / "agentsam_sdk" / "cad").is_dir():
+        raise
+    sys.path.insert(0, str(_checkout_python))
+    from agentsam_sdk.cad import (
+        discover_freecad,
+        discover_occt,
+        freecad_adapter_path,
+        probe_freecad,
+        probe_occt,
+    )
 
 PORT = int(os.environ.get("PORT", "8793"))
 
@@ -95,7 +103,7 @@ def _probe(command: list[str], env: dict[str, str] | None = None, timeout: int =
 
 def _extended_tool_version(name: str) -> dict[str, Any]:
     """Probe the production-pipeline tools by actually exercising them, not by checking a binary exists."""
-    if name == "occt" and discover_occt is not None and probe_occt is not None:
+    if name == "occt":
         receipt = probe_occt(discover_occt())
         return {
             "installed": bool(receipt.get("installed")),
@@ -150,52 +158,15 @@ def _tool_version(name: str) -> dict[str, Any]:
     if name in ("ifc", "media", "occt"):
         return _extended_tool_version(name)
     if name == "freecad":
-        if discover_freecad is not None and probe_freecad is not None:
-            receipt = probe_freecad(discover_freecad())
-            return {
-                "installed": bool(receipt.get("installed")),
-                "ready": bool(receipt.get("ready")),
-                "binary": receipt.get("binary"),
-                "version": receipt.get("version"),
-                "kernel": receipt.get("kernel"),
-                "error": receipt.get("error"),
-                "detail": receipt.get("detail"),
-            }
-        # Legacy Linux service image compatibility until SDK dependency is installed.
-        binary = shutil.which("python3")
-        module = Path("/usr/lib/freecad/lib/FreeCAD.so")
-
-        if not binary or not module.is_file():
-            return {"installed": False, "binary": None, "version": None}
-
-        env = os.environ.copy()
-        env["PYTHONPATH"] = "/usr/lib/freecad/lib"
-
-        probe = subprocess.run(
-            [binary, "-c",
-             ("import FreeCAD, Part; "
-              "assert Part.makeBox(1,2,3).isValid(); "
-              "print('.'.join(FreeCAD.Version()[:3]))")],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            env=env,
-            check=False,
-        )
-
-        if probe.returncode != 0:
-            return {
-                "installed": False,
-                "binary": binary,
-                "version": None,
-                "error": (probe.stderr or "FreeCAD kernel probe failed")[-500:],
-            }
-
+        receipt = probe_freecad(discover_freecad())
         return {
-            "installed": True,
-            "binary": binary,
-            "version": probe.stdout.strip(),
-            "kernel": "OCCT",
+            "installed": bool(receipt.get("installed")),
+            "ready": bool(receipt.get("ready")),
+            "binary": receipt.get("binary"),
+            "version": receipt.get("version"),
+            "kernel": receipt.get("kernel"),
+            "error": receipt.get("error"),
+            "detail": receipt.get("detail"),
         }
 
     command = TOOL_COMMANDS[name]
@@ -353,16 +324,10 @@ def _compile_openscad(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _find_freecad_adapter() -> Path:
-    candidates = [
-        Path("/srv/freecad/adapter.py"),
-        Path("/srv/services/cad/freecad/adapter.py"),
-        Path(__file__).parent / "freecad" / "adapter.py",
-        Path(__file__).parent / "freecad_adapter.py",
-    ]
-    for c in candidates:
-        if c.exists():
-            return c
-    raise RuntimeError("FreeCAD adapter script not found in CAD service container")
+    adapter = freecad_adapter_path()
+    if not adapter.is_file():
+        raise RuntimeError(f"FreeCAD adapter missing from the SDK package: {adapter}")
+    return adapter
 
 
 def _find_blender_adapter() -> Path:
@@ -379,21 +344,10 @@ def _find_blender_adapter() -> Path:
 
 
 def _freecad_command(adapter_path: Path, request_path: Path, operation: str = "build") -> list[str]:
-    if discover_freecad is not None:
-        host = discover_freecad()
-        if host is None:
-            raise RuntimeError("FreeCAD native runtime not found; configure AGENTSAM_FREECAD_HOME or AGENTSAM_FREECAD_PYTHON")
-        return host.adapter_command(adapter_path, request_path, operation=operation)
-    # Backwards-compatible Linux command path for images without the SDK.
-    for cmd in ["FreeCADCmd", "freecadcmd", "/usr/lib/freecad/bin/FreeCADCmd"]:
-        binary = shutil.which(cmd)
-        if binary or Path(cmd).exists():
-            return [binary or cmd, str(adapter_path), "--operation", operation, "--request", str(request_path)]
-    for py in ["/usr/lib/freecad/bin/python", "python3"]:
-        binary = shutil.which(py)
-        if binary or Path(py).exists():
-            return [binary or py, str(adapter_path), "--operation", operation, "--request", str(request_path)]
-    raise RuntimeError("FreeCAD runtime binary not found in container")
+    host = discover_freecad()
+    if host is None:
+        raise RuntimeError("FreeCAD native runtime not found; configure AGENTSAM_FREECAD_HOME or AGENTSAM_FREECAD_PYTHON")
+    return host.adapter_command(adapter_path, request_path, operation=operation)
 
 
 def _blender_command(adapter_path: Path, request_path: Path, operation: str = "build") -> list[str]:
@@ -447,8 +401,8 @@ def _ifc_candidates() -> list[tuple[str, dict[str, str], str]]:
     if Path(CONTAINER_VENV_PYTHON).is_file():
         found.append((CONTAINER_VENV_PYTHON, base, "container venv"))
     found.append((sys.executable, base, "service interpreter"))
-    host = discover_freecad() if discover_freecad is not None else None
-    if host is not None and getattr(host, "mode", None) == "python":
+    host = discover_freecad()
+    if host is not None and host.mode == "python":
         found.append((host.executable, host.environment(), "FreeCAD python"))
     return found
 
@@ -601,11 +555,9 @@ def _execute_freecad(payload: dict[str, Any]) -> dict[str, Any]:
         request_path.write_text(json.dumps(request_data, indent=2), encoding="utf-8")
 
         command = _freecad_command(adapter_path, request_path, operation="build")
-        host = discover_freecad() if discover_freecad is not None else None
+        host = discover_freecad()
         env = host.environment() if host is not None else os.environ.copy()
         env.setdefault("QT_QPA_PLATFORM", "offscreen")
-        if host is None:
-            env.setdefault("PYTHONPATH", "/usr/lib/freecad/lib")
 
         try:
             proc = subprocess.run(

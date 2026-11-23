@@ -118,7 +118,7 @@ test('CAD deployment creates private token config and isolated build context', (
     fs.mkdirSync(versionDir, { recursive: true });
     const context = stageCadContext(versionDir);
     assert.ok(fs.existsSync(path.join(context, 'server.py')));
-    assert.deepEqual(fs.readdirSync(context).sort(), ['server.py']);
+    assert.deepEqual(fs.readdirSync(context).sort(), ['agentsam_sdk', 'server.py']);
 
     const args = cadRunArguments(prepared);
     assert.ok(!args.includes('--read-only'));
@@ -224,4 +224,25 @@ test('stageCadContext stages every native engine source, so the image never buil
       assert.equal(fs.readFileSync(path.join(context, 'occt', name), 'utf8'), fs.readFileSync(new URL(name, nativeDir), 'utf8'), `${name} staged unchanged`);
     }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('staged context is self-contained: server.py imports the SDK CAD module and finds the packaged FreeCAD adapter', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-cad-context-'));
+  try {
+    const context = stageCadContext(root, { tools: 'freecad' });
+    assert.ok(fs.existsSync(path.join(context, 'agentsam_sdk/cad/adapters/freecad.py')));
+    assert.ok(!fs.existsSync(path.join(context, 'freecad')), 'adapter must not be staged a second time');
+    assert.ok(!fs.readdirSync(path.join(context, 'agentsam_sdk/cad')).includes('__pycache__'));
+    // Import server.py exactly as the container does: only the staged context on sys.path.
+    const output = execFileSync('python3', ['-I', '-c', [
+      'import importlib.util, sys',
+      `sys.path.insert(0, ${JSON.stringify(context)})`,
+      `spec = importlib.util.spec_from_file_location("cad_server", ${JSON.stringify(path.join(context, 'server.py'))})`,
+      'm = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)',
+      'print(m._find_freecad_adapter())',
+    ].join('\n')], { encoding: 'utf8' }).trim();
+    assert.ok(fs.realpathSync(output).startsWith(fs.realpathSync(context)), output);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

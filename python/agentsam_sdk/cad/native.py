@@ -16,6 +16,12 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 _PREFIX = "AGENTSAM_RESULT="
+_ADAPTERS = Path(__file__).resolve().parent / "adapters"
+
+
+def freecad_adapter_path() -> Path:
+    """The fixed FreeCAD-side adapter that ships inside this package (wheel, sdist and npm alike)."""
+    return _ADAPTERS / "freecad.py"
 _PROBE = (
     "import FreeCAD, Part, json\n"
     "shape = Part.makeBox(2, 3, 4)\n"
@@ -70,6 +76,46 @@ class FreeCADHost:
             )
             return [self.executable, "-c", code]
         return [self.executable, *argv]
+
+    def run(
+        self,
+        request: Mapping[str, object],
+        *,
+        operation: str = "build",
+        timeout: float = 120.0,
+        adapter: str | Path | None = None,
+    ) -> dict:
+        """Run the fixed adapter on this host and return its parsed result envelope.
+
+        `request` is the adapter's bounded JSON contract (schema_version 1); no code is
+        evaluated. Relative `output` paths resolve against a private temp dir, so pass an
+        absolute path to keep the artifact. Returns {"ok": False, "error": ...} on failure
+        instead of raising, so callers always get a receipt-shaped answer.
+        """
+        adapter_file = Path(adapter) if adapter else freecad_adapter_path()
+        if not adapter_file.is_file():
+            return {"ok": False, "error": f"FreeCAD adapter not found: {adapter_file}"}
+        with tempfile.TemporaryDirectory(prefix="agentsam-freecad-") as directory:
+            request_file = Path(directory) / "request.json"
+            request_file.write_text(json.dumps(dict(request)), encoding="utf-8")
+            try:
+                done = subprocess.run(
+                    self.adapter_command(adapter_file, request_file, operation=operation),
+                    capture_output=True, text=True, env=self.environment(),
+                    cwd=directory, timeout=timeout, check=False,
+                )
+            except subprocess.TimeoutExpired:
+                return {"ok": False, "error": f"FreeCAD adapter timed out after {timeout:g}s"}
+            except OSError as err:
+                return {"ok": False, "error": f"FreeCAD host failed to start: {err}"}
+        for line in reversed((done.stdout or "").splitlines()):
+            if line.startswith(_PREFIX):
+                try:
+                    return json.loads(line[len(_PREFIX):])
+                except ValueError:
+                    break
+        tail = (done.stderr or done.stdout or "").strip()[-500:]
+        return {"ok": False, "error": f"FreeCAD adapter returned no result (exit {done.returncode}): {tail}"}
 
 
 def discover_freecad(

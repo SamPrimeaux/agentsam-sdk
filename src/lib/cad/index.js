@@ -38,6 +38,7 @@ export {
   FREECAD_ADAPTER_PATH,
   FREECAD_EXPORT_FORMATS,
   discoverFreeCadPython,
+  resolveFreeCadHost,
   freeCadBuild,
   freeCadInspect,
 } from './freecad.js';

@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from agentsam_sdk.cad import FreeCADHost, discover_freecad, probe_freecad
+from agentsam_sdk.cad import FreeCADHost, discover_freecad, freecad_adapter_path, probe_freecad
 
 
 class NativeCADTests(unittest.TestCase):
@@ -122,9 +122,32 @@ class NativeCADTests(unittest.TestCase):
         )
         self.assertEqual((host.executable, host.library_dir), ("/usr/bin/python3", "/usr/lib64/freecad/lib"))
 
+    def test_discovery_matches_the_fixture_shared_with_the_node_port(self):
+        cases = json.loads((Path(__file__).parent / "fixtures" / "freecad_host_cases.json").read_text())["cases"]
+        for case in cases:
+            with self.subTest(case["name"]):
+                files, lookup = set(case["files"]), case["which"]
+                host = discover_freecad(
+                    platform_name=case["platform"], environment=case["env"],
+                    exists=lambda path: path in files, which=lambda name: lookup.get(name),
+                )
+                if case["expect"] is None:
+                    self.assertIsNone(host)
+                else:
+                    self.assertEqual(case["expect"], {
+                        "executable": host.executable, "mode": host.mode, "platform": host.platform,
+                        "source": host.source, "library_dir": host.library_dir,
+                    })
+
+    def test_packaged_adapter_ships_with_the_sdk_and_run_reports_failures_as_envelopes(self):
+        self.assertTrue(freecad_adapter_path().is_file())
+        missing = FreeCADHost("/nonexistent/python", "python", "linux", "test").run({"schema_version": 1}, timeout=5)
+        self.assertFalse(missing["ok"])
+        self.assertIn("failed to start", missing["error"])
+
     def test_real_adapter_runs_in_every_installed_mode(self):
         """Skipped unless FreeCAD and the SDK adapter are present; proves the launcher, not mocks."""
-        adapter = Path(__file__).resolve().parents[2] / "services" / "cad" / "freecad" / "adapter.py"
+        adapter = freecad_adapter_path()
         found = discover_freecad()
         if found is None or not adapter.is_file() or not probe_freecad(found).get("ready"):
             self.skipTest("FreeCAD or the SDK adapter is not available here")

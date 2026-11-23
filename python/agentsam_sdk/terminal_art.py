@@ -9,7 +9,7 @@ import json
 import os
 import shutil
 import sys
-from importlib import metadata, resources
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -51,11 +51,10 @@ def render_half_block(grid: list[str], *, color: bool) -> str:
 
 
 def version_string() -> str:
-    try:
-        return metadata.version("agentsam-sdk")
-    except metadata.PackageNotFoundError:
-        from . import __version__
-        return __version__
+    # __version__ is also what setuptools stamps into wheel metadata, so they agree for real
+    # installs; reading it directly keeps a stale editable install from reporting an old version.
+    from . import __version__
+    return __version__
 
 
 def boot_header(*, width: int | None = None, color: bool | None = None) -> str:
