@@ -250,11 +250,15 @@ test('legacy account-owned Canvases without thumbnail keys render read-only prev
 
 test('legacy owned Canvas advertises a preview URL even when thumbnail metadata is absent',async()=>{
   const item=artifactRow({id:'canvas_abc',name:'Legacy design',artifact_type:'design-canvas',
-    mime_type:'application/json',thumbnail_r2_key:null,preview_r2_key:null,public_url:null,is_public:0});
+    mime_type:'application/json',thumbnail_r2_key:null,preview_r2_key:null,public_url:null,is_public:0,
+    metadata_json:'{"artboardCount":2}'});
   const h=dbHarness({rows:{artifacts:[item]}});
   const listed=await listAccountLibraryResources(h.DB,'owner_1');
   assert.equal(listed[0].preview,'/api/work/library/artifacts/canvas_abc/file?preview=1');
   assert.equal(listed[0].open,'/admin/canvas?canvas=canvas_abc');
+  const blank=dbHarness({rows:{artifacts:[{...item,metadata_json:'{"artboardCount":0}'}]}});
+  const blankListing=await listAccountLibraryResources(blank.DB,'owner_1');
+  assert.equal(blankListing[0].preview,null);
 });
 
 test('artifact mutations validate fields and always constrain writes by owner', async () => {
