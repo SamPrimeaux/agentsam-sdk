@@ -160,7 +160,8 @@ function appTreeDrift({ write }) {
         }
       }
       for (const [key, entry] of Object.entries(packages)) {
-        if (!key || key.startsWith('node_modules/') || entry.link) continue;
+        // Lock keys inside any node_modules are installed registry copies, never workspace members; the untracked on-disk install must not decide drift.
+        if (!key || key.split('/').includes('node_modules') || entry.link) continue;
         const targetFile = path.join(dir, key, 'package.json');
         if (!fs.existsSync(targetFile)) continue;
         const diskTarget = read(targetFile);
