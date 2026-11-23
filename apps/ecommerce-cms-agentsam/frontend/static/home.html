@@ -12,6 +12,12 @@
 <script>
 if (new URLSearchParams(location.search).get('__agentsamEmbedded') === '1') {
   document.documentElement.classList.add('agentsam-embedded-home');
+  // Same-origin host appearance is available before the embedded page paints.
+  // The host's onLoad effect keeps this in sync after account theme changes.
+  try {
+    const hostTheme = parent.document.querySelector('[data-nav-theme]')?.getAttribute('data-nav-theme');
+    if (hostTheme === 'dark' || hostTheme === 'light') document.documentElement.dataset.theme = hostTheme;
+  } catch { /* Standalone and cross-origin previews keep their own theme. */ }
 }
 </script>
 <style>
@@ -26,7 +32,41 @@ html.agentsam-embedded-home #agentsam-dock { display: none !important; }
 html.agentsam-embedded-home .console-body,
 html.agentsam-embedded-home .console-workspace,
 html.agentsam-embedded-home .console-main { width: 100%; min-width: 0; }
-html.agentsam-embedded-home .fnf-home { padding-bottom: 2rem; }
+html.agentsam-embedded-home .fnf-home { padding: 0 clamp(12px, 4vw, 24px) 2rem; min-width: 0; max-width: 100%; box-sizing: border-box; }
+/* The hidden legacy navigation MUST NOT leave its mobile push transform on the
+   embedded Home. That transform was shifting half the page offscreen. */
+html.agentsam-embedded-home body.console-theme .console-workspace {
+  transform: none !important; flex: 1 1 0% !important;
+  min-width: 0 !important; width: 100% !important; max-width: 100% !important;
+}
+html.agentsam-embedded-home .console-shell,
+html.agentsam-embedded-home .console-body,
+html.agentsam-embedded-home .console-workspace,
+html.agentsam-embedded-home .console-main {
+  box-sizing: border-box; max-width: 100%; min-width: 0 !important;
+  overflow-x: clip;
+}
+html.agentsam-embedded-home .fnf-home-stage {
+  width: 100%; max-width: min(760px, 100%); min-width: 0;
+  min-height: min(810px, 100dvh); padding: clamp(28px, 6dvh, 48px) 0 52px;
+}
+html.agentsam-embedded-home .fnf-home-stage h1 {
+  max-width: 100%; font-size: clamp(22px, 4.5cqw, 32px); overflow-wrap: anywhere;
+}
+html.agentsam-embedded-home .fnf-site-preview {
+  width: min(350px, 100%); aspect-ratio: 350 / 197; height: auto;
+}
+html.agentsam-embedded-home .fnf-site-preview iframe {
+  transform: scale(var(--home-site-preview-scale, .2917));
+}
+html.agentsam-embedded-home .commerce-home-composer,
+html.agentsam-embedded-home .fnf-home-suggestions {
+  width: min(590px, 100%); min-width: 0;
+}
+@media (max-width: 560px) {
+  html.agentsam-embedded-home .fnf-home-stage h1 { font-size: clamp(20px, 5vw, 27px); }
+}
+
 </style>
 </head>
 <body>
@@ -138,6 +178,20 @@ renderShell("/admin/home", `
     console.error(err);
   }
 })();
+</script>
+<script>
+if (document.documentElement.classList.contains('agentsam-embedded-home')) {
+  const attachPreviewFit = () => {
+    const preview = document.querySelector('.fnf-site-preview');
+    if (!preview) return;
+    const fit = () => preview.style.setProperty('--home-site-preview-scale',
+      String(Math.min(.2917, preview.clientWidth / 1200)));
+    fit();
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(preview);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attachPreviewFit, { once: true });
+  else attachPreviewFit();
+}
 </script>
 </body>
 </html>

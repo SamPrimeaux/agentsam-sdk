@@ -147,6 +147,38 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const [theme, setTheme] = useState<NavTheme>(() => initialCachedAppearance()?.theme || 'dark');
   const [accent, setAccent] = useState(() => initialCachedAppearance()?.accentColor || accents[0]);
   const [navTokens, setNavTokens] = useState<NavTokens>(() => initialCachedAppearance()?.tokens || {});
+  const embeddedHomeFrame = useRef<HTMLIFrameElement>(null);
+  // The packaged commerce Home runs in its own same-origin document. Project
+  // the live account appearance into that document without copying its UI.
+  useEffect(() => {
+    const frame = embeddedHomeFrame.current;
+    if (!frame) return;
+    const sync = () => {
+      let doc: Document | null = null;
+      try { doc = frame.contentDocument; } catch { return; }
+      if (!doc?.documentElement) return;
+      doc.documentElement.dataset.theme = theme;
+      const host = document.querySelector('.as-nav-scope') ?? document.documentElement;
+      const computed = getComputedStyle(host);
+      const roles = {
+        bg: 'canvas', surface: 'surface', 'surface-2': 'hover',
+        ink: 'text', 'ink-2': 'muted', muted: 'muted',
+        line: 'border', hover: 'hover', focus: 'accent',
+        accent: 'accent',
+      } as const;
+      for (const [role, token] of Object.entries(roles)) {
+        const color = computed.getPropertyValue('--nav-' + token).trim();
+        if (color) doc.documentElement.style.setProperty('--c-' + role, color);
+      }
+      const foreground = computed.getPropertyValue('--nav-text').trim();
+      if (foreground) doc.documentElement.style.setProperty('--c-accent-ink',
+        computed.getPropertyValue('--nav-canvas').trim() || (theme === 'dark' ? '#101719' : '#ffffff'));
+    };
+    frame.addEventListener('load', sync);
+    sync();
+    return () => frame.removeEventListener('load', sync);
+  }, [theme, navTokens]);
+
   const [navigationStore, setNavigationStore] = useState<NavStateStore | undefined>(() =>
     typeof window === 'undefined' ? undefined : (window as Window & { __agentsamNavigationStore?: NavStateStore }).__agentsamNavigationStore);
   useEffect(() => {
@@ -731,8 +763,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         <OfflineBanner />
         <div className="platform-console-stage" data-assistant-focused={!isConversation && !isCanvasRoute && globalAssistantFocused && state.sideOpen ? "true" : "false"}>
           <main className="agentsam-route">{pathname === '/admin/home'
-            ? <iframe title="AgentSam admin home" src="/ecommerce-cms-agentsam/admin/home.html?__agentsamEmbedded=1"
-                className="h-full min-h-0 w-full flex-1 border-0" />
+            ? <iframe ref={embeddedHomeFrame} title="AgentSam admin home" src="/ecommerce-cms-agentsam/admin/home.html?__agentsamEmbedded=1"
+                className="agentsam-embedded-home-frame h-full min-h-0 w-full flex-1 border-0" />
             : <Outlet />}</main>
           {!isConversation && !isCanvasRoute && state.sideOpen ? <>
             {!globalAssistantFocused && <SplitHandle label="Resize AgentSam panel" onDrag={(delta) => setGlobalAssistantWidth((width) => Math.max(320, Math.min(720, width - delta)))} onDoubleClick={() => setGlobalAssistantWidth(390)} />}

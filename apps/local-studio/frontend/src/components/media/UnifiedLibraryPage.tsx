@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { LocalStudioWorkPage } from '@/components/work/LocalStudioWorkPage';
 import { MediaLibraryPage } from './MediaLibraryPage';
 import { Files, Images } from 'lucide-react';
@@ -8,6 +8,11 @@ import './library-layout.css';
  * File and media authority stays with the existing Work/Cloudflare providers. */
 export function UnifiedLibraryPage({ view }: { view: 'artifacts' | 'media' }) {
   const navigate = useNavigate();
+  const artifactFilter = useRouterState({ select: state => {
+    const requested = new URLSearchParams(state.location.searchStr).get('view');
+    return requested === 'yours' || requested === 'shared' || requested === 'recent' || requested === 'starred' || requested === 'trash'
+      ? requested : 'all';
+  }});
   return (
     <div className="agentsam-unified-library" data-studio-product="library" data-library-view={view}>
       <header className="agentsam-library-header">
@@ -26,7 +31,7 @@ export function UnifiedLibraryPage({ view }: { view: 'artifacts' | 'media' }) {
         </nav>
       </header>
       <section className="agentsam-library-content" aria-label={view === 'artifacts' ? 'Artifacts' : 'Media'}>
-        {view === 'artifacts' ? <LocalStudioWorkPage surface="artifacts" /> : <MediaLibraryPage />}
+        {view === 'artifacts' ? <LocalStudioWorkPage surface="artifacts" artifactView={artifactFilter} /> : <MediaLibraryPage />}
       </section>
     </div>
   );

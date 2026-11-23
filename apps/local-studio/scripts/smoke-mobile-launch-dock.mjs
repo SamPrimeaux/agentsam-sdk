@@ -33,6 +33,18 @@ try {
     isMobile: true, hasTouch: true,
   });
   page.setDefaultTimeout(6000);
+  const goalFixture = {
+    goals: [
+      { id: 'focus-life', source_key: null, title: 'Phone Focus QA', description: 'A focused goal description', goal_type: 'personal', status: 'active', priority: 1 },
+      { id: 'focus-work', source_key: null, title: 'Platform Focus QA', description: 'A work goal description', goal_type: 'platform', status: 'active', priority: 1 },
+    ],
+    steps: [{ id: 'life-step', goal_id: 'focus-life', title: 'Review a concrete step', status: 'todo' }],
+    ticketLinks: [],
+    goapGoals: [{ id: 'goap-focus', title: 'Engineering Focus QA', status: 'active', goal_status: 'active', project: 'Studio', focused: true }],
+  };
+  await page.route('**/api/studio/living-plan*', route => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify(goalFixture),
+  }));
   const errors = [];
   page.on('pageerror', (error) => errors.push(String(error)));
   await page.goto('http://127.0.0.1:' + server.address().port + '/#/admin/home', {
@@ -50,8 +62,17 @@ try {
   assert.equal(await page.locator('.console-sidenav.admin-sidebar').evaluate((element) =>
     element.getBoundingClientRect().width), 0);
   await dock.getByRole('button', { name: 'Chats' }).click();
-  // Chats is a focused conversation. Only the header bubble opens navigation.
+  // AgentSam now uses the same packaged dock with contextual Work surfaces.
+  const workDock = page.getByRole('navigation', { name: 'Work surfaces' });
+  await workDock.waitFor({state:'visible'});
   await dock.waitFor({state:'hidden'});
+  assert.deepEqual(await workDock.locator('button').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))),
+    ['Chat', 'Files', 'Code', 'Terminal', 'Preview']);
+  assert.equal(await page.locator('.as-nav-launch-dock:visible').count(), 1, 'never stack two bottom docks');
+  const phoneDockBounds = await workDock.boundingBox();
+  const phoneComposerBounds = await page.locator('.agentsam-conversation-dock').boundingBox();
+  assert.ok(phoneDockBounds && phoneComposerBounds && phoneComposerBounds.y + phoneComposerBounds.height <= phoneDockBounds.y + 2,
+    '390px composer must remain above the floating Work dock');
   const navToggle = page.locator('[data-shared-nav-toggle], .agentsam-topbar-leading [aria-label="Toggle global navigation"]').first();
   await navToggle.click();
   // Shared navigation is a push drawer (an inline aside), not a modal dialog.
@@ -90,19 +111,84 @@ try {
   await page.locator('.console-topbar-center .agentsam-mobile-companion-identity [data-companion-id]')
     .waitFor({ state: 'visible' });
   assert.equal(await dock.isVisible(), true, 'Home must retain the app launch dock');
+  const homeMetrics = await page.frameLocator('iframe[title="AgentSam admin home"]').locator('.fnf-home-stage').evaluate((stage) => {
+    const root = document.documentElement;
+    const rect = stage.getBoundingClientRect();
+    return {width: root.clientWidth, scrollWidth: root.scrollWidth, left: rect.left, right: rect.right,
+      theme: root.dataset.theme, background: getComputedStyle(document.querySelector('.fnf-home')).backgroundColor,
+      previewWidth: document.querySelector('.fnf-site-preview')?.getBoundingClientRect().width};
+  });
+  assert.ok(homeMetrics.left >= -1 && homeMetrics.right <= homeMetrics.width + 1,
+    `embedded Home must fit its frame: ${JSON.stringify(homeMetrics)}`);
+  assert.ok(homeMetrics.scrollWidth <= homeMetrics.width + 1,
+    `embedded Home must not overflow horizontally: ${JSON.stringify(homeMetrics)}`);
+  assert.ok(homeMetrics.previewWidth <= homeMetrics.width,
+    'Home website preview must flex with the available width');
+  const hostTheme = await page.locator('.as-nav-scope').first().getAttribute('data-nav-theme');
+  assert.equal(homeMetrics.theme, hostTheme, 'embedded Home follows the active account theme');
+  if (hostTheme === 'dark') {
+    assert.notEqual(homeMetrics.background, 'rgb(241, 241, 241)', 'embedded Home must not retain light surface in dark mode');
+  }
+  for (const width of [526, 820, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    const fit = await page.frameLocator('iframe[title="AgentSam admin home"]').locator('.fnf-home-stage').evaluate(stage => {
+      const rect = stage.getBoundingClientRect();
+      return { width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth,
+        left: rect.left, right: rect.right };
+    });
+    assert.ok(fit.left >= -1 && fit.right <= fit.width + 1 && fit.scroll <= fit.width + 1,
+      `${width}px Home must fit in Side Stage-width containers: ${JSON.stringify(fit)}`);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await dock.getByRole('button', { name: 'Ideas' }).click();
   await page.locator('[data-studio-product="ideas"]').waitFor({ state: 'visible' });
   await dock.getByRole('button', { name: 'Goals' }).click();
   await page.waitForURL(/#\/admin\/goalguru/);
+  await page.getByRole('button', { name: 'Life', exact: true }).click();
+  await page.getByRole('button', { name: 'Open goal: Phone Focus QA' }).click();
+  await page.getByRole('button', { name: 'All Life goals' }).waitFor({ state: 'visible' });
+  await page.getByText('A focused goal description').waitFor({ state: 'visible' });
+  await page.getByText('Review a concrete step').waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: 'All Life goals' }).click();
+  await page.getByRole('button', { name: 'Work', exact: true }).click();
+  await page.getByRole('button', { name: 'Open goal: Engineering Focus QA' }).click();
+  await page.getByRole('region', { name: 'Goal details: Engineering Focus QA' }).waitFor({ state: 'visible' });
+  assert.ok(page.url().includes('/admin/goalguru'), 'focus must remain on Goals instead of navigating to Work');
+  await page.getByRole('button', { name: 'All Work goals' }).click();
   await dock.getByRole('button', { name: 'Library' }).click();
   const library = page.locator('[data-studio-product="library"][data-library-view="artifacts"]');
   await library.waitFor({ state: 'visible' });
-  assert.equal(await dock.isVisible(), false, 'Library is a focused destination without the launch dock');
-  await library.getByRole('navigation', { name: 'Library sections' }).getByRole('button', { name: 'Media' }).click();
+  assert.equal(await dock.isVisible(), false, 'Library does not reuse the global destination dock');
+  const libraryDock = page.getByRole('navigation', { name: 'Library navigation' });
+  await libraryDock.waitFor({state:'visible'});
+  assert.deepEqual(await libraryDock.locator('button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label'))),
+    ['Artifacts', 'Yours', 'Shared', 'Recent', 'Media']);
+  await libraryDock.getByRole('button', {name:'Yours'}).click();
+  await page.waitForFunction(() => location.href.includes('view=yours'));
+  assert.equal(await libraryDock.getByRole('button',{name:'Yours'}).getAttribute('aria-pressed'), 'true');
+  await libraryDock.getByRole('button', {name:'Artifacts'}).click();
+  await page.waitForFunction(() => !location.href.includes('view=yours'));
+  assert.equal(await libraryDock.getByRole('button',{name:'Artifacts'}).getAttribute('aria-pressed'), 'true');
+  await libraryDock.getByRole('button', { name: 'Media' }).click();
   await page.locator('[data-studio-product="library"][data-library-view="media"]').waitFor({ state: 'visible' });
   await page.locator('[data-agentsam-media-library]').waitFor({ state: 'visible' });
-  assert.deepEqual(errors, [], 'the mobile path must not throw page errors');
-  console.log('[mobile-launch-smoke] PASS 390x844: chat without dock, one header drawer, scoped Home/Ideas/Goals dock, focused Library/Media');
+  // Tablet/half-browser acceptance: Work uses one centered dock and a single stage.
+  await page.goto('http://127.0.0.1:' + server.address().port + '/#/admin/agentsam', {waitUntil:'domcontentloaded'});
+  for (const width of [820, 1024]) {
+    await page.setViewportSize({width, height: 900});
+    await workDock.waitFor({state:'visible'});
+    const bounds = await workDock.boundingBox();
+    assert.ok(bounds && bounds.width <= 540 && bounds.x >= 0 && bounds.x + bounds.width <= width,
+      `${width}px Work dock stays compact and inside the viewport`);
+    assert.equal(await page.locator('.as-nav-launch-dock:visible').count(), 1);
+    const composer = await page.locator('.agentsam-conversation-dock').boundingBox();
+    assert.ok(composer && bounds && composer.y + composer.height <= bounds.y + 2,
+      `${width}px composer must remain above the compact dock`);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true,
+      `${width}px app does not overflow horizontally`);
+  }
+  assert.deepEqual(errors, [], 'the mobile and tablet paths must not throw page errors');
+  console.log('[mobile-launch-smoke] PASS 390x844, 820x900, 1024x900: shared packaged dock, one header drawer, scoped contexts, focused Library/Media');
 } finally {
   await browser?.close();
   await new Promise((done) => server.close(done));

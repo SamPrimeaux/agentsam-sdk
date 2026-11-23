@@ -1,82 +1,5 @@
 /* Work remaster layout — owned by workbench, not Agent 1 shell/theme/media. */
 
-.work-surface-bar {
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid var(--nav-border, var(--color-border));
-  background: color-mix(in srgb, var(--nav-surface, var(--color-card)) 92%, transparent);
-  flex-shrink: 0;
-}
-
-.work-surface-bar__project {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.work-surface-bar__select-wrap {
-  min-width: 0;
-  flex: 1;
-}
-
-.work-surface-bar__select {
-  width: 100%;
-  min-height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--nav-border, var(--color-border));
-  background: var(--nav-canvas, var(--color-background));
-  color: var(--nav-text, var(--color-foreground));
-  font-size: 13px;
-  padding: 0 10px;
-}
-
-.work-surface-bar__status {
-  flex-shrink: 0;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--nav-muted, var(--color-muted-foreground));
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: var(--nav-selected, var(--color-muted));
-}
-
-.work-surface-bar__status[data-status="host"] {
-  color: #1f7a4c;
-  background: color-mix(in srgb, #58b487 22%, transparent);
-}
-
-.work-surface-bar__status[data-status="sample"] {
-  color: #8a6a1f;
-  background: color-mix(in srgb, #d4ab52 24%, transparent);
-}
-
-.work-surface-bar__surfaces {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 4px;
-}
-
-.work-surface-bar__tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-height: 44px;
-  border-radius: 12px;
-  font-size: 10px;
-  color: var(--nav-muted, var(--color-muted-foreground));
-}
-
-.work-surface-bar__tab.is-active {
-  color: var(--nav-text, var(--color-foreground));
-  background: var(--nav-selected, var(--color-muted));
-}
-
 .work-workspace-gate {
   display: flex;
   flex: 1;
@@ -166,10 +89,6 @@
     --work-composer-pad: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
-  .agentsam-page-layout[data-work-remaster="true"] .work-surface-bar {
-    display: flex;
-  }
-
   .agentsam-page-layout[data-work-remaster="true"] .agentsam-conversation-dock {
     padding-bottom: var(--work-composer-pad);
   }
@@ -184,23 +103,6 @@
 
 /* Tablet: keep a usable two-panel stage when width allows. */
 @media (min-width: 768px) and (max-width: 1099px) {
-  .agentsam-page-layout[data-work-remaster="true"] .work-surface-bar {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    border-top: 0;
-    border-bottom: 1px solid var(--nav-border, var(--color-border));
-    padding-bottom: 8px;
-  }
-
-  .agentsam-page-layout[data-work-remaster="true"] .work-surface-bar__project {
-    flex: 0 1 240px;
-  }
-
-  .agentsam-page-layout[data-work-remaster="true"] .work-surface-bar__surfaces {
-    flex: 1;
-  }
-
   .agentsam-page-layout[data-work-remaster="true"] .agentsam-side-panel {
     min-width: 360px;
     max-width: calc(100% - 360px);
@@ -278,3 +180,13 @@
 }
 .agentsam-work-output-card :is(button):focus-visible { outline:2px solid var(--nav-accent,var(--color-accent));outline-offset:2px; }
 @media (prefers-reduced-motion:reduce) { .agentsam-work-output-card { transition:none; } }
+
+/* One active Work surface on constrained tablets, not two squeezed columns. */
+@media (max-width: 1099px) {
+  .agentsam-page-layout:not([data-work-surface="chat"]) .agentsam-side-panel {
+    width: 100% !important; max-width: 100%; min-width: 0; flex: 1;
+  }
+  .agentsam-page-layout:not([data-work-surface="chat"]) .agentsam-workspace > .studio-separator {
+    display: none;
+  }
+}

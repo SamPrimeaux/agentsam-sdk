@@ -8,7 +8,7 @@ import { IconAction } from '@/components/ui/icon-action';
 import { MessageList } from '@/components/workbench/thread';
 import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
-import { WorkSurfaceBar } from '@/components/workbench/work-surface-bar';
+import { WorkProjectSelect } from '@/components/workbench/work-project-select';
 
 import { useActiveCompanion, useCompanionSettings } from './CompanionContext';
 import { companionStateAsset } from './companions';
@@ -40,6 +40,14 @@ function rememberThread(id: string, accountId: string) {
 
 export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const { data, isMobile } = useNav();
+  const [compactWorkLayout, setCompactWorkLayout] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 1099px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1099px)');
+    const sync = () => setCompactWorkLayout(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
   const navigate = useNavigate();
   const state = useWorkStore();
   const companion = useActiveCompanion();
@@ -214,10 +222,10 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const streaming = state.streamingIds.includes(chat.id);
   const companionArt = companionStateAsset(companion, streaming ? 'working' : 'idle');
   const workSurface = state.workSurface;
-  const mobileWorkOpen = isMobile && workSurface !== 'chat';
+  const mobileWorkOpen = compactWorkLayout && workSurface !== 'chat';
   // Work mirrors the reference: stage on the left, chat on the right.
   // Chat mode keeps the established lead-left / Stage-right layout.
-  const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !isMobile;
+  const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !compactWorkLayout;
   const leadComposerDetached = workFocused || mobileWorkOpen || (isMobile && state.sideOpen);
   const floatingChatStyle = {
     '--agentsam-chat-left': floatingPosition ? floatingPosition.x + 'px' : 'auto',
@@ -234,6 +242,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     </> : null}
     {/* The hosted topbar already owns the one global menu bubble. */}
     {!hostLeadingSlot ? <Nav.Trigger aria-label="Toggle global navigation" /> : null}
+    {data.mode === 'work' ? <WorkProjectSelect /> : null}
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
   const headerActions = isMobile ? <div className="agentsam-header-utilities">
@@ -302,8 +311,8 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width + (workSplit ? delta : -delta), window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside id="agentsam-side-stage" className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused(focused => !focused)} /></aside></> : null}
-      {leadComposerDetached && workFocused && !isMobile ? (
+      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !compactWorkLayout && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width + (workSplit ? delta : -delta), window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside id="agentsam-side-stage" className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused(focused => !focused)} /></aside></> : null}
+      {leadComposerDetached && workFocused && !compactWorkLayout ? (
         <section
           ref={floatingChatRef}
           className="agentsam-floating-lead-chat"
@@ -343,7 +352,6 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
         </div>
       )}
     </div>
-    {!isMobile ? <WorkSurfaceBar /> : null}
   </div>;
 }
 

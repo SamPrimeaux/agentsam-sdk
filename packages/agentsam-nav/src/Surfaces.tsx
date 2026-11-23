@@ -22,9 +22,16 @@ export type NavLaunchItem = {
   onSelect: () => void;
 };
 
-/** The host supplies the destinations; navigation never invents app capabilities. */
-export function NavLaunchDock({ items }: { items: NavLaunchItem[] }) {
-  return <nav className="as-nav-launch-dock" aria-label="Quick navigation">
+/** One packaged dock for global destinations and contextual workspace surfaces.
+ * The host still owns routing, state, and actions; no duplicate dock runtime.
+ * `coverage="tablet"` opts into the compact 768–1099px layout.
+ */
+export function NavLaunchDock({ items, coverage = 'phone', label = 'Quick navigation' }: {
+  items: NavLaunchItem[];
+  coverage?: 'phone' | 'tablet';
+  label?: string;
+}) {
+  return <nav className="as-nav-launch-dock" data-nav-dock-coverage={coverage} aria-label={label}>
     {items.map(item => <button
       type="button" key={item.id} aria-label={item.label} title={item.label}
       aria-pressed={Boolean(item.active)} disabled={item.disabled}
