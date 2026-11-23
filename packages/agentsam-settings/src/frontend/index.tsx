@@ -3,6 +3,7 @@ import { useShellAppearance } from "../appearance";
 import { SettingsBillingPanel } from "./billing";
 import { SettingsAccountPanel } from "./account";
 import { SettingsDesignSpecSheet } from "./design-spec";
+import { BrandPluginWorkspace } from "./brand-workspace";
 import { SettingsStoragePanel } from "./storage";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
