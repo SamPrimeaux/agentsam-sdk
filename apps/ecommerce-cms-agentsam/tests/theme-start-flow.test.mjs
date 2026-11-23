@@ -18,7 +18,9 @@ test('new theme guidance is scoped to Ecommerce CMS and never claims to read una
   assert.match(prompt,/Do not publish or change existing pages without my approval/);
 });
 
-test('Theme Studio opens packaged AgentSam and offers real next steps', async () => {
+test('Theme Studio opens packaged AgentSam and offers real next steps', {
+  skip: browserAvailable ? false : 'Playwright/Chrome browser acceptance unavailable in this environment',
+}, async () => {
   const source = readFileSync(new URL('../frontend/theme-editor/theme-start.mjs', import.meta.url));
   const server = createServer((req,res) => {
     if (req.url === '/theme-start.mjs') {
