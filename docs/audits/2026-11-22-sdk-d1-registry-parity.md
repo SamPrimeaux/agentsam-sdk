@@ -14,7 +14,7 @@ Audit date: 2026-11-22. Read-only inspection of the local AgentSam SDK checkout 
 |---|---:|---|
 | `**/agentsam.app.json` | 15 | App and nested embedded/host manifests; heterogeneous schemas |
 | `skills/*/SKILL.md` | 39 | SDK root skills |
-| `skills/*/agentsam.skill.json` | 26 | Root skills with adjacent JSON metadata |
+| `skills/*/agentsam.skill.json` | 26 at audit start; **39 after Batch 1 PR** | All SDK source skill directories now have adjacent metadata; 15 are intentionally excluded from npm packaging until reviewed |
 | `src/cli/command-catalog.js` | 80 | Runtime catalog entries, computed via module import (not text-pattern count) |
 | `scripts/**/*.mjs` | 85 | Source scripts (not all cataloged DB scripts) |
 | `packages/catalog/generated/packages.json` | 55 | Generated canonical package catalog entries |
@@ -64,17 +64,23 @@ App-manifest IDs without an exact `apps.id` match (7/15):
 
 | Manifest | Intended reconciliation |
 |---|---|
-| `samspeaks` | Independent app candidate. Source contains `/samspeaks` manifest and Local Studio `/admin/samspeaks` route; verify deployed mount, maturity, version and icon before offering installation. |
-| `agentsam-copro-studio` | Source of the existing **MovieMode** app. Map manifest/package ID to canonical `moviemode`; do **not** create a duplicate public app until product identity is deliberately split. |
+| `samspeaks` | **MovieMode voice/direction module**, reusable elsewhere. Do not register an independently installable application. |
+| `agentsam-copro-studio` | **MovieMode editor/production module**. Canonical product identity remains `moviemode`, alongside SamSpeaks and media capabilities; do not create a duplicate public app. |
 | `product-studio` | Declared `role: embedded-app` under ecommerce; integrate as a CMS/commerce surface, not automatically a separate installable app. |
 | `completeful` | Existing `agentsam_plugins.plugin_key='completeful'` provider. Do not duplicate plugin registration as public application. |
 | `resend` | Existing `agentsam_plugins.plugin_key='resend'` API provider. Do not duplicate. |
-| `local-studio` | Host application, not necessarily a marketplace item. |
+| `local-studio` | Independently installable **platform desktop/web host**, with account sign-up/sign-in and shared hosted authority. Do not register it as an app offered inside itself. |
 | `agentsam-workbench` | Shared UI/runtime infrastructure, not a consumer-facing installable app. |
+
+The user has also classified **Database Editor** as a reusable module, rather than a standalone marketed app. Production retains an app row and installation; migrate its routing and user entitlement before changing that row. See `docs/architecture/app-module-plugin-classification.md`.
 
 Further app-like surfaces such as `project-control`, `agentsam-browser-site`, `agentsam-go-worker`, frontend routes and native stage plugins require explicit **host/subsystem/embedded app/independent app/plugin** classification before registration. Do not derive marketplace items from every route.
 
 Existing 18 legacy private rows with null `app_type` must remain private until ownership, provenance and intended product type are established.
+
+## Source versus npm distribution — follow-up finding
+
+A local `npm pack --dry-run --ignore-scripts --json` against the current SDK checkout included **24** of the **39** root `SKILL.md` files; at audit start only **12** of those packaged directories had adjacent JSON metadata. The Batch 1 source implementation adds the missing 13 manifests, bringing **39/39 source declarations and 24/24 configured npm-selected declarations**. It does **not** change the package's `files` allowlist to publish the other 15 without review. The skill loaders now avoid advertising unshipped built-in skill documents.
 
 ## Blocking schema and policy discrepancies
 
@@ -107,4 +113,4 @@ Existing 18 legacy private rows with null `app_type` must remain private until o
 - Cross-account tests verify that client-specific tools cannot be discovered or executed across tenant boundaries.
 - Production writes are separately reviewed after a read-only diff and migration preflight.
 
-> Status of this PR: **audit baseline only**. This document records verified source/D1 gaps and the implementation contract; it does not claim registration fixes or production deployments.
+> Status: **audit baseline plus source-only skill manifest/loader fixes**. All 39 source skill manifests were validated and the targeted skill regressions passed (27/27). No production D1 migration, selective data cleanup, or application catalog registration has been applied.
