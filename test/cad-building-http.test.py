@@ -77,4 +77,61 @@ class BuildingHTTPTest(unittest.TestCase):
                 status,result=self.call({'source':resource})
                 self.assertEqual(status,400,result)
 
+    def test_file_download_supports_head_and_byte_ranges(self):
+        payload = bytes(range(256)) * 8192
+        target = self.root / 'large-model.glb'
+        target.write_bytes(payload)
+        headers = {'Authorization': 'Bearer test-building-token-4321'}
+        head = Request(self.url + '/v1/files/work/large-model.glb', method='HEAD', headers=headers)
+        with urlopen(head, timeout=4) as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(int(response.headers['Content-Length']), len(payload))
+            self.assertEqual(response.headers['X-Content-Sha256'], hashlib.sha256(payload).hexdigest())
+            self.assertEqual(response.read(), b'')
+
+        ranged = Request(self.url + '/v1/files/work/large-model.glb', method='GET',
+                         headers={**headers, 'Range': 'bytes=100-199'})
+        with urlopen(ranged, timeout=4) as response:
+            self.assertEqual(response.status, 206)
+            self.assertEqual(response.headers['Content-Range'], f'bytes 100-199/{len(payload)}')
+            self.assertEqual(response.read(), payload[100:200])
+
+        full = Request(self.url + '/v1/files/work/large-model.glb', headers=headers)
+        with urlopen(full, timeout=4) as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.read(), payload)
+
+    def test_file_upload_streams_and_checks_hash(self):
+        payload = bytes(range(251)) * 8192
+        digest = hashlib.sha256(payload).hexdigest()
+        request = Request(
+            self.url + '/v1/files/work/uploaded-model.step',
+            data=payload,
+            method='PUT',
+            headers={
+                'Authorization': 'Bearer test-building-token-4321',
+                'Content-Type': 'application/octet-stream',
+                'X-Content-Sha256': digest,
+            },
+        )
+        with urlopen(request, timeout=8) as response:
+            result = json.load(response)
+            self.assertEqual(response.status, 200)
+        self.assertEqual(result['bytes'], len(payload))
+        self.assertEqual(result['sha256'], digest)
+        self.assertEqual((self.root / 'uploaded-model.step').read_bytes(), payload)
+
+    def test_invalid_range_returns_416(self):
+        target = self.root / 'small.bin'
+        target.write_bytes(b'0123456789')
+        request = Request(
+            self.url + '/v1/files/work/small.bin',
+            headers={'Authorization': 'Bearer test-building-token-4321', 'Range': 'bytes=99-'},
+        )
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(request, timeout=4)
+        with caught.exception as error:
+            self.assertEqual(error.code, 416)
+            self.assertEqual(error.headers['Content-Range'], 'bytes */10')
+
 if __name__=='__main__':unittest.main()

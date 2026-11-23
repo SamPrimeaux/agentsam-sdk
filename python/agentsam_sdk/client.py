@@ -1,9 +1,8 @@
-"""A real, bounded SAM local client: delegates to existing Node machinery.
+"""Portable AgentSam client with explicit local and host-owned capabilities.
 
-The current Python 0.1 package is a repository/data toolkit, not a remotely
-hosted universal SDK. This bridge exposes read-only deterministic capabilities
-and refuses any write, D1, CMS or arbitrary terminal operation. A native ACP
-client and remote per-installation identity are separately tracked work.
+Native Python operations work without Node. The optional JavaScript bridge
+remains bounded by its operation contract; privileged procedures and durable
+CAD jobs require explicitly injected trusted host invokers.
 """
 from __future__ import annotations
 
@@ -23,6 +22,7 @@ from typing import Any, Mapping
 from .runtime.native import NativeRuntime, NATIVE_OPERATION_SPECS, NativeOperationError
 from .procedures import ProcedureClient, ProcedureClientError
 from .assets import AssetProcedures
+from .cad.jobs import AsyncCadJobClient, CadJobClient
 
 class SamClientError(RuntimeError):
     def __init__(self, code: str, message: str | None = None):
@@ -177,7 +177,7 @@ class AgentSamClient:
         workspace_root: str | Path | None = None,
         receipt_dir: str | Path | None = None,
         authorize_operation=None, d1_adapter=None,
-        procedure_invoker=None,
+        procedure_invoker=None, cad_job_invoker=None,
         env: Mapping[str, str] | None = None,
     ):
         self.cwd = str(Path(cwd).expanduser().resolve())
@@ -205,6 +205,9 @@ class AgentSamClient:
         self.procedure_invoker = procedure_invoker
         self.procedures = ProcedureClient(procedure_invoker)
         self.assets = AssetProcedures(self.procedures)
+        # CAD jobs are existing host SAM operations, not a local queue. The
+        # client is always present; without a trusted host invoker it fails closed.
+        self.cad_jobs = CadJobClient(cad_job_invoker)
         self.control_plane = _ControlPlane(control_plane_url,control_plane_token or "") if control_plane_url else None
 
     def _resolved_node(self) -> str:
@@ -346,6 +349,10 @@ class AgentSamClient:
 
 class AsyncAgentSamClient(AgentSamClient):
     """Async subprocess transport to the same authorized local SAM entrypoint."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.cad_jobs = AsyncCadJobClient(self.cad_jobs)
     async def _request_async(self, method: str, **kwargs):
         node = self._resolved_node()
         bridge = self._resolved_bridge()

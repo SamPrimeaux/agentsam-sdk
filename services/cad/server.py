@@ -65,7 +65,10 @@ TOKEN_FILE = _service_path("AGENTSAM_CAD_TOKEN_FILE", "/config/service.token", "
 WORK_ROOT = _service_path("AGENTSAM_CAD_WORK_ROOT", "/work", "work")
 MAX_BODY_BYTES = 1_500_000
 MAX_SOURCE_CHARS = 500_000
-MAX_ARTIFACT_BYTES = 25 * 1024 * 1024
+MAX_ARTIFACT_BYTES = int(os.environ.get("AGENTSAM_CAD_MAX_ARTIFACT_BYTES", str(2 * 1024 * 1024 * 1024)))
+if not 1 <= MAX_ARTIFACT_BYTES <= 16 * 1024 * 1024 * 1024:
+    raise ValueError("AGENTSAM_CAD_MAX_ARTIFACT_BYTES must be between 1 byte and 16 GiB")
+MAX_INLINE_ARTIFACT_BYTES = min(25 * 1024 * 1024, MAX_ARTIFACT_BYTES)
 MAX_TIMEOUT_SECONDS = 120
 
 TOOL_COMMANDS = {
@@ -210,6 +213,9 @@ def _capabilities() -> dict[str, Any]:
         "limits": {
             "max_source_chars": MAX_SOURCE_CHARS,
             "max_artifact_bytes": MAX_ARTIFACT_BYTES,
+            "max_inline_artifact_bytes": MAX_INLINE_ARTIFACT_BYTES,
+            "artifact_streaming": True,
+            "range_requests": True,
             "max_timeout_seconds": MAX_TIMEOUT_SECONDS,
         },
     }
@@ -298,12 +304,13 @@ def _compile_openscad(payload: dict[str, Any]) -> dict[str, Any]:
         if proc.returncode != 0 or not output_path.exists():
             raise RuntimeError(f"OpenSCAD failed with exit {proc.returncode}: {logs[-4000:]}")
 
-        artifact = output_path.read_bytes()
-        if len(artifact) > MAX_ARTIFACT_BYTES:
+        artifact_size = output_path.stat().st_size
+        if artifact_size > MAX_INLINE_ARTIFACT_BYTES:
             raise RuntimeError(
-                f"artifact is {len(artifact)} bytes; JSON API limit is {MAX_ARTIFACT_BYTES}. "
-                "Use a smaller model or a future streaming artifact endpoint."
+                f"artifact is {artifact_size} bytes; inline JSON API limit is {MAX_INLINE_ARTIFACT_BYTES}. "
+                "Use the file-backed artifact endpoint for larger outputs."
             )
+        artifact = output_path.read_bytes()
 
         digest = hashlib.sha256(artifact).hexdigest()
         filename = str(payload.get("filename") or f"model.{output_format}")
@@ -504,9 +511,10 @@ def _execute_ifc(payload: dict[str, Any]) -> dict[str, Any]:
             raise RuntimeError(f"IFC {operation} failed ({err_msg}): {(proc.stderr or '')[-2000:]}")
         if not output_path.is_file():
             raise RuntimeError("IFC adapter reported success but wrote no model")
+        model_size = output_path.stat().st_size
+        if model_size > MAX_INLINE_ARTIFACT_BYTES:
+            raise RuntimeError(f"model is {model_size} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
         raw = output_path.read_bytes()
-        if len(raw) > MAX_ARTIFACT_BYTES:
-            raise RuntimeError(f"model is {len(raw)} bytes; exceeds {MAX_ARTIFACT_BYTES} bytes")
         model = json.loads(raw)
         return {
             "ok": True, "tool": "ifc", "operation": operation, "schema": model.get("schema"),
@@ -592,9 +600,10 @@ def _execute_freecad(payload: dict[str, Any]) -> dict[str, Any]:
         if not output_path.exists():
             raise RuntimeError(f"FreeCAD failed to produce output file {filename}")
 
+        artifact_size = output_path.stat().st_size
+        if artifact_size > MAX_INLINE_ARTIFACT_BYTES:
+            raise RuntimeError(f"artifact is {artifact_size} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
         artifact = output_path.read_bytes()
-        if len(artifact) > MAX_ARTIFACT_BYTES:
-            raise RuntimeError(f"artifact is {len(artifact)} bytes; exceeds {MAX_ARTIFACT_BYTES} bytes")
 
         digest = hashlib.sha256(artifact).hexdigest()
 
@@ -689,9 +698,10 @@ def _execute_blender(payload: dict[str, Any]) -> dict[str, Any]:
 
         artifact = b""
         if output_path.exists():
+            artifact_size = output_path.stat().st_size
+            if artifact_size > MAX_INLINE_ARTIFACT_BYTES:
+                raise RuntimeError(f"artifact is {artifact_size} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
             artifact = output_path.read_bytes()
-            if len(artifact) > MAX_ARTIFACT_BYTES:
-                raise RuntimeError(f"artifact is {len(artifact)} bytes; exceeds {MAX_ARTIFACT_BYTES} bytes")
 
         digest = hashlib.sha256(artifact).hexdigest() if artifact else None
 
@@ -822,10 +832,14 @@ def _cad_building_export(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _file_metadata(target: Path) -> dict[str, Any]:
-    raw = target.read_bytes()
-    if len(raw) > MAX_ARTIFACT_BYTES:
+    size = target.stat().st_size
+    if size > MAX_ARTIFACT_BYTES:
         raise ValueError("cad_file_too_large")
-    return {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+    digest = hashlib.sha256()
+    with target.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return {"bytes": size, "sha256": digest.hexdigest()}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -841,7 +855,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(payload)
+        if self.command != "HEAD":
+            self.wfile.write(payload)
 
     def _authorized(self) -> bool:
         token = _read_token()
@@ -868,31 +883,86 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("JSON request must be an object")
         return value
 
-    def _send_file(self, status: int, data: bytes, mime: str, sha: str) -> None:
+    def _send_file(self, status: int, target: Path, mime: str, sha: str,
+                   *, start: int = 0, end: int | None = None, head: bool = False) -> None:
+        size = target.stat().st_size
+        final = size - 1 if end is None else min(end, size - 1)
+        length = max(0, final - start + 1)
         self.send_response(status)
         self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Content-Length", str(length))
         self.send_header("ETag", '"' + sha + '"')
+        self.send_header("X-Content-Sha256", sha)
+        self.send_header("Accept-Ranges", "bytes")
         self.send_header("Cache-Control", "no-store")
+        if status == HTTPStatus.PARTIAL_CONTENT:
+            self.send_header("Content-Range", f"bytes {start}-{final}/{size}")
         self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(data)
+        if not head and length:
+            with target.open("rb") as stream:
+                stream.seek(start)
+                remaining = length
+                while remaining:
+                    chunk = stream.read(min(1024 * 1024, remaining))
+                    if not chunk:
+                        raise OSError("cad_file_changed_during_transfer")
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
 
-    def _handle_file_get(self) -> None:
+    def _handle_file_get(self, *, head: bool = False) -> None:
         alias, _root, target = _file_target(urlsplit(self.path).path)
         if target.is_dir():
+            if head:
+                self.send_response(HTTPStatus.METHOD_NOT_ALLOWED)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             entries = sorted(target.iterdir(), key=lambda entry: entry.name)
             self._json(HTTPStatus.OK, {"ok": True, "mount": alias,
                 "entries": [{"name": p.name, "type": "directory" if p.is_dir() else "file",
                              "bytes": p.stat().st_size if p.is_file() else None} for p in entries if not p.is_symlink()]})
             return
         if not target.is_file():
-            self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "cad_file_not_found"})
+            if head:
+                self.send_response(HTTPStatus.NOT_FOUND)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            else:
+                self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "cad_file_not_found"})
             return
-        data = target.read_bytes()
-        if len(data) > MAX_ARTIFACT_BYTES:
-            raise ValueError("cad_file_too_large")
-        self._send_file(HTTPStatus.OK, data, "application/octet-stream", hashlib.sha256(data).hexdigest())
+
+        metadata = _file_metadata(target)
+        size = metadata["bytes"]
+        range_header = self.headers.get("Range")
+        start, end, status = 0, size - 1, HTTPStatus.OK
+        if range_header:
+            match = re.fullmatch(r"bytes=(\d*)-(\d*)", range_header.strip())
+            if not match or (not match.group(1) and not match.group(2)) or "," in range_header:
+                self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            if match.group(1):
+                start = int(match.group(1))
+                end = int(match.group(2)) if match.group(2) else size - 1
+            else:
+                suffix = int(match.group(2))
+                if suffix <= 0:
+                    start = size
+                else:
+                    start = max(0, size - suffix)
+                end = size - 1
+            if start >= size or end < start:
+                self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            end = min(end, size - 1)
+            status = HTTPStatus.PARTIAL_CONTENT
+        self._send_file(status, target, "application/octet-stream", metadata["sha256"],
+                        start=start, end=end, head=head)
 
     def do_PUT(self) -> None:
         if not self._require_auth():
@@ -904,25 +974,30 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             if length < 1 or length > MAX_ARTIFACT_BYTES:
                 raise ValueError("cad_file_size_invalid")
-            data = self.rfile.read(length)
-            if len(data) != length:
-                raise ValueError("cad_file_incomplete")
-            sha = hashlib.sha256(data).hexdigest()
-            expected = self.headers.get("X-Content-Sha256")
-            if expected and expected.lower() != sha:
-                raise ValueError("cad_file_hash_mismatch")
             target.parent.mkdir(parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".cad-write-", delete=False) as fp:
-                temporary = Path(fp.name)
-                try:
-                    fp.write(data)
-                except Exception:
-                    temporary.unlink(missing_ok=True)
-                    raise
+            temporary: Path | None = None
+            digest = hashlib.sha256()
             try:
+                with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".cad-write-", delete=False) as fp:
+                    temporary = Path(fp.name)
+                    remaining = length
+                    while remaining:
+                        chunk = self.rfile.read(min(1024 * 1024, remaining))
+                        if not chunk:
+                            raise ValueError("cad_file_incomplete")
+                        fp.write(chunk)
+                        digest.update(chunk)
+                        remaining -= len(chunk)
+                    fp.flush()
+                sha = digest.hexdigest()
+                expected = self.headers.get("X-Content-Sha256")
+                if expected and (not re.fullmatch(r"[a-fA-F0-9]{64}", expected) or expected.lower() != sha):
+                    raise ValueError("cad_file_hash_mismatch")
                 os.replace(temporary, target)
+                temporary = None
             finally:
-                temporary.unlink(missing_ok=True)
+                if temporary is not None:
+                    temporary.unlink(missing_ok=True)
             self._json(HTTPStatus.OK, {"ok": True, "sha256": sha, "bytes": length,
                                        "path": str(target.relative_to(root))})
         except (ValueError, OSError) as exc:
@@ -970,6 +1045,29 @@ class Handler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, {"ok": True, "path": str(target.relative_to(root))})
         else:
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
+
+    def do_HEAD(self) -> None:
+        if urlsplit(self.path).path.startswith("/v1/files/"):
+            if not self._require_auth():
+                return
+            try:
+                self._handle_file_get(head=True)
+            except ValueError:
+                self.send_response(HTTPStatus.BAD_REQUEST)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            return
+        if self.path == "/healthz":
+            self._json(HTTPStatus.OK, {"ok": True, **_capabilities()})
+            return
+        if self.path == "/v1/capabilities":
+            if not self._require_auth():
+                return
+            self._json(HTTPStatus.OK, {"ok": True, **_capabilities()})
+            return
+        self.send_response(HTTPStatus.NOT_FOUND)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self) -> None:
         if urlsplit(self.path).path.startswith("/v1/files/"):
