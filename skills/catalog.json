@@ -160,7 +160,9 @@
       "aliases": [
         "cad",
         "blender",
-        "occt"
+        "occt",
+        "bim",
+        "iamscene"
       ],
       "title": "AgentSam CAD",
       "description": "CAD end to end: pick the entry point, engine and lane; build, inspect, render and export; prove each step with hashes and receipts.",
@@ -168,7 +170,8 @@
       "references": [
         "agentsam-cad/references/engines-and-lanes.md",
         "agentsam-cad/references/projects-and-operations.md",
-        "agentsam-cad/references/proof-and-triage.md"
+        "agentsam-cad/references/proof-and-triage.md",
+        "agentsam-cad/references/scene-geometry-bim.md"
       ],
       "user_invocable": true
     },

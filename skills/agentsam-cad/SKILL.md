@@ -5,18 +5,21 @@ description: >
   execution lane; build, inspect, render and export models; and prove every step with hashes
   and receipts. Covers Blender typed recipes, revisioned CAD projects (design_* tools,
   cad.project.* / cad.model.* SAM operations, the house-baseline and edit-preview workflows),
-  native OpenCascade (OCCT) solids with STEP/BREP/glTF/IFC output, and FreeCAD/OpenSCAD jobs.
+  native OpenCascade (OCCT) solids with STEP/BREP/glTF/IFC output, FreeCAD/OpenSCAD jobs,
+  IAMScene and IAMGeometry documents, and BIM/IFC semantics.
   Use for any programmatic CAD work, .blend/.glb/.stl/.obj/.step artifacts, parametric edits,
   model inspection, render previews, unit or dimension questions, revision conflicts, and
   "does CAD work here". Triggers on "cad", "blender", "occt", "opencascade", "freecad",
-  "openscad", "step file", "ifc", "glb", ".blend", "recipe", "box with hole", "courtyard house",
-  "design_model", "cad project", "revision conflict".
+  "openscad", "iamscene", "iamgeometry", "bim", "ifc", "step file", "glb", ".blend", "recipe",
+  "box with hole", "courtyard house", "design_model", "cad project", "revision conflict".
 metadata:
   short-description: "CAD end to end: pick entry point and lane, build, inspect, render, export, and prove each step"
   aliases:
     - cad
     - blender
     - occt
+    - bim
+    - iamscene
 user-invocable: true
 ---
 
@@ -36,6 +39,10 @@ revision. Every step here is meant to be provable, and "unsupported" is a valid 
    a remote VM, or the Docker CAD service. Cloudflare Workers never spawn these; use an
    authorized lane.
 
+Around those sit the scene/geometry layer (**IAMScene** composes, **IAMGeometry** references, OCCT
+makes exact solids) and **BIM** (IFC semantics in, IFC4 out). Each has its own authority; see
+`references/scene-geometry-bim.md`.
+
 ## Pick the entry point
 
 | Goal | Use |
@@ -45,11 +52,15 @@ revision. Every step here is meant to be provable, and "unsupported" is a valid 
 | Editable project with revisions (walls, rooms, openings, parametric objects) | `agentsam cad project <get\|validate\|apply\|save\|restore\|build\|inspect\|render\|export> <request.json> --root <dir>` |
 | The whole validated path in one run | `agentsam cad project workflow cad.house_baseline <in.json> --root <dir>` or `cad.edit_preview` |
 | Exact solids → STEP / BREP / glTF / IFC4 | `design_model_build` with `engine:"occt"` (native `agentsam-occt`) |
-| FreeCAD / OpenSCAD generation | `cad.job.generate` with `engine` = `freecad` \| `openscad` \| `blender` through an authorized runner |
-| Python, no Node | `agentsam_sdk.cad` (`discover_freecad`, `probe_freecad`) |
+| FreeCAD / OpenSCAD generation | `cad.job.generate` with `engine` = `freecad` \| `openscad` \| `blender` through an authorized runner, or the local/Docker executors in `src/lib/cad/` |
+| Scene documents, geometry manifests, format import/export | the `iamscene` CLI and `iamscene.*` SAM operations; ask `iamscene formats` what is really implemented |
+| BIM / IFC | read-only IFC semantics into `cad.project.v2`; IFC4 export via OCCT; `cad.building.export` |
+| Python, no Node | `agentsam_sdk.cad` (`discover_freecad`, `probe_freecad`, `CadBuildingClient`) |
 
-`agentsam cad` has exactly two subcommand families: `blender` and `project`. There is no
-`agentsam cad freecad` or `openscad`; do not invent one.
+Routing note: on `main`, the `agentsam cad` command itself routes `blender` and `project`;
+FreeCAD, OpenSCAD, OCCT and BIM are reached through the tools, operations and executors above.
+Confirm what this checkout and host expose with `agentsam cad project tools` and
+`iamscene formats` before choosing, and use whichever path they list.
 
 ## Discover before you act
 
@@ -107,5 +118,6 @@ dimensions you checked against intent; and an explicit list of what you did **no
 ## Go deeper (load only what the task needs)
 
 - `references/engines-and-lanes.md` — Blender, OCCT, FreeCAD, OpenSCAD, Docker: discovery, formats, limits.
+- `references/scene-geometry-bim.md` — IAMScene, IAMGeometry, the format registry, IFC/BIM paths.
 - `references/projects-and-operations.md` — project contract, edit operations, tools, workflows, SAM ids, run modes.
 - `references/proof-and-triage.md` — hash chain, per-engine geometry checks, error triage, how to re-verify this skill.
