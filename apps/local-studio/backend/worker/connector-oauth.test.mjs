@@ -9,6 +9,8 @@ import {
   disconnectConnector,
   handleConnectorWorkRequest,
   isConnectorWorkRequest,
+  resolveRegisteredOAuthPlugin,
+  registeredOAuthEntryUrl,
 } from "./connector-oauth.js";
 
 function fakeDb() {
@@ -230,4 +232,68 @@ test("repository transport failure is redacted but distinguishes timeout",async(
   const result=await response.json();
   assert.deepEqual(result,{ok:false,error:"github_repositories_unreachable",reason:"timeout"});
   assert.ok(!JSON.stringify(result).includes("sensitive"));
+});
+
+function envWithRegisteredPlugin(plugin) {
+  const e=env();
+  const original=e.DB.prepare.bind(e.DB);
+  e.DB.prepare=(sql)=> {
+    if (sql.includes("FROM agentsam_plugins WHERE id=?")) return {
+      bind:(id)=>({first:async()=> id===plugin.id ? plugin : null}),
+    };
+    return original(sql);
+  };
+  return e;
+}
+
+test("Google Drive plugin ID resolves the existing OAuth flow instead of hardcoded UI URLs",async()=>{
+  const plugin={
+    id:'plg_2ca659475bd1ee6a',
+    plugin_key:'google-drive',provider_key:'google_drive',plugin_kind:'oauth',auth_type:'oauth',
+    oauth_connect_url:'https://inneranimalmedia.com/api/integrations/google_drive/connect',
+    config_json:'{}',
+  };
+  const e=envWithRegisteredPlugin(plugin);
+  assert.equal((await resolveRegisteredOAuthPlugin(e,plugin.id)).provider,'google_drive');
+  const route='/api/work/connect/plugins/'+plugin.id+'/start';
+  assert.ok(isConnectorWorkRequest(route));
+  const response=await handleConnectorWorkRequest(post(route,{return_to:'/admin/agentsam'}),e,'au_test');
+  assert.equal(response.status,200);
+  const body=await response.json();
+  assert.ok(body.authorize_url.startsWith('https://accounts.google.com/'));
+  const auth=new URL(body.authorize_url);
+  assert.ok(auth.searchParams.get('scope').includes('drive.file'));
+  assert.equal(auth.searchParams.get('redirect_uri'),'https://agentsam.inneranimalmedia.com/api/oauth/google/callback');
+});
+
+test("Cloudflare plugin pack connects through its registered host flow and preserves explicit pack selection",async()=>{
+  const plugin={
+    id:'plg_8942571071a5ca64',plugin_key:'cloudflare-create',provider_key:'cloudflare',
+    plugin_kind:'oauth',auth_type:'oauth',
+    oauth_connect_url:'/api/connections/cloudflare/start?packs=create',
+    config_json:JSON.stringify({pack:true,pack_id:'create'}),
+  };
+  const e=envWithRegisteredPlugin(plugin);
+  const response=await handleConnectorWorkRequest(
+    post('/api/work/connect/plugins/'+plugin.id+'/start',{return_to:'/admin/agentsam'}),e,'au_test');
+  const body=await response.json();
+  assert.equal(response.status,200);
+  const target=new URL(body.authorize_url);
+  assert.equal(target.origin,'https://agentsam.inneranimalmedia.com');
+  assert.equal(target.pathname,'/api/connections/cloudflare/start');
+  assert.equal(target.searchParams.get('packs'),'create');
+  assert.equal(target.searchParams.get('return_to'),'/admin/agentsam');
+  assert.equal(registeredOAuthEntryUrl({...plugin,connectUrl:'https://evil.example/steal'},target.origin),null);
+});
+
+test("plugin resolver does not invent OAuth for unknown or non-OAuth plugin IDs",async()=>{
+  const plugin={
+    id:'plg_1234567890abcdef',plugin_key:'other',provider_key:'other',
+    plugin_kind:'native',auth_type:'none',oauth_connect_url:'https://evil.example/login',config_json:'{}',
+  };
+  const e=envWithRegisteredPlugin(plugin);
+  assert.equal(await resolveRegisteredOAuthPlugin(e,plugin.id),null);
+  const response=await handleConnectorWorkRequest(
+    post('/api/work/connect/plugins/'+plugin.id+'/start'),e,'au_test');
+  assert.equal(response.status,404);
 });
