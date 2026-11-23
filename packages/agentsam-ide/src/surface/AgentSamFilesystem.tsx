@@ -22,6 +22,7 @@ export type AgentSamFilesystemSource = IDEFileSource & {
     accountRef?: string;
     connectionId?: string;
     repository?: string;
+    branch?: string;
     bucket?: string;
     root?: string;
   };
@@ -36,6 +37,7 @@ export type AgentSamFilesystemContext = {
   accountRef?: string;
   connectionId?: string;
   repository?: string;
+  branch?: string;
   bucket?: string;
   root?: string;
   /** Workspace-relative file path; null when no file is open. */
@@ -72,7 +74,6 @@ export function AgentSamFilesystem({
 }: AgentSamFilesystemProps) {
   const source = resolveAgentSamFilesystemSource(sources, sourceId);
   const workspaceId = source?.workspaceId || '';
-  const sourceContext = source?.context;
   const handleActiveFile = useCallback((file: { path: string; version: string } | null) => {
     if (!onContextChange || !source) return;
     onContextChange({
