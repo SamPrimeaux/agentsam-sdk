@@ -14,7 +14,6 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-import re
 import sys
 from collections import Counter, defaultdict
 from importlib import import_module
