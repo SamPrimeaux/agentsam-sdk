@@ -999,35 +999,7 @@ function PluginCustomizeView({
                 <p className="mt-1 text-lg font-semibold">{isBrand?(Array.isArray(data?.connections)?data.connections.length:0):concepts.length}</p>
               </article>
             </div>
-            {isBrand ? (
-              <article className="rounded-xl border border-border/70 p-4">
-                <h3 className="text-[14px] font-semibold">Brand identity and contract</h3>
-                {brandContract ? (
-                  <>
-                    <p className="mt-1 text-[11px] text-muted-foreground">Your latest saved BrandContract · status: {String(brandContract.status||"unknown")}</p>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <div className="rounded-lg border border-border/70 bg-muted/15 p-3">
-                        <p className="text-[10px] text-muted-foreground">Contract version</p>
-                        <p className="mt-1 text-[12px] font-medium">{String(brandContract.schema_version||"Unspecified")}</p>
-                      </div>
-                      <div className="rounded-lg border border-border/70 bg-muted/15 p-3">
-                        <p className="text-[10px] text-muted-foreground">Last updated</p>
-                        <p className="mt-1 text-[12px] font-medium">{String(brandContract.updated_at||"Unknown")}</p>
-                      </div>
-                    </div>
-                    <details className="mt-4 rounded-lg border border-border/70 bg-muted/10 p-3">
-                      <summary className="cursor-pointer text-[12px] font-medium">Inspect saved contract and evidence</summary>
-                      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed">{JSON.stringify(brandContract,null,2)}</pre>
-                    </details>
-                  </>
-                ) : (
-                  <p className="mt-3 rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">
-                    No BrandContract has been saved in this workspace. Run the Brand inspection and drafting tools with actual brand evidence, review the result, then explicitly approve a saved contract.
-                  </p>
-                )}
-              </article>
-            ) : (
-              <>
+            <>
                 <section className="space-y-3" aria-label="Campaign briefs">
                   <h3 className="text-[14px] font-semibold">Campaign briefs</h3>
                   {briefs.length ? briefs.map((item,index)=>{
