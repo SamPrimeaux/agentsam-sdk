@@ -4,7 +4,7 @@ Audit date: 2026-11-22. Read-only inspection of the local AgentSam SDK checkout 
 
 ## Provenance and boundaries
 
-- SDK inspected on the user's iMac at `/Users/samprimeaux/agentsam-sdk`, HEAD `5f4a81154` (`ci/ui-evidence-main-only-20261122`), one commit ahead of local `main` at `4c818a9ed`. This audit PR is independently branched from GitHub `main`; it does **not** merge the user's local branch.
+- SDK inspected on a local macOS checkout of the repository, HEAD `5f4a81154` (`ci/ui-evidence-main-only-20261122`), one commit ahead of local `main` at `4c818a9ed`. This audit PR is independently branched from GitHub `main`; it does **not** merge the user's local branch.
 - Production data read through the connected Cloudflare D1 account, database name `inneranimalmedia-business` (UUID `cf87b717-d4e2-4cf8-bab0-a81268e32d49`).
 - Counts are a point-in-time database snapshot, not a release guarantee. Source inventory counts describe files/manifests; a manifest is not proof of a working deployed route or independent marketplace product.
 
