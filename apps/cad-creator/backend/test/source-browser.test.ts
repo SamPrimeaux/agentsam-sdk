@@ -35,6 +35,16 @@ test('source browser serves only indexed source IDs, preserves bytes and allows 
  const files=discoverCadSources([{project:path.basename(root),root}]);
  const scad=files.find(x=>x.format==='SCAD'),glb=files.find(x=>x.format==='GLB');
  assert.ok(scad&&glb);
+ for(const [name,expected] of Object.entries(newFiles)){
+  const record=files.find(x=>x.relativePath.endsWith('/'+name));
+  assert.ok(record,'missing source '+name);
+  assert.equal(record.formatRef?.id,expected.id);
+  assert.equal(record.role,expected.role);
+  assert.match(record.sha256,/^[a-f0-9]{64}$/);
+ }
+ assert.ok(!files.some(x=>x.relativePath.endsWith('/unrelated.json')));
+ assert.equal(files.find(x=>x.relativePath.endsWith('/large.step'))?.sha256,
+  (await import('node:crypto')).createHash('sha256').update(Buffer.alloc(1024*1024+17,0x5a)).digest('hex'));
  const app=express();app.use(express.json());installCadSourceBrowserRoutes(app);
  const server=await new Promise<ReturnType<typeof app.listen>>(resolve=>{
   const s=app.listen(0,'127.0.0.1',()=>resolve(s));
