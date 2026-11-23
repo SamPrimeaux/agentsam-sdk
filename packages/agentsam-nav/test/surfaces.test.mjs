@@ -141,6 +141,23 @@ function readNavSource() {
 }
 
 
+test('contextual dock preserves packaged semantics and opts into tablet coverage', () => {
+  const html = renderToString(React.createElement(Nav.Provider,
+    { value, defaultOpen: true }, React.createElement(Nav.LaunchDock, {
+      coverage: 'tablet', label: 'Work surfaces', items: [
+        { id: 'chat', label: 'Chat', icon: React.createElement('span', null, 'c'), active: false, onSelect: () => {} },
+        { id: 'preview', label: 'Preview', icon: React.createElement('span', null, 'p'), active: true, onSelect: () => {} },
+      ],
+    })));
+  assert.match(html, /data-nav-dock-coverage="tablet"/);
+  assert.match(html, /aria-label="Work surfaces"/);
+  assert.equal((html.match(/aria-pressed="true"/g) || []).length, 1);
+  assert.equal((html.match(/class="as-nav-launch-dock-icon"/g) || []).length, 2);
+  const css = readFileSync(new URL('../src/shell.css', import.meta.url), 'utf8');
+  assert.match(css, /max-width: 1099px/);
+  assert.match(css, /min-width: 768px/);
+});
+
 test('mobile launch dock is driven by real host destinations and has accessible selected states', () => {
   const labels = ['Chats', 'Work', 'Browser', 'Files', 'Apps'];
   const html = renderToString(React.createElement(Nav.Provider,

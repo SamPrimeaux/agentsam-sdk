@@ -687,7 +687,7 @@
   .agentsam-personal-surface { padding:17px 15px 100px; }
   .agentsam-library-switch { margin:8px 12px 4px; }
   /* The keyboard already owns the bottom safe area while editing. */
-  .agentsam-shell:has(input:focus,textarea:focus,[contenteditable="true"]:focus) .as-nav-launch-dock { display:none; }
+
 }
 
 
@@ -962,4 +962,51 @@
 .agentsam-side-panel .as-side-stage-annotation:hover,
 .agentsam-side-panel .as-side-stage-annotation[data-active="true"] {
   background:var(--nav-selected); color:var(--nav-accent);
+}
+
+/* The Work project control belongs in the header, not in a competing bottom dock. */
+.agentsam-work-project-select-wrap {
+  position: relative; display: inline-flex; align-items: center; gap: 6px;
+  min-width: 34px; max-width: 154px; height: 32px; padding: 0 8px;
+  border: 1px solid var(--nav-border); border-radius: 9px;
+  background: var(--nav-surface); color: var(--nav-muted); cursor: pointer;
+}
+.agentsam-work-project-select-wrap:focus-within {
+  outline: 2px solid var(--nav-accent); outline-offset: 2px;
+}
+.agentsam-work-project-select-wrap > svg { flex: none; }
+.agentsam-work-project-select-name {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11px;
+}
+.agentsam-work-project-select {
+  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+}
+@media (max-width: 550px) {
+  .agentsam-work-project-select-wrap { width: 34px; max-width: 34px; padding: 0 8px; }
+  .agentsam-work-project-select-name { display: none; }
+}
+/* Compact tablet and split-view destinations reserve space for the one floating dock. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .agentsam-shell .agentsam-main:has(.as-nav-launch-dock[data-nav-dock-coverage="tablet"]) {
+    padding-bottom: calc(77px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Hide the dock only for touch text entry, rather than every focused input
+   in a desktop browser's narrow pane (which hid Home's dock unnecessarily). */
+@media (max-width: 1099px) and (pointer: coarse) {
+  .agentsam-shell:has(input:focus,textarea:focus,[contenteditable="true"]:focus) .as-nav-launch-dock {
+    display: none;
+  }
+  .agentsam-shell:has(input:focus,textarea:focus,[contenteditable="true"]:focus) .agentsam-main:has(.as-nav-launch-dock) {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* An artifact-focused stage replaces dock navigation with its own Back action. */
+@media (max-width: 1099px) {
+  .agentsam-shell .agentsam-main:has(.agentsam-artifact-hub__focused) {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

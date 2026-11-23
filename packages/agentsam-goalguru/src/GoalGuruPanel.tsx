@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Check, ChevronDown, ChevronRight, Circle, Plus, RefreshCcw, Target } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowUpRight, Check, ChevronDown, ChevronRight, Circle, Plus, RefreshCcw, Target } from "lucide-react";
 import type { GoalGuruTransport, GoalGuruGoal, GoalGuruStep, GoalGuruTicketLink } from "./contracts";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
@@ -37,6 +37,18 @@ export function GoalGuruPanel({
   const [plan, setPlan] = useState<Plan>({ goals: [], steps: [], ticketLinks: [], goapGoals: [] });
   const [filter, setFilter] = useState<"personal" | "platform">("platform");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [focusedGoal, setFocusedGoal] = useState<{kind: 'living' | 'goap'; id: string} | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const closeFocus = () => {
+    setFocusedGoal(null);
+    setExpanded(null);
+    contentRef.current?.scrollTo({ top: 0 });
+  };
+  const openFocus = (kind: 'living' | 'goap', id: string) => {
+    setFocusedGoal({ kind, id });
+    setExpanded(kind === 'living' ? id : null);
+    contentRef.current?.scrollTo({ top: 0 });
+  };
   const [pending, setPending] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +77,10 @@ export function GoalGuruPanel({
   }, [request]);
   useEffect(() => { void reload(); }, [reload, refreshKey]);
 
+  const focusedGoap = focusedGoal?.kind === 'goap'
+    ? plan.goapGoals.find(goal => goal.id === focusedGoal.id) : null;
+  const focusedLiving = focusedGoal?.kind === 'living'
+    ? plan.goals.find(goal => goal.id === focusedGoal.id) : null;
   const visible = useMemo(() => plan.goals.filter(g => filter === "platform"
     ? g.goal_type === "platform"
     : g.goal_type !== "platform"
@@ -231,7 +247,7 @@ export function GoalGuruPanel({
       </div>
       <div className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-muted/50 p-1" role="group" aria-label="Goal areas">
         {(["personal", "platform"] as const).map(area => <button key={area} type="button"
-          onClick={() => { setFilter(area); setExpanded(null); setCreating(false); }}
+          onClick={() => { setFilter(area); setExpanded(null); setFocusedGoal(null); setCreating(false); }}
           aria-pressed={filter === area}
           className={"min-h-10 rounded-md px-3 text-sm font-medium transition-colors " + (filter === area
             ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
@@ -239,8 +255,15 @@ export function GoalGuruPanel({
         </button>)}
       </div>
     </div>
-    <div className="gg-content min-h-0 flex-1 overflow-y-auto px-4 pb-10 pt-4">
-      {legacyGoal ? <section className="mb-4 rounded-xl border border-border p-3">
+    <div ref={contentRef} className="gg-content min-h-0 flex-1 overflow-y-auto px-4 pb-10 pt-4" data-focused-goal={focusedGoal?.kind ?? undefined}>
+      {focusedGoal ? <div className="gg-focused-heading mb-4">
+        <button type="button" onClick={closeFocus} className="gg-back-to-goals inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={17} aria-hidden="true" /> All {filter === 'personal' ? 'Life' : 'Work'} goals
+        </button>
+        <h3 className="mt-2 break-words text-lg font-semibold tracking-tight">{focusedGoap?.title ?? focusedLiving?.title ?? 'Goal'}</h3>
+        {focusedLiving?.description ? <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{focusedLiving.description}</p> : null}
+      </div> : null}
+      {!focusedGoal && legacyGoal ? <section className="mb-4 rounded-xl border border-border p-3">
         <p className="text-xs font-semibold">Unsaved conversation goal</p>
         <p className="mt-1 line-clamp-3 text-sm">{legacyGoal.title}</p>
         <p className="mt-2 text-xs text-muted-foreground">
@@ -254,12 +277,23 @@ export function GoalGuruPanel({
       </section> : null}
       {error ? <div role="alert" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</div> : null}
       {loading ? <p className="py-10 text-center text-sm text-muted-foreground">Loading private goals…</p> : <>
-        {filter === "platform" && plan.goapGoals.length > 0 ? <section className="mb-5" aria-label="GOAP goals">
+        {focusedGoap ? <section className="gg-card gg-focused-detail rounded-xl border border-border p-4" aria-label={'Goal details: ' + focusedGoap.title}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Engineering goal</span>
+            <span className="rounded-full border border-border px-3 py-1 text-xs">
+              {GOAP_STATUS_LABEL[focusedGoap.goal_status ?? ''] ?? focusedGoap.status}
+            </span>
+          </div>
+          {focusedGoap.project ? <p className="mt-3 text-sm"><strong>Project:</strong> {focusedGoap.project}</p> : null}
+          {focusedGoap.priority ? <p className="mt-2 text-sm"><strong>Priority:</strong> {focusedGoap.priority}</p> : null}
+          <p className="mt-3 text-sm text-muted-foreground">This goal is linked to your existing engineering work. Its status and project are displayed here without redirecting you away from Goals.</p>
+        </section> : null}
+        {!focusedGoal && filter === "platform" && plan.goapGoals.length > 0 ? <section className="mb-5" aria-label="GOAP goals">
           <h3 className="mb-1 text-xs font-medium text-muted-foreground">GOAP goals</h3>
           <ul className="divide-y divide-border/70 rounded-lg border border-border/70">
             {plan.goapGoals.map(goal => <li key={goal.id}>
-              <a href={"/artifacts/tickets/" + encodeURIComponent(goal.id)}
-                className="flex min-h-12 items-center gap-3 px-3 py-2 text-sm hover:bg-muted/50">
+              <button type="button" onClick={() => openFocus('goap', goal.id)} aria-label={'Open goal: ' + goal.title}
+                className="gg-goal-open flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted/50">
                 <span className="min-w-0 flex-1 break-words">
                   <span className="block font-medium">{goal.title}</span>
                   {goal.project ? <span className="block text-xs text-muted-foreground">{goal.project}</span> : null}
@@ -267,14 +301,15 @@ export function GoalGuruPanel({
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {goal.focused ? "Current · " : ""}{GOAP_STATUS_LABEL[goal.goal_status ?? ""] ?? goal.status}
                 </span>
-              </a>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </button>
             </li>)}
           </ul>
         </section> : null}
-        {total > 0 ? <p className="mb-3 text-xs tabular-nums text-muted-foreground">
+        {!focusedGoal && total > 0 ? <p className="mb-3 text-xs tabular-nums text-muted-foreground">
           {completed} of {total} steps complete
         </p> : null}
-        {next ? <section className="gg-card mb-5 rounded-xl border border-border bg-card p-4" aria-label="Next action">
+        {!focusedGoal && next ? <section className="gg-card mb-5 rounded-xl border border-border bg-card p-4" aria-label="Next action">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Next concrete step</p>
           <p className="text-xs text-muted-foreground">{focus?.title}</p>
           <div className="mt-3 flex items-start gap-3">
@@ -291,11 +326,12 @@ export function GoalGuruPanel({
           <p className="mt-2 text-[11px] leading-4 text-muted-foreground">{onContinue ? "Opens a new conversation with this step prepared for review. Nothing runs until you send it." : "Connect a host work adapter to enable this action."}</p>
         </section> : null}
         <div className="space-y-2">
-          {visible.map(goal => {
+          {visible.filter(goal => !focusedGoal || (focusedGoal.kind === 'living' && focusedGoal.id === goal.id)).map(goal => {
             const steps = stepList(goal.id);
-            const open = expanded === goal.id;
-            return <section key={goal.id} className="gg-card overflow-hidden rounded-xl border border-border/80 bg-card/50">
-              <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? null : goal.id)}
+            const open = focusedGoal?.id === goal.id || expanded === goal.id;
+            return <section key={goal.id} className={'gg-card overflow-hidden rounded-xl border border-border/80 bg-card/50' + (focusedGoal ? ' gg-focused-detail' : '')}>
+              <button type="button" aria-expanded={open} aria-label={'Open goal: ' + goal.title}
+                onClick={() => { if (!focusedGoal) openFocus('living', goal.id); }}
                 className="flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold tabular-nums">
                   {steps.length && steps.every(step => step.status === "done") ? <Check size={16} /> : (goal.source_key?.match(/\d+$/)?.[0] ?? <Target size={15} />)}
@@ -306,7 +342,7 @@ export function GoalGuruPanel({
                       : steps.length ? `${finished(goal.id)}/${steps.length} complete` : "Active"}
                   </span>
                 </span>
-                {open ? <ChevronDown className="size-4 shrink-0 text-muted-foreground"/> : <ChevronRight className="size-4 shrink-0 text-muted-foreground" />}
+                {focusedGoal ? null : <ChevronRight className="size-4 shrink-0 text-muted-foreground" />}
               </button>
               {open ? <div className="border-t border-border/70 px-3 py-3">
                 {steps.length ? <div className="space-y-1">{steps.map(step => <label key={step.id}
@@ -369,9 +405,9 @@ export function GoalGuruPanel({
               </div> : null}
             </section>;
           })}
-          {!(visible.length || (filter === "platform" && plan.goapGoals.length)) && <p className="py-10 text-center text-sm text-muted-foreground">No goals in this area yet.</p>}
+          {!focusedGoal && !(visible.length || (filter === "platform" && plan.goapGoals.length)) && <p className="py-10 text-center text-sm text-muted-foreground">No goals in this area yet.</p>}
         </div>
-        <div className="mt-5">
+        {!focusedGoal ? <div className="mt-5">
           {creating ? <form className="space-y-2" onSubmit={event => { event.preventDefault(); void addGoal(); }}>
             <input autoFocus value={newTitle} onChange={event => setNewTitle(event.target.value)}
               maxLength={300} placeholder="A clear, achievable goal" aria-label="New goal title"
@@ -383,7 +419,7 @@ export function GoalGuruPanel({
             className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <Plus size={16} aria-hidden="true" /> Add a goal
           </button>}
-        </div>
+        </div> : null}
       </>}
     </div>
   </div>;

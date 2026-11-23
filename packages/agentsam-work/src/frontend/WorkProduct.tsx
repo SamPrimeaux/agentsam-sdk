@@ -67,6 +67,7 @@ export function WorkProduct({
   headerActions,
   knowledgeAction,
   onCreateArtifact,
+  artifactView,
 }: {
   host: WorkHost;
   surface: WorkSurfaceId;
@@ -82,6 +83,8 @@ export function WorkProduct({
   knowledgeAction?: ReactNode;
   /** Start a new artifact in the appropriate lead-chat or specialist workspace. */
   onCreateArtifact?: (kind: WorkArtifactCreateKind) => void;
+  /** Host-controlled Library filtering; shared with route-specific navigation. */
+  artifactView?: 'all' | 'yours' | 'shared' | 'recent' | 'starred' | 'trash';
 }) {
   const [range, setRange] = useState<{ from?: string; to?: string }>({});
   const calendarRange = surface === "calendar" && range.from ? range : {};
@@ -366,6 +369,7 @@ export function WorkProduct({
             ? value : "all";
         })()}
         initialView={(() => {
+          if (artifactView) return artifactView;
           if (typeof window === "undefined") return "all";
           const value = new URLSearchParams(window.location.search).get("view");
           return value === "yours" || value === "recent" || value === "starred" || value === "trash" || value === "shared"

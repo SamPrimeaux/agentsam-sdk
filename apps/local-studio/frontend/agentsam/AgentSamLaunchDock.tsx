@@ -1,25 +1,31 @@
-import { BookOpen, House, Lightbulb, MessageCircle, SquareCheckBig } from 'lucide-react';
+import { BookOpen, Clock3, FileCode, Files, Folder, House, Images, Lightbulb, MessageCircle, MonitorPlay, SquareCheckBig, SquareTerminal, UserRound, Users } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
+import { useNavigate } from '@tanstack/react-router';
 import { useWorkStore } from '@/lib/work/store';
 
 /**
- * Phone launch destinations for the existing Local Studio shell.
- * Work's editor/terminal tabs remain contextual, not a second global dock.
+ * The shell owns which navigation profile applies; agentsam-nav owns the
+ * single floating dock. Work surfaces and global destinations never stack.
  */
 export function AgentSamLaunchDock() {
   const { data, isMobile, open, setOpen } = useNav();
+  const navigate = useNavigate();
   const setSideOpen = useWorkStore((state) => state.setSideOpen);
+  const workSurface = useWorkStore((state) => state.workSurface);
+  const setWorkSurface = useWorkStore((state) => state.setWorkSurface);
   const [path, routeSearch = ''] = (data.pathname ?? '').split('?');
   const installedAdminPage = path === '/admin/apps/ecommerce-cms-agentsam' ? new URLSearchParams(routeSearch).get('page') : null;
   const chatsActive = path === '/admin/agentsam' || path.startsWith('/admin/chats');
   const libraryActive = path === '/admin/library' || path === '/admin/media' || path.startsWith('/admin/media/') || path === '/admin/artifacts';
-  // The launch dock is navigation for primary destinations, not editor chrome.
-  // Focused tools (Canvas, Library, CMS, Media, Settings, etc.) own their stage.
-  // Chats reserves the bottom edge for its single composer, as do focused tools.
-  // Keep quick destinations only on lightweight landing pages.
+  // Only lightweight landing pages and the AgentSam conversation host opt in.
+  // Editors, CMS, Library, and creative apps keep their own contextual chrome.
   const launchRoute = path === '/admin/home' || path === '/admin/ideas' || path === '/admin/goalguru' || path === '/goalguru';
-  // A modal navigation drawer takes precedence over the dock and underlying stage.
-  if (!isMobile || open || !launchRoute) return null;
+  const conversationRoute = path === '/admin/agentsam' || path.startsWith('/admin/chats');
+  const libraryRoute = path === '/admin/library' || path === '/admin/artifacts' || path === '/admin/media';
+  const libraryView = new URLSearchParams(routeSearch).get('view') || 'all';
+  // The sidebar drawer takes precedence. Beyond the nav provider's 901px
+  // mobile threshold, only Work opts into the 902–1099px compact dock.
+  if ((isMobile && open) || (!launchRoute && !conversationRoute && !libraryRoute)) return null;
   const showPage = (path: string) => {
     setOpen(false);
     // A dedicated route must not open a second SideStage over itself.
@@ -27,7 +33,32 @@ export function AgentSamLaunchDock() {
     data.onNavigate?.(path);
   };
 
-  return <Nav.LaunchDock items={[
+  if (libraryRoute) {
+    const showArtifacts = (view: 'all' | 'yours' | 'shared' | 'recent') => {
+      setOpen(false);
+      setSideOpen(false);
+      void navigate({ to: '/admin/library', search: view === 'all' ? {} : { view } } as never);
+    };
+    return <Nav.LaunchDock coverage="tablet" label="Library navigation" items={[
+      { id: 'artifacts', label: 'Artifacts', icon: <Files />, active: path !== '/admin/media' && libraryView === 'all', onSelect: () => showArtifacts('all') },
+      { id: 'yours', label: 'Yours', icon: <UserRound />, active: path !== '/admin/media' && libraryView === 'yours', onSelect: () => showArtifacts('yours') },
+      { id: 'shared', label: 'Shared', icon: <Users />, active: path !== '/admin/media' && libraryView === 'shared', onSelect: () => showArtifacts('shared') },
+      { id: 'recent', label: 'Recent', icon: <Clock3 />, active: path !== '/admin/media' && libraryView === 'recent', onSelect: () => showArtifacts('recent') },
+      { id: 'media', label: 'Media', icon: <Images />, active: path === '/admin/media', onSelect: () => showPage('/admin/media') },
+    ]} />;
+  }
+
+  if (conversationRoute) {
+    return <Nav.LaunchDock coverage="tablet" label="Work surfaces" items={[
+      { id: 'chat', label: 'Chat', icon: <MessageCircle />, active: workSurface === 'chat', onSelect: () => setWorkSurface('chat') },
+      { id: 'files', label: 'Files', icon: <Folder />, active: workSurface === 'files', onSelect: () => setWorkSurface('files') },
+      { id: 'code', label: 'Code', icon: <FileCode />, active: workSurface === 'code', onSelect: () => setWorkSurface('code') },
+      { id: 'terminal', label: 'Terminal', icon: <SquareTerminal />, active: workSurface === 'terminal', onSelect: () => setWorkSurface('terminal') },
+      { id: 'preview', label: 'Preview', icon: <MonitorPlay />, active: workSurface === 'preview', onSelect: () => setWorkSurface('preview') },
+    ]} />;
+  }
+
+  return <Nav.LaunchDock coverage="tablet" items={[
     {
       id: 'chats', label: 'Chats', icon: <MessageCircle />,
       active: chatsActive,

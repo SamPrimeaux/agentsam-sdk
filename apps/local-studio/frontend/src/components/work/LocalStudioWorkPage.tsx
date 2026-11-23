@@ -366,10 +366,12 @@ export function LocalStudioWorkPage({
   surface,
   projectId,
   ticketId,
+  artifactView,
 }: {
   surface: WorkSurfaceId;
   projectId?: string;
   ticketId?: string;
+  artifactView?: 'all' | 'yours' | 'shared' | 'recent' | 'starred' | 'trash';
 }) {
   const navigate = useNavigate();
   const host = useLocalStudioWorkHost();
@@ -431,6 +433,7 @@ export function LocalStudioWorkPage({
         presentation="embedded"
         host={host}
         surface={surface}
+        artifactView={artifactView}
         onCreateArtifact={startArtifactCreation}
         projectId={projectId}
         ticketId={ticketId}

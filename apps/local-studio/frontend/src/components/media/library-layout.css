@@ -93,3 +93,21 @@
    application header replaces it so mobile users never see stacked titles. */
 .agentsam-unified-library[data-library-view="artifacts"] .agentsam-work-artifacts__heading h1 { display: none; }
 .agentsam-unified-library:has(.agentsam-library__focused-view) .agentsam-library-header { display: none; }
+
+/* The shared packaged dock owns quick Library navigation at compact widths;
+   the desktop segmented header remains for larger screens. */
+@media (max-width: 1099px) {
+  .agentsam-unified-library .agentsam-library-switch { display: none; }
+  .agentsam-unified-library .agentsam-library-header {
+    padding: .75rem clamp(12px, 2vw, 24px);
+    align-items: center;
+    flex-direction: row;
+  }
+  .agentsam-unified-library .agentsam-library-header h1 { font-size: 1.15rem; }
+  .agentsam-unified-library .agentsam-library-content { min-width: 0; }
+}
+/* Artifact-specific focus is an immersive canvas: its own Back control is
+   available, and the bottom dock stays out of the way. */
+.agentsam-shell:has(.agentsam-artifact-hub__focused) .as-nav-launch-dock[aria-label="Library navigation"] {
+  display: none;
+}

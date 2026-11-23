@@ -425,6 +425,51 @@
   .as-nav-launch-dock-icon svg { width: 24px; height: 24px; }
 
 }
+/* Tablet and split-view hosts use the same packaged dock as phones.
+   Opt-in avoids changing focused editors and third-party consumers. */
+@media (max-width: 1099px) {
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] {
+    position: fixed; z-index: 65; display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch; gap: 3px;
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: max(9px, env(safe-area-inset-bottom, 0px)); padding: 6px;
+    border: 1px solid var(--nav-border); border-radius: 22px;
+    background: color-mix(in srgb, var(--nav-surface) 92%, transparent);
+    box-shadow: 0 10px 36px #0005;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] button {
+    min-width: 0; min-height: 51px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    border: 0; border-radius: 16px;
+    background: transparent; color: var(--nav-muted);
+    cursor: pointer; transition: background 120ms ease, color 120ms ease;
+  }
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] button:hover,
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] button:focus-visible,
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] button[aria-pressed="true"] {
+    background: var(--nav-selected); color: var(--nav-text);
+  }
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] .as-nav-launch-dock-icon {
+    display: grid; place-items: center;
+  }
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] .as-nav-launch-dock-icon svg {
+    width: 22px; height: 22px; stroke-width: 1.8;
+  }
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] .as-nav-launch-dock-label { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1099px) {
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: min(530px, calc(100% - 32px));
+  }
+  .as-nav-launch-dock[data-nav-dock-coverage="tablet"] .as-nav-launch-dock-label {
+    display: block; font-size: var(--nav-meta-size); line-height: 1.2;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .as-nav-launch-dock button { transition: none; }
 }
