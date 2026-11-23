@@ -12,7 +12,8 @@ PREFIX="library/bim-starters/barndominium/v2/"
 def sha(p):
     h=hashlib.sha256()
     with open(p,"rb") as f:
-        for c in iter(lambda:f.read(1048576),b""):h.update(c)
+        for c in iter(lambda:f.read(1048576),b""):
+            h.update(c)
     return h.hexdigest()
 
 def main():
@@ -76,15 +77,18 @@ authoring/prepare_release.py. Original source remains at R2
 cad/library/bim-starters/barndominium/v1.1/owner-review/ .
 """)
     files["README.md"]=readme
-    if any(not p.is_file() for p in files.values()):raise RuntimeError("missing file")
+    if any(not p.is_file() for p in files.values()):
+        raise RuntimeError("missing file")
     receipt=json.loads((b/"validation.json").read_text())
     if receipt["invalid_brep_shapes"] or receipt["ifc_export_errors"] or receipt["model_elements"]!=688 or receipt["real_opening_boolean_cuts"]!=26:
         raise RuntimeError("source failed QA")
     package=b/(NAME+".zip")
     with zipfile.ZipFile(package,"w",zipfile.ZIP_DEFLATED,compresslevel=7) as z:
-        for name,path in sorted(files.items()):z.write(path,arcname=name)
+        for name,path in sorted(files.items()):
+            z.write(path,arcname=name)
     with zipfile.ZipFile(package) as z:
-        if z.testzip() or set(z.namelist()) != set(files):raise RuntimeError("corrupt ZIP")
+        if z.testzip() or set(z.namelist()) != set(files):
+            raise RuntimeError("corrupt ZIP")
     files[package.name]=package
     rows=[]
     for name,path in sorted(files.items()):
@@ -124,4 +128,5 @@ cad/library/bim-starters/barndominium/v1.1/owner-review/ .
     print(json.dumps({"archive":str(package),"archive_bytes":package.stat().st_size,
         "manifest_sha256":sha(dest),"source_sha256":manifest["sourceSha256"],
         "members":len(rows),"prefix":PREFIX},indent=2))
-if __name__=="__main__":main()
+if __name__=="__main__":
+    main()

@@ -15,12 +15,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-import math
-import os
-import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
+from typing import Any
 
 import FreeCAD as App
 import Part
@@ -53,7 +51,7 @@ MODEL = []
 OPENINGS = []
 ISSUES = []
 ROOMS = []
-DOC = None
+DOC: Any = None
 GROUPS = {}
 
 def mm(x):
@@ -63,13 +61,15 @@ def vft(x,y,z):
     return V(mm(x),mm(y),mm(z))
 
 def box(x,y,z,dx,dy,dz):
-    if min(dx,dy,dz) <= 0: raise ValueError("invalid box dimensions")
+    if min(dx,dy,dz) <= 0:
+        raise ValueError("invalid box dimensions")
     return Part.makeBox(mm(dx),mm(dy),mm(dz),vft(x,y,z))
 
 def rod(p1,p2,width=.2,depth=.25):
     a,b=vft(*p1),vft(*p2)
     tangent=b-a
-    if tangent.Length < 1: raise ValueError("zero length member")
+    if tangent.Length < 1:
+        raise ValueError("zero length member")
     shape=Part.makeBox(tangent.Length,mm(width),mm(depth),V(0,-mm(width)/2,-mm(depth)/2))
     shape.Placement=App.Placement(a,App.Rotation(V(1,0,0),tangent))
     return shape
@@ -83,7 +83,7 @@ def issue(id,description,owner):
 
 def add(code,title,shape,category,ifc_class=None,source="provisional",material="TBD",notes="",parent=None):
     if shape.isNull() or shape.Volume <= 0 or not shape.isValid():
-        raise ValueError("invalid non-solid element %s" % code)
+        raise ValueError(f"invalid non-solid element {code}")
     obj=DOC.addObject("PartDesign::Feature","Element")
     obj.Label=code+" | "+title
     obj.Shape=shape
@@ -305,8 +305,6 @@ def add_roof():
     # Living ridge follows the 72-ft long axis to reconcile 10-ft eave
     # plus 6:12 x 16-ft half-span = 18-ft ridge on the source section.
     # Roof plan graphic showing a different ridge orientation remains RFI.
-    y0,y_r,y1=10,26,42
-    length0,length1=38,110
     add("R-LIV-NORTH","Living roof north 6:12 plane",
         polygon_prism([(36,8,9),(112,8,9),(112,26,18),(36,26,18)],.12),
         "roof","IfcRoof","section-derived","Standing seam over deck; detailing TBD")
@@ -405,8 +403,10 @@ def add_studs():
         while cursor < end-.5:
             if not any(h["start_ft"]-.25<=cursor<=h["start_ft"]+h["width_ft"]+.25 for h in holes):
                 i+=1
-                if axis=="x": shape=box(cursor,coord-.26,0,.14,.52,height)
-                else: shape=box(coord-.26,cursor,0,.52,.14,height)
+                if axis=="x":
+                    shape=box(cursor,coord-.26,0,.14,.52,height)
+                else:
+                    shape=box(coord-.26,cursor,0,.52,.14,height)
                 add(f"STUD-{wall_id}-{i:03}","Exterior stud conceptual 24in OC",shape,"frame",
                     "IfcMember","provisional","2×6 nominal, spacing/attachment TBD")
             cursor+=2
@@ -420,38 +420,38 @@ def load_rooms(csv_file):
 def write_csv(path,rows,fields):
     with open(path,"w",newline="",encoding="utf-8") as f:
         w=csv.DictWriter(f,fieldnames=fields,extrasaction="ignore")
-        w.writeheader();w.writerows(rows)
+        w.writeheader()
+        w.writerows(rows)
 
 def sha(path):
     d=hashlib.sha256()
     with open(path,"rb") as f:
-        for chunk in iter(lambda:f.read(1048576),b""):d.update(chunk)
+        for chunk in iter(lambda:f.read(1048576),b""):
+            d.update(chunk)
     return d.hexdigest()
 
 def save_obj_mtl(output):
     obj=output/(OUT_NAME+".obj")
     mtl=output/(OUT_NAME+".mtl")
     with open(mtl,"w") as out:
-        for category,color in PALETTE.items():
-            out.write(f"newmtl {category}\nKd {color[0]:.4f} {color[1]:.4f} {color[2]:.4f}\nKa .05 .05 .05\nKs .08 .08 .08\nNs 18\n\n")
+        out.writelines(f"newmtl {category}\nKd {color[0]:.4f} {color[1]:.4f} {color[2]:.4f}\nKa .05 .05 .05\nKs .08 .08 .08\nNs 18\n\n" for category,color in PALETTE.items())
     vertex_offset=0
     with open(obj,"w") as out:
         out.write("# Derived metric OBJ, FreeCAD native source remains authoritative\n")
         out.write("mtllib "+mtl.name+"\n")
         for rec in MODEL:
             vertices,faces=rec["_shape"].tessellate(75.0)
-            if not vertices or not faces:continue
+            if not vertices or not faces:
+                continue
             out.write(f"o {rec['id']}\nusemtl {rec['category']}\n")
-            for vertex in vertices:
-                out.write(f"v {vertex.x/1000:.6f} {vertex.y/1000:.6f} {vertex.z/1000:.6f}\n")
-            for a,b,c in faces:
-                out.write(f"f {a+1+vertex_offset} {b+1+vertex_offset} {c+1+vertex_offset}\n")
+            out.writelines(f"v {vertex.x/1000:.6f} {vertex.y/1000:.6f} {vertex.z/1000:.6f}\n" for vertex in vertices)
+            out.writelines(f"f {a+1+vertex_offset} {b+1+vertex_offset} {c+1+vertex_offset}\n" for a,b,c in faces)
             vertex_offset+=len(vertices)
     return obj,mtl
 
 def export_ifc(output):
     import ifcopenshell
-    import ifcopenshell.api as api
+    from ifcopenshell import api
     from ifcopenshell.api.geometry import add_mesh_representation
     f=api.run("project.create_file",version="IFC4")
     project=api.run("root.create_entity",f,ifc_class="IfcProject",name="Barndominium Structural Concept V2")
@@ -489,7 +489,7 @@ def export_ifc(output):
                 "ApprovalStatus":"NOT ENGINEERED / FOR CONCEPT REVIEW",
                 "MaterialSpec":rec["material"][:250],
             })
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - collect per-element IFC export failures
             failures.append({"id":rec["id"],"error":str(exc)})
     # Genuine IFC opening / fill relations, in addition to actual boolean wall voids
     # already present in native FreeCAD and triangulated IFC geometry.
@@ -518,7 +518,7 @@ def export_ifc(output):
             f.create_entity("IfcRelFillsElement",
                 GlobalId=ifcopenshell.guid.new(),
                 RelatingOpeningElement=opening,RelatedBuildingElement=filler)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - collect per-opening IFC relation failures
             failures.append({"id":op["id"],"error":"IFC relation: "+str(exc)})
     # Source rectangles become IfcSpace objects for the interior design stage.
     for room in ROOMS:
@@ -529,7 +529,8 @@ def export_ifc(output):
             api.run("aggregate.assign_object",f,products=[entity],relating_object=level)
             x,y=map(float,(room["x_ft"],room["y_ft"]))
             wide,deep=map(float,(room["width_ft"],room["depth_ft"]))
-            if wide<=0 or deep<=0: raise ValueError("invalid room polygon")
+            if wide<=0 or deep<=0:
+                raise ValueError("invalid room polygon")
             h=13.0 if room["group"]=="garage" else 7.0 if room["group"]=="exterior" else 9.2
             shape=box(x,y,0,wide,deep,h)
             verts,faces=shape.tessellate(100.0)
@@ -537,14 +538,14 @@ def export_ifc(output):
                 vertices=[[(float(v.x/1000),float(v.y/1000),float(v.z/1000)) for v in verts]],
                 faces=[[tuple(t) for t in faces]])
             api.run("geometry.assign_representation",f,product=entity,representation=rep)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - collect per-room IFC export failures
             failures.append({"id":room["id"],"error":"IFC space: "+str(exc)})
     fpath=output/(OUT_NAME+".ifc")
     f.write(str(fpath))
     return fpath,failures
 
 def main():
-    global DOC,GROUPS
+    global DOC
     rooms_file,out=(Path(arg).resolve() for arg in sys.argv[1:3])
     out.mkdir(parents=True,exist_ok=True)
     load_rooms(rooms_file)
@@ -572,7 +573,7 @@ def main():
     write_csv(out/"design-review-required.csv",ISSUES,["id","issue","reviewer","status"])
     invalid=[e["id"] for e in MODEL if e["_shape"].isNull() or not e["_shape"].isValid()]
     counts=dict(Counter(item["category"] for item in MODEL))
-    evidence={
+    evidence: dict[str, Any] = {
         "schema":"agentsam.cad.bim-structure-concept.v2",
         "project":"Barndominium Starter Kit",
         "source":"SAM-SPACE-BARNDOMINIUM-V11 / published owner-review source",
@@ -609,6 +610,8 @@ def main():
     print(json.dumps({key:evidence[key] for key in [
         "model_elements","model_categories","real_opening_boolean_cuts",
         "invalid_brep_shapes","ifc_export_errors","source_review_rectangles"]},indent=2))
-    if invalid or ifc_errors: raise RuntimeError("Unverified invalid Brep / IFC export failures")
+    if invalid or ifc_errors:
+        raise RuntimeError("Unverified invalid Brep / IFC export failures")
 
-if __name__=="__main__": main()
+if __name__=="__main__":
+    main()

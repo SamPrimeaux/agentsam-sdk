@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """Run with Blender --background --python ... -- source.obj output.glb output.webp"""
-from pathlib import Path
-import math
 import sys
+from pathlib import Path
+
 import bpy
 from mathutils import Vector
 
 args=sys.argv[sys.argv.index("--")+1:]
-obj_path=Path(args[0]); glb_path=Path(args[1]); image_path=Path(args[2])
+obj_path=Path(args[0])
+glb_path=Path(args[1])
+image_path=Path(args[2])
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.wm.obj_import(filepath=str(obj_path),forward_axis="Y",up_axis="Z")
 mesh_objs=[o for o in bpy.context.scene.objects if o.type=="MESH"]
-if not mesh_objs: raise RuntimeError("OBJ contained no mesh geometry")
+if not mesh_objs:
+    raise RuntimeError("OBJ contained no mesh geometry")
 # Preserve distinct BIM element IDs in individual glTF nodes.
 for obj in mesh_objs:
     obj.data.validate()
@@ -52,7 +55,11 @@ camera.data.ortho_scale=62
 scene.camera=camera
 def area(name,loc,power,size):
     bpy.ops.object.light_add(type="AREA",location=loc)
-    ob=bpy.context.object;ob.name=name;ob.data.energy=power;ob.data.shape="DISK";ob.data.size=size
+    ob=bpy.context.object
+    ob.name=name
+    ob.data.energy=power
+    ob.data.shape="DISK"
+    ob.data.size=size
     ob.rotation_euler=(center-ob.location).to_track_quat("-Z","Y").to_euler()
 area("Key",(16,33,65),8500,30)
 area("Fill",(-33,4,46),5000,36)

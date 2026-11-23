@@ -3,6 +3,8 @@ from typing import Any
 
 Vector: Any
 Base: Any
+Placement: Any
+Rotation: Any
 
 def Console() -> Any: ...
 def openDocument(*args: Any, **kwargs: Any) -> Any: ...
