@@ -5,6 +5,8 @@ import {
 } from "../../../../packages/agentsam-vault/src/crypto/oauth-envelope.js";
 import {
   b64url,
+  beginGmailOAuth,
+  disconnectGmail,
   clean,
   consumeOauthState,
   readStoredOauthToken,
@@ -592,6 +594,7 @@ export async function handleConnectorWorkRequest(request, env, userId) {
       if (connectorProvider(plugin.provider)) {
         return beginConnectorOAuth(request,env,userId,plugin.provider);
       }
+      if (plugin.provider==='google_gmail') return beginGmailOAuth(request,env,userId);
       const body=await request.json().catch(()=>({}));
       const connectUrl=registeredOAuthEntryUrl(plugin,url.origin,body.return_to || body.returnTo,body);
       if (!connectUrl) return json({ok:false,error:'oauth_plugin_connection_handler_missing'},409);
@@ -610,12 +613,18 @@ export async function handleConnectorWorkRequest(request, env, userId) {
           grantedScopes:clean(row.scopes).split(/\s+/).filter(Boolean)}))});
     }
     if (action==='disconnect' && request.method==='POST') {
+      const body=await request.json().catch(()=>({}));
+      const requested=connectionIdParts(body.connection_id || body.connectionId || '');
+      if(requested.provider !== plugin.provider || !requested.accountIdentifier)
+        return json({ok:false,error:'oauth_plugin_connection_mismatch'},400);
+      // Each provider owns token revocation; the broker only checks plugin
+      // identity and forwards the user's selected account.
+      if (plugin.provider==='google_gmail') {
+        return json(await disconnectGmail(env,userId,requested.accountIdentifier));
+      }
       if (!connectorProvider(plugin.provider)) {
         return json({ok:false,error:'use_provider_owned_disconnect',provider:plugin.provider},409);
       }
-      const body=await request.json().catch(()=>({}));
-      const requested=connectionIdParts(body.connection_id || body.connectionId || '');
-      if(requested.provider !== plugin.provider) return json({ok:false,error:'oauth_plugin_connection_mismatch'},400);
       return json(await disconnectConnector(env,userId,body.connection_id || body.connectionId));
     }
     return json({ok:false,error:'method_not_allowed'},405);
