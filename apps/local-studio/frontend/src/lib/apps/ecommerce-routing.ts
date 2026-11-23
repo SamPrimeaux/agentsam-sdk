@@ -71,7 +71,6 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
   // this host boundary so packaged assets never become an open proxy.
   const recognized: Record<string, readonly string[]> = {
     '/admin/pages': ['site_id'],
-    '/admin/theme-editor': ['slug', 'site', 'site_id', 'page_id', 'showcase', 'catalog', 'source', 'section', 'block', 'previewMode', 'stock', 'project', 'project_id', 'page', 'new'],
     '/admin/page-edit': ['slug', 'site_id', 'page_id'],
     '/admin/theme-project-editor': ['project','project_id','site_id','page','section','block','previewMode','stock','new'],
     '/admin/theme-workspace': ['site_id'],
@@ -96,9 +95,6 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
         ? ['site_id']
         : []);
   if ([...url.searchParams.keys()].some((name) => !allowed.includes(name) || url.searchParams.getAll(name).length !== 1)) return null;
-  if (url.pathname === '/admin/theme-editor' && url.searchParams.has('new') &&
-      (url.searchParams.get('new') !== '1' ||
-       ['project', 'project_id', 'page_id', 'slug', 'page'].some(key => url.searchParams.has(key)))) return null;
   if (url.pathname === '/admin/theme-project-editor') {
     if (url.searchParams.has('new') &&
         (url.searchParams.get('new') !== '1' || !url.searchParams.has('site_id') ||

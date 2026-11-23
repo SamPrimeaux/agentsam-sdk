@@ -10,7 +10,7 @@ import { studioNavigationProjection } from './studio-navigation.mjs';
 test('platform routes resolve to the real Ecommerce application bundle', () => {
   for (const [path, file] of [
     ['/admin/pages', 'pages.html'],
-    ['/admin/theme-editor', 'theme-editor.html'],
+    ['/admin/sites/site_a/pages/page_a/editor', 'theme-editor.html'],
     ['/admin/css/console.css', 'css/console.css'],
     ['/admin/js/shell.js', 'js/shell.js'],
     ['/admin/partials/growth-app.html', 'partials/growth-app.html'],
@@ -216,7 +216,7 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
     assert.ok(isStudioAdminPath(path), path);
   }
   assert.equal(isStudioAdminPath('/admin/products'), false);
-  assert.equal(isStudioAdminPath('/admin/theme-editor'), false);
+  assert.equal(resolveConsoleFile('/admin/theme-editor'), null, 'retired editor is not a document route');
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /!isStudioAdminPath\(url\.pathname\)/);
   assert.match(worker, /import \{ canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES \} from [^;]+studio-admin-routes\.mjs/);
@@ -271,7 +271,7 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
   assert.equal(visit('/admin/moviemode'), '#/admin/moviemode');
   assert.equal(visit('/cad'), '#/cad');
   assert.equal(visit('/admin/products'), '#/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');
-  assert.equal(visit('/admin/theme-editor?slug=home'), '#/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-editor%3Fslug%3Dhome');
+  assert.equal(resolveConsoleFile('/admin/theme-editor'), null, 'standalone entry is no longer mounted');
 });
 
 
@@ -443,14 +443,14 @@ test('legacy R2 HTML source editor mounts only when explicitly selected', async 
     },
   };
   const canonical = await servePackagedConsole(
-    new Request('https://agentsam.inneranimalmedia.com/admin/theme-editor?slug=home'),
+    new Request('https://agentsam.inneranimalmedia.com/admin/sites/site_a/pages/page_a/editor'),
     env,
   );
   assert.equal(canonical.status, 200);
   assert.doesNotMatch(await canonical.text(), /studio-cms-source-host/);
 
   const source = await servePackagedConsole(
-    new Request('https://agentsam.inneranimalmedia.com/admin/theme-editor?slug=sam-docs&source=html&site=agentsam-sdk'),
+    new Request('https://agentsam.inneranimalmedia.com/admin/sites/site_a/pages/page_a/editor?source=html'),
     env,
   );
   assert.equal(source.status, 200);

@@ -24,6 +24,10 @@ export function parseThemeEditorLocation(input) {
   const parts = url.pathname.split('/').filter(Boolean).map(decodeSegment);
   const query = url.searchParams;
 
+  if (parts[0] === 'admin' && parts[1] === 'sites' && validSegment(parts[2]) && parts[3] === 'themes' && parts[4] === 'new' && parts[5] === 'editor' && parts.length === 6) {
+    return { mode: 'new', siteId: parts[2], legacy: false };
+  }
+
   if (parts[0] === 'admin' && parts[1] === 'sites' && parts[2] && parts[3] === 'themes' && parts[4] && parts[5] === 'editor') {
     const [, , siteId, , projectId] = parts;
     const pageSlug = parts[6] || 'home';

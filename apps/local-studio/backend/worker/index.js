@@ -986,7 +986,7 @@ export default {
     // Retire the duplicate donor Atlas page. Existing deep links lead into
     // the canonical in-app Theme Studio; shared section runtime is retained.
     if (url.pathname === "/admin/revise-atlas" || url.pathname === "/admin/revise-atlas.html") {
-      const target=new URL('/admin/theme-editor?catalog=revise',request.url);
+      const target=new URL('/admin/store',request.url);
       return Response.redirect(target,302);
     }
 
@@ -1025,16 +1025,20 @@ export default {
       return home || json({ ok: false, error: "studio_home_unavailable" }, 503);
     }
 
+    // Old bookmarks enter the Store. Editors themselves remain on site-scoped routes.
+    if (["GET", "HEAD"].includes(request.method) && ["/admin/theme-editor", "/admin/theme-editor.html", "/admin/theme-editor/"].includes(url.pathname)) {
+      const target = new URL("/admin/store", url.origin);
+      const requestedSite = url.searchParams.get("site_id");
+      if (requestedSite && /^[A-Za-z0-9_-]{1,160}$/.test(requestedSite)) target.searchParams.set("site_id", requestedSite);
+      return Response.redirect(target.toString(), 308);
+    }
+
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
     const embeddedEcommerceHome = url.pathname === "/admin/home"
       && url.searchParams.get("__agentsamEmbedded") === "1";
     if ((request.method === "GET" || request.method === "HEAD") &&
         (url.pathname.startsWith("/admin/") && (isLocalStudioEcommerceDocumentPath(url.pathname) || !isStudioAdminPath(url.pathname) || embeddedEcommerceHome))) {
-      if (url.pathname === "/admin/theme-editor" && url.searchParams.has("marketplace_kind")) {
-        const denied = await guardStudioDocument(request, env);
-        if (denied) return denied;
-      }
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       let storeBootstrap=null;
       if(url.pathname==='/admin/store' && request.method==='GET'){

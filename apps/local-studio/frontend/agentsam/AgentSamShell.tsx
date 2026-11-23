@@ -188,7 +188,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     try { localStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
     setSelectedMerchantStoreId(id);
     window.dispatchEvent(new CustomEvent('agentsam:cms-site-changed', { detail: { site_id: id } }));
-    go('/admin/pages?site_id=' + encodeURIComponent(id));
+    go('/admin/store?site_id=' + encodeURIComponent(id));
   };
   const [globalAssistantFocused, setGlobalAssistantFocused] = useState(false);
   const [globalAssistantWidth, setGlobalAssistantWidth] = useState(390);

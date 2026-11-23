@@ -262,7 +262,7 @@ export async function resolveCmsSiteAccess(db, actorUserId, selector = null, acc
 
 /** Read only an explicit site selector; generic page/project slugs are ignored. */
 export function isCmsThemeEditorRoute(pathname) {
-  return pathname === '/admin/theme-editor' || pathname === '/admin/theme-project-editor' ||
+  return pathname === '/admin/theme-project-editor' ||
     /^\/admin\/sites\/[A-Za-z0-9_-]{1,160}\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/.test(pathname);
 }
 

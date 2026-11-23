@@ -104,9 +104,9 @@ test('CMS page adapter pins every read and write to the selected site and resolv
   assert.equal(preview.openUrl, 'https://example.com/about');
 });
 
-test('new=1 parses as a Theme Studio creation intent on the shared editor route', () => {
-  assert.deepEqual(parseThemeEditorLocation(new URL('https://studio.test/admin/theme-editor?new=1&site_id=site_a')), {
-    mode:'new', siteId:'site_a', legacy:true,
+test('site-scoped new-theme editor creates a draft without the retired entry route', () => {
+  assert.deepEqual(parseThemeEditorLocation(new URL('https://studio.test/admin/sites/site_a/themes/new/editor')), {
+    mode:'new', siteId:'site_a', legacy:false,
   });
 });
 
@@ -142,7 +142,7 @@ test('legacy new-theme alias redirects to the shared Theme Studio, never Design 
   const alias = read('../frontend/static/theme-project-editor.html');
   const bootstrap = read('../frontend/static/js/theme-studio-bootstrap.mjs');
   assert.match(alias,/new/);
-  assert.match(alias,/\/admin\/theme-editor/);
+  assert.match(alias,/\/admin\/sites\//);
   assert.doesNotMatch(alias,/\/canvas/);
   assert.match(bootstrap,/async function bootNewTheme/);
   assert.match(bootstrap,/blankThemeProject/);

@@ -100,7 +100,7 @@ try {
       window.__mounted = mountOnlineStore(frame, {
         baseUrl: location.origin,
         storefrontUrl: null,
-        newThemeUrl: '/admin/theme-editor?new=1',
+        newThemeUrl: '/admin/sites/site-store/themes/new/editor',
         onCreateTheme(href) { window.__newTheme = href; },
         async loadStore() {
           return { store: { visibility: 'unpublished' }, performance: {},
@@ -124,15 +124,14 @@ try {
   });
   const merchant = page.frameLocator('#merchant-frame');
   await merchant.locator('.online-store').waitFor();
-  await merchant.locator('#store-visibility-label').filter({hasText:/Unverified|Not published|Theme not published/}).waitFor({timeout:9000});
-  assert.equal(await merchant.locator('.online-store-title h1').innerText(), 'Online Store');
-  assert.match(await merchant.locator('#store-visibility-label').innerText(), /(?:Unverified|Not published|Theme not published)/);
-  assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Theme not published');
-  assert.equal(await merchant.locator('#test-customer-flow-btn').getAttribute('href'), '/admin/onboarding-preview?site_id=site-store', 'Embedded Store checkout preview uses the owning host origin rather than the srcdoc opaque origin');
+  await merchant.locator('#draft-themes').waitFor();
+  assert.equal(await merchant.locator('.online-store-accessible-heading').innerText(), 'Online Store');
+  assert.equal(await merchant.locator('.online-store-head').count(), 0, 'No redundant Store header actions');
+  assert.equal(await merchant.locator('#store-site-switcher').count(), 0, 'Site choice lives in the global profile menu');
   assert.equal(await merchant.locator('#new-theme-btn').isVisible(), true, 'New theme action is available for the selected site');
-  assert.match(await merchant.locator('#new-theme-btn').getAttribute('href'), /\/admin\/theme-editor\?new=1&site_id=site-store/);
+  assert.match(await merchant.locator('#new-theme-btn').getAttribute('href'), /\/admin\/sites\/site-store\/themes\/new\/editor/);
   await merchant.locator('#new-theme-btn').click();
-  assert.match(await page.evaluate(() => window.__newTheme || ''), /\/admin\/theme-editor\?new=1&site_id=site-store/);
+  assert.match(await page.evaluate(() => window.__newTheme || ''), /\/admin\/sites\/site-store\/themes\/new\/editor/);
   assert.equal(await merchant.locator('.online-store-starter').count(), 0, 'No fake storefront is presented as installed');
   assert.equal(await merchant.locator('.online-store-active').isHidden(), true, 'Uninstalled storefront must not show a fabricated theme preview');
   assert.equal(await merchant.locator('#import-theme-btn').isDisabled(), true, 'Unimplemented import cannot be clicked');
