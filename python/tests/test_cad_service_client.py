@@ -76,6 +76,9 @@ def building_receipt():
         "output_scope": "runtime-derived",
         "job_id": "building-abc",
         "source": {
+            "kind": "file",
+            "mount": "work",
+            "path": "models/source.json",
             "source_sha256": SHA,
             "source_revision": 3,
             "scope": "single_rectangular_shell_with_north_south_openings",
@@ -155,6 +158,13 @@ class CadServiceClientTests(unittest.TestCase):
         self.assertEqual(len(receipt["files"]), 9)
         fake.receipt["source"]["source_sha256"] = "b" * 64
         with self.assertRaisesRegex(CadServiceError, "source_evidence"):
+            client.export_building(
+                {"kind": "file", "mount": "work", "path": "models/source.json"},
+                base=SHA,
+            )
+        fake.receipt["source"]["source_sha256"] = SHA
+        fake.receipt["source"]["path"] = "models/other.json"
+        with self.assertRaisesRegex(CadServiceError, "source_identity"):
             client.export_building(
                 {"kind": "file", "mount": "work", "path": "models/source.json"},
                 base=SHA,
