@@ -98,7 +98,12 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
         :source==='r2'||source==='container'?plugins?.cloudflare:null;
       if(!pluginId)throw Error('No registered OAuth connection plugin was found for this source. Check installed connections.');
       const returnTo=window.location.pathname+window.location.search;
-      const result=await beginLocalStudioRegisteredPluginOAuth(pluginId,returnTo);
+      // These are provider adapter requirements, not hardcoded OAuth scopes.
+      // The connection service resolves them against the live D1 catalog and
+      // Cloudflare asks the user to approve the resulting permission set.
+      const requested=source==='r2'?{capabilities:['cloudflare.r2']}
+        :source==='container'?{capabilities:['cloudflare.containers']}:{};
+      const result=await beginLocalStudioRegisteredPluginOAuth(pluginId,returnTo,requested);
       if(!result.authorize_url)throw Error('oauth_authorization_url_unavailable');
       if(isPackagedDesktop())await openExternalUrl(result.authorize_url);
       else window.location.assign(result.authorize_url);
