@@ -75,8 +75,10 @@ test('R2 listing preserves provider folder prefixes and verified ETags',()=>{
     result:[{key:'src/a.ts',etag:'hash123',size:34,http_metadata:{contentType:'text/typescript'}}],
     result_info:{delimited:['src/'],cursor:'next',is_truncated:true},
   });
-  assert.deepEqual(value.entries.map(x=>x.path),['src/','src/a.ts']);
-  assert.equal(value.entries[1].version,'hash123');
+  assert.deepEqual(value.entries.map(x=>x.path),['src/']);
+  const nested=normalizeR2Listing({result:[{key:'src/a.ts',etag:'hash123',size:34}],result_info:{delimited:[]}},'src/');
+  assert.deepEqual(nested.entries.map(x=>x.path),['src/a.ts']);
+  assert.equal(nested.entries[0].version,'hash123');
   assert.equal(value.truncated,true);
 });
 test('Cloudflare OAuth scope gate rejects R2 account lacking read scopes',async()=>{
@@ -202,4 +204,17 @@ test('Drive readonly grant cannot write even when file claims canEdit',async()=>
       uploads++;return Response.json({id:'file_123',name:'file.md',mimeType:'text/markdown',version:'3',capabilities:{canEdit:true,canDownload:true}});
     }}));
   assert.equal(data.status,403);assert.equal(data.error,'drive_write_not_permitted');assert.equal(uploads,1);
+});
+
+test('R2 hierarchical list restores folders when the provider returns flat nested keys',()=>{
+  const result=normalizeR2Listing({
+    result:[{key:'src/a.ts',etag:'one'},{key:'src/nested/b.ts',etag:'two'},{key:'README.md',etag:'three'}],
+    result_info:{delimited:[]},
+  });
+  assert.deepEqual(result.entries.map(entry=>entry.path),['src/','README.md']);
+  const next=normalizeR2Listing({
+    result:[{key:'src/a.ts',etag:'one'},{key:'src/nested/b.ts',etag:'two'}],
+    result_info:{delimited:[]},
+  },'src/');
+  assert.deepEqual(next.entries.map(entry=>entry.path),['src/nested/','src/a.ts']);
 });
