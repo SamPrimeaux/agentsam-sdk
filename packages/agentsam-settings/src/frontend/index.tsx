@@ -2426,6 +2426,8 @@ function DesignView({snapshot,host}:{
             <pre className="mt-3 max-h-[460px] overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed">{JSON.stringify(latest,null,2)}</pre>
           </details>
           <p className="text-[10px] text-muted-foreground">Source: {context?.contextTool} · approved contract in the authorized Brand workspace.</p>
+          {host.openPluginWorkspace ? <button type="button" onClick={()=>host.openPluginWorkspace?.("agentsam-brand")}
+            className="rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Brand workspace →</button> : null}
         </div>}
       </Section>
       <Section title="Brand implementation" description="Logo and media assets, design tokens, application themes and campaign materials express the identity; they do not define it.">
