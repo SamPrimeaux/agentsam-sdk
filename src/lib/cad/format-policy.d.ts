@@ -4,6 +4,7 @@ export {
   CAD_SOURCE_FORMATS,
   CAD_FORMAT_OPERATIONS,
   identifyCadFileFormat,
+  cadFormatCandidates,
   cadOutputFormatReference,
   isCadAutoDiscoveryCandidate,
   runCadFormatOperation,
