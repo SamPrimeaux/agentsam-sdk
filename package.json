@@ -145,7 +145,9 @@
     "./site-scrape/worker": "./packages/agentsam-site-scrape/worker/index.mjs",
     "./site-scrape/index": "./packages/agentsam-site-scrape/runtime/index.mjs",
     "./site-scrape/storage": "./packages/agentsam-site-scrape/runtime/node-storage.mjs",
-    "./site-scrape/client": "./packages/agentsam-site-scrape/runtime/client.mjs"
+    "./site-scrape/client": "./packages/agentsam-site-scrape/runtime/client.mjs",
+    "./registry/universal-reconcile": "./src/registry/universal-reconcile.js",
+    "./registry/universal-catalog": "./protocol/registry/universal-catalog.v1.json"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -312,7 +314,7 @@
     "verify:ui-quality:source": "node scripts/ui-quality/check-source.mjs --changed-from origin/main",
     "docs:registry": "node scripts/registry/generate-docs.mjs",
     "docs:registry:check": "node scripts/registry/generate-docs.mjs --check",
-    "verify:registry": "node scripts/registry/generate-docs.mjs --check && node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/*.test.mjs && python3 -m unittest discover -s scripts/schema-registry -p 'test_*.py'",
+    "verify:registry": "node scripts/registry/generate-universal.mjs --check && node scripts/registry/generate-docs.mjs --check && node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/*.test.mjs && python3 -m unittest discover -s scripts/schema-registry -p 'test_*.py'",
     "catalog:check": "python3 scripts/catalog/build_catalog.py --repo . --check",
     "test": "node scripts/with-ephemeral-tmpdir.mjs -- npm run test:run",
     "test:brand": "npm --prefix packages/agentsam-brand test",
@@ -426,7 +428,13 @@
     "verify:cad-building": "node --test test/agent/cad-building-capability.test.mjs test/integration/cad-project-v2.test.mjs && python3 test/cad-building-source.test.py && python3 test/cad-building-http.test.py && PYTHONPATH=python python3 python/tests/test_cad_building_client.py",
     "verify:scene-v2": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-v2-authoring-alignment.test.mjs && npm --prefix packages/agentsam-contracts test && npm --prefix packages/iamscene test",
     "verify:release:incremental": "node scripts/with-ephemeral-tmpdir.mjs -- npm run verify:release:incremental:run",
-    "verify:release:incremental:run": "npm run verify:widgets:portable && npm run verify && node --test test/integration/ops-trail-single-tool-call-source.test.mjs && npm --prefix packages/copro-render test && npm run verify:knowledge-package && npm run test:python && npm run security:release"
+    "verify:release:incremental:run": "npm run verify:widgets:portable && npm run verify && node --test test/integration/ops-trail-single-tool-call-source.test.mjs && npm --prefix packages/copro-render test && npm run verify:knowledge-package && npm run test:python && npm run security:release",
+    "registry:universal:preview": "node scripts/registry/generate-universal.mjs",
+    "registry:universal:write": "node scripts/registry/generate-universal.mjs --write",
+    "registry:universal:check": "node scripts/registry/generate-universal.mjs --check",
+    "test:registry:universal": "node --test test/integration/universal-source-registry.test.mjs test/integration/universal-registry-reconcile.test.mjs",
+    "prepack": "node scripts/registry/generate-universal.mjs --write",
+    "verify:registry:universal": "npm run registry:universal:check && npm run test:registry:universal"
   },
   "engines": {
     "node": ">=22"
