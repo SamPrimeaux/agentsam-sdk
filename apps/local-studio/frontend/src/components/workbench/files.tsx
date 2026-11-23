@@ -43,7 +43,16 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const [connectOpen, setConnectOpen] = useState(false);
   const openRuntimeSettings = () => window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/admin/settings/runtime' } }));
   const rememberedProjects = projects.filter(item => item.kind === 'filesystem' && !isSampleProject(item) && (item.workspaceRoot || item.name));
-  const [source,setSource] = useState<IDEFileSourceId>('local');
+  const [source,setSource] = useState<IDEFileSourceId>(() => {
+    if(typeof window==='undefined')return 'local';
+    try {
+      const saved=window.sessionStorage.getItem('agentsam:ide:source');
+      return (['local','github','r2','drive','container','docker'] as string[]).includes(saved||'')
+        ? saved as IDEFileSourceId : 'local';
+    } catch { return 'local'; }
+  });
+  // OAuth returns to this route; preserve the requested source in this tab.
+  useEffect(()=>{try{window.sessionStorage.setItem('agentsam:ide:source',source);}catch{}},[source]);
   const [browserWorkspace,setBrowserWorkspace] = useState<FileWorkspace|null>(null);
   const [browserWorkspaceName,setBrowserWorkspaceName] = useState('');
   const [browserResumeHint,setBrowserResumeHint] = useState<BrowserFsaRestore|null>(null);
