@@ -9,10 +9,10 @@ import {
   createRemoteIDEWorkspace, discoverIDESources, listIDEGithubRepos, listIDEGithubBranches, listIDER2Buckets, listIDEContainers,
   type IDESourceDiscovery,
 } from '@/lib/work/remote-ide-workspace';
-import { beginLocalStudioConnectorOAuth, startLocalStudioProviderConnection } from '@/lib/connections/client';
+import { beginLocalStudioRegisteredPluginOAuth } from '@/lib/connections/client';
 import { DockerConnectionPanel } from '@/components/runtime/DockerConnectionPanel';
 import { createDockerIDEWorkspace, type DockerSelection } from '@/lib/work/docker-ide-workspace';
-const empty:IDESourceDiscovery={ok:true,googleDrive:[],github:[],cloudflare:[]};
+const empty:IDESourceDiscovery={ok:true,googleDrive:[],github:[],cloudflare:[],connectionPlugins:{googleDrive:null,github:null,cloudflare:null}};
 const info:Record<IDEFileSourceId,string>={
   local:'Authorized local filesystem',
   github:'GitHub repositories from your existing Local Studio OAuth connection',
@@ -90,15 +90,18 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
   const connect=async()=>{
     setError('');
     try{
+      // The current provider OAuth plugin comes from D1's agentsam_plugins.
+      // Files cannot assemble its own provider URL or OAuth scope list.
+      const plugins=catalog.connectionPlugins;
+      const pluginId=source==='github'?plugins?.github
+        :source==='drive'?plugins?.googleDrive
+        :source==='r2'||source==='container'?plugins?.cloudflare:null;
+      if(!pluginId)throw Error('No registered OAuth connection plugin was found for this source. Check installed connections.');
       const returnTo=window.location.pathname+window.location.search;
-      if(source==='github'||source==='drive'){
-        const result=await beginLocalStudioConnectorOAuth(source==='github'?'github':'google_drive',returnTo);
-        if(!result.authorize_url)throw Error('oauth_authorization_url_unavailable');
-        if(isPackagedDesktop())await openExternalUrl(result.authorize_url);
-        else window.location.assign(result.authorize_url);
-      }else if(source==='r2'||source==='container'){
-        await startLocalStudioProviderConnection('cloudflare',{returnTo});
-      }
+      const result=await beginLocalStudioRegisteredPluginOAuth(pluginId,returnTo);
+      if(!result.authorize_url)throw Error('oauth_authorization_url_unavailable');
+      if(isPackagedDesktop())await openExternalUrl(result.authorize_url);
+      else window.location.assign(result.authorize_url);
     }catch(e){setError(e instanceof Error?e.message:String(e));}
   };
   const loadRepos=async()=>{
