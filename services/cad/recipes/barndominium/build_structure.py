@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Build an owner-review Barndominium structural BIM from its published geometry.
 
 The geometry is reproducible, and modeled in FreeCAD solids with element IDs.
