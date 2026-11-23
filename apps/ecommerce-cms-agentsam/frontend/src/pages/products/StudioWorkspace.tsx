@@ -1629,8 +1629,8 @@ export default function StudioWorkspace({
         </nav>
         {/* The same editor tab state drives the packaged mobile dock. There is
             no second editor router, toolbar registry or ad hoc navigation. */}
-        <div className="ps-studio-launch-dock">
-          <NavLaunchDock label="Product Studio tools" items={tabs.map((t) => ({
+        <div className="ps-studio-launch-dock" role="group" aria-label="Product Studio tools">
+          <NavLaunchDock items={tabs.map((t) => ({
             id: t.id,
             label: t.label,
             icon: t.id === "tools" ? <PencilSparklesIcon size={22} /> : <StudioIcon name={t.icon} size={22} />,
