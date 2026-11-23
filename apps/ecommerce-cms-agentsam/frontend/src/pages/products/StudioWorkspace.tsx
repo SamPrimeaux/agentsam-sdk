@@ -1627,6 +1627,17 @@ export default function StudioWorkspace({
             <span>Artwork help</span>
           </a>
         </nav>
+        {/* The same editor tab state drives the packaged mobile dock. There is
+            no second editor router, toolbar registry or ad hoc navigation. */}
+        <div className="ps-studio-launch-dock">
+          <NavLaunchDock label="Product Studio tools" items={tabs.map((t) => ({
+            id: t.id,
+            label: t.label,
+            icon: t.id === "tools" ? <PencilSparklesIcon size={22} /> : <StudioIcon name={t.icon} size={22} />,
+            active: panelOpen && tab === t.id,
+            onSelect: () => openTab(t.id),
+          }))} />
+        </div>
         <aside className="ps-toolpanel" ref={panel} hidden={!panelOpen} aria-label="Selected design tool">
           <div className="ps-panel-heading">
             <div>
