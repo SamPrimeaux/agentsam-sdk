@@ -15,7 +15,7 @@ test('focused Side Stage overrides the tablet and desktop split-width clamps', (
 test('new browser tab actions live in the global trailing header and offer full view', () => {
   const page = read('../frontend/agentsam/AgentSamPage.tsx');
   assert.match(page, /className="agentsam-topbar-browser-actions"/);
-  assert.match(page, /New tab in full view/);
+  assert.match(page, /New browser tab in full view/);
   assert.match(page, /openBrowserTab\(true\)/);
   assert.match(page, /createPortal\(headerActions, hostActionsSlot\)/);
   assert.match(page, /<AnnotationToggle\s*\/>/);
