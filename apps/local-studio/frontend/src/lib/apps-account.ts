@@ -43,18 +43,31 @@ export async function loadAccountApps(): Promise<AdminInstallableApp[]> {
   if (!Array.isArray(value.apps)) throw new Error("apps_inventory_invalid");
   return value.apps;
 }
-export async function installAccountApp(key: string): Promise<void> { await appsRequest("POST", { key }); }
-export async function removeAccountApp(key: string): Promise<void> { await appsRequest("DELETE", { key }); }
+export async function installAccountApp(key: string): Promise<void> {
+  await appsRequest("POST", { key });
+  await reloadAccountApps();
+}
+export async function removeAccountApp(key: string): Promise<void> {
+  await appsRequest("DELETE", { key });
+  await reloadAccountApps();
+}
 export async function setAccountAppEnabled(key: string, enabled: boolean): Promise<void> {
   await appsRequest("PATCH", { key, enabled });
+  await reloadAccountApps();
 }
 
 const SAFE_APP_HREF = /^\/(?!\/)[\w/%?&=.,#:+~-]*$/;
 export function isSafeAppHref(href: string): boolean { return SAFE_APP_HREF.test(href); }
-export function openAccountApp(href: string): void { if (isSafeAppHref(href)) navigateApp(href); }
+export function openAccountApp(href: string): void {
+  if (!isSafeAppHref(href)) return;
+  const app = appsState.apps.find(row => row.installed && row.enabled && row.href === href);
+  if (app) void markAccountAppOpened(app.key);
+  navigateApp(href);
+}
 
 export async function pinAccountApp(key: string, pinned: boolean): Promise<void> {
   await appsRequest("PATCH", { key, pinned });
+  await reloadAccountApps();
 }
 
 /** Stamps last_opened_at for ranking recents. Never blocks opening an app. */
@@ -67,16 +80,28 @@ type AccountAppsState = { apps: AdminInstallableApp[]; loaded: boolean; error: b
 const EMPTY_APPS: AccountAppsState = Object.freeze({ apps: [], loaded: false, error: false });
 let appsState: AccountAppsState = EMPTY_APPS;
 let appsInFlight: Promise<void> | null = null;
+let accountAppsGeneration = 0;
 const appsListeners = new Set<() => void>();
 const publishApps = (next: AccountAppsState) => { appsState = next; appsListeners.forEach((fn) => fn()); };
+/** Reset account-owned state on identity changes; stale network responses are discarded. */
+export function invalidateAccountApps(): void {
+  accountAppsGeneration += 1;
+  appsInFlight = null;
+  publishApps(EMPTY_APPS);
+}
 
 /** Shared, account-scoped catalog snapshot for every surface that shows apps. */
 export function reloadAccountApps(): Promise<void> {
   if (appsInFlight) return appsInFlight;
+  const generation = accountAppsGeneration;
   appsInFlight = loadAccountApps()
-    .then((apps) => publishApps({ apps, loaded: true, error: false }))
-    .catch(() => publishApps({ apps: appsState.apps, loaded: true, error: true }))
-    .finally(() => { appsInFlight = null; });
+    .then((apps) => {
+      if (generation === accountAppsGeneration) publishApps({ apps, loaded: true, error: false });
+    })
+    .catch(() => {
+      if (generation === accountAppsGeneration) publishApps({ apps: [], loaded: true, error: true });
+    })
+    .finally(() => { if (generation === accountAppsGeneration) appsInFlight = null; });
   return appsInFlight;
 }
 
