@@ -69,6 +69,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const [pathInput,setPathInput]=useState('');
   const [paletteMode,setPaletteMode]=useState<'file'|'command'|null>(null);
   const [paletteQuery,setPaletteQuery]=useState('');
+  const [paletteSelection,setPaletteSelection]=useState(0);
   const [contextMenu,setContextMenu]=useState<{path:string;x:number;y:number}|null>(null);
   const [split,setSplit]=useState(false);
   const [previewOnly,setPreviewOnly]=useState(false);
@@ -357,6 +358,17 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     {name:'Split editor',run:()=>setSplit(!split)},
     {name:'Toggle explorer',run:()=>setExplorerOpen(value=>!value)},
   ];
+  const paletteEntries=paletteMode==='file'
+    ? tree.filter(entry=>entry.kind==='file'&&entry.path.toLowerCase().includes(paletteQuery.toLowerCase()))
+      .map(entry=>({name:entry.path,run:()=>void open(entry.path)}))
+    : commands.filter(command=>command.name.toLowerCase().includes(paletteQuery.toLowerCase()));
+  const runPaletteEntry=(index:number)=>{
+    const item=paletteEntries[index];
+    if(!item)return;
+    setPaletteMode(null);
+    setPaletteSelection(0);
+    item.run();
+  };
   const rendered=(tab:Tab)=><AgentSamMonacoEditor document={{workspaceId,path:tab.path,text:tab.value,languageId:tab.language}}
     onChange={value=>edit(tab.path,value)} onSave={()=>save(tab.path)} palette={palette} readOnly={Boolean((readonly&&!tab.untitled)||tab.readonly)}
     onEditorReady={editor=>{if(tab.untitled)editor.focus();}}
@@ -550,6 +562,25 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       <p>{confirmation.kind==='delete'?'This removes the selected file from its authorized source.':confirmation.kind==='overwrite'?'The version on disk has changed. An overwrite may replace another writer’s changes.':'The selected saved revision will replace the current file content.'}</p>
       <div className="asi-dialog-actions"><button type="button" onClick={()=>setConfirmation(null)}>Cancel</button><button className="asi-action-primary" type="button" onClick={()=>{const choice=confirmation;setConfirmation(null);if(choice.kind==='delete')void remove();else if(choice.kind==='restore'&&choice.revision)void restore(choice.revision);else if(choice.kind==='overwrite'&&current)void save(current.path,true);}}>Continue</button></div>
     </section></div>}
-    {paletteMode&&<div className="asi-overlay"><div className="asi-dialog" role="dialog" aria-modal="true"><input autoFocus aria-label="Command palette" value={paletteQuery} onKeyDown={e=>e.key==='Escape'&&setPaletteMode(null)} onChange={e=>setPaletteQuery(e.target.value)} placeholder={paletteMode==='file'?'Go to file…':'Run command…'}/><div className="asi-palette-results">{paletteMode==='file'?tree.filter(f=>f.kind==='file'&&f.path.toLowerCase().includes(paletteQuery.toLowerCase())).map(f=><button key={f.path} type="button" onClick={()=>{setPaletteMode(null);void open(f.path);}}>{f.path}</button>):commands.filter(c=>c.name.toLowerCase().includes(paletteQuery.toLowerCase())).map(c=><button key={c.name} type="button" onClick={()=>{setPaletteMode(null);c.run();}}>{c.name}</button>)}</div><button type="button" onClick={()=>setPaletteMode(null)}>Close</button></div></div>}
+    {paletteMode&&<div className="asi-overlay"><div className="asi-dialog asi-command-dialog" role="dialog" aria-modal="true" aria-label={paletteMode==='file'?'Go to file':'Command palette'}>
+      <div className="asi-command-field"><span aria-hidden="true">⌕</span>
+      <input autoFocus aria-label="Command palette" value={paletteQuery}
+        onKeyDown={event=>{
+          if(event.key==='Escape')setPaletteMode(null);
+          if(event.key==='ArrowDown'){event.preventDefault();setPaletteSelection(index=>Math.min(index+1,paletteEntries.length-1));}
+          if(event.key==='ArrowUp'){event.preventDefault();setPaletteSelection(index=>Math.max(0,index-1));}
+          if(event.key==='Enter'){event.preventDefault();runPaletteEntry(Math.max(0,Math.min(paletteSelection,paletteEntries.length-1)));}
+        }}
+        onChange={event=>{setPaletteQuery(event.target.value);setPaletteSelection(0);}}
+        placeholder={paletteMode==='file'?'Go to file…':'Run command…'} />
+      </div>
+      <div className="asi-palette-results" role="listbox">
+        {paletteEntries.length===0?<p className="asi-command-empty">No matching {paletteMode==='file'?'files':'commands'}.</p>:
+          paletteEntries.map((item,index)=><button key={item.name} role="option" aria-selected={index===paletteSelection}
+            type="button" onMouseEnter={()=>setPaletteSelection(index)} onClick={()=>runPaletteEntry(index)}>{item.name}</button>)}
+      </div>
+      <div className="asi-command-footer"><span>↑ ↓ Navigate · ↵ Select · Esc Close</span>
+        <button type="button" onClick={()=>setPaletteMode(null)}>Close</button></div>
+    </div></div>}
   </div>;
 }
