@@ -229,6 +229,38 @@ class CadServiceClientTests(unittest.TestCase):
             "/v1/files/customer-1/projects/p1/model.step",
         )
 
+    def test_provider_artifact_limits_are_honored(self):
+        fake = FakeTransport()
+        fake.caps["limits"] = {
+            "max_artifact_bytes": 10,
+            "max_inline_artifact_bytes": 5,
+        }
+        client = CadServiceClient(
+            "http://127.0.0.1:9001", TOKEN, fake,
+            max_inline_artifact_bytes=1024, max_artifact_bytes=1024,
+        )
+        artifact = {
+            "uri": "/v1/files/work/derived/building-abc/model.step",
+            "bytes": len(DATA),
+            "sha256": DIGEST,
+        }
+        with self.assertRaisesRegex(ValueError, "artifact_size_invalid"):
+            client.download_to(artifact, Path(tempfile.gettempdir()) / "not-created.step")
+        artifact["bytes"] = 8
+        with self.assertRaisesRegex(CadServiceError, "requires_streaming"):
+            client.download(artifact)
+
+    def test_cross_origin_redirect_is_rejected(self):
+        class RedirectResponse(Response):
+            def geturl(self):
+                return "https://attacker.example/collect"
+        client = CadServiceClient(
+            "http://127.0.0.1:9001", TOKEN,
+            lambda request, timeout=5: RedirectResponse(b"{}"),
+        )
+        with self.assertRaisesRegex(CadServiceError, "cross_origin_redirect"):
+            client.get_capabilities()
+
     def test_http_errors_keep_code_status_and_retryability(self):
         def unavailable(request, timeout=5):
             raise HTTPError(

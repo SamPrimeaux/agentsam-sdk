@@ -406,8 +406,10 @@ class CadServiceClient:
             artifact, max_bytes=self._effective_limit("max_artifact_bytes", self.max_artifact_bytes)
         )
         target = Path(destination).expanduser()
-        target.parent.mkdir(parents=True, exist_ok=True)
         partial = target.with_name(target.name + ".part")
+        if target.is_symlink() or partial.is_symlink():
+            raise ValueError("cad_download_destination_symlink")
+        target.parent.mkdir(parents=True, exist_ok=True)
         offset = partial.stat().st_size if resume and partial.is_file() else 0
         if offset > expected_bytes:
             partial.unlink(missing_ok=True)
