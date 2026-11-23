@@ -6,7 +6,7 @@
 
 One reusable brand workspace for one account or organization with any number of independently sourced brand identities. A brand can have several visual variants without copying its asset registry, components, approval history or source evidence. The UI consumes the **existing authorized Brand plugin workspace**, not a local hardcoded list.
 
-## Implemented in this branch
+## Implemented in the SDK source
 
 - `@inneranimalmedia/agentsam-brand/workspace` is a pure, Node/browser-safe API (no provider credentials, storage binding or Sharp import).
 - `normalizeBrandWorkspace(result)` accepts `brands`, `brandContracts`, `contracts`, or the current `latestContract`. It deduplicates by real source ID and never fabricates a brand when there is no saved identity.
