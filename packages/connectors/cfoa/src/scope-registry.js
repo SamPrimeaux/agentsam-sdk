@@ -5,11 +5,15 @@ import { getCloudflareCapability } from './capabilities.js';
  * only a fallback when D1 is unreachable.
  */
 const TTL_MS = 60_000;
-const cache = new Map();
+// Key by the actual D1 binding, never only by provider: local tests, tenants,
+// and differently bound environments must not reuse another DB's scope catalog.
+const cache = new WeakMap();
 
 export async function loadProviderScopes(env, providerKey = 'cloudflare') {
   if (!env?.DB?.prepare) return null;
-  const hit = cache.get(providerKey);
+  let perDb = cache.get(env.DB);
+  if (!perDb) { perDb = new Map(); cache.set(env.DB, perDb); }
+  const hit = perDb.get(providerKey);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.scopes;
   try {
     const { results } = await env.DB.prepare(
@@ -17,7 +21,7 @@ export async function loadProviderScopes(env, providerKey = 'cloudflare') {
     ).bind(providerKey).all();
     const scopes = new Map((results || []).map((row) => [row.scope, row]));
     if (!scopes.size) return null;
-    cache.set(providerKey, { at: Date.now(), scopes });
+    perDb.set(providerKey, { at: Date.now(), scopes });
     return scopes;
   } catch {
     return null;
