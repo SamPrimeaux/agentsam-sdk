@@ -2586,7 +2586,7 @@ function CodebaseView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function NetworkView({ snapshot }: { snapshot: SettingsSnapshot }) {
+function NetworkView({ snapshot, host }: { snapshot: SettingsSnapshot; host: SettingsHost }) {
   return (
     <Section title="Browser & network capabilities" description="Local, OAuth and tunnel state are separate capabilities.">
       <div className="rounded-lg border border-border/70 px-3">
@@ -2595,6 +2595,16 @@ function NetworkView({ snapshot }: { snapshot: SettingsSnapshot }) {
         <PreferenceRow label="Cloudflare OAuth" description="Connected infrastructure account." value={snapshot.network.oauth} />
         <PreferenceRow label="Connections API" description="Reachability of the account connections registry during this refresh." trailing={<StatusPill status={snapshot.network.health} />} />
       </div>
+      {host.openSettingsUnit && <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" onClick={() => host.openSettingsUnit?.("runtime")}
+          className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted">
+          Machines & Runtimes · connect terminal
+        </button>
+        <button type="button" onClick={() => host.openSettingsUnit?.("customize")}
+          className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted">
+          Manage provider OAuth
+        </button>
+      </div>}
     </Section>
   );
 }
@@ -2921,7 +2931,7 @@ function renderUnit(
     case "codebase":
       return <CodebaseView snapshot={snapshot} />;
     case "network":
-      return <NetworkView snapshot={snapshot} />;
+      return <NetworkView snapshot={snapshot} host={host} />;
     case "themes":
       return <ThemesView themes={snapshot.themes} host={host} onChanged={onChanged} />;
     case "storage":
