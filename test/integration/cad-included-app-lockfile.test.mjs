@@ -14,7 +14,7 @@ test('CAD included app lockfile supports clean release npm ci', () => {
   // Prefer cached packages, but allow registry lookup on cold CI runners:
   // --offline can fail ENOTCACHED for a valid, published dependency.
   const result = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', [
-    'ci', '--dry-run', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
+    'ci', '--dry-run', '--prefer-offline', '--ignore-scripts', '--no-audit', '--no-fund',
     '--fetch-retries=0',
   ], { cwd: cad, encoding: 'utf8', timeout: 45_000 });
   if (result.error) throw result.error;
