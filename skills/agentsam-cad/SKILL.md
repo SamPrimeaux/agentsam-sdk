@@ -55,9 +55,11 @@ makes exact solids) and **BIM** (IFC semantics in, IFC4 out). Each has its own a
 | FreeCAD / OpenSCAD generation | `cad.job.generate` with `engine` = `freecad` \| `openscad` \| `blender` through an authorized runner, or the local/Docker executors in `src/lib/cad/` |
 | Scene documents, geometry manifests, format import/export | the `iamscene` CLI and `iamscene.*` SAM operations; ask `iamscene formats` what is really implemented |
 | BIM / IFC | read-only IFC semantics into `cad.project.v2`; IFC4 export via OCCT; `cad.building.export` |
-| Python, no Node | `agentsam_sdk.cad` (`discover_freecad`, `probe_freecad`, `CadBuildingClient`) |
+| Python, no Node (`pip install agentsam-sdk`) | `agentsam cad doctor` (proves FreeCAD/OCCT with a real solid) and `agentsam cad build --request req.json --out part.step` (local FreeCAD, no service needed); in code `agentsam_sdk.cad`: `discover_freecad().run(request)`, `probe_freecad`, `CadBuildingClient` for the remote service |
 
-Routing note: on `main`, the `agentsam cad` command itself routes `blender` and `project`;
+Routing note: both installs ship an `agentsam` command and whichever is first on `PATH` answers.
+The Node one routes `cad blender` and `cad project`; the pip one routes `cad doctor` and `cad build`.
+Check `agentsam --version` and `agentsam cad --help` if a subcommand seems missing. Either way,
 FreeCAD, OpenSCAD, OCCT and BIM are reached through the tools, operations and executors above.
 Confirm what this checkout and host expose with `agentsam cad project tools` and
 `iamscene formats` before choosing, and use whichever path they list.

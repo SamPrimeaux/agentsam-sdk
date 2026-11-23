@@ -39,11 +39,20 @@ binaries.
 ## FreeCAD
 
 - Best for: parametric solids and STEP/IGES/BREP/STL interchange.
-- Binary: `freecadcmd` (recorded in `~/.agentsam/cad.json`). Adapter:
-  `services/cad/freecad/adapter.py`, results on a line prefixed `AGENTSAM_RESULT=`.
+- Host selection is one algorithm in two ports (`agentsam_sdk.cad.discover_freecad`,
+  `src/lib/cad/freecad-host.js`) kept in step by `python/tests/fixtures/freecad_host_cases.json`.
+  A host is `python` (bundled or system interpreter that imports FreeCAD, plus a library dir) or
+  `command` (FreeCADCmd, which rejects foreign argv, so the launcher passes the adapter its argv
+  through a fixed trampoline). Overrides: `AGENTSAM_FREECAD_PYTHON`, `AGENTSAM_FREECAD_CMD`,
+  `AGENTSAM_FREECAD_HOME`, `AGENTSAM_FREECAD_LIB`. Never call the adapter with a bare `python3`:
+  without the host's library dir it cannot import FreeCAD.
+- Adapter: `python/agentsam_sdk/cad/adapters/freecad.py` (inside the pip wheel, the npm package
+  and the Docker context; one copy). It prints its result on a line prefixed `AGENTSAM_RESULT=`
+  and returns volume, area, face/edge/vertex counts and bounding box in `metrics`.
 - Export formats: `step`, `stp`, `iges`, `brep`, `stl`.
-- Reached through `cad.job.generate` (`engine:"freecad"`) or the Docker executor. Python-only
-  discovery: `agentsam_sdk.cad.discover_freecad` / `probe_freecad`.
+- Reached through `cad.job.generate` (`engine:"freecad"`), the Docker executor, `freeCadBuild`
+  (Node), or with no Node at all `agentsam cad build --request req.json --out part.step`
+  (pip; `FreeCADHost.run()` in code). `agentsam cad doctor` builds a real box and checks its volume.
 
 ## OpenSCAD
 

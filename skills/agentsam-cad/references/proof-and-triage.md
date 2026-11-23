@@ -27,7 +27,14 @@ agentsam cad blender export "$OUT/box.blend" --format glb --out "$OUT/box.glb" -
 - Blender `inspect` → `scene.objects[]` gives `type`, `dimensions`, `location`, `scale`, `world_bounds`,
   `materials`, `modifiers`; plus `cameras`, `collections`, `active_camera`. Compare these to the
   request. The shipped box-with-hole recipe yields `Plate` (MESH, 80 × 50 × 4), `Key Light`,
-  `Preview Camera`. Dimensions prove the envelope only; they cannot prove an interior hole.
+  `Preview Camera`. Dimensions prove the envelope only. Each MESH object also carries `mesh`
+  (modifiers applied, world space): `vertices/edges/faces/triangles`, `shells`,
+  `non_manifold_edges`, and for closed manifolds `genus` and `volume`. A through-hole is
+  `genus: 1` with `shells: 1`; a solid plate is genus 0. The shipped plate reports genus 1 and a
+  volume just under 16000 (envelope minus the ~452 mm³ bore and bevel loss). `volume` and `genus`
+  are `null` for an open mesh; `non_manifold_edges` says why.
+- FreeCAD (`agentsam cad build`, `freeCadBuild`) → require `ok:true` and check `metrics.volume`
+  against the arithmetic you expect (80×50×4 minus π·5²·4 = 15685.84 for a 10 mm hole).
 - OCCT → require `ok:true`, `engine:"occt"`, the requested `operation`, and for inspection a
   positive finite `volume_mm3`. A cut should lower volume versus the uncut solid.
 - Project builds → read the per-revision receipts in
