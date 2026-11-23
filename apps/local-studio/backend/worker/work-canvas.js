@@ -1,3 +1,4 @@
+import { renderCanvasThumbnailSvg } from './work-canvas-thumbnail.js';
 /**
  * Independent, private Canvas documents. Storage authority: agentsam_artifacts
  * plus immutable ARTIFACTS objects. Generation authority: existing executions
@@ -90,6 +91,23 @@ export async function readCanvas(env,owner,id){
  if(!row)return null;
  return {canvas:canvasSummary(row),document:await readStored(env,row)};
 }
+async function putCanvasThumbnail(env,owner,id,revision,document){
+  const svg=renderCanvasThumbnailSvg(document);
+  if(!svg)return null;
+  const bytes=new TextEncoder().encode(svg);
+  // Preview is derived: a thumbnail outage cannot lose the authoritative edit.
+  if(bytes.byteLength>250_000)return null;
+  const key='canvas/'+encodeURIComponent(owner)+'/'+id+'/thumb-rev-'+revision+'-'+crypto.randomUUID()+'.svg';
+  try{
+    await env.ARTIFACTS.put(key,bytes,{httpMetadata:{contentType:'image/svg+xml'}});
+    const check=await env.ARTIFACTS.get(key);
+    if(!check||await sha(await check.arrayBuffer())!==await sha(bytes))throw new Error('thumbnail_write_unverified');
+    return key;
+  }catch{
+    try { await env.ARTIFACTS.delete?.(key); } catch { /* best-effort derived preview cleanup */ }
+    return null;
+  }
+}
 async function putVerified(env,owner,id,revision,document){
  requireDocument(document);
  const bytes=encode(document),hash=await sha(bytes);
@@ -106,17 +124,18 @@ export async function saveCanvas(env,owner,id,document,expectedHash,activeRun=nu
  if(!expectedHash||row.content_hash!==expectedHash)throw new CanvasError('revision_conflict',409);
  const prior=meta(row),revision=(Number(prior.revision)||1)+1;
  const asset=await putVerified(env,owner,id,revision,document);
+ const thumbnailKey=await putCanvasThumbnail(env,owner,id,revision,document);
  const history=[...(Array.isArray(prior.history)?prior.history:[]),{revision:revision-1,r2_key:row.r2_key,content_hash:row.content_hash,name:row.name,updated_at:row.updated_at}].slice(-100);
  try{
   const guard=activeRun?" AND EXISTS (SELECT 1 FROM agentsam_executions WHERE id=? AND user_id=? AND execution_key=? AND status='running' AND json_extract(metadata_json,'$.lease')=? AND json_extract(metadata_json,'$.cancelRequested')=0)":"";
-  const values=[document.name,asset.key,asset.size,asset.hash,JSON.stringify({...prior,revision,artboardCount:document.artboards.length,history}),id,owner,expectedHash];
+  const values=[document.name,asset.key,asset.size,asset.hash,thumbnailKey,JSON.stringify({...prior,revision,artboardCount:document.artboards.length,history}),id,owner,expectedHash];
   if(activeRun)values.push(activeRun.id,owner,id,activeRun.lease);
-  const result=await env.DB.prepare("UPDATE agentsam_artifacts SET name=?,r2_key=?,file_size_bytes=?,content_hash=?,metadata_json=?,updated_at=unixepoch() WHERE id=? AND user_id=? AND artifact_type='design-canvas' AND archived_at IS NULL AND content_hash=?"+guard).bind(...values).run();
+  const result=await env.DB.prepare("UPDATE agentsam_artifacts SET name=?,r2_key=?,file_size_bytes=?,content_hash=?,thumbnail_r2_key=?,metadata_json=?,updated_at=unixepoch() WHERE id=? AND user_id=? AND artifact_type='design-canvas' AND archived_at IS NULL AND content_hash=?"+guard).bind(...values).run();
   if(result.meta?.changes!==1){
    if(activeRun){const active=await getRun(env,owner,id,activeRun.id);if(!active||active.status!=='running'||meta(active).lease!==activeRun.lease)throw new CanvasError('generation_cancelled',409);}
    throw new CanvasError('revision_conflict',409);
   }
- }catch(error){await env.ARTIFACTS.delete?.(asset.key);throw error;}
+ }catch(error){await env.ARTIFACTS.delete?.(asset.key);if(thumbnailKey)await env.ARTIFACTS.delete?.(thumbnailKey);throw error;}
  return {canvas:canvasSummary({...row,name:document.name,content_hash:asset.hash,updated_at:now(),metadata_json:JSON.stringify({...prior,revision,artboardCount:document.artboards.length,history})}),document};
 }
 async function createCanvas(env,owner,data){

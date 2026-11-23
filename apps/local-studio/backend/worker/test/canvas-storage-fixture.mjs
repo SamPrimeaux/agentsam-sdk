@@ -12,7 +12,7 @@ export function canvasStorageFixture(){
  id TEXT PRIMARY KEY,user_id TEXT NOT NULL,tenant_id TEXT NOT NULL,name TEXT NOT NULL,artifact_type TEXT NOT NULL,
  r2_key TEXT NOT NULL,source TEXT NOT NULL,file_size_bytes INTEGER,content_hash TEXT,r2_bucket TEXT DEFAULT 'artifacts',
  scope TEXT DEFAULT 'user',visibility TEXT DEFAULT 'private',artifact_status TEXT DEFAULT 'draft',validation_status TEXT,
- mime_type TEXT,metadata_json TEXT DEFAULT '{}',created_at INTEGER DEFAULT(unixepoch()),updated_at INTEGER DEFAULT(unixepoch()),archived_at INTEGER);
+ mime_type TEXT,thumbnail_r2_key TEXT,metadata_json TEXT DEFAULT '{}',created_at INTEGER DEFAULT(unixepoch()),updated_at INTEGER DEFAULT(unixepoch()),archived_at INTEGER);
  CREATE TABLE agentsam_executions(
  id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,workspace_id TEXT NOT NULL,user_id TEXT,execution_type TEXT NOT NULL,
  run_id TEXT NOT NULL,execution_key TEXT,status TEXT NOT NULL,duration_ms INTEGER NOT NULL DEFAULT 0,
@@ -25,11 +25,11 @@ export function canvasStorageFixture(){
  input_json TEXT DEFAULT '{}',output_json TEXT DEFAULT '{}',error_json TEXT DEFAULT '{}',account_id TEXT,
  started_at INTEGER,completed_at INTEGER,created_at_unix INTEGER NOT NULL DEFAULT(unixepoch()));
  `);
- const objects=new Map();let brokenReads=false,failedWrites=false;
+ const objects=new Map();let brokenReads=false,failedWrites=false,failedThumbnailWrites=false;
  const ARTIFACTS={
-  async put(key,body){if(failedWrites)throw new Error('storage_write_failed');objects.set(key,new Uint8Array(body));},
+  async put(key,body){if(failedThumbnailWrites&&key.endsWith('.svg'))throw new Error('thumbnail_write_failed');if(failedWrites)throw new Error('storage_write_failed');objects.set(key,new Uint8Array(body));},
   async get(key){if(brokenReads)return null;const bytes=objects.get(key);return bytes?{arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)}:null;},
   async delete(key){objects.delete(key);},
  };
- return {env:{DB,ARTIFACTS},DB,objects,close:()=>DB.close(),breakReads:value=>brokenReads=value,failWrites:value=>failedWrites=value};
+ return {env:{DB,ARTIFACTS},DB,objects,close:()=>DB.close(),breakReads:value=>brokenReads=value,failWrites:value=>failedWrites=value,failThumbnailWrites:value=>failedThumbnailWrites=value};
 }
