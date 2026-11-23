@@ -2619,3 +2619,35 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 .ps-catalog-heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .ps-catalog-heading-actions label { display: flex; align-items: center; gap: 8px; }
 .ps-catalog-heading-actions select { background: inherit; color: inherit; border: 1px solid var(--ps-line); padding: 8px; border-radius: 8px; max-width: 200px; }
+
+/* Product Studio owns the editor context; agentsam-nav owns the dock component.
+   Desktop/tablet retain the original tool rail; phone width gets one dock
+   connected to those exact same tab actions and state. */
+.ps-studio-launch-dock { display:none; }
+@media (max-width:760px) {
+  .product-studio-shell {
+    --nav-surface:var(--c-surface,var(--ps-paper));
+    --nav-text:var(--ps-ink);
+    --nav-muted:var(--ps-muted);
+    --nav-border:var(--ps-line);
+    --nav-selected:var(--ps-accent-soft);
+  }
+  .product-studio-shell .ps-toolrail { display:none; }
+  .product-studio-shell .ps-studio-launch-dock { display:block; }
+  .product-studio-shell .ps-studio-launch-dock .as-nav-launch-dock {
+    display:grid; z-index:75;
+    left:max(12px,env(safe-area-inset-left,0px));
+    right:max(12px,env(safe-area-inset-right,0px));
+    bottom:max(9px,env(safe-area-inset-bottom,0px));
+  }
+  .product-studio-shell .ps-stage-column { padding-bottom:calc(100px + env(safe-area-inset-bottom,0px)); }
+  .product-studio-shell .ps-toolpanel:not([hidden]) {
+    bottom:calc(80px + env(safe-area-inset-bottom,0px));
+    max-height:min(34dvh,330px);
+    z-index:70;
+    border-radius:16px 16px 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-studio-shell .ps-studio-launch-dock button { transition:none; }
+}
