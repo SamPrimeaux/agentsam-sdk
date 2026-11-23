@@ -44,7 +44,7 @@ function encodeText(content){
   return btoa(binary);
 }
 export function isGithubIdeSourceRequest(path){
-  return /^\/api\/work\/ide\/github\/(repos|tree|file)$/.test(path);
+  return /^\/api\/work\/ide\/github\/(repos|tree|file|branches|changes)$/.test(path);
 }
 export async function handleGithubIdeSourceRequest(request,env,owner,opts={}){
   if(!owner)return error('unauthorized',401);
@@ -98,8 +98,40 @@ export async function handleGithubIdeSourceRequest(request,env,owner,opts={}){
       nextPage:ordered.length>start+100?page+1:null,truncated:false});
   }
   const repo=String(sp.get('repo')||'');
+  if(!safeRepo(repo))return error('github_repository_required');
+  if(url.pathname.endsWith('/branches')){
+    if(method!=='GET')return error('method_not_allowed',405);
+    const page=Number(sp.get('page')||1);
+    if(!Number.isInteger(page)||page<1||page>10)return error('github_page_invalid');
+    const result=await requestProvider(fetchImpl,token,
+      '/repos/'+repo+'/branches?per_page=100&page='+page);
+    if(!result.ok)return error(result.code,result.status);
+    if(!Array.isArray(result.data))return error('github_branch_listing_invalid',502);
+    const branches=result.data.filter(row=>safeBranch(row?.name)).map(row=>({name:row.name,protected:Boolean(row.protected)}));
+    return json({ok:true,branches,nextPage:branches.length===100 && page<10?page+1:null,
+      truncated:branches.length===100 && page===10});
+  }
   const branch=String(sp.get('branch')||'');
-  if(!safeRepo(repo)||!safeBranch(branch))return error('github_repository_and_branch_required');
+  if(!safeBranch(branch))return error('github_repository_and_branch_required');
+  if(url.pathname.endsWith('/changes')){
+    if(method!=='GET')return error('method_not_allowed',405);
+    const base=String(sp.get('base')||'');
+    if(!safeBranch(base))return error('github_base_branch_required');
+    // Compare committed branches, not a local working tree or user staging.
+    if(base===branch)return json({ok:true,base,branch,files:[]});
+    const result=await requestProvider(fetchImpl,token,
+      '/repos/'+repo+'/compare/'+encodeURIComponent(base)+'...'+encodeURIComponent(branch)+'?per_page=100');
+    if(!result.ok)return error(result.code,result.status);
+    const files=result.data?.files;
+    if(!Array.isArray(files))return error('github_compare_invalid',502);
+    // Never misrepresent an incomplete GitHub compare as a complete Changes list.
+    if(files.length>=100)return error('github_compare_too_large',409);
+    return json({ok:true,base,branch,files:files.filter(file=>safePath(file.filename)).map(file=>({
+      path:file.filename,status:String(file.status||'modified'),
+      previous_path:file.previous_filename&&safePath(file.previous_filename)?file.previous_filename:null,
+      sha:typeof file.sha==='string'?file.sha:null,
+    }))});
+  }
   const filePath=String(sp.get('path')||'');
   if(filePath && !safePath(filePath))return error('github_path_invalid');
   const urlPath='/repos/'+repo+'/contents'+(filePath?'/'+toPath(filePath):'');
