@@ -441,7 +441,7 @@ def save_obj_mtl(output):
             for vertex in vertices:
                 out.writelines([f"v {vertex.x/1000:.6f} {vertex.y/1000:.6f} {vertex.z/1000:.6f}\n"])
             for a,b,c in faces:
-                out.write(f"f {a+1+vertex_offset} {b+1+vertex_offset} {c+1+vertex_offset}\n")
+                out.writelines([f"f {a+1+vertex_offset} {b+1+vertex_offset} {c+1+vertex_offset}\n"])
             vertex_offset+=len(vertices)
     return obj,mtl
 
