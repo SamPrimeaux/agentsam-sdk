@@ -597,7 +597,7 @@ export async function handleConnectorWorkRequest(request, env, userId) {
       ).bind(userId,plugin.provider).all();
       return json({ok:true,plugin_id:plugin.id,provider:plugin.provider,
         connections:(results||[]).map(row=>({accountIdentifier:row.account_identifier,
-          grantedScopes:clean(row.scopes).split(/\\s+/).filter(Boolean)}))});
+          grantedScopes:clean(row.scopes).split(/\s+/).filter(Boolean)}))});
     }
     if (action==='disconnect' && request.method==='POST') {
       if (!connectorProvider(plugin.provider)) {
