@@ -6,7 +6,7 @@ test('serves the host navigation manifest directly from the static asset binding
   const manifest = JSON.stringify({
     schema: 'agentsam.host-navigation.v1',
     primary: [{ id: 'media', label: 'Media', href: '/media' }],
-    apps: [{ id: 'agentsam-copro-studio', label: 'MovieMode', href: '/admin/moviemode' }],
+    apps: [{ id: 'moviemode', label: 'MovieMode', href: '/admin/moviemode' }],
   });
   const calls = [];
   const env = {
