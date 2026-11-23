@@ -108,6 +108,10 @@ export function registeredOAuthEntryUrl(plugin, origin, returnTo, requested = {}
     if(packs.length && packs.length<=10 && packs.every(id=>/^[a-z0-9_-]{1,50}$/.test(id))) {
       url.searchParams.set('packs',packs.join(','));
     }
+    const selected=connectionIdParts(requested.connection_id||requested.connectionId||'');
+    if(selected.provider==='cloudflare' && /^[a-f0-9]{32}$/i.test(selected.accountIdentifier)) {
+      url.searchParams.set('account_id',selected.accountIdentifier);
+    }
   }
   if (url.origin===new URL(origin).origin && returnTo) url.searchParams.set('return_to',safeReturnTo(returnTo));
   return url.toString();
