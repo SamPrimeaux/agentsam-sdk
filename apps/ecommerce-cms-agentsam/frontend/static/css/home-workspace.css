@@ -11,6 +11,11 @@
   --home-ink-soft:var(--c-ink-2,var(--nav-muted,#625f68));
   --home-focus:var(--c-focus,var(--nav-accent,#8260ae));
   min-height:100%;
+  min-width:0;
+  width:100%;
+  box-sizing:border-box;
+  /* Side Stage changes the available inline size without changing device width. */
+  container-type:inline-size;
   background:var(--c-bg,var(--nav-canvas,#fbfbfc));
   color:var(--home-ink);
   padding:0 24px 80px;
