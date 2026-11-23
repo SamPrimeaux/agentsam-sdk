@@ -69,7 +69,8 @@ export function discoverCadSources(roots:Array<{project:string;root:string}>,max
         const detected=identifyCadFileFormat(entry.name);
         // Generic JSON sidecars vastly outnumber CAD sources. Named receipts and
         // native .iamscene.json documents remain discoverable.
-        if(!detected || (detected.id==='data.json'&&!receipt))continue;
+        if(!detected || !isCadAutoDiscoveryCandidate(detected.id,entry.name)
+          || (detected.id==='data.json'&&!receipt))continue;
         const stat=fs.statSync(full);
         if(stat.size===0)continue;
         const relativePath=path.relative(root,full).replaceAll(path.sep,'/');
