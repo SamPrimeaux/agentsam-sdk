@@ -36,6 +36,7 @@ function listPortableMigrationFiles(opts = {}) {
     '005_identity_company_native.sql',
     '006_identity_account_security.sql',
     '007_identity_session_revoke_reason.sql',
+    '008_identity_accounts.sql',
   ];
   if (opts.includeOAuthServer) {
     files.push('003_identity_oauth_server.sql');

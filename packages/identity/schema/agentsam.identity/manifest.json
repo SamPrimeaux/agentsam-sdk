@@ -33,7 +33,8 @@
       "identity.core": [
         "001_identity_core.sql",
         "005_identity_company_native.sql",
-        "007_identity_session_revoke_reason.sql"
+        "007_identity_session_revoke_reason.sql",
+        "008_identity_accounts.sql"
       ],
       "identity.oauth-client": [
         "002_identity_oauth_client.sql"
@@ -51,7 +52,8 @@
       "002_identity_oauth_client.sql",
       "005_identity_company_native.sql",
       "006_identity_account_security.sql",
-      "007_identity_session_revoke_reason.sql"
+      "007_identity_session_revoke_reason.sql",
+      "008_identity_accounts.sql"
     ],
     "apply_order_upgrade_v1_to_v2": [
       "005_identity_company_native.sql"
@@ -65,11 +67,15 @@
     ],
     "apply_order_upgrade_session_revoke_reason": [
       "007_identity_session_revoke_reason.sql"
+    ],
+    "apply_order_upgrade_accounts": [
+      "008_identity_accounts.sql"
     ]
   },
   "tables": {
     "identity.core": [
       "identity_schema_meta",
+      "accounts",
       "identity_users",
       "identity_external_accounts",
       "identity_sessions",
@@ -98,7 +104,8 @@
     ]
   },
   "table_patterns": [
-    "identity_*"
+    "identity_*",
+    "accounts"
   ],
   "seed_policy": "none",
   "compatibility": {
@@ -120,9 +127,9 @@
   },
   "recovery": {
     "authority": "createPasswordResetService",
-    "storage": "injected {get,put,delete} \u2014 not IdentityStore / not identity.core SQL",
+    "storage": "injected {get,put,delete} — not IdentityStore / not identity.core SQL",
     "optional_future_pack": "identity.recovery"
   },
   "owner": "@inneranimalmedia/agentsam-sdk/identity",
-  "notes": "Pack family for portable IdentityStore. Component IDs remain the contract units. Portable SQL SSOT is migrations/sqlite/. IAM production tables are NOT this pack \u2014 use the iam-compat adapter against hosted schema. Secrets are credential_ref / vault references, never raw tokens in rows. Password recovery stays storage-agnostic."
+  "notes": "Pack family for portable IdentityStore. Component IDs remain the contract units. Portable SQL SSOT is migrations/sqlite/. IAM production tables are NOT this pack — use the iam-compat adapter against hosted schema. Secrets are credential_ref / vault references, never raw tokens in rows. Password recovery stays storage-agnostic."
 }

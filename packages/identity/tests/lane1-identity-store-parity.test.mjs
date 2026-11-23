@@ -392,8 +392,13 @@ describe('Lane 1 migration paths', () => {
       `SELECT name FROM sqlite_master WHERE type='table' AND name='identity_companies'`,
     ).bind().first();
     assert.ok(companies);
+    // accounts is part of the portable pack; the hosted-only credential/company tables are not.
+    const accounts = await db.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'`,
+    ).bind().first();
+    assert.ok(accounts);
     const forbidden = await db.prepare(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name IN ('accounts','auth_users','company','oauth_states')`,
+      `SELECT name FROM sqlite_master WHERE type='table' AND name IN ('auth_users','company','oauth_states')`,
     ).bind().all();
     assert.equal((forbidden.results || []).length, 0);
   });
@@ -479,9 +484,13 @@ describe('Lane 1 shared IdentityStore parity', () => {
     assert.equal(adapter.backend, 'portable-d1');
     await runIdentityStoreSuite(adapter, { label: 'portable-d1' });
     const forbidden = sqlite.prepare(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name IN ('accounts','auth_users','company')`,
+      `SELECT name FROM sqlite_master WHERE type='table' AND name IN ('auth_users','company')`,
     ).all();
     assert.equal(forbidden.length, 0);
+    const orphans = sqlite.prepare(
+      `SELECT u.id FROM identity_users u LEFT JOIN accounts a ON a.id = u.id WHERE a.id IS NULL`,
+    ).all();
+    assert.equal(orphans.length, 0, 'every identity_users row has its accounts row');
   });
 
   it('C. IAM compat on production-shaped fixture (no production rows)', async () => {
