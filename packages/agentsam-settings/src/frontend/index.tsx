@@ -991,8 +991,8 @@ function PluginCustomizeView({
                 <p className="mt-1 break-all text-[12px] font-medium">{String(data?.workspaceId||(data?.workspace as Record<string,unknown>|undefined)?.display_name||"Account workspace")}</p>
               </article>
               <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
-                <p className="text-[11px] text-muted-foreground">{isBrand?"Saved contract":"Saved briefs"}</p>
-                <p className="mt-1 text-lg font-semibold">{isBrand?(brandContract?"1":"0"):briefs.length}</p>
+                <p className="text-[11px] text-muted-foreground">Saved briefs</p>
+                <p className="mt-1 text-lg font-semibold">{briefs.length}</p>
               </article>
               <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
                 <p className="text-[11px] text-muted-foreground">{isBrand?"Connected sources":"Concepts"}</p>
