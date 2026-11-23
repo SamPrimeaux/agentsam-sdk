@@ -1024,7 +1024,6 @@ function PluginCustomizeView({
                   }):<p className="rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">No campaign concepts have been saved yet.</p>}
                 </section>
               </>
-            )}
             <p className="text-[10px] text-muted-foreground">Source: {workspace.contextTool} via your authorized MCP connection. Workspace records are separate from chats and projects.</p>
           </div>
         ):null}
