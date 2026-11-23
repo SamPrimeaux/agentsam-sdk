@@ -15,6 +15,7 @@ function usage() {
   return `AgentSam programmatic CAD
 
 Usage:
+  agentsam cad ifc <status|inspect|validate|diff|edit> ...   (real IFC/BIM; see: agentsam cad ifc --help)
   agentsam cad blender status [--blender-bin <path>] [--json]
   agentsam cad blender inspect <model.blend> [--timeout <seconds>] [--json]
   agentsam cad blender build <recipe.json> --out <model.blend> [--input <base.blend>] [--json]
@@ -107,6 +108,7 @@ function required(value, message) {
 
 export async function runCad(argv) {
   if (argv[0] === 'project') return (await import('../lib/cad/project-cli.js')).runProjectCli(argv.slice(1));
+  if (argv[0] === 'ifc') return (await import('../lib/cad/ifc-cli.js')).runIfcCli(argv.slice(1));
   const engine = argv[0];
   if (!engine || engine === '--help' || engine === '-h') {
     console.log(usage());

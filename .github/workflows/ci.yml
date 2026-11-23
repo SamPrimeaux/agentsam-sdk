@@ -108,6 +108,37 @@ jobs:
         if: steps.release_train.outputs.changed == 'true'
         run: npm run release:train:guard
 
+      # Real-engine proof for IFC validate/diff/edit. It installs IfcOpenShell, so it only
+      # runs when IFC code, its tests or this workflow change (or when run by hand).
+      - name: Detect IFC authoring changes
+        id: ifc_authoring
+        run: |
+          changed=true
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            base="origin/$GITHUB_BASE_REF"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            base="${{ github.event.before }}"
+          else
+            base=""
+          fi
+          if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            if git diff --name-only "$base"...HEAD 2>/dev/null | grep -qE '^services/cad/(ifc|proof|typings)/|^src/lib/cad/ifc|^src/sam/operations/cad-bim-ifc|^test/(unit|integration)/cad-ifc|^\.github/workflows/ci\.yml$'; then
+              changed=true
+            else
+              changed=false
+            fi
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "IFC authoring proof needed: $changed"
+
+      - name: IFC authoring proof (real IfcOpenShell)
+        if: steps.ifc_authoring.outputs.changed == 'true'
+        run: |
+          uv venv "$RUNNER_TEMP/ifc-venv" --python 3.11
+          uv pip install --python "$RUNNER_TEMP/ifc-venv/bin/python" ifcopenshell==0.8.4.post1 numpy
+          "$RUNNER_TEMP/ifc-venv/bin/python" services/cad/proof/ifc_edit_test.py
+          AGENTSAM_CAD_PYTHON="$RUNNER_TEMP/ifc-venv/bin/python" node --test test/integration/cad-ifc-real.test.mjs
+
       - name: CLI context smoke
         run: node src/cli.js context --json
 

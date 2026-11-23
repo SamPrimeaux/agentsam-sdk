@@ -252,10 +252,12 @@
     {
       "id": "agentsam-arch-bim",
       "aliases": [
-        "arch-bim"
+        "arch-bim",
+        "bim",
+        "ifc"
       ],
       "title": "Semantic BIM and IFC",
-      "description": "Model typed building objects and validate IFC data requirements",
+      "description": "Read, validate, diff and edit real BIM/IFC by GlobalId, and prove every change by reopening it",
       "entry": "agentsam-arch-bim/SKILL.md",
       "references": [],
       "user_invocable": true
