@@ -1,61 +1,72 @@
 /**
  * CAD-relevant subset of the canonical agentsam.source-types.v2 identity catalog.
- * This is an extension-to-identity routing policy, NOT a codec or permission list.
- * The alignment test checks every ID/extension against contracts/source-types.v2.json.
- * Unknown sources are not silently assumed to be importable.
+ * The catalog owns extensions. Only CAD-specific roles and ambiguity policy
+ * belong here. Recognition is not evidence of codec/import/export readiness.
  */
-export const CAD_SOURCE_FORMATS = Object.freeze([
-  ['cad.freecad', 'native-bim', '.fcstd'],
-  ['cad.openscad', 'parametric', '.scad'],
-  ['cad.step', 'native-bim', '.step', '.stp'],
-  ['cad.iges', 'native-bim', '.iges', '.igs'],
-  ['cad.opencascade-brep', 'native-bim', '.brep'],
-  ['bim.ifc', 'native-bim', '.ifc'],
-  ['bim.ifczip', 'native-bim', '.ifczip'],
-  ['bim.ifcxml', 'native-bim', '.ifcxml'],
-  ['bim.revit-project', 'native-bim', '.rvt'],
-  ['bim.revit-family', 'native-bim', '.rfa'],
-  ['cad.dxf', 'exchange', '.dxf'],
-  ['cad.dwg', 'exchange', '.dwg'],
-  ['model.stl', 'exchange', '.stl'],
-  ['model.3mf', 'exchange', '.3mf'],
-  ['model.wavefront-obj', 'exchange', '.obj'],
-  ['model.ply', 'exchange', '.ply'],
-  ['model.iamscene', 'presentation', '.iamscene.json', '.iamscene'],
-  ['model.iamgeometry', 'exchange', '.iamgeometry'],
-  ['model.glb', 'presentation', '.glb'],
-  ['model.gltf', 'presentation', '.gltf'],
-  ['model.blender', 'presentation', '.blend'],
-  ['model.fbx', 'presentation', '.fbx'],
-  ['model.collada', 'presentation', '.dae'],
-  ['model.usd', 'presentation', '.usd'],
-  ['model.usda', 'presentation', '.usda'],
-  ['model.usdc', 'presentation', '.usdc'],
-  ['model.usdz', 'presentation', '.usdz'],
-  ['pointcloud.e57', 'exchange', '.e57'],
-  ['pointcloud.las', 'exchange', '.las'],
-  ['pointcloud.laz', 'exchange', '.laz'],
-  ['pointcloud.xyz', 'exchange', '.xyz'],
-  ['image.svg', 'exchange', '.svg'],
-  ['image.png', 'presentation', '.png'],
-  ['image.jpeg', 'presentation', '.jpg', '.jpeg'],
-  ['image.webp', 'presentation', '.webp'],
-  ['image.tiff', 'presentation', '.tif', '.tiff'],
-  ['image.exr', 'presentation', '.exr'],
-  ['document.pdf', 'verification', '.pdf'],
-  ['data.csv', 'verification', '.csv'],
-  ['data.json', 'verification', '.json'],
-  ['archive.zip', 'exchange', '.zip'],
-  ['video.mp4', 'presentation', '.mp4', '.m4v'],
-  ['video.quicktime', 'presentation', '.mov'],
-  ['video.matroska', 'presentation', '.mkv'],
-  ['media.otio', 'exchange', '.otio'],
-  ['media.otioz', 'exchange', '.otioz'],
-  ['audio.wav', 'presentation', '.wav', '.wave'],
-  ['cam.gcode', 'exchange', '.gcode', '.gc', '.nc', '.ngc', '.tap', '.cnc', '.mpf'],
-].map(([id, role, ...extensions]) => Object.freeze({
-  id, role, extensions: Object.freeze(extensions),
-})));
+import sourceCatalog from '@inneranimalmedia/agentsam-contracts/source-types/catalog' with { type: 'json' };
+
+const formatsById = new Map(sourceCatalog.formats.map(format => [format.id, format]));
+const cadRoles = Object.freeze([
+  ['cad.freecad', 'native-bim'],
+  ['cad.openscad', 'parametric'],
+  ['cad.step', 'native-bim'],
+  ['cad.iges', 'native-bim'],
+  ['cad.opencascade-brep', 'native-bim'],
+  ['bim.ifc', 'native-bim'],
+  ['bim.ifczip', 'native-bim'],
+  ['bim.ifcxml', 'native-bim'],
+  ['bim.revit-project', 'native-bim'],
+  ['bim.revit-family', 'native-bim'],
+  ['cad.dxf', 'exchange'],
+  ['cad.dwg', 'exchange'],
+  ['model.stl', 'exchange'],
+  ['model.3mf', 'exchange'],
+  ['model.wavefront-obj', 'exchange'],
+  ['model.ply', 'exchange'],
+  ['model.iamscene', 'presentation'],
+  ['model.iamgeometry', 'exchange'],
+  ['model.glb', 'presentation'],
+  ['model.gltf', 'presentation'],
+  ['model.blender', 'presentation'],
+  ['model.fbx', 'presentation'],
+  ['model.collada', 'presentation'],
+  ['model.usd', 'presentation'],
+  ['model.usda', 'presentation'],
+  ['model.usdc', 'presentation'],
+  ['model.usdz', 'presentation'],
+  ['pointcloud.e57', 'exchange'],
+  ['pointcloud.las', 'exchange'],
+  ['pointcloud.laz', 'exchange'],
+  ['pointcloud.xyz', 'exchange'],
+  ['image.svg', 'exchange'],
+  ['image.png', 'presentation'],
+  ['image.jpeg', 'presentation'],
+  ['image.webp', 'presentation'],
+  ['image.tiff', 'presentation'],
+  ['image.exr', 'presentation'],
+  ['document.pdf', 'verification'],
+  ['data.csv', 'verification'],
+  ['data.json', 'verification'],
+  ['archive.zip', 'exchange'],
+  ['video.mp4', 'presentation'],
+  ['video.quicktime', 'presentation'],
+  ['video.matroska', 'presentation'],
+  ['media.otio', 'exchange'],
+  ['media.otioz', 'exchange'],
+  ['audio.wav', 'presentation'],
+  ['cam.gcode', 'exchange'],
+]);
+
+// .h is a recognized G-code alias in some controllers but overwhelmingly a
+// programming-language header. Do not discover all headers as CNC programs.
+const excludedExtensions = Object.freeze({ 'cam.gcode': new Set(['.h']) });
+export const CAD_SOURCE_FORMATS = Object.freeze(cadRoles.map(([id, role]) => {
+  const canonical = formatsById.get(id);
+  if (!canonical) throw new Error('cad_source_format_missing_from_catalog:' + id);
+  const extensions = canonical.extensions.filter(ext => !excludedExtensions[id]?.has(ext));
+  if (!extensions.length) throw new Error('cad_source_format_has_no_extensions:' + id);
+  return Object.freeze({ id, role, extensions: Object.freeze(extensions) });
+}));
 
 const suffixes = CAD_SOURCE_FORMATS.flatMap(entry =>
   entry.extensions.map(extension => ({ entry, extension }))
@@ -74,7 +85,7 @@ export function identifyCadFileFormat(filename) {
   } : null;
 }
 
-/** Translate a legacy delivery label (e.g. "jpeg" or "mov") into canonical format identity. */
+/** Translate a legacy delivery label into canonical format identity. */
 export function cadOutputFormatReference(label) {
   if (typeof label !== 'string' || !/^[a-z0-9.+-]{1,32}$/i.test(label)) return null;
   const found = identifyCadFileFormat('artifact.' + label.toLowerCase().replace(/^\./, ''));
