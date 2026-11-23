@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {identifyCadFileFormat} from '../../../../../src/lib/cad/format-policy.js';
+import {identifyCadFileFormat} from '@inneranimalmedia/agentsam-contracts/source-types/cad';
 
 export type CadSource = {
   id:string; project:string; revision:string; relativePath:string;
