@@ -18,7 +18,7 @@ import {
 } from './index.js';
 import { cloudflareMediaConnectUrl, discoverCloudflareMedia, listCloudflareR2Objects } from './families/media.js';
 import { resolveAuthenticatedOwner } from './owner.js';
-import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, pluginPackScopes } from './scope-registry.js';
+import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, pluginPackScopes, listProviderScopeOptions, listProviderPluginPacks } from './scope-registry.js';
 import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
 
 const OAUTH_STATE_PROVIDER = 'cloudflare';
@@ -174,6 +174,7 @@ export function isCloudflareConnectionPath(pathname) {
     || pathname === '/api/connections/cloudflare/select'
     || pathname === '/api/connections/cloudflare/accounts'
     || pathname === '/api/connections/cloudflare/resources'
+    || pathname === '/api/connections/cloudflare/permissions'
     || /^\/api\/connections\/cloudflare\/r2\/buckets\/[^/]+\/objects$/.test(pathname);
 }
 
@@ -380,6 +381,28 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
   }
 
   await ensureTables(env);
+
+  if (url.pathname === '/api/connections/cloudflare/permissions' && request.method === 'GET') {
+    const [offerable, packs, preferred] = await Promise.all([
+      listProviderScopeOptions(env),
+      listProviderPluginPacks(env),
+      loadCloudflareConnectionRecord(env, ownerId).catch(() => null),
+    ]);
+    if (!offerable || !packs) {
+      return json({ ok:false, error:'cloudflare_permission_registry_unavailable' }, 503);
+    }
+    const granted = Array.isArray(preferred?.scopes) ? preferred.scopes : [];
+    return json({
+      ok:true, provider:'cloudflare', total:offerable.length,
+      // A catalog scope is merely OFFERABLE. It must never be displayed as a
+      // granted permission unless present on this account's active token.
+      available_permissions:offerable,
+      registered_packs:packs,
+      connection_id:preferred?.connectionId || null,
+      granted_scopes:granted,
+      account_selection_required:!preferred,
+    });
+  }
 
   if (url.pathname === '/api/connections/cloudflare' && request.method === 'GET') {
     const connection = env.DB
