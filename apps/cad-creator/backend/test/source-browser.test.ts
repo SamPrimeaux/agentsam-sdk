@@ -22,6 +22,7 @@ test('source browser serves only indexed source IDs, preserves bytes and allows 
   'schedule.xlsx':{id:'document.xlsx',role:'verification'},
   'presentation.pptx':{id:'document.pptx',role:'verification'},
   'part.stl':{id:'model.stl',role:'exchange'},
+  'geometry.obj':{id:'model.wavefront-obj',role:'exchange'},
   'review.mov':{id:'video.quicktime',role:'presentation'},
   'house.ifc':{id:'bim.ifc',role:'native-bim'},
   'house.ifczip':{id:'bim.ifczip',role:'native-bim'},
