@@ -1,7 +1,7 @@
 """Run with Blender --background --python ... -- source.obj output.glb output.webp"""
-from pathlib import Path
-import math
 import sys
+from pathlib import Path
+
 import bpy
 from mathutils import Vector
 
