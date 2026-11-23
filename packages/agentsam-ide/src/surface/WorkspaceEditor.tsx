@@ -74,6 +74,14 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const visibleTree=useMemo(()=>visibleWorkspaceTree(tree,expanded),[tree,expanded]);
   const loadedFolders=useRef<Set<string>>(new Set());
   const readonly=workspace.configuration?.readonly===true;
+  const operations=workspace.configuration?.capabilities;
+  const canCreate=!readonly&&operations?.create!==false;
+  const canRename=!readonly&&operations?.rename!==false;
+  const canDelete=!readonly&&operations?.delete!==false;
+  const canSearch=operations?.search!==false;
+  const canHistory=operations?.history!==false;
+  const canChanges=Boolean(workspace.changes)&&operations?.changes!==false;
+  const canSnapshot=Boolean(workspace.snapshot)&&operations?.snapshot!==false;
   const toggleFolder=async(path:string)=>{
     if(expanded.has(path)){
       setExpanded(prev=>{const next=new Set(prev);next.delete(path);return next;});return;
@@ -219,7 +227,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     }catch(e){setMessage(String(e));}
   };
   const create=async()=>{
-    if(readonly){setMessage('This provider is read-only.');return;}
+    if(readonly||(modal==='rename'?!canRename:!canCreate)){
+      setMessage('This filesystem source does not support that operation.');return;
+    }
     try{
       const path=normalizeWorkspacePath(pathInput,modal==='folder'?'folder':'file');
       if(modal==='rename'&&current){
@@ -233,7 +243,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     }catch(e){setMessage(e instanceof Error?e.message:String(e));}
   };
   const remove=async()=>{
-    if(readonly||!current||current.status!=='saved'||!window.confirm('Delete '+current.path+'?'))return;
+    if(!canDelete||!current||current.status!=='saved'||!window.confirm('Delete '+current.path+'?'))return;
     try{await workspace.delete(current.path,current.version);closeTab(current.path);await refresh();}
     catch(e){setMessage(String(e));}
   };
@@ -262,13 +272,15 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   };
   const commands=[
     {name:'Save',run:()=>current&&void save(current.path)},
-    {name:'New file',run:()=>{setModal('file');setPathInput('');}},
-    {name:'New folder',run:()=>{setModal('folder');setPathInput('');}},
-    {name:'Find in files',run:()=>setPanel('Search')},
-    {name:'Timeline',run:()=>void showHistory()},
+    ...(canCreate?[
+      {name:'New file',run:()=>{setModal('file');setPathInput('');}},
+      {name:'New folder',run:()=>{setModal('folder');setPathInput('');}},
+    ]:[]),
+    ...(canSearch?[{name:'Find in files',run:()=>setPanel('Search')}]:[]),
+    ...(canHistory?[{name:'Timeline',run:()=>void showHistory()}]:[]),
     {name:'Refresh',run:()=>void refresh()},
-    {name:'Changes',run:()=>void showChanges()},
-    {name:'Merkle snapshot',run:()=>void showSnapshot()},
+    ...(showHostModes&&canChanges?[{name:'Changes',run:()=>void showChanges()}]:[]),
+    ...(showHostModes&&canSnapshot?[{name:'Merkle snapshot',run:()=>void showSnapshot()}]:[]),
     {name:'Editor appearance',run:()=>setAppearanceOpen(true)},
     {name:'Split editor',run:()=>setSplit(!split)},
     {name:'Toggle explorer',run:()=>setExplorerOpen(value=>!value)},
@@ -311,7 +323,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     },650);
     return ()=>{live=false;clearTimeout(timeout);};
   },[workspace,current?.path,current?.value]);
-  const availablePanels:Panel[]=['Explorer','Search','Timeline','Problems',...(showHostModes?['Changes' as const,'Snapshot' as const]:[]),...(workspace.configuration?.references?.length?['References' as const]:[]),...(workspace.configuration?.dependencies?.length?['Dependencies' as const]:[])];
+  const availablePanels:Panel[]=['Explorer',...(canSearch?['Search' as const]:[]),...(canHistory?['Timeline' as const]:[]),'Problems',
+    ...(showHostModes&&canChanges?['Changes' as const]:[]),
+    ...(showHostModes&&canSnapshot?['Snapshot' as const]:[]),...(workspace.configuration?.references?.length?['References' as const]:[]),...(workspace.configuration?.dependencies?.length?['Dependencies' as const]:[])];
   const problems=tabs.flatMap(tab=>[...tab.diagnostics,...tab.editorDiagnostics].map(item=>({...item,path:tab.path})));
   const goToProblem=(problem:WorkspaceDiagnostic)=>{
     setRevealRequest(previous=>({path:problem.path,line:problem.line||1,column:problem.column||1,requestId:(previous?.requestId||0)+1}));
@@ -332,7 +346,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         <button type="button" disabled={!current} onClick={()=>{setSplit(!split);setPreviewOnly(false);}}>{split?'Close split':'Split'}</button>
         <button type="button" disabled={!current||(!current.preview&&!isMarkdownPath(current.path)&&!isHtmlPath(current.path))}
           onClick={()=>{setPreviewOnly(!previewOnly);setSplit(false);}}>{previewOnly?'Source':'Preview'}</button>
-        <button type="button" disabled={!current} onClick={()=>void showHistory()}>History</button>
+        <button type="button" disabled={!current||!canHistory} onClick={()=>void showHistory()}>History</button>
         <button type="button" aria-label="Editor appearance" aria-expanded={appearanceOpen} onClick={()=>setAppearanceOpen(value=>!value)}>Font</button>
         <button type="button" disabled={!current||current.readonly||readonly} onClick={()=>current&&void save(current.path)}>{current?.status==='saving'?'Saving…':'Save'}</button>
         {onExit&&<button type="button" onClick={()=>{if(tabs.some(t=>t.status!=='saved')){setMessage('Save all changes before exiting.');return;}onExit();}}>Close</button>}
@@ -357,7 +371,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         {sources?.length ? <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} /> : null}
         <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
-          {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" disabled={readonly} aria-label="New file" onClick={()=>{setModal('file');setPathInput('');}}>＋</button><button type="button" disabled={readonly} aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
+          {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" disabled={!canCreate} aria-label="New file" onClick={()=>{setModal('file');setPathInput('');}}>＋</button><button type="button" disabled={!canCreate} aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
             {treeError&&<div className="asi-reconnect" role="alert"><strong>Files unavailable</strong><p>{treeError}</p><div>{onReconnect&&<button type="button" onClick={onReconnect}>Reconnect workspace</button>}{onConnectionSettings&&<button type="button" onClick={onConnectionSettings}>Runtime settings</button>}<button type="button" onClick={()=>void refresh()}>Retry files</button></div></div>}
             <WorkspaceTreeView entries={visibleTree} expanded={expanded} active={active}
               onFile={path=>void open(path)} onFolder={path=>void toggleFolder(path)}
@@ -384,7 +398,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();setSidebarWidth(value=>Math.max(150,Math.min(450,value+(event.key==='ArrowLeft'?-16:16))));}}}/>
       <section className="asi-center" aria-label="Code editor">
         <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
-        {current?<><div className="asi-breadcrumb">{current.displayName||current.path.split('/').join(' › ')}<div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={readonly||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>void remove()} disabled={readonly||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
+        {current?<><div className="asi-breadcrumb">{current.displayName||current.path.split('/').join(' › ')}<div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={!canRename||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>void remove()} disabled={!canDelete||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
         <div className={'asi-editors'+(split&&!current.preview?' asi-split':'')}
           style={{'--asi-split-editor':splitPercent+'fr','--asi-split-preview':(100-splitPercent)+'fr'} as CSSProperties}>
           {!current.preview&&(!previewOnly||split)?<div>{rendered(current)}</div>:null}
@@ -415,8 +429,8 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
           <button type="button" role="menuitem" onClick={()=>{const parent=menuEntry.kind==='folder'?menuEntry.path:workspaceParents(menuEntry.path).at(-1)||'';setContextMenu(null);setModal('folder');setPathInput(parent?parent+'/':'');}}>New folder here</button>
           {menuEntry.kind==='file'&&current?.path===menuEntry.path&&current.status==='saved'&&<>
             <div className="asi-context-separator"/>
-            <button type="button" role="menuitem" disabled={current.canRename===false} onClick={()=>{setContextMenu(null);setModal('rename');setPathInput(menuEntry.path);}}>Rename selected file</button>
-            <button type="button" role="menuitem" disabled={current.canDelete===false} onClick={()=>{setContextMenu(null);void remove();}}>Delete selected file…</button>
+            <button type="button" role="menuitem" disabled={!canRename||current.canRename===false} onClick={()=>{setContextMenu(null);setModal('rename');setPathInput(menuEntry.path);}}>Rename selected file</button>
+            <button type="button" role="menuitem" disabled={!canDelete||current.canDelete===false} onClick={()=>{setContextMenu(null);void remove();}}>Delete selected file…</button>
           </>}
         </>}
       </div>
