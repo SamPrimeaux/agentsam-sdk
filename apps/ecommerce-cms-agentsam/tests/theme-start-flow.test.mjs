@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { readFileSync, existsSync } from 'node:fs';
+// Browser acceptance runs only where the real Playwright/Chrome runtime exists.
+const playwright = await import('playwright').catch(() => null);
+const chromePath = process.platform === 'darwin'
+  ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  : playwright?.chromium?.executablePath?.();
+const browserAvailable = Boolean(playwright && chromePath && existsSync(chromePath));
 import { themeStartPrompt } from '../frontend/theme-editor/theme-start.mjs';
 
 test('new theme guidance is scoped to Ecommerce CMS and never claims to read unavailable files', () => {
