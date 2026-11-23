@@ -23,6 +23,8 @@ export const STUDIO_ADMIN_MOUNTS = Object.freeze([
   Object.freeze({ id: 'cad.studio', flat: '/cad', canonical: '/admin/cad' }),
   Object.freeze({ id: 'campaigns', flat: '/campaigns', canonical: '/admin/campaigns' }),
   Object.freeze({ id: 'canvas', flat: '/canvas', canonical: '/admin/canvas' }),
+  // Existing account app installs may still carry the former Design Canvas launch URL.
+  Object.freeze({ id: 'design-canvas.compat', flat: '/admin/design-canvas', canonical: '/admin/canvas' }),
   Object.freeze({ id: 'cli', flat: '/cli', canonical: '/admin/cli' }),
   Object.freeze({ id: 'cms', flat: '/cms', canonical: '/admin/cms' }),
   Object.freeze({ id: 'collaborate', flat: '/collaborate', canonical: '/admin/collaborate' }),
