@@ -28,12 +28,14 @@ class CadBuildingClient(CadServiceClient):
     """Compatibility wrapper for the bounded building proof export."""
 
     def probe(self) -> bool:
+        self._building_ready = False
         try:
-            return super().probe() and self.operation_ready("cad_building_export")
+            self._building_ready = super().probe() and self.operation_ready("cad_building_export")
+            return self._building_ready
         except CadServiceError:
             return False
 
     def export(self, source: Mapping[str, Any], base: str | None = None) -> dict[str, Any]:
-        if not self.probe():
+        if not getattr(self, "_building_ready", False):
             raise CadServiceError("cad_host_unprobed_or_unavailable")
         return self.export_building(source, base=base, required_files=REQUIRED_FILES)
