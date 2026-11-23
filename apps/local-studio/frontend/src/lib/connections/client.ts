@@ -450,12 +450,13 @@ export function beginLocalStudioGmailConnection(returnTo: string) {
 export function beginLocalStudioRegisteredPluginOAuth(
   pluginId: string,
   returnTo: string,
-  options: {packs?:string[];capabilities?:string[]} = {},
+  options: {packs?:string[];capabilities?:string[];connectionId?:string} = {},
 ) {
   if (!/^plg_[a-f0-9]{8,}$/i.test(pluginId)) throw new Error('oauth_plugin_id_invalid');
   return pluginCatalogRequest<{ok:boolean;authorize_url:string;plugin_id?:string;provider?:string}>(
     'POST','/api/work/connect/plugins/'+encodeURIComponent(pluginId)+'/start',{
       return_to:returnTo,
+      ...(options.connectionId?{connection_id:options.connectionId}:{}),
       ...(options.packs?.length?{packs:options.packs}:{}),
       ...(options.capabilities?.length?{capabilities:options.capabilities}:{}),
     },
