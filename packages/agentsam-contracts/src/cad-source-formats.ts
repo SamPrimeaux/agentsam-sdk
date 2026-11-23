@@ -114,6 +114,21 @@ export function identifyCadFileFormat(filename: string): { catalog: 'agentsam.so
   } : null;
 }
 
+/**
+ * Return every canonical identity for an extension. Filename detection is only
+ * a hint: .obj can be a Wavefront mesh or a binary object file; .ptx has two
+ * established source identities. UI/importers can request content verification
+ * or an explicit user decision instead of pretending ambiguity does not exist.
+ */
+export function cadFormatCandidates(filename: string): AgentSourceFormatReference[] {
+  if (typeof filename !== 'string' || !filename) return [];
+  const basename = (filename.split(/[\\/]/).at(-1) ?? '').split(/[?#]/)[0].toLowerCase();
+  const matched = suffixes.find(({ extension }) => basename.endsWith(extension) && basename.length > extension.length);
+  if (!matched) return [];
+  return sourceCatalog.formats.filter(format => format.extensions.includes(matched.extension))
+    .map(format => ({ catalog: 'agentsam.source-types.v2' as const, id: format.id, extension: matched.extension }));
+}
+
 /** Translate a legacy delivery label into canonical format identity. */
 export function cadOutputFormatReference(label: string): AgentSourceFormatReference | null {
   if (typeof label !== 'string' || !/^[a-z0-9.+-]{1,32}$/i.test(label)) return null;
