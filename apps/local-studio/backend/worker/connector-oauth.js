@@ -86,7 +86,7 @@ export async function resolveRegisteredOAuthPlugin(env, pluginId) {
 
 /** Only a registered first-party auth entrypoint may be opened; never forward
  * arbitrary plugin metadata as a browser redirect. */
-export function registeredOAuthEntryUrl(plugin, origin, returnTo) {
+export function registeredOAuthEntryUrl(plugin, origin, returnTo, requested = {}) {
   const raw=clean(plugin?.connectUrl);
   if (!raw) return null;
   let url;
@@ -96,6 +96,16 @@ export function registeredOAuthEntryUrl(plugin, origin, returnTo) {
   if (!allowed.has(url.origin) || !/^\/api\/(oauth|integrations|connections)\//.test(url.pathname)) return null;
   if (plugin.packId && !url.searchParams.has('packs') && url.pathname.endsWith('/cloudflare/start')) {
     url.searchParams.set('packs',plugin.packId);
+  }
+  if(plugin.provider==='cloudflare' && /\/cloudflare\/start$/.test(url.pathname)) {
+    const capabilities=Array.isArray(requested.capabilities)?requested.capabilities:[];
+    const packs=Array.isArray(requested.packs)?requested.packs:[];
+    if(capabilities.length && capabilities.length<=20 && capabilities.every(id=>/^cloudflare\.[a-z0-9.-]{2,100}$/.test(id))) {
+      url.searchParams.set('capabilities',capabilities.join(','));
+    }
+    if(packs.length && packs.length<=10 && packs.every(id=>/^[a-z0-9_-]{1,50}$/.test(id))) {
+      url.searchParams.set('packs',packs.join(','));
+    }
   }
   if (url.origin===new URL(origin).origin && returnTo) url.searchParams.set('return_to',safeReturnTo(returnTo));
   return url.toString();
@@ -583,7 +593,7 @@ export async function handleConnectorWorkRequest(request, env, userId) {
         return beginConnectorOAuth(request,env,userId,plugin.provider);
       }
       const body=await request.json().catch(()=>({}));
-      const connectUrl=registeredOAuthEntryUrl(plugin,url.origin,body.return_to || body.returnTo);
+      const connectUrl=registeredOAuthEntryUrl(plugin,url.origin,body.return_to || body.returnTo,body);
       if (!connectUrl) return json({ok:false,error:'oauth_plugin_connection_handler_missing'},409);
       return json({ok:true,plugin_id:plugin.id,provider:plugin.provider,authorize_url:connectUrl});
     }
