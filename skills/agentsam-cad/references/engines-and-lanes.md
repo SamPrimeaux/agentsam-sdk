@@ -1,75 +1,70 @@
-# Engines and lanes
+# Engines and execution lanes
 
-An **engine** makes geometry; a **lane** is where it runs (local device, remote VM, Docker
-service). Pick the engine for the job, then an authorized lane. Workers never run native
-binaries.
+An **engine** creates or interprets geometry. A **lane** is the authorized place it runs: local
+machine, remote VM or the CAD service. Check the engine's real readiness and the host's advertised
+operation before using a lane. Native binaries do not run inside a Cloudflare Worker.
 
-## Blender (`agentsam cad blender …`)
+## Blender
 
-- Best for: meshes, scenes, lights/cameras, render previews, GLB/STL/OBJ delivery.
-- Discovery order: `--blender-bin <path>` → `AGENTSAM_BLENDER_BIN` → `PATH` → common install
-  locations. `~/.agentsam/cad.json` records what was found and its `source`.
-- Commands: `status`, `build <recipe.json> --out <m.blend> [--input <base.blend>]`,
-  `inspect <m.blend>`, `render-preview <m.blend> --out <p.png> [--camera] [--scene] [--width] [--height]`,
-  `export <m.blend> --format glb|stl|obj --out <file> [--objects a,b] [--collection name]`.
-  Shared: `--timeout 1..600` (default 120), `--cwd`, `--json`; `--no-apply-modifiers` is accepted.
-- Build consumes a typed recipe only (`protocol/cad/blender-recipe.schema.json`; worked example
-  `examples/cad/blender-box-with-hole.recipe.json`). It never evaluates Python.
-- Every result carries `execution_lane`, the Blender version, and an artifact `sha256`.
-- Limit: `inspect` reports objects, dimensions, bounds, materials, cameras and modifiers. It does
-  not report vertex/face counts or volume, so it cannot by itself prove an interior feature
-  such as a hole. Check the recipe's operation list and the preview image for that.
+- Use for mesh/scene construction, cameras, lighting, render previews and GLB/STL/OBJ export.
+- Node CLI: `agentsam cad blender status|build|inspect|render-preview|export`.
+- Build accepts the typed recipe at `protocol/cad/blender-recipe.schema.json`; it does not evaluate
+  arbitrary Python. Example: `examples/cad/blender-box-with-hole.recipe.json`.
+- Discovery: `--blender-bin` → `AGENTSAM_BLENDER_BIN` → `PATH` → standard installation locations.
+- `inspect` returns the input hash, scene objects, transforms, dimensions, bounds, materials,
+  cameras/collections and evaluated mesh metrics. Mesh metrics include vertices/edges/faces/triangles,
+  shells, non-manifold edges, genus and volume when the mesh is closed. For a closed single-shell
+  mesh, genus 1 is evidence of one through-hole; still compare the measured geometry to the request.
+- Every build/inspect/render/export step must echo the hash of the exact input it consumed.
 
-## OCCT (native `agentsam-occt`)
+## OpenCascade (OCCT)
 
-- Best for: exact solids (boolean cut, box solids, persisted feature replay), STEP/BREP/glTF/IFC4.
-- Executable: `~/.agentsam/bin/agentsam-occt` or the absolute path in `AGENTSAM_OCCT_BIN`.
-  `--doctor` prints an `AGENTSAM_RESULT={…}` receipt with the OCCT version and capabilities
-  (`solid.box.create`, `solid.cut`, `solid.inspect.step`, `solid.export.step`, `feature.replay`,
-  `sketch.solve2d`, `solid.tessellate`, `drawing.svg`, `solid.export.brep`, `solid.export.gltf`,
-  `bim.export.ifc4`).
-- Reached through `design_model_build|inspect|export` with `engine:"occt"` (optionally
-  `parametric_object_id`, `element_id`). Build replays the selected revision's `nativeHistory`.
-- Every native call must end with a receipt whose `ok` is true, `engine` is `occt`, and
-  `operation` matches the one requested. Missing or mismatched receipt = not done.
-- Inspection reports `volume_mm3` (millimetres, must be a positive finite number).
-- Build recipe for the executable lives in `packages/agentsam-occt/README.md`. The package never
-  installs a kernel or falls back to approximate geometry.
+- Use the native C++ `agentsam-occt` kernel for exact B-Rep solids, boolean operations, feature
+  replay, sketch solving, tessellation and drawing generation.
+- Locate `~/.agentsam/bin/agentsam-occt` or set `AGENTSAM_OCCT_BIN`. `--doctor` returns version and
+  advertised capabilities. The Python `probe_occt()` performs a real box → STEP export → STEP reopen
+  and checks the measured volume; a found binary alone is not ready.
+- Existing `design_model_build|inspect|export` operations select `engine:"occt"` where the host
+  advertises them. Native receipts must identify `engine:"occt"`, the requested operation and the
+  measured output. `volume_mm3` is in mm³.
+- The current native build recipe and operations are documented in `packages/agentsam-occt/README.md`.
+  Do not substitute approximate Python geometry for OCCT.
 
 ## FreeCAD
 
-- Best for: parametric solids and STEP/IGES/BREP/STL interchange.
-- Host selection is one algorithm in two ports (`agentsam_sdk.cad.discover_freecad`,
-  `src/lib/cad/freecad-host.js`) kept in step by `python/tests/fixtures/freecad_host_cases.json`.
-  A host is `python` (bundled or system interpreter that imports FreeCAD, plus a library dir) or
-  `command` (FreeCADCmd, which rejects foreign argv, so the launcher passes the adapter its argv
-  through a fixed trampoline). Overrides: `AGENTSAM_FREECAD_PYTHON`, `AGENTSAM_FREECAD_CMD`,
-  `AGENTSAM_FREECAD_HOME`, `AGENTSAM_FREECAD_LIB`. Never call the adapter with a bare `python3`:
-  without the host's library dir it cannot import FreeCAD.
-- Adapter: `python/agentsam_sdk/cad/adapters/freecad.py` (inside the pip wheel, the npm package
-  and the Docker context; one copy). It prints its result on a line prefixed `AGENTSAM_RESULT=`
-  and returns volume, area, face/edge/vertex counts and bounding box in `metrics`.
-- Export formats: `step`, `stp`, `iges`, `brep`, `stl`.
-- Reached through `cad.job.generate` (`engine:"freecad"`), the Docker executor, `freeCadBuild`
-  (Node), or with no Node at all `agentsam cad build --request req.json --out part.step`
-  (pip; `FreeCADHost.run()` in code). `agentsam cad doctor` builds a real box and checks its volume.
+- Use for parametric solids and native CAD interchange. The shared discovery algorithm is implemented
+  in Python (`agentsam_sdk.cad`) and Node (`src/lib/cad/freecad-host.js`) and tested against the same
+  fixture. It supports a Python host with the correct FreeCAD library environment and command-mode
+  `FreeCADCmd`; do not launch the adapter with a bare system `python3`.
+- One adapter lives at `python/agentsam_sdk/cad/adapters/freecad.py` and is packaged for the Python
+  wheel, npm package and Docker context. It reports B-Rep volume/area, face/edge/vertex counts and
+  bounds. `agentsam cad doctor --engine all` probes the native host; `agentsam cad build --request
+  req.json --out part.step` is the Python local lane and does not require Node.
+- Overrides: `AGENTSAM_FREECAD_PYTHON`, `AGENTSAM_FREECAD_CMD`, `AGENTSAM_FREECAD_HOME`, and
+  `AGENTSAM_FREECAD_LIB`. The host must be probed before reporting ready.
+- Durable generation uses `cad.job.generate` with `engine:"freecad"` only through an authorized host
+  runner. The local build proof and a durable project job are different lanes.
 
 ## OpenSCAD
 
-- Best for: simple CSG parts from source.
-- Source is validated against forbidden patterns before compile (`validateOpenScadSource`);
-  `test/integration/openscad-honesty.test.mjs` pins the "no fake output" behavior.
-- Reached through `cad.job.generate` (`engine:"openscad"`) or the Docker executor.
+- Use for validated source-driven CSG. `validateOpenScadSource` rejects forbidden source patterns
+  before compile; the integration tests pin the no-fake-output behavior.
+- There is no separate `agentsam cad openscad` CLI. Use the host-owned `cad.job.generate` operation
+  with `engine:"openscad"` or an advertised Docker CAD service executor.
 
-## Docker CAD service
+## Docker / hosted CAD service
 
-- Default `http://127.0.0.1:8793` (`/health`). Executors exist for OpenSCAD, FreeCAD and Blender.
-- Treat an unreachable service as an unavailable lane, not an error to paper over: fall back to
-  a native lane if one is discovered, otherwise report it.
+- The local development service defaults to `http://127.0.0.1:8793`; check `/health` and its
+  authenticated capabilities before using it. Executors exist for Blender, FreeCAD and OpenSCAD;
+  the service may advertise additional provider routes, but the live capability response decides.
+- `CadServiceClient` is the authenticated short-request/file-transfer client. It does not create
+  durable jobs. Use `CadJobClient` for host-owned long-running work.
+- An unreachable service is an unavailable lane. Use another authorized, verified lane or report
+  the gap; never silently substitute a different engine.
 
-## Formats
+## Format and capability rule
 
-A format reference identifies a format; it does not claim a provider can import, preview,
-validate, convert or export it. Ambiguous extensions (`.stl`, `.obj`, `.ts`, `.nc`) stay
-candidates until content or context resolves them. Promise only what the chosen engine's
-export list above supports.
+`contracts/source-types.v2.json` is the shared source/format identity catalog. The CAD format policy
+maps suffixes to identities; it is not a codec registry. IAMScene separately reports import, export,
+live-reference and round-trip capability. See `docs/cad/FORMAT_SUPPORT.md` and
+`references/scene-geometry-bim.md` before promising a format operation.

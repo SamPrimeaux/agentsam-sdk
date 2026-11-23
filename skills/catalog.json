@@ -160,18 +160,23 @@
       "aliases": [
         "cad",
         "blender",
+        "freecad",
+        "openscad",
         "occt",
         "bim",
-        "iamscene"
+        "ifc",
+        "iamscene",
+        "iamgeometry"
       ],
       "title": "AgentSam CAD",
-      "description": "CAD end to end: pick the entry point, engine and lane; build, inspect, render and export; prove each step with hashes and receipts.",
+      "description": "Route CAD/BIM work across portable project contracts, native engines, IAMScene, IFC and Python host jobs; verify outputs by receipts and hashes.",
       "entry": "agentsam-cad/SKILL.md",
       "references": [
         "agentsam-cad/references/engines-and-lanes.md",
         "agentsam-cad/references/projects-and-operations.md",
         "agentsam-cad/references/proof-and-triage.md",
-        "agentsam-cad/references/scene-geometry-bim.md"
+        "agentsam-cad/references/scene-geometry-bim.md",
+        "agentsam-cad/references/python-service-and-jobs.md"
       ],
       "user_invocable": true
     },
