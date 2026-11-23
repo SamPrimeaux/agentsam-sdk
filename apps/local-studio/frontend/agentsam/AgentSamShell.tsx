@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
+import { isStudioAdminPath, resolveLegacyContentMediaPath, canonicalStudioPath } from "../../shared/studio-admin-routes.mjs";
 import { isLocalStudioEcommerceDocumentPath } from "../../shared/ecommerce-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
@@ -299,6 +299,13 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // are top-level documents, not a nested ?page= app route or an extra iframe.
   const go = (to: string) => {
     const [pathOnly, query = ''] = to.split('?');
+    // Normalize server-owned legacy paths before both TanStack navigation and
+    // Tauri hash routing. Existing D1 installs may still use an old launch URL.
+    const canonical = canonicalStudioPath(pathOnly);
+    if (canonical && canonical !== pathOnly) {
+      go(canonical + (query ? '?' + query : ''));
+      return;
+    }
     const legacyMedia = resolveLegacyContentMediaPath(pathOnly, new URLSearchParams(query));
     if (legacyMedia) {
       go(legacyMedia);
