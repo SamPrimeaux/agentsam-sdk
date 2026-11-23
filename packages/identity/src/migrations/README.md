@@ -26,6 +26,8 @@
 | `password_reset_tokens` | Historical SQL reset tokens — runtime recovery uses KV/`createPasswordResetService` |
 | `company` | Hosted branding table |
 
+Audit columns (`0005_session_audit_columns.sql`): `auth_sessions.revoke_reason`, `accounts.last_active_at`.
+
 New generic scaffolds must be generated from the **portable** `agentsam.identity` pack, not by copying this tree as “portable D1.”
 
 Preserve these files for IAM-compat fixtures and historical feature resources. Do not delete until Lane 1 parity is proven and call sites no longer need them.
