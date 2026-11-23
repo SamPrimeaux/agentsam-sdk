@@ -595,6 +595,7 @@ def main():
         "ifc_export_errors":ifc_errors,
         "invalid_brep_shapes":invalid,
         "open_design_issues":ISSUES,
+        "files":evidence_files,
         "notes":[
           "Garage 14-ft eave/plate height assumed to accommodate 12-ft overhead doors",
           "Living roof ridge resolved at 18 ft using y-oriented half span; roof-plan graphic conflicts and requires review",
