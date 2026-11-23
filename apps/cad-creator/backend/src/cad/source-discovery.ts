@@ -11,6 +11,8 @@ export type CadSource = {
   bytes:number; sha256:string;
   /** Filename-based identity only; import/export requires a separate verified adapter. */
   formatRef?:{catalog:'agentsam.source-types.v2';id:string;extension:string};
+  /** Other canonical candidates when extension alone cannot resolve identity. */
+  formatCandidates?:Array<{catalog:'agentsam.source-types.v2';id:string;extension?:string}>;
 };
 const RECEIPT=/((model-exchange|exchange-receipt|glb-review-receipt|geometry-verification|bim-assembly-receipt|render-manifest)\.json)$/i;
 // Avoid blocking the local CAD server on every library refresh for unchanged GLBs/Blend files.
