@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Run with Blender --background --python ... -- source.obj output.glb output.webp"""
 from pathlib import Path
 import math
