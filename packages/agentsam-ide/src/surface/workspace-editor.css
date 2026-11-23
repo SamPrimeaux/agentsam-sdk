@@ -215,3 +215,11 @@
   .asi-empty-workspace { padding:5px; }
   .asi-empty-workspace h2 { font-size:17px; }
 }
+
+.asi-source-connect { padding:12px; border-bottom:1px solid var(--asi-border); background:var(--asi-canvas); }
+.asi-source-connection-panel { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.asi-source-connection-panel>strong { font-size:12px; font-weight:650; }
+.asi-source-connection-panel>p { margin:0; color:var(--asi-muted); line-height:1.5; font-size:11px; overflow-wrap:anywhere; }
+.asi-source-connection-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.asi-source-connection-actions>button { border:1px solid var(--asi-border); border-radius:6px; padding:6px 10px; font-size:11px; }
+.asi-source-connection-actions>button:first-child { color:var(--asi-accent,#2caeb2); border-color:var(--asi-accent,#2caeb2); }
