@@ -36,7 +36,7 @@ test('Theme Studio opens packaged AgentSam and offers real next steps', {
   await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
   let browser;
   try {
-    browser = await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+    browser = await playwright.chromium.launch({headless:true,executablePath:chromePath});
     const address = `http://127.0.0.1:${server.address().port}`;
     const page = await browser.newPage();
     await page.goto(address);
