@@ -59,7 +59,7 @@ test("Embedded MovieMode does not render desktop home columns at narrow panel wi
   assert.match(editor, /setHandsetPanel\("browser"\)/);
 });
 
-test("MovieMode project browser no longer advertises browser-local CoPro prototype footers", () => {
+test("MovieMode project browser identifies its app boundary from Media Library", () => {
   const projects = read("../../../packages/copro-ui/src/projects.tsx");
   assert.doesNotMatch(projects, /Browser-local editing/);
   assert.doesNotMatch(projects, /Open an existing prototype/);
