@@ -1,3 +1,4 @@
+import { renderCanvasThumbnailSvg } from './work-canvas-thumbnail.js';
 import { listCloudflareConnectionRecords, resolveCloudflareCredential } from '../../../../packages/connectors/cfoa/src/credential.js';
 
 /**
@@ -94,7 +95,8 @@ export async function listAccountLibraryResources(db, owner) {
       // Render previews by verified stored thumbnail availability, not by the
       // original artifact kind. A design or website document can have a
       // generated preview while its source file remains JSON/HTML.
-      preview: richPreview || (row.thumbnail_r2_key || row.preview_r2_key
+      preview: richPreview || (row.thumbnail_r2_key || row.preview_r2_key ||
+        (row.artifact_type === 'design-canvas' && Number(attributes.artboardCount) > 0)
         ? privatePreview : (kind==='image'?privateLink:null)),
       open:row.artifact_type === 'design-canvas'
         ? '/admin/canvas?canvas='+encodeURIComponent(row.id)
@@ -203,7 +205,7 @@ export async function serveAccountLibraryFile(env,owner,id,preview=false,options
     return Response.json({error:'not_found'},{status:404});
   }
   const row = await env.DB.prepare(
-    `SELECT r2_bucket,r2_key,preview_r2_key,thumbnail_r2_key,mime_type,name,metadata_json
+    `SELECT r2_bucket,r2_key,preview_r2_key,thumbnail_r2_key,mime_type,name,metadata_json,artifact_type,content_hash
      FROM agentsam_artifacts WHERE id=? AND user_id=? LIMIT 1`
   ).bind(id,owner).first();
   if (!row) return Response.json({error:'not_found'},{status:404});
@@ -214,9 +216,36 @@ export async function serveAccountLibraryFile(env,owner,id,preview=false,options
     : bucketName === 'inneranimalmedia-autorag' ? env.AUTORAG_BUCKET : null;
   const key = preview ? safe(row.thumbnail_r2_key || row.preview_r2_key || row.r2_key) : safe(row.r2_key);
   if (!key) return Response.json({error:'file_unavailable'},{status:404});
-  const object = bucket?.get
-    ? await bucket.get(key)
-    : await readOauthR2Artifact(env, owner, row, key, options.accountId || '', options);
+  // For older owned Design Canvases missing a stored thumbnail, render an inert
+  // preview on demand from the verified original. This is READ ONLY: never
+  // update content_hash, revision, or thumbnail key in an HTTP GET.
+  const legacyCanvas = preview && !row.thumbnail_r2_key && !row.preview_r2_key
+    && row.artifact_type === 'design-canvas' && row.mime_type === 'application/json'
+    && bucketName === 'artifacts' && bucket?.get;
+  let legacyPreview = false;
+  let object;
+  if (legacyCanvas) {
+    const source = await bucket.get(key);
+    const bytes = source && await source.arrayBuffer();
+    if (bytes && bytes.byteLength <= 2_000_000 && /^[a-f0-9]{64}$/i.test(safe(row.content_hash))) {
+      const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))]
+        .map(value=>value.toString(16).padStart(2,'0')).join('');
+      if (hash === row.content_hash) {
+        try {
+          const svg=renderCanvasThumbnailSvg(JSON.parse(new TextDecoder().decode(bytes)));
+          if (svg) {
+            object={body:new Blob([svg],{type:'image/svg+xml'}).stream(),httpMetadata:{contentType:'image/svg+xml'}};
+            legacyPreview=true;
+          }
+        } catch { /* Corrupt or unsupported legacy document: show gallery fallback. */ }
+      }
+    }
+    if (!legacyPreview) return Response.json({error:'preview_unavailable'},{status:404});
+  } else {
+    object = bucket?.get
+      ? await bucket.get(key)
+      : await readOauthR2Artifact(env, owner, row, key, options.accountId || '', options);
+  }
   if (object instanceof Response) return object;
   if (!object) return Response.json({error:'file_unavailable'},{status:404});
   const mime = safe(object.httpMetadata?.contentType || (preview ? '' : row.mime_type)).toLowerCase();
@@ -226,7 +255,7 @@ export async function serveAccountLibraryFile(env,owner,id,preview=false,options
     && safe(row.mime_type) === 'application/json'
     && safe(row.thumbnail_r2_key) === key
     && key.startsWith('canvas/'+encodeURIComponent(owner)+'/'+id+'/thumb-rev-');
-  const inline = /^(image\/(png|jpeg|webp|gif|avif)|application\/pdf|video\/(mp4|webm)|audio\/(mpeg|wav|ogg))$/.test(mime) || trustedCanvasPreview;
+  const inline = /^(image\/(png|jpeg|webp|gif|avif)|application\/pdf|video\/(mp4|webm)|audio\/(mpeg|wav|ogg))$/.test(mime) || trustedCanvasPreview || legacyPreview;
   const downloadName = safe(row.name || id).replace(/[\r\n"\\]/g,'_').slice(0,100);
   const headers = {
     'content-type':inline?mime:'application/octet-stream',

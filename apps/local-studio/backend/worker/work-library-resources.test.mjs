@@ -216,6 +216,51 @@ test('only server-generated account-scoped Canvas thumbnails are inline SVG', as
  const crossOwner=await serveAccountLibraryFile({DB:crossOwnerKey.DB,ARTIFACTS:bucket},'owner_1','art_1',true);
  assert.equal(crossOwner.headers.get('content-type'),'application/octet-stream');
 });
+test('legacy account-owned Canvases without thumbnail keys render read-only previews', async () => {
+  const document={version:1,artboards:[{id:'page',name:'Intro',width:1200,height:800,background:'#ffffff',nodes:[{
+    id:'n1',type:'text',name:'Title',x:10,y:10,width:450,height:90,text:'Original Canvas headline',style:{color:'#345678',fontSize:40},
+  }]}]};
+  const bytes=new TextEncoder().encode(JSON.stringify(document));
+  const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))]
+    .map(value=>value.toString(16).padStart(2,'0')).join('');
+  const object={arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};
+  const reads=[];
+  const bucket={async get(key){reads.push(key);return object;}};
+  const fileRow={r2_bucket:'artifacts',r2_key:'canvas/owner_1/art_1/rev-1.json',thumbnail_r2_key:null,
+    preview_r2_key:null,content_hash:digest,mime_type:'application/json',artifact_type:'design-canvas',name:'Legacy Canvas'};
+  const harness=dbHarness({fileRow});
+  const preview=await serveAccountLibraryFile({DB:harness.DB,ARTIFACTS:bucket},'owner_1','art_1',true);
+  assert.equal(preview.status,200);
+  assert.deepEqual(reads,['canvas/owner_1/art_1/rev-1.json']);
+  assert.equal(preview.headers.get('content-type'),'image/svg+xml');
+  assert.match(preview.headers.get('content-disposition'),/^inline/);
+  const svg=await preview.text();
+  assert.match(svg,/Original Canvas/);
+  assert.equal(harness.calls.some(item=>item.sql.startsWith('UPDATE')),false);
+  const mismatched=dbHarness({fileRow:{...fileRow,content_hash:'0'.repeat(64)}});
+  const rejected=await serveAccountLibraryFile({DB:mismatched.DB,ARTIFACTS:bucket},'owner_1','art_1',true);
+  assert.equal(rejected.status,404);
+  assert.equal(mismatched.calls.some(item=>item.sql.startsWith('UPDATE')),false);
+  const empty=new TextEncoder().encode(JSON.stringify({version:1,artboards:[]}));
+  const emptyHash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',empty))].map(v=>v.toString(16).padStart(2,'0')).join('');
+  const emptyBucket={async get(){return {arrayBuffer:async()=>empty.buffer.slice(empty.byteOffset,empty.byteOffset+empty.byteLength)};}};
+  const blank=await serveAccountLibraryFile({DB:dbHarness({fileRow:{...fileRow,content_hash:emptyHash}}).DB,ARTIFACTS:emptyBucket},'owner_1','art_1',true);
+  assert.equal(blank.status,404);
+});
+
+test('legacy owned Canvas advertises a preview URL even when thumbnail metadata is absent',async()=>{
+  const item=artifactRow({id:'canvas_abc',name:'Legacy design',artifact_type:'design-canvas',
+    mime_type:'application/json',thumbnail_r2_key:null,preview_r2_key:null,public_url:null,is_public:0,
+    metadata_json:'{"artboardCount":2}'});
+  const h=dbHarness({rows:{artifacts:[item]}});
+  const listed=await listAccountLibraryResources(h.DB,'owner_1');
+  assert.equal(listed[0].preview,'/api/work/library/artifacts/canvas_abc/file?preview=1');
+  assert.equal(listed[0].open,'/admin/canvas?canvas=canvas_abc');
+  const blank=dbHarness({rows:{artifacts:[{...item,metadata_json:'{"artboardCount":0}'}]}});
+  const blankListing=await listAccountLibraryResources(blank.DB,'owner_1');
+  assert.equal(blankListing[0].preview,null);
+});
+
 test('artifact mutations validate fields and always constrain writes by owner', async () => {
   const h = dbHarness({ existingRow: { id: 'art_1' } });
   const request = new Request('https://studio.example/api/work/library/artifacts/art_1', {
