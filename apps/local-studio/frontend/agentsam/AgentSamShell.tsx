@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
+import { isStudioAdminPath, resolveLegacyContentMediaPath, canonicalStudioPath } from "../../shared/studio-admin-routes.mjs";
 import { isLocalStudioEcommerceDocumentPath } from "../../shared/ecommerce-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
 import { openAppsInstaller, setAppsInstallerAdapter } from '@inneranimalmedia/agentsam-nav/browser';
-import { loadAccountApps, installAccountApp, removeAccountApp, setAccountAppEnabled, openAccountApp } from '@/lib/apps-account';
+import { loadAccountApps, installAccountApp, removeAccountApp, setAccountAppEnabled, openAccountApp, useAccountApps, invalidateAccountApps, reloadAccountApps, isSafeAppHref } from '@/lib/apps-account';
 import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
 import {
   projectStudioShellAppearance,
@@ -66,7 +66,7 @@ async function accountAvatarRequest(options: RequestInit = {}) {
 type MerchantStore = { id: string; name?: string; slug?: string; page_count?: number };
 type StudioNavigationNode = {id:string;label:string;href?:string;icon?:string;children?:StudioNavigationNode[]};
 type StudioNavigationProjection = {primary?:StudioNavigationNode[];channels?:StudioNavigationNode[];apps?:StudioNavigationNode[];utilities?:StudioNavigationNode[]};
-const navigationIcons = {home:Home,products:Package,orders:ShoppingBag,discounts:Tag,content:Files,analytics:BarChart3,projects:Folder,library:BookOpen,tickets:Ticket,store:Store,'online-store':Store,customers:Users,audience:Users,help:CircleHelp,settings:Settings,messageSquare:MessageSquareIcon,box:Box,film:Film,globe:Globe,growth:TrendingUp,apps:Layers3,layers:Layers3,mail:Mail,database:Database};
+const navigationIcons = {home:Home,products:Package,orders:ShoppingBag,discounts:Tag,content:Files,analytics:BarChart3,projects:Folder,library:BookOpen,tickets:Ticket,store:Store,'online-store':Store,customers:Users,audience:Users,help:CircleHelp,settings:Settings,messageSquare:MessageSquareIcon,box:Box,cad:Box,film:Film,moviemode:Film,globe:Globe,growth:TrendingUp,apps:Layers3,layers:Layers3,samsketch:Layers3,forms:Files,goalguru:Ticket,canvas:Layers3,cms:Store,mail:Mail,database:Database};
 function destination(item:StudioNavigationNode):NavDestination {
   const Icon = navigationIcons[item.icon as keyof typeof navigationIcons];
   return {...item,icon:Icon ? <Icon /> : undefined,children:item.children?.map(destination)};
@@ -118,6 +118,18 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });
   const state = useWorkStore();
   const user = useCurrentUser();
+  const accountApps = useAccountApps();
+  useEffect(() => {
+    invalidateAccountApps();
+    if (user && !user.isDevFallback) void reloadAccountApps();
+  }, [user?.id, user?.isDevFallback]);
+  // D1 account installations own the Apps navigation; bundled stages are not installs.
+  const installedAppNodes: StudioNavigationNode[] = accountApps.apps
+    .filter(app => app.installed && app.enabled && typeof app.href === 'string' && isSafeAppHref(app.href))
+    .map(app => ({ id: app.key, label: app.label, href: app.href!, icon: app.nav_icon || 'apps' }));
+  const installedAppChildren: StudioNavigationNode[] = accountApps.loaded && !accountApps.error
+    ? installedAppNodes
+    : [{ id: 'apps-verification', label: accountApps.error ? 'Apps unavailable — retry' : 'Verifying installed Apps…', icon: 'apps' }];
   useEffect(() => {
     const shell = window as Window & {__agentsamSignOut?:() => Promise<void>};
     const action = async () => {
@@ -176,7 +188,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     try { localStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
     setSelectedMerchantStoreId(id);
     window.dispatchEvent(new CustomEvent('agentsam:cms-site-changed', { detail: { site_id: id } }));
-    go('/admin/pages?site_id=' + encodeURIComponent(id));
+    go('/admin/store?site_id=' + encodeURIComponent(id));
   };
   const [globalAssistantFocused, setGlobalAssistantFocused] = useState(false);
   const [globalAssistantWidth, setGlobalAssistantWidth] = useState(390);
@@ -287,6 +299,13 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // are top-level documents, not a nested ?page= app route or an extra iframe.
   const go = (to: string) => {
     const [pathOnly, query = ''] = to.split('?');
+    // Normalize server-owned legacy paths before both TanStack navigation and
+    // Tauri hash routing. Existing D1 installs may still use an old launch URL.
+    const canonical = canonicalStudioPath(pathOnly);
+    if (canonical && canonical !== pathOnly) {
+      go(canonical + (query ? '?' + query : ''));
+      return;
+    }
     const legacyMedia = resolveLegacyContentMediaPath(pathOnly, new URLSearchParams(query));
     if (legacyMedia) {
       go(legacyMedia);
@@ -512,7 +531,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     : pathname + searchStr;
   const value: NavValue = {
     brand: (() => {
-      const active = (navigation.apps || []).find(app => app.href &&
+      const active = installedAppNodes.find(app => app.href &&
         (app.href.includes('?')
           ? navPathname === app.href
           : navPathname.split('?')[0] === app.href || navPathname.startsWith(app.href + '/')));
@@ -545,7 +564,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       // canonical primary entries from the same host projection as installed apps.
       ...(navigation.primary || []).filter(entry => entry.id !== 'projects'),
       ...(navigation.channels?.length ? [{id:'sales-channels',label:'Sales channels',icon:'store',children:navigation.channels}] : []),
-      {id:'installed-apps',label:'Apps',icon:'apps',children:navigation.apps || []},
+      {id:'installed-apps',label:'Apps',icon:'apps',children:installedAppChildren},
       ...(navigation.utilities || []),
     ].map(destination).map(item => item.id === 'installed-apps' ? {
       ...item,

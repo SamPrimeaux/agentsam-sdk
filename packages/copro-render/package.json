@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-render",
-  "version": "2.6.17",
+  "version": "2.6.18",
   "description": "CoPro render planning and renderer capability selection without renderer leakage into project files.",
   "type": "module",
   "license": "FSL-1.1-MIT",
@@ -36,7 +36,7 @@
     "access": "public"
   },
   "dependencies": {
-    "mediabunny": "^1.66.2"
+    "mediabunny": "1.66.2"
   },
   "keywords": [
     "copro",

@@ -626,7 +626,7 @@
         "Sharing AgentSam tool, agent, event, workspace, context and resource-scope contracts across independently packaged products.",
         "Representing loose file, asset, scene and optional project references without treating project membership as an authorization grant."
       ],
-      "version": "2.6.17"
+      "version": "2.6.18"
     },
     {
       "avoid_when": [],
@@ -679,7 +679,7 @@
         "multi-provider SQL adapters",
         "reusable database request handler"
       ],
-      "version": "2.6.14"
+      "version": "2.6.18"
     },
     {
       "avoid_when": [
@@ -1781,7 +1781,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.18"
     },
     {
       "avoid_when": [],
@@ -2390,7 +2390,7 @@
         "Integrating IAMScene scenes into browser/Node editors while preserving imported source files and reporting conversion losses.",
         "Calling the optional hosted CAD building-service adapter to export a bounded cad.project.v2 rectangular shell into verified IFC4/STEP/DXF/SVG/PNG/GLB/PDF/MP4 artifacts, subject to host authorization."
       ],
-      "version": "0.1.3"
+      "version": "0.1.4"
     },
     {
       "avoid_when": [

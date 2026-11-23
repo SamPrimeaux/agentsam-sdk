@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-brand",
-  "version": "2.6.17",
+  "version": "2.6.18",
   "description": "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify).",
   "type": "module",
   "license": "FSL-1.1-MIT",
@@ -25,7 +25,8 @@
     "./presets": "./src/presets/index.js",
     "./cli": "./src/cli/controller.js",
     "./package.json": "./package.json",
-    "./public": "./src/public.js"
+    "./public": "./src/public.js",
+    "./workspace": "./src/workspace.js"
   },
   "files": [
     "bin",

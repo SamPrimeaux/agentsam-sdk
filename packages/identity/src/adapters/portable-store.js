@@ -1,4 +1,5 @@
 import { createAccountSecurityStore } from './account-security-store.js';
+import { hasColumn, normalizeRevokeReason } from './column-support.js';
 import {
   IDENTITY_STORE_SCHEMA_VERSION,
   IdentitySchemaError,
@@ -93,6 +94,17 @@ export function createPortableIdentityStore(db, options = {}) {
         `INSERT INTO identity_users (id, email, display_name, password_hash, salt, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`,
       ).bind(id, normalizedEmail, displayName || null, passwordHash || null, salt || null, ts, ts).run();
+      // accounts is the account row of record; credentials stay in identity_users.
+      // Non-fatal and probed so databases that predate migration 008 keep working
+      // (re-applying the pack backfills any row missed here).
+      try {
+        if (await hasColumn(db, 'accounts', 'id')) {
+          await db.prepare(
+            `INSERT OR IGNORE INTO accounts (id, email, display_name, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?)`,
+          ).bind(id, normalizedEmail, displayName || normalizedEmail, ts, ts).run();
+        }
+      } catch { /* audit-only mirror */ }
       return this.findUserById(id);
     },
 
@@ -151,6 +163,13 @@ export function createPortableIdentityStore(db, options = {}) {
         id, userId, email || null, provider || 'email', providerSubject || null,
         displayName || null, expiresAt, ts, ts, sessionType,
       ).run();
+      // accounts.last_active_at is the account-level "last seen". Non-fatal so a login
+      // is never blocked by an audit write.
+      try {
+        if (await hasColumn(db, 'accounts', 'last_active_at')) {
+          await db.prepare('UPDATE accounts SET last_active_at = ? WHERE id = ?').bind(ts, userId).run();
+        }
+      } catch { /* audit-only */ }
       return {
         id,
         type: sessionType,
@@ -188,10 +207,17 @@ export function createPortableIdentityStore(db, options = {}) {
     async revokeSession(sessionId, reason = 'logout') {
       await ensure();
       const ts = nowUnix();
-      await db.prepare(
-        `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ? WHERE id = ? AND revoked_at IS NULL`,
-      ).bind(ts, ts, sessionId).run();
-      return { ok: true, reason };
+      const normalized = normalizeRevokeReason(reason);
+      if (await hasColumn(db, 'identity_sessions', 'revoke_reason')) {
+        await db.prepare(
+          `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ?, revoke_reason = ? WHERE id = ? AND revoked_at IS NULL`,
+        ).bind(ts, ts, normalized, sessionId).run();
+      } else {
+        await db.prepare(
+          `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ? WHERE id = ? AND revoked_at IS NULL`,
+        ).bind(ts, ts, sessionId).run();
+      }
+      return { ok: true, reason: normalized };
     },
 
     async createOAuthTransaction({

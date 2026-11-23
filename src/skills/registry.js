@@ -46,24 +46,21 @@ function builtinSuggestedTrigger(skill) {
 }
 
 function builtinToManifest(skill, skillsRoot) {
+  const declarationPath = path.join(skillsRoot, path.dirname(skill.entry), 'agentsam.skill.json');
+  const declaration = normalizeSkillManifest(JSON.parse(fs.readFileSync(declarationPath, 'utf8')));
+  if (declaration.id !== skill.id || declaration.instructions.ref !== 'SKILL.md'
+    || declaration.instructions.source !== 'local_file') {
+    throw new Error(`sdk_skill_manifest_mismatch:${skill.id}`);
+  }
+  // Keep existing SDK slash names and catalog aliases stable. An adjacent manifest
+  // is authoritative metadata; the package_file projection resolves its SKILL.md.
   return normalizeSkillManifest({
-    schema: 'agentsam.skill.v1',
-    id: skill.id,
-    name: skill.title || skill.id,
-    description: skill.description || '',
-    icon: 'skill',
-    slash: { suggested: builtinSuggestedTrigger(skill) || undefined },
-    instructions: {
-      source: 'package_file',
-      ref: skill.entry,
-    },
-    execution: {
-      mode: 'turn',
-      tools: [],
-      operations: [],
-      capabilities: [],
-    },
-    package: '@inneranimalmedia/agentsam-sdk',
+    ...declaration,
+    name: skill.title || declaration.name,
+    description: skill.description || declaration.description,
+    slash: { suggested: builtinSuggestedTrigger(skill) || declaration.slash?.suggested },
+    instructions: { source: 'package_file', ref: skill.entry },
+    package: declaration.package || '@inneranimalmedia/agentsam-sdk',
   });
 }
 
@@ -92,6 +89,8 @@ export class SkillRegistry {
 
     if (this.includeBuiltins) {
       for (const row of listBuiltinCatalog()) {
+        // Custom or packaged skill roots may intentionally omit source-only skills.
+        if (!fs.existsSync(path.join(this.skillsRoot, row.entry))) continue;
         const manifest = builtinToManifest(row, this.skillsRoot);
         byId.set(manifest.id, {
           id: manifest.id,

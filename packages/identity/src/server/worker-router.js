@@ -213,8 +213,14 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
       displayName: body.name || body.displayName,
     });
     if (!result.ok) {
+      await adapter.logAuthEvent({
+        eventType: 'signup', status: 'failed', provider: 'email', request,
+      });
       return jsonResponse({ ok: false, error: result.error }, 400);
     }
+    await adapter.logAuthEvent({
+      userId: result.user.id, eventType: 'signup', status: 'ok', provider: 'email', request,
+    });
     if (identity.isNativeSessionRequest(request)) {
       return identity.buildNativeLoginSuccessResponse(result, body.next);
     }

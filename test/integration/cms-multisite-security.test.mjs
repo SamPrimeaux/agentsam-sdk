@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { signCmsBridgeRequest, verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from '../../apps/ecommerce-cms-agentsam/backend/cms/studio-bridge-protocol.js';
+import { signCmsBridgeRequest, verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from '@inneranimalmedia/agentsam-cms/studio-bridge-protocol';
 import { listAuthorizedCmsSites, requireCmsSiteAccess } from '../../apps/local-studio/backend/worker/cms-authority.js';
 import { handleRemoteCmsRequest } from '../../apps/local-studio/backend/worker/cms-remote.js';
 import { handleStudioCmsBridge } from '../../apps/ecommerce-cms-agentsam/backend/cms/studio-bridge.js';

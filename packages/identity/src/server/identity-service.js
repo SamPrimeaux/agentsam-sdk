@@ -126,7 +126,7 @@ export function createIdentityService(config) {
     async logout(request) {
       const sessionId = parseBearerSessionId(request.headers.get('Authorization'))
         || parseSessionId(request.headers.get('Cookie'));
-      if (sessionId) await adapter.revokeSession(sessionId);
+      if (sessionId) await adapter.revokeSession(sessionId, 'logout');
       return { ok: true };
     },
 

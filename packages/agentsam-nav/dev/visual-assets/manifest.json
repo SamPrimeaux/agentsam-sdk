@@ -115,7 +115,7 @@
       "name": "Growth \u2014 authenticated SPA",
       "group": "Products & Apps",
       "owner": "ecommerce-cms-agentsam",
-      "source": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json",
+      "source": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.package.json",
       "url": "https://agentsam.inneranimalmedia.com/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth",
       "status": "unavailable",
       "detail": "Authenticated Growth SPA returned an installation destination error when captured. No valid UI screenshot; canonical source owner is Commerce CMS.",

@@ -194,7 +194,7 @@
     try { sessionStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
     try { localStorage.setItem('agentsam.cms.selected-site.v1', id); } catch {}
     window.dispatchEvent(new CustomEvent('agentsam:cms-site-changed', {detail:{site_id:id}}));
-    navigateHost('/admin/pages?site_id=' + encodeURIComponent(id));
+    navigateHost('/admin/store?site_id=' + encodeURIComponent(id));
     updateSharedNavigation();
   }
   async function refreshMerchantStores() {

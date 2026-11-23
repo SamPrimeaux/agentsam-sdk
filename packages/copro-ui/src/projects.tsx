@@ -1,13 +1,12 @@
 import { IconAction } from "./icon-action.js";
 import type { CoProCreativeAsset } from "./creative-types.js";
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
-import { normalizeOnboardingUrl } from "./onboarding-url.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Captions, ChevronDown, ChevronLeft, ChevronRight, Clapperboard,
   Film, Box, Sparkles, FolderOpen, Grid2X2, Home, Import, LayoutList,
   MoreHorizontal, Plus, Search, Scissors, ScreenShare, Type,
-  Palette, Image as ImageIcon, UserRound, ArrowUpRight, MonitorPlay, Play,
+  Palette, Image as ImageIcon, ArrowUpRight, MonitorPlay, Play,
 } from "lucide-react";
 
 export type CoProProjectSummary = {
@@ -86,7 +85,7 @@ function duration(ms?: number) {
 export function CoProProjectsScreen({
   projects, onOpenProject, onCreate, onOpenStudioMode, onImport, onRecord, recording = false,
   onStopRecording, onOpenTool, onRenameProject, onDeleteProject, onDuplicateProject,
-  appIconUrl, onboardingUrl, systemIcons, initialSection = "home", creativeAssets = [], onOpenCreativeTemplate,
+  appIconUrl, systemIcons, initialSection = "home", creativeAssets = [], onOpenCreativeTemplate,
 }: ProjectsProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
@@ -100,14 +99,6 @@ export function CoProProjectsScreen({
   const [active, setActive] = useState<"home" | "projects" | "templates" | "design">(initialSection);
   const [designQuery,setDesignQuery] = useState("");
   const [designGroup,setDesignGroup] = useState("All");
-  const [onboardedName,setOnboardedName] = useState<string | null>(null);
-  useEffect(() => {
-    if (!onboardingUrl) return;
-    try {
-      const saved = JSON.parse(localStorage.getItem('primetech.onboarding') || 'null');
-      if (saved?.done && typeof saved.name === 'string') setOnboardedName(saved.name.trim().split(/\s+/)[0] || null);
-    } catch { /* Onboarding is optional in standalone mode. */ }
-  }, [onboardingUrl]);
   const [templateQuery, setTemplateQuery] = useState("");
   const [templateGroup, setTemplateGroup] = useState("All");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -169,11 +160,7 @@ export function CoProProjectsScreen({
     </div>}
     <aside className="mm-home-sidebar" aria-label="PrimeTech navigation">
       <div className="mm-prime-account">
-        <div className="mm-prime-account-title"><span className="mm-prime-mark" aria-hidden="true">{appIconUrl?<img src={appIconUrl} alt=""/>:<Clapperboard size={21}/>}</span><div><strong>PrimeTech Account</strong><small>{onboardedName ? `Setup complete · ${onboardedName}` : "Onboarding portal"}</small></div></div>
-        <div className="mm-prime-account-actions">
-          <a href={onboardingUrl || "/auth/login?next=/admin/moviemode"}><UserRound size={14}/> {onboardingUrl ? (onboardedName ? "Account setup" : "Get started") : "Sign in"} <ArrowUpRight size={13}/></a>
-          <a className="is-primary" href={onboardingUrl ? normalizeOnboardingUrl(onboardingUrl)+"#tour" : "/auth/signup?next=/admin/moviemode"}>{onboardingUrl ? "Explore PrimeTech" : "Join Pro"} <ArrowUpRight size={13}/></a>
-        </div>
+        <div className="mm-prime-account-title"><span className="mm-prime-mark" aria-hidden="true">{appIconUrl?<img src={appIconUrl} alt=""/>:<Clapperboard size={21}/>}</span><div><strong>PrimeTech Studio</strong><small>Your creative workspace</small></div></div>
       </div>
       <span className="mm-sidebar-caption">CREATIVE STUDIO</span>
       <nav className="mm-prime-sidebar-nav" aria-label="Creative studio">
@@ -191,7 +178,7 @@ export function CoProProjectsScreen({
     <main className={"mm-home-main"+(active==="design"?" is-design":"")}>
       <header className="mm-home-header">
         <div className="mm-prime-page-heading"><span>PRIMETECH / CREATIVE STUDIO</span><strong>{active === "templates" ? "Templates" : active === "design" ? "Design Studio" : "Home"}</strong></div>
-        <div className="mm-home-header-actions">{onboardingUrl&&<a className="mm-prime-onboarding-link" href={onboardingUrl}>Explore PrimeTech <ArrowUpRight size={15}/></a>}<button type="button" title="Import video, images and audio" onClick={onImport}><CoProSystemIcon name="attachment" icons={systemIcons} size={17} fallback={<Import size={17}/>} /> Import</button><button type="button" onClick={onCreate}><Plus size={17}/> Create project</button></div>
+        <div className="mm-home-header-actions"><button type="button" title="Import video, images and audio" onClick={onImport}><CoProSystemIcon name="attachment" icons={systemIcons} size={17} fallback={<Import size={17}/>} /> Import</button><button type="button" onClick={onCreate}><Plus size={17}/> Create project</button></div>
       </header>
       {active === "design" ? <section className="mm-design-page" aria-label="PrimeTech Design Studio">
         <div className="mm-design-intro">
@@ -293,12 +280,6 @@ export function CoProProjectsScreen({
         {active === "home" && <section className="mm-prime-home-start" aria-label="Start creating">
           <div className="mm-prime-entry-row">
             <button type="button" className="mm-prime-create-hero" onClick={onCreate}><span className="mm-prime-hero-icon"><Plus size={22}/></span><span><strong>Create project</strong><small>One creative workspace for 3D, design, generation and video</small></span><ArrowUpRight size={22}/></button>
-            {onboardingUrl&&<a className="mm-prime-tour-entry" href={normalizeOnboardingUrl(onboardingUrl)+"#tour"}
-              aria-label="Explore the full PrimeTech immersive 3D tour">
-              <span className="mm-prime-tour-symbol"><img src={appIconUrl||"/brand/p-prime-electric.svg"} alt=""/></span>
-              <span className="mm-prime-tour-copy"><small>PRIMETECH / CREATIVE ENGINEERING</small><strong>Explore PrimeTech</strong><span>Experience the original immersive 3D tour</span></span>
-              <ArrowUpRight size={19} aria-hidden="true"/>
-            </a>}
           </div>
           <div className="mm-prime-home-actions" aria-label="Start in a PrimeTech studio mode">
             <button type="button" onClick={()=>onOpenStudioMode ? onOpenStudioMode('video') : onCreate()}><span className="mm-prime-action-icon"><MonitorPlay size={25}/></span><span><strong>Video</strong><small>Edit footage, sound, effects and timeline</small></span><ArrowUpRight size={17}/></button>

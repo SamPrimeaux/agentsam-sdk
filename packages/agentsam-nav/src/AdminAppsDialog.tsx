@@ -29,11 +29,13 @@ export function AdminAppMark({app,size=20}:{app:AdminInstallableApp;size?:number
 export function AdminAppsDirectory({loadApps,installApp,removeApp,updateApp,onOpenApp,onInstalled}:AdminAppsDirectoryProps) {
   const {apps,visible,view,setView,query,setQuery,needle,loading,error,active,confirmRemove,setConfirmRemove,perform,refresh}=
     useAdminApps({loadApps,installApp,removeApp,updateApp,onInstalled});
+  const installedCount = !apps.length && (loading || Boolean(error)) ? '—' : String(apps.filter(a=>a.installed).length);
+  const browseCount = !apps.length && (loading || Boolean(error)) ? '—' : String(apps.filter(a=>!a.installed).length);
   return <div className="as-apps-directory">
     <div className="as-apps-picker-controls">
       <div className="as-apps-picker-tabs" role="tablist" aria-label="Apps view">
-        <button role="tab" aria-selected={view==='installed'} type="button" onClick={()=>setView('installed')}>Installed ({apps.filter(a=>a.installed).length})</button>
-        <button role="tab" aria-selected={view==='browse'} type="button" onClick={()=>setView('browse')}>Browse ({apps.filter(a=>!a.installed).length})</button>
+        <button role="tab" aria-selected={view==='installed'} type="button" onClick={()=>setView('installed')}>Installed ({installedCount})</button>
+        <button role="tab" aria-selected={view==='browse'} type="button" onClick={()=>setView('browse')}>Browse ({browseCount})</button>
         <button type="button" className="as-apps-picker-refresh" onClick={()=>refresh()} disabled={loading||Boolean(active)}>Refresh</button>
       </div>
       <label className="as-apps-picker-search"><Search size={17}/><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search Apps" aria-label="Search Apps"/></label>

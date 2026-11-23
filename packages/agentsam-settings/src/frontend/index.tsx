@@ -3,6 +3,7 @@ import { useShellAppearance } from "../appearance";
 import { SettingsBillingPanel } from "./billing";
 import { SettingsAccountPanel } from "./account";
 import { SettingsDesignSpecSheet } from "./design-spec";
+import { BrandPluginWorkspace } from "./brand-workspace";
 import { SettingsStoragePanel } from "./storage";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
@@ -923,6 +924,15 @@ function PluginCustomizeView({
     row?.setupStatus === "connected" && row.enabled && row.healthStatus === "healthy" &&
     (row.installationKey !== "catalog-v1" || row.toolCount > 0)
   );
+  const pendingWorkspaceDeepLink = useRef<string|null>(typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("plugin"));
+  useEffect(() => {
+    const key = pendingWorkspaceDeepLink.current;
+    if(!key)return;
+    const row = plugins.find(item=>item.pluginKey === key || item.id === key);
+    if(!row || !isConnected(row))return;
+    pendingWorkspaceDeepLink.current = null;
+    void openWorkspace(row.id);
+  }, [plugins]);
   const installedState = (row: SettingsPlugin) => isConnected(row)
     ? "Connected" : row.setupStatus === "connected" && row.installationKey === "catalog-v1"
       ? "Verify tools" : row.setupStatus === "connected" ? "Check connection" : "Needs connection";
@@ -951,8 +961,6 @@ function PluginCustomizeView({
       ? result as Record<string,unknown>:null;
     const data=envelope?.data && typeof envelope.data==="object"
       ? envelope.data as Record<string,unknown>:envelope;
-    const brandContract=data?.latestContract && typeof data.latestContract==="object"
-      ? data.latestContract as Record<string,unknown>:null;
     const briefs=Array.isArray(data?.briefs)?data.briefs:[];
     const concepts=Array.isArray(data?.concepts)?data.concepts:[];
     const isBrand=workspace?.pluginKey==="agentsam-brand" || focusedPlugin.pluginKey==="agentsam-brand";
@@ -982,7 +990,7 @@ function PluginCustomizeView({
         {workspaceError ? <p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">
           {workspaceError}. Reconnect the plugin or verify the registered context tool.
         </p> : null}
-        {workspace && !workspaceError ? (
+        {workspace && !workspaceError ? (isBrand ? <BrandPluginWorkspace data={data} /> :
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
               <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
@@ -990,43 +998,15 @@ function PluginCustomizeView({
                 <p className="mt-1 break-all text-[12px] font-medium">{String(data?.workspaceId||(data?.workspace as Record<string,unknown>|undefined)?.display_name||"Account workspace")}</p>
               </article>
               <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
-                <p className="text-[11px] text-muted-foreground">{isBrand?"Saved contract":"Saved briefs"}</p>
-                <p className="mt-1 text-lg font-semibold">{isBrand?(brandContract?"1":"0"):briefs.length}</p>
+                <p className="text-[11px] text-muted-foreground">Saved briefs</p>
+                <p className="mt-1 text-lg font-semibold">{briefs.length}</p>
               </article>
               <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
-                <p className="text-[11px] text-muted-foreground">{isBrand?"Connected sources":"Concepts"}</p>
-                <p className="mt-1 text-lg font-semibold">{isBrand?(Array.isArray(data?.connections)?data.connections.length:0):concepts.length}</p>
+                <p className="text-[11px] text-muted-foreground">Concepts</p>
+                <p className="mt-1 text-lg font-semibold">{concepts.length}</p>
               </article>
             </div>
-            {isBrand ? (
-              <article className="rounded-xl border border-border/70 p-4">
-                <h3 className="text-[14px] font-semibold">Brand identity and contract</h3>
-                {brandContract ? (
-                  <>
-                    <p className="mt-1 text-[11px] text-muted-foreground">Your latest saved BrandContract · status: {String(brandContract.status||"unknown")}</p>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <div className="rounded-lg border border-border/70 bg-muted/15 p-3">
-                        <p className="text-[10px] text-muted-foreground">Contract version</p>
-                        <p className="mt-1 text-[12px] font-medium">{String(brandContract.schema_version||"Unspecified")}</p>
-                      </div>
-                      <div className="rounded-lg border border-border/70 bg-muted/15 p-3">
-                        <p className="text-[10px] text-muted-foreground">Last updated</p>
-                        <p className="mt-1 text-[12px] font-medium">{String(brandContract.updated_at||"Unknown")}</p>
-                      </div>
-                    </div>
-                    <details className="mt-4 rounded-lg border border-border/70 bg-muted/10 p-3">
-                      <summary className="cursor-pointer text-[12px] font-medium">Inspect saved contract and evidence</summary>
-                      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed">{JSON.stringify(brandContract,null,2)}</pre>
-                    </details>
-                  </>
-                ) : (
-                  <p className="mt-3 rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">
-                    No BrandContract has been saved in this workspace. Run the Brand inspection and drafting tools with actual brand evidence, review the result, then explicitly approve a saved contract.
-                  </p>
-                )}
-              </article>
-            ) : (
-              <>
+            <>
                 <section className="space-y-3" aria-label="Campaign briefs">
                   <h3 className="text-[14px] font-semibold">Campaign briefs</h3>
                   {briefs.length ? briefs.map((item,index)=>{
@@ -1051,7 +1031,6 @@ function PluginCustomizeView({
                   }):<p className="rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">No campaign concepts have been saved yet.</p>}
                 </section>
               </>
-            )}
             <p className="text-[10px] text-muted-foreground">Source: {workspace.contextTool} via your authorized MCP connection. Workspace records are separate from chats and projects.</p>
           </div>
         ):null}
@@ -2417,7 +2396,7 @@ function DesignView({snapshot,host}:{
             Your Brand plugin is connected, but the identity has not been defined and approved. Inspect actual brand evidence, draft the contract, review it, and explicitly save the approved version.
           </p>
           <p className="mt-2 text-[11px] text-muted-foreground">Connected evidence sources: {sourceCount}. No identity attributes have been invented.</p>
-          {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
+          {host.openPluginWorkspace || host.openSettingsUnit ? <button type="button" onClick={()=>host.openPluginWorkspace ? host.openPluginWorkspace("agentsam-brand") : host.openSettingsUnit?.("customize")}
             className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Brand workspace →</button>:null}
         </div>
         :<div className="space-y-4">
@@ -2447,6 +2426,8 @@ function DesignView({snapshot,host}:{
             <pre className="mt-3 max-h-[460px] overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed">{JSON.stringify(latest,null,2)}</pre>
           </details>
           <p className="text-[10px] text-muted-foreground">Source: {context?.contextTool} · approved contract in the authorized Brand workspace.</p>
+          {host.openPluginWorkspace ? <button type="button" onClick={()=>host.openPluginWorkspace?.("agentsam-brand")}
+            className="rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Brand workspace →</button> : null}
         </div>}
       </Section>
       <Section title="Brand implementation" description="Logo and media assets, design tokens, application themes and campaign materials express the identity; they do not define it.">
@@ -2586,7 +2567,7 @@ function CodebaseView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function NetworkView({ snapshot }: { snapshot: SettingsSnapshot }) {
+function NetworkView({ snapshot, host }: { snapshot: SettingsSnapshot; host: SettingsHost }) {
   return (
     <Section title="Browser & network capabilities" description="Local, OAuth and tunnel state are separate capabilities.">
       <div className="rounded-lg border border-border/70 px-3">
@@ -2595,6 +2576,16 @@ function NetworkView({ snapshot }: { snapshot: SettingsSnapshot }) {
         <PreferenceRow label="Cloudflare OAuth" description="Connected infrastructure account." value={snapshot.network.oauth} />
         <PreferenceRow label="Connections API" description="Reachability of the account connections registry during this refresh." trailing={<StatusPill status={snapshot.network.health} />} />
       </div>
+      {host.openSettingsUnit && <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" onClick={() => host.openSettingsUnit?.("runtime")}
+          className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted">
+          Machines & Runtimes · connect terminal
+        </button>
+        <button type="button" onClick={() => host.openSettingsUnit?.("customize")}
+          className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted">
+          Manage provider OAuth
+        </button>
+      </div>}
     </Section>
   );
 }
@@ -2921,7 +2912,7 @@ function renderUnit(
     case "codebase":
       return <CodebaseView snapshot={snapshot} />;
     case "network":
-      return <NetworkView snapshot={snapshot} />;
+      return <NetworkView snapshot={snapshot} host={host} />;
     case "themes":
       return <ThemesView themes={snapshot.themes} host={host} onChanged={onChanged} />;
     case "storage":

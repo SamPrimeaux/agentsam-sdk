@@ -88,12 +88,12 @@ function appearance(row, state, siteId = null) {
     state: slug === state.active ? 'active' : 'draft',
     preview_selected: slug === state.preview,
     editor_mode: 'canonical-cms',
-    preview_href: previewUrl || '/admin/theme-editor?slug=shop',
+    preview_href: previewUrl || '/admin/store?site_id=' + encodeURIComponent(siteId),
     preview_url: previewUrl,
     snapshot_url: previewUrl,
     edit_href: artifact?.metadata?.project_id
       ? '/admin/sites/' + encodeURIComponent(siteId) + '/themes/' + encodeURIComponent(artifact.metadata.project_id) + '/editor/home'
-      : '/admin/theme-editor?slug=shop&site_id=' + encodeURIComponent(siteId),
+      : '/admin/sites/' + encodeURIComponent(siteId) + '/settings/editor',
     installed: true,
     site_id: siteId,
     created_at: createdAt,

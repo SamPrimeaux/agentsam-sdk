@@ -73,5 +73,5 @@
     "Sharing AgentSam tool, agent, event, workspace, context and resource-scope contracts across independently packaged products.",
     "Representing loose file, asset, scene and optional project references without treating project membership as an authorization grant."
   ],
-  "version": "2.6.17"
+  "version": "2.6.18"
 }

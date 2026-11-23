@@ -54,7 +54,8 @@ test('Local Studio owns canonical Ecommerce routes while the package supplies pa
   assert.equal(resolveConsoleFile('/admin/pages'), 'pages.html');
   assert.equal(isStudioAdminPath('/admin/products'), true);
   assert.equal(resolveConsoleFile('/admin/products'), 'products.html');
-  assert.equal(resolveConsoleFile('/admin/theme-editor'), 'theme-editor.html');
+  assert.equal(resolveConsoleFile('/admin/theme-editor'), null, 'retired standalone editor is not a document route');
+  assert.equal(resolveConsoleFile('/admin/sites/site_a/pages/page_a/editor'), 'theme-editor.html');
   assert.equal(resolveConsoleFile('/admin/growth'), 'growth.html');
 });
 test('Projects route uses the existing Work product and authenticated HTTP snapshot, not bundled fixtures', () => {

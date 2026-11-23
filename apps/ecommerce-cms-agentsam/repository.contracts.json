@@ -44,10 +44,12 @@
       "contract_type": "package",
       "name": "Product Studio App",
       "description": "Bundled commerce Product Studio App contract.",
-      "manifest_path": "apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.app.json",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.package.json",
       "status": "active",
       "metadata": {
-        "app_id": "product-studio"
+        "app_id": "product-studio",
+        "canonical_kind": "module",
+        "owner_app_id": "ecommerce-cms-agentsam"
       }
     },
     {
@@ -56,10 +58,12 @@
       "contract_type": "package",
       "name": "Growth App",
       "description": "Bundled Growth/marketing App contract.",
-      "manifest_path": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.package.json",
       "status": "active",
       "metadata": {
-        "app_id": "growth"
+        "app_id": "growth",
+        "canonical_kind": "module",
+        "owner_app_id": "ecommerce-cms-agentsam"
       }
     },
     {
@@ -68,11 +72,13 @@
       "contract_type": "package",
       "name": "Completeful App",
       "description": "Bundled Completeful provider App contract.",
-      "manifest_path": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.app.json",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.package.json",
       "status": "active",
       "metadata": {
         "app_id": "completeful",
-        "plugin_key": "completeful"
+        "plugin_key": "completeful",
+        "canonical_kind": "provider",
+        "owner_app_id": "ecommerce-cms-agentsam"
       }
     },
     {
@@ -81,12 +87,14 @@
       "contract_type": "package",
       "name": "Resend Email App",
       "description": "Bundled Email/Resend provider App contract with mailbox-scoped authorization.",
-      "manifest_path": "apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/resend/agentsam.package.json",
       "status": "active",
       "metadata": {
         "app_id": "resend",
         "plugin_key": "resend",
-        "mailbox_authority": "mail_mailboxes"
+        "mailbox_authority": "mail_mailboxes",
+        "canonical_kind": "provider",
+        "owner_app_id": "ecommerce-cms-agentsam"
       }
     },
     {
@@ -109,7 +117,7 @@
       "contract_type": "package",
       "name": "Completeful package compatibility alias",
       "description": "Legacy contract key retained for compatibility; canonical ownership moved to app.completeful.",
-      "manifest_path": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.app.json",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.package.json",
       "status": "deprecated",
       "metadata": {
         "canonical_contract": "app.completeful",

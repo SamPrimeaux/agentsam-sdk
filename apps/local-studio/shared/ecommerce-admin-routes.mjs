@@ -25,7 +25,6 @@ export const LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES = Object.freeze([
   route('admin.content', '/admin/content', 'admin-html', 'content'),
   route('admin.pages', '/admin/pages', 'admin-html', 'pages'),
   route('admin.page-edit', '/admin/page-edit', 'admin-html', 'page-edit'),
-  route('admin.theme-editor', '/admin/theme-editor', 'admin-html', 'theme-editor'),
   route('admin.theme-project-editor', '/admin/theme-project-editor', 'admin-html', 'theme-project-editor'),
   route('admin.theme-editor.site-page', '/admin/sites/:siteId/pages/:pageId/editor', 'admin-html', 'theme-editor'),
   route('admin.theme-editor.site-settings', '/admin/sites/:siteId/settings/editor', 'admin-html', 'theme-editor'),

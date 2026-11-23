@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/primetech-procedures",
-  "version": "2.6.17",
+  "version": "2.6.18",
   "type": "module",
   "description": "Versioned PrimeTech workflow manifests, validation, execution orchestration and evidence receipts for AgentSam.",
   "exports": {

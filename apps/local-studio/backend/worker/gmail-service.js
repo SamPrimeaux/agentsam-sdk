@@ -105,7 +105,7 @@ async function ensureOauthStateTable(db) {
   ).run();
 }
 
-export async function saveOauthState(env, { state, userId, verifier, returnTo, provider = OAUTH_STATE_PROVIDER, resource = "gmail" }) {
+export async function saveOauthState(env, { state, userId, verifier, returnTo, provider = OAUTH_STATE_PROVIDER, resource = "gmail", metadata = {} }) {
   if (!vaultConfigured(env)) throw new Error("vault_required");
   await ensureOauthStateTable(env.DB);
   const now = Math.floor(Date.now() / 1000);
@@ -127,7 +127,7 @@ export async function saveOauthState(env, { state, userId, verifier, returnTo, p
     stateHash,
     encrypted,
     returnTo || null,
-    JSON.stringify({ product: "agentsam-work", resource }),
+    JSON.stringify({ product: "agentsam-work", resource, ...(metadata && typeof metadata === "object" ? metadata : {}) }),
     now + OAUTH_STATE_TTL_SECONDS,
     now,
   ).run();
@@ -137,7 +137,7 @@ export async function consumeOauthState(env, state, provider = OAUTH_STATE_PROVI
   await ensureOauthStateTable(env.DB);
   const stateHash = await hashState(state);
   const row = await env.DB.prepare(
-    "SELECT id, user_id, code_verifier_encrypted, redirect_after, expires_at, consumed_at " +
+    "SELECT id, user_id, code_verifier_encrypted, redirect_after, metadata_json, expires_at, consumed_at " +
       "FROM oauth_state_nonces WHERE state_hash = ? AND provider = ? LIMIT 1"
   ).bind(stateHash, provider).first();
   if (!row || row.consumed_at) return null;
@@ -152,6 +152,10 @@ export async function consumeOauthState(env, state, provider = OAUTH_STATE_PROVI
     user_id: clean(row.user_id),
     code_verifier: await decryptSecret(env, row.code_verifier_encrypted, stateAad(row.user_id, provider)),
     return_to: clean(row.redirect_after),
+    metadata:(()=>{
+      try { const parsed=JSON.parse(row.metadata_json||'{}'); return parsed && typeof parsed==='object'?parsed:{}; }
+      catch { return {}; }
+    })(),
   };
 }
 

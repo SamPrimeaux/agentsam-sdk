@@ -1,6 +1,7 @@
 import { createThemeProjectAdapter, repairEmptyThemeBlockControls } from '/theme-editor/project.mjs';
 import { createThemeEditorBridge } from '/theme-editor/bridge.mjs';
 import { mountThemeEditor } from '/theme-editor/mount.mjs';
+import { startThemeGuidance } from '/theme-editor/theme-start.mjs';
 import { blankThemeProject, inheritDefaultTemplates } from '/theme-editor/starter-project.mjs';
 import { fillMissingThemeChrome } from '/theme-editor/starter-chrome.mjs';
 import { createCmsPageThemeEditorAdapter } from '/ecommerce-cms-agentsam/theme-editor/cms-page-adapter.mjs';
@@ -63,7 +64,19 @@ function publishRoute(type, identity) {
 function mount(adapter, host) {
   frame.addEventListener('load', () => {
     mountThemeEditor(frame, host, { assetsBase: '/theme-editor/' })
-      .then(() => { if (host.openAssistantOnStart) frame.contentWindow?.openAgentsamDrawer?.(); })
+      .then(async () => {
+        if (!host.openAssistantOnStart) return;
+        try {
+          await startThemeGuidance(frame, {
+            siteId: host.siteId, projectId: host.projectId,
+            siteName: host.guidance?.siteName, projectName: host.metadata?.name,
+          });
+        } catch (error) {
+          // Optional guidance cannot take down a healthy, mounted editor.
+          console.error('theme_start_guidance_failed', error);
+          frame.contentWindow?.openAgentsamDrawer?.();
+        }
+      })
       .catch(showError);
   }, { once: true });
   frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/theme-editor/editor.css"></head><body></body></html>';
@@ -153,6 +166,7 @@ async function bootProject(route) {
     adapter: bridge,
     page: initialPage,
     openAssistantOnStart,
+    guidance: { siteName: project.brief?.siteName || project.name },
     pageRoutes,
     siteId,
     projectId,
@@ -304,50 +318,20 @@ async function bootCmsPage(route) {
   mount(adapter, host);
 }
 
-/** A missing site is a normal entry state, not an editor crash. */
-async function chooseSiteForEntry(route, { marketplace = false } = {}) {
+/** Editor routes carry a verified site ID. Website selection lives at /admin/store. */
+async function chooseSiteForEntry(route) {
   const data = await jsonRequest('/api/admin/cms/sites');
-  const sites = selectableThemeEditorSites(data.sites);
-  const rememberedSiteId = (() => { try { return sessionStorage.getItem(LEGACY_SITE_SELECTION_KEY); } catch { return null; } })();
-  const choice = chooseThemeEditorSite({sites, requestedSiteId:route.siteId||null,
-    rememberedSiteId, requireSelection:marketplace && !route.siteId});
+  const choice = chooseThemeEditorSite({
+    sites: selectableThemeEditorSites(data.sites),
+    requestedSiteId: route.siteId || '',
+    requireSelection: !route.siteId,
+  });
   if (choice.site) return choice.site;
-  if (!['site_selection_required','no_sites'].includes(choice.reason)) throw new Error(choice.reason);
-  const picker = document.getElementById('theme-project-site-picker');
-  if (!picker) throw new Error('theme_editor_site_picker_missing');
-  if (loading) loading.hidden = true;
-  if (errorNode) errorNode.hidden = true;
-  frame.hidden = true;
-  picker.hidden = false;
-  picker.querySelector('h1').focus();
-  const list = picker.querySelector('[data-site-list]');
-  list.replaceChildren();
-  if (!sites.length) {
-    picker.querySelector('[data-site-description]').textContent = 'Create a website before configuring an app embed.';
-    const link = document.createElement('a');
-    link.href = '/admin/pages';
-    link.textContent = 'Go to Pages';
-    list.append(link);
+  if (['site_selection_required', 'no_sites'].includes(choice.reason)) {
+    location.replace('/admin/store');
     return null;
   }
-  return new Promise(resolve => {
-    for (const site of sites) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      const name = document.createElement('strong');
-      name.textContent = site.name || site.slug || 'Website';
-      const detail = document.createElement('span');
-      detail.textContent = [site.primary_domain || site.slug,site.status === 'draft' ? 'Draft' : ''].filter(Boolean).join(' · ');
-      button.append(name,detail);
-      button.addEventListener('click',()=>{
-        picker.hidden = true;
-        frame.hidden = false;
-        if (loading) loading.hidden = false;
-        resolve(site);
-      },{once:true});
-      list.append(button);
-    }
-  });
+  throw new Error(choice.reason);
 }
 
 async function bootLegacyPage(route) {
@@ -383,6 +367,7 @@ async function bootNewTheme(route) {
   if (!site) return;
   const siteId = site.id;
   const siteName = String(site.name || 'My website').trim() || 'My website';
+  loading?.setAttribute('aria-label','Creating private theme draft and preparing AgentSam');
   // A new theme is an account-owned editable project, not a prewritten
   // merchant website. Reuse the existing stock chrome and system templates;
   // AgentSam opens to author the design after the draft has been created.

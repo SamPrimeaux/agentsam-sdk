@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-app-fundamentals",
+  "name": "AgentSam Application Fundamentals",
+  "description": "Build and review applications using explicit execution ownership, contracts, credentialed destinations, dependency graphs, AST evidence, and Merkle evidence.",
+  "package": "@inneranimalmedia/agentsam-sdk",
+  "slash": {
+    "suggested": "/app-fundamentals"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

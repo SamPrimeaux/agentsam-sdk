@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { FolderOpen, RefreshCw, Settings2 } from 'lucide-react';
-import { WorkspaceEditor, WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
+import { AgentSamFilesystem, type AgentSamFilesystemSource, type AgentSamFilesystemContext, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
 import type { AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
 import { HttpLspTransport, workspaceRootFileUri } from '@inneranimalmedia/agentsam-ide/lsp';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
@@ -43,7 +43,16 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const [connectOpen, setConnectOpen] = useState(false);
   const openRuntimeSettings = () => window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/admin/settings/runtime' } }));
   const rememberedProjects = projects.filter(item => item.kind === 'filesystem' && !isSampleProject(item) && (item.workspaceRoot || item.name));
-  const [source,setSource] = useState<IDEFileSourceId>('local');
+  const [source,setSource] = useState<IDEFileSourceId>(() => {
+    if(typeof window==='undefined')return 'local';
+    try {
+      const saved=window.sessionStorage.getItem('agentsam:ide:source');
+      return (['local','github','r2','drive','container','docker'] as string[]).includes(saved||'')
+        ? saved as IDEFileSourceId : 'local';
+    } catch { return 'local'; }
+  });
+  // OAuth returns to this route; preserve the requested source in this tab.
+  useEffect(()=>{try{window.sessionStorage.setItem('agentsam:ide:source',source);}catch{}},[source]);
   const [browserWorkspace,setBrowserWorkspace] = useState<FileWorkspace|null>(null);
   const [browserWorkspaceName,setBrowserWorkspaceName] = useState('');
   const [browserResumeHint,setBrowserResumeHint] = useState<BrowserFsaRestore|null>(null);
@@ -115,13 +124,26 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     return undefined;
   },[project?.id,project?.kind,project?.workspaceRoot,project?.runtimeBaseUrl,project?.runtimeCapability,ready]);
   const sources = useMemo<IDEFileSource[]>(() => ([
-    { id:'local', label:'Local', state: browserWorkspace || (project?.kind === 'filesystem' && ready) ? 'connected' : 'disconnected', detail:browserWorkspace?'User-authorized browser folder (manual save; no PTY/LSP)':descriptions.local },
+    { id:'local', label:'Local', state: browserWorkspace || (project?.kind === 'filesystem' && ready) ? 'connected' : project && isSampleProject(project) ? 'sample' : 'disconnected', detail:browserWorkspace?'User-authorized browser folder (manual save; no PTY/LSP)':descriptions.local },
     { id:'github', label:'GitHub', state:'disconnected', detail:descriptions.github },
     { id:'r2', label:'Cloudflare R2', state:'disconnected', detail:descriptions.r2 },
     { id:'drive', label:'Google Drive', state:'disconnected', detail:descriptions.drive },
     { id:'container', label:'Cloudflare container', state:'disconnected', detail:descriptions.container },
     { id:'docker', label:'Docker', state:'disconnected', detail:descriptions.docker },
   ]), [project?.kind, ready, browserWorkspace]);
+
+  const localSources: AgentSamFilesystemSource[] = sources.map(item => item.id === 'local' ? {
+    ...item,
+    workspace: browserWorkspace || workspace,
+    workspaceId: browserWorkspace ? browserWorkspaceKey : project?.id,
+    workspaceLabel: browserWorkspace ? browserWorkspaceName : project?.name,
+    context: {root: browserWorkspace ? undefined : project?.workspaceRoot || undefined},
+    reconnect: () => browserWorkspace ? void reconnectBrowserFolder() : setConnectOpen(true),
+    manageConnection: openRuntimeSettings,
+  } : item);
+  const publishFilesystemContext = (context: AgentSamFilesystemContext) => {
+    window.dispatchEvent(new CustomEvent('agentsam:filesystem-context', {detail:context}));
+  };
 
   async function openBrowserFolder() {
     setSourceNotice('');
@@ -153,6 +175,13 @@ export function FilesStage({ tab }: { tab: SideTab }) {
 
   if(source!=='local')return <RemoteFilesSource source={source} onSelect={setSource}
     palette={palette} hostConnected={Boolean(browserWorkspace||(project?.kind==='filesystem'&&ready))} />;
+  const connectDialog = <Dialog open={connectOpen} onOpenChange={setConnectOpen}>
+    <DialogContent>
+      <DialogTitle className="sr-only">Connect a project</DialogTitle>
+      <DialogDescription className="sr-only">Connect an authorized project or open a folder.</DialogDescription>
+      <WorkspaceGate project={project} force onOpenBrowserFolder={browserFsaReady?openBrowserFolder:undefined} />
+    </DialogContent>
+  </Dialog>;
   if(browserWorkspace) return <section className="work-files-stage flex h-full min-h-0 min-w-0 flex-col" aria-label="Authorized browser folder IDE">
     <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2 text-xs">
       <strong className="truncate font-medium">Browser folder · {browserWorkspaceName}</strong>
@@ -162,21 +191,17 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     <div className="min-h-0 flex-1">
       {monacoFailure?<p role="alert" className="p-4 text-sm text-destructive">Monaco unavailable: {monacoFailure}</p>
         :!monacoReady?<p role="status" className="p-4 text-xs text-muted-foreground">Initializing Monaco…</p>
-        :<WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} workspace={browserWorkspace} key={browserWorkspaceKey} workspaceId={browserWorkspaceKey}
-            label={browserWorkspaceName} palette={palette} sources={sources} sourceId="local"
-            onSourceSelect={setSource} showHostModes onReconnect={()=>setConnectOpen(true)} onConnectionSettings={openRuntimeSettings}/>}
+        :<AgentSamFilesystem renderMarkdown={renderIDEWorkspaceMarkdown}
+            sources={localSources} sourceId="local" onSourceSelect={setSource}
+            palette={palette} showHostModes onContextChange={publishFilesystemContext}/>}
     </div>
+    {connectDialog}
   </section>;
-  const connectDialog = <Dialog open={connectOpen} onOpenChange={setConnectOpen}>
-    <DialogContent>
-      <DialogTitle className="sr-only">Connect a project</DialogTitle>
-      <DialogDescription className="sr-only">Connect an authorized project or open a folder.</DialogDescription>
-      <WorkspaceGate project={project} force onOpenBrowserFolder={browserFsaReady?openBrowserFolder:undefined} />
-    </DialogContent>
-  </Dialog>;
   // No connection: the New tab is the default surface. The connector only appears on request.
   if (!project || projectNeedsConnection(project) || !ready)
-    return <div className="h-full overflow-y-auto"><WorkspaceSourceRail sources={sources} sourceId="local" onSelect={setSource}/>
+    return <div className="h-full overflow-y-auto">
+      <AgentSamFilesystem sources={localSources} sourceId="local" onSourceSelect={setSource}
+        palette={palette} onContextChange={publishFilesystemContext} setup={<>
       {sourceNotice?<p role="alert" className="p-3 text-xs text-destructive">{sourceNotice}</p>:null}
       <section className="mx-3 mt-3 rounded-lg border border-border bg-card/50 p-3 text-xs" aria-label="Reconnect workspace files">
         <div className="flex items-center justify-between gap-2">
@@ -207,6 +232,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
         </div>
       </section>
       <NewTabStage tab={tab} omitKinds={['files']} onConnectProject={()=>setConnectOpen(true)} onOpenFolder={browserFsaReady?openBrowserFolder:undefined} />
+      </>} />
       {connectDialog}
     </div>;
 
@@ -226,9 +252,9 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     {sourceNotice ? <div role="status" className="border-b border-border px-3 py-2 text-xs text-muted-foreground">{sourceNotice}
       <button type="button" className="ml-3 underline" onClick={()=>setSourceNotice('')}>Dismiss</button></div> : null}
     <div className="min-h-0 flex-1">
-      <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} key={project.id} workspace={workspace} workspaceId={project.id}
-        label={project.name} palette={palette} lsp={lsp} showHostModes sources={sources} sourceId="local"
-        onSourceSelect={id => setSource(id)} onReconnect={()=>setConnectOpen(true)} onConnectionSettings={openRuntimeSettings}/>
+      <AgentSamFilesystem renderMarkdown={renderIDEWorkspaceMarkdown}
+        sources={localSources} sourceId="local" onSourceSelect={setSource}
+        palette={palette} lsp={lsp} showHostModes onContextChange={publishFilesystemContext}/>
     </div>
     {connectDialog}
   </section>;

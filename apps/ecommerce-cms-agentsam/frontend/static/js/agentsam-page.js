@@ -848,7 +848,7 @@ function renderWorkspaceLinks(content) {
   const groups = [
     { title: "Store", items: [["Home", "/admin/home"], ["Products", "/admin/products"], ["Orders", "/admin/orders"], ["Customers", "/admin/customers"]] },
     { title: "Build & understand", items: [["Content & media", "/admin/content"], ["Analytics", "/admin/analytics/overview"], ["Online store", "/admin/store"]] },
-    { title: "Site setup", items: [["Pages", "/admin/pages"], ["Theme editor", "/admin/theme-editor"], ["Preferences", "/admin/preferences"]] },
+    { title: "Site setup", items: [["Pages", "/admin/pages"], ["Preferences", "/admin/preferences"]] },
   ];
   groups.forEach((group) => {
     const section = document.createElement("section");
