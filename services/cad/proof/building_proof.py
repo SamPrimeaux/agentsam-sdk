@@ -187,6 +187,7 @@ def stage_ifc(out: Path):
     import ezdxf  # ty: ignore[unresolved-import] -- available inside native CAD container
     import ifcopenshell
     import ifcopenshell.geom
+    import ifcopenshell.util.unit
     import ifcopenshell.validate
     import numpy as np  # ty: ignore[unresolved-import] -- available inside native CAD container
     from ifcopenshell import api
@@ -249,7 +250,9 @@ def stage_ifc(out: Path):
         m = np.eye(4)
         if rotate:
             m[0, 0], m[0, 1], m[1, 0], m[1, 1] = 0.0, -1.0, 1.0, 0.0
-        m[0, 3], m[1, 3], m[2, 3] = x, y, z
+        # Inputs are millimetres; the IfcOpenShell API takes SI metres and applies the
+        # file's length unit itself. Passing millimetres here scaled every position 1000x.
+        m[0, 3], m[1, 3], m[2, 3] = x / 1000.0, y / 1000.0, z / 1000.0
         api.run("geometry.edit_object_placement", f, product=product, matrix=m)
 
     def solid(cls, name, length, height, thickness, x, y, z=0.0, rotate=False):
@@ -260,9 +263,9 @@ def stage_ifc(out: Path):
             "geometry.add_wall_representation",
             f,
             context=body,
-            length=length,
-            height=height,
-            thickness=thickness,
+            length=length / 1000.0,
+            height=height / 1000.0,
+            thickness=thickness / 1000.0,
         )
         api.run("geometry.assign_representation", f, product=e, representation=rep)
         place(e, x, y, z, rotate)
@@ -314,9 +317,9 @@ def stage_ifc(out: Path):
     settings = ifcopenshell.geom.settings()
 
     def mesh_volume(geometry):
-        v = np.array(list(geometry.verts), dtype=float).reshape(
-            -1, 3
-        )  # project units: millimetres
+        v = (
+            np.array(list(geometry.verts), dtype=float).reshape(-1, 3) * 1000.0
+        )  # ifcopenshell.geom returns SI metres; the checks work in millimetres
         t = np.array(list(geometry.faces), dtype=int).reshape(-1, 3)
         return abs(
             float(
@@ -349,6 +352,12 @@ def stage_ifc(out: Path):
         "source_psets":len([p for p in g.by_type("IfcPropertySet") if p.Name == "Pset_IAMSource"]),
     }
     ifc["volume_in3"] = total_mm3 / IN**3
+    # Read straight from the entities, not from meshed output: the unit the file declares
+    # times the stored value must equal the requested height in millimetres.
+    unit_scale_to_m = ifcopenshell.util.unit.calculate_unit_scale(g)
+    south = next(w for w in g.by_type("IfcWall") if w.Name == "Wall-S")
+    solid_item = south.Representation.Representations[0].Items[0]
+    ifc["wall_height_mm"] = solid_item.Depth * unit_scale_to_m * 1000.0
     (out / "ifc.json").write_text(json.dumps(ifc, indent=2))
 
     # DXF plan, inches
@@ -692,6 +701,13 @@ def all_stages(out: Path):
         round(fc["volume_in3"], 3),
         round(ifc["volume_in3"], 3),
         "1e-4",
+    )
+    check(
+        "ifc-wall-height-matches-source-in-declared-units",
+        abs(ifc["wall_height_mm"] - PARAMS["height"] * IN) < 1e-6,
+        round(PARAMS["height"] * IN, 3),
+        round(ifc["wall_height_mm"], 3),
+        "1e-6 mm",
     )
     check(
         "dxf-inches-and-layers",

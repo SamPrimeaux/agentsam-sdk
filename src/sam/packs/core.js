@@ -3,6 +3,7 @@ import { brandScanOp } from '../operations/brand-scan.js';
 import { securityScanOp } from '../operations/security-scan.js';
 import { terminalExecOp } from '../operations/terminal-exec.js';
 import { cadBlenderInspectOp } from '../operations/cad-blender-inspect.js';
+import { cadBimIfcOps } from '../operations/cad-bim-ifc.js';
 import { codebaseindexIngestOp } from '../operations/codebaseindex-ingest.js';
 import { planningAstarOp } from '../operations/planning-astar.js';
 import { planningGoapOp } from '../operations/planning-goap.js';
@@ -18,6 +19,7 @@ export const CORE_OPERATIONS = [
   securityScanOp,
   terminalExecOp,
   cadBlenderInspectOp,
+  ...cadBimIfcOps,
   codebaseindexIngestOp,
   planningAstarOp,
   planningGoapOp,

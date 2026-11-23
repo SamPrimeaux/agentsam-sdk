@@ -211,6 +211,7 @@
     "services/knowledge/package-lock.json",
     "services/cad/server.py",
     "services/cad/blender",
+    "services/cad/ifc",
     "services/cad/occt",
     "bin",
     "README.md",

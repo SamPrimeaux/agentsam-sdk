@@ -1121,12 +1121,13 @@ name: agentsam-sam-operations
 description: >
   Call, describe, and judge SAM operations (`sam.invoke`, `sam.describe`, `sam.discover`) such as
   repository.inspect, brand.scan, security.scan, package.audit, terminal.exec, planning.goap,
-  decision.evaluate, cad.blender.inspect, and codebaseindex.ingest. Use when you need the exact
-  input shape of an operation, want to run machinery instead of guessing, or must decide whether
-  a result is actually proof. Triggers on "sam.invoke", "operation", "SAM", "run the scan",
-  "is this proven", "receipt", and "input shape".
+  decision.evaluate, cad.blender.inspect, arch.* reference lookups, and codebaseindex.ingest.
+  Use when you need the exact input shape of an operation, want to run machinery instead of
+  guessing, or must decide whether a result is actually proof.
+  Triggers on "sam.invoke", "operation", "SAM", "run the scan", "is this proven", "receipt",
+  "input shape", "describe operation".
 metadata:
-  short-description: "Exact inputs for each SAM operation, and how to tell a real result from an empty one"
+  short-description: Exact inputs for each SAM operation, and how to tell a real result from an empty one
   aliases:
     - sam
     - sam-operations
@@ -1137,9 +1138,25 @@ user-invocable: true
 
 # SAM operations
 
-SAM (Systematic Autonomous Machinery) exposes deterministic work as **operations** with one
-canonical id (`module.action`). The CLI is a convenience layer; the operation id is the identity.
-Full vocabulary: `docs/architecture/SAM_KERNEL.md`.
+SAM (Systematic Autonomous Machinery) exposes deterministic work as operations with one canonical
+id (`module.action`). The CLI is a convenience layer; the operation id is the identity. Full
+vocabulary: `docs/architecture/SAM_KERNEL.md`.
+
+Verified against SDK 2.6.18 plus the `cad.bim.ifc.*` operations added after it. The registry grows between releases, so re-run the discovery
+commands below before relying on any table here.
+
+## Find out what exists
+
+```sh
+agentsam sam list                       # the registry
+agentsam sam describe repository.inspect   # summary, risk, lanes, input_schema when declared
+agentsam sam discover <query> --json
+agentsam sam doctor                     # installed handlers and availability
+```
+
+`discover` returned a subset of the registry (20 of 26 in 2.6.18), so use `list` for the full set
+and `describe <id>` for any id you already know. `describe` returns `risk` (`read_only` or `write`), `status`, and `input_schema` when the
+operation declares one; `discover` cards also list the execution `lanes`.
 
 ## Call one
 
@@ -1155,39 +1172,62 @@ await sam.discover({ query: ''brand'' });       // compact cards
 
 There is no `agentsam invoke` verb. Use the client, or the matching CLI command.
 
-## Exact inputs (verified 2.6.12)
+## Exact inputs
 
-| Operation | Input | Notes |
-| --- | --- | --- |
-| `repository.inspect` | `{"root":"."}` | Read-only; output is large |
-| `brand.scan` | `{"root":".","maxFiles":20}` | Counts donor/`reference/` copies, so token totals can be inflated |
-| `security.scan` | `{"root":".","offline":false}` | With `offline:true` it returns `ok` but `status:"incomplete"` and `checked_count:0` |
-| `package.audit` | `{"root":".","offline":true}` | Offline leaves public candidates `unchecked` |
-| `terminal.exec` | `{"command":"node","args":["-v"]}` | Pathless executable plus argv. No shell strings, no `argv` key |
-| `planning.goap` | `{"initialState":{},"goal":{},"actions":[{"id":"a","preconditions":{},"effects":{},"cost":1}]}` | Pure, no model spend |
-| `planning.astar` | JS only: `{ initialState, isGoal(fn), expand(fn) }` | `expand` returns `[{ nextState, cost, action }]`. Not callable from JSON, CLI, or MCP |
-| `decision.evaluate` | `{"questions":["change_risk"],"state":{}}` | Ids: `terminal_lane`, `retrieval_mode`, `change_risk`, `requires_approval`, `security_review_required`, `verification_scope` |
-| `cad.blender.inspect` | `{"source":"model.blend"}` | Needs Blender and a real file (see `agentsam-cad`) |
-| `codebaseindex.ingest` | `{"root":"."}` | Writes under `.agentsam/`, may call an embedding provider. Run only when asked |
+"Checked" says how each row was confirmed in 2.6.18: **run** (invoked, envelope inspected),
+**schema** (input shape read from `describe`, not invoked), **carried** (from the previous verification, not re-run).
+
+| Operation | Input | Checked | Notes |
+|---|---|---|---|
+| `repository.inspect` | `{"root":"."}` | schema | Read-only; output is large |
+| `brand.scan` | `{"root":".","maxFiles":20}` | run | Counts donor/reference/ copies, so token totals can be inflated |
+| `security.scan` | `{"root":".","offline":false}` | run | With `offline:true` it now returns `ok:false`, `status:"incomplete"`, `checked_count:0` |
+| `package.audit` | `{"root":".","offline":true}` | run | `ok:true` is only the envelope. Offline leaves public candidates unchecked; read the data |
+| `terminal.exec` | `{"command":"node","args":["-v"]}` | run | Pathless executable plus argv. No shell strings, no `argv` key. Risk: `write` |
+| `planning.goap` | `{"initialState":{},"goal":{},"actions":[{"id":"a","preconditions":{},"effects":{},"cost":1}]}` | run | Pure, no model spend |
+| `planning.astar` | JS only: `{ initialState, isGoal(fn), expand(fn) }` | carried | `expand` returns `[{ nextState, cost, action }]`. Not callable from JSON, CLI, or MCP |
+| `decision.evaluate` | `{"questions":["change_risk"],"state":{}}` | run | Ids: `terminal_lane`, `retrieval_mode`, `change_risk`, `requires_approval`, `security_review_required`, `verification_scope` |
+| `cad.blender.inspect` | `{"source":"model.blend"}` | run (error path) | Needs Blender and a real file; a missing file returns `ok:false` with the path (see `agentsam-cad`) |
+| `cad.bim.ifc.inspect` | `{"input":"model.ifc"}` | run | Read-only. Needs IfcOpenShell (found automatically). Check `model.truncated` |
+| `cad.bim.ifc.validate` | `{"input":"model.ifc"}` | run | Read-only. Schema validation only |
+| `cad.bim.ifc.diff` | `{"input":"a.ifc","other":"b.ifc"}` | run | Read-only. By GlobalId; states what it does not compare |
+| `cad.bim.ifc.edit` | `{"input":"a.ifc","output":"b.ifc","base":"<sha256>","edits":[...]}` | run | Risk `write`. New copy only; see `agentsam-arch-bim` for the edit list and guarantees |
+| `codebaseindex.ingest` | `{"root":"."}` | carried | Risk `write`. Writes under `.agentsam/`, may call an embedding provider. Run only when asked |
+| `arch.assembly.thickness` | `{"layers":[{"name":"...","thickness_in":0.5}]}` | run | 1-128 layers; sums only the layers given, never infers missing ones |
+| `arch.material.lookup` | `{"nominal":"2x4","condition":"surfaced_dry"}` | run | `nominal` is one of 2x4, 2x6, 2x8, 2x10, 2x12 |
+| `arch.qa.compare_dimensions` | `{"expected_in":96,"measured_in":95.9,"tolerance_in":0.125}` | run | Compares two independent measurements; all three fields required |
+| `arch.references.list` | `{}` or `{"ids":["..."]}` | run | Curated authority URLs and licences; does not fetch pages |
+| `arch.capabilities.status` | `{}` | run | Discloses implemented reference capabilities; makes no CAD engine claims |
+
+Other registered families (`artifact.render`, `robotics.*`) declare no input schema. Do not guess
+their inputs: read `describe` for the summary, and if the shape is not stated, say so instead of
+trying payloads.
 
 ## Judge the result, not the envelope
 
-- `ok: true` plus a receipt means the operation ran. It does **not** mean the result is complete.
+- `ok: true` plus a receipt means the operation ran. It does not mean the result is complete.
   Always read the data: `status`, `complete`, `checked_count`, `unchecked`.
-- A receipt id (`samr_...`) is **not durable evidence**: receipts are in memory only, and
-  `agentsam receipts show <id>` reports "not found" afterward. Cite command output, file paths,
-  and hashes instead. Re-check with `agentsam receipts list`.
-- "Is X proven?" means all of: it has input/output schemas (`sam.describe`), a test calls
-  `invoke` and checks the data, and the denied/approval path is exercised for non-read risk.
+- A receipt id (`samr_...`) is not durable evidence. Right after an invoke,
+  `agentsam receipts show samr_...` reports "not found"; `receipts list` reads a local cache of
+  other receipt kinds, and a durable catalog needs a host adapter. Cite command output, file
+  paths and hashes.
+- "Is X proven?" means all of: it has schemas (`describe`), a test calls `invoke` and checks the
+  data, and the denied/approval path is exercised for non-read risk.
+- A failed operation returns `ok:false` with `error.code` (for example `sam_operation_failed`) and
+  a message. Relay the message; do not retry with invented inputs.
 
-## Known gaps (2.6.12, re-check before relying)
+## Known gaps (2.6.18, re-check before relying)
 
-- Only `repository.inspect` declares input/output schemas; the other nine return none from `describe`.
-- These CLI commands name operations that are **not registered**: `machine.inspect`, `engine.audit`,
-  `merch.preflight`, `receipts.inspect`, `site.scrape`. Use the CLI for them.
-- The agent loop (`src/agent`, `src/providers`) does not reference SAM operations, so a model
-  cannot call them yet. Run them yourself.
-','skills/agentsam-sam-operations/SKILL.md','0d808b7c0a6f061fcd55c298b070430bb8de8245952f943e9e80d6e90d81ec75','read_only','{"origin":"sdk_source","source_id":"agentsam-sam-operations","packaged_candidate":true}') ON CONFLICT(id) DO UPDATE SET scope_type=excluded.scope_type,name=excluded.name,slash_trigger=excluded.slash_trigger,npm_package_name=excluded.npm_package_name,npm_version=excluded.npm_version,description=excluded.description,content_markdown=excluded.content_markdown,file_path=excluded.file_path,content_checksum=excluded.content_checksum,access_mode=excluded.access_mode,metadata_json=excluded.metadata_json,is_published=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_published ELSE 0 END,is_active=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_active ELSE 0 END,updated_at=datetime('now');
+- Six operations declare an `input_schema` (`repository.inspect` and the five `arch.*`). No
+  operation declares an `output_schema`, so result fields must be read, not assumed.
+- These CLI commands name operations that are not in the registry: `machine.inspect`,
+  `engine.audit`, `merch.preflight`, `receipts.inspect`, `site.scrape`. Use the CLI for them.
+- A model can call SAM operations only in a host that wires `createSamCapabilityAdapter` into the
+  capability adapter. Nothing in the SDK does that by default, so otherwise run operations
+  yourself.
+- IFC can be read, validated, diffed and edited, but there is no general project-to-IFC export:
+  `cad.bim.ifc.export` is a declared intention, not a registered operation (see `agentsam-arch-bim`).
+','skills/agentsam-sam-operations/SKILL.md','e138ed1d7e3cd87c44db18af0376c2df1b3e472eed72a7d36a829a9efb39f915','read_only','{"origin":"sdk_source","source_id":"agentsam-sam-operations","packaged_candidate":true}') ON CONFLICT(id) DO UPDATE SET scope_type=excluded.scope_type,name=excluded.name,slash_trigger=excluded.slash_trigger,npm_package_name=excluded.npm_package_name,npm_version=excluded.npm_version,description=excluded.description,content_markdown=excluded.content_markdown,file_path=excluded.file_path,content_checksum=excluded.content_checksum,access_mode=excluded.access_mode,metadata_json=excluded.metadata_json,is_published=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_published ELSE 0 END,is_active=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_active ELSE 0 END,updated_at=datetime('now');
 INSERT INTO agentsam_skill_next (id,scope_type,name,slash_trigger,npm_package_name,npm_version,is_published,is_active,description,content_markdown,file_path,content_checksum,access_mode,metadata_json) VALUES ('sdk_skill_5d367a7e4aa97cba963dfc93','platform','AgentSam Repo Recon','/repo-recon','@inneranimalmedia/agentsam-sdk','2.6.18',0,0,'Map a repository with deterministic read-only commands before reading files or spending model tokens.','---
 name: agentsam-repo-recon
 description: >
@@ -1579,27 +1619,187 @@ Prefer deterministic measurement and source documents over model recollection. D
 - https://build123d.readthedocs.io/en/latest/
 - https://docs.ifcopenshell.org/ifcopenshell-python.html
 ','skills/agentsam-arch-geometry/SKILL.md','227eb8f9b2a0205a3add0f54088fe9dca7633fadf77887c441330ce5b46e1be2','read_only','{"origin":"sdk_source","source_id":"agentsam-arch-geometry","packaged_candidate":true}') ON CONFLICT(id) DO UPDATE SET scope_type=excluded.scope_type,name=excluded.name,slash_trigger=excluded.slash_trigger,npm_package_name=excluded.npm_package_name,npm_version=excluded.npm_version,description=excluded.description,content_markdown=excluded.content_markdown,file_path=excluded.file_path,content_checksum=excluded.content_checksum,access_mode=excluded.access_mode,metadata_json=excluded.metadata_json,is_published=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_published ELSE 0 END,is_active=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_active ELSE 0 END,updated_at=datetime('now');
-INSERT INTO agentsam_skill_next (id,scope_type,name,slash_trigger,npm_package_name,npm_version,is_published,is_active,description,content_markdown,file_path,content_checksum,access_mode,metadata_json) VALUES ('sdk_skill_0062b2bf1fa0de10b9a96f11','platform','Semantic BIM and IFC','/arch-bim','@inneranimalmedia/agentsam-sdk','2.6.18',0,0,'Model typed building objects and validate IFC data requirements','---
+INSERT INTO agentsam_skill_next (id,scope_type,name,slash_trigger,npm_package_name,npm_version,is_published,is_active,description,content_markdown,file_path,content_checksum,access_mode,metadata_json) VALUES ('sdk_skill_0062b2bf1fa0de10b9a96f11','platform','Semantic BIM and IFC','/arch-bim','@inneranimalmedia/agentsam-sdk','2.6.18',0,0,'Read, validate, diff and edit real BIM/IFC by GlobalId, and prove every change by reopening it','---
 name: agentsam-arch-bim
-description: Model typed building objects and validate IFC data requirements
+description: >
+  Work with real BIM and IFC: read a model''s semantics (spatial tree, typed elements, property
+  sets, GlobalIds), know exactly what the SDK can and cannot do with an IFC today, change a model
+  without losing object identity, and prove the result by reopening it. Use for .ifc files, "BIM",
+  IfcOpenShell, GlobalId, property sets, IDS checks, IFC import or export, "is this actually BIM",
+  and any request to edit a building model. Triggers on "ifc", "bim", "ifcopenshell", "globalid",
+  "pset", "ids", "semantic model", "import ifc", "export ifc", "round trip".
+metadata:
+  short-description: "Real BIM/IFC: read semantics, know what is supported, edit by GlobalId, prove by reopening"
+  aliases:
+    - arch-bim
+    - bim
+    - ifc
 user-invocable: true
 ---
 
 # Semantic BIM and IFC
 
-**Architectural Intelligence v0.1.0 (2026-10-19).**
+Skill v0.3.0 (2026-11-23).
 
-## Operating protocol
-Use version-pinned IFC schema and buildingSMART IDS requirement profiles. Record IFC object GUID, placement, spatial containment, material and type relationships. Reopen exported IFC and reconcile entity IDs, measured bounding boxes, walls, openings and floors. IDS data checks are not building-code certification.
+**CAD stores shapes. BIM stores things that have shapes**: each object knows its type, its
+relationships and its data. IFC is the open file format that carries all of it. A file with
+geometry but no types, relationships or properties is CAD in an `.ifc` wrapper. Say so; do not
+call it BIM.
 
-## Evidence and safety
-Prefer deterministic measurement and source documents over model recollection. Distinguish verified_reference, calculated_from_inputs, measured_in_artifact, proposed, unresolved and requires_professional_review. Confirm editions, applicability, units, dimensional conditions, source rights and professional review. Only use advertised and actually verified tools. Scope-specific authority precedes general web sources.
+## What the SDK does today (re-check before relying)
+
+| Need | How | State |
+|---|---|---|
+| Read an IFC into a semantic model | `cad.bim.ifc.inspect`, `agentsam cad ifc inspect` | **Available** (read-only) |
+| Validate against the IFC schema | `cad.bim.ifc.validate`, `agentsam cad ifc validate` | **Available** (read-only) |
+| Compare two IFC files by GlobalId | `cad.bim.ifc.diff`, `agentsam cad ifc diff` | **Available** (read-only) |
+| Change a model, keeping identity | `cad.bim.ifc.edit`, `agentsam cad ifc edit` | **Available** (write; writes a new copy) |
+| Project an inspected model into a read-only CAD project | `projectFromIfcInspection` (bim-bridge) | **Available** |
+| Build a new IFC from a project (`cad.bim.ifc.export`) | declared intention | **Not an advertised operation.** A single rectangular shell can be exported through the CAD service''s `cad.building.export` route; there is no general project-to-IFC export yet |
+| IDS requirement checks | none | **No SDK operation.** Run your own tooling and label the result |
+
+Confirm with `agentsam sam list` and `agentsam sam describe cad.bim.ifc.edit`. If an operation you
+need is not listed, say "unsupported" and name what would unlock it. Never hand-write IFC text,
+and never rename another format to `.ifc`. `agentsam-cad` lists IFC4 among OCCT export formats;
+whatever that writes, reopen it with `inspect` and report which semantics actually survived
+before calling it BIM.
+
+## Check the runtime first
+
+Locally, `agentsam cad ifc status` finds a Python that really imports IfcOpenShell (PATH, a venv,
+or FreeCAD''s bundled Python), or says what it searched. The CAD service capability probe reports
+an `ifc` entry:
+
+- `installed: true` means IfcOpenShell imports and `inspect` will run.
+- `ready: true` additionally means the DXF and PDF libraries are present, which drawing and
+  export work needs. `installed` without `ready` is fine for read-only inspection.
+- If it is not installed, the error names the interpreters searched and the install command.
+  Relay that; do not substitute a different parser.
+
+Inputs to `inspect` must be a file reference `{kind:"file", mount, path}`, never a URL or inline
+text. `max_elements` caps the output: **always check `truncated`** and refuse to treat a truncated
+model as complete (the bridge itself throws on one).
+
+## Reading the result (`agentsam.bim.model.v1`)
+
+The contract lives in `@inneranimalmedia/agentsam-contracts/bim-model`. Top level:
+`source` (IFC schema, sha256, byte length), `project` (GlobalId, name, length unit and its scale
+to metres), `spatial` tree (site, building, storey), `types`, `elements`, `spaces`, and a count of
+every IFC class present. Read in this order:
+
+1. `source.ifcSchema` and `project.lengthUnit`. Everything else depends on them.
+2. Class counts. This is the model''s real inventory; compare it to what the user thinks they have.
+3. The spatial tree. Elements with no container, or no type, are a modeling defect worth reporting.
+4. `spaces[].hasGeometry`. False means a label, not a measurable room.
+5. Declared property sets and quantities are what the author wrote, not what you measured.
+
+## Rules that prevent silent corruption
+
+1. **GlobalId is identity.** 22 characters; the alphabet includes `$` and `_`. Never regenerate
+   one, never key on names, and never key on `#123` step numbers (they renumber on every write).
+   Where a charset is restricted, encode losslessly; the bridge turns a GlobalId into `ifc:<hex>`.
+2. **Units.** Read the project length unit and convert explicitly. IFC is usually metric; the
+   current CAD project runtime is inch-based. State units on every number you report.
+3. **Pin the schema.** IFC2X3, IFC4 and IFC4X3 differ in classes and property sets. Record the
+   schema and never mix class names across versions.
+4. **Relationships are data, not drawing.** A door is "in" a wall only if an opening voids the
+   wall (`IfcRelVoidsElement`) and the door fills that opening (`IfcRelFillsElement`). Containment,
+   aggregation, typing, materials and properties are each their own relationship. Check them
+   before claiming connectivity.
+5. **Standard names.** `Pset_*Common` property sets and, in IFC4, `Qto_*BaseQuantities` are
+   standard; keep custom data under your own prefix.
+6. **Geometry is not semantics.** Matching shapes prove nothing about types or relationships.
+
+## Changing a model: the loop
+
+```
+open -> find by GlobalId -> edit -> validate -> save a copy (IDs kept) -> diff -> prove
+```
+
+`cad.bim.ifc.edit` runs that loop for you, in one call, on a **copy**:
+
+```json
+{ "input": "house.ifc", "output": "house-revB.ifc", "base": "<sha256 of house.ifc you read>",
+  "edits": [
+    { "op": "attribute.set", "globalId": "<22-char id>", "attribute": "Name", "value": "North Wall" },
+    { "op": "property.set", "globalId": "<id>", "pset": "Pset_WallCommon", "name": "FireRating", "value": "1HR" },
+    { "op": "placement.move", "globalId": "<id>", "delta_m": [0, 1.25, 0] },
+    { "op": "solid.extrusion_depth", "globalId": "<id>", "depth_m": 3.2 },
+    { "op": "element.remove", "globalId": "<id>", "cascade": true }
+  ] }
+```
+
+Operations: `attribute.set` (Name, Description, ObjectType, LongName, Tag), `property.set` /
+`property.remove` (occurrence property sets; `Qto_*` quantity sets are derived and refused),
+`placement.move` (metres; carries objects placed relative to it unless `with_children:false`),
+`solid.extrusion_depth` (only a single extrusion along local Z; anything else is refused, never
+guessed), `element.remove` (refuses hosted doors and windows unless `cascade:true`; project,
+site, building and storey are protected).
+
+What it guarantees, because it checks before writing:
+
+- the source file is never modified, and an existing output is never overwritten;
+- `base` is a revision precondition: a mismatch is a conflict, so re-read and re-apply;
+- the copy adds **no new validation errors**;
+- every GlobalId survives except explicit removals (and the openings they cascade);
+- **nothing changes outside the edited objects**; a collateral change fails the whole edit;
+- one bad edit anywhere writes nothing.
+
+Find the GlobalIds with `inspect` first; never guess one. Anything the allowlist does not cover
+(new walls, new storeys, profile reshaping, re-hosting, new types) is unsupported: say so and name
+the missing edit, rather than regenerating the model, which changes every ID and breaks links,
+schedules and comments.
+
+## Proving a result
+
+`edit` returns its own diff, but prove it independently: run `cad.bim.ifc.diff` on source and
+output, and `cad.bim.ifc.validate` on the output. A change is proven when you can show all of:
+
+- **Diff by GlobalId:** added, removed, changed (with old and new values), and an explicit
+  "unchanged: N objects".
+- **Hashes:** `source_sha256` of the input and the model hash you analysed. The output file''s own
+  hash after any write.
+- **Reopened output:** inspect the written file; do not trust the writer''s exit code.
+- **Counts by class** before and after, with every difference explained.
+
+Round trip means: out, back in, same GlobalIds, same relationships, same property values. Do not
+say "round-trips" unless you reopened it and compared. Receipt ids are not durable evidence;
+cite command output, paths and hashes (see `agentsam-sam-operations`).
+
+## IDS (Information Delivery Specification)
+
+buildingSMART IDS is an XML requirements format that checks whether model *data* meets a
+specification: entity, attribute, property, classification, material and part-of facets, each with
+cardinality. It checks data presence and shape, not geometry and not building-code compliance.
+Record the IDS version (1.0 at time of writing) and the checker used. A passing IDS is not
+certification.
+
+## Evidence statuses
+
+Label every claim: `verified_reference`, `calculated_from_inputs`, `measured_in_artifact`,
+`declared_in_source` (written in the IFC, not measured by you), `proposed`, `unresolved`,
+`requires_professional_review`. Prefer deterministic measurement and source documents over model
+recollection, confirm editions, units and applicability, and use only tools that are advertised
+and actually verified.
+
+## Report format
+
+```
+IFC: <file> sha256 <...>  schema <IFC4|...>  unit <...>  truncated <yes|no>
+Runtime: ifc installed <y|n>  ready <y|n>  ifcopenshell <version>
+Inventory: <class: count, ...>
+Findings: <defects with GlobalIds>
+Change: <none | diff by GlobalId>
+Proof: <what was reopened and compared>
+Unsupported: <what the SDK cannot do here and what would unlock it>
+```
 
 ## Sources
+
 - https://standards.buildingsmart.org/IFC/RELEASE/IFC4_3/index.html
 - https://github.com/buildingSMART/IDS/releases/tag/v1.0.0
 - https://docs.ifcopenshell.org/ifcopenshell-python.html
-','skills/agentsam-arch-bim/SKILL.md','2dd92193907f65c698b9a15c35eff4168661c9b69f841b11927071f7d66c3221','read_only','{"origin":"sdk_source","source_id":"agentsam-arch-bim","packaged_candidate":true}') ON CONFLICT(id) DO UPDATE SET scope_type=excluded.scope_type,name=excluded.name,slash_trigger=excluded.slash_trigger,npm_package_name=excluded.npm_package_name,npm_version=excluded.npm_version,description=excluded.description,content_markdown=excluded.content_markdown,file_path=excluded.file_path,content_checksum=excluded.content_checksum,access_mode=excluded.access_mode,metadata_json=excluded.metadata_json,is_published=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_published ELSE 0 END,is_active=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_active ELSE 0 END,updated_at=datetime('now');
+','skills/agentsam-arch-bim/SKILL.md','00ceae6a3950f668257539193cd9bfdb33e0f81ebad68ceb99a715d15def37a7','read_only','{"origin":"sdk_source","source_id":"agentsam-arch-bim","packaged_candidate":true}') ON CONFLICT(id) DO UPDATE SET scope_type=excluded.scope_type,name=excluded.name,slash_trigger=excluded.slash_trigger,npm_package_name=excluded.npm_package_name,npm_version=excluded.npm_version,description=excluded.description,content_markdown=excluded.content_markdown,file_path=excluded.file_path,content_checksum=excluded.content_checksum,access_mode=excluded.access_mode,metadata_json=excluded.metadata_json,is_published=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_published ELSE 0 END,is_active=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_active ELSE 0 END,updated_at=datetime('now');
 INSERT INTO agentsam_skill_next (id,scope_type,name,slash_trigger,npm_package_name,npm_version,is_published,is_active,description,content_markdown,file_path,content_checksum,access_mode,metadata_json) VALUES ('sdk_skill_dfd6af594c4fa41be820882e','platform','Architectural assemblies','/arch-assemblies','@inneranimalmedia/agentsam-sdk','2.6.18',0,0,'Compute detailed walls, roof, floors and openings from constituent layers','---
 name: agentsam-arch-assemblies
 description: Compute detailed walls, roof, floors and openings from constituent layers
