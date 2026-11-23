@@ -565,13 +565,15 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const requestedCapabilities = Array.isArray(requestedMeta.requested_capabilities)
       ? requestedMeta.requested_capabilities.filter(Boolean)
       : [];
-    // Prefer token response scopes; otherwise the scopes this start actually requested.
-    // Never invent host-default scopes for a narrower packs= connect.
-    const grantedScopeStr = tokens.scope
-      || (requestedScopes.length ? requestedScopes.join(' ') : requestedCloudflareScopes({
-        capabilities: requestedCapabilities.length ? requestedCapabilities : hostDefaultCapabilities,
-        packs: Array.isArray(requestedMeta.requested_packs) ? requestedMeta.requested_packs : [],
-      }).join(' '));
+    // OAuth may omit 'scope' when the issued grant is identical to the
+    // request. The only valid fallback is THIS saved PKCE state's scope set,
+    // never current host defaults or a previous token's permissions.
+    const providerScopeStr = typeof tokens.scope === 'string' ? tokens.scope.trim() : '';
+    if (!providerScopeStr && requestedScopes.length === 0) {
+      return settingsRedirect(url, 'error', 'oauth_requested_scopes_missing', stored.return_to || '');
+    }
+    const grantedScopeStr = providerScopeStr || requestedScopes.join(' ');
+    const scopeSource = providerScopeStr ? 'token_response' : 'request_equivalence';
     const capabilitySet = requestedCapabilities.length
       ? requestedCapabilities.slice()
       : hostDefaultCapabilities.slice();
@@ -582,6 +584,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token || null,
       scopes: grantedScopeStr,
+      scopeSource,
       accountId: tokens.account_id || null,
       expiresAt: tokens.expires_in
         ? Math.floor(Date.now() / 1000) + Number(tokens.expires_in)
