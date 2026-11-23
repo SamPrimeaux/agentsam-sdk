@@ -601,6 +601,12 @@ export const localStudioSettingsHost: SettingsHost = {
     if(typeof window!=="undefined")
       window.dispatchEvent(new CustomEvent("agentsam:navigate",{detail:{to:"/admin/settings/"+unit}}));
   },
+  openPluginWorkspace(pluginKey) {
+    if(typeof window === "undefined" || !/^[a-z0-9][a-z0-9_.-]{1,100}$/i.test(pluginKey))return;
+    window.dispatchEvent(new CustomEvent("agentsam:navigate",{
+      detail:{to:"/admin/settings/customize?plugin="+encodeURIComponent(pluginKey)},
+    }));
+  },
   async updateGeneralPreferences(preferences:SettingsGeneralPreferences){
     await settingsRequest("/api/settings/preferences","PUT",preferences);
     if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));

@@ -157,7 +157,11 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cad'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cli'), false);
   assert.equal(context.NAV.apps.some((item) => item.id === 'ecommerce-cms-agentsam'), false);
-  assert.equal(context.NAV.apps.some((item) => item.href === '/admin/growth'), true);
+  // Bundled Ecommerce extensions are optional. A missing Growth installation
+  // must not become a hardcoded launcher; if included, its route is stable.
+  const installedGrowth = projection.apps.find((item) => item.id === 'growth');
+  if (installedGrowth) assert.equal(installedGrowth.href, '/admin/growth');
+  else assert.equal(context.NAV.apps.some((item) => item.href === '/admin/growth'), false);
   assert.equal(context.NAV.main.some((item) => item.id === 'products'), false, 'Products live under Sales channels');
   assert.equal(context.NAV.main.some((item) => item.id === 'library' || item.id === 'help'), false);
   const media = context.NAV.main.find((item) => item.id === 'media');
