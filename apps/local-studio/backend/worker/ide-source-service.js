@@ -95,14 +95,37 @@ async function providerJson(fetchImpl,url,token,extraHeaders={}) {
   return {data};
 }
 
-export function normalizeR2Listing(body) {
+/**
+ * Legacy AgentSamFilesystem partitionR2Listing semantics: flattening a provider
+ * response must not turn nested keys into root files. R2 APIs sometimes return
+ * flat keys even when delimiter prefixes are missing.
+ */
+export function normalizeR2Listing(body, currentPrefix='') {
   const objects=Array.isArray(body.result) ? body.result : [];
   const prefixes=Array.isArray(body.result_info?.delimited) ? body.result_info.delimited : [];
+  const prefix=currentPrefix ? currentPrefix.replace(/\\/+$/, '')+'/' : '';
+  const folders=new Set();
+  const files=[];
+  for(const candidate of prefixes) {
+    if(typeof candidate!=='string'||!sourcePathOk(candidate)||!candidate.startsWith(prefix))continue;
+    const rest=candidate.slice(prefix.length);
+    if(!rest)continue;
+    const slash=rest.indexOf('/');
+    folders.add(prefix+(slash>=0?rest.slice(0,slash+1):rest+'/'));
+  }
+  for(const item of objects) {
+    if(!sourcePathOk(item?.key)||!item.key.startsWith(prefix))continue;
+    const rest=item.key.slice(prefix.length);
+    if(!rest)continue;
+    const slash=rest.indexOf('/');
+    if(slash>=0){folders.add(prefix+rest.slice(0,slash+1));continue;}
+    files.push({id:item.key,name:rest,kind:'file',path:item.key,size:Number(item.size||0),
+      version:item.etag||null,mimeType:item.http_metadata?.contentType||null});
+  }
   return {
     entries:[
-      ...prefixes.filter(p=>sourcePathOk(p)).map(p=>({id:p,name:p.split('/').filter(Boolean).at(-1),kind:'folder',path:p})),
-      ...objects.filter(v=>sourcePathOk(v.key)).map(v=>({id:v.key,name:v.key.split('/').at(-1),kind:'file',
-        path:v.key,size:Number(v.size||0),version:v.etag||null,mimeType:v.http_metadata?.contentType||null})),
+      ...[...folders].sort().map(p=>({id:p,name:p.replace(/\\/$/,'').split('/').at(-1),kind:'folder',path:p})),
+      ...files.sort((a,b)=>a.name.localeCompare(b.name)),
     ],
     cursor:body.result_info?.cursor||null,
     truncated:Boolean(body.result_info?.is_truncated),
@@ -232,7 +255,7 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
       const response=await providerJson(f,query,cf.token,
         jurisdiction==='default'?{}:{'cf-r2-jurisdiction':jurisdiction});
       if(response.error)return error(response.error,response.status);
-      return json({ok:true,...normalizeR2Listing(response.data)});
+      return json({ok:true,...normalizeR2Listing(response.data,prefix)});
     }
     const key=sp.get('key')||'';
     if(!key||!sourcePathOk(key))return error('r2_key_invalid');
