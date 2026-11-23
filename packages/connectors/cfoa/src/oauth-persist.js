@@ -163,8 +163,12 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
     ? input.capabilitySet
     : (Array.isArray(priorMeta.granted_at_capability_set) ? priorMeta.granted_at_capability_set : [])
   ).filter((id) => {
-    const needed = getCloudflareCapability(id)?.oauthScopes;
-    return !Array.isArray(needed) || !needed.length || needed.every((scope) => grantedSet.has(scope));
+    const capability = getCloudflareCapability(id);
+    const needed = capability?.oauthScopes;
+    // An unknown or token-only capability cannot become "granted" because
+    // its OAuth scope list happened to be absent.
+    return Array.isArray(needed) && needed.length > 0
+      && needed.every((scope) => grantedSet.has(scope));
   });
 
   let metadataJson = null;
@@ -178,6 +182,9 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
     if (accountDisplay) next.display = accountDisplay;
     if (clientId) next.connected_via_client_id = clientId;
     if (capabilitySet.length) next.granted_at_capability_set = capabilitySet;
+    if (input.scopeSource === 'token_response' || input.scopeSource === 'request_equivalence') {
+      next.scope_provenance = input.scopeSource;
+    }
     delete next.connected_via_app;
     metadataJson = JSON.stringify(next);
   } catch {
@@ -253,6 +260,7 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
     provenance: {
       connected_via_client_id: clientId,
       granted_at_capability_set: capabilitySet,
+      scope_provenance: input.scopeSource || null,
     },
   };
 }

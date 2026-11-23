@@ -96,3 +96,54 @@ test('GitHub rejects invalid repository, branch, and cross-directory file reques
     '/api/work/ide/github/file?account=developer&repo=Example%2Fmy-app&branch=main&path=..%2Fsecret'];
   for(const path of reject)assert.equal((await parse(await handleIdeSourceRequest(get(path),grant,owner))).status,400);
 });
+
+test('GitHub Changes compare is account scoped and identifies renamed committed files',async()=>{
+  const query=new URLSearchParams({...Object.fromEntries(params),base:'main',branch:'feature/editor'});
+  const route='/api/work/ide/github/changes?'+query.toString();
+  const response=await parse(await handleIdeSourceRequest(get(route),await env(),owner,{
+    fetchImpl:async (resource,options)=>{
+      assert.equal(options.headers.authorization,'Bearer token-secret');
+      assert.ok(String(resource).includes('/repos/Example/my-app/compare/main...feature%2Feditor?per_page=100'));
+      return Response.json({files:[
+        {filename:'src/workbench.ts',status:'modified',sha},
+        {filename:'src/current.ts',previous_filename:'src/previous.ts',status:'renamed',sha:nextSha},
+      ]});
+    },
+  }));
+  assert.equal(response.status,200);
+  assert.deepEqual(response.files.map(file=>file.path),['src/workbench.ts','src/current.ts']);
+  assert.equal(response.files[1].previous_path,'src/previous.ts');
+  assert.equal(JSON.stringify(response).includes('token-secret'),false);
+  const same=await parse(await handleIdeSourceRequest(
+    get('/api/work/ide/github/changes?'+new URLSearchParams({...Object.fromEntries(params),base:'main'})),
+    await env(),owner,{fetchImpl:async()=>{throw Error('same branch should skip provider');}},
+  ));
+  assert.equal(same.status,200);assert.deepEqual(same.files,[]);
+});
+
+test('GitHub Changes refuses incomplete comparisons and requires an explicit base',async()=>{
+  const incomplete=await parse(await handleIdeSourceRequest(
+    get('/api/work/ide/github/changes?'+new URLSearchParams({...Object.fromEntries(params),base:'main',branch:'feature/large'})),
+    await env(),owner,{fetchImpl:async()=>Response.json({files:Array.from({length:100},(_,i)=>({filename:'src/'+i+'.ts',status:'modified'}))})},
+  ));
+  assert.equal(incomplete.status,409);
+  assert.equal(incomplete.error,'github_compare_too_large');
+  const noBase=await parse(await handleIdeSourceRequest(get('/api/work/ide/github/changes?'+params),await env(),owner,{
+    fetchImpl:async()=>{throw Error('missing base must not fetch');},
+  }));
+  assert.equal(noBase.status,400);
+});
+
+test('GitHub branch discovery remains inside authorized repository and account',async()=>{
+  const response=await parse(await handleIdeSourceRequest(
+    get('/api/work/ide/github/branches?'+new URLSearchParams({account,repo:'Example/my-app'})),
+    await env(),owner,{fetchImpl:async (url,options)=>{
+      assert.ok(String(url).endsWith('/repos/Example/my-app/branches?per_page=100&page=1'));
+      assert.equal(options.headers.authorization,'Bearer token-secret');
+      return Response.json([{name:'main',protected:true},{name:'feature/editor',protected:false}]);
+    }},
+  ));
+  assert.equal(response.status,200);
+  assert.deepEqual(response.branches.map(b=>b.name),['main','feature/editor']);
+  assert.equal(response.nextPage,null);
+});

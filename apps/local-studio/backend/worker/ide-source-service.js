@@ -95,14 +95,37 @@ async function providerJson(fetchImpl,url,token,extraHeaders={}) {
   return {data};
 }
 
-export function normalizeR2Listing(body) {
+/**
+ * Legacy AgentSamFilesystem partitionR2Listing semantics: flattening a provider
+ * response must not turn nested keys into root files. R2 APIs sometimes return
+ * flat keys even when delimiter prefixes are missing.
+ */
+export function normalizeR2Listing(body, currentPrefix='') {
   const objects=Array.isArray(body.result) ? body.result : [];
   const prefixes=Array.isArray(body.result_info?.delimited) ? body.result_info.delimited : [];
+  const prefix=currentPrefix ? currentPrefix.replace(/\/+$/, '')+'/' : '';
+  const folders=new Set();
+  const files=[];
+  for(const candidate of prefixes) {
+    if(typeof candidate!=='string'||!sourcePathOk(candidate)||!candidate.startsWith(prefix))continue;
+    const rest=candidate.slice(prefix.length);
+    if(!rest)continue;
+    const slash=rest.indexOf('/');
+    folders.add(prefix+(slash>=0?rest.slice(0,slash+1):rest+'/'));
+  }
+  for(const item of objects) {
+    if(!sourcePathOk(item?.key)||!item.key.startsWith(prefix))continue;
+    const rest=item.key.slice(prefix.length);
+    if(!rest)continue;
+    const slash=rest.indexOf('/');
+    if(slash>=0){folders.add(prefix+rest.slice(0,slash+1));continue;}
+    files.push({id:item.key,name:rest,kind:'file',path:item.key,size:Number(item.size||0),
+      version:item.etag||null,mimeType:item.http_metadata?.contentType||null});
+  }
   return {
     entries:[
-      ...prefixes.filter(p=>sourcePathOk(p)).map(p=>({id:p,name:p.split('/').filter(Boolean).at(-1),kind:'folder',path:p})),
-      ...objects.filter(v=>sourcePathOk(v.key)).map(v=>({id:v.key,name:v.key.split('/').at(-1),kind:'file',
-        path:v.key,size:Number(v.size||0),version:v.etag||null,mimeType:v.http_metadata?.contentType||null})),
+      ...[...folders].sort().map(p=>({id:p,name:p.replace(/\/$/,'').split('/').at(-1),kind:'folder',path:p})),
+      ...files.sort((a,b)=>a.name.localeCompare(b.name)),
     ],
     cursor:body.result_info?.cursor||null,
     truncated:Boolean(body.result_info?.is_truncated),
@@ -120,15 +143,32 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
   const account=sanitize(sp.get('account'));
   try {
     if(url.pathname.endsWith('/sources')) {
-      const [drive,github,cf]=await Promise.all([
+      const [drive,github,cf,registered]=await Promise.all([
         connectorStatus(env,owner,'google_drive'),
         connectorStatus(env,owner,'github'),
         listCloudflareConnectionRecords(env,owner),
+        env.DB.prepare("SELECT id,provider_key,auth_type,config_json FROM agentsam_plugins " +
+          "WHERE plugin_kind='oauth' AND provider_key IN ('google_drive','github','cloudflare')").all()
+          .then(value=>value.results||[],()=>[]),
       ]);
+      // Plugin IDs originate in the shared registry; neither Monaco nor Files
+      // invents connection destinations or embeds provider-specific OAuth URLs.
+      const pick=provider=>registered.find(row=>{
+        if(row.provider_key!==provider)return false;
+        if(provider!=='cloudflare')return true;
+        let cfg={};
+        try{cfg=JSON.parse(row.config_json||'{}');}catch{return false;}
+        return cfg.pack!==true && row.auth_type==='oauth';
+      })?.id||null;
       return json({ok:true,googleDrive:drive.map(x=>({account:x.accountIdentifier,label:x.accountLabel})),
         github:github.map(x=>({account:x.accountIdentifier,label:x.accountLabel})),
         cloudflare:cf.filter(x=>x.status==='connected'&&accountOk(x.cloudflareAccountId))
-          .map(x=>({account:x.cloudflareAccountId,label:x.accountLabel,scopes:x.scopes}))});
+          .map(x=>({account:x.cloudflareAccountId,label:x.accountLabel,scopes:x.scopes})),
+        connectionPlugins:{
+          googleDrive:pick('google_drive'),
+          github:pick('github'),
+          cloudflare:pick('cloudflare'),
+        }});
     }
     if(url.pathname.includes('/drive/')) {
       const auth=await googleAccess(env,owner,account,f);
@@ -232,7 +272,7 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
       const response=await providerJson(f,query,cf.token,
         jurisdiction==='default'?{}:{'cf-r2-jurisdiction':jurisdiction});
       if(response.error)return error(response.error,response.status);
-      return json({ok:true,...normalizeR2Listing(response.data)});
+      return json({ok:true,...normalizeR2Listing(response.data,prefix)});
     }
     const key=sp.get('key')||'';
     if(!key||!sourcePathOk(key))return error('r2_key_invalid');

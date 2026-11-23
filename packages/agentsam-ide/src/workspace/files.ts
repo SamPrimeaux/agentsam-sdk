@@ -98,7 +98,17 @@ export interface FileWorkspace {
   /** Optional, host-authorized Merkle manifest. Never claim a snapshot without a root hash. */
   snapshot?(): Promise<WorkspaceSnapshot>;
   /** Renderability and external language policy are host decisions. */
-  configuration?: { readonly?: boolean; manualSave?: boolean; defaultLanguage?: string; supportedLanguages?: string[]; directories?: string[]; references?: string[]; dependencies?: string[] };
+  configuration?: {
+    readonly?: boolean;
+    manualSave?: boolean;
+    defaultLanguage?: string;
+    supportedLanguages?: string[];
+    directories?: string[];
+    references?: string[];
+    dependencies?: string[];
+    /** Explicit adapter support. Never present no-op controls as real tools. */
+    capabilities?: Partial<Record<'create'|'rename'|'delete'|'search'|'history'|'restore'|'changes'|'snapshot', boolean>>;
+  };
 }
 
 export class FileWorkspaceError extends Error {

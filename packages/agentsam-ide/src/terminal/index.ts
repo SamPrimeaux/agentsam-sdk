@@ -36,6 +36,21 @@ export function buildBootBanner(opts: {
   };
 }
 
+/**
+ * A terminal attaches to an authorized machine session, not to an editor project.
+ * A project may supply the initial cwd, but must never grant host execution by
+ * itself. The hosting service is responsible for authenticating the returned
+ * WebSocket URL or native runtime capability before calling this function.
+ */
+export function canAttachAuthorizedTerminal(input: {
+  hostedWebsocketUrl?: string | null;
+  runtimeBaseUrl?: string | null;
+  runtimeCapability?: string | null;
+}): boolean {
+  return Boolean(input.hostedWebsocketUrl?.trim()) ||
+    (Boolean(input.runtimeBaseUrl?.trim()) && Boolean(input.runtimeCapability?.trim()));
+}
+
 export const AGENTSAMD_DEFAULT_LISTEN = '127.0.0.1:18765';
 
 export async function probeAgentsamd(listen = AGENTSAMD_DEFAULT_LISTEN): Promise<{

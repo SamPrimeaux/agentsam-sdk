@@ -107,6 +107,12 @@ export function AppShellFrame() {
         event.preventDefault();
         useWorkStore.getState().toggleTerminal();
       }
+      // Standard IDE shortcut: toggle the integrated CLI without switching
+      // away from Monaco or requiring a project to be selected first.
+      if (meta && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "j") {
+        event.preventDefault();
+        useWorkStore.getState().toggleTerminal();
+      }
       if (meta && event.key.toLowerCase() === "b") {
         event.preventDefault();
         void navigate({ to: "/admin/chats" });

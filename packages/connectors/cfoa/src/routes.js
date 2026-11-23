@@ -18,7 +18,7 @@ import {
 } from './index.js';
 import { cloudflareMediaConnectUrl, discoverCloudflareMedia, listCloudflareR2Objects } from './families/media.js';
 import { resolveAuthenticatedOwner } from './owner.js';
-import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, pluginPackScopes } from './scope-registry.js';
+import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, pluginPackScopes, listProviderScopeOptions, listProviderPluginPacks, scopesForFullCatalogOptIn } from './scope-registry.js';
 import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
 
 const OAUTH_STATE_PROVIDER = 'cloudflare';
@@ -174,6 +174,7 @@ export function isCloudflareConnectionPath(pathname) {
     || pathname === '/api/connections/cloudflare/select'
     || pathname === '/api/connections/cloudflare/accounts'
     || pathname === '/api/connections/cloudflare/resources'
+    || pathname === '/api/connections/cloudflare/permissions'
     || /^\/api\/connections\/cloudflare\/r2\/buckets\/[^/]+\/objects$/.test(pathname);
 }
 
@@ -381,6 +382,28 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
 
   await ensureTables(env);
 
+  if (url.pathname === '/api/connections/cloudflare/permissions' && request.method === 'GET') {
+    const [offerable, packs, preferred] = await Promise.all([
+      listProviderScopeOptions(env),
+      listProviderPluginPacks(env),
+      loadCloudflareConnectionRecord(env, ownerId).catch(() => null),
+    ]);
+    if (!offerable || !packs) {
+      return json({ ok:false, error:'cloudflare_permission_registry_unavailable' }, 503);
+    }
+    const granted = Array.isArray(preferred?.scopes) ? preferred.scopes : [];
+    return json({
+      ok:true, provider:'cloudflare', total:offerable.length,
+      // A catalog scope is merely OFFERABLE. It must never be displayed as a
+      // granted permission unless present on this account's active token.
+      available_permissions:offerable,
+      registered_packs:packs,
+      connection_id:preferred?.connectionId || null,
+      granted_scopes:granted,
+      account_selection_required:!preferred,
+    });
+  }
+
   if (url.pathname === '/api/connections/cloudflare' && request.method === 'GET') {
     const connection = env.DB
       ? await loadCloudflareConnectionRecord(env, ownerId)
@@ -415,16 +438,29 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const registryExtra = [];
     for (const id of capabilitySet) {
       const fromRegistry = await registryScopesForCapability(env, id);
+      if (requested.includes(id) && !fromRegistry) {
+        return json({ok:false,error:'cloudflare_capability_unavailable',capability:id},400);
+      }
       if (fromRegistry) registryExtra.push(...fromRegistry);
     }
     const requestedScopes = requestedCloudflareScopes({
       capabilities: capabilitySet,
       packs: requestedPacks,
     });
-    const alreadyGranted = await activeGrantedScopes(env, ownerId);
-    // Pack scopes are declared by the plugin rows (agentsam_plugins.config_json); code catalog is the fallback.
+    // Do not import another Cloudflare account's latest scopes. Carry forward
+    // only grants on the explicitly selected (or preferred) account.
+    const selectedAccountId=String(url.searchParams.get('account_id')||'').trim();
+    const existingConnection=await loadCloudflareConnectionRecord(env,ownerId,
+      selectedAccountId?{connectionId:selectedAccountId}:{}).catch(()=>null);
+    const alreadyGranted=existingConnection && !existingConnection.account_selection_required
+      ? await activeGrantedScopes(env,ownerId,'cloudflare',existingConnection.connectionId)
+      : [];
+    // Plugin-scoped feature packs come from agentsam_plugins. The explicit
+    // 'all' choice must include all 374 live D1 permissions, not 315 static ones.
     const packScopes = (await pluginPackScopes(env, requestedPacks)) || [];
-    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra, ...packScopes])]);
+    const allScopes = await scopesForFullCatalogOptIn(env, requestedPacks);
+    if (allScopes === null) return json({ok:false,error:'cloudflare_full_permission_registry_unavailable'},503);
+    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra, ...packScopes, ...allScopes])]);
     const saved = await saveOAuthState(env, {
       state,
       ownerId,
@@ -529,13 +565,15 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const requestedCapabilities = Array.isArray(requestedMeta.requested_capabilities)
       ? requestedMeta.requested_capabilities.filter(Boolean)
       : [];
-    // Prefer token response scopes; otherwise the scopes this start actually requested.
-    // Never invent host-default scopes for a narrower packs= connect.
-    const grantedScopeStr = tokens.scope
-      || (requestedScopes.length ? requestedScopes.join(' ') : requestedCloudflareScopes({
-        capabilities: requestedCapabilities.length ? requestedCapabilities : hostDefaultCapabilities,
-        packs: Array.isArray(requestedMeta.requested_packs) ? requestedMeta.requested_packs : [],
-      }).join(' '));
+    // OAuth may omit 'scope' when the issued grant is identical to the
+    // request. The only valid fallback is THIS saved PKCE state's scope set,
+    // never current host defaults or a previous token's permissions.
+    const providerScopeStr = typeof tokens.scope === 'string' ? tokens.scope.trim() : '';
+    if (!providerScopeStr && requestedScopes.length === 0) {
+      return settingsRedirect(url, 'error', 'oauth_requested_scopes_missing', stored.return_to || '');
+    }
+    const grantedScopeStr = providerScopeStr || requestedScopes.join(' ');
+    const scopeSource = providerScopeStr ? 'token_response' : 'request_equivalence';
     const capabilitySet = requestedCapabilities.length
       ? requestedCapabilities.slice()
       : hostDefaultCapabilities.slice();
@@ -546,6 +584,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token || null,
       scopes: grantedScopeStr,
+      scopeSource,
       accountId: tokens.account_id || null,
       expiresAt: tokens.expires_in
         ? Math.floor(Date.now() / 1000) + Number(tokens.expires_in)
