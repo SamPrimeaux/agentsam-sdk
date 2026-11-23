@@ -117,7 +117,7 @@ export function BrandPluginWorkspace({ data }: { data: unknown }) {
           <h4 className="text-[13px] font-semibold">Recorded color roles</h4>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {colors.map(item => <article key={item.name} className="overflow-hidden rounded-lg border border-border/70">
-              <div className="h-16" style={{ backgroundColor: item.value }} aria-label={item.name + " color sample"}/>
+              <div className="h-16 brand-workspace-swatch" style={{ "--brand-swatch-color": item.value } as CSSProperties} aria-label={item.name + " color sample"}/>
               <div className="space-y-1 px-3 py-2"><p className="text-[12px] font-medium">{item.name}</p>
                 <p className="break-all text-[11px] text-muted-foreground">{item.sourceValue}</p>
                 {item.usage && <p className="text-[11px] text-muted-foreground">{item.usage}</p>}
