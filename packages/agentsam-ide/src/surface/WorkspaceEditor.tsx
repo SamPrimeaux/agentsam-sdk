@@ -28,19 +28,35 @@ export type WorkspaceEditorProps = {
   onConnectionSettings?: () => void;
   /** Host-owned source context for the agent; never includes OAuth credentials. */
   onActiveFileChange?: (file: {path:string;version:string}|null) => void;
+  /** Preserve unsaved untitled buffers across host source changes. */
+  initialUntitledDrafts?: UntitledEditorDraft[];
+  onUntitledDraftsChange?: (drafts: UntitledEditorDraft[]) => void;
+  /** A host-owned reconnect / account picker, rendered without leaving Monaco. */
+  connectionPanel?: ReactNode;
   /** Host-owned full Markdown renderer; avoids bundling an untrusted parser into the portable IDE. */
   renderMarkdown?: (content:string) => ReactNode;
   onExit?: () => void;
   agent?: { label: string; propose(input: {path: string; content: string; version: string}): Promise<{content: string; explanation: string}> };
 };
+export type UntitledEditorDraft = {
+  path: string;
+  displayName: string;
+  value: string;
+  language?: string;
+  targetDirectory?: string;
+};
 type Tab = WorkspaceFile & { untitled?: boolean; targetDirectory?: string; value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string; preview?: WorkspacePreview };
 type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'Changes' | 'Snapshot' | 'References' | 'Dependencies';
 
-export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown, onReconnect, onConnectionSettings, onActiveFileChange}: WorkspaceEditorProps) {
+export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown, onReconnect, onConnectionSettings, onActiveFileChange, initialUntitledDrafts, onUntitledDraftsChange, connectionPanel}: WorkspaceEditorProps) {
   const [tree,setTree]=useState<WorkspaceEntry[]>([]);
   const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
-  const [tabs,setTabs]=useState<Tab[]>([]);
-  const [active,setActive]=useState('');
+  const [tabs,setTabs]=useState<Tab[]>(()=>(initialUntitledDrafts||[]).map(draft=>({
+    path:draft.path,displayName:draft.displayName,content:draft.value,value:draft.value,
+    version:'untitled',language:draft.language||'plaintext',status:'modified',untitled:true,
+    targetDirectory:draft.targetDirectory,diagnostics:[],editorDiagnostics:[],
+  })));
+  const [active,setActive]=useState(()=>initialUntitledDrafts?.[0]?.path||'');
   const [panel,setPanel]=useState<Panel>('Explorer');
   const [query,setQuery]=useState('');
   const [hits,setHits]=useState<WorkspaceSearchHit[]>([]);
@@ -49,7 +65,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const [dialogError,setDialogError]=useState('');
   const [savingDraft,setSavingDraft]=useState(false);
   const [confirmation,setConfirmation]=useState<{kind:'delete'|'restore'|'overwrite';revision?:WorkspaceRevision}|null>(null);
-  const draftCounter=useRef(0);
+  const draftCounter=useRef(initialUntitledDrafts?.length||0);
   const [pathInput,setPathInput]=useState('');
   const [paletteMode,setPaletteMode]=useState<'file'|'command'|null>(null);
   const [paletteQuery,setPaletteQuery]=useState('');
@@ -76,6 +92,12 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const latestTabs=useRef(tabs);latestTabs.current=tabs;
   const latestActive=useRef(active);latestActive.current=active;
   const current=tabs.find(tab=>tab.path===active);
+  useEffect(()=>{
+    onUntitledDraftsChange?.(tabs.filter(tab=>tab.untitled).map(tab=>({
+      path:tab.path,displayName:tab.displayName||'Untitled',
+      value:tab.value,language:tab.language,targetDirectory:tab.targetDirectory,
+    })));
+  },[tabs,onUntitledDraftsChange]);
   const menuEntry=contextMenu?tree.find(entry=>entry.path===contextMenu.path):null;
   const visibleTree=useMemo(()=>visibleWorkspaceTree(tree,expanded),[tree,expanded]);
   const loadedFolders=useRef<Set<string>>(new Set());
@@ -90,7 +112,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const canSnapshot=Boolean(workspace.snapshot)&&operations?.snapshot!==false;
   const createUntitled=(parent='')=>{
     const number=++draftCounter.current;
-    const path='__agentsam_untitled__/'+Date.now().toString(36)+'-'+number;
+    const path='__agentsam_untitled__/'+crypto.randomUUID();
     const tab:Tab={
       path,displayName:'Untitled-'+number,content:'',value:'',version:'untitled',
       language:'plaintext',status:'modified',untitled:true,targetDirectory:parent,
@@ -423,6 +445,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         {sources?.length ? <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} /> : null}
         <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
+          {panel==='Explorer'&&connectionPanel?<div className="asi-source-connect">{connectionPanel}</div>:null}
           {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" aria-label="New file" title="Create untitled file" onClick={()=>createUntitled()}>＋</button><button type="button" disabled={!canCreate} aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
             {treeError&&<div className="asi-reconnect" role="alert"><strong>Files unavailable</strong><p>{treeError}</p><div>{onReconnect&&<button type="button" onClick={onReconnect}>Reconnect workspace</button>}{onConnectionSettings&&<button type="button" onClick={onConnectionSettings}>Runtime settings</button>}<button type="button" onClick={()=>void refresh()}>Retry files</button></div></div>}
             <WorkspaceTreeView entries={visibleTree} expanded={expanded} active={active}
