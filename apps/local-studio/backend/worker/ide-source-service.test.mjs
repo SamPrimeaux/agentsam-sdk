@@ -218,3 +218,27 @@ test('R2 hierarchical list restores folders when the provider returns flat neste
   },'src/');
   assert.deepEqual(next.entries.map(entry=>entry.path),['src/nested/','src/a.ts']);
 });
+
+test('Files discovery resolves plugin IDs from agentsam_plugins, not fixed source URLs',async()=>{
+  const e=env([]);
+  const original=e.DB.prepare.bind(e.DB);
+  e.DB.prepare=(sql)=>{
+    if(sql.includes('FROM agentsam_plugins'))return {
+      all:async()=>({results:[
+        {id:'plg_2ca659475bd1ee6a',provider_key:'google_drive',auth_type:'oauth',config_json:'{}'},
+        {id:'plg_1111111111111111',provider_key:'github',auth_type:'oauth',config_json:'{}'},
+        {id:'plg_2222222222222222',provider_key:'cloudflare',auth_type:'oauth',config_json:'{"pack":true,"pack_id":"create"}'},
+        {id:'plg_3333333333333333',provider_key:'cloudflare',auth_type:'oauth',config_json:'{}'},
+      ]}),
+    };
+    return original(sql);
+  };
+  const response=await parse(await handleIdeSourceRequest(get('/api/work/ide/sources'),e,owner));
+  assert.equal(response.status,200);
+  assert.deepEqual(response.connectionPlugins,{
+    googleDrive:'plg_2ca659475bd1ee6a',
+    github:'plg_1111111111111111',
+    cloudflare:'plg_3333333333333333',
+  });
+  assert.equal(JSON.stringify(response).includes('access_token_encrypted'),false);
+});
