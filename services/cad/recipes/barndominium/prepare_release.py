@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Package structure concept source, verified exports, QA and authoring scripts."""
 import hashlib
 import json
