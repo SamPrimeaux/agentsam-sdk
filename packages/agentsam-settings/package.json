@@ -29,6 +29,9 @@
     },
     "./frontend/styles.css": "./dist/frontend/index.css"
   },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-brand": "^2.6.17"
+  },
   "peerDependencies": {
     "lucide-react": "^0.510.0",
     "react": "^19.2.0",
