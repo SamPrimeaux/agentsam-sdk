@@ -32,6 +32,12 @@ const loadingScenePackageRoot = resolvePath(
 const workPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-work", import.meta.url)),
 );
+// The IDE source package is built in build:settings. The browser and Nitro
+// server must consume those same outputs, never an older published copy or a
+// linked package from another worktree's node_modules.
+const idePackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-ide", import.meta.url)),
+);
 const workbenchSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-workbench/src", import.meta.url)),
 );
@@ -283,6 +289,18 @@ export default defineConfig(({ command, isPreview }) => ({
     tsconfigPaths: true,
     preserveSymlinks: true,
     alias: [
+      {
+        find: /^@inneranimalmedia\/agentsam-ide\/surface\/workspace-editor\.css$/,
+        replacement: resolvePath(idePackageRoot, "dist/surface/workspace-editor.css"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-ide\/(surface|workspace|terminal|monaco|lsp|filetree|onboarding)$/,
+        replacement: resolvePath(idePackageRoot, "dist/$1/index.js"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-ide$/,
+        replacement: resolvePath(idePackageRoot, "dist/index.js"),
+      },
       // Runtime JS is required here; the frontend tsconfig intentionally names
       // the adjacent .d.ts for typechecking, which Vite must never execute.
       {
