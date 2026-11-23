@@ -10,3 +10,5 @@ export type { BrowserFsaRestore } from './browser-fsa.js';
 
 export { buildFsChangeMapFromStatus, fsChangeEntriesSorted, toWorkspaceChanges, buildVisibleChangePathSet, mapStatusTokenToState } from './changes.js';
 export type { AgentGitStatusFilesPayload, FsChangeEntry, FsChangeState } from './changes.js';
+
+export { createWorkspaceTextFile } from './file-creation.js';
