@@ -1,6 +1,6 @@
 # AgentSam Brand Workspace — first implementation and acceptance
 
-**Status:** feature-branch implementation, not an approved product release or published brand identity.
+**Status:** implemented SDK source contract. Brand approval, production deployment, and the complete Design Canvas integration remain separate acceptance gates.
 
 ## Objective
 
