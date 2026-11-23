@@ -4,23 +4,27 @@
   "apps": [
     {
       "id": "product-studio",
-      "contract": "apps/product-studio/agentsam.app.json",
-      "bundled": true
+      "contract": "apps/product-studio/agentsam.package.json",
+      "bundled": true,
+      "kind": "module"
     },
     {
       "id": "growth",
-      "contract": "apps/growth/agentsam.app.json",
-      "bundled": true
+      "contract": "apps/growth/agentsam.package.json",
+      "bundled": true,
+      "kind": "module"
     },
     {
       "id": "completeful",
-      "contract": "apps/completeful/agentsam.app.json",
-      "bundled": true
+      "contract": "apps/completeful/agentsam.package.json",
+      "bundled": true,
+      "kind": "provider"
     },
     {
       "id": "resend",
-      "contract": "apps/resend/agentsam.app.json",
-      "bundled": true
+      "contract": "apps/resend/agentsam.package.json",
+      "bundled": true,
+      "kind": "provider"
     }
   ]
 }
