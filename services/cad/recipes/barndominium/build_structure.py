@@ -303,7 +303,6 @@ def add_roof():
     # Living ridge follows the 72-ft long axis to reconcile 10-ft eave
     # plus 6:12 x 16-ft half-span = 18-ft ridge on the source section.
     # Roof plan graphic showing a different ridge orientation remains RFI.
-    length0,length1=38,110
     add("R-LIV-NORTH","Living roof north 6:12 plane",
         polygon_prism([(36,8,9),(112,8,9),(112,26,18),(36,26,18)],.12),
         "roof","IfcRoof","section-derived","Standing seam over deck; detailing TBD")
