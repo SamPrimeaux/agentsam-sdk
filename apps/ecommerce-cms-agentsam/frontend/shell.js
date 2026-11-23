@@ -137,9 +137,18 @@ function resolveShellMode(options = {}) {
   if (requested && SHELL_MODES[requested]) return SHELL_MODES[requested];
   // The hosting app owns all global chrome. An explicit iframe-only flag keeps
   // standalone installs and direct product routes on their normal admin shell.
-  const embedded = typeof window !== "undefined" && window.parent && window.parent !== window
-    && new URLSearchParams(window.location?.search || "").get("__agentsamEmbedded") === "1";
-  return embedded ? SHELL_MODES["embedded-app"] : SHELL_MODES.admin;
+  const framed = typeof window !== "undefined" && window.parent && window.parent !== window;
+  const explicitlyEmbedded = new URLSearchParams(window.location?.search || "").get("__agentsamEmbedded") === "1";
+  // A same-origin installed-app host is a second reliable indicator when a
+  // nested route loses its query string. Never infer this from a bare iframe:
+  // standalone embeds and direct admin routes must retain their own shell.
+  let installedAppHost = false;
+  if (framed) {
+    try { installedAppHost = Boolean(window.frameElement?.closest('[data-agentsam-installed-app]')); }
+    catch { installedAppHost = false; }
+  }
+  return framed && (explicitlyEmbedded || installedAppHost)
+    ? SHELL_MODES["embedded-app"] : SHELL_MODES.admin;
 }
 
 function decodeExitPath(value) {
