@@ -1,6 +1,7 @@
 import { createThemeProjectAdapter, repairEmptyThemeBlockControls } from '/theme-editor/project.mjs';
 import { createThemeEditorBridge } from '/theme-editor/bridge.mjs';
 import { mountThemeEditor } from '/theme-editor/mount.mjs';
+import { startThemeGuidance } from '/theme-editor/theme-start.mjs';
 import { blankThemeProject, inheritDefaultTemplates } from '/theme-editor/starter-project.mjs';
 import { fillMissingThemeChrome } from '/theme-editor/starter-chrome.mjs';
 import { createCmsPageThemeEditorAdapter } from '/ecommerce-cms-agentsam/theme-editor/cms-page-adapter.mjs';
@@ -63,7 +64,19 @@ function publishRoute(type, identity) {
 function mount(adapter, host) {
   frame.addEventListener('load', () => {
     mountThemeEditor(frame, host, { assetsBase: '/theme-editor/' })
-      .then(() => { if (host.openAssistantOnStart) frame.contentWindow?.openAgentsamDrawer?.(); })
+      .then(async () => {
+        if (!host.openAssistantOnStart) return;
+        try {
+          await startThemeGuidance(frame, {
+            siteId: host.siteId, projectId: host.projectId,
+            siteName: host.guidance?.siteName, projectName: host.metadata?.name,
+          });
+        } catch (error) {
+          // Optional guidance cannot take down a healthy, mounted editor.
+          console.error('theme_start_guidance_failed', error);
+          frame.contentWindow?.openAgentsamDrawer?.();
+        }
+      })
       .catch(showError);
   }, { once: true });
   frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/theme-editor/editor.css"></head><body></body></html>';
@@ -153,6 +166,7 @@ async function bootProject(route) {
     adapter: bridge,
     page: initialPage,
     openAssistantOnStart,
+    guidance: { siteName: project.brief?.siteName || project.name },
     pageRoutes,
     siteId,
     projectId,
@@ -353,6 +367,7 @@ async function bootNewTheme(route) {
   if (!site) return;
   const siteId = site.id;
   const siteName = String(site.name || 'My website').trim() || 'My website';
+  loading?.setAttribute('aria-label','Creating private theme draft and preparing AgentSam');
   // A new theme is an account-owned editable project, not a prewritten
   // merchant website. Reuse the existing stock chrome and system templates;
   // AgentSam opens to author the design after the draft has been created.

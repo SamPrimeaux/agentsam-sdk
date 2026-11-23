@@ -298,6 +298,7 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
   const live = data.site_preview?.url || (data.store?.visibility === 'public' ? data.store?.url : '') || '';
   const activeTheme = data.preview_theme || data.active_theme || null;
   const activeEdit = editorTarget(data.site_preview?.edit_href || activeTheme?.edit_href, selectedId);
+  const createTheme = editorTarget(data.new_theme_url, selectedId);
   const activeSaved = formatSaved(activeTheme?.last_saved || activeTheme?.updated_at || activeTheme?.created_at);
   const drafts = (data.draft_themes || []).filter(draft => draft.id !== activeTheme?.id);
 
@@ -326,7 +327,10 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
       <section aria-label="Draft themes">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Draft themes</h2>
-          <a href="#discover-themes" className={pill}><Plus className="size-4" aria-hidden="true" />Add theme</a>
+          <div className="flex items-center gap-2">
+            {createTheme && <InAppLink to={createTheme} className={cn(pill, primary)}><Plus className="size-4" aria-hidden="true" />New theme</InAppLink>}
+            <a href="#discover-themes" className={pill}>Discover themes</a>
+          </div>
         </div>
         <div className="rounded-2xl border border-border bg-card">
           {drafts.length

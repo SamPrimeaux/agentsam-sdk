@@ -613,6 +613,7 @@ function initAgentsamDrawer() {
   bindAgentsamStaticHandlers();
   mountAgentSamCapabilityMenu();
   loadAgentsamMeta();
+  document.dispatchEvent(new Event('agentsam:drawer-ready'));
 
   try {
     const key = agentsamOpenStateKey();
