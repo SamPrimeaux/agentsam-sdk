@@ -48,3 +48,14 @@ test('installed Design Canvas becomes the native editor while preserving app ins
     assert.equal(projectSideStageContribution({...row,plugin_key:'other-design'}),null);
   } finally { db.close(); }
 });
+
+
+test('empty Canvas offers immediate manual authoring without automatic direction generation',()=>{
+  const source=readFileSync(new URL('../../frontend/src/components/workbench/canvas-entry-stage.tsx',import.meta.url),'utf8');
+  assert.match(source,/onClick=\{addBoard\}>Create blank artboard/);
+  assert.match(source,/onClick=\{\(\)=>setShowSources\(true\)\}>Browse source artboards/);
+  assert.match(source,/onClick=\{\(\)=>void prepareDirections\(\)\}/);
+  assert.doesNotMatch(source,/directionRequested/);
+  const manual={...blankCanvasDocument(),artboards:[{id:'artboard_manual',name:'Page 1',width:1200,height:900,x:0,y:0,background:'#ffffff',nodes:[]}]};
+  assert.equal(validateCanvasDocument(manual),true);
+});
