@@ -454,7 +454,8 @@ def save_obj_mtl(output):
 def export_ifc(output):
     import ifcopenshell
     import ifcopenshell.api as api
-    from ifcopenshell.api.geometry import add_mesh_representation
+    geometry_api = cast(Any, import_module("ifcopenshell.api.geometry"))
+    add_mesh_representation = geometry_api.add_mesh_representation
     f=api.run("project.create_file",version="IFC4")
     project=api.run("root.create_entity",f,ifc_class="IfcProject",name="Barndominium Structural Concept V2")
     units=[
