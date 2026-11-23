@@ -33,7 +33,13 @@
         "--base={base}"
       ],
       "output": "dist"
-    }
+    },
+    "public_mounts": [
+      {
+        "from": "primetech-onboarding",
+        "to": "primetech/experience"
+      }
+    ]
   },
   "product_id": "moviemode",
   "directory_id_exception": true,

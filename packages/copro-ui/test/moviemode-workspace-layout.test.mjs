@@ -147,8 +147,7 @@ test('PrimeTech preserves one project workspace across scene, design, generate a
   }
   assert.equal((html.match(/class="mm-editor-categories"/g)||[]).length,1);
   assert.ok(html.indexOf('class="mm-editor-categories"')<html.indexOf('id="copro-tool-browser"'));
-  assert.match(html,/href="\/primetech-onboarding\/index\.html\?returnTo=/);
-  assert.match(html,/Explore PrimeTech/);
+  assert.doesNotMatch(html,/primetech-onboarding|Explore PrimeTech|mm-studio-tour-trigger/);
   assert.doesNotMatch(html,/mm-studio-tour-dialog|iframe|aria-modal="true"/);
 });
 

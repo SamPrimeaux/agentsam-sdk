@@ -46,6 +46,11 @@ export const DEFAULT_MANIFEST = path.join(
   'packages/agentsam-desktop-shell/manifests/local-studio.json',
 );
 const STAGE = /^[a-z0-9][a-z0-9-]*$/;
+// App-owned standalone public pages can be mounted outside an authenticated app's
+// asset namespace without creating a second copy of the source experience.
+const PUBLIC_MOUNT = /^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/;
+const RESERVED_PUBLIC_PREFIXES = new Set(['api', 'admin', 'auth', 'settings']);
+
 
 function within(base, rel, label) {
   if (typeof rel !== 'string' || !rel || path.isAbsolute(rel)) {
@@ -140,7 +145,27 @@ export function planIncludedApps({
       gzipOversizedWasm: b.gzip_oversized_wasm === true,
       publicDir: path.join(localStudio, 'frontend/public', embed.stage),
       stagedDir: path.join(localStudio, '.output/public', embed.stage),
+      publicMounts: (embed.public_mounts ?? []).map((mount) => {
+        if (!mount || typeof mount !== 'object' || typeof mount.from !== 'string' || typeof mount.to !== 'string' ||
+            !PUBLIC_MOUNT.test(mount.from) || !PUBLIC_MOUNT.test(mount.to) ||
+            RESERVED_PUBLIC_PREFIXES.has(mount.to.split('/')[0])) {
+          throw new Error(`app "${id}" has invalid embed.public_mounts entry`);
+        }
+        return {
+          from: within(path.join(localStudio, 'frontend/public', embed.stage), mount.from, `app "${id}" public mount source`),
+          to: path.join(localStudio, '.output/public', mount.to),
+          url: `/${mount.to}/`,
+        };
+      }),
     });
+  }
+  const publicMounts = new Set();
+  for (const plan of plans) for (const mount of plan.publicMounts ?? []) {
+    if ([...publicMounts].some((existing) => existing.startsWith(mount.url) || mount.url.startsWith(existing))) {
+      throw new Error(`public mount "${mount.url}" overlaps another app's mount`);
+    }
+    if (stages.has(mount.url.split('/')[1])) throw new Error(`public mount "${mount.url}" overlaps an app's stage`);
+    publicMounts.add(mount.url);
   }
   return { skipped: null, plans };
 }
@@ -192,6 +217,15 @@ function stage(plan) {
   rmSync(plan.stagedDir, { recursive: true, force: true });
   mkdirSync(path.dirname(plan.stagedDir), { recursive: true });
   cpSync(plan.publicDir, plan.stagedDir, { recursive: true, mode: constants.COPYFILE_FICLONE });
+  for (const mount of plan.publicMounts ?? []) {
+    if (!existsSync(mount.from) || !statSync(mount.from).isDirectory()) {
+      throw new Error(`${plan.id} public experience missing: ${mount.from}`);
+    }
+    rmSync(mount.to, { recursive: true, force: true });
+    mkdirSync(path.dirname(mount.to), { recursive: true });
+    cpSync(mount.from, mount.to, { recursive: true, mode: constants.COPYFILE_FICLONE });
+    console.log(`[included-apps] ${plan.id}: public experience -> ${mount.url}`);
+  }
   if (plan.gzipOversizedWasm) {
     const assetDir = path.join(plan.stagedDir, 'assets');
     if (!existsSync(assetDir)) throw new Error(`${plan.id} requested WASM compression without an assets folder`);
