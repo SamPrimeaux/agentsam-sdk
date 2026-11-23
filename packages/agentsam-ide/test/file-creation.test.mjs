@@ -64,3 +64,32 @@ test('Save As rejects traversal before any filesystem mutation',async()=>{
   await assert.rejects(()=>createWorkspaceTextFile(workspace,'../secrets','text'),/Invalid|workspace-relative/);
   assert.equal(files.size,0);
 });
+
+test('Save As creates missing parent folders through the authorized adapter',async()=>{
+  const {workspace,files}=fakeWorkspace();
+  const folders=new Set();
+  const created=[];
+  const nested={
+    ...workspace,
+    async list(parent='') {
+      return [
+        ...[...folders].filter(path => path.split('/').slice(0,-1).join('/')===parent)
+          .map(path=>({path,kind:'folder'})),
+        ...[...files.keys()].filter(path => path.split('/').slice(0,-1).join('/')===parent)
+          .map(path=>({path,kind:'file'})),
+      ];
+    },
+    async create(path,kind) {
+      created.push({path,kind});
+      if(kind==='folder')folders.add(path);
+      else files.set(path,{path,content:'',version:'v1'});
+      return {path,kind};
+    },
+  };
+  const saved=await createWorkspaceTextFile(nested,'src/nested/example.py','print("created")');
+  assert.equal(saved.content,'print("created")');
+  assert.deepEqual(created,[
+    {path:'src',kind:'folder'},{path:'src/nested',kind:'folder'},
+    {path:'src/nested/example.py',kind:'file'},
+  ]);
+});
