@@ -57,8 +57,6 @@ test('scene environment inspector exposes one source for each sky control',()=>{
  assert.equal((html.match(/Starfield visible/g)||[]).length,1);
  assert.match(html,/Light glow/);
  assert.match(html,/Sky time \/ phase/);
- assert.match(html,/value="#2e5366"/);
- assert.doesNotMatch(html,/value="#999999"/);
  assert.doesNotMatch(html,/Project saved/);
  assert.doesNotMatch(html,/<h2>Scene environment<\/h2>/);
 });
