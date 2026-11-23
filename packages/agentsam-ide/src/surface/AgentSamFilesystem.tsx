@@ -6,9 +6,9 @@
  * Connections, OAuth, credentials, runtime grants and file I/O are provided by
  * the host. The component does not call a provider endpoint or store tokens.
  */
-import { useCallback, useEffect, type ReactNode } from 'react';
-import { WorkspaceEditor, type WorkspaceEditorProps } from './WorkspaceEditor.js';
-import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from './WorkspaceSourceRail.js';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { WorkspaceEditor, type WorkspaceEditorProps, type UntitledEditorDraft } from './WorkspaceEditor.js';
+import { type IDEFileSource, type IDEFileSourceId } from './WorkspaceSourceRail.js';
 import type { FileWorkspace } from '../workspace/files.js';
 
 export type AgentSamFilesystemSource = IDEFileSource & {
@@ -74,6 +74,24 @@ export function AgentSamFilesystem({
 }: AgentSamFilesystemProps) {
   const source = resolveAgentSamFilesystemSource(sources, sourceId);
   const workspaceId = source?.workspaceId || '';
+  const [drafts,setDrafts]=useState<UntitledEditorDraft[]>([]);
+  // Disconnected state is a real editor surface, never a fake filesystem.
+  // No operation mutates a provider until the host grants and supplies one.
+  const disconnectedWorkspace=useMemo<FileWorkspace>(()=>({
+    async list(){return [];},
+    async read(){throw Error('Connect a file source before opening provider files.');},
+    async write(){return {ok:false,code:'source_not_connected',message:'Connect a writable source before saving.'};},
+    async create(){throw Error('Connect a writable source before creating files.');},
+    async rename(){throw Error('Connect a source before renaming.');},
+    async delete(){throw Error('Connect a source before deleting.');},
+    async search(){return [];},
+    async history(){return [];},
+    async restore(){return {ok:false,code:'source_not_connected',message:'Connect a source before restoring.'};},
+    configuration:{readonly:true,manualSave:true,capabilities:{
+      create:false,rename:false,delete:false,search:false,history:false,restore:false,
+      changes:false,snapshot:false,
+    }},
+  }),[]);
   const handleActiveFile = useCallback((file: { path: string; version: string } | null) => {
     if (!onContextChange || !source) return;
     onContextChange({
@@ -86,45 +104,32 @@ export function AgentSamFilesystem({
     handleActiveFile(null);
   }, [sourceId, workspaceId]); // announce source changes without leaking previous file identity
 
-  if (source && canMountAgentSamFilesystemSource(source)) {
-    return <WorkspaceEditor
-      {...editorProps}
-      key={source.id + ':' + workspaceId}
-      workspace={source.workspace!}
-      workspaceId={workspaceId}
-      label={source.workspaceLabel || source.label}
-      sources={sources}
-      sourceId={sourceId}
-      onSourceSelect={onSourceSelect}
-      onReconnect={source.reconnect || source.connect}
-      onConnectionSettings={source.manageConnection}
-      onActiveFileChange={handleActiveFile}
-    />;
-  }
 
-  return <section className="asi-ide" aria-label="AgentSam filesystem">
-    <div className="asi-main">
-      <aside className="asi-aside" aria-label="File sources">
-        <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} />
-      </aside>
-      <div className="asi-center">
-        <div className="asi-alert" role="status">
-          <strong>{source?.label || 'Files'}</strong>
-          <span>{source?.detail || 'Select an authorized source to browse its files.'}</span>
-        </div>
-        {error && <div className="asi-alert" role="alert">{error}</div>}
-        <div className="asi-side-content" style={{overflow:'auto',flex:1,padding:16}}>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
-            {source?.connect && <button type="button" onClick={() => void source.connect?.()}>Connect {source.label}</button>}
-            {source?.reconnect && <button type="button" onClick={() => void source.reconnect?.()}>Reconnect {source.label}</button>}
-            {source?.manageConnection && <button type="button" onClick={source.manageConnection}>Connection settings</button>}
-          </div>
-          {setup}
-          {!setup && !source?.connect && !source?.reconnect &&
-            <p>{source?.state === 'connecting' ? 'Checking source permissions…' :
-              'No authorized filesystem is selected. Connect a source or choose another.'}</p>}
-        </div>
-      </div>
+  const authorized=Boolean(source&&canMountAgentSamFilesystemSource(source));
+  const connectionPanel=authorized?null:<div className="asi-source-connection-panel" role="group" aria-label="Connect file source">
+    <strong>{source?.label||'Connect a file source'}</strong>
+    <p>{error||source?.detail||'New untitled files can be edited immediately. Connect a source when you need to browse or save files.'}</p>
+    <div className="asi-source-connection-actions">
+      {source?.connect&&<button type="button" onClick={()=>void source.connect?.()}>Connect {source.label}</button>}
+      {source?.reconnect&&<button type="button" onClick={()=>void source.reconnect?.()}>Reconnect</button>}
+      {source?.manageConnection&&<button type="button" onClick={source.manageConnection}>Manage connection</button>}
     </div>
-  </section>;
+    {setup}
+  </div>;
+  return <WorkspaceEditor
+    {...editorProps}
+    key={(source?.id||sourceId)+':'+(authorized?workspaceId:'disconnected')}
+    workspace={authorized?source!.workspace!:disconnectedWorkspace}
+    workspaceId={authorized?workspaceId:'disconnected:'+sourceId}
+    label={authorized?(source?.workspaceLabel||source?.label||'Files'):'Files · Untitled'}
+    sources={sources}
+    sourceId={sourceId}
+    onSourceSelect={onSourceSelect}
+    onReconnect={source?.reconnect||source?.connect}
+    onConnectionSettings={source?.manageConnection}
+    onActiveFileChange={handleActiveFile}
+    initialUntitledDrafts={drafts}
+    onUntitledDraftsChange={setDrafts}
+    connectionPanel={connectionPanel}
+  />;
 }
