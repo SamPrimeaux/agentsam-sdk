@@ -1644,7 +1644,10 @@ export default function StudioWorkspace({
               <span className="ps-eyebrow">MAKE IT YOURS</span>
               <h2>{tabs.find((t) => t.id === tab)?.label}</h2>
             </div>
-            <button type="button" className="ps-panel-dismiss" onClick={() => setPanelOpen(false)} aria-label="Collapse tool panel">×</button>
+            <div className="ps-panel-heading-actions">
+              <a className="ps-toolpanel-mobile-help" href="/admin/products/help/artwork">Artwork help</a>
+              <button type="button" className="ps-panel-dismiss" onClick={() => setPanelOpen(false)} aria-label="Collapse tool panel">×</button>
+            </div>
           </div>
           {tab === "options" && (
             <div className="ps-selling-editor" aria-label="Product options">
