@@ -22,7 +22,9 @@ const flags = (argv, extra = {}) => parseArgs({ args: argv, allowPositionals: tr
 const show = value => console.log(JSON.stringify(value, null, 2));
 const localPath = root => path.join(root, '.agentsam', 'knowledge', 'index.sqlite');
 export async function openStore(root, config, readOnly = false) {
-  return config.storage.driver === 'sqlite' ? openSqliteStore(localPath(root), { readOnly }) : openPostgresStore(process.env[config.storage.connection_env]);
+  if (config.storage.driver === 'sqlite') return openSqliteStore(localPath(root), { readOnly });
+  if (config.storage.driver === 'd1') return (await import('../knowledge/stores/d1.js')).openD1Store({ root, storage: config.storage }, { readOnly });
+  return openPostgresStore(process.env[config.storage.connection_env]);
 }
 export function provider(profile) {
   if (profile?.provider === 'none') throw new Error('Embedding is disabled for this profile. Configure an explicit provider with `agentsam autorag configure --provider … --semantic`.');

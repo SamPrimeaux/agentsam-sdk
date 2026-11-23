@@ -3,6 +3,7 @@
  * Pipeline authority: sam.codebaseindex.index.run (IAM host) · local: knowledge index run.
  */
 
+import { resolveD1Storage, discoverProjectStores } from '../knowledge/store-discovery.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -65,6 +66,10 @@ async function openStore(root, config, readOnly = false) {
   if (config.storage.driver === 'sqlite') {
     return openSqliteStore(localSqlitePath(root), { readOnly });
   }
+  if (config.storage.driver === 'd1') {
+    const { openD1Store } = await import('../knowledge/stores/d1.js');
+    return openD1Store({ root, storage: config.storage }, { readOnly });
+  }
   return openPostgresStore(process.env[config.storage.connection_env]);
 }
 
@@ -117,9 +122,11 @@ function loadOrBuildConfig(root, preferences) {
     embedding: preferences.embedding.provider === 'none'
       ? { provider: 'none', model: 'none', revision: '1', dimensions: 0, parameters: {} }
       : { ...base.embedding, ...preferences.embedding },
-    storage: preferences.storage === 'postgres'
-      ? { driver: 'postgres', connection_env: preferences.connectionEnv || 'AGENTSAM_DATABASE_URL' }
-      : { driver: 'sqlite' },
+    storage: preferences.storage === 'postgres' && preferences.connectionEnv
+      ? { driver: 'postgres', connection_env: preferences.connectionEnv }
+      : preferences.storage === 'd1' && preferences.d1
+        ? { driver: 'd1', ...preferences.d1 }
+        : { driver: 'sqlite' },
     lane: preferences.vectorLane ? {
       id: `${preferences.scopeName || 'default'}-cloudflare-vectorize`,
       backend: 'cloudflare_vectorize',
@@ -192,7 +199,8 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
     ? input.embedding
     : parseEmbeddingChoice(input.embeddingChoice || 'none');
 
-  const storage = input.storage === 'postgres' ? 'postgres' : 'sqlite';
+  const storage = ['postgres', 'd1'].includes(input.storage) ? input.storage : 'sqlite';
+  const d1 = storage === 'd1' ? await resolveD1Storage(root, input.d1Binding) : null;
   const vectors = input.vectors || (embedding.provider === 'none' ? 'none'
     : storage === 'postgres' ? 'pgvector' : 'sqlite_exact');
 
@@ -202,6 +210,7 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
     exclude,
     embedding,
     storage,
+    d1,
     vectorLane,
     scopeName: input.scope || 'ingest',
     connectionEnv: input.connectionEnv,
@@ -382,6 +391,7 @@ function parseArgv(argv = []) {
     else if (arg === '--include') out.include = argv[++i] || '';
     else if (arg === '--exclude') out.exclude = argv[++i] || '';
     else if (arg === '--storage') out.storage = argv[++i] || '';
+    else if (arg === '--d1-binding') out.d1Binding = argv[++i] || '';
     else if (arg === '--embedding') out.embedding = argv[++i] || '';
     else if (!arg.startsWith('-')) out.paths.push(arg);
     else throw new Error(`Unknown codebaseindex option: ${arg}`);
@@ -600,21 +610,30 @@ async function runWizard(root, opts) {
   }));
 
   // ⑥ Storage lanes
+  const d1Bindings = (await discoverProjectStores(root).catch(() => ({ candidates: [] }))).candidates
+    .filter((c) => c.driver === 'd1' && c.role === 'application' && c.name);
   const lane = pick(await select({
-    message: '⑥ Vector / data source lane',
-    initialValue: 'local',
+    message: '⑥ Where should the index live?',
+    initialValue: d1Bindings.length ? 'd1' : 'local',
     options: [
-      { value: 'local', label: 'Local SQLite', hint: 'metadata + optional exact vectors · $0 cloud' },
-      { value: 'supabase', label: 'Postgres / Supabase (direct DB)', hint: 'AGENTSAM_DATABASE_URL; Edge node-api uses autorag remote' },
-      { value: 'vectorize', label: 'Cloudflare Vectorize', hint: 'customer CF lane · not IAM host SSOT' },
+      ...(d1Bindings.length ? [{ value: 'd1', label: 'Cloudflare D1', hint: d1Bindings.map((c) => c.name).join(', ') + ' · your wrangler login, no extra setup' }] : []),
+      { value: 'local', label: 'Local SQLite', hint: 'on this machine · needs nothing' },
+      { value: 'vectorize', label: 'Cloudflare Vectorize', hint: 'this project\'s declared Vectorize binding' },
+      { value: 'supabase', label: 'Postgres (advanced)', hint: 'you provide a connection string; stored by name, never in config' },
     ],
   }));
-  const storage = lane === 'supabase' ? 'postgres' : 'sqlite';
+  let d1Binding = '';
+  if (lane === 'd1' && d1Bindings.length > 1) {
+    d1Binding = pick(await select({ message: 'Which D1 database?', options: d1Bindings.map((c) => ({ value: c.binding, label: c.name, hint: c.binding })) }));
+  }
+  let connectionEnv = '';
+  if (lane === 'supabase') {
+    connectionEnv = String(pick(await text({ message: 'Name of the environment variable holding your Postgres connection string', placeholder: 'MY_DATABASE_URL', validate: (v) => (/^[A-Z_][A-Z0-9_]*$/.test(String(v || '')) ? undefined : 'Use an UPPER_SNAKE_CASE variable name') }))).trim();
+    note('Direct Postgres uses that variable at run time. For an existing Supabase Edge node-api, use autorag setup --backend supabase_pgvector --resource <EDGE-URL>; the two transports are not interchangeable.', 'Lane note');
+  }
+  const storage = lane === 'supabase' ? 'postgres' : lane === 'd1' ? 'd1' : 'sqlite';
   if (lane === 'vectorize') {
     note('Uses this project’s declared Vectorize binding via Worker runtime or the current user’s authorized Cloudflare API transport.', 'Lane note');
-  }
-  if (lane === 'supabase') {
-    note('Direct backend Postgres requires AGENTSAM_DATABASE_URL. For an existing Supabase Edge node-api, use autorag setup --backend supabase_pgvector --resource <EDGE-URL>; the two transports are not interchangeable.', 'Lane note');
   }
 
   // ⑦ Dry-run vs execute
@@ -649,6 +668,8 @@ async function runWizard(root, opts) {
     include: include.length ? include : undefined,
     exclude,
     storage,
+    d1Binding,
+    connectionEnv,
     vectors: lane === 'vectorize' ? 'vectorize' : lane === 'supabase' ? 'pgvector' : (runEmbed ? 'sqlite_exact' : 'none'),
     embeddingChoice,
     embed: runEmbed,

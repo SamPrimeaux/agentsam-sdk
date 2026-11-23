@@ -28,8 +28,8 @@ function resolveDb(root, config) {
 export async function runDb(argv = [], opts = {}) {
   const sub = argv[0] || 'status';
   if (sub === 'sources' || sub === 'select') {
-    if (sub === 'select' && (argv[1] !== 'knowledge' || !argv[2] || argv.length > 4)) throw new Error('Usage: /db select knowledge sqlite|postgres [CONNECTION_ENV]');
-    const result = sub === 'sources' ? await discoverProjectStores(opts.cwd || process.cwd()) : selectKnowledgeStore(opts.cwd || process.cwd(), argv[2], argv[3]);
+    if (sub === 'select' && (argv[1] !== 'knowledge' || !argv[2] || argv.length > 4)) throw new Error('Usage: /db select knowledge sqlite|d1 [BINDING]|postgres CONNECTION_ENV');
+    const result = sub === 'sources' ? await discoverProjectStores(opts.cwd || process.cwd()) : await selectKnowledgeStore(opts.cwd || process.cwd(), argv[2], argv[3]);
     (opts.write || console.log)(JSON.stringify(result, null, 2) + '\n');
     return result;
   }
