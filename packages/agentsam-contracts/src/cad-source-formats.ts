@@ -83,12 +83,18 @@ for (const format of sourceCatalog.formats) {
 // .h is a recognized G-code alias in some controllers but overwhelmingly a
 // programming-language header. Do not discover all headers as CNC programs.
 const excludedExtensions: Record<string, ReadonlySet<string>> = Object.freeze({ 'cam.gcode': new Set(['.h']) });
-export const CAD_SOURCE_FORMATS = Object.freeze(cadRoles.map(([id, role]) => {
+// Earlier entries in the established CAD profile retain priority. A later
+// catalog family may share an extension (e.g. point-cloud .ptx and texture PTEX),
+// but one extension must never silently route to two default CAD owners.
+const assignedSuffixes = new Set<string>();
+export const CAD_SOURCE_FORMATS = Object.freeze(cadRoles.flatMap(([id, role]) => {
   const canonical = formatsById.get(id);
   if (!canonical) throw new Error('cad_source_format_missing_from_catalog:' + id);
-  const extensions = canonical.extensions.filter(ext => !excludedExtensions[id]?.has(ext));
-  if (!extensions.length) throw new Error('cad_source_format_has_no_extensions:' + id);
-  return Object.freeze({ id, role, extensions: Object.freeze(extensions) });
+  const extensions = canonical.extensions.filter(ext =>
+    !excludedExtensions[id]?.has(ext) && !assignedSuffixes.has(ext));
+  if (!extensions.length) return [];
+  for (const ext of extensions) assignedSuffixes.add(ext);
+  return [Object.freeze({ id, role, extensions: Object.freeze(extensions) })];
 }));
 
 const suffixes = CAD_SOURCE_FORMATS.flatMap(entry =>
