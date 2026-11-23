@@ -12,7 +12,7 @@ test('all real APP manifests have stable IDs and package version parity', () => 
   const apps = listAppManifests(root);
   const ids = apps.map(x=>x.id);
   assert.deepEqual([...ids].sort(), [
-    'agentsamforms','cad-creator','design-canvas','ecommerce-cms-agentsam',
+    'cad-creator','design-canvas','ecommerce-cms-agentsam',
     'goalguru','local-studio','moviemode','samsketch',
   ], 'unexpected APP discovery: inspect whether a new manifest represents an installable product');
   for (const app of apps) {
@@ -32,6 +32,7 @@ test('all real APP manifests have stable IDs and package version parity', () => 
 test('nested plugins and modules have package contracts, not independent APP identities', () => {
   for (const [relative,kind,owner] of [
     ['apps/samspeaks','module','moviemode'],
+    ['apps/local-studio/apps/agentsamforms','module','ecommerce-cms-agentsam'],
     ['apps/ecommerce-cms-agentsam/apps/product-studio','module','ecommerce-cms-agentsam'],
     ['apps/ecommerce-cms-agentsam/apps/growth','module','ecommerce-cms-agentsam'],
     ['apps/ecommerce-cms-agentsam/apps/completeful','provider','ecommerce-cms-agentsam'],

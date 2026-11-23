@@ -1,0 +1,104 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "agentsamforms",
+  "name": "AgentSamForms",
+  "kind": "module",
+  "version": "2.6.18",
+  "category": "forms",
+  "status": "bundled",
+  "description": "Merchant-installed storefront forms with site-owned CMS drafts and stored submissions.",
+  "routes": {
+    "home": "/forms",
+    "embed": "/forms/embed/:id",
+    "api": "/api/forms",
+    "app.authenticated": {
+      "path": "/forms",
+      "auth": "required",
+      "spa": true
+    },
+    "app.home": {
+      "path": "/forms"
+    },
+    "identity.login": {
+      "path": "/auth/login"
+    },
+    "identity.recovery": {
+      "path": "/auth/login"
+    },
+    "identity.oauth.start": {
+      "path": "/api/oauth/:provider/start"
+    },
+    "identity.oauth.callback": {
+      "path": "/api/oauth/:provider/callback"
+    },
+    "entry": "/forms",
+    "mounts": [
+      {
+        "path": "/forms",
+        "auth": "required",
+        "spa": true
+      }
+    ]
+  },
+  "surfaces": [
+    "admin-nav",
+    "merchant-storefront",
+    "standalone"
+  ],
+  "requires": [
+    "account.authenticated",
+    "cms.site",
+    "storage.sql"
+  ],
+  "provides": [
+    "forms.read",
+    "forms.edit",
+    "forms.publish",
+    "forms.submissions"
+  ],
+  "install": {
+    "supported": false,
+    "registry_key": "agentsamforms",
+    "authority": "agentsam_app_installations",
+    "seed": "five-site-scoped-cms-global-drafts",
+    "new_accounts": "module_consumption_via_owner_app",
+    "legacy_account_installations": "preserved_in_D1"
+  },
+  "implementation": {
+    "frontend": "frontend/src/components/forms/AgentSamFormsPage.tsx",
+    "backend": "backend/worker/agentsam-forms.js",
+    "migration": "backend/migrations/1365_agentsamforms_cms_site_and_submissions.sql",
+    "content_store": "cms_globals",
+    "revisions": "cms_revisions",
+    "submissions": "cms_form_submissions"
+  },
+  "safety": {
+    "public_routes": "published-only",
+    "published_edit": "explicit-unpublish",
+    "automatic_emails": false,
+    "automatic_orders": false,
+    "automatic_checkout": false
+  },
+  "product_id": "agentsamforms",
+  "auth": {
+    "required": true,
+    "entry": {
+      "authenticated": "app.authenticated",
+      "login": "identity.login",
+      "failure": "identity.recovery"
+    }
+  },
+  "distribution": {
+    "kind": "bundled-application",
+    "owner_host": "local-studio",
+    "install_authority": "agentsam_app_installations"
+  },
+  "type": "module",
+  "owner_app_id": "ecommerce-cms-agentsam",
+  "installable": false,
+  "legacy_installation": {
+    "table": "agentsam_app_installations",
+    "app_id": "agentsamforms",
+    "behavior": "preserve_existing"
+  }
+}
