@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
 import { ArrowUpRight, ImageOff, MousePointer2 } from "lucide-react";
 import { canvasBounds, locateNode, nodeAtWidth, safeStyle, safeUrl, type Artboard, type CanvasDocument, type CanvasNode } from "./model";
+import { withBrowserAnnotationBridge } from "../browser-build-result";
 
 type Props = {
-  document: CanvasDocument; selected: string; boardId: string; preview: boolean; width: number;
+  document: CanvasDocument; selected: string; boardId: string; preview: boolean; width: number; resourceId: string; revision: string;
   zoom: number; onZoom: (zoom:number)=>void; onSelect:(id:string,boardId:string)=>void;
   onChange:(id:string,patch:Partial<CanvasNode>)=>void; fitToken:number; tool:"select"|"pan"|"comment"; onPlacePin?:(boardId:string,x:number,y:number)=>void; renderComponent?:(node:CanvasNode,board:Artboard)=>ReactNode;
 };
-export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom,onSelect,onChange,fitToken,tool,onPlacePin,renderComponent}:Props) {
+export function CanvasStage({document,selected,boardId,preview,width,resourceId,revision,zoom,onZoom,onSelect,onChange,fitToken,tool,onPlacePin,renderComponent}:Props) {
   const viewport=useRef<HTMLDivElement>(null);
   const [pan,setPan]=useState({x:56,y:72});
   const [drag,setDrag]=useState<{id:string;x:number;y:number;startX:number;startY:number;mode:"move"|"resize"}|null>(null);
@@ -160,7 +161,7 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
       {renderComponent&&node.componentId?.startsWith("live-preview:") ? renderComponent(node,board) :
        node.type==="image" ? <CanvasImage src={safeUrl(node.src,true)} alt={node.text||node.name}/> :
        node.type==="html" ? <iframe className="cv-native-html" title={node.name} sandbox="allow-scripts" referrerPolicy="no-referrer"
-         srcDoc={node.sourceHtml ? (node.sourceBase ? node.sourceHtml.replace(/<head([^>]*)>/i, `<head$1><base href="${node.sourceBase}">`) : node.sourceHtml) : '<!doctype html><html><body></body></html>'} /> :
+         srcDoc={withBrowserAnnotationBridge(node.sourceHtml ? (node.sourceBase ? node.sourceHtml.replace(/<head([^>]*)>/i, `<head$1><base href="${node.sourceBase}">`) : node.sourceHtml) : '<!doctype html><html><body></body></html>')} /> :
        node.type==="input" ? <input className="cv-native-input" aria-label={node.name} placeholder={node.text} readOnly={!preview} onChange={e=>{previewValues.current[node.id]=e.target.value;}}/> :
        node.type==="button" ? <button type="button" className="cv-native-button" tabIndex={preview?0:-1}>{node.text||node.name}</button> :
        node.type==="link" ? <span className="cv-link">{node.text||node.name}</span> :
@@ -176,6 +177,9 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
     </div>;
   }
   return <div ref={viewport} className={"cv-viewport "+(preview?"is-preview ":"")+(tool==="pan"?"is-pan":"")}
+    data-agentsam-resource-host="" data-agentsam-resource-id={resourceId} data-agentsam-resource-kind="design-canvas"
+    data-agentsam-resource-revision={revision} data-agentsam-resource-app-id="agentsam-local-studio"
+    data-annotation-target="" data-agentsam-resource={resourceId}
     aria-label={preview?"Interactive Canvas preview":"Spatial Canvas"} onWheel={wheel}
     onPointerDown={event=>{
       if(event.target===event.currentTarget&&!preview)onSelect("",boardId);
@@ -186,6 +190,7 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
     }} onPointerMove={move} onPointerUp={end} onPointerCancel={()=>{setDrag(null);setPosition(null);panGesture.current=null;}}>
     <div className="cv-world" style={{"--cv-world-transform":"translate("+pan.x+"px,"+pan.y+"px) scale("+zoom+")"} as CSSProperties}>
       {boards.map(board=><section key={board.id} className="cv-artboard" data-artboard={board.id}
+        data-annotation-target="" data-agentsam-resource={board.id}
         aria-label={board.name} style={{"--cv-board-left":board.x+"px","--cv-board-top":board.y+"px","--cv-board-width":(preview&&width?width:board.width)+"px","--cv-board-height":board.height+"px","--cv-board-background":board.background||"#fff"} as CSSProperties}
         onPointerDown={event=>{if(tool==="pan")return;event.stopPropagation();if(tool==="comment"&&event.button===0){placePin(event,board);return;}if(!preview)onSelect("",board.id);}}>
         <button type="button" className={"cv-artboard-name"+(board.id===boardId?" active":"")} style={{"--cv-board-label-font":12/zoom+"px","--cv-board-label-top":-30/zoom+"px"} as CSSProperties}

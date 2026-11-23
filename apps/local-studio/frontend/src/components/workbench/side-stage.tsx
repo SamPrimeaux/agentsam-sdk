@@ -276,7 +276,7 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
         </IconAction>
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1" data-agentsam-annotation-scope="" data-side-stage-kind={tab?.kind || "newtab"}>
         {tab?.kind === "chat" ? <CoworkerChat tabId={tab.id} /> : null}
         {tab?.kind === "browser" ? <BrowserStage tab={tab} /> : null}
         {tab?.kind === "files" ? splitCoworker ? (

@@ -1,7 +1,7 @@
 import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useState, type CSSProperties } from "react";
 import { ChevronDown, ChevronRight, Component, Frame, Image, Layers, MousePointer2, Plus, Type } from "lucide-react";
-import { copy, locateNode, safeUrl, type Artboard, type CanvasDocument, type CanvasNode } from "./model";
+import { copy, locateNode, safeUrl, type Artboard, type CanvasDocument, type CanvasEvent, type CanvasNode, type CanvasRun } from "./model";
 
 export function CanvasLayers({document,selected,boardId,onSelect,onAdd,onComponent}:{document:CanvasDocument;selected:string;boardId:string;onSelect:(id:string,board:string)=>void;onAdd:()=>void;onComponent:(id:string)=>void}) {
  const [collapsed,setCollapsed]=useState<Set<string>>(new Set());
@@ -29,7 +29,7 @@ function Field({label,value,onChange,type="text"}:{label:string;value:string|num
  useEffect(()=>setDraft(String(value)),[value]);
  return <label className="cv-field"><span>{label}</span><input type={type} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={()=>{if(draft!==String(value))onChange(draft);}} onKeyDown={e=>{if(e.key==="Enter"){e.currentTarget.blur();}if(e.key==="Escape"){setDraft(String(value));e.currentTarget.blur();}}}/></label>;
 }
-export function CanvasInspector({document,selected,boardId,onNode,onBoard,onDocument,onRemove,onDuplicate,onComponent}:{document:CanvasDocument;selected:string;boardId:string;onNode:(patch:Partial<CanvasNode>)=>void;onBoard:(patch:Partial<Artboard>)=>void;onDocument:(next:CanvasDocument)=>void;onRemove:()=>void;onDuplicate:()=>void;onComponent:()=>void}) {
+export function CanvasInspector({document,selected,boardId,onNode,onBoard,onDocument,onRemove,onDuplicate,onComponent,events,run,onRetry,onCancel}:{document:CanvasDocument;selected:string;boardId:string;onNode:(patch:Partial<CanvasNode>)=>void;onBoard:(patch:Partial<Artboard>)=>void;onDocument:(next:CanvasDocument)=>void;onRemove:()=>void;onDuplicate:()=>void;onComponent:()=>void;events:CanvasEvent[];run:CanvasRun|null;onRetry:()=>void;onCancel:()=>void}) {
  const found=locateNode(document,selected), node=found?.node;
  const board=document.artboards.find(b=>b.id===boardId);
  const number=(key:keyof CanvasNode,value:string)=>{const v=Number(value);if(Number.isFinite(v))onNode({[key]:["width","height"].includes(key)?Math.max(8,v):v});};
@@ -73,5 +73,20 @@ export function CanvasInspector({document,selected,boardId,onNode,onBoard,onDocu
   {Object.entries(document.tokens).map(([key,value])=>typeof value==="string"||typeof value==="number"?<Field key={key} label={key} value={value} onChange={v=>onDocument({...document,tokens:{...document.tokens,[key]:v}})}/>:<details key={key} className="cv-details"><summary>{key}</summary><pre>{JSON.stringify(value,null,2)}</pre></details>)}
   {!Object.keys(document.tokens).length&&<p className="cv-panel-help">The creative system will appear here.</p>}
   {!!document.dataRequirements.length&&<details className="cv-details"><summary>Service requirements ({document.dataRequirements.length})</summary><pre>{JSON.stringify(document.dataRequirements,null,2)}</pre></details>}
+  <header className="cv-panel-heading cv-section-gap"><strong>Activity</strong><span>{events.length}</span></header>
+  {run&&<p className="cv-panel-help">Latest run · {run.status}</p>}
+  {run?.error&&<p role="alert" className="cv-error-text">{typeof run.error==="string"?run.error:JSON.stringify(run.error)}</p>}
+  {events.length?<div className="cv-activity-list" aria-label="Canvas generation activity">
+    {events.slice(-10).reverse().map((event,index)=>{
+      const payload=event.payload||event.data||{};
+      const label=String(event.message||payload.message||payload.title||payload.skill_id||payload.name||event.type.replaceAll("."," · ").replaceAll("_"," "));
+      return <article key={String(event.id||event.sequence||index)} className={"cv-activity-item "+(event.type.includes("fail")?"failed":"")}>
+        <strong>{label}</strong><small>{event.type}</small>
+        {Boolean(payload.instruction)&&<p>{String(payload.instruction)}</p>}
+      </article>;
+    })}
+  </div>:<p className="cv-panel-help">Canvas generation, edits and failures will appear here.</p>}
+  {run&&["failed","interrupted","conflict"].includes(run.status)&&<div className="cv-panel-actions"><button type="button" onClick={onRetry}>Retry from saved revision</button></div>}
+  {run&&!['completed','done','failed','cancelled','canceled','conflict','interrupted'].includes(run.status)&&<div className="cv-panel-actions"><button type="button" onClick={onCancel}>Cancel generation</button></div>}
  </div>;
 }

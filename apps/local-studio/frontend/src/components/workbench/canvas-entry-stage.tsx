@@ -1,16 +1,14 @@
 import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, ChevronDown, Component, ExternalLink, FileCode2, Frame, Hand, History, Image, Layers, Maximize2, Minimize2, MousePointer2, PanelLeft, PanelRight, Plus, Redo2, RefreshCw, Save, Settings2, Square, Type, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Component, ExternalLink, FileCode2, Frame, Hand, History, Image, Layers, MousePointer2, PanelLeft, Plus, Redo2, RefreshCw, Save, Settings2, Square, Type, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { DesignWorkspaceFrame } from "@inneranimalmedia/agentsam-workbench/design";
 import { AskAgentSamPill } from "@inneranimalmedia/agentsam-workbench/agent";
-import "@inneranimalmedia/agentsam-workbench/agent/contextual-composer.css";
 import { askAgentSamAboutArtifact } from "@/lib/work/artifact-assistance";
 import "@inneranimalmedia/agentsam-workbench/design/design-workspace.css";
 import type { DesignWorkspaceSnapshot } from "@inneranimalmedia/agentsam-contracts";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { useWorkStore } from "@/lib/work/store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { Composer } from "@/components/workbench/composer";
 import { ModelSelect } from "@/components/workbench/model-select";
 import { CanvasStage } from "./canvas/stage";
 import { CanvasInspector, CanvasLayers } from "./canvas/panels";
@@ -18,6 +16,7 @@ import { CanvasCmsHandoff } from "./canvas/cms-handoff";
 import { SourceArtboardLibrary, type ImportedSource } from "./canvas/source-library";
 import { API, CanvasApiError, blankDocument, canvasBounds, canvasRequest, cloneNode, copy, editNode, insertNode, locateNode, makeId, removeNode, terminalRun, withStarterPages, type Artboard, type CanvasDocument, type CanvasEvent, type CanvasMeta, type CanvasNode, type CanvasResponse, type CanvasRun, type Direction } from "./canvas/model";
 import "./canvas/canvas.css";
+import { AnnotationToggle, DESIGN_WORKSPACE_PROMPT_EVENT, type DesignWorkspacePromptRequest } from "../../../agentsam/AnnotationHelper";
 
 type EventResponse={ok:boolean;events:CanvasEvent[];cursor:number;canvas?:CanvasMeta;run:CanvasRun|null};
 function idFromUrl(url?:string) {
@@ -69,7 +68,6 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
  const [previewWidth,setPreviewWidth]=useState(0);
  const [layers,setLayers]=useState(true);
  const [properties,setProperties]=useState(true);
- const [assistantMode,setAssistantMode]=useState<"mini"|"docked"|"expanded">("mini");
  const [past,setPast]=useState<CanvasDocument[]>([]);
  const [future,setFuture]=useState<CanvasDocument[]>([]);
  const [showCms,setShowCms]=useState(false);
@@ -88,8 +86,11 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
  const cursor=useRef(0);
  const created=useRef("");
  const executeAbort=useRef<AbortController|null>(null);
+ const startRunRef=useRef<(instruction?:string,directionId?:string,attachments?:unknown[],selectionIds?:string[])=>Promise<void>>(async()=>{});
  const dirty=Boolean(document&&JSON.stringify(document)!==saved);
  const busy=Boolean(run&&!terminalRun(run.status));
+ const modelRef=useRef(model);modelRef.current=model;
+ const busyRef=useRef(busy);busyRef.current=busy;
  const recoveryKey=canvas?"agentsam.canvas.recovery."+canvas.id:"";
 
  function accept(result:CanvasResponse,reset=true) {
@@ -236,17 +237,57 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
   }catch(cause){if(!abort.signal.aborted)setError(message(cause));}
   finally{if(!abort.signal.aborted){try{const latest=await canvasRequest<{run:CanvasRun}>(API+"/"+encodeURIComponent(canvas.id)+"/runs/"+encodeURIComponent(runId));setRun(latest.run);}catch{}}}
  }
- async function startRun(instruction="",directionId?:string,attachments:unknown[]=[]) {
-  if(!canvas||busy)return;
+ async function startRun(instruction="",directionId?:string,attachments:unknown[]=[],selectionIds:string[]=(selection?[selection]:[])) {
+  if(!canvas)throw new Error("Canvas is not ready.");
+  if(busy)throw new Error("A Canvas generation is already running.");
   setError("");
-  if(!model.provider||!model.model_id){setError("Select an available model before starting.");return;}
-  const base=await save();if(!base)return;
+  if(!model.provider||!model.model_id)throw new Error("Select an available model before starting.");
   try {
+   const base=await save();
+   if(!base)throw new Error("Canvas could not be saved. Resolve the current error and try again.");
    const data=await canvasRequest<{run:CanvasRun}>(API+"/"+encodeURIComponent(canvas.id)+"/runs",{
-    method:"POST",body:JSON.stringify({id:makeId("run"),direction_id:directionId,base_revision:base.revision,instruction,selection:selection?[selection]:[],attachments,...model}),
+    method:"POST",body:JSON.stringify({id:makeId("run"),direction_id:directionId,base_revision:base.revision,instruction,selection:selectionIds,attachments,...model}),
    });
-   setRun(data.run);setAssistantMode("docked");void execute(data.run.id);
+   setRun(data.run);void execute(data.run.id);
   }catch(cause){setError(message(cause));throw cause;}
+ }
+ startRunRef.current=startRun;
+ useEffect(()=>{
+  const receive=(event:Event)=>{
+   const request=(event as CustomEvent<DesignWorkspacePromptRequest>).detail;
+   const state=current.current;
+   if(!request||!state.canvas||!state.document||request.resourceId!==state.canvas.id)return;
+   if(request.revision!==String(state.canvas.revision)){
+    request.error="This Canvas changed after the element was selected. Select it again before applying the change.";
+    setError(request.error);return;
+   }
+   const node=locateNode(state.document,request.selectionId)?.node;
+   const board=state.document.artboards.find(item=>item.id===request.selectionId);
+   const wholeDocument=request.selectionId===state.canvas.id;
+   if(!node&&!board&&!wholeDocument){request.error="The selected Canvas element is no longer available. Select it again.";return;}
+   if(board&&!board.nodes.length){
+    request.error="This artboard is empty. Use the Canvas creation actions first, then annotate an element to make a targeted edit.";
+    setError(request.error);return;
+   }
+   if(busyRef.current){request.error="A Canvas generation is already running. Wait for it to finish before sending another edit.";setError(request.error);return;}
+   if(!modelRef.current.provider||!modelRef.current.model_id){request.error="Select an available model before starting.";setError(request.error);return;}
+   request.handle=()=>{
+    const selectionIds=node?[node.id]:board?[board.id]:[];
+    if(node)setSelection(node.id);
+    else if(board){setSelection("");setBoardId(board.id);}
+    const instruction=board&&!node?request.prompt+"\n\nFocus on the artboard: "+board.name+".":request.prompt;
+    return startRunRef.current(instruction,undefined,[],selectionIds);
+   };
+  };
+  window.addEventListener(DESIGN_WORKSPACE_PROMPT_EVENT,receive);
+  return()=>window.removeEventListener(DESIGN_WORKSPACE_PROMPT_EVENT,receive);
+ },[]);
+ function retryRun() {
+  if(!run)return;
+  const savedSelection=Array.isArray(run.selection)?run.selection.filter((id):id is string=>typeof id==="string"):selection?[selection]:[];
+  const directionId=typeof run.direction_id==="string"?run.direction_id:undefined;
+  const instruction=directionId?"":String(run.instruction||"Continue the current Canvas from its saved state.");
+  void startRun(instruction,directionId,[],savedSelection).catch(()=>{});
  }
  async function cancelRun() {
   if(!canvas||!run)return;
@@ -337,22 +378,12 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
  if(loading)return <div className="cv-loading" role="status"><span className="cv-loading-mark"/><strong>Opening your Canvas</strong><span>A little room for your next idea.</span></div>;
  if(!canvas||!document)return <div className="cv-loading"><strong>Canvas couldn't open</strong><p role="alert">{error}</p><button className="cv-primary" onClick={()=>setBoot(n=>n+1)}>Try again</button></div>;
  const selectedNode=locateNode(document,selection)?.node;
- const snapshot:DesignWorkspaceSnapshot={contract:"agentsam.design-workspace.v1",resource:{id:canvas.id,kind:"design",appId:"agentsam-local-studio",title:document.name,href:"/admin/canvas?canvas="+canvas.id,accountId:user?.id||""},capabilities:["create","open","select","inspect","modify","preview","save","undo","redo","generate"],revision:String(canvas.revision),savedRevision:String(canvas.revision),dirty,selection:selection?[{id:selection,kind:selectedNode?.type||"element"}]:[],status:"ready",...(busy?{activeRunId:run!.id}:{})};
- const assistant=<div className={"cv-assistant-body "+assistantMode}>
-   <div className="cv-assistant-modes"><span>{selectedNode?"Target: "+selectedNode.name:"Document context"}</span><IconAction hint="Mini AgentSam" label="Mini AgentSam" onClick={()=>setAssistantMode("mini")}><Minimize2 size={13}/></IconAction><IconAction hint="Dock AgentSam" label="Dock AgentSam" onClick={()=>setAssistantMode("docked")}><PanelRight size={13}/></IconAction><IconAction hint="Expand AgentSam" label="Expand AgentSam" onClick={()=>setAssistantMode("expanded")}><Maximize2 size={13}/></IconAction></div>
-   {assistantMode!=="mini"&&<div className="cv-activity" aria-label="AgentSam execution history">
-    {!events.length&&<p className="cv-panel-help">Describe a change to the document or selected element. Actual operations and saved revisions appear here.</p>}
-    {events.map((event,index)=><div key={String(event.id||event.sequence||index)} className={"cv-event "+(event.type.includes("fail")?"failed":"")}><span className="cv-event-marker"/><div><p>{eventLabel(event)}</p><small>{event.type}</small>{Boolean(event.payload?.instruction)&&<blockquote>{String(event.payload?.instruction)}</blockquote>}</div></div>)}
-    {run?.error&&<p role="alert" className="cv-error-text">{typeof run.error==="string"?run.error:JSON.stringify(run.error)}</p>}
-    {run&&["failed","interrupted","conflict"].includes(run.status)&&<button onClick={()=>void startRun(String(run.instruction||"Continue the current Canvas from its saved state."))}>Retry from saved revision</button>}
-   </div>}
-   <Composer targetId={"canvas:"+canvas.id} targetKind="side" contextLabel={selectedNode?.name||document.name}
-    placeholder={selectedNode?"Change "+selectedNode.name+"…":"Describe what to create or change…"} busy={busy} onCancel={()=>void cancelRun()}
-    onSubmit={async({text,attachments})=>{await startRun(text,undefined,attachments);}}/>
- </div>;
+ const snapshot:DesignWorkspaceSnapshot={contract:"agentsam.design-workspace.v1",resource:{id:canvas.id,kind:"design",appId:"agentsam-local-studio",title:document.name,href:"/admin/canvas?canvas="+canvas.id,accountId:user?.id||""},capabilities:["create","open","select","inspect","modify","preview","save","undo","redo","generate"],revision:String(canvas.revision),savedRevision:String(canvas.revision),dirty,selection:selection?[{id:selection,kind:selectedNode?.type||"element"}]:boardId?[{id:boardId,kind:"artboard"}]:[],status:"ready",...(busy?{activeRunId:run!.id}:{})};
+ const selectedBoard=document.artboards.find(board=>board.id===boardId);
  const askAboutCanvas = () => askAgentSamAboutArtifact({
    kind: 'design', id: canvas.id, title: document.name, chatId: tab.parentChatId,
-   ...(selectedNode ? { selection: { id: selectedNode.id, kind: selectedNode.type, label: selectedNode.name } } : {}),
+   ...(selectedNode ? { selection: { id: selectedNode.id, kind: selectedNode.type, label: selectedNode.name } }
+     : selectedBoard ? { selection: { id: selectedBoard.id, kind: 'artboard', label: selectedBoard.name } } : {}),
  });
  const commands=<>
    <IconAction className="cv-icon-button" hint="Import source artboards" label="Source artboards" onClick={()=>setShowSources(true)}><FileCode2 size={15}/></IconAction>
@@ -367,16 +398,16 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
    <button className="cv-toolbar-button cv-secondary-command" onClick={async()=>{const savedCanvas=await save();if(savedCanvas)setShowCms(true);}}>Use in CMS</button>
    <button className="cv-primary" disabled={!dirty||saving} onClick={()=>void save()}>{saving?"Saving…":dirty?<><Save size={13}/> Save</>:<><Check size={13}/> Saved</>}</button>
  </>;
- return <div className="cv-root">
+ return <div className="cv-root" data-agentsam-annotation-scope="">
   <DesignWorkspaceFrame snapshot={snapshot} className="cv-workspace" commands={commands}
    explorer={layers&&!preview?<CanvasLayers document={document} selected={selection} boardId={boardId} onSelect={select} onAdd={addBoard} onComponent={insertComponent}/>:undefined}
-   inspector={properties&&!preview?<CanvasInspector document={document} selected={selection} boardId={boardId} onNode={patch=>changeNode(selection,patch)} onBoard={patch=>{const next=copy(document),board=next.artboards.find(b=>b.id===boardId);if(board){Object.assign(board,patch);change(next);}}} onDocument={change} onRemove={()=>{change(removeNode(document,selection));setSelection("");}} onDuplicate={duplicate} onComponent={makeComponent}/>:undefined}
-   assistant={assistantMode==="docked"?assistant:undefined} assistantOpen={assistantMode==="docked"} onAssistantOpenChange={open=>setAssistantMode(open?"docked":"mini")}
+   inspector={properties&&!preview?<CanvasInspector document={document} selected={selection} boardId={boardId} onNode={patch=>changeNode(selection,patch)} onBoard={patch=>{const next=copy(document),board=next.artboards.find(b=>b.id===boardId);if(board){Object.assign(board,patch);change(next);}}} onDocument={change} onRemove={()=>{change(removeNode(document,selection));setSelection("");}} onDuplicate={duplicate} onComponent={makeComponent} events={events} run={run} onRetry={retryRun} onCancel={()=>void cancelRun()}/>:undefined}
    status={<div className="cv-status"><span>{connection?"Private Canvas":"Connection lost · retrying"}{conflict?" · remote revision changed":""}</span><span>{document.artboards.length} artboards · Revision {canvas.revision}</span></div>}>
-   <CanvasStage document={document} selected={selection} boardId={boardId} preview={preview} width={previewWidth} zoom={zoom} onZoom={setZoom} onSelect={select} onChange={changeNode} fitToken={fitToken} tool={tool}/>
+   <CanvasStage document={document} selected={selection} boardId={boardId} preview={preview} width={previewWidth} resourceId={canvas.id} revision={String(canvas.revision)} zoom={zoom} onZoom={setZoom} onSelect={select} onChange={changeNode} fitToken={fitToken} tool={tool}/>
    <div className="cv-stage-toolbar" role="toolbar" aria-label="Canvas tools">
     <IconAction className={tool==="select"?"active":""} label="Select tool" hint="Select (V)" onClick={()=>setTool("select")}><MousePointer2 size={16}/></IconAction>
     <IconAction className={tool==="pan"?"active":""} label="Pan tool" hint="Pan (H)" onClick={()=>setTool("pan")}><Hand size={16}/></IconAction>
+    {location.pathname.replace(/\/+$/, "")==="/admin/canvas"&&<AnnotationToggle className="cv-icon-button"/>}
     {!preview&&<><span/><div className="cv-insert-menu"><IconAction label="Insert element" hint="Insert element" disabled={!boardId} onClick={()=>setInsertOpen(v=>!v)}><Plus size={16}/><ChevronDown size={10}/></IconAction>{insertOpen&&<div className="cv-popover">{(["frame","text","button","image","input","link"] as const).map(type=><button key={type} onClick={()=>insert(type)}>{type[0].toUpperCase()+type.slice(1)}</button>)}</div>}</div><IconAction label="Add artboard" hint="Add artboard" onClick={addBoard}><Frame size={16}/></IconAction></>}
     <span/><IconAction label="Zoom out" onClick={()=>setZoom(z=>Math.max(.08,z/1.2))}><ZoomOut size={15}/></IconAction><button className="cv-zoom-value" title="Fit artboards (1)" onClick={()=>setFitToken(n=>n+1)}>{Math.round(zoom*100)}%</button><IconAction label="Zoom in" onClick={()=>setZoom(z=>Math.min(3,z*1.2))}><ZoomIn size={15}/></IconAction>
     {preview&&<select aria-label="Preview width" value={previewWidth} onChange={e=>setPreviewWidth(Number(e.target.value))}><option value={0}>Desktop</option><option value={768}>Tablet · 768</option><option value={390}>Phone · 390</option></select>}
@@ -388,14 +419,12 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
     {directionError&&directions.length===4&&<p role="alert" className="cv-error-text">{directionError}</p>}
    </div>}
    {busy&&<div className="cv-run-status" role="status"><span className="cv-loading-mark"/><span>{events.length?eventLabel(events[events.length-1]):"Starting creation"}</span><IconAction onClick={()=>void cancelRun()} label="Cancel creation"><Square size={12}/></IconAction></div>}
-   {assistantMode==="mini"&&<div className="cv-mini-assistant">{assistant}</div>}
   </DesignWorkspaceFrame>
   {(error||conflict||recovery)&&<div className="cv-alert" role="alert"><div>{recovery?"An unsaved working copy is available from this browser.":conflict?"A newer revision was saved while you were editing. Your changes are still here.":error}</div>
    {recovery&&<><button onClick={()=>{change(recovery);setRecovery(null);}}>Restore changes</button><button onClick={()=>{setRecovery(null);try{sessionStorage.removeItem(recoveryKey);}catch{}}}>Dismiss</button></>}
    {conflict&&<><button onClick={()=>{const blob=new Blob([JSON.stringify(document,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob);const a=window.document.createElement("a");a.href=url;a.download="canvas-recovery.json";a.click();URL.revokeObjectURL(url);}}>Export my changes</button><button onClick={()=>void reload()}>Load saved revision</button></>}
    {!conflict&&!recovery&&<IconAction label="Dismiss error" onClick={()=>setError("")}><X size={14}/></IconAction>}
   </div>}
-  {assistantMode==="expanded"&&<div className="cv-expanded-assistant"><header><strong>AgentSam</strong><IconAction onClick={()=>setAssistantMode("docked")} label="Restore docked assistant"><Minimize2 size={16}/></IconAction></header>{assistant}</div>}
   {showCms&&<CanvasCmsHandoff canvas={canvas} onRepair={repairForCms} onClose={()=>setShowCms(false)}/>}
   <SourceArtboardLibrary open={showSources} onClose={()=>setShowSources(false)} onImport={importSource}/>
   {showLibrary&&<div className="cv-modal-backdrop"><section className="cv-modal" role="dialog" aria-modal="true" aria-labelledby="canvas-library-title"><header><h2 id="canvas-library-title">Your Canvases</h2><IconAction label="Close saved Canvases" onClick={()=>setShowLibrary(false)}><X size={18}/></IconAction></header><div className="cv-document-list">{library.map(item=><button key={item.id} onClick={()=>switchDocument(item.id)}><Frame size={16}/><span className="sr-only" aria-hidden="true">Open Canvas</span><span><strong>{item.name}</strong><small>Revision {item.revision}</small></span><ArrowRight size={14}/></button>)}{!library.length&&<p>No saved Canvases were returned.</p>}</div></section></div>}

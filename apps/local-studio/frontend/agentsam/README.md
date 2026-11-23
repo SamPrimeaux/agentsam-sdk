@@ -44,3 +44,9 @@ The helper inherits the selected theme and preserves iframe isolation. The chat
 route currently streams provider text; automatic execution of mentioned plugins
 still requires integrating the existing plugin runtime with that chat route.
 The existing `/api/plugins/tools/execute` endpoint remains the execution authority.
+
+
+The annotation helper scopes selection to the visible active Side Stage surface (or
+the standalone editor surface). Specialist workspaces may claim a resource-tagged
+selection through their domain run API; all other selections are staged in the active
+chat draft with their resource ID, revision and selected element ID preserved.

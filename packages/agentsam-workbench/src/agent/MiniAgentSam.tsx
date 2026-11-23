@@ -11,11 +11,25 @@ export interface AnnotationSelection {
   point?: { x: number; y: number };
   /** Optional semantic identity provided by an authenticated host adapter. */
   object?: { id: string; type: string; projectId: string; revision: number };
+  /** Host-owned resource identity for contextual routing; never grants mutation authority. */
+  resource?: { id: string; kind: string; revision?: string; appId?: string };
 }
+function readHostResource(element: Element): AnnotationSelection['resource'] | undefined {
+  const host = element.closest('[data-agentsam-resource-host]');
+  if (!host) return undefined;
+  const clean = (value: string | null, max: number) => (value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+  const id = clean(host.getAttribute('data-agentsam-resource-id'), 160);
+  const kind = clean(host.getAttribute('data-agentsam-resource-kind'), 80);
+  if (!id || !kind) return undefined;
+  const revision = clean(host.getAttribute('data-agentsam-resource-revision'), 80);
+  const appId = clean(host.getAttribute('data-agentsam-resource-app-id'), 120);
+  return { id, kind, ...(revision ? { revision } : {}), ...(appId ? { appId } : {}) };
+}
+
 export interface MiniAgentSamProps {
   selecting: boolean;
   onSelectingChange: (value: boolean) => void;
-  onSubmit: (prompt: string, selection: AnnotationSelection) => void | Promise<void>;
+  onSubmit: (prompt: string, selection: AnnotationSelection) => string | void | Promise<string | void>;
   renderComposer?: (props: { value: string; onChange: (value: string) => void; onSend: () => void; busy: boolean; expanded: boolean }) => ReactNode;
   scope?: () => HTMLElement | null;
 }
@@ -102,6 +116,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
       event.preventDefault(); event.stopPropagation();
       const selected = element.closest('button, a, input, textarea, select, [role="button"], [data-annotation-target]') || element;
       const resource = selected.closest('[data-agentsam-resource]') || selected;
+      const hostResource = readHostResource(selected);
       const clean = (text: string | null, max = 180) => (text || '').replace(/\s+/g, ' ').trim().slice(0, max);
       const editableSelector = 'input,textarea,select,[contenteditable]:not([contenteditable="false"])';
       const editable = selected.matches(editableSelector) || Boolean(selected.closest(editableSelector));
@@ -115,6 +130,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
         text: editable ? '[field value withheld]' : clean(selected.textContent, 300),
         point: { x: event.clientX, y: event.clientY },
         ...(cad ? { object: cad.object } : {}),
+        ...(hostResource ? { resource: hostResource } : {}),
       });
       target.current = selected;
       setBounds(isVisualCanvas(selected) ? new DOMRect(event.clientX, event.clientY, 2, 2) : selected.getBoundingClientRect());
@@ -126,8 +142,9 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
   // Opaque-origin browser frames can report a selected element without exposing their DOM.
   // Authenticate the sender against a frame currently owned by the app, never a global message.
   useEffect(() => {
-    const frameSelector = 'iframe.as-web-browser-frame,iframe.as-work-generated-preview,iframe.abs-explore-frame';
-    const frames = () => [...document.querySelectorAll<HTMLIFrameElement>(frameSelector)];
+    const frameSelector = 'iframe.as-web-browser-frame,iframe.as-work-generated-preview,iframe.abs-explore-frame,iframe.cv-native-html';
+    const root = scope?.() || document.body;
+    const frames = () => [...root.querySelectorAll<HTMLIFrameElement>(frameSelector)];
     // Same-origin embedded pages are not rewritten by the browser proxy. Attach
     // directly to their child document rather than selecting the entire iframe.
     const localFrames = new Map<Document, () => void>();
@@ -180,7 +197,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
     };
     frames().forEach(frame => { sendMode(frame); attachSameOrigin(frame); });
     const load = (event: Event) => {
-      if (event.target instanceof HTMLIFrameElement && event.target.matches(frameSelector)) {
+      if (event.target instanceof HTMLIFrameElement && event.target.matches(frameSelector) && root.contains(event.target)) {
         sendMode(event.target);
         attachSameOrigin(event.target);
       }
@@ -215,8 +232,12 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
         const clean = (v: unknown, max = 180) => typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '';
         const cad = cadContext.current?.frame === frame && (['canvas','svg','iframe'].includes(String(item?.tag)) || item?.visual === true)
           ? cadContext.current : null;
+        const hostResource = readHostResource(frame);
+        const frameResourceId = clean(frame.closest('[data-agentsam-resource]')?.getAttribute('data-agentsam-resource'));
+        const selectedId = hostResource?.kind === 'design-canvas' && hostResource.appId === 'agentsam-local-studio' && frameResourceId
+          ? frameResourceId : (frameResourceId || 'browser') + ':' + clean(item?.tag);
         setSelection({
-          id: cad?.object.id || (clean(frame.closest('[data-agentsam-resource]')?.getAttribute('data-agentsam-resource') || 'browser') + ':' + clean(item?.tag)),
+          id: cad?.object.id || selectedId,
           label: cad?.label || clean(item?.label) || 'Browser element', page: (() => {
             try {
               const page = new URL(clean(item?.url, 2000), location.href);
@@ -230,6 +251,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
           tag: clean(item?.tag), text: clean(item?.text, 300),
           ...(pointValid ? { point: { x: frameBox.left + pointX, y: frameBox.top + pointY } } : {}),
           ...(cad ? {object: cad.object} : {}),
+          ...(hostResource ? { resource: hostResource } : {}),
         });
         onSelectingChange(false);
       }
@@ -242,7 +264,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
       frames().forEach(frame => frame.contentWindow?.postMessage({source: 'agentsam-host', type: 'annotation-mode', enabled: false}, '*'));
       localFrames.forEach(cleanup => cleanup());
     };
-  }, [selecting, onSelectingChange]);
+  }, [selecting, onSelectingChange, scope]);
   useEffect(() => {
     const update = () => {
       if (browserSelection.current?.frame.isConnected) {
@@ -290,7 +312,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
   async function submit() {
     if (!value.trim() || !selection || busy) return;
     setBusy(true); setStatus('');
-    try { await onSubmit(value, selection); setValue(''); setStatus('Added to your chat draft for review.'); }
+    try { const receipt = await onSubmit(value, selection); setValue(''); setStatus(typeof receipt === 'string' && receipt.trim() ? receipt : 'Added to your chat draft for review.'); }
     catch (error) { setStatus(error instanceof Error ? error.message : 'Could not send. Try again.'); }
     finally { setBusy(false); }
   }
