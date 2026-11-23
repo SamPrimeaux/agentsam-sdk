@@ -54,6 +54,14 @@ test('source browser serves only indexed source IDs, preserves bytes and allows 
   const base='http://127.0.0.1:'+address.port+'/api/cad/sources/';
   const meta=await fetch(base+scad.id+'/metadata');assert.equal(meta.status,200);
   const md=await meta.json();assert.equal(md.source.sha256,scad.sha256);
+  for(const filename of ['part.stl','sheet.svg','review.mov','house.ifczip']){
+   const entry=files.find(x=>x.relativePath.endsWith('/'+filename));
+   assert.ok(entry);
+   const data=await fetch(base+entry.id+'/download');
+   assert.equal(data.status,200);
+   assert.deepEqual(Buffer.from(await data.arrayBuffer()),fs.readFileSync(path.join(dir,filename)));
+   assert.equal((await fetch(base+entry.id+'/preview')).status,415);
+  }
   const text=await fetch(base+scad.id+'/text');assert.equal(text.status,200);
   assert.equal(await text.text(),'cube([4,5,6]);');
   const asset=await fetch(base+glb.id+'/preview');assert.equal(asset.status,200);
