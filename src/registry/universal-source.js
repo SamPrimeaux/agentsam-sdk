@@ -17,8 +17,8 @@ const read = (root, relative) => JSON.parse(fs.readFileSync(path.join(root, rela
 const hex = (value) => createHash('sha256').update(value).digest('hex');
 const kebab = /^[a-z][a-z0-9-]*$/;
 
-function command({ manager, name, version, executable, words, description, topic='', aliases=[], source }) {
-  if (!['npm','pip'].includes(manager) || !words.length || !words.every(w => /^[a-z][a-z0-9-]*$/.test(w))) {
+function command({ manager, name, version, executable, words, description, topic='', aliases=[], source, sourceDigest='', rootCommand=false }) {
+  if (!['npm','pip'].includes(manager) || (!rootCommand && !words.length) || !words.every(w => /^[a-z][a-z0-9-]*$/.test(w))) {
     throw new Error('portable_cli_command_identity_invalid');
   }
   const commandKey = words.join(' ');
@@ -32,11 +32,11 @@ function command({ manager, name, version, executable, words, description, topic
     command_key: commandKey,
     command_words: words,
     aliases: aliases.filter(x => typeof x === 'string' && !x.startsWith('-')),
-    display_name: executable + ' ' + commandKey,
+    display_name: executable + (commandKey ? ' ' + commandKey : ''),
     description: description || '',
     topic,
     source_path: source,
-    source_sha256: hex(JSON.stringify([identity,description||'',topic,aliases,source])),
+    source_sha256: hex(JSON.stringify([identity,description||'',topic,aliases,source,sourceDigest])),
     release_state: 'source_only',
     is_active: false,
     // Explicitly not a credential, authorization, release receipt, or dispatch.
@@ -72,13 +72,14 @@ export function buildUniversalSource({
     throw new Error('pip_sdk_distribution_identity_invalid');
   }
   if (pkg.bin.agentsam !== 'bin/agentsam') throw new Error('npm_agentsam_entrypoint_changed');
+  const sourceDigest=(relative)=>hex(fs.readFileSync(path.join(root,relative)));
   const commands=[];
   for (const row of npmCatalog) {
     if (!kebab.test(row.id)) throw new Error('nonportable_cli_catalog_id:'+row.id);
     commands.push(command({
       manager:'npm',name:pkg.name,version:pkg.version,executable:'agentsam',
       words:[row.id],description:row.summary,topic:row.topic,aliases:row.aliases||[],
-      source:'src/cli/command-catalog.js',
+      source:'src/cli/command-catalog.js',sourceDigest:sourceDigest('src/cli/command-catalog.js'),
     }));
   }
   // All additional actual npm console executables, not imaginary slash aliases.
@@ -90,8 +91,8 @@ export function buildUniversalSource({
     }
     commands.push(command({
       manager:'npm',name:pkg.name,version:pkg.version,executable,
-      words:[executable],description:'Published-package entrypoint candidate',
-      topic:'binary',source:'package.json',
+      words:[],rootCommand:true,description:'Published-package entrypoint candidate',
+      topic:'binary',source:target,sourceDigest:sourceDigest(target),
     }));
   }
   const pySet=new Set();
@@ -103,7 +104,7 @@ export function buildUniversalSource({
     commands.push(command({
       manager:'pip',name:py.package,version:py.version,executable:py.executable,
       words:item.words,description:item.description,topic:item.words[0],
-      source:py.source,
+      source:py.source,sourceDigest:sourceDigest(py.source),
     }));
   }
   const identitySet=new Set();

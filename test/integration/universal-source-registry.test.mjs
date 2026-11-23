@@ -18,6 +18,11 @@ test('one source projection distinguishes npm/pip even when executable and subco
   const pip=snapshot.commands.find(c=>c.package_manager==='pip'&&c.command_key==='doctor'&&c.executable==='agentsam');
   assert.ok(npm&&pip);
   assert.notEqual(npm.id,pip.id);
+  const rootBinary=snapshot.commands.find(c=>c.executable==='agentsam-hooks'&&c.package_manager==='npm');
+  assert.equal(rootBinary.command_key,'');
+  assert.deepEqual(rootBinary.command_words,[]);
+  assert.equal(rootBinary.display_name,'agentsam-hooks');
+  assert.equal(rootBinary.source_path,'packages/agentsam-hooks/bin/agentsam-hooks.mjs');
   assert.equal(npm.package_name,'@inneranimalmedia/agentsam-sdk');
   assert.equal(pip.package_name,'agentsam-sdk');
   assert.ok(snapshot.commands.every(c=>c.release_state==='source_only'&&!c.is_active));
