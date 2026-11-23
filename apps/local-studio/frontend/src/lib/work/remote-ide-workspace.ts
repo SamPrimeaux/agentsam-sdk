@@ -8,6 +8,7 @@ export type IDESourceDiscovery = {
   googleDrive: Array<{account:string;label:string}>;
   github: Array<{account:string;label:string}>;
   cloudflare: Array<{account:string;label:string;scopes:string[]}>;
+  connectionPlugins: { googleDrive: string|null; github: string|null; cloudflare: string|null };
 };
 type RemoteEntry = {id:string; name:string; kind:'file'|'folder'; mimeType?:string; size?:number; readonly?:boolean; canEdit?:boolean};
 type RemoteListing = {ok:true;entries:RemoteEntry[];nextPageToken?:string|null;cursor?:string|null;truncated?:boolean};
