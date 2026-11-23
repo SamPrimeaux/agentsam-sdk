@@ -12,9 +12,9 @@ SHA='a'*64
 ARTIFACT=b'cad output artifact'
 ART_SHA=hashlib.sha256(ARTIFACT).hexdigest()
 FILE={'path':'shell.ifc','uri':'/v1/files/work/derived/building-abc/shell.ifc','bytes':len(ARTIFACT),'sha256':ART_SHA}
-CAPS={'endpoints':{'cad_building_export':{'handler_installed':True,'operation':'cad.building.export','scope':'single_rectangular_shell_with_north_south_openings'}},'tools':{x:{'installed':True} for x in ('freecad','occt','ifc','blender','media')}}
+CAPS={'endpoints':{'cad_building_export':{'handler_installed':True,'operation':'cad.building.export','scope':'single_rectangular_shell_with_north_south_openings','status':'available'}},'tools':{x:{'installed':True} for x in ('freecad','occt','ifc','blender','media')}}
 RECEIPT={'ok':True,'schema':'agentsam.cad.building-export.v1','output_scope':'runtime-derived',
- 'source':{'source_sha256':SHA,'scope':'single_rectangular_shell_with_north_south_openings'},
+ 'source':{'source_sha256':SHA,'source_revision':1,'scope':'single_rectangular_shell_with_north_south_openings'},
  'files':[FILE,*[{**FILE,'path':p,'uri':'/v1/files/work/derived/building-abc/'+p} for p in ['shell.step','plan.dxf','plan.svg','preview.png','sheet-A101-proof.pdf','model.glb','model.opt.glb','turntable.mp4']]],
  'receipt':{'status':'passed','checks':[{'id':str(i),'passed':True} for i in range(16)]}}
 
