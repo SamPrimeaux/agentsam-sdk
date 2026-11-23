@@ -35,8 +35,9 @@ export function brandColors(source, themeId = '') {
     return resolve(aliases.get(alias), visited);
   };
   return input.map(item => {
-    const perTheme = record(record(source)[item.name]).themes;
-    const themed = themeId && typeof record(perTheme)[themeId] === 'string' ? perTheme[themeId] : item.value;
+    const rawItem = Array.isArray(source) ? source.find(entry => record(entry).name === item.name) : record(source)[item.name];
+    const perTheme = record(record(rawItem).themes);
+    const themed = themeId && typeof perTheme[themeId] === 'string' ? perTheme[themeId] : item.value;
     return { name: item.name, value: resolve(themed), usage: item.usage, sourceValue: themed };
   }).filter(item => item.value);
 }
