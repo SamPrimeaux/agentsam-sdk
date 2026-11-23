@@ -137,7 +137,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     workspace: browserWorkspace || workspace,
     workspaceId: browserWorkspace ? browserWorkspaceKey : project?.id,
     workspaceLabel: browserWorkspace ? browserWorkspaceName : project?.name,
-    context: {root: browserWorkspace ? undefined : project?.workspaceRoot},
+    context: {root: browserWorkspace ? undefined : project?.workspaceRoot || undefined},
     reconnect: () => browserWorkspace ? void reconnectBrowserFolder() : setConnectOpen(true),
     manageConnection: openRuntimeSettings,
   } : item);
