@@ -18,7 +18,8 @@ test('new browser tab actions live in the global trailing header and offer full 
   assert.match(page, /New browser tab in full view/);
   assert.match(page, /openBrowserTab\(true\)/);
   assert.match(page, /createPortal\(headerActions, hostActionsSlot\)/);
-  assert.match(page, /<AnnotationToggle\s*\/>/);
+  const stage = read('../frontend/src/components/workbench/side-stage.tsx');
+  assert.match(stage, /item\.kind === 'browser' && item\.id === activeId && <AnnotationToggle\s*\/>/);
 });
 
 test('browser tabs take a real page title or URL host without a second tab registry', () => {
