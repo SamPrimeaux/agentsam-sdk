@@ -79,12 +79,15 @@ export async function scopesForFullCatalogOptIn(env, packs, providerKey='cloudfl
 }
 
 /** Scopes already granted on the active connection; new grants are added on top. */
-export async function activeGrantedScopes(env, ownerId, providerKey = 'cloudflare') {
-  if (!env?.DB?.prepare || !ownerId) return [];
+export async function activeGrantedScopes(env, ownerId, providerKey = 'cloudflare', accountIdentifier = '') {
+  // Additive permissions must stay on the SAME authorized provider account.
+  // Never use the latest token from some other Cloudflare account.
+  if (!env?.DB?.prepare || !ownerId || !accountIdentifier) return [];
   try {
     const row = await env.DB.prepare(
-      'SELECT scopes FROM user_oauth_tokens WHERE account_id = ? AND provider = ? AND is_active = 1 AND revoked_at IS NULL ORDER BY updated_at DESC LIMIT 1',
-    ).bind(ownerId, providerKey).first();
+      'SELECT scopes FROM user_oauth_tokens WHERE account_id = ? AND provider = ? ' +
+      'AND account_identifier = ? AND is_active = 1 AND revoked_at IS NULL LIMIT 1',
+    ).bind(ownerId, providerKey, accountIdentifier).first();
     return String(row?.scopes || '').split(/\s+/).filter(Boolean);
   } catch {
     return [];
