@@ -60,6 +60,48 @@ export function connectorProvider(key) {
   return CONNECTOR_PROVIDERS[clean(key).toLowerCase()] || null;
 }
 
+/**
+ * Resolve a provider from the account-wide plugin catalog, not from a Files
+ * icon or a hardcoded plugin ID. Connection grants are still stored in
+ * user_oauth_tokens; this lookup grants no permissions by itself.
+ */
+export async function resolveRegisteredOAuthPlugin(env, pluginId) {
+  const id = clean(pluginId);
+  if (!/^plg_[a-f0-9]{8,}$/i.test(id) || !env?.DB?.prepare) return null;
+  try {
+    const row = await env.DB.prepare(
+      "SELECT id,plugin_key,provider_key,plugin_kind,auth_type,oauth_connect_url,config_json " +
+      "FROM agentsam_plugins WHERE id=? AND plugin_kind='oauth' LIMIT 1"
+    ).bind(id).first();
+    if (!row || !['oauth','oauth_via_iam'].includes(row.auth_type)) return null;
+    let config = {};
+    try { config=JSON.parse(row.config_json || '{}'); } catch { return null; }
+    return {
+      id:row.id,pluginKey:row.plugin_key,provider:row.provider_key,
+      authType:row.auth_type,connectUrl:row.oauth_connect_url || null,
+      packId:config.pack===true && typeof config.pack_id==='string' ? config.pack_id : null,
+    };
+  } catch { return null; }
+}
+
+/** Only a registered first-party auth entrypoint may be opened; never forward
+ * arbitrary plugin metadata as a browser redirect. */
+export function registeredOAuthEntryUrl(plugin, origin, returnTo) {
+  const raw=clean(plugin?.connectUrl);
+  if (!raw) return null;
+  let url;
+  try { url=new URL(raw,origin); } catch { return null; }
+  const allowed=new Set([new URL(origin).origin,'https://inneranimalmedia.com','https://agentsam.inneranimalmedia.com']);
+  if (url.protocol!=='https:' && url.origin!==new URL(origin).origin) return null;
+  if (!allowed.has(url.origin) || !/^\/api\/(oauth|integrations|connections)\//.test(url.pathname)) return null;
+  if (plugin.packId && !url.searchParams.has('packs') && url.pathname.endsWith('/cloudflare/start')) {
+    url.searchParams.set('packs',plugin.packId);
+  }
+  if (url.origin===new URL(origin).origin && returnTo) url.searchParams.set('return_to',safeReturnTo(returnTo));
+  return url.toString();
+}
+
+
 function stateProvider(def) {
   return "connector_" + def.provider;
 }
@@ -521,12 +563,53 @@ export async function listGitHubConnectionRepositories(request, env, userId, fet
 }
 
 export function isConnectorWorkRequest(pathname) {
-  return pathname === "/api/work/github/repos" || /^\/api\/work\/connect\/(google_drive|google_calendar|github)\/(start|status|disconnect)$/.test(pathname);
+  return pathname === "/api/work/github/repos" ||
+    /^\/api\/work\/connect\/(google_drive|google_calendar|github)\/(start|status|disconnect)$/.test(pathname) ||
+    /^\/api\/work\/connect\/plugins\/plg_[a-f0-9]{8,}\/(start|status|disconnect)$/i.test(pathname);
 }
 
 export async function handleConnectorWorkRequest(request, env, userId) {
   const url = new URL(request.url);
   if (url.pathname === "/api/work/github/repos") return listGitHubConnectionRepositories(request,env,userId);
+  const pluginRoute = /^\/api\/work\/connect\/plugins\/(plg_[a-f0-9]{8,})\/(start|status|disconnect)$/i.exec(url.pathname);
+  if (pluginRoute) {
+    const [,pluginId,action] = pluginRoute;
+    const plugin=await resolveRegisteredOAuthPlugin(env,pluginId);
+    if (!plugin) return json({ok:false,error:'oauth_plugin_unavailable'},404);
+    if (action==='start' && request.method==='POST') {
+      // Native Google/GitHub flows reuse the proven PKCE/token persistence path,
+      // even if the plugin record's legacy URL targets another host.
+      if (connectorProvider(plugin.provider)) {
+        return beginConnectorOAuth(request,env,userId,plugin.provider);
+      }
+      const body=await request.json().catch(()=>({}));
+      const connectUrl=registeredOAuthEntryUrl(plugin,url.origin,body.return_to || body.returnTo);
+      if (!connectUrl) return json({ok:false,error:'oauth_plugin_connection_handler_missing'},409);
+      return json({ok:true,plugin_id:plugin.id,provider:plugin.provider,authorize_url:connectUrl});
+    }
+    if (action==='status' && request.method==='GET') {
+      if (connectorProvider(plugin.provider)) {
+        return json({ok:true,plugin_id:plugin.id,provider:plugin.provider,connections:await connectorStatus(env,userId,plugin.provider)});
+      }
+      const {results}=await env.DB.prepare(
+        "SELECT account_identifier,scopes FROM user_oauth_tokens WHERE account_id=? AND provider=? " +
+        "AND is_active=1 AND revoked_at IS NULL ORDER BY updated_at DESC"
+      ).bind(userId,plugin.provider).all();
+      return json({ok:true,plugin_id:plugin.id,provider:plugin.provider,
+        connections:(results||[]).map(row=>({accountIdentifier:row.account_identifier,
+          grantedScopes:clean(row.scopes).split(/\\s+/).filter(Boolean)}))});
+    }
+    if (action==='disconnect' && request.method==='POST') {
+      if (!connectorProvider(plugin.provider)) {
+        return json({ok:false,error:'use_provider_owned_disconnect',provider:plugin.provider},409);
+      }
+      const body=await request.json().catch(()=>({}));
+      const requested=connectionIdParts(body.connection_id || body.connectionId || '');
+      if(requested.provider !== plugin.provider) return json({ok:false,error:'oauth_plugin_connection_mismatch'},400);
+      return json(await disconnectConnector(env,userId,body.connection_id || body.connectionId));
+    }
+    return json({ok:false,error:'method_not_allowed'},405);
+  }
   const match = url.pathname.match(/^\/api\/work\/connect\/([a-z_]+)\/(start|status|disconnect)$/);
   if (!match) return json({ ok: false, error: "not_found" }, 404);
   const [, key, action] = match;
