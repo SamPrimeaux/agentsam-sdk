@@ -38,6 +38,8 @@ test('annotation button broadcasts active state and selection anchors to exact s
   assert.match(host, /aria-pressed=\{active\}/);
   assert.match(host, /agentsam:annotation-state/);
   assert.match(helper, /root\.addEventListener\('pointermove', move, true\)/);
-  assert.match(helper, /target\.current = selected; setBounds\(selected\.getBoundingClientRect\(\)\)/);
+  assert.match(helper, /target\.current = focus/);
+  assert.match(helper, /setBounds\(isVisualCanvas\(focus\) \? new DOMRect/);
+  assert.match(helper, /text: editable \? '\[field value withheld\]'/);
   assert.match(helper, /text: editable \? '\[field value withheld\]'/);
 });
