@@ -625,6 +625,7 @@ body:has(.copro-studio) { margin:0; }
 .mm-home-main{flex:1;min-width:0;padding:0 clamp(20px,3vw,48px) 30px;max-width:1900px;margin:0 auto}
 .mm-home-header{height:67px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--copro-line);margin-bottom:24px}
 .mm-home-header>div:first-child{display:flex;align-items:center;gap:10px}.mm-home-header>div:first-child span{color:var(--copro-accent-readable);letter-spacing:.12em;font-size:10px}.mm-home-header strong{font-size:18px;letter-spacing:-.03em}
+.mm-home-header .mm-prime-page-heading{display:grid;align-content:center;gap:2px}.mm-home-header .mm-prime-page-heading small{color:var(--copro-muted);font-size:10px;line-height:1.2}
 .mm-home-header-actions{display:flex;gap:8px}.mm-home-header-actions button{height:35px;padding:0 12px;border:1px solid var(--copro-line);background:var(--copro-surface);color:var(--copro-text);border-radius:7px;display:flex;align-items:center;gap:7px}
 .mm-home-header-actions button:last-child{background:var(--copro-accent);color:var(--copro-accent-ink);border-color:var(--copro-accent);font-weight:750}
 .mm-home-quickstart{display:grid;gap:10px}.mm-create-banner{position:relative;min-height:119px;width:100%;border:1px solid var(--copro-line);border-radius:10px;color:var(--copro-accent-ink);background:var(--copro-accent);display:flex;align-items:center;justify-content:center;gap:14px;font-size:19px;overflow:hidden;box-shadow:inset 0 1px var(--copro-muted)}

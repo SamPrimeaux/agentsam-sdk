@@ -5,10 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const read = (file) => readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
 
-test("MovieMode mounts only under /admin/moviemode; Media Library owns /media", () => {
+test("MovieMode mounts only under /admin/moviemode; /admin/media owns the unified library", () => {
   assert.match(read("../frontend/src/routes/(apps)/admin/moviemode.tsx"), /MovieModeSurface/);
-  assert.match(read("../frontend/src/routes/(apps)/media.tsx"), /MediaLibraryPage/);
-  assert.doesNotMatch(read("../frontend/src/routes/(apps)/media.tsx"), /MovieModeSurface/);
+  const legacyMedia = read("../frontend/src/routes/(apps)/media.tsx");
+  assert.match(legacyMedia, /Navigate to="\/admin\/media"/);
+  assert.doesNotMatch(legacyMedia, /MediaLibraryPage|MovieModeSurface/);
+  assert.match(read("../frontend/src/routes/(apps)/admin/media.tsx"), /UnifiedLibraryPage view="media"/);
   assert.match(read("../frontend/src/routes/(apps)/media.edit.tsx"), /createFileRoute\("\/\(apps\)\/media\/edit"\)/);
   assert.match(read("../frontend/src/routeTree.gen.ts"), /'\/media\/edit'/);
 });
@@ -22,12 +24,12 @@ test("MovieMode remains one runnable application with a reusable Work host", () 
 
 test("Media replaces Content while Work can still focus MovieMode", () => {
   const shell = read("../frontend/agentsam/AgentSamShell.tsx");
-  assert.match(read("../scripts/studio-navigation.mjs"), /id:'media',label:'Library',href:'\/media'/);
+  assert.match(read("../scripts/studio-navigation.mjs"), /id:'media',label:'Library',href:'\/admin\/media'/);
   assert.doesNotMatch(shell, /id: 'utilities'/);
   assert.match(read("../frontend/agentsam/side-stage-actions.ts"), /"media", "database", "terminal"/);
   assert.match(read("../frontend/src/components/workbench/side-stage.tsx"), /MovieModeSurface workPane/);
   assert.match(read("../frontend/agentsam/AgentSamPage.tsx"), /workFocused/);
-  assert.match(read("../frontend/src/routes/(apps)/widgets.tsx"), /component: WidgetUtilitiesPage/);
+  assert.match(read("../frontend/src/routes/(apps)/widgets.tsx"), /Navigate to="\/admin\/agentsam"/);
 });
 
 test("Full-height editors scroll within their Work container instead of viewport overflow", () => {
@@ -57,7 +59,7 @@ test("Embedded MovieMode does not render desktop home columns at narrow panel wi
   assert.match(editor, /setHandsetPanel\("browser"\)/);
 });
 
-test("MovieMode project browser no longer advertises browser-local CoPro prototype footers", () => {
+test("MovieMode project browser identifies its app boundary from Media Library", () => {
   const projects = read("../../../packages/copro-ui/src/projects.tsx");
   assert.doesNotMatch(projects, /Browser-local editing/);
   assert.doesNotMatch(projects, /Open an existing prototype/);

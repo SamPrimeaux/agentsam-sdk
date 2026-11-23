@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { createConfiguredGLTFLoader } from '@inneranimalmedia/agentsam-3d-viewer';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { colorAdjustmentPreviewFilter, STAGE_FINISHES, type CoProColorAdjustments, type CoProStageEnvironment } from '@inneranimalmedia/copro-ui';
+import { colorAdjustmentPreviewFilter, STAGE_ENVIRONMENT_DEFAULTS, STAGE_FINISHES, type CoProColorAdjustments, type CoProStageEnvironment } from '@inneranimalmedia/copro-ui';
 // LOCAL-ONLY engine integration. Consume the actual SamScene sky renderer, not a
 // second look-alike shader. Keep this behind UI acceptance before packaging.
 import { SkyGenerator } from './samscene/skyGenerator.ts';
@@ -32,7 +32,8 @@ type WorldHandle = {
   stage:THREE.Scene; renderer:THREE.WebGLRenderer;
   camera:THREE.PerspectiveCamera; controls:OrbitControls;
   sky:SkyGenerator; grid:THREE.GridHelper; hemi:THREE.HemisphereLight;
-  key:THREE.DirectionalLight; model:THREE.Group|null; mixer:THREE.AnimationMixer|null;
+  key:THREE.DirectionalLight; bounce:THREE.DirectionalLight; ground:THREE.Mesh; shadowPlane:THREE.Mesh;
+  model:THREE.Group|null; mixer:THREE.AnimationMixer|null;
   radius:number;center:THREE.Vector3;
 };
 
@@ -78,7 +79,7 @@ export function CoProWorldScene({src,title,timeUs,environment,adjustments,transf
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
     renderer.outputColorSpace=THREE.SRGBColorSpace;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure=1.15;
+    renderer.toneMappingExposure=STAGE_ENVIRONMENT_DEFAULTS.exposure;
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     node.appendChild(renderer.domElement);
@@ -90,22 +91,28 @@ export function CoProWorldScene({src,title,timeUs,environment,adjustments,transf
     // SamScene's genuine sky engine, including cloud shaders, stellar actors,
     // procedural aurora and nebula. No separate CoPro sky shader is created.
     const sky=new SkyGenerator();
+    const initialSky=sky.getConfig();
     sky.root.scale.setScalar(100);
     sky.root.visible=!skyVideoSrc;
     stage.add(sky.root as unknown as THREE.Object3D);
-    const grid=new THREE.GridHelper(12,24,0x8097b5,0x46536a);
+    const grid=new THREE.GridHelper(12,24,initialSky.horizonHex,initialSky.nadirHex);
+    for(const material of Array.isArray(grid.material)?grid.material:[grid.material]){
+      if(material instanceof THREE.LineBasicMaterial){material.transparent=true;material.opacity=.34;}
+    }
     grid.visible=false;stage.add(grid);
-    const hemi=new THREE.HemisphereLight('#e2ecff','#272631',2.1);
+    const hemi=new THREE.HemisphereLight(initialSky.horizonHex,initialSky.nadirHex,2.1);
     stage.add(hemi);
-    const key=new THREE.DirectionalLight('#fff1d3',3.3);
+    const key=new THREE.DirectionalLight(initialSky.sunHex,3.3);
     key.position.set(4,7,5);key.castShadow=true;
     key.shadow.mapSize.set(1024,1024);
     key.shadow.camera.near=.05;key.shadow.camera.far=1000;
     stage.add(key);
-    const bounce=new THREE.DirectionalLight('#9fc9ff',1.2);bounce.position.set(-4,3,-5);stage.add(bounce);
-    const ambientPlane=new THREE.Mesh(new THREE.PlaneGeometry(20000,20000),new THREE.MeshStandardMaterial({color:0x202935,roughness:.88,metalness:.14}));
-    ambientPlane.rotation.x=-Math.PI/2;ambientPlane.position.y=-.015;ambientPlane.receiveShadow=true;stage.add(ambientPlane);
-    const handle:WorldHandle={stage,renderer,camera,controls,sky,grid,hemi,key,model:null,mixer:null,radius:1,center:new THREE.Vector3()};
+    const bounce=new THREE.DirectionalLight(initialSky.cloudAccentHex,1.2);bounce.position.set(-4,3,-5);stage.add(bounce);
+    const groundPlane=new THREE.Mesh(new THREE.PlaneGeometry(20000,20000),new THREE.MeshBasicMaterial({color:initialSky.horizonHex,toneMapped:false}));
+    groundPlane.rotation.x=-Math.PI/2;groundPlane.position.y=-.015;stage.add(groundPlane);
+    const shadowPlane=new THREE.Mesh(new THREE.PlaneGeometry(20000,20000),new THREE.ShadowMaterial({color:initialSky.nadirHex,opacity:.22}));
+    shadowPlane.rotation.x=-Math.PI/2;shadowPlane.position.y=-.013;shadowPlane.receiveShadow=true;stage.add(shadowPlane);
+    const handle:WorldHandle={stage,renderer,camera,controls,sky,grid,hemi,key,bounce,ground:groundPlane,shadowPlane,model:null,mixer:null,radius:1,center:new THREE.Vector3()};
     world.current=handle;
     const fit=()=>{
       const bounds=node.getBoundingClientRect();
@@ -126,8 +133,9 @@ export function CoProWorldScene({src,title,timeUs,environment,adjustments,transf
       handle.center.copy(center);
       root.position.sub(center);
       root.traverse(child=>{if(child instanceof THREE.Mesh){child.castShadow=true;child.receiveShadow=true;}});
-      ambientPlane.position.y=bounds.min.y-center.y-.035*radius;
-      grid.position.y=ambientPlane.position.y+.004*radius;
+      groundPlane.position.y=bounds.min.y-center.y-.035*radius;
+      shadowPlane.position.y=groundPlane.position.y+.002*radius;
+      grid.position.y=groundPlane.position.y+.004*radius;
       grid.scale.setScalar(Math.max(.1,radius));
       const distance=radius/Math.sin(THREE.MathUtils.degToRad(camera.fov/2))*1.35;
       camera.near=Math.max(.01,distance/1500);camera.far=Math.max(10000,distance*50);camera.updateProjectionMatrix();
@@ -171,8 +179,10 @@ export function CoProWorldScene({src,title,timeUs,environment,adjustments,transf
         if(original && original!==child.material)for(const mat of Array.isArray(original)?original:[original])mat.dispose();}});
       sky.dispose();sky.root.removeFromParent();grid.geometry.dispose();
       for(const material of Array.isArray(grid.material)?grid.material:[grid.material]) material.dispose();
-      ambientPlane.geometry.dispose();
-      (ambientPlane.material as THREE.Material).dispose();
+      groundPlane.geometry.dispose();
+      (groundPlane.material as THREE.Material).dispose();
+      shadowPlane.geometry.dispose();
+      (shadowPlane.material as THREE.Material).dispose();
       renderer.dispose();renderer.domElement.remove();if(world.current===handle)world.current=null;
     };
   },[src]);
@@ -198,11 +208,25 @@ export function CoProWorldScene({src,title,timeUs,environment,adjustments,transf
     handle.sky.setGlowEnabled(environment?.glow!==false);
     handle.sky.root.visible=!skyVideoSrc;
     handle.grid.visible=Boolean(environment?.showGrid);
+    const skyConfig=handle.sky.getConfig();
+    const ambient=environment?.ambient??1;
+    handle.ground.visible=!skyVideoSrc;
+    (handle.ground.material as THREE.MeshBasicMaterial).color.set(skyConfig.horizonHex);
+    (handle.shadowPlane.material as THREE.ShadowMaterial).color.set(skyConfig.nadirHex);
+    const gridMaterials=Array.isArray(handle.grid.material)?handle.grid.material:[handle.grid.material];
+    gridMaterials.forEach((material,index)=>{
+      if(material instanceof THREE.LineBasicMaterial)material.color.set(index===0?skyConfig.horizonHex:skyConfig.nadirHex);
+    });
+    handle.hemi.color.setHSL((environment?.lightHue??37)/360,.35,.92);
+    handle.hemi.groundColor.set(skyConfig.nadirHex);
+    handle.key.color.set(skyConfig.sunHex);
+    handle.bounce.color.set(skyConfig.cloudAccentHex);
+    handle.renderer.toneMappingExposure=environment?.exposure??STAGE_ENVIRONMENT_DEFAULTS.exposure;
     handle.stage.fog=(environment?.fogOpacity??0)>0
-      ? new THREE.FogExp2(environment?.fogColor??'#999999',(environment?.fogOpacity??0)*.008/Math.max(handle.radius,1)) : null;
-    handle.hemi.intensity=1.4*(environment?.ambient??1);
-    handle.key.intensity=2.8*(environment?.ambient??1);
-    handle.key.color.setHSL((environment?.lightHue??37)/360,.35,.92);
+      ? new THREE.FogExp2(environment?.fogColor??skyConfig.horizonHex,(environment?.fogOpacity??0)*.008/Math.max(handle.radius,1)) : null;
+    handle.hemi.intensity=1.4*ambient;
+    handle.key.intensity=2.8*ambient;
+    handle.bounce.intensity=1.2*ambient;
     handle.key.shadow.radius=environment?.shadowSoftness??2.5;
     handle.key.position.set(4*Math.cos((environment?.keyAngle??35)*Math.PI/180),7,5*Math.sin((environment?.keyAngle??35)*Math.PI/180));
     // Only override source materials when a stage finish is selected. PBR maps use

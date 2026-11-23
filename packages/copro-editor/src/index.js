@@ -60,7 +60,7 @@ export function applyCoProCommand(inputProject, command) {
       }
       const patch = payload.patch;
       if (!patch || typeof patch!=="object" || Array.isArray(patch) ||
-        Object.keys(patch).some(key=>!["background","ambient","fogColor","fogOpacity","showGrid","skyPreset","finish","cloudDensity","skyProgression","starIntensity","galaxyIntensity","auroraIntensity","stars","glow","lightHue","shadowSoftness","keyAngle","skyVideoAssetId"].includes(key)))
+        Object.keys(patch).some(key=>!["background","ambient","exposure","fogColor","fogOpacity","showGrid","skyPreset","finish","cloudDensity","skyProgression","starIntensity","galaxyIntensity","auroraIntensity","stars","glow","lightHue","shadowSoftness","keyAngle","skyVideoAssetId"].includes(key)))
         throw new Error("copro_environment_patch_invalid");
       for (const [key,value] of Object.entries(patch)) {
         if (key==="background"||key==="fogColor") {
@@ -74,6 +74,7 @@ export function applyCoProCommand(inputProject, command) {
           if (typeof value!=="string" || !options.includes(value)) throw new Error("copro_environment_preset_invalid");
         } else if (typeof value!=="number" || !Number.isFinite(value) ||
           (key==="ambient" && (value<.2||value>2.5)) ||
+          (key==="exposure" && (value<.25||value>2.5)) ||
           (key==="fogOpacity" && (value<0||value>.8)) ||
           (["cloudDensity","skyProgression","starIntensity","galaxyIntensity","auroraIntensity"].includes(key) && (value<0||value>1)) ||
           (key==="lightHue" && (value<0||value>360)) ||

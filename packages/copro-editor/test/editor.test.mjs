@@ -275,9 +275,9 @@ test("mask command rejects unimplemented shapes, malformed dimensions and rectan
 test("stage environment is undoable and survives separate edits without replacing project metadata",()=>{
   const session = new CoProEditorSession(fixture());
   const before = session.project;
-  session.execute({type:"project.set_environment",payload:{patch:{background:"#304050",ambient:1.3,showGrid:true}}});
+  session.execute({type:"project.set_environment",payload:{patch:{background:"#304050",ambient:1.3,exposure:1.4,showGrid:true}}});
   session.execute({type:"project.set_environment",payload:{patch:{fogColor:"#b0c0d0",fogOpacity:.3}}});
-  assert.deepEqual(session.project.metadata.environment,{background:"#304050",ambient:1.3,showGrid:true,fogColor:"#b0c0d0",fogOpacity:.3});
+  assert.deepEqual(session.project.metadata.environment,{background:"#304050",ambient:1.3,exposure:1.4,showGrid:true,fogColor:"#b0c0d0",fogOpacity:.3});
   assert.deepEqual(before.metadata,fixture().metadata);
   session.undo();
   assert.equal(session.project.metadata.environment.fogOpacity,undefined);
@@ -290,7 +290,7 @@ test("stage environment is undoable and survives separate edits without replacin
 });
 
 test("stage environment validates colors, limits and unknown controls",()=>{
-  for(const patch of [{background:"red"},{fogColor:"#abc"},{ambient:3},{fogOpacity:-1},{showGrid:1},{fakeProperty:true}]){
+  for(const patch of [{background:"red"},{fogColor:"#abc"},{ambient:3},{exposure:.2},{exposure:2.6},{fogOpacity:-1},{showGrid:1},{fakeProperty:true}]){
     assert.throws(()=>applyCoProCommand(fixture(),{type:"project.set_environment",payload:{patch}}),/copro_environment_.*invalid/);
   }
 });

@@ -42,6 +42,7 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
   const [finishGroup,setFinishGroup]=useState<(typeof FINISH_GROUPS)[number]>('All');
   const current={...defaults,...(skyDefaults[environment?.skyPreset??defaults.skyPreset]??{}),...environment};
   const sky=skyList.find(entry=>entry.id===current.skyPreset) || skyList[0];
+  const fogColor=environment?.fogColor??sky?.bottom??defaults.fogColor;
   const selectedFinish=STAGE_FINISHES.find(entry=>entry.id===current.finish);
   const update=<K extends keyof CoProStageEnvironment>(key:K,value:CoProStageEnvironment[K])=>onChange({[key]:value});
   return <div className="mm-stage-look" aria-label="Scene settings">
@@ -142,13 +143,14 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
     </>}
     {activeSection==='lighting' && <>
     <section className="mm-look-card" aria-label="Dynamic lighting">
-      <div className="mm-look-card-head"><span><Sun size={13}/> DYNAMIC LIGHTING</span><button type="button" onClick={()=>onChange({ambient:1,lightHue:37,shadowSoftness:2.5,keyAngle:35})}>Reset lights</button></div>
+      <div className="mm-look-card-head"><span><Sun size={13}/> DYNAMIC LIGHTING</span><button type="button" onClick={()=>onChange({ambient:1,exposure:defaults.exposure,lightHue:37,shadowSoftness:2.5,keyAngle:35})}>Reset lights</button></div>
       <div className="mm-look-control-stack">
         <CoProRangeControl className="mm-look-slider" label="Light intensity" value={current.ambient} min={.2} max={2.5} step={.05} format={v=>`${v.toFixed(2)}×`} onCommit={value=>update('ambient',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Exposure" value={current.exposure} min={.25} max={2.5} step={.05} format={v=>`${v.toFixed(2)}×`} onCommit={value=>update('exposure',value)}/>
         <CoProRangeControl className="mm-look-slider" label="Ambient hue" value={current.lightHue} min={0} max={360} step={1} format={v=>`${v}°`} onCommit={value=>update('lightHue',value)}/>
         <CoProRangeControl className="mm-look-slider" label="Shadow blur" value={current.shadowSoftness} min={.5} max={10} step={.5} format={v=>v.toFixed(1)} onCommit={value=>update('shadowSoftness',value)}/>
         <CoProRangeControl className="mm-look-slider" label="Key light angle" value={current.keyAngle} min={-90} max={180} step={5} format={v=>`${v}°`} onCommit={value=>update('keyAngle',value)}/>
-        <label className="mm-look-color-control"><span>Atmosphere tint</span><input type="color" aria-label="Atmosphere tint" value={current.fogColor} onChange={event=>update('fogColor',event.currentTarget.value)}/></label>
+        <label className="mm-look-color-control"><span>Atmosphere tint</span><input type="color" aria-label="Atmosphere tint" value={fogColor} onChange={event=>update('fogColor',event.currentTarget.value)}/></label>
         <CoProRangeControl className="mm-look-slider" label="Atmosphere density" value={current.fogOpacity} min={0} max={.8} step={.02} format={v=>`${Math.round(v*100)}%`} onCommit={value=>update('fogOpacity',value)}/>
       </div>
     </section>

@@ -3,7 +3,7 @@ import type { CoProProject } from "@inneranimalmedia/copro-project";
 export type CoProCommand =
   | { type: "project.set_cover"; payload: { cover: {kind:"frame"|"upload";url:string;timeUs?:number}|null } }
   | { type: "project.apply_template"; payload: { tracks: any[]; canvas?: any } }
-  | { type: "project.set_environment"; payload: { patch: {background?:string;ambient?:number;fogColor?:string;fogOpacity?:number;showGrid?:boolean;skyPreset?:string;finish?:string;cloudDensity?:number;skyProgression?:number;starIntensity?:number;galaxyIntensity?:number;auroraIntensity?:number;stars?:boolean;glow?:boolean;lightHue?:number;shadowSoftness?:number;keyAngle?:number}|null } }
+  | { type: "project.set_environment"; payload: { patch: {background?:string;ambient?:number;exposure?:number;fogColor?:string;fogOpacity?:number;showGrid?:boolean;skyPreset?:string;finish?:string;cloudDensity?:number;skyProgression?:number;starIntensity?:number;galaxyIntensity?:number;auroraIntensity?:number;stars?:boolean;glow?:boolean;lightHue?:number;shadowSoftness?:number;keyAngle?:number}|null } }
   | { type: "project.set_canvas"; payload: { width: number; height: number; frameRate?: number } }
   | { type: "clip.insert"; payload: { trackId: string; clip: unknown } }
   | { type: "clip.move"; payload: { clipId: string; startUs: number; trackId?: string } }
