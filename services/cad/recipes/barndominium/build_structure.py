@@ -541,7 +541,7 @@ def export_ifc(output):
     return fpath,failures
 
 def main():
-    global DOC,GROUPS
+    global DOC
     rooms_file,out=(Path(arg).resolve() for arg in sys.argv[1:3])
     out.mkdir(parents=True,exist_ok=True)
     load_rooms(rooms_file)
