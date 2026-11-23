@@ -71,11 +71,13 @@ export type CoProStudioProps = {
   projectTitle?: string;
   previewSrc?: string | null;
   previewKind?: "video" | "image" | null;
+  /** Transparent SVG composition layer rendered above active footage or a 3D scene. */
+  creativeOverlaySrc?: string | null;
   mediaItems?: CoProMediaShelfItem[];
   localSceneSources?:LocalSceneSource[];
   localSceneSourceBusyId?:string|null;
   onImportLocalSceneSource?: (source:LocalSceneSource)=>void;
-  render3DScene?: (args:{url:string;name:string;assetId:string;timeUs:number;playing:boolean;environment?:CoProStageEnvironment;transform:{scale?:number;x?:number;y?:number;rotation?:number;opacity?:number}})=>React.ReactNode;
+  render3DScene?: (args:{url:string;name:string;assetId:string;timeUs:number;playing:boolean;environment?:CoProStageEnvironment;adjustments?:CoProColorAdjustments;transform:{scale?:number;x?:number;y?:number;rotation?:number;opacity?:number}})=>React.ReactNode;
   creativeAssets?: CoProCreativeAsset[];
   systemIcons?: CoProSystemIconMap;
   createTransitionPreview?:CoProTransitionPreviewFactory;
@@ -217,6 +219,7 @@ export function CoProStudio({
   projectTitle = "Untitled project",
   previewSrc,
   previewKind,
+  creativeOverlaySrc,
   mediaItems = [],
   localSceneSources=[],
   localSceneSourceBusyId,
@@ -570,7 +573,7 @@ export function CoProStudio({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     if (drag.nextX !== drag.x || drag.nextY !== drag.y) onAction?.({type:"transform",clipId:drag.clipId,patch:{x:drag.nextX,y:drag.nextY}});
   }
-  const effectivePreviewSrc = activeMedia?.url ?? (activeVisualClip?.metadata?.creative ? previewSrc : null);
+  const effectivePreviewSrc = activeMedia?.url ?? (activeVisualClip?.metadata?.creative ? (creativeOverlaySrc ?? previewSrc) : null);
   useEffect(()=>setPreviewDecodeWarning(null),[effectivePreviewSrc]);
   const effectivePreviewKind = activeMedia?.kind === "image" ? "image"
     : activeMedia?.kind === "video" ? "video"
@@ -1038,7 +1041,7 @@ export function CoProStudio({
               {activeMedia?.kind === "scene" && activeVisualClip && render3DScene ? (
                 render3DScene({url:activeMedia.url,name:activeMedia.name,assetId:activeMedia.id,playing,
                   timeUs:Math.max(0,(playheadUs-activeVisualClip.startUs)*(activeVisualClip.playbackRate??1)+(activeVisualClip.inUs??0)),
-                  environment:stageEnvironment,transform:activeTransform})
+                  environment:stageEnvironment,adjustments:activeVisualClip.metadata?.adjustments as CoProColorAdjustments|undefined,transform:activeTransform})
               ) : effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
                   ref={videoRef}
@@ -1109,6 +1112,7 @@ export function CoProStudio({
               )}
 
               <div className="copro-preview-overlay" aria-hidden="true" />
+              {activeMedia && creativeOverlaySrc && <img className="copro-preview-composition-overlay" src={creativeOverlaySrc} alt="" aria-hidden="true" draggable={false}/>}
               {effectivePreviewSrc && <>
                 <div className="mm-playback-guides" aria-hidden="true">
                   <span className="mm-safe-frame"/>
@@ -1266,6 +1270,7 @@ export function CoProStudio({
                 currentGraphic={String((selectedClip?.metadata?.graphic as any)?.id ?? "")}
                 currentGraphicText={String((selectedClip?.metadata?.graphic as any)?.text ?? "")}
                 creativeParameters={(selectedClip?.metadata?.creative as any)?.parameters as Record<string,unknown>|undefined}
+                creativeScene={String((selectedClip?.metadata?.creative as any)?.scene??"")}
                 onEffectChange={(effect) => selectedClip && onAction?.({type:"effect",clipId:selectedClip.id,effect})}
                 onTransitionChange={(transition) => selectedClip && onAction?.({type:"transition",clipId:selectedClip.id,transition,durationUs:300_000})}
                 onMotionChange={(motion) => selectedClip && onAction?.({type:"motion",clipId:selectedClip.id,motion})}

@@ -71,11 +71,16 @@ test("adjustments require a selected clip instead of silently editing ephemeral 
   assert.doesNotMatch(html, /aria-label="Exposure"/);
 });
 
-test("color slider event values are captured before React state-updater callbacks", async () => {
+test("inspector sliders share a release-commit control instead of creating undo entries while dragging", async () => {
   const {readFile} = await import("node:fs/promises");
-  const src = await readFile(new URL("../src/tool-sheet.tsx", import.meta.url), "utf8");
-  assert.match(src, /const nextValue = Number\(event\.currentTarget\.value\);/);
-  assert.doesNotMatch(src, /setValues\(current\s*=>\s*\([^)]*event\.currentTarget/);
+  const panel = await readFile(new URL("../src/tool-sheet.tsx", import.meta.url), "utf8");
+  const controls = await readFile(new URL("../src/panel-controls.tsx", import.meta.url), "utf8");
+  assert.match(panel, /import \{ CoProNumberControl, CoProRangeControl \}/);
+  assert.match(panel, /onCommit=\{next=>onAdjustmentChange/);
+  assert.match(controls, /onPointerUp=\{commit\}/);
+  assert.match(controls, /onPointerCancel=\{cancel\}/);
+  assert.match(controls, /onKeyUp=\{commit\}/);
+  assert.match(controls, /committedRef/);
 });
 
 test("animation inspector exposes catalog motion presets and real timing controls", () => {
@@ -93,9 +98,9 @@ test("animation inspector exposes catalog motion presets and real timing control
   assert.match(html,/Clip animation controls/);
   assert.match(html,/Zoom · in/);
   assert.match(html,/Rise · in/);
-  assert.match(html,/aria-label="Animation duration"/);
-  assert.match(html,/aria-label="Animation delay"/);
-  assert.match(html,/aria-label="Animation amplitude"/);
+  assert.match(html,/aria-label="Duration \(seconds\)"/);
+  assert.match(html,/aria-label="Delay \(seconds\)"/);
+  assert.match(html,/aria-label="Distance \/ intensity"/);
   assert.doesNotMatch(html,/No animation/);
 });
 
@@ -113,12 +118,40 @@ test("Video mask tab is backed by a clip callback and provider-only tools do not
   assert.doesNotMatch(html,/Preview removal|Interface preview/);
 });
 
-test("Scene workspace exposes project-backed stage environment and its reset",async()=>{
+test("the studio uses one project-backed stage look panel instead of a parallel legacy workspace",async()=>{
   const {readFile} = await import("node:fs/promises");
-  const source = await readFile(new URL("../src/creative-workspace.tsx",import.meta.url),"utf8");
-  assert.match(source,/onEnvironmentChange/);
-  for (const label of ["Stage background color","Stage ambient brightness","Stage fog color","Stage fog density","Show stage guide grid"]){
-    assert.ok(source.includes(label),label);
+  const source = await readFile(new URL("../src/studio.tsx",import.meta.url),"utf8");
+  assert.match(source,/CoProStageLookPanel/);
+  assert.doesNotMatch(source,/CoProCreativeWorkspace/);
+});
+
+test("unconnected tracking and AI stylize tools do not expose pretend processing controls",()=>{
+  for(const tool of ["tracking","ai-stylize"]){
+    const html=render(tool,{hasSelectedClip:true});
+    assert.match(html,/NOT CONNECTED/);
+    assert.match(html,/No processing controls shown/);
+    assert.doesNotMatch(html,/type="range"/);
   }
-  assert.match(source,/Reset stage environment/);
+});
+
+test("creative templates expose their editable fields and project image slot",()=>{
+  const kinetic=render("text",{
+    hasSelection:true,
+    creativeScene:"kinetic-stack",
+    creativeParameters:{title:"Build",subtitle:"Make room",label:"CHAPTER 01",words:["MAKE","ROOM"],accent:"#68dfc0",background:"#101819",backgroundMode:"transparent",foreground:"#f4f4e9"},
+  });
+  assert.match(kinetic,/Composition content/);
+  assert.match(kinetic,/Words/);
+  assert.match(kinetic,/MAKE/);
+  assert.match(kinetic,/ROOM/);
+  assert.match(kinetic,/Canvas background/);
+  const lowerThird=render("text",{
+    hasSelection:true,
+    creativeScene:"lower-third",
+    creativeParameters:{title:"Build",subtitle:"Make room",label:"CHAPTER 01",author:"Sam",media:"asset:creative-demo",accent:"#68dfc0",background:"#101819",backgroundMode:"transparent",foreground:"#f4f4e9"},
+    mediaItems:[{id:"asset:photo-1",name:"Studio still.webp",kind:"image",url:"blob:photo"}],
+  });
+  assert.match(lowerThird,/Author \/ name/);
+  assert.match(lowerThird,/Image source/);
+  assert.match(lowerThird,/Studio still\.webp/);
 });

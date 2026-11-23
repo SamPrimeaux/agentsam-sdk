@@ -357,14 +357,25 @@ export function applyCoProCommand(inputProject, command) {
       if (!current || current.schema !== "copro.creative-clip.v1") throw new Error("copro_clip_creative_not_found");
       const parameters = { ...(current.parameters ?? {}) };
       for (const [key, value] of Object.entries(payload.patch ?? {})) {
+        let nextValue=value;
         if (["title", "subtitle", "label", "author", "contact"].includes(key)) {
           if (typeof value !== "string" || value.length > 4000) throw new Error("copro_creative_text_parameter_invalid");
         } else if (key === "accent" || key === "background" || key === "foreground") {
           if (typeof value !== "string" || !/^#[0-9a-f]{6}$/i.test(value)) throw new Error("copro_creative_color_parameter_invalid");
+        } else if (key === "media") {
+          if (typeof value !== "string" || value.length > 512) throw new Error("copro_creative_media_parameter_invalid");
+        } else if (key === "backgroundMode") {
+          if(value!=="transparent"&&value!=="solid")throw new Error("copro_creative_background_mode_invalid");
+        } else if (key === "words" || key === "items") {
+          if (!Array.isArray(value) || value.length > 24 || value.some(item=>typeof item!=="string"||item.length>160)) throw new Error("copro_creative_list_parameter_invalid");
+          nextValue=value.map(item=>item.trim()).filter(Boolean);
+        } else if (key === "values") {
+          if (!Array.isArray(value) || value.length > 24 || value.some(item=>!Number.isFinite(Number(item))||Number(item)<0||Number(item)>1_000_000)) throw new Error("copro_creative_values_parameter_invalid");
+          nextValue=value.map(Number);
         } else {
           throw new Error("copro_creative_parameter_not_editable");
         }
-        parameters[key] = value;
+        parameters[key] = nextValue;
       }
       found.clip.metadata = { ...(found.clip.metadata ?? {}), creative: { ...current, parameters } };
       if (project.metadata?.creative) project.metadata = { ...project.metadata, creative: { ...project.metadata.creative, parameters: { ...(project.metadata.creative.parameters ?? {}), ...payload.patch } } };

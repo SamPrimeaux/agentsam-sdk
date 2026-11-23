@@ -1,5 +1,6 @@
-import React, { useEffect, useId, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { DEFAULT_COLOR_ADJUSTMENTS, type CoProColorAdjustments } from "./color-adjustments.js";
+import { CoProNumberControl, CoProRangeControl } from "./panel-controls.js";
 import type { CoProCreativeAsset } from "./creative-types.js";
 import { FileAudio, Film, Upload, X, Sparkles } from "lucide-react";
 
@@ -54,6 +55,7 @@ export type CoProToolPanelProps = {
   currentGraphic?: string;
   currentGraphicText?: string;
   creativeParameters?: Record<string, unknown>;
+  creativeScene?: string;
   creativeAssets?: CoProCreativeAsset[];
   onEffectChange?: (effect: string) => void;
   onTransitionChange?: (transition: string) => void;
@@ -69,13 +71,47 @@ export type CoProToolPanelProps = {
   scopeError?: string|null;
 };
 
+function CreativeTextField({label,value,onCommit,multiline=false,rows=2}:{label:string;value:string;onCommit:(value:string)=>void;multiline?:boolean;rows?:number}) {
+  const [draft,setDraft]=useState(value);
+  const draftRef=useRef(value);
+  useEffect(()=>{draftRef.current=value;setDraft(value);},[value]);
+  const commit=()=>{if(draftRef.current!==value)onCommit(draftRef.current);};
+  return <label><span>{label}</span>{multiline
+    ? <textarea rows={rows} value={draft} maxLength={4000} onChange={event=>{draftRef.current=event.currentTarget.value;setDraft(event.currentTarget.value);}} onBlur={commit}/>
+    : <input value={draft} maxLength={4000} onChange={event=>{draftRef.current=event.currentTarget.value;setDraft(event.currentTarget.value);}} onBlur={commit} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();commit();event.currentTarget.blur();}}}/>}</label>;
+}
+
+function CreativeListField({label,value,onCommit}:{label:string;value:string[];onCommit:(value:string[])=>void}) {
+  const serialized=value.join("\n");
+  const [draft,setDraft]=useState(serialized);
+  const draftRef=useRef(serialized);
+  useEffect(()=>{draftRef.current=serialized;setDraft(serialized);},[serialized]);
+  const commit=()=>{
+    const next=draftRef.current.split(/\r?\n/).map(item=>item.trim()).filter(Boolean).slice(0,24).map(item=>item.slice(0,160));
+    if(next.join("\n")!==serialized)onCommit(next);
+  };
+  return <label><span>{label} <small>One entry per line</small></span><textarea rows={4} value={draft} onChange={event=>{draftRef.current=event.currentTarget.value;setDraft(event.currentTarget.value);}} onBlur={commit}/></label>;
+}
+
+function CreativeNumberListField({label,value,onCommit}:{label:string;value:number[];onCommit:(value:number[])=>void}) {
+  const serialized=value.join(", ");
+  const [draft,setDraft]=useState(serialized);
+  const draftRef=useRef(serialized);
+  useEffect(()=>{draftRef.current=serialized;setDraft(serialized);},[serialized]);
+  const commit=()=>{
+    const next=draftRef.current.split(/[\s,;]+/).filter(Boolean).map(Number).filter(item=>Number.isFinite(item)&&item>=0&&item<=1_000_000).slice(0,24);
+    if(next.join(",")!==value.join(","))onCommit(next);
+  };
+  return <label><span>{label} <small>Comma-separated values</small></span><textarea rows={2} value={draft} onChange={event=>{draftRef.current=event.currentTarget.value;setDraft(event.currentTarget.value);}} onBlur={commit}/></label>;
+}
+
 const DESCRIPTION: Record<string, string> = {
   project: "Project information and timeline configuration.",
   video: "Video properties, masks, background removal and retouch controls.",
   animation: "Keyframes, motion curves, easing and animation controls.",
-  tracking: "Object, camera and planar tracking controls.",
+  tracking: "Object and camera tracking requires a connected motion-analysis processor.",
   adjust: "Professional image and footage adjustments.",
-  "ai-stylize": "Style-transfer and AI-assisted visual treatment controls.",
+  "ai-stylize": "AI visual treatment requires a connected image-generation processor.",
   media: "Bring in video, photographs, or audio and add them to the timeline.",
   audio: "Add audio, select a clip, and adjust its level.",
   text: "Add a title or edit the selected text directly on the timeline.",
@@ -112,15 +148,15 @@ function TransformEditor({transform,onTransformChange}:TransformEditorProps){
         if (!Number.isFinite(next)) return;
         onTransformChange?.({[key] : key === "scale" || key === "opacity" ? next/100 : next});
       };
-      return <label key={key} className="mm-transform-row">
+      return <div key={key} className="mm-transform-row">
         <span>{label}</span>
         <div className="mm-transform-inputs">
-          <input aria-label={label+" slider"} type="range" min={min} max={max} step={step} value={Math.max(min,Math.min(max,value))} onChange={event => change(Number(event.currentTarget.value))}/>
-          <input aria-label={label} type="number" min={min} max={max} step={step} value={value} onChange={event => change(Math.min(max,Math.max(min,Number(event.currentTarget.value))))}/>
+          <CoProRangeControl className="mm-transform-range" label={label+" slider"} value={Math.max(min,Math.min(max,value))} min={min} max={max} step={step} format={next=>`${next}${unit}`} onCommit={change}/>
+          <CoProNumberControl className="mm-transform-number" label={label} value={value} min={min} max={max} step={step} onCommit={change}/>
           <b>{unit}</b>
           <button type="button" title={"Reset "+label} aria-label={"Reset "+label} onClick={()=>change(fallback)}>↺</button>
         </div>
-      </label>;
+      </div>;
     })}
     <p className="copro-panel-note">Changes update the selected clip, preview and editable project history. Drag the image to reposition it.</p>
   </div>;
@@ -146,15 +182,11 @@ function World3DTransformEditor({transform={},visible=true,onChange}:{
       <small>CoPro world3d · editable project values</small>
     </div>
     <div className="mm-world3d-axis-grid">
-      {axes.map(axis=><label key={axis.key} className="mm-world3d-axis">
+      {axes.map(axis=><div key={axis.key} className="mm-world3d-axis">
         <span>{axis.label}</span>
-        <div><input type="number" value={transform?.[axis.key]??axis.defaultValue}
-          min={axis.min} max={axis.max} step={axis.step} aria-label={axis.label+" world3d"}
-          onChange={event=>{
-            const value=Number(event.currentTarget.value);
-            if(Number.isFinite(value)&&value>=axis.min&&value<=axis.max)onChange?.({transform:{[axis.key]:value}});
-          }}/><small>{axis.unit}</small></div>
-      </label>)}
+        <div><CoProNumberControl className="mm-world3d-number" label={axis.label+" world3d"} value={transform?.[axis.key]??axis.defaultValue}
+          min={axis.min} max={axis.max} step={axis.step} onCommit={value=>onChange?.({transform:{[axis.key]:value}})}/><small>{axis.unit}</small></div>
+      </div>)}
     </div>
     <label className="mm-world3d-visibility"><span>Visible in scene</span>
       <input type="checkbox" checked={visible} aria-label="3D object visible"
@@ -187,13 +219,8 @@ function VideoTools({transform,onTransformChange,mask,onMaskChange}:TransformEdi
           onClick={()=>update({shape,invert:shape==="circle"?current.invert:false})}>
           <i aria-hidden="true">{shape==="circle"?"○":"▭"}</i><span>{shape==="circle"?"Circle":"Rectangle"}</span></button>)}
       </div>
-      <div className="mm-feature-control"><span>Size <b>{current.size}%</b></span>
-        <input aria-label="Mask size" type="range" min="20" max="100" value={current.size}
-          onChange={event=>update({size:Number(event.currentTarget.value)})}/></div>
-      <div className="mm-feature-control"><span>Feather <b>{current.feather}%</b></span>
-        <input aria-label="Mask feather" type="range" min="0" max="30" value={current.feather}
-          disabled={current.shape!=="circle"}
-          onChange={event=>update({feather:Number(event.currentTarget.value)})}/></div>
+      <CoProRangeControl className="mm-feature-control" label="Mask size" value={current.size} min={20} max={100} step={1} format={value=>`${value}%`} onCommit={value=>update({size:value})}/>
+      <CoProRangeControl className="mm-feature-control" label="Mask feather" value={current.feather} min={0} max={30} step={1} format={value=>`${value}%`} disabled={current.shape!=="circle"} onCommit={value=>update({feather:value})}/>
       <label className="mm-feature-toggle"><span><strong>Invert circle</strong><small>Show the area outside the circle.</small></span>
         <input aria-label="Invert circle mask" type="checkbox" checked={current.shape==="circle"&&current.invert}
           disabled={current.shape!=="circle"} onChange={event=>update({invert:event.currentTarget.checked})}/></label>
@@ -207,13 +234,6 @@ function VideoTools({transform,onTransformChange,mask,onMaskChange}:TransformEdi
     </div>}
   </section>;
 }
-
-const FEATURE_PRESETS: Record<string,{eyebrow:string;title:string;description:string;tabs:string[];sliders:Array<{label:string;value:number;min:number;max:number;unit?:string}>;actions:string[]}> = {
-  animation:{eyebrow:"MOTION DESIGN",title:"Animation & keyframes",description:"Animate transforms, opacity, effects and properties over time with editable curves and keyframe tracks.",tabs:["Keyframes","Graph editor","Dope sheet","NLA"],sliders:[{label:"Position X",value:0,min:-1000,max:1000,unit:"px"},{label:"Position Y",value:0,min:-1000,max:1000,unit:"px"},{label:"Rotation",value:0,min:-360,max:360,unit:"°"},{label:"Scale",value:100,min:1,max:800,unit:"%"},{label:"Opacity",value:100,min:0,max:100,unit:"%"}],actions:["Add keyframe","Auto keyframe","Add animation track"]},
-  tracking:{eyebrow:"MOTION ANALYSIS",title:"Tracking & stabilization",description:"Object, camera and planar tracking with feature detection, solve settings and stabilization controls.",tabs:["Object","Camera","Planar","Stabilize"],sliders:[{label:"Feature threshold",value:50,min:0,max:100,unit:"%"},{label:"Track size",value:24,min:1,max:100,unit:"px"},{label:"Smoothing",value:35,min:0,max:100,unit:"%"},{label:"Solve accuracy",value:80,min:0,max:100,unit:"%"}],actions:["Analyze motion","Solve camera","Create tracking data"]},
-  adjust:{eyebrow:"COLOR & IMAGE",title:"Adjust",description:"Primary and secondary correction, tonal controls, color balance, curves, HSL, scopes and finishing.",tabs:["Basic","Color","Curves","HSL","Scopes"],sliders:[{label:"Exposure",value:0,min:-5,max:5,unit:"EV"},{label:"Contrast",value:0,min:-100,max:100},{label:"Saturation",value:100,min:0,max:200,unit:"%"},{label:"Highlights",value:0,min:-100,max:100},{label:"Shadows",value:0,min:-100,max:100},{label:"Temperature",value:0,min:-100,max:100},{label:"Tint",value:0,min:-100,max:100}],actions:["Reset adjustments","Save look","Apply to selection"]},
-  "ai-stylize":{eyebrow:"GENERATIVE FINISHING",title:"AI stylize",description:"Explore style transfer, cinematic looks, scene restyling and controlled image-to-image direction.",tabs:["Styles","Prompt","Structure","History"],sliders:[{label:"Style strength",value:45,min:0,max:100,unit:"%"},{label:"Structure preserve",value:80,min:0,max:100,unit:"%"},{label:"Detail retention",value:90,min:0,max:100,unit:"%"}],actions:["Generate preview","Create variation","Save style preset"]}
-};
 
 const ADJUST_TABS: Record<string, Array<{label:string;value:number;min:number;max:number;unit?:string}>> = {
   Basic: [
@@ -241,35 +261,21 @@ const ADJUST_TABS: Record<string, Array<{label:string;value:number;min:number;ma
   Scopes: [],
 };
 
-function CapabilityPreviewPanel({tool,hasSelectedClip,adjustments,onAdjustmentChange,scopeHistogram,onSampleScopes,scopeError}:{tool:string;hasSelectedClip:boolean;adjustments?:CoProColorAdjustments;onAdjustmentChange?: (patch:CoProColorAdjustments)=>void;scopeHistogram?:{red:number[];green:number[];blue:number[]}|null;onSampleScopes?:()=>void;scopeError?:string|null}){
-  const config=FEATURE_PRESETS[tool];
-  const [tab,setTab]=useState(config.tabs[0]);
-  const [values,setValues]=useState<Record<string,number>>({});
-  const [preset,setPreset]=useState("Cinematic");
-  const [prompt,setPrompt]=useState("");
-  const [lastAction,setLastAction]=useState("");
-  const [easing,setEasing]=useState("Ease in out");
-  return <section className="mm-capability-preview-panel">
-    <div className="mm-capability-heading"><span>{config.eyebrow}</span><strong>{config.title}</strong><p>{config.description}</p></div>
-    <div className="mm-capability-tabs" role="tablist">{config.tabs.map(item=><button type="button" role="tab" aria-selected={tab===item} className={tab===item?"is-active":""} key={item} onClick={()=>setTab(item)}>{item}</button>)}</div>
-    {tool==="ai-stylize"&&<div className="mm-ai-style-grid">{["Cinematic","Photoreal","Illustration","Anime","Clay","Architectural"].map(item=><button type="button" key={item} className={preset===item?"is-active":""} onClick={()=>setPreset(item)}><span className="mm-ai-style-art">{item.slice(0,1)}</span><strong>{item}</strong></button>)}</div>}
-    {(tool === "adjust" ? ADJUST_TABS[tab] ?? [] : config.sliders).map(control => {
+function CapabilityPreviewPanel({hasSelectedClip,adjustments,onAdjustmentChange,scopeHistogram,onSampleScopes,scopeError}:{hasSelectedClip:boolean;adjustments?:CoProColorAdjustments;onAdjustmentChange?: (patch:CoProColorAdjustments)=>void;scopeHistogram?:{red:number[];green:number[];blue:number[]}|null;onSampleScopes?:()=>void;scopeError?:string|null}){
+  const [tab,setTab]=useState("Basic");
+  return <section className="mm-capability-preview-panel" aria-label="Clip color adjustment">
+    <div className="mm-capability-heading"><span>COLOR & IMAGE</span><strong>Adjust</strong><p>Primary correction, tonal controls, color balance and measured RGB scopes.</p></div>
+    <div className="mm-capability-tabs" role="tablist" aria-label="Color adjustment sections">{Object.keys(ADJUST_TABS).map(item=><button type="button" role="tab" aria-selected={tab===item} className={tab===item?"is-active":""} key={item} onClick={()=>setTab(item)}>{item}</button>)}</div>
+    {(ADJUST_TABS[tab] ?? []).map(control => {
       const key = control.label.toLowerCase() as keyof typeof DEFAULT_COLOR_ADJUSTMENTS;
-      const value = tool === "adjust" ? (adjustments?.[key] ?? control.value) : (values[control.label] ?? control.value);
-      return <label className="mm-feature-control" key={control.label}>
-        <span>{control.label}<b>{value}{control.unit??""}</b></span>
-        <input aria-label={control.label} type="range" min={control.min} max={control.max}
-          step={control.max <= 10 ? .1 : 1} value={value}
-          disabled={tool === "adjust" && (!hasSelectedClip || !onAdjustmentChange)}
-          onChange={event => {
-            // Read the event synchronously: React updaters may run after currentTarget is null.
-            const nextValue = Number(event.currentTarget.value);
-            if (tool === "adjust") onAdjustmentChange?.({[key]:nextValue});
-            else setValues(current => ({...current,[control.label]:nextValue}));
-          }}/>
-      </label>;
+      const value = adjustments?.[key] ?? control.value;
+      return <CoProRangeControl key={control.label} className="mm-feature-control"
+        label={control.label} value={value} min={control.min} max={control.max}
+        step={control.max <= 10 ? .1 : 1} format={next=>`${next}${control.unit??""}`}
+        disabled={!hasSelectedClip || !onAdjustmentChange}
+        onCommit={next=>onAdjustmentChange?.({[key]:next})}/>
     })}
-    {tool === "adjust" && tab === "Scopes" && <div className="mm-color-scopes">
+    {tab === "Scopes" && <div className="mm-color-scopes">
       <div className="mm-scopes-heading"><strong>Source RGB histogram</strong><span>Current playhead frame</span></div>
       <button type="button" disabled={!hasSelectedClip} onClick={onSampleScopes}>Sample current frame</button>
       {scopeHistogram ? <svg viewBox="0 0 320 108" role="img" aria-label="Measured red green and blue channel histogram">
@@ -281,19 +287,25 @@ function CapabilityPreviewPanel({tool,hasSelectedClip,adjustments,onAdjustmentCh
       </svg> : <p>Sample the selected frame to inspect its actual color distribution.</p>}
       {scopeError && <p role="status">{scopeError}</p>}
     </div>}
-    {tool==="animation"&&<div className="mm-animation-curve-card"><div><strong>Interpolation</strong><select value={easing} onChange={event=>setEasing(event.currentTarget.value)}><option>Linear</option><option>Ease in</option><option>Ease out</option><option>Ease in out</option><option>Bezier</option><option>Step</option></select></div><div className="mm-animation-keyframe-track"><i/><i/><i/><i/></div><small>Frame 001 · 030 · 060 · 090</small></div>}
-    {tool==="ai-stylize"&&<label className="mm-ai-prompt"><span>Creative direction</span><textarea rows={3} value={prompt} onChange={event=>setPrompt(event.currentTarget.value)} placeholder="Describe the visual treatment, atmosphere, lighting or material style…"/></label>}
-    {tool === "adjust" ? <>
-      <button type="button" className="mm-capability-action" disabled={!hasSelectedClip || !onAdjustmentChange}
-        onClick={() => onAdjustmentChange?.({...DEFAULT_COLOR_ADJUSTMENTS})}>Reset adjustments</button>
-      <p className="copro-panel-note">{hasSelectedClip
-        ? "Color adjustments are saved per clip with undo/redo. The player uses a browser-filter approximation; source-accurate grading in exported video needs a render backend."
-        : "Select a video or image clip to edit its color adjustments."}</p>
-    </> : <>
-      {config.actions.map(action=><button type="button" className="mm-capability-action" key={action} onClick={()=>setLastAction(action)}>{action}</button>)}
-      {lastAction&&<div className="mm-feature-status"><Sparkles size={15}/><span><strong>{lastAction}</strong> · Preview only</span></div>}
-      <div className="mm-capability-status"><span>UI PREVIEW</span><strong>Preview controls</strong><p>Explore settings before processing.</p></div>
-    </>}
+    <button type="button" className="mm-capability-action" disabled={!hasSelectedClip || !onAdjustmentChange}
+      onClick={() => onAdjustmentChange?.({...DEFAULT_COLOR_ADJUSTMENTS})}>Reset adjustments</button>
+    <p className="copro-panel-note">{hasSelectedClip
+      ? "Adjustments are stored per clip with one undo step per slider drag. The viewport uses a browser preview approximation; source-accurate exported grading requires the render backend."
+      : "Select a video, image or 3D scene clip to edit its color adjustments."}</p>
+  </section>;
+}
+
+function CapabilityUnavailablePanel({tool}:{tool:"tracking"|"ai-stylize"}) {
+  const isTracking=tool==="tracking";
+  return <section className="mm-capability-preview-panel" aria-label={isTracking?"Tracking capability":"AI stylize capability"}>
+    <div className="mm-capability-heading"><span>{isTracking?"MOTION ANALYSIS":"GENERATIVE FINISHING"}</span>
+      <strong>{isTracking?"Tracking & stabilization":"AI stylize"}</strong>
+      <p>{isTracking
+        ? "Object, camera and planar tracking need a connected motion-analysis engine."
+        : "Style transfer and scene restyling need a connected image-generation processor."}</p>
+    </div>
+    <div className="mm-capability-status"><span>NOT CONNECTED</span><strong>No processing controls shown</strong>
+      <p>Nothing is simulated or saved here. The capability will become editable when its real processor is connected.</p></div>
   </section>;
 }
 
@@ -333,6 +345,7 @@ export function CoProToolPanel({
   currentGraphic = "",
   currentGraphicText = "",
   creativeParameters,
+  creativeScene = "",
   creativeAssets = [],
   onEffectChange,
   onTransitionChange,
@@ -423,21 +436,17 @@ export function CoProToolPanel({
             </div>
             <button className="mm-motion-more" type="button" onClick={onBrowsePresets}>Browse all animations</button>
             <div className="mm-motion-parameters">
-              <label>Duration <span>seconds</span><input aria-label="Animation duration" type="number" min=".05" max="30" step=".05"
-                disabled={!currentMotion} value={((motionSettings?.durationUs??800000)/1000000).toFixed(2)}
-                onChange={event=>{const n=Number(event.currentTarget.value);if(n>=.05&&n<=30)onMotionSettingsChange?.({durationUs:Math.round(n*1000000)});}}/></label>
-              <label>Delay <span>seconds</span><input aria-label="Animation delay" type="number" min="0" max="30" step=".05"
-                disabled={!currentMotion} value={((motionSettings?.delayUs??0)/1000000).toFixed(2)}
-                onChange={event=>{const n=Number(event.currentTarget.value);if(n>=0&&n<=30)onMotionSettingsChange?.({delayUs:Math.round(n*1000000)});}}/></label>
-              <label>Distance / intensity <span>px</span><input aria-label="Animation amplitude" type="range" min="0" max="400" step="1"
-                disabled={!currentMotion} value={motionSettings?.amplitude??80}
-                onChange={event=>onMotionSettingsChange?.({amplitude:Number(event.currentTarget.value)})}/></label>
+              <CoProNumberControl className="mm-motion-number" label="Duration (seconds)" value={(motionSettings?.durationUs??800000)/1000000} min={.05} max={30} step={.05} disabled={!currentMotion} onCommit={value=>onMotionSettingsChange?.({durationUs:Math.round(value*1_000_000)})}/>
+              <CoProNumberControl className="mm-motion-number" label="Delay (seconds)" value={(motionSettings?.delayUs??0)/1_000_000} min={0} max={30} step={.05} disabled={!currentMotion} onCommit={value=>onMotionSettingsChange?.({delayUs:Math.round(value*1_000_000)})}/>
+              <CoProRangeControl className="mm-feature-control" label="Distance / intensity" value={motionSettings?.amplitude??80} min={0} max={400} step={1} format={value=>`${value}px`} disabled={!currentMotion} onCommit={value=>onMotionSettingsChange?.({amplitude:value})}/>
               <span className="mm-motion-amplitude">{motionSettings?.amplitude??80} px</span>
             </div>
             <button type="button" className="mm-motion-remove" disabled={!currentMotion} onClick={()=>onMotionChange?.("none")}>Remove animation</button>
           </section>
-        ) : tool === "tracking" || tool === "adjust" || tool === "ai-stylize" ? (
-          <CapabilityPreviewPanel key={tool} tool={tool} hasSelectedClip={hasSelectedClip} adjustments={adjustments} onAdjustmentChange={onAdjustmentChange} scopeHistogram={scopeHistogram} onSampleScopes={onSampleScopes} scopeError={scopeError}/>
+        ) : tool === "adjust" ? (
+          <CapabilityPreviewPanel hasSelectedClip={hasSelectedClip} adjustments={adjustments} onAdjustmentChange={onAdjustmentChange} scopeHistogram={scopeHistogram} onSampleScopes={onSampleScopes} scopeError={scopeError}/>
+        ) : tool === "tracking" || tool === "ai-stylize" ? (
+          <CapabilityUnavailablePanel tool={tool}/>
         ) : tool === "trim" ? (
           <div className="copro-tool-control">
             <label className="copro-number-control"><span>Timeline start (seconds)</span><input type="number" min="0" step="0.1" value={trimStart} onChange={(e)=>setTrimStart(e.target.value)} onBlur={() => {
@@ -454,10 +463,7 @@ export function CoProToolPanel({
           </div>
         ) : tool === "speed" ? (
           <div className="copro-tool-control">
-            <div className="copro-value-row"><span>Playback speed</span><strong>{speed.toFixed(2)}×</strong></div>
-            <input aria-label="Playback speed" type="range" min=".25" max="4" step=".05" value={speed} onChange={(e) => {
-              const value = Number(e.target.value); setSpeed(value); onSpeedChange?.(value);
-            }}/>
+            <CoProRangeControl label="Playback speed" value={speed} min={.25} max={4} step={.05} format={value=>`${value.toFixed(2)}×`} onCommit={value=>{setSpeed(value);onSpeedChange?.(value);}}/>
             <div className="copro-preset-row">
               {[.5,1,1.5,2].map((value) => <button aria-pressed={Math.abs(speed-value)<.001} className={Math.abs(speed-value)<.001?"is-active":""} key={value} onClick={()=>{setSpeed(value);onSpeedChange?.(value);}}>{value}×</button>)}
             </div>
@@ -465,10 +471,7 @@ export function CoProToolPanel({
           </div>
         ) : (tool === "volume" || (tool === "audio" && hasSelectedClip && selectedClipKind === "audio")) ? (
           <div className="copro-tool-control">
-            <div className="copro-value-row"><span>Clip volume</span><strong>{volume}%</strong></div>
-            <input aria-label="Clip volume" type="range" min="0" max="200" value={volume} onChange={(e)=>{
-              const value=Number(e.target.value);setVolume(value);onVolumeChange?.(value/100);
-            }}/>
+            <CoProRangeControl label="Clip volume" value={volume} min={0} max={200} step={1} format={value=>`${value}%`} onCommit={value=>{setVolume(value);onVolumeChange?.(value/100);}}/>
             <div className="copro-preset-row">
               {[0,50,100,150].map((value)=><button key={value} className={volume===value?"is-active":""} aria-pressed={volume===value} onClick={()=>{setVolume(value);onVolumeChange?.(value/100);}}>{value}%</button>)}
             </div>
@@ -482,11 +485,33 @@ export function CoProToolPanel({
           </div>
         ) : isText && creativeParameters ? (
           <div className="mm-creative-parameter-editor">
-            <div className="mm-creative-parameter-heading"><strong>Composition content</strong><span>Edits update the rendered composition and project history.</span></div>
-            <label><span>Title</span><input value={String(creativeParameters.title ?? "")} maxLength={4000} onChange={event=>onCreativeParametersChange?.({title:event.currentTarget.value})}/></label>
-            <label><span>Subtitle</span><textarea rows={3} value={String(creativeParameters.subtitle ?? "")} maxLength={4000} onChange={event=>onCreativeParametersChange?.({subtitle:event.currentTarget.value})}/></label>
-            <label><span>Chapter / eyebrow</span><input value={String(creativeParameters.label ?? "")} maxLength={4000} onChange={event=>onCreativeParametersChange?.({label:event.currentTarget.value})}/></label>
-            <label className="mm-creative-accent-row"><span>Accent color</span><input type="color" value={/^#[0-9a-f]{6}$/i.test(String(creativeParameters.accent ?? ""))?String(creativeParameters.accent):"#68dfc0"} onChange={event=>onCreativeParametersChange?.({accent:event.currentTarget.value})}/></label>
+            <div className="mm-creative-parameter-heading"><strong>Composition content</strong><span>Text commits when you leave a field. Changes remain editable and undoable.</span></div>
+            <CreativeTextField label="Title" value={String(creativeParameters.title ?? "")} onCommit={value=>onCreativeParametersChange?.({title:value})}/>
+            <CreativeTextField label="Subtitle" value={String(creativeParameters.subtitle ?? "")} multiline rows={3} onCommit={value=>onCreativeParametersChange?.({subtitle:value})}/>
+            <CreativeTextField label="Chapter / eyebrow" value={String(creativeParameters.label ?? "")} onCommit={value=>onCreativeParametersChange?.({label:value})}/>
+            {(creativeScene==="quote-story"||creativeScene==="lower-third")&&<CreativeTextField label="Author / name" value={String(creativeParameters.author ?? "")} onCommit={value=>onCreativeParametersChange?.({author:value})}/>}
+            {creativeScene==="contact-card"&&<CreativeTextField label="Contact detail" value={String(creativeParameters.contact ?? "")} onCommit={value=>onCreativeParametersChange?.({contact:value})}/>}
+            {creativeScene==="kinetic-stack"&&<CreativeListField label="Words" value={Array.isArray(creativeParameters.words)?creativeParameters.words.map(String):[]} onCommit={value=>onCreativeParametersChange?.({words:value})}/>}
+            {["floating-cards","flip-showcase","product-grid","technical-explainer","photo-montage"].includes(creativeScene)&&<CreativeListField label="Items / labels" value={Array.isArray(creativeParameters.items)?creativeParameters.items.map(String):[]} onCommit={value=>onCreativeParametersChange?.({items:value})}/>}
+            {creativeScene==="data-brief"&&<>
+              <CreativeListField label="Data labels" value={Array.isArray(creativeParameters.items)?creativeParameters.items.map(String):[]} onCommit={value=>onCreativeParametersChange?.({items:value})}/>
+              <CreativeNumberListField label="Data values" value={Array.isArray(creativeParameters.values)?creativeParameters.values.map(Number):[]} onCommit={value=>onCreativeParametersChange?.({values:value})}/>
+            </>}
+            {["documentary-opener","social-story","lower-third","caption-story","photo-montage"].includes(creativeScene)&&<label><span>Image source</span>
+              <select value={String(creativeParameters.media ?? "asset:creative-demo")} onChange={event=>onCreativeParametersChange?.({media:event.currentTarget.value})}>
+                <option value="asset:creative-demo">Use the scene beneath</option>
+                {mediaItems.filter(item=>item.kind==="image").map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </label>}
+            <label><span>Canvas background</span><select value={String(creativeParameters.backgroundMode??"transparent")} onChange={event=>onCreativeParametersChange?.({backgroundMode:event.currentTarget.value})}>
+              <option value="transparent">Transparent · show scene beneath</option>
+              <option value="solid">Solid · fill canvas</option>
+            </select></label>
+            <div className="mm-creative-color-grid">
+              <label className="mm-creative-accent-row"><span>Accent color</span><input type="color" value={/^#[0-9a-f]{6}$/i.test(String(creativeParameters.accent ?? ""))?String(creativeParameters.accent):"#68dfc0"} onChange={event=>onCreativeParametersChange?.({accent:event.currentTarget.value})}/></label>
+              <label className="mm-creative-accent-row"><span>Background color</span><input type="color" value={/^#[0-9a-f]{6}$/i.test(String(creativeParameters.background ?? ""))?String(creativeParameters.background):"#101819"} onChange={event=>onCreativeParametersChange?.({background:event.currentTarget.value})}/></label>
+              <label className="mm-creative-accent-row"><span>Text color</span><input type="color" value={/^#[0-9a-f]{6}$/i.test(String(creativeParameters.foreground ?? ""))?String(creativeParameters.foreground):"#f4f4e9"} onChange={event=>onCreativeParametersChange?.({foreground:event.currentTarget.value})}/></label>
+            </div>
           </div>
         ) : isText ? (
           <form className="copro-tool-control" onSubmit={(event)=>{

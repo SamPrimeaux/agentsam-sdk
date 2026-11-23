@@ -43,6 +43,7 @@ const SKY_DOME_FRAGMENT = /* glsl */ `
   uniform float uStarIntensity;
   uniform float uGalaxyIntensity;
   uniform float uAuroraIntensity;
+  uniform float uGlowIntensity;
   uniform float uSunElevation;
 
   varying vec3 vWorldDir;
@@ -166,14 +167,14 @@ const SKY_DOME_FRAGMENT = /* glsl */ `
       float silverLining = pow(sunDot, 5.0) * 0.75 + pow(1.0 - clamp(elev, 0.0, 1.0), 3.0) * 0.35;
       vec3 litCloud = mix(uCloudAccent * 0.78, uCloudPrimary, smoothstep(threshold, threshold + 0.42, combined));
       litCloud = mix(litCloud, dawnHorizon, dawnPhase * 0.48);
-      litCloud += uSunColor * silverLining * 0.68;
+      litCloud += uSunColor * silverLining * 0.68 * uGlowIntensity;
 
       skyCol = mix(skyCol, litCloud, clamp(cloudMask * 0.92, 0.0, 0.95));
     }
 
     // Solar / Accretion Halo Disc
     float sunHalo = pow(sunDot, 10.0) * 0.32 + pow(sunDot, 96.0) * 0.75 + smoothstep(0.9985, 0.9998, sunDot) * 1.25;
-    skyCol += uSunColor * sunHalo * (0.65 + uAudioPulse * 0.35);
+    skyCol += uSunColor * sunHalo * (0.65 + uAudioPulse * 0.35) * uGlowIntensity;
 
     gl_FragColor = vec4(skyCol, 1.0);
   }
@@ -268,6 +269,7 @@ export class SkyGenerator {
           uStarIntensity: { value: this.config.starIntensity },
           uGalaxyIntensity: { value: this.config.galaxyIntensity },
           uAuroraIntensity: { value: this.config.auroraIntensity },
+          uGlowIntensity: { value: 1 },
           uSunElevation: { value: this.config.sunElevation },
         },
       })
@@ -456,6 +458,11 @@ export class SkyGenerator {
       immersiveSkyOnly: this.config.immersiveSkyOnly,
     });
     return this.getConfig();
+  }
+
+  /** Toggle the real sun halo and cloud silver-lining contribution in the sky shader. */
+  public setGlowEnabled(enabled: boolean): void {
+    this.skyDomeMat.uniforms.uGlowIntensity.value = enabled ? 1 : 0;
   }
 
   public applyConfig(patch: Partial<SkySceneConfig>, immediate = false): SkySceneConfig {

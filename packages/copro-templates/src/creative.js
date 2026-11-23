@@ -24,7 +24,7 @@ const rows = [
  ['audiogram','Audio story','graphics',6000000,'original',false],
  ['end-card','End card','social',5000000,'original',false],
 ];
-const defaults = {title:'Make room for possibility.',subtitle:'A story worth bringing to life.',label:'CHAPTER 01',author:'Your name',contact:'yourwebsite.com',words:['BUILD','WHAT','MATTERS','NEXT'],items:['Design','Precision','Motion','Possibility'],values:[62,88,47,76],accent:'#68dfc0',background:'#101819',foreground:'#f4f4e9',media:'asset:creative-demo',treatment:'clean',overlay:'none'};
+const defaults = {title:'Make room for possibility.',subtitle:'A story worth bringing to life.',label:'CHAPTER 01',author:'Your name',contact:'yourwebsite.com',words:['BUILD','WHAT','MATTERS','NEXT'],items:['Design','Precision','Motion','Possibility'],values:[62,88,47,76],accent:'#68dfc0',background:'#101819',backgroundMode:'transparent',foreground:'#f4f4e9',media:'asset:creative-demo',treatment:'clean',overlay:'none'};
 export const CREATIVE_TEMPLATES = Object.freeze(rows.map(([id,name,category,durationUs,provenance,featured]) => defineCoProTemplate({
  id:`creative:${id}`, name, description:`Project template (${category}). Instantiates a distinct editable CoPro project.`,
  canvas:{width:category==='social'||category==='captions'?1080:1920,height:category==='social'||category==='captions'?1920:1080,frameRate:30},
@@ -75,6 +75,7 @@ export function validateParameters(value={}) {
  const p=structuredClone(value);
  for(const key of ['title','subtitle','label','author','contact','media']) if(p[key]!==undefined && (typeof p[key]!=='string'||p[key].length>4000)) throw new TypeError(`copro_parameter_${key}_invalid`);
  for(const key of ['accent','background','foreground']) if(p[key]!==undefined&&!/^#[0-9a-f]{6}$/i.test(p[key])) throw new TypeError(`copro_parameter_${key}_invalid`);
+ if(p.backgroundMode!==undefined&&!['transparent','solid'].includes(p.backgroundMode)) throw new TypeError('copro_parameter_backgroundMode_invalid');
  for(const key of ['words','items']) if(p[key]!==undefined&&(!Array.isArray(p[key])||p[key].length>24||p[key].some(x=>typeof x!=='string'||x.length>300))) throw new TypeError(`copro_parameter_${key}_invalid`);
  if(p.values!==undefined&&(!Array.isArray(p.values)||p.values.length>24||p.values.some(x=>!Number.isFinite(x)||x<0||x>1000000))) throw new TypeError('copro_parameter_values_invalid');
  if(p.treatment!==undefined&&!TREATMENTS.some(x=>x.id===p.treatment)) throw new Error('copro_treatment_unknown');
@@ -95,12 +96,15 @@ function text(value,x,y,size,color,{anchor='middle',weight=700,maxChars=30,opaci
 function group(content,{x=0,y=0,scale=1,rotation=0,opacity=1,scaleX=1}={},cx=600,cy=337.5) {
  return `<g opacity="${n(clamp(opacity))}" transform="translate(${cx+x} ${cy+y}) rotate(${rotation}) scale(${scale*scaleX} ${scale}) translate(${-cx} ${-cy})">${content}</g>`;
 }
-function media(p,timeUs,{resolveAsset},w,h) {
- const url=resolveAsset?.(p.media,timeUs);
+function media(p,timeUs,options,w,h) {
+ const url=options.resolveAsset?.(p.media,timeUs);
  if(url) {
   if(typeof url!=='string'||!(/^(https?:\/\/|blob:|data:image\/(png|jpeg|webp|gif|avif);base64,)/i.test(url))) throw new Error('copro_asset_url_invalid');
   return `<image href="${esc(url)}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice"/>`;
  }
+ // In a timeline overlay, an empty media slot means "use the scene below".
+ // Standalone template previews keep their clearly labelled procedural artwork.
+ if(options.transparentBackground) return '';
  // Original procedural demo art. Never impersonates a decoded media frame.
  return `<g>${rect(0,0,w,h,'#253b3b')}<path d="M 0 ${h*.8} L ${w*.3} ${h*.22} L ${w*.6} ${h*.73} L ${w*.8} ${h*.3} L ${w} ${h*.55} V ${h} H 0 Z" fill="#4b7972"/><circle cx="${w*.76}" cy="${h*.2}" r="${w*.07}" fill="${p.accent}"/>${text('PROCEDURAL PREVIEW',w*.07,h*.94,14,'#bcd2c7',{anchor:'start',weight:400})}</g>`;
 }
@@ -197,7 +201,8 @@ export function renderCreativeSvg(id,timeUs,parameters={},options={}) {
  }
  if(p.overlay!=='none')body+=renderOverlaySvg(p.overlay,t,{width:w,height:h,accent:a});
  const matrix=TREATMENTS.find(x=>x.id===(p.treatment??'clean')).matrix;
- return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(template.name)}"><defs><filter id="copro-color-treatment"><feColorMatrix type="matrix" values="${matrix}"/></filter></defs><g font-family="Arial, Helvetica, sans-serif" filter="url(#copro-color-treatment)">${rect(0,0,w,h,p.background)}${body}</g></svg>`;
+ const backdrop=options.transparentBackground && p.backgroundMode!=='solid' ? '' : rect(0,0,w,h,p.background);
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(template.name)}"><defs><filter id="copro-color-treatment"><feColorMatrix type="matrix" values="${matrix}"/></filter></defs><g font-family="Arial, Helvetica, sans-serif" filter="url(#copro-color-treatment)">${backdrop}${body}</g></svg>`;
 }
 export function renderCreativeProjectFrame(project,timeUs,options={}) {
  if(project?.schema!=='copro.project.v1')throw new Error('copro_creative_project_invalid');integerUs(timeUs);

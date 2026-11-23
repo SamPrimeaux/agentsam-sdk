@@ -63,3 +63,20 @@ test('overlays, treatments and user values remain deterministic and XML-safe',()
  assert.equal(svg.includes('<script>'),false);assert.match(svg,/&lt;script&gt;/);assert.match(svg,/A &amp; B/);assert.equal(svg.includes('id="treatment"'),false);assert.match(renderCreativeSvg('product-launch',1,{treatment:undefined}),/^<svg/);
  assert.throws(()=>validateParameters({accent:'red"/><script/>'}),/invalid/);assert.throws(()=>validateParameters({values:[Infinity]}),/invalid/);assert.throws(()=>renderCreativeSvg('missing',0),/unknown/);
 });
+
+
+test('timeline compositions render as transparent overlays and resolve selected image slots',()=>{
+ const p=createCreativeProject('lower-third',{projectId:'overlay-test'});
+ const opaque=renderCreativeProjectFrame(p,500000);
+ const overlay=renderCreativeProjectFrame(p,500000,{transparentBackground:true});
+ assert.match(opaque,/<rect x="0" y="0" width="1200" height="675" fill="#101819"\s*\/>/);
+ assert.doesNotMatch(overlay,/<rect x="0" y="0" width="1200" height="675" fill="#101819"\s*\/>/);
+ assert.doesNotMatch(overlay,/PROCEDURAL PREVIEW/);
+ const clip=p.tracks[0].clips.find(item=>item.metadata?.creative);
+ clip.metadata.creative.parameters.media='asset:real-photo';
+ const resolved=renderCreativeProjectFrame(p,500000,{transparentBackground:true,resolveAsset:id=>id==='asset:real-photo'?'https://cdn.example.test/photo.webp':null});
+ assert.match(resolved,/href="https:\/\/cdn\.example\.test\/photo\.webp"/);
+ clip.metadata.creative.parameters.backgroundMode='solid';
+ const filled=renderCreativeProjectFrame(p,500000,{transparentBackground:true});
+ assert.match(filled,/<rect x="0" y="0" width="1200" height="675" fill="#101819"\s*\/>/);
+});

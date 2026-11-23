@@ -1,5 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { CoProStageLookPanel } from '../dist/stage-look-panel.js';
 import { stageLookBackground, STAGE_SKIES, STAGE_FINISHES, STAGE_MOODS } from '../src/stage-environment.ts';
 import { createCoProProject } from '../../copro-project/src/index.js';
 import { CoProEditorSession } from '../../copro-editor/src/index.js';
@@ -42,4 +45,15 @@ test('rejects unsupported material IDs, sky IDs and out-of-range atmospheric val
   for(const patch of [{skyPreset:'fake'},{finish:'fake'},{stars:1},{cloudDensity:2},{lightHue:420},{keyAngle:400},{shadowSoftness:-1}]) {
     assert.throws(()=>session.execute({type:'project.set_environment',payload:{patch}}),/copro_environment_.*invalid/);
   }
+});
+
+
+test('scene environment inspector exposes one source for each sky control',()=>{
+ const html=renderToStaticMarkup(React.createElement(CoProStageLookPanel,{environment:{},onChange:()=>{}}));
+ assert.equal((html.match(/<strong>Cloud density<\/strong>/g)||[]).length,1);
+ assert.equal((html.match(/Starfield visible/g)||[]).length,1);
+ assert.match(html,/Light glow/);
+ assert.match(html,/Sky time \/ phase/);
+ assert.doesNotMatch(html,/Project saved/);
+ assert.doesNotMatch(html,/<h2>Scene environment<\/h2>/);
 });

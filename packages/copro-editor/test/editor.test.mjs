@@ -139,14 +139,16 @@ test('creative composition parameters are validated and undoable', () => {
   clip.metadata.creative = {schema:"copro.creative-clip.v1",scene:"chapter-divider",parameters:{title:"Original",subtitle:"A subtitle",accent:"#68dfc0"}};
   project.metadata = {templateSlots:{title:"Original",accent:"#68dfc0"}};
   const session = new CoProEditorSession(project);
-  session.execute({type:"clip.set_creative_parameters",payload:{clipId:"clip:1",patch:{title:"New title",accent:"#ff7619"}}});
-  assert.deepEqual(session.project.tracks[0].clips[0].metadata.creative.parameters,{title:"New title",subtitle:"A subtitle",accent:"#ff7619"});
-  assert.deepEqual(session.project.metadata.templateSlots,{title:"New title",accent:"#ff7619"});
+  session.execute({type:"clip.set_creative_parameters",payload:{clipId:"clip:1",patch:{title:"New title",accent:"#ff7619",media:"asset:photo-1",backgroundMode:"solid",words:["MAKE","ROOM"],items:["One","Two"],values:[12,48]}}});
+  assert.deepEqual(session.project.tracks[0].clips[0].metadata.creative.parameters,{title:"New title",subtitle:"A subtitle",accent:"#ff7619",media:"asset:photo-1",backgroundMode:"solid",words:["MAKE","ROOM"],items:["One","Two"],values:[12,48]});
+  assert.deepEqual(session.project.metadata.templateSlots,{title:"New title",accent:"#ff7619",media:"asset:photo-1",backgroundMode:"solid",words:["MAKE","ROOM"],items:["One","Two"],values:[12,48]});
   session.undo();
   assert.equal(session.project.tracks[0].clips[0].metadata.creative.parameters.title,"Original");
   session.redo();
   assert.equal(session.project.tracks[0].clips[0].metadata.creative.parameters.title,"New title");
   assert.throws(()=>applyCoProCommand(session.project,{type:"clip.set_creative_parameters",payload:{clipId:"clip:1",patch:{accent:"red"}}}),/copro_creative_color_parameter_invalid/);
+  assert.throws(()=>applyCoProCommand(session.project,{type:"clip.set_creative_parameters",payload:{clipId:"clip:1",patch:{backgroundMode:"opaque"}}}),/copro_creative_background_mode_invalid/);
+  assert.throws(()=>applyCoProCommand(session.project,{type:"clip.set_creative_parameters",payload:{clipId:"clip:1",patch:{words:["ok",42]}}}),/copro_creative_list_parameter_invalid/);
 });
 
 

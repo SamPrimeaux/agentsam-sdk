@@ -55,6 +55,53 @@ const MIN_CLIP_US = 100_000;
 const MIN_PPS = 36;
 const MAX_PPS = 220;
 
+/** Keep pointer-driven timeline edits local while dragging, then emit one undoable command. */
+export function bindTimelinePointerTransaction<T>(
+  target: EventTarget,
+  pointerId: number,
+  originX: number,
+  calculate: (event: PointerEvent) => T,
+  preview: (value: T) => void,
+  commit: (value: T) => void,
+  revert: () => void,
+  shouldCommit: (value: T) => boolean,
+): () => void {
+  let finished=false;
+  const cleanup=()=>{
+    if(finished)return;
+    finished=true;
+    target.removeEventListener("pointermove",move as EventListener);
+    target.removeEventListener("pointerup",up as EventListener);
+    target.removeEventListener("pointercancel",cancel as EventListener);
+    target.removeEventListener("lostpointercapture",cancel as EventListener);
+  };
+  const move=(event:Event)=>{
+    const pointer=event as PointerEvent;
+    if(pointer.pointerId!==pointerId)return;
+    preview(calculate(pointer));
+  };
+  const up=(event:Event)=>{
+    const pointer=event as PointerEvent;
+    if(pointer.pointerId!==pointerId)return;
+    const value=calculate(pointer);
+    preview(value);
+    if(Math.abs(pointer.clientX-originX)>.5 && shouldCommit(value))commit(value);
+    else revert();
+    cleanup();
+  };
+  const cancel=(event:Event)=>{
+    const pointer=event as PointerEvent;
+    if(pointer.pointerId!==pointerId)return;
+    revert();
+    cleanup();
+  };
+  target.addEventListener("pointermove",move as EventListener);
+  target.addEventListener("pointerup",up as EventListener);
+  target.addEventListener("pointercancel",cancel as EventListener);
+  target.addEventListener("lostpointercapture",cancel as EventListener);
+  return cleanup;
+}
+
 export function CoProTimeline({
   project,
   mediaThumbnails = {},
@@ -289,18 +336,18 @@ export function CoProTimeline({
                           const target = event.currentTarget;
                           target.setPointerCapture(event.pointerId);
 
-                          const move = (next: PointerEvent) => {
-                            const deltaUs = Math.round(((next.clientX - originX) / pixelsPerSecond) * 1_000_000);
-                            onMoveClip?.(clip.id, snap(clip.id, Math.max(0, originStart + deltaUs)));
+                          const originalWidth=width;
+                          const calculate=(next:PointerEvent)=>{
+                            const deltaUs=Math.round(((next.clientX-originX)/pixelsPerSecond)*1_000_000);
+                            return {startUs:snap(clip.id,Math.max(0,originStart+deltaUs))};
                           };
-                          const up = () => {
-                            target.removeEventListener("pointermove", move as EventListener);
-                            target.removeEventListener("pointerup", up);
-                            target.removeEventListener("pointercancel", up);
+                          const preview=(value:{startUs:number})=>target.style.setProperty("--copro-clip-left",timeUsToPixels(value.startUs,{pixelsPerSecond})+"px");
+                          const revert=()=>{
+                            target.style.setProperty("--copro-clip-left",left+"px");
+                            target.style.setProperty("--copro-clip-width",originalWidth+"px");
                           };
-                          target.addEventListener("pointermove", move as EventListener);
-                          target.addEventListener("pointerup", up);
-                          target.addEventListener("pointercancel", up);
+                          bindTimelinePointerTransaction(target,event.pointerId,originX,calculate,preview,
+                            value=>onMoveClip?.(clip.id,value.startUs),revert,value=>value.startUs!==originStart);
                         }}
                       >
                         {selected && !track.locked && (
@@ -316,27 +363,28 @@ export function CoProTimeline({
                               const originDuration = clip.durationUs;
                               const target = event.currentTarget;
                               target.setPointerCapture(event.pointerId);
-                              const move = (next: PointerEvent) => {
-                                const rawDelta = Math.round(((next.clientX - originX) / pixelsPerSecond) * 1_000_000);
+                              const clipElement=target.closest<HTMLElement>("[data-copro-clip]");
+                              const originalLeft=left,originalWidth=width;
+                              const calculate=(next:PointerEvent)=>{
+                                const rawDelta=Math.round(((next.clientX-originX)/pixelsPerSecond)*1_000_000);
                                 const minDelta=Math.max(-Math.floor(originIn/rate),-originStart);
-                                let deltaUs = Math.max(minDelta, Math.min(originDuration - MIN_CLIP_US, rawDelta));
-                                const proposedStart = originStart + deltaUs;
-                                const snappedStart = snap(clip.id, proposedStart);
-                                deltaUs = Math.max(minDelta,Math.min(originDuration-MIN_CLIP_US,deltaUs+snappedStart-proposedStart));
-                                onTrimClip?.(clip.id, {
-                                  startUs: originStart + deltaUs,
-                                  inUs: originIn + Math.round(deltaUs*rate),
-                                  durationUs: originDuration - deltaUs,
-                                });
+                                let deltaUs=Math.max(minDelta,Math.min(originDuration-MIN_CLIP_US,rawDelta));
+                                const proposedStart=originStart+deltaUs;
+                                const snappedStart=snap(clip.id,proposedStart);
+                                deltaUs=Math.max(minDelta,Math.min(originDuration-MIN_CLIP_US,deltaUs+snappedStart-proposedStart));
+                                return {startUs:originStart+deltaUs,inUs:originIn+Math.round(deltaUs*rate),durationUs:originDuration-deltaUs};
                               };
-                              const up = () => {
-                                target.removeEventListener("pointermove", move as EventListener);
-                                target.removeEventListener("pointerup", up);
-                                target.removeEventListener("pointercancel", up);
+                              const preview=(value:{startUs:number;inUs:number;durationUs:number})=>{
+                                clipElement?.style.setProperty("--copro-clip-left",timeUsToPixels(value.startUs,{pixelsPerSecond})+"px");
+                                clipElement?.style.setProperty("--copro-clip-width",Math.max(44,timeUsToPixels(value.durationUs,{pixelsPerSecond}))+"px");
                               };
-                              target.addEventListener("pointermove", move as EventListener);
-                              target.addEventListener("pointerup", up);
-                              target.addEventListener("pointercancel", up);
+                              const revert=()=>{
+                                clipElement?.style.setProperty("--copro-clip-left",originalLeft+"px");
+                                clipElement?.style.setProperty("--copro-clip-width",originalWidth+"px");
+                              };
+                              bindTimelinePointerTransaction(target,event.pointerId,originX,calculate,preview,
+                                value=>onTrimClip?.(clip.id,value),revert,
+                                value=>value.startUs!==originStart||value.inUs!==originIn||value.durationUs!==originDuration);
                             }}
                           />
                         )}
@@ -386,22 +434,18 @@ export function CoProTimeline({
                               const clipEnd = clip.startUs + originDuration;
                               const target = event.currentTarget;
                               target.setPointerCapture(event.pointerId);
-                              const move = (next: PointerEvent) => {
-                                const deltaUs = Math.round(((next.clientX - originX) / pixelsPerSecond) * 1_000_000);
-                                const proposedEnd = clipEnd + deltaUs;
-                                const snappedEnd = snap(clip.id, proposedEnd);
-                                onTrimClip?.(clip.id, {
-                                  durationUs: Math.max(MIN_CLIP_US, originDuration + (snappedEnd - clipEnd)),
-                                });
+                              const clipElement=target.closest<HTMLElement>("[data-copro-clip]");
+                              const originalWidth=width;
+                              const calculate=(next:PointerEvent)=>{
+                                const deltaUs=Math.round(((next.clientX-originX)/pixelsPerSecond)*1_000_000);
+                                const proposedEnd=clipEnd+deltaUs;
+                                const snappedEnd=snap(clip.id,proposedEnd);
+                                return {durationUs:Math.max(MIN_CLIP_US,originDuration+(snappedEnd-clipEnd))};
                               };
-                              const up = () => {
-                                target.removeEventListener("pointermove", move as EventListener);
-                                target.removeEventListener("pointerup", up);
-                                target.removeEventListener("pointercancel", up);
-                              };
-                              target.addEventListener("pointermove", move as EventListener);
-                              target.addEventListener("pointerup", up);
-                              target.addEventListener("pointercancel", up);
+                              const preview=(value:{durationUs:number})=>clipElement?.style.setProperty("--copro-clip-width",Math.max(44,timeUsToPixels(value.durationUs,{pixelsPerSecond}))+"px");
+                              const revert=()=>clipElement?.style.setProperty("--copro-clip-width",originalWidth+"px");
+                              bindTimelinePointerTransaction(target,event.pointerId,originX,calculate,preview,
+                                value=>onTrimClip?.(clip.id,value),revert,value=>value.durationUs!==originDuration);
                             }}
                           />
                         )}
