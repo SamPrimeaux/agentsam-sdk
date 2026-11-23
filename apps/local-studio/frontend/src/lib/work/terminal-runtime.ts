@@ -19,6 +19,7 @@ import type { Project, ShellEffect } from "@inneranimalmedia/agentsam-local-shar
 import type { Terminal } from "@xterm/xterm";
 import type { FitAddon } from "@xterm/addon-fit";
 
+import { canAttachAuthorizedTerminal } from "@inneranimalmedia/agentsam-ide/terminal";
 import { AGENTSAMD_TOKEN_KEY } from "./agentsamd-client.ts";
 
 function getStoredAgentsamdToken(): string | null {
@@ -490,13 +491,11 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     }
   }
 
-  const useRealPty =
-    Boolean(hostedConnect?.ws_url) ||
-    (
-      Boolean(runtimeBase) &&
-      Boolean(runtimeCap) &&
-      (project0?.kind === "filesystem" || Boolean(runtimeBase))
-    );
+  const useRealPty = canAttachAuthorizedTerminal({
+    hostedWebsocketUrl: hostedConnect?.ws_url,
+    runtimeBaseUrl: runtimeBase,
+    runtimeCapability: runtimeCap,
+  });
 
   if (isHostedWeb && !useRealPty) {
     const detail = hostedConnectError || "terminal_connection_missing";
