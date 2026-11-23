@@ -1,3 +1,4 @@
+import { evidenceStorageProblems } from '../sam/packs/evidence/endpoint.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -171,6 +172,9 @@ export function validateEmbed(manifest, label) {
 function validateOneApp(app, knownIds, root) {
   const errors = [];
   errors.push(...validateEmbed(app.manifest, app.id));
+  if (app.manifest?.storage && Object.hasOwn(app.manifest.storage, 'evidenceEndpoint')) {
+    errors.push(...evidenceStorageProblems(app.manifest.storage).map((problem) => `${app.id}: storage: ${problem}`));
+  }
   const warnings = [];
   const m = app.manifest;
 

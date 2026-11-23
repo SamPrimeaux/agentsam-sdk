@@ -2,15 +2,17 @@ import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { assertSafeKey } from './naming.js';
 import { evidenceError } from './contract.js';
+import { EVIDENCE_ENDPOINT } from './endpoint.js';
 
 /**
- * Host-injected remote EvidenceStore backed by CAD Creator's existing R2
- * authority. No account/project literals, Cloudflare keys, or user-supplied URLs.
+ * Host-injected remote EvidenceStore backed by the app's own R2 authority, located
+ * by the app manifest's storage.evidenceEndpoint. No account/project literals,
+ * Cloudflare keys, or user-supplied URLs.
  * The host's authenticated request port owns OAuth and dispatch.
  */
 export function createHostedEvidenceStore({ appManifest, request, principal } = {}) {
   const route = appManifest?.storage?.evidenceEndpoint;
-  if (typeof route !== 'string' || !/^\/api\/cad\/evidence$/.test(route))
+  if (typeof route !== 'string' || !EVIDENCE_ENDPOINT.test(route))
     throw evidenceError('evidence_hosted_endpoint_manifest_required');
   if (typeof request !== 'function') throw evidenceError('evidence_hosted_authenticated_request_required');
   const digest = value => createHash('sha256').update(value).digest('hex');
