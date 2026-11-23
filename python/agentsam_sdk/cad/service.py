@@ -141,15 +141,20 @@ class CadServiceClient:
             port = address.port
         except ValueError as exc:
             raise ValueError("cad_host_endpoint_invalid") from exc
+        base_path = unquote(address.path)
         if (address.scheme not in ("https", "http") or not address.hostname
                 or address.username or address.password or address.query or address.fragment
-                or (port is not None and not 1 <= port <= 65535)):
+                or (port is not None and not 1 <= port <= 65535)
+                or "\\" in base_path or "\x00" in base_path
+                or any(part in (".", "..") for part in base_path.split("/"))
+                or "//" in base_path):
             raise ValueError("cad_host_endpoint_invalid")
         local_hosts = {"localhost", "127.0.0.1", "::1"}
         if (address.scheme == "http" and not allow_insecure_http
                 and address.hostname.lower() not in local_hosts):
             raise ValueError("cad_host_endpoint_https_required")
-        if not isinstance(token, str) or len(token.strip()) < 16:
+        if (not isinstance(token, str) or len(token.strip()) < 16
+                or "\r" in token or "\n" in token):
             raise ValueError("cad_host_token_required")
         if not callable(transport):
             raise ValueError("cad_host_transport_invalid")
@@ -225,7 +230,15 @@ class CadServiceClient:
 
     def _open(self, request: Request, timeout: float | None = None) -> Any:
         try:
-            return self._transport(request, timeout=self.timeout if timeout is None else timeout)
+            response = self._transport(request, timeout=self.timeout if timeout is None else timeout)
+            final_url = getattr(response, "geturl", lambda: request.full_url)()
+            original, final = urlsplit(request.full_url), urlsplit(final_url)
+            if final.scheme != original.scheme or final.netloc != original.netloc:
+                close = getattr(response, "close", None)
+                if callable(close):
+                    close()
+                raise CadServiceError("cad_service_cross_origin_redirect_rejected")
+            return response
         except HTTPError as exc:
             try:
                 raw = exc.read(64 * 1024)
@@ -461,7 +474,10 @@ class CadServiceClient:
         uri, expected_bytes, expected_hash = _artifact_metadata(
             artifact, max_bytes=self._effective_limit("max_artifact_bytes", self.max_artifact_bytes)
         )
-        inline_limit = self._effective_limit("max_inline_artifact_bytes", self.max_inline_artifact_bytes)
+        inline_limit = min(
+            self._effective_limit("max_inline_artifact_bytes", self.max_inline_artifact_bytes),
+            self._effective_limit("max_artifact_bytes", self.max_artifact_bytes),
+        )
         if expected_bytes > inline_limit:
             raise CadServiceError(
                 "cad_artifact_requires_streaming",
