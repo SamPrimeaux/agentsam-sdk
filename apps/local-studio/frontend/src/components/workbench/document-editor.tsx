@@ -12,6 +12,7 @@ import {
 } from '@inneranimalmedia/agentsam-workbench/agent';
 import '@inneranimalmedia/agentsam-workbench/agent/selection-toolbar.css';
 import { useWorkStore } from '@/lib/work/store';
+import { askAgentSamAboutArtifact } from '@/lib/work/artifact-assistance';
 import { RuntimeFilesystemAdapter } from '@/lib/work/workspace-fs';
 import type { Artifact, Project } from '@inneranimalmedia/agentsam-local-shared';
 import { StudioMark } from '@/components/mark';
@@ -197,10 +198,8 @@ export function ArtifactDocumentEditor({
     setCommentsOpen(true);
   }
   function askAboutSelection() {
-    if (!chatId) return;
-    setDraft(chatId, 'In ' + file.path + ', please review the selection: "' +
-      selectionText.current.slice(0,1500) + '"\n');
-    document.querySelector<HTMLTextAreaElement>('.agentsam-conversation-dock textarea')?.focus();
+    askAgentSamAboutArtifact({kind:'docs',id:file.path,title:file.path,chatId,
+      selection:{id:file.path,kind:'text',label:'Selected passage',text:selectionText.current}});
     setSelection(null);
   }
   async function save() {

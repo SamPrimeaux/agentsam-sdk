@@ -2,6 +2,9 @@ import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronDown, Component, ExternalLink, FileCode2, Frame, Hand, History, Image, Layers, Maximize2, Minimize2, MousePointer2, PanelLeft, PanelRight, Plus, Redo2, RefreshCw, Save, Settings2, Square, Type, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { DesignWorkspaceFrame } from "@inneranimalmedia/agentsam-workbench/design";
+import { AskAgentSamPill } from "@inneranimalmedia/agentsam-workbench/agent";
+import "@inneranimalmedia/agentsam-workbench/agent/contextual-composer.css";
+import { askAgentSamAboutArtifact } from "@/lib/work/artifact-assistance";
 import "@inneranimalmedia/agentsam-workbench/design/design-workspace.css";
 import type { DesignWorkspaceSnapshot } from "@inneranimalmedia/agentsam-contracts";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
@@ -347,6 +350,10 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
     placeholder={selectedNode?"Change "+selectedNode.name+"…":"Describe what to create or change…"} busy={busy} onCancel={()=>void cancelRun()}
     onSubmit={async({text,attachments})=>{await startRun(text,undefined,attachments);}}/>
  </div>;
+ const askAboutCanvas = () => askAgentSamAboutArtifact({
+   kind: 'design', id: canvas.id, title: document.name, chatId: tab.parentChatId,
+   ...(selectedNode ? { selection: { id: selectedNode.id, kind: selectedNode.type, label: selectedNode.name } } : {}),
+ });
  const commands=<>
    <IconAction className="cv-icon-button" hint="Import source artboards" label="Source artboards" onClick={()=>setShowSources(true)}><FileCode2 size={15}/></IconAction>
    <IconAction className="cv-icon-button" hint="Saved Canvases" label="Saved Canvases" onClick={()=>void showCanvases()}><History size={15}/></IconAction>
@@ -373,6 +380,7 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
     {!preview&&<><span/><div className="cv-insert-menu"><IconAction label="Insert element" hint="Insert element" disabled={!boardId} onClick={()=>setInsertOpen(v=>!v)}><Plus size={16}/><ChevronDown size={10}/></IconAction>{insertOpen&&<div className="cv-popover">{(["frame","text","button","image","input","link"] as const).map(type=><button key={type} onClick={()=>insert(type)}>{type[0].toUpperCase()+type.slice(1)}</button>)}</div>}</div><IconAction label="Add artboard" hint="Add artboard" onClick={addBoard}><Frame size={16}/></IconAction></>}
     <span/><IconAction label="Zoom out" onClick={()=>setZoom(z=>Math.max(.08,z/1.2))}><ZoomOut size={15}/></IconAction><button className="cv-zoom-value" title="Fit artboards (1)" onClick={()=>setFitToken(n=>n+1)}>{Math.round(zoom*100)}%</button><IconAction label="Zoom in" onClick={()=>setZoom(z=>Math.min(3,z*1.2))}><ZoomIn size={15}/></IconAction>
     {preview&&<select aria-label="Preview width" value={previewWidth} onChange={e=>setPreviewWidth(Number(e.target.value))}><option value={0}>Desktop</option><option value={768}>Tablet · 768</option><option value={390}>Phone · 390</option></select>}
+    <AskAgentSamPill contextLabel={selectedNode?.name || document.name} onAsk={askAboutCanvas}/>
    </div>
    {!document.artboards.length&&<div className="cv-invitation"><div className="cv-invitation-heading"><span className="cv-eyebrow">Design Canvas</span><h1>Start with a blank artboard</h1><p>Author directly, import a source artboard, or optionally ask AgentSam to prepare creative directions.</p><div className="cv-entry-actions"><button type="button" className="cv-primary" disabled={busy||preparing} onClick={addBoard}>Create blank artboard</button><button type="button" className="cv-toolbar-button" disabled={busy||preparing} onClick={()=>setShowSources(true)}>Browse source artboards</button></div></div>
     {preparing?<div className="cv-preparing" role="status"><span className="cv-loading-mark"/><p>Preparing four creative directions from your context…</p></div>:directions.length===4?<div className="cv-directions">{directions.map((direction,index)=><button key={direction.id} disabled={busy} onClick={()=>void startRun("",direction.id).catch(()=>{})}><span className="cv-direction-number">0{index+1}</span><h2>{direction.title}</h2><p>{direction.description}</p><span className="cv-direction-go">Explore this direction <ArrowRight size={15}/></span></button>)}</div>:<div className="cv-directions-empty"><p>{directionError||"Optional: prepare creative directions with AgentSam."}</p><ModelSelect compact/><button className="cv-toolbar-button" disabled={preparing} onClick={()=>void prepareDirections()}>Prepare directions</button></div>}

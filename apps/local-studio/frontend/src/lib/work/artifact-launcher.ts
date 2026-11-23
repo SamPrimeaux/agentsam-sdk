@@ -2,11 +2,10 @@ import { useWorkStore } from "@/lib/work/store";
 
 export type ArtifactCreationKind = "docs" | "slides" | "sheets" | "design" | "data" | "whiteboard";
 
-const CREATION_PROMPTS: Record<Exclude<ArtifactCreationKind, "design" | "whiteboard">, string> = {
+const CREATION_PROMPTS: Record<Exclude<ArtifactCreationKind, "design" | "whiteboard" | "data">, string> = {
   docs: "Start a new document artifact. Ask me what the document needs to accomplish and who it is for, then help me create an editable document that can be saved to Artifacts.",
   slides: "Start a new presentation artifact. Ask me about the audience, purpose, and key message, then help me build an editable slide deck that can be saved to Artifacts.",
   sheets: "Start a new spreadsheet artifact. Ask what information I need to organize and which calculations matter, then help me build an editable workbook that can be saved to Artifacts.",
-  data: "Start a new data artifact. Ask which verified data source, measures, and audience this dashboard should serve. Do not invent data; help me build an evidence-backed dashboard that can be saved to Artifacts.",
 };
 
 /**
@@ -17,10 +16,20 @@ const CREATION_PROMPTS: Record<Exclude<ArtifactCreationKind, "design" | "whitebo
 export function startArtifactCreation(kind: ArtifactCreationKind) {
   const work = useWorkStore.getState();
 
+  // Data has its own native creation stage, not a chat-prefill or browser redirect.
+  if (kind === "data") {
+    const chatId = work.startChat();
+    work.setActiveChat(chatId);
+    return work.openSideTab("data", { title: "Data", url: "/data?format=dashboard", ephemeral: false, parentChatId: chatId });
+  }
+
   if (kind === "design" || kind === "whiteboard") {
     const title = kind === "design" ? "Design" : "Whiteboard";
+    const chatId = work.startChat();
+    work.setActiveChat(chatId);
     const tabId = work.openSideTab("design", {
       title,
+      parentChatId: chatId,
       ephemeral: false,
       url: "/canvas?host=" + kind + "&template=" + kind,
     });
