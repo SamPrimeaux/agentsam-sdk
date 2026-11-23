@@ -76,6 +76,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const [appearance,setAppearance]=useState<EditorAppearance>(DEFAULT_EDITOR_APPEARANCE);
   const [appearanceReady,setAppearanceReady]=useState(false);
   const [appearanceOpen,setAppearanceOpen]=useState(false);
+  const [sourceSettingsOpen,setSourceSettingsOpen]=useState(false);
   const [cursor,setCursor]=useState({line:1,column:1});
   const [message,setMessage]=useState('');
   const [treeError,setTreeError]=useState('');
@@ -457,7 +458,10 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         {sources?.length ? <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} /> : null}
         <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
-          {panel==='Explorer'&&connectionPanel?<div className="asi-source-connect">{connectionPanel}</div>:null}
+          {panel==='Explorer'&&connectionPanel?<div className="asi-source-connect">
+            <p>A file source is not attached.</p>
+            <button type="button" onClick={()=>setSourceSettingsOpen(true)}>Connect or manage source</button>
+          </div>:null}
           {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" aria-label="New file" title="Create untitled file" onClick={()=>createUntitled()}>＋</button><button type="button" disabled={!canCreate} aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
             {treeError&&<div className="asi-reconnect" role="alert"><strong>Files unavailable</strong><p>{treeError}</p><div>{onReconnect&&<button type="button" onClick={onReconnect}>Reconnect workspace</button>}{onConnectionSettings&&<button type="button" onClick={onConnectionSettings}>Runtime settings</button>}<button type="button" onClick={()=>void refresh()}>Retry files</button></div></div>}
             <WorkspaceTreeView entries={visibleTree} expanded={expanded} active={active}
@@ -510,7 +514,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
             <button type="button" onClick={()=>{setPaletteMode('file');setPaletteQuery('');}}>Open file</button>
           </div>
           <small>⌘N New file · ⌘P Open file · ⌘⇧P Commands</small>
-        </div></div>}
+        </div>
+        {connectionPanel?<div className="asi-connection-empty">{connectionPanel}</div>:null}
+        </div>}
       </section>
     </div>
     {contextMenu&&menuEntry&&<><button type="button" className="asi-context-dismiss" aria-label="Dismiss file menu" onClick={()=>setContextMenu(null)}/>
@@ -557,6 +563,12 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       {dialogError&&<p className="asi-field-error" role="alert">{dialogError}</p>}
       <div className="asi-dialog-actions"><button type="button" onClick={()=>{setModal(null);setDialogError('');}}>Cancel</button><button className="asi-action-primary" type="submit" disabled={savingDraft||!pathInput.trim()}>{savingDraft?'Saving…':modal==='saveAs'?'Create & save':'Confirm'}</button></div>
     </form></div>}
+    {sourceSettingsOpen&&connectionPanel&&<div className="asi-overlay">
+      <section className="asi-dialog asi-connection-dialog" role="dialog" aria-modal="true" aria-label="File source connections">
+        {connectionPanel}
+        <div className="asi-dialog-actions"><button type="button" onClick={()=>setSourceSettingsOpen(false)}>Close</button></div>
+      </section>
+    </div>}
     {confirmation&&<div className="asi-overlay"><section className="asi-dialog" role="alertdialog" aria-modal="true" aria-label="Confirm file action">
       <strong>{confirmation.kind==='delete'?'Delete this file?':confirmation.kind==='overwrite'?'Overwrite newer content?':'Restore revision?'}</strong>
       <p>{confirmation.kind==='delete'?'This removes the selected file from its authorized source.':confirmation.kind==='overwrite'?'The version on disk has changed. An overwrite may replace another writer’s changes.':'The selected saved revision will replace the current file content.'}</p>
