@@ -15,7 +15,7 @@ on:
       - 'package.json'
       - '.github/workflows/universal-registry.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
   registry:
     runs-on: ubuntu-latest
@@ -33,6 +33,18 @@ jobs:
         run: node scripts/registry/generate-universal.mjs --check
       - name: Focused source, Python CLI and D1 read-only tests
         run: node --test test/integration/universal-source-registry.test.mjs test/integration/universal-registry-reconcile.test.mjs
+      - name: Persist generated source receipts on the Batch 1 branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/batch1-universal-registry-20261123'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add protocol/registry/universal-catalog.v1.json
+          git add migrations/d1/generated/20261123_portable_cli_seed.sql
+          git add migrations/d1/generated/20261123_source_skill_seed.sql
+          if ! git diff --cached --quiet; then
+            git commit -m 'build(registry): record generated source catalog and D1 staging seeds'
+            git push origin HEAD:refs/heads/fix/batch1-universal-registry-20261123
+          fi
       - name: Upload D1 candidate seeds and source manifest
         uses: actions/upload-artifact@v4
         with:

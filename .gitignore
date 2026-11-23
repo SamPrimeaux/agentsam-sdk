@@ -34,6 +34,10 @@ generated/
 # Canonical checked-in registry inventory; unlike build output it is CI evidence.
 !src/registry/generated/
 !src/registry/generated/inventory.json
+# Universal registry SQL receipts are committed deterministic source evidence.
+!migrations/d1/generated/
+!migrations/d1/generated/20261123_portable_cli_seed.sql
+!migrations/d1/generated/20261123_source_skill_seed.sql
 /work/
 
 # Generated theme gallery mounts (scripts/stage-themes-to-site.mjs via site:sync)
