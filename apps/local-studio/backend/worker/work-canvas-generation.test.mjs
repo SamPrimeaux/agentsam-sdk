@@ -134,3 +134,40 @@ test('unverified backend claims and model endpoint bindings are rejected',async(
     ...board('home').nodes[0],binding:{endpoint:'/api/admin/delete'},
   }]},{id:'home'}),/binding_requires_authorized_adapter/);
 });
+
+const rawReply=text=>Response.json({id:'response_raw',output_text:text,usage:{input_tokens:100,output_tokens:50}});
+test('model output wrapped in prose or fences is still accepted',async()=>{
+  const runtime=provider([
+    rawReply('Here is the plan:\n```json\n'+JSON.stringify(plan)+'\n```\nLet me know if you want changes.'),
+    rawReply('Sure! '+JSON.stringify({artboard:board('home')})+' {done}'),
+    rawReply('```\n'+JSON.stringify({artboard:board('about')})+'\n```'),
+  ]);
+  const e=execution(empty(),runtime);
+  const result=await executeCanvasGeneration(e.args);
+  assert.equal(result.document.artboards[0].nodes[0].text,'Notebook');
+  assert.equal(result.document.artboards[1].nodes[0].text,'About');
+});
+test('a cut-off artboard reply is retried once with a compact request and then saved',async()=>{
+  const full=JSON.stringify({artboard:board('home')});
+  const requests=[];
+  const runtime=provider([plan,rawReply(full.slice(0,full.length-12)),{artboard:board('home')},{artboard:board('about')}],
+    {onRequest:(url,init)=>{if(init?.body)requests.push(String(init.body));}});
+  const e=execution(empty(),runtime);
+  const result=await executeCanvasGeneration(e.args);
+  assert.equal(result.document.artboards[0].nodes.length,1);
+  const failed=e.events.filter(x=>x.type==='model.failed');
+  assert.equal(failed.length,1);
+  assert.equal(failed[0].payload.reason,'json_invalid');
+  assert.equal(failed[0].payload.attempt,1);
+  assert.equal(failed[0].payload.balanced,false);
+  assert.ok(requests.some(body=>body.includes('more compact')));
+  assert.ok(!JSON.stringify(failed[0].payload).includes('Notebook'),'diagnostics must not echo provider output');
+});
+test('two unparseable replies fail with the recoverable json error after exactly two attempts',async()=>{
+  const bad='{"artboard":{"id":"home","nodes":[';
+  const runtime=provider([plan,rawReply(bad),rawReply(bad)]);
+  const e=execution(empty(),runtime);
+  await assert.rejects(executeCanvasGeneration(e.args),/canvas_model_json_invalid/);
+  assert.equal(e.events.filter(x=>x.type==='model.failed'&&x.payload.reason==='json_invalid').length,2);
+  assert.equal(e.saved.length,1,'only the structure plan was saved');
+});

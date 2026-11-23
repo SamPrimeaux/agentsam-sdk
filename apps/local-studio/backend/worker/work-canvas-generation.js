@@ -16,11 +16,37 @@ const MAX_OUTPUT = 16000;
 function fail(code, status = 422) {
   const error = new Error(code); error.code = code; error.status = status; return error;
 }
+/** First balanced top-level JSON object in free text, ignoring braces inside strings. Null when the reply was cut off. */
+function extractJsonObject(raw) {
+  let start = raw.indexOf('{');
+  for (let tries = 0; start !== -1 && tries < 5; tries++) {
+    let depth = 0, inString = false, escaped = false;
+    for (let i = start; i < raw.length; i++) {
+      const ch = raw[i];
+      if (inString) { if (escaped) escaped = false; else if (ch === '\\') escaped = true; else if (ch === '"') inString = false; continue; }
+      if (ch === '"') inString = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}' && --depth === 0) {
+        const candidate = raw.slice(start, i + 1);
+        try { if (object(JSON.parse(candidate))) return candidate; } catch { /* try the next object */ }
+        break;
+      }
+    }
+    start = raw.indexOf('{', start + 1);
+  }
+  return null;
+}
 function parseJson(text) {
-  const raw = clean(text).replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const raw = clean(text).replace(/^\uFEFF/, '');
   if (!raw || raw.length > 500000) throw fail('canvas_model_output_invalid');
-  try { const value = JSON.parse(raw); if (!object(value)) throw new Error(); return value; }
-  catch { throw fail('canvas_model_json_invalid'); }
+  const fenced = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  try { const value = JSON.parse(fenced); if (object(value)) return value; } catch { /* fall through to extraction */ }
+  const body = extractJsonObject(raw);
+  if (body) return JSON.parse(body);
+  const error = fail('canvas_model_json_invalid');
+  // Lengths only: provider output can contain private prompt excerpts.
+  error.diagnostics = {chars: raw.length, balanced: false};
+  throw error;
 }
 async function digest(value) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)));
@@ -62,7 +88,7 @@ async function createModel({env, selection, runtime = {}, emit, shouldCancel}) {
   }
   return {
     provider, model_id: modelId,
-    async json(instructions, input, stage, maxOutputTokens = MAX_OUTPUT) {
+    async request(instructions, input, stage, maxOutputTokens) {
       await checkCancelled(shouldCancel);
       await emit?.('model.started', {provider, model_id: modelId, stage});
       let response;
@@ -86,10 +112,25 @@ async function createModel({env, selection, runtime = {}, emit, shouldCancel}) {
         throw fail('canvas_provider_request_failed:' + provider + ':' + (Number(error?.status) || 'transport'), 502);
       }
       await checkCancelled(shouldCancel);
-      const value = parseJson(response.output_text);
-      await emit?.('model.completed', {provider, model_id: modelId, stage,
-        response_id: response.response_id || null, usage: response.usage_delta || null});
-      return {value, response_id: response.response_id || null, usage: response.usage_delta || null};
+      return response;
+    },
+    /** One automatic compact retry when the reply is not parseable (usually cut off at the output limit). */
+    async json(instructions, input, stage, maxOutputTokens = MAX_OUTPUT) {
+      let extra = '';
+      for (let attempt = 1; ; attempt++) {
+        const response = await this.request(instructions + extra, input, stage, maxOutputTokens);
+        try {
+          const value = parseJson(response.output_text);
+          await emit?.('model.completed', {provider, model_id: modelId, stage,
+            response_id: response.response_id || null, usage: response.usage_delta || null});
+          return {value, response_id: response.response_id || null, usage: response.usage_delta || null};
+        } catch (error) {
+          if (error?.code !== 'canvas_model_json_invalid') throw error;
+          await emit?.('model.failed', {provider, model_id: modelId, stage, reason: 'json_invalid', attempt, ...error.diagnostics});
+          if (attempt >= 2) throw error;
+          extra = '\n\nYour previous reply was not one complete JSON object (it may have been cut off or wrapped in prose). Reply again with exactly one JSON object and nothing else, more compact: fewer and simpler nodes, short copy.';
+        }
+      }
     },
   };
 }
