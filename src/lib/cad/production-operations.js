@@ -5,6 +5,8 @@ export const CAD_PRODUCTION_CAPABILITIES = Object.freeze([
   ['cad.geometry.validate', 'Validate dimensional CAD entities and constraints.', 'read'],
   ['cad.bim.ifc.export', 'Export a semantic IFC building model from an approved revision.', 'write'],
   ['cad.solid.export', 'Export precision BREP solids from approved geometry.', 'write'],
+  ['cad.mesh.export', 'Export fabricated triangle meshes and 3MF packages with unit and watertightness verification.', 'write'],
+  ['cad.native.export', 'Export an editable native CAD project through an explicitly authorized desktop engine.', 'write'],
   ['cad.drawing.generate', 'Generate dimensioned vector and PDF engineering drawing sheets.', 'write'],
   ['cad.schedule.generate', 'Generate model-derived schedules, not invented cost figures.', 'write'],
   ['cad.quantity.takeoff', 'Calculate traceable measured material quantities.', 'write'],

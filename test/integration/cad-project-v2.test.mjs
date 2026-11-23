@@ -113,7 +113,9 @@ test('portable v2 validates domain profiles without requiring architectural fiel
   assert.throws(() => attachCadDeliveryProfiles(part, ['architecture.schematic']), /domain_mismatch/);
   const fabrication = attachCadDeliveryProfiles(part, ['mechanical.fabrication']);
   sameSchema(fabrication);
-  assert.equal(fabrication.outputs.length, 4);
+  assert.equal(fabrication.outputs.length, CAD_DELIVERY_PROFILES['mechanical.fabrication'].length);
+  assert.ok(fabrication.outputs.some(output => output.formatRef?.id === 'model.stl'));
+  assert.ok(fabrication.outputs.some(output => output.formatRef?.id === 'model.3mf'));
 });
 
 test('legacy V1 fixture maps losslessly to a model with stable editable IDs and back', () => {

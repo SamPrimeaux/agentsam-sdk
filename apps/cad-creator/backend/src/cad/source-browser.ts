@@ -12,6 +12,7 @@ function local(req:Request){
 }
 export function nativeApplicationForFormat(format:string):string|null{
  const choices:Record<string,string>={FCSTD:'FreeCAD',IFC:'FreeCAD',STEP:'FreeCAD',STP:'FreeCAD',
+   IGES:'FreeCAD',IGS:'FreeCAD',BREP:'FreeCAD',STL:'FreeCAD',OBJ:'FreeCAD',
    DXF:'FreeCAD',DWG:'FreeCAD',BLEND:'Blender',GLB:'Blender',GLTF:'Blender',SCAD:'OpenSCAD'};
  return choices[format.toUpperCase()]||null;
 }
