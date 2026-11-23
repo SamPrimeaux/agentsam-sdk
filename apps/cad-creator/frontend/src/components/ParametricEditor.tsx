@@ -16,10 +16,12 @@ import {
 } from 'lucide-react';
 import { DesignProject, ParametricObject, ParametricParameterDef } from '@inneranimalmedia/agentsam-cad-shared';
 import {
-  OPENSCAD_PARAMETRIC_TEMPLATES,
   generateOpenScadFromParametric,
   generateFullBimOpenScad,
 } from '../lib/openscad/generator';
+import { useQuickAddCatalog } from './quick-add';
+import type { QuickAddItem } from './quick-add/types';
+import { createParametricObjectFromCatalog } from '../lib/studio-template-source';
 import { validateOpenScadSource } from '../lib/openscad/sandbox';
 import { getExecutionProvider } from '../lib/execution';
 import { exportProjectToArtifact, downloadFile } from '../lib/exporters';
@@ -39,6 +41,8 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
   canEdit, initialObjectId,
 }) => {
   const parametricObjects = project.parametricObjects || [];
+  const catalog = useQuickAddCatalog(true);
+  const parametricTemplates = catalog.items.filter(item => item.kind === 'cad_parametric_template');
   const [selectedObjId, setSelectedObjId] = useState<string>(
     initialObjectId || parametricObjects[0]?.id || ''
   );
@@ -70,31 +74,25 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
     return validateOpenScadSource(sourceCodeOverride || (selectedObj ? generateOpenScadFromParametric(selectedObj) : ''));
   }, [sourceCodeOverride, selectedObj, activeSubTab, project]);
 
-  const handleCreateNewObject = (templateKey: string) => {
-    const tpl = OPENSCAD_PARAMETRIC_TEMPLATES[templateKey] || OPENSCAD_PARAMETRIC_TEMPLATES.workstation;
-    const newObj: ParametricObject = {
-      id: `param_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      name: `${tpl.name} #${parametricObjects.length + 1}`,
-      generator: 'openscad',
-      generatorTemplate: templateKey,
-      parameters: { ...tpl.defaultParams },
-      parameterDefs: tpl.parameterDefs,
-      transform: { x: 48 + parametricObjects.length * 24, y: 48, z: 0, rotationY: 0 },
-      source: tpl.generateScad(tpl.defaultParams),
-      updatedAt: Date.now(),
-    };
-
-    const res = applyDesignOperation(project, {
-      id: `op_add_${newObj.id}`,
-      type: 'create_parametric_object',
-      parametricObject: newObj,
-      timestamp: Date.now(),
-    });
-
-    if (res.success) {
-      onUpdateProject(res.project);
-      setSelectedObjId(newObj.id);
-      setExecutionLogs((prev) => [...prev, `[CREATED] Added new parametric object: ${newObj.name}`]);
+  const handleCreateNewObject = async (item: QuickAddItem) => {
+    if (!canEdit) return;
+    try {
+      const newObj = await createParametricObjectFromCatalog(item, parametricObjects.length);
+      const res = applyDesignOperation(project, {
+        id: `op_add_${newObj.id}`,
+        type: 'create_parametric_object',
+        parametricObject: newObj,
+        timestamp: Date.now(),
+      });
+      if (res.success) {
+        onUpdateProject(res.project);
+        setSelectedObjId(newObj.id);
+        setExecutionLogs((prev) => [...prev, `[CREATED] Added registered parametric object: ${newObj.name}`]);
+      } else {
+        setExecutionLogs((prev) => [...prev, `[ERROR] ${res.error || 'The CAD engine rejected the parametric object.'}`]);
+      }
+    } catch (error) {
+      setExecutionLogs((prev) => [...prev, `[ERROR] ${error instanceof Error ? error.message : 'The registered parametric template could not be loaded.'}`]);
     }
   };
 
@@ -164,44 +162,49 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex bg-slate-950 text-slate-100 overflow-hidden select-none">
+    <div className="w-full h-full flex bg-[var(--cad-bg)] text-[var(--cad-ink)] overflow-hidden select-none">
       {/* Sidebar: List of Parametric Objects */}
-      <div className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
-        <div className="p-3.5 border-b border-slate-800 flex items-center justify-between">
+      <div className="w-72 bg-[var(--cad-surface)] border-r border-[var(--cad-line)] flex flex-col shrink-0">
+        <div className="p-3.5 border-b border-[var(--cad-line)] flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Box className="w-4 h-4 text-purple-400" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+            <Box className="w-4 h-4 text-[var(--cad-accent-ink)]" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--cad-ink)]">
               Parametric Assemblies
             </h2>
           </div>
         </div>
 
-        {/* Add Template dropdown buttons */}
-        <div className="p-3 border-b border-slate-800 space-y-1.5">
-          <span className="text-[length:var(--text-sm)] font-semibold text-slate-400 block mb-1">
-            Generate From Template:
+        {/* Registered parametric catalog — no local template fallback. */}
+        <div className="p-3 border-b border-[var(--cad-line)] space-y-1.5">
+          <span className="text-[length:var(--text-sm)] font-semibold text-[var(--cad-muted)] block mb-1">
+            Registered parametric templates
           </span>
+          {catalog.status === 'loading' && <p className="text-xs text-[var(--cad-muted)]">Loading studio catalog…</p>}
+          {catalog.status === 'error' && <button type="button" onClick={catalog.refresh} className="text-xs text-[var(--cad-muted)]">Catalog unavailable · Retry</button>}
           <div className="grid grid-cols-1 gap-1.5">
-            {Object.entries(OPENSCAD_PARAMETRIC_TEMPLATES).map(([key, tpl]) => (
+            {parametricTemplates.map(item => (
               <button
-                key={key}
-                onClick={() => handleCreateNewObject(key)}
+                key={item.id}
+                onClick={() => void handleCreateNewObject(item)}
                 disabled={!canEdit}
-                className="flex items-center justify-between px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 hover:text-white rounded text-xs transition border border-slate-700/50 disabled:opacity-50"
+                className="flex items-center justify-between px-2.5 py-1.5 bg-[var(--cad-input)] hover:bg-[var(--cad-hover)] text-[var(--cad-ink)] hover:text-[var(--cad-ink)] rounded text-xs transition border border-[var(--cad-line)] disabled:opacity-50"
               >
                 <div className="flex items-center space-x-2 truncate">
-                  <Plus className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                  <span className="truncate">{tpl.name}</span>
+                  <Plus className="w-3.5 h-3.5 text-[var(--cad-accent-ink)] shrink-0" />
+                  <span className="truncate">{item.title}</span>
                 </div>
               </button>
             ))}
+            {catalog.status === 'ready' && parametricTemplates.length === 0 && (
+              <p className="text-xs text-[var(--cad-muted)]">No parametric templates are registered for CAD Creator.</p>
+            )}
           </div>
         </div>
 
         {/* Objects list */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {parametricObjects.length === 0 ? (
-            <div className="text-center p-6 text-slate-500 text-xs">
+            <div className="text-center p-6 text-[var(--cad-muted)] text-xs">
               No parametric objects created yet. Click a template above to generate one.
             </div>
           ) : (
@@ -211,17 +214,17 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                 onClick={() => setSelectedObjId(obj.id)}
                 className={`p-2.5 rounded-lg border text-xs cursor-pointer transition flex items-center justify-between ${
                   selectedObj?.id === obj.id
-                    ? 'bg-purple-950/40 border-purple-500/50 text-white'
-                    : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                    ? 'bg-[var(--cad-hover)] border-[var(--cad-accent)] text-[var(--cad-ink)]'
+                    : 'bg-[var(--cad-surface)] border-[var(--cad-line)] text-[var(--cad-muted)] hover:bg-[var(--cad-hover)] hover:text-[var(--cad-ink)]'
                 }`}
               >
                 <div className="truncate pr-2">
                   <p className="font-semibold truncate">{obj.name}</p>
-                  <p className="text-[length:var(--text-xs)] text-slate-500 mt-0.5">
+                  <p className="text-[length:var(--text-xs)] text-[var(--cad-muted)] mt-0.5">
                     X: {Math.round(obj.transform.x)}" | Y: {Math.round(obj.transform.y)}"
                   </p>
                 </div>
-                <Box className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <Box className="w-3.5 h-3.5 text-[var(--cad-accent-ink)] shrink-0" />
               </div>
             ))
           )}
@@ -229,16 +232,16 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
       </div>
 
       {/* Main Center Area: Controls / Code Editor */}
-      <div className="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+      <div className="flex-1 flex flex-col bg-[var(--cad-bg)] overflow-hidden">
         {/* Sub-tabs header */}
-        <div className="h-11 bg-slate-900/90 border-b border-slate-800 px-4 flex items-center justify-between shrink-0">
+        <div className="h-11 bg-[var(--cad-surface)] border-b border-[var(--cad-line)] px-4 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setActiveSubTab('params')}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${
                 activeSubTab === 'params'
-                  ? 'bg-purple-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-[var(--cad-accent)] text-[var(--cad-ink)] shadow'
+                  : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-input)]'
               }`}
             >
               <Sliders className="w-3.5 h-3.5" />
@@ -249,8 +252,8 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
               onClick={() => setActiveSubTab('code')}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${
                 activeSubTab === 'code'
-                  ? 'bg-purple-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-[var(--cad-accent)] text-[var(--cad-ink)] shadow'
+                  : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-input)]'
               }`}
             >
               <Code className="w-3.5 h-3.5" />
@@ -261,8 +264,8 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
               onClick={() => setActiveSubTab('fullbim')}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${
                 activeSubTab === 'fullbim'
-                  ? 'bg-purple-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-[var(--cad-accent)] text-[var(--cad-ink)] shadow'
+                  : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-input)]'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -273,8 +276,8 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
               onClick={() => setActiveSubTab('logs')}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${
                 activeSubTab === 'logs'
-                  ? 'bg-purple-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-[var(--cad-accent)] text-[var(--cad-ink)] shadow'
+                  : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-input)]'
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
@@ -284,14 +287,14 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
 
           <div className="flex items-center space-x-2">
             {activeSubTab==='code'&&<button type="button" aria-expanded={libraryOpen} aria-label="Toggle OpenSCAD libraries"
-              onClick={()=>setLibraryOpen(v=>!v)} className="px-2 py-1.5 border border-slate-700 rounded text-xs hover:bg-slate-800">
+              onClick={()=>setLibraryOpen(v=>!v)} className="px-2 py-1.5 border border-[var(--cad-line)] rounded text-xs hover:bg-[var(--cad-input)]">
               {libraryOpen?'Hide libraries':'Libraries'}
             </button>}
             {selectedObj && (
               <button
                 onClick={handleDeleteSelected}
                 disabled={!canEdit}
-                className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded transition"
+                className="p-1.5 text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)] rounded transition"
                 title="Delete object"
               >
                 <Trash2 className="w-4 h-4" />
@@ -301,7 +304,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
             <button
               onClick={handleCompileStl}
               disabled={isCompiling}
-              className="flex items-center space-x-1.5 px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs font-semibold shadow transition disabled:opacity-50"
+              className="flex items-center space-x-1.5 px-3 py-1 bg-[var(--cad-accent)] hover:bg-[var(--cad-hover)] text-[var(--cad-ink)] rounded text-xs font-semibold shadow transition disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" />
               <span>{isCompiling ? 'Compiling...' : 'Export STL'}</span>
@@ -310,21 +313,21 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
         </div>
 
         {/* Validation Status Indicator */}
-        <div className="px-4 py-1.5 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between text-[length:var(--text-sm)]">
+        <div className="px-4 py-1.5 bg-[var(--cad-surface)] border-b border-[var(--cad-line)] flex items-center justify-between text-[length:var(--text-sm)]">
           <div className="flex items-center space-x-2">
             {validationResult.valid ? (
-              <div className="flex items-center space-x-1 text-emerald-400 font-medium">
+              <div className="flex items-center space-x-1 text-[var(--cad-accent-ink)] font-medium">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>OpenSCAD AST & Sandbox Verified</span>
               </div>
             ) : (
-              <div className="flex items-center space-x-1 text-rose-400 font-medium">
+              <div className="flex items-center space-x-1 text-[var(--cad-muted)] font-medium">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>Security/Syntax issue: {validationResult.errors[0]}</span>
               </div>
             )}
           </div>
-          <span className="text-slate-500 font-mono text-[length:var(--text-xs)]">
+          <span className="text-[var(--cad-muted)] font-mono text-[length:var(--text-xs)]">
             Engine: Safe Client/Server CSG Kernel
           </span>
         </div>
@@ -334,12 +337,12 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
           {activeSubTab === 'params' && (
             selectedObj ? (
               <div className="max-w-2xl space-y-4">
-                <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
+                <div className="bg-[var(--cad-surface)] p-4 rounded-xl border border-[var(--cad-line)] space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-white">{selectedObj.name}</h3>
-                      <p className="text-xs text-slate-400">
-                        {OPENSCAD_PARAMETRIC_TEMPLATES[selectedObj.generatorTemplate || '']?.description || 'Custom Parametric Generator'}
+                      <h3 className="text-sm font-bold text-[var(--cad-ink)]">{selectedObj.name}</h3>
+                      <p className="text-xs text-[var(--cad-muted)]">
+                        {selectedObj.generatorTemplate ? `Registered studio template · ${selectedObj.generatorTemplate}` : 'Custom parametric generator'}
                       </p>
                     </div>
                   </div>
@@ -351,13 +354,13 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                       if (def.type === 'boolean') {
                         return (
                           <div key={def.name} className="flex items-center justify-between py-1">
-                            <span className="text-xs text-slate-300 font-medium">{def.label}</span>
+                            <span className="text-xs text-[var(--cad-muted)] font-medium">{def.label}</span>
                             <input
                               type="checkbox"
                               checked={Boolean(currentVal)}
                               onChange={(e) => handleParameterChange(def.name, e.target.checked)}
                               disabled={!canEdit}
-                              className="rounded bg-slate-800 border-slate-700 text-purple-600 focus:ring-purple-500 h-4 w-4"
+                              className="rounded bg-[var(--cad-input)] border-[var(--cad-line)] text-[var(--cad-accent-ink)] focus:ring-purple-500 h-4 w-4"
                             />
                           </div>
                         );
@@ -365,9 +368,9 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
 
                       return (
                         <div key={def.name} className="space-y-1">
-                          <div className="flex justify-between text-xs text-slate-300">
+                          <div className="flex justify-between text-xs text-[var(--cad-muted)]">
                             <span>{def.label}</span>
-                            <span className="font-mono text-purple-400">
+                            <span className="font-mono text-[var(--cad-accent-ink)]">
                               {currentVal} {def.unit || ''}
                             </span>
                           </div>
@@ -379,7 +382,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                             value={Number(currentVal)}
                             onChange={(e) => handleParameterChange(def.name, parseFloat(e.target.value))}
                             disabled={!canEdit}
-                            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                            className="w-full h-1.5 bg-[var(--cad-input)] rounded-lg appearance-none cursor-pointer accent-purple-500"
                           />
                         </div>
                       );
@@ -388,13 +391,13 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                 </div>
 
                 {/* Spatial positioning */}
-                <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <div className="bg-[var(--cad-surface)] p-4 rounded-xl border border-[var(--cad-line)] space-y-3">
+                  <h4 className="text-xs font-bold text-[var(--cad-muted)] uppercase tracking-wider">
                     Spatial Floor Transform (Inches)
                   </h4>
                   <div className="grid grid-cols-3 gap-3 text-xs">
                     <div>
-                      <label className="text-slate-400 text-[length:var(--text-xs)] block">Position X</label>
+                      <label className="text-[var(--cad-muted)] text-[length:var(--text-xs)] block">Position X</label>
                       <input
                         type="number"
                         value={selectedObj.transform.x}
@@ -411,12 +414,12 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                           });
                           if (res.success) onUpdateProject(res.project);
                         }}
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs mt-1"
+                        className="w-full bg-[var(--cad-input)] border border-[var(--cad-line)] rounded px-2 py-1 text-[var(--cad-ink)] text-xs mt-1"
                       />
                     </div>
 
                     <div>
-                      <label className="text-slate-400 text-[length:var(--text-xs)] block">Position Y</label>
+                      <label className="text-[var(--cad-muted)] text-[length:var(--text-xs)] block">Position Y</label>
                       <input
                         type="number"
                         value={selectedObj.transform.y}
@@ -433,12 +436,12 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                           });
                           if (res.success) onUpdateProject(res.project);
                         }}
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs mt-1"
+                        className="w-full bg-[var(--cad-input)] border border-[var(--cad-line)] rounded px-2 py-1 text-[var(--cad-ink)] text-xs mt-1"
                       />
                     </div>
 
                     <div>
-                      <label className="text-slate-400 text-[length:var(--text-xs)] block">Elevation Z</label>
+                      <label className="text-[var(--cad-muted)] text-[length:var(--text-xs)] block">Elevation Z</label>
                       <input
                         type="number"
                         value={selectedObj.transform.z || 0}
@@ -456,14 +459,14 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                           });
                           if (res.success) onUpdateProject(res.project);
                         }}
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs mt-1"
+                        className="w-full bg-[var(--cad-input)] border border-[var(--cad-line)] rounded px-2 py-1 text-[var(--cad-ink)] text-xs mt-1"
                       />
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-slate-500 text-xs p-6 text-center">
+              <div className="text-[var(--cad-muted)] text-xs p-6 text-center">
                 Select or create a parametric object on the left.
               </div>
             )
@@ -476,7 +479,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                 onChange={(e) => setSourceCodeOverride(e.target.value)}
                 disabled={!canEdit}
                 spellCheck={false}
-                className="w-full flex-1 bg-slate-900 font-mono text-xs text-purple-300 p-4 rounded-xl border border-slate-800 focus:outline-none focus:border-purple-500/50 resize-none min-h-[320px]"
+                className="w-full flex-1 bg-[var(--cad-surface)] font-mono text-xs text-[var(--cad-accent-ink)] p-4 rounded-xl border border-[var(--cad-line)] focus:outline-none focus:border-[var(--cad-accent)] resize-none min-h-[320px]"
               />
               {libraryOpen&&<OpenScadLibraryPane disabled={!canEdit} onInsert={line=>{
                 try{setSourceCodeOverride(previous=>insertOpenScadImport(previous,line));setExecutionLogs(previous=>[...previous,'[LIBRARY] Inserted registered import '+line]);}
@@ -486,9 +489,9 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
           )}
 
           {activeSubTab === 'code'&&selectedObj&&<div className="flex justify-end gap-2 px-4 pb-3">
-            <button type="button" className="rounded-md border border-slate-700 px-3 py-1.5 text-xs"
+            <button type="button" className="rounded-md border border-[var(--cad-line)] px-3 py-1.5 text-xs"
              onClick={()=>setSourceCodeOverride(selectedObj.source||generateOpenScadFromParametric(selectedObj))}>Revert</button>
-            <button type="button" className="rounded-md bg-purple-600 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+            <button type="button" className="rounded-md bg-[var(--cad-accent)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
              disabled={!canEdit||!validationResult.valid||sourceCodeOverride===selectedObj.source}
              onClick={()=>{
               const result=applyDesignOperation(project,{id:'cad-code-'+crypto.randomUUID(),timestamp:Date.now(),type:'update_parametric_source',
@@ -499,22 +502,22 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
            </div>}
           {activeSubTab === 'fullbim' && (
             <div className="h-full flex flex-col space-y-2">
-              <div className="text-xs text-slate-400 mb-1">
+              <div className="text-xs text-[var(--cad-muted)] mb-1">
                 Generated complete OpenSCAD script for all walls, cutouts, rooms, and embedded parametric objects:
               </div>
               <textarea
                 readOnly
                 value={generateFullBimOpenScad(project)}
                 spellCheck={false}
-                className="w-full flex-1 bg-slate-900 font-mono text-xs text-sky-300 p-4 rounded-xl border border-slate-800 resize-none min-h-[400px]"
+                className="w-full flex-1 bg-[var(--cad-surface)] font-mono text-xs text-[var(--cad-accent-ink)] p-4 rounded-xl border border-[var(--cad-line)] resize-none min-h-[400px]"
               />
             </div>
           )}
 
           {activeSubTab === 'logs' && (
-            <div className="bg-slate-950 font-mono text-xs text-slate-300 p-4 rounded-xl border border-slate-800 space-y-1.5 h-full overflow-y-auto">
+            <div className="bg-[var(--cad-bg)] font-mono text-xs text-[var(--cad-muted)] p-4 rounded-xl border border-[var(--cad-line)] space-y-1.5 h-full overflow-y-auto">
               {executionLogs.map((log, i) => (
-                <div key={i} className="text-slate-400">
+                <div key={i} className="text-[var(--cad-muted)]">
                   {log}
                 </div>
               ))}

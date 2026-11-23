@@ -1,5 +1,5 @@
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
-import {DREAMHOUSE_PROJECT_ID,withDreamHouseTerrain} from './dreamhouse-source';
+import {DREAMHOUSE_PROJECT_ID} from './dreamhouse-source';
 
 export const OWNER_DREAMHOUSE_PROJECT_ID = DREAMHOUSE_PROJECT_ID;
 const OWNER_PROJECT_ENDPOINT = '/api/cad/project/tools/design_project_get';
@@ -42,5 +42,5 @@ export async function loadOwnerDreamHouseProject(fetcher: typeof fetch = fetch):
     throw new Error('The local CAD project response did not match the DreamHouse owner-project contract. The owner BIM was not replaced.');
   }
 
-  return withDreamHouseTerrain(project as ProjectState);
+  return project as ProjectState;
 }

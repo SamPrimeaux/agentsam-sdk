@@ -1,7 +1,16 @@
-export { QuickAddMenu, type QuickAddEntry, type QuickAddMenuProps } from './QuickAddMenu';
-export { TemplatesGallery, type TemplatesGalleryProps } from './TemplatesGallery';
+export { QuickAddMenu, type QuickAddMenuProps, type QuickAddEntry } from './QuickAddMenu';
+export { TemplatesGallery } from './TemplatesGallery';
 export { QuickAddPreview } from './QuickAddPreview';
-export { useQuickAddCatalog } from './useQuickAddCatalog';
-export { builtinQuickAddCatalog, fetchQuickAddCatalog, sectionsFor, categoryLabel, QUICK_ADD_CATALOG_URL, cadCanAct, type QuickAddFetchOptions } from './catalog';
-export type { QuickAddItem, QuickAddTab, QuickAddSource } from './types';
-import './quick-add.css';
+export {
+  fetchQuickAddCatalog,
+  sectionsFor,
+  categoryLabel,
+  QUICK_ADD_CATALOG_URL,
+  cadCanAct,
+  furniturePresetFromItem,
+  furniturePresetsFromCatalog,
+  type QuickAddFetchOptions,
+  type QuickAddSection,
+} from './catalog';
+export { useQuickAddCatalog, invalidateQuickAddCatalog } from './useQuickAddCatalog';
+export type { QuickAddItem, QuickAddTab, QuickAddStatus, FurniturePreset } from './types';

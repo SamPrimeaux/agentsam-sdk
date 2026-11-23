@@ -1,27 +1,33 @@
-/** Gallery tab. Objects are things you place; Scenes are whole compositions you start from. */
-export type QuickAddTab = 'objects' | 'scenes';
+import type { FurnitureCategory } from '@inneranimalmedia/agentsam-cad-shared';
 
-/**
- * One catalog entry. `kind` is the studio_templates.resource_kind (what the thing is),
- * `category` is the sidebar grouping, and the file format never appears here: it is a
- * property of the payload, not a way to browse.
- */
+export type QuickAddTab = 'templates' | 'objects' | 'scenes';
+export type QuickAddStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
+
 export interface QuickAddItem {
   id: string;
   tab: QuickAddTab;
   kind: string;
+  app: string;
   category: string;
+  pack: string | null;
   title: string;
-  description?: string;
-  pack?: string | null;
-  app?: string;
-  /** Free-form per-kind data (stock fixtures carry type/w/d/h/color). */
-  specs?: Record<string, unknown>;
-  /** Image preview. When absent the tile renders a generated preview. */
-  previewUrl?: string | null;
-  /** Stable key of the payload the host resolves (template slug for scenes). */
-  ref?: string | null;
-  renderer?: string | null;
+  description: string;
+  specs: Record<string, unknown>;
+  compatibleApps: string[];
+  renderer: string | null;
+  ref: string | null;
+  previewUrl: string | null;
+  payloadUrl: string | null;
+  assetUrl: string | null;
 }
 
-export type QuickAddSource = 'catalog' | 'builtin';
+export interface FurniturePreset {
+  type: string;
+  name: string;
+  category: FurnitureCategory;
+  w: number;
+  d: number;
+  h: number;
+  color?: string;
+  description: string;
+}

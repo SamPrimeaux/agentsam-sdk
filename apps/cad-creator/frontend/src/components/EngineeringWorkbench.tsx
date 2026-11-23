@@ -9,8 +9,8 @@ import {useWorldView} from '../lib/world-view-store';
 import {resolveCadLighting,updateCadLightingProject,cadTimeOfDayLighting} from '@inneranimalmedia/agentsam-cad-shared';
 import {WorldViewSection} from './WorldViewSection';
 import {KIT, chooseKitTool, isKitActive, viewerSafe, type Group, type MenuId} from './sketch-kit-catalog';
-import {QuickAddMenu, type QuickAddEntry, type QuickAddItem} from './quick-add';
-import type {FurniturePreset} from './FurniturePicker';
+import {QuickAddMenu, type QuickAddEntry} from './quick-add';
+import type {FurniturePreset, QuickAddItem} from './quick-add/types';
 import {useKit} from '../lib/sketch-kit-store';
 import React, {useMemo, useState} from 'react';
 import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
@@ -376,14 +376,14 @@ export const CAD_STUDIO_TOOLS:{id:ActiveTool;label:string;shortcut:string;tier:1
  {id:'eraser',label:'Erase',shortcut:'E',tier:2,icon:Eraser},
  {id:'pan',label:'Pan',shortcut:'H',tier:2,icon:Hand}
 ];
-export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric,onSketch,onOpenSolid,onPlaceStock,onOpenScene,onOpenFamily,onTimeline}:{
+export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric,onSketch,onOpenSolid,onPlaceStock,onOpenScene,onOpenFamily,onTimeline,onPickCatalogItem}:{
  tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model'|'robotics')=>void;
  planLayout:'2d'|'split';onPlanLayout:(v:'2d'|'split')=>void;readOnly:boolean;
  onNew:()=>void;onTemplates:()=>void;onExport:()=>void;onToggleExplorer:()=>void;onToggleInspector:()=>void;
  explorerOpen:boolean;inspectorOpen:boolean;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onSketch:()=>void;onOpenFamily?:(id:StudioInspectorFamily)=>void;onTimeline?:()=>void;onOpenSolid?:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
+ studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;onSketch:()=>void;onOpenFamily?:(id:StudioInspectorFamily)=>void;onTimeline?:()=>void;onOpenSolid?:()=>void;onPlaceStock?:(preset:FurniturePreset)=>void;onOpenScene?:(ref:string|null,title:string)=>void;onPickCatalogItem?:(item:QuickAddItem)=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
@@ -483,8 +483,10 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
    {draft&&direct('eraser')}
   </div>
   {studioView==='edit'&&<div className="cad-tool-cluster cad-create-tools" aria-label="Create objects">
-   <QuickAddMenu label="Create · templates, parts, stock, project" groups={quickAddGroups}
-    onPickObject={pickQuickObject} onPickScene={item=>{onOpenScene?.(item.ref??null,item.title)}}/>
+   <QuickAddMenu label="Quick add · templates, objects and scenes" groups={quickAddGroups}
+    onPickTemplate={item=>onPickCatalogItem?.(item)}
+    onPickObject={item=>onPickCatalogItem?.(item)}
+    onPickScene={item=>onPickCatalogItem?.(item)}/>
   </div>}
   <div className="cad-tool-cluster cad-edit-history">
    {button('Undo (⌘Z)',<Undo2 size={16}/>,onUndo,false,!canUndo)}

@@ -1,32 +1,33 @@
 /**
- * Quick-add catalog for CAD Creator: the "+" menu and Templates gallery.
- * Platform catalog rows live in studio_templates; preview images stream from
- * whichever R2 bucket the row names, resolved through r2_buckets.binding_name.
- * Read-only. Callers are already authenticated by work-service.
- * Every active row is served; `?app=` and `?kind=` narrow it. Nothing is allowlisted in code.
+ * CAD Creator's studio library transport.
+ *
+ * Catalog records are owned by studio_templates. Payloads and previews are
+ * streamed from the R2 bucket named by each record; no template or asset data
+ * is duplicated in the CAD application bundle.
  */
-const BASE = /^\/api\/work\/cad\/catalog(?:\/([A-Za-z0-9_-]{3,100})\/preview)?$/;
-const TABS = ['objects', 'scenes'];
-/**
- * Which gallery tab a row belongs to is row data: `specs.tab`. Rows that do not say fall back to a
- * structural rule on resource_kind (compositions, templates and scenes are Scenes, the rest are Objects),
- * so a new kind appears in the catalog without a Worker change.
- */
-export const tabFor = (kind, specs) => {
-  if (TABS.includes(specs?.tab)) return specs.tab;
-  return /(composition|template|scene)/.test(String(kind || '')) ? 'scenes' : 'objects';
-};
+const BASE = /^\/api\/work\/cad\/catalog(?:\/([A-Za-z0-9_-]{3,100})\/(preview|payload|asset))?$/;
+const TABS = ['templates', 'objects', 'scenes'];
 const SLUG = /^[a-z0-9][a-z0-9_.-]{0,63}$/i;
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'private, max-age=60' } });
+
+export const tabFor = (kind, specs = {}) => {
+  const resourceKind = String(kind || '');
+  if (resourceKind === 'cad_project_template') return 'templates';
+  if (TABS.includes(specs?.tab)) return specs.tab;
+  if (resourceKind === 'model_3d') return 'scenes';
+  return /(composition|scene|bim_project|bim_starter)/.test(resourceKind) ? 'scenes' : 'objects';
+};
 
 export const isWorkCadCatalogRequest = (pathname) => BASE.test(pathname);
 
 function parseJson(text) {
-  try { const v = JSON.parse(text || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+  try { const value = JSON.parse(text || '{}'); return value && typeof value === 'object' ? value : {}; }
+  catch { return {}; }
 }
 
 function parseList(text) {
-  try { const v = JSON.parse(text || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch { return []; }
+  try { const value = JSON.parse(text || '[]'); return Array.isArray(value) ? value.filter((x) => typeof x === 'string') : []; }
+  catch { return []; }
 }
 
 /** `studio-templates/cad-creator/platform/modern_villa/v1/project.json` -> `modern_villa` */
@@ -34,6 +35,8 @@ export const payloadSlug = (key) => (String(key || '').match(/\/platform\/([^/]+
 
 export function toCatalogItem(row) {
   const specs = parseJson(row.specs_json);
+  const hasPayload = Boolean(row.payload_r2_key && row.payload_bucket_id);
+  const isModel = row.resource_kind === 'model_3d';
   return {
     id: row.id,
     tab: tabFor(row.resource_kind, specs),
@@ -48,7 +51,26 @@ export function toCatalogItem(row) {
     renderer: row.renderer_key || null,
     ref: payloadSlug(row.payload_r2_key),
     previewUrl: row.preview_r2_key && row.preview_bucket_id ? `/api/work/cad/catalog/${row.id}/preview` : null,
+    payloadUrl: hasPayload ? `/api/work/cad/catalog/${row.id}/payload` : null,
+    assetUrl: isModel && hasPayload ? `/api/work/cad/catalog/${row.id}/asset` : null,
   };
+}
+
+function bindingFor(env, bindingName) {
+  return /^[A-Z][A-Z0-9_]{1,63}$/.test(bindingName || '') ? env[bindingName] : null;
+}
+
+function contentTypeFor(key, fallback = 'application/octet-stream') {
+  const lower = String(key || '').toLowerCase();
+  if (lower.endsWith('.json')) return 'application/json; charset=utf-8';
+  if (lower.endsWith('.scad')) return 'text/plain; charset=utf-8';
+  if (lower.endsWith('.glb')) return 'model/gltf-binary';
+  if (lower.endsWith('.gltf')) return 'model/gltf+json';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.svg')) return 'image/svg+xml';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  return fallback;
 }
 
 export async function handleWorkCadCatalogRequest(request, env) {
@@ -56,6 +78,8 @@ export async function handleWorkCadCatalogRequest(request, env) {
   if (!env.DB?.prepare) return json({ ok: false, error: 'catalog_unavailable' }, 503);
   const match = BASE.exec(new URL(request.url).pathname);
   const id = match?.[1];
+  const action = match?.[2];
+
   if (!id) {
     const params = new URL(request.url).searchParams;
     const app = params.get('app'), kind = params.get('kind');
@@ -68,23 +92,43 @@ export async function handleWorkCadCatalogRequest(request, env) {
     }
     const rows = await env.DB.prepare(
       `SELECT id, app_id, resource_kind, pack_slug, pack_title, category, title, description, specs_json,
-              compatible_apps_json, payload_r2_key, preview_bucket_id, preview_r2_key, renderer_key
+              compatible_apps_json, payload_bucket_id, payload_r2_key, preview_bucket_id, preview_r2_key, renderer_key
          FROM studio_templates
         WHERE ${where.join(' AND ')}
         ORDER BY sort_order, title`,
     ).bind(...binds).all();
     const items = (rows.results || []).map(toCatalogItem);
-    return json({ ok: true, schema: 'agentsam.cad.quick-add-catalog.v1', items });
+    return json({ ok: true, schema: 'agentsam.cad.quick-add-catalog.v2', items });
   }
+
   const row = await env.DB.prepare(
-    `SELECT s.preview_r2_key, b.binding_name FROM studio_templates s
-       JOIN r2_buckets b ON b.id = s.preview_bucket_id
+    `SELECT s.resource_kind, s.payload_r2_key, s.preview_r2_key,
+            pb.binding_name AS payload_binding_name, vb.binding_name AS preview_binding_name
+       FROM studio_templates s
+       LEFT JOIN r2_buckets pb ON pb.id = s.payload_bucket_id
+       LEFT JOIN r2_buckets vb ON vb.id = s.preview_bucket_id
       WHERE s.id = ? AND s.status = 'active'`,
   ).bind(id).first();
-  const bucket = row && /^[A-Z][A-Z0-9_]{1,63}$/.test(row.binding_name || '') ? env[row.binding_name] : null;
-  if (!row?.preview_r2_key || typeof bucket?.get !== 'function') return json({ ok: false, error: 'preview_not_found' }, 404);
-  const object = await bucket.get(row.preview_r2_key);
-  if (!object) return json({ ok: false, error: 'preview_not_found' }, 404);
-  const type = object.httpMetadata?.contentType || (row.preview_r2_key.endsWith('.webp') ? 'image/webp' : 'image/png');
-  return new Response(object.body, { headers: { 'content-type': type, 'cache-control': 'public, max-age=3600' } });
+
+  if (!row) return json({ ok: false, error: 'catalog_item_not_found' }, 404);
+  if (action === 'asset' && row.resource_kind !== 'model_3d') return json({ ok: false, error: 'asset_not_available' }, 404);
+
+  const preview = action === 'preview';
+  const key = preview ? row.preview_r2_key : row.payload_r2_key;
+  const bindingName = preview ? row.preview_binding_name : row.payload_binding_name;
+  const bucket = bindingFor(env, bindingName);
+  if (!key || typeof bucket?.get !== 'function') return json({ ok: false, error: preview ? 'preview_not_found' : 'payload_not_found' }, 404);
+
+  const object = await bucket.get(key);
+  if (!object) return json({ ok: false, error: preview ? 'preview_not_found' : 'payload_not_found' }, 404);
+
+  const type = contentTypeFor(key, object.httpMetadata?.contentType);
+  return new Response(object.body, {
+    headers: {
+      'content-type': type,
+      'content-disposition': 'inline',
+      'x-content-type-options': 'nosniff',
+      'cache-control': preview ? 'public, max-age=3600' : 'private, max-age=300',
+    },
+  });
 }

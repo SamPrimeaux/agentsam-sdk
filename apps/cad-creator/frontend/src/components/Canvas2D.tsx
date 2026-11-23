@@ -1,4 +1,4 @@
-import {ARCHITECTURAL_STOCK} from './FurniturePicker';
+import type {FurniturePreset} from './quick-add/types';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ActiveTool, 
@@ -40,7 +40,7 @@ interface Props {
   activeTool: ActiveTool;
   onToolChange: (tool: ActiveTool) => void;
   onProjectChange: (updater: (prev: ProjectState) => ProjectState) => void;
-  selectedFurnitureType?: string | null;
+  selectedFurniturePreset?: FurniturePreset | null;
   remoteUsers?: MultiplayerUser[];
   unit?: MeasurementUnit;
   onSelectElement?: (type: string, id: string) => void;
@@ -54,7 +54,7 @@ export const Canvas2D: React.FC<Props> = ({
   activeTool,
   onToolChange,
   onProjectChange,
-  selectedFurnitureType,
+  selectedFurniturePreset,
   remoteUsers = [],
   unit = 'ft',
   onSelectElement,
@@ -142,6 +142,19 @@ export const Canvas2D: React.FC<Props> = ({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const themeStyle = getComputedStyle(containerRef.current || canvas);
+    const themeColor = (token: string, fallback: string) => themeStyle.getPropertyValue(token).trim() || fallback;
+    const palette = {
+      bg: themeColor('--cad-bg', 'Canvas'),
+      surface: themeColor('--cad-surface', 'Canvas'),
+      ink: themeColor('--cad-ink', 'CanvasText'),
+      muted: themeColor('--cad-muted', 'GrayText'),
+      line: themeColor('--cad-line', themeColor('--cad-ink', 'CanvasText')),
+      hover: themeColor('--cad-hover', themeColor('--cad-surface', 'Canvas')),
+      accent: themeColor('--cad-accent', themeColor('--nav-accent', 'Highlight')),
+      accentForeground: themeColor('--cad-accent-foreground', 'Canvas'),
+      warning: themeColor('--cad-warning', themeColor('--cad-accent', 'Highlight')),
+    };
 
     // Resize buffer
     if (containerRef.current) {
@@ -157,7 +170,7 @@ export const Canvas2D: React.FC<Props> = ({
     const offsetY = pan.y % step;
 
     ctx.beginPath();
-    ctx.strokeStyle = '#222222';
+    ctx.strokeStyle = palette.line;
     ctx.lineWidth = 0.6;
 
     for (let x = offsetX; x < canvas.width; x += step) {
@@ -175,7 +188,7 @@ export const Canvas2D: React.FC<Props> = ({
     const majorOffsetX = pan.x % majorStep;
     const majorOffsetY = pan.y % majorStep;
     ctx.beginPath();
-    ctx.strokeStyle = '#2e2e2e';
+    ctx.strokeStyle = palette.line;
     ctx.lineWidth = 1;
     for (let x = majorOffsetX; x < canvas.width; x += majorStep) {
       ctx.moveTo(x, 0);
@@ -200,9 +213,12 @@ export const Canvas2D: React.FC<Props> = ({
         ctx.closePath();
 
         const isSelected = selectedId === rm.id;
-        ctx.fillStyle = isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(30, 30, 30, 0.5)';
+        ctx.save();
+        ctx.globalAlpha = isSelected ? 0.22 : 0.32;
+        ctx.fillStyle = isSelected ? palette.accent : palette.surface;
         ctx.fill();
-        ctx.strokeStyle = isSelected ? '#3b82f6' : '#444444';
+        ctx.restore();
+        ctx.strokeStyle = isSelected ? palette.accent : palette.line;
         ctx.lineWidth = isSelected ? 2 : 1;
         ctx.stroke();
 
@@ -211,12 +227,12 @@ export const Canvas2D: React.FC<Props> = ({
         const cy = rm.points.reduce((acc, p) => acc + p[1], 0) / rm.points.length;
         const sCenter = toScreen(cx, cy);
 
-        ctx.fillStyle = '#e0e0e0';
+        ctx.fillStyle = palette.ink;
         ctx.font = 'bold 11px ui-sans-serif, system-ui';
         ctx.textAlign = 'center';
         ctx.fillText(rm.name, sCenter.x, sCenter.y - 4);
 
-        ctx.fillStyle = '#888888';
+        ctx.fillStyle = palette.muted;
         ctx.font = '10px ui-sans-serif, system-ui';
         ctx.fillText(`${Math.round(rm.areaSqFt)} sq ft`, sCenter.x, sCenter.y + 10);
       }
@@ -233,7 +249,7 @@ export const Canvas2D: React.FC<Props> = ({
       }
       const cur = toScreen(mouseWorld.x, mouseWorld.y);
       ctx.lineTo(cur.x, cur.y);
-      ctx.strokeStyle = '#a855f7';
+      ctx.strokeStyle = palette.accent;
       ctx.setLineDash([4, 4]);
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -251,7 +267,7 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.lineTo(p2.x, p2.y);
       ctx.lineCap = 'round';
       ctx.lineWidth = Math.max(3, (w.thickness || 6) * zoom);
-      ctx.strokeStyle = isSelected ? '#38bdf8' : w.exterior ? '#020617' : '#1e293b';
+      ctx.strokeStyle = isSelected ? palette.accent : w.exterior ? palette.ink : palette.surface;
       ctx.stroke();
 
       // Wall core stroke outline
@@ -259,7 +275,7 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.lineWidth = Math.max(1, ((w.thickness || 6) * zoom) - 3);
-      ctx.strokeStyle = isSelected ? '#60a5fa' : '#334155';
+      ctx.strokeStyle = isSelected ? palette.accent : palette.line;
       ctx.stroke();
 
       // Dimension badge above wall
@@ -273,12 +289,12 @@ export const Canvas2D: React.FC<Props> = ({
         ctx.translate(midX, midY);
         ctx.rotate(angle > Math.PI / 2 || angle < -Math.PI / 2 ? angle + Math.PI : angle);
 
-        ctx.fillStyle = '#0f172a';
+        ctx.fillStyle = palette.surface;
         ctx.fillRect(-22, -18, 44, 14);
-        ctx.strokeStyle = '#334155';
+        ctx.strokeStyle = palette.line;
         ctx.strokeRect(-22, -18, 44, 14);
 
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = palette.accent;
         ctx.font = '9px monospace';
         ctx.textAlign = 'center';
         ctx.fillText(formatLength(len), 0, -8);
@@ -296,7 +312,7 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.lineWidth = 6 * zoom;
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = palette.accent;
       ctx.lineCap = 'round';
       ctx.setLineDash([4, 4]);
       ctx.stroke();
@@ -305,9 +321,9 @@ export const Canvas2D: React.FC<Props> = ({
       // Live length badge
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2;
-      ctx.fillStyle = '#0284c7';
+      ctx.fillStyle = palette.accent;
       ctx.fillRect(midX - 30, midY - 20, 60, 18);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = palette.accentForeground;
       ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(formatLength(len), midX, midY - 7);
@@ -336,7 +352,7 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.save();
       ctx.beginPath();
       ctx.arc(sPos.x, sPos.y, halfW, 0, Math.PI * 2);
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = palette.surface;
       ctx.fill();
 
       // Swing Arc
@@ -353,14 +369,14 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.beginPath();
       ctx.moveTo(pStart.x, pStart.y);
       ctx.lineTo(pLeafEnd.x, pLeafEnd.y);
-      ctx.strokeStyle = isSelected ? '#a855f7' : '#38bdf8';
+      ctx.strokeStyle = palette.accent;
       ctx.lineWidth = 2.5;
       ctx.stroke();
 
       // Arc dash
       ctx.beginPath();
       ctx.arc(pStart.x, pStart.y, doorW * zoom, 0, Math.PI / 2);
-      ctx.strokeStyle = isSelected ? '#c084fc' : '#0284c7';
+      ctx.strokeStyle = palette.accent;
       ctx.setLineDash([2, 3]);
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -391,7 +407,7 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.lineWidth = Math.max(3, (wall.thickness || 6) * zoom);
-      ctx.strokeStyle = isSelected ? '#38bdf8' : '#0ea5e9';
+      ctx.strokeStyle = palette.accent;
       ctx.stroke();
 
       // Glass center line
@@ -399,7 +415,7 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.lineWidth = 1.5;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = palette.accentForeground;
       ctx.stroke();
     });
 
@@ -416,15 +432,17 @@ export const Canvas2D: React.FC<Props> = ({
 
       ctx.beginPath();
       ctx.roundRect(-sW / 2, -sD / 2, sW, sD, 4);
-      ctx.fillStyle = isSelected ? 'rgba(99, 102, 241, 0.4)' : f.color || '#334155';
+      if (isSelected) ctx.globalAlpha = 0.34;
+      ctx.fillStyle = isSelected ? palette.accent : f.color || palette.surface;
       ctx.fill();
-      ctx.strokeStyle = isSelected ? '#818cf8' : '#475569';
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = isSelected ? palette.accent : palette.line;
       ctx.lineWidth = isSelected ? 2.5 : 1;
       ctx.stroke();
 
       // Furniture Name text
       if (sW > 25 && sD > 15) {
-        ctx.fillStyle = '#f8fafc';
+        ctx.fillStyle = palette.ink;
         ctx.font = '9px ui-sans-serif, system-ui';
         ctx.textAlign = 'center';
         ctx.fillText(f.name, 0, 3);
@@ -441,7 +459,7 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
-      ctx.strokeStyle = '#0284c7';
+      ctx.strokeStyle = palette.accent;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
@@ -452,17 +470,17 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.lineTo(p1.x + tick, p1.y + tick);
       ctx.moveTo(p2.x - tick, p2.y - tick);
       ctx.lineTo(p2.x + tick, p2.y + tick);
-      ctx.strokeStyle = '#0284c7';
+      ctx.strokeStyle = palette.accent;
       ctx.stroke();
 
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2;
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = palette.surface;
       ctx.fillRect(midX - 25, midY - 8, 50, 16);
-      ctx.strokeStyle = '#0284c7';
+      ctx.strokeStyle = palette.accent;
       ctx.strokeRect(midX - 25, midY - 8, 50, 16);
 
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = palette.accent;
       ctx.font = 'bold 9px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(ann.label, midX, midY + 4);
@@ -477,7 +495,7 @@ export const Canvas2D: React.FC<Props> = ({
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = palette.warning;
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.stroke();
@@ -485,9 +503,9 @@ export const Canvas2D: React.FC<Props> = ({
 
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2;
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = palette.warning;
       ctx.fillRect(midX - 35, midY - 12, 70, 20);
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = palette.surface;
       ctx.font = 'bold 11px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(formatLength(dist), midX, midY + 2);
@@ -516,7 +534,7 @@ export const Canvas2D: React.FC<Props> = ({
         // User name tag
         ctx.fillStyle = u.color;
         ctx.fillRect(sCur.x + 12, sCur.y + 4, ctx.measureText(u.name).width + 12, 16);
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = palette.accentForeground;
         ctx.font = 'bold 9px ui-sans-serif, system-ui';
         ctx.textAlign = 'left';
         ctx.fillText(u.name, sCur.x + 18, sCur.y + 15);
@@ -695,7 +713,7 @@ export const Canvas2D: React.FC<Props> = ({
             points: roomPoints,
             areaSqFt: Math.round(areaSqFt),
             floorMaterial: 'hardwood',
-            color: '#f8fafc',
+            color: getComputedStyle(containerRef.current || document.documentElement).getPropertyValue('--cad-surface').trim() || 'Canvas',
           };
           onProjectChange((prev) => ({
             ...prev,
@@ -711,9 +729,9 @@ export const Canvas2D: React.FC<Props> = ({
 
     // 6. Tool: Place Furniture
     if (activeTool === 'furniture') {
-      const type = selectedFurnitureType || 'sofa_3seater';
-      const stock = ARCHITECTURAL_STOCK.find(item=>item.type===type);
+      const stock = selectedFurniturePreset;
       if(!stock)return;
+      const type = stock.type;
       const newFurniture: FurnitureElement = {
         id: `furn_${Date.now()}`,
         type,
@@ -865,11 +883,11 @@ export const Canvas2D: React.FC<Props> = ({
   };
 
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-[#121212] overflow-hidden flex flex-col select-none">
+    <div ref={containerRef} className="w-full h-full relative bg-[var(--cad-bg)] overflow-hidden flex flex-col select-none">
       {/* Legacy dock is retained for other consumers; CAD Creator supplies the main direct-tool ribbon. */}
-      {showToolToolbar && <div className="absolute top-2.5 left-2.5 z-10 flex items-center space-x-0.5 bg-[#252525] border border-[#333] p-1 rounded shadow-lg">
+      {showToolToolbar && <div className="absolute top-2.5 left-2.5 z-10 flex items-center space-x-0.5 bg-[var(--cad-surface)] border border-[var(--cad-line)] p-1 rounded shadow-lg">
         {isViewer && (
-          <div className="px-2 py-1 bg-purple-950/60 border border-purple-800/60 rounded text-[length:var(--text-xs)] font-mono text-purple-300 flex items-center space-x-1 mr-1">
+          <div className="px-2 py-1 bg-[var(--cad-hover)] border border-[var(--cad-line)] rounded text-[length:var(--text-xs)] font-mono text-[var(--cad-accent-ink)] flex items-center space-x-1 mr-1">
             <span>👁️ Viewer Mode</span>
           </div>
         )}
@@ -878,7 +896,7 @@ export const Canvas2D: React.FC<Props> = ({
           onClick={() => onToolChange('select')}
           title="Select & Inspect (V)"
           className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-            activeTool === 'select' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-[#333]'
+            activeTool === 'select' ? 'bg-[var(--cad-accent)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)]'
           }`}
         >
           <MousePointer2 className="w-3.5 h-3.5" />
@@ -890,7 +908,7 @@ export const Canvas2D: React.FC<Props> = ({
               onClick={() => onToolChange('wall')}
               title="Draw Wall (W)"
               className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-                activeTool === 'wall' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-[#333]'
+                activeTool === 'wall' ? 'bg-[var(--cad-accent)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)]'
               }`}
             >
               <Square className="w-3.5 h-3.5" />
@@ -901,7 +919,7 @@ export const Canvas2D: React.FC<Props> = ({
               onClick={() => onToolChange('door')}
               title="Insert Door"
               className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-                activeTool === 'door' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-[#333]'
+                activeTool === 'door' ? 'bg-[var(--cad-accent)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)]'
               }`}
             >
               <DoorClosed className="w-3.5 h-3.5" />
@@ -912,7 +930,7 @@ export const Canvas2D: React.FC<Props> = ({
               onClick={() => onToolChange('window')}
               title="Insert Window"
               className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-                activeTool === 'window' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-[#333]'
+                activeTool === 'window' ? 'bg-[var(--cad-accent)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)]'
               }`}
             >
               <AppWindow className="w-3.5 h-3.5" />
@@ -923,7 +941,7 @@ export const Canvas2D: React.FC<Props> = ({
               onClick={() => onToolChange('room')}
               title="Create Room Zone"
               className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-                activeTool === 'room' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-[#333]'
+                activeTool === 'room' ? 'bg-[var(--cad-accent)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)]'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -934,7 +952,7 @@ export const Canvas2D: React.FC<Props> = ({
               onClick={() => onToolChange('furniture')}
               title="Place Furniture / Fixture"
               className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-                activeTool === 'furniture' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-[#333]'
+                activeTool === 'furniture' ? 'bg-[var(--cad-accent)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)]'
               }`}
             >
               <Armchair className="w-3.5 h-3.5" />
@@ -947,7 +965,7 @@ export const Canvas2D: React.FC<Props> = ({
           onClick={() => onToolChange('measure')}
           title="Measure Tape"
           className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-            activeTool === 'measure' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-[#333]'
+            activeTool === 'measure' ? 'bg-[var(--cad-accent)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)]'
           }`}
         >
           <Ruler className="w-3.5 h-3.5" />
@@ -958,20 +976,20 @@ export const Canvas2D: React.FC<Props> = ({
             onClick={() => onToolChange('eraser')}
             title="Delete / Erase"
             className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-              activeTool === 'eraser' ? 'bg-rose-600 text-white shadow-sm' : 'text-gray-400 hover:text-rose-400 hover:bg-[#333]'
+              activeTool === 'eraser' ? 'bg-[var(--cad-danger)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-danger)] hover:bg-[var(--cad-hover)]'
             }`}
           >
             <Eraser className="w-3.5 h-3.5" />
           </button>
         )}
 
-        <div className="w-[1px] h-4 bg-[#444] mx-0.5"></div>
+        <div className="w-[1px] h-4 bg-[var(--cad-line)] mx-0.5"></div>
 
         <button
           onClick={() => onToolChange('pan')}
           title="Pan Hand"
           className={`p-1.5 rounded text-xs flex items-center space-x-1 transition ${
-            activeTool === 'pan' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-[#333]'
+            activeTool === 'pan' ? 'bg-[var(--cad-accent)] text-[var(--cad-accent-foreground)] shadow-sm' : 'text-[var(--cad-muted)] hover:text-[var(--cad-ink)] hover:bg-[var(--cad-hover)]'
           }`}
         >
           <Hand className="w-3.5 h-3.5" />
@@ -980,11 +998,11 @@ export const Canvas2D: React.FC<Props> = ({
 
       {/* Selected Element Context Actions */}
       {selectedId && !isViewer && (
-        <div className="absolute top-2.5 right-2.5 z-10 flex items-center space-x-1 bg-[#252525] border border-blue-500/40 p-1 rounded shadow-lg">
+        <div className="absolute top-2.5 right-2.5 z-10 flex items-center space-x-1 bg-[var(--cad-surface)] border border-[var(--cad-line)] p-1 rounded shadow-lg">
           {selectedType === 'furniture' && (
             <button
               onClick={handleRotateSelected}
-              className="px-2 py-1 bg-[#1E1E1E] hover:bg-[#333] text-gray-200 text-xs font-medium rounded flex items-center space-x-1 transition"
+              className="px-2 py-1 bg-[var(--cad-surface)] hover:bg-[var(--cad-hover)] text-[var(--cad-ink)] text-xs font-medium rounded flex items-center space-x-1 transition"
             >
               <RotateCw className="w-3 h-3" />
               <span>Rotate 45°</span>
@@ -992,7 +1010,7 @@ export const Canvas2D: React.FC<Props> = ({
           )}
           <button
             onClick={handleDeleteSelected}
-            className="px-2 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-medium rounded flex items-center space-x-1 transition"
+            className="px-2 py-1 bg-[var(--cad-hover)] hover:bg-[var(--cad-danger)] text-[var(--cad-danger)] hover:text-[var(--cad-ink)] border border-[var(--cad-line)] text-xs font-medium rounded flex items-center space-x-1 transition"
           >
             <Trash2 className="w-3 h-3" />
             <span>Delete</span>
@@ -1025,14 +1043,14 @@ export const Canvas2D: React.FC<Props> = ({
       <div className="cad-canvas-controls absolute bottom-2.5 right-2.5 z-10 flex items-center space-x-0.5 p-0.5 rounded shadow-lg">
         <button
           type="button" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(4, z + 0.2))}
-          className="inline-flex items-center gap-1 p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="inline-flex items-center gap-1 p-1 text-[var(--cad-muted)] hover:text-[var(--cad-ink)] rounded hover:bg-[var(--cad-hover)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <ZoomIn className="w-3.5 h-3.5" aria-hidden="true" /><span className="text-[length:var(--text-xs)]">Zoom in</span>
         </button>
-        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono px-1">{Math.round(zoom * 100)}%</span>
+        <span className="text-[length:var(--text-xs)] text-[var(--cad-muted)] font-mono px-1">{Math.round(zoom * 100)}%</span>
         <button
           type="button" aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))}
-          className="inline-flex items-center gap-1 p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="inline-flex items-center gap-1 p-1 text-[var(--cad-muted)] hover:text-[var(--cad-ink)] rounded hover:bg-[var(--cad-hover)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <ZoomOut className="w-3.5 h-3.5" aria-hidden="true" /><span className="text-[length:var(--text-xs)]">Zoom out</span>
         </button>
@@ -1041,7 +1059,7 @@ export const Canvas2D: React.FC<Props> = ({
             setPan({ x: 120, y: 120 });
             setZoom(1.4);
           }}
-          className="px-1.5 py-0.5 text-[length:var(--text-xs)] text-gray-400 hover:text-white rounded hover:bg-[#333] transition font-mono"
+          className="px-1.5 py-0.5 text-[length:var(--text-xs)] text-[var(--cad-muted)] hover:text-[var(--cad-ink)] rounded hover:bg-[var(--cad-hover)] transition font-mono"
         >
           Reset
         </button>

@@ -1,39 +1,64 @@
-import { describe, expect, it } from 'vitest';
-import { builtinQuickAddCatalog, cadCanAct, categoryLabel, fetchQuickAddCatalog, sectionsFor } from './catalog';
+import { describe, expect, it, vi } from 'vitest';
+import { cadCanAct, fetchQuickAddCatalog, furniturePresetFromItem, sectionsFor } from './catalog';
+import type { QuickAddItem } from './types';
 
-describe('quick-add catalog', () => {
-  it('builtin catalog mirrors the database shape: stock objects plus starter scenes', () => {
-    const items = builtinQuickAddCatalog();
-    expect(items.filter((i) => i.tab === 'objects').length).toBe(20);
-    expect(items.filter((i) => i.tab === 'scenes').length).toBeGreaterThanOrEqual(5);
-    expect(items.find((i) => i.id === 'tpl_cad_stock_desk')?.specs).toMatchObject({ type: 'desk', unit: 'in' });
-    expect(items.filter((i) => i.tab === 'scenes').every((i) => !!i.ref)).toBe(true);
+const item = (overrides: Partial<QuickAddItem>): QuickAddItem => ({
+  id: 'registered-id',
+  app: 'cad-creator',
+  compatibleApps: ['cad-creator'],
+  kind: 'cad_stock_object',
+  tab: 'objects',
+  title: 'Registered tree',
+  description: 'A registered tree object',
+  category: 'nature',
+  pack: 'DreamHouse',
+  renderer: 'cad.stock.v1',
+  specs: { type: 'tree-oak', w: 18, d: 18, h: 96, color: '#4b7d4b' },
+  payloadUrl: null,
+  assetUrl: null,
+  previewUrl: null,
+  ref: null,
+  ...overrides,
+});
+
+describe('CAD Studio catalog', () => {
+  it('accepts only catalog records with a supported CAD operation', () => {
+    expect(cadCanAct(item({}))).toBe(true);
+    expect(cadCanAct(item({ kind: 'cad_project_template', tab: 'templates', payloadUrl: '/payload.json' }))).toBe(true);
+    expect(cadCanAct(item({ kind: 'cad_terrain_preset', tab: 'objects', renderer: 'cad.terrain.v1', payloadUrl: '/terrain.json' }))).toBe(true);
+    expect(cadCanAct(item({ kind: 'model_3d', tab: 'objects', assetUrl: '/model.glb' }))).toBe(true);
+    expect(cadCanAct(item({ kind: 'unknown' as QuickAddItem['kind'] }))).toBe(false);
   });
 
-  it('labels raw categories and leaves labels alone', () => {
-    expect(categoryLabel('social_media')).toBe('Social media');
-    expect(categoryLabel('Social media')).toBe('Social media');
+  it('never substitutes a local fallback when the registered catalog is empty', async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [] }),
+    });
+    await expect(fetchQuickAddCatalog(fetcher as unknown as typeof fetch)).resolves.toEqual([]);
+    expect(fetcher).toHaveBeenCalledWith('/api/work/cad/catalog?app=cad-creator', expect.any(Object));
   });
 
-  it('groups by tab and category, then filters by search', () => {
-    const items = builtinQuickAddCatalog();
-    const objects = sectionsFor(items, 'objects');
-    expect(objects.map((s) => s.category)).toEqual(['Seating', 'Tables', 'Bedroom', 'Kitchen', 'Bathroom', 'Office', 'Decor']);
-    expect(sectionsFor(items, 'objects', 'sofa').flatMap((s) => s.items).length).toBe(2);
-    expect(sectionsFor(items, 'scenes', 'zzzz')).toEqual([]);
+  it('normalizes stock placement from registered dimensions and material data', () => {
+    expect(furniturePresetFromItem(item({}))).toMatchObject({
+      type: 'tree-oak',
+      name: 'Registered tree',
+      w: 18,
+      d: 18,
+      h: 96,
+      color: '#4b7d4b',
+    });
+    expect(furniturePresetFromItem(item({ specs: { type: 'bad', w: 0, d: 18, h: 96 } }))).toBeNull();
   });
 
-  it('asks the registry for the host app and keeps only what the host can act on', async () => {
+  it('groups catalog records by tab and registered category', () => {
     const items = [
-      { id: 'a', tab: 'objects', kind: 'cad_stock_object', category: 'seating', title: 'Sofa', specs: { type: 'sofa' } },
-      { id: 'b', tab: 'objects', kind: 'cad_stock_object', category: 'models', title: 'Glb', specs: { format: 'glb' } },
-      { id: 'c', tab: 'scenes', kind: 'scene_composition', category: 'sky', title: 'Sky' },
-      { id: 'd', tab: 'scenes', kind: 'cad_project_template', category: 'homes', title: 'Villa', ref: 'modern_villa' },
+      item({ id: 'tree-1', title: 'Oak tree' }),
+      item({ id: 'sofa-1', title: 'Sofa', category: 'seating' }),
+      item({ id: 'template-1', title: 'Villa', kind: 'cad_project_template', tab: 'templates' }),
     ];
-    let url = '';
-    const fake = (async (u: string) => { url = u; return { ok: true, json: async () => ({ items }) }; }) as unknown as typeof fetch;
-    const out = await fetchQuickAddCatalog(fake, undefined, { app: 'cad-creator', accepts: cadCanAct });
-    expect(url).toBe('/api/work/cad/catalog?app=cad-creator');
-    expect(out.map((i) => i.id)).toEqual(['a', 'd']);
+    expect(sectionsFor(items, 'objects').map(section => section.category)).toEqual(['Nature', 'Seating']);
+    expect(sectionsFor(items, 'templates').flatMap(section => section.items).map(value => value.title)).toEqual(['Villa']);
+    expect(sectionsFor(items, 'objects', 'oak').flatMap(section => section.items).map(value => value.title)).toEqual(['Oak tree']);
   });
 });
