@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, listProviderScopeOptions } from '../src/scope-registry.js';
+import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, listProviderScopeOptions, scopesForFullCatalogOptIn, listProviderPluginPacks } from '../src/scope-registry.js';
 
 function envWith(rows, token) {
   return {
@@ -34,7 +34,8 @@ test('scopes outside the registry are dropped', async () => {
 
 test('active grant scopes are split for additive grants', async () => {
   const env = envWith(rows, { scopes: 'stream.read stream.write' });
-  assert.deepEqual(await activeGrantedScopes(env, 'u1'), ['stream.read', 'stream.write']);
+  assert.deepEqual(await activeGrantedScopes(env, 'u1'), []);
+  assert.deepEqual(await activeGrantedScopes(env, 'u1', 'cloudflare', 'cf_account_1'), ['stream.read', 'stream.write']);
 });
 
 import { pluginPackScopes } from '../src/scope-registry.js';
@@ -59,4 +60,20 @@ test('a plugin row is not inferred to be a pack unless its registered pack flag 
     {plugin_key:'some-other',config_json:JSON.stringify({pack:true,pack_id:'create',oauth_scopes:['stream.read']})},
   ]);
   assert.deepEqual(await pluginPackScopes(env,['create']),['stream.read']);
+});
+
+test('Cloudflare full-access opt-in requests all 374 live D1 permissions, and only when explicitly selected',async()=>{
+  const scopes=Array.from({length:374},(_,i)=>({scope:'cf-product-'+i+'.read',label:'Product',category:'dev'}));
+  const env=envWith(scopes);
+  assert.equal((await scopesForFullCatalogOptIn(env,['all'])).length,374);
+  assert.deepEqual(await scopesForFullCatalogOptIn(env,['create']),[]);
+  assert.equal((await scopesForFullCatalogOptIn({},['all'])),null);
+});
+test('Registered plugin pack discovery keeps catalog entries separate from token grants',async()=>{
+  const env=envWith([{id:'plg_1234567890abcdef',plugin_key:'my-custom-pack',
+    config_json:JSON.stringify({pack:true,pack_id:'create',oauth_scopes:['images.read'],oauth_scopes_edit:['images.write']})}]);
+  assert.deepEqual(await listProviderPluginPacks(env),[{
+    plugin_id:'plg_1234567890abcdef',plugin_key:'my-custom-pack',pack_id:'create',
+    requested_scopes:['images.read','images.write'],
+  }]);
 });
