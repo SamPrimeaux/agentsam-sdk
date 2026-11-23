@@ -33,3 +33,20 @@ test('creative template clips render as transparent overlays over the active sce
   assert.match(css, /copro-preview-composition-overlay[^}]*pointer-events:none/);
   assert.match(templates, /backgroundMode:'transparent'/);
 });
+
+test('SamScene sky controls drive the real 3D ground, ambient/key lighting, fog and exposure', async () => {
+  const world = await source('../src/CoProWorldScene.tsx');
+  const panel = await source('../../../packages/copro-ui/src/stage-look-panel.tsx');
+  const editor = await source('../../../packages/copro-editor/src/index.js');
+  assert.match(world, /new THREE\.MeshBasicMaterial\(\{color:initialSky\.horizonHex,toneMapped:false\}\)/);
+  assert.match(world, /new THREE\.ShadowMaterial\(\{color:initialSky\.nadirHex,opacity:\.22\}\)/);
+  assert.match(world, /handle\.ground\.visible=!skyVideoSrc/);
+  assert.match(world, /handle\.hemi\.color\.setHSL/);
+  assert.match(world, /handle\.key\.color\.set\(skyConfig\.sunHex\)/);
+  assert.match(world, /handle\.bounce\.color\.set\(skyConfig\.cloudAccentHex\)/);
+  assert.match(world, /handle\.renderer\.toneMappingExposure=environment\?\.exposure\?\?STAGE_ENVIRONMENT_DEFAULTS\.exposure/);
+  assert.match(world, /environment\?\.fogColor\?\?skyConfig\.horizonHex/);
+  assert.doesNotMatch(world, /color:0x202935|#e2ecff|#fff1d3|#9fc9ff/);
+  assert.match(panel, /label="Exposure"/);
+  assert.match(editor, /"exposure"/);
+});

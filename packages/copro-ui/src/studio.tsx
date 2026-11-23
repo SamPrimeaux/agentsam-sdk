@@ -14,7 +14,7 @@ import { CoProMediaBrowser, type CoProMediaBrowserSection, type LocalSceneSource
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
 import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
 
-import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnvironment, type StageSky } from "./stage-environment.js";
+import { STAGE_ENVIRONMENT_DEFAULTS, STAGE_SKIES, stageLookBackground, type CoProStageEnvironment, type StageSky } from "./stage-environment.js";
 import { CoProStageLookPanel } from "./stage-look-panel.js";
 import { syncVideoPlayback } from "./video-playback.js";
 import {SidePanel} from "@inneranimalmedia/agentsam-workbench/shell";
@@ -344,6 +344,8 @@ export function CoProStudio({
   }, [selectedClipId]);
 
   const stageEnvironment = project.metadata?.environment as CoProStageEnvironment|undefined;
+  const stageSky=(stageSkies?.length?stageSkies:STAGE_SKIES).find(entry=>entry.id===(stageEnvironment?.skyPreset??STAGE_ENVIRONMENT_DEFAULTS.skyPreset))??STAGE_SKIES[0];
+  const stageFogColor=stageEnvironment?.fogColor??stageSky?.bottom??STAGE_ENVIRONMENT_DEFAULTS.fogColor;
   const projectDurationUs = Math.max(0,...project.tracks.flatMap(track=>track.clips.map(clip=>clip.startUs+clip.durationUs)));
   const videoRef = useRef<HTMLVideoElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -1032,7 +1034,7 @@ export function CoProStudio({
               data-grid={stageEnvironment?.showGrid?"":undefined}
               data-shadow={stageEnvironment?.shadowSoftness!==undefined?"":undefined}
               style={{"--mm-stage-bg":stageEnvironment?.background,"--mm-look-bg":stageLookBackground(stageEnvironment,stageSkies),
-                "--copro-stage-fog-color":stageEnvironment?.fogColor??STAGE_ENVIRONMENT_DEFAULTS.fogColor,
+                "--copro-stage-fog-color":stageFogColor,
                 "--copro-stage-fog-opacity":stageEnvironment?.fogOpacity??0,
                 "--copro-stage-softness":`${stageEnvironment?.shadowSoftness??2.5}px`,
                 "--mm-stage-shadow":stageEnvironment?.shadowSoftness!==undefined ? `0 18px ${20+stageEnvironment.shadowSoftness*5}px rgba(0,0,0,.48)` : undefined,

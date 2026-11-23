@@ -1,7 +1,9 @@
-/** CoPro stage/look metadata. This is a composited 2D stage backdrop, not a 3D PBR material. */
+/** Shared project-owned scene-look settings consumed by the 2D compositor and SamScene-backed 3D viewport. */
 export type CoProStageEnvironment = {
   background?: string;
   ambient?: number;
+  /** Global tone-mapping exposure for the SamScene-backed 3D viewport. */
+  exposure?: number;
   fogColor?: string;
   fogOpacity?: number;
   showGrid?: boolean;
@@ -22,7 +24,7 @@ export type CoProStageEnvironment = {
   keyAngle?: number;
 };
 export const STAGE_ENVIRONMENT_DEFAULTS = Object.freeze({
-  background: '#191919', ambient: 1, fogColor: '#999999', fogOpacity: 0, showGrid: false,
+  background: '#191919', ambient: 1, exposure: 1.15, fogColor: '#999999', fogOpacity: 0, showGrid: false,
   skyPreset: 'studio', finish: 'original', cloudDensity: .26,
   stars: false, glow: true, lightHue: 37, shadowSoftness: 2.5, keyAngle: 35,
 });

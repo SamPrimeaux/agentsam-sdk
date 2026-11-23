@@ -31,29 +31,35 @@ test('sky, ambient lighting hue, backdrop finish, clouds and stars visibly affec
 test('CoPro stores stage look edits in the project with independent undo/redo',()=>{
   const session=new CoProEditorSession(createCoProProject({id:'stage-test'}));
   session.execute({type:'project.set_environment',payload:{patch:{skyPreset:'aurora',finish:'gold',stars:true}}});
-  session.execute({type:'project.set_environment',payload:{patch:{cloudDensity:.5,lightHue:220,shadowSoftness:5,keyAngle:90}}});
+  session.execute({type:'project.set_environment',payload:{patch:{cloudDensity:.5,lightHue:220,shadowSoftness:5,keyAngle:90,exposure:1.4}}});
   assert.equal(session.project.metadata.environment.skyPreset,'aurora');
   assert.equal(session.project.metadata.environment.keyAngle,90);
+  assert.equal(session.project.metadata.environment.exposure,1.4);
   session.undo();
   assert.equal(session.project.metadata.environment.keyAngle,undefined);
+  assert.equal(session.project.metadata.environment.exposure,undefined);
   assert.equal(session.project.metadata.environment.skyPreset,'aurora');
   session.redo();
   assert.equal(session.project.metadata.environment.keyAngle,90);
+  assert.equal(session.project.metadata.environment.exposure,1.4);
 });
 test('rejects unsupported material IDs, sky IDs and out-of-range atmospheric values',()=>{
   const session=new CoProEditorSession(createCoProProject({id:'stage-invalid-test'}));
-  for(const patch of [{skyPreset:'fake'},{finish:'fake'},{stars:1},{cloudDensity:2},{lightHue:420},{keyAngle:400},{shadowSoftness:-1}]) {
+  for(const patch of [{skyPreset:'fake'},{finish:'fake'},{stars:1},{cloudDensity:2},{lightHue:420},{keyAngle:400},{shadowSoftness:-1},{exposure:.2},{exposure:2.6}]) {
     assert.throws(()=>session.execute({type:'project.set_environment',payload:{patch}}),/copro_environment_.*invalid/);
   }
 });
 
 
 test('scene environment inspector exposes one source for each sky control',()=>{
- const html=renderToStaticMarkup(React.createElement(CoProStageLookPanel,{environment:{},onChange:()=>{}}));
+ const html=renderToStaticMarkup(React.createElement(CoProStageLookPanel,{environment:{skyPreset:'aurora'},skies:STAGE_SKIES,onChange:()=>{}}));
  assert.equal((html.match(/<strong>Cloud density<\/strong>/g)||[]).length,1);
  assert.equal((html.match(/Starfield visible/g)||[]).length,1);
  assert.match(html,/Light glow/);
  assert.match(html,/Sky time \/ phase/);
+ assert.match(html,/Exposure/);
+ assert.match(html,/value="#2e5366"/);
+ assert.doesNotMatch(html,/value="#999999"/);
  assert.doesNotMatch(html,/Project saved/);
  assert.doesNotMatch(html,/<h2>Scene environment<\/h2>/);
 });
