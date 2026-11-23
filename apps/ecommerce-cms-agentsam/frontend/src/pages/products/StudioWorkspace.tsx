@@ -10,6 +10,8 @@ import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality
 import { suggestPrintScale } from "./studio-print-fit";
 import { alphaBounds } from "./studio-alpha-bounds";
 import StudioIcon from "./StudioIcon";
+import { NavLaunchDock } from "@inneranimalmedia/agentsam-nav";
+import "@inneranimalmedia/agentsam-nav/theme.css";
 import ProductImage from "./ProductImage";
 import {
   catalogProductId,
