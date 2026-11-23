@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import "./brand-workspace.css";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { brandColors, normalizeBrandWorkspace, renderBrandCoverSvg, type BrandWorkspaceEntry } from "@inneranimalmedia/agentsam-brand/workspace";
 
 type View = "overview" | "assets" | "sources" | "usage" | "review";
