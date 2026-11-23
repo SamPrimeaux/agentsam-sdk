@@ -1,4 +1,5 @@
 import {IconAction} from './icon-action.js';
+import { CoProRangeControl } from './panel-controls.js';
 import React, {useState} from 'react';
 import { CloudSun, Layers3, RotateCcw, SlidersHorizontal, Sparkles, Sun, Check } from 'lucide-react';
 import {
@@ -26,17 +27,6 @@ const FINISH_GROUP: Record<string, (typeof FINISH_GROUPS)[number]> = {
   calacatta:'Stone',marquina:'Stone',basalt:'Dark',
 };
 
-function ControlledSlider({label,value,min,max,step,format,onChange}: {
-  label:string;value:number;min:number;max:number;step:number;
-  format:(value:number)=>string;onChange:(value:number)=>void;
-}) {
-  return <label className="mm-look-slider">
-    <span><strong>{label}</strong><output>{format(value)}</output></span>
-    <input type="range" min={min} max={max} step={step} value={value}
-      aria-label={label} onChange={event=>onChange(Number(event.currentTarget.value))}/>
-  </label>;
-}
-
 function LookToggle({label,detail,checked,onChange}: {
   label:string;detail:string;checked:boolean;onChange:(value:boolean)=>void;
 }) {
@@ -48,7 +38,7 @@ function LookToggle({label,detail,checked,onChange}: {
 
 export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDefaults={},skies}:StageLookPanelProps) {
   const skyList=skies?.length?skies:STAGE_SKIES;
-  const [activeSection,setActiveSection]=useState<'scene'|'environment'|'lighting'|'materials'>('scene');
+  const [activeSection,setActiveSection]=useState<'scene'|'environment'|'lighting'|'materials'>('environment');
   const [finishGroup,setFinishGroup]=useState<(typeof FINISH_GROUPS)[number]>('All');
   const current={...defaults,...(skyDefaults[environment?.skyPreset??defaults.skyPreset]??{}),...environment};
   const sky=skyList.find(entry=>entry.id===current.skyPreset) || skyList[0];
@@ -57,7 +47,7 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
   return <div className="mm-stage-look" aria-label="Scene settings">
     <header className="mm-look-header">
       <div className="mm-look-eyebrow"><Sun size={13}/> SCENE <span>PROJECT</span></div>
-      <div className="mm-look-title-row"><div><h2>Scene environment</h2><p>SamScene sky · project-owned controls</p></div>
+      <div className="mm-look-title-row"><p>Project-owned settings · live preview</p>
         <IconAction title="Reset scene settings" aria-label="Reset scene settings" onClick={()=>onChange(null)}><RotateCcw size={15}/></IconAction>
       </div>
     </header>
@@ -71,7 +61,7 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
     </nav>
     {activeSection==='scene' && <>
     <section className="mm-look-card mm-look-live-card" aria-label="Active 3D environment">
-      <div className="mm-look-card-head"><span>ACTIVE SCENE ENVIRONMENT</span><small>Project saved</small></div>
+      <div className="mm-look-card-head"><span>ACTIVE SCENE ENVIRONMENT</span><small>Live</small></div>
       <div className="mm-scene-environment-summary">
         <strong>{sky.name}</strong>
         <span>SamScene procedural sky, direct in the editable 3D viewport</span>
@@ -112,17 +102,15 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
         </button>)}
       </div>
       <div className="mm-look-card-inner mm-look-grid-controls">
-        <LookToggle label="Stars" detail="Backdrop star points" checked={current.stars} onChange={value=>update('stars',value)}/>
-        <LookToggle label="Light glow" detail="Soft horizon lighting" checked={current.glow} onChange={value=>update('glow',value)}/>
+        <LookToggle label="Starfield visible" detail="Show or hide stars without changing intensity" checked={current.stars} onChange={value=>update('stars',value)}/>
+        <LookToggle label="Light glow" detail="Soft sun halo and cloud lighting" checked={current.glow} onChange={value=>update('glow',value)}/>
       </div>
-      <ControlledSlider label="Cloud density" value={current.cloudDensity} min={0} max={1} step={.02} format={v=>`${Math.round(v*100)}%`} onChange={value=>update('cloudDensity',value)}/>
       <div className="mm-look-control-stack mm-look-sky-controls">
-        <ControlledSlider label="Sky time / phase" value={current.skyProgression??.36} min={0} max={1} step={.01} format={v=>Math.round(v*100)+"%"} onChange={value=>update('skyProgression',value)}/>
-        <ControlledSlider label="Cloud density" value={current.cloudDensity} min={0} max={1} step={.02} format={v=>Math.round(v*100)+"%"} onChange={value=>update('cloudDensity',value)}/>
-        <ControlledSlider label="Galaxy & nebula" value={current.galaxyIntensity??.25} min={0} max={1} step={.02} format={v=>Math.round(v*100)+"%"} onChange={value=>update('galaxyIntensity',value)}/>
-        <ControlledSlider label="Polar aurora" value={current.auroraIntensity??.14} min={0} max={1} step={.02} format={v=>Math.round(v*100)+"%"} onChange={value=>update('auroraIntensity',value)}/>
-        <ControlledSlider label="Star intensity" value={current.starIntensity??.8} min={0} max={1} step={.02} format={v=>Math.round(v*100)+"%"} onChange={value=>update('starIntensity',value)}/>
-        <LookToggle label="Starfield visible" detail="Show/hide the stars without changing intensity" checked={current.stars} onChange={value=>update('stars',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Sky time / phase" value={current.skyProgression??.36} min={0} max={1} step={.01} format={v=>Math.round(v*100)+"%"} onCommit={value=>update('skyProgression',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Cloud density" value={current.cloudDensity} min={0} max={1} step={.02} format={v=>Math.round(v*100)+"%"} onCommit={value=>update('cloudDensity',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Galaxy & nebula" value={current.galaxyIntensity??.25} min={0} max={1} step={.02} format={v=>Math.round(v*100)+"%"} onCommit={value=>update('galaxyIntensity',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Polar aurora" value={current.auroraIntensity??.14} min={0} max={1} step={.02} format={v=>Math.round(v*100)+"%"} onCommit={value=>update('auroraIntensity',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Star intensity" value={current.starIntensity??.8} min={0} max={1} step={.02} format={v=>Math.round(v*100)+"%"} onCommit={value=>update('starIntensity',value)}/>
       </div>
     </section>
 
@@ -156,12 +144,12 @@ export function CoProStageLookPanel({environment,onChange,videoSources=[],skyDef
     <section className="mm-look-card" aria-label="Dynamic lighting">
       <div className="mm-look-card-head"><span><Sun size={13}/> DYNAMIC LIGHTING</span><button type="button" onClick={()=>onChange({ambient:1,lightHue:37,shadowSoftness:2.5,keyAngle:35})}>Reset lights</button></div>
       <div className="mm-look-control-stack">
-        <ControlledSlider label="Light intensity" value={current.ambient} min={.2} max={2.5} step={.05} format={v=>`${v.toFixed(2)}×`} onChange={value=>update('ambient',value)}/>
-        <ControlledSlider label="Ambient hue" value={current.lightHue} min={0} max={360} step={1} format={v=>`${v}°`} onChange={value=>update('lightHue',value)}/>
-        <ControlledSlider label="Shadow blur" value={current.shadowSoftness} min={.5} max={10} step={.5} format={v=>v.toFixed(1)} onChange={value=>update('shadowSoftness',value)}/>
-        <ControlledSlider label="Key light angle" value={current.keyAngle} min={-90} max={180} step={5} format={v=>`${v}°`} onChange={value=>update('keyAngle',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Light intensity" value={current.ambient} min={.2} max={2.5} step={.05} format={v=>`${v.toFixed(2)}×`} onCommit={value=>update('ambient',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Ambient hue" value={current.lightHue} min={0} max={360} step={1} format={v=>`${v}°`} onCommit={value=>update('lightHue',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Shadow blur" value={current.shadowSoftness} min={.5} max={10} step={.5} format={v=>v.toFixed(1)} onCommit={value=>update('shadowSoftness',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Key light angle" value={current.keyAngle} min={-90} max={180} step={5} format={v=>`${v}°`} onCommit={value=>update('keyAngle',value)}/>
         <label className="mm-look-color-control"><span>Atmosphere tint</span><input type="color" aria-label="Atmosphere tint" value={current.fogColor} onChange={event=>update('fogColor',event.currentTarget.value)}/></label>
-        <ControlledSlider label="Atmosphere density" value={current.fogOpacity} min={0} max={.8} step={.02} format={v=>`${Math.round(v*100)}%`} onChange={value=>update('fogOpacity',value)}/>
+        <CoProRangeControl className="mm-look-slider" label="Atmosphere density" value={current.fogOpacity} min={0} max={.8} step={.02} format={v=>`${Math.round(v*100)}%`} onCommit={value=>update('fogOpacity',value)}/>
       </div>
     </section>
 

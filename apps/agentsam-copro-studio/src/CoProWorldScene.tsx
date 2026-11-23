@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { createConfiguredGLTFLoader } from '@inneranimalmedia/agentsam-3d-viewer';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { STAGE_FINISHES, type CoProStageEnvironment } from '@inneranimalmedia/copro-ui';
+import { colorAdjustmentPreviewFilter, STAGE_FINISHES, type CoProColorAdjustments, type CoProStageEnvironment } from '@inneranimalmedia/copro-ui';
 // LOCAL-ONLY engine integration. Consume the actual SamScene sky renderer, not a
 // second look-alike shader. Keep this behind UI acceptance before packaging.
 import { SkyGenerator } from './samscene/skyGenerator.ts';
@@ -19,6 +19,7 @@ export type CoProWorldSceneProps = {
   title:string;
   timeUs:number;
   environment?:CoProStageEnvironment;
+  adjustments?:CoProColorAdjustments;
   transform?:SceneTransform;
   world3dTransform?:SpatialTransform;
   world3dVisible?:boolean;
@@ -36,7 +37,7 @@ type WorldHandle = {
 };
 
 /** Actual GLB geometry and animation tracks, not a flattened screenshot or CSS sky. */
-export function CoProWorldScene({src,title,timeUs,environment,transform,world3dTransform,world3dVisible=true,skyVideoSrc,playing=false,onThumbnail}:CoProWorldSceneProps) {
+export function CoProWorldScene({src,title,timeUs,environment,adjustments,transform,world3dTransform,world3dVisible=true,skyVideoSrc,playing=false,onThumbnail}:CoProWorldSceneProps) {
   const host=useRef<HTMLDivElement>(null);
   const skyVideoRef=useRef<HTMLVideoElement>(null);
   const world=useRef<WorldHandle|null>(null);
@@ -177,6 +178,12 @@ export function CoProWorldScene({src,title,timeUs,environment,transform,world3dT
   },[src]);
 
   useEffect(()=>{
+    const renderer=world.current?.renderer;
+    if(!renderer)return;
+    renderer.domElement.style.filter=colorAdjustmentPreviewFilter(adjustments)||"none";
+  },[adjustments,src]);
+
+  useEffect(()=>{
     const handle=world.current;
     if(!handle)return;
     const preset=resolveSamSceneSkyId(environment?.skyPreset);
@@ -188,6 +195,7 @@ export function CoProWorldScene({src,title,timeUs,environment,transform,world3dT
       galaxyIntensity:environment?.galaxyIntensity??handle.sky.getConfig().galaxyIntensity,
       auroraIntensity:environment?.auroraIntensity??handle.sky.getConfig().auroraIntensity,
     },true);
+    handle.sky.setGlowEnabled(environment?.glow!==false);
     handle.sky.root.visible=!skyVideoSrc;
     handle.grid.visible=Boolean(environment?.showGrid);
     handle.stage.fog=(environment?.fogOpacity??0)>0

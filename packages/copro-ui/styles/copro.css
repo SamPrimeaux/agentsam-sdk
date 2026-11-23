@@ -1039,6 +1039,7 @@ body:has(.copro-studio) { margin:0; }
 .copro-studio .copro-preview-media{filter:var(--copro-media-filter,none);clip-path:var(--copro-media-clip-path,none);}
 .copro-preview-device{position:relative;isolation:isolate;}
 .copro-preview-overlay{position:absolute;z-index:3;inset:0;pointer-events:none;opacity:0;}
+.copro-preview-composition-overlay{position:absolute;z-index:4;inset:0;width:100%;height:100%;object-fit:contain;background:transparent;pointer-events:none;user-select:none;}
 .copro-preview-device[data-overlay="film-grain"] .copro-preview-overlay{opacity:.24;background-image:radial-gradient(color-mix(in srgb, var(--copro-text) 55%, transparent) .55px,transparent .8px),radial-gradient(color-mix(in srgb, var(--copro-shadow) 70%, transparent) .6px,transparent .9px);background-position:0 0,3px 4px;background-size:7px 7px,9px 9px;mix-blend-mode:overlay;}
 .copro-preview-device[data-overlay="vignette"] .copro-preview-overlay{opacity:1;background:radial-gradient(ellipse at center,transparent 42%,color-mix(in srgb, var(--copro-shadow) 78%, transparent) 100%);}
 .copro-preview-device[data-overlay="letterbox"] .copro-preview-overlay{opacity:1;background:linear-gradient(to bottom,color-mix(in srgb, var(--copro-bg) 55%, var(--copro-shadow)) 0 9%,transparent 9% 91%,color-mix(in srgb, var(--copro-bg) 55%, var(--copro-shadow)) 91% 100%);}
@@ -3719,3 +3720,23 @@ body:has(.copro-studio) { margin:0; }
 
 body[data-copro-resizing]{user-select:none!important}
 body[data-copro-resizing] iframe{pointer-events:none!important}
+
+
+.copro-range-control{display:grid;gap:8px;min-width:0;color:var(--copro-text-2);font-size:12px;}
+.copro-range-control>span{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;}
+.copro-range-control>span strong{min-width:0;color:var(--copro-text-1);font-size:12px;font-weight:650;}
+.copro-range-control>span output{flex:none;color:var(--copro-accent);font-variant-numeric:tabular-nums;}
+.copro-range-control input[type=range]{width:100%;min-width:0;accent-color:var(--copro-accent);cursor:pointer;}
+.copro-range-control input[type=range]:disabled{cursor:not-allowed;opacity:.45;}
+
+
+.copro-number-control{display:grid;gap:6px;min-width:0;color:var(--copro-text-2);font-size:12px;}
+.copro-number-control>span{min-width:0;color:var(--copro-text-2);font-size:11px;}
+.copro-number-control>input[type=number]{width:100%;min-width:0;min-height:34px;padding:6px 8px;border:1px solid var(--copro-line);border-radius:7px;background:var(--copro-surface-0);color:var(--copro-text-1);font:inherit;font-variant-numeric:tabular-nums;}
+.copro-number-control>input:focus-visible{outline:2px solid var(--copro-accent);outline-offset:1px;}
+.copro-number-control>input:disabled{opacity:.45;cursor:not-allowed;}
+.mm-transform-inputs .mm-transform-range,.mm-transform-inputs .mm-transform-number{min-width:0;width:100%;}
+.mm-transform-inputs .mm-transform-range>span,.mm-transform-inputs .mm-transform-number>span,.mm-world3d-axis .mm-world3d-number>span{display:none;}
+.mm-world3d-axis .mm-world3d-number{flex:1;min-width:0;}
+.mm-world3d-axis .mm-world3d-number>input{width:100%;}
+.mm-motion-parameters .mm-motion-number{min-width:0;}
