@@ -3,16 +3,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildUniversalSource, commandSeedSql } from '../../src/registry/universal-source.js';
+import { buildUniversalSource, commandSeedSql, skillSeedSql } from '../../src/registry/universal-source.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const files={
   'protocol/registry/universal-catalog.v1.json':null,
   'migrations/d1/generated/20261123_portable_cli_seed.sql':null,
+  'migrations/d1/generated/20261123_source_skill_seed.sql':null,
 };
 const data=buildUniversalSource({root});
 files['protocol/registry/universal-catalog.v1.json']=JSON.stringify(data,null,2)+'\n';
 files['migrations/d1/generated/20261123_portable_cli_seed.sql']=commandSeedSql(data.commands);
+files['migrations/d1/generated/20261123_source_skill_seed.sql']=skillSeedSql(data.skills);
 const check=process.argv.includes('--check');
 const write=process.argv.includes('--write');
 if(check&&write)throw new Error('choose --check OR --write');

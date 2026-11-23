@@ -138,6 +138,8 @@ export function buildUniversalSource({
       id:row.id,name:definition.name,slash_trigger:definition.slash?.suggested||null,
       npm_package_name:pkg.name,npm_source_version:pkg.version,
       source:src,content_checksum:hex(fs.readFileSync(path.join(root,src))),
+      content_markdown:fs.readFileSync(path.join(root,src),'utf8'),
+      description:definition.description||'',
       packaged_in_source_manifest:packaged,
       state:packaged?'package_candidate':'source_only',
       is_published:false,is_active:false,
@@ -216,4 +218,35 @@ export function commandSeedSql(commands) {
       "updated_at=unixepoch();");
   }
   return parts.join('\n')+'\n';
+}
+
+/** Stage all source skills as disabled evidence; publish only after tarball proof.
+ * Scope is platform with NULL account, so user123 can discover verified releases
+ * later without sharing the author's private account or copying user records.
+ */
+export function skillSeedSql(skills) {
+  const ids=new Set();
+  const statements=['-- Generated staging for agentsam_skill_next; none auto-published or activated.'];
+  for (const s of skills) {
+    if(ids.has(s.id))throw new Error('duplicate_skill_id:'+s.id);
+    ids.add(s.id);
+    if(!s.slash_trigger || !/^\/[a-z0-9][a-z0-9-]*$/.test(s.slash_trigger))
+      throw new Error('invalid_skill_trigger:'+s.id);
+    const id='sdk_skill_'+hex(s.id).slice(0,24);
+    const cols=['id','scope_type','name','slash_trigger','npm_package_name','npm_version',
+      'is_published','is_active','description','content_markdown','file_path','content_checksum',
+      'access_mode','metadata_json'];
+    const vals=[id,'platform',s.name,s.slash_trigger,s.npm_package_name,s.npm_source_version,
+      0,0,s.description,s.content_markdown,s.source,s.content_checksum,'read_only',
+      JSON.stringify({origin:'sdk_source',source_id:s.id,packaged_candidate:s.packaged_in_source_manifest})];
+    statements.push('INSERT INTO agentsam_skill_next ('+cols.join(',')+') VALUES ('+
+      vals.map(v=>typeof v==='number'?String(v):sqlString(v)).join(',')+
+      ') ON CONFLICT(id) DO UPDATE SET '+
+      cols.filter(k=>!['id','is_published','is_active'].includes(k))
+        .map(k=>k+'=excluded.'+k).join(',')+','+
+      "is_published=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum THEN agentsam_skill_next.is_published ELSE 0 END,"+
+      "is_active=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum THEN agentsam_skill_next.is_active ELSE 0 END,"+
+      "updated_at=datetime('now');");
+  }
+  return statements.join('\n')+'\n';
 }
