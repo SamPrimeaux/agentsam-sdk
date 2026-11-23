@@ -1,78 +1,98 @@
-import { ARCHITECTURAL_STOCK } from '../FurniturePicker';
-import { TEMPLATE_METADATA_LIST } from '../../lib/templates';
-import type { QuickAddItem } from './types';
+import type { FurnitureCategory } from '@inneranimalmedia/agentsam-cad-shared';
+import type { FurniturePreset, QuickAddItem, QuickAddTab } from './types';
 
 export const QUICK_ADD_CATALOG_URL = '/api/work/cad/catalog';
 
-const TABS = new Set(['objects', 'scenes']);
-const isItem = (v: unknown): v is QuickAddItem => {
-  const o = v as QuickAddItem;
-  return !!o && typeof o.id === 'string' && typeof o.title === 'string' && typeof o.category === 'string' && TABS.has(o.tab);
-};
-
-/** "social_media" / "seating" -> "Social media" / "Seating". Idempotent on labels. */
-export const categoryLabel = (raw: string): string => {
-  const text = String(raw || 'Other').replace(/[_-]+/g, ' ').trim();
-  return text.charAt(0).toUpperCase() + text.slice(1);
-};
-
 export interface QuickAddFetchOptions {
-  /** Ask the registry for rows compatible with this app (rows marked "*" are compatible with every app). */
-  app?: string;
-  /** The host's own capability check: keep only items it can act on, so no tile is a dead click. */
+  app: string;
   accepts?: (item: QuickAddItem) => boolean;
 }
 
-export async function fetchQuickAddCatalog(fetcher: typeof fetch = fetch, signal?: AbortSignal, options: QuickAddFetchOptions = {}): Promise<QuickAddItem[]> {
-  const url = options.app ? `${QUICK_ADD_CATALOG_URL}?app=${encodeURIComponent(options.app)}` : QUICK_ADD_CATALOG_URL;
-  const res = await fetcher(url, { credentials: 'same-origin', signal });
-  if (!res.ok) throw new Error(`catalog_${res.status}`);
-  const body = (await res.json()) as { items?: unknown };
-  const items = Array.isArray(body.items) ? body.items.filter(isItem) : [];
+export function categoryLabel(value: string): string {
+  const label = String(value || 'Other').replace(/[_-]+/g, ' ').trim();
+  return label.replace(/\b\w/g, (letter) => letter.toUpperCase()) || 'Other';
+}
+
+export function cadCanAct(item: QuickAddItem): boolean {
+  if (item.kind === 'cad_project_template') return item.tab === 'templates' && Boolean(item.payloadUrl);
+  if (item.kind === 'cad_stock_object') {
+    const specs = item.specs;
+    return item.tab === 'objects'
+      && typeof specs.type === 'string'
+      && Number(specs.w) > 0
+      && Number(specs.d) > 0
+      && Number(specs.h) > 0;
+  }
+  if (item.kind === 'cad_terrain_preset') {
+    return (item.tab === 'objects' || item.tab === 'scenes')
+      && item.renderer === 'cad.terrain.v1'
+      && Boolean(item.payloadUrl);
+  }
+  if (item.kind === 'cad_parametric_template') {
+    return item.tab === 'objects'
+      && item.renderer === 'openscad.template.v1'
+      && Boolean(item.payloadUrl);
+  }
+  if (item.kind === 'model_3d') return (item.tab === 'objects' || item.tab === 'scenes') && Boolean(item.assetUrl);
+  return false;
+}
+
+export function furniturePresetFromItem(item: QuickAddItem): FurniturePreset | null {
+  if (item.kind !== 'cad_stock_object') return null;
+  const specs = item.specs;
+  const type = typeof specs.type === 'string' ? specs.type : '';
+  const w = Number(specs.w), d = Number(specs.d), h = Number(specs.h);
+  if (!type || !(w > 0) || !(d > 0) || !(h > 0)) return null;
+  return {
+    type,
+    name: item.title,
+    category: item.category as FurnitureCategory,
+    w,
+    d,
+    h,
+    color: typeof specs.color === 'string' ? specs.color : undefined,
+    description: item.description,
+  };
+}
+
+export function furniturePresetsFromCatalog(items: QuickAddItem[]): FurniturePreset[] {
+  return items.map(furniturePresetFromItem).filter((item): item is FurniturePreset => item !== null);
+}
+
+export async function fetchQuickAddCatalog(
+  fetcher: typeof fetch = fetch,
+  signal?: AbortSignal,
+  options: QuickAddFetchOptions = { app: 'cad-creator', accepts: cadCanAct },
+): Promise<QuickAddItem[]> {
+  const response = await fetcher(`${QUICK_ADD_CATALOG_URL}?app=${encodeURIComponent(options.app)}`, {
+    credentials: 'same-origin',
+    signal,
+    headers: { accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Studio catalog request failed (${response.status})`);
+  const body = await response.json() as { items?: QuickAddItem[] };
+  const items = Array.isArray(body.items) ? body.items : [];
   return options.accepts ? items.filter(options.accepts) : items;
 }
 
-/** CAD Creator can place stock fixtures (specs.type) and open scenes that resolve to a project template (ref). */
-export const cadCanAct = (item: QuickAddItem): boolean =>
-  item.tab === 'scenes' ? !!item.ref : typeof item.specs?.type === 'string';
-
-/** Same shape the DB serves, so the menu works offline, in local studio and for any SDK install. */
-export function builtinQuickAddCatalog(): QuickAddItem[] {
-  const objects: QuickAddItem[] = ARCHITECTURAL_STOCK.map((s) => ({
-    id: `tpl_cad_stock_${s.type}`,
-    tab: 'objects',
-    kind: 'cad_stock_object',
-    category: s.category,
-    pack: 'Architectural stock',
-    title: s.name,
-    description: s.description,
-    specs: { type: s.type, unit: 'in', w: s.w, d: s.d, h: s.h, color: s.color },
-  }));
-  const scenes: QuickAddItem[] = TEMPLATE_METADATA_LIST.map((t) => ({
-    id: `tpl_cad_${t.id}`,
-    tab: 'scenes',
-    kind: 'cad_project_template',
-    category: t.category,
-    pack: 'Starter layouts',
-    title: t.name,
-    description: t.description,
-    ref: t.id,
-  }));
-  return [...objects, ...scenes];
+export interface QuickAddSection {
+  category: string;
+  items: QuickAddItem[];
 }
 
-export interface QuickAddSection { category: string; items: QuickAddItem[] }
-
-export function sectionsFor(items: QuickAddItem[], tab: QuickAddItem['tab'], query = ''): QuickAddSection[] {
+export function sectionsFor(items: QuickAddItem[], tab: QuickAddTab, query = ''): QuickAddSection[] {
   const q = query.trim().toLowerCase();
-  const order: string[] = [];
   const by = new Map<string, QuickAddItem[]>();
   for (const item of items) {
     if (item.tab !== tab) continue;
-    if (q && !`${item.title} ${item.description || ''} ${item.category} ${item.pack || ''}`.toLowerCase().includes(q)) continue;
+    const haystack = `${item.title} ${item.description} ${item.category} ${item.pack || ''}`.toLowerCase();
+    if (q && !haystack.includes(q)) continue;
     const label = categoryLabel(item.category);
-    if (!by.has(label)) { by.set(label, []); order.push(label); }
-    by.get(label)!.push(item);
+    const section = by.get(label) || [];
+    section.push(item);
+    by.set(label, section);
   }
-  return order.map((category) => ({ category, items: by.get(category)! }));
+  return [...by.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([category, sectionItems]) => ({ category, items: sectionItems }));
 }

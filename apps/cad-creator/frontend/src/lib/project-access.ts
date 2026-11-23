@@ -1,5 +1,5 @@
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
-import { TEMPLATES } from './templates';
+import { createEmptyCadProject } from './create-empty-project';
 
 export type CadAccessMode = 'owner' | 'public-demo' | 'hosted-project';
 
@@ -11,7 +11,6 @@ export function isTrustedLocalCadHost(hostname: string): boolean {
 /** Owner access is enabled only by an explicit local-shell request on loopback. */
 export function resolveCadAccessMode(requested: string | null, hostname: string): CadAccessMode {
   if (requested === 'owner' && isTrustedLocalCadHost(hostname)) return 'owner';
-  // Hosted project access is scoped by the authenticated Work API, not this query parameter.
   if (requested === 'project') return 'hosted-project';
   return 'public-demo';
 }
@@ -23,18 +22,21 @@ function newPublicProjectId(): string {
   return `demo_${randomId}`;
 }
 
-/**
- * A public user gets a private in-memory copy with a new project identity.
- * Never mutate the catalog template or reuse the owner's DreamHouse project ID.
- */
+/** A public user receives a private in-memory copy; registered studio starters are fetched separately. */
 export function cloneProjectForPublicUser(source: ProjectState, name: string): ProjectState {
   const project = JSON.parse(JSON.stringify(source)) as ProjectState;
   project.id = newPublicProjectId();
   project.name = name;
+  project.version = 1;
   project.updatedAt = Date.now();
   return project;
 }
 
+/** The public editor starts empty; project content comes only from registered studio_templates payloads. */
 export function createPublicExampleProject(): ProjectState {
-  return cloneProjectForPublicUser(TEMPLATES.modern_villa, 'Example Home');
+  const project = createEmptyCadProject();
+  project.id = newPublicProjectId();
+  project.name = 'Untitled CAD project';
+  project.updatedAt = Date.now();
+  return project;
 }

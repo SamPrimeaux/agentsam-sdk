@@ -2,9 +2,9 @@ import {describe,expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {TerrainEditorPanel} from './TerrainEditorPanel';
-import {createDreamHouseTerrainDocument} from '../lib/world-terrain';
+import {createTerrainDocument} from '../lib/world-terrain';
 
-const terrain=createDreamHouseTerrainDocument();
+const terrain={...createTerrainDocument(),treeCount:2,rockCount:2};
 const noop=()=>{};
 
 describe('project-owned terrain inspector',()=>{

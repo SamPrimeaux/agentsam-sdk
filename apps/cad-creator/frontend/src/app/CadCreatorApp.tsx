@@ -2,7 +2,6 @@ import {useShellAppearance} from '../../../../../packages/agentsam-settings/src/
 import {installDesignWorkspaceGuest,resolveHostedDesignScope} from '../../../../../packages/agentsam-contracts/src/design-workspace-bridge';
 import {createCadDesignAdapter} from '../lib/design-workspace-adapter';
 import {CadCamWorkspace} from '../components/CadCamWorkspace';
-import {OPENSCAD_PARAMETRIC_TEMPLATES} from '../lib/openscad/generator';
 import {insertOpenScadImport} from '../components/OpenScadLibraryPane';
 import {recordNativePlanChange} from '../lib/native-engine';
 /**
@@ -19,14 +18,19 @@ import {
   ActiveTool,
   MultiplayerUser,
   MeasurementUnit,
-  FurnitureCategory,
   UserRole
 } from '@inneranimalmedia/agentsam-cad-shared';
 import type {CadSceneElement} from '@inneranimalmedia/agentsam-cad-shared';
 import {reconcileSceneElements,sceneReviewContext} from '../lib/scene-document';
-import { TEMPLATES, TEMPLATE_METADATA_LIST } from '../lib/templates';
-import { cloneTemplateProject } from '../components/TemplateStarterGrid';
-import type { FurniturePreset } from '../components/FurniturePicker';
+import type { FurniturePreset, QuickAddItem } from '../components/quick-add/types';
+import { furniturePresetFromItem } from '../components/quick-add/catalog';
+import {
+  createParametricObjectFromCatalog,
+  loadStudioProjectTemplate,
+  loadStudioTerrainPreset,
+  mergeStudioTerrainPreset,
+} from '../lib/studio-template-source';
+import { createTerrainDocument, validateTerrainDocument } from '../lib/world-terrain';
 import { createEmptyCadProject } from '../lib/create-empty-project';
 import { loadDreamHouseProject } from '../lib/dreamhouse-source';
 import { loadOwnerDreamHouseProject } from '../lib/owner-project-source';
@@ -49,7 +53,6 @@ import { canEditHostedCadSelection, listHostedProjects, loadHostedProject, saveH
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
-import { CloudProjectsModal } from '../components/CloudProjectsModal';
 import { TemplateDrawer } from '../components/TemplateDrawer';
 import { CadProjectGallery } from '../components/CadProjectGallery';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
@@ -136,7 +139,7 @@ export function CadCreatorApp({
     setSourceStatus('loading');setSourceError('');setHostedSelection(null);setSceneInventory([]);
     void loadHostedProject(hostedProjectId,hostedRevision||undefined).then(selection=>{
       if(!active)return;
-      setProject(selection.project || { ...createEmptyCadProject(), id: hostedProjectId, name: selection.registry.project.name });setHostedSelection(selection);
+      setCatalogModel(null);setProject(selection.project || { ...createEmptyCadProject(), id: hostedProjectId, name: selection.registry.project.name });setHostedSelection(selection);
       setHistory([]);setRedoStack([]);setUiSelection(null);setVerifiedProjectRevision(null);
       setActiveWorkspace('model');setPlanLayout('split');
       setExplorerOpen(false);setInspectorOpen(false);setSourceStatus('loaded');
@@ -155,7 +158,7 @@ export function CadCreatorApp({
       const nextProject = accessMode === 'owner'
         ? source
         : cloneProjectForPublicUser(source, 'DreamHouse · Personal Example');
-      setProject(nextProject);
+      setCatalogModel(null);setProject(nextProject);
       setHistory([]); setRedoStack([]); setUiSelection(null); setVerifiedProjectRevision(null);
       const requestedWorkspace = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('workspace');
       setActiveWorkspace(requestedWorkspace === 'samsketch' ? 'plan' : 'model'); setPlanLayout('split');
@@ -242,8 +245,9 @@ export function CadCreatorApp({
     if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);
   }, [presentation, uiSelection]);
   // Appearance belongs to the AgentSam host navigation/theme provider.
-  const cadAccent = 'var(--nav-accent, var(--color-accent, #82a7fb))';
-  const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
+  const cadAccent = 'var(--nav-accent, var(--color-accent, Highlight))';
+  const [selectedFurniturePreset, setSelectedFurniturePreset] = useState<FurniturePreset | null>(null);
+  const [catalogModel, setCatalogModel] = useState<QuickAddItem | null>(null);
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
   const selectedVisualAnchor = useRef<{id:string;x:number;y:number;at:number} | null>(null);
@@ -267,6 +271,11 @@ export function CadCreatorApp({
   const [hostAppearance, setHostAppearance] = useState<{theme:'dark'|'light';accent?:string} | null>(null);
   const appearance = hostAppearance ?? settingsAppearance;
   const isDarkMode = appearance.theme === 'dark';
+  useEffect(() => {
+    const accent = appearance.accent || getComputedStyle(document.documentElement).getPropertyValue('--nav-accent').trim() || 'Highlight';
+    setCurrentUser(previous => ({ ...previous, color: accent }));
+  }, [appearance.accent]);
+
 
   // Robotics is an optional heavy workspace.
   const roboticsContainerRef = useRef<HTMLDivElement>(null);
@@ -277,7 +286,6 @@ export function CadCreatorApp({
   const { capabilities: liveCapabilities, report: cadToolsReport } = useCadTools();
 
   // 3. Modals State
-  const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isTemplateLibraryOpen, setIsTemplateLibraryOpen] = useState(false);
   const [leftPanelTab,setLeftPanelTab]=useState<'objects'|'assets'|'libraries'>('objects');
   // Hosted mode only: name of the unsaved template copy being edited. Null means no copy is open.
@@ -303,7 +311,7 @@ export function CadCreatorApp({
     return {
       id: 'local_' + (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)),
       name: 'Local CAD Editor',
-      color: '#82a7fb',
+      color: 'Highlight',
       role: accessMode === 'hosted-project' ? 'Viewer' : canCollaborate ? 'Owner' : 'Editor',
       selectedIds: [],
       activeTool: 'select',
@@ -556,19 +564,15 @@ export function CadCreatorApp({
   // It never stands in for a registered project; picking one from the Project menu clears it again.
   const placeStockPreset = (preset: FurniturePreset) => {
     if (isViewer) return;
-    setSelectedFurnitureType(preset.type);
+    setSelectedFurniturePreset(preset);
     setActiveTool('furniture');
     setStudioView('edit');
     handleSelectWorkspace('plan');
     setPlanLayout('split');
     showToast('Click the 2D plan to place ' + preset.name);
   };
-  const openTemplateScene = (ref: string | null, title: string) => {
-    const tpl = TEMPLATE_METADATA_LIST.find((entry) => entry.id === ref);
-    if (!tpl) { showToast(`"${title}" could not be opened`); return; }
-    startFromTemplate(cloneTemplateProject(tpl), tpl.name);
-  };
   const startFromTemplate = (copy: ProjectState, name: string) => {
+    setCatalogModel(null);
     setTemplateCopyName(name);
     setProject(copy);
     setCurrentUser((prev) => (prev.role === 'Viewer' ? { ...prev, role: 'Editor' } : prev));
@@ -583,6 +587,78 @@ export function CadCreatorApp({
     setPlanLayout('split');
     setActiveTool('select');
     showToast(`Started an unsaved copy of "${name}"`);
+  };
+
+  const handlePickCatalogItem = async (item: QuickAddItem) => {
+    if (isViewer) {
+      showToast('This CAD revision is read-only.');
+      return;
+    }
+    try {
+      if (item.kind === 'cad_project_template') {
+        const copy = await loadStudioProjectTemplate(item);
+        startFromTemplate(copy, item.title);
+        return;
+      }
+      if (item.kind === 'cad_stock_object') {
+        const preset = furniturePresetFromItem(item);
+        if (!preset) throw new Error('This registered object has no supported CAD placement definition.');
+        setCatalogModel(null);
+        placeStockPreset(preset);
+        return;
+      }
+      if (item.kind === 'cad_parametric_template') {
+        const part = await createParametricObjectFromCatalog(item, project.parametricObjects?.length || 0);
+        const operation = {
+          id: `cad-part-${crypto.randomUUID()}`,
+          timestamp: Date.now(),
+          type: 'create_parametric_object',
+          parametricObject: part,
+        } as DesignOperation;
+        const checked = applyDesignOperation(project, operation);
+        if (!checked.success) throw new Error(checked.error || 'The CAD engine rejected this parametric part.');
+        updateProject(previous => {
+          const next = applyDesignOperation(previous, operation);
+          return next.success ? next.project : previous;
+        });
+        setCatalogModel(null);
+        setUiSelection({ group: 'parametricObjects', id: part.id });
+        setInspectorOpen(true);
+        setActiveWorkspace('model');
+        showToast(`Created ${item.title} from the registered parametric definition`);
+        return;
+      }
+      if (item.kind === 'cad_terrain_preset') {
+        const preset = await loadStudioTerrainPreset(item);
+        const current = project.sceneSettings?.terrain
+          ? validateTerrainDocument(project.sceneSettings.terrain)
+          : createTerrainDocument();
+        const terrain = mergeStudioTerrainPreset(current, preset, item);
+        updateProject(previous => ({
+          ...previous,
+          sceneSettings: { ...previous.sceneSettings, terrain },
+        }));
+        setCatalogModel(null);
+        setShowBimStarters(false);
+        handleSelectWorkspace('model');
+        setPlanLayout('split');
+        showToast(item.specs.apply_mode === 'replace'
+          ? `Applied site scene: ${item.title}`
+          : `Added ${item.title} to the site terrain`);
+        return;
+      }
+      if (item.kind === 'model_3d' && item.assetUrl) {
+        setCatalogModel(item);
+        setShowBimStarters(false);
+        setShowProjectGallery(false);
+        handleSelectWorkspace('model');
+        showToast(`Opened ${item.title} as a read-only 3D asset preview`);
+        return;
+      }
+      throw new Error(`"${item.title}" does not yet have a supported CAD insertion operation.`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'The registered studio resource could not be loaded.');
+    }
   };
 
   const handleRedo = () => {
@@ -663,9 +739,9 @@ export function CadCreatorApp({
   // Shown in place of a model while hosted mode has no registered project open. With a project id
   // present (loading or failed) the original status text stays: a failed load is never replaced by a starter.
   const hostedEmptyPane = sourceStatus === 'loading'
-    ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">Loading registered BIM revision…</div>
+    ? <div className="flex size-full items-center justify-center bg-[var(--cad-bg)] px-6 text-center text-sm text-[var(--cad-muted)]">Loading registered BIM revision…</div>
     : hostedProjectId
-      ? <div className="flex size-full flex-col items-center justify-center gap-3 bg-slate-950 px-6 text-center text-sm text-slate-400">
+      ? <div className="flex size-full flex-col items-center justify-center gap-3 bg-[var(--cad-bg)] px-6 text-center text-sm text-[var(--cad-muted)]">
           <p>Choose a saved CAD project to inspect its registered model.</p>
           <button type="button" className="cad-hosted-chrome__browse" onClick={() => setShowProjectGallery(true)}>Browse project gallery</button>
         </div>
@@ -677,27 +753,35 @@ export function CadCreatorApp({
   return (
     <div data-appearance={isDarkMode ? 'dark' : 'light'} data-nav-theme={appearance.theme}
       style={{
+        '--nav-accent': appearance.accent || cadAccent,
+        '--cad-bg': 'var(--dashboard-canvas, var(--color-background, Canvas))',
+        '--cad-surface': 'var(--color-card, var(--dashboard-surface, var(--dashboard-canvas, Canvas)))',
+        '--cad-card': 'var(--color-card, var(--cad-surface))',
+        '--cad-thumb-surface': 'var(--color-input, var(--cad-surface))',
+        '--cad-ink': 'var(--dashboard-text, var(--color-foreground, CanvasText))',
+        '--cad-muted': 'var(--dashboard-text-muted, var(--color-muted-foreground, GrayText))',
+        '--cad-line': 'var(--dashboard-border, var(--color-border, currentColor))',
+        '--cad-hover': 'var(--nav-selected, var(--color-muted, transparent))',
+        '--cad-input': 'var(--color-input, var(--color-card, Canvas))',
         '--cad-accent': cadAccent,
-        '--nav-accent': appearance.accent,
-        '--cad-surface': 'var(--color-card, var(--dashboard-canvas, #151c29))',
-        '--cad-ink': 'var(--dashboard-text, var(--color-foreground, #d9e2f1))',
-        '--cad-muted': 'var(--dashboard-text-muted, var(--color-muted-foreground, #97a4b7))',
-        '--cad-line': 'var(--dashboard-border, var(--color-border, #303b4b))',
-        '--cad-hover': 'var(--nav-selected, var(--color-muted, #293347))',
-        '--cad-input': 'var(--color-input, var(--color-card, #1c2636))',
-        '--cad-accent-ink': 'var(--nav-accent, var(--color-accent, #8cb9ff))',
+        '--cad-accent-ink': cadAccent,
+        '--cad-accent-foreground': 'var(--color-accent-foreground, var(--dashboard-text, CanvasText))',
+        '--cad-success': 'var(--color-success, var(--status-success, var(--cad-accent)))',
+        '--cad-danger': 'var(--color-destructive, var(--status-danger, var(--cad-ink)))',
+        '--cad-warning': 'var(--color-warning, var(--status-warning, var(--cad-accent)))',
+        '--cad-shadow': 'color-mix(in srgb, var(--cad-ink) 18%, transparent)',
       } as React.CSSProperties}
-      className={`as-nav-scope cad-workspace-ui relative flex flex-col h-full w-full min-w-0 min-h-0 font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      className="as-nav-scope cad-workspace-ui relative flex flex-col h-full w-full min-w-0 min-h-0 font-sans overflow-hidden select-none">
       {accessMode === 'hosted-project' && (
         <div className="cad-hosted-chrome" aria-label="Registered CAD project and revision">
-          <label htmlFor="cad-hosted-project" className="text-slate-400 text-xs">Project</label>
+          <label htmlFor="cad-hosted-project" className="text-[var(--cad-muted)] text-xs">Project</label>
           <select id="cad-hosted-project" aria-label="Open registered CAD project" value={hostedProjectId}
             onChange={event=>{setShowProjectGallery(false);setTemplateCopyName(null);setCurrentUser(prev=>prev.role==='Editor'?{...prev,role:'Viewer'}:prev);setHostedProjectId(event.target.value);setHostedRevision('');setHostedSelection(null);setProject(createEmptyCadProject());}}>
             <option value="">Select a saved project</option>
             {hostedProjects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
             {hostedProjectId&&!hostedProjects.some(item=>item.id===hostedProjectId)&&<option value={hostedProjectId}>{hostedProjectId}</option>}
           </select>
-          {hostedSelection&&<><label htmlFor="cad-hosted-revision" className="text-slate-400 text-xs">Revision</label>
+          {hostedSelection&&<><label htmlFor="cad-hosted-revision" className="text-[var(--cad-muted)] text-xs">Revision</label>
           <select id="cad-hosted-revision" aria-label="Select registered BIM revision" value={hostedSelection.revision.revision}
             onChange={event=>setHostedRevision(event.target.value)}>
             {hostedSelection.registry.revisions.filter(row=>row.models.length&&(row.documents.length||row.revision==='current')).map(row=><option key={row.revision} value={row.revision}>{row.label || row.revision} · {row.status}</option>)}
@@ -708,9 +792,9 @@ export function CadCreatorApp({
       )}
       {/* The host Nav.Topbar owns application chrome. CAD owns only its contextual tools. */}
       {chromeFolded ? (
-        <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[length:var(--text-sm)]">
+        <div className="flex h-8 shrink-0 items-center justify-between border-b border-[var(--cad-line)] bg-[var(--cad-surface)] px-3 text-[length:var(--text-sm)]">
           <span className="font-medium">{project.name || 'Untitled Project'} · {activeWorkspace}</span>
-          <button type="button" onClick={() => setChromeFolded(false)} aria-label="Show workspace controls" className="rounded bg-slate-800 px-2 py-0.5 hover:bg-slate-700">Show controls</button>
+          <button type="button" onClick={() => setChromeFolded(false)} aria-label="Show workspace controls" className="rounded bg-[var(--cad-input)] px-2 py-0.5 hover:bg-[var(--cad-hover)]">Show controls</button>
         </div>
       ) : (<>
 
@@ -721,7 +805,7 @@ export function CadCreatorApp({
           canUndo={history.length > 0 && !isViewer} canRedo={redoStack.length > 0 && !isViewer}
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
-          onNew={startBlankProject} onTemplates={() => {setShowProjectGallery(true);setIsTemplateLibraryOpen(false)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}} onPlaceStock={placeStockPreset} onOpenScene={openTemplateScene}
+          onNew={startBlankProject} onTemplates={() => {setShowProjectGallery(true);setIsTemplateLibraryOpen(false)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}} onPlaceStock={placeStockPreset} onPickCatalogItem={handlePickCatalogItem}
           onSketch={()=>setSketchOpen(true)}
           onOpenSolid={accessMode === 'hosted-project' ? undefined : () => {
             const width = solidWidthInput.current;
@@ -746,8 +830,8 @@ export function CadCreatorApp({
           viewportMode={activeWorkspace==='plan'?(planLayout==='split'?'split':'2d'):'3d'}
           onViewportMode={mode=>{setStudioView('edit');if(mode==='3d'){handleSelectWorkspace('model')}else{handleSelectWorkspace('plan');setPlanLayout(mode)}}}
           projectSlot={accessMode === 'hosted-project' ? (hostedWritable
-            ? <div className="flex items-center gap-2 text-xs text-slate-300"><span>{hostedDirty ? 'Unsaved changes' : 'All changes saved'} · {hostedSelection?.revision.label || hostedSelection?.revision.revision}</span><button type="button" disabled={!hostedDirty || hostedSaving} onClick={() => void saveHostedRevision()}>{hostedSaving ? 'Saving…' : 'Save revision'}</button></div>
-            : <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered source · editing unavailable for this revision'}</span>) : <ProjectRuntimePanel widthInputRef={solidWidthInput} project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
+            ? <div className="flex items-center gap-2 text-xs text-[var(--cad-muted)]"><span>{hostedDirty ? 'Unsaved changes' : 'All changes saved'} · {hostedSelection?.revision.label || hostedSelection?.revision.revision}</span><button type="button" disabled={!hostedDirty || hostedSaving} onClick={() => void saveHostedRevision()}>{hostedSaving ? 'Saving…' : 'Save revision'}</button></div>
+            : <span className="text-xs text-[var(--cad-muted)]">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered source · editing unavailable for this revision'}</span>) : <ProjectRuntimePanel widthInputRef={solidWidthInput} project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
           runtimeSlot={<CadStatusStrip workspace={currentWorkspaceDescriptor} activeTool={activeTool} unit={unit}
             selectionCount={currentUser.selectedIds.length} jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
             isSynced={isSynced} isDarkMode={isDarkMode} capabilities={liveCapabilities}/>}
@@ -786,26 +870,7 @@ export function CadCreatorApp({
                       onSelect={next=>{setUiSelection(next);setInspectorOpen(true);if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}
                       onOpenTemplates={()=>setIsTemplateLibraryOpen(true)}
                       onPlaceStock={placeStockPreset}
-                      onCreateParametric={key=>{
-                        if(isViewer)return;
-                        const template=OPENSCAD_PARAMETRIC_TEMPLATES[key];
-                        if(!template){showToast('Unknown parametric generator');return}
-                        const objectId='param_'+crypto.randomUUID();
-                        const part={
-                          id:objectId,name:template.name,generator:'openscad' as const,generatorTemplate:key,
-                          parameters:{...template.defaultParams},parameterDefs:template.parameterDefs,
-                          transform:{x:48,y:48,z:0,rotationY:0},
-                          source:template.generateScad(template.defaultParams),updatedAt:Date.now()
-                        };
-                        const operation={id:'cad-part-'+crypto.randomUUID(),timestamp:Date.now(),type:'create_parametric_object',parametricObject:part} as DesignOperation;
-                        const checked=applyDesignOperation(project,operation);
-                        if(!checked.success){showToast(checked.error||'Could not create parametric part');return}
-                        updateProject(previous=>{const next=applyDesignOperation(previous,operation);return next.success?next.project:previous});
-                        setUiSelection({group:'parametricObjects',id:objectId});setInspectorOpen(true);
-                        setSourceRequest(n=>n+1);
-                        if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);
-                        showToast('Added '+template.name+' to project');
-                      }}
+                      onCreateParametric={item => { void handlePickCatalogItem(item); }}
                       onInsertScadImport={line=>{
                         if(isViewer||uiSelection?.group!=='parametricObjects')return;
                         const part=project.parametricObjects?.find(value=>value.id===uiSelection.id);
@@ -839,21 +904,21 @@ export function CadCreatorApp({
             onDragEnd={()=>rememberDimension('explorer',leftWidth)}
             onDoubleClick={()=>{setLeftWidth(20);rememberDimension('explorer',20)}}/>}
         {/* PRIMARY VIEWPORT STAGE */}
-        <section ref={stageRef} className={'cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]'+(activeWorkspace==='plan'&&planLayout==='split'?' cad-stage-split':'')}
+        <section ref={stageRef} className={'cad-workspace-stage flex-1 flex overflow-hidden relative bg-[var(--cad-bg)]'+(activeWorkspace==='plan'&&planLayout==='split'?' cad-stage-split':'')}
           style={{'--cad-split':splitRatio+'%'} as React.CSSProperties}>
           {sourceStatus === 'unavailable' && sourceError && (
-            <div role="alert" className="absolute left-3 top-3 z-40 max-w-[min(430px,calc(100%-24px))] rounded-xl border border-amber-400/35 bg-slate-950/95 p-3 text-xs text-slate-100 shadow-xl">
+            <div role="alert" className="absolute left-3 top-3 z-40 max-w-[min(430px,calc(100%-24px))] rounded-xl border border-amber-400/35 bg-[var(--cad-bg)]/95 p-3 text-xs text-[var(--cad-ink)] shadow-xl">
               <strong>{accessMode === 'hosted-project' ? 'Registered CAD project unavailable' : accessMode === 'owner' ? 'Owner project unavailable' : 'Public example unavailable'}</strong>
-              <p className="mt-1 text-slate-300">{sourceError}</p>
-              <p className="mt-1 text-slate-400">{accessMode === 'hosted-project' ? 'The registered source was not replaced with a template or an older GLB.' : accessMode === 'owner' ? 'No public example was substituted. The local project service must return the saved owner BIM; no source files were modified.' : 'Your current example canvas has not been replaced. You can keep editing it or choose another starter.'}</p>
-              {accessMode !== 'hosted-project' && <button type="button" className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 hover:bg-white/10" onClick={() => void openDreamHouse()}>{accessMode === 'owner' ? 'Retry owner project' : 'Retry public example'}</button>}
-              <button type="button" className="ml-2 rounded-lg px-3 py-1.5 text-slate-300 hover:bg-white/10" onClick={() => setSourceError('')}>Dismiss</button>
+              <p className="mt-1 text-[var(--cad-muted)]">{sourceError}</p>
+              <p className="mt-1 text-[var(--cad-muted)]">{accessMode === 'hosted-project' ? 'The registered source was not replaced with a template or an older GLB.' : accessMode === 'owner' ? 'No public example was substituted. The local project service must return the saved owner BIM; no source files were modified.' : 'Your current example canvas has not been replaced. You can keep editing it or choose another starter.'}</p>
+              {accessMode !== 'hosted-project' && <button type="button" className="mt-2 rounded-lg border border-[var(--cad-line)] px-3 py-1.5 hover:bg-[var(--cad-hover)]" onClick={() => void openDreamHouse()}>{accessMode === 'owner' ? 'Retry owner project' : 'Retry public example'}</button>}
+              <button type="button" className="ml-2 rounded-lg px-3 py-1.5 text-[var(--cad-muted)] hover:bg-[var(--cad-hover)]" onClick={() => setSourceError('')}>Dismiss</button>
             </div>
           )}
           {/* A registered project BIM is resolved through its D1/R2 revision records.
               The visual GLB is never the authoritative editable source. */}
           {showProjectGallery && (
-            <div className="absolute inset-0 z-30 bg-slate-950">
+            <div className="absolute inset-0 z-30 bg-[var(--cad-bg)]">
               <div className="absolute right-3 top-3 z-40">
                 <button type="button" className="cad-hosted-chrome__browse" onClick={() => setShowProjectGallery(false)}>Back to workspace</button>
               </div>
@@ -874,7 +939,7 @@ export function CadCreatorApp({
           {activeWorkspace === 'plan' && !showProjectGallery && (
             <>
               {(planLayout === '2d' || planLayout === 'split') && (
-                <div className={`cad-plan-pane h-full relative min-w-0 ${planLayout === 'split' ? 'border-r border-white/10' : 'w-full'}`} style={planLayout==='split'?{width:splitRatio+'%',flex:'none'}:undefined}>
+                <div className={`cad-plan-pane h-full relative min-w-0 ${planLayout === 'split' ? 'border-r border-[var(--cad-line)]' : 'w-full'}`} style={planLayout==='split'?{width:splitRatio+'%',flex:'none'}:undefined}>
                   <Canvas2D
                     project={project}
                     activeTool={activeTool}
@@ -885,7 +950,7 @@ export function CadCreatorApp({
                       id:uiSelection.id,
                       type: ({walls:'wall',doors:'door',windows:'window',rooms:'room',furniture:'furniture'} as const)[uiSelection.group]
                     } : null}
-                    selectedFurnitureType={selectedFurnitureType}
+                    selectedFurniturePreset={selectedFurniturePreset}
                     remoteUsers={remoteUsers}
                     unit={unit}
                     userRole={currentUser.role}
@@ -935,7 +1000,13 @@ export function CadCreatorApp({
           {/* WORKSPACE 2: MODEL */}
           {activeWorkspace === 'model' && !showProjectGallery && (
             <div className="w-full h-full relative">
-              {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
+              {catalogModel ? <>
+                <button type="button" className="cad-hosted-chrome__browse absolute right-3 top-3 z-30"
+                  onClick={() => setCatalogModel(null)}>Back to project</button>
+                <CadWorldViewport terrainHost={terrainHost} modelUrl={catalogModel.assetUrl!}
+                  sceneLabel={catalogModel.title} revision={catalogModel.id} readOnly siteEditable={false}/>
+              </>
+              : showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
                 ? <CadWorldViewport terrainHost={terrainHost} modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
                     readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
@@ -983,17 +1054,17 @@ export function CadCreatorApp({
       <MiniAgentSam selecting={annotating} onSelectingChange={setAnnotating}
         onSubmit={submitCadRequest}
       />
-      {(copilotDraft || assistantReply) && <aside data-annotation-control="" aria-label="CAD copilot status" className="fixed bottom-14 right-4 z-[100] w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-white/20 bg-slate-950 px-3 py-2 text-xs text-white shadow-2xl">
+      {(copilotDraft || assistantReply) && <aside data-annotation-control="" aria-label="CAD copilot status" className="fixed bottom-14 right-4 z-[100] w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-[var(--cad-line)] bg-[var(--cad-bg)] px-3 py-2 text-xs text-[var(--cad-ink)] shadow-2xl">
         <div className="flex items-center justify-between gap-2"><strong>AgentSam CAD copilot</strong><button type="button" aria-label="Dismiss copilot status" onClick={() => {setCopilotDraft('');setAssistantReply('');}}>Close</button></div>
         {assistantReply && <p role="status" className="mt-2 whitespace-pre-wrap">{assistantReply}</p>}
-        {copilotDraft && <><textarea readOnly value={copilotDraft} aria-label="CAD request draft" rows={4} className="mt-2 w-full rounded bg-slate-800 p-2 text-white"/><button type="button" onClick={() => void navigator.clipboard.writeText(copilotDraft)}>Copy request</button></>}
+        {copilotDraft && <><textarea readOnly value={copilotDraft} aria-label="CAD request draft" rows={4} className="mt-2 w-full rounded bg-[var(--cad-input)] p-2 text-[var(--cad-ink)]"/><button type="button" onClick={() => void navigator.clipboard.writeText(copilotDraft)}>Copy request</button></>}
       </aside>}
 
 
       {sketchOpen && <dialog ref={sketchDialog} aria-label="Native sketch" onClose={()=>setSketchOpen(false)}
-        className="m-auto h-[90dvh] w-[96vw] max-w-screen-xl overflow-hidden rounded-lg border border-slate-700 bg-slate-950 p-0 text-slate-100 backdrop:bg-black/60">
+        className="m-auto h-[90dvh] w-[96vw] max-w-screen-xl overflow-hidden rounded-lg border border-[var(--cad-line)] bg-[var(--cad-bg)] p-0 text-[var(--cad-ink)] backdrop:bg-[var(--cad-bg)]">
         <div className="flex h-full flex-col">
-          <header className="flex items-center justify-between border-b border-slate-700 px-3 py-2">
+          <header className="flex items-center justify-between border-b border-[var(--cad-line)] px-3 py-2">
             <strong>Native sketch</strong>
             <button type="button" onClick={()=>sketchDialog.current?.close()}>Back to project</button>
           </header>
@@ -1014,7 +1085,7 @@ export function CadCreatorApp({
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-xl text-xs font-semibold animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-indigo-600 text-[var(--cad-ink)] px-4 py-2 rounded-xl shadow-xl text-xs font-semibold animate-in fade-in slide-in-from-bottom-2">
           {toastMessage}
         </div>
       )}

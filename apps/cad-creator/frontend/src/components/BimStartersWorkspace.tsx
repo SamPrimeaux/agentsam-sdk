@@ -1,4 +1,5 @@
 import {createThreeViewport,createConfiguredGLTFLoader} from '@inneranimalmedia/agentsam-3d-viewer';
+import {readCadTheme} from '../lib/cad-theme';
 import {CadSourceInspector} from './CadSourceInspector';
 import {CadResourceCard} from './CadResourceCard';
 import {CadPreviewImage, CadPreview3DStatic} from './CadPreviewTreatments';
@@ -40,7 +41,7 @@ function BimViewport({ id, version, focused, hidden, isolated, onPick }: {
     setLoadError('');
     objectsRef.current.clear();
     const viewport=createThreeViewport(mount,{THREE,OrbitControls},{
-      wrapper:false,autoRender:false,background:'#111722',fov:42,
+      wrapper:false,autoRender:false,background:readCadTheme(mount).background,fov:42,
       near:.01,far:10000,maxPixelRatio:2,
       enableDamping:true,minDistance:.1,maxDistance:2000,
     });
@@ -126,8 +127,8 @@ function BimViewport({ id, version, focused, hidden, isolated, onPick }: {
   }, [focused, id]);
 
   return <div className="relative h-full w-full" ref={mountRef}>
-    {loadError && <div role="alert" className="absolute left-4 top-4 z-10 rounded bg-slate-900 p-3 text-sm text-rose-300">{loadError}</div>}
-    <div className="pointer-events-none absolute bottom-4 left-4 rounded bg-slate-950/80 px-3 py-2 text-[length:var(--text-sm)] text-slate-300">
+    {loadError && <div role="alert" className="absolute left-4 top-4 z-10 rounded bg-[var(--cad-surface)] p-3 text-sm text-[var(--cad-danger)]">{loadError}</div>}
+    <div className="pointer-events-none absolute bottom-4 left-4 rounded bg-[var(--cad-surface)] px-3 py-2 text-[length:var(--text-sm)] text-[var(--cad-muted)]">
       Drag to orbit · Scroll to zoom · Click an element to inspect
     </div>
   </div>;
@@ -210,14 +211,14 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
       setRefreshing(false);
     }
   };
-  return <div className="flex h-full min-h-0 w-full flex-col bg-[#10141d] text-slate-100">
-    <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2 text-xs">
-      <button onClick={onReturn} className="rounded border border-white/20 px-3 py-1 hover:bg-white/10">Return to CAD canvas</button>
-      {active && <button onClick={() => { setActive(null); setSelected(null); }} className="rounded border border-white/20 px-3 py-1">BIM Library</button>}
+  return <div className="flex h-full min-h-0 w-full flex-col bg-[var(--cad-bg)] text-[var(--cad-ink)]">
+    <div className="flex flex-wrap items-center gap-2 border-b border-[var(--cad-line)] px-3 py-2 text-xs">
+      <button onClick={onReturn} className="rounded border border-[var(--cad-line)] px-3 py-1 hover:bg-[var(--cad-hover)]">Return to CAD canvas</button>
+      {active && <button onClick={() => { setActive(null); setSelected(null); }} className="rounded border border-[var(--cad-line)] px-3 py-1">BIM Library</button>}
       <span className="font-semibold">{active ? active.title : inspectedSource ? 'Source inspector' : 'Native BIM Starter Library'}</span>
-      {active && <span className="text-slate-400">{active.objectCount} original objects · {active.meshCount} preview meshes</span>}
+      {active && <span className="text-[var(--cad-muted)]">{active.objectCount} original objects · {active.meshCount} preview meshes</span>}
     </div>
-    {error && <div role="alert" className="p-4 text-sm text-amber-300">{error}</div>}
+    {error && <div role="alert" className="p-4 text-sm text-[var(--cad-accent-ink)]">{error}</div>}
     {!active&&inspectedSource ? <CadSourceInspector source={inspectedSource} onBack={()=>setSelectedSourceId(null)}/> : !active ? <div className="cad-project-gallery flex-1">
       <header className="cad-project-gallery__head">
         <div>
@@ -261,45 +262,45 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
         <BimViewport key={active.id + previewVersion} id={active.id} version={String(previewVersion) + active.sourceSha256}
           focused={selected} hidden={hidden} isolated={isolated} onPick={handlePick} />
       </div>
-      <aside className="flex max-h-[45%] w-full shrink-0 flex-col border-t border-white/10 bg-[#161c27] md:max-h-full md:w-[280px] md:border-l md:border-t-0">
-        <div className="space-y-2 border-b border-white/10 p-3 text-xs">
+      <aside className="flex max-h-[45%] w-full shrink-0 flex-col border-t border-[var(--cad-line)] bg-[var(--cad-surface)] md:max-h-full md:w-[280px] md:border-l md:border-t-0">
+        <div className="space-y-2 border-b border-[var(--cad-line)] p-3 text-xs">
           <div className="font-semibold">Original FreeCAD project</div>
-          <p className="text-slate-400">The browser mesh is an inspectable derivative. The source keeps the true FreeCAD assemblies, constraints, dimensions and drawings.</p>
-          <button onClick={() => void openNative()} className="w-full rounded bg-amber-500 px-2 py-2 font-semibold text-slate-950">Edit working copy in FreeCAD</button>
-          <button disabled={refreshing} onClick={() => void refreshPreview()} className="w-full rounded border border-amber-500/40 px-2 py-2 text-amber-200 disabled:opacity-40">{refreshing ? 'Converting model…' : 'Sync 3D after FreeCAD save'}</button>
-          <a className="block rounded border border-white/20 px-2 py-2 text-center hover:bg-white/10" href={asset(active.id, 'source')}>Download preserved original .FCStd</a>
-          {active.workingExists && <a className="block rounded border border-white/20 px-2 py-2 text-center hover:bg-white/10" href={asset(active.id, 'working')}>Download working copy</a>}
-          {nativeStatus && <div role="status" className="text-amber-200">{nativeStatus}</div>}
+          <p className="text-[var(--cad-muted)]">The browser mesh is an inspectable derivative. The source keeps the true FreeCAD assemblies, constraints, dimensions and drawings.</p>
+          <button onClick={() => void openNative()} className="w-full rounded bg-[var(--cad-accent)] px-2 py-2 font-semibold text-[var(--cad-accent-foreground)]">Edit working copy in FreeCAD</button>
+          <button disabled={refreshing} onClick={() => void refreshPreview()} className="w-full rounded border border-amber-500/40 px-2 py-2 text-[var(--cad-accent-ink)] disabled:opacity-40">{refreshing ? 'Converting model…' : 'Sync 3D after FreeCAD save'}</button>
+          <a className="block rounded border border-[var(--cad-line)] px-2 py-2 text-center hover:bg-[var(--cad-hover)]" href={asset(active.id, 'source')}>Download preserved original .FCStd</a>
+          {active.workingExists && <a className="block rounded border border-[var(--cad-line)] px-2 py-2 text-center hover:bg-[var(--cad-hover)]" href={asset(active.id, 'working')}>Download working copy</a>}
+          {nativeStatus && <div role="status" className="text-[var(--cad-accent-ink)]">{nativeStatus}</div>}
         </div>
-        <div className="border-b border-white/10 p-3">
+        <div className="border-b border-[var(--cad-line)] p-3">
           <label htmlFor="bim-object-filter" className="text-xs font-semibold">FreeCAD object tree</label>
           <input id="bim-object-filter" value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Filter materials, walls, beams…" className="mt-2 w-full rounded border border-white/15 bg-slate-950 px-2 py-2 text-xs" />
+            placeholder="Filter materials, walls, beams…" className="mt-2 w-full rounded border border-[var(--cad-line)] bg-[var(--cad-input)] px-2 py-2 text-xs" />
         </div>
-        {item && <div className="border-b border-white/10 bg-amber-400/10 p-3 text-xs">
-          <div className="font-semibold text-amber-200">{item.label}</div>
-          <div className="mt-1 break-all text-slate-300">{item.type}</div>
-          <div className="mt-1 text-slate-400">Object: {item.name}</div>
-          <div className="mt-1 text-slate-400">{item.inPreview ? 'Selectable 3D geometry' : 'Native FreeCAD-only object (not tessellated)'}</div>
+        {item && <div className="border-b border-[var(--cad-line)] bg-[var(--cad-hover)] p-3 text-xs">
+          <div className="font-semibold text-[var(--cad-accent-ink)]">{item.label}</div>
+          <div className="mt-1 break-all text-[var(--cad-muted)]">{item.type}</div>
+          <div className="mt-1 text-[var(--cad-muted)]">Object: {item.name}</div>
+          <div className="mt-1 text-[var(--cad-muted)]">{item.inPreview ? 'Selectable 3D geometry' : 'Native FreeCAD-only object (not tessellated)'}</div>
           {item.inPreview && <div className="mt-2 flex flex-wrap gap-2">
             <button onClick={() => setHidden((names) => names.includes(item.name) ? names : [...names, item.name])}
               className="rounded border border-amber-400/40 px-2 py-1">Hide</button>
             <button onClick={() => setIsolated((name) => name === item.name ? null : item.name)}
               className="rounded border border-amber-400/40 px-2 py-1">{isolated === item.name ? 'Exit isolate' : 'Isolate'}</button>
             <button onClick={() => { setHidden([]); setIsolated(null); }}
-              className="rounded border border-white/20 px-2 py-1">Show all</button>
+              className="rounded border border-[var(--cad-line)] px-2 py-1">Show all</button>
           </div>}
         </div>}
-        <div className="border-b border-white/10 px-3 py-2 text-xs">
+        <div className="border-b border-[var(--cad-line)] px-3 py-2 text-xs">
           <button onClick={() => { setHidden([]); setIsolated(null); }}
-            className="rounded border border-white/20 px-2 py-1 hover:bg-white/10">Show all geometry</button>
+            className="rounded border border-[var(--cad-line)] px-2 py-1 hover:bg-[var(--cad-hover)]">Show all geometry</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {objects.slice(0, 500).map(o => <button key={o.name} onClick={() => setSelected(o.name)}
-            className={`block w-full truncate rounded px-2 py-1.5 text-left text-xs ${selected === o.name ? 'bg-amber-500/20 text-amber-200' : 'text-slate-300 hover:bg-white/10'}`}
+            className={`block w-full truncate rounded px-2 py-1.5 text-left text-xs ${selected === o.name ? 'bg-[var(--cad-hover)] text-[var(--cad-accent-ink)]' : 'text-[var(--cad-muted)] hover:bg-[var(--cad-hover)]'}`}
             title={o.name + ' · ' + o.type}>
             <span className={o.inPreview ? '' : 'opacity-45'}>{o.label}</span>
-            <span className="ml-1 text-[length:var(--text-xs)] text-slate-500">{o.type.replace(/^.*::/, '')}</span>
+            <span className="ml-1 text-[length:var(--text-xs)] text-[var(--cad-muted)]">{o.type.replace(/^.*::/, '')}</span>
           </button>)}
         </div>
       </aside>

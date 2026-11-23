@@ -1,5 +1,6 @@
 import {createThreeViewport,createStudioTextures,createProceduralPbrMaterial,PROCEDURAL_PBR_MATERIAL_MAP,CAD_MATERIAL_PRESET_MAP,isSoftwareWebGLRenderer} from '@inneranimalmedia/agentsam-3d-viewer';
 import {trackCadRenderer} from '../lib/cad/scene-performance';
+import {readCadTheme} from '../lib/cad-theme';
 import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ViewCube } from './ViewCube';
@@ -96,11 +97,12 @@ export const Viewport3D: React.FC<Props> = ({
   useEffect(() => {
     if (!mountRef.current) return;
     const container = mountRef.current;
+    const theme = readCadTheme(container);
     // One shared renderer lifecycle for BIM + DreamHouse world + SamSketch.
     // CAD owns camera modes and native geometry; viewer owns canvas, GPU and resizing.
     const viewport = createThreeViewport(container, {THREE}, {
       wrapper:false,controls:false,autoRender:false,lights:false,
-      fov:45,near:0.1,far:1000,maxPixelRatio:2,background:'#090d16',
+      fov:45,near:0.1,far:1000,maxPixelRatio:2,background:theme.background,
       preserveDrawingBuffer:true,
       shadowMap:{enabled:true,type:THREE.PCFShadowMap},
       toneMapping:THREE.ACESFilmicToneMapping,toneMappingExposure:1.0,
@@ -110,7 +112,7 @@ export const Viewport3D: React.FC<Props> = ({
     const renderer=viewport.renderer as unknown as THREE.WebGLRenderer;rendererRef.current=renderer;
 
     // Lighting setup
-    const hemiLight = new THREE.HemisphereLight('#ffffff', '#334155', 0.6);
+    const hemiLight = new THREE.HemisphereLight('#ffffff', theme.surface, 0.6);
     scene.add(hemiLight);
     hemiLightRef.current = hemiLight;
 
@@ -134,7 +136,7 @@ export const Viewport3D: React.FC<Props> = ({
     const groundSize = 60;
     const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: '#0b101b',
+      color: theme.surface,
       roughness: 0.9,
       metalness: 0.1,
     });
@@ -145,7 +147,7 @@ export const Viewport3D: React.FC<Props> = ({
     scene.add(ground);
     groundRef.current=ground;
 
-    const gridHelper = new THREE.GridHelper(50, 50, '#1e293b', '#0f172a');
+    const gridHelper = new THREE.GridHelper(50, 50, theme.line, theme.hover);
     gridHelper.position.y = 0;
     scene.add(gridHelper);
     gridRef.current=gridHelper;
@@ -251,7 +253,7 @@ export const Viewport3D: React.FC<Props> = ({
     sun.position.set(30*Math.cos(altitude)*Math.sin(azimuth), 30*Math.sin(altitude), 30*Math.cos(altitude)*Math.cos(azimuth));
     sun.color.set(lighting.sunColor); sun.intensity = lighting.intensity;
     hemi.color.set(lighting.ambientColor); hemi.groundColor.set(lighting.groundColor); hemi.intensity = lighting.ambientIntensity;
-    scene.background = new THREE.Color(lighting.skyVisible ? lighting.skyColor : '#090d16');
+    scene.background = new THREE.Color(lighting.skyVisible ? lighting.skyColor : readCadTheme(mountRef.current).background);
     sun.castShadow = lighting.shadows; sun.shadow.bias = lighting.shadowBias;
     renderer.shadowMap.enabled = lighting.shadows;
     const size = lighting.shadowQuality === 'low' ? 512 : lighting.shadowQuality === 'medium' ? 1024 : 2048;
@@ -498,7 +500,7 @@ export const Viewport3D: React.FC<Props> = ({
 
           const geo = new THREE.ShapeGeometry(shape);
           const mat = new THREE.MeshStandardMaterial({
-            color: '#334155',
+            color: readCadTheme(mountRef.current).accent,
             roughness: 0.8,
             side: THREE.DoubleSide,
           });
@@ -629,8 +631,8 @@ export const Viewport3D: React.FC<Props> = ({
   }, [cameraMode,showRoof,project.sceneSettings?.cameraFov,canEditScene]);
 
   return (
-    <div className="w-full h-full relative bg-[#121212] flex flex-col select-none overflow-hidden group">
-      {nativeStatus&&<div role="status" className="absolute bottom-3 left-3 z-20 text-xs bg-slate-950/80 text-slate-100 px-2 py-1">{nativeStatus}</div>}
+    <div className="w-full h-full relative bg-[var(--cad-bg)] flex flex-col select-none overflow-hidden group">
+      {nativeStatus&&<div role="status" className="absolute bottom-3 left-3 z-20 text-xs bg-[var(--cad-surface)] text-[var(--cad-ink)] px-2 py-1">{nativeStatus}</div>}
       {/* Main 3D Canvas Mounting Container */}
       <div
         ref={mountRef}
@@ -644,14 +646,14 @@ export const Viewport3D: React.FC<Props> = ({
       {/* First Person Crosshair and Navigation HUD */}
       {cameraMode === 'firstperson' && (
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="w-2 h-2 rounded-full bg-white/70 shadow-glow"></div>
+          <div className="w-2 h-2 rounded-full bg-[var(--cad-accent)] shadow-glow"></div>
 
           {fpHelp && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#252525] border border-[#333] px-3.5 py-1.5 rounded text-xs text-gray-300 flex items-center space-x-3 pointer-events-auto shadow-xl">
-              <span>Use <kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[length:var(--text-xs)]">W</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[length:var(--text-xs)]">A</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[length:var(--text-xs)]">S</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[length:var(--text-xs)]">D</kbd> or Arrows to walk</span>
-              <span className="text-gray-600">|</span>
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[var(--cad-surface)] border border-[var(--cad-line)] px-3.5 py-1.5 rounded text-xs text-[var(--cad-muted)] flex items-center space-x-3 pointer-events-auto shadow-xl">
+              <span>Use <kbd className="px-1.5 py-0.5 bg-[var(--cad-input)] border border-[var(--cad-line)] rounded font-mono text-[var(--cad-ink)] text-[length:var(--text-xs)]">W</kbd><kbd className="px-1.5 py-0.5 bg-[var(--cad-input)] border border-[var(--cad-line)] rounded font-mono text-[var(--cad-ink)] text-[length:var(--text-xs)]">A</kbd><kbd className="px-1.5 py-0.5 bg-[var(--cad-input)] border border-[var(--cad-line)] rounded font-mono text-[var(--cad-ink)] text-[length:var(--text-xs)]">S</kbd><kbd className="px-1.5 py-0.5 bg-[var(--cad-input)] border border-[var(--cad-line)] rounded font-mono text-[var(--cad-ink)] text-[length:var(--text-xs)]">D</kbd> or Arrows to walk</span>
+              <span className="text-[var(--cad-muted)]">|</span>
               <span>Click & Drag to Look</span>
-              <button onClick={() => setFpHelp(false)} className="text-gray-400 hover:text-white text-xs ml-2">✕</button>
+              <button onClick={() => setFpHelp(false)} className="text-[var(--cad-muted)] hover:text-[var(--cad-ink)] text-xs ml-2">✕</button>
             </div>
           )}
         </div>
@@ -686,7 +688,7 @@ function create3DFurnitureMesh(
   const d = (item.d || 36) * SCALE;
   const h = (item.h || 30) * SCALE;
 
-  const mainMat = getMaterial(item.material || 'furniture', item.materialPresetId ? undefined : item.color || '#334155', item.materialPresetId);
+  const mainMat = getMaterial(item.material || 'furniture', item.materialPresetId ? undefined : item.color, item.materialPresetId);
   const woodMat = getMaterial('wood_panel');
   const metalMat = getMaterial('steel');
 

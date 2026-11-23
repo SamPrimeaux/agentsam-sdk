@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
 import { CadResourceCard } from './CadResourceCard';
-import { CadPreview2D, CadPreview3DStatic } from './CadPreviewTreatments';
-import { TEMPLATE_METADATA_LIST } from '../lib/templates';
-import { cloneTemplateProject } from './TemplateStarterGrid';
+import { CadPreview3DStatic, CadPreview2D } from './CadPreviewTreatments';
+import { QuickAddPreview, categoryLabel, useQuickAddCatalog } from './quick-add';
+import type { QuickAddItem } from './quick-add/types';
+import { loadStudioProjectTemplate } from '../lib/studio-template-source';
 
 export type CadGalleryHostedProject = { id: string; name: string };
 export type CadGalleryLocalSnapshot = { id: string; name: string; date: string; state: ProjectState };
@@ -22,10 +23,6 @@ interface Props {
 
 type Filter = 'all' | 'projects' | 'revisions' | 'starters';
 
-/**
- * Polished CAD Creator entry/gallery surface.
- * Hosted projects use lightweight 3D treatments; local snapshots and templates use real 2D schematics.
- */
 export function CadProjectGallery({
   mode = 'mixed',
   hostedProjects = [],
@@ -35,19 +32,35 @@ export function CadProjectGallery({
   onOpenLocal,
   onStartTemplate,
   onOpenBimLibrary,
-  emptyHint = 'Open a registered CAD project or start from a drafting template.',
+  emptyHint = 'Open a registered CAD project or start from a registered studio template.',
 }: Props) {
   const [filter, setFilter] = useState<Filter>('all');
-  const featuredTemplates = useMemo(() => TEMPLATE_METADATA_LIST.slice(0, 4), []);
+  const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const catalog = useQuickAddCatalog(true);
+  const featuredTemplates = useMemo(() => catalog.items.filter(item => item.tab === 'templates'), [catalog.items]);
 
   const showProjects = filter === 'all' || filter === 'projects';
   const showRevisions = filter === 'all' || filter === 'revisions';
   const showStarters = filter === 'all' || filter === 'starters';
-
   const hasAnything =
     (showProjects && hostedProjects.length > 0) ||
     (showRevisions && localSnapshots.length > 0) ||
-    (showStarters && (featuredTemplates.length > 0 || !!onOpenBimLibrary));
+    (showStarters && (featuredTemplates.length > 0 || catalog.status === 'loading' || !!onOpenBimLibrary));
+
+  const startTemplate = async (item: QuickAddItem) => {
+    if (!onStartTemplate) return;
+    setLoadingTemplateId(item.id);
+    setTemplateError(null);
+    try {
+      const project = await loadStudioProjectTemplate(item);
+      onStartTemplate(project, item.title);
+    } catch (error) {
+      setTemplateError(error instanceof Error ? error.message : 'The registered template could not be loaded.');
+    } finally {
+      setLoadingTemplateId(null);
+    }
+  };
 
   return (
     <div className="cad-project-gallery" aria-label="CAD Creator projects and revisions">
@@ -62,15 +75,9 @@ export function CadProjectGallery({
             ['all', 'All'],
             ['projects', 'Projects'],
             ['revisions', 'Revisions'],
-            ['starters', 'Starters'],
+            ['starters', 'Templates'],
           ] as const).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={filter === id}
-              onClick={() => setFilter(id)}
-            >
+            <button key={id} type="button" role="tab" aria-selected={filter === id} onClick={() => setFilter(id)}>
               {label}
             </button>
           ))}
@@ -81,52 +88,58 @@ export function CadProjectGallery({
         <p className="cad-project-gallery__empty" role="status">{emptyHint}</p>
       ) : (
         <div className="cad-project-gallery__grid">
-          {showProjects &&
-            hostedProjects.map((item) => (
-              <CadResourceCard
-                key={`hosted-${item.id}`}
-                title={item.name}
-                category="Registered BIM"
-                meta={`Project · ${item.id.slice(0, 12)}${item.id.length > 12 ? '…' : ''}`}
-                previewKind="model-3d"
-                selected={selectedHostedId === item.id}
-                preview={<CadPreview3DStatic seed={item.id} label={item.name} walls={10} rooms={4} />}
-                openLabel="Open project"
-                onOpen={onOpenHosted ? () => onOpenHosted(item.id) : undefined}
-              />
-            ))}
+          {showProjects && hostedProjects.map((item) => (
+            <CadResourceCard
+              key={`hosted-${item.id}`}
+              title={item.name}
+              category="Registered BIM"
+              meta={`Project · ${item.id.slice(0, 12)}${item.id.length > 12 ? '…' : ''}`}
+              previewKind="model-3d"
+              selected={selectedHostedId === item.id}
+              preview={<CadPreview3DStatic seed={item.id} label={item.name} walls={10} rooms={4} />}
+              openLabel="Open project"
+              onOpen={onOpenHosted ? () => onOpenHosted(item.id) : undefined}
+            />
+          ))}
 
-          {showRevisions &&
-            localSnapshots.map((snap) => (
-              <CadResourceCard
-                key={`local-${snap.id}`}
-                title={snap.name}
-                category="Local revision"
-                meta={`${snap.date} · ${snap.state.walls.length} walls · ${snap.state.rooms.length} spaces`}
-                previewKind="plan-2d"
-                preview={<CadPreview2D project={snap.state} />}
-                openLabel="Restore"
-                onOpen={onOpenLocal ? () => onOpenLocal(snap.state) : undefined}
-              />
-            ))}
+          {showRevisions && localSnapshots.map((snap) => (
+            <CadResourceCard
+              key={`local-${snap.id}`}
+              title={snap.name}
+              category="Local revision"
+              meta={`${snap.date} · ${snap.state.walls.length} walls · ${snap.state.rooms.length} spaces`}
+              previewKind="plan-2d"
+              preview={<CadPreview2D project={snap.state} />}
+              openLabel="Restore"
+              onOpen={onOpenLocal ? () => onOpenLocal(snap.state) : undefined}
+            />
+          ))}
 
-          {showStarters &&
-            onStartTemplate &&
-            featuredTemplates.map((tpl) => (
-              <CadResourceCard
-                key={`tpl-${tpl.id}`}
-                title={tpl.name}
-                category={tpl.categoryLabel}
-                meta={`${tpl.dimensions} · ${tpl.project.walls.length} walls · ${tpl.project.rooms.length} zones`}
-                previewKind="plan-2d"
-                preview={<CadPreview2D project={tpl.project} />}
-                openLabel="Use template"
-                secondaryLabel="2D preview"
-                onOpen={() => onStartTemplate(cloneTemplateProject(tpl), tpl.name)}
-              />
-            ))}
+          {showStarters && catalog.status === 'loading' && (
+            <p className="cad-project-gallery__empty" role="status">Loading registered studio templates…</p>
+          )}
+          {showStarters && catalog.status === 'error' && (
+            <div className="cad-project-gallery__empty" role="alert">
+              <p>{catalog.error || 'The studio template catalog is unavailable.'}</p>
+              <button type="button" onClick={catalog.refresh}>Retry catalog</button>
+            </div>
+          )}
+          {showStarters && templateError && <p className="cad-project-gallery__empty" role="alert">{templateError}</p>}
+          {showStarters && featuredTemplates.map((item) => (
+            <CadResourceCard
+              key={`tpl-${item.id}`}
+              title={item.title}
+              category={categoryLabel(item.category)}
+              meta={item.description}
+              previewKind="plan-2d"
+              preview={<QuickAddPreview item={item} />}
+              openLabel={loadingTemplateId === item.id ? 'Loading…' : 'Use template'}
+              secondaryLabel="Registered template"
+              onOpen={loadingTemplateId ? undefined : () => void startTemplate(item)}
+            />
+          ))}
 
-          {showStarters && onOpenBimLibrary ? (
+          {showStarters && onOpenBimLibrary && (
             <CadResourceCard
               title="Native BIM library"
               category="FreeCAD starters"
@@ -136,15 +149,15 @@ export function CadProjectGallery({
               openLabel="Browse BIM"
               onOpen={onOpenBimLibrary}
             />
-          ) : null}
+          )}
         </div>
       )}
 
-      {mode === 'hosted' && hostedProjects.length === 0 ? (
+      {mode === 'hosted' && hostedProjects.length === 0 && (
         <p className="cad-project-gallery__note">
-          No registered Work projects yet. Sign in and attach a CAD registry, or start from a template below.
+          No registered Work projects yet. Sign in and attach a CAD registry, or start from a registered studio template.
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

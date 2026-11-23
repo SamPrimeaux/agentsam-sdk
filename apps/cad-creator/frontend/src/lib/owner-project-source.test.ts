@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { loadOwnerDreamHouseProject, OWNER_DREAMHOUSE_PROJECT_ID } from './owner-project-source';
-import {createDreamHouseTerrainDocument,createTerrainDocument} from './world-terrain';
+import {createTerrainDocument} from './world-terrain';
 
 const endpoint = '/api/cad/project/tools/design_project_get';
 const project = { id: OWNER_DREAMHOUSE_PROJECT_ID, name: 'DreamHouse V1', walls: [{ id: 'wall-1' }], rooms: [{ id: 'room-1' }] };
@@ -10,7 +10,7 @@ describe('owner DreamHouse source', () => {
     const fetcher = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, result: { project, revision: 3 } }) });
     const loaded=await loadOwnerDreamHouseProject(fetcher as unknown as typeof fetch);
     expect(loaded).toMatchObject(project);
-    expect(loaded.sceneSettings?.terrain).toEqual(createDreamHouseTerrainDocument());
+    expect(loaded.sceneSettings?.terrain).toBeUndefined();
     expect(fetcher).toHaveBeenCalledWith(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
