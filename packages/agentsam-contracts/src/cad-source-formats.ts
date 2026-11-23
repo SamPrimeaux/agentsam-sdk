@@ -185,7 +185,7 @@ export async function runCadFormatOperation(input: {
       || !adapter.formatIds.includes(targetId) || !adapter.operations.includes(input.operation)) continue;
     if (adapter.ready && await adapter.ready() !== true) continue;
     const format: AgentSourceFormatReference = {
-      catalog: recognized.catalog, id: recognized.id, extension: recognized.extension,
+      catalog: recognized.catalog, id: targetId, extension: recognized.extension,
     };
     return { adapterId: adapter.id, format, output: await adapter.execute({
       operation: input.operation, format, source: input.source, options: input.options,
