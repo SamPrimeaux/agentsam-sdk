@@ -113,3 +113,32 @@ export async function pluginPackScopes(env, packs, providerKey = 'cloudflare') {
     return null;
   }
 }
+
+/**
+ * User-selectable Cloudflare OAuth packs from the installed plugin catalog.
+ * A pack description is NOT evidence that its scopes were granted to a user.
+ */
+export async function listProviderPluginPacks(env, providerKey = 'cloudflare') {
+  if (!env?.DB?.prepare) return null;
+  try {
+    const { results } = await env.DB.prepare(
+      "SELECT id, plugin_key, config_json FROM agentsam_plugins " +
+      "WHERE provider_key = ? AND plugin_kind = 'oauth'"
+    ).bind(providerKey).all();
+    const packs = [];
+    for (const row of results || []) {
+      let cfg;
+      try { cfg = JSON.parse(row.config_json || '{}'); } catch { continue; }
+      if (cfg?.pack !== true || typeof cfg.pack_id !== 'string' || !cfg.pack_id.trim()) continue;
+      const requestedScopes = [...new Set([
+        ...(Array.isArray(cfg.oauth_scopes) ? cfg.oauth_scopes : []),
+        ...(Array.isArray(cfg.oauth_scopes_edit) ? cfg.oauth_scopes_edit : []),
+      ].filter(scope => typeof scope === 'string' && scope.trim()))];
+      packs.push({
+        plugin_id:row.id,plugin_key:row.plugin_key,pack_id:cfg.pack_id,
+        requested_scopes:requestedScopes,
+      });
+    }
+    return packs.sort((a,b)=>a.pack_id.localeCompare(b.pack_id));
+  } catch { return null; }
+}
