@@ -107,7 +107,7 @@
         "sam.codebaseindex"
       ],
       "title": "AgentSam Codebaseindex",
-      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands — use agentsam codebaseindex / codebaseindex.ingest.",
+      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands \u2014 use agentsam codebaseindex / codebaseindex.ingest.",
       "entry": "agentsam-codebaseindex/SKILL.md",
       "references": [],
       "user_invocable": true
@@ -159,12 +159,17 @@
       "id": "agentsam-cad",
       "aliases": [
         "cad",
-        "blender"
+        "blender",
+        "occt"
       ],
       "title": "AgentSam CAD",
-      "description": "Typed-recipe Blender build, inspect, preview, and export with sha256 proof between steps.",
+      "description": "CAD end to end: pick the entry point, engine and lane; build, inspect, render and export; prove each step with hashes and receipts.",
       "entry": "agentsam-cad/SKILL.md",
-      "references": [],
+      "references": [
+        "agentsam-cad/references/engines-and-lanes.md",
+        "agentsam-cad/references/projects-and-operations.md",
+        "agentsam-cad/references/proof-and-triage.md"
+      ],
       "user_invocable": true
     },
     {
