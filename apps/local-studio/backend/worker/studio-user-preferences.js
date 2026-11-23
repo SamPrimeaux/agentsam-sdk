@@ -43,6 +43,61 @@ export async function handleStudioUserPreferences(request,env,accountId){
  return answer({ok:true,preferences:next.settings_general});
 }
 
+/**
+ * Account-owned New Tab appearance. Reuses agentsam_user_ui_preferences and
+ * preserves general settings, avatar and companion keys on every write.
+ * Wallpaper images are user-selected existing assets, not uploaded or fetched
+ * by this endpoint.
+ */
+const NEW_TAB_WALLPAPERS = new Set(['default','aurora','dusk','forest','graphite','photo']);
+function normalizeNewTabAppearance(value) {
+ const wallpaper = NEW_TAB_WALLPAPERS.has(value?.wallpaper) ? value.wallpaper : 'default';
+ const imageUrl = typeof value?.imageUrl === 'string' ? value.imageUrl : null;
+ return { wallpaper, imageUrl: wallpaper === 'photo' ? imageUrl : null };
+}
+function validNewTabImage(value) {
+ if (typeof value !== 'string' || !value || value.length > 1600 || /[\x00-\x1f\\"'<>]/.test(value))
+   return false;
+ if (/^\/(?!\/)/.test(value)) return /^\/(?:media|api\/media|assets|brand)\/[a-zA-Z0-9_./?&=%-]+$/.test(value) && !value.includes('..');
+ try {
+   const url = new URL(value);
+   return url.protocol === 'https:' && !url.username && !url.password;
+ } catch { return false; }
+}
+export async function handleStudioNewTabPreferences(request,env,accountId) {
+ if (!accountId) return answer({ok:false,error:'unauthorized'},401);
+ if (!env.DB?.prepare) return answer({ok:false,error:'preferences_unavailable'},503);
+ if (!['GET','PUT'].includes(request.method)) return answer({ok:false,error:'method_not_allowed'},405);
+ if (request.method === 'PUT') {
+   if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin)
+     return answer({ok:false,error:'origin_not_allowed'},403);
+   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+     return answer({ok:false,error:'json_content_type_required'},415);
+   if (Number(request.headers.get('content-length')) > 2048)
+     return answer({ok:false,error:'preferences_invalid'},413);
+ }
+ const row = await env.DB.prepare('SELECT ui_preferences_json FROM agentsam_user_ui_preferences WHERE account_id = ? LIMIT 1').bind(accountId).first();
+ const previous = decode(row?.ui_preferences_json);
+ if (request.method === 'GET')
+   return answer({ok:true,appearance:normalizeNewTabAppearance(previous.new_tab)});
+ const raw = await request.text();
+ if (raw.length > 2048) return answer({ok:false,error:'preferences_invalid'},413);
+ let input;
+ try { input = JSON.parse(raw); } catch { return answer({ok:false,error:'preferences_invalid'},400); }
+ if (!input || typeof input !== 'object' || Array.isArray(input) ||
+     Object.keys(input).some(key=>!['wallpaper','imageUrl'].includes(key)) ||
+     !NEW_TAB_WALLPAPERS.has(input.wallpaper) ||
+     (input.wallpaper === 'photo' && !validNewTabImage(input.imageUrl)) ||
+     (input.wallpaper !== 'photo' && input.imageUrl != null && input.imageUrl !== ''))
+   return answer({ok:false,error:'preferences_invalid'},400);
+ const next = normalizeNewTabAppearance(input);
+ await env.DB.prepare('INSERT INTO agentsam_user_ui_preferences (account_id,ui_preferences_json,updated_at) ' +
+  'VALUES (?,?,unixepoch()) ON CONFLICT(account_id) DO UPDATE SET ' +
+  'ui_preferences_json=excluded.ui_preferences_json,updated_at=unixepoch()')
+  .bind(accountId,JSON.stringify({...previous,new_tab:next})).run();
+ return answer({ok:true,appearance:next});
+}
+
 /** Per-authenticated-user avatar preference. Reuses the existing JSON preferences row. */
 function normalizeAccountAvatar(value) {
  if(value == null || value === "") return null;

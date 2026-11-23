@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {listAccountWidgets, installAccountWidget, changeAccountWidget, removeAccountWidget, handleAccountWidgetsRequest} from './account-widgets.js';
+import {listAccountWidgets, installAccountWidget, changeAccountWidget, removeAccountWidget, reorderAccountWidgets, handleAccountWidgetsRequest} from './account-widgets.js';
 
 function fixture() {
   const sqlite = new DatabaseSync(':memory:');
@@ -93,4 +93,32 @@ test('HTTP widget endpoints enforce authorization, origin, request schema, and r
   assert.equal((await handleAccountWidgetsRequest(req('POST',{...body('clock'),extra:true}),db,'alice')).status,400);
   assert.equal((await handleAccountWidgetsRequest(req('PATCH',{...body('clock'),pinned:true}),db,'alice')).status,404);
   assert.equal((await handleAccountWidgetsRequest(req('POST',body('clock'),'https://evil.example'),db,'alice')).status,403);
+});
+
+test('atomic reorder preserves the caller account and pinned segment', async () => {
+  const {db,sqlite} = fixture();
+  for (const key of ['countdown','clock','queues']) await installAccountWidget(db, 'alice', body(key));
+  for (const key of ['countdown','clock']) await installAccountWidget(db, 'bob', body(key));
+  await changeAccountWidget(db,'alice',{...body('queues'),pinned:true});
+  const reordered = await reorderAccountWidgets(db,'alice',{surface:'agentsam_stage',order:['queues','clock','countdown']});
+  assert.deepEqual(reordered.order,['queues','clock','countdown']);
+  const alice = sqlite.prepare("SELECT i.widget_key,l.order_index FROM agentsam_widget_installations i JOIN agentsam_widget_layouts l ON l.installation_id=i.id WHERE i.account_id='alice' ORDER BY l.order_index").all();
+  const bob = sqlite.prepare("SELECT i.widget_key,l.order_index FROM agentsam_widget_installations i JOIN agentsam_widget_layouts l ON l.installation_id=i.id WHERE i.account_id='bob' ORDER BY l.order_index").all();
+  assert.deepEqual(alice.map(row=>row.widget_key),['queues','clock','countdown']);
+  assert.deepEqual(bob.map(row=>row.order_index),[0,1]);
+  await assert.rejects(()=>reorderAccountWidgets(db,'alice',{surface:'agentsam_stage',order:['clock','queues','countdown']}),/widget_order_pin_boundary/);
+  await assert.rejects(()=>reorderAccountWidgets(db,'alice',{surface:'agentsam_stage',order:['clock','countdown']}),/widget_order_stale/);
+  await assert.rejects(()=>reorderAccountWidgets(db,'alice',{surface:'agentsam_stage',order:['queues','clock','clock']}),/widget_order_invalid/);
+  const unchanged = sqlite.prepare("SELECT i.widget_key FROM agentsam_widget_installations i JOIN agentsam_widget_layouts l ON l.installation_id=i.id WHERE i.account_id='alice' ORDER BY l.order_index").all();
+  assert.deepEqual(unchanged.map(row=>row.widget_key),['queues','clock','countdown']);
+});
+
+test('reorder endpoint enforces authorization, origin and JSON',async()=>{
+  const {db}=fixture();
+  await installAccountWidget(db,'alice',body('clock'));
+  const order={surface:'agentsam_stage',order:['clock']};
+  const req=(origin)=>new Request('https://host.example/api/widgets',{method:'PUT',headers:{origin,'content-type':'application/json'},body:JSON.stringify(order)});
+  assert.equal((await handleAccountWidgetsRequest(req('https://host.example'),db,null)).status,401);
+  assert.equal((await handleAccountWidgetsRequest(req('https://evil.example'),db,'alice')).status,403);
+  assert.equal((await handleAccountWidgetsRequest(req('https://host.example'),db,'alice')).status,200);
 });

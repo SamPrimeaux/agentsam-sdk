@@ -36,7 +36,7 @@
   "assets": {
     "binding": "ASSETS",
     "directory": "../.output/public",
-    "run_worker_first": ["/start", "/start/*", "/", "/home", "/home/*", "/site/*", "/privacy", "/privacy/*", "/terms", "/terms/*", "/sitemap", "/sitemap/*", "/sitemap.xml", "/robots.txt", "/themes/*", "/admin", "/admin/*", "/public-sites/*", "/api/admin/agentsam/*", "/api/widgets", "/ecommerce-cms-agentsam/admin/login*", "/sites", "/samsketch", "/samspeaks", "/api/samspeaks/*", "/projects", "/projects/*", "/learn", "/learn/*", "/docs", "/docs/*", "/packages/sdk/*"]
+    "run_worker_first": ["/start", "/start/*", "/", "/home", "/home/*", "/site/*", "/privacy", "/privacy/*", "/terms", "/terms/*", "/sitemap", "/sitemap/*", "/sitemap.xml", "/robots.txt", "/themes/*", "/admin", "/admin/*", "/public-sites/*", "/api/admin/agentsam/*", "/api/widgets", "/api/settings/new-tab", "/ecommerce-cms-agentsam/admin/login*", "/sites", "/samsketch", "/samspeaks", "/api/samspeaks/*", "/projects", "/projects/*", "/learn", "/learn/*", "/docs", "/docs/*", "/packages/sdk/*"]
   },
   "vars": {
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",

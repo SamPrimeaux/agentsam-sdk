@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { AdminAppMark, type AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
-import { ChevronDown, FolderGit2, FolderOpen, Globe, LayoutGrid, Pin, PinOff, Plug, X } from "lucide-react";
+import { ChevronDown, FolderGit2, FolderOpen, Globe, LayoutGrid, Paintbrush, Pin, PinOff, Plug, X } from "lucide-react";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
@@ -23,6 +23,18 @@ import { reloadSideStageRegistry, useSideStageRegistry, type SideStageAction } f
 import { settingsPaneLabel } from "@/components/settings/settingsPaneLabel";
 import { PluginLogo, StageIcon, pluginLogoUrl, themeIsDarkNow } from "./stage-icons";
 import { NewTabWidgets } from "./new-tab-widgets";
+import { DEFAULT_NEW_TAB_APPEARANCE, loadNewTabAppearance, saveNewTabAppearance,
+  type NewTabAppearance, type NewTabWallpaper } from "@/lib/widgets/new-tab-appearance";
+import "./new-tab-appearance.css";
+
+const WALLPAPER_CHOICES: {id:NewTabWallpaper; title:string}[] = [
+  {id:'default',title:'System'},
+  {id:'aurora',title:'Aurora'},
+  {id:'dusk',title:'Dusk'},
+  {id:'forest',title:'Forest'},
+  {id:'graphite',title:'Graphite'},
+];
+
 
 const START_CHIPS = [
   { id: "code", label: "Code", prefix: null },
@@ -90,6 +102,28 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
   const { apps, loaded: appsLoaded, error: appsError, reload: reloadApps } = useAccountApps();
   const { plugins, loaded: pluginsLoaded, error: pluginsError, reload: reloadPlugins } = useAccountPlugins();
   const [history, setHistory] = useState<BrowserHistoryEntry[] | null>(null);
+  const [appearance,setAppearance] = useState<NewTabAppearance>(DEFAULT_NEW_TAB_APPEARANCE);
+  const [appearanceOpen,setAppearanceOpen] = useState(false);
+  const [appearanceSaving,setAppearanceSaving] = useState(false);
+  const [appearanceError,setAppearanceError] = useState<string | null>(null);
+  const [imageUrlInput,setImageUrlInput] = useState("");
+  useEffect(() => {
+    let cancelled=false;
+    setAppearance(DEFAULT_NEW_TAB_APPEARANCE);
+    void loadNewTabAppearance().then(value=>{
+      if(!cancelled){setAppearance(value);setImageUrlInput(value.imageUrl??"");}
+    }).catch(()=>{if(!cancelled)setAppearanceError("Wallpaper preferences unavailable.");});
+    return ()=>{cancelled=true;};
+  },[user?.id]);
+  const changeAppearance = async (value:NewTabAppearance) => {
+    if(appearanceSaving)return;
+    setAppearanceSaving(true);
+    setAppearanceError(null);
+    try {setAppearance(await saveNewTabAppearance(value));}
+    catch(error){setAppearanceError(error instanceof Error ? error.message.replaceAll("_"," ") : "Could not save wallpaper.");}
+    finally{setAppearanceSaving(false);}
+  };
+
 
   useEffect(() => { void loadBrowserHistory(8).then(setHistory); }, []);
 
@@ -160,11 +194,49 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
   const groupLabel = (text: string) => <div className="px-2 pb-0.5 pt-1.5 text-[10px] uppercase tracking-wide text-muted-foreground/80">{text}</div>;
 
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto" data-testid="new-tab-stage">
-      <div className="mx-auto flex max-w-3xl flex-col gap-7 px-4 py-6">
+    <div className="as-new-tab-stage scrollbar-thin h-full overflow-y-auto" data-testid="new-tab-stage"
+      data-wallpaper={appearance.wallpaper}
+      style={{'--new-tab-photo': 'url(' + JSON.stringify(appearance.imageUrl || '') + ')'} as CSSProperties}>
+      <div className="relative mx-auto flex max-w-3xl flex-col gap-7 px-4 py-6">
         <header>
-          <h2 className="text-lg font-semibold">{greeting}</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">Start something, open a tool, or pick up where you left off.</p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold">{greeting}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">Start something, open a tool, or pick up where you left off.</p>
+            </div>
+            <Button type="button" size="sm" variant="outline" aria-expanded={appearanceOpen}
+              onClick={()=>setAppearanceOpen(value=>!value)}>
+              <Paintbrush className="size-3.5" /> Customize
+            </Button>
+          </div>
+          {appearanceOpen && <section aria-label="Customize New Tab" className="mt-3 rounded-2xl border border-border bg-card/95 p-3 shadow-sm">
+            <div className="mb-2 text-xs font-medium">Wallpaper</div>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,6.5rem),1fr))] gap-2">
+              {WALLPAPER_CHOICES.map(choice=><button key={choice.id} type="button"
+                aria-pressed={appearance.wallpaper===choice.id} disabled={appearanceSaving}
+                onClick={()=>void changeAppearance({wallpaper:choice.id,imageUrl:null})}
+                className={cn("flex min-w-0 flex-col gap-1 rounded-xl border p-1.5 text-left text-xs transition-colors hover:border-primary/60",
+                  appearance.wallpaper===choice.id ? "border-primary ring-1 ring-primary" : "border-border")}>
+                <span aria-hidden="true" className={cn("as-wallpaper-swatch block h-12 w-full rounded-lg","as-wallpaper-"+choice.id)} />
+                <span className="px-1 pb-1">{choice.title}</span>
+              </button>)}
+            </div>
+            <label htmlFor="new-tab-image-url" className="mt-3 block text-xs font-medium">Your image</label>
+            <p className="mt-1 text-[11px] text-muted-foreground">Use an existing media-library image URL. No extra file storage is created.</p>
+            <div className="mt-2 flex min-w-0 flex-wrap gap-2">
+              <input id="new-tab-image-url" type="text" autoComplete="off" value={imageUrlInput}
+                onChange={event=>setImageUrlInput(event.target.value)}
+                placeholder="https://… or /media/…" maxLength={1600}
+                className="h-9 min-w-0 flex-[1_1_10rem] rounded-lg border border-border bg-background px-3 text-xs text-foreground" />
+              <Button type="button" size="sm" variant="secondary"
+                disabled={appearanceSaving || !imageUrlInput.trim()}
+                onClick={()=>void changeAppearance({wallpaper:'photo',imageUrl:imageUrlInput.trim()})}>
+                Use image
+              </Button>
+            </div>
+            {appearanceError && <p role="alert" className="mt-2 text-xs text-destructive">{appearanceError}</p>}
+          </section>}
+          <p aria-live="polite" className="sr-only">{appearanceSaving ? "Saving wallpaper" : ""}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {START_CHIPS.map((chip) => (
               <Button key={chip.id} type="button" size="sm" variant="chip" onClick={() => startChip(chip)}>{chip.label}</Button>

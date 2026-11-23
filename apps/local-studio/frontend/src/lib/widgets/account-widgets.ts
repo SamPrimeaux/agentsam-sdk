@@ -25,7 +25,7 @@ type Patch = Partial<Pick<AccountWidget, 'pinned' | 'hidden' | 'orderIndex'>> & 
   configuration?: Record<string, unknown>;
 };
 
-async function widgetRequest<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', data?: object, surface: AccountWidgetSurface = 'agentsam_stage'): Promise<T> {
+async function widgetRequest<T>(method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', data?: object, surface: AccountWidgetSurface = 'agentsam_stage'): Promise<T> {
   const response = await fetch(method === 'GET' ? '/api/widgets?surface=' + encodeURIComponent(surface) : '/api/widgets', {
     method,
     credentials: 'same-origin',
@@ -53,4 +53,10 @@ export async function updateAccountWidget(key: string, patch: Patch, surface: Ac
 }
 export async function uninstallAccountWidget(key: string, surface: AccountWidgetSurface = 'agentsam_stage') {
   await widgetRequest('DELETE', { key, surface });
+}
+
+
+/** Atomic full-order persistence; preserve pinned grouping and saved sizes. */
+export async function reorderAccountWidgets(order: string[], surface: AccountWidgetSurface = 'agentsam_stage') {
+  await widgetRequest('PUT', { surface, order });
 }

@@ -189,11 +189,50 @@ export async function removeAccountWidget(db, accountId, body) {
   ).bind(accountId,key,surface).run();
   return { key, surface, removed: Boolean(result?.meta?.changes) };
 }
+/**
+ * Persist a complete visible New Tab order in one SQL statement. The account/
+ * surface predicate prevents ordering another user's installations; pins stay
+ * grouped before non-pinned cards as in the current Workbench presentation.
+ */
+export async function reorderAccountWidgets(db, accountId, body) {
+  if (!db?.prepare || !accountId) throw Error('widget_context_missing');
+  if (!body || typeof body !== 'object' || Array.isArray(body) ||
+      Object.keys(body).some(k => !['surface','order'].includes(k)))
+    throw Error('widget_request_invalid');
+  const surface = safeSurface(body.surface);
+  const order = body.order;
+  if (!Array.isArray(order) || order.length > 50 || order.some(key => typeof key !== 'string' || !KEY_RE.test(key)) ||
+      new Set(order).size !== order.length) throw Error('widget_order_invalid');
+  const { results = [] } = await db.prepare(
+    "SELECT widget_key, pinned FROM agentsam_widget_installations WHERE account_id = ? AND surface = ? AND instance_key = 'default' AND enabled = 1 AND hidden = 0"
+  ).bind(accountId, surface).all();
+  if (results.length !== order.length || order.some(key => !results.some(row => row.widget_key === key)))
+    throw Error('widget_order_stale');
+  const pinned = new Set(results.filter(row => row.pinned).map(row => row.widget_key));
+  let unpinnedSeen = false;
+  for (const key of order) {
+    if (!pinned.has(key)) unpinnedSeen = true;
+    else if (unpinnedSeen) throw Error('widget_order_pin_boundary');
+  }
+  if (!order.length) return { surface, order: [] };
+  // One UPDATE makes swaps and longer drag moves atomic; no transient duplicate
+  // ranks, unlike independent PATCH requests from the old up/down buttons.
+  const caseExpr = order.map(() => 'WHEN ? THEN ?').join(' ');
+  await db.prepare(
+    'UPDATE agentsam_widget_layouts SET order_index = (' +
+    'SELECT CASE widget_key ' + caseExpr + ' ELSE agentsam_widget_layouts.order_index END ' +
+    'FROM agentsam_widget_installations WHERE id = agentsam_widget_layouts.installation_id' +
+    '), updated_at = unixepoch() WHERE breakpoint = ? AND installation_id IN (' +
+    "SELECT id FROM agentsam_widget_installations WHERE account_id = ? AND surface = ? AND instance_key = 'default' AND enabled = 1 AND hidden = 0)"
+  ).bind(...order.flatMap((key, i) => [key, i]), 'base', accountId, surface).run();
+  return { surface, order };
+}
+
 export async function handleAccountWidgetsRequest(request, db, accountId) {
   if (!accountId) return fail('unauthorized',401);
   if (!db?.prepare) return fail('widgets_unavailable',503);
   const method = request.method.toUpperCase();
-  if (!['GET','POST','PATCH','DELETE'].includes(method)) return fail('method_not_allowed',405);
+  if (!['GET','POST','PATCH','DELETE','PUT'].includes(method)) return fail('method_not_allowed',405);
   const url = new URL(request.url);
   if (method !== 'GET') {
     if (request.headers.get('origin') && request.headers.get('origin') !== url.origin)
@@ -211,15 +250,16 @@ export async function handleAccountWidgetsRequest(request, db, accountId) {
     if (raw.length > MAX_BODY) return fail('widget_request_invalid',413);
     const body = JSON.parse(raw);
     const result = method === 'POST' ? await installAccountWidget(db,accountId,body)
+      : method === 'PUT' ? await reorderAccountWidgets(db,accountId,body)
       : method === 'PATCH' ? await changeAccountWidget(db,accountId,body)
       : await removeAccountWidget(db,accountId,body);
     return respond({ok:true,...result},method === 'POST'?201:200);
   } catch (error) {
     const code = String(error?.message ?? 'widget_request_failed');
     const invalid = code.startsWith('widget_') && (
-      code.endsWith('_invalid') || code === 'widget_not_ready' || code === 'widget_not_installed' || code === 'widget_not_found');
+      code.endsWith('_invalid') || code === 'widget_order_stale' || code === 'widget_order_pin_boundary' || code === 'widget_not_ready' || code === 'widget_not_installed' || code === 'widget_not_found');
     const status = code === 'widget_not_installed'||code === 'widget_not_found' ? 404 :
-      code === 'widget_not_ready' ? 409 : invalid || error instanceof SyntaxError ? 400 : 503;
+      code === 'widget_not_ready' || code === 'widget_order_stale' ? 409 : invalid || error instanceof SyntaxError ? 400 : 503;
     return fail(error instanceof SyntaxError ? 'widget_request_invalid' :
       status === 503 ? 'widget_request_failed' : code,status);
   }
