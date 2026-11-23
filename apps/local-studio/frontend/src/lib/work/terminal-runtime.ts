@@ -400,28 +400,10 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   const isHostedWeb = !tauriInvoke && !isLoopbackBrowser;
   const terminalSession = activeTerminalSession();
 
-  if (!project0) {
-    term.writeln("No authorized workspace selected.");
-    term.writeln("Connect a host project (agentsam start-local) before opening Terminal.");
-    useTerminalSessionStore.getState().patchSession(sessionId, {
-      state: "disconnected",
-      runtimeLabel: "No workspace",
-      error: "workspace_required",
-    });
-    return {
-      sessionId,
-      term,
-      fit,
-      run: async () => {
-        term.writeln("Connect an authorized workspace to run a real PTY.");
-      },
-      host: null,
-      park,
-      observer: null,
-      refCount: 0,
-      getProject,
-    };
-  }
+  // Terminal authorization is machine/session-scoped. A project grants filesystem
+  // access and a preferred cwd; it is not required to open a shell on a paired host.
+  // The authenticated terminal/connect endpoint (or native agentsamd pairing) still
+  // enforces the runtime grant. Never substitute a virtual shell for a missing grant.
 
   type HostedTerminalConnect = {
     ok?: boolean;
@@ -466,8 +448,8 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   }
 
   // Direct loopback probing is only valid for desktop/local-browser hosts.
-  let runtimeBase = project0.runtimeBaseUrl;
-  let runtimeCap = project0.runtimeCapability;
+  let runtimeBase = project0?.runtimeBaseUrl;
+  let runtimeCap = project0?.runtimeCapability;
   if (!runtimeBase && !isHostedWeb) {
     try {
       const probe = await fetch("http://127.0.0.1:3099/health", { signal: AbortSignal.timeout(800) });
@@ -513,13 +495,13 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     (
       Boolean(runtimeBase) &&
       Boolean(runtimeCap) &&
-      (project0.kind === "filesystem" || Boolean(runtimeBase))
+      (project0?.kind === "filesystem" || Boolean(runtimeBase))
     );
 
   if (isHostedWeb && !useRealPty) {
     const detail = hostedConnectError || "terminal_connection_missing";
-    term.writeln("No runtime connected.");
-    term.writeln(`Connect or enroll a runtime to use Terminal in Web Local Studio.  ·  ${detail}`);
+    term.writeln("Unable to connect to an authorized runtime.");
+    term.writeln(`Use Machines & Runtimes to select or enroll a machine, then retry.  ·  ${detail}`);
     useTerminalSessionStore.getState().patchSession(sessionId, {
       state: "disconnected",
       runtimeLabel: "No runtime connected",
@@ -540,7 +522,30 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     };
   }
 
-  if (project0.kind === "filesystem" && !useRealPty) {
+  if (!project0 && !useRealPty) {
+    term.writeln("No authorized terminal runtime is connected.");
+    term.writeln("Open Machines & Runtimes to connect a computer, then retry Terminal.");
+    useTerminalSessionStore.getState().patchSession(sessionId, {
+      state: "disconnected",
+      runtimeLabel: "Runtime connection required",
+      error: "terminal_runtime_required",
+    });
+    return {
+      sessionId,
+      term,
+      fit,
+      run: async () => {
+        term.writeln("Connect an authorized runtime to open a real PTY.");
+      },
+      host: null,
+      park,
+      observer: null,
+      refCount: 0,
+      getProject,
+    };
+  }
+
+  if (project0?.kind === "filesystem" && !useRealPty) {
     term.writeln("Filesystem workspace requires a live local runtime + capability.");
     term.writeln("Run `agentsam start-local` from the workspace root, then reopen this project.");
     term.writeln("Virtual shell is disabled for filesystem projects (no silent fallback).");
@@ -565,7 +570,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     const persistedCwd = activeTerminalSession().cwd;
     let resolvedCwd =
       hostedConnect?.cwd ||
-      project0.workspaceRoot ||
+      project0?.workspaceRoot ||
       (persistedCwd && persistedCwd !== "/" ? persistedCwd : "");
     if (!resolvedCwd && usingAgentsamd) {
       const nativeContext = await getDesktopWorkspaceContext();
@@ -587,7 +592,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       term.writeln(
         `PTY attach failed: ${err instanceof Error ? err.message : String(err)}.`,
       );
-      if (isHostedWeb || project0.kind === "filesystem") {
+      if (isHostedWeb || project0?.kind === "filesystem") {
         term.writeln(
           isHostedWeb
             ? "Hosted Web Terminal requires a connected runtime; no virtual shell fallback is allowed."
