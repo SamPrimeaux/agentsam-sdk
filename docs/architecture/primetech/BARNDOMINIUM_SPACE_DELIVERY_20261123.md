@@ -1,5 +1,14 @@
 # Barndominium Starter Kit — Space, artifact, and native BIM handoff
 
+## Production publication completed (2026-11-23)
+
+- **Platform R2**: \`cad/library/bim-starters/barndominium/v1.1/owner-review/\` contains ten checksum-verified objects, including the exact 184,774-byte original owner-review ZIP, 312,077-byte HTML Space, one 45,840-byte WebP thumbnail, issue/room/systems CSVs, READMEs and the published-last \`manifest.json\`.
+- **D1 reusable Space**: \`studio_templates.id='tpl_barndominium_space_v11'\`, SKU \`SAM-SPACE-BARNDOMINIUM-V11\`, \`resource_kind='space_template'\`, **status \`active\`** (concept/presentation only).
+- **D1 native BIM candidate**: \`studio_templates.id='tpl_barndominium_bim_starter'\`, SKU \`SAM-BIM-BARNDOMINIUM-STARTER\`, \`resource_kind='bim_starter'\`, **status \`draft\`**; there is no verified editable FreeCAD/IFC geometry yet.
+- **Object registry**: ten \`r2_objects\` rows (\`inventory_source='publisher'\`) with verified SHA256, linked by ten \`asset_relationships\` edges to the two catalog entries.
+- **Next-agent source**: \`docs/architecture/primetech/BARNDOMINIUM_BIM_BUILDOUT_RUNBOOK_20261123.md\` and corresponding R2 \`NEXT_AGENT_BUILDOUT.md\`. Finish all geometric assemblies, interior details and BIM-derived schedules **before** activating native BIM.
+- This production D1/R2 registration is live **independently of** the PR's application code. Current app UI may not display a new native BIM launcher until that runtime integration ships.
+
 ## Source classification (2026-11-23)
 
 The owner's uploaded \`barndominium-starter-kit.zip\` contains a **single self-contained HTML Space** plus README, not a FreeCAD/IFC/STEP/DXF native CAD deliverable. The Space has 16 conceptual SVG-generated drawing sheets, original concept JPEG, room hotspots, doors/windows/materials, a 36-item construction sequence, and 17 allowance categories. The source itself clearly states that the documents are not stamped construction drawings. Do not register or advertise this as a native editable BIM file.
@@ -25,7 +34,7 @@ Platform stock uses \`r2_storage_routes\` app-purpose routing; current first-par
 
 1. Import the user-owned HTML Space as a private \`agentsam_artifacts\` deliverable and link it to the conversation/run. Preserve the original file and its provenance. Generated \`zip\` is a deliverable, not a canonical native BIM source.
 2. Refine the existing Space into a design-development review: source/assumption ledger, area and room data, coordinated drawings, electrical/plumbing/HVAC device schedules, door/window hardware and procurement schedules, validation report, remaining RFIs and local approvals. Every unresolved spec remains \`TBD\` rather than fabricated.
-3. After native project source and geometry are actually produced and validated, publish the reusable BIM starter as a **new** \`studio_templates\` entry: \`app_id='shared'\`, \`resource_kind='bim_starter'\`, \`category='bim-starters'\`, e.g. SKU \`SAM-BIM-BARNDOMINIUM-STARTER\`. Status remains \`draft\` until the R2 payload, checksum, thumbnail, FreeCAD source and GLB are verified.
+3. After native project source and geometry are actually produced and validated, **promote the existing draft BIM row** in \`studio_templates\`: \`app_id='shared'\`, \`resource_kind='bim_starter'\`, \`category='bim-starters'\`, SKU \`SAM-BIM-BARNDOMINIUM-STARTER\`. Status remains \`draft\` until the R2 payload, checksum, thumbnail, FreeCAD source and GLB are verified.
 4. Use the existing \`cad\` R2 bucket, immutable prefix \`library/bim-starters/barndominium/v1/\`. Publish \`manifest.json\` **last**. Recommended objects: \`source.FCStd\`, \`preview.glb\`, \`thumbnail.webp\`, \`drawings/\`, \`coordination/\`, and \`delivery.zip\`. Keep the account-specific review Space under private Artifacts, not public platform stock.
 5. Use \`agentsam.cad.bim-starter.v1\` manifest conventions: original source SHA256, preview derived-from SHA256, object hierarchy, verified export relationships, source format, validation outputs. Instantiation must copy the source into an account-owned project and must never edit the shared stock source.
 6. Chat → existing agent run status → verified artifact card → existing Side Stage open → authenticated ZIP download. The card should display real title/type/status/thumbnail, avoid overlays on mobile, and offer rename/move-to-Library and edit only when authorized.
