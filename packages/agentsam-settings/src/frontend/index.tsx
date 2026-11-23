@@ -983,7 +983,7 @@ function PluginCustomizeView({
         {workspaceError ? <p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">
           {workspaceError}. Reconnect the plugin or verify the registered context tool.
         </p> : null}
-        {workspace && !workspaceError ? (
+        {workspace && !workspaceError ? (isBrand ? <BrandPluginWorkspace data={data} /> :
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
               <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
