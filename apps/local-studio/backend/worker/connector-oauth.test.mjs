@@ -27,7 +27,7 @@ function fakeDb() {
               log.push({ sql, args });
               if (/^INSERT INTO oauth_state_nonces/.test(sql)) {
                 nonce = { id: args[0], user_id: args[1], provider: args[2], state_hash: args[3],
-                  code_verifier_encrypted: args[4], redirect_after: args[5], expires_at: args[7], consumed_at: null };
+                  code_verifier_encrypted: args[4], redirect_after: args[5], metadata_json:args[6], expires_at: args[7], consumed_at: null };
               }
               if (/^INSERT INTO user_oauth_tokens/.test(sql)) grantPersisted = true;
               if (/^UPDATE oauth_state_nonces SET consumed_at/.test(sql)) {
@@ -296,4 +296,39 @@ test("plugin resolver does not invent OAuth for unknown or non-OAuth plugin IDs"
   const response=await handleConnectorWorkRequest(
     post('/api/work/connect/plugins/'+plugin.id+'/start'),e,'au_test');
   assert.equal(response.status,404);
+});
+
+test('Drive reconnect retains the selected account full-drive permission instead of downgrading to drive.file',async()=>{
+  const e=env();
+  const old=e.DB.prepare.bind(e.DB);
+  e.DB.prepare=(sql)=>{
+    if(sql.includes('SELECT scopes FROM user_oauth_tokens WHERE account_id=?'))return {
+      bind:(owner,provider,account)=>({first:async()=>owner==='au_test'&&provider==='google_drive'&&account==='connected@example.com'
+        ? {scopes:'https://www.googleapis.com/auth/drive'} : null}),
+    };
+    if(sql.includes('SELECT scope FROM agentsam_provider_scopes'))return {
+      all:async()=>({results:[
+        {scope:'https://www.googleapis.com/auth/drive'},
+        {scope:'https://www.googleapis.com/auth/drive.file'},
+      ]}),
+    };
+    return old(sql);
+  };
+  const response=await beginConnectorOAuth(post('/api/work/connect/google_drive/start',{
+    return_to:'/admin/agentsam',connection_id:'google_drive:connected@example.com',
+  }),e,'au_test','google_drive');
+  assert.equal(response.status,200);
+  const data=await response.json();
+  const url=new URL(data.authorize_url);
+  const scopes=url.searchParams.get('scope').split(' ');
+  assert.ok(scopes.includes('https://www.googleapis.com/auth/drive'));
+  assert.ok(scopes.includes('https://www.googleapis.com/auth/drive.file'));
+  assert.ok(!scopes.includes('https://www.googleapis.com/auth/calendar.events'));
+});
+test('OAuth account mismatch cannot inherit unrelated provider permissions',async()=>{
+  const response=await beginConnectorOAuth(post('/api/work/connect/google_drive/start',{
+    connection_id:'github:connected@example.com',
+  }),env(),'au_test','google_drive');
+  assert.equal(response.status,503);
+  assert.equal((await response.json()).error,'oauth_account_provider_mismatch');
 });
