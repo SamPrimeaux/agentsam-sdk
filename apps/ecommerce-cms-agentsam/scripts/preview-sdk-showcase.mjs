@@ -16,7 +16,7 @@ const port=Number(process.env.PORT||4327);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.json':'application/json','.woff2':'font/woff2'};
 const storefrontManifestPaths=[
  path.join(root,'agentsam.app.json'),
- path.join(root,'apps/resend/agentsam.app.json')
+ path.join(root,'apps/resend/agentsam.package.json')
 ];
 let themeStoreProductsPromise=null;
 const getThemeStoreProducts=()=>{

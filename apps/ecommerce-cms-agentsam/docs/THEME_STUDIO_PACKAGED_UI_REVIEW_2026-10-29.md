@@ -11,7 +11,7 @@ This uses the packaged frontend/static/theme-editor.html and original theme-edit
 ## Scoped enhancements made in place
 - Page dropdown searches existing authorized CMS page matches directly and retains category browsing. No new preset or automatic template creation.
 - Theme Settings retains the CmsThemeSettings bridge. Additional fields for logo/favicon, page width, reduced motion, input radius, modal placement, and icon style are stored in the existing design draft object. Installed-theme rendering for these metadata keys is not yet asserted.
-- App Embeds now lists the five manifest-defined types: announcement bar/popup, contact form, email subscriptions, and newsletter popup. Build-generated catalog derives from agentsam.app.json and apps/resend/agentsam.app.json.
+- App Embeds now lists the five manifest-defined types: announcement bar/popup, contact form, email subscriptions, and newsletter popup. Build-generated catalog derives from agentsam.app.json and apps/resend/agentsam.package.json.
 - Right inspector preview edits copy, placement, triggers, colors, form fields, required flags, double opt-in, and modal/form validation in memory only. No installation, D1 write, email submission, provider connection or persisted embed configuration.
 - Copy preview JSON is not brought into merchant UI. Resolve showcase remains independent.
 

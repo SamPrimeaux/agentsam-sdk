@@ -38,7 +38,7 @@ test("Navigation projection points Media at the library tree", () => {
   assert.match(nav, /id:'media',label:'Library',href:'\/media'/);
   assert.match(nav, /href:'\/media\/images'/);
   assert.match(nav, /href:'\/media\/videos'/);
-  assert.match(nav, /agentsam-copro-studio': \{ href: '\/admin\/moviemode'/);
+  assert.match(nav, /moviemode': \{ href: '\/admin\/moviemode'/);
   assert.match(nav, /aliases: \[\]/);
 });
 
