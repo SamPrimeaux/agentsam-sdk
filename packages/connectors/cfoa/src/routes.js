@@ -18,7 +18,7 @@ import {
 } from './index.js';
 import { cloudflareMediaConnectUrl, discoverCloudflareMedia, listCloudflareR2Objects } from './families/media.js';
 import { resolveAuthenticatedOwner } from './owner.js';
-import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, pluginPackScopes, listProviderScopeOptions, listProviderPluginPacks } from './scope-registry.js';
+import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, pluginPackScopes, listProviderScopeOptions, listProviderPluginPacks, scopesForFullCatalogOptIn } from './scope-registry.js';
 import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
 
 const OAUTH_STATE_PROVIDER = 'cloudflare';
@@ -438,16 +438,29 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const registryExtra = [];
     for (const id of capabilitySet) {
       const fromRegistry = await registryScopesForCapability(env, id);
+      if (requested.includes(id) && !fromRegistry) {
+        return json({ok:false,error:'cloudflare_capability_unavailable',capability:id},400);
+      }
       if (fromRegistry) registryExtra.push(...fromRegistry);
     }
     const requestedScopes = requestedCloudflareScopes({
       capabilities: capabilitySet,
       packs: requestedPacks,
     });
-    const alreadyGranted = await activeGrantedScopes(env, ownerId);
-    // Pack scopes are declared by the plugin rows (agentsam_plugins.config_json); code catalog is the fallback.
+    // Do not import another Cloudflare account's latest scopes. Carry forward
+    // only grants on the explicitly selected (or preferred) account.
+    const selectedAccountId=String(url.searchParams.get('account_id')||'').trim();
+    const existingConnection=await loadCloudflareConnectionRecord(env,ownerId,
+      selectedAccountId?{connectionId:selectedAccountId}:{}).catch(()=>null);
+    const alreadyGranted=existingConnection && !existingConnection.account_selection_required
+      ? await activeGrantedScopes(env,ownerId,'cloudflare',existingConnection.connectionId)
+      : [];
+    // Plugin-scoped feature packs come from agentsam_plugins. The explicit
+    // 'all' choice must include all 374 live D1 permissions, not 315 static ones.
     const packScopes = (await pluginPackScopes(env, requestedPacks)) || [];
-    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra, ...packScopes])]);
+    const allScopes = await scopesForFullCatalogOptIn(env, requestedPacks);
+    if (allScopes === null) return json({ok:false,error:'cloudflare_full_permission_registry_unavailable'},503);
+    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra, ...packScopes, ...allScopes])]);
     const saved = await saveOAuthState(env, {
       state,
       ownerId,
