@@ -2387,7 +2387,7 @@ function DesignView({snapshot,host}:{
             Your Brand plugin is connected, but the identity has not been defined and approved. Inspect actual brand evidence, draft the contract, review it, and explicitly save the approved version.
           </p>
           <p className="mt-2 text-[11px] text-muted-foreground">Connected evidence sources: {sourceCount}. No identity attributes have been invented.</p>
-          {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
+          {host.openPluginWorkspace || host.openSettingsUnit ? <button type="button" onClick={()=>host.openPluginWorkspace ? host.openPluginWorkspace("agentsam-brand") : host.openSettingsUnit?.("customize")}
             className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Brand workspace →</button>:null}
         </div>
         :<div className="space-y-4">
