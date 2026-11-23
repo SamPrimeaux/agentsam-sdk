@@ -9,8 +9,10 @@ const cad = path.join(repo, 'apps/cad-creator');
 
 test('CAD included app lockfile supports clean release npm ci', () => {
   // CI ordinarily runs SDK verification without rebuilding bundled apps.
-  // This offline dry-run checks npm's actual package-lock consistency rules,
+  // This dry-run checks npm's actual package-lock consistency rules,
   // so a broken CAD install cannot first surface during a production deploy.
+  // Prefer cached packages, but allow registry lookup on cold CI runners:
+  // --offline can fail ENOTCACHED for a valid, published dependency.
   const result = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', [
     'ci', '--dry-run', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
     '--fetch-retries=0',
