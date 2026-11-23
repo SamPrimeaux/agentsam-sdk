@@ -48,5 +48,6 @@ test('SamScene sky controls drive the real 3D ground, ambient/key lighting, fog 
   assert.match(world, /environment\?\.fogColor\?\?skyConfig\.horizonHex/);
   assert.doesNotMatch(world, /color:0x202935|#e2ecff|#fff1d3|#9fc9ff/);
   assert.match(panel, /label="Exposure"/);
+  assert.match(panel, /const fogColor=environment\?\.fogColor\?\?sky\?\.bottom\?\?defaults\.fogColor/);
   assert.match(editor, /"exposure"/);
 });
