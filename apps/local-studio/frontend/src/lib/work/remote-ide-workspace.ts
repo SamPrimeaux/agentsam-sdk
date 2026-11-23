@@ -1,5 +1,5 @@
 /** Remote sources use the shared IDE's FileWorkspace contract, not a new editor. */
-import type { FileWorkspace, WorkspaceEntry, WorkspaceFile } from '@inneranimalmedia/agentsam-ide/workspace';
+import { toWorkspaceChanges, type FileWorkspace, type WorkspaceEntry, type WorkspaceFile } from '@inneranimalmedia/agentsam-ide/workspace';
 import { languageFromPath } from '@/lib/utils';
 import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from '@/lib/desktop/tauri';
 
@@ -8,11 +8,14 @@ export type IDESourceDiscovery = {
   googleDrive: Array<{account:string;label:string}>;
   github: Array<{account:string;label:string}>;
   cloudflare: Array<{account:string;label:string;scopes:string[]}>;
+  connectionPlugins: { googleDrive: string|null; github: string|null; cloudflare: string|null };
 };
 type RemoteEntry = {id:string; name:string; kind:'file'|'folder'; mimeType?:string; size?:number; readonly?:boolean; canEdit?:boolean};
 type RemoteListing = {ok:true;entries:RemoteEntry[];nextPageToken?:string|null;cursor?:string|null;truncated?:boolean};
 type RemoteFile = {ok:true;file:{id:string;name:string;content:string;version:string;readonly:boolean;mimeType?:string;note?:string}};
 type Repositories = {ok:true;repositories:Array<{fullName:string;defaultBranch:string;private:boolean;canPush:boolean}>;nextPage?:number|null;truncated?:boolean};
+type GithubBranches = {ok:true;branches:Array<{name:string;protected:boolean}>;nextPage?:number|null;truncated?:boolean};
+type GithubChanges = {ok:true;base:string;branch:string;files:Array<{path:string;status:string;previous_path?:string|null;sha?:string|null}>};
 type Buckets = {ok:true;buckets:Array<{name:string;jurisdiction:string}>;cursor?:string|null};
 type Containers = {ok:true;applications:Array<{id:string;name:string;instances?:unknown}>;filesystemAvailable:false;note:string};
 type ErrorResponse = {ok:false;error:string};
@@ -36,6 +39,9 @@ export function discoverIDESources(){return remoteIdeRequest<IDESourceDiscovery>
 export function listIDEGithubRepos(account:string,page=1) {
   return remoteIdeRequest<Repositories>('/api/work/ide/github/repos?'+new URLSearchParams({account,page:String(page)}));
 }
+export function listIDEGithubBranches(account:string,repo:string,page=1) {
+  return remoteIdeRequest<GithubBranches>('/api/work/ide/github/branches?'+new URLSearchParams({account,repo,page:String(page)}));
+}
 export function listIDER2Buckets(account:string) {
   return remoteIdeRequest<Buckets>('/api/work/ide/r2/buckets?account='+encodeURIComponent(account));
 }
@@ -43,7 +49,7 @@ export function listIDEContainers(account:string) {
   return remoteIdeRequest<Containers>('/api/work/ide/containers/applications?account='+encodeURIComponent(account));
 }
 
-export type RemoteIDESelection = {source:'drive'|'r2'|'github';account:string;bucket?:string;jurisdiction?:string;repository?:string;branch?:string;canPush?:boolean};
+export type RemoteIDESelection = {source:'drive'|'r2'|'github';account:string;bucket?:string;jurisdiction?:string;repository?:string;branch?:string;baseBranch?:string;canPush?:boolean};
 function safeSegment(name:string) {
   const plain=name.replace(/[\\/<>{}:|?*"\x00-\x1f]/g,'_');
   return encodeURIComponent(plain).slice(0,90);
@@ -127,8 +133,23 @@ export function createRemoteIDEWorkspace(selection:RemoteIDESelection):FileWorks
       }catch(error){const code=error instanceof Error?error.message:'github_write_failed';
         return {ok:false,code,message:code==='version_conflict'?'GitHub file changed; compare and reload before saving.':code};}
     },
+    ...(selection.source==='github' && selection.baseBranch ? {
+      async changes() {
+        const params=new URLSearchParams({
+          account:selection.account,repo:selection.repository||'',
+          branch:selection.branch||'',base:selection.baseBranch||'',
+        });
+        const result=await remoteIdeRequest<GithubChanges>(base+'changes?'+params);
+        return toWorkspaceChanges({files:result.files});
+      },
+    } : {}),
     async create(){return disabled();},async rename(){return disabled();},async delete(){return disabled();},
     async search(){return disabled();},async history(){return disabled();},async restore(){return disabled();},
-    configuration:{readonly:selection.source==='r2'||(selection.source==='github'&&!selection.canPush),manualSave:selection.source==='drive'},
+    configuration:{
+      readonly:selection.source==='r2'||(selection.source==='github'&&!selection.canPush),
+      manualSave:selection.source==='drive',
+      capabilities:{create:false,rename:false,delete:false,search:false,history:false,restore:false,
+        changes:selection.source==='github'&&Boolean(selection.baseBranch),snapshot:false},
+    },
   };
 }

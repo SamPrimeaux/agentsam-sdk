@@ -41,7 +41,9 @@ test('real repo: included apps resolve from their own manifests', () => {
   assert.equal(movie.kind, 'app');
   assert.equal(plans.find(p => p.id === 'samspeaks')?.owner_app_id, 'moviemode');
   assert.deepEqual(movie.command.slice(-1), ['--base=/moviemode/']);
-  assert.ok(movie.output.endsWith(path.join('moviemode', 'dist')));
+  assert.ok(movie.output.endsWith(path.join('agentsam-copro-studio', 'dist')));
+  assert.equal(movie.publicMounts.length, 1);
+  assert.equal(movie.publicMounts[0].url, '/primetech/experience/');
 });
 
 test('a new app needs only an embed block — no host code change', () => {
@@ -69,6 +71,16 @@ test('embed paths cannot escape the app directory', () => {
     () => plan({ foo: { schema: 'agentsam.app.v1', id: 'foo', name: 'Foo', kind: 'app', embed: embed('foo', { output: '../../etc' }) } }, ['foo']),
     /escapes its directory/,
   );
+});
+
+test('public experiences cannot publish root files or reserved application routes', () => {
+  const app = (from, to) => ({
+    schema: 'agentsam.app.v1', id: 'foo', name: 'Foo', kind: 'app',
+    embed: { ...embed('foo-ui'), public_mounts: [{ from, to }] },
+  });
+  for (const [from, to] of [['.', 'primetech'], ['assets/../../private', 'primetech'], ['tour', 'admin/tools'], ['tour', '../unsafe']]) {
+    assert.throws(() => plan({ foo: app(from, to) }, ['foo']), /invalid embed.public_mounts/);
+  }
 });
 
 test('two apps cannot claim the same stage', () => {
