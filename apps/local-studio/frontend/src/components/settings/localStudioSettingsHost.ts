@@ -57,9 +57,14 @@ import {
 import { projectSettingsStorageTargets, type CloudflareStorageDiscovery, type StorageSettingsResponse } from "@/lib/storage/settings-targets";
 import {
   listLocalStudioWidgets,
-  setLocalStudioWidgetVisible,
   subscribeLocalStudioWidgets,
 } from "@/lib/widgets/preferences";
+import {
+  loadAccountWidgets, installAccountWidget, uninstallAccountWidget,
+  updateAccountWidget, type AccountWidget,
+} from "@/lib/widgets/account-widgets";
+import { useWorkStore } from "@/lib/work/store";
+
 
 import { SETTINGS_CATALOG_CHANGED_EVENT, buildConnectionReturnUrl } from "@/lib/desktop/connection-deep-link";
 
@@ -145,24 +150,53 @@ function settingsPlugin(plugin: LocalStudioPluginRecord): SettingsPlugin {
   };
 }
 
-function settingsWidgets(): SettingsWidget[] {
-  return listLocalStudioWidgets().map((widget) => ({
+function settingsWidgets(catalog: AccountWidget[] | null = null): SettingsWidget[] {
+  const curated = listLocalStudioWidgets();
+  const curatedById = new Map(curated.map(widget => [widget.id, widget]));
+  if (!catalog) return curated.map(widget => ({
     id: widget.id,
     name: widget.title,
     description: widget.description || "",
     kind: widget.kind,
     icon: widget.icon || null,
     sizes: [...widget.sizes],
-    visible: widget.visible,
-    removable: widget.removable,
+    visible: false,
+    removable: false,
     source: widget.source,
-    preferenceScope: widget.preferenceScope,
-    deeplink: widget.deeplink || null,
+    preferenceScope: "Account widgets unavailable",
+    deeplink: null,
     category: widget.category,
     tags: [...(widget.tags ?? [])],
     availability: widget.availability,
     ownerPackage: widget.ownerPackage,
+    installed: false,
+    installable: false,
   }));
+  return catalog.map(widget => {
+    const definition = curatedById.get(widget.key);
+    return {
+      id: widget.key,
+      name: widget.title,
+      description: widget.description,
+      kind: definition?.kind ?? widget.key,
+      icon: widget.icon ?? definition?.icon ?? null,
+      sizes: widget.sizes,
+      visible: widget.installed && !widget.hidden,
+      removable: widget.installed,
+      source: widget.available ? 'Packaged Workbench widget' : 'Catalog concept · preview only',
+      preferenceScope: 'Your account · New Tab',
+      deeplink: null,
+      category: widget.category,
+      tags: [...(definition?.tags ?? [])],
+      availability: widget.available ? 'ready' as const : 'demo' as const,
+      ownerPackage: widget.ownerPackage ?? definition?.ownerPackage,
+      installed: widget.installed,
+      installable: widget.available,
+      pinned: widget.pinned,
+      sizeClass: widget.sizeClass,
+      configuration: widget.configuration,
+    };
+  });
 }
 
 /**
@@ -483,7 +517,10 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     ? signedIn ? "Connected account + local device" : "Local device"
     : "Web session";
   snapshot.general.project = workspace?.default_cwd || (desktop ? "Local workspace" : "Hosted workspace");
-  snapshot.widgets = settingsWidgets();
+  // The authenticated catalog and installation are the authority, not localStorage.
+  // Keep metadata previews available if the account service is offline.
+  const accountWidgets = desktop ? null : await loadAccountWidgets('agentsam_stage').catch(() => null);
+  snapshot.widgets = settingsWidgets(accountWidgets);
   snapshot.plugins = (pluginResult.value?.plugins||[]).map(settingsPlugin);
   snapshot.pluginsError = pluginResult.ok ? null : "Installed connections could not be verified. Try refreshing; existing authorizations are unchanged.";
   const machines = pluginResult.value?.machines;
@@ -753,14 +790,28 @@ export const localStudioSettingsHost: SettingsHost = {
     throw new Error("plugin_disconnect_unavailable");
   },
   async setWidgetVisible(id, visible) {
-    setLocalStudioWidgetVisible(id, visible);
+    await updateAccountWidget(id, {hidden: !visible});
+  },
+  async installWidget(id) {
+    await installAccountWidget(id);
+  },
+  async updateWidget(id, update) {
+    await updateAccountWidget(id, update);
+  },
+  async removeWidget(id) {
+    await uninstallAccountWidget(id);
   },
   openWidget(id) {
     if (typeof window === "undefined") return;
-    const widget = settingsWidgets().find((candidate) => candidate.id === id);
-    if (!widget?.deeplink) return;
+    // This action deliberately does not route through /admin/widgets.
+    // The installed widget is rendered in the existing Side Stage New Tab.
+    const state = useWorkStore.getState();
+    const existing = state.sideTabs.find(tab => tab.kind === "newtab");
+    if (existing) state.setActiveSideTab(existing.id);
+    else state.openSideTab("newtab", { ephemeral: false });
+    state.setSideOpen(true);
     window.dispatchEvent(
-      new CustomEvent("agentsam:navigate", { detail: { to: widget.deeplink } }),
+      new CustomEvent("agentsam:navigate", { detail: { to: "/admin/agentsam" } }),
     );
   },
   async upsertCatalogItem(kind, item) {

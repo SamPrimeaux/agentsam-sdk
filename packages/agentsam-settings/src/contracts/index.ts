@@ -275,6 +275,12 @@ export type SettingsWidget = {
   tags?: string[];
   availability?: "ready" | "demo";
   ownerPackage?: string;
+  /** Account-backed New Tab installation, never a local demo toggle. */
+  installed?: boolean;
+  installable?: boolean;
+  pinned?: boolean;
+  sizeClass?: string;
+  configuration?: Record<string, unknown>;
 };
 
 export type SettingsCatalogKind =
@@ -537,6 +543,11 @@ export interface SettingsHost {
   beginPluginSetup?(id: string, options?: {allowWrites?: boolean;fullCloudflareAccess?:boolean}): Promise<void>;
   disconnectPlugin?(id: string): Promise<void>;
   setWidgetVisible?(id: string, visible: boolean): Promise<void>;
+  /** Installed for the account's AgentSam New Tab. */
+  installWidget?(id: string): Promise<void>;
+  updateWidget?(id: string, update: {
+    pinned?: boolean; sizeClass?: string; configuration?: Record<string, unknown>;
+  }): Promise<void>;
   openWidget?(id: string): void;
   removeWidget?(id: string): Promise<void>;
   activateTheme?(id: string): Promise<void>;

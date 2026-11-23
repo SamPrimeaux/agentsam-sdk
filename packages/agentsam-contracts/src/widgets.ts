@@ -32,6 +32,8 @@ export interface AgentSamWidgetDefinition {
   availability?: 'ready' | 'demo';
   /** Proposed package authority for graduating a donor widget. */
   ownerPackage?: string;
+  /** Stable compiled renderer ID; catalog values never become dynamic imports. */
+  componentKey?: string;
   data?: AgentSamWidgetDataSource;
   /** Route key or host-resolved deep link. Do not put credentials or raw provider secrets here. */
   deeplink?: string;

@@ -1,0 +1,10 @@
+/* Widget layout follows the Side Stage's actual inline size, not the browser viewport. */
+.as-new-tab-widgets {
+  container-type: inline-size;
+  min-width: 0;
+}
+@container (min-width: 700px) {
+  .as-new-tab-widget--large {
+    grid-column: span 2;
+  }
+}

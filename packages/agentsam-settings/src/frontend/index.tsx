@@ -1445,6 +1445,8 @@ function WidgetCustomizeView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [mutating, setMutating] = useState(false);
+  const [widgetError, setWidgetError] = useState<string | null>(null);
   const selected = widgets.find((widget) => widget.id === selectedId) ?? null;
   const ready = widgets.filter((widget) => widget.availability !== "demo").length;
   const previewCount = widgets.length - ready;
@@ -1456,6 +1458,7 @@ function WidgetCustomizeView({
     { id: "navigation", label: "Navigation" },
     { id: "content", label: "Content" },
     { id: "weather", label: "Weather" },
+    { id: "inbox", label: "Storefront" },
   ];
   const filtered = useMemo(() => widgets.filter((widget) => {
     if (activeCategory !== "all" && widget.category !== activeCategory) return false;
@@ -1465,10 +1468,23 @@ function WidgetCustomizeView({
       .some((value) => value.toLowerCase().includes(query));
   }), [widgets, activeCategory, searchTerm]);
 
+  async function perform(action: () => Promise<void>) {
+    if (mutating) return;
+    setMutating(true);
+    setWidgetError(null);
+    try {
+      await action();
+      await onChanged();
+    } catch (error) {
+      setWidgetError(error instanceof Error ? error.message.replaceAll("_", " ") : "Couldn’t update your widget.");
+    } finally {
+      setMutating(false);
+    }
+  }
+
   async function setVisible(visible: boolean) {
-    if (!selected || selected.availability === "demo" || !host.setWidgetVisible) return;
-    await host.setWidgetVisible(selected.id, visible);
-    await onChanged();
+    if (!selected?.installed || !host.setWidgetVisible) return;
+    await perform(() => host.setWidgetVisible!(selected.id, visible));
   }
 
   const categoryLabel = (id: string | undefined) =>
@@ -1477,12 +1493,12 @@ function WidgetCustomizeView({
   return (
     <>
       <section className="space-y-6 pb-8">
-        <div className="relative overflow-hidden rounded-[22px] border border-border/70 bg-gradient-to-br from-muted/50 via-background to-violet-500/[0.055] p-5 sm:p-7">
-          <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-violet-500/[0.085] blur-3xl" />
+        <div className="relative overflow-hidden rounded-[22px] border border-border/70 bg-gradient-to-br from-muted/50 via-background to-primary/[0.055] p-5 sm:p-7">
+          <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-primary/[0.085] blur-3xl" />
           <div className="relative flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-xl">
               <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                <Boxes className="size-3.5 text-violet-400" /> Workbench collection
+                <Boxes className="size-3.5 text-primary" /> Workbench collection
               </div>
               <h2 className="text-[24px] font-semibold tracking-[-0.045em] sm:text-[28px]">Your widget library</h2>
               <p className="mt-2 max-w-lg text-[12px] leading-[1.7] text-muted-foreground">
@@ -1508,7 +1524,7 @@ function WidgetCustomizeView({
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search widgets or capabilities"
-                className="h-10 w-full rounded-xl border border-border/80 bg-background/70 pl-10 pr-3 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-violet-400/70 focus:ring-2 focus:ring-violet-400/10"
+                className="h-10 w-full rounded-xl border border-border/80 bg-background/70 pl-10 pr-3 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/70 focus:ring-2 focus:ring-primary/10"
               />
             </label>
             <span className="text-[11px] text-muted-foreground">{filtered.length} of {widgets.length} widgets</span>
@@ -1534,19 +1550,19 @@ function WidgetCustomizeView({
         </div>
 
         {filtered.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-3">
             {filtered.map((widget) => {
               const demo = widget.availability === "demo";
               return (
                 <button
                   type="button"
                   key={widget.id}
-                  onClick={() => setSelectedId(widget.id)}
-                  className="group min-w-0 overflow-hidden rounded-[19px] border border-border/75 bg-background/65 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_38px_-22px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                  onClick={() => {setSelectedId(widget.id);setWidgetError(null);}}
+                  className="group min-w-0 overflow-hidden rounded-[19px] border border-border/75 bg-background/65 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_38px_-22px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label={`Preview ${widget.name}${demo ? " concept" : " widget"}`}
                 >
-                  <div className="relative h-[158px] overflow-hidden border-b border-border/60 bg-gradient-to-br from-muted/50 via-muted/20 to-violet-400/[0.075] px-5 py-4">
-                    <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-violet-400/[0.07] blur-2xl" />
+                  <div className="relative h-[158px] overflow-hidden border-b border-border/60 bg-gradient-to-br from-muted/50 via-muted/20 to-primary/[0.075] px-5 py-4">
+                    <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-primary/[0.07] blur-2xl" />
                     <div className="relative h-full"><WidgetGalleryPreview id={widget.id} /></div>
                   </div>
                   <div className="space-y-2 p-4">
@@ -1559,14 +1575,14 @@ function WidgetCustomizeView({
                         "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium",
                         demo ? "border-border bg-muted/45 text-muted-foreground" : "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
                       )}>
-                        {demo ? "Concept" : "Ready"}
+                        {demo ? "Concept" : widget.installed ? "Installed" : "Ready"}
                       </span>
                     </div>
                     <p className="line-clamp-2 min-h-[31px] text-[10px] leading-[1.55] text-muted-foreground">{widget.description}</p>
                     <div className="flex items-center justify-between border-t border-border/60 pt-2.5">
-                      <span className="text-[10px] text-muted-foreground">{demo ? "Sample preview" : widget.visible ? "Visible in Utilities" : "Hidden in Utilities"}</span>
+                      <span className="text-[10px] text-muted-foreground">{demo ? "Sample preview" : widget.installed ? "Installed on New Tab" : widget.installable ? "Click to install" : "Installation unavailable"}</span>
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-foreground/80">
-                        Explore <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                        {demo ? "Explore" : widget.installed ? "Manage" : "Install"} <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                       </span>
                     </div>
                   </div>
@@ -1594,7 +1610,7 @@ function WidgetCustomizeView({
       >
         {selected ? (
           <div className="space-y-5">
-            <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/45 to-violet-400/[0.06] p-5">
+            <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/45 to-primary/[0.06] p-5">
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{selected.availability === 'demo' ? 'Design preview' : 'Live widget'}</span>
                 <span className="rounded-full border border-border bg-background/75 px-2 py-0.5 text-[9px] text-muted-foreground">
@@ -1604,18 +1620,59 @@ function WidgetCustomizeView({
               <div className="mx-auto min-h-40 max-w-sm">{selected.availability === 'demo' ? <WidgetGalleryPreview id={selected.id} interactive /> : <div className="agentsam-widget"><BuiltinWidget widgetId={selected.id} /></div>}</div>
             </div>
             <div className="rounded-lg border border-border/70 px-3">
-              <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not yet installed" : "Ready to use"} />
+              <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not installable" : selected.installed ? "Installed on your New Tab" : selected.installable ? "Ready to install" : "Installation service unavailable"} />
               <PreferenceRow label="Category" description="Widget library grouping." value={categoryLabel(selected.category)} />
               {selected.ownerPackage ? <PreferenceRow label="Proposed owner" description="Target package authority for this widget." value={selected.ownerPackage} /> : null}
               <PreferenceRow label="Sizes" description="Supported presentation sizes." value={selected.sizes.join(", ")} />
               {selected.availability !== "demo" ? (
                 <>
-                  <PreferenceRow label="Preference scope" description="Where the current visibility choice is stored." value={selected.preferenceScope} />
-                  <PreferenceRow
-                    label="Visible"
-                    description="Show this widget in the Utilities surface."
-                    trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
-                  />
+                  <PreferenceRow label="Saved to" description="Where your widget installation and layout live." value={selected.preferenceScope} />
+                  {selected.installed && host.setWidgetVisible ? (
+                    <PreferenceRow label="Shown on New Tab"
+                      description="Hide the widget without uninstalling it."
+                      trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
+                    />
+                  ) : null}
+                  {selected.installed && host.updateWidget ? (
+                    <>
+                      <PreferenceRow label="Pinned"
+                        description="Keep this widget ahead of unpinned widgets."
+                        trailing={<Toggle enabled={Boolean(selected.pinned)}
+                          onChange={value => void perform(() => host.updateWidget!(selected.id, {pinned:value}))} />}
+                      />
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 py-3">
+                        <label htmlFor="widget-size" className="text-[12px] font-medium text-foreground">Widget size</label>
+                        <select id="widget-size" value={selected.sizeClass || selected.sizes[0] || "small"}
+                          disabled={mutating}
+                          onChange={event => void perform(() => host.updateWidget!(selected.id, {sizeClass:event.target.value}))}
+                          className="rounded-lg border border-border bg-background px-3 py-2 text-[12px]">
+                          {selected.sizes.map(size => <option key={size} value={size}>{size}</option>)}
+                        </select>
+                      </div>
+                      {selected.id === "countdown" && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 py-3">
+                          <label htmlFor="widget-duration" className="text-[12px] font-medium text-foreground">Countdown duration</label>
+                          <select id="widget-duration" disabled={mutating}
+                            value={Number(selected.configuration?.durationMs ?? 300000)}
+                            onChange={event => void perform(() => host.updateWidget!(selected.id, {configuration:{durationMs:Number(event.target.value)}}))}
+                            className="rounded-lg border border-border bg-background px-3 py-2 text-[12px]">
+                            {[5,15,25,45,60].map(minutes => <option key={minutes} value={minutes*60000}>{minutes} min</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {selected.id === "clock" && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 py-3">
+                          <label htmlFor="widget-timezone" className="text-[12px] font-medium text-foreground">Time zone</label>
+                          <select id="widget-timezone" disabled={mutating}
+                            value={String(selected.configuration?.timeZone ?? "UTC")}
+                            onChange={event => void perform(() => host.updateWidget!(selected.id, {configuration:{timeZone:event.target.value}}))}
+                            className="max-w-[65%] rounded-lg border border-border bg-background px-3 py-2 text-[12px]">
+                            {[...new Set([String(selected.configuration?.timeZone ?? "UTC"),"UTC","America/Chicago","America/New_York","America/Los_Angeles","Europe/London","Asia/Tokyo"])].map(zone => <option key={zone} value={zone}>{zone}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </>
+                  ) : null}
                 </>
               ) : (
                 <p className="py-3 text-[11px] leading-relaxed text-muted-foreground">
@@ -1623,14 +1680,28 @@ function WidgetCustomizeView({
                 </p>
               )}
             </div>
+            {widgetError ? <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-[12px] text-destructive">{widgetError}</p> : null}
             <div className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
-              {selected.availability !== "demo" && host.openWidget ? (
-                <button type="button" onClick={() => host.openWidget?.(selected.id)} className="h-9 rounded-lg bg-foreground px-4 text-[11px] font-medium text-background">Open widget</button>
+              {selected.availability !== "demo" && !selected.installed && host.installWidget ? (
+                <button type="button" disabled={mutating || !selected.installable}
+                  onClick={() => void perform(() => host.installWidget!(selected.id))}
+                  className="h-9 rounded-lg bg-primary px-4 text-[11px] font-medium text-primary-foreground disabled:opacity-40">
+                  {mutating ? "Installing…" : "Install to New Tab"}
+                </button>
               ) : null}
-              {selected.availability !== "demo" && host.setWidgetVisible ? (
-                <button type="button" onClick={() => void setVisible(!selected.visible)} className="h-9 rounded-lg border border-border px-4 text-[11px] hover:bg-muted">{selected.visible ? "Hide widget" : "Show widget"}</button>
+              {selected.installed && host.openWidget ? (
+                <button type="button" onClick={() => host.openWidget?.(selected.id)}
+                  className="h-9 rounded-lg bg-primary px-4 text-[11px] font-medium text-primary-foreground">Open New Tab</button>
               ) : null}
-              <button type="button" onClick={() => setSelectedId(null)} className="h-9 rounded-lg border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Close preview</button>
+              {selected.installed && host.removeWidget ? (
+                <button type="button" disabled={mutating}
+                  onClick={() => void perform(() => host.removeWidget!(selected.id))}
+                  className="h-9 rounded-lg border border-border px-4 text-[11px] hover:bg-muted disabled:opacity-40">
+                  Remove widget
+                </button>
+              ) : null}
+              <button type="button" onClick={() => setSelectedId(null)}
+                className="h-9 rounded-lg border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Close</button>
             </div>
           </div>
         ) : null}

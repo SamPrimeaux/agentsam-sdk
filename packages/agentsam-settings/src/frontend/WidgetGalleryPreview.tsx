@@ -39,9 +39,9 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
   const bars = (values: number[]) => (
     <div className="flex h-[76px] items-end gap-1.5">
       {values.map((value, index) => (
-        <div key={index} className="min-w-0 flex-1 rounded-t-[4px] bg-violet-400/15">
+        <div key={index} className="min-w-0 flex-1 rounded-t-[4px] bg-primary/15">
           <div
-            className="rounded-t-[4px] bg-violet-400/75"
+            className="rounded-t-[4px] bg-primary/75"
             style={{ height: value + "%", minHeight: 8, marginTop: (100 - value) * 0.52 }}
           />
         </div>
@@ -60,7 +60,7 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
   const row = (name: string, right?: string, icon?: "check" | "activity") => (
     <div className="flex items-center justify-between gap-3 border-b border-foreground/5 py-2 last:border-b-0">
       <div className="flex min-w-0 items-center gap-2">
-        {icon === "check" ? <Check className="size-3 shrink-0 text-emerald-400" /> : icon === "activity" ? <Activity className="size-3 shrink-0 text-violet-400" /> : <span className="size-1.5 shrink-0 rounded-full bg-violet-400/70" />}
+        {icon === "check" ? <Check className="size-3 shrink-0 text-emerald-400" /> : icon === "activity" ? <Activity className="size-3 shrink-0 text-primary" /> : <span className="size-1.5 shrink-0 rounded-full bg-primary/70" />}
         <span className="truncate text-[11px] text-foreground/80">{name}</span>
       </div>
       {right ? <span className="shrink-0 text-[10px] text-muted-foreground">{right}</span> : null}
@@ -71,7 +71,7 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
     return <div className="flex h-full flex-col justify-center gap-3">
       {miniLabel("FOCUS SESSION")}
       <div className="font-mono text-[37px] font-medium leading-none tracking-[-0.09em] text-foreground">05:00</div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full w-2/3 rounded-full bg-violet-400" /></div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full w-2/3 rounded-full bg-primary" /></div>
       {miniLabel("Ready to start")}
     </div>;
   }
@@ -108,7 +108,7 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
   if (id === "queue-status") {
     return <div className="flex h-full flex-col justify-between">
       <div className="grid grid-cols-3 gap-2">{[["12","Queued"],["04","Running"],["00","Failed"]].map(([v,l])=><div key={l}><span className="font-mono text-[22px] font-medium text-foreground">{v}</span><div className="mt-1 text-[9px] text-muted-foreground">{l}</div></div>)}</div>
-      <div className="flex h-2 overflow-hidden rounded-full bg-foreground/10"><span className="w-[58%] bg-violet-400"/><span className="w-[29%] bg-sky-400"/><span className="w-[13%] bg-amber-400"/></div>
+      <div className="flex h-2 overflow-hidden rounded-full bg-foreground/10"><span className="w-[58%] bg-primary"/><span className="w-[29%] bg-sky-400"/><span className="w-[13%] bg-amber-400"/></div>
       {miniLabel("Priority distribution")}
     </div>;
   }
@@ -137,7 +137,7 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
     </div>;
   }
   if (id === "artifact-preview") {
-    return <div className="flex h-full flex-col gap-3 overflow-hidden rounded-lg border border-border/60 bg-background/55 p-3"><div className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-red-400/70"/><span className="size-1.5 rounded-full bg-amber-400/70"/><span className="size-1.5 rounded-full bg-emerald-400/70"/><span className="ml-2 text-[9px] text-muted-foreground">widget.tsx</span></div><div className="space-y-2 font-mono text-[10px]"><span className="block text-violet-300">export const Widget = () =&gt; &#123;</span><span className="block pl-2 text-sky-300">return &lt;Card /&gt;;</span><span className="block text-violet-300">&#125;;</span></div></div>;
+    return <div className="flex h-full flex-col gap-3 overflow-hidden rounded-lg border border-border/60 bg-background/55 p-3"><div className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-red-400/70"/><span className="size-1.5 rounded-full bg-amber-400/70"/><span className="size-1.5 rounded-full bg-emerald-400/70"/><span className="ml-2 text-[9px] text-muted-foreground">widget.tsx</span></div><div className="space-y-2 font-mono text-[10px]"><span className="block text-primary">export const Widget = () =&gt; &#123;</span><span className="block pl-2 text-sky-300">return &lt;Card /&gt;;</span><span className="block text-primary">&#125;;</span></div></div>;
   }
   if (id === "active-run") {
     return <div className="flex h-full flex-col justify-center gap-3"><div className="flex items-center gap-2"><Play className="size-3 fill-emerald-400 text-emerald-400"/><span className="text-[11px] font-medium text-foreground">Executing workflow</span></div>{row("Plan generated","Done","check")}{row("Inspecting packages","Running","activity")}{row("Verifying output","Pending")}</div>;
@@ -146,7 +146,7 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
     return <div className="flex h-full flex-col justify-center gap-2"><div className="flex items-center gap-2">{<ShieldCheck className="size-4 text-amber-400"/>}<span className="text-[11px] font-medium text-foreground">Approval required</span></div><div className="rounded-lg border border-border/70 bg-background/60 p-3"><div className="mb-3 text-[10px] text-foreground/80">Deploy production changes</div><div className="flex gap-2"><span className="rounded-md bg-emerald-400/15 px-3 py-1 text-[10px] text-emerald-300">Approve</span><span className="rounded-md bg-foreground/10 px-3 py-1 text-[10px] text-muted-foreground">Reject</span></div></div></div>;
   }
   if (id === "task-progress") {
-    return <div className="flex h-full flex-col justify-center gap-3">{miniLabel("RELEASE WORKFLOW")}<div className="flex items-center justify-between">{metric("68%","Completion")}<GitCommitHorizontal className="size-5 text-violet-400"/></div><div className="h-2 overflow-hidden rounded-full bg-foreground/10"><div className="h-full w-[68%] bg-violet-400"/></div>{row("Build and validate", "In progress", "activity")}</div>;
+    return <div className="flex h-full flex-col justify-center gap-3">{miniLabel("RELEASE WORKFLOW")}<div className="flex items-center justify-between">{metric("68%","Completion")}<GitCommitHorizontal className="size-5 text-primary"/></div><div className="h-2 overflow-hidden rounded-full bg-foreground/10"><div className="h-full w-[68%] bg-primary"/></div>{row("Build and validate", "In progress", "activity")}</div>;
   }
-  return <div className="flex h-full flex-col items-center justify-center gap-3"><Command className="size-6 text-violet-400"/>{line("75%",true)}{line("55%")}{line("65%")}</div>;
+  return <div className="flex h-full flex-col items-center justify-center gap-3"><Command className="size-6 text-primary"/>{line("75%",true)}{line("55%")}{line("65%")}</div>;
 }
