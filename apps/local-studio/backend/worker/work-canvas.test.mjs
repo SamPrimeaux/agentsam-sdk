@@ -52,7 +52,13 @@ test('concurrent save CAS preserves winner, history and exact restore; stale arc
  const writes=await Promise.all([call(h,'PUT','/'+id,{document:doc},a.canvas.contentHash),call(h,'PUT','/'+id,{document:{...doc,name:'Other writer'}},a.canvas.contentHash)]);
  assert.deepEqual(writes.map(r=>r.status).sort(),[200,409]);
  const current=await readCanvas(h.env,'owner_a',id);assert.equal(current.canvas.revision,2);
- assert.equal(h.objects.size,2);
+ assert.equal(h.objects.size,3); // first JSON, winning JSON and its saved thumbnail; losing CAS cleans up.
+ const savedRow=await h.DB.prepare('SELECT thumbnail_r2_key FROM agentsam_artifacts WHERE id=?').bind(id).first();
+ assert.match(savedRow.thumbnail_r2_key,/^canvas\/owner_a\/canvas_[a-z0-9-]+\/thumb-rev-2-[a-z0-9-]+\.svg$/);
+ assert.ok(h.objects.has(savedRow.thumbnail_r2_key));
+ const thumbnail=new TextDecoder().decode(h.objects.get(savedRow.thumbnail_r2_key));
+ assert.match(thumbnail, /<svg[^>]*width="512"/);
+ assert.match(thumbnail,/Actual edi/);
  assert.equal((await call(h,'DELETE','/'+id,undefined,a.canvas.contentHash)).status,409);
  const history=await (await call(h,'GET','/'+id+'/history')).json();assert.equal(history.revisions.length,2);
  const restore=await call(h,'POST','/'+id+'/restore',{revision:1},current.canvas.contentHash);
@@ -63,6 +69,19 @@ test('failed and missing object writes never advance metadata or return fabricat
  h.failWrites(true);const response=await call(h,'PUT','/'+id,{document:{...a.document,name:'Unsaved'}},a.canvas.contentHash);assert.equal(response.status,500);
  h.failWrites(false);assert.equal((await readCanvas(h.env,'owner_a',id)).canvas.revision,1);
  h.breakReads(true);assert.equal((await call(h,'GET','/'+id)).status,424);
+});
+test('thumbnail failure never blocks a durable editable Canvas revision',async t=>{
+ const h=canvasStorageFixture();t.after(h.close);const initial=await create(h);
+ h.failThumbnailWrites(true);
+ const doc={...initial.document,name:'Working without preview',artboards:[board()]};
+ const saved=await call(h,'PUT','/'+id,{document:doc},initial.canvas.contentHash);
+ assert.equal(saved.status,200);
+ const row=await h.DB.prepare('SELECT thumbnail_r2_key FROM agentsam_artifacts WHERE id=?').bind(id).first();
+ assert.equal(row.thumbnail_r2_key,null);
+ const opened=await readCanvas(h.env,'owner_a',id);
+ assert.equal(opened.canvas.revision,2);
+ assert.deepEqual(opened.document,doc);
+ assert.equal(h.objects.size,2);
 });
 test('real SQL execution lifecycle emits actual saves and is idempotent; wrong owner cannot read run',async t=>{
  const h=canvasStorageFixture();t.after(h.close);const a=await create(h);

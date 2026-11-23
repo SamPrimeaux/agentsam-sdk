@@ -220,7 +220,13 @@ export async function serveAccountLibraryFile(env,owner,id,preview=false,options
   if (object instanceof Response) return object;
   if (!object) return Response.json({error:'file_unavailable'},{status:404});
   const mime = safe(object.httpMetadata?.contentType || (preview ? '' : row.mime_type)).toLowerCase();
-  const inline = /^(image\/(png|jpeg|webp|gif|avif)|application\/pdf|video\/(mp4|webm)|audio\/(mpeg|wav|ogg))$/.test(mime);
+  // Only our bounded, server-generated Canvas thumbnail may be served as inline
+  // SVG. Arbitrary uploaded SVG remains a download, never executable markup.
+  const trustedCanvasPreview = preview && mime === 'image/svg+xml'
+    && safe(row.mime_type) === 'application/json'
+    && safe(row.thumbnail_r2_key) === key
+    && key.startsWith('canvas/'+encodeURIComponent(owner)+'/'+id+'/thumb-rev-');
+  const inline = /^(image\/(png|jpeg|webp|gif|avif)|application\/pdf|video\/(mp4|webm)|audio\/(mpeg|wav|ogg))$/.test(mime) || trustedCanvasPreview;
   const downloadName = safe(row.name || id).replace(/[\r\n"\\]/g,'_').slice(0,100);
   const headers = {
     'content-type':inline?mime:'application/octet-stream',

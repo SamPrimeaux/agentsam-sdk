@@ -199,6 +199,23 @@ test('preview delivery prefers the thumbnail key and missing or cross-owner arti
   assert.equal(reads.length, 1);
 });
 
+test('only server-generated account-scoped Canvas thumbnails are inline SVG', async () => {
+ const previewKey='canvas/owner_1/art_1/thumb-rev-2-55443322-11bb.svg';
+ const bucket={async get(){return {body:new Blob(['<svg xmlns="http://www.w3.org/2000/svg"/>']).stream(),httpMetadata:{contentType:'image/svg+xml'}};}};
+ const trusted=dbHarness({fileRow:{r2_bucket:'artifacts',r2_key:'original.json',thumbnail_r2_key:previewKey,mime_type:'application/json',name:'canvas'}});
+ const rendered=await serveAccountLibraryFile({DB:trusted.DB,ARTIFACTS:bucket},'owner_1','art_1',true);
+ assert.equal(rendered.status,200);
+ assert.equal(rendered.headers.get('content-type'),'image/svg+xml');
+ assert.match(rendered.headers.get('content-disposition'),/^inline/);
+ const untrusted=dbHarness({fileRow:{r2_bucket:'artifacts',r2_key:'upload.svg',thumbnail_r2_key:'upload.svg',mime_type:'image/svg+xml',name:'untrusted'}});
+ const download=await serveAccountLibraryFile({DB:untrusted.DB,ARTIFACTS:bucket},'owner_1','art_1',true);
+ assert.equal(download.status,200);
+ assert.equal(download.headers.get('content-type'),'application/octet-stream');
+ assert.match(download.headers.get('content-disposition'),/^attachment/);
+ const crossOwnerKey=dbHarness({fileRow:{r2_bucket:'artifacts',r2_key:'original.json',thumbnail_r2_key:'canvas/other_owner/art_1/thumb-rev-2-test.svg',mime_type:'application/json',name:'wrong'}});
+ const crossOwner=await serveAccountLibraryFile({DB:crossOwnerKey.DB,ARTIFACTS:bucket},'owner_1','art_1',true);
+ assert.equal(crossOwner.headers.get('content-type'),'application/octet-stream');
+});
 test('artifact mutations validate fields and always constrain writes by owner', async () => {
   const h = dbHarness({ existingRow: { id: 'art_1' } });
   const request = new Request('https://studio.example/api/work/library/artifacts/art_1', {
