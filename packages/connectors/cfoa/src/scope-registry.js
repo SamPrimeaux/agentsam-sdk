@@ -67,6 +67,17 @@ export async function filterToRegistry(env, scopes, providerKey = 'cloudflare') 
   return scopes.filter((scope) => scope === 'offline_access' || registry.has(scope));
 }
 
+/**
+ * Explicit 'all' pack means every currently registered, active provider
+ * permission, not the smaller checked-in fallback catalog. Never silently
+ * downgrade a full-catalog consent request when D1 is unavailable.
+ */
+export async function scopesForFullCatalogOptIn(env, packs, providerKey='cloudflare') {
+  if (!Array.isArray(packs) || !packs.some(pack=>String(pack).toLowerCase()==='all')) return [];
+  const registry=await loadProviderScopes(env,providerKey);
+  return registry ? [...registry.keys()] : null;
+}
+
 /** Scopes already granted on the active connection; new grants are added on top. */
 export async function activeGrantedScopes(env, ownerId, providerKey = 'cloudflare') {
   if (!env?.DB?.prepare || !ownerId) return [];
