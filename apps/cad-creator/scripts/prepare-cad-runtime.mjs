@@ -10,6 +10,9 @@ if(fs.existsSync(path.join(sdk,'src/lib/cad/project-cli.js'))){
   // Keep the distributable runtime independent of monorepo-only node_modules links.
   alias:{'@inneranimalmedia/agentsam-errors':path.join(sdk,'packages/agentsam-errors/src/index.js')}});
  fs.copyFileSync(path.join(sdk,'src/lib/cad/project-cli.d.ts'),path.join(runtime,'project-cli.d.mts'));
+ // FreeCAD host selection: dependency-free ESM shared with the CLI and mirrored by the Python SDK.
+ fs.copyFileSync(path.join(sdk,'src/lib/cad/freecad-host.js'),path.join(runtime,'freecad-host.mjs'));
+ fs.copyFileSync(path.join(sdk,'src/lib/cad/freecad-host.d.ts'),path.join(runtime,'freecad-host.d.mts'));
  fs.mkdirSync(path.join(runtime,'cad/blender'),{recursive:true});
  fs.copyFileSync(path.join(sdk,'services/cad/blender/adapter.py'),path.join(runtime,'cad/blender/adapter.py'));
  fs.mkdirSync(path.join(runtime,'cad/freecad'),{recursive:true});

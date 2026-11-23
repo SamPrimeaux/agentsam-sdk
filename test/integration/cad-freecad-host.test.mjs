@@ -5,10 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { discoverFreeCadHost, freeCadAdapterCommand, freeCadHostEnvironment } from '../src/lib/cad/freecad-host.js';
-import { FREECAD_ADAPTER_PATH, freeCadBuild } from '../src/lib/cad/freecad.js';
+import { discoverFreeCadHost, freeCadAdapterCommand, freeCadHostEnvironment } from '../../src/lib/cad/freecad-host.js';
+import { FREECAD_ADAPTER_PATH, freeCadBuild } from '../../src/lib/cad/freecad.js';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const { cases } = JSON.parse(fs.readFileSync(path.join(root, 'python/tests/fixtures/freecad_host_cases.json'), 'utf8'));
 
 test('Node discovery matches the fixture the Python SDK replays (no drift between the two ports)', () => {
