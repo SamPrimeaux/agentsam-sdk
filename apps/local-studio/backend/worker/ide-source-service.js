@@ -143,15 +143,32 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
   const account=sanitize(sp.get('account'));
   try {
     if(url.pathname.endsWith('/sources')) {
-      const [drive,github,cf]=await Promise.all([
+      const [drive,github,cf,registered]=await Promise.all([
         connectorStatus(env,owner,'google_drive'),
         connectorStatus(env,owner,'github'),
         listCloudflareConnectionRecords(env,owner),
+        env.DB.prepare("SELECT id,provider_key,auth_type,config_json FROM agentsam_plugins " +
+          "WHERE plugin_kind='oauth' AND provider_key IN ('google_drive','github','cloudflare')").all()
+          .then(value=>value.results||[],()=>[]),
       ]);
+      // Plugin IDs originate in the shared registry; neither Monaco nor Files
+      // invents connection destinations or embeds provider-specific OAuth URLs.
+      const pick=provider=>registered.find(row=>{
+        if(row.provider_key!==provider)return false;
+        if(provider!=='cloudflare')return true;
+        let cfg={};
+        try{cfg=JSON.parse(row.config_json||'{}');}catch{return false;}
+        return cfg.pack!==true && row.auth_type==='oauth';
+      })?.id||null;
       return json({ok:true,googleDrive:drive.map(x=>({account:x.accountIdentifier,label:x.accountLabel})),
         github:github.map(x=>({account:x.accountIdentifier,label:x.accountLabel})),
         cloudflare:cf.filter(x=>x.status==='connected'&&accountOk(x.cloudflareAccountId))
-          .map(x=>({account:x.cloudflareAccountId,label:x.accountLabel,scopes:x.scopes}))});
+          .map(x=>({account:x.cloudflareAccountId,label:x.accountLabel,scopes:x.scopes})),
+        connectionPlugins:{
+          googleDrive:pick('google_drive'),
+          github:pick('github'),
+          cloudflare:pick('cloudflare'),
+        }});
     }
     if(url.pathname.includes('/drive/')) {
       const auth=await googleAccess(env,owner,account,f);
