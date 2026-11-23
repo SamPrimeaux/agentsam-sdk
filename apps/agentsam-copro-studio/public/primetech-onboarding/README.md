@@ -22,3 +22,5 @@ into that public path, without adding another source implementation.
 - Completion opens the normal account sign-up/sign-in flow; the tour is not
   an account-enrollment requirement for an existing dashboard user.
 - The embedded Assistant is demonstrative unless a supported AI service is connected.
+
+- App Store shared Assistant preview: `/primetech/experience/?assistantPreview=1#tour` (same popup code, simulated delivery only).
