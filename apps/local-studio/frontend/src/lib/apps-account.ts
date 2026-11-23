@@ -46,14 +46,17 @@ export async function loadAccountApps(): Promise<AdminInstallableApp[]> {
 export async function installAccountApp(key: string): Promise<void> {
   await appsRequest("POST", { key });
   await reloadAccountApps();
+  if (!appsState.loaded || appsState.error) throw new Error('apps_mutation_applied_unverified');
 }
 export async function removeAccountApp(key: string): Promise<void> {
   await appsRequest("DELETE", { key });
   await reloadAccountApps();
+  if (!appsState.loaded || appsState.error) throw new Error('apps_mutation_applied_unverified');
 }
 export async function setAccountAppEnabled(key: string, enabled: boolean): Promise<void> {
   await appsRequest("PATCH", { key, enabled });
   await reloadAccountApps();
+  if (!appsState.loaded || appsState.error) throw new Error('apps_mutation_applied_unverified');
 }
 
 const SAFE_APP_HREF = /^\/(?!\/)[\w/%?&=.,#:+~-]*$/;
@@ -68,6 +71,7 @@ export function openAccountApp(href: string): void {
 export async function pinAccountApp(key: string, pinned: boolean): Promise<void> {
   await appsRequest("PATCH", { key, pinned });
   await reloadAccountApps();
+  if (!appsState.loaded || appsState.error) throw new Error('apps_mutation_applied_unverified');
 }
 
 /** Stamps last_opened_at for ranking recents. Never blocks opening an app. */
