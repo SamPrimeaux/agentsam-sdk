@@ -1,125 +1,145 @@
 ---
 name: agentsam-cad
 description: >
-  Drive AgentSam's real CAD machinery end to end: choose the right entry point, engine and
-  execution lane; build, inspect, render and export models; and prove every step with hashes
-  and receipts. Covers Blender typed recipes, revisioned CAD projects (design_* tools,
-  cad.project.* / cad.model.* SAM operations, the house-baseline and edit-preview workflows),
-  native OpenCascade (OCCT) solids with STEP/BREP/glTF/IFC output, FreeCAD/OpenSCAD jobs,
-  IAMScene and IAMGeometry documents, and BIM/IFC semantics.
-  Use for any programmatic CAD work, .blend/.glb/.stl/.obj/.step artifacts, parametric edits,
-  model inspection, render previews, unit or dimension questions, revision conflicts, and
-  "does CAD work here". Triggers on "cad", "blender", "occt", "opencascade", "freecad",
-  "openscad", "iamscene", "iamgeometry", "bim", "ifc", "step file", "glb", ".blend", "recipe",
-  "box with hole", "courtyard house", "design_model", "cad project", "revision conflict".
+  Plan, open, import, inspect, edit, compare, validate, render, convert, and export CAD, BIM,
+  engineering, and 3D assets through AgentSam's existing contracts and engines. Use when someone
+  asks to work with a CAD file or project, make or repair geometry, check dimensions or units,
+  build a model, generate drawings, render a preview, prepare fabrication outputs, or debug an
+  engine. Covers Blender, FreeCAD, OpenSCAD, native OCCT, CAD project contracts, SAM CAD jobs,
+  IAMScene, IAMGeometry, and BIM/IFC. Triggers on CAD, BIM, IFC, STEP, STP, IGES, BREP, FCStd,
+  STL, OBJ, PLY, 3MF, DXF, DWG, SVG, GLB, GLTF, BLEND, MOV, MP4, .ifc, .step, .stl, .blend, .mov,
+  "open/import this model", "why won't this file import", "convert this CAD file", "box with a
+  hole", "check FreeCAD/Blender/OCCT", "compare these models", and "export a drawing".
 metadata:
-  short-description: "CAD end to end: pick entry point and lane, build, inspect, render, export, and prove each step"
+  short-description: "Route CAD/BIM work through real contracts, engines and verified outputs"
   aliases:
     - cad
     - blender
+    - freecad
+    - openscad
     - occt
     - bim
+    - ifc
     - iamscene
+    - iamgeometry
 user-invocable: true
 ---
 
 # AgentSam CAD
 
-CAD fails quietly. A build can exit 0 with the wrong geometry, the wrong units, or a stale
-revision. Every step here is meant to be provable, and "unsupported" is a valid answer.
+Treat CAD as source-controlled engineering work, not a one-shot image-generation task. Preserve the
+original source, coordinate system, units, semantic identity and revision. A successful process
+exit is not proof that the geometry is correct.
 
-## The map: three layers, never skip one
+## Route the work correctly
 
-1. **Contract** — what is being made. A Blender recipe (`protocol/cad/blender-recipe.schema.json`)
-   or a CAD project: editable, revisioned, validated. The runtime today is the inch-based
-   project (`cad.project.v1`); `protocol/cad/cad.project.v2.schema.json` is the portable target.
-2. **Operation** — who may run it. CLI commands, `design_*` project tools, or SAM operations
-   (`cad.project.*`, `cad.model.*`, `cad.job.*`). Writes are approval-gated in a SAM host.
-3. **Engine + lane** — where it executes: Blender, OCCT, FreeCAD or OpenSCAD on a local device,
-   a remote VM, or the Docker CAD service. Cloudflare Workers never spawn these; use an
-   authorized lane.
+1. **Contract — what is authoritative?** A typed Blender recipe, a revisioned CAD project, an IFC
+   source, an `.iamscene` document, or an `.iamgeometry` reference manifest. The canonical portable
+   project envelope is `cad.project.v2` (`protocol/cad/cad.project.v2.schema.json`). The local
+   `agentsam cad project` file-store workflow is still the legacy v1 runtime; do not send a v2
+   document through it. Use a host project adapter only when its live tool catalog confirms v2
+   support. See `references/projects-and-operations.md`.
+2. **Operation — who may perform it?** Use the existing `design_*`, `cad.project.*`, `cad.model.*`,
+   `cad.job.*`, `cad.bim.ifc.*`, or `iamscene.*` operation that matches the task. A skill or manifest
+   is not an authorization grant. Host operations must enforce tenant, project, workspace and
+   resource scope plus required approval.
+3. **Engine and lane — where will it run?** Choose Blender, FreeCAD, OpenSCAD, OCCT, IfcOpenShell,
+   or IAMScene's registered adapters, then use an authorized local-device, remote-VM or CAD-service
+   lane. A Cloudflare Worker must not spawn native geometry binaries.
+4. **Proof — what did the engine actually produce?** Check the source hash, project revision,
+   engine/version, operation receipt, output bytes/hash, units, geometry/semantic checks and any
+   unsupported steps. Never promote `planned` or `running` to `generated` or `validated` by inference.
 
-Around those sit the scene/geometry layer (**IAMScene** composes, **IAMGeometry** references, OCCT
-makes exact solids) and **BIM** (IFC semantics in, IFC4 out). Each has its own authority; see
-`references/scene-geometry-bim.md`.
+## Choose the existing entry point
 
-## Pick the entry point
-
-| Goal | Use |
+| Goal | Start here |
 |---|---|
-| One-off model from a typed recipe | `agentsam cad blender build <recipe.json> --out <m.blend> --json` |
-| Inspect, preview or export a `.blend` | `agentsam cad blender inspect \| render-preview \| export` (SAM: `cad.blender.inspect` with `{"source":"<m.blend>"}`) |
-| Editable project with revisions (walls, rooms, openings, parametric objects) | `agentsam cad project <get\|validate\|apply\|save\|restore\|build\|inspect\|render\|export> <request.json> --root <dir>` |
-| The whole validated path in one run | `agentsam cad project workflow cad.house_baseline <in.json> --root <dir>` or `cad.edit_preview` |
-| Exact solids → STEP / BREP / glTF / IFC4 | `design_model_build` with `engine:"occt"` (native `agentsam-occt`) |
-| FreeCAD / OpenSCAD generation | `cad.job.generate` with `engine` = `freecad` \| `openscad` \| `blender` through an authorized runner, or the local/Docker executors in `src/lib/cad/` |
-| Scene documents, geometry manifests, format import/export | the `iamscene` CLI and `iamscene.*` SAM operations; ask `iamscene formats` what is really implemented |
-| BIM / IFC | read-only IFC semantics into `cad.project.v2`; IFC4 export via OCCT; `cad.building.export` |
-| Python, no Node (`pip install agentsam-sdk`) | `agentsam cad doctor` (proves FreeCAD/OCCT with a real solid) and `agentsam cad build --request req.json --out part.step` (local FreeCAD, no service needed); in code `agentsam_sdk.cad`: `discover_freecad().run(request)`, `probe_freecad`, `CadBuildingClient` for the remote service |
+| Build a mesh/scene from a typed recipe | Node CLI: `agentsam cad blender build <recipe.json> --out <model.blend> --json` |
+| Inspect, render or export a Blender model | `agentsam cad blender inspect`, `render-preview`, `export`; inspect topology as well as dimensions |
+| Create or edit a legacy local project | Node CLI: `agentsam cad project <get\|validate\|apply\|save\|restore\|build\|inspect\|render\|export>`; this local store is v1, not the v2 authoring runtime |
+| Run the existing local project workflows | `agentsam cad project workflow cad.house_baseline …` or `cad.edit_preview`; both are legacy v1 workflows |
+| Build exact solids / STEP / BREP / GLB | Existing `design_model_*` tools with `engine:"occt"`, backed by the native `agentsam-occt` binary |
+| Run FreeCAD locally without Node | Python CLI: `agentsam cad build --request req.json --out part.step`; use `agentsam cad doctor --engine all` first |
+| Generate with FreeCAD, OpenSCAD or Blender as durable work | Existing host operation `cad.job.generate`; use `AgentSamClient.cad_jobs` with an injected trusted host invoker |
+| Inspect, validate, compare or edit IFC | Node CLI: `agentsam cad ifc status\|inspect\|validate\|diff\|edit`; edit writes a new IFC file, never overwrites the source |
+| Inventory native CAD source assets | `AgentSamClient(procedure_invoker=trusted_host).assets.inventory()`; reuses the authorized `repo.asset.inventory@0.1.0` PrimeTech procedure, not a local duplicate scanner |
+| Author or exchange scenes and geometry references | `iamscene` CLI and existing `iamscene.*` SAM operations; query `iamscene formats` before import/export |
+| Transfer provider files or run short advertised provider operations | Python `CadServiceClient`; use `download_to()` for large artifacts |
 
-Routing note: both installs ship an `agentsam` command and whichever is first on `PATH` answers.
-The Node one routes `cad blender` and `cad project`; the pip one routes `cad doctor` and `cad build`.
-Check `agentsam --version` and `agentsam cad --help` if a subcommand seems missing. Either way,
-FreeCAD, OpenSCAD, OCCT and BIM are reached through the tools, operations and executors above.
-Confirm what this checkout and host expose with `agentsam cad project tools` and
-`iamscene formats` before choosing, and use whichever path they list.
+Both the Node SDK and the Python distribution install an executable named `agentsam`. The command
+on `PATH` decides which CLI answers. Check `which agentsam` and `agentsam --version` before assuming
+a subcommand exists: Node owns `cad blender`, `cad ifc`, and `cad project`; pip owns `cad doctor`
+and the local FreeCAD `cad build` lane.
 
-## Discover before you act
+## Discover capabilities before selecting an engine
+
+Run only the discovery commands relevant to the selected installation:
 
 ```sh
-agentsam cad blender status --json     # available, binary, version, execution_lane
-agentsam cad project tools             # live tool catalog + input schemas: the source of truth
-agentsam cad project workflows         # workflow keys, requires, provides, steps
-~/.agentsam/bin/agentsam-occt --doctor # OCCT receipt: version + capabilities (override: AGENTSAM_OCCT_BIN)
-cat ~/.agentsam/cad.json               # discovered openscad / freecad / blender binaries and their source
+# Node SDK / SAM project and IFC tools
+agentsam cad blender status --json
+agentsam cad ifc status --json
+agentsam cad project tools
+agentsam cad project workflows
+
+# Python SDK / local native engines
+agentsam cad doctor --engine all
+
+# IAMScene's actual adapter matrix; pass the discovered native OCCT binary when needed
+iamscene formats --binary ~/.agentsam/bin/agentsam-occt
 ```
 
-A capability exists only when the tool is advertised **and** a probe passes. Installed software
-alone advertises nothing. If `available` is false, `status` returns install guidance; relay it
-and stop. Never produce a stand-in artifact.
+Treat the live host catalog and engine receipts as authoritative. `contracts/source-types.v2.json`
+and `src/lib/cad/format-policy.js` identify file/source formats; they do not prove that an engine
+can import, edit, preview, convert or export them. IAMScene's format registry reports those
+operations separately. See `references/engines-and-lanes.md` and
+`references/scene-geometry-bim.md`.
 
-## Standard loop
+## Required execution sequence
 
-1. **Discover** (above). Know the engine, version and lane before promising output.
-2. **Validate the contract.** `design_project_validate` for projects; a bad recipe fails at build.
-   A validation failure halts the pipeline before any write.
-3. **Write with `expected_revision`.** Save or apply; on `revision_conflict` re-read and
-   re-apply, never retry blind.
-4. **Build.**
-5. **Inspect and compare.** The build artifact `sha256` must equal the inspect `input.sha256`.
-   Then compare objects and dimensions to what was asked, not just the exit code.
-6. **Render a preview** and look at the PNG.
-7. **Export** in the format the consumer needs.
-8. **Report** using the format at the bottom.
+1. **Inventory the source.** Keep the original immutable. Identify format from signatures/content
+   and application context, not extension alone. Resolve ambiguous `.stl`, `.obj`, `.nc` and similar
+   suffixes before choosing a reader.
+2. **Lock the design authority.** Prefer the existing project/scene/IFC source and its revision.
+   Preserve source units, coordinate frame, element IDs, GlobalIds, relationships and unknown
+   extension data. Do not silently rescale or redraw approved dimensions.
+3. **Check the real engine and lane.** A binary on disk is not a ready engine. Run its doctor/probe
+   and confirm the required operation is advertised by the selected host.
+4. **Validate inputs before writes.** Validate the project schema, domain module, recipe, IFC edit
+   request, units and source references. Use the current revision and expected hash/revision.
+5. **Execute through the existing host.** Use typed operations and trusted job invokers. Do not
+   launch arbitrary Python, construct shell strings, create a second queue, or bypass SAM approval.
+6. **Inspect the produced artifact.** Check dimensions and units, but also topology/volume for
+   solids, manifold state for meshes, and GlobalIds/relationships/properties for IFC. Open the
+   preview when one is produced.
+7. **Verify and report.** Match the inspected input SHA-256 to the built artifact SHA-256. For a
+   v2 output, require its file URI, SHA-256, source project revision, executor/version and correlated
+   receipt before calling it `generated`; require validation evidence before calling it `validated`.
+8. **State limitations explicitly.** Separate verified facts, calculations, declared source values,
+   proposals and professional-review requirements. `professionalReview.permitReady` and `sealed`
+   remain false; SAM never issues professional seals.
 
-## Rules that prevent the usual failures
+## Hard boundaries
 
-- **Units first.** v1 projects store inches (`"units":"in"`); the recipe converter emits metres
-  (864 in becomes 21.9456 m); OCCT receipts report millimetres (`volume_mm3`). Name the unit
-  whenever you state a dimension.
-- **Typed operations only.** Recipes and feature logs are data. Arbitrary Python is never
-  evaluated, OpenSCAD source is pattern-checked, and OCCT replays a revision's persisted
-  `nativeHistory` instead of accepting caller-supplied feature histories.
-- **Revision discipline.** Saves are immutable; restore creates a new revision; `batch_operations`
-  (up to 256) is atomic. Stale writes fail with `revision_conflict`.
-- **Unsupported is an answer.** `roof_geometry_not_supported`, `unsupported_operation:<type>`
-  and similar errors are reported verbatim. Never approximate with substitute geometry.
-- **Proof beats exit codes.** A step is done when it has an artifact, a sha256 and a receipt that
-  names the right operation. "It worked" is not evidence.
-- **Don't claim what isn't advertised.** Production capabilities such as `cad.drawing.generate`,
-  `cad.bim.ifc.export` and `cad.quantity.takeoff` are contract targets; they exist only when a
-  host registers a provider that returns a real output, checksum and receipt.
-- **Evidence stays out of the repo.** Use a temp or gitignored `--root`; the project runtime writes
-  `.agentsam/cad/{projects,artifacts,workflow-runs}` under it.
+- A format identity is not an adapter capability. Never infer import/export from an extension.
+- A valid `cad.project.v2` schema is not proof that the selected host has a v2 authoring runtime.
+  CAD artifact/evidence storage is not project-document persistence; the current Worker scaffold
+  reports `worker_routes_not_wired`, while the project-tools route is still local Node/v1.
+- IFC semantic projection into a CAD project is source-linked/read-only. The IFC edit operation edits
+  an allowlisted set of source properties into a **new file**; it is not parametric geometry editing.
+- `CadBuildingClient` is a compatibility wrapper for the experimental rectangular-building proof,
+  not the general CAD job API. It must refuse readiness until runtime proof is advertised.
+- `CadServiceClient` handles short provider HTTP operations and file transfer. `CadJobClient` uses
+  the host's existing `cad.job.*` lifecycle. They are not interchangeable.
+- No local SQLite queue, duplicate project store, duplicate format catalog, fake geometry kernel,
+  guessed unit, or silent fallback.
 
-## Report format
+## Load the relevant reference only when needed
 
-Engine + version + lane; each artifact path with its sha256; the unit; the objects and
-dimensions you checked against intent; and an explicit list of what you did **not** verify.
-
-## Go deeper (load only what the task needs)
-
-- `references/engines-and-lanes.md` — Blender, OCCT, FreeCAD, OpenSCAD, Docker: discovery, formats, limits.
-- `references/scene-geometry-bim.md` — IAMScene, IAMGeometry, the format registry, IFC/BIM paths.
-- `references/projects-and-operations.md` — project contract, edit operations, tools, workflows, SAM ids, run modes.
-- `references/proof-and-triage.md` — hash chain, per-engine geometry checks, error triage, how to re-verify this skill.
+- Engine choice, binary discovery, provider lanes: `references/engines-and-lanes.md`.
+- Project revisions, v1/v2 boundaries, SAM operations and workflow contracts:
+  `references/projects-and-operations.md`.
+- IAMScene, IAMGeometry, format capability matrix and BIM/IFC: `references/scene-geometry-bim.md`.
+- Python clients, durable jobs, authenticated service transport and large files:
+  `references/python-service-and-jobs.md`.
+- Hash chains, geometric/semantic proof, errors and triage: `references/proof-and-triage.md`.

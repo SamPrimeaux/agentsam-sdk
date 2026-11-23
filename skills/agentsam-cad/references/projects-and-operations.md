@@ -1,96 +1,112 @@
-# Projects, edits, tools, workflows, SAM operations
+# Project contracts, revisions, operations and workflows
 
-## Two project contracts
+## Canonical portable project contract
 
-- **v1 (`cad.project.v1`) — what the local runtime executes today.** Inch-based. Collections:
-  `walls`, `rooms`, `doors`, `windows`, `furniture`, `parametricObjects`, plus `lighting`,
-  `sketchDocument`, `roofType`, `ceilingHeight`. Fixture: `test/fixtures/cad/courtyard-house.json`.
-- **v2 (`cad.project.v2`) — the portable target.** Schema `protocol/cad/cad.project.v2.schema.json`,
-  source `src/lib/cad/project-v2.js`. Required top-level keys: `schema, id, name, domain, revision,
-  coordinateSystem, geometry, modules, assets, views, sheets, scenes, productions, outputs,
-  packages, receipts, revisions, professionalReview`. Native units are declared explicitly;
-  `architecture.building` requires an architecture module; `mechanical.part` is valid without
-  roofs or bedrooms. v1 migration keeps original editable inches and unknown fields under
-  `compatibility.sourceDocument`; it never rescales approved dimensions.
-- Domain modules and core pieces live under `protocol/cad/v2/` (`core/`, `intent/`,
-  `interchange/`, `modules/`, `presentation/`, `validation/`).
+`cad.project.v2` is the canonical portable CAD project envelope. Its schema is
+`protocol/cad/cad.project.v2.schema.json`; implementation and helpers live in
+`src/lib/cad/project-v2.js`; its modular schema pack is under `protocol/cad/v2/`.
 
-## Local project store (CLI)
+A v2 project carries typed identity/domain/revision, explicit coordinate system and units, editable
+geometry entities/relationships/constraints, domain modules, source/derived assets, views/sheets,
+scenes/productions, output dependencies, delivery packages, receipts, revisions and professional
+review state. `architecture.building` requires an architecture module; `mechanical.part` does not
+inherit building-only concepts such as rooms or roofs.
 
-`--root <dir>` (default: cwd) holds:
+The source-types catalog supplies `sourceKindRef` and `formatRef`. A format reference identifies a
+format; it does not assert that an engine can read, edit, validate, preview or export it.
 
-```
-<root>/.agentsam/cad/projects/<id>/{1.json,2.json,head.json}   # immutable revisions
-<root>/.agentsam/cad/artifacts/<id>/<revision>/…               # model.blend, model.glb, courtyard.png, *.json receipts
-<root>/.agentsam/cad/workflow-runs/<run_id>.json               # per-step evidence
-```
+V1 remains a compatibility/migration input. `normalizeCadV1` preserves original editable inches,
+IDs, arrays and unknown source fields in `compatibility.sourceDocument`; it does not rescale approved
+geometry. Keep the original v1 document recoverable.
 
-Use a temp or gitignored root. Request files are JSON; pass `-` to read stdin.
+### Important current runtime boundary
 
-## Tools (`agentsam cad project tools` prints the live catalog; trust it over this table)
+The Node `agentsam cad project` local CLI still creates `createProjectRuntime()` with
+`FileProjectStore` and the legacy v1 editable-project contract. Its `cad.house_baseline` and
+`cad.edit_preview` workflows are v1 workflows. In `agentsam-cad-machinery`, the CAD Creator frontend
+still uses `LocalProjectRepository`/browser localStorage and its local backend project routes use
+the v1 file-store runtime; the Worker/schema release path stages the v2 contract but does not supply
+a v2 project persistence/authoring host. The SDK's v2 validator, normalizer, output invalidation and
+completion helpers do not by themselves make any of those paths a full v2 authoring runtime. The
+SAM CAD pack delegates project operations to an injected host `projectTools` adapter; use v2 there
+only when the live host advertises and validates it. Do not send a v2 document through the v1 local
+file-store path or claim that localStorage is durable project authority.
 
-| Tool | Does | Key input | Capability |
-|---|---|---|---|
-| `design_project_get` | read a revision | `project_id`, `revision?`, `expected_content_hash?` | design.read |
-| `design_project_validate` | validate geometry and references | `project` or `project_id` (+`revision`) | design.read |
-| `design_apply_operation` | atomic typed edit | `project_id`, `expected_revision`, `operation{type,…}`, `message?` | design.write |
-| `design_project_save` | save an immutable revision | `project`, `expected_revision` | design.write |
-| `design_project_restore` | restore old geometry as a **new** revision | `project_id`, `revision`, `expected_revision` | design.write |
-| `design_model_build` | build the revision model | `project_id`, `revision?`, `engine` = `occt`\|`blender`, `parametric_object_id?`, `element_id?` | design.write |
-| `design_model_inspect` | inspect the built model | `project_id`, `revision?`, `engine?` | design.read |
-| `design_model_render` | render a PNG | `project_id`, `revision?` | design.export |
-| `design_model_export` | export the built model | `project_id`, `revision?`, `format?`, `engine?`, `element_id?` | design.export |
+This is a real integration gap, not a reason to add another project store or new parallel route.
+The completion path is to replace the localStorage/v1 authority with the existing CAD Creator host
+persistence, then wire the existing `cad.project.*` / `design_*` operation family to the canonical
+v2 contract and its revision/output receipts. Until that host is deployed, v2 is a contract/schema
+and validation capability, not an end-to-end CAD Creator project lifecycle.
 
-In a SAM host, apply, save, restore, build, render and export need explicit approval.
-
-## Edit operations (`design_apply_operation.operation.type`)
-
-Verified types: `create_wall`, `create_room`, `add_door`, `add_window`, `add_fixture`,
-`create_parametric_object`, `update_wall|room|door|window|fixture` (`{<kind>Id, updates}`),
-`delete_*` (deleting a wall cascades to its doors and windows), `move_element`
-(`elementType`, `elementId`, `dx`, `dy`, `dz?`), `set_lighting`, `attach_sketch`,
-`update_parametric_parameter`, `update_parametric_source`, `batch_operations` (≤256, atomic),
-`convert_sketch_selection`. The authoritative list is `applyProjectOperation` in
-`src/lib/cad/editable-project-contract.js`. An unknown type fails `unsupported_operation:<type>`;
-a bad id fails `element_not_found:<id>`; the result is re-validated before it is saved.
-
-Example request (`edit.json`):
-
-```json
-{"project_id":"courtyard-house-fixture","expected_revision":1,
- "operation":{"type":"update_wall","wallId":"wall-0","updates":{"height3D":132}},
- "message":"raise wall-0"}
-```
-
-## Workflows
-
-| Key | Steps | Needs |
-|---|---|---|
-| `cad.house_baseline` | validate → save → reopen → build → inspect → render → export | a valid candidate project; Blender available |
-| `cad.edit_preview` | read → edit → reopen → build → inspect → render → export | a saved project and its `expected_revision`; Blender available |
+## Local v1 project CLI (compatibility path)
 
 ```sh
-# input shape: {"project": <project>}   |   {"project_id","expected_revision","operation"}
-agentsam cad project workflow cad.house_baseline in.json --root "$ROOT"
-agentsam cad project workflow cad.edit_preview   edit.json --root "$ROOT"
+agentsam cad project <get|validate|apply|save|restore|build|inspect|render|export|tools> <request.json> --root <dir>
+agentsam cad project workflows
+agentsam cad project workflow cad.house_baseline <input.json> --root <dir>
+agentsam cad project workflow cad.edit_preview <edit.json> --root <dir>
 ```
 
-A workflow halts on invalid validation (`project_invalid`) and on a stale revision
-(`revision_conflict`) without claiming any effect.
+The local store writes immutable revisions and per-revision artifacts under
+`.agentsam/cad/projects/` and `.agentsam/cad/artifacts/`. Use a temporary or gitignored root. The
+live `agentsam cad project tools` output is authoritative for tool names and input schemas.
 
-## SAM operations
+## Existing SAM project and model operations
 
-- Stable: `cad.project.get|validate|apply|save|restore`, `cad.model.build|inspect|render|export`,
-  `cad.job.generate|execute|status`, and standalone `cad.blender.inspect` (`{"source":"<path>"}`).
-- Run modes resolve to those operations: `cad.inspect`→`cad.project.get`, `cad.create`→`cad.project.save`,
-  `cad.edit`→`cad.project.apply`, `cad.export`→`cad.model.export` (`glb|stl|obj`),
-  `cad.generate`→`cad.job.generate` (needs `project_id`, `workspace_id`, `engine`, `prompt`).
-- Target production operations (registered only when a host supplies an authorized provider that
-  returns an artifact URI, checksum and receipt): `cad.geometry.validate`, `cad.bim.ifc.export`,
-  `cad.solid.export`, `cad.mesh.export`, `cad.native.export`, `cad.drawing.generate`,
-  `cad.schedule.generate`, `cad.quantity.takeoff`, `cad.document.prepare`, `cad.scene.build`,
-  `cad.scene.optimize`, `cad.walkthrough.package`, `cad.presentation.render`, `cad.video.render`,
-  `cad.video.project.export`, `cad.deliverables.package`. Check what the host advertises; do not
-  assume.
-- Every operation carries `project_id`, `revision` and (where needed) `workspace_id`; the provider
-  enforces tenant and resource ownership regardless of the UI.
+The canonical operation family is:
+
+- `cad.project.get`, `cad.project.validate`, `cad.project.apply`, `cad.project.save`,
+  `cad.project.restore`.
+- `cad.model.build`, `cad.model.inspect`, `cad.model.render`, `cad.model.export`.
+- The local/legacy tool names include `design_project_get`, `design_project_validate`,
+  `design_apply_operation`, `design_project_save`, `design_project_restore`,
+  `design_model_build`, `design_model_inspect`, `design_model_render`, and
+  `design_model_export`.
+
+The SAM pack delegates to the host's project adapter. Apply/save/restore/build/render/export require
+the relevant host capability and approval. The local v1 tool table is not proof that a connected
+host implements the v2 project contract.
+
+## Durable host-owned CAD jobs
+
+`cad.job.generate`, `cad.job.status` and `cad.job.execute` are the existing durable job lifecycle.
+The host owns principal resolution, project/workspace authorization, approval, runner dispatch and
+`agentsam_cad_jobs` persistence. `createCadHttpPorts()` already supplies the `jobs` port and maps
+these operations to the existing authenticated `/api/cad/openscad/generate`, `/api/cad/freecad/script`,
+`/api/cad/blender/script`, `/api/cad/jobs/:id` and `/api/cad/jobs/:id/execute` routes. Do not create a
+second queue or route family. Supported engine choices are host-advertised; common job engines
+include `freecad`, `openscad` and `blender`. The SAM pack registers `cad.job.*` only when the host
+passes the existing `jobs` port to `createCadOperations` and exposes those operations in its live
+catalog; a client facade or manifest alone does not make a host runner available.
+
+Python source exposes `AgentSamClient.cad_jobs` and `AsyncAgentSamClient.cad_jobs`. Supply the
+trusted host invoker as `cad_job_invoker`; the default client fails closed with
+`cad_job_host_not_configured`. The invoker is not a caller-controlled shell or generic stdio bridge.
+See `references/python-service-and-jobs.md`.
+
+## Output state and revision rules
+
+V2 output states are `planned`, `queued`, `running`, `generated`, `validated`, `approved`, `stale`,
+`failed` and `blocked`. A v2 output is only `generated` when it has its real file URI, SHA-256,
+generating project revision, executor name/version and correlated execution receipt. `validated`
+requires validation evidence; `approved` requires the required review/authorization. Geometry edits
+invalidate dependent outputs. Check dependency cycles before execution.
+
+`professionalReview.permitReady` and `professionalReview.sealed` remain false in the schema. A
+successful model build, IFC validation or IDS check is not a permit, professional seal or legal
+certification.
+
+## IFC operations
+
+The existing `cad.bim.ifc.inspect`, `cad.bim.ifc.validate`, `cad.bim.ifc.diff` and `cad.bim.ifc.edit`
+operations use the IfcOpenShell adapter. `agentsam cad ifc` exposes the corresponding Node CLI.
+`edit` writes a **new** IFC file and verifies no new validation errors, preserved GlobalIds and no
+changes outside the edited objects. This is direct IFC source editing, not v2 project geometry
+editing or a general project-to-IFC round-trip pipeline. See `references/scene-geometry-bim.md`.
+
+## Production operation declarations
+
+`src/lib/cad/production-operations.js` declares target production operations (drawings, schedules,
+quantity takeoff, scene/video/presentation and deliverable packaging). They register only when a
+real host advertises the operation, resolves principal/resource scope, enforces approval and returns
+real artifacts, hashes and receipts. A declaration is not an available provider.

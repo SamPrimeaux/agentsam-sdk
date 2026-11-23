@@ -2,7 +2,7 @@
   "schema": "agentsam.skill.v1",
   "id": "agentsam-cad",
   "name": "AgentSam CAD",
-  "description": "CAD end to end: pick the entry point, engine and lane; build, inspect, render and export; prove each step with hashes and receipts.",
+  "description": "Route CAD, BIM/IFC and 3D work through existing project contracts, engines, host jobs and verified artifacts; includes Blender, FreeCAD, OpenSCAD, OCCT, IAMScene and IAMGeometry.",
   "package": "@inneranimalmedia/agentsam-sdk",
   "slash": {
     "suggested": "/cad"

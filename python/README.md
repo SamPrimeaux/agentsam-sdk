@@ -162,4 +162,45 @@ verified_receipt = client.assets.inventory_native()
 
 Async hosts can use `await AsyncAgentSamClient(...).assets.ainventory_native()`. The existing host-owned `repo.asset.inventory@0.1.0` procedure owns native source discovery and hashing, while `ProcedureClient` validates its receipt.
 
-This is SOURCE functionality until the corresponding clean Python wheel is published to PyPI. The source declares `0.2.0`; do not assume that already-published `agentsam-sdk==0.1.0` includes it.
+This is source functionality until the matching clean Python wheel is published to PyPI. The source version is read from `agentsam_sdk.__version__`; do not assume an installed wheel includes a newly added API until that exact version is published and tested from a clean install.
+
+
+## CAD service transport and durable jobs
+
+The standard-library-only module agentsam_sdk.cad.CadServiceClient handles
+authenticated provider capabilities, bounded native-engine requests,
+mount-relative file references, and streamed, resumable artifact downloads.
+Use download_to() for large files; download() intentionally refuses artifacts
+above its configured inline limit.
+
+The old CadBuildingClient remains a compatibility wrapper for the experimental
+rectangular-building proof endpoint. It is not the general CAD project API, and
+it will not report that endpoint ready while the provider says
+requires-runtime-proof.
+
+Long-running project work uses the host-owned CAD job operations rather than
+holding one provider HTTP request open:
+
+~~~python
+from agentsam_sdk import AgentSamClient
+
+# The host supplies a trusted, authenticated SAM operation invoker.
+client = AgentSamClient(cad_job_invoker=authorized_host_invoke)
+job = client.cad_jobs.submit(
+    project_id="project_123",
+    workspace_id="workspace_123",
+    engine="freecad",
+    prompt="Build a parametric enclosure with mounting bosses",
+)
+result = job.wait(timeout=3600)
+~~~
+
+The host adapter dispatches the existing cad.job.generate, cad.job.status, and
+cad.job.execute operations and owns project authorization, approvals, runner
+dispatch and agentsam_cad_jobs persistence. The existing SDK `createCadHttpPorts().jobs`
+adapter maps the SAM operations to the authenticated CAD API; the host supplies the
+trusted invoker. AgentSamClient exposes the existing client as `client.cad_jobs`; without a trusted invoker it fails closed with
+`cad_job_host_not_configured`. AsyncAgentSamClient exposes the nonblocking
+`async_client.cad_jobs` facade. The Python SDK creates no parallel job table or
+local queue. See the
+[Python CAD transport architecture](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/docs/architecture/PYTHON_CAD_SERVICE_TRANSPORT.md).

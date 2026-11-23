@@ -16,7 +16,7 @@ current task calls for them.
 | `agentsam-plan-and-goap` | **current** | Read plan state first; advance plans with evidence, only when asked |
 | `agentsam-sam-operations` | **current** | Exact SAM operation inputs; judge results, not envelopes |
 | `agentsam-repo-recon` | **current** | Map a repo with deterministic read-only tools first |
-| `agentsam-cad` | **current** | CAD end to end: entry point, engine/lane, build/inspect/render/export, hash and receipt proof |
+| `agentsam-cad` | **current** | CAD/BIM routing across project contracts, native engines, IAMScene, IFC, Python jobs and verified outputs |
 | `agentsam-experience-delivery` | **proposed workflow** | Machine-first, source-faithful brand/UX/scene handoffs with real functional gates |
 | `agentsam-sdk-orientation` | **current** | Where things live, which source is authoritative |
 
