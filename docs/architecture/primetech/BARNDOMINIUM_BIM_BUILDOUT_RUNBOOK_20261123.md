@@ -4,6 +4,47 @@
 
 **Current state**: v1.1 is an interactive owner-review **HTML Space**, not a parametric model or permit-ready drawing set. The verified ZIP contains its standalone HTML, README, CSV issue/room/systems registers and delivery manifest. The archive is 184,774 bytes, SHA-256 \`fc1acabd19277de9ae4672c5f07d3b93374002691d185ce29f350aec32bc91b6\`. Always retrieve by catalog R2 reference and verify bytes. The template record for the Space can be active as a review/presentation; the native BIM candidate remains draft until verified.
 
+## Structural concept V2 — implemented and published 2026-11-23
+
+The previous missing-native-source condition has been superseded. Native FreeCAD
+structural geometry and IFC4 now exist as an unapproved design-review draft.
+
+- Catalog: SAM-BIM-BARNDOMINIUM-STARTER, existing studio_templates row,
+  version 2, status DRAFT. Do not create a parallel catalog or runtime preset.
+- Storage: private R2 bucket cad, prefix library/bim-starters/barndominium/v2/.
+  Original v1.1 owner-review Space and archive remain unchanged.
+- Source: source.FCStd; IFC4: model.ifc; view: preview.glb and thumbnail.webp;
+  archive: Barndominium-Structure-Concept-V2.zip; metadata: manifest.json.
+- Verified 688 FreeCAD shapes in 12 categories, 26 real boolean wall-opening cuts
+  with IFC host/void/fill links, 20 IfcSpace source program volumes.
+- Native includes foundation and thickened-edge concepts, structural grid,
+  posts, beams, bracing, all designated exterior/interior partitions,
+  opening frames, doors/windows, three garage overhead doors,
+  roof planes, trusses, purlins, porch posts, flashings and rainwater drainage.
+- FreeCAD reopened 688 elements without invalid solids. IFC4 reopened
+  688 model elements, 26 IfcOpeningElement, 26 void/fill relationships each,
+  and 20 IfcSpace; Blender GLB reimport preserved 688 named nodes.
+- All 15 R2 objects independently downloaded and SHA-256 verified; recorded
+  as publisher inventory in r2_objects and related to the existing template.
+
+IMPORTANT: source geometry and material/frame proposals ARE NOT ENGINEERED.
+FreeCAD feature solids are directly editable but are not fully constraint-driven
+architectural BIM assemblies. Default sizes are placeholders. The garage
+14-foot wall/eave is an explicit assumption for three 12-foot garage doors,
+and the 18-foot living ridge source section conflicts with the roof-plan
+ridge orientation. The roof-to-roof valley remains a review reference, not an
+engineered/weatherproof detail. Structural spans, uplift, soils, footing/rebar,
+glazing/egress, rated garage separation, interior finishes, MEP, site and
+permit decisions are unresolved. Keep this registry row in DRAFT until
+the actual reviews are complete.
+
+Rebuild scripts: services/cad/recipes/barndominium/.
+The v1.1 review/room-schedule.csv is input. The FreeCAD generator produces
+native and IFC models, Blender makes the GLB/PNG preview, cwebp makes the
+single release thumbnail, and prepare_release.py packages the data and manifest.
+Any changed source or geometry must be released under a NEW immutable prefix,
+never overwritten in published v2 storage.
+
 ## Immediate next-agent execution
 
 1. Query \`studio_templates\` for \`SAM-SPACE-BARNDOMINIUM-V11\` and \`SAM-BIM-BARNDOMINIUM-STARTER\`; resolve \`payload_bucket_id\` → \`r2_buckets\`. Read the uploaded \`manifest.json\`, \`review/issue-register.csv\`, \`review/room-schedule.csv\` and \`review/systems-coordination.csv\` directly from the existing \`cad\` bucket. Download and check the ZIP SHA-256. Avoid a new registry, app, table, bucket, viewer, or BIM editor.
