@@ -9,10 +9,12 @@ service-local queue or client-created job database.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import re
 import socket
+import threading
 import time
 import uuid
 from collections.abc import Callable, Mapping
@@ -183,6 +185,7 @@ class CadServiceClient:
         self.capabilities_ttl = float(capabilities_ttl)
         self._capabilities: dict[str, Any] | None = None
         self._capabilities_at = 0.0
+        self._capabilities_lock = threading.RLock()
 
     def _url(self, path: str) -> str:
         if not isinstance(path, str) or not path.startswith("/") or path.startswith("//"):
@@ -301,16 +304,17 @@ class CadServiceClient:
         return value
 
     def get_capabilities(self, *, refresh: bool = False) -> dict[str, Any]:
-        now = time.monotonic()
-        if (not refresh and self._capabilities is not None
-                and now - self._capabilities_at <= self.capabilities_ttl):
-            return dict(self._capabilities)
-        value = self._request_json("GET", "/v1/capabilities")
-        if value.get("ok") is not True or not isinstance(value.get("endpoints"), dict):
-            raise CadServiceError("cad_host_capabilities_invalid")
-        self._capabilities = value
-        self._capabilities_at = now
-        return dict(value)
+        with self._capabilities_lock:
+            now = time.monotonic()
+            if (not refresh and self._capabilities is not None
+                    and now - self._capabilities_at <= self.capabilities_ttl):
+                return copy.deepcopy(self._capabilities)
+            value = self._request_json("GET", "/v1/capabilities")
+            if value.get("ok") is not True or not isinstance(value.get("endpoints"), dict):
+                raise CadServiceError("cad_host_capabilities_invalid")
+            self._capabilities = value
+            self._capabilities_at = now
+            return copy.deepcopy(value)
 
     def probe(self) -> bool:
         """Probe the authenticated service itself, not whether every tool is ready."""

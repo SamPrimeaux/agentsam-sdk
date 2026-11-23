@@ -197,7 +197,7 @@ result = job.wait(timeout=3600)
 ~~~
 
 The host adapter dispatches the existing cad.job.generate, cad.job.status, and
-cad.job.execute operations and owns project authorization, approvals, Queue
-Control and agentsam_cad_jobs persistence. The Python SDK creates no parallel
+cad.job.execute operations and owns project authorization, approvals, runner
+dispatch and agentsam_cad_jobs persistence. The Python SDK creates no parallel
 job table or local queue. See the
 [Python CAD transport architecture](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/docs/architecture/PYTHON_CAD_SERVICE_TRANSPORT.md).

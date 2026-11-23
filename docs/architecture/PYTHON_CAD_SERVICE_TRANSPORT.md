@@ -7,14 +7,14 @@ The Python CAD SDK has two deliberately separate client surfaces:
 - **CadServiceClient** is a provider transport. It inspects authenticated capabilities, invokes short native-provider endpoints, lists mount-scoped files, and streams verified artifacts.
 - **CadJobClient** delegates durable project work to the host's existing SAM CAD operations: **cad.job.generate**, **cad.job.status**, and **cad.job.execute**.
 
-The host remains the authority for OAuth principal resolution, project/workspace authorization, write approval, Queue Control, runner selection, and the existing **agentsam_cad_jobs** records. The Python client does not create a queue, local job database, or alternate job table.
+The host remains the authority for OAuth principal resolution, project/workspace authorization, write approval, runner dispatch, and the existing **agentsam_cad_jobs** records. The Python client does not create a queue, local job database, or alternate job table.
 
 ## Existing source and result contracts
 
 - Editable source remains **cad.project.v2**; the building proof reads a bounded subset of that model and does not create a second project format.
 - CAD operation intent and authorization remain in the SAM CAD pack.
 - Durable job identity and lifecycle remain in the host-owned CAD job port.
-- Generated outputs must use the CAD artifact receipt and delivery-manifest contracts, including project/source revision, operation, executor, artifact URI, byte count, digest, and validation evidence.
+- The general CAD project pipeline uses the canonical CAD artifact receipt and delivery-manifest contracts, including project/source revision, operation, executor, artifact URI, byte count, digest, and validation evidence. The experimental building proof retains its operation-specific v1 receipt and is not a replacement for those contracts.
 - File refs are mount-relative aliases. The service resolves them against its own operator-authorized mounts; a caller cannot send an arbitrary host path.
 
 ## Client responsibilities

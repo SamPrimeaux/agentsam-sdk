@@ -2,7 +2,7 @@
 
 This client intentionally delegates to the installed SAM CAD operation port:
 cad.job.generate, cad.job.status and cad.job.execute. The host owns
-authorization, approvals, Queue Control and the existing agentsam_cad_jobs
+authorization, approvals, runner dispatch and the existing agentsam_cad_jobs
 records. The caller must inject that trusted host operation adapter; the stock
 Python AgentSamClient does not automatically expose these CAD operations. No
 second queue, SQLite file, local process or ad-hoc job table is made.
