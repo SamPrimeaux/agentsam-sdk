@@ -52,9 +52,18 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
     finally{setLoading(false);}
   },[]);
   useEffect(()=>{void refresh();},[refresh]);
+  // Return from an OAuth popup/redirect without forcing users through Settings.
+  useEffect(()=>{
+    const onFocus=()=>{void refresh();};
+    window.addEventListener('focus',onFocus);
+    return ()=>window.removeEventListener('focus',onFocus);
+  },[refresh]);
   useEffect(()=>{setAccount('');setBucket('');setBuckets([]);setRepos([]);setRepository('');setApps([]);setDockerSelection(null);setError('');},[source]);
   const accounts=source==='drive'?catalog.googleDrive:source==='github'?catalog.github:catalog.cloudflare;
   const selected=accounts.some(a=>a.account===account);
+  useEffect(()=>{
+    if(accounts.length===1 && !selected) setAccount(accounts[0]!.account);
+  },[accounts,selected]);
   const remote=useMemo(()=>{
     if(source==='docker')return dockerSelection?createDockerIDEWorkspace(dockerSelection):null;
     if(!selected)return null;
@@ -121,7 +130,8 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
         <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} key={source==='docker'&&dockerSelection?'docker:'+dockerSelection.context+':'+dockerSelection.container+':'+dockerSelection.root:source+':'+account+':'+bucket} workspace={remote}
           workspaceId={source==='docker'&&dockerSelection?'docker:'+dockerSelection.context+':'+dockerSelection.container+':'+dockerSelection.root:source+':'+account+':'+bucket} palette={palette}
           label={source==='docker'?'Docker · '+dockerSelection?.container:source==='drive'?'Google Drive · '+account:source==='github'?'GitHub · '+repository:'R2 · '+bucket}
-          sources={sources} sourceId={source} onSourceSelect={onSelect}/></>:null}
+          sources={sources} sourceId={source} onSourceSelect={onSelect}
+          onReconnect={()=>{if(source==='docker')setDockerSelection(null);else void connect();}}/></>:null}
     </div>:<div className="min-h-0 flex-1 overflow-y-auto p-4 text-xs">
       <div className="mx-auto flex max-w-lg flex-col gap-4">
         <div><h2 className="text-base font-semibold">{sources.find(s=>s.id===source)?.label}</h2>
