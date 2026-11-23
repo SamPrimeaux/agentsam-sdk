@@ -185,3 +185,23 @@ test('Blender real execution builds, inspects, and exports production 3D assets'
   assert.ok(fs.existsSync(glbPath));
   assert.ok(fs.statSync(glbPath).size > 0);
 });
+
+test('Blender inspect proves the hole: closed manifold, one shell, genus 1, and the 80x50x4 envelope', { skip: !toolAvailable('blender') && 'blender binary not available on this machine' }, async (t) => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-blender-hole-'));
+  t.after(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+  const recipe = JSON.parse(fs.readFileSync(new URL('../../examples/cad/blender-box-with-hole.recipe.json', import.meta.url), 'utf8'));
+  const blendPath = path.join(tmpDir, 'plate.blend');
+
+  const built = await blenderBuild({ recipe, output: blendPath });
+  const inspected = await blenderInspect({ input: blendPath });
+  assert.equal(inspected.input.sha256, built.artifact.sha256, 'inspected the file that was built');
+
+  const plate = inspected.scene.objects.find(object => object.name === 'Plate');
+  assert.deepEqual(plate.dimensions, [80, 50, 4]);
+  assert.equal(plate.mesh.non_manifold_edges, 0);
+  assert.equal(plate.mesh.shells, 1);
+  assert.equal(plate.mesh.genus, 1, 'a through-hole is genus 1; a solid plate would be 0');
+  // Envelope minus the 64-gon bore (~452 mm3) and bevel loss: strictly inside the envelope, not equal to it.
+  assert.ok(plate.mesh.volume > 15000 && plate.mesh.volume < 16000 - 400, `volume ${plate.mesh.volume}`);
+  assert.equal(inspected.scene.objects.find(object => object.type === 'CAMERA').mesh, null);
+});

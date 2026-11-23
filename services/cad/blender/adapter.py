@@ -16,6 +16,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+import bmesh
 import bpy
 from mathutils import Vector
 
@@ -411,8 +412,55 @@ def _round_vec(values: Any) -> list[float]:
     return [round(float(value), 9) for value in values]
 
 
+def _mesh_stats(obj: Any, depsgraph: Any) -> dict[str, Any]:
+    """Topology and volume of the evaluated mesh in world space, so a boolean hole is provable.
+
+    shells/genus come from V-E+F: a closed orientable surface has V-E+F = 2*(shells - genus),
+    so a plate with one through-hole reports genus 1. volume is only reported for a closed
+    manifold (an open mesh has no volume); non_manifold_edges says why it is missing.
+    """
+    evaluated = obj.evaluated_get(depsgraph)
+    mesh = evaluated.to_mesh()
+    try:
+        bm = bmesh.new()
+        try:
+            bm.from_mesh(mesh)
+            bm.transform(obj.matrix_world)
+            parents = list(range(len(bm.verts)))
+
+            def find(index: int) -> int:
+                while parents[index] != index:
+                    parents[index] = parents[parents[index]]
+                    index = parents[index]
+                return index
+
+            for edge in bm.edges:
+                first, second = (vert.index for vert in edge.verts)
+                parents[find(first)] = find(second)
+            shells = len({find(vert.index) for vert in bm.verts})
+            non_manifold = sum(1 for edge in bm.edges if not edge.is_manifold)
+            euler = len(bm.verts) - len(bm.edges) + len(bm.faces)
+            closed = non_manifold == 0 and len(bm.faces) > 0
+            return {
+                "vertices": len(bm.verts),
+                "edges": len(bm.edges),
+                "faces": len(bm.faces),
+                "triangles": sum(len(face.verts) - 2 for face in bm.faces),
+                "shells": shells,
+                "euler_characteristic": euler,
+                "non_manifold_edges": non_manifold,
+                "genus": (2 * shells - euler) // 2 if closed else None,
+                "volume": round(abs(bm.calc_volume()), 6) if closed else None,
+            }
+        finally:
+            bm.free()
+    finally:
+        evaluated.to_mesh_clear()
+
+
 def _inspect() -> dict[str, Any]:
     scene = bpy.context.scene
+    depsgraph = bpy.context.evaluated_depsgraph_get()
     objects: list[dict[str, Any]] = []
     for obj in sorted(bpy.data.objects, key=lambda item: item.name):
         world_bounds = []
@@ -428,6 +476,7 @@ def _inspect() -> dict[str, Any]:
             "world_bounds": world_bounds,
             "materials": sorted(slot.material.name for slot in obj.material_slots if slot.material),
             "modifiers": [{"name": modifier.name, "type": modifier.type} for modifier in obj.modifiers],
+            "mesh": _mesh_stats(obj, depsgraph) if obj.type == "MESH" else None,
         })
     return {
         "ok": True,
