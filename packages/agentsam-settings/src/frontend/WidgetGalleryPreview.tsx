@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { QueueDepthWidget, formatClockTime } from '@inneranimalmedia/agentsam-workbench/widgets';
 import {
   Activity,
@@ -32,8 +32,8 @@ function ClockLivePreview() {
 export function WidgetGalleryPreview({ id, interactive = false }: { id: string; interactive?: boolean }) {
   const line = (width: string, light = false) => (
     <span
-      className={`block h-1.5 rounded-full ${light ? "bg-foreground/35" : "bg-foreground/10"}`}
-      style={{ width }}
+      className={`block h-1.5 w-[var(--preview-line-width)] rounded-full ${light ? "bg-foreground/35" : "bg-foreground/10"}`}
+      style={{ "--preview-line-width": width } as CSSProperties}
     />
   );
   const bars = (values: number[]) => (
@@ -41,8 +41,11 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
       {values.map((value, index) => (
         <div key={index} className="min-w-0 flex-1 rounded-t-[4px] bg-primary/15">
           <div
-            className="rounded-t-[4px] bg-primary/75"
-            style={{ height: value + "%", minHeight: 8, marginTop: (100 - value) * 0.52 }}
+            className="mt-[var(--preview-bar-offset)] h-[var(--preview-bar-height)] min-h-2 rounded-t-[4px] bg-primary/75"
+            style={{
+              "--preview-bar-height": value + "%",
+              "--preview-bar-offset": (100 - value) * 0.52 + "px",
+            } as CSSProperties}
           />
         </div>
       ))}
@@ -97,7 +100,7 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
   if (id === "token-cost-glance") {
     return <div className="flex h-full flex-col justify-between">
       <div>{miniLabel("ESTIMATED SPEND")}{metric("$2.84","Today's model usage")}</div>
-      <div className="flex items-end gap-1.5">{[20,27,23,39,34,55,48,61,46,57,72,66].map((v,i)=><span key={i} className="flex-1 rounded-t-sm bg-sky-400/70" style={{height:v*.62+4}}/>)}</div>
+      <div className="flex items-end gap-1.5">{[20,27,23,39,34,55,48,61,46,57,72,66].map((v,i)=><span key={i} className="h-[var(--preview-spark-height)] flex-1 rounded-t-sm bg-sky-400/70" style={{"--preview-spark-height":(v*.62+4)+"px"} as CSSProperties}/>)}</div>
     </div>;
   }
   if (id === "jobs" || id === "recent-items" || id === "github-activity") {
@@ -133,7 +136,7 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
   if (id === "media" || id === "weather-dashboard-agent") {
     return <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-xl bg-gradient-to-br from-indigo-400/20 via-sky-400/10 to-fuchsia-400/25 p-3">
       <div className="absolute -right-5 -top-7 size-28 rounded-full bg-sky-400/20 blur-2xl"/><div className="relative flex items-center justify-between">{miniLabel(id==="media"?"MEDIA PREVIEW":"WEATHER EXAMPLE")}{id==="media"?<Activity className="size-4 text-sky-300"/>:<CloudSun className="size-5 text-amber-300"/>}</div>
-      <div className="relative">{id==="weather-dashboard-agent"?<><div className="text-[31px] font-light tracking-[-0.08em] text-foreground">22°</div><span className="text-[10px] text-muted-foreground">Partly cloudy · sample</span></>:<><div className="mb-2 flex h-10 items-center justify-center gap-1">{[12,25,18,39,23,43,29,16,37,21,13].map((v,i)=><span key={i} className="w-1 rounded-full bg-sky-300/65" style={{height:v}}/>)}</div><span className="text-[10px] text-muted-foreground">Ambient stream · sample</span></>}</div>
+      <div className="relative">{id==="weather-dashboard-agent"?<><div className="text-[31px] font-light tracking-[-0.08em] text-foreground">22°</div><span className="text-[10px] text-muted-foreground">Partly cloudy · sample</span></>:<><div className="mb-2 flex h-10 items-center justify-center gap-1">{[12,25,18,39,23,43,29,16,37,21,13].map((v,i)=><span key={i} className="h-[var(--preview-wave-height)] w-1 rounded-full bg-sky-300/65" style={{"--preview-wave-height":v+"px"} as CSSProperties}/>)}</div><span className="text-[10px] text-muted-foreground">Ambient stream · sample</span></>}</div>
     </div>;
   }
   if (id === "artifact-preview") {
