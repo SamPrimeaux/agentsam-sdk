@@ -72,7 +72,7 @@ export function mapStatusTokenToState(raw: string | null | undefined): FsChangeS
   const lower = original.toLowerCase();
   const upper = original.toUpperCase();
 
-  if (lower.includes('renamed') || lower === 'renamed' || /^r\b/i.test(original) || upper.startsWith('R')) {
+  if (lower.includes('renamed') || lower === 'renamed' || /^r\b/i.test(original) || /^R(?:\\d{0,3}|\\s)/.test(upper)) {
     return 'renamed';
   }
   if (
