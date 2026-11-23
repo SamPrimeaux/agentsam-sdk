@@ -14,6 +14,23 @@ test('source browser serves only indexed source IDs, preserves bytes and allows 
  fs.mkdirSync(dir,{recursive:true});
  fs.writeFileSync(path.join(dir,'sketch.scad'),'cube([4,5,6]);');
  fs.writeFileSync(path.join(dir,'model.glb'),Buffer.from('glTF\x02\x00\x00\x00mock preview'));
+ const newFiles:Record<string,{id:string;role:string}>={
+  'sheet.svg':{id:'image.svg',role:'exchange'},
+  'part.stl':{id:'model.stl',role:'exchange'},
+  'review.mov':{id:'video.quicktime',role:'presentation'},
+  'house.ifc':{id:'bim.ifc',role:'native-bim'},
+  'house.ifczip':{id:'bim.ifczip',role:'native-bim'},
+  'solid.igs':{id:'cad.iges',role:'native-bim'},
+  'solid.brep':{id:'cad.opencascade-brep',role:'native-bim'},
+  'prototype.3mf':{id:'model.3mf',role:'exchange'},
+  'view.iamscene.json':{id:'model.iamscene',role:'presentation'},
+  'part.iamgeometry':{id:'model.iamgeometry',role:'exchange'},
+ };
+ for(const filename of Object.keys(newFiles))
+  fs.writeFileSync(path.join(dir,filename),Buffer.from('source bytes for '+filename));
+ // Larger than the hashing buffer: regression guard for constant-memory hashing.
+ fs.writeFileSync(path.join(dir,'large.step'),Buffer.alloc(1024*1024+17,0x5a));
+ fs.writeFileSync(path.join(dir,'unrelated.json'),'{"not":"a CAD receipt"}');
  process.env.AGENTSAM_CAD_SOURCE_ROOTS=root;
  const files=discoverCadSources([{project:path.basename(root),root}]);
  const scad=files.find(x=>x.format==='SCAD'),glb=files.find(x=>x.format==='GLB');
