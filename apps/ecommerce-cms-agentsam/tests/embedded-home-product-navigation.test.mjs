@@ -46,4 +46,5 @@ test('Product Studio uses the published packaged dock with the real editor tabs,
   assert.match(styles, /@media\s*\(max-width:\s*760px\)[\s\S]*\.ps-toolrail\s*\{\s*display:none/);
   assert.match(styles, /\.ps-studio-launch-dock\s+\.as-nav-launch-dock\s*\{/);
   assert.match(styles, /\.ps-toolpanel:not\(\[hidden\]\)\s*\{[^}]*bottom:\s*calc\(80px/s);
+  assert.match(styles, /\.product-studio-shell:has\(input:focus,textarea:focus,select:focus/);
 });
