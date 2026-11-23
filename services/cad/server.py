@@ -304,12 +304,13 @@ def _compile_openscad(payload: dict[str, Any]) -> dict[str, Any]:
         if proc.returncode != 0 or not output_path.exists():
             raise RuntimeError(f"OpenSCAD failed with exit {proc.returncode}: {logs[-4000:]}")
 
-        artifact = output_path.read_bytes()
-        if len(artifact) > MAX_INLINE_ARTIFACT_BYTES:
+        artifact_size = output_path.stat().st_size
+        if artifact_size > MAX_INLINE_ARTIFACT_BYTES:
             raise RuntimeError(
-                f"artifact is {len(artifact)} bytes; inline JSON API limit is {MAX_INLINE_ARTIFACT_BYTES}. "
-                "Use a smaller model or a future streaming artifact endpoint."
+                f"artifact is {artifact_size} bytes; inline JSON API limit is {MAX_INLINE_ARTIFACT_BYTES}. "
+                "Use the file-backed artifact endpoint for larger outputs."
             )
+        artifact = output_path.read_bytes()
 
         digest = hashlib.sha256(artifact).hexdigest()
         filename = str(payload.get("filename") or f"model.{output_format}")
@@ -510,9 +511,10 @@ def _execute_ifc(payload: dict[str, Any]) -> dict[str, Any]:
             raise RuntimeError(f"IFC {operation} failed ({err_msg}): {(proc.stderr or '')[-2000:]}")
         if not output_path.is_file():
             raise RuntimeError("IFC adapter reported success but wrote no model")
+        model_size = output_path.stat().st_size
+        if model_size > MAX_INLINE_ARTIFACT_BYTES:
+            raise RuntimeError(f"model is {model_size} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
         raw = output_path.read_bytes()
-        if len(raw) > MAX_INLINE_ARTIFACT_BYTES:
-            raise RuntimeError(f"model is {len(raw)} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
         model = json.loads(raw)
         return {
             "ok": True, "tool": "ifc", "operation": operation, "schema": model.get("schema"),
@@ -598,9 +600,10 @@ def _execute_freecad(payload: dict[str, Any]) -> dict[str, Any]:
         if not output_path.exists():
             raise RuntimeError(f"FreeCAD failed to produce output file {filename}")
 
+        artifact_size = output_path.stat().st_size
+        if artifact_size > MAX_INLINE_ARTIFACT_BYTES:
+            raise RuntimeError(f"artifact is {artifact_size} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
         artifact = output_path.read_bytes()
-        if len(artifact) > MAX_INLINE_ARTIFACT_BYTES:
-            raise RuntimeError(f"artifact is {len(artifact)} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
 
         digest = hashlib.sha256(artifact).hexdigest()
 
@@ -695,9 +698,10 @@ def _execute_blender(payload: dict[str, Any]) -> dict[str, Any]:
 
         artifact = b""
         if output_path.exists():
+            artifact_size = output_path.stat().st_size
+            if artifact_size > MAX_INLINE_ARTIFACT_BYTES:
+                raise RuntimeError(f"artifact is {artifact_size} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
             artifact = output_path.read_bytes()
-            if len(artifact) > MAX_INLINE_ARTIFACT_BYTES:
-                raise RuntimeError(f"artifact is {len(artifact)} bytes; exceeds inline limit {MAX_INLINE_ARTIFACT_BYTES} bytes")
 
         digest = hashlib.sha256(artifact).hexdigest() if artifact else None
 
