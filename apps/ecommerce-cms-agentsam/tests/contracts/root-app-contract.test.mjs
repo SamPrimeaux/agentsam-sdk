@@ -20,19 +20,18 @@ test("root Ecommerce contract classifies admin as core and product/growth/provid
   assert.ok(!manifest.features.includes("provider.resend"));
 });
 
-test("compatibility manifests point at their canonical owner instead of becoming a second authority", async () => {
-  const expected = {
-    "admin-shell-nav": "apps/ecommerce-cms-agentsam/frontend/admin.surface.json",
-    "growth-campaigns": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.package.json",
-    "product-studio": "apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.package.json",
-    "provider-completeful": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.package.json",
-    "provider-resend": "apps/ecommerce-cms-agentsam/apps/resend/agentsam.package.json",
-    "mini-agentsam-composer": "packages/agentsam-workbench/agentsam.feature.json"
-  };
-
-  for (const [name, target] of Object.entries(expected)) {
-    const feature = await json(path.join(repoRoot, "features", name, "agentsam.feature.json"));
-    assert.equal(feature.compatibility?.canonical, target);
+test("ecommerce module/provider registry only references canonical package manifests", async () => {
+  const registry = await json(path.join(appRoot, "apps/registry.json"));
+  const roles = { "product-studio": "module", growth: "module", completeful: "provider", resend: "provider" };
+  assert.deepEqual(registry.apps.map(row => row.id), Object.keys(roles));
+  for (const entry of registry.apps) {
+    assert.equal(entry.kind, roles[entry.id]);
+    const file = path.join(appRoot, entry.contract);
+    const manifest = await json(file);
+    assert.equal(manifest.schema, "agentsam.package.v1");
+    assert.equal(manifest.kind, entry.kind);
+    assert.equal(manifest.owner_app_id, "ecommerce-cms-agentsam");
+    assert.equal(manifest.installable, false);
   }
 });
 
