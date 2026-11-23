@@ -91,6 +91,7 @@ export function discoverCadSources(roots:Array<{project:string;root:string}>,max
           project:configured.project,revision:revisionFrom(relativePath),
           relativePath,format:receipt?'JSON':detected.extension.replace(/^\./,'').replace(/\.json$/,'').toUpperCase(),
           formatRef:{catalog:'agentsam.source-types.v2',id:detected.id,extension:detected.extension},
+          ...(cadFormatCandidates(entry.name).length>1 ? {formatCandidates:cadFormatCandidates(entry.name)} : {}),
           role,status,bytes:stat.size,sha256,
         });
       }
