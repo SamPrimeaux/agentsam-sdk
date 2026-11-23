@@ -15,6 +15,7 @@ test('Home iframe actually shrinks with Side Stage and its content responds to a
   const home = read('../frontend/static/css/home-workspace.css');
   assert.match(host, /\.platform-console-stage\s*>\s*\.agentsam-route\s*\{[^}]*flex:\s*1\s+1\s+0%/s);
   assert.match(host, /\.agentsam-route\s*>\s*iframe\s*\{[^}]*width:\s*100%/s);
+  assert.match(host, /@media\s*\(max-width:\s*760px\)[\s\S]*\.platform-console-assistant\s*\{\s*position:\s*absolute/);
   assert.match(home, /\.fnf-home\s*\{[^}]*container-type:\s*inline-size/s);
   assert.match(home, /@container\s*\(max-width:\s*620px\)/);
   assert.match(home, /@container\s*\(max-width:\s*390px\)/);
