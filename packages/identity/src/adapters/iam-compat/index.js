@@ -4,6 +4,7 @@ import { IdentitySchemaError } from '../../contracts/identity-store.js';
 import { IDENTITY_STORE_SCHEMA_VERSION } from '../../contracts/identity-store.js';
 import { newAccountIdentityId, newAuthUserId, newSessionId, newAuthEventId, nowUnix } from '../cloudflare-d1/ids.js';
 import { createAccountSecurityStore } from '../account-security-store.js';
+import { hasColumn, normalizeRevokeReason } from '../column-support.js';
 import { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from '../../contracts/company.js';
 
 
@@ -228,6 +229,13 @@ export function createIamCompatIdentityAdapter(db, options = {}) {
         `INSERT INTO auth_sessions (${columns.join(', ')})
          VALUES (${columns.map(() => '?').join(', ')})`,
       ).bind(...values).run();
+      // accounts.last_active_at is the account-level "last seen"; session rows only
+      // carry per-session activity. Non-fatal so a login is never blocked by an audit write.
+      try {
+        if (await hasColumn(db, 'accounts', 'last_active_at')) {
+          await db.prepare(`UPDATE accounts SET last_active_at = ? WHERE id = ?`).bind(ts, userId).run();
+        }
+      } catch { /* audit-only */ }
       return {
         id,
         type: desktop ? SESSION_TYPES.DESKTOP : SESSION_TYPES.BROWSER,
@@ -265,10 +273,17 @@ export function createIamCompatIdentityAdapter(db, options = {}) {
 
     async revokeSession(sessionId, reason = 'logout') {
       const ts = nowUnix();
-      await db.prepare(
-        `UPDATE auth_sessions SET revoked_at = ?, last_active_at = ? WHERE id = ? AND revoked_at IS NULL`,
-      ).bind(ts, ts, sessionId).run();
-      return { ok: true, reason };
+      const normalized = normalizeRevokeReason(reason);
+      if (await hasColumn(db, 'auth_sessions', 'revoke_reason')) {
+        await db.prepare(
+          `UPDATE auth_sessions SET revoked_at = ?, last_active_at = ?, revoke_reason = ? WHERE id = ? AND revoked_at IS NULL`,
+        ).bind(ts, ts, normalized, sessionId).run();
+      } else {
+        await db.prepare(
+          `UPDATE auth_sessions SET revoked_at = ?, last_active_at = ? WHERE id = ? AND revoked_at IS NULL`,
+        ).bind(ts, ts, sessionId).run();
+      }
+      return { ok: true, reason: normalized };
     },
 
     async createOAuthTransaction({ state, provider, codeVerifier, returnTo, redirectTo, appId, ttlSeconds = 600, clientType, nativeChallenge, nativeRedirect }) {

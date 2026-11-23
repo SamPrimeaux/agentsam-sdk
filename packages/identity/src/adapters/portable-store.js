@@ -1,4 +1,5 @@
 import { createAccountSecurityStore } from './account-security-store.js';
+import { hasColumn, normalizeRevokeReason } from './column-support.js';
 import {
   IDENTITY_STORE_SCHEMA_VERSION,
   IdentitySchemaError,
@@ -188,10 +189,17 @@ export function createPortableIdentityStore(db, options = {}) {
     async revokeSession(sessionId, reason = 'logout') {
       await ensure();
       const ts = nowUnix();
-      await db.prepare(
-        `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ? WHERE id = ? AND revoked_at IS NULL`,
-      ).bind(ts, ts, sessionId).run();
-      return { ok: true, reason };
+      const normalized = normalizeRevokeReason(reason);
+      if (await hasColumn(db, 'identity_sessions', 'revoke_reason')) {
+        await db.prepare(
+          `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ?, revoke_reason = ? WHERE id = ? AND revoked_at IS NULL`,
+        ).bind(ts, ts, normalized, sessionId).run();
+      } else {
+        await db.prepare(
+          `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ? WHERE id = ? AND revoked_at IS NULL`,
+        ).bind(ts, ts, sessionId).run();
+      }
+      return { ok: true, reason: normalized };
     },
 
     async createOAuthTransaction({
