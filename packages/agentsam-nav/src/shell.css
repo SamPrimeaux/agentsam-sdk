@@ -466,7 +466,7 @@
     width: min(530px, calc(100% - 32px));
   }
   .as-nav-launch-dock[data-nav-dock-coverage="tablet"] .as-nav-launch-dock-label {
-    display: block; font-size: 10px; line-height: 1.2;
+    display: block; font-size: var(--nav-meta-size); line-height: 1.2;
   }
 }
 
