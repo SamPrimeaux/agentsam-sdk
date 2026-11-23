@@ -103,7 +103,7 @@ async function providerJson(fetchImpl,url,token,extraHeaders={}) {
 export function normalizeR2Listing(body, currentPrefix='') {
   const objects=Array.isArray(body.result) ? body.result : [];
   const prefixes=Array.isArray(body.result_info?.delimited) ? body.result_info.delimited : [];
-  const prefix=currentPrefix ? currentPrefix.replace(/\\/+$/, '')+'/' : '';
+  const prefix=currentPrefix ? currentPrefix.replace(/\/+$/, '')+'/' : '';
   const folders=new Set();
   const files=[];
   for(const candidate of prefixes) {
@@ -124,7 +124,7 @@ export function normalizeR2Listing(body, currentPrefix='') {
   }
   return {
     entries:[
-      ...[...folders].sort().map(p=>({id:p,name:p.replace(/\\/$/,'').split('/').at(-1),kind:'folder',path:p})),
+      ...[...folders].sort().map(p=>({id:p,name:p.replace(/\/$/,'').split('/').at(-1),kind:'folder',path:p})),
       ...files.sort((a,b)=>a.name.localeCompare(b.name)),
     ],
     cursor:body.result_info?.cursor||null,
