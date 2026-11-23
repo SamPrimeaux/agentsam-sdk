@@ -191,5 +191,5 @@ export async function runCadFormatOperation(input: {
       operation: input.operation, format, source: input.source, options: input.options,
     }) };
   }
-  throw new Error('cad_operation_adapter_unavailable:' + recognized.id + ':' + input.operation);
+  throw new Error('cad_operation_adapter_unavailable:' + targetId + ':' + input.operation);
 }
