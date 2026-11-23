@@ -45,7 +45,7 @@ export function projectFromIfcInspection(model, { id, name, sourceUri, revision 
   }
   visitSpatial(model.spatial);
   for (const space of model.spaces) entity(space.globalId, 'IfcSpace', {
-    ...space, semanticOnly: !space.hasGeometry,
+    ...space, semanticOnly: true,
   });
   for (const element of model.elements) entity(element.globalId, element.ifcClass, {
     ...element, geometryAuthority: 'source-ifc',
