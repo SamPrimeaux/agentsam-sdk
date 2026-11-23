@@ -8,3 +8,6 @@
     grid-column: span 2;
   }
 }
+
+/* Drag affordance works for mouse, touch and pen without taking over the cards. */
+.as-new-tab-drag-handle { touch-action: none; user-select:none; }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {
-  loadAccountWidgets, installAccountWidget, updateAccountWidget, uninstallAccountWidget,
+  loadAccountWidgets, installAccountWidget, updateAccountWidget, uninstallAccountWidget, reorderAccountWidgets,
 } from './account-widgets.ts';
 
 const respond = (data: object, status = 200) =>
@@ -24,12 +24,14 @@ test('New Tab widget client uses one authenticated account-scoped API for read a
     assert.equal(widgets[0]?.key,'countdown');
     await installAccountWidget('countdown');
     await updateAccountWidget('countdown',{pinned:true,sizeClass:'medium'});
+    await reorderAccountWidgets(['clock','countdown']);
     await uninstallAccountWidget('countdown');
-    assert.deepEqual(calls.map(call=>call.method),['GET','POST','PATCH','DELETE']);
+    assert.deepEqual(calls.map(call=>call.method),['GET','POST','PATCH','PUT','DELETE']);
     assert.ok(calls.every(call=>call.credentials==='same-origin'));
     assert.equal(calls[0].url,'/api/widgets?surface=agentsam_stage');
     assert.deepEqual(calls[1].body,{key:'countdown',surface:'agentsam_stage'});
     assert.deepEqual(calls[2].body,{key:'countdown',surface:'agentsam_stage',pinned:true,sizeClass:'medium'});
+    assert.deepEqual(calls[3].body,{surface:'agentsam_stage',order:['clock','countdown']});
   } finally {globalThis.fetch = originalFetch;}
 });
 test('widget client never reports failed installation as successful', async () => {

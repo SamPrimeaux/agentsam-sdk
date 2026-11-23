@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BuiltinWidget, WidgetFrame } from '@inneranimalmedia/agentsam-workbench/widgets';
 import '@inneranimalmedia/agentsam-workbench/widgets/widgets.css';
-import { ArrowDown, ArrowUp, LayoutGrid, Pin, PinOff, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, LayoutGrid, Pin, PinOff, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconAction } from '@/components/ui/icon-action';
 import {
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useCurrentUser } from '@/lib/auth/use-current-user';
 import {
-  loadAccountWidgets, installAccountWidget, updateAccountWidget, uninstallAccountWidget,
+  loadAccountWidgets, installAccountWidget, updateAccountWidget, uninstallAccountWidget, reorderAccountWidgets,
   type AccountWidget,
 } from '@/lib/widgets/account-widgets';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,10 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [detailsKey, setDetailsKey] = useState<string | null>(null);
   const accountGeneration = useRef(0);
+  const draggingRef = useRef<string | null>(null);
+  const [draggingKey,setDraggingKey] = useState<string | null>(null);
+  const [dropTargetKey,setDropTargetKey] = useState<string | null>(null);
+
 
   const refresh = useCallback(async () => {
     const generation = accountGeneration.current;
@@ -82,15 +86,31 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
   const ready = catalog.filter(widget => widget.available && !widget.installed);
   const hidden = catalog.filter(widget => widget.installed && widget.hidden);
   const concepts = catalog.filter(widget => !widget.available);
+  const reorder = (sourceKey: string, targetKey: string) => {
+    if(sourceKey === targetKey || busyKey) return;
+    const from = installed.findIndex(item => item.key === sourceKey);
+    const to = installed.findIndex(item => item.key === targetKey);
+    if(from < 0 || to < 0) return;
+    if(installed[from].pinned !== installed[to].pinned){
+      setError("Pinned widgets remain in the first group. Unpin a widget to move it into another group.");
+      return;
+    }
+    const next = [...installed];
+    next.splice(to, 0, ...next.splice(from, 1));
+    void act(sourceKey, () => reorderAccountWidgets(next.map(widget => widget.key)));
+  };
   const move = (widget: AccountWidget, direction: -1 | 1) => {
     const index = installed.findIndex(item => item.key === widget.key);
-    const neighbor = installed[index + direction];
-    if (!neighbor || neighbor.pinned !== widget.pinned) return;
-    void act(widget.key, async () => {
-      // Persist explicit rank on the base breakpoint without remounting the widget.
-      await updateAccountWidget(widget.key, {orderIndex: neighbor.orderIndex === widget.orderIndex ? index + direction : neighbor.orderIndex});
-      await updateAccountWidget(neighbor.key, {orderIndex: neighbor.orderIndex === widget.orderIndex ? index : widget.orderIndex});
-    });
+    const neighbor = installed[index+direction];
+    if(neighbor) reorder(widget.key,neighbor.key);
+  };
+  const dropWidgetAt = (x:number,y:number) => document.elementFromPoint(x,y)
+    ?.closest<HTMLElement>('[data-widget-key]')?.dataset.widgetKey ?? null;
+  const finishDrag = (sourceKey:string,targetKey:string|null) => {
+    draggingRef.current=null;
+    setDraggingKey(null);
+    setDropTargetKey(null);
+    if(targetKey) reorder(sourceKey,targetKey);
   };
 
   return (
@@ -167,11 +187,41 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
         ) : (
           <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] items-start gap-3">
             {installed.map((widget, index) => (
-              <li key={widget.installationId ?? widget.key}
-                className={cn('min-w-0', widget.sizeClass === 'large' && 'as-new-tab-widget--large')}>
+              <li key={widget.installationId ?? widget.key} data-widget-key={widget.key}
+                className={cn('min-w-0 rounded-xl transition-[outline-color,opacity]',
+                  widget.sizeClass === 'large' && 'as-new-tab-widget--large',
+                  draggingKey === widget.key && 'opacity-55',
+                  dropTargetKey === widget.key && dropTargetKey !== draggingKey && 'outline outline-2 outline-primary')}>
                 <WidgetFrame title={widget.title} size={widget.sizeClass as 'small' | 'medium' | 'large'}
                   actions={<div className="flex w-full flex-wrap items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-1">
+                      <IconAction type="button" variant="ghost" className="as-new-tab-drag-handle cursor-grab active:cursor-grabbing"
+                        label={'Drag ' + widget.title + ' to arrange'}
+                        hint="Drag to rearrange. On keyboards use the arrow keys while focused; pinned widgets stay together."
+                        disabled={Boolean(busyKey)}
+                        onPointerDown={event=>{
+                          if(event.pointerType==='mouse' && event.button!==0)return;
+                          draggingRef.current=widget.key; setDraggingKey(widget.key);
+                          event.currentTarget.setPointerCapture(event.pointerId);
+                        }}
+                        onPointerMove={event=>{
+                          if(draggingRef.current===widget.key)
+                            setDropTargetKey(dropWidgetAt(event.clientX,event.clientY));
+                        }}
+                        onPointerUp={event=>{
+                          if(draggingRef.current!==widget.key)return;
+                          const target=dropWidgetAt(event.clientX,event.clientY);
+                          if(event.currentTarget.hasPointerCapture(event.pointerId))
+                            event.currentTarget.releasePointerCapture(event.pointerId);
+                          finishDrag(widget.key,target);
+                        }}
+                        onPointerCancel={()=>finishDrag(widget.key,null)}
+                        onKeyDown={event=>{
+                          if(event.key==='ArrowUp'||event.key==='ArrowLeft'){event.preventDefault();move(widget,-1);}
+                          if(event.key==='ArrowDown'||event.key==='ArrowRight'){event.preventDefault();move(widget,1);}
+                        }}>
+                        <GripVertical className="size-4" />
+                      </IconAction>
                       <IconAction type="button" variant="ghost" label={widget.pinned ? 'Unpin widget' : 'Pin widget'}
                         disabled={Boolean(busyKey)}
                         onClick={() => void act(widget.key, () => updateAccountWidget(widget.key, {pinned: !widget.pinned}))}>

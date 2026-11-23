@@ -57,6 +57,30 @@ catalog and package registry have advanced since that audit:
 This implements the existing proposed authority split; it does not approve an
 unreviewed new widget framework or move domain metrics into widget tables.
 
+## New Tab layout and appearance follow-up — 2026-11-23
+
+- Keep one AgentSam New Tab in Side Stage; its tool tiles use the
+  installed application and Side Stage registries, not widget installation rows.
+- Keep the packaged @inneranimalmedia/agentsam-workbench/widgets as the
+  renderer/contract owner for compiled widgets. It is not a substitute for
+  agentsam-nav app navigation or agentsam-embeds storefront CMS embeds.
+- agentsam_widget_layouts.order_index remains the account-owned sortable
+  widget grid order. The PUT /api/widgets operation accepts the complete
+  visible order, validates installed keys and pinned grouping, then performs
+  a single atomic SQLite/D1 update. Pointer dragging and keyboard move
+  controls use the same operation. Existing position_x/y remain reserved
+  for future spatial layouts; don't persist arbitrary coordinates without a
+  responsive breakpoint contract.
+- The New Tab's wallpaper selection goes into the existing
+  agentsam_user_ui_preferences.new_tab JSON namespace. This prevents
+  a separate New Tab account settings table and preserves other preferences.
+  GET/PUT /api/settings/new-tab require an authenticated account and
+  same-origin JSON mutation. Image URLs reference already-hosted media,
+  with no duplicate upload or independent asset store.
+- Existing /admin/widgets exists only as a compatibility entry point for
+  older bookmarks, not a new feature surface. Navigation and settings should
+  link directly to New Tab or Customize → Widgets.
+
 ## Decision
 
 ### 1. Contracts are protocol authority

@@ -1,0 +1,27 @@
+/* New Tab appearance belongs to the existing Side Stage tab and is scoped to
+   its container, never the global Studio shell or the active CMS site theme. */
+.as-new-tab-stage {background-color:var(--background); background-repeat:no-repeat; background-size:cover; background-position:center;}
+.as-new-tab-stage[data-wallpaper="aurora"], .as-wallpaper-aurora {
+  background-image:radial-gradient(ellipse at 12% 6%,color-mix(in srgb,var(--primary) 35%,transparent),transparent 65%),
+    radial-gradient(ellipse at 87% 34%,rgba(65,173,144,.20),transparent 56%);
+}
+.as-new-tab-stage[data-wallpaper="dusk"], .as-wallpaper-dusk {
+  background-image:radial-gradient(ellipse at 14% 12%,rgba(149,97,202,.23),transparent 63%),
+    radial-gradient(ellipse at 96% 80%,rgba(226,129,106,.14),transparent 65%);
+}
+.as-new-tab-stage[data-wallpaper="forest"], .as-wallpaper-forest {
+  background-image:radial-gradient(ellipse at 25% 15%,rgba(46,126,97,.23),transparent 58%),
+    radial-gradient(ellipse at 90% 98%,rgba(97,141,75,.17),transparent 67%);
+}
+.as-new-tab-stage[data-wallpaper="graphite"], .as-wallpaper-graphite {
+  background-image:linear-gradient(135deg,color-mix(in srgb,var(--foreground) 4%,transparent) 0 1px,transparent 1px),
+    radial-gradient(ellipse at 50% 5%,color-mix(in srgb,var(--foreground) 7%,transparent),transparent 70%);
+  background-size:22px 22px,cover;
+}
+.as-new-tab-stage[data-wallpaper="photo"] {
+  background-image:linear-gradient(color-mix(in srgb,var(--background) 75%,transparent),
+    color-mix(in srgb,var(--background) 85%,transparent)),var(--new-tab-photo);
+  background-size:cover;
+}
+.as-wallpaper-swatch {background-color:var(--background);border:1px solid var(--border);background-size:cover;}
+.as-wallpaper-default {background-image:linear-gradient(135deg,var(--background),var(--card));}
