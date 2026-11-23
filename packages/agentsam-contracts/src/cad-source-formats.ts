@@ -174,6 +174,12 @@ export async function runCadFormatOperation(input: {
   const recognized = identifyCadFileFormat(input.filename);
   if (!recognized) throw new Error('cad_format_unknown');
   if (!CAD_FORMAT_OPERATIONS.includes(input.operation)) throw new Error('cad_operation_unknown');
+  const candidates = cadFormatCandidates(input.filename);
+  if (input.resolvedFormatId && !candidates.some(candidate => candidate.id === input.resolvedFormatId))
+    throw new Error('cad_format_resolution_invalid');
+  if (candidates.length > 1 && !input.resolvedFormatId)
+    throw new Error('cad_format_ambiguous:' + recognized.extension);
+  const targetId = input.resolvedFormatId || recognized.id;
   for (const adapter of adapters) {
     if (!adapter || !adapter.id || typeof adapter.execute !== 'function'
       || !adapter.formatIds.includes(recognized.id) || !adapter.operations.includes(input.operation)) continue;
