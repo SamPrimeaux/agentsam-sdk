@@ -8,6 +8,7 @@
 export { brandScan } from './scan.js';
 export { brandResolve, parseDeclaredColor } from './resolve.js';
 export { buildBrandContractDraft, writeBrandArtifacts } from './contract.js';
+export { normalizeBrandWorkspace, brandColors, brandContrast, renderBrandCoverSvg, renderCreationTileSvg } from './workspace.js';
 export { brandPlan } from './plan.js';
 export {
   brandGoapActions,
