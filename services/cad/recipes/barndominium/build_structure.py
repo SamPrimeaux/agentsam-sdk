@@ -486,7 +486,7 @@ def export_ifc(output):
                 "ApprovalStatus":"NOT ENGINEERED / FOR CONCEPT REVIEW",
                 "MaterialSpec":rec["material"][:250],
             })
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - preserve per-element IFC export diagnostics across library versions.
             failures.append({"id":rec["id"],"error":str(exc)})
     # Genuine IFC opening / fill relations, in addition to actual boolean wall voids
     # already present in native FreeCAD and triangulated IFC geometry.
@@ -515,7 +515,7 @@ def export_ifc(output):
             f.create_entity("IfcRelFillsElement",
                 GlobalId=ifcopenshell.guid.new(),
                 RelatingOpeningElement=opening,RelatedBuildingElement=filler)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - preserve per-element IFC export diagnostics across library versions.
             failures.append({"id":op["id"],"error":"IFC relation: "+str(exc)})
     # Source rectangles become IfcSpace objects for the interior design stage.
     for room in ROOMS:
@@ -534,7 +534,7 @@ def export_ifc(output):
                 vertices=[[(float(v.x/1000),float(v.y/1000),float(v.z/1000)) for v in verts]],
                 faces=[[tuple(t) for t in faces]])
             api.run("geometry.assign_representation",f,product=entity,representation=rep)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - preserve per-element IFC export diagnostics across library versions.
             failures.append({"id":room["id"],"error":"IFC space: "+str(exc)})
     fpath=output/(OUT_NAME+".ifc")
     f.write(str(fpath))
