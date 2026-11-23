@@ -21,6 +21,8 @@ export interface QuickAddItem {
   previewUrl?: string | null;
   /** Stable key of the payload the host resolves (template slug for scenes). */
   ref?: string | null;
+  /** Authenticated R2-backed payload, not yet a native editable BIM project. */
+  payloadUrl?: string | null;
   renderer?: string | null;
 }
 
