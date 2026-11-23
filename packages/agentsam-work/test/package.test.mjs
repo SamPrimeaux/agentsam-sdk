@@ -222,3 +222,19 @@ test('Work project timer uses the same transport in hosted and desktop Work', as
     {path:'/api/work/projects/p1/timer/stop',method:'POST',body:{timerId:'te_a'}},
   ]);
 });
+
+
+test('Artifacts library paginates large result sets and preserves container-responsive creation tiles', () => {
+  const surface = readFileSync(new URL('../src/frontend/surfaces/ArtifactsSurface.tsx', import.meta.url), 'utf8');
+  const theme = readFileSync(new URL('../src/frontend/theme.css', import.meta.url), 'utf8');
+  assert.match(surface, /ARTIFACT_PAGE_SIZE = 60/);
+  assert.match(surface, /displayedArtifacts = visible\.slice\(0, visibleLimit\)/);
+  assert.match(surface, /displayedArtifacts\.map\(/);
+  assert.match(surface, /visible\.length > visibleLimit/);
+  assert.match(surface, /setVisibleLimit\(\(limit\) => Math\.min\(/);
+  assert.match(surface, /\[query, source, kind, view, sortBy\]/);
+  assert.match(theme, /container-type:inline-size/);
+  assert.match(theme, /@container \(max-width:660px\)/);
+  assert.match(theme, /@container \(max-width:330px\)/);
+  assert.match(theme, /agentsam-artifact-hub__create-card:focus-visible/);
+});

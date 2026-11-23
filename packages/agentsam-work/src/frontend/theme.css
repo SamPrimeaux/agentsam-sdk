@@ -1820,7 +1820,7 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 .agentsam-artifact-stage__error {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;border-bottom:1px solid var(--agentsam-work-border);color:var(--agentsam-work-muted);font-size:12px;}
 .agentsam-artifact-stage__error button {border:1px solid var(--agentsam-work-border);border-radius:8px;padding:5px 9px;background:var(--agentsam-work-panel);color:var(--agentsam-work-text);font:inherit;}
 .agentsam-artifact-hub__scroll {flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:16px 16px 28px;}
-.agentsam-artifact-hub__content {width:100%;max-width:1160px;margin:0 auto;}
+.agentsam-artifact-hub__content {width:100%;max-width:1160px;margin:0 auto;container-type:inline-size;}
 .agentsam-artifact-hub__header {display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
 .agentsam-artifact-hub__header h1 {margin:0;font-size:23px;font-weight:650;letter-spacing:-.035em;line-height:1.2;}
 .agentsam-artifact-hub__header p {margin:5px 0 0;color:var(--agentsam-work-muted);font-size:12px;line-height:1.45;}
@@ -1864,9 +1864,9 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 .agentsam-artifact-hub__section-heading h2 {margin:0;font-size:12px;font-weight:650;letter-spacing:-.01em;}
 .agentsam-artifact-hub__section-heading > span {color:var(--agentsam-work-muted);font-size:10px;}
 .agentsam-artifact-hub__create-grid {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-top:10px;}
-.agentsam-artifact-hub__create-card {display:flex;flex-direction:column;align-items:stretch;gap:6px;min-width:0;padding:0;border:0;background:transparent;color:var(--agentsam-work-text);text-align:left;cursor:pointer;}
+.agentsam-artifact-hub__create-card {display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0;padding:0;border:0;background:transparent;color:var(--agentsam-work-text);text-align:left;cursor:pointer;}
 .agentsam-artifact-hub__create-card:disabled {opacity:.45;cursor:not-allowed;}
-.agentsam-artifact-hub__create-art {display:grid;place-items:center;aspect-ratio:1.35/1;min-height:48px;border:1px solid color-mix(in srgb,var(--agentsam-work-text) 7%,transparent);border-radius:9px;background:color-mix(in srgb,var(--agentsam-work-accent) 20%,var(--agentsam-work-panel));color:var(--agentsam-work-text);transition:transform 140ms ease,border-color 140ms ease;}
+.agentsam-artifact-hub__create-art {display:grid;place-items:center;aspect-ratio:1.35/1;min-height:64px;border:1px solid color-mix(in srgb,var(--agentsam-work-text) 16%,transparent);border-radius:11px;background:color-mix(in srgb,var(--agentsam-work-accent) 25%,var(--agentsam-work-panel));color:var(--agentsam-work-text);transition:transform 140ms ease,border-color 140ms ease,background 140ms ease;}
 .agentsam-artifact-hub__create-card:hover .agentsam-artifact-hub__create-art {transform:translateY(-2px);border-color:color-mix(in srgb,var(--agentsam-work-accent) 55%,var(--agentsam-work-border));}
 .agentsam-artifact-hub__create-card[data-kind="docs"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-accent) 26%,var(--agentsam-work-panel));color:var(--agentsam-work-accent);}
 .agentsam-artifact-hub__create-card[data-kind="slides"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-warning) 26%,var(--agentsam-work-panel));color:var(--agentsam-work-warning);}
@@ -1874,7 +1874,12 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 .agentsam-artifact-hub__create-card[data-kind="design"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-accent) 16%,var(--agentsam-work-panel));color:var(--agentsam-work-accent);}
 .agentsam-artifact-hub__create-card[data-kind="data"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-danger) 26%,var(--agentsam-work-panel));color:var(--agentsam-work-danger);}
 .agentsam-artifact-hub__create-card[data-kind="whiteboard"] .agentsam-artifact-hub__create-art {background:color-mix(in srgb,var(--agentsam-work-warning) 15%,color-mix(in srgb,var(--agentsam-work-accent) 15%,var(--agentsam-work-panel)));color:var(--agentsam-work-text);}
-.agentsam-artifact-hub__create-label {overflow:hidden;color:var(--agentsam-work-muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap;}
+.agentsam-artifact-hub__create-label {min-width:0;color:var(--agentsam-work-text);font-size:12px;font-weight:600;line-height:1.3;overflow-wrap:anywhere;}
+.agentsam-artifact-hub__create-card:focus-visible {outline:2px solid var(--agentsam-work-accent);outline-offset:3px;border-radius:11px;}
+.agentsam-artifact-hub__pagination {display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:18px;color:var(--agentsam-work-muted);font-size:12px;}
+.agentsam-artifact-hub__pagination button {min-height:38px;padding:8px 14px;border:1px solid var(--agentsam-work-border);border-radius:9px;background:var(--agentsam-work-panel);color:var(--agentsam-work-text);font:inherit;font-weight:600;cursor:pointer;}
+.agentsam-artifact-hub__pagination button:hover {border-color:var(--agentsam-work-accent);background:var(--agentsam-work-panel-subtle);}
+.agentsam-artifact-hub__pagination button:focus-visible {outline:2px solid var(--agentsam-work-accent);outline-offset:2px;}
 .agentsam-artifact-hub__saved {margin-top:23px;}
 .agentsam-artifact-hub__items {display:grid;gap:10px;margin-top:11px;}
 .agentsam-artifact-hub__items.is-grid {grid-template-columns:repeat(auto-fill,minmax(148px,1fr));}
@@ -1941,3 +1946,5 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 @media(prefers-reduced-motion:reduce) {
   .agentsam-artifact-hub__create-art,.agentsam-artifact-hub__item {transition:none;}
 }
+@container (max-width:660px) {.agentsam-artifact-hub__create-grid {grid-template-columns:repeat(3,minmax(0,1fr));}}
+@container (max-width:330px) {.agentsam-artifact-hub__create-grid {grid-template-columns:repeat(2,minmax(0,1fr));}}
