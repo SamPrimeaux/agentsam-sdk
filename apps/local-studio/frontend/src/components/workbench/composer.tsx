@@ -266,11 +266,11 @@ export function Composer({
               <span className="block truncate text-xs font-medium">{annotation.label || 'Selected annotation'}</span>
               <span className="block truncate text-[10px] text-muted-foreground">{annotation.object ? 'CAD object' : annotation.tag} · Annotation</span>
             </div>
-            <Button type="button" size="icon-sm" variant="ghost" className="absolute right-1 top-1 size-6 rounded-md"
-              aria-label={`Remove annotation ${annotation.label}`}
+            <IconAction type="button" size="icon-sm" variant="ghost" className="absolute right-1 top-1 size-6 rounded-md"
+              label={`Remove annotation ${annotation.label}`}
               onClick={() => useWorkStore.getState().setPendingAnnotations(targetId, items => items.filter(item => item.id !== annotation.id))}>
               <X className="size-3.5"/>
-            </Button>
+            </IconAction>
           </div>
         ))}
         {pendingAttachments.map((attachment) => (
@@ -282,9 +282,9 @@ export function Composer({
             ) : <FileText className="size-8 shrink-0 text-muted-foreground" aria-hidden="true" />}
             <div className="min-w-0"><span className="block truncate text-xs font-medium">{attachment.name}</span>
               <span className="text-[10px] text-muted-foreground">{attachment.kind === 'image' ? 'Image' : 'File'} · {Math.ceil(attachment.size / 1024)} KB</span></div>
-            <Button type="button" size="icon-sm" variant="ghost" className="absolute right-1 top-1 size-6 rounded-md" aria-label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>
+            <IconAction type="button" size="icon-sm" variant="ghost" className="absolute right-1 top-1 size-6 rounded-md" label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>
               <X className="size-3.5" />
-            </Button>
+            </IconAction>
           </div>
         ))}
       </div>

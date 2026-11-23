@@ -852,7 +852,9 @@
 /* Focused Side Stage: the lead chat floats above the work surface rather than
    consuming a full-width dock. Reuse the exact same Composer and PluginPicker. */
 .agentsam-page-layout .agentsam-floating-lead-chat {
-  position:absolute; z-index:110; right:16px; bottom:16px;
+  position:absolute; z-index:110;
+  left:var(--agentsam-chat-left, auto); top:var(--agentsam-chat-top, auto);
+  right:var(--agentsam-chat-right, 16px); bottom:var(--agentsam-chat-bottom, 16px);
   display:flex; flex-direction:column; width:min(452px,calc(100% - 32px));
   min-width:280px; max-height:min(78%,660px);
   border:1px solid var(--nav-border); border-radius:17px;

@@ -245,6 +245,7 @@
    surface; all colors inherit the account's active cms_themes shell tokens. */
 .mini-agentsam-pin {
   position:fixed; z-index:10001; display:grid; place-items:center;
+  left:var(--mini-pin-left, 8px); top:var(--mini-pin-top, 8px);
   width:27px; height:27px; border:2px solid var(--mini-surface);
   border-radius:10px 10px 10px 3px; padding:0;
   background:var(--mini-accent); color:var(--mini-surface);
@@ -291,3 +292,5 @@
 }
 .mini-agentsam-attachment-card button:hover {background:var(--mini-surface);color:var(--mini-text)}
 .mini-agentsam-upload-error {color:var(--mini-text);font-size:11px}
+
+.mini-agentsam-visually-hidden { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }

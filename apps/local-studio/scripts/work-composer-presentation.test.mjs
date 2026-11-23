@@ -120,7 +120,7 @@ test('Side Stage opens from one header toggle, then offers its own full-view con
 
 test('Full view retains the lead composer and shared plus menu in a movable chat panel', () => {
   assert.match(page, /className="agentsam-floating-lead-chat"/);
-  assert.match(page, /aria-label="Drag chat panel"/);
+  assert.match(page, /label="Drag chat panel"/);
   assert.match(page, /onPointerMove=\{onFloatingDragMove\}/);
   assert.match(page, /onKeyDown=\{event =>/);
   assert.match(page, /className="agentsam-floating-chat-composer">\{leadComposer\}/);

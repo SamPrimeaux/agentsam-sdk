@@ -304,7 +304,8 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
     {selecting && <div ref={cursorHint} className="mini-agentsam-hint" role="status"><MousePointer2 size={14} aria-hidden="true" /> Select to annotate <kbd>Esc</kbd></div>}
     {bounds && (selecting || selection) && <div className="mini-agentsam-outline" style={{ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height }} />}
     {selection && bounds && !expanded && <button type="button" className="mini-agentsam-pin"
-      style={{ left: Math.max(8, Math.min(window.innerWidth - 30, bounds.right - 10)), top: Math.max(8, Math.min(window.innerHeight - 30, bounds.top - 10)) }}
+      style={{ '--mini-pin-left': Math.max(8, Math.min(window.innerWidth - 30, bounds.right - 10)) + 'px',
+        '--mini-pin-top': Math.max(8, Math.min(window.innerHeight - 30, bounds.top - 10)) + 'px' } as CSSProperties}
       aria-label={`Annotation pin for ${selection.label || selection.tag}`} title="Open annotation"
       onClick={() => panel.current?.querySelector('textarea')?.focus()}>1</button>}
     {selection && expanded && <div className="mini-agentsam-review-backdrop" onClick={() => setExpanded(false)} />}
@@ -313,7 +314,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
       onPointerUp={(event) => { if (event.pointerType !== 'touch' || (event.target as Element).closest('button')) return; const now = Date.now(); if (now - lastTouch.current < 300) setExpanded(true); lastTouch.current = now; }}>
 
       <div className="mini-agentsam-heading"><span title={selection.label}>{selection.label || selection.tag}</span><button type="button" aria-label={expanded ? "Collapse message" : "Expand message"} title={expanded ? "Collapse message" : "Review entire message"} aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button><button type="button" aria-label="Close miniAgentSam" onClick={() => { setSelection(null); setBounds(null); setExpanded(false); }}><X size={18} /></button></div>
-      {renderComposer ? renderComposer({ value, onChange: setValue, onSend: () => void submit(), busy, expanded }) : <><textarea aria-label="Annotation instructions" placeholder="Ask about this…" value={value} onChange={(event) => setValue(event.target.value)} /><button type="button" disabled={busy || !value.trim()} className="mini-agentsam-send" aria-label="Send annotation" onClick={() => void submit()}><ArrowUp size={18} /></button></>}
+      {renderComposer ? renderComposer({ value, onChange: setValue, onSend: () => void submit(), busy, expanded }) : <><textarea aria-label="Annotation instructions" placeholder="Ask about this…" value={value} onChange={(event) => setValue(event.target.value)} /><button type="button" disabled={busy || !value.trim()} className="mini-agentsam-send" aria-label="Send annotation" title="Send annotation" onClick={() => void submit()}><ArrowUp size={18} /><span className="mini-agentsam-visually-hidden">Send annotation</span></button></>}
       {!expanded && !busy && !value.trim() && <div className="mini-agentsam-suggestions" role="group" aria-label="Suggested annotation prompts">
         {suggestions.map(text => <button type="button" key={text} onClick={() => setValue(text)}>{text}</button>)}
       </div>}

@@ -6,6 +6,7 @@ import { useWorkStore, type ComposerAttachment } from '@/lib/work/store';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { stageChatImage, stageChatFile } from '@/lib/content/chat-images';
 import { ComposerLibraryPicker } from '@/components/workbench/composer-library-picker';
+import { IconAction } from '@/components/ui/icon-action';
 import { PluginPicker } from './PluginPicker';
 
 export function AnnotationToggle() {
@@ -15,7 +16,7 @@ export function AnnotationToggle() {
     window.addEventListener('agentsam:annotation-state', update);
     return () => window.removeEventListener('agentsam:annotation-state', update);
   }, []);
-  return <button type="button" className="as-nav-button as-side-stage-annotation" data-annotation-control="" data-active={active ? 'true' : 'false'} aria-pressed={active} aria-label={active ? 'Stop annotating' : 'Annotate page'} title={active ? 'Stop annotating (Esc)' : 'Annotate page'} onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))}><MousePointer2 size={18} /></button>;
+  return <IconAction type="button" className="as-nav-button as-side-stage-annotation" data-annotation-control="" data-active={active ? 'true' : 'false'} aria-pressed={active} label={active ? 'Stop annotating' : 'Annotate page'} hint={active ? 'Stop annotating (Esc)' : 'Select an element to annotate'} onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))}><MousePointer2 size={18} /></IconAction>;
 }
 export function AnnotationHelper() {
   const [selecting, setSelecting] = useState(false);

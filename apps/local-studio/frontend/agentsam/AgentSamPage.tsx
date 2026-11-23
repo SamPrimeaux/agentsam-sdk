@@ -219,6 +219,12 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   // Chat mode keeps the established lead-left / Stage-right layout.
   const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !isMobile;
   const leadComposerDetached = workFocused || mobileWorkOpen || (isMobile && state.sideOpen);
+  const floatingChatStyle = {
+    '--agentsam-chat-left': floatingPosition ? floatingPosition.x + 'px' : 'auto',
+    '--agentsam-chat-top': floatingPosition ? floatingPosition.y + 'px' : 'auto',
+    '--agentsam-chat-right': floatingPosition ? 'auto' : '16px',
+    '--agentsam-chat-bottom': floatingPosition ? 'auto' : '16px',
+  } as CSSProperties;
   const leadComposer = <Composer workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && (workFocused || (empty && !leadComposerDetached))} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
   // One set of controls is portalled into hosted chrome or rendered locally.
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
@@ -302,16 +308,14 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           ref={floatingChatRef}
           className="agentsam-floating-lead-chat"
           aria-label="Movable AgentSam chat"
-          style={floatingPosition
-            ? { left: floatingPosition.x, top: floatingPosition.y, right: 'auto', bottom: 'auto' }
-            : undefined}
+          style={floatingChatStyle}
         >
           <header className="agentsam-floating-chat-header">
-            <button type="button" className="agentsam-floating-chat-minimize" aria-label={floatingMinimized ? 'Expand chat' : 'Minimize chat'} aria-expanded={!floatingMinimized} onClick={() => setFloatingMinimized(minimized => !minimized)}>
+            <IconAction type="button" className="agentsam-floating-chat-minimize" label={floatingMinimized ? 'Expand chat' : 'Minimize chat'} aria-expanded={!floatingMinimized} onClick={() => setFloatingMinimized(minimized => !minimized)}>
               {floatingMinimized ? <Plus size={14} /> : <Minus size={14} />}
-            </button>
+            </IconAction>
             <span>Chat</span>
-            <button type="button" className="agentsam-floating-chat-grip" aria-label="Drag chat panel" title="Drag chat panel"
+            <IconAction type="button" className="agentsam-floating-chat-grip" label="Drag chat panel" hint="Drag chat panel. Arrow keys move the panel."
               onPointerDown={onFloatingDragStart} onPointerMove={onFloatingDragMove}
               onPointerUp={onFloatingDragEnd} onPointerCancel={onFloatingDragEnd}
               onKeyDown={event => {
@@ -326,7 +330,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
                 const panel = floatingChatRef.current?.getBoundingClientRect();
                 if (root && panel) moveFloatingChat(panel.left - root.left + delta[0], panel.top - root.top + delta[1]);
               }}
-            ><GripVertical size={16} /></button>
+            ><GripVertical size={16} /></IconAction>
           </header>
           {!floatingMinimized && <>
             {!empty && <div className="agentsam-floating-chat-thread"><MessageList messages={chat.messages} chatId={chat.id} streaming={streaming} readingMode={data.mode === 'work'} /></div>}
