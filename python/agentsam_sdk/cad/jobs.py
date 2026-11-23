@@ -3,7 +3,9 @@
 This client intentionally delegates to the installed SAM CAD operation port:
 cad.job.generate, cad.job.status and cad.job.execute. The host owns
 authorization, approvals, Queue Control and the existing agentsam_cad_jobs
-records. No second queue, SQLite file, local process or ad-hoc job table is made.
+records. The caller must inject that trusted host operation adapter; the stock
+Python AgentSamClient does not automatically expose these CAD operations. No
+second queue, SQLite file, local process or ad-hoc job table is made.
 """
 from __future__ import annotations
 
@@ -45,7 +47,7 @@ def _record(value: Any) -> dict[str, Any]:
 
 
 class CadJobClient:
-    """Adapter over an authorized host invoker, usually AgentSamClient.invoke."""
+    """Adapter over a trusted host invoker supplied by the CAD host integration."""
 
     def __init__(self, invoke: Callable[[str, dict[str, Any]], Any]):
         if not callable(invoke):

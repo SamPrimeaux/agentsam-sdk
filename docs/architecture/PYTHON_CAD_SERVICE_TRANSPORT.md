@@ -40,7 +40,7 @@ Use CadJobClient when the operation may run beyond one HTTP request or needs dur
 ~~~python
 from agentsam_sdk.cad import CadJobClient
 
-jobs = CadJobClient(agent_sam.invoke)
+jobs = CadJobClient(authorized_host_invoke)
 job = jobs.submit(
     project_id="project_123",
     workspace_id="workspace_123",
@@ -50,7 +50,7 @@ job = jobs.submit(
 result = job.wait(timeout=3600)
 ~~~
 
-The injected invoker must be the authenticated host SAM operation port. It is not a raw HTTP endpoint, and it must not be replaced with a caller-controlled account ID or direct D1 access. execute() calls the existing cad.job.execute operation; the host still performs its own authorization and approval checks. There is intentionally no client-side cancel operation until the host exposes a canonical cancel operation.
+The injected invoker must be supplied by the authenticated host integration and dispatch the existing SAM CAD operations. The stock Python AgentSamClient.invoke currently does not expose cad.job.* automatically. This is not a raw HTTP endpoint, and it must not be replaced with a caller-controlled account ID or direct D1 access. execute() calls the existing cad.job.execute operation; the host still performs its own authorization and approval checks. There is intentionally no client-side cancel operation until the host exposes a canonical cancel operation.
 
 For async applications, AsyncCadJobClient wraps the same host port in asyncio.to_thread so polling does not block the event loop.
 
