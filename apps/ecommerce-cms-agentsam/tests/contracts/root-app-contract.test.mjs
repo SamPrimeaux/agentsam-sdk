@@ -23,10 +23,10 @@ test("root Ecommerce contract classifies admin as core and product/growth/provid
 test("compatibility manifests point at their canonical owner instead of becoming a second authority", async () => {
   const expected = {
     "admin-shell-nav": "apps/ecommerce-cms-agentsam/frontend/admin.surface.json",
-    "growth-campaigns": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json",
-    "product-studio": "apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.app.json",
-    "provider-completeful": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.app.json",
-    "provider-resend": "apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json",
+    "growth-campaigns": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.package.json",
+    "product-studio": "apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.package.json",
+    "provider-completeful": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.package.json",
+    "provider-resend": "apps/ecommerce-cms-agentsam/apps/resend/agentsam.package.json",
     "mini-agentsam-composer": "packages/agentsam-workbench/agentsam.feature.json"
   };
 
@@ -39,5 +39,8 @@ test("compatibility manifests point at their canonical owner instead of becoming
 test("canonical app manifest compatibility mirror cannot drift", async () => {
   const canonical = await json(path.join(appRoot, "agentsam.app.json"));
   const mirror = await json(path.join(appRoot, ".agentsam/app.json"));
-  assert.deepEqual(mirror, canonical);
+  assert.equal(canonical.schema, 'agentsam.app.v1');
+  assert.equal(mirror.schema, 'agentsam.host-install.v1');
+  assert.equal(mirror.app_id, canonical.id);
+  assert.equal(mirror.id, undefined, 'host state must never redefine APP identity');
 });

@@ -208,6 +208,18 @@ function validateOneApp(app, knownIds, root) {
     warnings.push(`${app.id}: neither entrypoints nor bin declared`);
   }
 
+  // A manifest version is not independently authoritative from its source package.
+  // Fail validation rather than shipping a stale product version in the desktop.
+  const packageJsonPath = path.join(app.dir, 'package.json');
+  if (fs.existsSync(packageJsonPath)) {
+    const pkg = readJson(packageJsonPath);
+    if (pkg.name && m.package && pkg.name !== m.package) {
+      errors.push(`${app.id}: manifest package differs from package.json`);
+    }
+    if (pkg.version && m.version !== pkg.version) {
+      errors.push(`${app.id}: manifest version ${m.version ?? '(missing)'} differs from package.json ${pkg.version}`);
+    }
+  }
   warnings.push(...npmDistributionWarnings(app));
 
   const hostPath = path.join(app.dir, '.agentsam', 'app.json');

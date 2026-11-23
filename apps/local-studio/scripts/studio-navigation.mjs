@@ -11,7 +11,7 @@ const mounts = {
   'local-studio': { href: '/admin/agentsam', icon: 'messageSquare', label: 'AgentSam', aliases: ['/admin/agentsam', '/admin/chats'] },
   'cad-creator': { href: '/admin/cad', icon: 'box', label: 'CAD Creator', aliases: ['/admin/cad'] },
   // MovieMode is Apps-only. Never alias /media — Media Library owns that tree.
-  'agentsam-copro-studio': { href: '/admin/moviemode', icon: 'film', label: 'MovieMode', aliases: [] },
+  'moviemode': { href: '/admin/moviemode', icon: 'film', label: 'MovieMode', aliases: [] },
   'samsketch': { href: '/admin/samsketch', icon: 'layers', label: 'SamSketch', aliases: [] },
   // SamSculpt is Creative Department Batch 1+. Include only when apps/samsculpt (or packaged
   // agentsam-3d-studio) is listed in included_apps — mount stays dormant until then.
@@ -24,7 +24,7 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
   const apps = new Map(listAppManifests(repoRoot).map((app) => [app.id, app]));
   const ids = [...new Set([host.app_id, ...(host.included_apps || [])])];
   const commerce = ids.includes('ecommerce-cms-agentsam');
-  const growthPath = path.join(repoRoot, 'apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json');
+  const growthPath = path.join(repoRoot, 'apps/ecommerce-cms-agentsam/apps/growth/agentsam.package.json');
   const bundledApps = [];
   let growthNav = null;
   const bundledDir = path.join(repoRoot, 'apps/ecommerce-cms-agentsam/apps');
@@ -41,14 +41,13 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
         aliases: [],
         provenance: 'ecommerce-bundled-manifest',
       };
-      // Growth stays discoverable under Audience; keep Apps entry for deep links.
-      bundledApps.push(growthNav);
+      // Growth is an Audience module, not an independent installed APP.
     }
-    // Only expose bundled provider/extension apps that declare real routes.
+    // Provider/extension routes belong to their owning product, not Apps installs.
     // No fake product/fulfillment launcher, duplicate catalog, or new registry.
     for (const name of bundledAppDirectories) {
       if (name === 'growth') continue;
-      const manifestFile = path.join(bundledDir, name, 'agentsam.app.json');
+      const manifestFile = path.join(bundledDir, name, 'agentsam.package.json');
       if (!existsSync(manifestFile)) continue;
       const app = JSON.parse(readFileSync(manifestFile,'utf8'));
       if (app.status !== 'bundled' || app.navigation?.placement !== 'apps' || !app.routes?.[0]) continue;

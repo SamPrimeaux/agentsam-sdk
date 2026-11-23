@@ -18,6 +18,11 @@ export function listAppManifests(root = DEFAULT_ROOT) {
     let manifest;
     try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); }
     catch { return; }
+    // Only independent applications belong in the APP discovery/installer.
+    // A bundled module/provider must declare an agentsam.package.json instead.
+    if (manifest.schema !== 'agentsam.app.v1' || manifest.kind !== 'app') {
+      throw new Error(`invalid_app_manifest_kind:${manifestPath}`);
+    }
     const id = manifest.id || entryName;
     if (seen.has(id)) return;
     seen.add(id);
