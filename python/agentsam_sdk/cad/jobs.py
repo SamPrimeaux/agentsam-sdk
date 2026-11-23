@@ -13,7 +13,8 @@ import asyncio
 import math
 import re
 import time
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from typing import Any
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 _ENGINES = frozenset(("freecad", "blender", "openscad"))
