@@ -103,7 +103,12 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
       // Cloudflare asks the user to approve the resulting permission set.
       const requested=source==='r2'?{capabilities:['cloudflare.r2']}
         :source==='container'?{capabilities:['cloudflare.containers']}:{};
-      const result=await beginLocalStudioRegisteredPluginOAuth(pluginId,returnTo,requested);
+      const chosenAccount=selected && account
+        ? (source==='drive'?'google_drive':source==='github'?'github':'cloudflare')+':'+account
+        : undefined;
+      const result=await beginLocalStudioRegisteredPluginOAuth(pluginId,returnTo,{
+        ...requested,...(chosenAccount?{connectionId:chosenAccount}:{}),
+      });
       if(!result.authorize_url)throw Error('oauth_authorization_url_unavailable');
       if(isPackagedDesktop())await openExternalUrl(result.authorize_url);
       else window.location.assign(result.authorize_url);
