@@ -42,8 +42,7 @@ import {
   discoverLocalStudioPlugins,
   installLocalStudioPublicPlugin,
   removeLocalStudioPublicPlugin,
-  beginLocalStudioConnectorOAuth,
-  beginLocalStudioGmailConnection,
+  beginLocalStudioRegisteredPluginOAuth,
   disconnectLocalStudioConnector,
   beginLocalStudioPublicPluginOAuth,
   disconnectLocalStudioGmail,
@@ -698,9 +697,10 @@ export const localStudioSettingsHost: SettingsHost = {
       const returnTo = isPackagedDesktop()
         ? buildConnectionReturnUrl(plugin.providerKey, "/admin/settings/customize?view=plugins")
         : "/admin/settings/customize?view=plugins";
-      const response = plugin.providerKey === "google_gmail"
-        ? await beginLocalStudioGmailConnection("/admin/settings/customize?view=plugins")
-        : await beginLocalStudioConnectorOAuth(plugin.providerKey, returnTo);
+      // Settings and Files invoke the same account-owned registered plugin
+      // broker. Google/Drive/GitHub/Gmail callbacks still stay in their proven
+      // provider services; the host does not copy OAuth logic into the UI.
+      const response = await beginLocalStudioRegisteredPluginOAuth(plugin.id, returnTo);
       if (!response?.authorize_url?.startsWith("https://")) throw new Error("plugin_oauth_url_invalid");
       await openExternalUrl(response.authorize_url);
       return;
