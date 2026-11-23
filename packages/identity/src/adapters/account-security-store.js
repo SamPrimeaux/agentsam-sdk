@@ -10,6 +10,7 @@
  * nothing here accepts a user id from request input.
  */
 import { AccountCapabilityError, toUnixSeconds } from '../core/account-security.js';
+import { hasColumn } from './column-support.js';
 
 function nowUnix() {
   return Math.floor(Date.now() / 1000);
@@ -117,6 +118,12 @@ export function createAccountSecurityStore(db, config) {
             statements.push(db.prepare(
               `UPDATE identity_users SET display_name = ?, updated_at = ? WHERE id = ?`,
             ).bind(name[1], ts, userId));
+            // Keep the account row of record in step when migration 008 is applied.
+            if (name[1] && await hasColumn(db, 'accounts', 'display_name')) {
+              statements.push(db.prepare(
+                `UPDATE accounts SET display_name = ?, updated_at = ? WHERE id = ?`,
+              ).bind(name[1], ts, userId));
+            }
           }
           const profileEntries = entries.filter(([key]) => key !== 'displayName');
           if (profileEntries.length) {
