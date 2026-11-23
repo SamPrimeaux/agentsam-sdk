@@ -55,7 +55,8 @@ function fixture(projectRows = []) {
 }
 
 test("remote CMS sites may serve the shared Theme Studio shell but not arbitrary admin routes", () => {
-  assert.equal(isCmsThemeEditorRoute("/admin/theme-editor"), true);
+  // Legacy generic editor routes are not authorized remote-site editor entrypoints.
+  assert.equal(isCmsThemeEditorRoute("/admin/theme-editor"), false);
   assert.equal(isCmsThemeEditorRoute("/admin/theme-project-editor"), true);
   assert.equal(isCmsThemeEditorRoute("/admin/sites/site-a/themes/theme-a/editor/home"), true);
   assert.equal(isCmsThemeEditorRoute("/admin/sites/site-a/pages/page-home/editor"), true);

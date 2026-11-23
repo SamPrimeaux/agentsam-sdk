@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {identifyCadFileFormat} from '../../../../../src/lib/cad/format-policy.js';
+import {identifyCadFileFormat,isCadAutoDiscoveryCandidate,cadFormatCandidates} from '@inneranimalmedia/agentsam-contracts/source-types/cad';
 
 export type CadSource = {
   id:string; project:string; revision:string; relativePath:string;
@@ -11,6 +11,8 @@ export type CadSource = {
   bytes:number; sha256:string;
   /** Filename-based identity only; import/export requires a separate verified adapter. */
   formatRef?:{catalog:'agentsam.source-types.v2';id:string;extension:string};
+  /** Other canonical candidates when extension alone cannot resolve identity. */
+  formatCandidates?:Array<{catalog:'agentsam.source-types.v2';id:string;extension?:string}>;
 };
 const RECEIPT=/((model-exchange|exchange-receipt|glb-review-receipt|geometry-verification|bim-assembly-receipt|render-manifest)\.json)$/i;
 // Avoid blocking the local CAD server on every library refresh for unchanged GLBs/Blend files.
@@ -67,7 +69,8 @@ export function discoverCadSources(roots:Array<{project:string;root:string}>,max
         const detected=identifyCadFileFormat(entry.name);
         // Generic JSON sidecars vastly outnumber CAD sources. Named receipts and
         // native .iamscene.json documents remain discoverable.
-        if(!detected || (detected.id==='data.json'&&!receipt))continue;
+        if(!detected || !isCadAutoDiscoveryCandidate(detected.id,entry.name)
+          || (detected.id==='data.json'&&!receipt))continue;
         const stat=fs.statSync(full);
         if(stat.size===0)continue;
         const relativePath=path.relative(root,full).replaceAll(path.sep,'/');
@@ -88,6 +91,7 @@ export function discoverCadSources(roots:Array<{project:string;root:string}>,max
           project:configured.project,revision:revisionFrom(relativePath),
           relativePath,format:receipt?'JSON':detected.extension.replace(/^\./,'').replace(/\.json$/,'').toUpperCase(),
           formatRef:{catalog:'agentsam.source-types.v2',id:detected.id,extension:detected.extension},
+          ...(cadFormatCandidates(entry.name).length>1 ? {formatCandidates:cadFormatCandidates(entry.name)} : {}),
           role,status,bytes:stat.size,sha256,
         });
       }

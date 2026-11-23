@@ -22,11 +22,12 @@ test('Local Studio context resolves from nearest agentsam.app.json', () => {
   assert.match(context.source || '', /apps\/local-studio\/agentsam\.app\.json$/);
 });
 
-test('package app identity resolves from its own manifest without Local Studio leakage', () => {
+test('portable package identity does not impersonate an installed application', () => {
   const context = resolveCurrentAppContext({
     root: ROOT,
     cwd: path.join(ROOT, 'packages/agentsam-database-editor/src'),
   });
-  assert.equal(context.app_id, 'database-editor');
+  assert.equal(context.app_id, null);
   assert.equal(context.host_origin, null);
+  assert.equal(context.source, null);
 });
