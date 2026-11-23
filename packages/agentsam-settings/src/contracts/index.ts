@@ -522,6 +522,8 @@ export interface SettingsHost {
   updateStoragePreference?(preference: SettingsStoragePreferenceInput): Promise<void>;
   updateNotificationSettings?(settings: SettingsNotificationProfileUpdate): Promise<void>;
   openSettingsUnit?(unit: SettingsUnitId): void;
+  /** Navigate to an authenticated installed plugin workspace; does not grant new permissions. */
+  openPluginWorkspace?(pluginKey: string): void;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
   removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;
   setCatalogItemEnabled?(kind: SettingsCatalogKind, id: string, enabled: boolean): Promise<void>;
