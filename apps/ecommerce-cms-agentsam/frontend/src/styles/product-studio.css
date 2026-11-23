@@ -2623,8 +2623,18 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 /* Product Studio owns the editor context; agentsam-nav owns the dock component.
    Desktop/tablet retain the original tool rail; phone width gets one dock
    connected to those exact same tab actions and state. */
-.ps-studio-launch-dock { display:none; }
+.ps-studio-launch-dock, .ps-toolpanel-mobile-help { display:none; }
+.ps-panel-heading-actions { display:flex; align-items:center; gap:8px; }
 @media (max-width:760px) {
+  .product-studio-shell .ps-toolpanel-mobile-help {
+    display:inline-flex; align-items:center; min-height:32px; padding:5px 8px;
+    border-radius:8px; color:var(--ps-muted); text-decoration:none;
+    font-size:11px; white-space:nowrap;
+  }
+  .product-studio-shell .ps-toolpanel-mobile-help:focus-visible,
+  .product-studio-shell .ps-toolpanel-mobile-help:hover {
+    background:var(--ps-accent-soft); color:var(--ps-accent);
+  }
   .product-studio-shell {
     --nav-surface:var(--c-surface,var(--ps-paper));
     --nav-text:var(--ps-ink);
