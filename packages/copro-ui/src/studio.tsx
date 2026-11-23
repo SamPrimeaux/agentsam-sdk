@@ -12,6 +12,7 @@ import { CoProToolPanel, type CoProMediaShelfItem, type CoProClipMask } from "./
 import { colorAdjustmentPreviewFilter, type CoProColorAdjustments } from "./color-adjustments.js";
 import { CoProMediaBrowser, type CoProMediaBrowserSection, type LocalSceneSource } from "./media-browser.js";
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
+import { writeCoProMediaDragData } from "./media-dnd.js";
 import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
 
 import { STAGE_ENVIRONMENT_DEFAULTS, STAGE_SKIES, stageLookBackground, type CoProStageEnvironment, type StageSky } from "./stage-environment.js";
@@ -33,7 +34,7 @@ export type CoProStudioAction =
   | { type: "split"; clipId: string; atUs: number }
   | { type: "duplicate"; clipId: string }
   | { type: "delete"; clipId: string }
-  | { type: "move"; clipId: string; startUs: number }
+  | { type: "move"; clipId: string; startUs: number; trackId?: string }
   | { type: "trim"; clipId: string; patch: { startUs?: number; inUs?: number; durationUs?: number } }
   | { type: "speed"; clipId: string; playbackRate: number }
   | { type: "volume"; clipId: string; volume: number }
@@ -86,7 +87,7 @@ export type CoProStudioProps = {
   sampleGraphic?: CoProGraphicSampler;
   onSeek?: (timeUs: number) => void;
   onSelectClip?: (clipId: string | null) => void;
-  onMediaAdd?: (id: string, atUs: number) => void;
+  onMediaAdd?: (id: string, atUs: number, trackId?: string) => void;
   onOpenCreativeTemplate?: (id: string) => void;
   onAction?: (action: CoProStudioAction) => void;
 };
@@ -874,7 +875,13 @@ export function CoProStudio({
                   <div className="mm-model-gallery-heading">In this project</div>
                   <div className="mm-model-gallery-grid">
                     {mediaItems.filter(item=>item.kind==="scene").map(item=>
-                      <article className="mm-model-gallery-card" key={item.id}>
+                      <article
+                        className="mm-model-gallery-card"
+                        key={item.id}
+                        draggable
+                        onDragStart={event=>writeCoProMediaDragData(event.dataTransfer,item.id,item.name,item.kind)}
+                        title="Drag this 3D scene to the video timeline"
+                      >
                         <div className="mm-model-gallery-art">{item.thumbnails?.[0]
                           ? <img src={item.thumbnails[0]} alt={item.name+" scene preview"}/>
                           : <Box size={30} aria-hidden="true"/>}<span>GLB</span></div>
@@ -936,7 +943,13 @@ export function CoProStudio({
                 <div className="mm-scene-browser-heading">Project 3D assets</div>
                 {mediaItems.filter(item=>item.kind==='scene').length===0
                   ? <p className="mm-scene-browser-empty">Import a GLB in Media to make it available here.</p>
-                  : mediaItems.filter(item=>item.kind==='scene').map(item=><div className="mm-scene-browser-row" key={item.id}>
+                  : mediaItems.filter(item=>item.kind==='scene').map(item=><div
+                      className="mm-scene-browser-row"
+                      key={item.id}
+                      draggable
+                      onDragStart={event=>writeCoProMediaDragData(event.dataTransfer,item.id,item.name,item.kind)}
+                      title="Drag this 3D scene to the video timeline"
+                    >
                       <Layers size={16}/><span><strong>{item.name}</strong><small>3D scene · imported</small></span>
                       <button type="button" onClick={()=>onMediaAdd?.(item.id,playheadUs)}>Add</button></div>)}
                 {localSceneSources.filter(item=>item.kind==='scene').length>0&&<>
@@ -1292,7 +1305,8 @@ export function CoProStudio({
             playheadUs={playheadUs}
             onSelectClip={onSelectClip}
             onSeek={onSeek}
-            onMoveClip={(clipId, startUs) => onAction?.({ type: "move", clipId, startUs })}
+            onMoveClip={(clipId, startUs, trackId) => onAction?.({ type: "move", clipId, startUs, trackId })}
+            onDropMedia={(mediaId, atUs, trackId) => onMediaAdd?.(mediaId, atUs, trackId)}
             onTrimClip={(clipId, patch) => onAction?.({ type: "trim", clipId, patch })}
             onAddTrack={() => onAction?.({ type: "add-track" })}
             onTrackState={(trackId, patch) => onAction?.({ type: "track-state", trackId, patch })}

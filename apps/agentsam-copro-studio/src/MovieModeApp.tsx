@@ -828,7 +828,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     return item;
   }
 
-  function addSessionMediaToTimeline(item: SessionMediaItem, atUs: number) {
+  function addSessionMediaToTimeline(item: SessionMediaItem, atUs: number, requestedTrackId?: string) {
     const session = sessionRef.current;
     const kind = item.kind === "audio" ? "audio" : item.kind === "image" ? "overlay" : "video";
 
@@ -837,7 +837,8 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     if ((item.kind==="video"||item.kind==="image") && item.width && item.height && !hasVisualSource) {
       currentProject=session.execute({type:"project.set_canvas",payload:{width:item.width,height:item.height,frameRate:currentProject.canvas?.frameRate??30}});
     }
-    let track = currentProject.tracks.find((entry:any) => entry.kind === kind && !entry.locked);
+    let track = currentProject.tracks.find((entry:any) => entry.id === requestedTrackId && entry.kind === kind && !entry.locked)
+      ?? currentProject.tracks.find((entry:any) => entry.kind === kind && !entry.locked);
 
     if (!track) {
       const trackId = "track:" + kind + ":" + Date.now();
@@ -953,7 +954,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       setProject(session.execute({type:"project.set_canvas",payload:action.canvas}));
       return;
     }
-    if (action.type === "move") { setProject(session.execute({ type:"clip.move", payload:{ clipId:action.clipId, startUs:action.startUs } })); return; }
+    if (action.type === "move") { setProject(session.execute({ type:"clip.move", payload:{ clipId:action.clipId, startUs:action.startUs, ...(action.trackId?{trackId:action.trackId}:{}) } })); return; }
     if (action.type === "trim") { setProject(session.execute({ type:"clip.trim", payload:{ clipId:action.clipId, ...action.patch } })); return; }
     if (action.type === "speed") { setProject(session.execute({ type:"clip.set_speed", payload:{ clipId:action.clipId, playbackRate:action.playbackRate } })); return; }
     if (action.type === "volume") { setProject(session.execute({ type:"clip.set_volume", payload:{ clipId:action.clipId, volume:action.volume } })); return; }
@@ -1166,9 +1167,9 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     renderCreativePreview={creativePreviewRenderer}
     sampleMotion={motionSampler ?? undefined}
     sampleGraphic={graphicSampler ?? undefined}
-    onMediaAdd={(id, atUs) => {
+    onMediaAdd={(id, atUs, trackId) => {
       const item = mediaItems.find((entry) => entry.id === id);
-      if (item) addSessionMediaToTimeline(item, atUs);
+      if (item) addSessionMediaToTimeline(item, atUs, trackId);
     }}
     onSeek={setPlayheadUs}
     onSelectClip={setSelectedClipId}
