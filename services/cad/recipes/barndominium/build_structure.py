@@ -15,7 +15,7 @@ import csv
 import hashlib
 import json
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from importlib import import_module
 from pathlib import Path
 from typing import Any, cast
