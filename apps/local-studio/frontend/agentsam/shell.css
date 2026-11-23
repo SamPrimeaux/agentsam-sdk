@@ -575,10 +575,21 @@
 .agentsam-topbar-leading > button:disabled { opacity: .32; cursor: default; }
 /* The hosted hamburger occupies the first rail slot. Keep the breadcrumb / back
    controls in normal flow beside it instead of painting over that hit target. */
+/* Hosted navigation is left-anchored, not a justify-between item which can
+   drift into the center Chat/Work selector when trailing controls change. */
+.console-topbar:has(#agentsam-console-leading-slot:not(:empty)) {
+  justify-content:flex-start;
+  gap:8px;
+}
 .console-topbar:has(#agentsam-console-leading-slot:not(:empty)) .console-topbar-spacer {
   flex: 0 0 var(--agentsam-leading-clearance, 54px);
   width: var(--agentsam-leading-clearance, 54px);
   min-width: var(--agentsam-leading-clearance, 54px);
+}
+.console-topbar:has(#agentsam-console-leading-slot:not(:empty)) #agentsam-console-leading-slot {
+  margin-right:auto;
+  max-width:calc(50% - var(--agentsam-leading-clearance, 54px) - 28px);
+  overflow:hidden;
 }
 @media (max-width: 767px) {
   .console-topbar:has(#agentsam-console-leading-slot:not(:empty)) {
