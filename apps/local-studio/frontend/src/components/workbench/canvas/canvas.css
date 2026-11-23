@@ -85,3 +85,7 @@
 .cv-source-list button>span:nth-child(2){flex:1;min-width:0}.cv-source-list button strong,.cv-source-list button small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cv-source-list button strong{font-size:12px}.cv-source-list button small{font-size:10px;color:var(--nav-muted);margin-top:3px}
 
 .cv-entry-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:16px}
+
+/* The shared AgentSam action lives with the actual canvas tools, not in a third composer. */
+.cv-stage-toolbar .agentsam-ask-pill {flex:0 0 auto;}
+@container (max-width:520px) {.cv-stage-toolbar .agentsam-ask-pill span {display:none;}}

@@ -129,7 +129,7 @@ test('Full view retains the lead composer and shared plus menu in a movable chat
 });
 
 test('Work split puts the stage before chat and preserves resize direction', () => {
-  assert.match(page, /const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !isMobile/);
+  assert.match(page, /const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !compactWorkLayout/);
   assert.match(page, /workSplit \? " is-work-stage-first"/);
   assert.match(page, /workSplit \? delta : -delta/);
   assert.match(styles, /\.agentsam-workspace.is-work-stage-first \{\s*flex-direction:row-reverse/s);

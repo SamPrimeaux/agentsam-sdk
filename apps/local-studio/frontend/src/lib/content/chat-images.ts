@@ -22,8 +22,8 @@ export type ChatFileReference = {
 export type ChatAttachmentReference = ChatImageReference | ChatFileReference;
 export type ChatImagePayload = { mimeType: string; dataUrl: string };
 
-const TEXT_FILE_PATTERN = /\.(txt|md|markdown|csv|json|jsonl|yaml|yml|html?|xml|css|scss|tsx?|jsx?|mjs|cjs|py|rs|go|sql|sh|zsh|svg|toml|ini|log|java|kt|swift|c|h|cpp|hpp)$/i;
-const FILE_PATTERN = /\.(pdf|docx?|xlsx?|pptx?|zip|glb|gltf|stl|ifc|mov|mp4|webm|png|jpg|jpeg|webp|svg|txt|md|markdown|csv|json|jsonl|yaml|yml|html?|xml|css|scss|tsx?|jsx?|mjs|cjs|py|rs|go|sql|sh|zsh|toml|ini|log|java|kt|swift|c|h|cpp|hpp)$/i;
+const TEXT_FILE_PATTERN = /\.(txt|md|markdown|csv|tsv|json|jsonl|yaml|yml|html?|xml|css|scss|tsx?|jsx?|mjs|cjs|py|rs|go|sql|sh|zsh|svg|toml|ini|log|java|kt|swift|c|h|cpp|hpp)$/i;
+const FILE_PATTERN = /\.(pdf|docx?|xlsx?|pptx?|zip|glb|gltf|stl|ifc|mov|mp4|webm|png|jpg|jpeg|webp|svg|txt|md|markdown|csv|tsv|json|jsonl|yaml|yml|html?|xml|css|scss|tsx?|jsx?|mjs|cjs|py|rs|go|sql|sh|zsh|toml|ini|log|java|kt|swift|c|h|cpp|hpp)$/i;
 export const MAX_CHAT_FILE_BYTES = 20 * 1024 * 1024;
 export function isTextChatFile(name: string, mime: string): boolean {
   return TEXT_FILE_PATTERN.test(name) || /^(text\/|application\/(json|xml|javascript)$)/.test(mime);

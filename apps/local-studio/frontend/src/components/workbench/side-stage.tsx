@@ -27,6 +27,7 @@ import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
 import { PluginSideStage } from "@/components/workbench/plugin-side-stage";
 import { MovieModeSurface } from "@/components/media/MovieModeSurface";
 import { DatabaseStage } from "@/components/workbench/database-stage";
+import { DataArtifactStage } from "@/components/workbench/data-artifact-stage";
 import { TerminalPane } from "@/components/workbench/terminal";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
@@ -44,7 +45,7 @@ function TabIcon({ kind, icon }: { kind: string; icon?: string | null }) {
   if (kind === "app") return <Layers className="size-3.5" />;
   if (kind === "media") return <Film className="size-3.5" />;
   if (kind === "goal") return <Target className="size-3.5" />;
-  if (kind === "database") return <Database className="size-3.5" />;
+  if (kind === "database" || kind === "data") return <Database className="size-3.5" />;
   if (kind === "apps") return <LayoutGrid className="size-3.5" />;
   if (kind === "newtab") return <LayoutGrid className="size-3.5" />;
   if (kind === "terminal") return <SquareTerminal className="size-3.5" />;
@@ -150,6 +151,7 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
                 <span className="max-w-28 truncate" title={item.title}>{item.title}</span>
               </button>
               {item.kind === 'browser' && item.id === activeId && <AnnotationToggle />}
+              {(['design', 'data', 'files'] as string[]).includes(item.kind) && item.id === activeId && <AnnotationToggle />}
               <IconAction
                 type="button"
                 variant="ghost"
@@ -295,6 +297,7 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
         {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId && stage.stageId === tab.stageId)} /> : null}
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
+        {tab?.kind === "data" ? <DataArtifactStage tab={tab} /> : null}
         {tab?.kind === "apps" ? <AppLibraryStage /> : null}
         {tab?.kind === "newtab" ? <NewTabStage tab={tab} /> : null}
         {tab?.kind === "item" ? <ItemStage tab={tab} /> : null}

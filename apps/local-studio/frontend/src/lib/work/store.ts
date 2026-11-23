@@ -103,6 +103,7 @@ const SIDE_TITLES: Record<SideKind, string> = {
   newtab: "New tab",
   item: "Item",
   design: "Canvas",
+  data: "Data",
   plugin: "Plugin",
 };
 

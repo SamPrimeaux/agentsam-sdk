@@ -17,3 +17,4 @@ export * from './AgentRuntimeField';
 export * from './capability-catalog';
 
 export * from './SelectionToolbar';
+export * from './AskAgentSamPill';

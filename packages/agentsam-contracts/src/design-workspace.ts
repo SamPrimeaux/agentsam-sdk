@@ -13,6 +13,11 @@ export type DesignDocumentKind =
   | "website"
   | "app-ui"
   | "design"
+  | "slides"
+  | "whiteboard"
+  | "doc"
+  | "data"
+  | "sheets"
   | "cad"
   | "sketch"
   | "sculpt"
@@ -44,6 +49,10 @@ export interface DesignSelection {
   id: string;
   kind: string;
   parentId?: string;
+  /** Optional pointer anchor for a selection, not document geometry. */
+  point?: { x: number; y: number };
+  /** Host-verified semantic identity; never a grant to mutate the object. */
+  object?: { id: string; type: string; projectId?: string; revision?: number };
 }
 
 export interface DesignResourceAddress {

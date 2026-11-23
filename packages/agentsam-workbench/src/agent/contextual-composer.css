@@ -611,3 +611,10 @@
   }
 }
 
+
+/* Shared Artifact-to-conversation action: one composer, never a second agent panel. */
+.agentsam-ask-pill { display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;padding:6px 12px;border:1px solid var(--nav-border,var(--border));border-radius:999px;background:var(--nav-surface,var(--background));color:var(--nav-text,var(--foreground));font:inherit;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;box-shadow:0 3px 12px color-mix(in srgb,currentColor 9%,transparent);cursor:pointer;transition:background 140ms ease,border-color 140ms ease;}
+.agentsam-ask-pill:hover {background:var(--nav-selected,var(--muted));border-color:var(--nav-text,var(--foreground));}
+.agentsam-ask-pill:focus-visible {outline:2px solid var(--nav-text,var(--foreground));outline-offset:3px;}
+.agentsam-ask-pill:disabled {cursor:not-allowed;opacity:.45;}
+@media (prefers-reduced-motion:reduce) {.agentsam-ask-pill {transition:none;}}

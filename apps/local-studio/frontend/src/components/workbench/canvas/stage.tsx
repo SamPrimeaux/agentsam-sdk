@@ -147,6 +147,8 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
     const common={
       "data-canvas-node":node.id,
       "data-node-kind":node.type,
+      "data-annotation-target":"",
+      "data-agentsam-resource":node.id,
       className:"cv-node"+(!preview&&selected===node.id?" is-selected":""),
       style,
       onPointerDown:(event:ReactPointerEvent<HTMLDivElement>)=>startNode(event,node,board),
