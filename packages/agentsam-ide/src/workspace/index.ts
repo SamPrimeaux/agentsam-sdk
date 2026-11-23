@@ -7,3 +7,6 @@ export type { WorkspaceHashedEntry } from './merkle.js';
 
 export { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, restoreBrowserFsaIDEWorkspace, reconnectBrowserFsaIDEWorkspace, createBrowserFsaWorkspace } from './browser-fsa.js';
 export type { BrowserFsaRestore } from './browser-fsa.js';
+
+export { buildFsChangeMapFromStatus, fsChangeEntriesSorted, toWorkspaceChanges, buildVisibleChangePathSet, mapStatusTokenToState } from './changes.js';
+export type { AgentGitStatusFilesPayload, FsChangeEntry, FsChangeState } from './changes.js';
