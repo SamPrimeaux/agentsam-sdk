@@ -245,8 +245,8 @@ export function skillSeedSql(skills) {
       ') ON CONFLICT(id) DO UPDATE SET '+
       cols.filter(k=>!['id','is_published','is_active'].includes(k))
         .map(k=>k+'=excluded.'+k).join(',')+','+
-      "is_published=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum THEN agentsam_skill_next.is_published ELSE 0 END,"+
-      "is_active=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum THEN agentsam_skill_next.is_active ELSE 0 END,"+
+      "is_published=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_published ELSE 0 END,"+
+      "is_active=CASE WHEN agentsam_skill_next.content_checksum=excluded.content_checksum AND agentsam_skill_next.npm_version=excluded.npm_version AND agentsam_skill_next.npm_package_name=excluded.npm_package_name THEN agentsam_skill_next.is_active ELSE 0 END,"+
       "updated_at=datetime('now');");
   }
   return statements.join('\n')+'\n';
