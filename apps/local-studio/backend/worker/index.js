@@ -184,7 +184,7 @@ function isSiteScopedCmsAdminApi(pathname, request) {
 
   const siteCommerceRoute = pathname === "/api/admin/products"
     || /^\/api\/admin\/collections(?:\/[A-Za-z0-9_-]+(?:\/items)?)?$/.test(pathname)
-    || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/\d+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory)$/.test(pathname);
+    || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/[A-Za-z0-9_-]+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory)$/.test(pathname);
   return siteCommerceRoute
     || pathname.startsWith("/api/admin/theme-editor/")
     || pathname.startsWith("/api/admin/store/themes/")
@@ -196,7 +196,7 @@ function isLocalStudioCommerceApi(pathname) {
     || pathname === "/api/admin/me"
     || pathname === "/api/admin/products"
     || /^\/api\/admin\/collections(?:\/[A-Za-z0-9_-]+(?:\/items)?)?$/.test(pathname)
-    || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/\d+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory|collections)$/.test(pathname)
+    || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/[A-Za-z0-9_-]+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory|collections)$/.test(pathname)
     || pathname === "/api/admin/platform/bindings"
     || pathname === "/api/admin/media" || pathname.startsWith("/api/admin/media/")
     || pathname.startsWith("/api/admin/assets/")
@@ -1122,7 +1122,8 @@ export default {
       if (!principal) return json({ ok: false, error: "unauthorized" }, 401);
       // IAM's registry has opaque asset IDs and a different schema from merchant D1.
       // Read-only opt-in: keep all mutations owned by the existing media handler.
-      if (env.AGENTSAM_PLATFORM_MEDIA_REGISTRY === "preview" && request.method === "GET" &&
+      if ((env.AGENTSAM_PLATFORM_MEDIA_REGISTRY === "preview" || url.searchParams.get("provider") === "platform_registry")
+          && request.method === "GET" &&
           (url.pathname === "/api/admin/media" || /^\/api\/admin\/media\/[^/]+$/.test(url.pathname))) {
         return handlePlatformMediaRead(request, env, url, principal);
       }
@@ -1185,6 +1186,9 @@ export default {
       const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
         ? await completefulAccountEnvironment(env, principal.id)
         : env;
+      const scopedCommerceEnv = /^\/api\/admin\/products\/\d+\/images(?:\/|$)/.test(url.pathname)
+        ? { ...commerceEnv, PRODUCT_MEDIA_SCHEMA: "platform", PRODUCT_MEDIA_OWNER_ID: principal.id }
+        : commerceEnv;
       const providerMediaResponse = await handleStudioContentMediaApi(request, env, studioUser, url, context);
       if (providerMediaResponse) return providerMediaResponse;
       if (url.pathname === "/api/admin/agentsam/chat" && request.method === "POST") {
@@ -1215,7 +1219,7 @@ export default {
           return json({ ok: false, error: "AgentSam could not load the editor conversation. Try again." }, 503);
         }
       }
-      return withLocalStudioCmsContext(studioUser.account_id, cmsSite, () => handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser), principal.id);
+      return withLocalStudioCmsContext(studioUser.account_id, cmsSite, () => handleEcommerceAdminApi(request, scopedCommerceEnv, url, context, studioUser), principal.id);
     }
 
     // Public marketing/docs and merchant CMS routes: D1-resolved site ownership,

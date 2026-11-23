@@ -456,6 +456,8 @@ async function openBrowseLibrary() {
   const picked = await openMediaPicker({
     title: "Browse Media",
     multi: true,
+    source: "platform_registry",
+    siteId: productSiteId,
   });
   if (!picked?.length) return;
 
@@ -506,12 +508,15 @@ function renderMediaGrid(images) {
     return;
   }
 
+  const escapeMediaHtml = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[ch]);
   const tiles = (images || [])
     .map(
       (img) => `
-    <div class="product-media-tile ${img.is_primary ? "is-primary" : ""}" data-asset-id="${img.id}">
+    <div class="product-media-tile ${img.is_primary ? "is-primary" : ""}" data-asset-id="${escapeMediaHtml(img.id)}">
       ${img.is_primary ? '<span class="primary-tag">Primary</span>' : ""}
-      <img src="${img.url}" alt="${img.filename || ""}">
+      <img src="${escapeMediaHtml(img.url)}" alt="${escapeMediaHtml(img.filename || "" )}">
       <div class="tile-actions">
         ${img.is_primary ? "" : '<button type="button" class="btn ghost small set-primary-btn">Primary</button>'}
         <button type="button" class="btn danger small remove-btn">Remove</button>
@@ -531,11 +536,11 @@ function renderMediaGrid(images) {
   grid.querySelectorAll(".product-media-tile").forEach((tile) => {
     const assetId = tile.dataset.assetId;
     tile.querySelector(".set-primary-btn")?.addEventListener("click", async () => {
-      await productAdminFetch(`/api/admin/products/${productId}/images/${assetId}/primary`, { method: "POST" });
+      await productAdminFetch(`/api/admin/products/${productId}/images/${encodeURIComponent(assetId)}/primary`, { method: "POST" });
       loadImages();
     });
     tile.querySelector(".remove-btn")?.addEventListener("click", async () => {
-      await productAdminFetch(`/api/admin/products/${productId}/images/${assetId}`, { method: "DELETE" });
+      await productAdminFetch(`/api/admin/products/${productId}/images/${encodeURIComponent(assetId)}`, { method: "DELETE" });
       loadImages();
     });
   });
@@ -604,13 +609,23 @@ async function uploadFiles(fileList) {
   form.append("folder", "products");
 
   try {
-    const res = await fetch("/api/admin/media", {
+    const url = new URL("/api/admin/media", location.origin);
+    if (productSiteId) url.searchParams.set("site_id", productSiteId);
+    const res = await fetch(url.pathname + url.search, {
       method: "POST",
       body: form,
       credentials: "include",
+      headers: { accept: "application/json" },
     });
+    // An auth/proxy fallback can return a 200 HTML app shell. Never display its
+    // raw JSON parse exception, and never claim that bytes were uploaded.
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      throw new Error(`Media upload returned an unexpected response (HTTP ${res.status}). Check your session or media provider connection and retry.`);
+    }
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Upload failed");
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.error || "Upload failed");
+    if (!Array.isArray(data.assets) || !data.assets.length) throw new Error("No images were returned by the media provider.");
 
     if (isNew) {
       for (const asset of data.assets) {

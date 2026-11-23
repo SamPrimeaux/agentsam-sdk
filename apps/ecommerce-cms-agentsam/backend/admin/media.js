@@ -1286,8 +1286,111 @@ export async function platformBindings(env) {
 }
 
 // ----- Product <-> image associations -----
+// The hosted AgentSam account uses its existing universal media_assets registry.
+// Standalone merchant sites still use their original media_assets.url contract.
+const platformProductMedia = (env) => env.PRODUCT_MEDIA_SCHEMA === "platform" && !!env.PRODUCT_MEDIA_OWNER_ID;
+
+function renderableMediaUri(value) {
+  if (typeof value !== "string" || value.length > 2048) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" ? parsed.href : null;
+  } catch { return null; }
+}
+
+async function platformProductAsset(env, assetId) {
+  const id = String(assetId || "");
+  const ownerId = env.PRODUCT_MEDIA_OWNER_ID;
+  if (!id || id.length > 230) return null;
+  const found = await env.DB.prepare(
+    `SELECT id,source_uri AS url,filename,content_type,media_kind,status
+       FROM media_assets WHERE id=? AND created_by_user_id=?`
+  ).bind(id,ownerId).first();
+  if (found) return found.media_kind === "image" && ["ready","uploaded"].includes(found.status)
+    && renderableMediaUri(found.url) ? found : null;
+
+  // Existing Image Library uploads predate the universal registry. Materialize
+  // a canonical reference for an *owned* image only when the user attaches it.
+  const legacy = await env.DB.prepare(
+    `SELECT id,filename,mime_type,size,width,height,cloudflare_image_id,r2_key,url
+       FROM images WHERE id=? AND user_id=? AND COALESCE(status,'active') != 'deleted'`
+  ).bind(id,ownerId).first();
+  const url = renderableMediaUri(legacy?.url);
+  if (!legacy || !url || !String(legacy.mime_type || "").startsWith("image/")) return null;
+  const provider = legacy.cloudflare_image_id ? "cloudflare_images" : "external";
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO media_assets
+       (id,provider,provider_resource_id,source_uri,filename,content_type,media_kind,
+        size_bytes,width,height,status,metadata_json,created_by_user_id)
+       VALUES (?,?,?,?,?,?,'image',?,?,?,'ready',?,?)`
+  ).bind(id,provider,legacy.cloudflare_image_id || legacy.r2_key || legacy.id,url,
+    legacy.filename,legacy.mime_type,legacy.size,legacy.width,legacy.height,
+    JSON.stringify({legacy_image_id:legacy.id}),ownerId).run();
+  return {id,filename:legacy.filename,content_type:legacy.mime_type,media_kind:'image',status:'ready',url};
+}
+
+async function listPlatformProductImages(env, productId) {
+  const {results} = await env.DB.prepare(
+    `SELECT pi.id AS link_id,pi.position,pi.is_primary,m.id,m.filename,m.content_type,
+            m.source_uri AS url,m.source_uri AS thumbnail_url,m.status
+       FROM product_images pi JOIN media_assets m ON m.id=pi.media_asset_id
+       WHERE pi.product_id=? AND m.created_by_user_id=?
+       ORDER BY pi.is_primary DESC,pi.position ASC`
+  ).bind(productId,env.PRODUCT_MEDIA_OWNER_ID).all();
+  return results;
+}
+
+async function attachPlatformProductImage(env,productId,assetId) {
+  const asset = await platformProductAsset(env,assetId);
+  if (!asset) return json({ok:false,error:'media_asset_not_available_for_account'}, {status:404});
+  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM product_images WHERE product_id=?').bind(productId).first();
+  const isFirst = !Number(count?.n);
+  try {
+    await env.DB.prepare(
+      'INSERT INTO product_images(product_id,media_asset_id,position,is_primary) VALUES(?,?,?,?)'
+    ).bind(productId,asset.id,Number(count?.n || 0),isFirst ? 1 : 0).run();
+  } catch (err) {
+    if (/UNIQUE|constraint/i.test(String(err?.message || '')))
+      return json({ok:false,error:'image_already_attached'}, {status:409});
+    throw err;
+  }
+  if (isFirst) await env.DB.prepare('UPDATE products SET image_url=? WHERE id=?').bind(asset.url,productId).run();
+  return json({ok:true,asset_id:asset.id});
+}
+
+async function makePrimaryPlatformProductImage(env,productId,assetId) {
+  const asset = await platformProductAsset(env,assetId);
+  if (!asset) return json({ok:false,error:'media_asset_not_available_for_account'}, {status:404});
+  const attached = await env.DB.prepare(
+    'SELECT id FROM product_images WHERE product_id=? AND media_asset_id=?'
+  ).bind(productId,asset.id).first();
+  if (!attached) return json({ok:false,error:'image_not_attached_to_product'}, {status:404});
+  await env.DB.prepare('UPDATE product_images SET is_primary=0 WHERE product_id=?').bind(productId).run();
+  await env.DB.prepare('UPDATE product_images SET is_primary=1 WHERE product_id=? AND media_asset_id=?')
+    .bind(productId,asset.id).run();
+  await env.DB.prepare('UPDATE products SET image_url=? WHERE id=?').bind(asset.url,productId).run();
+  return json({ok:true});
+}
+
+async function detachPlatformProductImage(env,productId,assetId) {
+  await env.DB.prepare('DELETE FROM product_images WHERE product_id=? AND media_asset_id=?')
+    .bind(productId,assetId).run();
+  const {results} = await env.DB.prepare(
+    `SELECT pi.media_asset_id,m.source_uri AS url
+       FROM product_images pi JOIN media_assets m ON m.id=pi.media_asset_id
+       WHERE pi.product_id=? AND m.created_by_user_id=?
+       ORDER BY pi.is_primary DESC,pi.position ASC LIMIT 1`
+  ).bind(productId,env.PRODUCT_MEDIA_OWNER_ID).all();
+  const next = results?.[0] || null;
+  if (next) await env.DB.prepare('UPDATE product_images SET is_primary=1 WHERE product_id=? AND media_asset_id=?')
+    .bind(productId,next.media_asset_id).run();
+  await env.DB.prepare('UPDATE products SET image_url=? WHERE id=?').bind(next?.url || null,productId).run();
+  return json({ok:true});
+}
+
 
 export async function listProductImages(request, env, productId) {
+  if (platformProductMedia(env)) return json({ok:true,images:await listPlatformProductImages(env,productId)});
   const { results } = await env.DB.prepare(
     `SELECT pi.id AS link_id, pi.position, pi.is_primary, m.*
      FROM product_images pi
@@ -1308,6 +1411,7 @@ export async function attachProductImage(request, env, productId) {
     return json({ error: "Invalid body" }, { status: 400 });
   }
   if (!body.media_asset_id) return json({ error: "media_asset_id required" }, { status: 400 });
+  if (platformProductMedia(env)) return attachPlatformProductImage(env,productId,body.media_asset_id);
 
   const countRow = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM product_images WHERE product_id = ?`
@@ -1342,6 +1446,7 @@ export async function attachProductImage(request, env, productId) {
 }
 
 export async function detachProductImage(request, env, productId, mediaAssetId) {
+  if (platformProductMedia(env)) return detachPlatformProductImage(env,productId,mediaAssetId);
   await env.DB.prepare(
     `DELETE FROM product_images WHERE product_id = ? AND media_asset_id = ?`
   )
@@ -1351,6 +1456,7 @@ export async function detachProductImage(request, env, productId, mediaAssetId) 
 }
 
 export async function setPrimaryProductImage(request, env, productId, mediaAssetId) {
+  if (platformProductMedia(env)) return makePrimaryPlatformProductImage(env,productId,mediaAssetId);
   await env.DB.prepare(`UPDATE product_images SET is_primary = 0 WHERE product_id = ?`)
     .bind(productId)
     .run();

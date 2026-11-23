@@ -11,6 +11,8 @@
   let resolvePick = null;
   let assets = [];
   let selected = new Set();
+  let requestedSource = "";
+  let requestedSite = "";
   let activeTab = "all";
   let activeBucket = "";
   let availableBuckets = [];
@@ -70,7 +72,7 @@
     document.getElementById("media-picker-grid").addEventListener("click", (e) => {
       const tile = e.target.closest("[data-asset-id]");
       if (!tile) return;
-      const id = Number(tile.dataset.assetId);
+      const id = String(tile.dataset.assetId || "");
       if (selected.has(id)) selected.delete(id);
       else selected.add(id);
       renderGrid();
@@ -86,7 +88,7 @@
   }
 
   function confirmPick() {
-    const picked = assets.filter((a) => selected.has(a.id));
+    const picked = assets.filter((a) => selected.has(String(a.id)));
     closePicker(picked);
   }
 
@@ -108,13 +110,17 @@
   function filteredAssets() {
     const q = (document.getElementById("media-picker-search")?.value || "").trim().toLowerCase();
     return assets.filter((a) => {
-      if (!isImageAsset(a)) return false;
+      if (!isImageAsset(a) || !a.url) return false;
       if (activeBucket && String(a.r2_bucket || a.bucket || "") !== activeBucket) return false;
       if (!q) return true;
       const hay = `${a.filename} ${a.r2_key || ""} ${a.url}`.toLowerCase();
       return hay.includes(q);
     });
   }
+
+  const safeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[ch]);
 
   function renderGrid() {
     const grid = document.getElementById("media-picker-grid");
@@ -131,9 +137,9 @@
     grid.innerHTML = list
       .map(
         (a) => `
-      <button type="button" class="media-picker-tile${selected.has(a.id) ? " is-selected" : ""}" data-asset-id="${a.id}" title="${a.r2_key || a.filename}">
-        <img src="${a.url}" alt="" loading="lazy">
-        <span class="media-picker-tile-name">${a.filename}</span>
+      <button type="button" class="media-picker-tile${selected.has(String(a.id)) ? " is-selected" : ""}" data-asset-id="${safeHtml(a.id)}" title="${safeHtml(a.r2_key || a.filename)}">
+        <img src="${safeHtml(a.url)}" alt="" loading="lazy">
+        <span class="media-picker-tile-name">${safeHtml(a.filename)}</span>
       </button>`
       )
       .join("");
@@ -153,9 +159,11 @@
     if (grid) grid.innerHTML = '<p class="media-picker-empty">Loading…</p>';
 
     const tab = PICKER_TABS.find((t) => t.id === activeTab) || PICKER_TABS[0];
-    const syncParam = sync ? "&sync=1" : "";
+    const syncParam = sync && requestedSource !== "platform_registry" ? "&sync=1" : "";
     try {
-      const data = await adminFetch(`/api/admin/media?${tab.query}${syncParam}`);
+      const siteParam = requestedSite ? `&site_id=${encodeURIComponent(requestedSite)}` : "";
+      const sourceParam = requestedSource === "platform_registry" ? "&provider=platform_registry" : "";
+      const data = await adminFetch(`/api/admin/media?${tab.query}${sourceParam}${siteParam}${syncParam}`);
       assets = data.assets || [];
       // Only show buckets explicitly exposed by the authorized media provider
       // or already represented by accessible assets; never enumerate unrelated account buckets.
@@ -174,12 +182,14 @@
   }
 
   /**
-   * @param {{ title?: string, multi?: boolean, preselected?: number[] }} options
+   * @param {{ title?: string, multi?: boolean, preselected?: string[], source?: string, siteId?: string }} options
    * @returns {Promise<Array|null>} selected assets or null if cancelled
    */
   window.openMediaPicker = function openMediaPicker(options = {}) {
     ensurePickerDom();
-    selected = new Set(options.preselected || []);
+    selected = new Set((options.preselected || []).map(String));
+    requestedSource = options.source === "platform_registry" ? "platform_registry" : "";
+    requestedSite = typeof options.siteId === "string" ? options.siteId : "";
     activeTab = "all";
     activeBucket = "";
     if (options.multi === false) selected = new Set();
@@ -188,6 +198,7 @@
     if (title) title.textContent = options.title || "Browse Media";
 
     renderTabs();
+    document.getElementById("media-picker-sync").textContent = requestedSource ? "Refresh library" : "Sync from R2";
     backdrop.classList.add("is-open");
     document.body.classList.add("media-picker-open");
     loadAssets(true);

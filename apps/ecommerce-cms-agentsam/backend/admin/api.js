@@ -903,10 +903,10 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
   if (m && method === "GET") return listProductImages(request, env, m[1]);
   if (m && method === "POST") return attachProductImage(request, env, m[1]);
 
-  m = path.match(/^\/api\/admin\/products\/(\d+)\/images\/(\d+)$/);
+  m = path.match(/^\/api\/admin\/products\/(\d+)\/images\/([A-Za-z0-9_-]+)$/);
   if (m && method === "DELETE") return detachProductImage(request, env, m[1], m[2]);
 
-  m = path.match(/^\/api\/admin\/products\/(\d+)\/images\/(\d+)\/primary$/);
+  m = path.match(/^\/api\/admin\/products\/(\d+)\/images\/([A-Za-z0-9_-]+)\/primary$/);
   if (m && method === "POST") return setPrimaryProductImage(request, env, m[1], m[2]);
 
   if (path === "/api/admin/mail/settings" && method === "GET") return getMailSettings(env);

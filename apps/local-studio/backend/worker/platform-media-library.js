@@ -82,11 +82,13 @@ export function normalizeIamMediaAsset(row) {
   const meta = safeMeta(row.metadata_json);
   const mime = row.content_type || "";
   const kind = getKind(mime, row.filename || row.object_key);
-  const provider = row.source_kind === "stream" ? "cf_stream" : (row.source_kind || "r2");
+  const providerType = row.provider || row.source_kind || "external";
+  const provider = providerType === "cloudflare_stream" || providerType === "stream" ? "cf_stream"
+    : providerType === "cloudflare_images" ? "cf_images" : providerType;
   const url = /^https:\/\//.test(row.source_uri || "") ? row.source_uri : null;
   return {
     id: String(row.id),
-    source: { provider, key: row.object_key, asset_id: row.stream_uid || null, url },
+    source: { provider, key: row.object_key, asset_id: row.provider_resource_id || row.stream_uid || null, url },
     filename: row.filename || row.object_key?.split("/").pop() || String(row.id),
     r2_key: provider === "r2" ? row.object_key : null,
     url, delivery_url: url, cdn_url: url,
@@ -96,7 +98,7 @@ export function normalizeIamMediaAsset(row) {
     status: row.status === "failed" ? "failed" : row.status === "analyzing" ? "processing" : "ready",
     folder: getFolder(kind, meta),
     category: meta.category || null,
-    meta: { ...meta, source_bucket: row.bucket, source_key: row.object_key, provider },
+    meta: { ...meta, source_bucket: row.bucket_id || row.bucket || null, source_key: row.object_key, provider },
     display: {
       format: (mime.split("/")[1] || kind).toUpperCase(),
       width: row.width || null,
@@ -141,12 +143,14 @@ export async function handlePlatformMediaRead(request, env, url, principal) {
         "FROM images WHERE user_id = ? AND COALESCE(status,'active') != 'deleted' ORDER BY created_at DESC LIMIT 2000"
       ).bind(userId).all(),
       env.DB.prepare(
+        // Canonical platform media_assets has provider, provider_resource_id,
+        // bucket_id and created_by_user_id. It has no source_kind, bucket,
+        // stream_uid or workspace_id. Never infer cross-user sharing here.
         "SELECT m.id, m.filename, m.content_type, m.size_bytes, m.width, m.height, m.object_key, " +
-        "m.bucket, m.source_kind, m.source_uri, m.stream_uid, m.status, m.metadata_json, m.created_at, m.updated_at " +
-        "FROM media_assets m WHERE m.created_by_user_id = ? OR EXISTS (" +
-        "SELECT 1 FROM workspace_members wm WHERE wm.user_id = ? AND wm.is_active = 1 " +
-        "AND wm.workspace_id = m.workspace_id) ORDER BY m.created_at DESC LIMIT 2000"
-      ).bind(userId, userId).all(),
+        "m.bucket_id, m.provider, m.provider_resource_id, m.source_uri, m.status, " +
+        "m.metadata_json, m.created_at, m.updated_at " +
+        "FROM media_assets m WHERE m.created_by_user_id = ? ORDER BY m.created_at DESC LIMIT 2000"
+      ).bind(userId).all(),
     ]);
 
     const indexed = new Map();

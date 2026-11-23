@@ -658,6 +658,28 @@ async function listMedia(env, request, url, principal = null) {
   }));
 }
 
+/** Register provider image bytes in the canonical platform media_assets table.
+ * A storefront product links to this verified owner-scoped asset ID, never a
+ * guessed Cloudflare UUID or a second merchant media row.
+ */
+export async function registerUploadedImageAsset(env, ownerId, image, providerAccountId) {
+  if (!env.DB?.prepare) throw Object.assign(new Error('media_registry_unavailable'), {code:'media_registry_unavailable'});
+  const assetId = `asset_img_${crypto.randomUUID().replaceAll('-', '')}`;
+  const delivery = String(image.url || image.delivery_url || '');
+  if (!/^https:\/\/[^/\s]+\//.test(delivery)) throw Object.assign(new Error('uploaded_media_delivery_url_missing'), {code:'uploaded_media_delivery_url_missing'});
+  await env.DB.prepare(
+    `INSERT INTO media_assets
+     (id,provider,provider_account_id,provider_resource_id,source_uri,filename,content_type,
+      media_kind,size_bytes,width,height,status,created_by_user_id,metadata_json)
+     VALUES (?,'cloudflare_images',?,?,?,?,?,'image',?,?,?,'ready',?,?)`
+  ).bind(assetId,providerAccountId || null,String(image.cloudflare_image_id || image.id),
+    delivery,String(image.filename || ''),String(image.mime_type || 'image/jpeg'),
+    Number(image.size_bytes || 0),image.width ?? null,image.height ?? null,ownerId,
+    JSON.stringify({source:'cloudflare_oauth',category:image.category || null,folder:image.folder || 'images'})
+  ).run();
+  return {...image,id:assetId,media_asset_id:assetId};
+}
+
 async function uploadMediaViaOauth(env, ownerId, url, form) {
   const {
     uploadCloudflareImage,
@@ -752,7 +774,7 @@ async function uploadMediaViaOauth(env, ownerId, url, form) {
           filename: file.name,
           metadata,
         });
-        assets.push(normalizeImageAsset({
+        const registered = normalizeImageAsset({
           id: uploaded.id,
           filename: uploaded.filename,
           mime_type: file.type || "image/jpeg",
@@ -770,7 +792,8 @@ async function uploadMediaViaOauth(env, ownerId, url, form) {
             cloudflare_account_id: imagesClient.client.accountId,
             variants: uploaded.variants,
           },
-        }));
+        });
+        assets.push(await registerUploadedImageAsset(env,ownerId,registered,imagesClient.client.accountId));
       }
     } catch (err) {
       errors.push({
