@@ -5,10 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const read = (file) => readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
 
-test("MovieMode mounts only under /admin/moviemode; Media Library owns /media", () => {
+test("MovieMode mounts only under /admin/moviemode; /admin/media owns the unified library", () => {
   assert.match(read("../frontend/src/routes/(apps)/admin/moviemode.tsx"), /MovieModeSurface/);
-  assert.match(read("../frontend/src/routes/(apps)/media.tsx"), /MediaLibraryPage/);
-  assert.doesNotMatch(read("../frontend/src/routes/(apps)/media.tsx"), /MovieModeSurface/);
+  const legacyMedia = read("../frontend/src/routes/(apps)/media.tsx");
+  assert.match(legacyMedia, /Navigate to="\\/admin\\/media"/);
+  assert.doesNotMatch(legacyMedia, /MediaLibraryPage|MovieModeSurface/);
+  assert.match(read("../frontend/src/routes/(apps)/admin/media.tsx"), /UnifiedLibraryPage view="media"/);
   assert.match(read("../frontend/src/routes/(apps)/media.edit.tsx"), /createFileRoute\("\/\(apps\)\/media\/edit"\)/);
   assert.match(read("../frontend/src/routeTree.gen.ts"), /'\/media\/edit'/);
 });
