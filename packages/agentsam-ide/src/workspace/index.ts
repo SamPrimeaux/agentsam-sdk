@@ -12,3 +12,5 @@ export { buildFsChangeMapFromStatus, fsChangeEntriesSorted, toWorkspaceChanges, 
 export type { AgentGitStatusFilesPayload, FsChangeEntry, FsChangeState } from './changes.js';
 
 export { createWorkspaceTextFile } from './file-creation.js';
+
+export { mediaKindForPath, isMarkdownPath, isHtmlPath } from './media.js';

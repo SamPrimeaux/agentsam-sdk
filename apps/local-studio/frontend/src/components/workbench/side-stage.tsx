@@ -4,6 +4,7 @@ import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Columns2, M
 import { Button } from "@/components/ui/button";
 import { SplitHandle } from "@/components/shell/split-handle";
 import { IconAction } from "@/components/ui/icon-action";
+import { AnnotationToggle } from "../../../agentsam/AnnotationHelper";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -148,6 +149,7 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
                 <TabIcon kind={item.kind} icon={item.icon} />
                 <span className="max-w-28 truncate" title={item.title}>{item.title}</span>
               </button>
+              {item.kind === 'browser' && item.id === activeId && <AnnotationToggle />}
               <IconAction
                 type="button"
                 variant="ghost"
@@ -256,8 +258,8 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
         {onFocusToggle && <IconAction
           type="button"
           variant="ghost"
-          label={workFocused ? "Restore split conversation and Work" : "Focus Work panel"}
-          hint={workFocused ? "Restore split view" : "Expand Work within the current window"}
+          label={workFocused ? "Exit full view" : "Expand to full view"}
+          hint={workFocused ? "Restore chat and workspace split" : "Expand workspace and float the chat"}
           onClick={onFocusToggle}
         >{workFocused ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</IconAction>}
         <IconAction

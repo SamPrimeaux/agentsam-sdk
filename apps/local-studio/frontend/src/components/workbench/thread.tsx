@@ -1,10 +1,11 @@
 import { IconAction } from "@/components/ui/icon-action";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { Download, FileText, FileCode2, ArrowUpRight } from "lucide-react";
+import { Download, FileText, FileCode2, ArrowUpRight, ImageIcon } from "lucide-react";
 import type { Artifact } from "@inneranimalmedia/agentsam-local-shared";
 import { createIndexedDbContentStorage } from "@inneranimalmedia/agentsam-content";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import type { ChatImageReference } from "@/lib/content/chat-images";
+import { stageChatFile, type ChatAttachmentReference, type ChatImageReference } from "@/lib/content/chat-images";
 import { AgentConversationSurface, AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
 import { MessageMarkdown } from "@/components/workbench/markdown";
 import { Composer } from "@/components/workbench/composer";
@@ -20,6 +21,31 @@ const STARTERS = [
   "Add a landing hero to index.html and preview it",
   "Prepare this workspace for Cloudflare Pages and GitHub Actions",
 ];
+
+/** A chat resource retains its original provider identity when opened in Files. */
+function openChatAttachment(ref: ChatAttachmentReference) {
+  const store = useWorkStore.getState();
+  store.openSideTab('files', {title: ref.name, fileId: null, ephemeral: false,
+    attachedResource: {blobId: ref.source.blobId, name: ref.name,
+      mimeType: ref.mimeType, size: ref.size, kind: ref.kind}});
+  store.setSideOpen(true);
+}
+
+function ConversationAttachmentCard({ refInfo }: {refInfo: ChatAttachmentReference}) {
+  if (refInfo.kind === 'image') return <div className="min-w-0 w-[130px] rounded-xl border border-border bg-card p-1.5 text-foreground shadow-sm">
+    <ConversationImage refInfo={refInfo} />
+    <button type="button" className="mt-1 flex w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-muted"
+      title={'Open '+refInfo.name+' in Files'} onClick={()=>openChatAttachment(refInfo)}>
+      <ImageIcon className="size-3.5 shrink-0"/><span className="min-w-0 flex-1 truncate">{refInfo.name}</span><ArrowUpRight className="size-3 shrink-0"/>
+    </button>
+  </div>;
+  return <button type="button" onClick={()=>openChatAttachment(refInfo)} title={'Open '+refInfo.name+' in Files'}
+    className="flex max-w-[260px] items-center gap-2 rounded-xl border border-border bg-card p-2.5 text-left text-foreground shadow-sm transition-colors hover:bg-muted/60">
+    <FileText className="size-7 shrink-0 text-muted-foreground"/><span className="min-w-0 flex-1"><strong className="block truncate text-xs font-medium">{refInfo.name}</strong>
+      <small className="text-[10px] text-muted-foreground">File · {Math.ceil(refInfo.size/1024)} KB · Open in Files</small></span>
+    <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground"/>
+  </button>;
+}
 
 function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
   const { user } = useCurrentUserState();
@@ -51,13 +77,20 @@ function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
 
 function WorkOutputCards({ files }: {files: Artifact[]}) {
   const openSideTab = useWorkStore(state => state.openSideTab);
+  const { user } = useCurrentUserState();
   const projectFiles = useWorkStore(state => state.projects.find(project => project.id === state.activeProjectId)?.files) ?? [];
   if (!files.length) return null;
-  function open(file: Artifact) {
+  async function open(file: Artifact) {
     const inProject = projectFiles.find(item=>item.path===file.path);
-    if (!inProject) return;
-    const kind = /\\.(md|txt|markdown|agentdoc\\.html)$/.test(file.path) ? 'artifacts' : 'files';
-    openSideTab(kind, {fileId:inProject.id,ephemeral:false});
+    if (inProject) {
+      openSideTab('files', {fileId:inProject.id, attachedResource:null,ephemeral:false,title:file.title||file.path});
+    } else {
+      if (!user?.id) throw new Error('Sign in to open this output in Files.');
+      // A generated message output is a resource, not necessarily a saved project
+      // file. View the original bytes without silently assigning it to a project.
+      const ref = await stageChatFile(new File([file.content],file.path.split('/').pop()||'output.txt',{type:'text/plain'}), user.id);
+      openChatAttachment(ref);
+    }
     useWorkStore.getState().setSideOpen(true);
   }
   function download(file: Artifact) {
@@ -74,12 +107,12 @@ function WorkOutputCards({ files }: {files: Artifact[]}) {
       const document = /\\.(md|txt|markdown|agentdoc\\.html)$/.test(file.path);
       return <div key={file.id} className="agentsam-work-output-card">
         <button type="button" className="agentsam-work-output-card__main"
-          disabled={!inProject} onClick={()=>open(file)}
-          title={inProject?'Open '+(file.title||file.path):'Saved output is not available in this project'}>
+          onClick={()=>{void open(file).catch(error=>toast.error(error instanceof Error?error.message:'Could not open output'));}}
+          title={'Open '+(file.title||file.path)+' in Files'}>
           {document ? <FileText size={19} aria-hidden="true"/>:<FileCode2 size={19} aria-hidden="true"/>}
           <span><strong>{file.title || file.path.split('/').pop()}</strong>
             <small>{document?'Document':'File'}</small></span>
-          {inProject?<ArrowUpRight className="agentsam-work-output-card__open" size={16} aria-hidden="true"/>:null}
+          <ArrowUpRight className="agentsam-work-output-card__open" size={16} aria-hidden="true"/>
         </button>
         <IconAction type="button" className="agentsam-work-output-card__download" label={'Download '+(file.title||file.path)}
           hint="Download output" onClick={()=>download(file)}><Download size={16}/></IconAction>
@@ -109,18 +142,24 @@ function MessageBubble({
   }, [streaming]);
 
   if (message.role === "user") {
+    const refs = Array.isArray(message.metadata?.attachments)
+      ? (message.metadata.attachments as ChatAttachmentReference[]).filter(ref =>
+          ref && (ref.kind === 'image' || ref.kind === 'file') && ref.source?.type === 'blob') : [];
+    const annotations = Array.isArray(message.metadata?.annotations)
+      ? (message.metadata.annotations as Array<{id:string;label:string;tag:string;object?:{id:string}}>).filter(a => a && typeof a.label === 'string').slice(0,8) : [];
     return (
-      <div className="flex justify-end" data-chat-message-id={message.id} tabIndex={-1}>
-        <div className="max-w-[min(100%,40rem)] rounded-2xl bg-accent px-4 py-3 text-sm leading-relaxed text-accent-foreground">
-          {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
-            <div className="mb-3 grid max-w-[min(100%,38rem)] grid-cols-2 gap-2 sm:grid-cols-3">
-              {(message.metadata.attachments as ChatImageReference[]).filter((image) => image.kind === "image").map((image) => (
-                <ConversationImage key={image.id} refInfo={image} />
-              ))}
-            </div>
-          ) : null}
-          {message.content ? <p className="whitespace-pre-wrap">{message.content}</p> : null}
-        </div>
+      <div className="flex flex-col items-end gap-1.5" data-chat-message-id={message.id} tabIndex={-1}>
+        {annotations.length > 0 && <div className="flex max-w-[min(100%,42rem)] flex-wrap justify-end gap-1.5" aria-label="Referenced annotations">
+          {annotations.map(a => <span key={a.id} className="inline-flex max-w-56 items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1 text-xs text-foreground" title={a.object?.id || a.tag}>
+            <span aria-hidden="true">⌖</span><span className="truncate">{a.label || 'Annotation'}</span>
+          </span>)}
+        </div>}
+        {refs.length > 0 ? <div className="flex max-w-[min(100%,42rem)] flex-wrap justify-end gap-2" aria-label="Message attachments">
+          {refs.map(ref => <ConversationAttachmentCard key={ref.id} refInfo={ref} />)}
+        </div> : null}
+        {message.content ? <div className="max-w-[min(100%,40rem)] rounded-2xl bg-accent px-4 py-3 text-sm leading-relaxed text-accent-foreground">
+          <p className="whitespace-pre-wrap">{message.content}</p>
+        </div> : null}
       </div>
     );
   }

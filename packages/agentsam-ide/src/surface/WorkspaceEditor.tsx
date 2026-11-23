@@ -28,6 +28,8 @@ export type WorkspaceEditorProps = {
   onConnectionSettings?: () => void;
   /** Host-owned source context for the agent; never includes OAuth credentials. */
   onActiveFileChange?: (file: {path:string;version:string}|null) => void;
+  /** Host-selected file to open on this existing IDE surface. */
+  initialFilePath?: string;
   /** Preserve unsaved untitled buffers across host source changes. */
   initialUntitledDrafts?: UntitledEditorDraft[];
   onUntitledDraftsChange?: (drafts: UntitledEditorDraft[]) => void;
@@ -48,7 +50,7 @@ export type UntitledEditorDraft = {
 type Tab = WorkspaceFile & { untitled?: boolean; targetDirectory?: string; value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string; preview?: WorkspacePreview };
 type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'Changes' | 'Snapshot' | 'References' | 'Dependencies';
 
-export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown, onReconnect, onConnectionSettings, onActiveFileChange, initialUntitledDrafts, onUntitledDraftsChange, connectionPanel}: WorkspaceEditorProps) {
+export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown, onReconnect, onConnectionSettings, onActiveFileChange, initialFilePath, initialUntitledDrafts, onUntitledDraftsChange, connectionPanel}: WorkspaceEditorProps) {
   const [tree,setTree]=useState<WorkspaceEntry[]>([]);
   const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
   const [tabs,setTabs]=useState<Tab[]>(()=>(initialUntitledDrafts||[]).map(draft=>({
@@ -195,6 +197,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       setActive(file.path);setMessage('');
     }catch(e){setMessage(e instanceof Error?e.message:String(e));}
   },[queue,workspace]);
+  useEffect(() => {
+    if (initialFilePath) void open(initialFilePath);
+  }, [initialFilePath, open]);
 
   const edit=(path:string,value:string)=>{
     const tab=latestTabs.current.find(item=>item.path===path);

@@ -15,10 +15,11 @@ test('focused Side Stage overrides the tablet and desktop split-width clamps', (
 test('new browser tab actions live in the global trailing header and offer full view', () => {
   const page = read('../frontend/agentsam/AgentSamPage.tsx');
   assert.match(page, /className="agentsam-topbar-browser-actions"/);
-  assert.match(page, /New tab in full view/);
+  assert.match(page, /New browser tab in full view/);
   assert.match(page, /openBrowserTab\(true\)/);
   assert.match(page, /createPortal\(headerActions, hostActionsSlot\)/);
-  assert.match(page, /<AnnotationToggle\s*\/>/);
+  const stage = read('../frontend/src/components/workbench/side-stage.tsx');
+  assert.match(stage, /item\.kind === 'browser' && item\.id === activeId && <AnnotationToggle\s*\/>/);
 });
 
 test('browser tabs take a real page title or URL host without a second tab registry', () => {
@@ -37,6 +38,8 @@ test('annotation button broadcasts active state and selection anchors to exact s
   assert.match(host, /aria-pressed=\{active\}/);
   assert.match(host, /agentsam:annotation-state/);
   assert.match(helper, /root\.addEventListener\('pointermove', move, true\)/);
-  assert.match(helper, /target\.current = selected; setBounds\(selected\.getBoundingClientRect\(\)\)/);
+  assert.match(helper, /target\.current = focus/);
+  assert.match(helper, /setBounds\(isVisualCanvas\(focus\) \? new DOMRect/);
+  assert.match(helper, /text: editable \? '\[field value withheld\]'/);
   assert.match(helper, /text: editable \? '\[field value withheld\]'/);
 });

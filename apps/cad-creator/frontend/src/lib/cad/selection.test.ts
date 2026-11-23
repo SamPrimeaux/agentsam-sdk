@@ -6,6 +6,11 @@ describe('cad selection + proposal', () => {
     const s = buildSelectionContext({ workspace:'model', projectId:'p1', revision:4, objectId:'wall-04', objectType:'wall', label:'Exterior wall' });
     expect(s).toMatchObject({ source:'cad-creator', revision:4, object:{id:'wall-04',units:'in'} });
   });
+  it('preserves a verified visual pick point but never fabricates one for tree selections', () => {
+    const input={workspace:'model',projectId:'p1',revision:4,objectId:'tree-2',objectType:'scene-element',label:'Oak tree'};
+    expect(buildSelectionContext({...input,anchor:{x:240,y:134}}).anchor).toEqual({x:240,y:134});
+    expect(buildSelectionContext(input).anchor).toBeUndefined();
+  });
   it('proposal is revision-guarded design_apply_operation, not auto-apply', () => {
     const s = buildSelectionContext({ workspace:'model', projectId:'p1', revision:4, objectId:'wall-04', objectType:'wall', label:'Exterior wall' });
     const pr = proposeWallHeight(s, 96, 120);

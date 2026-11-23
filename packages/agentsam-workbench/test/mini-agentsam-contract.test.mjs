@@ -43,3 +43,15 @@ test('Local Studio brand uses the canonical packaged desktop icon', async () => 
   assert.deepEqual(packagedIcon, canonicalIcon);
   assert.doesNotMatch(brand, /imagedelivery|https?:\/\//);
 });
+
+test('miniAgentSam pins actual selection points and derives its appearance from theme tokens', async () => {
+  const source = await readFile(new URL('../src/agent/MiniAgentSam.tsx', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../src/agent/mini-agentsam.css', import.meta.url), 'utf8');
+  assert.match(source, /className="mini-agentsam-pin"/);
+  assert.match(source, /className="mini-agentsam-suggestions"/);
+  assert.match(source, /cadContext\.current/);
+  assert.match(source, /previousPointerEvents/);
+  assert.match(source, /\['canvas','svg','iframe'\]/);
+  assert.match(css, /\.mini-agentsam-attachment-previews/);
+  assert.match(css, /--mini-accent: var\(--nav-accent/);
+});

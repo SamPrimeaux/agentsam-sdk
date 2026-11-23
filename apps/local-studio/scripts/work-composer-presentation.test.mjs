@@ -50,12 +50,13 @@ test('plugins and connected services are available from the plus/@ menu, not per
   assert.match(styles, /\.agentsam-plugin-row \{[^}]*min-height: 44px/);
 });
 
-test('image attachments expand the composer above the draft and keep controls below', () => {
+test('file and image attachments use compact neutral cards above the draft', () => {
   assert.match(composer, /className="flex max-h-\[376px\] flex-wrap items-start gap-3 overflow-y-auto/);
-  assert.match(composer, /size-32 shrink-0[^\"]*sm:size-40 md:size-44/);
-  assert.match(composer, /object-contain p-1/);
+  assert.match(composer, /h-\[66px\] max-w-56/);
+  assert.match(composer, /size-12 shrink-0 overflow-hidden rounded-md/);
   assert.doesNotMatch(composer, /absolute inset-x-0 bottom-0 truncate bg-black/);
   assert.match(composer, /attachmentPreview=\{attachmentPreview\}/);
+  assert.match(composer, /stageChatFile\(file, user\?\.id/);
   assert.match(styles, /\.agentsam-composer-surface \.agentsam-composer-attachments \{ display: flex; width: 100%;/);
   assert.match(styles, /\.agentsam-composer-surface:has\(\.agentsam-composer-attachments\) \{\s*flex-direction: column/s);
   assert.match(composer, /<ProjectPicker chatId=\{targetId\} showTrigger=\{false\} \/>/);
@@ -95,10 +96,74 @@ test('Work preserves an expanded two-row composer while Chat stays compact', () 
   assert.match(styles, /data-composer-mode="work"\] \.as-work-composer-surface/);
   assert.match(styles, /data-composer-mode="chat"\] \.agentsam-composer-surface\s*\{[^}]*flex-direction: row/s);
   assert.match(composer, /toolbarStart=\{<>\{trigger\}/);
+  assert.doesNotMatch(composer, /<RunModeSelect/);
+  assert.match(composer, /toolbarEnd=\{<>\<ModelSelect workStyle \/>/);
+  assert.ok(composer.indexOf('workMode && showWorkShortcuts') > composer.indexOf('<AgentComposer'), 'Work shortcut links follow the shared composer');
   assert.match(composer, /attachmentPreview=\{attachmentPreview\}/);
+  assert.match(composer, /stageChatFile\(file, user\?\.id/);
   assert.match(composer, /workMode && showWorkShortcuts/);
   assert.match(composer, /onClick=\{openProject\}/);
   assert.match(composer, /onClick=\{openPlugins\}/);
   assert.match(composer, /fileRef\.current\?\.click\(\)/);
-  assert.match(page, /showWorkShortcuts=\{data\.mode === 'work' && empty && !leadComposerDetached\}/);
+  assert.match(page, /showWorkShortcuts=\{data\.mode === 'work' && \(workFocused \|\| \(empty && !leadComposerDetached\)\)\}/);
+});
+
+
+test('Side Stage opens from one header toggle, then offers its own full-view control', () => {
+  const stage=read('frontend/src/components/workbench/side-stage.tsx');
+  assert.match(page, /label=\{state\.sideOpen \? 'Close side workspace' : 'Open side workspace'\}/);
+  assert.match(page, /onClick=\{toggleSideWorkspace\}/);
+  assert.match(page, /<SideStage workFocused=\{workFocused\} onFocusToggle=/);
+  assert.match(stage, /\{onFocusToggle && <IconAction/);
+  assert.doesNotMatch(page, /hint="Toggle focused Side Stage"/);
+});
+
+test('Full view retains the lead composer and shared plus menu in a movable chat panel', () => {
+  assert.match(page, /className="agentsam-floating-lead-chat"/);
+  assert.match(page, /label="Drag chat panel"/);
+  assert.match(page, /onPointerMove=\{onFloatingDragMove\}/);
+  assert.match(page, /onKeyDown=\{event =>/);
+  assert.match(page, /className="agentsam-floating-chat-composer">\{leadComposer\}/);
+  assert.match(styles, /\.agentsam-floating-lead-chat \.agentsam-plugin-host/);
+  assert.match(styles, /\.agentsam-floating-lead-chat \.as-work-shortcuts/);
+});
+
+test('Work split puts the stage before chat and preserves resize direction', () => {
+  assert.match(page, /const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !isMobile/);
+  assert.match(page, /workSplit \? " is-work-stage-first"/);
+  assert.match(page, /workSplit \? delta : -delta/);
+  assert.match(styles, /\.agentsam-workspace.is-work-stage-first \{\s*flex-direction:row-reverse/s);
+});
+
+test('Unsent attachment cards survive composer relocation without persisting browser object URLs', () => {
+  const store=read('frontend/src/lib/work/store.ts');
+  assert.match(composer, /pendingComposerAttachments\[targetId\] \?\? EMPTY_PENDING_ATTACHMENTS/);
+  assert.match(composer, /setPendingComposerAttachments\(targetId, next\)/);
+  assert.match(store, /pendingComposerAttachments: \{\}/);
+  assert.match(store, /setPendingComposerAttachments: \(id, next\) => set/);
+  const partialize=store.slice(store.lastIndexOf('partialize: (s) =>'));
+  assert.doesNotMatch(partialize, /pendingComposerAttachments/);
+});
+
+test('Browser annotation lives beside the Browser tab and reuses miniAgentSam', () => {
+  const stage=read('frontend/src/components/workbench/side-stage.tsx');
+  const browser=read('frontend/src/components/workbench/browser.tsx');
+  const helper=read('frontend/agentsam/AnnotationHelper.tsx');
+  assert.match(stage, /item.kind === 'browser' && item.id === activeId && <AnnotationToggle/);
+  assert.doesNotMatch(browser, /className="as-browser-annotate"/);
+  assert.match(helper, /<MiniAgentSam selecting=\{selecting\}/);
+  assert.match(helper, /setPendingAnnotations\(id, items/);
+  assert.match(helper, /setPendingComposerAttachments\(id, items/);
+  assert.match(helper, /onAttach=\{\(\) => fileInput.current\?\.click\(\)\}/);
+});
+
+test('Selected annotation cards are portable context, not exposed JSON in the draft', () => {
+  const store=read('frontend/src/lib/work/store.ts');
+  const helper=read('frontend/agentsam/AnnotationHelper.tsx');
+  const thread=read('frontend/src/components/workbench/thread.tsx');
+  assert.match(composer, /pendingAnnotations\.map\(annotation/);
+  assert.match(store, /formatAnnotationContext\(m\.metadata\?\.annotations\)/);
+  assert.match(thread, /aria-label="Referenced annotations"/);
+  assert.doesNotMatch(helper, /JSON\.stringify\(selection\)/);
+  assert.doesNotMatch(store.slice(store.lastIndexOf('partialize: (s) =>')), /pendingAnnotations/);
 });
