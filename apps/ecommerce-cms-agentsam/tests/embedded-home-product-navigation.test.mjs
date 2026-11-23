@@ -34,4 +34,7 @@ test('Product Studio uses the published packaged dock with the real editor tabs,
   assert.match(styles, /\.ps-studio-launch-dock\s+\.as-nav-launch-dock\s*\{/);
   assert.match(styles, /\.ps-toolpanel:not\(\[hidden\]\)\s*\{[^}]*bottom:\s*calc\(80px/s);
   assert.match(styles, /\.product-studio-shell:has\(input:focus,textarea:focus,select:focus/);
+  // The mobile dock replaces the rail, not its existing help destination.
+  assert.match(workspace, /className="ps-toolpanel-mobile-help" href="\/admin\/products\/help\/artwork"/);
+  assert.match(styles, /\.ps-toolpanel-mobile-help\s*\{[^}]*display:inline-flex/);
 });
