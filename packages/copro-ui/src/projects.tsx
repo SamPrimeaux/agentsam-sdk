@@ -177,7 +177,7 @@ export function CoProProjectsScreen({
 
     <main className={"mm-home-main"+(active==="design"?" is-design":"")}>
       <header className="mm-home-header">
-        <div className="mm-prime-page-heading"><span>PRIMETECH / CREATIVE STUDIO</span><strong>{active === "templates" ? "Templates" : active === "design" ? "Design Studio" : "Home"}</strong></div>
+        <div className="mm-prime-page-heading"><span>PRIMETECH / CREATIVE STUDIO</span><strong>{active === "templates" ? "Templates" : active === "design" ? "Design Studio" : "Home"}</strong><small>Apps · independent from Media Library</small></div>
         <div className="mm-home-header-actions"><button type="button" title="Import video, images and audio" onClick={onImport}><CoProSystemIcon name="attachment" icons={systemIcons} size={17} fallback={<Import size={17}/>} /> Import</button><button type="button" onClick={onCreate}><Plus size={17}/> Create project</button></div>
       </header>
       {active === "design" ? <section className="mm-design-page" aria-label="PrimeTech Design Studio">
