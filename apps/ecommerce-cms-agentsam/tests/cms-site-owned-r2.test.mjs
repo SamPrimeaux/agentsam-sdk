@@ -40,6 +40,26 @@ test('existing published homepage reads authored R2 draft, saves a new private r
   }finally{db.close();}
 });
 
+test('one unsupported section source does not blank the site-owned page or overwrite its R2 reference', async () => {
+  const {db,env,objects} = fixture();
+  try {
+    db.prepare("INSERT INTO cms_page_sections (id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket,draft_r2_key) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .run('legacy-source','home','legacy-source','html_source','Legacy source','{}',1,1,
+        'inneranimalmedia','cms/ws_inneranimalmedia/sections/legacy/published.html');
+    const opened = await getSiteOwnedPage(env,'merchant','home','main','home');
+    assert.equal(opened.ok,true);
+    assert.equal(opened.page.sections[0].content.headline,'Existing R2 headline');
+    assert.deepEqual(opened.page.missing_source_sections,['legacy-source']);
+    const legacy = opened.page.sections.find(section => section.key==='legacy-source');
+    assert.equal(legacy.read_only,true);
+    assert.equal(legacy.source_error,'cms_section_bucket_unavailable');
+    const row=db.prepare("SELECT r2_bucket,draft_r2_key FROM cms_page_sections WHERE id='legacy-source'").get();
+    assert.equal(row.r2_bucket,'inneranimalmedia');
+    assert.equal(row.draft_r2_key,'cms/ws_inneranimalmedia/sections/legacy/published.html');
+    assert.equal(objects.get('cms/sections/drafts/home/hero.json'), JSON.stringify({headline:'Existing R2 headline'}));
+  } finally { db.close(); }
+});
+
 test("site-owned catalog resources install a private draft and refuse foreign page IDs", async () => {
   const {db,env} = fixture();
   const url = new URL("https://cms.test/api/admin/cms/pages/home/catalog-resources?site_id=main&page_id=home");
