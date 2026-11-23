@@ -166,6 +166,8 @@ export interface CadFormatAdapter {
  */
 export async function runCadFormatOperation(input: {
   filename: string; operation: CadFormatOperation; source: unknown; options?: unknown;
+  /** Resolution from a real content inspector or explicit application/user choice. */
+  resolvedFormatId?: string;
 }, adapters: readonly CadFormatAdapter[] = []): Promise<{
   adapterId: string; format: AgentSourceFormatReference; output: unknown;
 }> {
