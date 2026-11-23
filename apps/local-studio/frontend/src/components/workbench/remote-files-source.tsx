@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 const renderIDEWorkspaceMarkdown = (content:string) => <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>;
-import { WorkspaceEditor, WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
+import { AgentSamFilesystem, type AgentSamFilesystemSource, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
 import type { AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
 import { openExternalUrl, isPackagedDesktop } from '@/lib/desktop/tauri';
 import {
@@ -120,19 +120,40 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
     try{const r=await listIDEContainers(account);setApps(r.applications);}
     catch(e){setError(e instanceof Error?e.message:String(e));}
   };
+  // Account OAuth and remote I/O stay in the host's connection/backend adapters.
+  // The canonical AgentSamFilesystem only receives an authorized FileWorkspace.
+  const workspaceId = source === 'docker' && dockerSelection
+    ? ['docker',dockerSelection.context,dockerSelection.container,dockerSelection.root].join(':')
+    : [source,account,repository,bucket].join(':');
+  const workspaceLabel = source === 'docker' ? 'Docker · '+dockerSelection?.container
+    : source === 'drive' ? 'Google Drive · '+account
+    : source === 'github' ? 'GitHub · '+repository
+    : 'R2 · '+bucket;
+  const filesystemSources: AgentSamFilesystemSource[] = sources.map(item => item.id === source ? {
+    ...item,
+    workspace: monacoReady && !monacoFailure ? remote : null,
+    workspaceId,
+    workspaceLabel,
+    context: {
+      accountRef: account || undefined,
+      repository: source === 'github' ? repository : undefined,
+      bucket: source === 'r2' ? bucket : undefined,
+      root: source === 'docker' ? dockerSelection?.root : undefined,
+    },
+    reconnect: source === 'docker'
+      ? () => setDockerSelection(null) : () => void connect(),
+  } : item);
   return <div className="work-files-stage flex h-full min-h-0 flex-col">
-    {!remote ? <WorkspaceSourceRail sources={sources} sourceId={source} onSelect={onSelect}/> : null}
-    {error?<p role="alert" className="border-b border-border px-3 py-2 text-xs text-destructive">{error}</p>:null}
-    {remote?<div className="min-h-0 flex-1">
-      {monacoFailure?<p role="alert" className="p-3 text-xs text-destructive">Monaco runtime unavailable: {monacoFailure}</p>:null}
-      {!monacoReady&&!monacoFailure?<p className="p-3 text-xs text-muted-foreground">Initializing Monaco language workers…</p>:null}
-      {monacoReady&&!monacoFailure?<>
-        <WorkspaceEditor renderMarkdown={renderIDEWorkspaceMarkdown} key={source==='docker'&&dockerSelection?'docker:'+dockerSelection.context+':'+dockerSelection.container+':'+dockerSelection.root:source+':'+account+':'+bucket} workspace={remote}
-          workspaceId={source==='docker'&&dockerSelection?'docker:'+dockerSelection.context+':'+dockerSelection.container+':'+dockerSelection.root:source+':'+account+':'+bucket} palette={palette}
-          label={source==='docker'?'Docker · '+dockerSelection?.container:source==='drive'?'Google Drive · '+account:source==='github'?'GitHub · '+repository:'R2 · '+bucket}
-          sources={sources} sourceId={source} onSourceSelect={onSelect}
-          onReconnect={()=>{if(source==='docker')setDockerSelection(null);else void connect();}}/></>:null}
-    </div>:<div className="min-h-0 flex-1 overflow-y-auto p-4 text-xs">
+    <AgentSamFilesystem
+      sources={filesystemSources} sourceId={source} onSourceSelect={onSelect}
+      palette={palette} showHostModes renderMarkdown={renderIDEWorkspaceMarkdown}
+      error={error || monacoFailure || undefined}
+      onContextChange={context => window.dispatchEvent(
+        new CustomEvent('agentsam:filesystem-context', {detail:context}),
+      )}
+      setup={remote
+        ? (!monacoReady ? <p className="p-4 text-xs">Initializing Monaco language workers…</p> : null)
+        : <div className="min-h-0 flex-1 overflow-y-auto p-4 text-xs">
       <div className="mx-auto flex max-w-lg flex-col gap-4">
         <div><h2 className="text-base font-semibold">{sources.find(s=>s.id===source)?.label}</h2>
           <p className="mt-1 text-muted-foreground">{info[source]}</p></div>
@@ -171,6 +192,8 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
           </div>:null}
         </>:<p className="text-muted-foreground">Dockerize CLI creates and packages images; direct filesystem browsing requires a selected Docker host/container and an authorized root.</p>}
       </div>
-    </div>}
+          </div>
+      }
+    />
   </div>;
 }
