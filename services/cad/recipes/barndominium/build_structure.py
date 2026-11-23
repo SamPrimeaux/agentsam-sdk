@@ -429,7 +429,7 @@ def save_obj_mtl(output):
     mtl=output/(OUT_NAME+".mtl")
     with open(mtl,"w") as out:
         for category,color in PALETTE.items():
-            out.write(f"newmtl {category}\nKd {color[0]:.4f} {color[1]:.4f} {color[2]:.4f}\nKa .05 .05 .05\nKs .08 .08 .08\nNs 18\n\n")
+            out.writelines([f"newmtl {category}\nKd {color[0]:.4f} {color[1]:.4f} {color[2]:.4f}\nKa .05 .05 .05\nKs .08 .08 .08\nNs 18\n\n"])
     vertex_offset=0
     with open(obj,"w") as out:
         out.write("# Derived metric OBJ, FreeCAD native source remains authoritative\n")
