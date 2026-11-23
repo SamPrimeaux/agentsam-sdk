@@ -21,7 +21,7 @@ test('store discovery reads JSONC bindings without leaking credentials or select
   assert.equal(result.candidates.find(c => c.driver === 'd1').name, 'existing-app');
   assert.equal(result.candidates.find(c => c.environment === 'preview').name, 'preview-app');
   assert.ok(result.candidates.filter(c => c.role === 'application').every(c => c.selectable === false));
-  assert.equal(result.candidates.find(c => c.driver === 'postgres').connection_env, 'DATABASE_URL');
+  assert.equal(result.candidates.find(c => c.driver === 'postgres'), undefined, 'ambient DATABASE_URL must not be adopted; Postgres is opt-in');
   assert.doesNotMatch(JSON.stringify(result), /password|secret|do-not-emit/);
   assert.equal(fs.existsSync(path.join(root, '.agentsam')), false);
   let output = '';
@@ -29,16 +29,20 @@ test('store discovery reads JSONC bindings without leaking credentials or select
   assert.match(output, /existing-app/);
 });
 
-test('knowledge selection edits existing portable config without overwriting scope or moving runtime data', () => {
+test('knowledge selection edits existing portable config without overwriting scope or moving runtime data', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-store-selection-'));
   fs.writeFileSync(path.join(root, 'package.json'), '{"name":"stores"}');
   initRepository(root, { repositoryId: 'repo:test', include: ['src'] });
-  selectKnowledgeStore(root, 'postgres', 'MY_DATABASE_URL');
+  await selectKnowledgeStore(root, 'postgres', 'MY_DATABASE_URL');
   assert.deepEqual(readConfig(root).scope.include, ['src']);
   assert.equal(readConfig(root).storage.connection_env, 'MY_DATABASE_URL');
   assert.equal(fs.existsSync(path.join(root, '.agentsam/data/agentsam.sqlite')), false);
-  assert.throws(() => selectKnowledgeStore(root, 'postgres', 'postgres://password@host/db'), /connection_env/);
-  assert.throws(() => selectKnowledgeStore(root, 'd1'), /adapter_unavailable/);
-  selectKnowledgeStore(root, 'sqlite');
+  await assert.rejects(() => selectKnowledgeStore(root, 'postgres', 'postgres://password@host/db'), /connection_env/);
+  await assert.rejects(() => selectKnowledgeStore(root, 'postgres'), /connection_env_required/);
+  await assert.rejects(() => selectKnowledgeStore(root, 'd1'), /d1_binding_not_found/);
+  fs.writeFileSync(path.join(root, 'wrangler.jsonc'), '{"name":"x","d1_databases":[{"binding":"DB","database_name":"my-app-db","database_id":"abc"}]}');
+  await selectKnowledgeStore(root, 'd1');
+  assert.deepEqual(readConfig(root).storage, { driver: 'd1', database: 'my-app-db', binding: 'DB', config: 'wrangler.jsonc' });
+  await selectKnowledgeStore(root, 'sqlite');
   assert.deepEqual(readConfig(root).storage, { driver: 'sqlite' });
 });

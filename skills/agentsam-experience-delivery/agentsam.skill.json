@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-experience-delivery",
+  "name": "AgentSam Experience Delivery",
+  "description": "Machinery-first, source-faithful creative experience workflow with real interactive and CMS acceptance gates; preserve originals and founder authority.",
+  "package": "@inneranimalmedia/agentsam-sdk",
+  "slash": {
+    "suggested": "/experience-delivery"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

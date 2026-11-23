@@ -18,7 +18,6 @@ import { STAGE_ENVIRONMENT_DEFAULTS, stageLookBackground, type CoProStageEnviron
 import { CoProStageLookPanel } from "./stage-look-panel.js";
 import { syncVideoPlayback } from "./video-playback.js";
 import {SidePanel} from "@inneranimalmedia/agentsam-workbench/shell";
-import { normalizeOnboardingUrl } from "./onboarding-url.js";
 
 
 export type CoProStudioAction =
@@ -206,7 +205,6 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
 }
 
 export function CoProStudio({
-  onboardingUrl = "/primetech-onboarding/index.html",
   project,
   initialTool = null,
   initialStudioMode = "video",
@@ -843,11 +841,6 @@ export function CoProStudio({
           </div>}
         </div>
         </nav>
-        <a className="mm-studio-tour-trigger"
-          title="Experience the full PrimeTech 3D tour and return to this project"
-          href={normalizeOnboardingUrl(onboardingUrl)+"?returnTo="+encodeURIComponent(
-            typeof window==="undefined" ? "/" : window.location.pathname+window.location.search
-          )+"#tour"}>Explore PrimeTech <ChevronRight size={15}/></a>
       </div>
       <main className="copro-workspace" ref={workspaceRef}>
         <div className={["copro-editing-grid", showBrowser ? "has-browser" : "", showInspector ? "has-inspector" : "", isNarrow ? "is-narrow" : "", isCompact ? "is-compact" : "", layout.reversed ? "is-reversed" : ""].filter(Boolean).join(" ")} style={{

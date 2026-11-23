@@ -4,7 +4,7 @@
   "name": "SamSketch",
   "kind": "app",
   "package": "@inneranimalmedia/samsketch",
-  "version": "0.1.0",
+  "version": "2.6.14",
   "entrypoints": {
     "frontend": "./"
   },
@@ -106,5 +106,10 @@
       "output": "dist",
       "gzip_oversized_wasm": true
     }
+  },
+  "product_id": "samsketch",
+  "distribution": {
+    "kind": "bundled-module-capable-app",
+    "release_status": "source-private"
   }
 }

@@ -7,27 +7,9 @@ if (location.pathname.startsWith('/admin/')) {
 }
 renderShell("/admin/store", `
   <div class="online-store">
-    <header class="online-store-head">
-      <div class="online-store-title">
-        ${storeIcon()}
-        <h1>Online Store</h1>
-      </div>
-      <div class="online-store-actions">
-        <button type="button" class="online-store-pill" id="store-visibility-btn" aria-haspopup="true">
-          <span class="online-store-pill-dot" aria-hidden="true"></span>
-          <span id="store-visibility-label">Online Store</span>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <a class="btn ghost small" id="test-customer-flow-btn" href="/admin/onboarding-preview" target="_top" rel="noopener" title="Test plan selection, checkout review, setup and welcome without a payment provider">Preview checkout</a>
-        <button type="button" class="btn ghost small" id="view-storefront-btn" disabled title="Connect a site to preview the published storefront">View site</button>
-        <button type="button" class="online-store-icon-btn" aria-label="More actions">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
-        </button>
-      </div>
-    </header>
-    <div class="online-store-site-context" id="online-store-site-context"></div>
+    <h1 class="online-store-accessible-heading">Online Store</h1>
 
-    <section class="online-store-card online-store-active is-loading" aria-label="Current theme" aria-busy="true">
+    <section class="online-store-card online-store-active is-loading" aria-label="Storefront cover and current theme" aria-busy="true">
       <div class="online-store-previews">
         <div class="online-store-preview online-store-preview--desktop">
           <iframe id="theme-preview-desktop" title="Desktop storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Desktop · Verified live only</span>
@@ -248,14 +230,6 @@ function setPreviewFrames(href) {
   });
 }
 
-function setStoreViewButton(url) {
-  const view=document.getElementById("view-storefront-btn");
-  if(!view)return;
-  const trusted=typeof url==="string" && /^https:\/\/[^\s<>"']+$/.test(url);
-  view.disabled=!trusted;
-  view.title=trusted ? "Open your connected published storefront" : "Connect a site before opening its storefront";
-  view.onclick=trusted ? ()=>window.open(url,"_blank","noopener,noreferrer") : null;
-}
 function showThemeUnavailable(state, message) {
   const status=document.getElementById("active-theme-status");
   const name=document.getElementById("active-theme-name");
@@ -383,11 +357,11 @@ function scopedStoreEditorHref(raw,siteId) {
     if (origin === 'null') return '/admin/store';
   } catch { return '/admin/store'; }
   let url;
-  try { url = new URL(raw || '/admin/theme-editor',origin); }
+  try { url = new URL(raw || '/admin/store',origin); }
   catch { return '/admin/store'; }
   const cleanEditorMatch = url.pathname.match(/^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/);
   if (url.origin!==origin ||
-      (!cleanEditorMatch && !['/admin/theme-editor','/admin/theme-project-editor','/admin/page-edit'].includes(url.pathname)))
+      (!cleanEditorMatch && !['/admin/theme-project-editor','/admin/page-edit'].includes(url.pathname)))
     return '/admin/store';
   // An editor URL from a different site is an invalid read-model record.
   // Never silently rewrite its site identity and open the wrong site's editor.
@@ -420,13 +394,6 @@ function showActiveTheme(theme,siteId) {
     const d = initial?.ok && (!siteId || initial.selected_site_id===siteId) ? initial :
       await adminFetch('/api/admin/store/online'+(siteId?'?site_id='+encodeURIComponent(siteId):''));
     const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
-    const journey=document.getElementById('test-customer-flow-btn');
-    if(journey) {
-      const intent=new URL('/admin/onboarding-preview',window.AgentSamOnlineStoreHost?.baseUrl || location.origin);
-      if(d.selected_site_id && /^[A-Za-z0-9_-]{1,120}$/.test(d.selected_site_id))
-        intent.searchParams.set('site_id',d.selected_site_id);
-      journey.href=intent.pathname+intent.search;
-    }
     document.querySelector('.online-store').dataset.siteId=d.selected_site_id||'';
     if(d.selected_site_id && location.pathname==='/admin/store'){
       const canonical=new URL(location.href);
@@ -446,7 +413,7 @@ function showActiveTheme(theme,siteId) {
       const base = new URL(window.AgentSamOnlineStoreHost?.baseUrl || location.href);
       const destination = new URL(newThemeUrl, base);
       if(destination.origin === base.origin && destination.pathname.startsWith('/')){
-        if(sites.some(site => site.id === d.selected_site_id))
+        if(sites.some(site => site.id === d.selected_site_id) && !/^\/admin\/sites\/[A-Za-z0-9_-]+\//.test(destination.pathname))
           destination.searchParams.set('site_id',d.selected_site_id);
         createTheme.href=destination.href;
         createTheme.hidden=false;
@@ -461,128 +428,6 @@ function showActiveTheme(theme,siteId) {
         destination.searchParams.set('site_id',d.selected_site_id);
       externalStore.href = destination.href;
     }
-    if(sites.length && !window.AgentSamOnlineStoreHost){
-      const current=sites.find(site=>site.id===d.selected_site_id)||sites[0];
-      const root=document.createElement('details');
-      root.id='store-site-switcher';
-      root.className='cms-site-switcher';
-      const trigger=document.createElement('summary');
-      trigger.className='cms-site-switcher-trigger';
-      trigger.setAttribute('aria-label','Switch current website');
-      const triggerCopy=document.createElement('span');
-      triggerCopy.className='cms-site-switcher-label';
-      const primary=document.createElement('strong');
-      primary.textContent=current.name||current.slug;
-      const subtitle=document.createElement('small');
-      subtitle.textContent=current.primary_domain||(current.is_default?'Primary website':'Current website');
-      const chevron=document.createElement('span');
-      chevron.className='cms-site-switcher-chevron';
-      chevron.setAttribute('aria-hidden','true');
-      chevron.textContent='⌄';
-      triggerCopy.append(primary,subtitle);
-      trigger.append(triggerCopy,chevron);
-      root.append(trigger);
-      const menu=document.createElement('div');
-      menu.className='cms-site-switcher-menu';
-      const heading=document.createElement('div');
-      heading.className='cms-site-switcher-heading';
-      heading.textContent='Switch website';
-      const search=document.createElement('input');
-      search.type='search';
-      search.className='cms-site-switcher-search';
-      search.placeholder='Search websites';
-      search.setAttribute('aria-label','Search owned websites');
-      const list=document.createElement('div');
-      list.className='cms-site-switcher-results';
-      const footer=document.createElement('div');
-      footer.className='cms-site-switcher-footer';
-      const ranked=[...sites].sort((a,b)=>
-        Number(b.id===current.id)-Number(a.id===current.id) ||
-        Number(b.is_default===1)-Number(a.is_default===1) ||
-        Number(b.status==='active')-Number(a.status==='active') ||
-        Number(b.page_count||0)-Number(a.page_count||0) ||
-        String(a.name).localeCompare(String(b.name)));
-      function chooseSite(selected){
-        const url=new URL(window.location.href);
-        url.pathname='/admin/store';
-        ['project','page','slug','page_id','section','block','previewMode'].forEach(key=>url.searchParams.delete(key));
-        url.searchParams.set('site_id',selected.id);
-        try {
-          const parent=window.parent;
-          if(parent!==window && parent.location.origin===window.location.origin &&
-             parent.location.pathname==='/apps/ecommerce-cms-agentsam'){
-            const outer=new URL(parent.location.href);
-            ['project','slug','page_id','section','block','previewMode'].forEach(key=>outer.searchParams.delete(key));
-            outer.searchParams.set('page','/admin/store');
-            outer.searchParams.set('site_id',selected.id);
-            parent.location.assign(outer.href);
-            return;
-          }
-        } catch { /* Standalone or cross-origin frame: navigate the current CMS document. */ }
-        window.location.assign(url.href);
-      }
-      function renderMatches(){
-        const q=search.value.trim().toLowerCase();
-        const matched=ranked.filter(site=>
-          !q || [site.name,site.slug,site.primary_domain].some(value=>
-            String(value||'').toLowerCase().includes(q)));
-        const visible=q?matched.slice(0,30):matched.slice(0,6);
-        list.replaceChildren();
-        for(const site of visible){
-          const item=document.createElement('button');
-          item.type='button';
-          item.className='cms-site-switcher-item';
-          if(site.id===current.id)item.setAttribute('aria-current','true');
-          const names=document.createElement('span');
-          names.className='cms-site-switcher-item-copy';
-          const name=document.createElement('strong');
-          name.textContent=site.name||site.slug;
-          const detail=document.createElement('small');
-          detail.textContent=site.primary_domain||site.slug;
-          names.append(name,detail);
-          const meta=document.createElement('span');
-          meta.className='cms-site-switcher-item-meta';
-          meta.textContent=site.id===current.id?'Current':site.is_default?'Primary':'';
-          item.append(names,meta);
-          item.onclick=()=>chooseSite(site);
-          list.append(item);
-        }
-        if(!visible.length){
-          const none=document.createElement('p');
-          none.className='cms-site-switcher-empty';
-          none.textContent='No matching websites';
-          list.append(none);
-        }
-        footer.textContent=q
-          ? matched.length+' matching websites'
-          : (sites.length>visible.length?'Showing main sites · Search all '+sites.length:'All your websites');
-      }
-      search.addEventListener('input',renderMatches);
-      root.addEventListener('toggle',()=>{if(root.open){renderMatches();search.focus();}});
-      root.addEventListener('keydown',event=>{
-        if(event.key==='Escape'){root.open=false;trigger.focus();}
-      });
-      document.addEventListener('pointerdown',event=>{
-        if(root.open&&!root.contains(event.target))root.open=false;
-      });
-      menu.append(heading,search,list,footer);
-      root.append(menu);
-      document.getElementById('online-store-site-context')?.append(root);
-      renderMatches();
-    }
-
-    document.getElementById("store-visibility-label").textContent =
-      d.site_preview?.url ? "Website live" :
-      d.store.visibility === "public" ? "Public" :
-      d.store.visibility === "password" ? "Password protected" : "Theme not published";
-
-    // Store metrics belong in Analytics, not theme management.
-    document.querySelectorAll('.online-store-icon-btn').forEach(button=>{button.hidden=true;});
-    const visibilityButton=document.getElementById('store-visibility-btn');
-    if(visibilityButton){visibilityButton.disabled=true;visibilityButton.style.cursor='default';}
-
-    setStoreViewButton(d.site_preview?.url ||
-      (d.store?.visibility==="public" ? d.store?.url : null));
     // Published site identity wins over a disconnected Heuristic starter.
     // A theme draft may still be edited under Draft themes, not impersonate
     // this domain's live website.
@@ -660,7 +505,6 @@ function showActiveTheme(theme,siteId) {
   } catch (err) {
     console.error(err);
     showThemeUnavailable("error");
-    document.getElementById("store-visibility-label").textContent = "Online Store";
   }
 })();
 

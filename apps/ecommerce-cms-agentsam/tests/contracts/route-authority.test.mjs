@@ -36,8 +36,9 @@ test("App routes resolve to the corresponding App owner", () => {
 });
 
 test("core routes remain core and preserve clean document resolution", () => {
-  assert.equal(adminRouteForPath("/admin/theme-editor")?.owner?.kind, "core");
-  assert.equal(adminHtmlFile("/admin/theme-editor"), "/admin/theme-editor.html");
+  assert.equal(adminRouteForPath("/admin/theme-editor"), null, "standalone Theme Editor entry was retired");
+  assert.equal(adminHtmlFile("/admin/theme-editor"), null);
+  assert.equal(adminHtmlFile("/admin/sites/site_a/pages/page_a/editor"), "/admin/theme-editor.html");
   assert.equal(adminHtmlFile("/admin/email"), "/admin/dashboard/email.html");
   assert.equal(isAdminPublicPath("/admin/login"), true);
   assert.equal(isAdminPublicPath("/admin/home"), false);

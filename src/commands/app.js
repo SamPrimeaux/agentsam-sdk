@@ -1,3 +1,4 @@
+import { evidenceStorageProblems } from '../sam/packs/evidence/endpoint.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -171,6 +172,9 @@ export function validateEmbed(manifest, label) {
 function validateOneApp(app, knownIds, root) {
   const errors = [];
   errors.push(...validateEmbed(app.manifest, app.id));
+  if (app.manifest?.storage && Object.hasOwn(app.manifest.storage, 'evidenceEndpoint')) {
+    errors.push(...evidenceStorageProblems(app.manifest.storage).map((problem) => `${app.id}: storage: ${problem}`));
+  }
   const warnings = [];
   const m = app.manifest;
 
@@ -208,6 +212,18 @@ function validateOneApp(app, knownIds, root) {
     warnings.push(`${app.id}: neither entrypoints nor bin declared`);
   }
 
+  // A manifest version is not independently authoritative from its source package.
+  // Fail validation rather than shipping a stale product version in the desktop.
+  const packageJsonPath = path.join(app.dir, 'package.json');
+  if (fs.existsSync(packageJsonPath)) {
+    const pkg = readJson(packageJsonPath);
+    if (pkg.name && m.package && pkg.name !== m.package) {
+      errors.push(`${app.id}: manifest package differs from package.json`);
+    }
+    if (pkg.version && m.version !== pkg.version) {
+      errors.push(`${app.id}: manifest version ${m.version ?? '(missing)'} differs from package.json ${pkg.version}`);
+    }
+  }
   warnings.push(...npmDistributionWarnings(app));
 
   const hostPath = path.join(app.dir, '.agentsam', 'app.json');

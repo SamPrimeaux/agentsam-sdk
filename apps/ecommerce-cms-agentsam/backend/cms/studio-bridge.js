@@ -6,7 +6,7 @@
 // Load the full CMS rendering/authoring engine only for an authorized CMS route.
 // Signature verification and Store Overview must not require optional theme packages.
 import { onlineStoreOverview } from '../admin/store.js';
-import { verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from './studio-bridge-protocol.js';
+import { verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from '@inneranimalmedia/agentsam-cms/studio-bridge-protocol';
 
 const PREFIX='/api/internal/studio-cms/';
 const WRITE_METHODS=new Set(['POST','PUT','PATCH','DELETE']);

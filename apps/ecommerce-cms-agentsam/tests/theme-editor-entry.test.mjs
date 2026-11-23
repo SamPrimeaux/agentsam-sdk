@@ -128,5 +128,5 @@ test('marketplace handoff asks for explicit site even when a prior selection exi
   assert.equal(next.to,'/admin/sites/site_a/pages/cmsp_home_a/editor?marketplace_kind=cms_embed&marketplace_key=store_chat');
   const shell=readFileSync(new URL('../frontend/static/theme-editor.html',import.meta.url),'utf8');
   assert.match(shell,/#theme-project-loading\[hidden\]/);
-  assert.match(shell,/id="theme-project-site-picker"/);
+  assert.doesNotMatch(shell,/id="theme-project-site-picker"/,"editor must not own a website picker");
 });

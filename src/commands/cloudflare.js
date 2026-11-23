@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { listWranglerNativeCommands, runWranglerNative, summarizeCloudflareCpuProfileFile, WRANGLER_OPERATION_FAMILIES } from '../cloudflare/index.js';
 import { renderDiagnosticError } from '../errors/index.js';
+import { parseWhoami, renderCloudflareStatus } from './cloudflare-status.js';
 import {
   CloudflareApiClient,
   CloudflareApiError,
@@ -511,6 +512,10 @@ export async function runCloudflare(argv = [], options = {}) {
         }
       } else {
         result = await runWranglerNative('whoami', args, options);
+        if (!args.json) {
+          const who = parseWhoami(result?.data ?? result?.stdout);
+          if (who) { write(renderCloudflareStatus(who)); return result; }
+        }
       }
     } else if (args.family === 'commands') {
       result = {

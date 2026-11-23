@@ -66,20 +66,34 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
   }
 
   useEffect(() => { void refresh(); }, []);
+  // Machine-registry evidence is distinct from an attached PTY session. A
+  // recently healthy, account-scoped machine may be selected for connection;
+  // only the actual terminal handshake can mark it connected.
+  const availableLocalMachine = useMemo(() => machines?.items.find((machine) => {
+    const checkedAt = Number(machine.health_checked_at || machine.last_seen_at || 0);
+    return Boolean(machine.connection_id)
+      && /execos|agentsamd|local/i.test(machine.runtime_adapter || machine.provider || '')
+      && /healthy|ready|online|ok/i.test(machine.health_status || '')
+      && checkedAt > 0 && Math.abs(Date.now() / 1000 - checkedAt) < 600;
+  }), [machines]);
   const runtimes = useMemo(() => BASE_RUNTIMES.map((item): RuntimeCard => {
     const activeSession = sessions.find((session) => isConnectedRuntimeSession(item.id, session));
     const state: RuntimeState = activeSession ? "online"
-      : item.id === "local" && nativeStatus ? (nativeStatus.online ? "online" : "offline")
+      : item.id === "local" && nativeStatus ? (nativeStatus.online ? "available" : "offline")
+      : item.id === "local" && availableLocalMachine ? "available"
       : item.id === "docker" && nativeStatus ? (nativeStatus.dockerAvailable ? "available" : "setup_required")
       : "unknown";
     return {
       ...item,
       state,
       activeSession,
-      detail: activeSession ? [activeSession.runtimeLabel || item.name, activeSession.cwd].filter(Boolean).join(" · ") : item.detail,
+      detail: activeSession ? [activeSession.runtimeLabel || item.name, activeSession.cwd].filter(Boolean).join(" · ")
+        : item.id === "local" && availableLocalMachine
+          ? `${availableLocalMachine.name} · registered machine, connection not yet attached`
+          : item.detail,
       missing: state === "setup_required" && item.id === "docker" ? ["Docker is not installed"] : undefined,
     };
-  }), [sessions, nativeStatus]);
+  }), [sessions, nativeStatus, availableLocalMachine]);
   const local = runtimes.find((item) => item.id === "local");
 
   return (
@@ -118,7 +132,8 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
       <div className="grid gap-3">
         {runtimes.map((runtime) => {
           const Icon = runtime.icon;
-          const usable = runtime.state === "online" && (Boolean(runtime.activeSession) || runtime.id === "local");
+          const usable = (runtime.state === "online" && (Boolean(runtime.activeSession) || runtime.id === "local"))
+            || (runtime.id === "local" && runtime.state !== "offline");
           return (
             <section key={runtime.id} className="rounded-xl border border-border bg-card p-4">
               <div className="flex flex-wrap items-start gap-3">
@@ -126,7 +141,7 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-sm font-medium">{runtime.name}</h2>
-                    <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">{runtime.state === "online" ? "Runtime connected" : runtime.state === "available" ? "Tool detected · not attached" : runtime.state === "setup_required" ? "Setup needed" : runtime.state === "offline" ? "Offline" : "Not verified"}</span>
+                    <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">{runtime.state === "online" ? "Runtime connected" : runtime.state === "available" ? (runtime.id === "local" ? "Machine available · PTY not attached" : "Tool detected · not attached") : runtime.state === "setup_required" ? "Setup needed" : runtime.state === "offline" ? "Offline" : "Not verified"}</span>
                   </div>
                   <p className="mt-1 break-all text-xs text-muted-foreground">{runtime.detail}</p>
                   {runtime.missing?.length ? <p className="mt-2 text-xs text-muted-foreground">{runtime.missing.join(", ")}</p> : null}
@@ -147,7 +162,7 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
                     });
                     useWorkStore.getState().setTerminalOpen(true);
                   }}>
-                    <TerminalSquare className="size-4" /> Terminal
+                    <TerminalSquare className="size-4" /> {runtime.activeSession ? "New terminal" : "Connect terminal"}
                   </Button>
                 ) : runtime.id === "docker" && runtime.state === "available" && local?.state === "online" ? (
                   <Button type="button" size="sm" onClick={() => {
@@ -164,8 +179,8 @@ export function RuntimeManagerPage({ embedded = false }: { embedded?: boolean } 
                 <div className="mt-4 grid gap-3 border-t border-border pt-4 text-xs sm:grid-cols-3">
                   <div><p className="text-muted-foreground">Adapter</p><p className="mt-1 font-medium">{runtime.adapter}</p></div>
                   <div><p className="text-muted-foreground">Connection transport</p><p className="mt-1 font-medium">{runtime.transport.replaceAll("_", " ")}</p></div>
-                  <div><p className="text-muted-foreground">Expected capabilities</p><p className="mt-1 font-medium">{runtime.capabilities.join(", ")}</p></div>
-                  {runtime.activeSession ? <div className="sm:col-span-3"><p className="text-muted-foreground">Verified session</p><p className="mt-1 break-all font-medium">{runtime.activeSession.connectionId} · {runtime.activeSession.cwd || "Default directory"}</p></div> : <p className="text-muted-foreground sm:col-span-3">No verified session. Expected capabilities describe the adapter contract, not an active grant.</p>}
+                  <div><p className="text-muted-foreground">Expected capabilities</p><p className="mt-1 font-medium">{runtime.capabilities.join(", ")} (adapter contract)</p></div>
+                  {runtime.activeSession ? <div className="sm:col-span-3"><p className="text-muted-foreground">Verified session</p><p className="mt-1 break-all font-medium">{runtime.activeSession.connectionId} · {runtime.activeSession.cwd || "Default directory"}</p></div> : <p className="text-muted-foreground sm:col-span-3">No active PTY session in this Work view. Use Connect terminal to request a live session; registered-machine health alone is not a terminal grant.</p>}
                 </div>
               ) : null}
               {runtime.id === "docker" && expandedRuntime === "docker" ?

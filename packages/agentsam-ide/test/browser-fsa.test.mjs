@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {createBrowserFsaWorkspace} from '../dist/workspace/browser-fsa.js';
+import {createWorkspaceTextFile} from '../dist/workspace/file-creation.js';
 
 function fixture(){
   const disk=new Map([['README.md','First'],['main.ts','export const one=1;']]);
@@ -42,4 +43,38 @@ test('unsupported operations fail explicitly without simulated success',async()=
   await assert.rejects(fs.rename('README.md','changed.md'),/atomic rename/);
   await assert.rejects(fs.history('README.md'),/history/);
   await assert.rejects(fs.restore('README.md','revision','version'),/restoration/);
+});
+
+test('New File Save As creates nested browser file using leaf name, not a slash-delimited getFileHandle', async()=>{
+  const disk=new Map();
+  const attempted=[];
+  const fileHandle=name=>({
+    kind:'file',name,
+    async getFile(){return new Blob([disk.get(name)||''],{type:'text/plain'});},
+    async createWritable(){let pending='';return {async write(value){pending=String(value);},async close(){disk.set(name,pending);},async abort(){}};},
+  });
+  const nested={
+    kind:'directory',name:'reports',
+    async *entries(){for(const name of disk.keys())yield [name,fileHandle(name)];},
+    async getFileHandle(name,options={}){
+      attempted.push(name);
+      if(name.includes('/'))throw new TypeError('Name is not allowed');
+      if(!disk.has(name)){if(!options.create)throw Error('missing');disk.set(name,'');}
+      return fileHandle(name);
+    },
+    async getDirectoryHandle(){throw Error('missing directory');},
+  };
+  const root={
+    kind:'directory',name:'project',
+    async *entries(){yield ['reports',nested];},
+    async getDirectoryHandle(name){if(name==='reports')return nested;throw Error('missing directory');},
+    async getFileHandle(){throw Error('root should not receive nested file handle');},
+  };
+  const workspace=createBrowserFsaWorkspace(root);
+  const saved=await createWorkspaceTextFile(workspace,'reports/validate_project.py','print("verified")');
+  assert.equal(saved.path,'reports/validate_project.py');
+  assert.equal(saved.content,'print("verified")');
+  assert.ok(attempted.length >= 3);
+  assert.ok(attempted.every(name=>name==='validate_project.py'));
+  assert.equal(disk.get('validate_project.py'),'print("verified")');
 });

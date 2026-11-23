@@ -778,7 +778,7 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
   // second and uninstalled CMS table family. Do not continue its write path.
   if (/^\/api\/admin\/store\/themes\/[^/]+\/(?:pages(?:\/[a-z0-9-]+)?|preview)$/.test(path)) {
     return json({ error: "Use the canonical CMS Theme Studio for page and theme editing.",
-      edit_href: "/admin/theme-editor?slug=shop", code: "retired_theme_workspace" }, { status: 410 });
+      edit_href: "/admin/store", code: "retired_theme_workspace" }, { status: 410 });
   }
 
   let themeMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)$/);

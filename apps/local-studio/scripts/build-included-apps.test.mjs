@@ -25,7 +25,9 @@ const plan = (apps, included) => {
 test('real repo: included apps resolve from their own manifests', () => {
   const { plans } = planIncludedApps();
   const manifest = JSON.parse(fs.readFileSync(DEFAULT_MANIFEST, 'utf8'));
-  assert.deepEqual(plans.map((p) => p.id), manifest.included_apps);
+  assert.deepEqual(plans.filter((p) => p.kind === 'app').map((p) => p.id), manifest.included_apps);
+  assert.deepEqual(plans.filter((p) => p.kind === 'module').map((p) => p.id),
+    manifest.included_modules.map((m) => m.id));
   const cad = plans.find((p) => p.id === 'cad-creator');
   assert.ok(cad, 'cad-creator must stay included');
   assert.equal(cad.base, '/cad-creator/');
@@ -33,11 +35,15 @@ test('real repo: included apps resolve from their own manifests', () => {
   assert.ok(cad.cwd.endsWith(path.join('apps', 'cad-creator')));
   assert.ok(cad.output.endsWith(path.join('frontend', 'dist')));
   assert.ok(cad.publicDir.endsWith(path.join('frontend', 'public', 'cad-creator')));
-  const movie = plans.find((p) => p.id === 'agentsam-copro-studio');
+  const movie = plans.find((p) => p.id === 'moviemode');
   assert.ok(movie, 'MovieMode must be an included application');
   assert.equal(movie.base, '/moviemode/');
+  assert.equal(movie.kind, 'app');
+  assert.equal(plans.find(p => p.id === 'samspeaks')?.owner_app_id, 'moviemode');
   assert.deepEqual(movie.command.slice(-1), ['--base=/moviemode/']);
   assert.ok(movie.output.endsWith(path.join('agentsam-copro-studio', 'dist')));
+  assert.equal(movie.publicMounts.length, 1);
+  assert.equal(movie.publicMounts[0].url, '/primetech/experience/');
 });
 
 test('a new app needs only an embed block — no host code change', () => {
@@ -65,6 +71,16 @@ test('embed paths cannot escape the app directory', () => {
     () => plan({ foo: { schema: 'agentsam.app.v1', id: 'foo', name: 'Foo', kind: 'app', embed: embed('foo', { output: '../../etc' }) } }, ['foo']),
     /escapes its directory/,
   );
+});
+
+test('public experiences cannot publish root files or reserved application routes', () => {
+  const app = (from, to) => ({
+    schema: 'agentsam.app.v1', id: 'foo', name: 'Foo', kind: 'app',
+    embed: { ...embed('foo-ui'), public_mounts: [{ from, to }] },
+  });
+  for (const [from, to] of [['.', 'primetech'], ['assets/../../private', 'primetech'], ['tour', 'admin/tools'], ['tour', '../unsafe']]) {
+    assert.throws(() => plan({ foo: app(from, to) }, ['foo']), /invalid embed.public_mounts/);
+  }
 });
 
 test('two apps cannot claim the same stage', () => {
@@ -98,9 +114,11 @@ test('every included stage is gitignored (generated output never gets committed)
 
 test('generic --only flag stages one registered application without building other apps', () => {
   const command = path.join(LOCAL_STUDIO, 'scripts', 'build-included-apps.mjs');
-  const output = execFileSync(process.execPath, [command, '--dry-run', '--only', 'agentsam-copro-studio'], { encoding: 'utf8' });
+  const output = execFileSync(process.execPath, [command, '--dry-run', '--only', 'moviemode'], { encoding: 'utf8' });
   const plans = JSON.parse(output);
-  assert.deepEqual(plans.map((plan) => plan.id), ['agentsam-copro-studio']);
+  assert.deepEqual(plans.map((plan) => plan.id), ['moviemode', 'samspeaks']);
+  assert.equal(plans[1].kind, 'module');
+  assert.equal(plans[1].owner_app_id, 'moviemode');
   assert.equal(plans[0].base, '/moviemode/');
 });
 

@@ -445,6 +445,23 @@ export function beginLocalStudioGmailConnection(returnTo: string) {
     'POST','/api/work/gmail/oauth/start',{return_to:returnTo},
   );
 }
+/** Start the host-owned OAuth flow for a plugin discovered from agentsam_plugins.
+ * No provider URLs, secrets or OAuth scopes are assembled by the IDE. */
+export function beginLocalStudioRegisteredPluginOAuth(
+  pluginId: string,
+  returnTo: string,
+  options: {packs?:string[];capabilities?:string[];connectionId?:string} = {},
+) {
+  if (!/^plg_[a-f0-9]{8,}$/i.test(pluginId)) throw new Error('oauth_plugin_id_invalid');
+  return pluginCatalogRequest<{ok:boolean;authorize_url:string;plugin_id?:string;provider?:string}>(
+    'POST','/api/work/connect/plugins/'+encodeURIComponent(pluginId)+'/start',{
+      return_to:returnTo,
+      ...(options.connectionId?{connection_id:options.connectionId}:{}),
+      ...(options.packs?.length?{packs:options.packs}:{}),
+      ...(options.capabilities?.length?{capabilities:options.capabilities}:{}),
+    },
+  );
+}
 export function beginLocalStudioConnectorOAuth(providerKey: string, returnTo: string) {
   if (!/^(google_drive|google_calendar|github)$/.test(providerKey)) throw new Error('connector_provider_invalid');
   return pluginCatalogRequest<{ok:boolean;authorize_url:string}>(

@@ -44,8 +44,8 @@ assert.deepEqual(
   {mode:'page',siteId:'site_a',pageId:'page_home_a',pageSlug:null,legacy:false},
 );
 assert.deepEqual(
-  parseThemeEditorLocation(new URL('https://studio.test/admin/theme-editor?new=1&site_id=site_a')),
-  {mode:'new',siteId:'site_a',legacy:true},
+  parseThemeEditorLocation(new URL('https://studio.test/admin/sites/site_a/themes/new/editor')),
+  {mode:'new',siteId:'site_a',legacy:false},
 );
 
 const shell = read('../frontend/static/theme-editor.html');

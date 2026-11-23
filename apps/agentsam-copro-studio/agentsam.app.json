@@ -1,7 +1,7 @@
 {
   "schema": "agentsam.app.v1",
-  "id": "agentsam-copro-studio",
-  "name": "MovieMode / CoPro Studio",
+  "id": "moviemode",
+  "name": "MovieMode",
   "kind": "app",
   "package": "@inneranimalmedia/agentsam-copro-studio",
   "version": "2.6.17",
@@ -33,6 +33,72 @@
         "--base={base}"
       ],
       "output": "dist"
+    },
+    "public_mounts": [
+      {
+        "from": "primetech-onboarding",
+        "to": "primetech/experience"
+      }
+    ]
+  },
+  "product_id": "moviemode",
+  "directory_id_exception": true,
+  "auth": {
+    "required": true,
+    "entry": {
+      "authenticated": "app.authenticated",
+      "login": "identity.login",
+      "failure": "identity.recovery"
     }
+  },
+  "routes": {
+    "app.authenticated": {
+      "path": "/admin/moviemode",
+      "auth": "required",
+      "spa": true
+    },
+    "app.home": {
+      "path": "/admin/moviemode"
+    },
+    "identity.login": {
+      "path": "/auth/login"
+    },
+    "identity.recovery": {
+      "path": "/auth/login"
+    },
+    "identity.oauth.start": {
+      "path": "/api/oauth/:provider/start"
+    },
+    "identity.oauth.callback": {
+      "path": "/api/oauth/:provider/callback"
+    },
+    "entry": "/admin/moviemode",
+    "mounts": [
+      {
+        "path": "/admin/moviemode",
+        "auth": "required",
+        "spa": true
+      }
+    ]
+  },
+  "runtime": {
+    "type": "spa",
+    "assetRoot": "dist",
+    "shell": "index.html"
+  },
+  "modules": [
+    {
+      "id": "copro",
+      "package": "@inneranimalmedia/agentsam-copro-studio"
+    },
+    {
+      "id": "samspeaks",
+      "package": "@inneranimalmedia/samspeaks"
+    }
+  ],
+  "distribution": {
+    "kind": "application",
+    "stage": "moviemode",
+    "release_status": "bundled-source"
   }
 }

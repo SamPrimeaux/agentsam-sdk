@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from 'react';
-import { ArrowUpRight, ChevronDown, ExternalLink, Globe2, MoreHorizontal, Plus, Store } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, Globe2, MoreHorizontal, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconAction } from '@/components/ui/icon-action';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { resolveEcommerceAdminDestination } from '@/lib/apps/ecommerce-routing';
 
 /**
- * Native Online Store: website picker, live theme card, Draft themes with real
+ * Native Online Store: profile-scoped website, cover preview, Draft themes with real
  * renders, and Discover themes from the public Theme Store catalog. Colors
  * come from theme tokens only.
  */
@@ -247,8 +246,9 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
   useEffect(() => {
     const controller = new AbortController();
     setError('');
+    setData(null); // Never show the previous merchant's cover while switching accounts/sites.
     getJson<StorePayload>('/api/admin/store/online' + (siteId ? '?site_id=' + encodeURIComponent(siteId) : ''), controller.signal)
-      .then(setData)
+      .then(result => { if (!controller.signal.aborted) setData(result); })
       .catch(cause => { if (!controller.signal.aborted) setError(String(cause?.message || 'request_failed')); });
     return () => controller.abort();
   }, [siteId, tick]);
@@ -289,72 +289,23 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
   const selectedId = data.selected_site_id || siteId || '';
   const selected = sites.find(site => site.id === selectedId);
   if (!selected) {
-    return <div className="mx-auto flex max-w-2xl flex-col gap-4 px-6 py-12">
-      <h1 className="text-2xl font-semibold text-foreground">Choose a store</h1>
-      <p className="text-sm text-muted-foreground">Select the website you want to edit before adding a theme.</p>
-      {sites.map(site => <Button key={site.id} variant="outline" onClick={() => go('/admin/store?site_id=' + encodeURIComponent(site.id))}>
-        {site.name || site.title || site.slug || site.id}
-      </Button>)}
-      <Button onClick={() => window.location.assign('/start')}>Create another store</Button>
+    return <div className="mx-auto max-w-2xl px-6 py-12" role="status">
+      <h1 className="text-xl font-semibold text-foreground">Select a store from your profile</h1>
+      <p className="mt-2 text-sm text-muted-foreground">The profile menu owns store switching. Choose a store there to open its cover and themes.</p>
     </div>;
   }
   const siteName = data.selected_site_name || selected?.name || selected?.title || 'Your website';
-  const siteDomain = selected?.primary_domain || selected?.url || '';
   const live = data.site_preview?.url || (data.store?.visibility === 'public' ? data.store?.url : '') || '';
-  const status = data.site_preview?.url ? 'Website live'
-    : data.store?.visibility === 'public' ? 'Public'
-    : data.store?.visibility === 'password' ? 'Password protected' : 'Theme not published';
   const activeTheme = data.preview_theme || data.active_theme || null;
   const activeEdit = editorTarget(data.site_preview?.edit_href || activeTheme?.edit_href, selectedId);
+  const createTheme = editorTarget(data.new_theme_url, selectedId);
   const activeSaved = formatSaved(activeTheme?.last_saved || activeTheme?.updated_at || activeTheme?.created_at);
   const drafts = (data.draft_themes || []).filter(draft => draft.id !== activeTheme?.id);
 
-  const checkout = editorTarget('/admin/onboarding-preview', selectedId);
-  const workspace = editorTarget('/admin/theme-workspace', selectedId);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-8">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button type="button" className="flex w-full max-w-sm items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:bg-muted" aria-label="Choose website">
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold text-foreground">{siteName}</span>
-              {siteDomain && <span className="block truncate text-xs text-muted-foreground">{siteDomain}</span>}
-            </span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-64">
-          <DropdownMenuLabel>Websites</DropdownMenuLabel>
-          {sites.map(site => (
-            <DropdownMenuItem key={site.id} onSelect={() => go('/admin/store?site_id=' + encodeURIComponent(site.id))}>
-              <span className="flex flex-col"><span>{site.name || site.title || site.slug || site.id}</span>
-                {(site.primary_domain || site.url) && <span className="text-xs text-muted-foreground">{site.primary_domain || site.url}</span>}
-              </span>
-            </DropdownMenuItem>
-          ))}
-          {!sites.length && <DropdownMenuItem disabled>No websites yet</DropdownMenuItem>}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="flex items-center gap-3 text-2xl font-semibold text-foreground"><Store className="size-5 text-muted-foreground" aria-hidden="true" />Online Store</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={pill}><span className={cn('size-2 rounded-full', live ? 'bg-accent' : 'bg-muted-foreground')} aria-hidden="true" />{status}</span>
-          {live && <a className={pill} href={live} target="_blank" rel="noopener noreferrer">Preview store <ExternalLink className="size-3.5" aria-hidden="true" /></a>}
-          {(checkout || workspace) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <IconAction variant="outline" label="More store actions" hint="Preview checkout and Theme Studio"><MoreHorizontal className="size-4" /></IconAction>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-48">
-                {checkout && <DropdownMenuItem onSelect={() => go(checkout)}>Preview checkout</DropdownMenuItem>}
-                {workspace && <DropdownMenuItem onSelect={() => go(workspace)}>My Theme Studio</DropdownMenuItem>}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </header>
+      <h1 className="sr-only">Online Store</h1>
 
       <section aria-label="Current theme" className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="relative aspect-[16/8] bg-muted">
@@ -376,7 +327,10 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
       <section aria-label="Draft themes">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Draft themes</h2>
-          <a href="#discover-themes" className={pill}><Plus className="size-4" aria-hidden="true" />Add theme</a>
+          <div className="flex items-center gap-2">
+            {createTheme && <InAppLink to={createTheme} className={cn(pill, primary)}><Plus className="size-4" aria-hidden="true" />New theme</InAppLink>}
+            <a href="#discover-themes" className={pill}>Discover themes</a>
+          </div>
         </div>
         <div className="rounded-2xl border border-border bg-card">
           {drafts.length

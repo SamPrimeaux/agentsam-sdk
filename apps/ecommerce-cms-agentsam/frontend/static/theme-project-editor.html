@@ -15,10 +15,8 @@
       const siteId = query.get('site_id');
       const projectId = query.get('project') || query.get('project_id');
       if (query.get('new') === '1') {
-        const target = new URL('/admin/theme-editor', location.origin);
-        target.searchParams.set('new', '1');
-        if (siteId) target.searchParams.set('site_id', siteId);
-        location.replace(target.pathname + target.search);
+        if (!/^[A-Za-z0-9_-]{1,160}$/.test(siteId || '')) { location.replace('/admin/store'); return; }
+        location.replace('/admin/sites/' + encodeURIComponent(siteId) + '/themes/new/editor');
         return;
       }
       if (!/^[A-Za-z0-9_-]{1,160}$/.test(siteId || '') || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId || '')) {

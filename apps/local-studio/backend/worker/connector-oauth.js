@@ -5,6 +5,8 @@ import {
 } from "../../../../packages/agentsam-vault/src/crypto/oauth-envelope.js";
 import {
   b64url,
+  beginGmailOAuth,
+  disconnectGmail,
   clean,
   consumeOauthState,
   readStoredOauthToken,
@@ -60,6 +62,62 @@ export function connectorProvider(key) {
   return CONNECTOR_PROVIDERS[clean(key).toLowerCase()] || null;
 }
 
+/**
+ * Resolve a provider from the account-wide plugin catalog, not from a Files
+ * icon or a hardcoded plugin ID. Connection grants are still stored in
+ * user_oauth_tokens; this lookup grants no permissions by itself.
+ */
+export async function resolveRegisteredOAuthPlugin(env, pluginId) {
+  const id = clean(pluginId);
+  if (!/^plg_[a-f0-9]{8,}$/i.test(id) || !env?.DB?.prepare) return null;
+  try {
+    const row = await env.DB.prepare(
+      "SELECT id,plugin_key,provider_key,plugin_kind,auth_type,oauth_connect_url,config_json " +
+      "FROM agentsam_plugins WHERE id=? AND plugin_kind='oauth' LIMIT 1"
+    ).bind(id).first();
+    if (!row || !['oauth','oauth_via_iam'].includes(row.auth_type)) return null;
+    let config = {};
+    try { config=JSON.parse(row.config_json || '{}'); } catch { return null; }
+    return {
+      id:row.id,pluginKey:row.plugin_key,provider:row.provider_key,
+      authType:row.auth_type,connectUrl:row.oauth_connect_url || null,
+      packId:config.pack===true && typeof config.pack_id==='string' ? config.pack_id : null,
+    };
+  } catch { return null; }
+}
+
+/** Only a registered first-party auth entrypoint may be opened; never forward
+ * arbitrary plugin metadata as a browser redirect. */
+export function registeredOAuthEntryUrl(plugin, origin, returnTo, requested = {}) {
+  const raw=clean(plugin?.connectUrl);
+  if (!raw) return null;
+  let url;
+  try { url=new URL(raw,origin); } catch { return null; }
+  const allowed=new Set([new URL(origin).origin,'https://inneranimalmedia.com','https://agentsam.inneranimalmedia.com']);
+  if (url.protocol!=='https:' && url.origin!==new URL(origin).origin) return null;
+  if (!allowed.has(url.origin) || !/^\/api\/(oauth|integrations|connections)\//.test(url.pathname)) return null;
+  if (plugin.packId && !url.searchParams.has('packs') && url.pathname.endsWith('/cloudflare/start')) {
+    url.searchParams.set('packs',plugin.packId);
+  }
+  if(plugin.provider==='cloudflare' && /\/cloudflare\/start$/.test(url.pathname)) {
+    const capabilities=Array.isArray(requested.capabilities)?requested.capabilities:[];
+    const packs=Array.isArray(requested.packs)?requested.packs:[];
+    if(capabilities.length && capabilities.length<=20 && capabilities.every(id=>/^cloudflare\.[a-z0-9.-]{2,100}$/.test(id))) {
+      url.searchParams.set('capabilities',capabilities.join(','));
+    }
+    if(packs.length && packs.length<=10 && packs.every(id=>/^[a-z0-9_-]{1,50}$/.test(id))) {
+      url.searchParams.set('packs',packs.join(','));
+    }
+    const selected=connectionIdParts(requested.connection_id||requested.connectionId||'');
+    if(selected.provider==='cloudflare' && /^[a-f0-9]{32}$/i.test(selected.accountIdentifier)) {
+      url.searchParams.set('account_id',selected.accountIdentifier);
+    }
+  }
+  if (url.origin===new URL(origin).origin && returnTo) url.searchParams.set('return_to',safeReturnTo(returnTo));
+  return url.toString();
+}
+
+
 function stateProvider(def) {
   return "connector_" + def.provider;
 }
@@ -95,6 +153,36 @@ export function connectionIdParts(connectionId) {
   return { provider: raw.slice(0, index).toLowerCase(), accountIdentifier: raw.slice(index + 1) };
 }
 
+async function scopesForSelectedConnector(env,userId,def,connectionId) {
+  const selected=connectionIdParts(connectionId);
+  if (!selected.provider) return def.scopes;
+  if (selected.provider !== def.provider || !selected.accountIdentifier)
+    throw new Error('oauth_account_provider_mismatch');
+  // GitHub App permissions are installation-scoped, not Google OAuth scopes.
+  if (def.kind !== 'google') return def.scopes;
+  // A reconnect must request the selected account's existing grants too,
+  // rather than silently downgrading broad Drive access to drive.file.
+  const row=await env.DB.prepare(
+    "SELECT scopes FROM user_oauth_tokens WHERE account_id=? AND LOWER(provider)=? " +
+    "AND account_identifier=? AND is_active=1 AND revoked_at IS NULL LIMIT 1"
+  ).bind(userId,def.provider,selected.accountIdentifier).first();
+  if (!row?.scopes) return def.scopes;
+  let entries;
+  try {
+    const response=await env.DB.prepare(
+      "SELECT scope FROM agentsam_provider_scopes WHERE provider_key='google' AND is_active=1"
+    ).all();
+    entries=response.results||[];
+  } catch {
+    // Never silently discard the already-granted scopes if the permission
+    // catalog is unavailable; the user can retry after it recovers.
+    throw new Error('oauth_permission_catalog_unavailable');
+  }
+  const known=new Set([...entries.map(entry=>String(entry.scope)), 'openid','email','profile']);
+  const prior=clean(row.scopes).split(/[\s,]+/).filter(scope=>known.has(scope));
+  return [...new Set([...def.scopes,...prior])];
+}
+
 export async function beginConnectorOAuth(request, env, userId, key) {
   const def = connectorProvider(key);
   if (!def) return json({ ok: false, error: "connector_provider_unknown" }, 404);
@@ -107,9 +195,16 @@ export async function beginConnectorOAuth(request, env, userId, key) {
   const state = def.statePrefix + b64url(randomBytes(18));
   const body = request.method === "POST" ? await request.json().catch(() => ({})) : {};
   const returnTo = safeReturnTo(body.return_to || "/admin/settings/customize?view=plugins");
+  let requestedScopes;
+  try {
+    requestedScopes=await scopesForSelectedConnector(env,userId,def,body.connection_id||body.connectionId);
+  } catch(error) {
+    return json({ok:false,error:error?.message||'oauth_scope_resolution_failed'},503);
+  }
   await saveOauthState(env, {
     state, userId, verifier, returnTo,
     provider: stateProvider(def), resource: def.provider,
+    metadata:{requested_scopes:requestedScopes},
   });
 
   const redirectUri = new URL(request.url).origin + callbackPath(def);
@@ -119,7 +214,7 @@ export async function beginConnectorOAuth(request, env, userId, key) {
   auth.searchParams.set("state", state);
   auth.searchParams.set("code_challenge", challenge);
   auth.searchParams.set("code_challenge_method", "S256");
-  auth.searchParams.set("scope", def.scopes.join(" "));
+  auth.searchParams.set("scope", requestedScopes.join(" "));
   if (def.kind !== "github") {
     auth.searchParams.set("response_type", "code");
     auth.searchParams.set("access_type", "offline");
@@ -169,7 +264,7 @@ async function fetchProfile(def, accessToken) {
   return { identifier: email, display: email, email };
 }
 
-async function persistConnectorGrant(env, userId, def, tokens, profile) {
+async function persistConnectorGrant(env, userId, def, tokens, profile, requestedScopes = def.scopes) {
   const material = vaultMaterial(env);
   if (!material) throw new Error("vault_required");
   const account = profile.identifier;
@@ -182,13 +277,16 @@ async function persistConnectorGrant(env, userId, def, tokens, profile) {
     || (existing ? await readStoredOauthToken(material, existing, "refresh", aad) : "");
   const accessEnc = await sealOauthToken(material, clean(tokens.access_token), aad);
   const refreshEnc = refreshToken ? await sealOauthToken(material, refreshToken, aad) : null;
-  const scopes = def.kind === "github" ? "" : (clean(tokens.scope).replace(/,/g, " ") || def.scopes.join(" "));
+  const tokenScopes=clean(tokens.scope).replace(/,/g, " ");
+  const scopes = def.kind === "github" ? "" : (tokenScopes || requestedScopes.join(" "));
   const now = Math.floor(Date.now() / 1000);
   // GitHub App user tokens may expire; persist expiry/refresh token when GitHub returns them.
   const expiresAt = tokens.expires_in ? now + Math.max(60, Number(tokens.expires_in)) : null;
   const metadata = JSON.stringify({
     status: "connected", product: "agentsam-work", provider: def.provider,
     email: profile.email || null, display: profile.display,
+    scope_provenance: def.kind==='github'?'github_installation_permissions'
+      :(tokenScopes?'token_response':'request_equivalence'),
   });
 
   await env.DB.prepare(
@@ -275,7 +373,8 @@ export async function completeConnectorOAuth(request, env) {
   const profile = await fetchProfile(def, tokens.access_token);
   if (!profile) return new Response(def.label + " account unavailable.", { status: 502 });
 
-  await persistConnectorGrant(env, clean(pending.user_id), def, tokens, profile);
+  await persistConnectorGrant(env, clean(pending.user_id), def, tokens, profile,
+    Array.isArray(pending.metadata?.requested_scopes)?pending.metadata.requested_scopes:def.scopes);
   const target = new URL(safeReturnTo(pending.return_to), url.origin);
   target.searchParams.set("provider", def.provider);
   target.searchParams.set("result", "connected");
@@ -521,12 +620,60 @@ export async function listGitHubConnectionRepositories(request, env, userId, fet
 }
 
 export function isConnectorWorkRequest(pathname) {
-  return pathname === "/api/work/github/repos" || /^\/api\/work\/connect\/(google_drive|google_calendar|github)\/(start|status|disconnect)$/.test(pathname);
+  return pathname === "/api/work/github/repos" ||
+    /^\/api\/work\/connect\/(google_drive|google_calendar|github)\/(start|status|disconnect)$/.test(pathname) ||
+    /^\/api\/work\/connect\/plugins\/plg_[a-f0-9]{8,}\/(start|status|disconnect)$/i.test(pathname);
 }
 
 export async function handleConnectorWorkRequest(request, env, userId) {
   const url = new URL(request.url);
   if (url.pathname === "/api/work/github/repos") return listGitHubConnectionRepositories(request,env,userId);
+  const pluginRoute = /^\/api\/work\/connect\/plugins\/(plg_[a-f0-9]{8,})\/(start|status|disconnect)$/i.exec(url.pathname);
+  if (pluginRoute) {
+    const [,pluginId,action] = pluginRoute;
+    const plugin=await resolveRegisteredOAuthPlugin(env,pluginId);
+    if (!plugin) return json({ok:false,error:'oauth_plugin_unavailable'},404);
+    if (action==='start' && request.method==='POST') {
+      // Native Google/GitHub flows reuse the proven PKCE/token persistence path,
+      // even if the plugin record's legacy URL targets another host.
+      if (connectorProvider(plugin.provider)) {
+        return beginConnectorOAuth(request,env,userId,plugin.provider);
+      }
+      if (plugin.provider==='google_gmail') return beginGmailOAuth(request,env,userId);
+      const body=await request.json().catch(()=>({}));
+      const connectUrl=registeredOAuthEntryUrl(plugin,url.origin,body.return_to || body.returnTo,body);
+      if (!connectUrl) return json({ok:false,error:'oauth_plugin_connection_handler_missing'},409);
+      return json({ok:true,plugin_id:plugin.id,provider:plugin.provider,authorize_url:connectUrl});
+    }
+    if (action==='status' && request.method==='GET') {
+      if (connectorProvider(plugin.provider)) {
+        return json({ok:true,plugin_id:plugin.id,provider:plugin.provider,connections:await connectorStatus(env,userId,plugin.provider)});
+      }
+      const {results}=await env.DB.prepare(
+        "SELECT account_identifier,scopes FROM user_oauth_tokens WHERE account_id=? AND provider=? " +
+        "AND is_active=1 AND revoked_at IS NULL ORDER BY updated_at DESC"
+      ).bind(userId,plugin.provider).all();
+      return json({ok:true,plugin_id:plugin.id,provider:plugin.provider,
+        connections:(results||[]).map(row=>({accountIdentifier:row.account_identifier,
+          grantedScopes:clean(row.scopes).split(/\s+/).filter(Boolean)}))});
+    }
+    if (action==='disconnect' && request.method==='POST') {
+      const body=await request.json().catch(()=>({}));
+      const requested=connectionIdParts(body.connection_id || body.connectionId || '');
+      if(requested.provider !== plugin.provider || !requested.accountIdentifier)
+        return json({ok:false,error:'oauth_plugin_connection_mismatch'},400);
+      // Each provider owns token revocation; the broker only checks plugin
+      // identity and forwards the user's selected account.
+      if (plugin.provider==='google_gmail') {
+        return json(await disconnectGmail(env,userId,requested.accountIdentifier));
+      }
+      if (!connectorProvider(plugin.provider)) {
+        return json({ok:false,error:'use_provider_owned_disconnect',provider:plugin.provider},409);
+      }
+      return json(await disconnectConnector(env,userId,body.connection_id || body.connectionId));
+    }
+    return json({ok:false,error:'method_not_allowed'},405);
+  }
   const match = url.pathname.match(/^\/api\/work\/connect\/([a-z_]+)\/(start|status|disconnect)$/);
   if (!match) return json({ ok: false, error: "not_found" }, 404);
   const [, key, action] = match;

@@ -108,7 +108,7 @@
  * @property {(input: { accountId: string, provider: string, providerSubject: string, email?: string|null }) => Promise<string>} upsertProviderIdentity
  * @property {(input: { userId: string, email?: string|null, provider?: string, providerSubject?: string|null, displayName?: string|null, type?: 'browser'|'desktop' }) => Promise<IdentitySession>} createSession
  * @property {(sessionId: string) => Promise<IdentitySession|null>} getSession
- * @property {(sessionId: string, reason?: string) => Promise<{ ok: true, reason: string }>} revokeSession
+ * @property {(sessionId: string, reason?: string) => Promise<{ ok: true, reason: string }>} revokeSession — reason is persisted (bounded, lowercase, underscores) where the store has a revoke_reason column
  * @property {(input: { state: string, provider: string, codeVerifier: string, returnTo?: string|null, appId: string, ttlSeconds?: number, clientType?: string, nativeChallenge?: string, nativeRedirect?: string }) => Promise<void>} createOAuthTransaction
  * @property {(state: string) => Promise<OAuthTransaction|null>} consumeOAuthTransaction
  * @property {(input: AuthEventInput) => Promise<void>} logAuthEvent

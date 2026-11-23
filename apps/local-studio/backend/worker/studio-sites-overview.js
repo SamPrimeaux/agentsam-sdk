@@ -89,14 +89,14 @@ export async function handleStudioSitesOverview(request, env, actorUserId) {
   const externalPreview = homePage?.status === 'published' && selectedSite?.status === 'active' &&
     /^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/.test(domain)
       ? 'https://' + domain + (homePage.route_path || '/') : null;
-  const siteEditHref = homePage ? '/admin/theme-editor?' + new URLSearchParams({
-    site_id: selectedSite.id, slug: homePage.slug, page_id: homePage.id,
-  }).toString() : null;
+  const siteEditHref = homePage
+    ? '/admin/sites/' + encodeURIComponent(selectedSite.id) + '/pages/' + encodeURIComponent(homePage.id) + '/editor'
+    : null;
 
   return response({
     ok: true,
     source: 'studio_cms_site_read_model',
-    new_theme_url: '/admin/theme-editor?new=1',
+    new_theme_url: '/admin/sites/' + encodeURIComponent(selectedSite.id) + '/themes/new/editor',
     store: { visibility: 'unpublished', url: null, domain: null, company_name: null },
     site_preview: homePage ? {
       title: homePage.title,

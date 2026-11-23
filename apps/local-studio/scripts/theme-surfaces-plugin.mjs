@@ -19,7 +19,7 @@ export function themeSurfacesPlugin() {
       assets.set('theme-editor/' + name, join(editor, source));
     }
     const themeEditorSource = resolve(repoRoot, 'apps/ecommerce-cms-agentsam/frontend/theme-editor');
-    for (const name of ['project.mjs', 'bridge.mjs', 'mount.mjs', 'starter-project.mjs', 'starter-products.mjs', 'starter-chrome.mjs', 'system-template-registry.mjs', 'stock-templates.mjs']) {
+    for (const name of ['project.mjs', 'bridge.mjs', 'mount.mjs', 'starter-project.mjs', 'starter-products.mjs', 'starter-chrome.mjs', 'theme-start.mjs', 'system-template-registry.mjs', 'stock-templates.mjs']) {
       assets.set('theme-editor/' + name, join(themeEditorSource, name));
     }
     // Reuse the merchant-facing Online Store shell and its live Theme Store browser.

@@ -78,7 +78,6 @@ export const ADMIN_ROUTE_MANIFEST = [
   }),
   coreAdmin({ id: "admin.pages", path: "/admin/pages", handler: "admin-html", page: "pages", context: "cms.pages", legacy: ["/admin/pages.html"] }),
   coreAdmin({ id: "admin.page-edit", path: "/admin/page-edit", handler: "admin-html", page: "page-edit", context: "cms.page", legacy: ["/admin/page-edit.html"] }),
-  coreAdmin({ id: "admin.theme-editor", path: "/admin/theme-editor", handler: "admin-html", page: "theme-editor", context: "cms.theme-editor", legacy: ["/admin/theme-editor.html"] }),
   coreAdmin({ id: "admin.theme-project-editor", path: "/admin/theme-project-editor", handler: "admin-html", page: "theme-project-editor", context: "cms.theme-editor", legacy: ["/admin/theme-project-editor.html"] }),
   coreAdmin({ id: "admin.theme-editor.site-page", path: "/admin/sites/:siteId/pages/:pageId/editor", handler: "admin-html", page: "theme-editor", context: "cms.theme-editor" }),
   coreAdmin({ id: "admin.theme-editor.site-settings", path: "/admin/sites/:siteId/settings/editor", handler: "admin-html", page: "theme-editor", context: "cms.theme-editor" }),

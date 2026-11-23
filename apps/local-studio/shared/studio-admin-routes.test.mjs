@@ -19,6 +19,8 @@ test('legacy dashboard document paths canonicalize under /admin', () => {
     ['/projects/project_123', '/admin/projects/project_123'],
     ['/artifacts/tickets/ticket_123', '/admin/artifacts/tickets/ticket_123'],
     ['/cad', '/admin/cad'],
+    ['/admin/design-canvas', '/admin/canvas'],
+    ['/admin/design-canvas/my-document', '/admin/canvas/my-document'],
     ['/agentsam/apps/cad', '/admin/cad'],
     ['/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fstore', '/admin/apps/ecommerce-cms-agentsam'],
     ['/store', '/admin/themes'],

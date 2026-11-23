@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { compareVersions, checkForUpdate, detectInstall, promptForUpdate, readState } from '../../src/lib/update-check.js';
+import { compareVersions, checkForUpdate, detectInstall, promptForUpdate, readState } from '../../src/cli/update-check.js';
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'as-upd-'));
 const fakeFetch = (version) => async () => ({ ok: true, json: async () => ({ version }) });

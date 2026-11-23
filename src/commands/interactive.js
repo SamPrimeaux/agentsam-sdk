@@ -2,7 +2,7 @@ import { configureCliPreferences } from './preferences.js';
 import { runShell } from './shell.js';
 import { detectCliProject, readCliPreferences } from '../lib/cli-preferences.js';
 import { runBootScene } from '../ui/boot.js';
-import { checkForUpdate, promptForUpdate } from '../lib/update-check.js';
+import { checkForUpdate, promptForUpdate } from '../cli/update-check.js';
 import { select, isCancel } from '@clack/prompts';
 import { discoverProjectCapabilities } from '../agent/project-discovery.js';
 

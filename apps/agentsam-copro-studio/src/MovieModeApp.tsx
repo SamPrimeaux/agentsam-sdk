@@ -194,11 +194,9 @@ function makeImportedProject(file: File, media: Pick<SessionMediaItem,"durationU
 let evidenceImportStarted = false;
 
 export function MovieModeApp({ initialScreen = "projects", screen: requestedScreen, onScreenChange, standalone = false }: MovieModeAppProps) {
-  /** Standalone dev serves the tour at the root; embedded hosts stage it under /moviemode/. */
   /** `.as-nav-scope` re-declares every --nav-* token with the neutral/violet defaults. Embedded in a host shell that already
    *  carries the active theme, a nested scope would reset the theme for the whole editor, so only a standalone app owns one. */
   const navScope = standalone ? "as-nav-scope " : "";
-  const onboardingBase = standalone ? "/primetech-onboarding/" : "/moviemode/primetech-onboarding/";
   const registrySkies = useRegistrySkies();
   // CoPro derives its palette from the host theme via scoped CSS tokens.
 
@@ -1102,7 +1100,6 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         onDeleteProject={deleteSavedProject}
         onDuplicateProject={(id) => void duplicateSavedProject(id)}
         appIconUrl={standalone ? "/brand/p-prime-spectrum-128.avif" : coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
-        onboardingUrl={onboardingBase}
         systemIcons={MOVIEMODE_SYSTEM_ICONS}
       />
       <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*,.glb,model/gltf-binary" className="copro-hidden-source-input" aria-label="Select a video, 3D GLB scene, image or audio file" onChange={(event) => {
@@ -1121,7 +1118,6 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     </div>}
     <CoProStudio
     key={projectSeed}
-    onboardingUrl={onboardingBase}
     initialTool={initialTool}
     initialStudioMode={studioEntryMode}
     samSceneSkyDefaults={SAMSCENE_SKY_DEFAULTS}

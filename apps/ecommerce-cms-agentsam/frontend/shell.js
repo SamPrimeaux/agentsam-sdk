@@ -361,11 +361,10 @@ function navActive(href, activeHref) {
   if (href === activeHref) return true;
   const aliases = {
     "/admin/home": ["/admin/dashboard", "/admin/dashboard.html"],
-    "/admin/store": ["/admin/pages", "/admin/page-edit", "/admin/theme-editor", "/admin/preferences"],
+    "/admin/store": ["/admin/pages", "/admin/page-edit", "/admin/preferences"],
     "/admin/products": ["/admin/product-edit", "/admin/products/create"],
     "/admin/content": ["/admin/media", "/admin/media.html"],
-    "/admin/pages": ["/admin/page-edit", "/admin/theme-editor"],
-    "/admin/theme-editor": ["/admin/page-edit"],
+    "/admin/pages": ["/admin/page-edit"],
     "/admin/analytics/overview": [
       "/admin/analytics/finance",
       "/admin/analytics/health",

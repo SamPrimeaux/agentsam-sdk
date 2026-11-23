@@ -8,7 +8,7 @@ const read = p=>readFileSync(new URL(p,root),'utf8');
 const server=fileURLToPath(new URL('scripts/preview-sdk-showcase.mjs',root));
 test('existing bundled manifests own every editor embed and enforce first name in form configuration',()=>{
  const core=JSON.parse(read('agentsam.app.json'));
- const resend=JSON.parse(read('apps/resend/agentsam.app.json'));
+ const resend=JSON.parse(read('apps/resend/agentsam.package.json'));
  const embeds=[...core.storefront_embeds,...resend.storefront_embeds];
  assert.deepEqual(embeds.map(e=>e.key).sort(),[
   'announcement_bar','announcement_modal','contact_form','newsletter_modal','newsletter_subscribe'

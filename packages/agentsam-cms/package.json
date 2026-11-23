@@ -24,7 +24,8 @@
     "./application": {
       "types": "./src/index.d.ts",
       "import": "./src/application.js"
-    }
+    },
+    "./studio-bridge-protocol": "./src/studio-bridge-protocol.js"
   },
   "engines": {
     "node": ">=22"

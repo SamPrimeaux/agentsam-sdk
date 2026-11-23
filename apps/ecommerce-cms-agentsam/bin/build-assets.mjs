@@ -54,6 +54,11 @@ if (fs.existsSync(iamSceneBrowserSource)) {
   throw new Error("Incomplete Ecommerce release: iamscene browser runtime is missing");
 }
 await copy(source("frontend/static"), path.join(dest, "admin"));
+// The analytics routes are served by the packaged React SPA and shared analytics
+// packages. The original standalone HTML/Babel export is not an app runtime:
+// don't ship its 21 vendor assets a second time under the CMS package prefix.
+// Canonical /admin/analytics/{overview,finance,health} still mount _spa/index.html.
+await rm(path.join(dest, "admin/analytics"), { recursive: true, force: true });
 // Generated releases belong in dist, not the tracked frontend/static mirror.
 // Both public URLs must contain the exact same source-derived runtime bytes.
 for (const asset of ["admin/js/iamscene-runtime.js", "js/iamscene-runtime.js"]) {
@@ -208,5 +213,10 @@ for (const critical of [
   if (!fs.existsSync(path.join(dest, critical))) {
     throw new Error("Incomplete Ecommerce release: missing " + critical);
   }
+}
+// The old dashboard HTML/Babel export must not leak back into a portable CMS
+// release alongside the supported React + shared analytics implementation.
+if (fs.existsSync(path.join(dest, "admin/analytics"))) {
+  throw new Error("Legacy analytics vendor tree was packaged alongside the reusable analytics SPA");
 }
 console.log("Ecommerce release assets assembled from app-local packages:", dest);

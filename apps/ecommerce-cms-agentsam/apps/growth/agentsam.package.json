@@ -1,5 +1,5 @@
 {
-  "schema": "agentsam.app.v1",
+  "schema": "agentsam.package.v1",
   "id": "growth",
   "name": "Growth",
   "role": "embedded-app",
@@ -65,5 +65,9 @@
       "growth_campaign_publish"
     ],
     "notes": "Growth tools reuse the existing admin Growth API. Draft mutations require confirmation; campaign publish requires explicit approval."
-  }
+  },
+  "kind": "module",
+  "type": "module",
+  "owner_app_id": "ecommerce-cms-agentsam",
+  "installable": false
 }

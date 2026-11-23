@@ -4,7 +4,7 @@
   "name": "AgentSam CAD Creator",
   "kind": "app",
   "package": "@inneranimalmedia/agentsam-cad-creator",
-  "version": "2.6.17",
+  "version": "2.6.18",
   "entrypoints": {
     "frontend": "./frontend",
     "backend": "./backend",
@@ -204,5 +204,6 @@
         }
       ]
     }
-  }
+  },
+  "product_id": "cad-creator"
 }

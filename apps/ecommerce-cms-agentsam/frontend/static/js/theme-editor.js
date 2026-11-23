@@ -3499,6 +3499,17 @@
       syncPublishCapability();
       renderPageOptions('');
       renderTree();
+      // A disconnected legacy R2 source is visible and read-only, not an
+      // empty section masquerading as editable content or a whole-page 500.
+      const sourceIssues=(pageData.sections || []).filter(section => section.source_error);
+      if(sourceIssues.length) {
+        const notice=document.createElement('div');
+        notice.className='te-source-warning';
+        notice.setAttribute('role','status');
+        notice.textContent=sourceIssues.length + (sourceIssues.length===1 ? ' section source is' : ' section sources are') +
+          ' unavailable. Original source references are preserved and those sections are read-only until reconnected.';
+        byId('te-tree')?.prepend(notice);
+      }
       renderInspector();
       // A source-backed Design Canvas stock item is selectable for insertion
       // into the CURRENT authorized project/page. Never auto-insert or publish.

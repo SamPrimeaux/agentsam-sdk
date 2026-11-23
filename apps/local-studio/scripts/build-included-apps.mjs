@@ -46,6 +46,11 @@ export const DEFAULT_MANIFEST = path.join(
   'packages/agentsam-desktop-shell/manifests/local-studio.json',
 );
 const STAGE = /^[a-z0-9][a-z0-9-]*$/;
+// App-owned standalone public pages can be mounted outside an authenticated app's
+// asset namespace without creating a second copy of the source experience.
+const PUBLIC_MOUNT = /^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/;
+const RESERVED_PUBLIC_PREFIXES = new Set(['api', 'admin', 'auth', 'settings']);
+
 
 function within(base, rel, label) {
   if (typeof rel !== 'string' || !rel || path.isAbsolute(rel)) {
@@ -75,15 +80,38 @@ export function planIncludedApps({
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const ids = Array.isArray(manifest.included_apps) ? manifest.included_apps : [];
   const byId = new Map(listAppManifests(repoRoot).map((app) => [app.id, app]));
+  const modules = Array.isArray(manifest.included_modules) ? manifest.included_modules : [];
   const plans = [];
   const stages = new Map();
-  for (const id of ids) {
+  const items = ids.map((id) => {
     const app = byId.get(id);
     if (!app) {
       throw new Error(
         `included_apps entry "${id}" matches no agentsam.app.json (known: ${[...byId.keys()].join(', ') || 'none'})`,
       );
     }
+    return { ...app, type: 'app' };
+  });
+  // Build-time modules may be staged alongside apps, but never count as a
+  // separate account installation, product identity or launcher entry.
+  for (const ref of modules) {
+    if (!ref || typeof ref.id !== 'string' || typeof ref.manifest !== 'string') {
+      throw new Error('included_modules entries require id and manifest');
+    }
+    const file = within(repoRoot, ref.manifest, 'included_modules.manifest');
+    if (!existsSync(file)) throw new Error(`included module manifest missing: ${ref.manifest}`);
+    const value = JSON.parse(readFileSync(file, 'utf8'));
+    if (value.schema !== 'agentsam.package.v1' || value.kind !== 'module' || value.id !== ref.id) {
+      throw new Error(`invalid included module identity: ${ref.manifest}`);
+    }
+    if (!ids.includes(value.owner_app_id) || ref.owner_app_id !== value.owner_app_id) {
+      throw new Error(`included module has no installed owner APP: ${ref.id}`);
+    }
+    if (items.some((a) => a.id === ref.id)) throw new Error(`duplicate included module/app id: ${ref.id}`);
+    items.push({ id: value.id, dir: path.dirname(file), manifest: value, type: 'module' });
+  }
+  for (const app of items) {
+    const id = app.id;
     const embed = app.manifest.embed;
     if (!embed || !embed.build) {
       throw new Error(`app "${id}" is in included_apps but its agentsam.app.json declares no embed.build`);
@@ -98,6 +126,8 @@ export function planIncludedApps({
     const base = `/${embed.stage}/`;
     plans.push({
       id,
+      kind: app.type,
+      owner_app_id: app.type === 'module' ? app.manifest.owner_app_id : id,
       stage: embed.stage,
       base,
       cwd,
@@ -115,7 +145,27 @@ export function planIncludedApps({
       gzipOversizedWasm: b.gzip_oversized_wasm === true,
       publicDir: path.join(localStudio, 'frontend/public', embed.stage),
       stagedDir: path.join(localStudio, '.output/public', embed.stage),
+      publicMounts: (embed.public_mounts ?? []).map((mount) => {
+        if (!mount || typeof mount !== 'object' || typeof mount.from !== 'string' || typeof mount.to !== 'string' ||
+            !PUBLIC_MOUNT.test(mount.from) || !PUBLIC_MOUNT.test(mount.to) ||
+            RESERVED_PUBLIC_PREFIXES.has(mount.to.split('/')[0])) {
+          throw new Error(`app "${id}" has invalid embed.public_mounts entry`);
+        }
+        return {
+          from: within(path.join(localStudio, 'frontend/public', embed.stage), mount.from, `app "${id}" public mount source`),
+          to: path.join(localStudio, '.output/public', mount.to),
+          url: `/${mount.to}/`,
+        };
+      }),
     });
+  }
+  const publicMounts = new Set();
+  for (const plan of plans) for (const mount of plan.publicMounts ?? []) {
+    if ([...publicMounts].some((existing) => existing.startsWith(mount.url) || mount.url.startsWith(existing))) {
+      throw new Error(`public mount "${mount.url}" overlaps another app's mount`);
+    }
+    if (stages.has(mount.url.split('/')[1])) throw new Error(`public mount "${mount.url}" overlaps an app's stage`);
+    publicMounts.add(mount.url);
   }
   return { skipped: null, plans };
 }
@@ -167,6 +217,15 @@ function stage(plan) {
   rmSync(plan.stagedDir, { recursive: true, force: true });
   mkdirSync(path.dirname(plan.stagedDir), { recursive: true });
   cpSync(plan.publicDir, plan.stagedDir, { recursive: true, mode: constants.COPYFILE_FICLONE });
+  for (const mount of plan.publicMounts ?? []) {
+    if (!existsSync(mount.from) || !statSync(mount.from).isDirectory()) {
+      throw new Error(`${plan.id} public experience missing: ${mount.from}`);
+    }
+    rmSync(mount.to, { recursive: true, force: true });
+    mkdirSync(path.dirname(mount.to), { recursive: true });
+    cpSync(mount.from, mount.to, { recursive: true, mode: constants.COPYFILE_FICLONE });
+    console.log(`[included-apps] ${plan.id}: public experience -> ${mount.url}`);
+  }
   if (plan.gzipOversizedWasm) {
     const assetDir = path.join(plan.stagedDir, 'assets');
     if (!existsSync(assetDir)) throw new Error(`${plan.id} requested WASM compression without an assets folder`);
@@ -228,7 +287,11 @@ function main() {
     console.error('[included-apps] Refusing to rebuild every installed app. Pass --only <app-id> or --all for an explicitly approved full release.');
     process.exit(1);
   }
-  const selected = flags.only ? result.plans.filter((plan) => plan.id === flags.only) : result.plans;
+  // Scoped product releases include their declared modules, not unrelated
+  // applications. A module can still be rebuilt directly with --only <module>.
+  const selected = flags.only
+    ? result.plans.filter(plan => plan.id === flags.only || plan.kind === 'module' && plan.owner_app_id === flags.only)
+    : result.plans;
   if (flags['dry-run']) {
     console.log(JSON.stringify(selected, null, 2));
     return;

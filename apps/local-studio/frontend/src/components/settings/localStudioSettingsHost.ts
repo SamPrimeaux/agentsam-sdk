@@ -42,8 +42,7 @@ import {
   discoverLocalStudioPlugins,
   installLocalStudioPublicPlugin,
   removeLocalStudioPublicPlugin,
-  beginLocalStudioConnectorOAuth,
-  beginLocalStudioGmailConnection,
+  beginLocalStudioRegisteredPluginOAuth,
   disconnectLocalStudioConnector,
   beginLocalStudioPublicPluginOAuth,
   disconnectLocalStudioGmail,
@@ -601,6 +600,12 @@ export const localStudioSettingsHost: SettingsHost = {
     if(typeof window!=="undefined")
       window.dispatchEvent(new CustomEvent("agentsam:navigate",{detail:{to:"/admin/settings/"+unit}}));
   },
+  openPluginWorkspace(pluginKey) {
+    if(typeof window === "undefined" || !/^[a-z0-9][a-z0-9_.-]{1,100}$/i.test(pluginKey))return;
+    window.dispatchEvent(new CustomEvent("agentsam:navigate",{
+      detail:{to:"/admin/settings/customize?plugin="+encodeURIComponent(pluginKey)},
+    }));
+  },
   async updateGeneralPreferences(preferences:SettingsGeneralPreferences){
     await settingsRequest("/api/settings/preferences","PUT",preferences);
     if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
@@ -698,9 +703,11 @@ export const localStudioSettingsHost: SettingsHost = {
       const returnTo = isPackagedDesktop()
         ? buildConnectionReturnUrl(plugin.providerKey, "/admin/settings/customize?view=plugins")
         : "/admin/settings/customize?view=plugins";
-      const response = plugin.providerKey === "google_gmail"
-        ? await beginLocalStudioGmailConnection("/admin/settings/customize?view=plugins")
-        : await beginLocalStudioConnectorOAuth(plugin.providerKey, returnTo);
+      // Settings and Files invoke the same account-owned registered plugin
+      // broker. Google/Drive/GitHub/Gmail callbacks still stay in their proven
+      // provider services; the host does not copy OAuth logic into the UI.
+      const response = await beginLocalStudioRegisteredPluginOAuth(plugin.id, returnTo,
+        plugin.connectionRef ? {connectionId:plugin.connectionRef} : {});
       if (!response?.authorize_url?.startsWith("https://")) throw new Error("plugin_oauth_url_invalid");
       await openExternalUrl(response.authorize_url);
       return;

@@ -80,7 +80,7 @@ export async function finishOAuthLogin({ request, env, identity, adapter, saved,
 
   if (sessionTypeForTransaction(saved) === SESSION_TYPES.DESKTOP) {
     if (!saved.native_challenge || !isAllowedNativeRedirect(saved.native_redirect, env)) {
-      await adapter.revokeSession?.(result.sessionId);
+      await adapter.revokeSession?.(result.sessionId, 'native_handoff_invalid');
       return Response.redirect(`${url.origin}${loginPath}?error=native_handoff_invalid`, 302);
     }
     const handoff = randomOAuthState();
@@ -125,7 +125,7 @@ export async function handleNativeExchangeRequest(request, { adapter, identity }
   const row = await adapter.consumeNativeHandoff(await sha256Hex(handoff));
   if (!row) return jsonResponse({ ok: false, error: 'handoff_invalid_or_expired' }, 400);
   if ((await pkceChallenge(verifier)) !== row.challenge) {
-    await adapter.revokeSession?.(row.session_id);
+    await adapter.revokeSession?.(row.session_id, 'pkce_verification_failed');
     return jsonResponse({ ok: false, error: 'pkce_verification_failed' }, 400);
   }
 

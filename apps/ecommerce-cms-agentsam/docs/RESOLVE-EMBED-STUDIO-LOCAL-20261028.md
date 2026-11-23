@@ -13,7 +13,7 @@ Use the existing scripts/preview-sdk-showcase.mjs with PORT=4357. Resolve assets
 
 ## Integration authority
 - The SDK root agentsam.app.json owns native announcement/contact embeds.
-- The existing apps/resend/agentsam.app.json owns Resend newsletter embeds.
+- The existing apps/resend/agentsam.package.json owns Resend newsletter embeds.
 - The Companions newsletter_subscribers production table was checked on 2026-10-28: provider_contact_id TEXT already exists; first_name and last_name remain nullable. Do NOT rerun the ALTER there.
 - Newsletter component config defaults to required_fields of email and first_name, double opt-in on. backend/cms/storefront-embed-contract.ts validates form requirements and disallows reactivation of bounced, complained and unsubscribed records. It does not write to a DB.
 - A live adapter must load trusted config from cms_components, write consent and source attribution, use a credential-vault Resend connection, and handle provider unsubscribe webhooks.

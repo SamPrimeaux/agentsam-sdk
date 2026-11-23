@@ -95,27 +95,40 @@ export async function getSiteOwnedPage(env, accountId, slug, siteId, pageId = nu
     GROUP BY entity_id
   `).bind(accountId, site.id).all();
   const versionBySection = new Map((versions.results || []).map(row => [row.entity_id, Number(row.n || 0)]));
+  // One legacy or unavailable R2 source must not prevent the merchant from
+  // opening every other saved section. Never reclassify that section as an
+  // editable blank draft: the original D1/R2 pointer remains authoritative.
+  const missingSourceSections = [];
   const sections = await Promise.all(results.map(async section => {
     let content = parse(section.section_data);
     const pointer = section.draft_r2_key || section.published_r2_key;
+    let sourceError = null;
     if (pointer) {
       const storage = section.r2_bucket === "cms" ? env.CMS_CONTENT
         : section.r2_bucket === "agentsam-os-blueprint-content" ? env.WEBSITE_ASSETS : null;
-      if (!storage) throw new Error("cms_section_bucket_unavailable");
-      const object = await storage.get(pointer);
-      if (!object) throw new Error("cms_section_object_missing");
-      try {
-        const saved = JSON.parse(await object.text());
-        if (!saved || typeof saved !== "object" || Array.isArray(saved)) throw new Error("invalid_section");
-        content = saved;
-      } catch { throw new Error("cms_section_content_invalid"); }
+      if (!storage) sourceError = "cms_section_bucket_unavailable";
+      else {
+        try {
+          const object = await storage.get(pointer);
+          if (!object) sourceError = "cms_section_object_missing";
+          else {
+            const saved = JSON.parse(await object.text());
+            if (!saved || typeof saved !== "object" || Array.isArray(saved))
+              sourceError = "cms_section_content_invalid";
+            else content = saved;
+          }
+        } catch { sourceError = "cms_section_content_unavailable"; }
+      }
     }
+    const key = section.section_key || section.id;
+    if (sourceError) missingSourceSections.push(key);
     return {
-      id: section.id, key: section.section_key || section.id,
+      id: section.id, key,
       name: section.section_name || section.section_type,
       content, sort_order: section.sort_order,
       status: section.is_visible ? "active" : "hidden",
       source: pointer ? "cms-r2" : "cms-d1",
+      ...(sourceError ? { source_error: sourceError, read_only: true } : {}),
       version: versionBySection.get(section.id) || 0,
       updated_at: section.updated_at,
     };
@@ -159,7 +172,7 @@ export async function getSiteOwnedPage(env, accountId, slug, siteId, pageId = nu
       },
       site,
       sections,
-      missing_source_sections: [],
+      missing_source_sections: missingSourceSections,
       content_authority: page.status === "published" ? "cms-published" : "cms-draft-only",
     },
   };

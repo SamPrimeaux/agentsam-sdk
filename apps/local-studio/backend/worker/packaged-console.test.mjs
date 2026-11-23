@@ -21,7 +21,8 @@ test("MovieMode project and editor routes both render inside the shared admin sh
 
 test("installed theme projects use the existing CMS project editor route", () => {
   assert.equal(resolveConsoleFile("/admin/theme-project-editor"), "theme-project-editor.html");
-  assert.equal(resolveConsoleFile("/admin/theme-editor"), "theme-editor.html");
+  assert.equal(resolveConsoleFile("/admin/theme-editor"), null);
+  assert.equal(resolveConsoleFile("/admin/sites/site_a/themes/theme_a/editor/home"), "theme-editor.html");
 });
 
 
@@ -39,7 +40,7 @@ test('canonical Products opens the existing Ecommerce catalog; Product Studio re
 test('Local Studio is the sole canonical route authority for installed Ecommerce pages', () => {
   for (const [path, asset] of [
     ['/admin/pages', 'pages.html'],
-    ['/admin/theme-editor', 'theme-editor.html'],
+    ['/admin/sites/site_a/pages/page_a/editor', 'theme-editor.html'],
     ['/admin/theme-project-editor', 'theme-project-editor.html'],
     ['/admin/products', 'products.html'],
     ['/admin/orders', 'orders.html'],
@@ -51,10 +52,8 @@ test('Local Studio is the sole canonical route authority for installed Ecommerce
     assert.equal(resolveConsoleFile(path), asset, path + ' serves its packaged capability');
     assert.equal(isStudioAdminPath(path), true, path + ' belongs to the canonical admin namespace');
   }
-  assert.equal(isLocalStudioEcommerceDocumentPath('/admin/theme-editor'), true);
+  assert.equal(isLocalStudioEcommerceDocumentPath('/admin/theme-editor'), false);
   assert.equal(isLocalStudioEcommerceDocumentPath('/admin/store'), false);
   assert.equal(resolveConsoleFile('/admin/store'), null, 'the Store host route must not recursively serve itself');
-  assert.equal(canonicalStudioPath('/admin/theme-editor/'), '/admin/theme-editor');
-  assert.equal(canonicalStudioPath('/admin/theme-editor.html'), '/admin/theme-editor');
   assert.equal(resolveLocalStudioEcommerceAdminRoute('/admin/not-a-real-cms-page'), null);
 });

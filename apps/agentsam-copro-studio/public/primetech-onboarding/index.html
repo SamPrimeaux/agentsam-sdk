@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0a0b13">
-<title>PrimeTech Onboarding</title>
+<title>PrimeTech — Interactive Experience</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <style>
   /* One :root block holds every color. Brand hues come from the PrimeTech P mark; a theme overrides only this block. */
@@ -536,6 +536,39 @@
     .panel > section.on, .head { animation: none; }
     * { transition-duration: .01ms !important; }
   }
+
+  /* Store Chat listing: an isolated preview of this exact Assistant, never a second implementation. */
+  body.assistant-preview { background: var(--page); color: var(--hero-ink); }
+  body.assistant-preview > .field,
+  body.assistant-preview > .stage,
+  body.assistant-preview > .launch,
+  body.assistant-preview > .tour { display: none !important; }
+  .assistant-preview-site { min-height: 100vh; background: var(--page); color: var(--hero-ink); font-family: var(--font); }
+  .assistant-preview-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 17px 28px; border-bottom: 1px solid #dae1dc; font-size: 12px; letter-spacing: .045em; }
+  .assistant-preview-top strong { font-weight: 800; }
+  .assistant-preview-top span { font-size: 10px; font-weight: 750; color: #57736b; letter-spacing: .12em; }
+  .assistant-preview-intro { width: min(430px, 48%); padding: clamp(44px, 10vh, 105px) 0 80px clamp(26px, 6vw, 68px); }
+  .assistant-preview-eyebrow { color: #286554; font-size: 11px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+  .assistant-preview-intro h1 { font-size: clamp(29px, 4.4vw, 53px); line-height: 1.1; letter-spacing: -.05em; margin: 18px 0; }
+  .assistant-preview-intro p { color: #526158; font-size: 15px; line-height: 1.65; margin: 0 0 24px; }
+  .assistant-preview-intro button { padding: 12px 20px; border: 0; border-radius: 8px; background: #23483a; color: #fff; cursor: pointer; font: 700 13px var(--font); }
+  .assistant-preview-caveat { position: absolute; left: 28px; bottom: 16px; color: #6c7970; font-size: 11px; }
+  body.assistant-preview .ast { z-index: 100; right: clamp(14px, 2vw, 26px); bottom: clamp(22px, 4vh, 35px); }
+  body.assistant-preview .ast-panel { height: min(520px, 79vh); max-width: calc(100vw - 28px); }
+  @media (max-width: 570px) {
+    .assistant-preview-top { padding: 13px 16px; }
+    .assistant-preview-intro { padding: 20px 18px 0; width: min(100%, 360px); }
+    .assistant-preview-intro h1 { font-size: 25px; max-width: 270px; }
+    .assistant-preview-intro p, .assistant-preview-caveat { display: none; }
+    .assistant-preview-intro button { margin-top: 2px; }
+    body.assistant-preview .ast-panel,
+    body.assistant-preview .ast-panel.big {
+      width: calc(100vw - 28px);
+      max-width: calc(100vw - 28px);
+      height: min(440px, 73vh);
+      transition: none;
+    }
+  }
 </style>
 </head>
 <body data-view="setup">
@@ -754,6 +787,18 @@
   <footer class="foot" id="foot" data-sec="12" data-name="Footer"></footer>
 </div>
 
+<!-- Store Chat listing preview. The assistant controls below are shared with the public PrimeTech tour. -->
+<section class="assistant-preview-site" id="assistant-preview-site" aria-label="AgentSam storefront assistant demonstration" hidden>
+  <div class="assistant-preview-top"><strong>YOUR STOREFRONT</strong><span>INTERACTIVE DEMO</span></div>
+  <div class="assistant-preview-intro">
+    <span class="assistant-preview-eyebrow">Customer support</span>
+    <h1>Help is just a message away.</h1>
+    <p>Try the actual AgentSam Assistant floating popup. Open it, expand it, and preview a conversation without leaving the page.</p>
+    <button type="button" id="assistant-preview-open">Open assistant</button>
+  </div>
+  <small class="assistant-preview-caveat">Preview only — no inbox delivery or live AI service is connected.</small>
+</section>
+
 <!-- ============ AgentSam Assistant ============ -->
 <div class="ast" id="ast">
   <div class="ast-bubble" id="ast-bubble" hidden>
@@ -797,7 +842,7 @@
   // All content and behavior hooks live here. Nothing below this block is brand-specific.
   var CONFIG = {
     storageKey: "primetech.onboarding",
-    studioUrl: "/?studio=new",   // local MovieMode onboarding handoff: opens the actual CoPro editor
+    studioUrl: "/auth/signup?next=%2Fadmin%2Fmoviemode", // public showcase handoff; existing users can sign in
     focus: [
       { id: "architecture", label: "Architecture & BIM",       color: "var(--purple)", icon: '<path d="M4 21V7l8-4 8 4v14"/><path d="M3 21h18"/><path d="M9.5 21v-5h5v5"/><path d="M8 10h2M14 10h2M8 13.5h2M14 13.5h2"/>' },
       { id: "product",      label: "Product Design",           color: "var(--red)",    icon: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>' },
@@ -1368,9 +1413,10 @@
   }
 
   /* ---------- AgentSam Assistant ---------- */
+  var assistantPreviewMode = new URLSearchParams(window.location.search).get("assistantPreview") === "1";
   var sample = null, busy = false, transcript = [];
   try {
-    if (window.claude && window.claude.use) window.claude.use("sample").then(function (s) { sample = s; }).catch(function () {});
+    if (!assistantPreviewMode && window.claude && window.claude.use) window.claude.use("sample").then(function (s) { sample = s; }).catch(function () {});
   } catch (e) {}
   if (!sample && !window.claude) {
     $("ast-panel").querySelector(".ast-note").textContent = "AI content may be incomplete or inaccurate. Review results before use.";
@@ -1395,7 +1441,7 @@
     if (!q || busy) return;
     say(q, "me");
     if (!sample) {
-      say('Assistant isn\'t connected in this local build. Your message wasn\'t sent.', 'bot');
+      say('This is an interactive preview. No inbox or AI service is connected, and your message was not sent.', 'bot');
       return;
     }
     busy = true; syncSend();
@@ -1482,9 +1528,20 @@
   $("name").value = state.name;
   $("company").value = state.company;
   buildBenefits(); buildFeatures(); buildWorkflows(); buildNav(); buildStatic(); buildBundle(); buildLearning(); buildCompare(); buildFaq(); buildReq();
+  if (assistantPreviewMode) {
+    document.body.classList.add("assistant-preview");
+    $("assistant-preview-site").hidden = false;
+    $("assistant-preview-open").addEventListener("click", openPanel);
+  }
   view();
+  if (assistantPreviewMode) setTimeout(openPanel, 60);
 })();
 </script>
-<script type="module" src="assets/scene.js"></script>
+<script type="module">
+  // Keep the lightweight storefront widget preview independent of the 3D tour renderer.
+  if (new URLSearchParams(location.search).get("assistantPreview") !== "1") {
+    import("./assets/scene.js");
+  }
+</script>
 </body>
 </html>

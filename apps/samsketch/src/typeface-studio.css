@@ -140,3 +140,13 @@ button { color: inherit; }
   .tf-preview-panel input { max-width: none; }
   .tf-rail { grid-template-columns: repeat(9,minmax(0,1fr)); }
 }
+/* Theme Store font catalog is a reference surface, not a second glyph editor. */
+.tf-font-library { display:grid;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--tf-line);min-width:0; }
+.tf-font-library > small {color:var(--tf-muted);font-size:9px;font-weight:700;letter-spacing:.12em;}
+.tf-font-library > strong {font-size:12px;font-weight:650;}
+.tf-font-library label {display:grid;gap:4px;color:var(--tf-muted);font-size:10px;}
+.tf-font-library input,.tf-font-library select {box-sizing:border-box;width:100%;min-width:0;min-height:32px;padding:5px 7px;background:var(--tf-field);border:1px solid var(--tf-line);border-radius:6px;color:var(--tf-text);font-size:11px;}
+.tf-font-library input:focus,.tf-font-library select:focus{outline:2px solid var(--tf-accent);outline-offset:1px;}
+.tf-font-library [data-font-reference-specimen]{min-height:44px;margin:0;padding:8px 4px;overflow-wrap:anywhere;font-size:21px;line-height:1.1;}
+.tf-font-library [data-font-library-count],.tf-font-library [data-font-license]{font-size:10px;color:var(--tf-muted);}
+.tf-font-library [data-font-license]{color:var(--tf-accent);}

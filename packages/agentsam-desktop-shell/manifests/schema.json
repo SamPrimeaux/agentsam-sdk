@@ -3,67 +3,167 @@
   "$id": "https://schemas.inneranimalmedia.com/packages/agentsam-desktop-shell/v1/brand-manifest.schema.json",
   "title": "AgentSam Desktop Brand Manifest",
   "type": "object",
-  "required": ["app_id", "app_name", "bundle_identifier", "base_url", "deep_link_scheme", "identity_provider"],
+  "required": [
+    "app_id",
+    "app_name",
+    "bundle_identifier",
+    "base_url",
+    "deep_link_scheme",
+    "identity_provider"
+  ],
   "properties": {
-    "app_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-    "app_name": { "type": "string" },
-    "bundle_identifier": { "type": "string", "pattern": "^[a-z0-9.-]+$" },
-    "base_url": { "type": "string", "format": "uri" },
+    "app_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "app_name": {
+      "type": "string"
+    },
+    "bundle_identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9.-]+$"
+    },
+    "base_url": {
+      "type": "string",
+      "format": "uri"
+    },
     "surface": {
       "type": "string",
-      "enum": ["workspace", "app", "store", "portal", "brand"]
+      "enum": [
+        "workspace",
+        "app",
+        "store",
+        "portal",
+        "brand"
+      ]
     },
-    "launch_path": { "type": "string", "pattern": "^/.*" },
-    "app_manifest": { "type": "string", "description": "Path to the product agentsam.app.json, resolved relative to this brand manifest." },
+    "launch_path": {
+      "type": "string",
+      "pattern": "^/.*"
+    },
+    "app_manifest": {
+      "type": "string",
+      "description": "Path to the product agentsam.app.json, resolved relative to this brand manifest."
+    },
     "routes": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
+      "additionalProperties": {
+        "type": "string"
+      },
       "properties": {
-        "home": { "type": "string" },
-        "login": { "type": "string" },
-        "logout": { "type": "string" },
-        "next_after_login": { "type": "string" }
+        "home": {
+          "type": "string"
+        },
+        "login": {
+          "type": "string"
+        },
+        "logout": {
+          "type": "string"
+        },
+        "next_after_login": {
+          "type": "string"
+        }
       }
     },
     "auth": {
       "type": "object",
       "additionalProperties": true,
       "properties": {
-        "login_url": { "type": "string" },
-        "session_check": { "type": "string" },
-        "oauth_deep_link": { "type": "string" },
-        "authority": { "type": "string", "enum": ["service", "standalone"] },
-        "ui": { "type": "string" },
-        "service_origin": { "type": "string" },
-        "native_session": { "type": "string", "enum": ["bearer", "cookie"] },
-        "session_store": { "type": "string" },
-        "standalone_adapter": { "type": "string", "enum": ["sqlite"] },
-        "notes": { "type": "string" }
+        "login_url": {
+          "type": "string"
+        },
+        "session_check": {
+          "type": "string"
+        },
+        "oauth_deep_link": {
+          "type": "string"
+        },
+        "authority": {
+          "type": "string",
+          "enum": [
+            "service",
+            "standalone"
+          ]
+        },
+        "ui": {
+          "type": "string"
+        },
+        "service_origin": {
+          "type": "string"
+        },
+        "native_session": {
+          "type": "string",
+          "enum": [
+            "bearer",
+            "cookie"
+          ]
+        },
+        "session_store": {
+          "type": "string"
+        },
+        "standalone_adapter": {
+          "type": "string",
+          "enum": [
+            "sqlite"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
       }
     },
     "local_state": {
       "type": "object",
       "additionalProperties": true,
       "properties": {
-        "adapter": { "type": "string", "enum": ["sqlite"] },
-        "authority": { "type": "string", "enum": ["device"] },
-        "roles": { "type": "array", "items": { "type": "string" } }
+        "adapter": {
+          "type": "string",
+          "enum": [
+            "sqlite"
+          ]
+        },
+        "authority": {
+          "type": "string",
+          "enum": [
+            "device"
+          ]
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "platform_profiles": {
       "type": "object",
       "additionalProperties": true,
       "properties": {
-        "desktop": { "type": "object", "additionalProperties": true },
-        "mobile": { "type": "object", "additionalProperties": true }
+        "desktop": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "mobile": {
+          "type": "object",
+          "additionalProperties": true
+        }
       }
     },
     "allowed_web_origins": {
       "type": "array",
-      "items": { "type": "string", "format": "uri" }
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
     },
-    "deep_link_scheme": { "type": "string", "pattern": "^[a-z][a-z0-9]*$" },
-    "icon_set": { "type": "string" },
+    "deep_link_scheme": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*$"
+    },
+    "icon_set": {
+      "type": "string"
+    },
     "icon_source_url": {
       "type": "string",
       "format": "uri",
@@ -96,11 +196,19 @@
           "additionalProperties": {
             "type": "object",
             "properties": {
-              "base": { "type": "string" },
-              "raised": { "type": "string" },
-              "mark_fill": { "type": "string" }
+              "base": {
+                "type": "string"
+              },
+              "raised": {
+                "type": "string"
+              },
+              "mark_fill": {
+                "type": "string"
+              }
             },
-            "required": ["base"]
+            "required": [
+              "base"
+            ]
           }
         },
         "profiles": {
@@ -109,35 +217,69 @@
             "macos": {
               "type": "object",
               "properties": {
-                "surface": { "type": "string" },
-                "optical_scale": { "type": "number", "minimum": 0.5, "maximum": 0.92 },
-                "size": { "type": "integer" }
+                "surface": {
+                  "type": "string"
+                },
+                "optical_scale": {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 0.92
+                },
+                "size": {
+                  "type": "integer"
+                }
               }
             },
             "ios": {
               "type": "object",
               "properties": {
-                "surface": { "type": "string" },
-                "optical_scale": { "type": "number", "minimum": 0.5, "maximum": 0.92 },
-                "system_mask": { "type": "boolean" },
-                "size": { "type": "integer" }
+                "surface": {
+                  "type": "string"
+                },
+                "optical_scale": {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 0.92
+                },
+                "system_mask": {
+                  "type": "boolean"
+                },
+                "size": {
+                  "type": "integer"
+                }
               }
             },
             "windows": {
               "type": "object",
               "properties": {
-                "surface": { "type": "string" },
-                "optical_scale": { "type": "number", "minimum": 0.5, "maximum": 0.92 },
-                "size": { "type": "integer" }
+                "surface": {
+                  "type": "string"
+                },
+                "optical_scale": {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 0.92
+                },
+                "size": {
+                  "type": "integer"
+                }
               }
             },
             "tray": {
               "type": "object",
               "properties": {
-                "mark_only": { "type": "boolean" },
-                "mark_fill": { "type": "string" },
-                "surface": { "type": "string" },
-                "size": { "type": "integer" }
+                "mark_only": {
+                  "type": "boolean"
+                },
+                "mark_fill": {
+                  "type": "string"
+                },
+                "surface": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "integer"
+                }
               }
             }
           }
@@ -146,7 +288,10 @@
     },
     "included_apps": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$"
+      },
       "description": "Optional sibling APP ids (agentsam.app.json) to bundle with this desktop host. Empty/omitted = host-only. Validated against the APP registry."
     },
     "version": {
@@ -163,21 +308,69 @@
     },
     "identity_provider": {
       "type": "string",
-      "enum": ["portable", "inneranimalmedia", "google", "github", "gcp", "email", "google_desktop_and_cloudflare"]
+      "enum": [
+        "portable",
+        "inneranimalmedia",
+        "google",
+        "github",
+        "gcp",
+        "email",
+        "google_desktop_and_cloudflare"
+      ]
     },
     "theme": {
       "type": "object",
       "properties": {
-        "primary_color": { "type": "string" },
-        "accent_color": { "type": "string" }
+        "primary_color": {
+          "type": "string"
+        },
+        "accent_color": {
+          "type": "string"
+        }
       }
     },
     "feature_flags": {
       "type": "object",
       "properties": {
-        "tray": { "type": "boolean", "default": true },
-        "auto_update": { "type": "boolean", "default": true },
-        "local_execution_node": { "type": "boolean", "default": false }
+        "tray": {
+          "type": "boolean",
+          "default": true
+        },
+        "auto_update": {
+          "type": "boolean",
+          "default": true
+        },
+        "local_execution_node": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "included_modules": {
+      "type": "array",
+      "description": "Build-time modules owned by an included APP; never independently installed or included in the account Apps catalog.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "manifest",
+          "owner_app_id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "manifest": {
+            "type": "string",
+            "pattern": "^(apps|packages)/[a-z0-9/.-]+/agentsam\\.package\\.json$"
+          },
+          "owner_app_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
+        "additionalProperties": false
       }
     }
   }

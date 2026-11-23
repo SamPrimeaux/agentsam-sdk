@@ -368,8 +368,10 @@ export async function authenticateViaBrowser(options = {}) {
     throw err;
   }
   const clientId = resolved.clientId;
-  // Native login always enters through the canonical IAM portal. Google or other
-  // login methods may be offered by IAM itself; provider grants are not CLI sessions.
+  // Sessions are always minted by the AgentSam authorization server; the chosen
+  // provider (google/github) is passed as a sign-in hint so the user lands on
+  // that provider instead of a generic portal.
+  const providerHint = ['google', 'github'].includes(options.loginProvider) ? options.loginProvider : '';
   const issuer = resolveIamIssuer(env, options.issuer || '');
 
   const state = randomUrlSafe(24, options.randomBytesImpl || randomBytes);
@@ -407,13 +409,14 @@ export async function authenticateViaBrowser(options = {}) {
         : authorizationUrl.replace(/^https?:\/\/[^/]+/, '');
       const loginGateUrl = new URL('/auth/login', `${issuer}/`);
       loginGateUrl.searchParams.set('next', authorizePath.startsWith('/') ? authorizePath : `/${authorizePath}`);
+      if (providerHint) loginGateUrl.searchParams.set('provider', providerHint);
       browserUrl = loginGateUrl.toString();
     }
 
     const promptImpl = options.promptToOpenUrlImpl || promptToOpenUrl;
     await promptImpl(browserUrl, {
-      heading: 'Authenticate your Inner Animal Media account at:',
-      prompt: 'Press ENTER to open Inner Animal Media sign-in in your browser.',
+      heading: providerHint ? `Sign in with ${providerHint === 'github' ? 'GitHub' : 'Google'} at:` : 'Authenticate your Inner Animal Media account at:',
+      prompt: providerHint ? `Press ENTER to open ${providerHint === 'github' ? 'GitHub' : 'Google'} sign-in in your browser.` : 'Press ENTER to open Inner Animal Media sign-in in your browser.',
       input: options.input,
       output: options.output,
       openImpl: options.openImpl,
