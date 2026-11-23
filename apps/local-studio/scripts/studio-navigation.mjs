@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { listAppManifests } from '../../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
@@ -11,7 +11,7 @@ const mounts = {
   'local-studio': { href: '/admin/agentsam', icon: 'messageSquare', label: 'AgentSam', aliases: ['/admin/agentsam', '/admin/chats'] },
   'cad-creator': { href: '/admin/cad', icon: 'box', label: 'CAD Creator', aliases: ['/admin/cad'] },
   // MovieMode is Apps-only. Never alias /media — Media Library owns that tree.
-  'agentsam-copro-studio': { href: '/admin/moviemode', icon: 'film', label: 'MovieMode', aliases: [] },
+  'moviemode': { href: '/admin/moviemode', icon: 'film', label: 'MovieMode', aliases: [] },
   'samsketch': { href: '/admin/samsketch', icon: 'layers', label: 'SamSketch', aliases: [] },
   // SamSculpt is Creative Department Batch 1+. Include only when apps/samsculpt (or packaged
   // agentsam-3d-studio) is listed in included_apps — mount stays dormant until then.
@@ -24,11 +24,8 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
   const apps = new Map(listAppManifests(repoRoot).map((app) => [app.id, app]));
   const ids = [...new Set([host.app_id, ...(host.included_apps || [])])];
   const commerce = ids.includes('ecommerce-cms-agentsam');
-  const growthPath = path.join(repoRoot, 'apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json');
-  const bundledApps = [];
+  const growthPath = path.join(repoRoot, 'apps/ecommerce-cms-agentsam/apps/growth/agentsam.package.json');
   let growthNav = null;
-  const bundledDir = path.join(repoRoot, 'apps/ecommerce-cms-agentsam/apps');
-  const bundledAppDirectories = existsSync(bundledDir) ? readdirSync(bundledDir) : [];
   if (commerce) {
     const growth = JSON.parse(readFileSync(growthPath, 'utf8'));
     if (growth.status === 'bundled' && growth.role === 'embedded-app') {
@@ -41,23 +38,9 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
         aliases: [],
         provenance: 'ecommerce-bundled-manifest',
       };
-      // Growth stays discoverable under Audience; keep Apps entry for deep links.
-      bundledApps.push(growthNav);
+      // Growth is an Audience module, not an independent installed APP.
     }
-    // Only expose bundled provider/extension apps that declare real routes.
-    // No fake product/fulfillment launcher, duplicate catalog, or new registry.
-    for (const name of bundledAppDirectories) {
-      if (name === 'growth') continue;
-      const manifestFile = path.join(bundledDir, name, 'agentsam.app.json');
-      if (!existsSync(manifestFile)) continue;
-      const app = JSON.parse(readFileSync(manifestFile,'utf8'));
-      if (app.status !== 'bundled' || app.navigation?.placement !== 'apps' || !app.routes?.[0]) continue;
-      bundledApps.push({
-        id:app.id,name:app.name,label:app.navigation.label || app.name,
-        href:app.routes[0],icon:app.navigation.icon || 'apps',aliases:[],
-        provenance:'ecommerce-bundled-manifest'
-      });
-    }
+
   }
   return {
     primary: [
@@ -103,7 +86,7 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
       // An included build is not automatically a mounted navigation destination.
       if (!mount) return [];
       return [{ id: app.id, name: app.name, package: app.manifest.package, version: app.manifest.version, ...mount }];
-    }), ...bundledApps],
+    })],
   };
 }
 

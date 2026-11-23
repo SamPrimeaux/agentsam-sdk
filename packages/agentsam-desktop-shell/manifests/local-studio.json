@@ -75,9 +75,8 @@
   "included_apps": [
     "cad-creator",
     "ecommerce-cms-agentsam",
-    "agentsam-copro-studio",
+    "moviemode",
     "samsketch",
-    "samspeaks",
     "design-canvas"
   ],
   "theme": {
@@ -141,5 +140,18 @@
       "secure_store": "mobile_secure_store",
       "notes": "Mobile must not depend on executable sidecars; it consumes the same identity/service and local-state contracts through native mobile adapters."
     }
+  },
+  "included_modules": [
+    {
+      "id": "samspeaks",
+      "manifest": "apps/samspeaks/agentsam.package.json",
+      "owner_app_id": "moviemode"
+    }
+  ],
+  "app_catalog": {
+    "authority": "inneranimalmedia-business.apps + agentsam_app_installations",
+    "scope": "verified_account",
+    "included_apps_are": "build_time_only",
+    "failed_inventory_is_not_zero": true
   }
 }

@@ -55,7 +55,7 @@ const publicPages=[
  {name:'CAD Creator — public preview',slug:'cad-public',group:'Products & Apps',owner:'cad-creator',source:'apps/cad-creator',url:'https://cad.inneranimalmedia.com/#aspiration'},
  {name:'InnerAnimalMedia — website',slug:'inneranimal-public',group:'Commerce & Themes',owner:'inneranimalmedia',source:'apps/ecommerce-cms-agentsam',url:'https://inneranimalmedia.com/'},
  {name:'Theme packages — public preview',slug:'themes-public',group:'Commerce & Themes',owner:'ecommerce-cms-agentsam',source:'apps/ecommerce-cms-agentsam/frontend',url:'https://themes.inneranimalmedia.com/'},
- {name:'Growth — authenticated SPA',slug:'growth-app',group:'Products & Apps',owner:'ecommerce-cms-agentsam',source:'apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json',url:'https://agentsam.inneranimalmedia.com/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth'},
+ {name:'Growth — authenticated SPA',slug:'growth-app',group:'Products & Apps',owner:'ecommerce-cms-agentsam',source:'apps/ecommerce-cms-agentsam/apps/growth/agentsam.package.json',url:'https://agentsam.inneranimalmedia.com/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fgrowth'},
  {name:'SamSketch — authenticated editor',slug:'samsketch-app',group:'Products & Apps',owner:'samsketch',source:'apps/samsketch/agentsam.app.json',url:'https://agentsam.inneranimalmedia.com/samsketch'},
  {name:'MovieMode — authenticated workspace',slug:'moviemode-app',group:'Products & Apps',owner:'agentsam-copro-studio',source:'apps/agentsam-copro-studio/agentsam.app.json',url:'https://agentsam.inneranimalmedia.com/admin/moviemode'},
 ];

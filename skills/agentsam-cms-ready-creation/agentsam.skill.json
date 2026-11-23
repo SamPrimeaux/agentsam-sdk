@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-cms-ready-creation",
+  "name": "AgentSam CMS-Ready Creation",
+  "description": "Prepare independent web/app Canvas work for an optional full-stack CMS theme conversion without creating or publishing a site by default.",
+  "package": "@inneranimalmedia/agentsam-sdk",
+  "slash": {
+    "suggested": "/cms-ready-creation"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "schema": "agentsam.app.v1",
+  "schema": "agentsam.package.v1",
   "id": "product-studio",
   "name": "Product Studio",
   "role": "embedded-app",
@@ -116,5 +116,9 @@
       "tkt_a6482217d8ca4be4",
       "tkt_f7caf8bc4f124de8"
     ]
-  }
+  },
+  "kind": "module",
+  "type": "module",
+  "owner_app_id": "ecommerce-cms-agentsam",
+  "installable": false
 }

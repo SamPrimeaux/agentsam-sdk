@@ -8,10 +8,10 @@ import { studioNavigationProjection } from './studio-navigation.mjs';
 test('navigation exposes configured installations only and preserves product identity from manifests', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'agentsam-navigation-'));
   try {
-    for (const [id, name, version] of [['local-studio', 'Custom host', '9.0.0'], ['cad-creator', 'CAD product', '4.2.1'], ['agentsam-copro-studio', 'Excluded product', '1.0.0']]) {
+    for (const [id, name, version] of [['local-studio', 'Custom host', '9.0.0'], ['cad-creator', 'CAD product', '4.2.1'], ['moviemode', 'Excluded product', '1.0.0']]) {
       const folder = path.join(root, 'apps', id);
       mkdirSync(folder, { recursive: true });
-      writeFileSync(path.join(folder, 'agentsam.app.json'), JSON.stringify({ id, name, version, package: '@example/' + id }));
+      writeFileSync(path.join(folder, 'agentsam.app.json'), JSON.stringify({ schema:'agentsam.app.v1', kind:'app', id, name, version, package: '@example/' + id }));
     }
     const host = path.join(root, 'host.json');
     writeFileSync(host, JSON.stringify({ app_id: 'local-studio', included_apps: ['cad-creator'] }));
@@ -62,8 +62,8 @@ test('one Products route with Create and bundled Completeful discovered from man
   assert.equal(products?.children.find(item=>item.id === 'create')?.label, 'Create');
   assert.equal(data.primary.find(item=>item.id === 'media')?.label, 'Library');
   const supplier = data.apps.find(item=>item.id === 'completeful');
-  assert.equal(supplier?.provenance,'ecommerce-bundled-manifest');
-  assert.equal(supplier?.href,'/admin/products/create?app=completeful');
+  assert.equal(supplier, undefined, 'Completeful is a provider integration, not a separately installed app');
+  assert.ok(data.channels.find(item => item.id === 'audience')?.children.some(item => item.id === 'growth'));
 });
 
 

@@ -1,5 +1,5 @@
 {
-  "schema": "agentsam.app.v1",
+  "schema": "agentsam.package.v1",
   "id": "completeful",
   "name": "Completeful",
   "role": "provider-app",
@@ -72,5 +72,10 @@
     "placement": "apps",
     "label": "Completeful",
     "icon": "products"
-  }
+  },
+  "kind": "provider",
+  "type": "integration",
+  "owner_app_id": "ecommerce-cms-agentsam",
+  "installable": false,
+  "plugin_key": "completeful"
 }
