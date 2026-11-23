@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {prepareCanvasDirections,executeCanvasGeneration,validateGeneratedArtboard} from './work-canvas-generation.js';
+import {prepareCanvasDirections,executeCanvasGeneration,normalizeCanvasGenerationSelection,validateGeneratedArtboard} from './work-canvas-generation.js';
 
 const directions=Array.from({length:4},(_,i)=>({id:'direction-'+i,title:'Direction '+i,
   description:'A distinct compositional direction number '+i,creativeIntent:'A purposeful creative intention number '+i}));
@@ -13,6 +13,16 @@ const plan={name:'Notebook',tokens:{color:'#191919'},pages:[
 const board=id=>({id,background:'#fff',nodes:[{id:id+'_title',type:'text',name:'Title',x:20,y:20,
   width:400,height:60,text:id==='home'?'Notebook':'About',style:{fontSize:40,color:'#191919'}}]});
 const run={id:'run_test',provider:'openai',model_id:'gpt-5.4-mini',direction_id:'direction-0'};
+test('artboard contextual selection expands to its node subtree without widening to other artboards',()=>{
+  const document={artboards:[
+    {id:'board_home',nodes:[{id:'node_hero',children:[{id:'node_title',children:[]}]}]},
+    {id:'board_about',nodes:[{id:'node_about',children:[]}]},
+  ]};
+  assert.deepEqual(normalizeCanvasGenerationSelection(['board_home'],document),['node_hero','node_title']);
+  assert.deepEqual(normalizeCanvasGenerationSelection(['node_title'],document),['node_title']);
+  assert.deepEqual(normalizeCanvasGenerationSelection(['board_home','node_title'],document),['node_hero','node_title']);
+  assert.deepEqual(normalizeCanvasGenerationSelection(['board_empty'],{artboards:[{id:'board_empty',nodes:[]}]}),[]);
+});
 function provider(outputs,{onRequest,credential=true}={}) {
   const calls=[];
   return {calls, resolveCredential:async()=>credential?{value:'test-only-credential',source:'user_vault'}:null,

@@ -18,10 +18,20 @@ is built into the helper. It inherits `--nav-*` tokens; other hosts can supply
 `--mini-surface`, `--mini-text`, `--mini-muted`, `--mini-border`, and `--mini-accent`.
 
 Selections are bounded descriptive DOM context and never authorize edits. Input
-values are withheld. Cross-origin and sandboxed iframe contents are not inspected;
-their host frame may be selected as a contextual resource. Mark semantic ancestors
+values are withheld. Cross-origin and sandboxed iframe contents are not inspected
+unless the frame explicitly implements the bounded `agentsam-browser` postMessage
+protocol; otherwise its host frame may be selected as context. Mark semantic ancestors
 with `data-agentsam-resource` and excluded controls with `data-annotation-control`.
-Local Studio stages the annotation in its active conversation draft for review.
+
+A specialist host can optionally mark its active surface with
+`data-agentsam-resource-host`, `data-agentsam-resource-id`, and
+`data-agentsam-resource-kind`; `data-agentsam-resource-revision` and
+`data-agentsam-resource-app-id` are optional. `MiniAgentSam` returns this as
+`selection.resource` so the host can route the prompt to its own authenticated
+editing API. `onSubmit` may return a short receipt string for the helper to display;
+otherwise it reports that the annotation was staged in the chat draft. These attributes are context only, never authorization or mutation
+permission. Local Studio stages ordinary annotations in the active conversation
+for review; specialist adapters may claim a matching resource prompt.
 
 
 ## Conversation and runtime surfaces

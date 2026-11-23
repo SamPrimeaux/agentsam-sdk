@@ -218,9 +218,20 @@ function allNodes(document) {
   for (const board of document.artboards || []) walk(board.nodes);
   return nodes;
 }
-function normalizeSelection(selection) {
+export function normalizeCanvasGenerationSelection(selection, document) {
   const rows = Array.isArray(selection) ? selection : selection ? [selection] : [];
-  return rows.map(row=> typeof row==='string'?row:row.nodeId||row.node_id||row.id).filter(Boolean);
+  const boards = new Map((document?.artboards || []).map(board => [board.id, board]));
+  const normalized = [];
+  for (const row of rows) {
+    const id = typeof row === 'string' ? row : row.nodeId || row.node_id || row.id;
+    if (!id) continue;
+    const board = boards.get(id);
+    // The API accepts artboard IDs as contextual selections. The generation
+    // engine edits nodes, so expand an artboard to its complete node subtree.
+    if (board) normalized.push(...allNodes({ artboards: [board] }).keys());
+    else normalized.push(id);
+  }
+  return [...new Set(normalized)];
 }
 function replaceNodes(document, patches) {
   const replace = nodes => nodes.map(node => patches.has(node.id) ? clone(patches.get(node.id)) :
@@ -279,7 +290,7 @@ export async function executeCanvasGeneration({
   let current=clone(document);
   const instruction=clean(run.instruction).slice(0,8000);
   if (instruction && current.artboards?.some(board=>board.nodes?.length)) {
-    const existing=allNodes(current), selection=normalizeSelection(run.selection);
+    const existing=allNodes(current), selection=normalizeCanvasGenerationSelection(run.selection,current);
     if (selection.some(id=>!existing.has(id))) throw fail('canvas_selection_not_found',404);
     const allowed=new Set(selection.length?selection:[...existing.keys()]);
     const result=await model.json(instructions+'\nReturn {"patches":[Node],"summary":"what changed"}. Replace only requested nodes, preserving each id and unrequested properties. For selected nodes modify only that selection. Do not add or remove nodes outside selected subtrees.',

@@ -27,6 +27,33 @@ test('mini composer exposes compact, focused, expandable review chrome', async (
   assert.match(css, /\.mini-agentsam-send svg[\s\S]*transform: none/);
 });
 
+test('miniAgentSam preserves host resource identity and specialist handoff context', async () => {
+  const mini = await readFile(new URL('../src/agent/MiniAgentSam.tsx', import.meta.url), 'utf8');
+  const host = await readFile(new URL('../../../apps/local-studio/frontend/agentsam/AnnotationHelper.tsx', import.meta.url), 'utf8');
+  const canvas = await readFile(new URL('../../../apps/local-studio/frontend/src/components/workbench/canvas-entry-stage.tsx', import.meta.url), 'utf8');
+  const stage = await readFile(new URL('../../../apps/local-studio/frontend/src/components/workbench/canvas/stage.tsx', import.meta.url), 'utf8');
+  const sideStage = await readFile(new URL('../../../apps/local-studio/frontend/src/components/workbench/side-stage.tsx', import.meta.url), 'utf8');
+  const canvasCss = await readFile(new URL('../../../apps/local-studio/frontend/src/components/workbench/canvas/canvas.css', import.meta.url), 'utf8');
+
+  assert.match(mini, /data-agentsam-resource-host/);
+  assert.match(mini, /readHostResource\(selected\)/);
+  assert.match(mini, /readHostResource\(frame\)/);
+  assert.match(mini, /iframe\.cv-native-html/);
+  assert.match(host, /agentsam:design-workspace-prompt/);
+  assert.match(host, /Selected \$\{selection\.tag\}: \$\{selection\.id\}/);
+  assert.match(host, /data-agentsam-annotation-scope/);
+  assert.match(sideStage, /data-agentsam-annotation-scope/);
+  assert.match(stage, /data-agentsam-resource-kind="design-canvas"/);
+  assert.match(stage, /data-agentsam-resource-revision=\{revision\}/);
+  assert.match(stage, /withBrowserAnnotationBridge/);
+  assert.match(host, /DESIGN_WORKSPACE_PROMPT_EVENT/);
+  assert.match(canvas, /DESIGN_WORKSPACE_PROMPT_EVENT/);
+  assert.match(canvas, /startRunRef\.current/);
+  assert.doesNotMatch(canvas, /cv-assistant-body|cv-mini-assistant|assistantMode|<Composer targetId=/);
+  assert.doesNotMatch(canvasCss, /cv-assistant-body|cv-mini-assistant|cv-assistant-modes|cv-expanded-assistant/);
+  assert.match(canvas, /<AnnotationToggle className=\"cv-icon-button\"\/>/);
+});
+
 test('Local Studio brand uses the canonical packaged desktop icon', async () => {
   const brand = await readFile(
     new URL('../../../apps/local-studio/frontend/agentsam/brand.ts', import.meta.url),

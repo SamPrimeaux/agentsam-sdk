@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MousePointer2, ArrowUp } from 'lucide-react';
-import { AgentComposer, MiniAgentSam } from '@inneranimalmedia/agentsam-workbench/agent';
+import { AgentComposer, MiniAgentSam, type AnnotationSelection } from '@inneranimalmedia/agentsam-workbench/agent';
 import '@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css';
 import { useWorkStore, type ComposerAttachment } from '@/lib/work/store';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
@@ -9,14 +9,24 @@ import { ComposerLibraryPicker } from '@/components/workbench/composer-library-p
 import { IconAction } from '@/components/ui/icon-action';
 import { PluginPicker } from './PluginPicker';
 
-export function AnnotationToggle() {
+export const DESIGN_WORKSPACE_PROMPT_EVENT = 'agentsam:design-workspace-prompt' as const;
+export type DesignWorkspacePromptRequest = {
+  resourceId: string;
+  revision: string;
+  selectionId: string;
+  prompt: string;
+  handle?: () => Promise<void>;
+  error?: string;
+};
+
+export function AnnotationToggle({className=""}:{className?:string}={}) {
   const [active, setActive] = useState(false);
   useEffect(() => {
     const update = (event: Event) => setActive(Boolean((event as CustomEvent<{ selecting: boolean }>).detail?.selecting));
     window.addEventListener('agentsam:annotation-state', update);
     return () => window.removeEventListener('agentsam:annotation-state', update);
   }, []);
-  return <IconAction type="button" className="as-nav-button as-side-stage-annotation" data-annotation-control="" data-active={active ? 'true' : 'false'} aria-pressed={active} label={active ? 'Stop annotating' : 'Annotate page'} hint={active ? 'Stop annotating (Esc)' : 'Select an element to annotate'} onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))}><MousePointer2 size={18} /></IconAction>;
+  return <IconAction type="button" className={`as-nav-button as-side-stage-annotation ${className}`.trim()} data-annotation-control="" data-active={active ? 'true' : 'false'} aria-pressed={active} label={active ? 'Stop annotating' : 'Annotate page'} hint={active ? 'Stop annotating (Esc)' : 'Select an element to annotate'} onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))}><MousePointer2 size={18} /></IconAction>;
 }
 export function AnnotationHelper() {
   const [selecting, setSelecting] = useState(false);
@@ -54,16 +64,36 @@ export function AnnotationHelper() {
       event.currentTarget.value = '';
       void attachMiniFiles(files);
     }}/>
-    <MiniAgentSam selecting={selecting} onSelectingChange={setSelecting} onSubmit={async (prompt, selection) => {
+    <MiniAgentSam selecting={selecting} onSelectingChange={setSelecting} scope={() =>
+      Array.from(document.querySelectorAll<HTMLElement>('[data-agentsam-annotation-scope]')).find(element => element.getClientRects().length > 0) || null
+    } onSubmit={async (prompt, selection: AnnotationSelection) => {
     const store = useWorkStore.getState();
+    // A specialist editor may claim this contextual prompt and execute it through
+    // its own authenticated domain API. The shared MiniAgentSam remains the only UI.
+    if (selection.resource?.kind === 'design-canvas' && selection.resource.appId === 'agentsam-local-studio' && selection.resource.revision && !miniAttachments.length) {
+      const request: DesignWorkspacePromptRequest = {
+        resourceId: selection.resource.id,
+        revision: selection.resource.revision,
+        selectionId: selection.id,
+        prompt,
+      };
+      window.dispatchEvent(new CustomEvent(DESIGN_WORKSPACE_PROMPT_EVENT, { detail: request }));
+      if (request.handle) { await request.handle(); return 'Canvas edit started.'; }
+      if (request.error) throw new Error(request.error);
+    }
     const id = store.activeChatId;
     if (!id) throw new Error('Open a conversation first.');
     // Keep the selected resource structured: the user's visible draft stays clean.
     // Sending the main chat attaches this context to the message envelope.
     store.setPendingAnnotations(id, items => [...items, {
       id: crypto.randomUUID(), label: selection.label, page: selection.page,
-      tag: selection.tag, text: selection.text, point: selection.point,
-      object: selection.object,
+      tag: selection.tag,
+      text: [
+        selection.resource ? `Resource ${selection.resource.kind}: ${selection.resource.id}${selection.resource.revision ? ` @ revision ${selection.resource.revision}` : ''}` : '',
+        `Selected ${selection.tag}: ${selection.id}`,
+        selection.text,
+      ].filter(Boolean).join(' · '),
+      point: selection.point, object: selection.object,
     }].slice(-8));
     if (miniAttachments.length) {
       store.setPendingComposerAttachments(id, items => [...items, ...miniAttachments].slice(0, 20));
