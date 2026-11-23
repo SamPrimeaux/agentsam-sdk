@@ -28,10 +28,6 @@ class CadJobError(RuntimeError):
 def _record(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise CadJobError("cad_job_response_invalid")
-    for key in ("job", "result", "data"):
-        nested = value.get(key)
-        if isinstance(nested, dict) and (nested.get("id") or nested.get("job_id")):
-            return nested
     if value.get("ok") is False:
         error = value.get("error")
         if isinstance(error, dict):
@@ -39,6 +35,10 @@ def _record(value: Any) -> dict[str, Any]:
                               str(error.get("message") or error.get("code")),
                               details=error.get("details") if isinstance(error.get("details"), dict) else {})
         raise CadJobError(str(error or "cad_job_operation_failed"))
+    for key in ("job", "result", "data"):
+        nested = value.get(key)
+        if isinstance(nested, dict) and (nested.get("id") or nested.get("job_id")):
+            return nested
     if value.get("id") or value.get("job_id"):
         return value
     raise CadJobError("cad_job_identity_missing")

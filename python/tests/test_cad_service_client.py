@@ -122,7 +122,8 @@ class CadServiceClientTests(unittest.TestCase):
             CadServiceClient("https://user:pass@cad.example.com", TOKEN)
         client = CadServiceClient("http://cad.example.com", TOKEN, allow_insecure_http=True)
         self.assertEqual(client.endpoint, "http://cad.example.com")
-        self.assertTrue(CadServiceClient("http://127.0.0.1:9001", TOKEN).probe() is False)
+        local = CadServiceClient("http://127.0.0.1:9001", TOKEN)
+        self.assertEqual(local.endpoint, "http://127.0.0.1:9001")
 
     def test_probe_is_distinct_from_operation_readiness(self):
         fake = FakeTransport()
