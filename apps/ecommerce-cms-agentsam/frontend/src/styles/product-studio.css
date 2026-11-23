@@ -2648,6 +2648,13 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
     border-radius:16px 16px 0 0;
   }
 }
+/* Keep the software keyboard and actual editing controls unobstructed. */
+@media (max-width:760px) {
+  .product-studio-shell:has(input:focus,textarea:focus,select:focus,[contenteditable="true"]:focus)
+    .ps-studio-launch-dock .as-nav-launch-dock { display:none; }
+  .product-studio-shell:has(input:focus,textarea:focus,select:focus,[contenteditable="true"]:focus)
+    .ps-toolpanel:not([hidden]) { bottom:env(safe-area-inset-bottom,0px); }
+}
 @media (prefers-reduced-motion: reduce) {
   .product-studio-shell .ps-studio-launch-dock button { transition:none; }
 }
