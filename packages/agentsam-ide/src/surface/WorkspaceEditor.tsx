@@ -24,6 +24,8 @@ export type WorkspaceEditorProps = {
   /** Connections and provisioning are owned by the embedding host, not Monaco. */
   onReconnect?: () => void;
   onConnectionSettings?: () => void;
+  /** Host-owned source context for the agent; never includes OAuth credentials. */
+  onActiveFileChange?: (file: {path:string;version:string}|null) => void;
   /** Host-owned full Markdown renderer; avoids bundling an untrusted parser into the portable IDE. */
   renderMarkdown?: (content:string) => ReactNode;
   onExit?: () => void;
@@ -32,7 +34,7 @@ export type WorkspaceEditorProps = {
 type Tab = WorkspaceFile & { value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string; preview?: WorkspacePreview };
 type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'Changes' | 'Snapshot' | 'References' | 'Dependencies';
 
-export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown, onReconnect, onConnectionSettings}: WorkspaceEditorProps) {
+export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false, renderMarkdown, onReconnect, onConnectionSettings, onActiveFileChange}: WorkspaceEditorProps) {
   const [tree,setTree]=useState<WorkspaceEntry[]>([]);
   const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
   const [tabs,setTabs]=useState<Tab[]>([]);
@@ -316,6 +318,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     void open(problem.path);
     setPanel('Problems');
   };
+  useEffect(() => {
+    onActiveFileChange?.(current ? {path:current.path,version:current.version} : null);
+  }, [onActiveFileChange, current?.path, current?.version]);
   const dirty=current&&current.status!=='saved';
   return <div className="asi-ide">
     <header className="asi-toolbar">
