@@ -55,7 +55,7 @@ MODEL = []
 OPENINGS = []
 ISSUES = []
 ROOMS = []
-DOC = None
+DOC: Any = None
 GROUPS = {}
 
 def mm(x):
