@@ -27,6 +27,7 @@ test('portable package identity does not impersonate an installed application', 
     root: ROOT,
     cwd: path.join(ROOT, 'packages/agentsam-database-editor/src'),
   });
-  assert.equal(context.app_id, 'database-editor');
+  assert.equal(context.app_id, null);
   assert.equal(context.host_origin, null);
+  assert.equal(context.source, null);
 });
