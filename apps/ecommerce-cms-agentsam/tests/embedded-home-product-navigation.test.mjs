@@ -8,6 +8,8 @@ test('AgentSam leading controls reserve the hamburger hit target', () => {
   const css = read('../../local-studio/frontend/agentsam/shell.css');
   assert.match(css, /#agentsam-console-leading-slot:not\(:empty\)[^}]+--agentsam-leading-clearance/s);
   assert.match(css, /--agentsam-leading-clearance:\s*50px/);
+  assert.match(css, /#agentsam-console-leading-slot:not\(:empty\)[^}]*margin-right:auto/s);
+  assert.match(css, /justify-content:flex-start/);
 });
 
 test('Home iframe actually shrinks with Side Stage and its content responds to available width', () => {
