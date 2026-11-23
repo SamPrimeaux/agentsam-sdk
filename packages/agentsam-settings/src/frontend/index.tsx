@@ -924,6 +924,15 @@ function PluginCustomizeView({
     row?.setupStatus === "connected" && row.enabled && row.healthStatus === "healthy" &&
     (row.installationKey !== "catalog-v1" || row.toolCount > 0)
   );
+  const pendingWorkspaceDeepLink = useRef<string|null>(typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("plugin"));
+  useEffect(() => {
+    const key = pendingWorkspaceDeepLink.current;
+    if(!key)return;
+    const row = plugins.find(item=>item.pluginKey === key || item.id === key);
+    if(!row || !isConnected(row))return;
+    pendingWorkspaceDeepLink.current = null;
+    void openWorkspace(row.id);
+  }, [plugins]);
   const installedState = (row: SettingsPlugin) => isConnected(row)
     ? "Connected" : row.setupStatus === "connected" && row.installationKey === "catalog-v1"
       ? "Verify tools" : row.setupStatus === "connected" ? "Check connection" : "Needs connection";
