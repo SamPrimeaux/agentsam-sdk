@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { discoverFreeCad } from './discovery';
+import { discoverFreeCadHost, freeCadAdapterCommand, freeCadHostEnvironment } from '../../runtime/freecad-host.mjs';
 import { probeDockerServiceHealth, executeFreeCadDocker } from './docker-executor';
 
 const execFileAsync = promisify(execFile);
@@ -98,41 +98,11 @@ export async function executeFreeCadBuild({
   }
   const adapterPath = resolveFreeCadAdapter();
 
-  // Find FreeCAD python environment
-  let pythonBin: string | null = null;
-  let libDir: string | null = null;
-
-  if (adapterPath) {
-    const { binary } = discoverFreeCad(process.env);
-    if (binary && process.platform === 'darwin') {
-      const appRoot = binary.includes('.app') ? binary.split('.app')[0] + '.app' : null;
-      if (appRoot) {
-        const p = path.join(appRoot, 'Contents/Resources/bin/python');
-        const l = path.join(appRoot, 'Contents/Resources/lib');
-        if (fs.existsSync(p)) {
-          pythonBin = p;
-          libDir = l;
-        }
-      }
-    }
-
-    if (!pythonBin) {
-      const candidates = [
-        '/Applications/FreeCAD.app/Contents/Resources/bin/python',
-        '/usr/lib/freecad/bin/python',
-        '/usr/bin/python3',
-      ];
-      for (const c of candidates) {
-        if (fs.existsSync(c)) {
-          pythonBin = c;
-          break;
-        }
-      }
-    }
-  }
+  // One host-selection algorithm for every caller (src/lib/cad/freecad-host.js, mirrored by the Python SDK).
+  const host = adapterPath ? discoverFreeCadHost({ env: process.env }) : null;
 
   // If local FreeCAD python / adapter is missing, delegate to containerized Docker service
-  if (!pythonBin || !adapterPath) {
+  if (!host || !adapterPath) {
     try {
       const dockerHealth = await probeDockerServiceHealth();
       if (dockerHealth.available && dockerHealth.tools?.freecad?.installed) {
@@ -182,15 +152,13 @@ export async function executeFreeCadBuild({
 
   fs.writeFileSync(requestPath, JSON.stringify(request, null, 2), 'utf8');
 
-  const env = { ...process.env };
-  if (libDir) {
-    env.PYTHONPATH = [libDir, env.PYTHONPATH].filter(Boolean).join(path.delimiter);
-  }
+  const env = freeCadHostEnvironment(host);
+  const [command, ...commandArgs] = freeCadAdapterCommand(host, adapterPath, requestPath, 'build');
 
   try {
     const { stdout, stderr } = await execFileAsync(
-      pythonBin,
-      [adapterPath, '--operation', 'build', '--request', requestPath],
+      command,
+      commandArgs,
       {
         cwd: tmpDir,
         env,

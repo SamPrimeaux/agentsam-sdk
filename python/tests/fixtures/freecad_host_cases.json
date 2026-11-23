@@ -1,0 +1,30 @@
+{
+  "_doc": "Replayed by python/tests/test_cad_native.py and test/cad-freecad-host.test.mjs so the two discovery implementations cannot drift. `files` is the set of paths that exist; `which` maps PATH lookups.",
+  "cases": [
+    {"name": "macOS bundle python wins over bundle FreeCADCmd", "platform": "darwin", "env": {"HOME": "/Users/u"},
+     "files": ["/Applications/FreeCAD.app/Contents/Resources/bin/python", "/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd"], "which": {},
+     "expect": {"executable": "/Applications/FreeCAD.app/Contents/Resources/bin/python", "mode": "python", "platform": "darwin", "source": "native_bundle", "library_dir": "/Applications/FreeCAD.app/Contents/Resources/lib"}},
+    {"name": "macOS 1.x bundle with only lowercase freecadcmd", "platform": "darwin", "env": {"HOME": "/Users/u"},
+     "files": ["/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd"], "which": {},
+     "expect": {"executable": "/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd", "mode": "command", "platform": "darwin", "source": "native_bundle", "library_dir": "/Applications/FreeCAD.app/Contents/Resources/lib"}},
+    {"name": "macOS user-level ~/Applications install", "platform": "darwin", "env": {"HOME": "/Users/u"},
+     "files": ["/Users/u/Applications/FreeCAD.app/Contents/Resources/bin/python"], "which": {},
+     "expect": {"executable": "/Users/u/Applications/FreeCAD.app/Contents/Resources/bin/python", "mode": "python", "platform": "darwin", "source": "native_bundle", "library_dir": "/Users/u/Applications/FreeCAD.app/Contents/Resources/lib"}},
+    {"name": "AGENTSAM_FREECAD_HOME beats the system bundle", "platform": "darwin", "env": {"HOME": "/Users/u", "AGENTSAM_FREECAD_HOME": "/opt/fc"},
+     "files": ["/opt/fc/bin/python", "/Applications/FreeCAD.app/Contents/Resources/bin/python"], "which": {},
+     "expect": {"executable": "/opt/fc/bin/python", "mode": "python", "platform": "darwin", "source": "native_bundle", "library_dir": "/opt/fc/lib"}},
+    {"name": "Linux lib64 layout uses system python3", "platform": "linux", "env": {},
+     "files": ["/usr/lib64/freecad/lib/FreeCAD.so", "/usr/bin/python3"], "which": {"python3": "/usr/bin/python3"},
+     "expect": {"executable": "/usr/bin/python3", "mode": "python", "platform": "linux", "source": "system_python", "library_dir": "/usr/lib64/freecad/lib"}},
+    {"name": "Linux with only freecadcmd on PATH is command mode", "platform": "linux", "env": {},
+     "files": ["/usr/bin/freecadcmd"], "which": {"freecadcmd": "/usr/bin/freecadcmd"},
+     "expect": {"executable": "/usr/bin/freecadcmd", "mode": "command", "platform": "linux", "source": "path", "library_dir": null}},
+    {"name": "explicit AGENTSAM_FREECAD_PYTHON override", "platform": "linux", "env": {"AGENTSAM_FREECAD_PYTHON": "/custom/py", "AGENTSAM_FREECAD_LIB": "/custom/lib"},
+     "files": ["/custom/py", "/usr/bin/freecadcmd"], "which": {"freecadcmd": "/usr/bin/freecadcmd"},
+     "expect": {"executable": "/custom/py", "mode": "python", "platform": "linux", "source": "environment", "library_dir": "/custom/lib"}},
+    {"name": "explicit AGENTSAM_FREECAD_CMD override", "platform": "linux", "env": {"AGENTSAM_FREECAD_CMD": "/custom/fcmd"},
+     "files": ["/custom/fcmd"], "which": {},
+     "expect": {"executable": "/custom/fcmd", "mode": "command", "platform": "linux", "source": "environment", "library_dir": null}},
+    {"name": "nothing installed", "platform": "linux", "env": {}, "files": [], "which": {}, "expect": null}
+  ]
+}

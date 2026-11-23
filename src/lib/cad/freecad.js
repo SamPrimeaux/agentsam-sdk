@@ -4,10 +4,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runProcess } from '../../security/process.js';
 import { discoverFreeCad, freeCadStatus } from './discovery.js';
+import { discoverFreeCadHost, freeCadAdapterCommand, freeCadHostEnvironment } from './freecad-host.js';
 import { probeDockerServiceHealth, executeFreeCadDocker } from './docker-executor.js';
 
 const sdkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-export const FREECAD_ADAPTER_PATH = path.join(sdkRoot, 'services/cad/freecad/adapter.py');
+// The adapter ships inside the Python SDK package (wheel, sdist and npm alike): one home, no copies.
+export const FREECAD_ADAPTER_PATH = path.join(sdkRoot, 'python/agentsam_sdk/cad/adapters/freecad.py');
 export const FREECAD_RESULT_PREFIX = 'AGENTSAM_RESULT=';
 export const FREECAD_EXPORT_FORMATS = Object.freeze(['step', 'stp', 'iges', 'brep', 'stl']);
 
@@ -20,56 +22,31 @@ function isFile(value) {
 }
 
 /**
- * Discovers the Python executable with FreeCAD / OpenCASCADE bindings.
+ * Resolves the FreeCAD host (python or FreeCADCmd). An explicit `freecadBin` narrows discovery to
+ * that install; everything else follows the same algorithm as the Python SDK (freecad-host.js).
  */
-export function discoverFreeCadPython({
-  freecadBin,
-  env = process.env,
-  platform = process.platform,
-} = {}) {
-  // 1. Direct explicit environment override
-  if (env.AGENTSAM_FREECAD_PYTHON && isFile(env.AGENTSAM_FREECAD_PYTHON)) {
-    return {
-      pythonBin: env.AGENTSAM_FREECAD_PYTHON,
-      libDir: env.AGENTSAM_FREECAD_LIB || null,
-    };
+export function resolveFreeCadHost({ freecadBin, env = process.env, platform = process.platform } = {}) {
+  const scoped = { ...env };
+  if (freecadBin) {
+    const bundle = String(freecadBin).match(/^(.*?\.app)[\\/]/);
+    const name = path.basename(String(freecadBin));
+    if (bundle) scoped.AGENTSAM_FREECAD_HOME = path.join(bundle[1], 'Contents', 'Resources');
+    else if (/^freecadcmd/i.test(name)) scoped.AGENTSAM_FREECAD_CMD = freecadBin;
+    else if (/^python/i.test(name)) scoped.AGENTSAM_FREECAD_PYTHON = freecadBin;
+    else scoped.AGENTSAM_FREECAD_HOME = path.dirname(path.dirname(freecadBin));
   }
+  return discoverFreeCadHost({ env: scoped, platform });
+}
 
-  // 2. Discover FreeCAD base installation
-  const { binary } = discoverFreeCad({ freecadBin, env, platform });
-  if (binary) {
-    if (platform === 'darwin') {
-      const appRoot = binary.includes('.app') ? binary.split('.app')[0] + '.app' : null;
-      if (appRoot) {
-        const bundledPython = path.join(appRoot, 'Contents/Resources/bin/python');
-        const bundledLib = path.join(appRoot, 'Contents/Resources/lib');
-        if (isFile(bundledPython)) {
-          return { pythonBin: bundledPython, libDir: bundledLib };
-        }
-      }
-    }
-  }
-
-  // 3. Fallback candidates on system
-  const candidates = [
-    ...(platform === 'darwin'
-      ? ['/Applications/FreeCAD.app/Contents/Resources/bin/python']
-      : []),
-    ...(platform === 'linux'
-      ? ['/usr/lib/freecad/bin/python', '/usr/bin/python3']
-      : []),
-    ...(platform === 'win32'
-      ? [path.join(env.ProgramFiles || 'C:\\Program Files', 'FreeCAD', 'bin', 'python.exe')]
-      : []),
-  ];
-
-  for (const c of candidates) {
-    if (isFile(c)) {
-      return { pythonBin: c, libDir: null };
-    }
-  }
-
-  return { pythonBin: null, libDir: null };
+/**
+ * Compatibility view of resolveFreeCadHost for callers that only want a FreeCAD-capable interpreter.
+ * A FreeCADCmd-only install has no interpreter to hand back; use resolveFreeCadHost for that.
+ */
+export function discoverFreeCadPython({ freecadBin, env = process.env, platform = process.platform } = {}) {
+  const host = resolveFreeCadHost({ freecadBin, env, platform });
+  return host?.mode === 'python'
+    ? { pythonBin: host.executable, libDir: host.libraryDir }
+    : { pythonBin: null, libDir: null };
 }
 
 export function parseFreeCadResult(stdout) {
@@ -97,8 +74,8 @@ export async function freeCadBuild({
   cwd = process.cwd(),
   runProcessImpl = runProcess,
 } = {}) {
-  const { pythonBin, libDir } = discoverFreeCadPython({ freecadBin });
-  if (!pythonBin || !fs.existsSync(FREECAD_ADAPTER_PATH)) {
+  const host = resolveFreeCadHost({ freecadBin });
+  if (!host || !fs.existsSync(FREECAD_ADAPTER_PATH)) {
     try {
       const dockerHealth = await probeDockerServiceHealth();
       if (dockerHealth.available && dockerHealth.tools?.freecad?.installed) {
@@ -138,16 +115,14 @@ export async function freeCadBuild({
 
   fs.writeFileSync(requestPath, JSON.stringify(request, null, 2), { mode: 0o600 });
 
-  const env = { ...process.env };
-  if (libDir) {
-    env.PYTHONPATH = [libDir, env.PYTHONPATH].filter(Boolean).join(path.delimiter);
-  }
+  const env = freeCadHostEnvironment(host);
+  const [command, ...commandArgs] = freeCadAdapterCommand(host, FREECAD_ADAPTER_PATH, requestPath, 'build');
 
   const started = Date.now();
   try {
     const proc = await runProcessImpl(
-      pythonBin,
-      [FREECAD_ADAPTER_PATH, '--operation', 'build', '--request', requestPath],
+      command,
+      commandArgs,
       {
         cwd,
         env,
@@ -193,9 +168,9 @@ export async function freeCadInspect({
   cwd = process.cwd(),
   runProcessImpl = runProcess,
 } = {}) {
-  const { pythonBin, libDir } = discoverFreeCadPython({ freecadBin });
-  if (!pythonBin) {
-    throw new Error('FreeCAD Python environment is not available');
+  const host = resolveFreeCadHost({ freecadBin });
+  if (!host) {
+    throw new Error('FreeCAD is not available; install FreeCAD or set AGENTSAM_FREECAD_PYTHON / AGENTSAM_FREECAD_CMD');
   }
 
   const inputPath = path.resolve(cwd, input);
@@ -213,16 +188,14 @@ export async function freeCadInspect({
 
   fs.writeFileSync(requestPath, JSON.stringify(request, null, 2), { mode: 0o600 });
 
-  const env = { ...process.env };
-  if (libDir) {
-    env.PYTHONPATH = [libDir, env.PYTHONPATH].filter(Boolean).join(path.delimiter);
-  }
+  const env = freeCadHostEnvironment(host);
+  const [command, ...commandArgs] = freeCadAdapterCommand(host, FREECAD_ADAPTER_PATH, requestPath, 'inspect');
 
   const started = Date.now();
   try {
     const proc = await runProcessImpl(
-      pythonBin,
-      [FREECAD_ADAPTER_PATH, '--operation', 'inspect', '--request', requestPath],
+      command,
+      commandArgs,
       {
         cwd,
         env,

@@ -94,8 +94,8 @@ export function generateCadDocker(opts = {}) {
 
   const packages = ['python3', 'ca-certificates', 'passwd', ...new Set(tools.flatMap(tool => APT_PACKAGES[tool]))];
   const q = JSON.stringify;
-  const copyLines = ['COPY server.py /srv/server.py'];
-  if (tools.includes('freecad')) copyLines.push('COPY freecad/ /srv/freecad/');
+  // server.py imports agentsam_sdk.cad (the one native-host implementation, adapters included).
+  const copyLines = ['COPY server.py /srv/server.py', 'COPY agentsam_sdk/ /srv/agentsam_sdk/'];
   if (tools.includes('blender')) copyLines.push('COPY blender/ /srv/blender/');
   const provision = [];
   if (tools.includes('ifc')) {
@@ -227,13 +227,12 @@ export function stageCadContext(versionDir, opts = {}) {
   fs.mkdirSync(context, { recursive: true });
   fs.copyFileSync(path.join(sdkRoot, CAD_SERVER_FILE), path.join(context, 'server.py'));
   const tools = opts.tools ? normalizeCadTools(opts.tools) : [];
-  if (tools.includes('freecad')) {
-    const freecadAdapter = path.join(sdkRoot, 'services/cad/freecad/adapter.py');
-    if (fs.existsSync(freecadAdapter)) {
-      fs.mkdirSync(path.join(context, 'freecad'), { recursive: true });
-      fs.copyFileSync(freecadAdapter, path.join(context, 'freecad', 'adapter.py'));
-    }
-  }
+  const sdkCadSource = path.join(sdkRoot, 'python/agentsam_sdk/cad');
+  if (!fs.existsSync(sdkCadSource)) throw new Error(`SDK CAD module missing from this install: ${sdkCadSource}`);
+  const sdkStage = path.join(context, 'agentsam_sdk');
+  fs.mkdirSync(sdkStage, { recursive: true });
+  fs.writeFileSync(path.join(sdkStage, '__init__.py'), '"""Minimal agentsam_sdk package staged for the CAD service; only agentsam_sdk.cad ships here."""\n');
+  fs.cpSync(sdkCadSource, path.join(sdkStage, 'cad'), { recursive: true, filter: source => path.basename(source) !== '__pycache__' });
   if (tools.includes('media')) {
     fs.mkdirSync(path.join(context, 'provision'), { recursive: true });
     fs.copyFileSync(path.join(sdkRoot, 'services/cad/provision/install_node.py'), path.join(context, 'provision', 'install_node.py'));

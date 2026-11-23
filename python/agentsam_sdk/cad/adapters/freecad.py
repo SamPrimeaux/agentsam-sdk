@@ -15,14 +15,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Ensure FreeCAD C++ Python libraries are on path if running via standalone python
-for candidate in [
-    "/Applications/FreeCAD.app/Contents/Resources/lib",
-    "/usr/lib/freecad/lib",
-    "/usr/local/lib/freecad/lib",
-]:
-    if os.path.isdir(candidate) and candidate not in sys.path:
-        sys.path.insert(0, candidate)
+# The launcher puts FreeCAD's library directory on PYTHONPATH (FreeCADHost.environment() in the
+# Python SDK, freeCadHostEnvironment() in Node), so no install locations are baked in here.
+# AGENTSAM_FREECAD_LIB covers a hand-run `python freecad.py ...` against a custom install.
+_library = os.environ.get("AGENTSAM_FREECAD_LIB")
+if _library and os.path.isdir(_library) and _library not in sys.path:
+    sys.path.insert(0, _library)
 
 try:
     import FreeCAD

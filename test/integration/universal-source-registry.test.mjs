@@ -52,7 +52,7 @@ test('Python parser inventory is derived from argparse source and has all expect
   assert.equal(result.status,0,result.stderr);
   const parsed=JSON.parse(result.stdout);
   assert.deepEqual(parsed.commands.map(c=>c.words.join(' ')),[
-    'cad doctor','data agentsam-walk','data d1-bloat','doctor',
+    'cad build','cad doctor','data agentsam-walk','data d1-bloat','doctor',
     'repository inspect','repository inventory','repository scan-bloat',
   ]);
 });

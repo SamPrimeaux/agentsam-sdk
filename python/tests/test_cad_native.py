@@ -1,11 +1,15 @@
 """CAD engine discovery has explicit Darwin/Linux/Windows contract tests."""
+import json
 import os
+import subprocess
+import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from agentsam_sdk.cad import FreeCADHost, discover_freecad, probe_freecad
+from agentsam_sdk.cad import FreeCADHost, discover_freecad, freecad_adapter_path, probe_freecad
 
 
 class NativeCADTests(unittest.TestCase):
@@ -67,6 +71,105 @@ class NativeCADTests(unittest.TestCase):
         self.assertTrue(receipt["ready"])
         self.assertEqual(receipt["volume"], 24)
         self.assertIn("-c", run.call_args.args[0])
+
+
+    def test_command_mode_hands_adapter_its_argv_through_a_fixed_trampoline(self):
+        # FreeCADCmd rejects --operation/--request itself, so they must never be top-level argv.
+        host = FreeCADHost("/opt/fc/bin/FreeCADCmd", "command", "linux", "test")
+        adapter, request = "/srv/ad'apter\"; import os.py", "/tmp/r\nq.json"
+        command = host.adapter_command(adapter, request, operation="inspect")
+        self.assertEqual(command[:2], ["/opt/fc/bin/FreeCADCmd", "-c"])
+        self.assertEqual(len(command), 3)
+        self.assertNotIn("--operation", command)
+        captured, saved = {}, list(sys.argv)
+        fake = types.SimpleNamespace(run_path=lambda path, run_name: captured.update(
+            path=path, run_name=run_name, argv=list(sys.argv)))
+        try:
+            with patch.dict(sys.modules, {"runpy": fake}):
+                exec(command[2], {})
+        finally:
+            sys.argv[:] = saved
+        self.assertEqual(captured["path"], adapter)
+        self.assertEqual(captured["run_name"], "__main__")
+        self.assertEqual(captured["argv"], [adapter, "--operation", "inspect", "--request", request])
+
+    def test_python_mode_adapter_argv_is_direct(self):
+        host = FreeCADHost("/opt/fc/bin/python", "python", "linux", "test", "/opt/fc/lib")
+        self.assertEqual(
+            host.adapter_command("/srv/adapter.py", "/tmp/r.json"),
+            ["/opt/fc/bin/python", "/srv/adapter.py", "--operation", "build", "--request", "/tmp/r.json"],
+        )
+
+    def test_macos_user_level_bundle_and_lowercase_command_name(self):
+        home = "/Users/example/Applications/FreeCAD.app/Contents/Resources"
+        host = discover_freecad(
+            platform_name="darwin", environment={"HOME": "/Users/example"},
+            exists=lambda path: path == home + "/bin/python", which=lambda name: None,
+        )
+        self.assertEqual((host.executable, host.mode, host.library_dir), (home + "/bin/python", "python", home + "/lib"))
+        root = "/Applications/FreeCAD.app/Contents/Resources"
+        host = discover_freecad(
+            platform_name="darwin", environment={"HOME": "/Users/example"},
+            exists=lambda path: path == root + "/bin/freecadcmd", which=lambda name: None,
+        )
+        self.assertEqual((host.executable, host.mode), (root + "/bin/freecadcmd", "command"))
+
+    def test_linux_lib64_layout(self):
+        host = discover_freecad(
+            platform_name="linux", environment={"HOME": "/home/runner"},
+            exists=lambda path: path in ("/usr/lib64/freecad/lib/FreeCAD.so", "/usr/bin/python3"),
+            which=lambda name: "/usr/bin/python3" if name == "python3" else None,
+        )
+        self.assertEqual((host.executable, host.library_dir), ("/usr/bin/python3", "/usr/lib64/freecad/lib"))
+
+    def test_discovery_matches_the_fixture_shared_with_the_node_port(self):
+        cases = json.loads((Path(__file__).parent / "fixtures" / "freecad_host_cases.json").read_text())["cases"]
+        for case in cases:
+            with self.subTest(case["name"]):
+                files, lookup = set(case["files"]), case["which"]
+                host = discover_freecad(
+                    platform_name=case["platform"], environment=case["env"],
+                    exists=lambda path: path in files, which=lambda name: lookup.get(name),
+                )
+                if case["expect"] is None:
+                    self.assertIsNone(host)
+                else:
+                    self.assertEqual(case["expect"], {
+                        "executable": host.executable, "mode": host.mode, "platform": host.platform,
+                        "source": host.source, "library_dir": host.library_dir,
+                    })
+
+    def test_packaged_adapter_ships_with_the_sdk_and_run_reports_failures_as_envelopes(self):
+        self.assertTrue(freecad_adapter_path().is_file())
+        missing = FreeCADHost("/nonexistent/python", "python", "linux", "test").run({"schema_version": 1}, timeout=5)
+        self.assertFalse(missing["ok"])
+        self.assertIn("failed to start", missing["error"])
+
+    def test_real_adapter_runs_in_every_installed_mode(self):
+        """Skipped unless FreeCAD and the SDK adapter are present; proves the launcher, not mocks."""
+        adapter = freecad_adapter_path()
+        found = discover_freecad()
+        if found is None or not adapter.is_file() or not probe_freecad(found).get("ready"):
+            self.skipTest("FreeCAD or the SDK adapter is not available here")
+        hosts = [found]
+        for name in ("FreeCADCmd", "freecadcmd", "FreeCADCmd.exe"):
+            sibling = Path(found.executable).with_name(name)
+            if sibling.is_file():
+                hosts.append(FreeCADHost(str(sibling), "command", found.platform, "test", found.library_dir))
+                break
+        for host in hosts:
+            with self.subTest(mode=host.mode), tempfile.TemporaryDirectory() as directory:
+                request = Path(directory) / "request.json"
+                request.write_text(json.dumps({
+                    "schema_version": 1, "output": str(Path(directory) / "box.step"), "format": "step",
+                    "operations": [{"op": "box", "name": "b", "length": 2, "width": 3, "height": 4}],
+                }))
+                done = subprocess.run(host.adapter_command(adapter, request), capture_output=True, text=True,
+                                      env=host.environment(), timeout=120, check=False)
+                receipt = json.loads([l for l in done.stdout.splitlines() if l.startswith("AGENTSAM_RESULT=")][-1][16:])
+                self.assertEqual(done.returncode, 0)
+                self.assertTrue(receipt["ok"])
+                self.assertAlmostEqual(receipt["metrics"]["volume"], 24.0, places=6)
 
 
 if __name__ == "__main__":

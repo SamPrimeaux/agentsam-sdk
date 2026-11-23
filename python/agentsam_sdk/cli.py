@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from agentsam_sdk.runtime.contract import ToolInput, ToolResult
 
@@ -160,6 +161,30 @@ def _cmd_cad_doctor(args: argparse.Namespace) -> int:
     return 0 if all(result.get("ready") for result in results.values()) else 1
 
 
+def _cmd_cad_build(args: argparse.Namespace) -> int:
+    from agentsam_sdk.cad import discover_freecad
+
+    try:
+        request = json.loads(Path(args.request).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as err:
+        print(json.dumps({"ok": False, "error": f"cannot read request: {err}"}, indent=2))
+        return 2
+    if not isinstance(request, dict):
+        print(json.dumps({"ok": False, "error": "request must be a JSON object"}, indent=2))
+        return 2
+    if args.out:
+        request["output"] = str(Path(args.out).expanduser().resolve())
+    elif request.get("output"):
+        request["output"] = str(Path(str(request["output"])).expanduser().resolve())
+    host = discover_freecad()
+    if host is None:
+        print(json.dumps({"ok": False, "error": "FreeCAD not found; run `agentsam cad doctor` for what was checked"}, indent=2))
+        return 1
+    result = host.run(request, operation=args.operation, timeout=args.timeout)
+    print(json.dumps(result, indent=2))
+    return 0 if result.get("ok") else 1
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     from .diagnostics import inspect_installation
     report = inspect_installation(verify_cad=args.verify_cad)
@@ -190,6 +215,12 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--engine", choices=("all", "freecad", "occt"), default="all")
     doctor.add_argument("--timeout", type=int, default=15, help="probe timeout in seconds (1-60)")
     doctor.set_defaults(func=_cmd_cad_doctor)
+    build = cad_sub.add_parser("build", help="run the fixed FreeCAD adapter locally on a JSON request")
+    build.add_argument("--request", required=True, help="adapter request JSON (schema_version 1)")
+    build.add_argument("--out", help="artifact path; overrides the request's output")
+    build.add_argument("--operation", choices=("build", "inspect"), default="build")
+    build.add_argument("--timeout", type=float, default=120.0, help="seconds before the run is abandoned")
+    build.set_defaults(func=_cmd_cad_build)
 
     data = sub.add_parser("data", help="D1 data audits")
     data_sub = data.add_subparsers(dest="cmd", required=True)

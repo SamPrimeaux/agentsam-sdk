@@ -30,7 +30,7 @@
     ]
   },
   "counts": {
-    "commands": 93,
+    "commands": 94,
     "tools": 9,
     "skills": 39,
     "scripts": 7,
@@ -1789,6 +1789,27 @@
       "verification": null
     },
     {
+      "id": "cli_db8e5c5f9707c9bcfd9b0976",
+      "package_manager": "pip",
+      "package_name": "agentsam-sdk",
+      "package_version": "0.3.0",
+      "executable": "agentsam",
+      "command_key": "cad build",
+      "command_words": [
+        "cad",
+        "build"
+      ],
+      "aliases": [],
+      "display_name": "agentsam cad build",
+      "description": "run the fixed FreeCAD adapter locally on a JSON request",
+      "topic": "cad",
+      "source_path": "python/agentsam_sdk/cli.py",
+      "source_sha256": "02ab9ea53ed5ac3b05aa1703afec44b3d6c3ad42866166bd4ca49257f4295dff",
+      "release_state": "source_only",
+      "is_active": false,
+      "verification": null
+    },
+    {
       "id": "cli_7f35025d5a4af90c83cf1145",
       "package_manager": "pip",
       "package_name": "agentsam-sdk",
@@ -1804,7 +1825,7 @@
       "description": "verify FreeCAD/OCCT with a real solid operation",
       "topic": "cad",
       "source_path": "python/agentsam_sdk/cli.py",
-      "source_sha256": "e7d37fc46aa8bc2e466b2d1054b9da0e31a87a00464f40dbe2ee5d1c11efaad5",
+      "source_sha256": "19e82b653c579a8e5b6202cd98e7611f59df6e616dd154f06cc6897417b98af5",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1825,7 +1846,7 @@
       "description": "walk agentsam_* tables",
       "topic": "data",
       "source_path": "python/agentsam_sdk/cli.py",
-      "source_sha256": "a38ccc83eb2f98435f55ef9c2094b9e099fd892cdcbc46d6cc802c863d402b86",
+      "source_sha256": "9d2fe192bb28f1e5b4f4eb51a98b345c03a24673ea3e51a531a79ecaa9320541",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1846,7 +1867,7 @@
       "description": "database-scoped D1 audit (--quick=counts, --full=text sizes)",
       "topic": "data",
       "source_path": "python/agentsam_sdk/cli.py",
-      "source_sha256": "55918cdad34ef228f8318291342b50d40daaa238323fe1dc77f3e5a0c3ab5541",
+      "source_sha256": "429fef4ea1cdb906f069f11209b1279113e7817e2ec657e5f05898bca6cbae8d",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1866,7 +1887,7 @@
       "description": "check installed Python SDK and optional native runtimes",
       "topic": "doctor",
       "source_path": "python/agentsam_sdk/cli.py",
-      "source_sha256": "dbd33569a46bb422fe8fba95399d0989d1bcf397d04e39166ab4e526bd8979d1",
+      "source_sha256": "7c212db41d8fbedb35c064f03b267ad353c9e4a378a9a60ee68f58a66cd23daf",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1887,7 +1908,7 @@
       "description": "file walk: sizes + dates (+ optional --dupes SHA-256 groups)",
       "topic": "repository",
       "source_path": "python/agentsam_sdk/cli.py",
-      "source_sha256": "fd06b39d76952b60b4e321cb41a5c141af2b2bbfd627fecb0a823b2bb126a2c0",
+      "source_sha256": "7e2b05b55ee37c3c206830650b647b0e05c7fde9883d07ae422ec1d4f728fdc5",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1908,7 +1929,7 @@
       "description": "file counts + sizes by logical category (jq-friendly JSON)",
       "topic": "repository",
       "source_path": "python/agentsam_sdk/cli.py",
-      "source_sha256": "be999bafdedcaabc251bb8c29a68606d26da0cfb73c998dc2e0913e723259025",
+      "source_sha256": "6ea57152147ee37630ec855157d61a790ef06f2c8421ae62efa417d9133f2a65",
       "release_state": "source_only",
       "is_active": false,
       "verification": null
@@ -1929,7 +1950,7 @@
       "description": "largest runtime source files (KB/lines/est. tokens)",
       "topic": "repository",
       "source_path": "python/agentsam_sdk/cli.py",
-      "source_sha256": "d115d4bc2778264941f9067e1ffad79200170962089a21c42b992f2c608e551b",
+      "source_sha256": "dc8570d4c5f620a5a06a626f5b11b523a3ad0ce1136f0a6a60dec7b3a2d5790b",
       "release_state": "source_only",
       "is_active": false,
       "verification": null

@@ -13,6 +13,7 @@ for (const relative of [
   'backend/dist/server.mjs',
   'backend/dist/cad/freecad/adapter.py',
   'backend/runtime/cad/freecad/adapter.py',
+  'backend/runtime/freecad-host.mjs',
   'bin/agentsam-cad-creator.mjs',
   'bin/freecad-bim-preview.py',
   'BIM_STARTERS.md',

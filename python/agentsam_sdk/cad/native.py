@@ -16,6 +16,12 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 _PREFIX = "AGENTSAM_RESULT="
+_ADAPTERS = Path(__file__).resolve().parent / "adapters"
+
+
+def freecad_adapter_path() -> Path:
+    """The fixed FreeCAD-side adapter that ships inside this package (wheel, sdist and npm alike)."""
+    return _ADAPTERS / "freecad.py"
 _PROBE = (
     "import FreeCAD, Part, json\n"
     "shape = Part.makeBox(2, 3, 4)\n"
@@ -58,10 +64,58 @@ class FreeCADHost:
         return env
 
     def adapter_command(self, adapter: str | Path, request: str | Path, operation: str = "build") -> list[str]:
-        return [
-            self.executable, str(adapter), "--operation", operation,
-            "--request", str(request),
-        ]
+        argv = [str(adapter), "--operation", operation, "--request", str(request)]
+        if self.mode == "command":
+            # FreeCADCmd parses script arguments itself (it rejects --operation/--request, and
+            # --pass forwards only one value), so give the unmodified adapter its argv from a
+            # fixed one-line trampoline. Paths are repr()-quoted literals, never shell-expanded.
+            code = (
+                "import runpy, sys; "
+                f"sys.argv = {argv!r}; "
+                f"runpy.run_path({argv[0]!r}, run_name='__main__')"
+            )
+            return [self.executable, "-c", code]
+        return [self.executable, *argv]
+
+    def run(
+        self,
+        request: Mapping[str, object],
+        *,
+        operation: str = "build",
+        timeout: float = 120.0,
+        adapter: str | Path | None = None,
+    ) -> dict:
+        """Run the fixed adapter on this host and return its parsed result envelope.
+
+        `request` is the adapter's bounded JSON contract (schema_version 1); no code is
+        evaluated. Relative `output` paths resolve against a private temp dir, so pass an
+        absolute path to keep the artifact. Returns {"ok": False, "error": ...} on failure
+        instead of raising, so callers always get a receipt-shaped answer.
+        """
+        adapter_file = Path(adapter) if adapter else freecad_adapter_path()
+        if not adapter_file.is_file():
+            return {"ok": False, "error": f"FreeCAD adapter not found: {adapter_file}"}
+        with tempfile.TemporaryDirectory(prefix="agentsam-freecad-") as directory:
+            request_file = Path(directory) / "request.json"
+            request_file.write_text(json.dumps(dict(request)), encoding="utf-8")
+            try:
+                done = subprocess.run(
+                    self.adapter_command(adapter_file, request_file, operation=operation),
+                    capture_output=True, text=True, env=self.environment(),
+                    cwd=directory, timeout=timeout, check=False,
+                )
+            except subprocess.TimeoutExpired:
+                return {"ok": False, "error": f"FreeCAD adapter timed out after {timeout:g}s"}
+            except OSError as err:
+                return {"ok": False, "error": f"FreeCAD host failed to start: {err}"}
+        for line in reversed((done.stdout or "").splitlines()):
+            if line.startswith(_PREFIX):
+                try:
+                    return json.loads(line[len(_PREFIX):])
+                except ValueError:
+                    break
+        tail = (done.stderr or done.stdout or "").strip()[-500:]
+        return {"ok": False, "error": f"FreeCAD adapter returned no result (exit {done.returncode}): {tail}"}
 
 
 def discover_freecad(
@@ -102,7 +156,11 @@ def discover_freecad(
 
     homes = [env["AGENTSAM_FREECAD_HOME"]] if env.get("AGENTSAM_FREECAD_HOME") else []
     if family == "darwin":
-        homes += ["/Applications/FreeCAD.app/Contents/Resources"]
+        user_home = env.get("HOME") or str(Path.home())
+        homes += [
+            "/Applications/FreeCAD.app/Contents/Resources",
+            str(Path(user_home) / "Applications" / "FreeCAD.app" / "Contents" / "Resources"),
+        ]
         for home in homes:
             root = Path(home)
             lib = lib_override or str(root / "lib")
@@ -110,9 +168,10 @@ def discover_freecad(
                 found = host(str(candidate), "python", "native_bundle", lib)
                 if found:
                     return found
-            found = host(str(root / "bin" / "FreeCADCmd"), "command", "native_bundle", lib)
-            if found:
-                return found
+            for name in ("FreeCADCmd", "freecadcmd"):  # the bundle name is lowercase on FreeCAD 1.x
+                found = host(str(root / "bin" / name), "command", "native_bundle", lib)
+                if found:
+                    return found
 
     elif family == "win32":
         for root_name in ("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)", "LOCALAPPDATA"):
@@ -139,7 +198,7 @@ def discover_freecad(
                 found = host(str(candidate), mode, "configured_install", lib_override or str(root / "lib"))
                 if found:
                     return found
-        for lib in (lib_override, "/usr/lib/freecad/lib", "/usr/local/lib/freecad/lib"):
+        for lib in (lib_override, "/usr/lib/freecad/lib", "/usr/lib64/freecad/lib", "/usr/local/lib/freecad/lib"):
             if lib and exists(str(Path(lib) / "FreeCAD.so")):
                 python = which("python3") or sys.executable
                 found = host(python, "python", "system_python", lib)

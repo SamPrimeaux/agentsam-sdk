@@ -403,7 +403,7 @@
     "quality:ui": "npm run quality:ui:source && npm --prefix apps/local-studio run build:desktop && npm run quality:ui:responsive",
     "catalog:inventory": "node scripts/generate-capability-inventory.mjs",
     "catalog:inventory:check": "node scripts/generate-capability-inventory.mjs --check",
-    "verify:cad-python": "uvx --from ty==0.0.88 ty check --project services/cad services/cad && uvx --from ruff==0.17.1 ruff check services/cad && uvx --from ruff==0.17.1 ruff check --select E4,E7,E9,F,I,UP services/cad",
+    "verify:cad-python": "uvx --from ty==0.0.88 ty check --project services/cad services/cad python/agentsam_sdk/cad/adapters && uvx --from ruff==0.17.1 ruff check services/cad && uvx --from ruff==0.17.1 ruff check --select E4,E7,E9,F,I,UP services/cad && uvx --from ruff==0.17.1 ruff check --config services/cad/pyproject.toml python/agentsam_sdk/cad/adapters && uvx --from ruff==0.17.1 ruff check --config services/cad/pyproject.toml --select E4,E7,E9,F,I,UP python/agentsam_sdk/cad/adapters",
     "sam:machine:build": "node scripts/sam-machine/build.mjs --out /tmp/sam-machine-build",
     "sam:machine:verify": "bash scripts/sam-machine/verify.sh",
     "test:primetech-procedures": "npm --prefix packages/primetech-procedures test",
