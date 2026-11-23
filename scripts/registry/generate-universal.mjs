@@ -30,6 +30,10 @@ if(write) {
     }
   }
 }
-console.log(JSON.stringify({schema:data.schema,counts:data.counts,mode:write?'write':check?'check':'preview',
+const report=JSON.stringify({schema:data.schema,counts:data.counts,mode:write?'write':check?'check':'preview',
   non_publishable:data.commands.filter(c=>c.release_state!=='verified').length,
-  note:'no records were marked published, activated or executed'},null,2));
+  note:'no records were marked published, activated or executed'},null,2);
+// npm pack --json uses stdout as a machine-readable tarball list.
+// Lifecycle hooks must never contaminate it with our own JSON or progress.
+if (write || check) console.error('[universal-registry] ' + report);
+else console.log(report);

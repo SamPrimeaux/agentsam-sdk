@@ -146,7 +146,6 @@
     "./site-scrape/index": "./packages/agentsam-site-scrape/runtime/index.mjs",
     "./site-scrape/storage": "./packages/agentsam-site-scrape/runtime/node-storage.mjs",
     "./site-scrape/client": "./packages/agentsam-site-scrape/runtime/client.mjs",
-    "./registry/universal-catalog": "./protocol/registry/universal-catalog.v1.json",
     "./registry/universal-reconcile": "./src/registry/universal-reconcile.js"
   },
   "bin": {
