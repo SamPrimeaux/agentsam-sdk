@@ -44,7 +44,9 @@
 .platform-console-stage[data-assistant-focused="true"] > .agentsam-route { display: none; }
 .platform-console-stage[data-assistant-focused="true"] > .platform-console-assistant { flex: 1 1 auto; max-width: none; min-width: 0; }
 .platform-console-stage > .studio-separator { flex: 0 0 12px; }
-@media (max-width: 850px) {
+/* Keep tablet and half-desktop layouts split; an overlay at 850px used
+   to hide half of Home instead of letting its container-responsive cards reflow. */
+@media (max-width: 760px) {
   .platform-console-assistant { position: absolute; z-index: 50; inset: 0 0 0 auto; width: min(100%, 420px); max-width: 100%; min-width: 0; box-shadow: -10px 0 30px #0003; }
   .platform-console-stage > .studio-separator { display: none; }
 }
