@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-sam-operations",
+  "name": "AgentSam SAM Operations",
+  "description": "Exact inputs for each SAM operation and how to tell a real result from an empty one.",
+  "package": "@inneranimalmedia/agentsam-sdk",
+  "slash": {
+    "suggested": "/sam-operations"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

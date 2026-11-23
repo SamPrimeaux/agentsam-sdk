@@ -15,7 +15,7 @@ const embedPack = (() => {
 })();
 const manifests = [
   resolve(app, 'agentsam.app.json'),
-  resolve(app, 'apps/resend/agentsam.app.json'),
+  resolve(app, 'apps/resend/agentsam.package.json'),
   embedPack,
 ];
 const apps = [];

@@ -2354,7 +2354,7 @@
         "multi-provider SQL adapters",
         "reusable database request handler"
       ],
-      "version": "2.6.14",
+      "version": "2.6.18",
       "readiness": "unverified"
     },
     {
@@ -3506,7 +3506,7 @@
       "use_when": [
         "Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces."
       ],
-      "version": "2.6.12",
+      "version": "2.6.18",
       "readiness": "unverified"
     },
     {

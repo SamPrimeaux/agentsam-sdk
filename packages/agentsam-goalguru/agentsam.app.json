@@ -5,11 +5,39 @@
   "kind": "app",
   "display_name": "GoalGuru",
   "package": "@inneranimalmedia/agentsam-goalguru",
-  "version": "2.6.14",
+  "version": "2.6.18",
   "icon": "target",
   "category": "productivity",
   "routes": {
-    "home": "/goalguru"
+    "home": "/goalguru",
+    "app.authenticated": {
+      "path": "/goalguru",
+      "auth": "required",
+      "spa": true
+    },
+    "app.home": {
+      "path": "/goalguru"
+    },
+    "identity.login": {
+      "path": "/auth/login"
+    },
+    "identity.recovery": {
+      "path": "/auth/login"
+    },
+    "identity.oauth.start": {
+      "path": "/api/oauth/:provider/start"
+    },
+    "identity.oauth.callback": {
+      "path": "/api/oauth/:provider/callback"
+    },
+    "entry": "/goalguru",
+    "mounts": [
+      {
+        "path": "/goalguru",
+        "auth": "required",
+        "spa": true
+      }
+    ]
   },
   "surfaces": [
     "standalone",
@@ -36,5 +64,14 @@
     "frontend": "./dist/index.js",
     "manifest": "./agentsam.app.json"
   },
-  "directory_id_exception": true
+  "directory_id_exception": true,
+  "product_id": "goalguru",
+  "auth": {
+    "required": true,
+    "entry": {
+      "authenticated": "app.authenticated",
+      "login": "identity.login",
+      "failure": "identity.recovery"
+    }
+  }
 }

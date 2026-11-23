@@ -1,8 +1,8 @@
 {
-  "schema": "agentsam.app.v1",
+  "schema": "agentsam.package.v1",
   "id": "samspeaks",
   "name": "SamSpeaks",
-  "kind": "app",
+  "kind": "module",
   "package": "@inneranimalmedia/samspeaks",
   "version": "0.1.0",
   "entrypoints": {
@@ -101,5 +101,10 @@
       ],
       "output": "dist"
     }
-  }
+  },
+  "type": "module",
+  "owner_app_id": "moviemode",
+  "installable": false,
+  "role": "moviemode-voice-direction",
+  "description": "Portable SamSpeaks audio and voice-direction module owned by MovieMode; can be reused by another authorized host."
 }

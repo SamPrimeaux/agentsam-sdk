@@ -14,11 +14,22 @@ function normalizeSkillId(value) {
   return String(value ?? '').trim().toLowerCase();
 }
 
+// Only advertise instructions physically shipped in this SDK distribution.
+// The source catalog may contain additional skills intentionally held from npm.
+function skillIsAvailable(skill) {
+  try {
+    return fs.existsSync(safeSkillPath(skill.entry));
+  } catch {
+    return false;
+  }
+}
+
 function resolveSkillRecord(idOrAlias) {
   const needle = normalizeSkillId(idOrAlias);
   if (!needle) return null;
   const catalog = readCatalog();
   return catalog.skills.find((skill) => {
+    if (!skillIsAvailable(skill)) return false;
     if (normalizeSkillId(skill.id) === needle) return true;
     return (skill.aliases ?? []).some((alias) => normalizeSkillId(alias) === needle);
   }) ?? null;
@@ -34,7 +45,7 @@ function safeSkillPath(relativePath) {
 }
 
 export function listSkills() {
-  return readCatalog().skills.map((skill) => ({ ...skill }));
+  return readCatalog().skills.filter(skillIsAvailable).map((skill) => ({ ...skill }));
 }
 
 export function getSkill(idOrAlias) {

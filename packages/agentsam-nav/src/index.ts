@@ -13,4 +13,4 @@ export { NavCollapsible, NavCollapsibleTrigger, NavCollapsibleContent } from './
 export { NavTrigger } from './NavTrigger.js';
 
 export { AdminAppsDialog, AdminAppsDirectory, AdminAppMark, type AdminAppsDialogProps, type AdminAppsDirectoryProps, type AdminInstallableApp } from './AdminAppsDialog.js';
-export { useAdminApps, type AdminAppAction, type AdminAppsView, type UseAdminAppsOptions } from './useAdminApps.js';
+export { useAdminApps, accountAppsErrorMessage, type AdminAppAction, type AdminAppsView, type UseAdminAppsOptions } from './useAdminApps.js';

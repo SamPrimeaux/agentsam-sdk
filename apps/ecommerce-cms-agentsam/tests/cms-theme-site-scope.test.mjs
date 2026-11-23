@@ -127,6 +127,17 @@ test("each duplicate is its own draft site with a cms_site_themes row; saves syn
       { project: edited, expected_version: 1, site_id: first.site_id });
     assert.equal(saved.status, 200);
     assert.equal(sqlite.prepare("SELECT draft_revision FROM cms_site_themes WHERE site_id=?").get(first.site_id).draft_revision, 2);
+    // Theme Store changes must reach the same cms_activity_log table as D1:
+    // never let a missing fixture table masquerade as a healthy write.
+    const auditEvents = sqlite.prepare(
+      "SELECT action,resource_type,resource_id,details_json FROM cms_activity_log WHERE site_id=? ORDER BY created_at,id"
+    ).all(first.site_id);
+    assert.ok(auditEvents.some(event => event.action === "theme.draft.created"));
+    const draftSaved = auditEvents.find(event => event.action === "theme.draft.saved");
+    assert.ok(draftSaved, "saved theme must produce an activity-log event");
+    assert.equal(draftSaved.resource_type, "theme-project");
+    assert.equal(draftSaved.resource_id, first.project.id);
+    assert.equal(JSON.parse(draftSaved.details_json).revision, 2);
 
     assert.equal((await call(`/api/admin/cms/theme-projects/${first.project.id}?site_id=${first.site_id}`, "GET", undefined, "acct-other")).status, 404);
     assert.equal((await call(`/api/admin/cms/theme-projects/x?site_id=site-live`, "DELETE")).status, 409);

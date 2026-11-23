@@ -75,15 +75,38 @@ export function planIncludedApps({
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const ids = Array.isArray(manifest.included_apps) ? manifest.included_apps : [];
   const byId = new Map(listAppManifests(repoRoot).map((app) => [app.id, app]));
+  const modules = Array.isArray(manifest.included_modules) ? manifest.included_modules : [];
   const plans = [];
   const stages = new Map();
-  for (const id of ids) {
+  const items = ids.map((id) => {
     const app = byId.get(id);
     if (!app) {
       throw new Error(
         `included_apps entry "${id}" matches no agentsam.app.json (known: ${[...byId.keys()].join(', ') || 'none'})`,
       );
     }
+    return { ...app, type: 'app' };
+  });
+  // Build-time modules may be staged alongside apps, but never count as a
+  // separate account installation, product identity or launcher entry.
+  for (const ref of modules) {
+    if (!ref || typeof ref.id !== 'string' || typeof ref.manifest !== 'string') {
+      throw new Error('included_modules entries require id and manifest');
+    }
+    const file = within(repoRoot, ref.manifest, 'included_modules.manifest');
+    if (!existsSync(file)) throw new Error(`included module manifest missing: ${ref.manifest}`);
+    const value = JSON.parse(readFileSync(file, 'utf8'));
+    if (value.schema !== 'agentsam.package.v1' || value.kind !== 'module' || value.id !== ref.id) {
+      throw new Error(`invalid included module identity: ${ref.manifest}`);
+    }
+    if (!ids.includes(value.owner_app_id) || ref.owner_app_id !== value.owner_app_id) {
+      throw new Error(`included module has no installed owner APP: ${ref.id}`);
+    }
+    if (items.some((a) => a.id === ref.id)) throw new Error(`duplicate included module/app id: ${ref.id}`);
+    items.push({ id: value.id, dir: path.dirname(file), manifest: value, type: 'module' });
+  }
+  for (const app of items) {
+    const id = app.id;
     const embed = app.manifest.embed;
     if (!embed || !embed.build) {
       throw new Error(`app "${id}" is in included_apps but its agentsam.app.json declares no embed.build`);
@@ -98,6 +121,8 @@ export function planIncludedApps({
     const base = `/${embed.stage}/`;
     plans.push({
       id,
+      kind: app.type,
+      owner_app_id: app.type === 'module' ? app.manifest.owner_app_id : id,
       stage: embed.stage,
       base,
       cwd,
@@ -228,7 +253,11 @@ function main() {
     console.error('[included-apps] Refusing to rebuild every installed app. Pass --only <app-id> or --all for an explicitly approved full release.');
     process.exit(1);
   }
-  const selected = flags.only ? result.plans.filter((plan) => plan.id === flags.only) : result.plans;
+  // Scoped product releases include their declared modules, not unrelated
+  // applications. A module can still be rebuilt directly with --only <module>.
+  const selected = flags.only
+    ? result.plans.filter(plan => plan.id === flags.only || plan.kind === 'module' && plan.owner_app_id === flags.only)
+    : result.plans;
   if (flags['dry-run']) {
     console.log(JSON.stringify(selected, null, 2));
     return;

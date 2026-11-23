@@ -43,6 +43,7 @@ test('the native app, desktop manifest, lockfiles and updater share the desktop 
   const json = (relative) => JSON.parse(readFileSync(path.resolve(shellRoot, relative), 'utf8'));
   const pkg = json('package.json');
   const app = json('../../apps/local-studio/agentsam.app.json');
+  const studioPackage = json('../../apps/local-studio/package.json');
   const tauri = json('src-tauri/tauri.conf.json');
   const shellLock = json('package-lock.json');
   const rootLock = json('../../package-lock.json');
@@ -51,6 +52,7 @@ test('the native app, desktop manifest, lockfiles and updater share the desktop 
   for (const [name, actual] of Object.entries({
     desktopManifest: manifest.version,
     appManifest: app.version,
+    studioHostPackage: studioPackage.version,
     tauriConfig: tauri.version,
     desktopLock: shellLock.version,
     desktopLockRoot: shellLock.packages[''].version,
@@ -63,4 +65,18 @@ test('the native app, desktop manifest, lockfiles and updater share the desktop 
   assert.deepEqual(tauri.plugins.updater.endpoints, [
     'https://updates.inneranimalmedia.com/updates/local-studio/{{target}}/{{arch}}/{{current_version}}',
   ]);
+});
+
+test('connected desktop uses authenticated host authority, never a second Apps database', () => {
+  assert.equal(manifest.auth.authority, 'service');
+  assert.equal(manifest.auth.native_session, 'bearer');
+  assert.equal(manifest.auth.session_store, 'os_secure_store');
+  assert.match(manifest.auth.service_origin, /^https:\/\/[^/]+$/);
+  assert.equal(manifest.auth.standalone_adapter, 'sqlite', 'SQLite is explicit standalone mode only');
+  assert.equal(manifest.local_state.authority, 'device');
+  assert.ok(manifest.local_state.roles.includes('cache'));
+  assert.ok(manifest.local_state.roles.includes('workspace_state'));
+  assert.ok(!manifest.local_state.roles.includes('apps'));
+  assert.ok(!manifest.local_state.roles.includes('cms'));
+  assert.equal(manifest.feature_flags.offline_shell, false);
 });

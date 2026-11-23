@@ -2,22 +2,32 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
+import {identifyCadFileFormat} from '../../../../../src/lib/cad/format-policy.js';
 
 export type CadSource = {
   id:string; project:string; revision:string; relativePath:string;
   format:string; role:'native-bim'|'parametric'|'presentation'|'exchange'|'verification';
   status:'source-only'|'review-only'|'verification-only';
   bytes:number; sha256:string;
+  /** Filename-based identity only; import/export requires a separate verified adapter. */
+  formatRef?:{catalog:'agentsam.source-types.v2';id:string;extension:string};
 };
-const EXTENSIONS=new Set(['.fcstd','.ifc','.blend','.glb','.gltf','.step','.stp','.scad','.dxf','.dwg']);
 const RECEIPT=/((model-exchange|exchange-receipt|glb-review-receipt|geometry-verification|bim-assembly-receipt|render-manifest)\.json)$/i;
 // Avoid blocking the local CAD server on every library refresh for unchanged GLBs/Blend files.
 const digestCache=new Map<string,{size:number;mtimeMs:number;sha256:string}>();
-const ROLE:Record<string,CadSource['role']>={
-  '.fcstd':'native-bim','.ifc':'native-bim','.scad':'parametric','.step':'native-bim',
-  '.stp':'native-bim','.blend':'presentation','.glb':'presentation','.gltf':'presentation',
-  '.dxf':'exchange','.dwg':'exchange',
-};
+// Stream disk reads in bounded chunks. IFC archives, footage and scans may be
+// gigabytes; buffering entire files to hash them exhausts memory.
+function sha256File(filename:string):string {
+  const digest=createHash('sha256');
+  const fd=fs.openSync(filename,'r');
+  const buffer=Buffer.allocUnsafe(1024*1024);
+  try {
+    let count:number;
+    while((count=fs.readSync(fd,buffer,0,buffer.length,null))>0)
+      digest.update(buffer.subarray(0,count));
+  }finally{fs.closeSync(fd)}
+  return digest.digest('hex');
+}
 const revisionFrom=(s:string):string=>{
   const match=s.match(/(?:^|[\\/])v(1(?:[.-][0-9]+)?)(?:[\\/]|$)/i)
     ||s.match(/DreamHouse-V(1(?:[.-][0-9]+)?)/i);
@@ -53,28 +63,32 @@ export function discoverCadSources(roots:Array<{project:string;root:string}>,max
         if(entry.isSymbolicLink())continue;
         if(entry.isDirectory()){walk(full,depth+1);continue;}
         if(!entry.isFile())continue;
-        const ext=path.extname(entry.name).toLowerCase();
         const receipt=RECEIPT.test(entry.name);
-        const sceneImage= configured.project==='DreamHouse' &&
-          /(^|\/)presentation\/renders\//.test(path.relative(root,full).replaceAll(path.sep,'/')) &&
-          ['.png','.jpg','.jpeg','.webp'].includes(ext);
-        if(!EXTENSIONS.has(ext)&&!receipt&&!sceneImage)continue;
+        const detected=identifyCadFileFormat(entry.name);
+        // Generic JSON sidecars vastly outnumber CAD sources. Named receipts and
+        // native .iamscene.json documents remain discoverable.
+        if(!detected || (detected.id==='data.json'&&!receipt))continue;
         const stat=fs.statSync(full);
         if(stat.size===0)continue;
         const relativePath=path.relative(root,full).replaceAll(path.sep,'/');
-        const role=sceneImage?'presentation':receipt?(entry.name.includes('exchange')?'exchange':'verification'):(ROLE[ext]||'exchange');
-        const status=role==='native-bim'||role==='parametric'?'source-only':role==='presentation'?'review-only':'verification-only';
+        const role:CadSource['role']=receipt
+          ? (entry.name.includes('exchange')?'exchange':'verification')
+          : detected.role;
+        const status=role==='verification'?'verification-only'
+          :role==='presentation'?'review-only':'source-only';
         const cached=digestCache.get(full);
         let sha256=cached?.size===stat.size&&cached.mtimeMs===stat.mtimeMs?cached.sha256:'';
         if(!sha256){
-          try{sha256=createHash('sha256').update(fs.readFileSync(full)).digest('hex');}
+          try{sha256=sha256File(full);}
           catch{continue;} // source changed during scan; retry next request
           digestCache.set(full,{size:stat.size,mtimeMs:stat.mtimeMs,sha256});
         }
         result.push({
           id:createHash('sha256').update(configured.project+'\n'+relativePath).digest('hex').slice(0,20),
           project:configured.project,revision:revisionFrom(relativePath),
-          relativePath,format:receipt?'JSON':ext.slice(1).toUpperCase(),role,status,bytes:stat.size,sha256,
+          relativePath,format:receipt?'JSON':detected.extension.replace(/^\./,'').replace(/\.json$/,'').toUpperCase(),
+          formatRef:{catalog:'agentsam.source-types.v2',id:detected.id,extension:detected.extension},
+          role,status,bytes:stat.size,sha256,
         });
       }
     };
