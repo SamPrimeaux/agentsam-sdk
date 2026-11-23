@@ -13,7 +13,6 @@ import copy
 import hashlib
 import json
 import re
-import socket
 import threading
 import time
 import uuid
@@ -250,7 +249,7 @@ class CadServiceClient:
             finally:
                 exc.close()
             raise error from exc
-        except (URLError, TimeoutError, socket.timeout, OSError) as exc:
+        except (URLError, TimeoutError, OSError) as exc:
             raise CadServiceError(
                 "cad_host_transport_unavailable",
                 "The CAD service could not be reached.",

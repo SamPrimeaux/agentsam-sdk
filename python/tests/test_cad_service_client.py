@@ -208,8 +208,9 @@ class CadServiceClientTests(unittest.TestCase):
             "bytes": len(DATA),
             "sha256": DIGEST,
         }
-        with self.assertRaisesRegex(CadServiceError, "requires_streaming"):
+        with self.assertRaises(CadServiceError) as caught:
             client.download(artifact)
+        self.assertEqual(caught.exception.code, "cad_artifact_requires_streaming")
         client.max_inline_artifact_bytes = 1024
         self.assertEqual(client.download(artifact), DATA)
         artifact["sha256"] = "b" * 64
@@ -246,8 +247,9 @@ class CadServiceClientTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "artifact_size_invalid"):
             client.download_to(artifact, Path(tempfile.gettempdir()) / "not-created.step")
         artifact["bytes"] = 8
-        with self.assertRaisesRegex(CadServiceError, "requires_streaming"):
+        with self.assertRaises(CadServiceError) as caught:
             client.download(artifact)
+        self.assertEqual(caught.exception.code, "cad_artifact_requires_streaming")
 
     def test_cross_origin_redirect_is_rejected(self):
         class RedirectResponse(Response):

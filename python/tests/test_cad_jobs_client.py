@@ -2,6 +2,7 @@ import asyncio
 import unittest
 
 from agentsam_sdk.cad import AsyncCadJobClient, CadJobClient, CadJobError
+from agentsam_sdk.client import AgentSamClient, AsyncAgentSamClient
 
 
 class CadJobClientTests(unittest.TestCase):
@@ -59,6 +60,42 @@ class CadJobClientTests(unittest.TestCase):
             engine="openscad", prompt="Build a bracket",
         ))
         self.assertEqual(handle.id, "job_123")
+
+    def test_agent_sam_client_binds_jobs_only_to_the_supplied_host(self):
+        calls = []
+        def invoke(operation, payload):
+            calls.append((operation, payload))
+            return {"job_id": "job_host", "status": "queued"}
+
+        client = AgentSamClient(cad_job_invoker=invoke)
+        handle = client.cad_jobs.submit(
+            project_id="project_1", workspace_id="workspace_1",
+            engine="freecad", prompt="Build a verified enclosure",
+        )
+        self.assertEqual(handle.id, "job_host")
+        self.assertEqual(calls[0][0], "cad.job.generate")
+
+        unbound = AgentSamClient()
+        with self.assertRaises(CadJobError) as caught:
+            unbound.cad_jobs.submit(
+                project_id="project_1", workspace_id="workspace_1",
+                engine="blender", prompt="Build a verified enclosure",
+            )
+        self.assertEqual(caught.exception.code, "cad_job_host_not_configured")
+
+    def test_async_agent_sam_client_exposes_nonblocking_host_jobs(self):
+        calls = []
+        def invoke(operation, payload):
+            calls.append(operation)
+            return {"job_id": "job_async", "status": "queued"}
+
+        client = AsyncAgentSamClient(cad_job_invoker=invoke)
+        handle = asyncio.run(client.cad_jobs.submit(
+            project_id="project_1", workspace_id="workspace_1",
+            engine="openscad", prompt="Build a verified bracket",
+        ))
+        self.assertEqual(handle.id, "job_async")
+        self.assertEqual(calls, ["cad.job.generate"])
 
 
 if __name__ == "__main__":

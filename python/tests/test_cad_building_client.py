@@ -13,7 +13,7 @@ ARTIFACT=b'cad output artifact'
 ART_SHA=hashlib.sha256(ARTIFACT).hexdigest()
 FILE={'path':'shell.ifc','uri':'/v1/files/work/derived/building-abc/shell.ifc','bytes':len(ARTIFACT),'sha256':ART_SHA}
 CAPS={'ok':True,'service':'agentsam-cad','version':'1','endpoints':{'cad_building_export':{'handler_installed':True,'operation':'cad.building.export','scope':'single_rectangular_shell_with_north_south_openings','status':'available'}},'tools':{x:{'installed':True} for x in ('freecad','occt','ifc','blender','media')}}
-RECEIPT={'ok':True,'schema':'agentsam.cad.building-export.v1','output_scope':'runtime-derived',
+RECEIPT={'ok':True,'schema':'agentsam.cad.building-export.v1','job_id':'job_123','output_scope':'runtime-derived',
  'source':{'kind':'file','mount':'work','path':'scene.json','source_sha256':SHA,'source_revision':1,'scope':'single_rectangular_shell_with_north_south_openings'},
  'files':[FILE,*[{**FILE,'path':p,'uri':'/v1/files/work/derived/building-abc/'+p} for p in ['shell.step','plan.dxf','plan.svg','preview.png','sheet-A101-proof.pdf','model.glb','model.opt.glb','turntable.mp4']]],
  'receipt':{'status':'passed','checks':[{'id':str(i),'passed':True} for i in range(16)]}}
@@ -41,7 +41,7 @@ class CadBuildingPythonClientTests(unittest.TestCase):
             client.export({'kind':'file','mount':'work','path':'scene.json'},'b'*64)
         with self.assertRaisesRegex(RuntimeError,'integrity_invalid'):
             client.download({**FILE,'sha256':'b'*64})
-        with self.assertRaisesRegex(ValueError,'endpoint_invalid'):
+        with self.assertRaisesRegex(ValueError,'endpoint_https_required'):
             CadBuildingClient('http://public.example.org','dummy-bearer-token-only')
 
 if __name__=='__main__':unittest.main()

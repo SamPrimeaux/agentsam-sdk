@@ -3,9 +3,9 @@
 This client intentionally delegates to the installed SAM CAD operation port:
 cad.job.generate, cad.job.status and cad.job.execute. The host owns
 authorization, approvals, runner dispatch and the existing agentsam_cad_jobs
-records. The caller must inject that trusted host operation adapter; the stock
-Python AgentSamClient does not automatically expose these CAD operations. No
-second queue, SQLite file, local process or ad-hoc job table is made.
+records. AgentSamClient exposes this facade through `cad_jobs`; a trusted
+host operation invoker must be injected explicitly. Without one, calls fail
+closed. No second queue, SQLite file, local process or ad-hoc job table is made.
 """
 from __future__ import annotations
 
@@ -50,12 +50,14 @@ def _record(value: Any) -> dict[str, Any]:
 class CadJobClient:
     """Adapter over a trusted host invoker supplied by the CAD host integration."""
 
-    def __init__(self, invoke: Callable[[str, dict[str, Any]], Any]):
-        if not callable(invoke):
-            raise ValueError("cad_job_invoker_required")
+    def __init__(self, invoke: Callable[[str, dict[str, Any]], Any] | None = None):
+        if invoke is not None and not callable(invoke):
+            raise ValueError("cad_job_invoker_invalid")
         self._invoke = invoke
 
     def _call(self, operation: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if not callable(self._invoke):
+            raise CadJobError("cad_job_host_not_configured")
         value = self._invoke(operation, payload)
         if hasattr(value, "__await__"):
             close = getattr(value, "close", None)
@@ -71,7 +73,7 @@ class CadJobClient:
         workspace_id: str,
         engine: str,
         prompt: str,
-    ) -> "CadJobHandle":
+    ) -> CadJobHandle:
         if not isinstance(project_id, str) or not _ID.fullmatch(project_id):
             raise ValueError("cad_job_project_id_invalid")
         if not isinstance(workspace_id, str) or not _ID.fullmatch(workspace_id):

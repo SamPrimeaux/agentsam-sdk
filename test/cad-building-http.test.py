@@ -130,7 +130,8 @@ class BuildingHTTPTest(unittest.TestCase):
         )
         with self.assertRaises(HTTPError) as caught:
             urlopen(request, timeout=4)
-        self.assertEqual(caught.exception.code, 416)
-        self.assertEqual(caught.exception.headers['Content-Range'], 'bytes */10')
+        with caught.exception as error:
+            self.assertEqual(error.code, 416)
+            self.assertEqual(error.headers['Content-Range'], 'bytes */10')
 
 if __name__=='__main__':unittest.main()
