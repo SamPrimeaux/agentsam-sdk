@@ -144,6 +144,11 @@ export function createRemoteIDEWorkspace(selection:RemoteIDESelection):FileWorks
     } : {}),
     async create(){return disabled();},async rename(){return disabled();},async delete(){return disabled();},
     async search(){return disabled();},async history(){return disabled();},async restore(){return disabled();},
-    configuration:{readonly:selection.source==='r2'||(selection.source==='github'&&!selection.canPush),manualSave:selection.source==='drive'},
+    configuration:{
+      readonly:selection.source==='r2'||(selection.source==='github'&&!selection.canPush),
+      manualSave:selection.source==='drive',
+      capabilities:{create:false,rename:false,delete:false,search:false,history:false,restore:false,
+        changes:selection.source==='github'&&Boolean(selection.baseBranch),snapshot:false},
+    },
   };
 }
