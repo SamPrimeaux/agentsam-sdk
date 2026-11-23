@@ -575,6 +575,7 @@ def main():
     write_csv(out/"design-review-required.csv",ISSUES,["id","issue","reviewer","status"])
     invalid=[e["id"] for e in MODEL if e["_shape"].isNull() or not e["_shape"].isValid()]
     counts=dict(Counter(item["category"] for item in MODEL))
+    evidence_files: list[dict[str, str | int]] = []
     evidence={
         "schema":"agentsam.cad.bim-structure-concept.v2",
         "project":"Barndominium Starter Kit",
