@@ -20,7 +20,9 @@ import os
 import re
 import sys
 from collections import Counter, defaultdict
+from importlib import import_module
 from pathlib import Path
+from typing import Any, cast
 
 import FreeCAD as App
 import Part
