@@ -46,6 +46,7 @@ function iconFor(kind: WorkArtifact["kind"]) {
 
 type LibraryView = "all" | "yours" | "shared" | "recent" | "starred" | "trash";
 type LibrarySort = "updated" | "name" | "type";
+const ARTIFACT_PAGE_SIZE = 60;
 
 export function ArtifactsSurface({
   artifacts,
@@ -74,6 +75,7 @@ export function ArtifactsSurface({
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [layout, setLayout] = useState<"grid" | "list">("grid");
+  const [visibleLimit, setVisibleLimit] = useState(ARTIFACT_PAGE_SIZE);
   const [failedPreviews, setFailedPreviews] = useState<Set<string>>(() => new Set());
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const focusedArtifact = artifacts.find((artifact) => artifact.id === focusedId);
@@ -89,6 +91,7 @@ export function ArtifactsSurface({
   useEffect(() => setFailedPreviews(new Set()), [artifacts]);
   useEffect(() => setView(initialView), [initialView]);
   useEffect(() => setSource(initialSource), [initialSource]);
+  useEffect(() => setVisibleLimit(ARTIFACT_PAGE_SIZE), [query, source, kind, view, sortBy]);
 
   const sources = useMemo(
     () => [...new Set(artifacts.map((item) => item.source))].sort(),
@@ -121,6 +124,8 @@ export function ArtifactsSurface({
     });
     return view === "recent" ? sorted.slice(0, 50) : sorted;
   }, [artifacts, query, source, kind, view, sortBy]);
+
+  const displayedArtifacts = visible.slice(0, visibleLimit);
 
   const assetMutation = async (
     artifact: WorkArtifact,
@@ -381,7 +386,7 @@ export function ArtifactsSurface({
                         onClick={() => onCreateArtifact?.(option.id)}
                       >
                         <span className="agentsam-artifact-hub__create-art">
-                          <Icon size={27} strokeWidth={1.55} aria-hidden="true" />
+                          <Icon size={31} strokeWidth={1.55} aria-hidden="true" />
                         </span>
                         <span className="agentsam-artifact-hub__create-label">{option.label}</span>
                       </button>
@@ -412,7 +417,7 @@ export function ArtifactsSurface({
                 </div>
               ) : (
                 <div className={"agentsam-artifact-hub__items is-" + layout}>
-                  {visible.map((artifact) => {
+                  {displayedArtifacts.map((artifact) => {
                     const Icon = iconFor(artifact.kind);
                     const ownerEditable = artifact.resourceType === "artifact" && Boolean(artifact.providerId);
                     const hasDestination = Boolean(artifact.open || artifact.preview || (artifact.source === "local" && onOpenArtifact));
@@ -484,6 +489,14 @@ export function ArtifactsSurface({
                   })}
                 </div>
               )}
+              {visible.length > visibleLimit ? (
+                <div className="agentsam-artifact-hub__pagination" role="group" aria-label="More artifacts">
+                  <span>Showing {displayedArtifacts.length} of {visible.length}</span>
+                  <button type="button" onClick={() => setVisibleLimit((limit) => Math.min(limit + ARTIFACT_PAGE_SIZE, visible.length))}>
+                    Show {Math.min(ARTIFACT_PAGE_SIZE, visible.length - visibleLimit)} more
+                  </button>
+                </div>
+              ) : null}
             </section>
           </div>
         </div>
