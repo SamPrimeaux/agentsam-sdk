@@ -16,7 +16,13 @@ test('source browser serves only indexed source IDs, preserves bytes and allows 
  fs.writeFileSync(path.join(dir,'model.glb'),Buffer.from('glTF\x02\x00\x00\x00mock preview'));
  const newFiles:Record<string,{id:string;role:string}>={
   'sheet.svg':{id:'image.svg',role:'exchange'},
+  'render.png':{id:'image.png',role:'presentation'},
+  'drawing.pdf':{id:'document.pdf',role:'verification'},
+  'requirements.docx':{id:'document.docx',role:'verification'},
+  'schedule.xlsx':{id:'document.xlsx',role:'verification'},
+  'presentation.pptx':{id:'document.pptx',role:'verification'},
   'part.stl':{id:'model.stl',role:'exchange'},
+  'geometry.obj':{id:'model.wavefront-obj',role:'exchange'},
   'review.mov':{id:'video.quicktime',role:'presentation'},
   'house.ifc':{id:'bim.ifc',role:'native-bim'},
   'house.ifczip':{id:'bim.ifczip',role:'native-bim'},
@@ -43,6 +49,8 @@ test('source browser serves only indexed source IDs, preserves bytes and allows 
   assert.match(record.sha256,/^[a-f0-9]{64}$/);
  }
  assert.ok(!files.some(x=>x.relativePath.endsWith('/unrelated.json')));
+ const ambiguous=files.find(x=>x.relativePath.endsWith('/geometry.obj'));
+ assert.deepEqual(ambiguous?.formatCandidates?.map(x=>x.id),['model.wavefront-obj','binary.coff-object']);
  assert.equal(files.find(x=>x.relativePath.endsWith('/large.step'))?.sha256,
   (await import('node:crypto')).createHash('sha256').update(Buffer.alloc(1024*1024+17,0x5a)).digest('hex'));
  const app=express();app.use(express.json());installCadSourceBrowserRoutes(app);
