@@ -104,7 +104,9 @@ test('generic --only flag stages one registered application without building oth
   const command = path.join(LOCAL_STUDIO, 'scripts', 'build-included-apps.mjs');
   const output = execFileSync(process.execPath, [command, '--dry-run', '--only', 'moviemode'], { encoding: 'utf8' });
   const plans = JSON.parse(output);
-  assert.deepEqual(plans.map((plan) => plan.id), ['moviemode']);
+  assert.deepEqual(plans.map((plan) => plan.id), ['moviemode', 'samspeaks']);
+  assert.equal(plans[1].kind, 'module');
+  assert.equal(plans[1].owner_app_id, 'moviemode');
   assert.equal(plans[0].base, '/moviemode/');
 });
 

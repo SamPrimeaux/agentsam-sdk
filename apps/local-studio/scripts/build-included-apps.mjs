@@ -253,7 +253,11 @@ function main() {
     console.error('[included-apps] Refusing to rebuild every installed app. Pass --only <app-id> or --all for an explicitly approved full release.');
     process.exit(1);
   }
-  const selected = flags.only ? result.plans.filter((plan) => plan.id === flags.only) : result.plans;
+  // Scoped product releases include their declared modules, not unrelated
+  // applications. A module can still be rebuilt directly with --only <module>.
+  const selected = flags.only
+    ? result.plans.filter(plan => plan.id === flags.only || plan.kind === 'module' && plan.owner_app_id === flags.only)
+    : result.plans;
   if (flags['dry-run']) {
     console.log(JSON.stringify(selected, null, 2));
     return;
