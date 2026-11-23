@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { createWorkspaceTextFile } from './file-creation.js';
+import { createWorkspaceTextFile } from '../../dist/workspace/file-creation.js';
 import type { FileWorkspace, WorkspaceEntry, WorkspaceFile } from './files.js';
 
 function fakeWorkspace() {
