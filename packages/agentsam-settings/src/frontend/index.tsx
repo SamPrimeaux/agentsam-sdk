@@ -952,8 +952,6 @@ function PluginCustomizeView({
       ? result as Record<string,unknown>:null;
     const data=envelope?.data && typeof envelope.data==="object"
       ? envelope.data as Record<string,unknown>:envelope;
-    const brandContract=data?.latestContract && typeof data.latestContract==="object"
-      ? data.latestContract as Record<string,unknown>:null;
     const briefs=Array.isArray(data?.briefs)?data.briefs:[];
     const concepts=Array.isArray(data?.concepts)?data.concepts:[];
     const isBrand=workspace?.pluginKey==="agentsam-brand" || focusedPlugin.pluginKey==="agentsam-brand";
