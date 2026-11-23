@@ -1,8 +1,7 @@
-import {useEffect,useState} from 'react';
-import {ARCHITECTURAL_STOCK,type FurniturePreset} from './FurniturePicker';
-import {OPENSCAD_PARAMETRIC_TEMPLATES} from '../lib/openscad/generator';
+import {useEffect,useMemo,useState} from 'react';
+import type {FurniturePreset, QuickAddItem} from './quick-add/types';
+import {categoryLabel, furniturePresetsFromCatalog, useQuickAddCatalog} from './quick-add';
 import {OpenScadLibraryPane} from './OpenScadLibraryPane';
-import {useMemo} from 'react';
 import type {ProjectState,WallAssembly} from '@inneranimalmedia/agentsam-cad-shared';
 import {Box,Layers3,Library,PanelLeftClose} from 'lucide-react';
 import {WALL_ASSEMBLY_STARTERS,cloneAssembly,defaultWallAssembly,wallAssemblyTotal} from '../lib/cad/wall-assemblies';
@@ -11,15 +10,19 @@ import type {CadElementSelection} from './EngineeringWorkbench';
 export function CadResourcesPane({mode,project,selection,onSelect,onClose,onApplyAssembly,onPlaceStock,onCreateParametric,onInsertScadImport,readOnly,onOpenTemplates,sceneInventory,preferredSection}:{
  mode:'assets'|'libraries';project:ProjectState;selection:CadElementSelection;
  onSelect:(value:CadElementSelection)=>void;onClose:()=>void;onApplyAssembly:(assembly:WallAssembly)=>void;onPlaceStock:(preset:FurniturePreset)=>void;
- onCreateParametric:(templateKey:string)=>void;onInsertScadImport:(importLine:string)=>void;
+ onCreateParametric:(item:QuickAddItem)=>void;onInsertScadImport:(importLine:string)=>void;
  readOnly:boolean;onOpenTemplates:()=>void;sceneInventory?:Array<{category:string;count:number}>;
  preferredSection?:'assemblies'|'stock'|'parametric'|'openscad';
 }){
  const [librarySection,setLibrarySection]=useState<'assemblies'|'stock'|'parametric'|'openscad'>(preferredSection||'assemblies');
  useEffect(()=>{if(preferredSection)setLibrarySection(preferredSection)},[preferredSection]);
+ const catalog = useQuickAddCatalog(mode === 'libraries');
+ const stockItems = useMemo(() => furniturePresetsFromCatalog(catalog.items), [catalog.items]);
+ const parametricItems = useMemo(() => catalog.items.filter(item => item.kind === 'cad_parametric_template'), [catalog.items]);
+ const stockCategories = useMemo(() => ['all', ...Array.from(new Set(stockItems.map(item => item.category)))], [stockItems]);
  const [stockSearch,setStockSearch]=useState('');
  const [stockCategory,setStockCategory]=useState('all');
- const filteredStock=ARCHITECTURAL_STOCK.filter(stock=>(stockCategory==='all'||stock.category===stockCategory)&&
+ const filteredStock=stockItems.filter(stock=>(stockCategory==='all'||stock.category===stockCategory)&&
   (stock.name+' '+stock.description).toLowerCase().includes(stockSearch.trim().toLowerCase()));
  const materials=useMemo(()=>{
   const map=new Map<string,{wallIds:string[];thickness:number}>();
@@ -79,26 +82,33 @@ export function CadResourcesPane({mode,project,selection,onSelect,onClose,onAppl
       <input type="search" value={stockSearch} onChange={event=>setStockSearch(event.target.value)} placeholder="Sofa, table, plant, vanity…" aria-label="Search architectural stock"/>
      </label>
      <div className="cad-stock-filters" role="group" aria-label="Stock categories">
-      {['all','seating','tables','bedroom','kitchen','bathroom','office','decor'].map(category=>
-       <button key={category} type="button" aria-pressed={stockCategory===category} onClick={()=>setStockCategory(category)}>{category}</button>)}
+      {stockCategories.map(category=>
+       <button key={category} type="button" aria-pressed={stockCategory===category} onClick={()=>setStockCategory(category)}>{category === 'all' ? 'All' : categoryLabel(category)}</button>)}
      </div>
-     <div className="cad-stock-list">{filteredStock.map(item=><article key={item.type} className="cad-stock-card">
-       <div className="cad-stock-swatch" style={{background:item.color}} aria-hidden="true"/>
-       <div><strong>{item.name}</strong><small>{item.w} × {item.d} × {item.h} in · {item.category}</small>
+     <div className="cad-stock-list">
+      {catalog.status==='loading' && <p className="cad-pane-note">Loading registered studio objects…</p>}
+      {catalog.status==='error' && <div className="cad-pane-note" role="alert">The studio catalog is unavailable. <button type="button" onClick={catalog.refresh}>Retry</button></div>}
+      {filteredStock.map(item=><article key={item.type} className="cad-stock-card">
+       <div className="cad-stock-swatch" style={item.color ? {background:item.color} : undefined} aria-hidden="true"/>
+       <div><strong>{item.name}</strong><small>{item.w} × {item.d} × {item.h} in · {categoryLabel(item.category)}</small>
         <p>{item.description}</p></div>
        <button type="button" disabled={readOnly} onClick={()=>onPlaceStock(item)}>Place</button>
-     </article>)}
-     {!filteredStock.length&&<p className="cad-pane-note">No stock items match your filters.</p>}</div>
+      </article>)}
+      {catalog.status==='ready' && !filteredStock.length&&<p className="cad-pane-note">No registered stock items match your filters.</p>}
+     </div>
      </>}
      {librarySection==='parametric'&&<>
      <h4>Parametric generators · OpenSCAD</h4>
      <p className="cad-property-help">Create a real parametric part in this project, then edit its dimensions and source in Properties.</p>
      <div className="cad-generator-list">
-      {Object.entries(OPENSCAD_PARAMETRIC_TEMPLATES).map(([key,template])=>
-       <div key={key} className="cad-generator-card">
-        <strong>{template.name}</strong><small>{template.description}</small>
-        <button type="button" disabled={readOnly} onClick={()=>onCreateParametric(key)}>Add to project</button>
+      {catalog.status==='loading' && <p className="cad-pane-note">Loading registered parametric templates…</p>}
+      {catalog.status==='error' && <div className="cad-pane-note" role="alert">The studio catalog is unavailable. <button type="button" onClick={catalog.refresh}>Retry</button></div>}
+      {parametricItems.map(item=>
+       <div key={item.id} className="cad-generator-card">
+        <strong>{item.title}</strong><small>{item.description}</small>
+        <button type="button" disabled={readOnly} onClick={()=>onCreateParametric(item)}>Add to project</button>
        </div>)}
+      {catalog.status==='ready' && !parametricItems.length && <p className="cad-pane-note">No registered parametric templates are available.</p>}
      </div>
      </>}
      {librarySection==='openscad'&&<>

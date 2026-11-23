@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TEMPLATES } from './templates';
+import { createEmptyCadProject } from './create-empty-project';
 import { cloneProjectForPublicUser, createPublicExampleProject, isTrustedLocalCadHost, resolveCadAccessMode } from './project-access';
 
 describe('CAD project access boundaries', () => {
@@ -14,21 +14,24 @@ describe('CAD project access boundaries', () => {
   });
 
   it('creates a separate example project without mutating the catalog template', () => {
-    const template = TEMPLATES.modern_villa;
-    const originalId = template.id;
-    const originalWallCount = template.walls.length;
+    const source = createEmptyCadProject();
+    source.id = 'registered-source';
+    source.name = 'Source project';
+    source.walls.push({ id: 'wall-source', x1: 0, y1: 0, x2: 120, y2: 0, thickness: 6, height3D: 96, material: 'wood_panel' });
+    const originalWallCount = source.walls.length;
     const example = createPublicExampleProject();
-    expect(example.id).not.toBe(originalId);
+    expect(example.id).not.toBe(source.id);
     expect(example.id).toMatch(/^demo_/);
-    expect(example.name).toBe('Example Home');
-    expect(example.walls).toHaveLength(originalWallCount);
-    example.walls.pop();
-    expect(template.walls).toHaveLength(originalWallCount);
-    expect(template.id).toBe(originalId);
+    expect(example.name).toBe('Untitled CAD project');
+    expect(example.walls).toHaveLength(0);
+    const copy = cloneProjectForPublicUser(source, 'Independent copy');
+    copy.walls.pop();
+    expect(source.walls).toHaveLength(originalWallCount);
+    expect(source.id).toBe('registered-source');
   });
 
   it('clones a published DreamHouse example into a user-owned demo identity', () => {
-    const published = { ...TEMPLATES.modern_villa, id: 'dreamhouse-v1-wip', name: 'DreamHouse V1.1' };
+    const published = { ...createEmptyCadProject(), id: 'dreamhouse-v1-wip', name: 'DreamHouse V1.1' };
     const userCopy = cloneProjectForPublicUser(published, 'DreamHouse · Personal Example');
     expect(userCopy.id).not.toBe('dreamhouse-v1-wip');
     expect(userCopy.id).toMatch(/^demo_/);

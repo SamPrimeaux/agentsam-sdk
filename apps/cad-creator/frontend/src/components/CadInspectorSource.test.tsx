@@ -4,7 +4,6 @@ import {describe,it,expect,vi} from 'vitest';
 import {CadInspectorSource} from './CadInspectorSource';
 import {CadResourcesPane} from './CadResourcesPane';
 import {createEmptyCadProject} from '../lib/create-empty-project';
-import {OPENSCAD_PARAMETRIC_TEMPLATES} from '../lib/openscad/generator';
 import {insertOpenScadImport} from './OpenScadLibraryPane';
 import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
 
@@ -25,21 +24,21 @@ describe('contextual CAD element editing',()=>{
    onChange={noop} readOnly={true}/>);
   expect(html).toContain('not an editable native BIM entity');
  });
- it('offers actual generator templates and registered import tooling in the existing Libraries rail',()=>{
-  const html=renderToStaticMarkup(<CadResourcesPane mode="libraries" project={project} selection={null}
+ it('loads registered generator templates and import tooling in the existing Libraries rail',()=>{
+  const html=renderToStaticMarkup(<CadResourcesPane mode="libraries" preferredSection="parametric" project={project} selection={null}
    onSelect={noop} onClose={noop} onApplyAssembly={noop} onPlaceStock={noop}
    onCreateParametric={noop} onInsertScadImport={noop} onOpenTemplates={noop} readOnly={false}/>);
   expect(html).toContain('Library categories');
   expect(html).toContain('Parametric');
   expect(html).toContain('OpenSCAD');
+  expect(html).toContain('Loading registered parametric templates');
   expect(html).toContain('Assembly');
  });
 
  it('creates and updates parametric source through the actual CAD operation reducer',()=>{
-  const template=OPENSCAD_PARAMETRIC_TEMPLATES.workstation;
-  const object={id:'param-test',name:template.name,generator:'openscad' as const,generatorTemplate:'workstation',
-   parameters:{...template.defaultParams},parameterDefs:template.parameterDefs,
-   transform:{x:48,y:48,z:0,rotationY:0},source:template.generateScad(template.defaultParams)};
+  const object={id:'param-test',name:'Test parametric part',generator:'openscad' as const,generatorTemplate:'registered-test-part',
+   parameters:{width:60},parameterDefs:[],
+   transform:{x:48,y:48,z:0,rotationY:0},source:'cube([width, 24, 18]);'};
   const created=applyDesignOperation(project,{id:'create-part',timestamp:Date.now(),type:'create_parametric_object',parametricObject:object});
   expect(created.success).toBe(true);
   if(!created.success)return;

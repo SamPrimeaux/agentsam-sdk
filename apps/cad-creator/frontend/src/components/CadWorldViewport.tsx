@@ -1,4 +1,5 @@
 import {trackCadRenderer} from '../lib/cad/scene-performance';
+import {readCadTheme} from '../lib/cad-theme';
 import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import * as THREE from 'three';
@@ -255,12 +256,13 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
  useEffect(()=>{if(onSceneSettings)return;try{localStorage.setItem(terrainKey,JSON.stringify(terrain))}catch{/* storage unavailable */}},[terrain,terrainKey,onSceneSettings]);
  useEffect(()=>{
   const host=mount.current;if(!host)return;
+  const theme=readCadTheme(host);
   let alive=true;
   let gltfRoot:THREE.Object3D|null=null;
   // Shared renderer lifecycle; the CAD orbit/walk camera controller remains native to this workspace.
   const viewport=createThreeViewport(host,{THREE},{
     wrapper:false,controls:false,autoRender:false,lights:false,
-    fov:56,near:.06,far:2400,maxPixelRatio:2,background:'#0a1420',
+    fov:56,near:.06,far:2400,maxPixelRatio:2,background:theme.background,
     powerPreference:'high-performance',preserveDrawingBuffer:true,
     shadowMap:{enabled:true,type:THREE.PCFShadowMap},
     toneMapping:THREE.ACESFilmicToneMapping,toneMappingExposure:.72,
@@ -511,7 +513,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
   const scene=sceneRef.current;if(!scene)return;
   if(selectedBox.current){scene.remove(selectedBox.current);selectedBox.current.geometry.dispose();(selectedBox.current.material as THREE.Material).dispose();selectedBox.current=null;}
   const binding=selectedElementId?bindings.current.get(selectedElementId):undefined;
-  if(binding){const helper=new THREE.Box3Helper(sceneElementBounds(binding),new THREE.Color('#82a7fb'));scene.add(helper);selectedBox.current=helper;}
+  if(binding){const helper=new THREE.Box3Helper(sceneElementBounds(binding),new THREE.Color(readCadTheme(mount.current).accent));scene.add(helper);selectedBox.current=helper;}
  },[sceneElements,selectedElementId,roofVisible,ready,shading]);
  useEffect(()=>{
   const focus=(event:Event)=>{
@@ -527,7 +529,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
  useEffect(()=>{
   const scene=sceneRef.current;if(!scene||!ready||!layoutProject?.sceneSource||!layoutProject.walls.length){setNativeStatus('');return;}
   let cancelled=false,layer:THREE.Group|undefined;
-  const material=new THREE.MeshStandardMaterial({color:'#82a7fb',roughness:.7});setNativeStatus('Evaluating native layout…');
+  const material=new THREE.MeshStandardMaterial({color:readCadTheme(mount.current).accent,roughness:.7});setNativeStatus('Evaluating native layout…');
   void nativePlanLayer(layoutProject,()=>material).then(result=>{if(cancelled){disposeNativeLayer(result);return;}layer=result;scene.add(layer);setNativeStatus('Layout: OCCT solids');},error=>{if(!cancelled)setNativeStatus(String(error).includes('requires_desktop')?'Native model evaluation unavailable':String(error));});
   return()=>{cancelled=true;if(layer){scene.remove(layer);disposeNativeLayer(layer);}material.dispose();};
  },[ready,layoutProject?.walls,layoutProject?.doors,layoutProject?.windows,layoutProject?.nativeHistory,layoutProject?.sceneSource]);
@@ -588,7 +590,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
   const mapping:Record<CadToneMapping,THREE.ToneMapping>={aces:THREE.ACESFilmicToneMapping,reinhard:THREE.ReinhardToneMapping,neutral:THREE.NeutralToneMapping,none:THREE.NoToneMapping};
   webgl.toneMapping=mapping[toneMapping];webgl.toneMappingExposure=exposure;
  },[toneMapping,exposure]);
- useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(skyVisible?skyColor:'#26313b');},[skyVisible,skyColor]);
+ useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(skyVisible?skyColor:readCadTheme(mount.current).background);},[skyVisible,skyColor]);
  // Editing always regenerates the complete terrain projection from the same
  // document, so exported JSON and visible relief cannot diverge.
  useEffect(()=>{
@@ -662,7 +664,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
   if(touchPointers.current.size<2)pinchDistance.current=null;
   const p=pointer.current;if(p?.id===e.pointerId){if(!wasPinching&&!terrainBrushRef.current.mode&&p.distance<5)pick(e);pointer.current=null}
  };
- return <section className="relative h-full min-h-0 min-w-0 flex-1 bg-[#081321] text-[#e4edf7]" data-cad-world="project-revision" data-world-ready={ready?'true':'false'}>
+ return <section className="relative h-full min-h-0 min-w-0 flex-1 bg-[var(--cad-bg)] text-[var(--cad-ink)]" data-cad-world="project-revision" data-world-ready={ready?'true':'false'}>
    <div ref={mount} role="img" aria-label={`${sceneLabel} ${revision} BIM world`}
      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
      onPointerDown={start} onPointerMove={drag} onPointerUp={stop}
@@ -680,23 +682,23 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
      <div className="cad-viewport-overlay__chip"><span>Rev {revision}</span><span className="cad-viewport-overlay__sep" aria-hidden="true">·</span><span>{mode==='walk'?'Walk':'Orbit'}</span></div>
      {progress||error?null:<div className="cad-viewport-overlay__hint">Lightweight HUD · full GLB loads only in this workspace</div>}
    </div>
-   {nativeStatus&&<div className="absolute bottom-3 left-3 text-xs bg-slate-950/80 text-slate-100 px-2 py-1" role="status">{nativeStatus}</div>}
-   {mode==='walk'&&<div className="pointer-events-none absolute bottom-14 left-1/2 -translate-x-1/2 rounded-lg bg-[#111b2c]/85 px-3 py-2 text-center text-xs text-white/90">W A S D · drag to look · Shift to move faster</div>}
+   {nativeStatus&&<div className="absolute bottom-3 left-3 text-xs bg-[var(--cad-surface)] text-[var(--cad-ink)] px-2 py-1" role="status">{nativeStatus}</div>}
+   {mode==='walk'&&<div className="pointer-events-none absolute bottom-14 left-1/2 -translate-x-1/2 rounded-lg bg-[var(--cad-surface)] px-3 py-2 text-center text-xs text-[var(--cad-ink)]">W A S D · drag to look · Shift to move faster</div>}
    {mode==='walk'&&<div className="absolute bottom-16 left-3 z-20 flex gap-1 sm:hidden">
      {(['KeyW','KeyA','KeyS','KeyD'] as const).map((key,i)=><button key={key} type="button" aria-label={'Move '+['forward','left','back','right'][i]}
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
-       className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
+       className="rounded-lg border border-[var(--cad-line)] bg-[var(--cad-input)] px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
    {siteEditable&&terrainHost&&createPortal(<TerrainEditorPanel document={terrain} resetDocument={terrainInitialRef.current.document} onChange={changeTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
      brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
      onFitSite={fitSite}/>,terrainHost)}
-   {!terrainOpen&&selection&&!onSelect&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
+   {!terrainOpen&&selection&&!onSelect&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-[var(--cad-line)] bg-[var(--cad-surface)] p-3 text-xs shadow-xl" aria-label="Selected BIM element">
      <div className="flex justify-between gap-2"><strong>BIM · {selection.category}</strong><button onClick={()=>setSelection(null)} aria-label="Close BIM inspector">×</button></div>
-     <p className="mt-1 break-all font-mono text-sky-200">{selection.designId}</p>
-     <p className="mt-1 text-slate-400">{selection.nodeName} · {selection.source}</p>
+     <p className="mt-1 break-all font-mono text-[var(--cad-accent-ink)]">{selection.designId}</p>
+     <p className="mt-1 text-[var(--cad-muted)]">{selection.nodeName} · {selection.source}</p>
    </aside>}
    <div className="absolute bottom-12 right-3 z-20"><ViewCube/></div>
-   {(progress||error)&&<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/20 bg-[#101a2b]/95 px-5 py-4 text-center text-sm" role="status">{error||progress}</div>}
+   {(progress||error)&&<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[var(--cad-line)] bg-[var(--cad-surface)] px-5 py-4 text-center text-sm" role="status">{error||progress}</div>}
 
  </section>;
 }
