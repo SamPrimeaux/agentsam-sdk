@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,20 @@ test('release train check enforces public package versions and exact public inte
     encoding: 'utf8',
   });
   assert.match(output, /PASS all public release packages and dependency pins aligned/);
+});
+
+test('release train check ignores stale installed copies under nested node_modules', () => {
+  const nm = path.join(root, 'apps/local-studio/backend/node_modules');
+  assert.equal(existsSync(nm), false, 'test needs a tree without a local-studio backend install');
+  const pkgDir = path.join(nm, '@inneranimalmedia/agentsam-sdk');
+  try {
+    mkdirSync(pkgDir, { recursive: true });
+    writeFileSync(path.join(pkgDir, 'package.json'), JSON.stringify({ name: '@inneranimalmedia/agentsam-sdk', version: '0.0.1' }));
+    const output = execFileSync(process.execPath, ['scripts/release-train.mjs', 'check'], { cwd: root, encoding: 'utf8' });
+    assert.match(output, /PASS all public release packages and dependency pins aligned/);
+  } finally {
+    rmSync(nm, { recursive: true, force: true });
+  }
 });
 
 test('OCCT and viewer are public npm packages consumed through registry pins', () => {
