@@ -1,3 +1,4 @@
+import { getCloudflareCapability } from './capabilities.js';
 /**
  * Provider scope registry — reads D1 `agentsam_provider_scopes` (the SSOT for
  * which scopes a provider offers) instead of code constants. Code catalogs are
@@ -23,14 +24,36 @@ export async function loadProviderScopes(env, providerKey = 'cloudflare') {
   }
 }
 
-/** `cloudflare.images` -> every active registry scope in the `images.*` family. */
+/**
+ * Resolve only the scopes explicitly declared for a capability. The previous
+ * last-segment prefix match could silently request every permission in an
+ * unrelated family. D1 enumerates scope availability; the selected capability
+ * or explicit `cloudflare.perm.<family>` authorizes the requested set.
+ */
 export async function registryScopesForCapability(env, capabilityId, providerKey = 'cloudflare') {
   const registry = await loadProviderScopes(env, providerKey);
   if (!registry) return null;
-  const family = String(capabilityId || '').split('.').pop();
-  if (!family) return null;
-  const found = [...registry.keys()].filter((scope) => scope.startsWith(`${family}.`));
-  return found.length ? found : null;
+  const id = String(capabilityId || '');
+  if (providerKey !== 'cloudflare') return null;
+  const defined = getCloudflareCapability(id);
+  if (defined && Array.isArray(defined.oauthScopes) && defined.oauthScopes.length) {
+    const scopes = defined.oauthScopes.filter(scope => registry.has(scope));
+    return scopes.length ? scopes : null;
+  }
+  const match = /^cloudflare\.perm\.([a-z0-9][a-z0-9-]*)$/.exec(id);
+  if (!match) return null;
+  const exactFamily = match[1];
+  const scopes = [...registry.keys()].filter(scope => scope.startsWith(exactFamily + '.'));
+  return scopes.length ? scopes : null;
+}
+/** Provider permission inventory for a permission picker. These are offerable,
+ * NOT an account's granted token permissions. */
+export async function listProviderScopeOptions(env, providerKey = 'cloudflare') {
+  const registry = await loadProviderScopes(env, providerKey);
+  if (!registry) return null;
+  return [...registry.values()].map(row => ({
+    scope: row.scope, label: row.label, category: row.category,
+  })).sort((a,b) => a.scope.localeCompare(b.scope));
 }
 
 /** Drop scopes the registry does not (or no longer) offer. */
@@ -60,19 +83,26 @@ export async function activeGrantedScopes(env, ownerId, providerKey = 'cloudflar
  */
 export async function pluginPackScopes(env, packs, providerKey = 'cloudflare') {
   if (!env?.DB?.prepare || !packs?.length) return null;
-  const keys = packs.map((pack) => `${providerKey}-${String(pack).toLowerCase()}`);
+  const requested = new Set(packs.map(pack => String(pack || '').toLowerCase()).filter(Boolean));
+  if (!requested.size) return null;
   try {
-    const marks = keys.map(() => '?').join(',');
+    // Pack identity comes from the registry's config.pack_id, not a fabricated
+    // provider + pack key. The user can install/relabel registered packs.
     const { results } = await env.DB.prepare(
-      `SELECT plugin_key, config_json FROM agentsam_plugins WHERE provider_key = ? AND plugin_key IN (${marks})`,
-    ).bind(providerKey, ...keys).all();
+      `SELECT id, plugin_key, config_json FROM agentsam_plugins WHERE provider_key = ? AND plugin_kind = 'oauth'`,
+    ).bind(providerKey).all();
     const out = new Set();
     let found = 0;
     for (const row of results || []) {
       let cfg = {};
-      try { cfg = JSON.parse(row.config_json || '{}'); } catch { /* ignore */ }
-      found += 1;
-      for (const scope of [...(cfg.oauth_scopes || []), ...(cfg.oauth_scopes_edit || [])]) out.add(scope);
+      try { cfg = JSON.parse(row.config_json || '{}'); } catch { /* invalid plugin config is ignored */ }
+      const packId = String(cfg.pack_id || '').toLowerCase();
+      if (cfg.pack !== true || !requested.has(packId)) continue;
+      found++;
+      for (const scope of [...(Array.isArray(cfg.oauth_scopes) ? cfg.oauth_scopes : []),
+                            ...(Array.isArray(cfg.oauth_scopes_edit) ? cfg.oauth_scopes_edit : [])]) {
+        if (typeof scope === 'string' && scope.trim()) out.add(scope.trim());
+      }
     }
     return found ? [...out] : null;
   } catch {
