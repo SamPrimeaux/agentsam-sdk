@@ -1,15 +1,17 @@
-/** Runtime export of agentsam.app.json for Local Studio EmptyState. */
+/** Reusable Database Editor module descriptor; D1 legacy app installations remain compatible. */
 export const DATABASE_EDITOR_APP = Object.freeze({
-  schema: 'agentsam.app.v1',
+  schema: 'agentsam.package.v1',
+  kind: 'module',
+  installable: false,
   id: 'database-editor',
   name: 'AgentSam Database Editor',
   display_name: 'Database Editor',
   package: '@inneranimalmedia/agentsam-database-editor',
   icon: 'database',
   install: {
-    supported: true,
-    command: 'agentsam app install database-editor',
-    curl: 'curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id database-editor',
+    supported: false,
+    authority: 'host-capability',
+    note: 'Existing account app installations remain accessible through the host launcher; new standalone installs are not offered.',
   },
   preview: {
     supported: true,

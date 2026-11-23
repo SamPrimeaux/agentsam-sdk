@@ -11,38 +11,37 @@ export function listAppManifests(root = DEFAULT_ROOT) {
   const out = [];
   const seen = new Set();
 
-  function addFromDir(parent, entryName) {
-    const dir = path.join(parent, entryName);
+  const ignored = new Set(['node_modules', 'dist', '.output', 'target', 'public', '.git', '.agentsam', 'test', 'tests', 'fixtures']);
+  function scanDirectory(dir, depth, maxDepth) {
+    if (!fs.existsSync(dir)) return;
     const manifestPath = path.join(dir, 'agentsam.app.json');
-    if (!fs.existsSync(manifestPath)) return;
-    let manifest;
-    try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); }
-    catch { return; }
-    // Only independent applications belong in the APP discovery/installer.
-    // A bundled module/provider must declare an agentsam.package.json instead.
-    if (manifest.schema !== 'agentsam.app.v1' || manifest.kind !== 'app') {
-      throw new Error(`invalid_app_manifest_kind:${manifestPath}`);
+    if (fs.existsSync(manifestPath)) {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      if (manifest.schema !== 'agentsam.app.v1' || manifest.kind !== 'app') {
+        throw new Error(`invalid_app_manifest_kind:${manifestPath}`);
+      }
+      const id = manifest.id || path.basename(dir);
+      if (seen.has(id)) throw new Error(`duplicate_app_manifest_id:${id}`);
+      seen.add(id);
+      out.push({
+        id,
+        name: manifest.name || path.basename(dir),
+        dir,
+        manifestPath,
+        bin: manifest.bin || null,
+        commands: manifest.commands || {},
+        manifest,
+      });
     }
-    const id = manifest.id || entryName;
-    if (seen.has(id)) return;
-    seen.add(id);
-    out.push({
-      id,
-      name: manifest.name || entryName,
-      dir,
-      manifestPath,
-      bin: manifest.bin || null,
-      commands: manifest.commands || {},
-      manifest,
-    });
-  }
-
-  for (const parentName of ['apps', 'packages']) {
-    const parent = path.join(root, parentName);
-    if (!fs.existsSync(parent)) continue;
-    for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
-      if (entry.isDirectory()) addFromDir(parent, entry.name);
+    if (depth >= maxDepth) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory() || ignored.has(entry.name)) continue;
+      scanDirectory(path.join(dir, entry.name), depth + 1, maxDepth);
     }
   }
+  // Includes nested host-owned applications, such as AgentSamForms.
+  // Package modules and plugins no longer carry agentsam.app.json.
+  scanDirectory(path.join(root, 'apps'), 0, 4);
+  scanDirectory(path.join(root, 'packages'), 0, 2);
   return out.sort((a, b) => a.id.localeCompare(b.id));
 }
