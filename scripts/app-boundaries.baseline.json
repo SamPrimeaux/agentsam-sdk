@@ -1,6 +1,5 @@
 [
   "apps/ecommerce-cms-agentsam/backend/cms/site-starter.test.mjs imports apps/local-studio (../../../local-studio/backend/worker/studio-sites-overview.js)",
-  "apps/local-studio/backend/worker/cms-remote.js imports apps/ecommerce-cms-agentsam (../../../ecommerce-cms-agentsam/backend/cms/studio-bridge-protocol.js)",
   "apps/local-studio/backend/worker/index.js imports apps/cad-creator (../../../cad-creator/agentsam.app.json)",
   "apps/local-studio/backend/worker/index.js imports apps/ecommerce-cms-agentsam (../../../ecommerce-cms-agentsam/agentsam.app.json)",
   "apps/local-studio/backend/worker/index.js imports apps/ecommerce-cms-agentsam (../../../ecommerce-cms-agentsam/backend/admin/api.js)",
