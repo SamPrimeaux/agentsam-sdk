@@ -235,3 +235,14 @@
 .asi-command-empty { margin:10px; padding:10px; text-align:center; color:var(--asi-muted); font-size:12px; }
 .asi-command-footer { border-top:1px solid var(--asi-border); display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px 3px; color:var(--asi-muted); font-size:10px; }
 .asi-command-footer button { padding:4px 8px; border-radius:4px; border:1px solid var(--asi-border); font-size:10px; }
+
+.asi-source-connect { display:flex; flex-direction:column; gap:7px; }
+.asi-source-connect p { margin:0; font-size:11px; line-height:1.4; color:var(--asi-muted); }
+.asi-source-connect button { text-align:left; border:1px solid var(--asi-border); border-radius:6px; padding:7px 9px; font-size:11px; color:var(--asi-accent,#2caeb2); }
+.asi-connection-empty { width:min(440px,100%); padding:12px; margin-top:7px; border:1px solid var(--asi-border); border-radius:10px; background:var(--asi-surface); text-align:left; }
+.asi-connection-dialog { width:min(560px,100%); padding:20px; }
+.asi-connection-dialog .asi-source-connection-panel { gap:12px; }
+.asi-connection-dialog .asi-source-connection-panel>strong { font-size:16px; }
+.asi-connection-dialog .asi-source-connection-panel input,
+.asi-connection-dialog .asi-source-connection-panel select { max-width:100%; }
+.asi-welcome:has(.asi-connection-empty) { display:flex; flex-direction:column; align-items:center; justify-content:center; overflow-y:auto; gap:12px; }
