@@ -995,8 +995,8 @@ function PluginCustomizeView({
                 <p className="mt-1 text-lg font-semibold">{briefs.length}</p>
               </article>
               <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
-                <p className="text-[11px] text-muted-foreground">{isBrand?"Connected sources":"Concepts"}</p>
-                <p className="mt-1 text-lg font-semibold">{isBrand?(Array.isArray(data?.connections)?data.connections.length:0):concepts.length}</p>
+                <p className="text-[11px] text-muted-foreground">Concepts</p>
+                <p className="mt-1 text-lg font-semibold">{concepts.length}</p>
               </article>
             </div>
             <>
