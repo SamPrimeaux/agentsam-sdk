@@ -37,7 +37,7 @@ class CadBuildingPythonClientTests(unittest.TestCase):
         self.assertTrue(client.probe())
         with self.assertRaisesRegex(ValueError,'resource_ref'):
             client.export({'kind':'file','mount':'work','path':'../secret'})
-        with self.assertRaisesRegex(RuntimeError,'receipt_invalid'):
+        with self.assertRaisesRegex(RuntimeError,'source_evidence_invalid'):
             client.export({'kind':'file','mount':'work','path':'scene.json'},'b'*64)
         with self.assertRaisesRegex(RuntimeError,'integrity_invalid'):
             client.download({**FILE,'sha256':'b'*64})
