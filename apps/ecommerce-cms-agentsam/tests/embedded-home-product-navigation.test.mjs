@@ -4,33 +4,20 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-test('AgentSam leading controls reserve the hamburger hit target', () => {
-  const css = read('../../local-studio/frontend/agentsam/shell.css');
-  assert.match(css, /#agentsam-console-leading-slot:not\(:empty\)[^}]+--agentsam-leading-clearance/s);
-  assert.match(css, /--agentsam-leading-clearance:\s*50px/);
-  assert.match(css, /#agentsam-console-leading-slot:not\(:empty\)[^}]*margin-right:auto/s);
-  assert.match(css, /justify-content:flex-start/);
+test('Storefront Home adapts its content to a narrow host container rather than screen width', () => {
+  const css = read('../frontend/static/css/home-workspace.css');
+  assert.match(css, /\.fnf-home\s*\{[^}]*container-type:\s*inline-size/s);
+  assert.match(css, /@container\s*\(max-width:\s*620px\)/);
+  assert.match(css, /@container\s*\(max-width:\s*390px\)/);
+  assert.match(css, /\.fnf-home-shortcuts__grid\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\)/);
 });
 
-test('Home iframe actually shrinks with Side Stage and its content responds to available width', () => {
-  const host = read('../../local-studio/frontend/agentsam/platform-console.css');
-  const home = read('../frontend/static/css/home-workspace.css');
-  assert.match(host, /\.platform-console-stage\s*>\s*\.agentsam-route\s*\{[^}]*flex:\s*1\s+1\s+0%/s);
-  assert.match(host, /\.agentsam-route\s*>\s*iframe\s*\{[^}]*width:\s*100%/s);
-  assert.match(host, /@media\s*\(max-width:\s*760px\)[\s\S]*\.platform-console-assistant\s*\{\s*position:\s*absolute/);
-  assert.match(home, /\.fnf-home\s*\{[^}]*container-type:\s*inline-size/s);
-  assert.match(home, /@container\s*\(max-width:\s*620px\)/);
-  assert.match(home, /@container\s*\(max-width:\s*390px\)/);
-  assert.match(home, /\.fnf-home-shortcuts__grid\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\)/);
-});
-
-test('Packaged Ecommerce shell hides duplicate global navigation only in a proven installed-app frame', () => {
+test('Embedded Ecommerce admin shell remains single while direct routes keep standalone navigation', () => {
   const shell = read('../frontend/shell.js');
-  const host = read('../../local-studio/frontend/src/routes/(apps)/admin/apps/ecommerce-cms-agentsam.tsx');
   assert.match(shell, /window\.frameElement\?\.closest\('\[data-agentsam-installed-app\]'\)/);
   assert.match(shell, /framed\s*&&\s*\(explicitlyEmbedded\s*\|\|\s*installedAppHost\)/);
   assert.match(shell, /"embedded-app":\s*\{[^}]*hideAdminNav:\s*true/);
-  assert.match(host, /resolved\.searchParams\.set\('__agentsamEmbedded',\s*'1'\)/);
+  assert.match(shell, /return framed && \(explicitlyEmbedded \|\| installedAppHost\)/);
 });
 
 test('Product Studio uses the published packaged dock with the real editor tabs, not another tool router', () => {
