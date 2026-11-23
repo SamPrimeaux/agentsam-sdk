@@ -609,7 +609,7 @@ def main():
     }
     for fn in [native,ifc,obj,mtl,out/"elements.csv",out/"openings.csv",
                out/"rooms-source.csv",out/"design-review-required.csv"]:
-        evidence.setdefault("files",[]).append({"name":fn.name,"bytes":fn.stat().st_size,"sha256":sha(fn)})
+        evidence_files.append({"name":fn.name,"bytes":fn.stat().st_size,"sha256":sha(fn)})
     (out/"validation.json").write_text(json.dumps(evidence,indent=2)+"\n")
     print(json.dumps({key:evidence[key] for key in [
         "model_elements","model_categories","real_opening_boolean_cuts",
