@@ -43,7 +43,7 @@ const fixtureWidgets: SettingsWidget[] = [
     removable: false,
     source: "Built in",
     preferenceScope: "This device",
-    deeplink: "/widgets",
+    deeplink: null,
   },
 ];
 

@@ -21,6 +21,42 @@ The current implementation is only partially connected:
 
 The platform also needs a clean way for first-party packages such as queue control, GOAP/work graph, analytics, repository, content/media, Brand, Campaign, and other domain packages to contribute relevant widgets without each package inventing a separate widget framework.
 
+## Implementation checkpoint — 2026-11-23 (local checkout, not yet deployed)
+
+The October proposal's original inventory above is historical; the production D1
+catalog and package registry have advanced since that audit:
+
+- Verified live Cloudflare D1 inneranimalmedia-business: 23 widget catalog
+  entries, zero installations, zero layouts and zero preferences before this
+  implementation. The 23rd entry, store-chat, is a storefront embed and is
+  **not** an AgentSam New Tab widget.
+- Workbench curates 22 New Tab widget entries: four actual compiled renderers
+  (queues, countdown, clock, calculator), and eighteen concepts that must
+  remain visibly un-installable until they have safe renderers/adapters.
+- Live table schemas reflect migration
+  1367_account_scoped_widgets_browser_history_app_views.sql: installation
+  state is keyed to accounts.id; user-id and redundant layout scope columns
+  from migration 1347 do not exist in the current live schema.
+- Local Studio's new authenticated GET/POST/PATCH/DELETE /api/widgets adapter
+  uses these existing four D1 tables. No new widget tables or account
+  configuration tables were introduced. The server allowlists compiled
+  Workbench renderers before allowing an installation; D1 cannot load code.
+- The existing Settings → Customize → Widgets gallery offers install, remove,
+  pin, size, configuration and visibility. The existing Side Stage → New Tab
+  hosts installed Workbench widget components with container-aware placement
+  and a shared add/control menu. /admin/widgets remains a legacy redirect to
+  New Tab, not a separate widget dashboard.
+- Authenticated widget preference and placement state is in D1; the old
+  browser localStorage visibility map is no longer a write authority. The
+  legacy metadata function is a compiled-gallery projection only.
+- Local SQLite and request-contract tests verify installation scope, layout,
+  configuration validation, concept gates, same-origin mutation and deletion.
+  A production rollout, authenticated visual walkthrough, desktop parity and
+  migration-tracking check are still release gates.
+
+This implements the existing proposed authority split; it does not approve an
+unreviewed new widget framework or move domain metrics into widget tables.
+
 ## Decision
 
 ### 1. Contracts are protocol authority

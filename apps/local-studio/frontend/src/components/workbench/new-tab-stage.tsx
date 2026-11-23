@@ -22,6 +22,7 @@ import type { LocalStudioPluginRecord } from "@/lib/connections/client";
 import { reloadSideStageRegistry, useSideStageRegistry, type SideStageAction } from "../../../agentsam/side-stage-actions";
 import { settingsPaneLabel } from "@/components/settings/settingsPaneLabel";
 import { PluginLogo, StageIcon, pluginLogoUrl, themeIsDarkNow } from "./stage-icons";
+import { NewTabWidgets } from "./new-tab-widgets";
 
 const START_CHIPS = [
   { id: "code", label: "Code", prefix: null },
@@ -256,6 +257,8 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
             </DropdownMenu>
           </div>
         </section>
+
+        <NewTabWidgets onOpenGallery={() => openSettings("customize", "widgets")} />
 
         <section aria-label="Suggested">
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Suggested</h3>

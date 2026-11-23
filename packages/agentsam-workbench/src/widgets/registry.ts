@@ -5,6 +5,7 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
   Object.freeze({
     id: 'queues',
     kind: 'queues',
+    componentKey: 'QueueDepthWidget',
     title: 'Queue Depth',
     description: 'Cloudflare transport backlog, consumers, and 24h history',
     icon: 'layers',
@@ -13,11 +14,11 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
     sizes: ['medium', 'large'] as const,
     availability: 'ready',
     ownerPackage: '@inneranimalmedia/agentsam-queue-control',
-    deeplink: '/widgets',
   } satisfies AgentSamWidgetDefinition),
   Object.freeze({
     id: 'countdown',
     kind: 'countdown',
+    componentKey: 'CountdownWidget',
     title: 'Countdown',
     description: 'Absolute deadline timer for focus blocks and checkpoints.',
     icon: 'clock-3',
@@ -26,11 +27,11 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
     sizes: ['small', 'medium'] as const,
     availability: 'ready',
     ownerPackage: '@inneranimalmedia/agentsam-workbench',
-    deeplink: '/widgets',
   } satisfies AgentSamWidgetDefinition),
   Object.freeze({
     id: 'clock',
     kind: 'clock',
+    componentKey: 'ClockWidget',
     title: 'World & Precision Clock',
     description: 'Device-backed world clock with timezone selection, seconds and date.',
     icon: 'clock',
@@ -39,11 +40,11 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
     sizes: ['small', 'medium'] as const,
     availability: 'ready',
     ownerPackage: '@inneranimalmedia/agentsam-workbench',
-    deeplink: '/widgets',
   } satisfies AgentSamWidgetDefinition),
   Object.freeze({
     id: 'calculator',
     kind: 'calculator',
+    componentKey: 'CalculatorWidget',
     title: 'Utility Calculator',
     description: 'Bounded arithmetic, keyboard input and session history, without dynamic code evaluation.',
     icon: 'calculator',
@@ -52,7 +53,6 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
     sizes: ['small', 'medium'] as const,
     availability: 'ready',
     ownerPackage: '@inneranimalmedia/agentsam-workbench',
-    deeplink: '/widgets',
   } satisfies AgentSamWidgetDefinition),
 ] satisfies readonly AgentSamWidgetDefinition[]);
 

@@ -209,6 +209,7 @@ try {
     '/api/settings/companions',
     '/api/apps/launcher',
     '/api/browser/history',
+    '/api/widgets',
     '/api/settings/browser',
     '/api/work/canvases',
     '/api/work/canvases/canvas_aaaaaaaaaaaa',

@@ -90,6 +90,7 @@ import { handleStudioThemes } from "./studio-themes.js";
 import { handleStudioNavigation } from "./studio-navigation-preferences.js";
 import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled, setNativeAdminAppPinned, touchNativeAdminAppOpened } from "./apps-launcher.js";
 import { listBrowserHistory, recordBrowserVisit, removeBrowserHistoryEntry } from "./browser-history.js";
+import { handleAccountWidgetsRequest } from "./account-widgets.js";
 import { listEmbedPolicy, listTrustedOrigins, trustOrigin, untrustOrigin } from "./browser-trust.js";
 import { handleBrowserPage } from "./browser-page.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
@@ -1769,6 +1770,9 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
           code==="app_install_not_supported"?409:
           code==="app_install_key_invalid"||code==="app_enabled_invalid"||code==="app_pinned_invalid"?400:503);
       }
+    }
+    if (url.pathname === "/api/widgets") {
+      return handleAccountWidgetsRequest(request, env.DB, await sessionAccount());
     }
     if (isAppsOpen) {
       if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
