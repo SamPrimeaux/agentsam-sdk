@@ -2,7 +2,7 @@
   "schema": "agentsam.skill.v1",
   "id": "agentsam-cad",
   "name": "AgentSam CAD",
-  "description": "Typed-recipe Blender build, inspect, preview, and export with sha256 proof between steps.",
+  "description": "CAD end to end: pick the entry point, engine and lane; build, inspect, render and export; prove each step with hashes and receipts.",
   "package": "@inneranimalmedia/agentsam-sdk",
   "slash": {
     "suggested": "/cad"
