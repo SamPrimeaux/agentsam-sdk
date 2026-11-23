@@ -15,6 +15,17 @@ Theme Studio, storefront delivery, and Apps are owned by
 - D1/R2/host adapters implement durable revisions, atomic CAS, immutable
   publication manifests and rollback. The SDK does not initialize storage.
 
+## Worker service-bridge contract
+
+`@inneranimalmedia/agentsam-cms/studio-bridge-protocol` owns the portable,
+short-lived signed Worker-to-Worker request protocol for Ecommerce CMS and
+Local Studio. A host must verify the signed-in account, site membership,
+site-scoped edit/publish permission and trusted service binding **before**
+using this protocol. The receiving Worker independently verifies the HMAC,
+project scope, timestamp, method, path, body digest and allowlist. This
+module has no storage binding, CMS schema, or authority to publish by itself.
+Local Studio and Ecommerce use their existing attached D1/R2 host bindings.
+
 ## Runtime entry points
 
 `createCmsOperations()` retains the canonical SDK agent operation vocabulary
