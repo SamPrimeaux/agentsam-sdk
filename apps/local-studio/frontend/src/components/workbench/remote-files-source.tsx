@@ -6,7 +6,7 @@ import { AgentSamFilesystem, type AgentSamFilesystemSource, type IDEFileSource, 
 import type { AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
 import { openExternalUrl, isPackagedDesktop } from '@/lib/desktop/tauri';
 import {
-  createRemoteIDEWorkspace, discoverIDESources, listIDEGithubRepos, listIDER2Buckets, listIDEContainers,
+  createRemoteIDEWorkspace, discoverIDESources, listIDEGithubRepos, listIDEGithubBranches, listIDER2Buckets, listIDEContainers,
   type IDESourceDiscovery,
 } from '@/lib/work/remote-ide-workspace';
 import { beginLocalStudioConnectorOAuth, startLocalStudioProviderConnection } from '@/lib/connections/client';
@@ -43,6 +43,8 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
   const [buckets,setBuckets]=useState<Array<{name:string;jurisdiction:string}>>([]);
   const [repos,setRepos]=useState<Array<{fullName:string;defaultBranch:string;private:boolean;canPush:boolean}>>([]);
   const [repository,setRepository]=useState('');
+  const [branch,setBranch]=useState('');
+  const [branches,setBranches]=useState<Array<{name:string;protected:boolean}>>([]);
   const [apps,setApps]=useState<Array<{id:string;name:string;instances?:unknown}>>([]);
   const [dockerSelection,setDockerSelection]=useState<DockerSelection|null>(null);
   const refresh=useCallback(async()=>{
@@ -58,7 +60,7 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
     window.addEventListener('focus',onFocus);
     return ()=>window.removeEventListener('focus',onFocus);
   },[refresh]);
-  useEffect(()=>{setAccount('');setBucket('');setBuckets([]);setRepos([]);setRepository('');setApps([]);setDockerSelection(null);setError('');},[source]);
+  useEffect(()=>{setAccount('');setBucket('');setBuckets([]);setRepos([]);setRepository('');setBranch('');setBranches([]);setApps([]);setDockerSelection(null);setError('');},[source]);
   const accounts=source==='drive'?catalog.googleDrive:source==='github'?catalog.github:catalog.cloudflare;
   const selected=accounts.some(a=>a.account===account);
   useEffect(()=>{
@@ -70,11 +72,13 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
     if(source==='drive')return createRemoteIDEWorkspace({source:'drive',account});
     if(source==='github'){
       const repo=repos.find(item=>item.fullName===repository);
-      if(repo)return createRemoteIDEWorkspace({source:'github',account,repository:repo.fullName,branch:repo.defaultBranch,canPush:repo.canPush});
+      if(repo)return createRemoteIDEWorkspace({source:'github',account,repository:repo.fullName,
+        branch:branches.some(item=>item.name===branch)?branch:repo.defaultBranch,
+        baseBranch:repo.defaultBranch,canPush:repo.canPush});
     }
     if(source==='r2'&&bucket&&buckets.some(item=>item.name===bucket))return createRemoteIDEWorkspace({source:'r2',account,bucket,jurisdiction:buckets.find(item=>item.name===bucket)?.jurisdiction});
     return null;
-  },[source,account,bucket,buckets,repos,repository,selected,dockerSelection]);
+  },[source,account,bucket,buckets,repos,repository,branch,branches,selected,dockerSelection]);
   const sources=useMemo<IDEFileSource[]>(()=>[
     {id:'local',label:'Local',state:hostConnected?'connected':'disconnected',detail:info.local},
     {id:'github',label:'GitHub',state:catalog.github?.length?'connected':'disconnected',detail:info.github},
@@ -110,6 +114,24 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
       setRepos(all);
     }catch(e){setError(e instanceof Error?e.message:String(e));}
   };
+  useEffect(()=>{
+    if(source!=='github'||!selected||!repository)return;
+    let live=true;
+    setBranches([]);
+    void (async()=>{
+      try {
+        const all:Array<{name:string;protected:boolean}>=[];
+        for(let page=1;page<=10;page++){
+          const result=await listIDEGithubBranches(account,repository,page);
+          all.push(...result.branches);
+          if(result.truncated)throw Error('Too many branches; narrow the GitHub repository.');
+          if(!result.nextPage)break;
+        }
+        if(live)setBranches(all);
+      }catch(e){if(live)setError(e instanceof Error?e.message:String(e));}
+    })();
+    return ()=>{live=false;};
+  },[source,selected,account,repository]);
   const loadBuckets=async()=>{
     setError('');
     try{const r=await listIDER2Buckets(account);if(r.cursor)throw Error('R2 bucket listing requires pagination.');setBuckets(r.buckets);}
@@ -124,7 +146,7 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
   // The canonical AgentSamFilesystem only receives an authorized FileWorkspace.
   const workspaceId = source === 'docker' && dockerSelection
     ? ['docker',dockerSelection.context,dockerSelection.container,dockerSelection.root].join(':')
-    : [source,account,repository,bucket].join(':');
+    : [source,account,repository,branch,bucket].join(':');
   const workspaceLabel = source === 'docker' ? 'Docker · '+dockerSelection?.container
     : source === 'drive' ? 'Google Drive · '+account
     : source === 'github' ? 'GitHub · '+repository
@@ -137,6 +159,7 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
     context: {
       accountRef: account || undefined,
       repository: source === 'github' ? repository : undefined,
+      branch: source === 'github' ? branch || repos.find(item=>item.fullName===repository)?.defaultBranch : undefined,
       bucket: source === 'r2' ? bucket : undefined,
       root: source === 'docker' ? dockerSelection?.root : undefined,
     },
@@ -176,10 +199,20 @@ export function RemoteFilesSource({source,onSelect,palette,hostConnected}:{
           {!accounts.length?<p className="text-muted-foreground">No authorized account detected. Connect using the existing OAuth flow.</p>:null}
           {source==='drive'?<p className="text-muted-foreground">Drive's drive.file scope only exposes files this app is authorized to access. Files open as read-only text while conditional writes are being verified.</p>:null}
           {source==='github'&&repos.length?<label className="flex items-center gap-2">Repository
-            <select className="min-w-0 flex-1 rounded border border-border bg-background p-2" value={repository} onChange={e=>setRepository(e.target.value)}>
+            <select className="min-w-0 flex-1 rounded border border-border bg-background p-2" value={repository} onChange={e=>{setRepository(e.target.value);setBranch('');setBranches([]);}}>
               <option value="">Choose a repository</option>
               {repos.map(repo=><option key={repo.fullName} value={repo.fullName}>{repo.fullName} · {repo.defaultBranch}{repo.canPush?'':' (read only)'}</option>)}
             </select></label>:null}
+          {source==='github'&&repository?<label className="flex items-center gap-2">Branch
+            <select className="min-w-0 flex-1 rounded border border-border bg-background p-2"
+              value={branches.some(item=>item.name===branch)?branch:repos.find(item=>item.fullName===repository)?.defaultBranch||''}
+              onChange={e=>setBranch(e.target.value)}>
+              {repos.find(item=>item.fullName===repository)?.defaultBranch &&
+                <option value={repos.find(item=>item.fullName===repository)!.defaultBranch}>Default · {repos.find(item=>item.fullName===repository)!.defaultBranch}</option>}
+              {branches.filter(item=>item.name!==repos.find(repo=>repo.fullName===repository)?.defaultBranch)
+                .map(item=><option key={item.name} value={item.name}>{item.name}{item.protected?' (protected)':''}</option>)}
+            </select>
+          </label>:null}
           {source==='r2'&&buckets.length?<label className="flex items-center gap-2">Bucket
             <select className="min-w-0 flex-1 rounded border border-border bg-background p-2" value={bucket}
               onChange={e=>setBucket(e.target.value)}><option value="">Choose bucket</option>
