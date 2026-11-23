@@ -24,6 +24,7 @@ import { NewTabStage } from '@/components/workbench/new-tab-stage';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { RemoteFilesSource } from '@/components/workbench/remote-files-source';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
+import { createChatFileWorkspace } from '@/lib/work/chat-file-workspace';
 
 const descriptions: Record<IDEFileSourceId, string> = {
   local: 'Local runtime — requires an authorized root and capability',
@@ -144,6 +145,12 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const publishFilesystemContext = (context: AgentSamFilesystemContext) => {
     window.dispatchEvent(new CustomEvent('agentsam:filesystem-context', {detail:context}));
   };
+  const attachmentWorkspace = useMemo(() =>
+    tab.attachedResource && browserScope
+      ? createChatFileWorkspace(tab.attachedResource,browserScope)
+      : null,
+    [tab.attachedResource?.blobId,tab.attachedResource?.name,tab.attachedResource?.size,
+      tab.attachedResource?.mimeType,tab.attachedResource?.kind,browserScope]);
 
   async function openBrowserFolder() {
     setSourceNotice('');
@@ -173,6 +180,16 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     }catch(error){setSourceNotice(error instanceof Error?error.message:String(error));}
   }
 
+  if (tab.attachedResource) {
+    if (!attachmentWorkspace) return <p role="status" className="p-4 text-sm">Sign in to open this attachment.</p>;
+    const { workspace:chatWorkspace, path } = attachmentWorkspace;
+    return <AgentSamFilesystem
+      sources={[{id:'local',label:'Conversation file',state:'connected',
+        workspace:chatWorkspace,workspaceId:'chat:'+tab.attachedResource.blobId,workspaceLabel:tab.attachedResource.name}]}
+      sourceId="local" onSourceSelect={setSource}
+      initialFilePath={path} renderMarkdown={renderIDEWorkspaceMarkdown}
+      palette={palette} onContextChange={publishFilesystemContext}/>;
+  }
   if(source!=='local')return <RemoteFilesSource source={source} onSelect={setSource}
     palette={palette} hostConnected={Boolean(browserWorkspace||(project?.kind==='filesystem'&&ready))} />;
   const connectDialog = <Dialog open={connectOpen} onOpenChange={setConnectOpen}>

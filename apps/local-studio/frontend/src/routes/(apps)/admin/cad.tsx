@@ -30,7 +30,19 @@ export function CadStudioPage() {
   const [approvalBusy, setApprovalBusy] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState("");
   useEffect(() => installCadHostBridge(() => iframeRef.current, {
-    onSelection: (sel) => setSelection(sel),
+    onSelection: (sel) => {
+      setSelection(sel);
+      // Forward descriptive CAD identity to the annotation host. A screen
+      // anchor is valid only when the CAD engine actually reported one.
+      const frame = iframeRef.current?.getBoundingClientRect();
+      const annotation = sel ? {
+        label: sel.object.label.slice(0, 180),
+        object: { id: sel.object.id, type: sel.object.type, projectId: sel.project_id, revision: sel.revision },
+        point: sel.anchor && frame ? { x: frame.left + sel.anchor.x, y: frame.top + sel.anchor.y } : undefined,
+      } : null;
+      window.dispatchEvent(new CustomEvent('agentsam:cad-selection', { detail: annotation }));
+      if (window.parent !== window) window.parent.postMessage({ source:'agentsam-cad-selection', selection: annotation }, window.location.origin);
+    },
     onAssistantRequest: ({ request_id, prompt, selection: sel }) => {
       void runCadAssistantTurn({ request_id, prompt, selection: sel }, (text) => {
         postToCadGuest(iframeRef.current, { type: "assistant.response", request_id, text });
@@ -73,7 +85,7 @@ export function CadStudioPage() {
       )}
       <div data-cad-editor-stage className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {chatOpen && <CadConversationPane selected={selection?.object.label} />}
-        <div data-cad-iframe-region className={"relative min-h-0 min-w-0 flex-1 overflow-hidden "+(chatOpen ? "hidden md:block" : "block")}>
+        <div data-cad-iframe-region data-annotation-target="cad-viewport" aria-label="CAD viewport" className={"relative min-h-0 min-w-0 flex-1 overflow-hidden "+(chatOpen ? "hidden md:block" : "block")}>
           <iframe ref={iframeRef} title="CAD Creator" src={cadEmbeddedUrl({ projectId: search.project, revision: search.revision })}
             className="absolute inset-0 block h-full w-full border-0" allow="fullscreen" />
         </div>

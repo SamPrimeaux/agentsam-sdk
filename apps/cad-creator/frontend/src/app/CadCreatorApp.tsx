@@ -246,6 +246,7 @@ export function CadCreatorApp({
   const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
+  const selectedVisualAnchor = useRef<{id:string;x:number;y:number;at:number} | null>(null);
   const [verifiedProjectRevision, setVerifiedProjectRevision] = useState<{projectId:string;revision:number}|null>(null);
   const onVerifiedRevision = useCallback((revision:number|null, projectId:string) => {
     setVerifiedProjectRevision(revision === null ? null : {projectId,revision});
@@ -470,7 +471,8 @@ export function CadCreatorApp({
       showToast(error instanceof Error ? error.message : 'DreamHouse example unavailable');
     }
   }, [accessMode, isViewer, updateProject]);
-  const selectSceneElement=useCallback(({designId}:{designId:string})=>{
+  const selectSceneElement=useCallback(({designId}:{designId:string},anchor?:{x:number;y:number})=>{
+    selectedVisualAnchor.current = anchor ? {id:designId,x:anchor.x,y:anchor.y,at:Date.now()} : null;
     const group=project.sceneElements?.some(element=>element.id===designId)?'sceneElements':
       (['walls','doors','windows','rooms','furniture','parametricObjects'] as const).find(key=>project[key]?.some(element=>element.id===designId));
     if(group){setUiSelection({group,id:designId});setInspectorOpen(true);}
@@ -479,12 +481,20 @@ export function CadCreatorApp({
   useEffect(()=>{
     const record=uiSelection?project[uiSelection.group]?.find(element=>element.id===uiSelection.id):null;
     const runtimeRevision=verifiedSelectionRevision(project.id,verifiedProjectRevision);
+    const visual = selectedVisualAnchor.current;
+    const anchor = uiSelection && visual?.id === uiSelection.id && Date.now()-visual.at < 10000
+      ? {x:visual.x,y:visual.y} : undefined;
     const selection=uiSelection&&record?buildSelectionContext({workspace:activeWorkspace,projectId:hostedProjectId||project.id,
       revision:runtimeRevision??0,revisionRef:hostedSelection?.revision.revision,
       objectId:uiSelection.id,objectType:uiSelection.group==='sceneElements'?'scene-element':uiSelection.group,
       label:'name' in record?String(record.name):'label' in record?String(record.label||record.id):record.id,
-      units:uiSelection.group==='sceneElements'?'m':'in'}):null;
+      units:uiSelection.group==='sceneElements'?'m':'in',anchor}):null;
     setCadSelection(selection);bridgeRef.current?.post({type:'cad.selection',selection});
+    window.dispatchEvent(new CustomEvent('agentsam:cad-selection', {detail:selection ? {
+      label:selection.object.label,
+      object:{id:selection.object.id,type:selection.object.type,projectId:selection.project_id,revision:selection.revision},
+      point:selection.anchor,
+    } : null}));
   },[uiSelection,project,activeWorkspace,verifiedProjectRevision,hostedProjectId,hostedSelection]);
   const reviewSelectedElement=()=>{
     const element=uiSelection&&project[uiSelection.group]?.find(row=>row.id===uiSelection.id);

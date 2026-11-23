@@ -40,7 +40,7 @@ export interface CadWorldViewportProps {
  readOnly?:boolean;
  /** Site terrain and scenery editing; defaults to !readOnly. Stored on this device per project revision. */
  siteEditable?:boolean;
- onSelect?:(s:Selected)=>void;
+ onSelect?:(s:Selected, anchor?:{x:number;y:number})=>void;
  onSceneInventory?:(groups:CadSceneInventoryGroup[])=>void;
  onSceneElements?:(elements:CadSceneElement[])=>void;
  sceneElements?:CadSceneElement[];
@@ -609,7 +609,7 @@ export function CadWorldViewport({terrainHost,modelUrl,manifestUrl,sceneLabel,re
   while(o&&!o.userData?.CadElementId&&!o.userData?.DesignId)o=o.parent;
   if(!o)return;
   const selected={designId:String(o.userData.CadElementId||o.userData.DesignId),category:String(o.userData.Category||'component'),nodeName:o.name,source:String(o.userData.Source||revision)};
-  setSelection(selected);onSelect?.(selected);
+  setSelection(selected);onSelect?.(selected,{x:event.clientX,y:event.clientY});
  },[ready,onSelect]);
  const sculptAt=useCallback((event:React.PointerEvent<HTMLDivElement>,force=false)=>{
   const brush=terrainBrushRef.current,projection=terrainProjection.current,camera=renderCamera.current,webgl=renderer.current;

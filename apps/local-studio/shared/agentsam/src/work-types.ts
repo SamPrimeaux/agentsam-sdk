@@ -134,6 +134,8 @@ export type SideTab = {
   url: string;
   srcdoc: string | null;
   fileId: string | null;
+  /** Account-local chat attachment; resolved by Files via the signed-in user's storage. */
+  attachedResource?: { blobId: string; name: string; mimeType: string; size: number; kind: 'image' | 'file' } | null;
   /** In-app browser history stack (URLs only; srcdoc previews skip history). */
   history: string[];
   historyIndex: number;

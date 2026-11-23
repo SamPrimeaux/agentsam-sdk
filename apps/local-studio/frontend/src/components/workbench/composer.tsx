@@ -1,24 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, FolderOpen, ImagePlus, Maximize2, Mic, Paperclip, Pause, Play, Plug, Square, Target, Trash2, X } from "lucide-react";
+import { ArrowUp, FolderOpen, ImagePlus, Maximize2, Mic, FileText, Paperclip, Pause, Play, Plug, Square, Target, Trash2, X } from "lucide-react";
 import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModelSelect } from "@/components/workbench/model-select";
-import { RunModeSelect } from "@/components/workbench/run-mode-select";
 import { cn, formatElapsed } from "@/lib/utils";
-import { defaultRunModeForTarget, useWorkStore } from "@/lib/work/store";
+import { defaultRunModeForTarget, useWorkStore, type ComposerAttachment, type PendingAnnotation } from "@/lib/work/store";
 import { PluginPicker } from '../../../agentsam/PluginPicker';
 import { ProjectPicker } from '../../../agentsam/ProjectPicker';
 import { toast } from "sonner";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { resolveChatImages, stageChatImage, type ChatImagePayload, type ChatImageReference } from "@/lib/content/chat-images";
+import { resolveChatImages, stageChatImage, stageChatFile, type ChatImagePayload, type ChatAttachmentReference } from "@/lib/content/chat-images";
 import { ImageLightbox } from "@/components/workbench/image-lightbox";
 import { CHAT_IMAGE_DROP_EVENT, takeChatImages } from "@/lib/content/chat-drop-queue";
 import { ComposerLibraryPicker } from "./composer-library-picker";
 import { VoiceSession, startDictation, canDictate } from "./voice-session";
 import "./composer-library.css";
 import "./work-voice.css";
+
+const EMPTY_PENDING_ATTACHMENTS: ComposerAttachment[] = [];
+const EMPTY_PENDING_ANNOTATIONS: PendingAnnotation[] = [];
 
 const RUN_MODE_PLACEHOLDERS = {
   agent: "Work on anything…",
@@ -42,7 +44,7 @@ export function Composer({
   targetId: string;
   targetKind: "chat" | "side";
   placeholder?: string;
-  onSubmit?: (message: { text: string; attachments: ChatImageReference[]; images: ChatImagePayload[] }) => Promise<void>;
+  onSubmit?: (message: { text: string; attachments: ChatAttachmentReference[]; images: ChatImagePayload[] }) => Promise<void>;
   onCancel?: () => void;
   busy?: boolean;
   contextLabel?: string;
@@ -89,9 +91,12 @@ export function Composer({
   const openSideTab = useWorkStore((s) => s.openSideTab);
   const [now, setNow] = useState(Date.now());
 
-  const [pendingAttachments, setPendingAttachments] = useState<
-    Array<ChatImageReference & { previewUrl?: string }>
-  >([]);
+  // Store-backed pending references: moving this same composer from Chat to a
+  // floating full-view window must NOT drop unsent files or image previews.
+  const pendingAttachments = useWorkStore((s) => s.pendingComposerAttachments[targetId] ?? EMPTY_PENDING_ATTACHMENTS);
+  const pendingAnnotations = useWorkStore((s) => s.pendingAnnotations[targetId] ?? EMPTY_PENDING_ANNOTATIONS);
+  const setPendingAttachments = (next: ComposerAttachment[] | ((current: ComposerAttachment[]) => ComposerAttachment[])) =>
+    useWorkStore.getState().setPendingComposerAttachments(targetId, next);
 
   useEffect(() => {
     if (!goal || goal.status !== "active") return;
@@ -107,23 +112,20 @@ export function Composer({
       const capacity = Math.max(0, 20 - pendingAttachments.length);
       const selected = Array.from(files);
       if (!capacity) {
-        toast.error("A message can include up to 20 images.");
+        toast.error("A message can include up to 20 attachments.");
         return;
       }
-      if (selected.length > capacity) toast.message(`Only the first ${capacity} image(s) were added. The limit is 20 per message.`);
+      if (selected.length > capacity) toast.message(`Only the first ${capacity} file(s) were added. The limit is 20 per message.`);
       for (const file of selected.slice(0, capacity)) {
         const supportedImage = ['image/png', 'image/jpeg', 'image/webp'].includes(file.type);
-        const supportedText = ['text/plain', 'text/markdown', 'text/csv', 'text/html', 'application/json', 'application/xml'].includes(file.type)
-          || /\.(md|txt|csv|json|html|xml)$/i.test(file.name);
         if (supportedImage) {
           const image = await stageChatImage(file, user?.id || '');
           next.push({ ...image, previewUrl: URL.createObjectURL(file) });
-        } else if (supportedText && file.size <= 1_000_000) {
-          const contents = (await file.text()).slice(0, 24_000).replaceAll('```', '``\u200b`');
-          const old = useWorkStore.getState().drafts[targetId] || '';
-          setDraft(targetId, [old, 'Attached reference file: ' + file.name + '\n```text\n' + contents + '\n```'].filter(Boolean).join('\n\n'));
         } else {
-          toast.error('Unsupported file: ' + file.name + '. Attach PNG/JPEG/WebP or a text, Markdown, JSON, CSV, HTML or XML file under 1 MB.');
+          // Preserve the real file identity and bytes: never expand a document
+          // into the visible prompt or silently invent a project workspace file.
+          try { next.push(await stageChatFile(file, user?.id || '')); }
+          catch (reason) { toast.error(reason instanceof Error ? reason.message : 'Could not attach '+file.name); }
         }
       }
       setPendingAttachments((previous) => [...previous, ...next].slice(0, 20));
@@ -161,12 +163,16 @@ export function Composer({
 
   async function submitWithAttachments() {
     if (imageMode) { await generateImage(); return; }
+    if (pendingAnnotations.length && (streaming || (typeof navigator !== 'undefined' && !navigator.onLine))) {
+      toast.message('Annotations will stay attached. Send them when this conversation is available.');
+      return;
+    }
     if (streaming && !onSubmit && !staging && !submitting && value.trim()) {
       setQueued((items) => [...items, value.trim()]);
       setDraft(targetId, "");
       return;
     }
-    if (staging || submitting || streaming || (!value.trim() && !pendingAttachments.length)) return;
+    if (staging || submitting || streaming || (!value.trim() && !pendingAttachments.length && !pendingAnnotations.length)) return;
     if (onSubmit) {
       setSubmitting(true);
       try {
@@ -200,6 +206,14 @@ export function Composer({
   function openProject() {
     window.dispatchEvent(new Event('agentsam:open-project-picker:' + targetId));
   }
+  useEffect(() => {
+    const fromMini = (event: Event) => {
+      const requestedId = (event as CustomEvent<{ targetId: string }>).detail?.targetId;
+      if (requestedId === targetId) setImageMode(true);
+    };
+    window.addEventListener('agentsam:composer-image-mode', fromMini);
+    return () => window.removeEventListener('agentsam:composer-image-mode', fromMini);
+  }, [targetId]);
   function beginDictation() {
     if (dictating) { dictationStop.current?.(); dictationStop.current = null; setDictating(false); return; }
     if (!canDictate()) { toast.error('Dictation is not supported by this browser.'); return; }
@@ -242,22 +256,34 @@ export function Composer({
     finally { setSubmitting(false); }
   }
 
-  const attachControl = !workMode ? <><RunModeSelect value={runMode} onChange={(mode) => setRunMode(targetId, mode)} compact /><ModelSelect compact /></> : null;
-
-  const attachmentPreview = pendingAttachments.length ? (
-    <div className="px-2 pt-2 pb-1" role="group" aria-label="Attached images">
+  const attachmentPreview = pendingAttachments.length || pendingAnnotations.length ? (
+    <div className="px-2 pt-2 pb-1" role="group" aria-label="Message context and attached files">
       <div className="flex max-h-[376px] flex-wrap items-start gap-3 overflow-y-auto pr-1">
+        {pendingAnnotations.map(annotation => (
+          <div key={annotation.id} className="group relative flex h-[66px] max-w-56 min-w-0 items-center gap-2 rounded-xl border border-border bg-card px-2 pr-8 text-foreground shadow-sm" title={annotation.page}>
+            <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted text-sm" aria-hidden="true">⌖</span>
+            <div className="min-w-0">
+              <span className="block truncate text-xs font-medium">{annotation.label || 'Selected annotation'}</span>
+              <span className="block truncate text-[10px] text-muted-foreground">{annotation.object ? 'CAD object' : annotation.tag} · Annotation</span>
+            </div>
+            <Button type="button" size="icon-sm" variant="ghost" className="absolute right-1 top-1 size-6 rounded-md"
+              aria-label={`Remove annotation ${annotation.label}`}
+              onClick={() => useWorkStore.getState().setPendingAnnotations(targetId, items => items.filter(item => item.id !== annotation.id))}>
+              <X className="size-3.5"/>
+            </Button>
+          </div>
+        ))}
         {pendingAttachments.map((attachment) => (
-          <div key={attachment.id} title={attachment.name} className="group relative size-32 shrink-0 overflow-hidden rounded-[18px] border border-border/70 bg-muted/60 sm:size-40 md:size-44">
+          <div key={attachment.id} title={attachment.name} className="group relative flex h-[66px] max-w-56 min-w-0 items-center gap-2 rounded-xl border border-border bg-card px-2 pr-8 text-foreground shadow-sm">
             {attachment.previewUrl ? (
-              <ImageLightbox src={attachment.previewUrl} alt={attachment.name} triggerClassName="size-full cursor-zoom-in">
-                <img src={attachment.previewUrl} alt="" className="size-full object-contain p-1" />
+              <ImageLightbox src={attachment.previewUrl} alt={attachment.name} triggerClassName="size-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                <img src={attachment.previewUrl} alt="" className="size-full object-cover" />
               </ImageLightbox>
-            ) : (
-              <div className="grid size-full place-items-center text-xs text-muted-foreground">Image</div>
-            )}
-            <Button type="button" size="icon-sm" variant="secondary" className="absolute right-2 top-2 size-7 rounded-full opacity-100 shadow sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" aria-label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>
-              <Trash2 className="size-3.5" />
+            ) : <FileText className="size-8 shrink-0 text-muted-foreground" aria-hidden="true" />}
+            <div className="min-w-0"><span className="block truncate text-xs font-medium">{attachment.name}</span>
+              <span className="text-[10px] text-muted-foreground">{attachment.kind === 'image' ? 'Image' : 'File'} · {Math.ceil(attachment.size / 1024)} KB</span></div>
+            <Button type="button" size="icon-sm" variant="ghost" className="absolute right-1 top-1 size-6 rounded-md" aria-label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>
+              <X className="size-3.5" />
             </Button>
           </div>
         ))}
@@ -272,7 +298,7 @@ export function Composer({
       label="Send"
       data-composer-send=""
       className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
-      disabled={staging || submitting || (streaming && (!!onSubmit || !value.trim())) || (!value.trim() && pendingAttachments.length === 0)}
+      disabled={staging || submitting || (streaming && (!!onSubmit || !value.trim())) || (!value.trim() && pendingAttachments.length === 0 && pendingAnnotations.length === 0)}
       onClick={submitWithAttachments}
     >
       <ArrowUp className="size-4" />
@@ -303,7 +329,7 @@ export function Composer({
         className="hidden"
         suppressHydrationWarning
         multiple
-        accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json,.html,.xml"
+        accept="image/png,image/jpeg,image/webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json,.yaml,.yml,.html,.xml,.svg,.ts,.tsx,.js,.jsx,.py,.css,.sql,.zip,.glb,.gltf,.stl,.ifc,.mov,.mp4"
         onChange={(event) => {
           void onFiles(event.target.files);
           event.target.value = "";
@@ -366,11 +392,6 @@ export function Composer({
         activeMode={runMode}
         onModeChange={mode => setRunMode(targetId,mode)}
         contextLabel={contextLabel}>{({ trigger, onKeyDown, onSelect, openPlugins }) => <>
-        {workMode && showWorkShortcuts && <div className="as-work-shortcuts" role="group" aria-label="Work context and attachments">
-          <button type="button" onClick={openProject}><FolderOpen size={17} aria-hidden="true"/> Choose project</button>
-          <button type="button" onClick={()=>fileRef.current?.click()}><Paperclip size={17} aria-hidden="true"/> Files</button>
-          <button type="button" onClick={openPlugins}><Plug size={17} aria-hidden="true"/> Plugins</button>
-        </div>}
         <AgentComposer
         value={value}
         runMode={runMode}
@@ -379,8 +400,8 @@ export function Composer({
         onCancel={cancel}
         streaming={streaming}
         placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Reply or hold to talk' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
-        toolbarStart={<>{trigger}{!workMode ? attachControl : imageMode ? <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title="Leave image creation mode"><ImagePlus size={14}/> Image creation <X size={13}/></button> : null}</>}
-        toolbarEnd={workMode ? <><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></> : null}
+        toolbarStart={<>{trigger}{imageMode ? <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title="Leave image creation mode"><ImagePlus size={14}/> Image creation <X size={13}/></button> : null}</>}
+        toolbarEnd={<><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></>}
         attachmentPreview={attachmentPreview}
         sendControl={sendControl}
         cancelControl={cancelControl}
@@ -403,6 +424,11 @@ export function Composer({
           },
         }}
       />
+        {workMode && showWorkShortcuts && <div className="as-work-shortcuts" role="group" aria-label="Work context and attachments">
+          <button type="button" onClick={openProject}><FolderOpen size={17} aria-hidden="true"/> Choose project</button>
+          <button type="button" onClick={()=>fileRef.current?.click()}><Paperclip size={17} aria-hidden="true"/> Files</button>
+          <button type="button" onClick={openPlugins}><Plug size={17} aria-hidden="true"/> Plugins</button>
+        </div>}
         {targetKind === 'chat' ? <ProjectPicker chatId={targetId} showTrigger={false} /> : null}
       </>}</PluginPicker>
       <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async file => { await onFiles([file]); }} />

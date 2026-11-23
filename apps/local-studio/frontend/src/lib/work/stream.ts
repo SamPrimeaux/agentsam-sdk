@@ -1,11 +1,11 @@
 import type { AgentMessage as ChatMessage, AgentRunMode } from "@inneranimalmedia/agentsam-contracts";
-import { resolveChatImages, type ChatImageReference } from "@/lib/content/chat-images";
+import { resolveChatImages, resolveChatFileContext, type ChatAttachmentReference } from "@/lib/content/chat-images";
 import type { RawRuntimeEvent } from "@inneranimalmedia/agentsam-loading-scene";
 import { buildStudioSystemMessages, type StudioChatSurface } from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
 import { identitySessionExists, invokeLocalProvider, invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 export async function streamChat(opts: {
-  messages: Array<Pick<ChatMessage, "role" | "content"> & { attachments?: ChatImageReference[] }>;
+  messages: Array<Pick<ChatMessage, "role" | "content"> & { attachments?: ChatAttachmentReference[] }>;
   accountId?: string;
   surface: StudioChatSurface;
   runMode: AgentRunMode;
@@ -42,15 +42,16 @@ export async function streamChat(opts: {
   // Rehydrate account-scoped original bytes only at the trusted request boundary.
   // Content-local references, not data URLs, remain in persisted chat history.
   if (opts.messages.some((message) => (message.attachments?.length || 0) > 20)) {
-    throw new Error("Send up to 20 images per message.");
+    throw new Error("Send up to 20 attachments per message.");
   }
-  const modelMessages = await Promise.all(opts.messages.map(async (m) => ({
-    role: m.role,
-    content: m.content,
-    ...(m.attachments?.length
-      ? { images: await resolveChatImages(m.attachments, opts.accountId || "") }
-      : {}),
-  })));
+  const modelMessages = await Promise.all(opts.messages.map(async (m) => {
+    const originalFiles = await resolveChatFileContext(m.attachments ?? [], opts.accountId || '');
+    const images = await resolveChatImages(m.attachments ?? [], opts.accountId || '');
+    return { role: m.role,
+      content: originalFiles ? [m.content, originalFiles].filter(Boolean).join('\n\n') : m.content,
+      ...(images.length ? { images } : {}),
+    };
+  }));
 
   const requestBody = {
     messages: modelMessages,

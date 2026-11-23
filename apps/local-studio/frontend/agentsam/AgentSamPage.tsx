@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, BookOpen, Bot, Compass, Files, Maximize2, Minimize2, MousePointer2, Plus, Share2, SquarePen } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Bot, Compass, Files, GripVertical, Maximize2, Minimize2, Minus, MousePointer2, PanelRightClose, PanelRightOpen, Plus, Share2, SquarePen } from 'lucide-react';
 import { Nav, useNav, type NavAction } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { IconAction } from '@/components/ui/icon-action';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MessageList } from '@/components/workbench/thread';
 import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
@@ -15,7 +14,6 @@ import { useActiveCompanion, useCompanionSettings } from './CompanionContext';
 import { companionStateAsset } from './companions';
 import { emitCompanionHandoff } from './companion-events';
 import { SplitHandle } from '@/components/shell/split-handle';
-import { AnnotationToggle } from './AnnotationHelper';
 import { AgentConversationSurface, AgentRuntimeField } from '@inneranimalmedia/agentsam-workbench/agent';
 import { localStudioRuntimeVisuals } from '@/lib/runtime-visuals/local-studio-runtime';
 import '@/components/workbench/work-layout.css';
@@ -63,6 +61,65 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     setHostLeadingSlot(document.getElementById('agentsam-console-leading-slot'));
   }, []);
   const [workFocused, setWorkFocused] = useState(false);
+  const [floatingMinimized, setFloatingMinimized] = useState(false);
+  const [floatingPosition, setFloatingPosition] = useState<{ x: number; y: number } | null>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const floatingChatRef = useRef<HTMLElement>(null);
+  const floatingDrag = useRef<{ pointerId: number; startX: number; startY: number; x: number; y: number } | null>(null);
+
+  // The full-view chat is the SAME lead composer, not a second chat or menu.
+  // Only the small grip captures the pointer; the textarea, plugins and file cards
+  // retain all of their native gestures and click targets.
+  const moveFloatingChat = (x: number, y: number) => {
+    const workspace = workspaceRef.current;
+    const panel = floatingChatRef.current;
+    if (!workspace || !panel) return;
+    setFloatingPosition({
+      x: Math.max(8, Math.min(x, Math.max(8, workspace.clientWidth - panel.offsetWidth - 8))),
+      y: Math.max(8, Math.min(y, Math.max(8, workspace.clientHeight - panel.offsetHeight - 8))),
+    });
+  };
+  const onFloatingDragStart = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const workspace = workspaceRef.current;
+    const panel = floatingChatRef.current;
+    if (!workspace || !panel) return;
+    const workspaceRect = workspace.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    floatingDrag.current = {
+      pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
+      x: panelRect.left - workspaceRect.left, y: panelRect.top - workspaceRect.top,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onFloatingDragMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = floatingDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    moveFloatingChat(drag.x + event.clientX - drag.startX, drag.y + event.clientY - drag.startY);
+  };
+  const onFloatingDragEnd = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (floatingDrag.current?.pointerId !== event.pointerId) return;
+    floatingDrag.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  // A floating window must remain reachable when it expands, when content
+  // arrives, or when the desktop viewport is resized.
+  useEffect(() => {
+    if (!workFocused || typeof ResizeObserver === 'undefined') return;
+    const workspace = workspaceRef.current;
+    const panel = floatingChatRef.current;
+    if (!workspace || !panel) return;
+    const keepVisible = () => setFloatingPosition(position => {
+      if (!position) return null;
+      const x = Math.max(8, Math.min(position.x, Math.max(8, workspace.clientWidth - panel.offsetWidth - 8)));
+      const y = Math.max(8, Math.min(position.y, Math.max(8, workspace.clientHeight - panel.offsetHeight - 8)));
+      return x === position.x && y === position.y ? position : { x, y };
+    });
+    const observer = new ResizeObserver(keepVisible);
+    observer.observe(workspace);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [workFocused, floatingMinimized]);
   const [panelWidth, setPanelWidth] = useState(() => {
     if (typeof window === 'undefined') return 780;
     try {
@@ -99,6 +156,17 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const openBrowserTab = (fullView: boolean) => {
     state.openSideTab('browser', { ephemeral: false });
     setWorkFocused(fullView);
+  };
+  // Global top-right control ONLY toggles the side workspace. Focus / full view
+  // is a second, contextual action in the stage header once the panel is open.
+  const toggleSideWorkspace = () => {
+    if (state.sideOpen) {
+      setWorkFocused(false);
+      state.setSideOpen(false);
+      return;
+    }
+    if (!state.sideTabs.length) state.openSideTab('browser', { ephemeral: false });
+    else state.setSideOpen(true);
   };
   // Preserve the existing browser, annotation, pinned resources and conversation
   // capabilities behind the mobile header's one contextual More trigger.
@@ -147,8 +215,11 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const companionArt = companionStateAsset(companion, streaming ? 'working' : 'idle');
   const workSurface = state.workSurface;
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
+  // Work mirrors the reference: stage on the left, chat on the right.
+  // Chat mode keeps the established lead-left / Stage-right layout.
+  const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !isMobile;
   const leadComposerDetached = workFocused || mobileWorkOpen || (isMobile && state.sideOpen);
-  const leadComposer = <Composer workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && empty && !leadComposerDetached} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
+  const leadComposer = <Composer workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && (workFocused || (empty && !leadComposerDetached))} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
   // One set of controls is portalled into hosted chrome or rendered locally.
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
     {!isMobile ? <>
@@ -167,22 +238,15 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
         : <Nav.ConversationActions additionalActions={mobileMoreActions} />}
     </div>
   </div> : <div className="agentsam-header-utilities">
-    <div className="agentsam-topbar-browser-actions" role="group" aria-label="Browser and annotation controls">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild><IconAction label="New browser tab" hint="New tab or new tab in full view"><Plus size={18} /></IconAction></DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => openBrowserTab(false)}>New tab</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => openBrowserTab(true)}>New tab in full view</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <IconAction label={workFocused ? 'Exit full view' : 'Enter full view'} hint="Toggle focused Side Stage" onClick={() => {
-        if (!workFocused) {
-          if (!state.sideTabs.length) state.openSideTab('browser', { ephemeral: false });
-          else state.setSideOpen(true);
-        }
-        setWorkFocused(focused => !focused);
-      }}>{workFocused ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</IconAction>
-      <AnnotationToggle />
+    <div className="agentsam-topbar-browser-actions" role="group" aria-label="Workspace panel">
+      <IconAction
+        type="button"
+        label={state.sideOpen ? 'Close side workspace' : 'Open side workspace'}
+        hint={state.sideOpen ? 'Close side workspace' : 'Open side workspace'}
+        aria-expanded={state.sideOpen}
+        aria-controls="agentsam-side-stage"
+        onClick={toggleSideWorkspace}
+      >{state.sideOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}</IconAction>
     </div>
     {!empty && <div className="agentsam-header-action-pill" role="group" aria-label="Conversation actions">
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
@@ -202,7 +266,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       <span className="flex-1" aria-hidden="true" />
       {!hostActionsSlot ? headerActions : null}
     </Nav.Topbar> : null}
-    <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "") + (leadComposerDetached ? " has-detached-composer" : "")}>
+    <div ref={workspaceRef} className={"agentsam-workspace" + (workSplit ? " is-work-stage-first" : "") + (workFocused ? " is-work-focused" : "") + (leadComposerDetached ? " has-detached-composer" : "")}>
       <section className="agentsam-conversation" aria-label="Conversation" inert={mobileWorkOpen || (isMobile && state.sideOpen) || workFocused} style={workFocused || mobileWorkOpen ? { display:"none" } : undefined}>
         <AgentConversationSurface
           empty={empty}
@@ -232,10 +296,48 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width - delta, window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} /></aside></> : null}
-      {leadComposerDetached && <div className="agentsam-focused-lead-composer" aria-label="Lead AgentSam composer">
-        {leadComposer}
-      </div>}
+      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width + (workSplit ? delta : -delta), window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside id="agentsam-side-stage" className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused(focused => !focused)} /></aside></> : null}
+      {leadComposerDetached && workFocused && !isMobile ? (
+        <section
+          ref={floatingChatRef}
+          className="agentsam-floating-lead-chat"
+          aria-label="Movable AgentSam chat"
+          style={floatingPosition
+            ? { left: floatingPosition.x, top: floatingPosition.y, right: 'auto', bottom: 'auto' }
+            : undefined}
+        >
+          <header className="agentsam-floating-chat-header">
+            <button type="button" className="agentsam-floating-chat-minimize" aria-label={floatingMinimized ? 'Expand chat' : 'Minimize chat'} aria-expanded={!floatingMinimized} onClick={() => setFloatingMinimized(minimized => !minimized)}>
+              {floatingMinimized ? <Plus size={14} /> : <Minus size={14} />}
+            </button>
+            <span>Chat</span>
+            <button type="button" className="agentsam-floating-chat-grip" aria-label="Drag chat panel" title="Drag chat panel"
+              onPointerDown={onFloatingDragStart} onPointerMove={onFloatingDragMove}
+              onPointerUp={onFloatingDragEnd} onPointerCancel={onFloatingDragEnd}
+              onKeyDown={event => {
+                const step = event.shiftKey ? 64 : 24;
+                const delta = {
+                  ArrowLeft: [-step, 0], ArrowRight: [step, 0],
+                  ArrowUp: [0, -step], ArrowDown: [0, step],
+                }[event.key];
+                if (!delta) return;
+                event.preventDefault();
+                const root = workspaceRef.current?.getBoundingClientRect();
+                const panel = floatingChatRef.current?.getBoundingClientRect();
+                if (root && panel) moveFloatingChat(panel.left - root.left + delta[0], panel.top - root.top + delta[1]);
+              }}
+            ><GripVertical size={16} /></button>
+          </header>
+          {!floatingMinimized && <>
+            {!empty && <div className="agentsam-floating-chat-thread"><MessageList messages={chat.messages} chatId={chat.id} streaming={streaming} readingMode={data.mode === 'work'} /></div>}
+            <div className="agentsam-floating-chat-composer">{leadComposer}</div>
+          </>}
+        </section>
+      ) : leadComposerDetached && (
+        <div className="agentsam-focused-lead-composer" aria-label="Lead AgentSam composer">
+          {leadComposer}
+        </div>
+      )}
     </div>
     {!isMobile ? <WorkSurfaceBar /> : null}
   </div>;

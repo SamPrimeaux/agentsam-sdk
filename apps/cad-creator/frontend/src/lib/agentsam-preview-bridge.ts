@@ -9,6 +9,8 @@ export interface CadSelectionContext {
   source: 'cad-creator'; workspace: string; project_id: string; revision: number;
   revision_ref?:string;
   object: { id: string; type: string; label: string; units: 'in'|'m' };
+  /** Real screen-space CAD pick point in guest CSS pixels; absent for tree selection. */
+  anchor?: { x: number; y: number };
 }
 /** Host owns conversation + write authority. Guest may only *request*; never privileged writes. */
 export type CadOutbound =

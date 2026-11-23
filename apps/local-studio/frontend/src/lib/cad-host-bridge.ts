@@ -7,7 +7,7 @@ import type { DesignWorkspaceEvent } from "@inneranimalmedia/agentsam-workbench/
  */
 export const CAD_BRIDGE_CHANNEL = "agentsam-preview-bridge" as const;
 export const CAD_WORKSPACES = ["plan", "model", "parametric", "robotics", "render"] as const;
-export interface CadSelectionContext { source: "cad-creator"; workspace: string; project_id: string; revision: number; revision_ref?:string; object: { id: string; type: string; label: string; units: "in"|"m" } }
+export interface CadSelectionContext { source: "cad-creator"; workspace: string; project_id: string; revision: number; revision_ref?:string; object: { id: string; type: string; label: string; units: "in"|"m" }; anchor?: { x: number; y: number } }
 export interface CadHostHandlers {
   onSelection?: (s: CadSelectionContext|null) => void;
   /** Shared workspace selection projection; the CAD engine remains the authority. */
@@ -32,6 +32,8 @@ export function validateCadGuestMessage(event: MessageEvent, iframe: HTMLIFrameE
   if (!isObj(d) || d.channel !== CAD_BRIDGE_CHANNEL || d.version !== 1 || typeof d.type !== "string") return null;
   if (d.type === "cad.selection") {
     const s = d.selection; if (s !== null && (!isObj(s) || s.source !== "cad-creator" || !isObj(s.object) || typeof s.object.id !== "string" || !s.object.id || typeof s.project_id !== "string" || !s.project_id.trim() || typeof s.object.type !== "string" || !s.object.type.trim())) return null;
+    if (s?.anchor && (!isObj(s.anchor) || !Number.isFinite(s.anchor.x) || !Number.isFinite(s.anchor.y)
+      || s.anchor.x < 0 || s.anchor.y < 0 || s.anchor.x > 50000 || s.anchor.y > 50000)) return null;
   }
   if (d.type === "assistant.request" && (typeof d.request_id !== "string" || typeof d.prompt !== "string")) return null;
   if (d.type === "cad.proposal" && (!isObj(d.proposal) || d.proposal.tool !== "design_apply_operation" || !isObj(d.proposal.args))) return null;

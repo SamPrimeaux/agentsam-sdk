@@ -108,3 +108,11 @@ test("actual iframe events emit select and deselect without writing CAD geometry
     { type: "selection", resourceId: "project-10", selection: [] },
   ]);
 });
+
+test('CAD projected visual anchors are optional and verified before annotation handoff', () => {
+  globalThis.window = { location: { origin: 'https://workspace.example' } };
+  assert.ok(validateCadGuestMessage(asMessage(selected), frame));
+  assert.ok(validateCadGuestMessage(asMessage({ ...selected, anchor: { x: 320, y: 160 } }), frame));
+  assert.equal(validateCadGuestMessage(asMessage({ ...selected, anchor: { x: Infinity, y: 100 } }), frame), null);
+  assert.equal(validateCadGuestMessage(asMessage({ ...selected, anchor: { x: -40, y: 100 } }), frame), null);
+});

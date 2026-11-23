@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowUp, ExternalLink, Eye, MessageSquare, MousePointer2, Puzzle, Square } from 'lucide-react';
+import { ArrowUp, ExternalLink, Eye, MessageSquare, Puzzle, Square } from 'lucide-react';
 import { AgentSamAbsBrowser } from '@inneranimalmedia/agentsam-abs/react';
 import type { AbsBrowserMode, BrowserTabState } from '@inneranimalmedia/agentsam-abs';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
@@ -172,7 +172,6 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
         onSwitchTab={() => undefined}
         toolbarActions={<div className="as-work-browser-actions">
           {mode === 'build' && tab.srcdoc && <button type="button" className="as-browser-view-switch" onClick={() => setPreviewOpen(value => !value)} aria-label={previewOpen ? 'Open build conversation' : 'View generated page'} title={previewOpen ? 'Conversation' : 'Preview'}>{previewOpen ? <MessageSquare size={14} /> : <Eye size={14} />}<span>{previewOpen ? 'Chat' : 'Preview'}</span></button>}
-          <button type="button" className="as-browser-annotate" onClick={() => window.dispatchEvent(new Event('agentsam:annotate'))} aria-label="Annotate browser page" title="Annotate browser page"><MousePointer2 size={14}/><span>Annotate</span></button>
           {native && <IconAction type="button" variant="ghost" label="Chrome extensions" hint="Open Chrome extensions in your separate browser profile" onClick={() => {
             void openAgentBrowser('chrome://extensions/').catch((error) => toast.error(String(error)));
           }}><Puzzle size={14} /></IconAction>}
