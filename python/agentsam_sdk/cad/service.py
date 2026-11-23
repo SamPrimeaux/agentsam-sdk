@@ -327,6 +327,13 @@ class CadServiceClient:
                 return False
         return True
 
+    def _effective_limit(self, name: str, configured: int) -> int:
+        limits = self.get_capabilities().get("limits", {})
+        advertised = limits.get(name) if isinstance(limits, dict) else None
+        if isinstance(advertised, int) and not isinstance(advertised, bool) and advertised > 0:
+            return min(configured, advertised)
+        return configured
+
     def execute(self, engine: str, payload: Mapping[str, Any], *, timeout: float | None = None) -> dict[str, Any]:
         if engine not in _ENGINE_ROUTES or not isinstance(payload, Mapping):
             raise ValueError("cad_engine_operation_invalid")
@@ -363,8 +370,15 @@ class CadServiceClient:
         if base is not None:
             payload["base"] = base.lower()
         data = self._request_json("POST", "/v1/cad/building/export", payload, timeout=timeout)
-        validate_building_export(data, base=base, required_files=required_files,
-                                 max_artifact_bytes=self.max_artifact_bytes)
+        endpoint = self.get_capabilities().get("endpoints", {}).get("cad_building_export", {})
+        validate_building_export(
+            data,
+            base=base,
+            required_files=required_files,
+            max_artifact_bytes=self._effective_limit("max_artifact_bytes", self.max_artifact_bytes),
+            expected_source=ref,
+            expected_scope=endpoint.get("scope") if isinstance(endpoint, dict) else None,
+        )
         return data
 
     def download_to(
@@ -376,7 +390,7 @@ class CadServiceClient:
         timeout: float | None = None,
     ) -> Path:
         uri, expected_bytes, expected_hash = _artifact_metadata(
-            artifact, max_bytes=self.max_artifact_bytes
+            artifact, max_bytes=self._effective_limit("max_artifact_bytes", self.max_artifact_bytes)
         )
         target = Path(destination).expanduser()
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -445,9 +459,10 @@ class CadServiceClient:
 
     def download(self, artifact: Mapping[str, Any], *, timeout: float | None = None) -> bytes:
         uri, expected_bytes, expected_hash = _artifact_metadata(
-            artifact, max_bytes=self.max_artifact_bytes
+            artifact, max_bytes=self._effective_limit("max_artifact_bytes", self.max_artifact_bytes)
         )
-        if expected_bytes > self.max_inline_artifact_bytes:
+        inline_limit = self._effective_limit("max_inline_artifact_bytes", self.max_inline_artifact_bytes)
+        if expected_bytes > inline_limit:
             raise CadServiceError(
                 "cad_artifact_requires_streaming",
                 "Use download_to() for artifacts larger than the configured inline limit.",
@@ -483,19 +498,27 @@ def validate_building_export(
     base: str | None = None,
     required_files: frozenset[str] | set[str] | None = None,
     max_artifact_bytes: int = DEFAULT_MAX_ARTIFACT_BYTES,
+    expected_source: Mapping[str, Any] | None = None,
+    expected_scope: str | None = None,
 ) -> None:
     if not isinstance(data, dict) or data.get("ok") is not True or data.get("schema") != "agentsam.cad.building-export.v1":
         raise CadServiceError("cad_building_receipt_invalid")
     source = data.get("source")
     if (not isinstance(source, dict) or data.get("output_scope") != "runtime-derived"
             or not isinstance(source.get("scope"), str) or not source.get("scope")
+            or (expected_scope is not None and source.get("scope") != expected_scope)
             or not isinstance(source.get("source_sha256"), str)
             or not HEX.fullmatch(source["source_sha256"].lower())
             or isinstance(source.get("source_revision"), bool)
             or not isinstance(source.get("source_revision"), int) or source["source_revision"] < 1
             or (base is not None and source["source_sha256"].lower() != base.lower())):
         raise CadServiceError("cad_building_source_evidence_invalid")
-    if not isinstance(data.get("job_id"), str) or not data["job_id"]:
+    if expected_source is not None and any(
+        source.get(key) != expected_source.get(key) for key in ("kind", "mount", "path")
+    ):
+        raise CadServiceError("cad_building_source_identity_mismatch")
+    if (not isinstance(data.get("job_id"), str)
+            or not re.fullmatch(r"[A-Za-z0-9_-]{1,160}", data["job_id"])):
         raise CadServiceError("cad_building_job_identity_invalid")
     files = data.get("files")
     if not isinstance(files, list) or not files:
@@ -513,7 +536,13 @@ def validate_building_export(
         raise CadServiceError("cad_building_required_artifacts_missing")
     receipt = data.get("receipt")
     checks = receipt.get("checks") if isinstance(receipt, dict) else None
-    if (not isinstance(receipt, dict) or receipt.get("status") != "passed"
-            or not isinstance(checks, list) or not checks
-            or any(not isinstance(check, dict) or not check.get("id") or check.get("passed") is not True for check in checks)):
+    check_ids: set[str] = set()
+    if not isinstance(checks, list) or not checks:
+        raise CadServiceError("cad_building_validation_receipt_invalid")
+    for check in checks:
+        if (not isinstance(check, dict) or not isinstance(check.get("id"), str)
+                or not check["id"] or check["id"] in check_ids or check.get("passed") is not True):
+            raise CadServiceError("cad_building_validation_receipt_invalid")
+        check_ids.add(check["id"])
+    if not isinstance(receipt, dict) or receipt.get("status") != "passed":
         raise CadServiceError("cad_building_validation_receipt_invalid")
