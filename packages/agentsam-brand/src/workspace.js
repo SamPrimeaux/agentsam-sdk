@@ -57,7 +57,7 @@ function fromContract(contract) {
 }
 
 function fromBrandEntry(entry) {
-  const e = record(entry), contract = record(e.contract || e.latestContract || e.brandContract);
+  const e = record(entry), contract = record(e.contract || e.latestContract || e.brandContract || (e.visual_system || e.schema ? e : null));
   const base = fromContract(contract);
   const pack = record(e.pack);
   return {
