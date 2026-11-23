@@ -573,8 +573,17 @@
   background: var(--nav-hover, var(--surface-2, #262626));
 }
 .agentsam-topbar-leading > button:disabled { opacity: .32; cursor: default; }
+/* The hosted hamburger occupies the first rail slot. Keep the breadcrumb / back
+   controls in normal flow beside it instead of painting over that hit target. */
 .console-topbar:has(#agentsam-console-leading-slot:not(:empty)) .console-topbar-spacer {
-  flex: 0 0 0; width: 0; min-width: 0;
+  flex: 0 0 var(--agentsam-leading-clearance, 54px);
+  width: var(--agentsam-leading-clearance, 54px);
+  min-width: var(--agentsam-leading-clearance, 54px);
+}
+@media (max-width: 767px) {
+  .console-topbar:has(#agentsam-console-leading-slot:not(:empty)) {
+    --agentsam-leading-clearance: 50px;
+  }
 }
 .console-shell:has(#agentsam-console-leading-slot:not(:empty)) :is(.console-nav-ghost-toggle--persistent, #admin-menu-toggle) {
   opacity: 0; pointer-events: none;
