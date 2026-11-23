@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-jr-dev",
+  "name": "AgentSam Jr Dev",
+  "description": "Teach, inspect, build, and revise real software using beginner-friendly language grounded in repository and runtime evidence.",
+  "package": "@inneranimalmedia/agentsam-sdk",
+  "slash": {
+    "suggested": "/jr-dev"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}
