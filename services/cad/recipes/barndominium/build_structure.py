@@ -81,7 +81,7 @@ def issue(id,description,owner):
 
 def add(code,title,shape,category,ifc_class=None,source="provisional",material="TBD",notes="",parent=None):
     if shape.isNull() or shape.Volume <= 0 or not shape.isValid():
-        raise ValueError("invalid non-solid element %s" % code)
+        raise ValueError(f"invalid non-solid element {code}")
     obj=DOC.addObject("PartDesign::Feature","Element")
     obj.Label=code+" | "+title
     obj.Shape=shape
