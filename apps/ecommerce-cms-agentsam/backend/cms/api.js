@@ -3118,8 +3118,8 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json(result);
   }
 
-  // Change a real page URL without touching its published R2 content. Stable
-  // page_id and explicit site ownership prevent cross-site slug collisions.
+  // Draft-only route changes for unpublished pages. Published routes are committed
+  // with their verified HTML and manifest by page-publication.mjs.
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9%_-]+)\/route$/);
   if (m && method === "PUT") {
     if (!context.accountId || !siteId) return json({ error: "cms_site_required" }, { status: 400 });
@@ -3142,6 +3142,12 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
       return json({ error: "Invalid or reserved page URL" }, { status: 400 });
     }
     if (nextSlug === page.slug && nextRoute === page.route_path) return json({ ok:true, page });
+    // A published route is part of the public artifact. Do not move its D1
+    // pointer ahead of the verified R2 document; Page Editor stores the new
+    // handle in its private draft and Publish commits the route atomically.
+    if (page.status === "published") {
+      return json({ error: "cms_page_route_change_requires_publish" }, { status: 409 });
+    }
     const collision = await env.DB.prepare(`
       SELECT id FROM cms_pages WHERE site_id=? AND id<>? AND
        (slug=? OR route_path=? OR EXISTS (

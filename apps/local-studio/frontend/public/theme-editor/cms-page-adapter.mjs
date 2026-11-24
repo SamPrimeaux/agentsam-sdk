@@ -1,4 +1,6 @@
 // GENERATED from packages/theme-contract/editor/cms-page-adapter.mjs. DO NOT EDIT.
+import { renderThemePage, withThemeSharedChrome } from './project.mjs';
+
 /**
  * CMS-page target for the single Theme Studio runtime.
  *
@@ -69,13 +71,57 @@ export function createCmsPageThemeEditorAdapter({
     return result.registry || result;
   }
 
+  async function getSelectedThemeProject() {
+    const catalog = await request('/api/admin/cms/themes');
+    // Theme Studio edits the selected preview theme. The live theme remains
+    // untouched until the merchant explicitly publishes the theme.
+    const selected = catalog.preview_theme || catalog.active_theme || null;
+    if (!selected?.slug) throw new Error('cms_theme_selection_missing');
+    const inventory = await request('/api/admin/cms/theme-projects');
+    const projects = Array.isArray(inventory.projects) ? inventory.projects : [];
+    const summary = projects.find(project =>
+      project?.sourceThemeId === selected.slug ||
+      project?.id === selected.project_id ||
+      project?.id === selected.projectId
+    );
+    if (!summary?.id) throw new Error('cms_theme_project_not_found_for_selected_theme');
+    const result = await request(`/api/admin/cms/theme-projects/${encodeURIComponent(summary.id)}`);
+    if (!result?.project || result.project.id !== summary.id) {
+      throw new Error('cms_theme_project_read_failed');
+    }
+    return result.project;
+  }
+
   async function getThemeIdentity() {
     const catalog = await request('/api/admin/cms/themes');
-    const theme = catalog.active_theme || catalog.preview_theme || null;
+    const theme = catalog.preview_theme || catalog.active_theme || null;
     return {
       name: theme?.name || theme?.slug || 'Website theme',
       status: theme?.state || theme?.status || 'draft',
     };
+  }
+
+  async function getThemeSettings() {
+    const project = await getSelectedThemeProject();
+    return structuredClone(project.themeSettings || {});
+  }
+
+  async function updateThemeSettings(settings) {
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+      throw new Error('theme_settings_object_required');
+    }
+    const project = await getSelectedThemeProject();
+    const nextProject = { ...project, themeSettings: structuredClone(settings) };
+    const saved = await request(`/api/admin/cms/theme-projects/${encodeURIComponent(project.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        site_id: siteId,
+        project: nextProject,
+        expected_version: Number(project.revision || 0),
+      }),
+    });
+    if (!saved?.ok || !saved.project) throw new Error(saved?.error || 'cms_theme_settings_save_failed');
+    return structuredClone(saved.project.themeSettings || {});
   }
 
   async function resolvePreview(slug, pageData) {
@@ -86,14 +132,53 @@ export function createCmsPageThemeEditorAdapter({
     }
     const page = pageData || pages.find(item => item.slug === slug);
     const previewPage = slug === 'site' ? (pages.find(item => item.slug === 'home') || page) : page;
-    const route = previewPage?.route_path || previewPage?.route || previewPage?.live_route || (slug === 'home' || slug === 'site' ? '/' : null);
-    if (!route || route === '/_site-shell') throw new Error('cms_page_public_route_unavailable');
-    const publicUrl = publicUrlResolver?.(site, route);
-    if (!publicUrl) throw new Error('cms_site_public_domain_required');
-    const previewUrl = new URL(publicUrl);
-    previewUrl.searchParams.set('preview', '1');
-    previewUrl.searchParams.set('_', String(Date.now()));
-    return { url: previewUrl.href, openUrl: publicUrl };
+    if (!previewPage?.slug || previewPage.route_path === '/_site-shell') {
+      throw new Error('cms_page_preview_target_unavailable');
+    }
+    const route = previewPage.route_path || (previewPage.slug === 'home' ? '/' : null);
+    const openUrl = route ? publicUrlResolver?.(site, route) : null;
+    const hasPageSections = Array.isArray(previewPage.sections) && previewPage.sections.length > 0;
+
+    // A CMS page with no page-owned sections inherits its matching page
+    // template from the selected theme project. Reuse the exact Theme Studio
+    // composition/rendering contract, including shared header/footer chrome.
+    // Once the merchant adds page-owned sections, the canonical D1/R2 page
+    // renderer takes over for that page's content.
+    if (!hasPageSections) {
+      let project = null;
+      try { project = await getSelectedThemeProject(); } catch {}
+      const templatePage = project?.pages?.find(item => item.slug === previewPage.slug) ||
+        project?.pages?.find(item => item.slug === previewPage.page_type);
+      if (templatePage) {
+        const composed = withThemeSharedChrome(project, templatePage);
+        const html = renderThemePage(composed, project.tokens || {}, {
+          baseUrl: composed.assetBase || undefined,
+        });
+        if (typeof html !== 'string' || !html.trim()) throw new Error('cms_theme_template_preview_render_empty');
+        return { html, ...(openUrl ? { openUrl } : {}), inheritedThemeTemplate: true,
+          templateSlug: templatePage.slug };
+      }
+    }
+
+    // Never point the editor at the public route with a decorative ?preview=1
+    // query. The storefront does not own private drafts. Render the current
+    // canonical D1/R2 page through the same server renderer used by Publish.
+    const rendered = await request(`/api/admin/cms/pages/${encodeURIComponent(previewPage.slug)}/preview`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title: previewPage.title || previewPage.slug,
+        body_html: '',
+        visibility: previewPage.status === 'published' ? 'visible' : 'hidden',
+        template_sku: previewPage.template_sku || '',
+        seo_title: '',
+        seo_description: '',
+        url_handle: previewPage.slug,
+      }),
+    });
+    if (typeof rendered?.html !== 'string' || !rendered.html.trim()) {
+      throw new Error('cms_page_preview_render_empty');
+    }
+    return { html: rendered.html, ...(openUrl ? { openUrl } : {}) };
   }
 
   async function listMedia() {
@@ -121,6 +206,8 @@ export function createCmsPageThemeEditorAdapter({
     request,
     getRegistry,
     getThemeIdentity,
+    getThemeSettings,
+    updateThemeSettings,
     resolvePreview,
     listMedia,
     uploadMedia,

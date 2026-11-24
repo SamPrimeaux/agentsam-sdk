@@ -67,14 +67,15 @@ async function installed(env, accountId, siteId) {
       bySlug.set(slug, candidate);
     }
   }
-  return [...bySlug.values()];
+  return { artifacts:[...bySlug.values()], defaultProject:projectBySlug.get(DEFAULT)||null };
 }
-function appearance(row, state, siteId = null) {
+function appearance(row, state, siteId = null, defaultProject = null) {
   const slug = row?.slug || DEFAULT;
   const artifact = row || null;
   const isDefault = !artifact;
   const previewUrl = artifact?.metadata?.preview_url || null;
   const createdAt = artifact?.created_at || null;
+  const projectId = artifact?.metadata?.project_id || defaultProject?.id || null;
   return {
     id: artifact?.id || 'runtime:' + DEFAULT,
     slug,
@@ -84,6 +85,7 @@ function appearance(row, state, siteId = null) {
     version: artifact?.version || null,
     source_kind: artifact?.source_kind || (isDefault ? 'installed-runtime' : null),
     artifact_id: artifact?.id || null,
+    project_id: projectId,
     manifest_object_key: artifact?.manifest_object_key || null,
     state: slug === state.active ? 'active' : 'draft',
     preview_selected: slug === state.preview,
@@ -91,8 +93,8 @@ function appearance(row, state, siteId = null) {
     preview_href: previewUrl || '/admin/store?site_id=' + encodeURIComponent(siteId),
     preview_url: previewUrl,
     snapshot_url: previewUrl,
-    edit_href: artifact?.metadata?.project_id
-      ? '/admin/sites/' + encodeURIComponent(siteId) + '/themes/' + encodeURIComponent(artifact.metadata.project_id) + '/editor/home'
+    edit_href: projectId
+      ? '/admin/sites/' + encodeURIComponent(siteId) + '/themes/' + encodeURIComponent(projectId) + '/editor/home'
       : '/admin/sites/' + encodeURIComponent(siteId) + '/settings/editor',
     installed: true,
     site_id: siteId,
@@ -112,9 +114,10 @@ export async function listStoreThemes(env, accountId = null, siteId = null) {
     const site = siteId
       ? await resolveCmsSite(env.DB, { accountId: account, siteId })
       : await resolveCmsSite(env.DB, { accountId: account, createDefault: true });
-    const [record, artifacts] = await Promise.all([globalRow(env, account, site.id), installed(env, account, site.id)]);
+    const [record, installedThemes] = await Promise.all([globalRow(env, account, site.id), installed(env, account, site.id)]);
     const state = current(record);
-    const themes = [appearance(null, state, site.id), ...artifacts.filter(a => a.slug !== DEFAULT).map(a => appearance(a, state, site.id))];
+    const themes = [appearance(null, state, site.id, installedThemes.defaultProject),
+      ...installedThemes.artifacts.filter(a => a.slug !== DEFAULT).map(a => appearance(a, state, site.id))];
     return {
       ok: true, source: 'cms_artifacts+cms_globals', active_theme: themes.find(x => x.state === 'active') || null,
       preview_theme: themes.find(x => x.preview_selected) || null,

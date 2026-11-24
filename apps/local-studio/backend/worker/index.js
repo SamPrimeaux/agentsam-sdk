@@ -1198,11 +1198,18 @@ export default {
           return json({ ok: false, error: "origin_not_allowed" }, 403);
         }
         const CMS_ASSISTANT_INFERENCE = input => runStudioCmsAssistant(input, {
-          workersAI: typeof env.AGENTSAM_WAI?.run === "function",
           signal: request.signal,
           async getInventory() {
-            const response = await handleLlmInventory(env, principal.id, request);
-            return (await response.json()).availableModels || [];
+            // Include the platform's configured providers as well as this
+            // account's vault. Vault credentials take precedence; the inventory
+            // also adds the host Workers AI candidates for the same fallback.
+            const inventoryUrl = new URL(request.url);
+            inventoryUrl.searchParams.set("include_platform", "1");
+            const inventoryRequest = new Request(inventoryUrl.toString());
+            const response = await handleLlmInventory(env, principal.id, inventoryRequest);
+            const inventory = await response.json();
+            if (!response.ok || inventory?.ok === false) throw new Error("model_inventory_unavailable");
+            return inventory.availableModels || [];
           },
           sendChat(body) {
             const chat = new Request(new URL("/api/chat", url), {

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
 import { createSiteOwnedPage } from '../backend/cms/site-owned-page-adapter.mjs';
 import { publishMerchantPage, previewMerchantPage, renderMerchantPage, sanitizeMerchantBody } from '../backend/cms/page-publication.mjs';
 
@@ -38,8 +39,10 @@ function setup() {
     }}}}
   };
   const objects=new Map();
+  const contentObjects=new Map();
   const WEBSITE_ASSETS={async get(key){const value=objects.get(key);return value == null ? null : {async text(){return value}}},async put(key,value){objects.set(key,value)}};
-  return {db,objects,env:{DB,WEBSITE_ASSETS}};
+  const CMS_CONTENT={async get(key){const value=contentObjects.get(key);return value == null ? null : {async text(){return value}}},async put(key,value){contentObjects.set(key,value)}};
+  return {db,objects,contentObjects,env:{DB,WEBSITE_ASSETS,CMS_CONTENT}};
 }
 const draft=(extra={})=>({title:'Starter page',body_html:'<p>Hello <strong>world</strong></p>',visibility:'visible',url_handle:'starter',seo_title:'Starter SEO',seo_description:'Page details',template_sku:'',...extra});
 async function create(env,body=draft()) {
@@ -123,6 +126,61 @@ test('draft changed during publication rejects the CAS and leaves the page unpub
   const result=await publishMerchantPage(env,'owner1','site_one','starter',p.id);
   assert.equal(result.status,409);
   assert.equal(db.prepare('SELECT status FROM cms_pages WHERE id=?').get(p.id).status,'draft');
+ }finally{db.close()}
+});
+
+
+test('legacy assembled HTML/CSS/JS sections publish from their existing R2 sources and commit URL redirects atomically',async()=>{
+ const {db,objects,contentObjects,env}=setup();try {
+  const p=await create(env,draft({title:'Legacy page',url_handle:'legacy',body_html:''}));
+  db.prepare("UPDATE cms_pages SET route_path='/legacy',status='published',content_object_key='pages/legacy/index.html',published_manifest_object_key='legacy/legacy.json' WHERE id=?").run(p.id);
+  const nextDraft=draft({title:'Legacy page',url_handle:'legacy-updated',body_html:''});
+  db.prepare('UPDATE cms_page_drafts SET draft_data=? WHERE page_id=? AND user_id=?').run(JSON.stringify(nextDraft),p.id,'owner1');
+  const sections=[
+    ['hero','hero',{html_source:'assembled',role:'hero',html:'<section data-cms-section="hero"><h1>Legacy page</h1></section>'}],
+    ['story','story_chrome',{html_source:'assembled',role:'story_chrome',html:'<aside class="story-rail">Our story</aside>'}],
+    ['styles','page_css',{html_source:'assembled',role:'page_css',css:'main.legacy-page{background:var(--theme-color-background)}.hero{color:inherit}'}],
+    ['scripts','page_js',{html_source:'assembled',role:'page_js',js:'window.legacyPageReady=true;'}],
+    ['services','services-grid',{eyebrow:'What we do',title:'Services',description:'Site services and capabilities.'}],
+  ];
+  for(let index=0;index<sections.length;index++){
+    const [id,type,content]=sections[index];
+    const raw=JSON.stringify(content);
+    const key=`cms/sections/drafts/${p.id}/${id}.json`;
+    contentObjects.set(key,raw);
+    const hash=createHash('sha256').update(raw).digest('hex');
+    db.prepare(`INSERT INTO cms_page_sections
+      (id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket,
+       draft_r2_key,published_r2_key,content_hash,published_hash,template_sku,definition_id)
+      VALUES (?,?,?,?,?,'{}',?,1,'cms',?,NULL,?,NULL,NULL,NULL)`)
+      .run(`sec_${id}`,p.id,id,type,id,index,key,hash);
+  }
+  const preview=await previewMerchantPage(env,'owner1','site_one','legacy',p.id);
+  assert.equal(preview.ok,true,JSON.stringify(preview));
+  assert.match(preview.html,/Legacy page/);
+  assert.match(preview.html,/Our story/);
+  assert.match(preview.html,/What we do/);
+  assert.match(preview.html,/class="legacy-page cms-native-sections"/);
+  assert.match(preview.html,/window\.legacyPageReady=true/);
+  assert.match(preview.html,/script-src &#39;sha256-[A-Za-z0-9+/=]+&#39;/);
+  assert.ok(preview.html.includes('main.legacy-page{background:var(--theme-color-background)}'));
+
+  const published=await publishMerchantPage(env,'owner1','site_one','legacy',p.id);
+  assert.equal(published.ok,true,JSON.stringify(published));
+  assert.equal(published.slug,'legacy-updated');
+  assert.equal(published.route_path,'/legacy-updated');
+  assert.equal(published.rendered_sections,5);
+  assert.equal(objects.get(published.key),preview.html);
+  const row=db.prepare('SELECT slug,route_path,status,content_object_key,metadata_json FROM cms_pages WHERE id=?').get(p.id);
+  assert.equal(row.slug,'legacy-updated');
+  assert.equal(row.route_path,'/legacy-updated');
+  assert.equal(row.status,'published');
+  assert.equal(row.content_object_key,published.key);
+  assert.deepEqual(JSON.parse(row.metadata_json).route_redirects,['/legacy']);
+  const manifest=JSON.parse(objects.get(published.manifest_key));
+  assert.equal(manifest.slug,'legacy-updated');
+  assert.equal(manifest.route_path,'/legacy-updated');
+  assert.ok(manifest.sections.every(section=>section.renderer_kind));
  }finally{db.close()}
 });
 

@@ -80,6 +80,11 @@
           </div>
           <div class="pe-field">
             <label for="pe-body">Content</label>
+            <div class="pe-section-source-note" id="pe-section-source-note" hidden>
+              <div id="pe-section-note-copy"><strong id="pe-section-count">0 saved sections</strong><span id="pe-section-note-detail"> make up this page's layout and content in Theme Studio. This field is optional page copy; it does not replace those sections.</span></div>
+              <a id="pe-open-theme-studio" href="#">Edit sections in Theme Studio</a>
+              <p id="pe-section-source-warning" hidden>Some saved section sources could not be loaded. They are preserved and will not be replaced with blank content.</p>
+            </div>
             <div class="pe-rich-wrap">
               <div class="pe-toolbar" role="toolbar" aria-label="Format page content">
                 <select id="pe-format" aria-label="Text style"><option value="p">Paragraph</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="blockquote">Quote</option></select>
@@ -105,7 +110,7 @@
             <div id="pe-seo-fields" class="pe-seo-fields" hidden>
               <div class="pe-field"><label for="pe-seo-title-input">Page title</label><input id="pe-seo-title-input" maxlength="200" type="text"><small id="pe-seo-count">0 of 70 characters used</small></div>
               <div class="pe-field"><label for="pe-seo-description-input">Meta description</label><textarea id="pe-seo-description-input" rows="3" maxlength="1000"></textarea><small id="pe-meta-count">0 of 160 characters used</small></div>
-              <div class="pe-field"><label for="pe-handle">URL handle</label><div class="pe-handle-row"><span id="pe-route-prefix">/pages/</span><input id="pe-handle" type="text" maxlength="80" spellcheck="false"></div><small id="pe-handle-help">The URL updates when you save. Existing published links redirect to the new address.</small></div>
+              <div class="pe-field"><label for="pe-handle">URL handle</label><div class="pe-handle-row"><span id="pe-route-prefix">/pages/</span><input id="pe-handle" type="text" maxlength="80" spellcheck="false"></div><small id="pe-handle-help">The new URL stays in your draft until you publish. Your current live URL remains unchanged.</small></div>
             </div>
           </div>
         </section>
@@ -338,6 +343,42 @@
       page = pageRes.page;
       site = page?.site || pageRes.site || listRes.site || {};
       if (!page?.id) throw Error("Page record unavailable");
+      const savedSections = Array.isArray(page.sections) ? page.sections : [];
+      const visibleSections = savedSections.filter(section => section.status !== "hidden");
+      const sectionNote = $("pe-section-source-note");
+      const sectionCount = $("pe-section-count");
+      const sectionDetail = $("pe-section-note-detail");
+      const sectionLink = $("pe-open-theme-studio");
+      if (savedSections.length) {
+        sectionNote.hidden = false;
+        sectionCount.textContent = visibleSections.length + " saved section" + (visibleSections.length === 1 ? "" : "s");
+        sectionDetail.textContent = " make up this page's layout and content in Theme Studio. This field is optional page copy; it does not replace those sections.";
+        sectionLink.href = "/admin/sites/" + encodeURIComponent(site.id || window.cmsActiveSiteId) +
+          "/pages/" + encodeURIComponent(page.id) + "/editor?previewMode=desktop";
+        sectionLink.textContent = "Edit sections in Theme Studio";
+        const missing = Array.isArray(page.missing_source_sections) ? page.missing_source_sections : [];
+        $("pe-section-source-warning").hidden = missing.length === 0;
+      } else {
+        try {
+          const themeCatalog = await cmsAdminFetch("/api/admin/cms/themes");
+          const selectedTheme = themeCatalog?.preview_theme || themeCatalog?.active_theme;
+          if (selectedTheme?.project_id) {
+            const projectResult = await cmsAdminFetch("/api/admin/cms/theme-projects/" + encodeURIComponent(selectedTheme.project_id));
+            const themePage = projectResult?.project?.pages?.find(item => item.slug === page.slug) ||
+              projectResult?.project?.pages?.find(item => item.slug === page.page_type);
+            if (themePage?.slug) {
+              sectionNote.hidden = false;
+              sectionCount.textContent = "No page-specific sections";
+              sectionDetail.textContent = ". This page inherits its layout from the " +
+                String(selectedTheme.name || "selected theme") + " template. This field is optional page copy.";
+              sectionLink.href = "/admin/sites/" + encodeURIComponent(site.id || window.cmsActiveSiteId) +
+                "/themes/" + encodeURIComponent(selectedTheme.project_id) + "/editor/" + encodeURIComponent(themePage.slug);
+              sectionLink.textContent = "Edit inherited theme template";
+              $("pe-section-source-warning").hidden = true;
+            } else sectionNote.hidden = true;
+          } else sectionNote.hidden = true;
+        } catch { sectionNote.hidden = true; }
+      }
       window.cmsActivePageId = page.id;
       siblings = (listRes.pages || []).filter(p => p.slug !== "site");
       const locationUrl = new URL(location.href);
@@ -364,7 +405,7 @@
       $("pe-handle").readOnly = homepage;
       $("pe-handle-help").textContent = homepage
         ? "This page has a protected route. Its URL cannot be changed here."
-        : "Saving updates the page URL. Previously published URLs redirect automatically.";
+        : "The new URL stays in your draft until you publish. Your current live URL remains unchanged.";
       $("pe-seo-site").textContent = site.name || site.slug || "Your store";
       updatePublicLink();
       const pos = siblings.findIndex(item => item.id === page.id);
@@ -405,18 +446,12 @@
         $("pe-heading").textContent = page.title;
       }
       const oldSlug = page.slug;
-      if (d.url_handle !== page.slug) {
-        if (page.route_path === "/" || page.is_system_page || page.slug === "site") {
-          throw Error("This page has a protected URL and cannot be renamed.");
-        }
-        // Canonical D1 route and slug are updated before the private copy draft.
-        const renamed = await cmsAdminFetch("/api/admin/cms/pages/" + encodeURIComponent(slug) + "/route",{
-          method:"PUT",body:JSON.stringify({slug:d.url_handle,route_path:currentRoute(d.url_handle)})
-        });
-        if (!renamed?.page?.id) throw Error("The URL change could not be verified.");
-        page = renamed.page;
-        slug = page.slug;
+      if (d.url_handle !== page.slug &&
+          (page.route_path === "/" || page.is_system_page || page.slug === "site")) {
+        throw Error("This page has a protected URL and cannot be renamed.");
       }
+      // Keep the live route stable while edits are private. Publication commits
+      // the new slug, route, redirect alias and verified HTML together.
       // A newly created or unpublished page can persist its title, template and SEO
       // directly in the canonical CMS draft. Published pages keep these fields private.
       if (page.status === "draft") {
@@ -442,7 +477,7 @@
       syncPreview();
       markSaved();
       note(createdNow ? "Page created and saved to your store's draft library." :
-        oldSlug !== page.slug ? "Page URL updated and draft saved. Old published URLs redirect to the new address." :
+        oldSlug !== d.url_handle ? "Draft saved. The new URL and old-URL redirect will go live together when you publish." :
         "Page draft saved. Select Publish to make this page public.");
       return true;
     } catch(error) {
@@ -482,7 +517,16 @@
       if (!published?.ok || published.status !== "published" || published.page_id !== page.id)
         throw Error(published?.error || "The CMS did not confirm publication.");
       page.status = "published";
+      page.slug = published.slug || page.slug;
+      page.route_path = published.route_path || page.route_path;
+      page.title = getDraft().title;
       page.content_object_key = published.key;
+      slug = page.slug;
+      window.cmsActivePageSlug = slug;
+      const publishedUrl = new URL(location.href);
+      publishedUrl.searchParams.set("slug",slug);
+      publishedUrl.searchParams.set("page_id",page.id);
+      history.replaceState(null,"",publishedUrl);
       updatePublicLink();
       const url = hostedPageUrl();
       $("pe-publication-notice").hidden = false;

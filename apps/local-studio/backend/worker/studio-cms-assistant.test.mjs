@@ -14,7 +14,11 @@ test("hosted editor uses Studio ask mode, retains a bounded history and retries 
     history: [{ role: "assistant", content: "Previous reply" }], attachments: [],
   }, {
     workersAI: true,
-    getInventory: () => { throw new Error("Worker binding should use its curated inventory"); },
+    getInventory: () => [
+      { provider: "openai", model_id: "account-default", chat_eligible: true, is_default: true },
+      { provider: "cloudflare", model_id: "bound-worker-model", chat_eligible: true },
+      { provider: "gemini", model_id: "account-fallback", chat_eligible: true },
+    ],
     sendChat(body) {
       calls.push(body);
       return calls.length === 1 ? Response.json({ error: "unavailable" }, { status: 503 }) : new Response("A new title");
@@ -22,10 +26,46 @@ test("hosted editor uses Studio ask mode, retains a bounded history and retries 
   });
   assert.equal(reply.reply, "A new title");
   assert.equal(calls.length, 2);
-  assert.notEqual(calls[0].model_id, calls[1].model_id);
+  assert.equal(calls[0].provider, "openai");
+  assert.equal(calls[0].model_id, "account-default");
+  assert.equal(calls[1].provider, "cloudflare");
+  assert.equal(calls[1].model_id, "bound-worker-model");
   assert.equal(calls[0].run_mode, "ask");
   assert.match(calls[0].messages.at(-1).content, /Selected editor context: .*hero/);
   assert.equal(calls[0].messages[0].content, "Previous reply");
+});
+
+test("hosted editor reports safe per-model diagnostics when every configured model fails", async () => {
+  const result = await runStudioCmsAssistant({
+    message: "Create a page", history: [], selection: null, attachments: [],
+  }, {
+    getInventory: () => [
+      { provider: "openai", model_id: "primary", chat_eligible: true },
+      { provider: "cloudflare", model_id: "fallback", chat_eligible: true },
+    ],
+    sendChat({ model_id }) {
+      return model_id === "primary"
+        ? Response.json({ error: { code: "invalid_api_key" } }, { status: 401 })
+        : Response.json({ error: "unavailable" }, { status: 503 });
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 502);
+  assert.match(result.error, /openai\/primary:invalid_api_key/);
+  assert.match(result.error, /cloudflare\/fallback:unavailable/);
+  assert.equal(result.attempts.length, 2);
+});
+
+test("hosted editor gives an actionable error when account model inventory cannot load", async () => {
+  const result = await runStudioCmsAssistant({
+    message: "Create a page", history: [], selection: null, attachments: [],
+  }, {
+    getInventory: () => { throw new Error("private provider detail"); },
+    sendChat: () => { throw new Error("must not run"); },
+  });
+  assert.equal(result.status, 503);
+  assert.equal(result.diagnostic_code, "model_inventory_unavailable");
+  assert.doesNotMatch(result.error, /private provider detail/);
 });
 
 test("hosted image requests only select an eligible vision model", async () => {

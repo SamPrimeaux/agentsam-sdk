@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { JSDOM } from 'jsdom';
 import { readFileSync } from 'node:fs';
 import { parseThemeEditorLocation, themeProjectEditorPath, cmsPageEditorPath } from '../frontend/theme-editor/routes.mjs';
 import { adminRouteForPath } from '../backend/lib/route-manifest.js';
@@ -7,8 +8,25 @@ import { createCmsPageThemeEditorAdapter } from '../frontend/theme-editor/cms-pa
 import { blankThemeProject, materializeStarterProject, inheritDefaultTemplates } from '../frontend/theme-editor/starter-project.mjs';
 import { fillMissingThemeChrome } from '../frontend/theme-editor/starter-chrome.mjs';
 import { validateThemeProjectPayload } from '../backend/cms/theme-project-store.mjs';
+import { withThemeSharedChrome } from '../packages/theme-contract/editor/project.mjs';
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
+
+test('theme page composition projects one saved header/footer into the page without mutating the project', () => {
+  const header={key:'header-main',globalKey:'site_header',zone:'HEADER',html:'<header>Site header</header>',content:{},schema:{fields:[]}};
+  const footer={key:'footer-main',globalKey:'site_footer',zone:'FOOTER',html:'<footer>Site footer</footer>',content:{},schema:{fields:[]}};
+  const body={key:'blog-body',zone:'BODY',html:'<main>Blog content</main>',content:{},schema:{fields:[]}};
+  const project={pages:[
+    {slug:'home',template:'<html><body></body></html>',sections:[header,footer]},
+    {slug:'blog',template:'<html><body><!--theme-section:blog-body--></body></html>',sections:[body]},
+  ]};
+  const before=structuredClone(project);
+  const composed=withThemeSharedChrome(project,project.pages[1]);
+  assert.match(composed.template,/<!--theme-section:global_site_header-->/);
+  assert.match(composed.template,/<!--theme-section:global_site_footer-->/);
+  assert.deepEqual(composed.sections.map(section=>section.key),['global_site_header','blog-body','global_site_footer']);
+  assert.deepEqual(project,before);
+});
 
 test('both CMS pages and installed themes resolve to the same Theme Studio HTML route', () => {
   for (const path of [
@@ -59,27 +77,48 @@ test('project and page saves remain scoped to the same site identity', () => {
   assert.match(pageAdapter, /url\.searchParams\.set\('site_id', siteId\)/);
 });
 
-test('CMS page adapter pins every read and write to the selected site and resolves the real public preview URL', async () => {
+test('CMS page adapter persists theme settings to the selected project and previews through the canonical renderer', async (t) => {
+  const dom = new JSDOM('<!doctype html>');
+  const originalParser = globalThis.DOMParser;
+  globalThis.DOMParser = dom.window.DOMParser;
+  t.after(() => { if (originalParser) globalThis.DOMParser = originalParser; else delete globalThis.DOMParser; dom.window.close(); });
   const calls = [];
   const pagesPayload = {
     site: { id:'site_a', name:'Agency site', primary_domain:'example.com' },
     pages: [
-      { id:'page_home_a', site_id:'site_a', slug:'home', route_path:'/' },
-      { id:'page_about_a', site_id:'site_a', slug:'about', route_path:'/about' },
+      { id:'page_home_a', site_id:'site_a', slug:'home', route_path:'/', title:'Home', status:'published' },
+      { id:'page_about_a', site_id:'site_a', slug:'about', route_path:'/about', title:'About', status:'draft', sections:[] },
+      { id:'page_services_a', site_id:'site_a', slug:'services', route_path:'/services', title:'Services', status:'draft', sections:[{id:'cms-section'}] },
     ],
+  };
+  const project = {
+    id:'theme_heuristic', sourceThemeId:'heuristic', revision:4,
+    themeSettings:{colors:{accent:'#123456'},typography:{body:'Inter'}},
+    tokens:{'--theme-color-primary':'#123456'},
+    pages:[{slug:'about',title:'About template',template:'<html><body><!--theme-section:about_intro--></body></html>',sections:[{key:'about_intro',html:'<section>Inherited theme template</section>',content:{},schema:{fields:[]}}]}],
   };
   const adapter = createCmsPageThemeEditorAdapter({
     siteId:'site_a',
     pagesPayload,
     publicUrlResolver:(site, route) => 'https://' + site.primary_domain + route,
-    fetchImpl:async (path, init) => {
-      calls.push({path, init});
-      const data = path.startsWith('/api/admin/cms/registry')
-        ? {ok:true, registry:{pages:[]}}
-        : path.startsWith('/api/admin/cms/themes')
-          ? {ok:true, active_theme:{name:'Plain Jane', state:'draft'}}
-          : {ok:true, page:pagesPayload.pages[0]};
-      return {ok:true, status:200, json:async()=>data};
+    fetchImpl:async (path, init={}) => {
+      calls.push({path,init});
+      const url = new URL(path,'https://agentsam.example');
+      let data;
+      if (url.pathname === '/api/admin/cms/registry') data={ok:true,registry:{pages:[]}};
+      else if (url.pathname === '/api/admin/cms/themes') data={ok:true,
+        active_theme:{name:'Live theme',slug:'live-theme',state:'published'},
+        preview_theme:{name:'Heuristic',slug:'heuristic',project_id:'theme_heuristic',state:'draft'}};
+      else if (url.pathname === '/api/admin/cms/theme-projects') data={ok:true,
+        projects:[{id:'theme_heuristic',sourceThemeId:'heuristic'}]};
+      else if (url.pathname === '/api/admin/cms/theme-projects/theme_heuristic' && init.method==='PUT') {
+        const body=JSON.parse(init.body);
+        data={ok:true,project:body.project};
+      }
+      else if (url.pathname === '/api/admin/cms/theme-projects/theme_heuristic') data={ok:true,project};
+      else if (url.pathname === '/api/admin/cms/pages/services/preview') data={ok:true,html:'<!doctype html><main><h1>Server-rendered page draft</h1></main>'};
+      else data={ok:true,page:pagesPayload.pages[0]};
+      return {ok:true,status:200,json:async()=>data};
     },
   });
 
@@ -95,13 +134,36 @@ test('CMS page adapter pins every read and write to the selected site and resolv
   assert.equal(siteUrl.searchParams.has('page_id'), false);
 
   assert.deepEqual(await adapter.getRegistry(), {pages:[]});
-  assert.deepEqual(await adapter.getThemeIdentity(), {name:'Plain Jane', status:'draft'});
-  const preview = await adapter.resolvePreview('about', pagesPayload.pages[1]);
-  const previewUrl = new URL(preview.url);
-  assert.equal(previewUrl.origin + previewUrl.pathname, 'https://example.com/about');
-  assert.equal(previewUrl.searchParams.get('preview'), '1');
-  assert.ok(previewUrl.searchParams.get('_'));
-  assert.equal(preview.openUrl, 'https://example.com/about');
+  assert.deepEqual(await adapter.getThemeIdentity(), {name:'Heuristic', status:'draft'});
+  assert.deepEqual(await adapter.getThemeSettings(), project.themeSettings);
+  const nextSettings={colors:{accent:'#abcdef'}};
+  assert.deepEqual(await adapter.updateThemeSettings(nextSettings),nextSettings);
+  const updateCall=calls.find(call=>call.init.method==='PUT'&&call.path.includes('/theme-projects/'));
+  assert.ok(updateCall);
+  const updateBody=JSON.parse(updateCall.init.body);
+  assert.equal(updateBody.site_id,'site_a');
+  assert.equal(updateBody.expected_version,4);
+  assert.deepEqual(updateBody.project.themeSettings,nextSettings);
+
+  const inheritedPreview = await adapter.resolvePreview('about', pagesPayload.pages[1]);
+  assert.match(inheritedPreview.html,/Inherited theme template/);
+  assert.equal(inheritedPreview.inheritedThemeTemplate,true);
+  assert.equal(inheritedPreview.templateSlug,'about');
+  assert.equal(inheritedPreview.openUrl,'https://example.com/about');
+  assert.equal(calls.some(call=>call.path.startsWith('/api/admin/cms/pages/about/preview')),false);
+
+  const preview = await adapter.resolvePreview('services', pagesPayload.pages[2]);
+  assert.match(preview.html,/Server-rendered page draft/);
+  assert.equal(preview.openUrl,'https://example.com/services');
+  const previewCall=calls.find(call=>call.path.startsWith('/api/admin/cms/pages/services/preview'));
+  assert.ok(previewCall);
+  const previewUrl=new URL(previewCall.path,'https://agentsam.example');
+  assert.equal(previewUrl.searchParams.get('site_id'),'site_a');
+  assert.equal(previewUrl.searchParams.get('page_id'),'page_services_a');
+  assert.equal(previewCall.init.method,'POST');
+  assert.equal(JSON.parse(previewCall.init.body).url_handle,'services');
+  assert.equal(calls.some(call=>call.path.startsWith('https://example.com/about?preview=1')),false);
+  assert.ok(calls.every(call=>new URL(call.path,'https://agentsam.example').searchParams.get('site_id')==='site_a'));
 });
 
 test('site-scoped new-theme editor creates a draft without the retired entry route', () => {
