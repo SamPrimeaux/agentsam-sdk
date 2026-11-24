@@ -12,7 +12,7 @@
 import {
   importVaultMasterKey,
   encryptVaultSecret as encryptWithVaultKey,
-  decryptVaultSecret as decryptWithVaultKey,
+  openVaultSecret,
 } from "@inneranimalmedia/agentsam-vault/crypto";
 
 export type StudioCredentialSource = "user_vault" | "platform";
@@ -77,8 +77,7 @@ export async function decryptVaultSecret(
   aad: string,
   masterKeyMaterial: string,
 ): Promise<string> {
-  const key = await importVaultMasterKey(masterKeyMaterial);
-  return decryptWithVaultKey(key, packedB64, aad);
+  return (await openVaultSecret(masterKeyMaterial, packedB64, aad)).value;
 }
 
 export interface VaultD1Binding {

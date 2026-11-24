@@ -23,7 +23,7 @@ import { resolveIamIssuer } from "../../../../packages/identity/src/contracts/au
 import {
   importVaultMasterKey,
   encryptVaultSecret,
-  decryptVaultSecret,
+  openVaultSecret,
   last4 as vaultLast4,
   createProviderRegistry,
   createCredentialResolver,
@@ -289,8 +289,7 @@ async function encryptSecret(env, plaintext, aad) {
 }
 
 async function decryptSecret(env, packedB64, aad) {
-  const key = await importVaultMasterKey(env.VAULT_MASTER_KEY);
-  return decryptVaultSecret(key, packedB64, aad);
+  return (await openVaultSecret(env.VAULT_MASTER_KEY, packedB64, aad)).value;
 }
 
 async function constantTimeSecretEqual(left, right) {

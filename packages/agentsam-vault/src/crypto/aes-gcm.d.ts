@@ -28,3 +28,14 @@ export function makeCredentialRef(input: {
   backend?: string;
   id: string;
 }): string;
+
+export function openVaultSecret(
+  masterKeyMaterial: string,
+  packedB64: string,
+  aad: string,
+): Promise<{ value: string; format: string }>;
+export function probeVaultSecret(
+  masterKeyMaterial: string,
+  packedB64: string,
+  aad: string,
+): Promise<Record<string, boolean>>;

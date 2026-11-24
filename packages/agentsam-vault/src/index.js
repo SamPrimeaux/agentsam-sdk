@@ -12,6 +12,8 @@ export {
   mintVaultMasterKeyV1,
   encryptVaultSecret,
   decryptVaultSecret,
+  openVaultSecret,
+  probeVaultSecret,
   last4,
   makeCredentialRef,
 } from './crypto/aes-gcm.js';
