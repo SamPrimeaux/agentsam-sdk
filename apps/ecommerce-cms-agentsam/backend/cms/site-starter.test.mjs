@@ -46,7 +46,8 @@ test('first visit resolves a site without silently installing a theme; explicit 
     assert.equal((await ensureCmsSiteStarter(env,'fresh',overview.selected_site_id)).ok,true);
     overview=await (await handleStudioSitesOverview(storeRequest(overview.selected_site_id),env,'fresh')).json();
     assert.equal(overview.preview_theme.installed,true);
-    assert.match(overview.preview_theme.edit_href,/theme-project-editor\?project=theme_heuristic&site_id=/);
+    assert.equal(overview.preview_theme.project_id,'theme_heuristic');
+    assert.equal(overview.preview_theme.edit_href,'/admin/sites/'+encodeURIComponent(site.id)+'/themes/theme_heuristic/editor/home');
     const saved=await getThemeProject(env,'fresh','theme_heuristic',overview.selected_site_id);
     assert.equal(saved.ok,true);
     assert.deepEqual(saved.project.pages.map(p=>p.slug),['home','shop','about']);

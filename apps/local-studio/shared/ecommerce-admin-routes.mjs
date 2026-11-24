@@ -31,8 +31,6 @@ export const LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES = Object.freeze([
   route('admin.theme-editor.theme', '/admin/sites/:siteId/themes/:projectId/editor', 'admin-html', 'theme-editor'),
   route('admin.theme-editor.theme-page', '/admin/sites/:siteId/themes/:projectId/editor/:pageSlug', 'admin-html', 'theme-editor'),
   route('admin.theme-workspace', '/admin/theme-workspace', 'admin-html', 'theme-workspace'),
-  route('admin.scene-lab', '/admin/scene-lab', 'admin-html', 'scene-lab'),
-  route('admin.bridge-fly-preview', '/admin/bridge-fly-preview', 'admin-html', 'bridge-fly-preview'),
   route('admin.growth', '/admin/growth', 'admin-html', 'growth'),
   route('admin.email', '/admin/email', 'admin-html', 'email'),
   route('admin.preferences', '/admin/preferences', 'admin-html', 'preferences'),

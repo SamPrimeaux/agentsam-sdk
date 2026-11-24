@@ -87,7 +87,7 @@ import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
 import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.js";
 import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
-import { handleStudioNavigation } from "./studio-navigation-preferences.js";
+import { handleStudioNavigation, loadStudioNavigationCatalog } from "./studio-navigation-preferences.js";
 import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled, setNativeAdminAppPinned, touchNativeAdminAppOpened } from "./apps-launcher.js";
 import { listBrowserHistory, recordBrowserVisit, removeBrowserHistoryEntry } from "./browser-history.js";
 import { handleAccountWidgetsRequest } from "./account-widgets.js";
@@ -1198,11 +1198,18 @@ export default {
           return json({ ok: false, error: "origin_not_allowed" }, 403);
         }
         const CMS_ASSISTANT_INFERENCE = input => runStudioCmsAssistant(input, {
-          workersAI: typeof env.AGENTSAM_WAI?.run === "function",
           signal: request.signal,
           async getInventory() {
-            const response = await handleLlmInventory(env, principal.id, request);
-            return (await response.json()).availableModels || [];
+            // Include the platform's configured providers as well as this
+            // account's vault. Vault credentials take precedence; the inventory
+            // also adds the host Workers AI candidates for the same fallback.
+            const inventoryUrl = new URL(request.url);
+            inventoryUrl.searchParams.set("include_platform", "1");
+            const inventoryRequest = new Request(inventoryUrl.toString());
+            const response = await handleLlmInventory(env, principal.id, inventoryRequest);
+            const inventory = await response.json();
+            if (!response.ok || inventory?.ok === false) throw new Error("model_inventory_unavailable");
+            return inventory.availableModels || [];
           },
           sendChat(body) {
             const chat = new Request(new URL("/api/chat", url), {
@@ -1745,10 +1752,12 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
       const userId = await sessionUser();
       if (!userId) return json({ok:false,error:"unauthorized"},401);
-      try { return json({ok:true,apps:await listLauncherApps(env.DB,userId)}); }
-      catch (error) {
-        console.error("apps_launcher_error",String(error?.message||error));
-        return json({ok:false,error:"apps_launcher_unavailable"},503);
+      try {
+        const hostCatalog = await loadStudioNavigationCatalog(request, env);
+        return json({ok:true,apps:await listLauncherApps(env.DB,userId,hostCatalog.appManifests || [])});
+      } catch (error) {
+        console.error("apps_manifest_catalog_unavailable", String(error?.message || error).slice(0,120));
+        return json({ok:false,error:"apps_manifest_catalog_unavailable"},503);
       }
     }
     if (isAppsInstall) {

@@ -64,9 +64,9 @@ async function accountAvatarRequest(options: RequestInit = {}) {
 }
 
 type MerchantStore = { id: string; name?: string; slug?: string; page_count?: number };
-type StudioNavigationNode = {id:string;label:string;href?:string;icon?:string;children?:StudioNavigationNode[]};
-type StudioNavigationProjection = {primary?:StudioNavigationNode[];channels?:StudioNavigationNode[];apps?:StudioNavigationNode[];utilities?:StudioNavigationNode[]};
-const navigationIcons = {home:Home,products:Package,orders:ShoppingBag,discounts:Tag,content:Files,analytics:BarChart3,projects:Folder,library:BookOpen,tickets:Ticket,store:Store,'online-store':Store,customers:Users,audience:Users,help:CircleHelp,settings:Settings,messageSquare:MessageSquareIcon,box:Box,cad:Box,film:Film,moviemode:Film,globe:Globe,growth:TrendingUp,apps:Layers3,layers:Layers3,samsketch:Layers3,forms:Files,goalguru:Ticket,canvas:Layers3,cms:Store,mail:Mail,database:Database};
+type StudioNavigationNode = {id:string;label:string;href?:string;icon?:string;hidden?:boolean;host_core?:boolean;app_id?:string;screen_id?:string;source?:string;pluginKey?:string;children?:StudioNavigationNode[]};
+type StudioNavigationProjection = {primary?:StudioNavigationNode[];work?:StudioNavigationNode[];channels?:StudioNavigationNode[];apps?:StudioNavigationNode[];utilities?:StudioNavigationNode[]};
+const navigationIcons = {home:Home,products:Package,orders:ShoppingBag,discounts:Tag,content:Files,analytics:BarChart3,projects:Folder,library:BookOpen,tickets:Ticket,store:Store,'online-store':Store,customers:Users,audience:Users,help:CircleHelp,settings:Settings,messageSquare:MessageSquareIcon,box:Box,cad:Box,film:Film,moviemode:Film,globe:Globe,growth:TrendingUp,apps:Layers3,layers:Layers3,samsketch:Layers3,forms:Files,goalguru:Ticket,canvas:Layers3,cms:Store,mail:Mail,database:Database,'folder-kanban':Folder,'chart-no-axes-combined':BarChart3,'file-text':Files,network:Layers3,'file-input':Files,'message-square':MessageSquareIcon,ticket:Ticket};
 function destination(item:StudioNavigationNode):NavDestination {
   const Icon = navigationIcons[item.icon as keyof typeof navigationIcons];
   return {...item,icon:Icon ? <Icon /> : undefined,children:item.children?.map(destination)};
@@ -123,13 +123,6 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     invalidateAccountApps();
     if (user && !user.isDevFallback) void reloadAccountApps();
   }, [user?.id, user?.isDevFallback]);
-  // D1 account installations own the Apps navigation; bundled stages are not installs.
-  const installedAppNodes: StudioNavigationNode[] = accountApps.apps
-    .filter(app => app.installed && app.enabled && typeof app.href === 'string' && isSafeAppHref(app.href))
-    .map(app => ({ id: app.key, label: app.label, href: app.href!, icon: app.nav_icon || 'apps' }));
-  const installedAppChildren: StudioNavigationNode[] = accountApps.loaded && !accountApps.error
-    ? installedAppNodes
-    : [{ id: 'apps-verification', label: accountApps.error ? 'Apps unavailable — retry' : 'Verifying installed Apps…', icon: 'apps' }];
   useEffect(() => {
     const shell = window as Window & {__agentsamSignOut?:() => Promise<void>};
     const action = async () => {
@@ -293,25 +286,44 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const isSettings = pathname === '/admin/settings' || pathname.startsWith('/admin/settings/');
   const isCanvasRoute = pathname === '/admin/canvas' || pathname.startsWith('/admin/canvas/');
   const [navigation, setNavigation] = useState<StudioNavigationProjection>({});
+  const [navigationLoaded, setNavigationLoaded] = useState(false);
+  const [navigationError, setNavigationError] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     const loadNavigation = async () => {
       try {
-        let response = await fetch('/api/studio/navigation', { credentials: 'same-origin', signal: controller.signal });
-        // Packaged desktop/offline and old Workers can still read the installation
-        // catalog. Account edits are only accepted through the authenticated API.
-        if (!response.ok) response = await fetch('/admin/data/navigation.json', { signal: controller.signal });
+        const response = await fetch('/api/studio/navigation', { credentials: 'same-origin', signal: controller.signal });
         if (!response.ok) throw new Error('Application navigation unavailable');
         const projection = await response.json();
-        if (!controller.signal.aborted && projection.schema === 'agentsam.host-navigation.v1' && Array.isArray(projection.apps)) {
-          setNavigation({ ...projection, apps: dedupeAppNavigation(projection.apps) });
+        if (projection.schema !== 'agentsam.host-navigation.v1' || !Array.isArray(projection.apps)) {
+          throw new Error('Application navigation invalid');
         }
-      } catch { /* Never show invented installed apps. */ }
+        if (!controller.signal.aborted) {
+          setNavigation({ ...projection, apps: dedupeAppNavigation(projection.apps) });
+          setNavigationError(false);
+          setNavigationLoaded(true);
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setNavigationError(true);
+          setNavigationLoaded(true);
+        }
+      }
     };
     void loadNavigation();
     window.addEventListener('agentsam:navigation-changed', loadNavigation);
-    return () => { controller.abort(); window.removeEventListener('agentsam:navigation-changed', loadNavigation); };
+    window.addEventListener('agentsam:plugins-changed', loadNavigation);
+    window.addEventListener('agentsam:apps-changed', loadNavigation);
+    return () => { controller.abort(); window.removeEventListener('agentsam:navigation-changed', loadNavigation); window.removeEventListener('agentsam:plugins-changed', loadNavigation); window.removeEventListener('agentsam:apps-changed', loadNavigation); };
   }, []);
+  // The authenticated navigation projection is the single source for Apps,
+  // including installed plugins and per-account visibility/order overrides.
+  const installedAppNodes: StudioNavigationNode[] = (navigation.apps || [])
+    .filter(app => app.host_core !== true && app.hidden !== true && typeof app.href === 'string' && isSafeAppHref(app.href))
+    .map(app => ({ id: app.id, label: app.label, href: app.href, icon: app.icon || 'apps', source: app.source, pluginKey: app.pluginKey }));
+  const installedAppChildren: StudioNavigationNode[] = navigationLoaded && !navigationError
+    ? installedAppNodes
+    : [{ id: 'apps-verification', label: navigationError ? 'Apps unavailable — retry' : 'Verifying installed Apps…', icon: 'apps' }];
 
   const isMovieModeRoute = pathname === '/admin/moviemode' || pathname.startsWith('/admin/moviemode/');
   // When a SideStage preview becomes the dedicated editor, close only its
@@ -594,7 +606,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     destinations: [
       // Render the platform-owned business destinations first. These are the
       // canonical primary entries from the same host projection as installed apps.
-      ...(navigation.primary || []).filter(entry => entry.id !== 'projects'),
+      ...(navigation.primary || []),
+      ...(navigation.work?.length ? [{id:'work',label:'Work',icon:'folder-kanban',children:navigation.work}] : []),
       ...(navigation.channels?.length ? [{id:'sales-channels',label:'Sales channels',icon:'store',children:navigation.channels}] : []),
       {id:'installed-apps',label:'Apps',icon:'apps',children:installedAppChildren},
       ...(navigation.utilities || []),

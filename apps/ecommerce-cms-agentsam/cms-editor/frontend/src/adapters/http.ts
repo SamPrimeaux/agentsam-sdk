@@ -9,6 +9,9 @@ import {
   type CmsEditorAdapter,
   type CmsPublicationSnapshot,
   type CmsRevision,
+  type CmsNavigationMenu,
+  type CmsNavigationMenuInput,
+  type CmsNavigationRevision,
 } from '../../../shared/cms/src/adapter';
 import {
   buildCmsEditorGroups,
@@ -278,6 +281,88 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     return {
       ...meta,
       pages: hydratePages(boot),
+    };
+  }
+
+  async listNavigationMenus(siteId: string): Promise<CmsNavigationMenu[]> {
+    const query = new URLSearchParams({ site_id: siteId });
+    const result = await this.api<{ menus?: Json[] }>(this.url('/api/admin/cms/navigation?' + query.toString()));
+    return (result.menus || []).map((row) => ({
+      id: String(row.id),
+      siteId: String(row.site_id || siteId),
+      handle: String(row.handle || ''),
+      title: String(row.title || ''),
+      status: String(row.status || 'draft') as CmsNavigationMenu['status'],
+      layout: String(row.layout || 'links') as CmsNavigationMenu['layout'],
+      items: Array.isArray(row.items) ? row.items : [],
+      groups: Array.isArray(row.groups) ? row.groups : [],
+      metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : {},
+      readOnly: Boolean(row.read_only),
+      createdAt: row.created_at ? String(row.created_at) : undefined,
+      updatedAt: String(row.updated_at || ''),
+    }));
+  }
+
+  async createNavigationMenu(siteId: string, input: CmsNavigationMenuInput): Promise<CmsNavigationMenu> {
+    const query = new URLSearchParams({ site_id: siteId });
+    const result = await this.api<{ menu: Json }>(this.url('/api/admin/cms/navigation?' + query.toString()), {
+      method: 'POST',
+      body: JSON.stringify({
+        handle: input.handle, title: input.title, status: input.status,
+        layout: input.layout, items: input.items, groups: input.groups,
+      }),
+    });
+    return this.mapNavigationMenu(result.menu, siteId);
+  }
+
+  async updateNavigationMenu(siteId: string, menuId: string, input: CmsNavigationMenuInput & { expectedUpdatedAt: string }): Promise<CmsNavigationMenu> {
+    const query = new URLSearchParams({ site_id: siteId });
+    const result = await this.api<{ menu: Json }>(this.url('/api/admin/cms/navigation/' + encodeURIComponent(menuId) + '?' + query.toString()), {
+      method: 'PUT',
+      body: JSON.stringify({
+        handle: input.handle, title: input.title, status: input.status,
+        layout: input.layout, items: input.items, groups: input.groups,
+        expected_updated_at: input.expectedUpdatedAt,
+      }),
+    });
+    return this.mapNavigationMenu(result.menu, siteId);
+  }
+
+  async archiveNavigationMenu(siteId: string, menuId: string, expectedUpdatedAt: string): Promise<CmsNavigationMenu> {
+    const query = new URLSearchParams({ site_id: siteId });
+    const result = await this.api<{ menu: Json }>(this.url('/api/admin/cms/navigation/' + encodeURIComponent(menuId) + '?' + query.toString()), {
+      method: 'DELETE',
+      body: JSON.stringify({ expected_updated_at: expectedUpdatedAt }),
+    });
+    return this.mapNavigationMenu(result.menu, siteId);
+  }
+
+  async listNavigationRevisions(siteId: string, menuId: string): Promise<CmsNavigationRevision[]> {
+    const query = new URLSearchParams({ site_id: siteId });
+    const result = await this.api<{ revisions?: Json[] }>(this.url('/api/admin/cms/navigation/' + encodeURIComponent(menuId) + '/revisions?' + query.toString()));
+    return (result.revisions || []).map((row) => ({
+      id: String(row.id),
+      revisionNumber: Number(row.revision_number || 0),
+      revisionKind: String(row.revision_kind || ''),
+      snapshot: row.snapshot,
+      createdAt: String(row.created_at || ''),
+    }));
+  }
+
+  private mapNavigationMenu(row: Json, siteId: string): CmsNavigationMenu {
+    return {
+      id: String(row.id),
+      siteId: String(row.site_id || siteId),
+      handle: String(row.handle || ''),
+      title: String(row.title || ''),
+      status: String(row.status || 'draft') as CmsNavigationMenu['status'],
+      layout: String(row.layout || 'links') as CmsNavigationMenu['layout'],
+      items: Array.isArray(row.items) ? row.items : [],
+      groups: Array.isArray(row.groups) ? row.groups : [],
+      metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : {},
+      readOnly: Boolean(row.read_only),
+      createdAt: row.created_at ? String(row.created_at) : undefined,
+      updatedAt: String(row.updated_at || ''),
     };
   }
 

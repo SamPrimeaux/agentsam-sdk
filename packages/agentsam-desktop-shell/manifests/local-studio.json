@@ -75,9 +75,10 @@
   "included_apps": [
     "cad-creator",
     "ecommerce-cms-agentsam",
-    "moviemode",
     "samsketch",
-    "design-canvas"
+    "design-canvas",
+    "moviemode",
+    "goalguru"
   ],
   "theme": {
     "primary_color": "#0a0a0c",

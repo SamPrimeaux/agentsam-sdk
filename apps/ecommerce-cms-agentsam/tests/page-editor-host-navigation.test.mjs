@@ -63,6 +63,13 @@ test('merchant Page Editor is a separate, responsive content and SEO surface', (
     assert.ok(js.includes(control), 'missing interactive Page Editor control '+control);
   }
   assert.match(js, /content-draft/);
+  assert.ok(js.includes('pe-section-source-note'), 'section-based pages must not look like empty body-only pages');
+  assert.ok(js.includes('savedSections'), 'Page Editor must report the canonical saved section count');
+  assert.ok(js.includes('Edit sections in Theme Studio'), 'Page Editor must link to the actual section owner');
+  assert.ok(js.includes('Edit inherited theme template'), 'empty pages must link to their selected theme template');
+  assert.ok(js.includes('projectResult?.project?.pages'), 'the inherited template link must resolve against the real theme project');
+  assert.doesNotMatch(js, /\/route/, 'saving a draft must not move a published route');
+  assert.ok(css.includes('.pe-section-source-note'), 'the section source notice uses the existing theme tokens');
   assert.ok(js.includes('initialNewPage'), 'new pages share the same editor as existing pages');
   assert.ok(js.includes('cmsAdminFetch("/api/admin/cms/pages",{'), 'first save creates a canonical CMS draft');
   assert.match(js, /cmsAdminFetch/);
@@ -80,13 +87,15 @@ test('page review drafts are tenant-scoped and cannot silently publish', () => {
   assert.match(api, /publish_ready: false/);
 });
 
-test('merchant page URL edits update the canonical D1 route and preserve published redirects', () => {
+test('merchant page URL edits stay private until the verified publication commits the new route and redirect', () => {
   const frontend = readFileSync(new URL('../frontend/static/js/page-editor-review.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../frontend/static/css/page-editor-review.css', import.meta.url), 'utf8');
   const api = readFileSync(new URL('../backend/cms/api.js', import.meta.url), 'utf8');
   assert.match(frontend, /currentRoute\(d\.url_handle\)/);
   assert.match(frontend, /content-draft/);
-  assert.match(frontend, /\/route/);
+  assert.doesNotMatch(frontend, /\/route/);
+  assert.match(frontend, /new URL stays in your draft until you publish/);
+  assert.match(frontend, /new URL and old-URL redirect will go live together when you publish/);
   assert.match(frontend, /created\?\.page\?\.id/);
   assert.match(frontend, /page_id",page\.id/);
   assert.match(frontend, /pe-discard/);
@@ -97,4 +106,5 @@ test('merchant page URL edits update the canonical D1 route and preserve publish
   assert.match(api, /metadata\.route_redirects/);
   assert.match(api, /WHERE id=\? AND site_id=\? AND slug=\? AND route_path=\?/);
   assert.match(api, /A page already uses that URL/);
+  assert.match(api, /cms_page_route_change_requires_publish/);
 });

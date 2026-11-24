@@ -83,7 +83,6 @@ export const localStudioSettingsManifest = defineSettingsManifest({
       icon: "theme",
       views: [
         { id: "themes", label: "Themes" },
-        { id: "navigation", label: "Navigation" },
       ],
     },
     {

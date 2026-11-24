@@ -98,8 +98,10 @@ export function resolveNavConfig(settings = {}) {
       backgroundColor: /^#[0-9a-f]{6}$/i.test(settings.announcementBgColor || "") ? settings.announcementBgColor : "#161616",
       textColor: /^#[0-9a-f]{6}$/i.test(settings.announcementTextColor || "") ? settings.announcementTextColor : "#ffffff",
     },
-    items: Array.isArray(settings.navItems) && settings.navItems.length
-      ? sanitizeNavItems(settings.navItems)
-      : DEFAULT_NAV_ITEMS,
+    items: Array.isArray(settings.cmsNavigationItems)
+      ? (settings.cmsNavigationItems.length ? sanitizeNavItems(settings.cmsNavigationItems) : [])
+      : Array.isArray(settings.navItems) && settings.navItems.length
+        ? sanitizeNavItems(settings.navItems)
+        : DEFAULT_NAV_ITEMS,
   };
 }

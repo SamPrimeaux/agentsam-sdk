@@ -680,12 +680,14 @@ export const localStudioSettingsHost: SettingsHost = {
     await installLocalStudioPublicPlugin(pluginKey);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+      window.dispatchEvent(new Event("agentsam:plugins-changed"));
     }
   },
   async removeCatalogPlugin(pluginId) {
     await removeLocalStudioPublicPlugin(pluginId);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+      window.dispatchEvent(new Event("agentsam:plugins-changed"));
     }
   },
   async readPluginWorkspace(pluginId) {

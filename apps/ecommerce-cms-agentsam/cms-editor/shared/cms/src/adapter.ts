@@ -47,6 +47,54 @@ export type CmsAsset = {
   metadata?: Record<string, unknown>;
 };
 
+export type CmsNavigationItem = {
+  id: string;
+  label: string;
+  href: string;
+  target?: string;
+  rel?: string;
+  children?: CmsNavigationItem[];
+};
+
+export type CmsNavigationGroup = {
+  key: string;
+  label: string;
+  items: CmsNavigationItem[];
+};
+
+export type CmsNavigationMenu = {
+  id: string;
+  siteId: string;
+  handle: string;
+  title: string;
+  status: 'draft' | 'active' | 'archived';
+  layout: 'links' | 'grouped-footer';
+  items: CmsNavigationItem[];
+  groups: CmsNavigationGroup[];
+  metadata?: Record<string, unknown>;
+  readOnly?: boolean;
+  createdAt?: string;
+  updatedAt: string;
+};
+
+export type CmsNavigationMenuInput = {
+  handle?: string;
+  title?: string;
+  status?: 'draft' | 'active' | 'archived';
+  layout?: 'links' | 'grouped-footer';
+  items?: CmsNavigationItem[];
+  groups?: CmsNavigationGroup[];
+  expectedUpdatedAt?: string;
+};
+
+export type CmsNavigationRevision = {
+  id: string;
+  revisionNumber: number;
+  revisionKind: string;
+  snapshot: unknown;
+  createdAt: string;
+};
+
 export type CmsCapabilityErrorCode =
   | 'cms_capability_unsupported'
   | 'cms_adapter_not_configured'
@@ -129,6 +177,13 @@ export type CmsEditorAdapter = {
   publish(pageId: string, options?: { revisionId?: string }): Promise<CmsPublicationSnapshot>;
   getPublishedRevision(pageId: string): Promise<CmsPublicationSnapshot | null>;
 
+  // Navigation (site-owned menus; distinct from account/platform navigation)
+  listNavigationMenus(siteId: string): Promise<CmsNavigationMenu[]>;
+  createNavigationMenu(siteId: string, input: CmsNavigationMenuInput): Promise<CmsNavigationMenu>;
+  updateNavigationMenu(siteId: string, menuId: string, input: CmsNavigationMenuInput & { expectedUpdatedAt: string }): Promise<CmsNavigationMenu>;
+  archiveNavigationMenu(siteId: string, menuId: string, expectedUpdatedAt: string): Promise<CmsNavigationMenu>;
+  listNavigationRevisions(siteId: string, menuId: string): Promise<CmsNavigationRevision[]>;
+
   // Assets
   listAssets(siteId: string): Promise<CmsAsset[]>;
   getAsset(assetId: string): Promise<CmsAsset>;
@@ -182,6 +237,11 @@ export const CMS_ADAPTER_CAPABILITIES = Object.freeze([
   'uploadAsset',
   'updateAsset',
   'deleteAsset',
+  'listNavigationMenus',
+  'createNavigationMenu',
+  'updateNavigationMenu',
+  'archiveNavigationMenu',
+  'listNavigationRevisions',
 ] as const);
 
 export type CmsAdapterCapability = (typeof CMS_ADAPTER_CAPABILITIES)[number];

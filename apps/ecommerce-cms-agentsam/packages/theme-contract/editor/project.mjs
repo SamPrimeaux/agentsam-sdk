@@ -18,6 +18,41 @@ export function validateThemeProject(value) {
   return clone(value);
 }
 
+/** Compose the existing site-global header/footer into a page preview without
+ * persisting duplicate section rows or mutating the saved theme project. */
+export function withThemeSharedChrome(project, page) {
+  if (page?.slug === 'site') return clone(page);
+  const merged = clone(page);
+  const chosen = new Map();
+  for (const candidate of [...(project?.pages || [])].sort((a,b) =>
+    (a.slug === 'home' ? -1 : 0) - (b.slug === 'home' ? -1 : 0))) {
+    for (const item of candidate.sections || []) {
+      if (!item.globalKey || !['HEADER','FOOTER'].includes(item.zone)) continue;
+      if (!chosen.has(item.globalKey)) chosen.set(item.globalKey,item);
+    }
+  }
+  for (const item of chosen.values()) {
+    const key = 'global_' + item.globalKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const existing = merged.sections.find(section => section.globalKey === item.globalKey);
+    if (existing) {
+      merged.template = merged.template.replaceAll('<!--theme-section:' + existing.key + '-->',
+        '<!--theme-section:' + key + '-->');
+      existing.key = key;
+      continue;
+    }
+    const slot = '<!--theme-section:' + key + '-->';
+    const projected = {...clone(item),key};
+    if (item.zone === 'HEADER') {
+      merged.sections.unshift(projected);
+      merged.template = merged.template.replace(/(<body\b[^>]*>)/i,'$1' + slot);
+    } else {
+      merged.sections.push(projected);
+      merged.template = merged.template.replace(/<\/body>/i,slot + '</body>');
+    }
+  }
+  return merged;
+}
+
 /** Deterministic HTML bindings preserve the actual theme markup, CSS and structure. */
 export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl = '' } = {}) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -379,34 +414,7 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
     if (!s) throw new Error('theme_section_not_found');
     return s;
   };
-  const withSharedChrome = (page) => {
-    if (page.slug === 'site') return page;
-    const merged = clone(page);
-    for (const item of sharedSections()) {
-      const key = sharedKey(item);
-      const existing = merged.sections.find(section => section.globalKey === item.globalKey);
-      if (existing) {
-        // Render site-owned keys in the preview even if imported pages reuse
-        // generic section_1 IDs. Selection can then never target a body block.
-        merged.template = merged.template.replaceAll('<!--theme-section:' + existing.key + '-->',
-          '<!--theme-section:' + key + '-->');
-        existing.key = key;
-        continue;
-      }
-      // Install the shared header/footer into the transient preview only.
-      // An existing customer draft is never duplicated or silently mutated.
-      const slot = '<!--theme-section:' + key + '-->';
-      const projected = {...clone(item), key};
-      if (item.zone === 'HEADER') {
-        merged.sections.unshift(projected);
-        merged.template = merged.template.replace(/(<body\b[^>]*>)/i, '$1' + slot);
-      } else {
-        merged.sections.push(projected);
-        merged.template = merged.template.replace(/<\/body>/i, slot + '</body>');
-      }
-    }
-    return merged;
-  };
+  const withSharedChrome = (page) => withThemeSharedChrome(state,page);
   const syncGlobal = (slug, s) => {
     if (!s.globalKey) return;
     for (const page of state.pages) {

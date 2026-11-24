@@ -143,5 +143,21 @@ export const CMS_OPERATION_CONTRACTS = Object.freeze([
     input_schema:base({...versioned,confirmation:{type:'boolean',const:true},...idempotency},['pageId','expectedVersion','confirmation']),
     output_schema:mutationResult({publishedVersion:positive}),
   }),
+  operation({
+    id:'cms.navigation.list',capability:'cms.navigation.read',effect:'read',
+    description:'List the authorized website navigation menus for the resolved CMS site, including their active/draft state.',
+    input_schema:base({}),
+    output_schema:result({menus:{type:'array',items:object}}),
+  }),
+  operation({
+    id:'cms.navigation.save',capability:'cms.navigation.write',effect:'draft_update',
+    description:'Save a site-owned navigation menu draft with optimistic version checking; publishing remains an explicit separate action.',
+    input_schema:base({
+      menuId:string,expectedVersion:positive,
+      items:{type:'array',maxItems:100,items:object},
+      ...idempotency,
+    },['menuId','expectedVersion','items']),
+    output_schema:result({menuId:string,version:positive,digest,idempotent:{type:'boolean'}}),
+  }),
 ]);
 export const CMS_CONTRACTS_BY_NAME = new Map(CMS_OPERATION_CONTRACTS.map(x=>[x.id,x]));

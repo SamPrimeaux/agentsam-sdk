@@ -2,6 +2,9 @@ import {
   CmsCapabilityError,
   type CmsAsset,
   type CmsEditorAdapter,
+  type CmsNavigationMenu,
+  type CmsNavigationMenuInput,
+  type CmsNavigationRevision,
   type CmsPublicationSnapshot,
   type CmsRevision,
 } from '../../../shared/cms/src/adapter';
@@ -67,6 +70,8 @@ export class MemoryCmsAdapter implements CmsEditorAdapter {
   /** True when this adapter is not durable across reloads/processes. */
   readonly temporary = true;
   private sites = new Map<string, SiteStore>();
+  private navigationMenus = new Map<string, CmsNavigationMenu[]>();
+  private navigationRevisions = new Map<string, CmsNavigationRevision[]>();
 
   /** Genuinely empty store — use installStarterPack / createSite to populate. */
   static createEmpty() {
@@ -203,6 +208,80 @@ export class MemoryCmsAdapter implements CmsEditorAdapter {
       ...store.meta,
       pages: structuredClone(store.pages),
     });
+  }
+
+  async listNavigationMenus(siteId: string): Promise<CmsNavigationMenu[]> {
+    this.storeOrThrow(siteId);
+    return structuredClone(this.navigationMenus.get(siteId) || []);
+  }
+
+  async createNavigationMenu(siteId: string, input: CmsNavigationMenuInput): Promise<CmsNavigationMenu> {
+    this.storeOrThrow(siteId);
+    const now = new Date().toISOString();
+    const menu: CmsNavigationMenu = {
+      id: id('menu'),
+      siteId,
+      handle: String(input.handle || input.title || 'menu').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64),
+      title: String(input.title || 'New menu'),
+      status: input.status || 'draft',
+      layout: input.layout || 'links',
+      items: structuredClone(input.items || []),
+      groups: structuredClone(input.groups || []),
+      metadata: {},
+      createdAt: now,
+      updatedAt: now,
+    };
+    const menus = this.navigationMenus.get(siteId) || [];
+    if (menus.some(existing => existing.handle === menu.handle)) throw new CmsCapabilityError('createNavigationMenu', 'navigation_handle_conflict');
+    menus.push(menu);
+    this.navigationMenus.set(siteId, menus);
+    this.navigationRevisions.set(siteId + ':' + menu.id, [{
+      id: id('navrev'), revisionNumber: 1, revisionKind: menu.status === 'active' ? 'published' : 'draft',
+      snapshot: structuredClone(menu), createdAt: now,
+    }]);
+    return structuredClone(menu);
+  }
+
+  async updateNavigationMenu(siteId: string, menuId: string, input: CmsNavigationMenuInput & { expectedUpdatedAt: string }): Promise<CmsNavigationMenu> {
+    this.storeOrThrow(siteId);
+    const menus = this.navigationMenus.get(siteId) || [];
+    const index = menus.findIndex(menu => menu.id === menuId);
+    if (index < 0) throw new CmsCapabilityError('updateNavigationMenu', 'navigation_menu_not_found', 'cms_source_not_found');
+    const current = menus[index];
+    if (current.updatedAt !== input.expectedUpdatedAt) throw new CmsCapabilityError('updateNavigationMenu', 'navigation_menu_conflict');
+    const revisions = this.navigationRevisions.get(siteId + ':' + menuId) || [];
+    revisions.push({
+      id: id('navrev'), revisionNumber: revisions.length + 1, revisionKind: 'history',
+      snapshot: structuredClone(current), createdAt: new Date().toISOString(),
+    });
+    const next: CmsNavigationMenu = {
+      ...current,
+      id: current.id,
+      siteId,
+      handle: input.handle ?? current.handle,
+      title: input.title ?? current.title,
+      status: input.status ?? current.status,
+      layout: input.layout ?? current.layout,
+      items: input.items !== undefined ? structuredClone(input.items) : current.items,
+      groups: input.groups !== undefined ? structuredClone(input.groups) : current.groups,
+      metadata: current.metadata || {},
+      updatedAt: new Date().toISOString(),
+    };
+    delete (next as CmsNavigationMenu & { expectedUpdatedAt?: string }).expectedUpdatedAt;
+    if (menus.some((menu, itemIndex) => itemIndex !== index && menu.handle === next.handle)) throw new CmsCapabilityError('updateNavigationMenu', 'navigation_handle_conflict');
+    menus[index] = next;
+    this.navigationMenus.set(siteId, menus);
+    this.navigationRevisions.set(siteId + ':' + menuId, revisions);
+    return structuredClone(next);
+  }
+
+  async archiveNavigationMenu(siteId: string, menuId: string, expectedUpdatedAt: string): Promise<CmsNavigationMenu> {
+    return this.updateNavigationMenu(siteId, menuId, { status: 'archived', expectedUpdatedAt });
+  }
+
+  async listNavigationRevisions(siteId: string, menuId: string): Promise<CmsNavigationRevision[]> {
+    this.storeOrThrow(siteId);
+    return structuredClone(this.navigationRevisions.get(siteId + ':' + menuId) || []);
   }
 
   async listPages(siteId: string) {

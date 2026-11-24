@@ -205,5 +205,26 @@
       ]
     }
   },
-  "product_id": "cad-creator"
+  "product_id": "cad-creator",
+  "screens": [
+    {
+      "id": "cad-creator.workspace",
+      "app_id": "cad-creator",
+      "route": "/admin/cad",
+      "primary": true,
+      "module": "routes/(apps)/admin/cad.tsx",
+      "export": "CadStudioPage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "admin-nav",
+        "label": "CAD Creator",
+        "icon": "box",
+        "primary": true,
+        "key": "cad-creator"
+      }
+    }
+  ]
 }

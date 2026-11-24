@@ -13,6 +13,19 @@ export interface AdminInstallableApp {
   enabled: boolean;
   installable: boolean;
   setup_status: string;
+  /** Manifest-backed screen registrations resolved from the existing apps catalog. */
+  screen_status?: 'registered' | 'not_registered' | 'manifest_missing' | string;
+  manifest_id?: string | null;
+  manifest_version?: string | null;
+  surfaces?: string[];
+  screens?: Array<{
+    id: string;
+    app_id?: string;
+    route?: string;
+    label?: string;
+    navigation?: Record<string, unknown>;
+    [key: string]: unknown;
+  }>;
   /** Same-origin work view a host can frame in place (an app's standalone mount). */
   embed_href?: string | null;
   pinned?: boolean;

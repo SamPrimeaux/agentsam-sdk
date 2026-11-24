@@ -17,6 +17,7 @@
     "@inneranimalmedia/agentsam-content": "file:../../../packages/agentsam-content",
     "@inneranimalmedia/agentsam-content-studio": "file:../../../packages/agentsam-content-studio",
     "@inneranimalmedia/agentsam-contracts": "file:../../../packages/agentsam-contracts",
+    "@inneranimalmedia/agentsam-goalguru": "file:../../../packages/agentsam-goalguru",
     "@inneranimalmedia/agentsam-ide": "file:../../../packages/agentsam-ide",
     "@inneranimalmedia/agentsam-key-manager": "file:../../../packages/agentsam-key-manager",
     "@inneranimalmedia/agentsam-loading-scene": "file:../../../packages/agentsam-loading-scene",
@@ -27,6 +28,7 @@
     "@inneranimalmedia/agentsam-vault": "file:../../../packages/agentsam-vault",
     "@inneranimalmedia/agentsam-work": "file:../../../packages/agentsam-work",
     "@inneranimalmedia/agentsam-workbench": "file:../../../packages/agentsam-workbench",
+    "@inneranimalmedia/ecommerce-cms-agentsam": "file:../../ecommerce-cms-agentsam",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -83,8 +85,7 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "zod": "^4.4.0",
-    "zustand": "^5.0.0",
-    "@inneranimalmedia/agentsam-goalguru": "file:../../../packages/agentsam-goalguru"
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

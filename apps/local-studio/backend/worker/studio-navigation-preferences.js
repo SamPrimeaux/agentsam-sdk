@@ -1,4 +1,4 @@
-import { listLauncherApps } from './apps-launcher.js';
+import { listLauncherApps, listInstalledNavigationPlugins } from './apps-launcher.js';
 import { dedupeAppNavigation } from '../../shared/dedupe-app-navigation.mjs';
 import { canonicalStudioPath } from '../../shared/studio-admin-routes.mjs';
 
@@ -12,9 +12,10 @@ const ICONS = Object.freeze([
   'home', 'projects', 'content', 'analytics', 'tickets', 'store', 'products',
   'orders', 'customers', 'apps', 'settings', 'messageSquare', 'box', 'film',
   'layers', 'globe', 'growth', 'database', 'library', 'mail', 'help',
+  'folder-kanban', 'ticket', 'chart-no-axes-combined', 'file-text', 'network', 'file-input', 'message-square',
 ]);
 const ICON_SET = new Set(ICONS);
-const GROUPS = ['primary', 'channels', 'apps', 'utilities'];
+const GROUPS = ['primary', 'work', 'channels', 'apps', 'utilities'];
 const json = (data, status = 200) => Response.json(data, {
   status, headers: { 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' },
 });
@@ -29,6 +30,12 @@ function canonicalizeStudioHref(href) {
   return target.pathname + target.search + target.hash;
 }
 
+function safeNavigationHref(value) {
+  if (typeof value !== 'string' || value.length > 240 ||
+    !/^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(value) || /[\\\u0000-\u001f<>"']/.test(value)) return null;
+  return canonicalizeStudioHref(value);
+}
+
 function canonicalizeNavigationTree(nodes) {
   return (Array.isArray(nodes) ? nodes : []).map(item => ({
     ...item,
@@ -41,7 +48,7 @@ function canonicalizeNavigationTree(nodes) {
 function canonicalizeNavigation(data) {
   return {
     ...data,
-    ...Object.fromEntries(['primary', 'channels', 'apps', 'utilities'].map(section => [
+    ...Object.fromEntries(['primary', 'work', 'channels', 'apps', 'utilities'].map(section => [
       section, canonicalizeNavigationTree(data?.[section]),
     ])),
   };
@@ -58,6 +65,9 @@ export function listNavigationEntries(base) {
         label: node.label || node.name || node.id,
         href: node.href || '',
         icon: node.icon || '',
+        app_id: node.app_id || null,
+        screen_id: node.screen_id || null,
+        routeManaged: Boolean(node.screen_id),
       });
       walk(node.children, section, path + node.id + '/', depth + 1);
     }
@@ -69,10 +79,11 @@ export function listNavigationEntries(base) {
 export function normalizeNavigationOverrides(value, base) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw clientError('navigation_overrides_invalid');
   if (Object.keys(value).length > 160) throw clientError('navigation_override_limit_exceeded');
-  const allowed = new Set(listNavigationEntries(base).map(entry => entry.key));
+  const allowed = new Map(listNavigationEntries(base).map(entry => [entry.key, entry]));
   const result = {};
   for (const [key, row] of Object.entries(value)) {
-    if (!allowed.has(key)) throw clientError('navigation_destination_not_installed');
+    const entry = allowed.get(key);
+    if (!entry) throw clientError('navigation_destination_not_installed');
     if (!row || typeof row !== 'object' || Array.isArray(row)) throw clientError('navigation_override_invalid');
     if (Object.keys(row).some(name => !['label', 'icon', 'href', 'hidden', 'order'].includes(name))) throw clientError('navigation_field_unknown');
     const out = {};
@@ -86,10 +97,11 @@ export function normalizeNavigationOverrides(value, base) {
       out.icon = row.icon;
     }
     if ('href' in row) {
+      if (entry.routeManaged) throw clientError('navigation_route_managed_by_manifest');
       const href = row.href;
-      if (typeof href !== 'string' || href.length > 240 || !/^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(href) || /[\\\u0000-\u001f]/.test(href)) {
-        throw clientError('navigation_href_invalid');
-      }
+      if (typeof href !== 'string' || href.length > 240 ||
+          !/^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(href) ||
+          /[\\\u0000-\u001f<>"']/.test(href)) throw clientError('navigation_href_invalid');
       out.href = canonicalizeStudioHref(href);
     }
     if ('hidden' in row) {
@@ -134,44 +146,75 @@ export function applyNavigationOverrides(base, overrides) {
  * A catalog listing is never itself an installation or a permission grant.
  */
 export function withInstalledApps(base, catalog = []) {
-  // A manifest-owned, optional app also requires an account installation to
-  // appear. Match by its canonical href/aliases; do not create a second key map.
-  // Host-core and CMS-owned entries without a matching installable native app
-  // remain the host's responsibility, never a fake account installation.
-  const managed = catalog.filter(app=>app?.installable && app.kind==='app');
-  const apps = (Array.isArray(base?.apps) ? base.apps : []).filter(entry=>{
-    const item=managed.find(app=>app.href===entry.href ||
-      (Array.isArray(entry.aliases) && entry.aliases.includes(app.href)));
-    // An ecommerce-bundled destination is not an account Apps installation.
-    // Keep such services in their owned Commerce routes until they expose a
-    // native admin App manifest and the account explicitly installs it.
-    if (!item && entry.provenance==='ecommerce-bundled-manifest') return false;
-    return !item || (item.installed===true && item.enabled===true);
-  });
+  const managed = new Map((Array.isArray(catalog) ? catalog : [])
+    .filter(app => app?.kind === 'app' || app?.kind === 'plugin')
+    .map(app => [String(app.key), app]));
+
+  const isScreenAvailable = entry => {
+    if (entry?.host_core === true || entry?.installation_required === false) return true;
+    const appId = String(entry?.app_id || '');
+    const screenId = String(entry?.screen_id || '');
+    const installation = managed.get(appId);
+    return Boolean(installation?.installed === true && installation?.enabled === true &&
+      screenId && Array.isArray(installation.screens) &&
+      installation.screens.some(screen => screen?.id === screenId));
+  };
+
+  const filterTree = nodes => (Array.isArray(nodes) ? nodes : []).map(entry => {
+    if (entry?.screen_id && !isScreenAvailable(entry)) return null;
+    if (entry?.app_id && !entry?.screen_id && !isScreenAvailable(entry)) return null;
+    const children = filterTree(entry?.children);
+    return { ...entry, ...(Array.isArray(entry?.children) ? { children } : {}) };
+  }).filter(Boolean);
+
+  const primary = filterTree(base?.primary);
+  const work = filterTree(base?.work);
+  const channels = filterTree(base?.channels);
+  const apps = filterTree(base?.apps);
+  const utilities = filterTree(base?.utilities);
   const ids = new Set(apps.map(app => String(app.id || '')));
   const hrefs = new Set(apps.map(app => String(app.href || '')));
-  const onlineStoreIsCanonical = Array.isArray(base?.channels) &&
-    base.channels.some(channel => channel?.id === 'online-store' && channel.href === '/admin/store');
+  const canonicalPaths = new Set();
+  const addCanonicalPath = value => {
+    const href = safeNavigationHref(value);
+    if (!href) return;
+    try { canonicalPaths.add(new URL(href, 'https://agentsam.invalid').pathname); } catch {}
+  };
+  const collectTreePaths = entries => {
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      addCanonicalPath(entry.href);
+      for (const alias of Array.isArray(entry.aliases) ? entry.aliases : []) addCanonicalPath(alias);
+      collectTreePaths(entry.children);
+    }
+  };
+  for (const group of [primary, work, channels, apps, utilities]) collectTreePaths(group);
+  for (const app of catalog.filter(item => item?.kind === 'app' && item.installed === true && item.enabled === true)) {
+    addCanonicalPath(app.href);
+    addCanonicalPath(app.legacy_href);
+    for (const screen of Array.isArray(app.screens) ? app.screens : []) addCanonicalPath(screen.route);
+  }
+  const onlineStoreIsCanonical = channels.some(channel => channel?.id === 'online-store' && channel.href === '/admin/store');
+
   for (const app of catalog) {
-    // The installed CMS remains available in the Apps manager, but its admin
-    // destination is already represented by Sales channels > Online Store.
+    // The installed CMS is represented by its channel root and child screens,
+    // not duplicated as a second top-level Apps entry.
     if (onlineStoreIsCanonical && app?.key === 'ecommerce-cms-agentsam') continue;
-    if (!app || app.installed !== true || app.enabled !== true ||
+    if (!app || app.kind !== 'plugin' || app.installed !== true || app.enabled !== true ||
         !Array.isArray(app.surfaces) || !app.surfaces.includes('admin-nav')) continue;
-    const href = app.href;
+    const href = safeNavigationHref(app.href);
     const label = typeof app.label === 'string' ? app.label.trim() : '';
     const key = typeof app.key === 'string' ? app.key.trim() : '';
     if (!key || !/^[a-z0-9][a-z0-9._-]*$/i.test(key) || !label || label.length > 80 ||
-        typeof href !== 'string' || href.length > 240 ||
-        !/^\/(?!\/)[\w/%?&=.,#:+~-]*$/.test(href) ||
-        /[\\\u0000-\u001f<>"']/.test(href)) continue;
+        typeof href !== 'string') continue;
     const id = 'plugin-' + key.replace(/[^a-z0-9-]/gi, '-');
-    if (ids.has(id) || hrefs.has(href) ||
-      apps.some(existing=>Array.isArray(existing.aliases) && existing.aliases.includes(href))) continue;
+    let pathname = null;
+    try { pathname = new URL(href, 'https://agentsam.invalid').pathname; } catch {}
+    if (ids.has(id) || hrefs.has(href) || (pathname && canonicalPaths.has(pathname)) ||
+      apps.some(existing => Array.isArray(existing.aliases) && existing.aliases.includes(href))) continue;
     ids.add(id); hrefs.add(href);
     apps.push({ id, label, href, icon: 'apps', source: 'account-plugin', pluginKey: key });
   }
-  return { ...base, apps: dedupeAppNavigation(apps) };
+  return { ...base, primary, work, channels, apps: dedupeAppNavigation(apps), utilities };
 }
 
 function withCurrentNavigationOverrides(saved, base) {
@@ -190,8 +233,14 @@ async function loadBase(request, env) {
     throw new Error('navigation_catalog_unavailable');
   }
   const data = await response.json();
-  if (data.schema !== 'agentsam.host-navigation.v1' || !Array.isArray(data.apps)) throw new Error('navigation_catalog_invalid');
+  if (data.schema !== 'agentsam.host-navigation.v1' || !Array.isArray(data.apps) || !Array.isArray(data.appManifests)) {
+    throw new Error('navigation_catalog_invalid');
+  }
   return data;
+}
+
+export async function loadStudioNavigationCatalog(request, env) {
+  return loadBase(request, env);
 }
 async function loadRow(env, accountId) {
   return env.DB.prepare('SELECT overrides_json, updated_at_ms FROM agentsam_platform_navigation_overrides WHERE account_id = ?')
@@ -210,8 +259,9 @@ export async function handleStudioNavigation(request, env, accountId) {
     const hostDefaults = await loadBase(request, env);
     // The account's installation registry is the only source of optional
     // app destinations. Failure must never invent installed apps.
-    const installed = await listLauncherApps(env.DB, accountId);
-    const defaults = canonicalizeNavigation(withInstalledApps(hostDefaults, installed));
+    const installed = await listLauncherApps(env.DB, accountId, hostDefaults.appManifests || []);
+    const plugins = await listInstalledNavigationPlugins(env.DB, accountId, hostDefaults.appManifests || [], installed);
+    const defaults = canonicalizeNavigation(withInstalledApps(hostDefaults, [...installed, ...plugins]));
     let row = await loadRow(env, accountId);
     if (request.method === 'PATCH') {
       const raw = await request.text();

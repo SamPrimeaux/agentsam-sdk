@@ -136,8 +136,8 @@ export function CmsDashboard({
         title: 'Structure',
         desc: 'Organize your site structure, menus, and navigation.',
         sub: hasActiveSite && !loading ? `${pagesCount} page${pagesCount === 1 ? '' : 's'}` : '—',
-        path: siteSlug ? buildCmsPath({ panel: 'pages', siteSlug }) : '',
-        cta: 'View structure →',
+        path: siteSlug ? '/admin/structure?site_slug=' + encodeURIComponent(siteSlug) : '',
+        cta: 'Manage navigation →',
       },
       {
         id: 'settings',

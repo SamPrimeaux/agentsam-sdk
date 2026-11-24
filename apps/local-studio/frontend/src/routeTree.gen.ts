@@ -76,6 +76,7 @@ import { Route as appsAdminSettingsRouteImport } from './routes/(apps)/admin/set
 import { Route as appsAdminShipRouteImport } from './routes/(apps)/admin/ship'
 import { Route as appsAdminSitesRouteImport } from './routes/(apps)/admin/sites'
 import { Route as appsAdminStoreRouteImport } from './routes/(apps)/admin/store'
+import { Route as appsAdminStructureRouteImport } from './routes/(apps)/admin/structure'
 import { Route as appsAdminThemesRouteImport } from './routes/(apps)/admin/themes'
 import { Route as appsAdminTicketsRouteImport } from './routes/(apps)/admin/tickets'
 import { Route as appsAdminWidgetsRouteImport } from './routes/(apps)/admin/widgets'
@@ -464,6 +465,11 @@ const appsAdminStoreRoute = appsAdminStoreRouteImport.update({
   path: '/store',
   getParentRoute: () => appsAdminRouteRoute,
 } as any)
+const appsAdminStructureRoute = appsAdminStructureRouteImport.update({
+  id: '/structure',
+  path: '/structure',
+  getParentRoute: () => appsAdminRouteRoute,
+} as any)
 const appsAdminThemesRoute = appsAdminThemesRouteImport.update({
   id: '/themes',
   path: '/themes',
@@ -798,6 +804,7 @@ export interface FileRoutesByFullPath {
   '/admin/ship': typeof appsAdminShipRoute
   '/admin/sites': typeof appsAdminSitesRoute
   '/admin/store': typeof appsAdminStoreRoute
+  '/admin/structure': typeof appsAdminStructureRoute
   '/admin/themes': typeof appsAdminThemesRoute
   '/admin/tickets': typeof appsAdminTicketsRoute
   '/admin/widgets': typeof appsAdminWidgetsRoute
@@ -911,6 +918,7 @@ export interface FileRoutesByTo {
   '/admin/ship': typeof appsAdminShipRoute
   '/admin/sites': typeof appsAdminSitesRoute
   '/admin/store': typeof appsAdminStoreRoute
+  '/admin/structure': typeof appsAdminStructureRoute
   '/admin/themes': typeof appsAdminThemesRoute
   '/admin/tickets': typeof appsAdminTicketsRoute
   '/admin/widgets': typeof appsAdminWidgetsRoute
@@ -1030,6 +1038,7 @@ export interface FileRoutesById {
   '/(apps)/admin/ship': typeof appsAdminShipRoute
   '/(apps)/admin/sites': typeof appsAdminSitesRoute
   '/(apps)/admin/store': typeof appsAdminStoreRoute
+  '/(apps)/admin/structure': typeof appsAdminStructureRoute
   '/(apps)/admin/themes': typeof appsAdminThemesRoute
   '/(apps)/admin/tickets': typeof appsAdminTicketsRoute
   '/(apps)/admin/widgets': typeof appsAdminWidgetsRoute
@@ -1152,6 +1161,7 @@ export interface FileRouteTypes {
     | '/admin/ship'
     | '/admin/sites'
     | '/admin/store'
+    | '/admin/structure'
     | '/admin/themes'
     | '/admin/tickets'
     | '/admin/widgets'
@@ -1265,6 +1275,7 @@ export interface FileRouteTypes {
     | '/admin/ship'
     | '/admin/sites'
     | '/admin/store'
+    | '/admin/structure'
     | '/admin/themes'
     | '/admin/tickets'
     | '/admin/widgets'
@@ -1383,6 +1394,7 @@ export interface FileRouteTypes {
     | '/(apps)/admin/ship'
     | '/(apps)/admin/sites'
     | '/(apps)/admin/store'
+    | '/(apps)/admin/structure'
     | '/(apps)/admin/themes'
     | '/(apps)/admin/tickets'
     | '/(apps)/admin/widgets'
@@ -1955,6 +1967,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsAdminStoreRouteImport
       parentRoute: typeof appsAdminRouteRoute
     }
+    '/(apps)/admin/structure': {
+      id: '/(apps)/admin/structure'
+      path: '/structure'
+      fullPath: '/admin/structure'
+      preLoaderRoute: typeof appsAdminStructureRouteImport
+      parentRoute: typeof appsAdminRouteRoute
+    }
     '/(apps)/admin/themes': {
       id: '/(apps)/admin/themes'
       path: '/themes'
@@ -2441,6 +2460,7 @@ interface appsAdminRouteRouteChildren {
   appsAdminShipRoute: typeof appsAdminShipRoute
   appsAdminSitesRoute: typeof appsAdminSitesRoute
   appsAdminStoreRoute: typeof appsAdminStoreRoute
+  appsAdminStructureRoute: typeof appsAdminStructureRoute
   appsAdminThemesRoute: typeof appsAdminThemesRoute
   appsAdminTicketsRoute: typeof appsAdminTicketsRoute
   appsAdminWidgetsRoute: typeof appsAdminWidgetsRoute
@@ -2482,6 +2502,7 @@ const appsAdminRouteRouteChildren: appsAdminRouteRouteChildren = {
   appsAdminShipRoute: appsAdminShipRoute,
   appsAdminSitesRoute: appsAdminSitesRoute,
   appsAdminStoreRoute: appsAdminStoreRoute,
+  appsAdminStructureRoute: appsAdminStructureRoute,
   appsAdminThemesRoute: appsAdminThemesRoute,
   appsAdminTicketsRoute: appsAdminTicketsRoute,
   appsAdminWidgetsRoute: appsAdminWidgetsRoute,

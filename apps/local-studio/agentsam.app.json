@@ -227,5 +227,45 @@
     "installable_external": true,
     "account_authority": "service",
     "native_release_required": true
-  }
+  },
+  "screens": [
+    {
+      "id": "local-studio.chat",
+      "app_id": "local-studio",
+      "route": "/admin/agentsam",
+      "primary": true,
+      "host_core": true,
+      "installation_required": false,
+      "module": "agentsam/AgentSamPage.tsx",
+      "export": "AgentSamPage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "admin-nav",
+        "label": "AgentSam",
+        "icon": "message-square",
+        "primary": true,
+        "key": "agentsam"
+      }
+    },
+    {
+      "id": "database-editor.workspace",
+      "app_id": "database-editor",
+      "route": "/admin/database",
+      "module": "components/database/DatabasePage.tsx",
+      "export": "DatabasePage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "admin-nav",
+        "label": "Database Editor",
+        "icon": "database",
+        "key": "database-editor"
+      }
+    }
+  ]
 }
