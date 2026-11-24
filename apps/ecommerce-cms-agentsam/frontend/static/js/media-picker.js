@@ -11,7 +11,6 @@
   let resolvePick = null;
   let assets = [];
   let selected = new Set();
-  let requestedSource = "";
   let requestedSite = "";
   let activeTab = "all";
   let activeBucket = "";
@@ -159,11 +158,10 @@
     if (grid) grid.innerHTML = '<p class="media-picker-empty">Loading…</p>';
 
     const tab = PICKER_TABS.find((t) => t.id === activeTab) || PICKER_TABS[0];
-    const syncParam = sync && requestedSource !== "platform_registry" ? "&sync=1" : "";
+    const syncParam = sync ? "&sync=1" : "";
     try {
       const siteParam = requestedSite ? `&site_id=${encodeURIComponent(requestedSite)}` : "";
-      const sourceParam = requestedSource === "platform_registry" ? "&provider=platform_registry" : "";
-      const data = await adminFetch(`/api/admin/media?${tab.query}${sourceParam}${siteParam}${syncParam}`);
+      const data = await adminFetch(`/api/admin/media?${tab.query}${siteParam}${syncParam}`);
       assets = data.assets || [];
       // Only show buckets explicitly exposed by the authorized media provider
       // or already represented by accessible assets; never enumerate unrelated account buckets.
@@ -182,13 +180,12 @@
   }
 
   /**
-   * @param {{ title?: string, multi?: boolean, preselected?: string[], source?: string, siteId?: string }} options
+   * @param {{ title?: string, multi?: boolean, preselected?: string[], siteId?: string }} options
    * @returns {Promise<Array|null>} selected assets or null if cancelled
    */
   window.openMediaPicker = function openMediaPicker(options = {}) {
     ensurePickerDom();
     selected = new Set((options.preselected || []).map(String));
-    requestedSource = options.source === "platform_registry" ? "platform_registry" : "";
     requestedSite = typeof options.siteId === "string" ? options.siteId : "";
     activeTab = "all";
     activeBucket = "";
@@ -198,7 +195,7 @@
     if (title) title.textContent = options.title || "Browse Media";
 
     renderTabs();
-    document.getElementById("media-picker-sync").textContent = requestedSource ? "Refresh library" : "Sync from R2";
+    document.getElementById("media-picker-sync").textContent = "Refresh library";
     backdrop.classList.add("is-open");
     document.body.classList.add("media-picker-open");
     loadAssets(true);

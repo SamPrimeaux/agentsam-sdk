@@ -1,7 +1,13 @@
 import { scheduleStudioErrorLog } from "./studio-error-log.js";
+import { connectorStatus, resolveConnectorAccess } from "./connector-oauth.js";
 
 const IAM_ORIGIN = "https://inneranimalmedia.com";
 const MAX_PAGE_SIZE = 100;
+const GOOGLE_DRIVE_API = "https://www.googleapis.com/drive/v3";
+const GOOGLE_DRIVE_MEDIA_SCOPES = [
+  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/drive",
+];
 const ALLOWED_FORWARD_HEADERS = [
   "cookie",
   "authorization",
@@ -77,6 +83,9 @@ function normalizeImageAsset(item) {
     r2_key: source.r2_key || null,
     r2_bucket: bucket,
     cloudflare_image_id: source.cloudflare_image_id || null,
+    provider: source.provider || (source.source === "cf_images" || source.cloudflare_image_id ? "cloudflare_images" : source.source === "r2" || source.r2_key ? "r2" : null),
+    provider_account_id: source.provider_account_id || meta.cloudflare_account_id || meta.provider_account_id || null,
+    provider_resource_id: source.provider_resource_id || source.cloudflare_image_id || (source.source === "r2" ? source.r2_key : null),
     category: source.category || meta.category || "",
     folder: source.folder || meta.folder || (mime.startsWith("video/") ? "videos" : "images"),
     tags,
@@ -506,6 +515,159 @@ async function recoverDrafts(env, request, url, principal = null) {
   return result.data;
 }
 
+async function resolveGoogleDriveConnection(env, ownerId, url) {
+  const test = env?.__agentsamTestGoogleDrive;
+  const connections = Array.isArray(test?.connections)
+    ? test.connections
+    : await connectorStatus(env, ownerId, "google_drive");
+  const requested = String(url.searchParams.get("connection_id") || url.searchParams.get("google_account") || "").trim();
+  const connection = requested
+    ? connections.find((item) => item.id === requested || item.accountIdentifier === requested)
+    : connections.length === 1 ? connections[0] : null;
+  if (!connections.length) return {
+    ok: false,
+    error: "google_drive_oauth_required",
+    status: 401,
+    connect_url: "/api/work/connect/google_drive/start",
+  };
+  if (!connection && connections.length > 1 && !requested) return {
+    ok: false,
+    error: "google_drive_account_selection_required",
+    status: 409,
+    accounts: connections.map(({ id, accountLabel, accountIdentifier }) => ({ id, accountLabel, accountIdentifier })),
+  };
+  if (!connection) return { ok: false, error: "google_drive_account_not_connected", status: 403 };
+
+  const testScopes = test?.grantedScopes || GOOGLE_DRIVE_MEDIA_SCOPES;
+  const access = test
+    ? (testScopes.some((scope) => GOOGLE_DRIVE_MEDIA_SCOPES.includes(scope))
+      ? { ok: true, accessToken: test.accessToken || "test-google-access-token", grantedScopes: testScopes }
+      : { ok: false, code: "oauth_insufficient_scope" })
+    : await resolveConnectorAccess(env, ownerId, "google_drive", connection.accountIdentifier, {
+        requiredScopes: GOOGLE_DRIVE_MEDIA_SCOPES,
+      });
+  if (!access.ok) {
+    const missing = access.code === "oauth_insufficient_scope";
+    return {
+      ok: false,
+      error: missing ? "google_drive_scope_missing" : "google_drive_reconnect_required",
+      status: missing ? 403 : 401,
+      missing_scopes: missing ? [GOOGLE_DRIVE_MEDIA_SCOPES[0]] : undefined,
+      connect_url: "/api/work/connect/google_drive/start",
+    };
+  }
+  return { ok: true, connection, accessToken: access.accessToken, grantedScopes: access.grantedScopes || [] };
+}
+
+function driveQueryLiteral(value) {
+  return String(value || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+const GOOGLE_DRIVE_MODEL_EXTENSIONS = [
+  ".3mf", ".blend", ".brep", ".dae", ".dxf", ".fbx", ".glb", ".gltf", ".ifc",
+  ".iges", ".igs", ".obj", ".ply", ".scad", ".step", ".stl", ".stp", ".usd", ".usdz",
+];
+
+function normalizeGoogleDriveFile(file, connection) {
+  const mime = String(file.mimeType || "application/octet-stream");
+  const fileId = String(file.id || "");
+  const thumbnail = String(file.thumbnailLink || "");
+  const image = mime.startsWith("image/");
+  const video = mime.startsWith("video/");
+  const lowerName = String(file.name || "").toLowerCase();
+  const model = GOOGLE_DRIVE_MODEL_EXTENSIONS.some((extension) => lowerName.endsWith(extension));
+  const category = image ? "image" : video ? "video" : model ? "model" : "file";
+  const dimensions = image ? file.imageMediaMetadata || {} : file.videoMediaMetadata || {};
+  return {
+    id: `gdrive:${connection.accountIdentifier}:${fileId}`,
+    filename: String(file.name || fileId),
+    original_filename: String(file.name || ""),
+    content_type: mime,
+    mime_type: mime,
+    size_bytes: Number(file.size || 0) || 0,
+    size: Number(file.size || 0) || 0,
+    width: dimensions.width == null ? null : Number(dimensions.width),
+    height: dimensions.height == null ? null : Number(dimensions.height),
+    url: thumbnail,
+    delivery_url: thumbnail,
+    thumbnail_url: thumbnail,
+    source: "drive",
+    provider: "google_drive",
+    provider_account_id: connection.accountIdentifier,
+    provider_resource_id: fileId,
+    google_drive_file_id: fileId,
+    category,
+    folder: category === "image" ? "images" : category === "video" ? "videos" : category === "model" ? "models" : "files",
+    status: "ready",
+    created_at: file.createdTime || "",
+    updated_at: file.modifiedTime || "",
+    meta: {
+      parents: Array.isArray(file.parents) ? file.parents : [],
+      web_view_url: file.webViewLink || "",
+      web_content_url: file.webContentLink || "",
+      description: file.description || "",
+    },
+  };
+}
+
+async function listGoogleDriveMedia(env, ownerId, url, { page, pageSize, query, kind }) {
+  const resolved = await resolveGoogleDriveConnection(env, ownerId, url);
+  if (!resolved.ok) return resolved;
+  const q = [
+    "trashed = false",
+    "mimeType != 'application/vnd.google-apps.folder'",
+    "mimeType != 'application/vnd.google-apps.shortcut'",
+  ];
+  if (kind === "image") q.push("mimeType contains 'image/'");
+  else if (kind === "video") q.push("mimeType contains 'video/'");
+  else if (kind === "model") q.push(`(${GOOGLE_DRIVE_MODEL_EXTENSIONS.map((extension) => `name contains '${driveQueryLiteral(extension)}'`).join(" or ")})`);
+  if (query) q.push(`name contains '${driveQueryLiteral(query)}'`);
+  const params = new URLSearchParams({
+    q: q.join(" and "),
+    pageSize: String(Math.min(pageSize, 100)),
+    orderBy: "modifiedTime desc",
+    fields: "nextPageToken,files(id,name,mimeType,size,createdTime,modifiedTime,thumbnailLink,webViewLink,webContentLink,imageMediaMetadata,videoMediaMetadata,parents,description)",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
+  });
+  const cursor = url.searchParams.get("cursor") || url.searchParams.get("page_token");
+  if (cursor) params.set("pageToken", cursor);
+  const fetcher = env?.__agentsamTestGoogleDrive?.fetch || fetch;
+  let response;
+  try {
+    response = await fetcher(`${GOOGLE_DRIVE_API}/files?${params}`, {
+      headers: { authorization: `Bearer ${resolved.accessToken}`, accept: "application/json" },
+    });
+  } catch {
+    return { ok: false, error: "google_drive_media_list_failed", status: 502 };
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) return {
+    ok: false,
+    error: response.status === 401 ? "google_drive_reconnect_required" : "google_drive_media_list_failed",
+    status: response.status === 401 ? 401 : response.status === 403 ? 403 : 502,
+    connect_url: "/api/work/connect/google_drive/start",
+  };
+  const files = Array.isArray(data.files) ? data.files : [];
+  const assets = files.map((file) => normalizeGoogleDriveFile(file, resolved.connection));
+  return {
+    ok: true,
+    assets,
+    items: assets,
+    total: assets.length,
+    page,
+    source: "drive",
+    provider_api: "google_drive_oauth",
+    account: {
+      id: resolved.connection.accountIdentifier,
+      connection_id: resolved.connection.id,
+      label: resolved.connection.accountLabel || resolved.connection.accountIdentifier,
+    },
+    pagination: { has_next: Boolean(data.nextPageToken), cursor: data.nextPageToken || null, total_exact: false },
+    capabilities: { upload: false, delete: false, metadata_write: false },
+  };
+}
+
 async function listMedia(env, request, url, principal = null) {
   const source = String(url.searchParams.get("source") || "all").toLowerCase();
   const folder = String(url.searchParams.get("folder") || "").toLowerCase();
@@ -515,6 +677,12 @@ async function listMedia(env, request, url, principal = null) {
   const query = String(url.searchParams.get("q") || "").trim();
   const providerPref = mediaProviderPreference(url);
   let recovery = null;
+
+  if (source === "drive" || source === "google_drive") {
+    if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
+    const result = await listGoogleDriveMedia(env, principal.id, url, { page, pageSize, query, kind });
+    return result.ok ? json(result) : json(result, result.status || 502);
+  }
 
   // User Cloudflare media is the default. InnerAnimalMedia only when provider=inneranimalmedia.
   // Never require IAM_API for user-owned CF Images / Stream / R2 gallery browsing (#419).
@@ -528,7 +696,7 @@ async function listMedia(env, request, url, principal = null) {
         ? (kind === "video" || folder === "videos" ? "stream" : source === "r2" ? "r2" : "cf_images")
         : source;
       const oauthArgs = {
-        source: oauthSource === "drive" ? "cf_images" : (oauthSource === "all" ? "cf_images" : oauthSource),
+        source: oauthSource === "all" ? "cf_images" : oauthSource,
         page,
         pageSize,
         query,
@@ -658,28 +826,6 @@ async function listMedia(env, request, url, principal = null) {
   }));
 }
 
-/** Register provider image bytes in the canonical platform media_assets table.
- * A storefront product links to this verified owner-scoped asset ID, never a
- * guessed Cloudflare UUID or a second merchant media row.
- */
-export async function registerUploadedImageAsset(env, ownerId, image, providerAccountId) {
-  if (!env.DB?.prepare) throw Object.assign(new Error('media_registry_unavailable'), {code:'media_registry_unavailable'});
-  const assetId = `asset_img_${crypto.randomUUID().replaceAll('-', '')}`;
-  const delivery = String(image.url || image.delivery_url || '');
-  if (!/^https:\/\/[^/\s]+\//.test(delivery)) throw Object.assign(new Error('uploaded_media_delivery_url_missing'), {code:'uploaded_media_delivery_url_missing'});
-  await env.DB.prepare(
-    `INSERT INTO media_assets
-     (id,provider,provider_account_id,provider_resource_id,source_uri,filename,content_type,
-      media_kind,size_bytes,width,height,status,created_by_user_id,metadata_json)
-     VALUES (?,'cloudflare_images',?,?,?,?,?,'image',?,?,?,'ready',?,?)`
-  ).bind(assetId,providerAccountId || null,String(image.cloudflare_image_id || image.id),
-    delivery,String(image.filename || ''),String(image.mime_type || 'image/jpeg'),
-    Number(image.size_bytes || 0),image.width ?? null,image.height ?? null,ownerId,
-    JSON.stringify({source:'cloudflare_oauth',category:image.category || null,folder:image.folder || 'images'})
-  ).run();
-  return {...image,id:assetId,media_asset_id:assetId};
-}
-
 async function uploadMediaViaOauth(env, ownerId, url, form) {
   const {
     uploadCloudflareImage,
@@ -774,7 +920,7 @@ async function uploadMediaViaOauth(env, ownerId, url, form) {
           filename: file.name,
           metadata,
         });
-        const registered = normalizeImageAsset({
+        assets.push(normalizeImageAsset({
           id: uploaded.id,
           filename: uploaded.filename,
           mime_type: file.type || "image/jpeg",
@@ -783,6 +929,9 @@ async function uploadMediaViaOauth(env, ownerId, url, form) {
           delivery_url: uploaded.variant_url || "",
           thumbnail_url: uploaded.variant_url || "",
           cloudflare_image_id: uploaded.id,
+          provider: "cloudflare_images",
+          provider_account_id: imagesClient.client.accountId,
+          provider_resource_id: uploaded.id,
           source: "cf_images",
           tags: fileTags,
           alt_text: altText,
@@ -792,8 +941,7 @@ async function uploadMediaViaOauth(env, ownerId, url, form) {
             cloudflare_account_id: imagesClient.client.accountId,
             variants: uploaded.variants,
           },
-        });
-        assets.push(await registerUploadedImageAsset(env,ownerId,registered,imagesClient.client.accountId));
+        }));
       }
     } catch (err) {
       errors.push({
@@ -1304,6 +1452,86 @@ async function streamDirectUpload(env, request, url, principal = null) {
       connect_url: "/api/connections/cloudflare/start?packs=media&return_to=/media",
     }, err?.httpStatus || 502);
   }
+}
+
+export async function resolveCloudflareProductMediaReference(env, ownerId, input) {
+  const provider = String(input?.provider || "");
+  const accountId = String(input?.provider_account_id || "").trim();
+  const resourceId = String(input?.provider_resource_id || input?.cloudflare_image_id || "").trim();
+  const mime = String(input?.content_type || input?.mime_type || "").toLowerCase();
+  if (provider !== "cloudflare_images" || !accountId || !resourceId || !mime.startsWith("image/"))
+    return { ok: false, error: "provider_image_reference_invalid" };
+  const delivery = String(input?.delivery_url || input?.url || "");
+  let deliveryUrl;
+  try { deliveryUrl = new URL(delivery); } catch { return { ok: false, error: "provider_image_delivery_url_invalid" }; }
+  if (deliveryUrl.protocol !== "https:" || !deliveryUrl.pathname.split("/").includes(resourceId))
+    return { ok: false, error: "provider_image_delivery_url_invalid" };
+  if (!env.DB?.prepare) return { ok: false, error: "media_reference_storage_unavailable" };
+  // Verify this user has an active connection to the provider account before
+  // reusing a reference that may have been created by another authorized
+  // user of the same provider account. The provider/account/resource identity is
+  // shared; created_by_user_id is provenance, not an access-control boundary.
+  const accessUrl = new URL("https://agentsam.local/api/admin/media");
+  accessUrl.searchParams.set("connection_id", accountId);
+  const resolved = await resolveOauthMediaClient(env, ownerId, accessUrl, "cloudflare.images");
+  if (!resolved.ok) return { ok: false, error: resolved.error || "cloudflare_reconnect_required" };
+  if (String(resolved.client.accountId) !== accountId) return { ok: false, error: "cloudflare_account_mismatch" };
+  const existing = await env.DB.prepare(
+    "SELECT id,source_uri AS url,filename,content_type,media_kind,status FROM media_assets " +
+    "WHERE provider='cloudflare_images' AND provider_account_id=? AND provider_resource_id=? LIMIT 1"
+  ).bind(accountId,resourceId).first();
+  let existingUrlIsSafe = false;
+  try { existingUrlIsSafe = new URL(String(existing?.url || "")).protocol === "https:"; } catch {}
+  if (existing && existing.media_kind === "image" && ["ready","uploaded"].includes(existing.status) && existingUrlIsSafe)
+    return { ok: true, asset: existing };
+  const { getCloudflareImage } = await import("@inneranimalmedia/agentsam-connector-cloudflare/families/media");
+  let current;
+  try { current = await getCloudflareImage(resolved.client, resourceId); }
+  catch (error) {
+    const status = Number(error?.status || error?.statusCode || 0);
+    return { ok: false, error: status === 404 ? "provider_image_not_found"
+      : status === 401 || status === 403 ? "cloudflare_reconnect_required" : "provider_image_verification_failed" };
+  }
+  if (String(current.id) !== resourceId) return { ok: false, error: "provider_image_not_found" };
+  if (current.requireSignedURLs) return { ok: false, error: "provider_image_requires_signed_url" };
+  const currentVariant = Array.isArray(current.variants) ? current.variants.find((value) => {
+    try {
+      const candidate = new URL(String(value));
+      return candidate.protocol === "https:" && candidate.pathname.split("/").includes(resourceId);
+    } catch { return false; }
+  }) : null;
+  const verifiedUrl = currentVariant || (deliveryUrl.hostname === "imagedelivery.net" ? deliveryUrl.href : null);
+  if (!verifiedUrl) return { ok: false, error: "provider_image_delivery_unavailable" };
+  const filename = String(current.filename || input.filename || resourceId);
+  const size = Number(current.size || input.size_bytes || 0);
+  const width = input.width ?? null;
+  const height = input.height ?? null;
+  const metadata = JSON.stringify({source:"provider_reference",account_id:accountId,resource_id:resourceId,require_signed_urls:false});
+  if (existing) {
+    await env.DB.prepare(
+      "UPDATE media_assets SET source_uri=?,filename=?,content_type=?,media_kind='image',size_bytes=?,width=?,height=?,status='ready',metadata_json=? WHERE id=?"
+    ).bind(verifiedUrl,filename,mime,size,width,height,metadata,existing.id).run();
+  } else {
+    const identity = `cloudflare_images\0${accountId}\0${resourceId}`;
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
+    const suffix = [...new Uint8Array(digest)].slice(0, 16).map((value) => value.toString(16).padStart(2, "0")).join("");
+    const id = `asset_cfimg_${suffix}`;
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO media_assets
+        (id,provider,provider_account_id,provider_resource_id,source_uri,filename,content_type,
+         media_kind,size_bytes,width,height,status,created_by_user_id,metadata_json)
+       VALUES (?,'cloudflare_images',?,?,?,?,?,'image',?,?,?,'ready',?,?)`
+    ).bind(id,accountId,resourceId,verifiedUrl,filename,mime,size,width,height,ownerId,metadata).run();
+  }
+  const row = await env.DB.prepare(
+    "SELECT id,source_uri AS url,filename,content_type,media_kind,status FROM media_assets " +
+    "WHERE provider='cloudflare_images' AND provider_account_id=? AND provider_resource_id=? LIMIT 1"
+  ).bind(accountId,resourceId).first();
+  let safeUrl = false;
+  try { safeUrl = new URL(String(row?.url || "")).protocol === "https:"; } catch {}
+  if (!row || row.media_kind !== "image" || !["ready","uploaded"].includes(row.status) || !safeUrl)
+    return { ok: false, error: "media_reference_not_available_for_account" };
+  return { ok: true, asset: row };
 }
 
 export async function handleStudioContentMediaApi(request, env, principal, url = new URL(request.url), ctx = null) {

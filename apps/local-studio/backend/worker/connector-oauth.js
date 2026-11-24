@@ -153,20 +153,26 @@ export function connectionIdParts(connectionId) {
   return { provider: raw.slice(0, index).toLowerCase(), accountIdentifier: raw.slice(index + 1) };
 }
 
-async function scopesForSelectedConnector(env,userId,def,connectionId) {
+async function scopesForSelectedConnector(env,userId,def,connectionId,requestedScopes=[]) {
   const selected=connectionIdParts(connectionId);
-  if (!selected.provider) return def.scopes;
-  if (selected.provider !== def.provider || !selected.accountIdentifier)
+  if (selected.provider && (selected.provider !== def.provider || !selected.accountIdentifier))
     throw new Error('oauth_account_provider_mismatch');
   // GitHub App permissions are installation-scoped, not Google OAuth scopes.
   if (def.kind !== 'google') return def.scopes;
-  // A reconnect must request the selected account's existing grants too,
-  // rather than silently downgrading broad Drive access to drive.file.
-  const row=await env.DB.prepare(
-    "SELECT scopes FROM user_oauth_tokens WHERE account_id=? AND LOWER(provider)=? " +
-    "AND account_identifier=? AND is_active=1 AND revoked_at IS NULL LIMIT 1"
-  ).bind(userId,def.provider,selected.accountIdentifier).first();
-  if (!row?.scopes) return def.scopes;
+
+  const requested=[...new Set((Array.isArray(requestedScopes)?requestedScopes:[]).map(clean).filter(Boolean))];
+  let prior=[];
+  if (selected.provider) {
+    // A reconnect must request the selected account's existing grants too,
+    // rather than silently downgrading broad Drive access to drive.file.
+    const row=await env.DB.prepare(
+      "SELECT scopes FROM user_oauth_tokens WHERE account_id=? AND LOWER(provider)=? " +
+      "AND account_identifier=? AND is_active=1 AND revoked_at IS NULL LIMIT 1"
+    ).bind(userId,def.provider,selected.accountIdentifier).first();
+    if (row?.scopes) prior=clean(row.scopes).split(/[\s,]+/).filter(Boolean);
+  }
+  if (!requested.length && !prior.length) return def.scopes;
+
   let entries;
   try {
     const response=await env.DB.prepare(
@@ -174,13 +180,17 @@ async function scopesForSelectedConnector(env,userId,def,connectionId) {
     ).all();
     entries=response.results||[];
   } catch {
-    // Never silently discard the already-granted scopes if the permission
-    // catalog is unavailable; the user can retry after it recovers.
+    // Never silently discard an existing grant or requested capability when
+    // the permission catalog is unavailable.
     throw new Error('oauth_permission_catalog_unavailable');
   }
   const known=new Set([...entries.map(entry=>String(entry.scope)), 'openid','email','profile']);
-  const prior=clean(row.scopes).split(/[\s,]+/).filter(scope=>known.has(scope));
-  return [...new Set([...def.scopes,...prior])];
+  if (requested.some(scope=>!known.has(scope))) throw new Error('oauth_scope_not_registered');
+  const preserved=prior.filter(scope=>known.has(scope));
+  // An explicit capability request for a new connection is the complete
+  // least-privilege scope set. Reconnects add it without dropping prior grants.
+  const base=requested.length ? preserved : [...def.scopes,...preserved];
+  return [...new Set([...base,...requested])];
 }
 
 export async function beginConnectorOAuth(request, env, userId, key) {
@@ -197,7 +207,7 @@ export async function beginConnectorOAuth(request, env, userId, key) {
   const returnTo = safeReturnTo(body.return_to || "/admin/settings/customize?view=plugins");
   let requestedScopes;
   try {
-    requestedScopes=await scopesForSelectedConnector(env,userId,def,body.connection_id||body.connectionId);
+    requestedScopes=await scopesForSelectedConnector(env,userId,def,body.connection_id||body.connectionId,body.requested_scopes||body.requestedScopes);
   } catch(error) {
     return json({ok:false,error:error?.message||'oauth_scope_resolution_failed'},503);
   }

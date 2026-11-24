@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Maximize2, MessageSquareText, PanelRight, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, Maximize2, MessageSquareText, PanelRight, Pencil, Trash2 } from "lucide-react";
 import { IconAction } from "@/components/ui/icon-action";
 import { KindGlyph } from "./MediaGrid";
 import {
@@ -46,6 +46,13 @@ export function MediaViewer({
   const [chosenVariant, setChosenVariant] = useState<string | null>(null);
   const [inspectorTab, setInspectorTab] = useState<"storage" | "delivery" | "keys" | "sourcing">("storage");
   const preview = chosenVariant || previewUrl(asset);
+  const driveUrl = (() => {
+    if (providerOf(asset) !== "drive") return null;
+    try {
+      const value = new URL(String(asset.meta?.web_view_url || ""));
+      return value.protocol === "https:" && ["drive.google.com", "docs.google.com"].includes(value.hostname) ? value.href : null;
+    } catch { return null; }
+  })();
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -90,6 +97,8 @@ export function MediaViewer({
     ["Key", asset.r2_key || null],
     ["Image ID", asset.cloudflare_image_id || null],
     ["Stream UID", asset.cloudflare_stream_uid || null],
+    ["Google account", providerOf(asset) === "drive" ? asset.provider_account_id || null : null],
+    ["Drive file ID", asset.google_drive_file_id || null],
   ];
 
   return (
@@ -114,7 +123,11 @@ export function MediaViewer({
           >
             <PanelRight size={16} />
           </button>
-          {preview ? (
+          {driveUrl ? (
+            <a className="agentsam-media-icon" href={driveUrl} target="_blank" rel="noopener noreferrer" aria-label="Open original in Google Drive">
+              <ExternalLink size={16} />
+            </a>
+          ) : preview ? (
             <a className="agentsam-media-icon" href={preview} target="_blank" rel="noopener noreferrer" aria-label="Open selected media delivery">
               <Maximize2 size={16} />
             </a>
@@ -242,16 +255,17 @@ export function MediaViewer({
               </section>
             ) : null}
             <div className="agentsam-media-viewer__actions">
-              {preview ? <a className="agentsam-media-btn" href={preview} target="_blank" rel="noopener noreferrer">Open</a> : null}
-              {preview ? <button type="button" className="agentsam-media-btn" onClick={() => void onExport(asset)}>
+              {driveUrl ? <a className="agentsam-media-btn" href={driveUrl} target="_blank" rel="noopener noreferrer">Open original in Google Drive</a> : null}
+              {preview && providerOf(asset) !== "drive" ? <a className="agentsam-media-btn" href={preview} target="_blank" rel="noopener noreferrer">Open</a> : null}
+              {preview && providerOf(asset) !== "drive" ? <button type="button" className="agentsam-media-btn" onClick={() => void onExport(asset)}>
                 <Download size={14} /> Export preview
               </button> : null}
-              {preview && providerOf(asset) !== "local" ? (
+              {preview && providerOf(asset) !== "local" && providerOf(asset) !== "drive" ? (
                 <button type="button" className="agentsam-media-btn" onClick={() => void navigator.clipboard?.writeText(preview)}>
                   Copy link
                 </button>
               ) : null}
-              {providerOf(asset) !== "local" ? <a className="agentsam-media-btn" href={`/admin/moviemode?import=${encodeURIComponent(asset.id)}`}>
+              {providerOf(asset) !== "local" && providerOf(asset) !== "drive" ? <a className="agentsam-media-btn" href={`/admin/moviemode?import=${encodeURIComponent(asset.id)}`}>
                 Use in MovieMode
               </a> : null}
             </div>

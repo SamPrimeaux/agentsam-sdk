@@ -1,5 +1,5 @@
 export type MediaKind = "all" | "image" | "video" | "model" | "file";
-export type MediaSource = "cf_images" | "stream" | "r2" | "local" | "intake";
+export type MediaSource = "cf_images" | "stream" | "r2" | "drive" | "local" | "intake";
 export type MediaProvider = "cf_images" | "r2" | "stream" | "drive" | "local" | "intake" | "other";
 
 export type MediaAsset = {
@@ -16,6 +16,10 @@ export type MediaAsset = {
   r2_key?: string | null;
   cloudflare_image_id?: string | null;
   cloudflare_stream_uid?: string | null;
+  provider?: string | null;
+  provider_account_id?: string | null;
+  provider_resource_id?: string | null;
+  google_drive_file_id?: string | null;
   meta?: { variants?: string[]; require_signed_urls?: boolean; [key: string]: unknown };
   duration_ms?: number | null;
   width?: number | null;
@@ -141,6 +145,7 @@ export function identityLabel(asset: MediaAsset) {
   if (asset.cloudflare_stream_uid) return `Stream · ${asset.cloudflare_stream_uid}`;
   if (asset.r2_bucket && asset.r2_key) return `R2 · ${asset.r2_bucket}/${asset.r2_key}`;
   if (asset.r2_key) return `R2 · ${asset.r2_key}`;
+  if (asset.google_drive_file_id) return `Google Drive · ${asset.google_drive_file_id}`;
   return asset.id;
 }
 
@@ -208,6 +213,16 @@ export function toLibraryError(status: number, body: Record<string, unknown> | n
   if (code === "cloudflare_reconnect_required" || code === "cloudflare_authorization_required"
       || code === "cloudflare_credential_required" || code === "cloudflare_token_required") {
     return { kind: "reconnect", message: "Storage needs authorization again. Your saved media remains unchanged.", connectUrl };
+  }
+  if (code === "google_drive_scope_missing") {
+    return { kind: "reconnect", message: "Google Drive needs read-only access to browse the files in this account. Your files remain unchanged." };
+  }
+  if (code === "google_drive_oauth_required" || code === "google_drive_reconnect_required"
+      || code === "google_drive_account_not_connected") {
+    return { kind: "reconnect", message: "Connect or reauthorize the selected Google Drive account. Your files remain unchanged." };
+  }
+  if (code === "google_drive_account_selection_required") {
+    return { kind: "account", message: "Choose which Google Drive account to browse." };
   }
   if (status === 409 || code === "cloudflare_account_selection_required") {
     return { kind: "account", message: "Choose which storage account to browse." };

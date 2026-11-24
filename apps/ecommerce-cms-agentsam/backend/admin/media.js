@@ -1298,23 +1298,62 @@ function renderableMediaUri(value) {
   } catch { return null; }
 }
 
-async function platformProductAsset(env, assetId) {
-  const id = String(assetId || "");
+async function platformProductAsset(env, assetInput) {
+  const input = assetInput && typeof assetInput === "object" ? assetInput : null;
+  const id = String(input?.id || assetInput || "").trim();
   const ownerId = env.PRODUCT_MEDIA_OWNER_ID;
   if (!id || id.length > 230) return null;
-  const found = await env.DB.prepare(
-    `SELECT id,source_uri AS url,filename,content_type,media_kind,status
-       FROM media_assets WHERE id=? AND created_by_user_id=?`
-  ).bind(id,ownerId).first();
+
+  let found = null;
+  try {
+    found = await env.DB.prepare(
+      `SELECT id,source_uri AS url,filename,content_type,media_kind,status
+         FROM media_assets WHERE id=? AND created_by_user_id=?`
+    ).bind(id,ownerId).first();
+  } catch {
+    // Older platform databases may not have the canonical reference table yet.
+  }
   if (found) return found.media_kind === "image" && ["ready","uploaded"].includes(found.status)
     && renderableMediaUri(found.url) ? found : null;
 
-  // Existing Image Library uploads predate the universal registry. Materialize
-  // a canonical reference for an *owned* image only when the user attaches it.
+  // Older clients may send only the internal reference ID. Resolve shared
+  // provider references through the current user's own OAuth connection.
+  if (!input && typeof env.resolvePlatformMediaReference === "function") {
+    const shared = await env.DB.prepare(
+      `SELECT id,provider,provider_account_id,provider_resource_id,source_uri AS url,filename,content_type
+         FROM media_assets WHERE id=? AND provider='cloudflare_images' LIMIT 1`
+    ).bind(id).first();
+    if (shared?.provider_account_id && shared?.provider_resource_id) {
+      const resolved = await env.resolvePlatformMediaReference({
+        id: shared.id, provider: shared.provider, provider_account_id: shared.provider_account_id,
+        provider_resource_id: shared.provider_resource_id, url: shared.url,
+        filename: shared.filename, content_type: shared.content_type,
+      });
+      const asset = resolved?.ok ? resolved.asset : null;
+      if (asset && asset.media_kind === "image" && ["ready","uploaded"].includes(asset.status)
+          && renderableMediaUri(asset.url)) return asset;
+      return null;
+    }
+  }
+
+  // Provider inventory stays in the connected account. Create a lightweight
+  // product reference only when the user actually attaches the selected image.
+  if (input?.provider === "cloudflare_images" && typeof env.resolvePlatformMediaReference === "function") {
+    const resolved = await env.resolvePlatformMediaReference(input);
+    const asset = resolved?.ok ? resolved.asset : null;
+    if (asset && asset.media_kind === "image" && ["ready","uploaded"].includes(asset.status)
+        && renderableMediaUri(asset.url)) return asset;
+    return null;
+  }
+
+  // Compatibility bridge for images created by the older Image Library.
+  // This remains lazy and owner-scoped; browsing never materializes rows.
+  const legacyId = String(input?.provider_resource_id || id);
   const legacy = await env.DB.prepare(
     `SELECT id,filename,mime_type,size,width,height,cloudflare_image_id,r2_key,url
-       FROM images WHERE id=? AND user_id=? AND COALESCE(status,'active') != 'deleted'`
-  ).bind(id,ownerId).first();
+       FROM images WHERE (id=? OR cloudflare_image_id=? OR r2_key=?) AND user_id=?
+         AND COALESCE(status,'active') != 'deleted' LIMIT 1`
+  ).bind(legacyId,legacyId,legacyId,ownerId).first();
   const url = renderableMediaUri(legacy?.url);
   if (!legacy || !url || !String(legacy.mime_type || "").startsWith("image/")) return null;
   const provider = legacy.cloudflare_image_id ? "cloudflare_images" : "external";
@@ -1323,10 +1362,10 @@ async function platformProductAsset(env, assetId) {
        (id,provider,provider_resource_id,source_uri,filename,content_type,media_kind,
         size_bytes,width,height,status,metadata_json,created_by_user_id)
        VALUES (?,?,?,?,?,?,'image',?,?,?,'ready',?,?)`
-  ).bind(id,provider,legacy.cloudflare_image_id || legacy.r2_key || legacy.id,url,
+  ).bind(legacy.id,provider,legacy.cloudflare_image_id || legacy.r2_key || legacy.id,url,
     legacy.filename,legacy.mime_type,legacy.size,legacy.width,legacy.height,
     JSON.stringify({legacy_image_id:legacy.id}),ownerId).run();
-  return {id,filename:legacy.filename,content_type:legacy.mime_type,media_kind:'image',status:'ready',url};
+  return {id:legacy.id,filename:legacy.filename,content_type:legacy.mime_type,media_kind:'image',status:'ready',url};
 }
 
 async function listPlatformProductImages(env, productId) {
@@ -1334,14 +1373,14 @@ async function listPlatformProductImages(env, productId) {
     `SELECT pi.id AS link_id,pi.position,pi.is_primary,m.id,m.filename,m.content_type,
             m.source_uri AS url,m.source_uri AS thumbnail_url,m.status
        FROM product_images pi JOIN media_assets m ON m.id=pi.media_asset_id
-       WHERE pi.product_id=? AND m.created_by_user_id=?
+       WHERE pi.product_id=?
        ORDER BY pi.is_primary DESC,pi.position ASC`
-  ).bind(productId,env.PRODUCT_MEDIA_OWNER_ID).all();
+  ).bind(productId).all();
   return results;
 }
 
-async function attachPlatformProductImage(env,productId,assetId) {
-  const asset = await platformProductAsset(env,assetId);
+async function attachPlatformProductImage(env,productId,assetInput) {
+  const asset = await platformProductAsset(env,assetInput);
   if (!asset) return json({ok:false,error:'media_asset_not_available_for_account'}, {status:404});
   const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM product_images WHERE product_id=?').bind(productId).first();
   const isFirst = !Number(count?.n);
@@ -1359,12 +1398,17 @@ async function attachPlatformProductImage(env,productId,assetId) {
 }
 
 async function makePrimaryPlatformProductImage(env,productId,assetId) {
-  const asset = await platformProductAsset(env,assetId);
-  if (!asset) return json({ok:false,error:'media_asset_not_available_for_account'}, {status:404});
+  // The product relationship authorizes use of a shared provider reference;
+  // the row's original creator is not the owner of the provider account.
   const attached = await env.DB.prepare(
     'SELECT id FROM product_images WHERE product_id=? AND media_asset_id=?'
-  ).bind(productId,asset.id).first();
+  ).bind(productId,assetId).first();
   if (!attached) return json({ok:false,error:'image_not_attached_to_product'}, {status:404});
+  const asset = await env.DB.prepare(
+    "SELECT id,source_uri AS url,media_kind,status FROM media_assets WHERE id=? LIMIT 1"
+  ).bind(assetId).first();
+  if (!asset || asset.media_kind !== 'image' || !['ready','uploaded'].includes(asset.status)
+      || !renderableMediaUri(asset.url)) return json({ok:false,error:'media_asset_not_available_for_account'}, {status:404});
   await env.DB.prepare('UPDATE product_images SET is_primary=0 WHERE product_id=?').bind(productId).run();
   await env.DB.prepare('UPDATE product_images SET is_primary=1 WHERE product_id=? AND media_asset_id=?')
     .bind(productId,asset.id).run();
@@ -1378,9 +1422,9 @@ async function detachPlatformProductImage(env,productId,assetId) {
   const {results} = await env.DB.prepare(
     `SELECT pi.media_asset_id,m.source_uri AS url
        FROM product_images pi JOIN media_assets m ON m.id=pi.media_asset_id
-       WHERE pi.product_id=? AND m.created_by_user_id=?
+       WHERE pi.product_id=?
        ORDER BY pi.is_primary DESC,pi.position ASC LIMIT 1`
-  ).bind(productId,env.PRODUCT_MEDIA_OWNER_ID).all();
+  ).bind(productId).all();
   const next = results?.[0] || null;
   if (next) await env.DB.prepare('UPDATE product_images SET is_primary=1 WHERE product_id=? AND media_asset_id=?')
     .bind(productId,next.media_asset_id).run();
@@ -1410,8 +1454,12 @@ export async function attachProductImage(request, env, productId) {
   } catch {
     return json({ error: "Invalid body" }, { status: 400 });
   }
+  if (platformProductMedia(env)) {
+    const assetInput = body.asset && typeof body.asset === "object" ? body.asset : body.media_asset_id;
+    if (!assetInput) return json({ error: "media_asset_id required" }, { status: 400 });
+    return attachPlatformProductImage(env,productId,assetInput);
+  }
   if (!body.media_asset_id) return json({ error: "media_asset_id required" }, { status: 400 });
-  if (platformProductMedia(env)) return attachPlatformProductImage(env,productId,body.media_asset_id);
 
   const countRow = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM product_images WHERE product_id = ?`

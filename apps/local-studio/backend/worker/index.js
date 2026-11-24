@@ -99,8 +99,7 @@ import { handleBrowserPage } from "./browser-page.js";
 import { handleAgentSamFormsApi, handleAgentSamFormsPublic } from "./agentsam-forms.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
-import { handleStudioContentMediaApi } from "./content-media-api.js";
-import { handlePlatformMediaRead } from "./platform-media-library.js";
+import { handleStudioContentMediaApi, resolveCloudflareProductMediaReference } from "./content-media-api.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
 import { serveCatalogImage } from "../../../ecommerce-cms-agentsam/backend/completeful/images.js";
 
@@ -1119,13 +1118,6 @@ export default {
       if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
       const principal = await resolveSessionUser(request, env);
       if (!principal) return json({ ok: false, error: "unauthorized" }, 401);
-      // IAM's registry has opaque asset IDs and a different schema from merchant D1.
-      // Read-only opt-in: keep all mutations owned by the existing media handler.
-      if ((env.AGENTSAM_PLATFORM_MEDIA_REGISTRY === "preview" || url.searchParams.get("provider") === "platform_registry")
-          && request.method === "GET" &&
-          (url.pathname === "/api/admin/media" || /^\/api\/admin\/media\/[^/]+$/.test(url.pathname))) {
-        return handlePlatformMediaRead(request, env, url, principal);
-      }
       const studioUser = { ...principal, id: principal.id, account_id: principal.id, role: "owner", authority: "local-studio" };
       if (url.pathname === "/api/admin/cms/sites") {
         const hostUrl = new URL(request.url);
@@ -1186,7 +1178,12 @@ export default {
         ? await completefulAccountEnvironment(env, principal.id)
         : env;
       const scopedCommerceEnv = /^\/api\/admin\/products\/\d+\/images(?:\/|$)/.test(url.pathname)
-        ? { ...commerceEnv, PRODUCT_MEDIA_SCHEMA: "platform", PRODUCT_MEDIA_OWNER_ID: principal.id }
+        ? {
+            ...commerceEnv,
+            PRODUCT_MEDIA_SCHEMA: "platform",
+            PRODUCT_MEDIA_OWNER_ID: principal.id,
+            resolvePlatformMediaReference: (asset) => resolveCloudflareProductMediaReference(env, principal.id, asset),
+          }
         : commerceEnv;
       const providerMediaResponse = await handleStudioContentMediaApi(request, env, studioUser, url, context);
       if (providerMediaResponse) return providerMediaResponse;
