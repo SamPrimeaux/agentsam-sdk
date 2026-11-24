@@ -1,1 +1,1 @@
-export * from "../../../../packages/identity/src/oauth/goaude.js";
+export * from "@inneranimalmedia/agentsam-identity/oauth/goaude";

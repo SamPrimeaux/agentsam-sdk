@@ -11,16 +11,16 @@ import { serveStudioMerchantStart } from "./studio-merchant-start.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
-import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cfoa/src/routes.js";
-import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cfoa/src/index.js";
-import { handleIdentityWorkerRequest } from "../../../../packages/identity/src/server/worker-router.js";
+import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "@inneranimalmedia/agentsam-connector-cloudflare/routes";
+import { resolveCloudflareOAuthClient } from "@inneranimalmedia/agentsam-connector-cloudflare";
+import { handleIdentityWorkerRequest } from "@inneranimalmedia/agentsam-identity/server/worker-router";
 import {
   IDENTITY_ROUTE_IDS,
   projectionFromAppManifest,
   createRouteRegistry,
-} from "../../../../packages/identity/src/contracts/routes.js";
-import { mountRequiresAuth } from "../../../../packages/identity/src/server/mount-policy.js";
-import { resolveIamIssuer } from "../../../../packages/identity/src/contracts/auth-config.js";
+} from "@inneranimalmedia/agentsam-identity/contracts/routes";
+import { mountRequiresAuth } from "@inneranimalmedia/agentsam-identity/server/mount-policy";
+import { resolveIamIssuer } from "@inneranimalmedia/agentsam-identity/contracts/auth-config";
 import {
   importVaultMasterKey,
   encryptVaultSecret,
@@ -30,7 +30,7 @@ import {
   last4 as vaultLast4,
   createProviderRegistry,
   createCredentialResolver,
-} from "../../../../packages/agentsam-vault/src/index.js";
+} from "@inneranimalmedia/agentsam-vault";
 import {
   collectCredentialScopedInventory,
   sanitizeInventoryForClient,
@@ -53,7 +53,7 @@ import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections
 import { readAccountSideStageCatalog, updateAccountSideStage } from "./plugin-side-stages.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
-import { handleSamSpeaksRequest } from "../../../../packages/agentsam-communications/src/samspeaks-runtime.js";
+import { handleSamSpeaksRequest } from "@inneranimalmedia/agentsam-communications/samspeaks";
 import { handleStudioChatHistory } from "./studio-chat-history.js";
 import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
 import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES } from "../../shared/studio-admin-routes.mjs";

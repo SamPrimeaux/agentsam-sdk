@@ -1,5 +1,5 @@
 /** Studio-owned public MCP OAuth 2.1 PKCE broker. No OAuth credentials enter the WebView. */
-import { importVaultMasterKey, encryptVaultSecret, decryptVaultSecret } from '../../../../packages/agentsam-vault/src/index.js';
+import { importVaultMasterKey, encryptVaultSecret, decryptVaultSecret } from '@inneranimalmedia/agentsam-vault';
 import { discoverPublicPlugins, fetchPluginResource } from './plugin-discovery.js';
 import { listRemoteMcpTools, callRemoteMcpTool } from './plugin-mcp-client.js';
 import { validateStateBoundOAuthScopes } from './plugin-oauth-state-bound.js';

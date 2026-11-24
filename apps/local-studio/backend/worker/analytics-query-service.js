@@ -34,13 +34,13 @@ async function discoverBasinForAccount(env, accountId) {
     catalogTables: [],
   };
   try {
-    const { discoverBasinResources } = await import("../../../../packages/connectors/cfoa/src/families/basin.js");
+    const { discoverBasinResources } = await import("@inneranimalmedia/agentsam-connector-cloudflare/families/basin");
     let client;
     // Test injection only; production always resolves the grant from this account's OAuth row.
     if (env?.__agentsamTestCfClient !== undefined) {
       client = env.__agentsamTestCfClient;
     } else {
-      const { createCloudflareApiClient } = await import("../../../../packages/connectors/cfoa/src/api-client.js");
+      const { createCloudflareApiClient } = await import("@inneranimalmedia/agentsam-connector-cloudflare/api-client");
       client = await createCloudflareApiClient({
         env,
         ownerId: accountId,
@@ -101,7 +101,7 @@ async function queryCloudflareHttpAnalytics(env, ownerAccountId, rawRange) {
     if (env?.__agentsamTestCfClient !== undefined) {
       client = env.__agentsamTestCfClient;
     } else {
-      const { createCloudflareApiClient } = await import("../../../../packages/connectors/cfoa/src/api-client.js");
+      const { createCloudflareApiClient } = await import("@inneranimalmedia/agentsam-connector-cloudflare/api-client");
       client = await createCloudflareApiClient({
         env,
         ownerId: ownerAccountId,

@@ -1,4 +1,4 @@
-import { TICKET_TO_GOAL_STATUS } from '../../../../packages/agentsam-goap/src/contracts.js';
+import { TICKET_TO_GOAL_STATUS } from '@inneranimalmedia/agentsam-goap/contracts';
 
 const CLI_SOURCE = 'agentsam_sdk';
 

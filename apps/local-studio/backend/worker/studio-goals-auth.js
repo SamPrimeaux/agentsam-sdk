@@ -1,4 +1,4 @@
-import { resolveIamIssuer } from '../../../../packages/identity/src/contracts/auth-config.js';
+import { resolveIamIssuer } from '@inneranimalmedia/agentsam-identity/contracts/auth-config';
 
 // CLI tokens use the same platform authority as agentsam whoami. Studio
 // browser and desktop sessions resolve through Studio Identity first.

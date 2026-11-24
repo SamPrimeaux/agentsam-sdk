@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import {
   oauthAad,
   sealOauthToken,
-} from "../../../../packages/agentsam-vault/src/crypto/oauth-envelope.js";
+} from "@inneranimalmedia/agentsam-vault/oauth";
 import {
   b64url,
   beginGmailOAuth,

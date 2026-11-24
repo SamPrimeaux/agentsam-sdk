@@ -1,4 +1,4 @@
-import { CloudflareQueueApiAdapter } from '../../../../packages/agentsam-queue-control/src/adapters/cloudflare.js';
+import { CloudflareQueueApiAdapter } from '@inneranimalmedia/agentsam-queue-control/adapters/cloudflare';
 
 const reply = (body, status = 200) => Response.json(body, {
   status, headers: { 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' },

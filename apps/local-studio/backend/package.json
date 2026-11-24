@@ -10,8 +10,15 @@
   "dependencies": {
     "@inneranimalmedia/agentsam-analytics": "file:../../../packages/agentsam-analytics",
     "@inneranimalmedia/agentsam-cms": "file:../../../packages/agentsam-cms",
+    "@inneranimalmedia/agentsam-communications": "file:../../../packages/agentsam-communications",
+    "@inneranimalmedia/agentsam-connector-cloudflare": "file:../../../packages/connectors/cfoa",
+    "@inneranimalmedia/agentsam-database-editor": "file:../../../packages/agentsam-database-editor",
+    "@inneranimalmedia/agentsam-goap": "file:../../../packages/agentsam-goap",
+    "@inneranimalmedia/agentsam-identity": "file:../../../packages/identity",
     "@inneranimalmedia/agentsam-local-shared": "file:../shared/agentsam",
+    "@inneranimalmedia/agentsam-queue-control": "file:../../../packages/agentsam-queue-control",
     "@inneranimalmedia/agentsam-sdk": "2.6.17",
+    "@inneranimalmedia/agentsam-vault": "file:../../../packages/agentsam-vault",
     "@inneranimalmedia/agentsam-work": "file:../../../packages/agentsam-work",
     "@inneranimalmedia/financial-analytics": "file:../../../packages/financial-analytics"
   },

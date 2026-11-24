@@ -1,5 +1,5 @@
 import { renderCanvasThumbnailSvg } from './work-canvas-thumbnail.js';
-import { listCloudflareConnectionRecords, resolveCloudflareCredential } from '../../../../packages/connectors/cfoa/src/credential.js';
+import { listCloudflareConnectionRecords, resolveCloudflareCredential } from '@inneranimalmedia/agentsam-connector-cloudflare/credential';
 
 /**
  * One Library discovery adapter. Source ownership stays with existing D1

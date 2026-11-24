@@ -38,7 +38,11 @@
     "./adapters/sqlite": "./src/adapters/sqlite/index.js",
     "./adapters/portable-d1": "./src/adapters/portable-d1/index.js",
     "./adapters/iam-compat": "./src/adapters/iam-compat/index.js",
-    "./adapters/cloudflare-d1": "./src/adapters/cloudflare-d1/index.js"
+    "./adapters/cloudflare-d1": "./src/adapters/cloudflare-d1/index.js",
+    "./contracts/routes": "./src/contracts/routes.js",
+    "./oauth/goaude": "./src/oauth/goaude.js",
+    "./server/mount-policy": "./src/server/mount-policy.js",
+    "./server/worker-router": "./src/server/worker-router.js"
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",

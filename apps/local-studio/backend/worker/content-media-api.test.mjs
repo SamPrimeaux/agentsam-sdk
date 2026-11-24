@@ -264,7 +264,12 @@ test('explicit InnerAnimalMedia provider uploads retain the source in the canoni
 
 test('#419 Cloudflare Images upload never calls IAM_API', async () => {
   const calls = [];
+  const registered = [];
   const env = {
+    DB: { prepare(sql) {
+      assert.match(sql, /INSERT INTO media_assets/);
+      return { bind(...values) { return { async run() { registered.push(values); return { success: true }; } }; } };
+    } },
     __agentsamTestCfClient: {
       accountId: 'acct_user_owned',
       connectionId: 'conn_user',
@@ -301,6 +306,11 @@ test('#419 Cloudflare Images upload never calls IAM_API', async () => {
   assert.equal(response.status, 200);
   assert.equal(data.provider_api, 'cloudflare_oauth');
   assert.equal(data.assets[0].cloudflare_image_id, 'cfimg_upload_1');
+  assert.equal(registered.length, 1);
+  assert.equal(registered[0][0], data.assets[0].media_asset_id);
+  assert.equal(registered[0][1], 'acct_user_owned');
+  assert.equal(registered[0][2], 'cfimg_upload_1');
+  assert.equal(registered[0][9], principal.id);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].hasForm, true);
 });

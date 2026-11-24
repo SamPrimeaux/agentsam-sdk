@@ -6,7 +6,12 @@
   "exports": {
     ".": "./src/index.js",
     "./capabilities": "./src/capabilities.js",
-    "./api-client": "./src/api-client.js"
+    "./api-client": "./src/api-client.js",
+    "./credential": "./src/credential.js",
+    "./routes": "./src/routes.js",
+    "./vault": "./src/vault.js",
+    "./families/basin": "./src/families/basin.js",
+    "./families/media": "./src/families/media.js"
   },
   "publishConfig": {
     "access": "public"
