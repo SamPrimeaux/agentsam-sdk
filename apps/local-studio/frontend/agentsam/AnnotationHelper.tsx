@@ -142,7 +142,7 @@ export function AnnotationHelper() {
     sendControl={<button className="mini-agentsam-send" data-composer-send="" type="button" aria-label="Add annotation to conversation" disabled={busy || !value.trim()} onClick={onSend}><ArrowUp aria-hidden="true" size={18} strokeWidth={2.2} /></button>}
     textareaProps={{ onKeyDown, onInput: (event) => onSelect(event.currentTarget.selectionStart), onSelect: (event) => onSelect(event.currentTarget.selectionStart) }}
   /></>}</PluginPicker>} />
-    <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async file => { await attachMiniFiles([file]); }}/>
+    <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async files => { await attachMiniFiles(files); }}/>
   </>;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Columns2, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid } from "lucide-react";
+import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Columns2, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid, Search, FileText, ClipboardCheck, Code2, LoaderCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SplitHandle } from "@/components/shell/split-handle";
 import { IconAction } from "@/components/ui/icon-action";
@@ -364,6 +364,33 @@ function formatDatabaseAssistantContext(ctx: Record<string, unknown>): string {
   return lines.join("\n");
 }
 
+const COWORKER_TASK_STARTERS = [
+  {
+    label: "Research",
+    detail: "Evidence, sources and findings",
+    prompt: "Research the assigned question for the lead. Return a concise evidence-backed brief with sources, key findings, uncertainties and recommended next steps.",
+    icon: Search,
+  },
+  {
+    label: "Draft",
+    detail: "Create a usable deliverable",
+    prompt: "Draft the requested deliverable for the lead. Keep it editable, save it through the existing project or artifact workflow, and report the exact output location.",
+    icon: FileText,
+  },
+  {
+    label: "Review",
+    detail: "Check quality and gaps",
+    prompt: "Review the current work for correctness, missing cases, usability and risks. Return prioritized findings with concrete evidence and file or line references.",
+    icon: ClipboardCheck,
+  },
+  {
+    label: "Build",
+    detail: "Implement a scoped change",
+    prompt: "Implement the assigned scoped change in the existing project. Reuse current contracts and systems, run focused checks, and report changed files and test results.",
+    icon: Code2,
+  },
+] as const;
+
 function CoworkerChat({ tabId }: { tabId: string }) {
   const tab = useWorkStore((s) => s.sideTabs.find((t) => t.id === tabId));
   const keepSideChat = useWorkStore((s) => s.keepSideChat);
@@ -407,20 +434,28 @@ function CoworkerChat({ tabId }: { tabId: string }) {
   if (!tab) return null;
   const parent = chats.find((t) => t.id === tab.parentChatId);
   const empty = tab.messages.length === 0;
+  const hasResponse = tab.messages.some(message => message.role === "assistant");
+  const statusLabel = streaming ? "Working" : hasResponse && tab.reportToLead ? "Returned to lead" : empty ? "Reports back when done" : "Brief sent";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          {parent
-            ? `Co-worker helping lead chat “${parent.title}” · reports back when done`
-            : "Co-worker · reports into the lead chat"}
-        </p>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="truncate text-xs text-muted-foreground">
+            {parent
+              ? `Co-worker helping lead chat “${parent.title}”`
+              : "Co-worker · independent task"}
+          </p>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground" data-coworker-status={streaming ? "working" : hasResponse && tab.reportToLead ? "returned" : "ready"}>
+            {streaming ? <LoaderCircle className="size-3 animate-spin" aria-hidden="true" /> : hasResponse && tab.reportToLead ? <CheckCircle2 className="size-3" aria-hidden="true" /> : <span className="size-1.5 rounded-full bg-current opacity-60" />}
+            {statusLabel}
+          </span>
+        </div>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className="h-7 rounded-full"
+          className="h-7 shrink-0 rounded-full"
           onClick={() => keepSideChat(tab.id)}
           disabled={tab.messages.length === 0}
         >
@@ -456,15 +491,49 @@ function CoworkerChat({ tabId }: { tabId: string }) {
         empty={empty}
         thread={<MessageList messages={tab.messages} chatId={parent?.id} streaming={streaming} />}
         emptyState={
-          <div className="flex flex-col items-center justify-center px-6 text-center">
-            <StudioMark className="mb-3 size-10" />
-            <h2 className="text-base font-medium">
-              {databaseContext ? "Database co-worker" : "Co-worker"}
-            </h2>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground text-pretty">
+          <div className="flex w-full flex-col items-center justify-center gap-5 px-5 py-6 text-center">
+            <div className="flex flex-col items-center">
+              <StudioMark className="mb-3 size-10" />
+              <h2 className="text-base font-medium">
+                {databaseContext ? "Database co-worker" : "Co-worker"}
+              </h2>
+              <p className="mt-1 max-w-sm text-sm text-muted-foreground text-pretty">
+                {databaseContext
+                  ? "Selected database context is loaded below. Brief AgentSam to explain schema, draft SQL, or reason about the current error — writes still require confirmation in the editor."
+                  : "Give a specialist a focused assignment. It works beside the lead conversation and returns its completed brief there automatically."}
+              </p>
+            </div>
+            {!databaseContext ? (
+              <div className="w-full max-w-sm text-left">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Start with a focus</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {COWORKER_TASK_STARTERS.map(starter => {
+                    const Icon = starter.icon;
+                    return (
+                      <Button
+                        key={starter.label}
+                        type="button"
+                        variant="outline"
+                        className="h-auto min-h-[68px] flex-col items-start justify-center gap-1 rounded-xl px-3 py-2.5 text-left"
+                        onClick={() => {
+                          const current = useWorkStore.getState().drafts[tab.id] || "";
+                          setDraft(tab.id, current.trim() ? `${current.trim()}
+
+${starter.prompt}` : starter.prompt);
+                        }}
+                      >
+                        <span className="inline-flex items-center gap-2 text-xs font-semibold"><Icon className="size-3.5" aria-hidden="true" />{starter.label}</span>
+                        <span className="text-[10px] font-normal text-muted-foreground">{starter.detail}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            <p className="max-w-sm text-[11px] text-muted-foreground">
               {databaseContext
-                ? "Selected database context is loaded below. Brief AgentSam to explain schema, draft SQL, or reason about the current error — writes still require confirmation in the editor."
-                : "Spin up a specialist beside the lead agent — research, draft files, review — without derailing the main chat. Brief handoffs land back in the lead thread."}
+                ? "Review proposed changes in the owning editor before applying them."
+                : "You can edit the brief before sending. The lead chat remains undisturbed while the co-worker works."}
             </p>
           </div>
         }

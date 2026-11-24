@@ -48,6 +48,23 @@ test("commands do not mutate the input project", () => {
   assert.equal(next.tracks[0].clips[0].startUs, 2_000_000);
 });
 
+test("clip.move can move a clip to another compatible timeline track", () => {
+  const original = fixture();
+  original.tracks.push(createTrack({ id: "track:2" }));
+  const next = applyCoProCommand(original, {
+    type: "clip.move",
+    payload: { clipId: "clip:1", startUs: 4_000_000, trackId: "track:2" },
+  });
+
+  assert.equal(original.tracks[0].clips.length, 1);
+  assert.equal(next.tracks[0].clips.length, 0);
+  assert.deepEqual(next.tracks[1].clips.map(clip => ({
+    id: clip.id,
+    startUs: clip.startUs,
+    assetId: clip.assetId,
+  })), [{ id: "clip:1", startUs: 4_000_000, assetId: "asset:1" }]);
+});
+
 test("session supports deterministic undo and redo", () => {
   const session = new CoProEditorSession(fixture());
   session.execute({

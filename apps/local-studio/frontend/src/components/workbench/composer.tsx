@@ -16,7 +16,6 @@ import { ImageLightbox } from "@/components/workbench/image-lightbox";
 import { CHAT_IMAGE_DROP_EVENT, takeChatImages } from "@/lib/content/chat-drop-queue";
 import { ComposerLibraryPicker } from "./composer-library-picker";
 import { VoiceSession, startDictation, canDictate } from "./voice-session";
-import "./composer-library.css";
 import "./work-voice.css";
 
 const EMPTY_PENDING_ATTACHMENTS: ComposerAttachment[] = [];
@@ -431,7 +430,7 @@ export function Composer({
         </div>}
         {targetKind === 'chat' ? <ProjectPicker chatId={targetId} showTrigger={false} /> : null}
       </>}</PluginPicker>
-      <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async file => { await onFiles([file]); }} />
+      <ComposerLibraryPicker open={libraryOpen} onClose={() => setLibraryOpen(false)} onAttach={async files => { await onFiles(files); }} />
       <VoiceSession open={voiceOpen} onClose={() => setVoiceOpen(false)} targetId={targetId} targetKind={targetKind} />
     </div>
   );

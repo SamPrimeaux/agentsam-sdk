@@ -19,6 +19,7 @@ import type { CoProMotionSampler, CoProCreativeAsset, CoProTransitionPreviewFact
 import type { CoProMediaShelfItem } from "./tool-sheet.js";
 import { CoProAssetPreview } from "./asset-preview.js";
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
+import { writeCoProMediaDragData } from "./media-dnd.js";
 
 export type CoProMediaBrowserSection = "import" | "media" | "subprojects" | "yours" | "generate" | "spaces" | "library";
 export type LocalSceneSource = {id:string;name:string;kind:"scene"|"video";source:string;url:string;sizeBytes:number};
@@ -339,7 +340,13 @@ export function CoProMediaBrowser({
         {visibleMedia.length ? (
           <div className="mm-media-card-grid">
             {visibleMedia.map((item) => (
-              <article className="mm-media-card" key={item.id}>
+              <article
+                className="mm-media-card"
+                key={item.id}
+                draggable
+                onDragStart={event => writeCoProMediaDragData(event.dataTransfer, item.id, item.name, item.kind)}
+                title="Drag to a timeline track, or use Add to timeline"
+              >
                 <div className="mm-media-card-preview">
                   <MediaPreview item={item} systemIcons={systemIcons} />
                   {formatDuration(item.durationUs) && <span className="mm-media-duration">{formatDuration(item.durationUs)}</span>}

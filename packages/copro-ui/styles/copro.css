@@ -60,15 +60,17 @@
 .copro-timeline-scroll { width:100%; height:100%; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; touch-action:pan-x; }
 .copro-timeline-scroll::-webkit-scrollbar { display:none; }
 .copro-timeline-stage { height:100%; position:relative; padding-top:28px; }
-.copro-ruler { position:absolute; inset:0 0 auto; height:28px; border-bottom:1px solid var(--copro-line); }
+.copro-ruler { position:absolute; inset:0 0 auto; height:28px; border-bottom:1px solid var(--copro-line); cursor:ew-resize; touch-action:none; }
 .copro-tick { position:absolute; top:0; height:28px; color:var(--copro-text); font-size:9px; }
 .copro-tick i { display:block; width:1px; height:7px; background:var(--copro-surface); }
 .copro-tick span { position:absolute; top:10px; left:4px; }
 .copro-playhead { position:absolute; top:20px; bottom:0; width:1px; background:var(--copro-surface); z-index:4; pointer-events:none; }
 .copro-playhead b { position:absolute; top:0; left:50%; transform:translate(-50%,-50%); width:9px; height:9px; border-radius:50%; background:var(--copro-surface); }
 .copro-track-stack { padding-top:7px; }
-.copro-track-row { height:62px; position:relative; margin-bottom:4px; }
-.copro-clip { left: var(--copro-clip-left); width: var(--copro-clip-width); }
+.copro-track-row { height:62px; position:relative; margin-bottom:4px; overflow:visible; }
+.copro-track-row.is-drop-target { background:color-mix(in srgb,var(--copro-accent) 10%,transparent); box-shadow:inset 0 0 0 1px var(--copro-accent); }
+.copro-clip { position:absolute; top:var(--copro-clip-top,0px); left:var(--copro-clip-left); width:var(--copro-clip-width); z-index:2; box-sizing:border-box; cursor:grab; touch-action:none; user-select:none; }
+.copro-clip:active { cursor:grabbing; }
 .copro-clip.is-selected { border-color:var(--copro-accent); box-shadow:0 0 0 1px var(--copro-accent),0 0 18px color-mix(in srgb, var(--copro-accent) 15%, transparent); }
 .copro-clip-filmstrip { position:absolute; inset:0; display:flex; opacity:.9; }
 .copro-clip-filmstrip span { flex:1 0 44px; background:radial-gradient(circle at 55% 36%,color-mix(in srgb, var(--copro-text) 20%, transparent),transparent 13%),linear-gradient(135deg,var(--copro-surface-2),var(--copro-surface) 58%,var(--copro-surface-2)); border-right:1px solid color-mix(in srgb, var(--copro-text) 8%, transparent); }

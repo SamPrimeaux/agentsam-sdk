@@ -823,13 +823,24 @@
   background:color-mix(in srgb,var(--nav-popover) 96%,transparent);box-shadow:0 16px 55px #0006;
 }
 .agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-heading {display:none}
-.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row {min-height:37px;gap:9px;padding:6px 9px;border-radius:7px}
-.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row > svg {height:16px;width:16px;flex:0 0 16px;color:var(--nav-muted)}
-.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row strong {font-size:12px;font-weight:530}
-.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row small {font-size:11px;display:inline;color:var(--nav-muted);margin-left:6px}
+.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row {
+  min-height:44px; gap:11px; padding:8px 11px; border-radius:9px;
+}
+.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row > svg {
+  height:18px; width:18px; flex:0 0 18px; color:var(--nav-muted);
+}
+.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row strong {
+  font-size:13px; font-weight:560; line-height:1.3;
+}
+.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row small {
+  font-size:11.5px; display:inline; color:var(--nav-muted); margin-left:7px; line-height:1.3;
+}
+.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-root-list {
+  gap:3px;
+}
 .agentsam-plugin-section-divider {height:1px;margin:5px 6px;background:var(--nav-border)}
 .agentsam-page-layout[data-composer-mode="work"] .agentsam-composer-actions > span[style*="flex"] {flex:1;min-width:3px}
-@media(max-width:550px){.as-work-mode-indicator{max-width:85px;font-size:10px}.agentsam-page-layout[data-composer-mode="work"] .as-work-composer-surface{padding:8px}.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row small{display:block;margin-left:0}}
+@media(max-width:550px){.as-work-mode-indicator{max-width:85px;font-size:10px}.agentsam-page-layout[data-composer-mode="work"] .as-work-composer-surface{padding:8px}.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row{min-height:48px}.agentsam-page-layout[data-composer-mode="work"] .agentsam-plugin-menu:has([data-work-plus-menu]) .agentsam-plugin-row small{display:block;margin-left:0;font-size:11px}}
 
 /* Project chooser remains mounted for the unified composer + action, but
    offers no duplicate visible row below the message input. */

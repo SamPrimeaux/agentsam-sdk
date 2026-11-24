@@ -1,5 +1,6 @@
 import { IconAction } from "./icon-action.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { isCoProMediaDragForTrack, readCoProMediaDragId } from "./media-dnd.js";
 import {
   collectSnapPointsUs,
   projectDurationUs,
@@ -42,7 +43,8 @@ type TimelineProps = {
   selectedClipId?: string | null;
   playheadUs: number;
   onSelectClip?: (clipId: string) => void;
-  onMoveClip?: (clipId: string, startUs: number) => void;
+  onMoveClip?: (clipId: string, startUs: number, trackId?: string) => void;
+  onDropMedia?: (mediaId: string, atUs: number, trackId: string) => void;
   onTrimClip?: (clipId: string, patch: { startUs?: number; inUs?: number; durationUs?: number }) => void;
   onSeek?: (timeUs: number) => void;
   onAddTrack?: () => void;
@@ -60,6 +62,7 @@ export function bindTimelinePointerTransaction<T>(
   target: EventTarget,
   pointerId: number,
   originX: number,
+  originY: number,
   calculate: (event: PointerEvent) => T,
   preview: (value: T) => void,
   commit: (value: T) => void,
@@ -85,7 +88,7 @@ export function bindTimelinePointerTransaction<T>(
     if(pointer.pointerId!==pointerId)return;
     const value=calculate(pointer);
     preview(value);
-    if(Math.abs(pointer.clientX-originX)>.5 && shouldCommit(value))commit(value);
+    if(Math.hypot(pointer.clientX-originX,pointer.clientY-originY)>.5 && shouldCommit(value))commit(value);
     else revert();
     cleanup();
   };
@@ -109,6 +112,7 @@ export function CoProTimeline({
   playheadUs,
   onSelectClip,
   onMoveClip,
+  onDropMedia,
   onTrimClip,
   onSeek,
   onAddTrack,
@@ -119,6 +123,7 @@ export function CoProTimeline({
   const scroller = useRef<HTMLDivElement>(null);
   const menuRef=useRef<HTMLDivElement>(null);
   const [clipMenu,setClipMenu]=useState<{clipId:string;locked:boolean;x:number;y:number;atUs:number}|null>(null);
+  const [dropTrackId,setDropTrackId]=useState<string|null>(null);
   useEffect(()=>{
     if(!clipMenu)return;
     const dismiss=(event:PointerEvent)=>{
@@ -164,6 +169,23 @@ export function CoProTimeline({
     const rect = el.getBoundingClientRect();
     const x = clientX - rect.left + el.scrollLeft;
     return Math.max(0, Math.round((x / pixelsPerSecond) * 1_000_000));
+  }
+
+  function trackAtPointer(clientY:number, sourceTrackId:string):{trackId:string;offset:number} {
+    const rows=Array.from(scroller.current?.querySelectorAll<HTMLElement>("[data-copro-track-id]")??[]);
+    const source=project.tracks.find(track=>track.id===sourceTrackId);
+    const sourceRow=rows.find(row=>row.dataset.coproTrackId===sourceTrackId);
+    const targetRow=rows.find(row=>{
+      const rect=row.getBoundingClientRect();
+      return clientY>=rect.top && clientY<=rect.bottom;
+    });
+    const target=project.tracks.find(track=>track.id===targetRow?.dataset.coproTrackId);
+    if(!source||!sourceRow||!target||!targetRow||target.locked||target.kind!==source.kind)
+      return {trackId:sourceTrackId,offset:0};
+    return {
+      trackId:target.id,
+      offset:targetRow.getBoundingClientRect().top-sourceRow.getBoundingClientRect().top,
+    };
   }
 
   function snap(clipId: string, timeUs: number) {
@@ -273,8 +295,26 @@ export function CoProTimeline({
           }}
           onTouchEnd={() => { pinchStart.current = null; }}
           onPointerDown={(event) => {
-            if ((event.target as HTMLElement).closest("[data-copro-clip]")) return;
+            const target=event.target as HTMLElement;
+            if (target.closest("[data-copro-clip]")) return;
             onSeek?.(timeFromPointer(event.clientX));
+            if(!target.closest(".copro-ruler") || event.button!==0)return;
+            const captureTarget=event.currentTarget;
+            const pointerId=event.pointerId;
+            try{captureTarget.setPointerCapture(pointerId);}catch{return;}
+            const seek=(next:PointerEvent)=>{if(next.pointerId===pointerId)onSeek?.(timeFromPointer(next.clientX));};
+            const finish=(next:PointerEvent)=>{
+              if(next.pointerId!==pointerId)return;
+              seek(next);
+              captureTarget.removeEventListener("pointermove",seek);
+              captureTarget.removeEventListener("pointerup",finish);
+              captureTarget.removeEventListener("pointercancel",finish);
+              captureTarget.removeEventListener("lostpointercapture",finish);
+            };
+            captureTarget.addEventListener("pointermove",seek);
+            captureTarget.addEventListener("pointerup",finish);
+            captureTarget.addEventListener("pointercancel",finish);
+            captureTarget.addEventListener("lostpointercapture",finish);
           }}
         >
           <div className="copro-timeline-stage" style={{ "--copro-timeline-width": timelineWidth + "px" } as React.CSSProperties}>
@@ -303,8 +343,27 @@ export function CoProTimeline({
             <div className="copro-track-stack">
               {project.tracks.map((track) => (
                 <div
-                  className={"copro-track-row copro-track-" + track.kind + (track.visible === false ? " is-hidden-track" : "")}
+                  className={"copro-track-row copro-track-" + track.kind + (track.visible === false ? " is-hidden-track" : "") + (dropTrackId===track.id ? " is-drop-target" : "")}
                   key={track.id}
+                  data-copro-track-id={track.id}
+                  data-copro-track-kind={track.kind}
+                  onDragOver={event=>{
+                    if(track.locked||!isCoProMediaDragForTrack(event.dataTransfer,track.kind))return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect="copy";
+                    setDropTrackId(track.id);
+                  }}
+                  onDragLeave={event=>{
+                    if(!event.currentTarget.contains(event.relatedTarget as Node|null))
+                      setDropTrackId(current=>current===track.id?null:current);
+                  }}
+                  onDrop={event=>{
+                    const mediaId=readCoProMediaDragId(event.dataTransfer);
+                    if(!mediaId||track.locked||!isCoProMediaDragForTrack(event.dataTransfer,track.kind))return;
+                    event.preventDefault();
+                    setDropTrackId(null);
+                    onDropMedia?.(mediaId,snap("media-drop",timeFromPointer(event.clientX)),track.id);
+                  }}
                 >
                   {track.clips.map((clip) => {
                     const selected = clip.id === selectedClipId;
@@ -332,6 +391,7 @@ export function CoProTimeline({
                           if (track.locked) return;
                           onSelectClip?.(clip.id);
                           const originX = event.clientX;
+                          const originY = event.clientY;
                           const originStart = clip.startUs;
                           const target = event.currentTarget;
                           target.setPointerCapture(event.pointerId);
@@ -339,15 +399,21 @@ export function CoProTimeline({
                           const originalWidth=width;
                           const calculate=(next:PointerEvent)=>{
                             const deltaUs=Math.round(((next.clientX-originX)/pixelsPerSecond)*1_000_000);
-                            return {startUs:snap(clip.id,Math.max(0,originStart+deltaUs))};
+                            const destination=trackAtPointer(next.clientY,track.id);
+                            return {startUs:snap(clip.id,Math.max(0,originStart+deltaUs)),trackId:destination.trackId,offset:destination.offset};
                           };
-                          const preview=(value:{startUs:number})=>target.style.setProperty("--copro-clip-left",timeUsToPixels(value.startUs,{pixelsPerSecond})+"px");
+                          const preview=(value:{startUs:number;trackId:string;offset:number})=>{
+                            target.style.setProperty("--copro-clip-left",timeUsToPixels(value.startUs,{pixelsPerSecond})+"px");
+                            target.style.setProperty("--copro-clip-top",value.offset+"px");
+                          };
                           const revert=()=>{
                             target.style.setProperty("--copro-clip-left",left+"px");
+                            target.style.setProperty("--copro-clip-top","0px");
                             target.style.setProperty("--copro-clip-width",originalWidth+"px");
                           };
-                          bindTimelinePointerTransaction(target,event.pointerId,originX,calculate,preview,
-                            value=>onMoveClip?.(clip.id,value.startUs),revert,value=>value.startUs!==originStart);
+                          bindTimelinePointerTransaction(target,event.pointerId,originX,originY,calculate,preview,
+                            value=>onMoveClip?.(clip.id,value.startUs,value.trackId),revert,
+                            value=>value.startUs!==originStart||value.trackId!==track.id);
                         }}
                       >
                         {selected && !track.locked && (
@@ -357,6 +423,7 @@ export function CoProTimeline({
                             onPointerDown={(event) => {
                               event.stopPropagation();
                               const originX = event.clientX;
+                              const originY = event.clientY;
                               const originStart = clip.startUs;
                               const originIn = clip.inUs ?? 0;
                               const rate=clip.playbackRate??1;
@@ -382,7 +449,7 @@ export function CoProTimeline({
                                 clipElement?.style.setProperty("--copro-clip-left",originalLeft+"px");
                                 clipElement?.style.setProperty("--copro-clip-width",originalWidth+"px");
                               };
-                              bindTimelinePointerTransaction(target,event.pointerId,originX,calculate,preview,
+                              bindTimelinePointerTransaction(target,event.pointerId,originX,originY,calculate,preview,
                                 value=>onTrimClip?.(clip.id,value),revert,
                                 value=>value.startUs!==originStart||value.inUs!==originIn||value.durationUs!==originDuration);
                             }}
@@ -430,6 +497,7 @@ export function CoProTimeline({
                             onPointerDown={(event) => {
                               event.stopPropagation();
                               const originX = event.clientX;
+                              const originY = event.clientY;
                               const originDuration = clip.durationUs;
                               const clipEnd = clip.startUs + originDuration;
                               const target = event.currentTarget;
@@ -444,7 +512,7 @@ export function CoProTimeline({
                               };
                               const preview=(value:{durationUs:number})=>clipElement?.style.setProperty("--copro-clip-width",Math.max(44,timeUsToPixels(value.durationUs,{pixelsPerSecond}))+"px");
                               const revert=()=>clipElement?.style.setProperty("--copro-clip-width",originalWidth+"px");
-                              bindTimelinePointerTransaction(target,event.pointerId,originX,calculate,preview,
+                              bindTimelinePointerTransaction(target,event.pointerId,originX,originY,calculate,preview,
                                 value=>onTrimClip?.(clip.id,value),revert,value=>value.durationUs!==originDuration);
                             }}
                           />
