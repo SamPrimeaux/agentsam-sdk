@@ -8,7 +8,8 @@ function fixture() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(`PRAGMA foreign_keys=ON;
     CREATE TABLE apps(id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, app_icon TEXT, icon_url TEXT, launch_url TEXT, editor_url TEXT,
-      app_type TEXT, status TEXT DEFAULT 'active', visibility TEXT NOT NULL DEFAULT 'private', featured INTEGER DEFAULT 0);
+      app_type TEXT, status TEXT DEFAULT 'active', visibility TEXT NOT NULL DEFAULT 'private', featured INTEGER DEFAULT 0,
+      config_json TEXT NOT NULL DEFAULT '{}');
     CREATE TABLE agentsam_app_installations(
       id TEXT PRIMARY KEY DEFAULT ('ainst_' || lower(hex(randomblob(8)))),
       account_id TEXT NOT NULL,

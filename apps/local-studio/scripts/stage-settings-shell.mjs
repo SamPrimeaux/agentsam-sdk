@@ -40,9 +40,9 @@ const studioApps = [
   '/mail', '/artifacts', '/artifacts/tickets', '/tickets', '/themes',
 ];
 for (const pathname of studioApps) {
-  const route = pathname.replace(/^\/(?:admin\/)?/, '');
-  const url = 'https://agentsam.inneranimalmedia.com' + pathname;
-  const rendered=await nitro.fetch(new Request(url),{},{
+  const requestUrl = new URL(pathname, 'https://agentsam.inneranimalmedia.com');
+  const route = requestUrl.pathname.replace(/^\/(?:admin\/)?/, '');
+  const rendered=await nitro.fetch(new Request(requestUrl),{},{
     waitUntil(){},passThroughOnException(){},
   });
   const html=await rendered.text();

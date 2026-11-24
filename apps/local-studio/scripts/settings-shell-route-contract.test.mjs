@@ -38,7 +38,8 @@ test('Settings shell host is session-gated, read-only and stays on the current a
 test('AgentSam Work, CAD and MovieMode use authenticated canonical React shells',()=>{
  const routes=[...STUDIO_ADMIN_PRERENDERED_ROUTES, '/mail','/artifacts','/artifacts/tickets','/tickets','/themes'];
  for(const pathname of routes){
-  const route = pathname.replace(/^\/(?:admin\/)?/, '');
+  const routeUrl = new URL(pathname, 'https://agentsam.inneranimalmedia.com');
+  const route = routeUrl.pathname.replace(/^\/(?:admin\/)?/, '');
   const source=path.join(root,'.output/public/studio-app-shell',route,'index.html');
   assert.ok(existsSync(source),'missing Studio mount: '+route);
   const html=readFileSync(source,'utf8');
@@ -46,7 +47,7 @@ test('AgentSam Work, CAD and MovieMode use authenticated canonical React shells'
   assert.ok(html.includes('/assets/'));
   assert.doesNotMatch(html,/password_hash|client_secret/i);
   if (pathname === '/admin/store' || pathname.startsWith('/admin/media')) {
-    assert.ok(html.includes('/(apps)' + pathname), 'wrong router match for ' + pathname);
+    assert.ok(html.includes('/(apps)' + routeUrl.pathname), 'wrong router match for ' + pathname);
   }
  }
  const worker=readFileSync(path.join(root,'backend/worker/index.js'),'utf8');
@@ -90,4 +91,10 @@ test('Settings subpages stay in one canonical shell and use router navigation',(
  assert.ok(nativeAuth.includes('invalidateDesktopIdentityStatus'));
  const keys=readFileSync(path.join(root,'frontend/src/components/settings/LiveKeysSettingsPage.tsx'),'utf8');
  assert.ok(keys.includes('agentsam:identity-open'));
+});
+
+test('CMS Structure prerender uses an explicit website scope to avoid a redirect-only shell',()=>{
+ const structure=STUDIO_ADMIN_PRERENDERED_ROUTES.find((route)=>new URL(route,'https://agentsam.inneranimalmedia.com').pathname==='/admin/structure');
+ assert.ok(structure);
+ assert.equal(new URL(structure,'https://agentsam.inneranimalmedia.com').searchParams.get('scope'),'website');
 });

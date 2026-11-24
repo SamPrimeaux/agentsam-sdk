@@ -6,7 +6,7 @@ import React from "react";
  */
 export function IconAction({
   children, className = "", title, type = "button", ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { ref?: React.Ref<HTMLButtonElement> }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const accessibleName = props["aria-label"] || title;
   if (!accessibleName) throw new Error("copro_icon_action_name_required");
   const help = typeof title === "string" ? title : String(accessibleName);
