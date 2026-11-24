@@ -391,6 +391,8 @@ jobs:
         run: npm run build --prefix apps/local-studio
       - name: Verify hosted Worker output
         run: npm run cf:verify-output --prefix apps/local-studio
+      - name: Verify hosted Studio backend tests
+        run: npm run test --workspace @inneranimalmedia/agentsam-local-studio-backend --prefix apps/local-studio
       - name: Smoke-test hosted Worker routes
         run: npm run cf:smoke:worker --prefix apps/local-studio
       - name: Install Chromium for hosted shell regression
