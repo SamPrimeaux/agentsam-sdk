@@ -8,7 +8,26 @@
     "strict": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@inneranimalmedia/copro-ui": [
+        "../../packages/copro-ui/src/index.ts"
+      ],
+      "@inneranimalmedia/copro-editor": [
+        "../../packages/copro-editor/src/index.d.ts"
+      ],
+      "@inneranimalmedia/copro-storage": [
+        "../../packages/copro-storage/src/index.d.ts"
+      ],
+      "@inneranimalmedia/copro-media": [
+        "../../packages/copro-media/src/index.d.ts"
+      ]
+    }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite.config.ts"
+  ]
 }

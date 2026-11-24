@@ -84,6 +84,9 @@ const keyManagerPackageRoot = resolvePath(
 // node_modules may point at a different checkout in developer worktrees.
 const coproUiSource = fileURLToPath(new URL("../../packages/copro-ui/src/index.ts", import.meta.url));
 const coproUiStyles = fileURLToPath(new URL("../../packages/copro-ui/styles/copro.css", import.meta.url));
+const coproEditorSource = fileURLToPath(new URL("../../packages/copro-editor/src/index.js", import.meta.url));
+const coproStorageSource = fileURLToPath(new URL("../../packages/copro-storage/src/index.js", import.meta.url));
+const coproMediaSource = fileURLToPath(new URL("../../packages/copro-media/src/index.js", import.meta.url));
 const studioRoot = resolvePath(fileURLToPath(new URL(".", import.meta.url)));
 const frontendNodeModules = resolvePath(studioRoot, "frontend", "node_modules");
 const repoNodeModules = resolvePath(studioRoot, "..", "..", "node_modules");
@@ -309,6 +312,9 @@ export default defineConfig(({ command, isPreview }) => ({
       },
       { find: /^@inneranimalmedia\/copro-ui\/styles\.css$/, replacement: coproUiStyles },
       { find: /^@inneranimalmedia\/copro-ui$/, replacement: coproUiSource },
+      { find: /^@inneranimalmedia\/copro-editor$/, replacement: coproEditorSource },
+      { find: /^@inneranimalmedia\/copro-storage$/, replacement: coproStorageSource },
+      { find: /^@inneranimalmedia\/copro-media$/, replacement: coproMediaSource },
       ...navRuntimeAliases,
       { find: /^@inneranimalmedia\/agentsam-abs\/react$/, replacement: resolvePath(absPackageRoot, "src/react/index.ts") },
       { find: /^@inneranimalmedia\/agentsam-abs\/browser\.css$/, replacement: resolvePath(absPackageRoot, "styles/browser.css") },

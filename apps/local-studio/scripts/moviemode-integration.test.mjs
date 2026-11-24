@@ -24,7 +24,7 @@ test("MovieMode remains one runnable application with a reusable Work host", () 
 
 test("Media replaces Content while Work can still focus MovieMode", () => {
   const shell = read("../frontend/agentsam/AgentSamShell.tsx");
-  assert.match(read("../scripts/studio-navigation.mjs"), /id:'media',label:'Library',href:'\/admin\/media'/);
+  assert.ok(read("../scripts/studio-navigation.mjs").includes('id: "library", label: "Library", href: "/media"'));
   assert.doesNotMatch(shell, /id: 'utilities'/);
   assert.match(read("../frontend/agentsam/side-stage-actions.ts"), /"media", "database", "terminal"/);
   assert.match(read("../frontend/src/components/workbench/side-stage.tsx"), /MovieModeSurface workPane/);
@@ -44,8 +44,16 @@ test("Local Studio bundles MovieMode from the active SDK worktree, not a linked 
   const vite = read("../vite.config.ts");
   assert.match(vite, /copro-ui\/src\/index\.ts/);
   assert.match(vite, /copro-ui\/styles\/copro\.css/);
+  assert.match(vite, /copro-editor\/src\/index\.js/);
+  assert.match(vite, /copro-storage\/src\/index\.js/);
+  assert.match(vite, /copro-media\/src\/index\.js/);
   assert.match(vite, /replacement: coproUiSource/);
-  assert.match(vite, /replacement: coproUiStyles/);
+  assert.match(vite, /replacement: coproEditorSource/);
+  assert.match(vite, /replacement: coproStorageSource/);
+  assert.match(vite, /replacement: coproMediaSource/);
+  const tsconfig = read("../frontend/tsconfig.json");
+  assert.match(tsconfig, /"@inneranimalmedia\/copro-ui"/);
+  assert.match(tsconfig, /"@inneranimalmedia\/copro-editor"/);
 });
 
 test("Embedded MovieMode does not render desktop home columns at narrow panel widths", () => {

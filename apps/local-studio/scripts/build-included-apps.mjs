@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Build and stage every app named in the desktop brand manifest's `included_apps`.
- *
- * Nothing in this file is app-specific. An app declares how it is built and where
- * it is served from in its own agentsam.app.json:
+ * Build and stage every independently embedded app named in the desktop brand manifest.
+ * Host-component screens are already compiled into Local Studio and do not need a
+ * second standalone asset bundle. Other included apps declare how they are built
+ * and where they are served from in their own agentsam.app.json:
  *
  *   "embed": {
  *     "stage": "cad-creator",            // served at /<stage>/, staged as frontend/public/<stage>
@@ -18,9 +18,9 @@
  *   }
  *
  * Apps are discovered with listAppManifests() — the same discovery `agentsam app validate` uses.
- * To ship another app with Local Studio: add its id to `included_apps` in
- * packages/agentsam-desktop-shell/manifests/local-studio.json and give it an `embed` block.
- * No edit to this file.
+ * To ship another independently embedded app with Local Studio: add its id to
+ * `included_apps` and give it an `embed.build` block. Host-component-only apps
+ * are bundled by the host screen module and need no separate embed build.
  *
  * Usage (from apps/local-studio):
  *   node scripts/build-included-apps.mjs                 refuse implicit all-product rebuild
@@ -82,6 +82,7 @@ export function planIncludedApps({
   const byId = new Map(listAppManifests(repoRoot).map((app) => [app.id, app]));
   const modules = Array.isArray(manifest.included_modules) ? manifest.included_modules : [];
   const plans = [];
+  const hostApps = [];
   const stages = new Map();
   const items = ids.map((id) => {
     const app = byId.get(id);
@@ -114,7 +115,14 @@ export function planIncludedApps({
     const id = app.id;
     const embed = app.manifest.embed;
     if (!embed || !embed.build) {
-      throw new Error(`app "${id}" is in included_apps but its agentsam.app.json declares no embed.build`);
+      const screens = Array.isArray(app.manifest.screens) ? app.manifest.screens : [];
+      const hostComponentOnly = app.type === 'app' && screens.length > 0 &&
+        screens.every((screen) => screen?.mount?.type === 'host-component');
+      if (hostComponentOnly) {
+        hostApps.push({ id, kind: app.type, screens: screens.map((screen) => screen.id) });
+        continue;
+      }
+      throw new Error(`app "${id}" is in included_apps but its agentsam.app.json declares no embed.build or host-component screen`);
     }
     if (!STAGE.test(embed.stage ?? '')) throw new Error(`app "${id}": embed.stage must match ${STAGE}`);
     if (stages.has(embed.stage)) {
@@ -167,7 +175,7 @@ export function planIncludedApps({
     if (stages.has(mount.url.split('/')[1])) throw new Error(`public mount "${mount.url}" overlaps an app's stage`);
     publicMounts.add(mount.url);
   }
-  return { skipped: null, plans };
+  return { skipped: null, plans, hostApps };
 }
 
 function childEnv() {
@@ -270,11 +278,17 @@ function main() {
     return;
   }
   if (result.plans.length === 0) {
-    console.log('[included-apps] none declared — host Local Studio only');
+    for (const app of result.hostApps ?? []) {
+      console.log(`[included-apps] ${app.id}: host-component screen bundled with Local Studio — no separate asset build`);
+    }
+    console.log(result.hostApps?.length
+      ? '[included-apps] host-bundled apps only — no separate embed assets to build'
+      : '[included-apps] none declared — host Local Studio only');
     return;
   }
   if (flags.only && !result.plans.some((plan) => plan.id === flags.only)) {
-    console.error(`[included-apps] ERROR: included app "${flags.only}" is not registered`);
+    if (result.hostApps?.some((app) => app.id === flags.only)) return;
+    console.error(`[included-apps] ERROR: included app "${flags.only}" is not registered for a separate embed build`);
     process.exit(1);
   }
   if (flags.only && flags.all) {
@@ -295,6 +309,9 @@ function main() {
   if (flags['dry-run']) {
     console.log(JSON.stringify(selected, null, 2));
     return;
+  }
+  for (const app of result.hostApps ?? []) {
+    console.log(`[included-apps] ${app.id}: host-component screen bundled with Local Studio — no separate asset build`);
   }
   for (const plan of selected) {
     try {

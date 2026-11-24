@@ -101,6 +101,18 @@
       ],
       "@inneranimalmedia/agentsam-local-shared": [
         "../shared/agentsam/src/index.ts"
+      ],
+      "@inneranimalmedia/copro-ui": [
+        "../../../packages/copro-ui/src/index.ts"
+      ],
+      "@inneranimalmedia/copro-editor": [
+        "../../../packages/copro-editor/src/index.d.ts"
+      ],
+      "@inneranimalmedia/copro-storage": [
+        "../../../packages/copro-storage/src/index.d.ts"
+      ],
+      "@inneranimalmedia/copro-media": [
+        "../../../packages/copro-media/src/index.d.ts"
       ]
     },
     "allowImportingTsExtensions": true,

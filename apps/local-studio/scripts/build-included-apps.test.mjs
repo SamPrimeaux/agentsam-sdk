@@ -25,7 +25,11 @@ const plan = (apps, included) => {
 test('real repo: included apps resolve from their own manifests', () => {
   const { plans } = planIncludedApps();
   const manifest = JSON.parse(fs.readFileSync(DEFAULT_MANIFEST, 'utf8'));
-  assert.deepEqual(plans.filter((p) => p.kind === 'app').map((p) => p.id), manifest.included_apps);
+  assert.deepEqual(
+    [...plans.filter((p) => p.kind === 'app').map((p) => p.id), ...planIncludedApps().hostApps.map((p) => p.id)].sort(),
+    [...manifest.included_apps].sort(),
+  );
+  assert.deepEqual(planIncludedApps().hostApps.map((p) => p.id), ['goalguru']);
   assert.deepEqual(plans.filter((p) => p.kind === 'module').map((p) => p.id),
     manifest.included_modules.map((m) => m.id));
   const cad = plans.find((p) => p.id === 'cad-creator');
@@ -59,10 +63,21 @@ test('unknown id fails and names the known ids', () => {
   );
 });
 
-test('an included app without embed.build is rejected', () => {
+test('host-component-only apps are compiled by Local Studio and need no duplicate embed build', () => {
+  const { plans, hostApps } = plan({
+    foo: {
+      schema: 'agentsam.app.v1', id: 'foo', name: 'Foo', kind: 'app',
+      screens: [{ id: 'foo.workspace', mount: { type: 'host-component', scope: 'host' } }],
+    },
+  }, ['foo']);
+  assert.deepEqual(plans, []);
+  assert.deepEqual(hostApps, [{ id: 'foo', kind: 'app', screens: ['foo.workspace'] }]);
+});
+
+test('an included app without embed.build or a host-component screen is rejected', () => {
   assert.throws(
     () => plan({ foo: { schema: 'agentsam.app.v1', id: 'foo', name: 'Foo', kind: 'app' } }, ['foo']),
-    /declares no embed\.build/,
+    /declares no embed\.build or host-component screen/,
   );
 });
 
