@@ -20,7 +20,7 @@
     "@inneranimalmedia/agentsam-vault": "2.6.18"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public"

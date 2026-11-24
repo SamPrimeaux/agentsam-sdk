@@ -709,18 +709,10 @@ const SERVICE_TO_PROVIDER = Object.freeze(
         const aliases = [p.id];
         if (p.id === "xai") aliases.push("grok");
         if (p.id === "gemini") aliases.push("google");
-        return aliases.map((alias) => [alias, p.id === "xai" ? "grok" : p.id]);
+        return aliases.map((alias) => [alias, p.id]);
       }),
   ),
 );
-
-const INVENTORY_PROVIDER_IDS = Object.freeze([
-  ...new Set(
-    PROVIDER_REGISTRY.list()
-      .filter((p) => p.credential?.kind === "provider_api_key" || p.id === "cloudflare")
-      .map((p) => (p.id === "xai" ? "grok" : p.id)),
-  ),
-]);
 
 async function loadVaultCredentialsForAccount(env, accountId) {
   const { results } = await env.DB.prepare(
@@ -786,7 +778,7 @@ function platformCredentials(env) {
   put('openai', env.OPENAI_API_KEY);
   put('anthropic', env.ANTHROPIC_API_KEY);
   put('gemini', env.GEMINI_API_KEY);
-  put('grok', env.XAI_API_KEY);
+  put('xai', env.XAI_API_KEY);
   put('cursor', env.CURSOR_API_KEY);
   put('cloudflare', env.CLOUDFLARE_API_TOKEN, {
     cloudflare_account_id: env.CLOUDFLARE_ACCOUNT_ID || null,
@@ -795,7 +787,9 @@ function platformCredentials(env) {
 }
 
 async function handleLlmInventory(env, userId, request) {
-  const includePlatform = new URL(request.url).searchParams.get('include_platform') === '1';
+  // Same credential sources as /api/chat (vault first, platform fills gaps) so the picker
+  // never lists fewer models than chat can run. `include_platform=0` opts out.
+  const includePlatform = new URL(request.url).searchParams.get('include_platform') !== '0';
   const vault = await loadVaultCredentialsForAccount(env, userId);
   const platform = includePlatform ? platformCredentials(env) : new Map();
   const merged = new Map();
