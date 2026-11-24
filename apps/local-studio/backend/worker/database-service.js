@@ -9,10 +9,10 @@ import {
   listD1Resources,
   manageD1Resource,
   readPostgresMetrics,
-} from '../../../../packages/agentsam-database-editor/backend/index.js';
-import { resolveCloudflareCredential as resolveCloudflareConnectorCredential } from '../../../../packages/connectors/cfoa/src/credential.js';
+} from '@inneranimalmedia/agentsam-database-editor/backend';
+import { resolveCloudflareCredential as resolveCloudflareConnectorCredential } from '@inneranimalmedia/agentsam-connector-cloudflare/credential';
 import { scheduleStudioErrorLog } from './studio-error-log.js';
-import { listCloudflareConnectionRecords } from '../../../../packages/connectors/cfoa/src/credential.js';
+import { listCloudflareConnectionRecords } from '@inneranimalmedia/agentsam-connector-cloudflare/credential';
 
 const RANGE_SECONDS = Object.freeze({
   '1h': 60 * 60,

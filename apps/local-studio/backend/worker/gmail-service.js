@@ -3,12 +3,12 @@ import {
   oauthAad,
   sealOauthToken,
   unsealOauthToken,
-} from "../../../../packages/agentsam-vault/src/crypto/oauth-envelope.js";
+} from "@inneranimalmedia/agentsam-vault/oauth";
 import {
   decryptSecret,
   encryptSecret,
   vaultConfigured,
-} from "../../../../packages/connectors/cfoa/src/vault.js";
+} from "@inneranimalmedia/agentsam-connector-cloudflare/vault";
 
 const PROVIDER = "google_gmail";
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";

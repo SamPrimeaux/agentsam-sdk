@@ -49,3 +49,14 @@ test('Studio backend declares every directly imported first-party package', () =
   visit(resolve(backend, 'server'));
   assert.deepEqual([...new Set(missing)].sort(), [], 'Backend imports must resolve through its own dependency manifest');
 });
+
+// Keep the migrated package families behind declared package exports.
+test('Worker uses public entry points for migrated SDK package families', () => {
+  const worker = resolve(root, 'apps/local-studio/backend/worker');
+  const forbidden = /(?:\.\.\/){4}packages\/(?:identity|connectors\/cfoa|agentsam-(?:vault|communications|database-editor|goap|queue-control))\//;
+  const violations = readdirSync(worker, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.js') && !entry.name.includes('.test.'))
+    .filter(entry => forbidden.test(readFileSync(resolve(worker, entry.name), 'utf8')))
+    .map(entry => entry.name);
+  assert.deepEqual(violations, []);
+});

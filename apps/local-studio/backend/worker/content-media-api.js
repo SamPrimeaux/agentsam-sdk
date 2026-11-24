@@ -180,7 +180,7 @@ async function resolveOauthMediaClient(env, ownerId, url, capabilityId = "cloudf
   if (env?.__agentsamTestCfClient) {
     return { ok: true, client: env.__agentsamTestCfClient };
   }
-  const { createCloudflareApiClient } = await import("../../../../packages/connectors/cfoa/src/api-client.js");
+  const { createCloudflareApiClient } = await import("@inneranimalmedia/agentsam-connector-cloudflare/api-client");
   try {
     const client = await createCloudflareApiClient({
       env,
@@ -233,7 +233,7 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
     listCloudflareR2Objects,
     listCloudflareImages,
     listCloudflareStream,
-  } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+  } = await import("@inneranimalmedia/agentsam-connector-cloudflare/families/media");
   const capabilityId = source === "stream" ? "cloudflare.stream" : source === "r2" ? "cloudflare.r2" : "cloudflare.images";
   const resolved = await resolveOauthMediaClient(env, ownerId, url, capabilityId);
   if (!resolved.ok) return resolved;
@@ -684,7 +684,7 @@ async function uploadMediaViaOauth(env, ownerId, url, form) {
   const {
     uploadCloudflareImage,
     uploadCloudflareR2Object,
-  } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+  } = await import("@inneranimalmedia/agentsam-connector-cloudflare/families/media");
 
   const files = [...form.getAll("files"), ...form.getAll("file")].filter(isFile);
   if (!files.length) return json({ ok: false, error: "no_files_provided" }, 400);
@@ -909,7 +909,7 @@ async function batchMediaViaOauth(env, ownerId, url, body) {
     deleteCloudflareR2Object,
     getCloudflareImage,
     updateCloudflareImage,
-  } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+  } = await import("@inneranimalmedia/agentsam-connector-cloudflare/families/media");
 
   const action = String(body.action || body.operation || "").toLowerCase();
   const ids = Array.isArray(body.ids) ? body.ids.map((id) => String(id)).filter(Boolean) : [];
@@ -1119,7 +1119,7 @@ async function proxyAssetViaOauth(env, ownerId, request, url, assetId, suffix = 
     getCloudflareStream,
     deleteCloudflareStream,
     deleteCloudflareR2Object,
-  } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+  } = await import("@inneranimalmedia/agentsam-connector-cloudflare/families/media");
 
   const id = String(assetId || "");
   const method = request.method.toUpperCase();
@@ -1277,7 +1277,7 @@ async function streamDirectUpload(env, request, url, principal = null) {
     return json({ ...result.data, provider_api: "inneranimalmedia" }, result.response.status);
   }
   if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
-  const { createCloudflareStreamDirectUpload } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+  const { createCloudflareStreamDirectUpload } = await import("@inneranimalmedia/agentsam-connector-cloudflare/families/media");
   const resolved = await resolveOauthMediaClient(env, principal.id, url, "cloudflare.stream");
   if (!resolved.ok) return json(resolved, resolved.status || 401);
   const body = await request.json().catch(() => ({}));

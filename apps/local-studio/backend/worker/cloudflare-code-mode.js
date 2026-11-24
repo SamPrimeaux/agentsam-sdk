@@ -1,4 +1,4 @@
-import { loadCloudflareAccessToken } from '../../../../packages/connectors/cfoa/src/index.js';
+import { loadCloudflareAccessToken } from '@inneranimalmedia/agentsam-connector-cloudflare';
 
 const API_BASE = 'https://api.cloudflare.com/client/v4';
 const OPENAPI_SPEC_URL = 'https://raw.githubusercontent.com/cloudflare/api-schemas/main/openapi.json';

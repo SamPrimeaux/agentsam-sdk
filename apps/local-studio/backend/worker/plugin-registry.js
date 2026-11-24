@@ -8,7 +8,7 @@ import {
   createPluginRuntime,
   executeVectorizeTool,
 } from '@inneranimalmedia/agentsam-sdk/plugins';
-import { probeCloudflareConnection } from '../../../../packages/connectors/cfoa/src/index.js';
+import { probeCloudflareConnection } from '@inneranimalmedia/agentsam-connector-cloudflare';
 import { callCloudflareMcpTool, executeAgentSamCloudflareProgram, searchCloudflareApi } from './cloudflare-code-mode.js';
 import { executeCompletefulNative } from './completeful-native.js';
 import { runRemotePluginTool } from './plugin-oauth.js';

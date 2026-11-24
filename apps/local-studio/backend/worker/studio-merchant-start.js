@@ -1,5 +1,5 @@
 /** Local Studio mounts Identity-owned first-run onboarding. Commerce supplies the site API. */
-import { serveMerchantOnboarding } from '../../../../packages/identity/src/server/merchant-onboarding.js';
+import { serveMerchantOnboarding } from '@inneranimalmedia/agentsam-identity/merchant-onboarding';
 
 /** The host projects its own identity, sites, and editing routes in `config`.
  * The reusable CMS knows none of these paths or this Worker's asset layout. */

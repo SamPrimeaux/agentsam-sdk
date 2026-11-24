@@ -10,10 +10,10 @@ on:
 permissions:
   contents: read
 
-# A newer push to the same pull request supersedes the run in flight.
+# Newer source pushes supersede stale validation runs; manual runs are preserved.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'source' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   # The SDK suite, sharded so wall-clock is the slowest shard, not the sum.
@@ -383,8 +383,6 @@ jobs:
             apps/local-studio/backend/worker/studio-cms-assistant.test.mjs \
             apps/local-studio/backend/worker/cms-owned-sites.test.mjs \
             packages/connectors/cfoa/tests/capabilities.test.mjs
-      - name: Build all registered included apps
-        run: node apps/local-studio/scripts/build-included-apps.mjs --all
       - name: Install Local Studio build dependencies
         run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
       - name: Assemble hosted Local Studio Worker and assets

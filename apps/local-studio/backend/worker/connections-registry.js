@@ -1,7 +1,7 @@
 import {
   cloudflareConnectionSafeStatus,
   loadCloudflareConnectionRecord,
-} from "../../../../packages/connectors/cfoa/src/index.js";
+} from "@inneranimalmedia/agentsam-connector-cloudflare";
 import { loadPluginRegistry, materializeCloudflarePlugin } from "./plugin-registry.js";
 import { listAccountSideStages } from "./plugin-side-stages.js";
 

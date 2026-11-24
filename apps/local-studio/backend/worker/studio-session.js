@@ -1,5 +1,5 @@
 /** Host session adapter: SDK Identity remains the authentication authority. */
-import { createIdentityService, createCloudflareD1Adapter } from '../../../../packages/identity/src/server/worker-router.js';
+import { createIdentityService, createCloudflareD1Adapter } from '@inneranimalmedia/agentsam-identity/server/worker-router';
 
 export class StudioIdentityUnavailableError extends Error {
   constructor() { super('identity_unavailable'); this.name = 'StudioIdentityUnavailableError'; }

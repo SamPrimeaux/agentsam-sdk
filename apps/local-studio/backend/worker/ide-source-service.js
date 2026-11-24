@@ -11,7 +11,7 @@ import { handleGithubIdeSourceRequest, isGithubIdeSourceRequest } from './github
 import {
   listCloudflareConnectionRecords,
   resolveCloudflareCredential,
-} from '../../../../packages/connectors/cfoa/src/credential.js';
+} from '@inneranimalmedia/agentsam-connector-cloudflare/credential';
 
 const CF_API = 'https://api.cloudflare.com/client/v4';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
