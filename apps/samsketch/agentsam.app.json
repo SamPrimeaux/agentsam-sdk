@@ -111,5 +111,26 @@
   "distribution": {
     "kind": "bundled-module-capable-app",
     "release_status": "source-private"
-  }
+  },
+  "screens": [
+    {
+      "id": "samsketch.studio",
+      "app_id": "samsketch",
+      "route": "/admin/samsketch",
+      "primary": true,
+      "module": "routes/(apps)/admin/samsketch.tsx",
+      "export": "SamSketchPage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "admin-nav",
+        "label": "SamSketch",
+        "icon": "pencil-ruler",
+        "primary": true,
+        "key": "samsketch"
+      }
+    }
+  ]
 }

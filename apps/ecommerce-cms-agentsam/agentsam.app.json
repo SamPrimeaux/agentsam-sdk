@@ -447,5 +447,230 @@
         "spa": true
       }
     ]
-  }
+  },
+  "screens": [
+    {
+      "id": "ecommerce-cms-agentsam.store",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/store",
+      "primary": true,
+      "module": "components/store/OnlineStorePage.tsx",
+      "export": "OnlineStorePage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "channels",
+        "key": "online-store",
+        "root": true,
+        "label": "Online Store",
+        "icon": "store",
+        "primary": true,
+        "order": 10
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.pages",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/pages",
+      "mount": {
+        "type": "document",
+        "path": "/admin/pages"
+      },
+      "navigation": {
+        "surface": "channels",
+        "parent": "online-store",
+        "label": "Pages",
+        "icon": "file-text",
+        "order": 10
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.structure",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/structure",
+      "module": "components/cms/CmsStructurePage.tsx",
+      "export": "CmsStructurePage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "channels",
+        "parent": "online-store",
+        "label": "Structure",
+        "icon": "network",
+        "order": 20
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.preferences",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/preferences",
+      "mount": {
+        "type": "document",
+        "path": "/admin/preferences"
+      },
+      "navigation": {
+        "surface": "channels",
+        "parent": "online-store",
+        "label": "Preferences",
+        "icon": "settings",
+        "order": 30
+      }
+    },
+    {
+      "id": "agentsamforms.page",
+      "app_id": "agentsamforms",
+      "route": "/admin/forms",
+      "primary": true,
+      "module": "components/forms/AgentSamFormsPage.tsx",
+      "export": "AgentSamFormsPage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "admin-nav",
+        "label": "Forms",
+        "icon": "file-input",
+        "primary": true,
+        "key": "forms"
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.products",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/products",
+      "mount": {
+        "type": "document",
+        "path": "/admin/products"
+      },
+      "navigation": {
+        "surface": "channels",
+        "label": "Products",
+        "icon": "products",
+        "key": "products",
+        "root": true,
+        "order": 20
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.collections",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/collections",
+      "mount": {
+        "type": "document",
+        "path": "/admin/collections"
+      },
+      "navigation": {
+        "surface": "channels",
+        "label": "Collections",
+        "icon": "box",
+        "parent": "products",
+        "order": 10
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.product-create",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/products/create",
+      "mount": {
+        "type": "document",
+        "path": "/admin/products/create"
+      },
+      "navigation": {
+        "surface": "channels",
+        "label": "Create",
+        "icon": "products",
+        "parent": "products",
+        "order": 20,
+        "key": "create"
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.inventory",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/inventory",
+      "mount": {
+        "type": "document",
+        "path": "/admin/inventory"
+      },
+      "navigation": {
+        "surface": "channels",
+        "label": "Inventory",
+        "icon": "box",
+        "parent": "products",
+        "order": 30
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.orders",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/orders",
+      "mount": {
+        "type": "document",
+        "path": "/admin/orders"
+      },
+      "navigation": {
+        "surface": "channels",
+        "label": "Orders",
+        "icon": "orders",
+        "parent": "products",
+        "order": 40
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.discounts",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/discounts",
+      "mount": {
+        "type": "document",
+        "path": "/admin/discounts"
+      },
+      "navigation": {
+        "surface": "channels",
+        "label": "Discounts",
+        "icon": "settings",
+        "parent": "products",
+        "order": 50
+      }
+    },
+    {
+      "id": "ecommerce-cms-agentsam.audience",
+      "app_id": "ecommerce-cms-agentsam",
+      "route": "/admin/subscribers",
+      "mount": {
+        "type": "document",
+        "path": "/admin/subscribers"
+      },
+      "navigation": {
+        "surface": "channels",
+        "label": "Audience",
+        "icon": "customers",
+        "key": "audience",
+        "root": true,
+        "order": 30
+      }
+    },
+    {
+      "id": "growth.workspace",
+      "app_id": "agentsam-app-growth",
+      "route": "/admin/growth",
+      "primary": true,
+      "mount": {
+        "type": "document",
+        "path": "/admin/growth"
+      },
+      "navigation": {
+        "surface": "channels",
+        "label": "Growth",
+        "icon": "growth",
+        "parent": "audience",
+        "order": 10,
+        "key": "growth"
+      }
+    }
+  ]
 }

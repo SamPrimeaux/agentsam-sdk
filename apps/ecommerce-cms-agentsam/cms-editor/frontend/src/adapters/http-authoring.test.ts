@@ -134,6 +134,48 @@ describe('HttpCmsAdapter composition authoring', () => {
     expect(calls.some((call) => call.url.includes('/sections/section_hero/visibility') && call.method === 'POST')).toBe(true);
   });
 
+  it('routes CMS website menu CRUD and revision reads through the site-owned navigation API', async () => {
+    const calls: Call[] = [];
+    const menu = {
+      id: 'menu_main', site_id: 'site-a', handle: 'main', title: 'Main menu',
+      status: 'active', layout: 'links', items: [{ id: 'home', label: 'Home', href: '/' }],
+      groups: [], metadata: {}, read_only: false, created_at: '2026-11-23T08:00:00.000Z',
+      updated_at: '2026-11-23T08:01:00.000Z',
+    };
+    const transport: typeof fetch = async (input, init = {}) => {
+      const url = String(input);
+      const method = String(init.method || 'GET').toUpperCase();
+      const body = typeof init.body === 'string' ? JSON.parse(init.body) : undefined;
+      calls.push({ url, method, body });
+      if (url.includes('/revisions')) return json({ ok: true, revisions: [{ id: 'rev-1', revision_number: 1, revision_kind: 'history', snapshot: {}, created_at: '2026-11-23T08:00:00.000Z' }] });
+      if (method === 'GET') return json({ ok: true, menus: [menu] });
+      if (method === 'POST') return json({ ok: true, menu: { ...menu, id: 'menu_new', ...body } }, 201);
+      if (method === 'PUT') return json({ ok: true, menu: { ...menu, ...body, updated_at: '2026-11-23T08:02:00.000Z' } });
+      if (method === 'DELETE') return json({ ok: true, menu: { ...menu, status: 'archived', updated_at: '2026-11-23T08:03:00.000Z' } });
+      return json({ ok: false, error: 'unexpected_route' }, 404);
+    };
+    const adapter = new HttpCmsAdapter({ transport });
+
+    const listed = await adapter.listNavigationMenus('site-a');
+    expect(listed[0]).toMatchObject({ id: 'menu_main', siteId: 'site-a', handle: 'main', status: 'active' });
+    const created = await adapter.createNavigationMenu('site-a', { handle: 'new', title: 'New', items: [] });
+    expect(created.id).toBe('menu_new');
+    const updated = await adapter.updateNavigationMenu('site-a', 'menu_main', {
+      handle: 'main', title: 'Main menu', status: 'active', items: [{ id: 'home', label: 'Home', href: '/' }],
+      expectedUpdatedAt: menu.updated_at,
+    });
+    expect(updated.updatedAt).toBe('2026-11-23T08:02:00.000Z');
+    const archived = await adapter.archiveNavigationMenu('site-a', 'menu_main', updated.updatedAt);
+    expect(archived.status).toBe('archived');
+    const revisions = await adapter.listNavigationRevisions('site-a', 'menu_main');
+    expect(revisions[0]).toMatchObject({ id: 'rev-1', revisionNumber: 1, revisionKind: 'history' });
+
+    expect(calls.map(call => call.method)).toEqual(['GET', 'POST', 'PUT', 'DELETE', 'GET']);
+    expect(calls.every(call => call.url.includes('site_id=site-a'))).toBe(true);
+    expect((calls[2].body as { expected_updated_at?: string }).expected_updated_at).toBe(menu.updated_at);
+    expect((calls[3].body as { expected_updated_at?: string }).expected_updated_at).toBe(updated.updatedAt);
+  });
+
   it('uses real DELETE routes for sections and blocks', async () => {
     const calls: Call[] = [];
     const transport: typeof fetch = async (input, init = {}) => {

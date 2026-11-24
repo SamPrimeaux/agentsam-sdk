@@ -39,6 +39,58 @@ function seededLegacyCmsDb() {
   return db;
 }
 
+function seededSiteFirstWithLegacyNavigationDb() {
+  const db = seededLegacyCmsDb();
+  db.exec(siteFirstMigration);
+  const siteId = db.prepare("SELECT id FROM cms_sites WHERE account_id='acct-a' AND is_default=1").get().id;
+  db.exec(`
+    DROP TABLE cms_navigation_menus;
+    CREATE TABLE cms_navigation_menus (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      project_slug TEXT NOT NULL,
+      menu_name TEXT NOT NULL,
+      menu_type TEXT NOT NULL,
+      menu_items TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      site_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (site_id) REFERENCES cms_sites(id)
+    );
+    CREATE UNIQUE INDEX idx_cms_navigation_menus_project_name ON cms_navigation_menus(project_id, menu_name);
+    DROP TABLE cms_revisions;
+    CREATE TABLE cms_revisions (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES accounts(id),
+      site_id TEXT NOT NULL,
+      entity_type TEXT NOT NULL CHECK (entity_type IN ('page','section','block','global')),
+      entity_id TEXT NOT NULL,
+      revision_number INTEGER NOT NULL DEFAULT 0,
+      revision_kind TEXT NOT NULL DEFAULT 'current' CHECK (revision_kind IN ('current','history','published','draft','imported')),
+      content_object_key TEXT,
+      content_hash TEXT,
+      snapshot_json TEXT NOT NULL DEFAULT '{}',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (site_id, account_id) REFERENCES cms_sites(id, account_id) ON DELETE CASCADE
+    );
+    INSERT INTO cms_revisions(id,account_id,site_id,entity_type,entity_id,revision_number,revision_kind,snapshot_json,metadata_json)
+      VALUES ('revision-page','acct-a','${siteId}','page','page-a-home',1,'history','{}','{}');
+  `);
+  const insertMenu = db.prepare(`INSERT INTO cms_navigation_menus
+    (id,project_id,project_slug,menu_name,menu_type,menu_items,is_active,site_id)
+    VALUES (?,?,?,?,?,?,?,?)`);
+  insertMenu.run('nav-main','acct-a','acct-a','main','header',JSON.stringify([
+    { key:'home', label:'Home', href:'/' },
+  ]),1,siteId);
+  insertMenu.run('nav-footer','acct-a','acct-a','footer','site_footer',JSON.stringify({
+    schema:'iam.cms.footer-menu.v1',
+    groups:[{key:'company',label:'Company',items:[{key:'about',label:'About',href:'/about'}]}],
+  }),1,siteId);
+  return db;
+}
+
 test("site-first migration preserves existing CMS identities and stored object references", async () => {
   const db = seededLegacyCmsDb();
   try {
@@ -68,7 +120,7 @@ test("site-first migration is idempotent and refuses a partially migrated schema
   try {
     const adapter = wrap(db);
     assert.equal((await migrateCmsSiteFirst(adapter)).migrated, true);
-    assert.deepEqual(await migrateCmsSiteFirst(adapter), { skipped: true, reason: "site_id_already_present" });
+    assert.deepEqual(await migrateCmsSiteFirst(adapter), { skipped: true, reason: "site_first_schema_complete" });
   } finally { db.close(); }
 
   const partial = new DatabaseSync(":memory:");
@@ -91,5 +143,34 @@ test("migration SQL and runner remain one source of truth", async () => {
       const names = database => database.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(row => row.name);
       assert.deepEqual(names(db), names(direct));
     } finally { direct.close(); }
+  } finally { db.close(); }
+});
+
+test("site-first runner upgrades the already-site-scoped production navigation schema in place", async () => {
+  const db = seededSiteFirstWithLegacyNavigationDb();
+  try {
+    const result = await migrateCmsSiteFirst(wrap(db));
+    assert.equal(result.migrated, true);
+    assert.equal(result.migration, 'cms-navigation-runtime');
+    assert.equal(result.navigation.revisionsSeeded, 2);
+    const main = db.prepare("SELECT account_id,site_id,handle,title,items_json,status FROM cms_navigation_menus WHERE id='nav-main'").get();
+    assert.equal(main.account_id, 'acct-a');
+    assert.equal(main.handle, 'main');
+    assert.equal(main.status, 'active');
+    assert.equal(JSON.parse(main.items_json)[0].label, 'Home');
+    const footer = db.prepare("SELECT metadata_json FROM cms_navigation_menus WHERE id='nav-footer'").get();
+    const metadata = JSON.parse(footer.metadata_json);
+    assert.equal(metadata.legacyMenuItems.schema, 'iam.cms.footer-menu.v1');
+    assert.equal(metadata.legacyMenuItems.groups[0].items[0].href, '/about');
+    const revisions = db.prepare("SELECT entity_id,entity_type,revision_kind,snapshot_json FROM cms_revisions WHERE entity_type='navigation' ORDER BY entity_id").all();
+    assert.equal(revisions.length, 2);
+    assert.equal(revisions[0].revision_kind, 'published');
+    const revisionByMenu = new Map(revisions.map(row => [row.entity_id, JSON.parse(row.snapshot_json)]));
+    assert.equal(revisionByMenu.get('nav-footer').layout, 'grouped-footer');
+    assert.equal(revisionByMenu.get('nav-main').layout, 'links');
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_revisions WHERE id='revision-page'").get().n, 1);
+    assert.match(db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='cms_revisions'").get().sql, /'navigation'/);
+    assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+    assert.deepEqual(await migrateCmsSiteFirst(wrap(db)), { skipped: true, reason: 'site_first_schema_complete' });
   } finally { db.close(); }
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolveConsoleFile, servePackagedConsole } from '../backend/worker/packaged-console.js';
-import { canonicalStudioPath, isStudioAdminPath } from '../shared/studio-admin-routes.mjs';
+import { canonicalStudioPath, isStudioAdminPath, isStudioShellAdminPath } from '../shared/studio-admin-routes.mjs';
 import { handleStudioAccountAvatar } from '../backend/worker/studio-user-preferences.js';
 import { studioNavigationProjection } from './studio-navigation.mjs';
 
@@ -84,12 +84,12 @@ test('immutable product sources and packaged shell are the authority', () => {
   }
 
   const app = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
-  assert.match(app, /return \(isApp \|\| isStudioAdminPath\(pathname\)\) \? <PackagedConsoleFrame><AgentSamShell embedded \/><\/PackagedConsoleFrame> : <Outlet \/>/);
+  assert.match(app, /return \(isApp \|\| isStudioShellAdminPath\(pathname\)\) \? <PackagedConsoleFrame><AgentSamShell embedded \/><\/PackagedConsoleFrame> : <Outlet \/>/);
   assert.match(app, /pathname === "\/admin\/home"/);
   for (const file of [
     'frontend/public/admin/host-config.js',
-    'frontend/public/admin/js/shell.js',
-    'frontend/public/ecommerce-cms-agentsam/admin/home.html'
+    '../ecommerce-cms-agentsam/frontend/shell.js',
+
   ]) assert.ok(existsSync(new URL('../' + file, import.meta.url)), file);
 });
 
@@ -103,7 +103,7 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.doesNotMatch(shell, /href: '\/cli'/);
   assert.match(shell, /defaultOpen mobileBreakpoint=\{901\} resizable/);
   assert.doesNotMatch(shell, /defaultOpen peekable/);
-  assert.match(shell, /fetch\('\/admin\/data\/navigation\.json'/);
+  assert.doesNotMatch(shell, /fetch\('\/admin\/data\/navigation\.json'/, 'static manifest data must not bypass account installation checks');
   assert.match(shell, /navigation\.primary/);
   assert.match(shell, /navigation\.channels/);
   assert.match(shell, /navigation\.utilities/);
@@ -157,18 +157,14 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cad'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cli'), false);
   assert.equal(context.NAV.apps.some((item) => item.id === 'ecommerce-cms-agentsam'), false);
-  // Bundled Ecommerce extensions are optional. A missing Growth installation
-  // must not become a hardcoded launcher; if included, its route is stable.
-  const installedGrowth = projection.apps.find((item) => item.id === 'growth');
-  if (installedGrowth) assert.equal(installedGrowth.href, '/admin/growth');
-  else assert.equal(context.NAV.apps.some((item) => item.href === '/admin/growth'), false);
+  // Growth is an Audience child screen, not a second top-level app launcher.
+  const audienceProjection = projection.channels.find((item) => item.id === 'audience');
+  assert.equal(audienceProjection?.children.some(item => item.app_id === 'agentsam-app-growth' && item.href === '/admin/growth'), true);
   assert.equal(context.NAV.main.some((item) => item.id === 'products'), false, 'Products live under Sales channels');
-  assert.equal(context.NAV.main.some((item) => item.id === 'library' || item.id === 'help'), false);
-  const media = context.NAV.main.find((item) => item.id === 'media');
-  assert.equal(media.href, '/admin/media');
-  assert.deepEqual(Array.from(media.children, (entry) => entry.href), [
-    '/admin/media/images', '/admin/media/videos', '/admin/media/models', '/admin/media/files',
-  ]);
+  const library = context.NAV.main.find((item) => item.id === 'library' || item.id === 'media');
+  assert.equal(library.href, '/media');
+  assert.equal(library.label, 'Library');
+  assert.deepEqual(Array.from(library.children, (item) => item.href), ['/media/images','/media/videos','/media/models','/media/files']);
   const analytics = context.NAV.main.find((item) => item.id === 'analytics');
   assert.equal(analytics.href, '/admin/analytics/overview');
   assert.deepEqual(Array.from(analytics.children, (entry) => entry.href), [
@@ -219,7 +215,8 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
   for (const path of ['/admin/agentsam', '/admin/cad', '/admin/moviemode', '/admin/projects']) {
     assert.ok(isStudioAdminPath(path), path);
   }
-  assert.equal(isStudioAdminPath('/admin/products'), false);
+  assert.equal(isStudioAdminPath('/admin/products'), true);
+  assert.equal(isStudioShellAdminPath('/admin/products'), false);
   assert.equal(resolveConsoleFile('/admin/theme-editor'), null, 'retired editor is not a document route');
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /!isStudioAdminPath\(url\.pathname\)/);

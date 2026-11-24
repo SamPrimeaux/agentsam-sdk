@@ -71,6 +71,33 @@ export function verifyAppAuthContract(manifest, opts = {}) {
     }
   }
 
+  const screenIds = new Set();
+  for (const screen of Array.isArray(manifest.screens) ? manifest.screens : []) {
+    if (!screen?.id || screenIds.has(screen.id)) {
+      errors.push('invalid or duplicate screen id: ' + (screen?.id || '(missing)'));
+      continue;
+    }
+    screenIds.add(screen.id);
+    if (typeof screen.route !== 'string' || !screen.route.startsWith('/') || screen.route.startsWith('//')) {
+      errors.push('invalid screen route: ' + screen.route);
+    }
+    if (screen.app_id != null && (typeof screen.app_id !== 'string' || !screen.app_id.trim())) {
+      errors.push('invalid screen app_id: ' + screen.id);
+    }
+    const mountType = screen.mount?.type;
+    if (!['host-component', 'document', 'iframe'].includes(mountType)) {
+      errors.push('invalid screen mount type: ' + screen.id);
+    } else if (mountType === 'host-component' && (!screen.module || !screen.export)) {
+      errors.push('host-component screen requires module and export: ' + screen.id);
+    } else if (mountType === 'document' && !(screen.mount?.path || screen.route)?.startsWith('/')) {
+      errors.push('document screen requires an absolute path: ' + screen.id);
+    }
+    const surface = screen.navigation?.surface;
+    if (surface != null && !['admin-nav', 'channels', 'none'].includes(surface)) {
+      errors.push('invalid navigation surface: ' + screen.id);
+    }
+  }
+
   if (errors.length) return { ok: false, errors };
   return { ok: true, projection, requiredRouteIds: [...REQUIRED_AUTH_ROUTE_IDS] };
 }

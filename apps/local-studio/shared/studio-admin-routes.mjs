@@ -10,6 +10,7 @@ export const STUDIO_ADMIN_MOUNTS = Object.freeze([
   Object.freeze({ id: 'dashboard.root', flat: '/admin', canonical: '/admin/home', exactOnly: true }),
   Object.freeze({ id: 'commerce.home', flat: '/admin/home', canonical: '/admin/home', exactOnly: true }),
   Object.freeze({ id: 'commerce.store', flat: '/admin/store', canonical: '/admin/store', exactOnly: true }),
+  Object.freeze({ id: 'cms.structure', flat: '/structure', canonical: '/admin/structure', exactOnly: true }),
   Object.freeze({ id: 'commerce.checkout-preview', flat: '/admin/onboarding-preview', canonical: '/admin/onboarding-preview', exactOnly: true }),
   Object.freeze({ id: 'creative.moviemode', flat: '/admin/moviemode', canonical: '/admin/moviemode' }),
   Object.freeze({ id: 'agent.cad-compat', flat: '/agentsam/apps/cad', canonical: '/admin/cad' }),
@@ -52,7 +53,7 @@ export const STUDIO_ADMIN_MOUNTS = Object.freeze([
 // Build and serve the same route match. Hydrating HTML serialized for a flat
 // redirect or a parent route can leave TanStack Start with different matches.
 export const STUDIO_ADMIN_PRERENDERED_ROUTES = Object.freeze([
-  "/admin/store", "/admin/onboarding-preview", "/admin/agentsam", "/admin/cad",
+  "/admin/store", "/admin/structure", "/admin/onboarding-preview", "/admin/agentsam", "/admin/cad",
   "/admin/moviemode", "/admin/moviemode/edit", "/admin/projects",
   "/admin/media", "/admin/media/images", "/admin/media/videos",
   "/admin/media/models", "/admin/media/files",

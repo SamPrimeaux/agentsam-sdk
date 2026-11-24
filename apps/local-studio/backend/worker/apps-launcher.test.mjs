@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { listLauncherApps, installNativeAdminApp } from "./apps-launcher.js";
+import { listLauncherApps, listInstalledNavigationPlugins, installNativeAdminApp } from "./apps-launcher.js";
 
 function listDb(rows) {
   const state = { query: "", accountId: "" };
@@ -27,9 +27,31 @@ test("apps launcher lists public applications with per-account installed/enabled
   assert.match(db.state.query, /a\.visibility = 'public'/);
   assert.deepEqual(
     apps.map(row => [row.key, row.installed, row.enabled, row.setup_status]),
-    [["campaign", true, true, "configured"], ["disabled", true, false, "disabled"], ["available", false, false, "not_installed"]],
+    [["campaign", true, true, "screen_unregistered"], ["disabled", true, false, "disabled"], ["available", false, false, "not_installed"]],
   );
-  assert.deepEqual(apps[0].surfaces, ["admin-nav"]);
+  assert.deepEqual(apps[0].surfaces, []);
+  assert.equal(apps[0].screen_status, "manifest_missing");
+});
+
+test("app screens are exposed only when package manifest and catalog screen bindings agree", async () => {
+  const manifestCatalog = [{
+    id: "cad-creator", version: "2.6.18",
+    screens: [
+      { id: "cad-creator.workspace", route: "/admin/cad", navigation: { surface: "admin-nav", label: "CAD Creator" }, mount: { type: "host-component" } },
+      { id: "cad-creator.assets", route: "/admin/cad/assets", navigation: { surface: "admin-nav", label: "CAD Assets" }, mount: { type: "host-component" } },
+    ],
+  }];
+  const db = listDb([{
+    id: "cad-creator", name: "CAD Creator", launch_url: "/admin/old-cad", editor_url: "/cad-creator/",
+    config_json: JSON.stringify({ runtime: { manifest_id: "cad-creator", screen_ids: ["cad-creator.workspace", "cad-creator.assets"] } }),
+    install_id: "ainst_cad", enabled: 1,
+    install_config_json: JSON.stringify({ runtime: { disabled_screen_ids: ["cad-creator.assets"] } }),
+  }]);
+  const [app] = await listLauncherApps(db, "acct_123", manifestCatalog);
+  assert.equal(app.href, "/admin/cad");
+  assert.equal(app.screen_status, "registered");
+  assert.deepEqual(app.screens.map(screen => screen.id), ["cad-creator.workspace"]);
+  assert.deepEqual(app.surfaces, ["admin-nav"]);
 });
 
 test("apps launcher never exposes unsafe launch urls", async () => {
@@ -88,4 +110,36 @@ test("install rejects unknown apps, apps without a safe launch url, bad keys and
   await assert.rejects(() => installNativeAdminApp(db, "acct_a", "../bad"), /app_install_key_invalid/);
   await assert.rejects(() => installNativeAdminApp(db, "", "cad"), /apps_launcher_context_missing/);
   assert.equal(db.writes.length, 0);
+});
+
+test("installed plugin screens resolve from the existing plugin installation config", async () => {
+  const manifestCatalog = [{
+    id: "ecommerce-cms-agentsam", version: "2.6.18",
+    screens: [{
+      id: "growth.workspace", app_id: "agentsam-app-growth", route: "/admin/growth",
+      navigation: { surface: "channels", parent: "audience", label: "Growth", icon: "chart-no-axes-combined" },
+      mount: { type: "document", path: "/admin/growth" },
+    }],
+  }];
+  const rows = [{
+    plugin_key: "agentsam-app-growth", display_name: "Growth", description: "Audience growth tools",
+    icon_url: null,
+    metadata_json: JSON.stringify({ app: { nav: { label: "Growth", href: "/admin/growth", icon: "chart" }, surfaces: ["admin-nav"] } }),
+    enabled: 1, setup_status: "configured",
+    config_json: JSON.stringify({ runtime: { manifest_id: "ecommerce-cms-agentsam", screen_ids: ["growth.workspace"] } }),
+    instance_key: "default", updated_at: 100,
+  }];
+  const db = {
+    prepare(query) {
+      assert.match(query, /agentsam_plugin_installations/);
+      return { bind(accountId) { assert.equal(accountId, "acct_123"); return { all: async () => ({ results: rows }) }; } };
+    },
+  };
+  const plugins = await listInstalledNavigationPlugins(db, "acct_123", manifestCatalog, []);
+  assert.equal(plugins.length, 1);
+  assert.equal(plugins[0].key, "agentsam-app-growth");
+  assert.equal(plugins[0].href, "/admin/growth");
+  assert.deepEqual(plugins[0].surfaces, ["channels"]);
+  assert.deepEqual(plugins[0].screens.map(screen => screen.id), ["growth.workspace"]);
+  assert.equal(plugins[0].screen_status, "registered");
 });

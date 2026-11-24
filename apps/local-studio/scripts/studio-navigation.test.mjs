@@ -5,43 +5,52 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { studioNavigationProjection } from './studio-navigation.mjs';
 
-test('navigation exposes configured installations only and preserves product identity from manifests', () => {
+test('navigation projects only included app screens and preserves host-owned destinations', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'agentsam-navigation-'));
   try {
-    for (const [id, name, version] of [['local-studio', 'Custom host', '9.0.0'], ['cad-creator', 'CAD product', '4.2.1'], ['moviemode', 'Excluded product', '1.0.0']]) {
+    const fixtures = [
+      ['local-studio', 'Custom host', '9.0.0', [{ id: 'local-studio.chat', route: '/admin/agentsam', host_core: true, installation_required: false, navigation: { surface: 'admin-nav', label: 'AgentSam' } }]],
+      ['cad-creator', 'CAD product', '4.2.1', [{ id: 'cad-creator.workspace', route: '/admin/cad', navigation: { surface: 'admin-nav', label: 'CAD Creator' } }]],
+      ['moviemode', 'Excluded product', '1.0.0', [{ id: 'moviemode.editor', route: '/admin/moviemode', navigation: { surface: 'admin-nav', label: 'MovieMode' } }]],
+    ];
+    for (const [id, name, version, screens] of fixtures) {
       const folder = path.join(root, 'apps', id);
       mkdirSync(folder, { recursive: true });
-      writeFileSync(path.join(folder, 'agentsam.app.json'), JSON.stringify({ schema:'agentsam.app.v1', kind:'app', id, name, version, package: '@example/' + id }));
+      writeFileSync(path.join(folder, 'agentsam.app.json'), JSON.stringify({ schema:'agentsam.app.v1', kind:'app', id, name, version, package: '@example/' + id, screens }));
     }
     const host = path.join(root, 'host.json');
     writeFileSync(host, JSON.stringify({ app_id: 'local-studio', included_apps: ['cad-creator'] }));
     const projection = studioNavigationProjection({ repoRoot: root, manifestPath: host });
-    assert.deepEqual(projection.apps.map((app) => app.id), ['local-studio', 'cad-creator']);
-    assert.equal(projection.apps[1].name, 'CAD product');
-    assert.equal(projection.apps[1].version, '4.2.1');
+    assert.deepEqual(projection.apps.map(app => [app.app_id, app.screen_id]), [['local-studio', 'local-studio.chat'], ['cad-creator', 'cad-creator.workspace']]);
+    assert.equal(projection.apps[1].label, 'CAD Creator');
     assert.equal(projection.apps[1].href, '/admin/cad');
-    assert.deepEqual(projection.primary.map((item) => item.id), ['home', 'media', 'analytics', 'tickets']);
-    assert.equal(projection.channels.length, 0, 'A host without Ecommerce must not advertise Online Store');
-    assert.equal(projection.primary.find((item) => item.id === 'media')?.href, '/admin/media');
+    assert.deepEqual(projection.primary.map(item => item.id), ['home', 'library', 'analytics']);
+    assert.deepEqual(projection.work.map(item => item.id), ['projects', 'tickets']);
+    assert.equal(projection.channels.length, 0, 'A host without Ecommerce must not advertise sales channels');
+    assert.equal(projection.primary.find(item => item.id === 'library')?.href, '/media');
     assert.deepEqual(projection.utilities, [], 'Utilities remain under Settings/account instead of global navigation');
     writeFileSync(host, JSON.stringify({ app_id: 'local-studio', included_apps: ['missing-app'] }));
     assert.throws(() => studioNavigationProjection({ repoRoot: root, manifestPath: host }), /has no manifest: missing-app/);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test('global React shell renders primary business destinations before sales channels and installed apps', () => {
+test('global React shell renders primary, Work, sales channels and installed apps in that order', () => {
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
-  const primary = shell.indexOf('...(navigation.primary || []).filter(');
+  const primary = shell.indexOf('...(navigation.primary || []),');
+  const work = shell.indexOf("...(navigation.work?.length ? [{id:'work'");
   const channels = shell.indexOf("...(navigation.channels?.length ? [{id:'sales-channels'");
   const apps = shell.indexOf("{id:'installed-apps',label:'Apps'");
   assert.ok(primary >= 0, 'the primary navigation projection must be rendered');
-  assert.ok(channels > primary, 'sales channels must follow primary destinations');
+  assert.ok(work > primary, 'Work must follow primary destinations');
+  assert.ok(channels > work, 'sales channels must follow Work');
   assert.ok(apps > channels, 'installed apps must follow sales channels');
   const projection = readFileSync(new URL('./studio-navigation.mjs', import.meta.url), 'utf8');
-  assert.match(projection, /id:'media',label:'Library',href:'\/admin\/media',icon:'library'/);
+  assert.match(projection, /id: "library", label: "Library", href: "\/media"/);
+  assert.match(projection, /id: "projects", label: "Projects", href: "\/admin\/projects"/);
   // Settings owns Documentation; Help is not a global destination.
-  assert.doesNotMatch(projection, /id:'help'/);
-  assert.match(projection, /id:'inventory',label:'Inventory',href:'\/admin\/inventory'/);
+  assert.doesNotMatch(projection, /id: "help"/);
+  const manifest = JSON.parse(readFileSync(new URL('../../ecommerce-cms-agentsam/agentsam.app.json', import.meta.url), 'utf8'));
+  assert.equal(manifest.screens.find(screen => screen.id === 'ecommerce-cms-agentsam.inventory')?.route, '/admin/inventory');
 });
 
 test('Ecommerce shell.js legacy rail is replaced by agentsam-nav without a second-nav flash', async () => {
@@ -60,7 +69,7 @@ test('one Products route with Create and bundled Completeful discovered from man
   assert.equal(products?.href, '/admin/products');
   assert.equal(products?.children.filter(item=>item.href === products.href).length, 0);
   assert.equal(products?.children.find(item=>item.id === 'create')?.label, 'Create');
-  assert.equal(data.primary.find(item=>item.id === 'media')?.label, 'Library');
+  assert.equal(data.primary.find(item=>item.id === 'library')?.label, 'Library');
   const supplier = data.apps.find(item=>item.id === 'completeful');
   assert.equal(supplier, undefined, 'Completeful is a provider integration, not a separately installed app');
   assert.ok(data.channels.find(item => item.id === 'audience')?.children.some(item => item.id === 'growth'));

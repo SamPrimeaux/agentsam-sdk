@@ -100,5 +100,26 @@
     "kind": "application",
     "stage": "moviemode",
     "release_status": "bundled-source"
-  }
+  },
+  "screens": [
+    {
+      "id": "moviemode.editor",
+      "app_id": "moviemode",
+      "route": "/admin/moviemode",
+      "primary": true,
+      "module": "routes/(apps)/admin/moviemode.tsx",
+      "export": "MovieModePage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "admin-nav",
+        "label": "MovieMode",
+        "icon": "film",
+        "primary": true,
+        "key": "moviemode"
+      }
+    }
+  ]
 }

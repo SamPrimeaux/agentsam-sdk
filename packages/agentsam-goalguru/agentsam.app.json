@@ -73,5 +73,25 @@
       "login": "identity.login",
       "failure": "identity.recovery"
     }
-  }
+  },
+  "screens": [
+    {
+      "id": "goalguru.workspace",
+      "app_id": "goalguru",
+      "route": "/admin/goalguru",
+      "primary": true,
+      "module": "routes/(apps)/admin/goalguru.tsx",
+      "export": "GoalGuruPage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "admin-nav",
+        "label": "GoalGuru",
+        "icon": "target",
+        "primary": true
+      }
+    }
+  ]
 }

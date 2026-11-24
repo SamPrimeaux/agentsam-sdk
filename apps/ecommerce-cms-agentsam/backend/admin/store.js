@@ -5,8 +5,9 @@
  * Themes → registry/pages data (never fabricated). Analytics → packaged contract.
  */
 
-import { resolveNavConfig, sanitizeNavItems } from "../lib/site-nav.js";
+import { resolveNavConfig } from "../lib/site-nav.js";
 import { resolveCmsSite } from "../cms/site-context.mjs";
+import { loadPrimaryCmsNavigation, upsertPrimaryCmsNavigation } from "../cms/navigation-menus.mjs";
 import { DEFAULT_SITE_STORE_SETTINGS as PACKAGE_STORE_DEFAULTS } from "../cms/site-settings-contract.mjs";
 import { hashPassword, verifyPassword } from "../lib/auth.js";
 import { listStoreThemes } from "./themes.js";
@@ -29,15 +30,14 @@ function unavailableMetric(source = "analytics") {
 }
 
 function publicSettings(settings) {
-  const {
-    storePasswordHash: _h,
-    storePasswordSalt: _s,
-    storePassword: _p,
-    sceneReview: _scene,
-    ...rest
-  } = settings || {};
+  const privateFields = new Set(["storePasswordHash", "storePasswordSalt", "storePassword", "sceneReview"]);
+  const safeSettings = Object.fromEntries(Object.entries(settings || {}).filter(([key, value]) => {
+    if (privateFields.has(key)) return false;
+    // Never expose nested credential material from legacy or future settings.
+    return !(value && typeof value === "object" && !Array.isArray(value) && "passwordHash" in value);
+  }));
   return {
-    ...rest,
+    ...safeSettings,
     hasStorePassword: Boolean(settings?.storePasswordHash),
   };
 }
@@ -94,7 +94,13 @@ async function loadStorePreferences(env, { allowCache = true, ...context } = {})
       const cached = await env.CMS_CACHE.get(cacheKey, "json");
       if (cached && typeof cached === "object" && cached.__ssot === "cms_sites.settings_json.store" &&
           cached.siteId === site.id && cached.settings && typeof cached.settings === "object") {
-        return { ok: true, settings: { ...PACKAGE_STORE_DEFAULTS, ...cached.settings }, source: "cache", site };
+        return {
+          ok: true,
+          settings: { ...PACKAGE_STORE_DEFAULTS, ...cached.settings },
+          navigationItems: await loadPrimaryCmsNavigation(env.DB, site),
+          source: "cache",
+          site,
+        };
       }
     } catch { /* ignore stale or malformed cache */ }
   }
@@ -110,7 +116,7 @@ async function loadStorePreferences(env, { allowCache = true, ...context } = {})
       __ssot: "cms_sites.settings_json.store", siteId: site.id, settings, cached_at: Date.now(),
     })).catch(() => {});
   }
-  return { ok: true, settings, source: "d1", site };
+  return { ok: true, settings, navigationItems: await loadPrimaryCmsNavigation(env.DB, site), source: "d1", site };
 }
 
 async function saveStorePreferences(env, incoming, context = {}) {
@@ -143,9 +149,16 @@ async function saveStorePreferences(env, incoming, context = {}) {
   if (incoming.navBrandAccentLight != null) {
     next.navBrandAccentLight = String(incoming.navBrandAccentLight).slice(0, 32);
   }
+  let navigationItems = loaded.navigationItems ?? null;
   if (incoming.navItems != null) {
-    next.navItems = sanitizeNavItems(incoming.navItems);
-    next.navigationAuthority = "preferences";
+    const requestedItems = Array.isArray(incoming.navItems) ? incoming.navItems : [];
+    const savedNavigation = await upsertPrimaryCmsNavigation(env.DB, loaded.site, requestedItems);
+    if (!savedNavigation.ok) {
+      return { ok: false, error: savedNavigation.error, detail: "The CMS navigation schema must be upgraded before saving menu changes." };
+    }
+    navigationItems = savedNavigation.menu?.items ?? requestedItems;
+    next.navigationAuthority = "cms";
+    delete next.navItems;
   }
   if (incoming.announcementEnabled != null) {
     next.announcementEnabled = incoming.announcementEnabled === true;
@@ -195,7 +208,7 @@ async function saveStorePreferences(env, incoming, context = {}) {
     })).catch(() => {});
   }
 
-  return { ok: true, settings: next };
+  return { ok: true, settings: next, navigationItems };
 }
 
 export async function verifyStorefrontPassword(env, password, context = {}) {
@@ -244,16 +257,6 @@ async function resolveStorePerformance(env) {
 
 export { loadStorePreferences, resolveNavConfig, PACKAGE_STORE_DEFAULTS };
 
-/** Update only the scene review key without rewriting merchant preferences. */
-export async function saveSceneReviewSettings(env, sceneReview, context = {}) {
-  const site = await resolvePreferenceSite(env, context);
-  const result = await env.DB.prepare(
-    "UPDATE cms_sites SET settings_json=json_set(COALESCE(settings_json,'{}'),'$.store.sceneReview',json(?)),updated_at=datetime('now') WHERE id=? AND account_id=?"
-  ).bind(JSON.stringify(sceneReview), site.id, site.account_id).run();
-  if (!(result.meta?.changes > 0)) throw new Error("Store settings could not be saved");
-  if (env.CMS_CACHE) await env.CMS_CACHE.delete(KV_PREFS_KEY(site.id));
-  return true;
-}
 
 
 export async function getStoreNav(env, context = {}) {
@@ -265,7 +268,7 @@ export async function getStoreNav(env, context = {}) {
   };
   return json({
     ok: true,
-    nav: resolveNavConfig(merged),
+    nav: resolveNavConfig({ ...merged, cmsNavigationItems: loaded.navigationItems }),
     site: {
       id: loaded.site.id,
       name: loaded.site.name || null,
@@ -298,6 +301,7 @@ export async function getStorePreferences(env, context = {}) {
     },
     nav: resolveNavConfig({
       ...loaded.settings,
+      cmsNavigationItems: loaded.navigationItems,
       homeTitle: loaded.settings.homeTitle || siteName,
     }),
     settings: publicSettings(loaded.settings),
@@ -350,7 +354,7 @@ export async function postStorePreferences(request, env, context = {}) {
   return json({
     ok: true,
     settings: publicSettings(saved.settings),
-    nav: resolveNavConfig(saved.settings),
+    nav: resolveNavConfig({ ...saved.settings, cmsNavigationItems: saved.navigationItems }),
   });
 }
 

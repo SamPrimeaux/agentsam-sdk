@@ -87,7 +87,7 @@ import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
 import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.js";
 import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
-import { handleStudioNavigation } from "./studio-navigation-preferences.js";
+import { handleStudioNavigation, loadStudioNavigationCatalog } from "./studio-navigation-preferences.js";
 import { listLauncherApps, installNativeAdminApp, removeNativeAdminApp, setNativeAdminAppEnabled, setNativeAdminAppPinned, touchNativeAdminAppOpened } from "./apps-launcher.js";
 import { listBrowserHistory, recordBrowserVisit, removeBrowserHistoryEntry } from "./browser-history.js";
 import { handleAccountWidgetsRequest } from "./account-widgets.js";
@@ -1745,10 +1745,12 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
       const userId = await sessionUser();
       if (!userId) return json({ok:false,error:"unauthorized"},401);
-      try { return json({ok:true,apps:await listLauncherApps(env.DB,userId)}); }
-      catch (error) {
-        console.error("apps_launcher_error",String(error?.message||error));
-        return json({ok:false,error:"apps_launcher_unavailable"},503);
+      try {
+        const hostCatalog = await loadStudioNavigationCatalog(request, env);
+        return json({ok:true,apps:await listLauncherApps(env.DB,userId,hostCatalog.appManifests || [])});
+      } catch (error) {
+        console.error("apps_manifest_catalog_unavailable", String(error?.message || error).slice(0,120));
+        return json({ok:false,error:"apps_manifest_catalog_unavailable"},503);
       }
     }
     if (isAppsInstall) {

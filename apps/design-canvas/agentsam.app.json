@@ -86,5 +86,26 @@
   "distribution": {
     "kind": "app",
     "release_status": "source-release-verified-only"
-  }
+  },
+  "screens": [
+    {
+      "id": "design-canvas.editor",
+      "app_id": "design-canvas",
+      "route": "/admin/canvas",
+      "primary": true,
+      "module": "routes/(apps)/admin/canvas.tsx",
+      "export": "CanvasPage",
+      "mount": {
+        "type": "host-component",
+        "scope": "host"
+      },
+      "navigation": {
+        "surface": "admin-nav",
+        "label": "Design Canvas",
+        "icon": "panels-top-left",
+        "primary": true,
+        "key": "design-canvas"
+      }
+    }
+  ]
 }

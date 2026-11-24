@@ -12,6 +12,7 @@ import {
   saveSiteOwnedSectionDraft, selectOwnedPageSite, findSiteOwnedPage,
 } from "./site-owned-page-adapter.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
+import { listCmsNavigationMenus, createCmsNavigationMenu, updateCmsNavigationMenu, archiveCmsNavigationMenu, listCmsNavigationRevisions } from "./navigation-menus.mjs";
 import { previewMerchantPage, publishMerchantPage } from "./page-publication.mjs";
 import {handleCheckoutPreviewApi} from "./checkout-preview.mjs";
 import {
@@ -2793,6 +2794,58 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     }
     return { scope, canonical: !(await legacyPageLinkMatches(env, scope.page)) };
   };
+
+  const navigationSite = async (selectedSiteId = siteId) => {
+    if (!context.accountId) return { error: json({ ok: false, error: "account_required" }, { status: 403 }) };
+    try {
+      return { site: await resolveCmsSite(env.DB, { accountId: context.accountId, siteId: selectedSiteId || null }) };
+    } catch (error) {
+      return { error: json({ ok: false, error: String(error?.message || error) }, { status: 404 }) };
+    }
+  };
+
+  if (path === "/api/admin/cms/navigation" && method === "GET") {
+    const resolved = await navigationSite(url.searchParams.get("site_id") || siteId);
+    if (resolved.error) return resolved.error;
+    const result = await listCmsNavigationMenus(env.DB, resolved.site);
+    return json(result, { status: result.status || (result.ok ? 200 : 503) });
+  }
+
+  if (path === "/api/admin/cms/navigation" && method === "POST") {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: "invalid_json" }, { status: 400 }); }
+    const resolved = await navigationSite(url.searchParams.get("site_id") || body.site_id || siteId);
+    if (resolved.error) return resolved.error;
+    const result = await createCmsNavigationMenu(env.DB, resolved.site, body);
+    return json(result, { status: result.status || (result.ok ? 201 : 503) });
+  }
+
+  const navigationRevisionsMatch = path.match(/^\/api\/admin\/cms\/navigation\/([a-zA-Z0-9_-]+)\/revisions$/);
+  if (navigationRevisionsMatch && method === "GET") {
+    const resolved = await navigationSite(url.searchParams.get("site_id") || siteId);
+    if (resolved.error) return resolved.error;
+    const result = await listCmsNavigationRevisions(env.DB, resolved.site, navigationRevisionsMatch[1]);
+    return json(result, { status: result.status || (result.ok ? 200 : 503) });
+  }
+
+  const navigationMenuMatch = path.match(/^\/api\/admin\/cms\/navigation\/([a-zA-Z0-9_-]+)$/);
+  if (navigationMenuMatch && method === "PUT") {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: "invalid_json" }, { status: 400 }); }
+    const resolved = await navigationSite(url.searchParams.get("site_id") || body.site_id || siteId);
+    if (resolved.error) return resolved.error;
+    const result = await updateCmsNavigationMenu(env.DB, resolved.site, navigationMenuMatch[1], body);
+    return json(result, { status: result.status || (result.ok ? 200 : 503) });
+  }
+
+  if (navigationMenuMatch && method === "DELETE") {
+    let body = {};
+    try { if (request.headers.get("content-type")?.includes("application/json")) body = await request.json(); } catch { return json({ ok: false, error: "invalid_json" }, { status: 400 }); }
+    const resolved = await navigationSite(url.searchParams.get("site_id") || body.site_id || siteId);
+    if (resolved.error) return resolved.error;
+    const result = await archiveCmsNavigationMenu(env.DB, resolved.site, navigationMenuMatch[1], body.expected_updated_at || url.searchParams.get("expected_updated_at"));
+    return json(result, { status: result.status || (result.ok ? 200 : 503) });
+  }
 
   if (path === "/api/admin/cms/warm" && method === "POST") {
     const { warmAllCmsPages } = await import("./deploy.js");

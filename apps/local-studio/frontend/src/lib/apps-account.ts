@@ -47,16 +47,19 @@ export async function installAccountApp(key: string): Promise<void> {
   await appsRequest("POST", { key });
   await reloadAccountApps();
   if (!appsState.loaded || appsState.error) throw new Error('apps_mutation_applied_unverified');
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('agentsam:apps-changed'));
 }
 export async function removeAccountApp(key: string): Promise<void> {
   await appsRequest("DELETE", { key });
   await reloadAccountApps();
   if (!appsState.loaded || appsState.error) throw new Error('apps_mutation_applied_unverified');
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('agentsam:apps-changed'));
 }
 export async function setAccountAppEnabled(key: string, enabled: boolean): Promise<void> {
   await appsRequest("PATCH", { key, enabled });
   await reloadAccountApps();
   if (!appsState.loaded || appsState.error) throw new Error('apps_mutation_applied_unverified');
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('agentsam:apps-changed'));
 }
 
 const SAFE_APP_HREF = /^\/(?!\/)[\w/%?&=.,#:+~-]*$/;

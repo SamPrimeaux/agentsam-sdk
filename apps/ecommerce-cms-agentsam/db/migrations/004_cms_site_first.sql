@@ -227,7 +227,7 @@ CREATE TABLE cms_revisions__next (
   id               TEXT PRIMARY KEY DEFAULT ('cmsr_' || lower(hex(randomblob(8)))),
   account_id       TEXT NOT NULL REFERENCES accounts(id),
   site_id          TEXT NOT NULL,
-  entity_type      TEXT NOT NULL CHECK (entity_type IN ('page','section','block','global')),
+  entity_type      TEXT NOT NULL CHECK (entity_type IN ('page','section','block','global','navigation')),
   entity_id        TEXT NOT NULL,
   revision_number  INTEGER NOT NULL DEFAULT 0,
   revision_kind    TEXT NOT NULL DEFAULT 'current'
