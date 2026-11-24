@@ -31,7 +31,17 @@ export function makeCredentialRef(input: {
 
 export const VAULT_FORMAT_CANONICAL: "v1-aad";
 export const VAULT_FORMAT_LEGACY_IAM: "hkdf-noaad";
+export const VAULT_FORMAT_UNKNOWN: "unknown";
 export function vaultFormatForMetadata(metadata: unknown): string;
+export function vaultKeyMaterials(
+  env: { VAULT_MASTER_KEY?: unknown; VAULT_KEY?: unknown },
+  format: string,
+): string[];
+export function openVaultRow(
+  env: { VAULT_MASTER_KEY?: unknown; VAULT_KEY?: unknown },
+  row: { secret_value_encrypted: string; metadata_json?: unknown },
+  aad: string,
+): Promise<{ value: string; format: string }>;
 export function openVaultSecret(
   masterKeyMaterials: string | string[],
   packedB64: string,

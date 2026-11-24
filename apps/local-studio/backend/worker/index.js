@@ -5,6 +5,7 @@ import { handleStudioConversationShares, handlePublicConversationShare } from ".
 import { handleStudioQueueObservability } from "./studio-queue-observability.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { serveDesignCanvasAdminRoute } from "./design-canvas-admin-route.js";
+import { decideChatIdentity } from "./studio-chat-gate.js";
 import { resolveStudioSessionUser, resolveStudioAccountIdForUser, guardStudioDocumentSession, guardStudioAdminBoundary } from "./studio-session.js";
 import { serveStudioMerchantStart } from "./studio-merchant-start.js";
 import { resolveStudioGoalsCliAccount } from "./studio-goals-auth.js";
@@ -23,8 +24,9 @@ import { resolveIamIssuer } from "../../../../packages/identity/src/contracts/au
 import {
   importVaultMasterKey,
   encryptVaultSecret,
-  openVaultSecret,
-  vaultFormatForMetadata,
+  openVaultRow,
+  classifyVaultRow,
+  summarizeVaultReport,
   last4 as vaultLast4,
   createProviderRegistry,
   createCredentialResolver,
@@ -290,11 +292,8 @@ async function encryptSecret(env, plaintext, aad) {
 }
 
 async function decryptSecret(env, packedB64, aad, metadataJson = null) {
-  // Format comes from row provenance: AAD-bound rows must open canonically; rows without the
-  // marker are legacy IAM writes (HKDF, no AAD), which may be keyed by VAULT_KEY.
-  const format = vaultFormatForMetadata(metadataJson);
-  const materials = format === "v1-aad" ? [env.VAULT_MASTER_KEY] : [env.VAULT_MASTER_KEY, env.VAULT_KEY];
-  return (await openVaultSecret(materials, packedB64, aad, format)).value;
+  // Provenance and key candidates are decided in agentsam-vault, shared with Studio chat.
+  return (await openVaultRow(env, { secret_value_encrypted: packedB64, metadata_json: metadataJson }, aad)).value;
 }
 
 async function constantTimeSecretEqual(left, right) {
@@ -1970,9 +1969,18 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         (url.pathname === "/api/llm/inventory" && request.method === "GET")
       ) {
         const sid = await sessionUser();
-        if (sid && (request.headers.get("x-user-id") || "").trim() !== sid) {
-          const bound = bindSessionUser(request, sid);
-          if (bound) request = bound;
+        const decision = decideChatIdentity({
+          sessionUserId: sid,
+          bridgeOk: sid ? false : (await requireBridgeKey(request, env)).ok,
+          headerUserId: request.headers.get("x-user-id"),
+        });
+        if (decision.action === "deny") {
+          return json({ ok: false, error: decision.error }, decision.status, vaultCors(request));
+        }
+        if (decision.action === "bind") {
+          const bound = bindSessionUser(request, decision.userId);
+          if (!bound) return json({ ok: false, error: "identity_bind_failed" }, 500, vaultCors(request));
+          request = bound;
         }
       }
 
@@ -2091,6 +2099,33 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
     try {
       // The same D1 service registry that authorizes key creation drives
       // the Settings provider picker. No parallel hardcoded provider list.
+      // Read-only integrity report for this account's own rows. Classification only: no
+      // plaintext, ciphertext, keys or provider validity. Never rewrites a row.
+      if (url.pathname === "/api/vault/diagnostics" && request.method === "GET") {
+        const { results } = await env.DB.prepare(
+          `SELECT id, secret_name, service_name, secret_value_encrypted, metadata_json, is_active, expires_at
+           FROM user_secrets WHERE account_id = ? ORDER BY service_name, created_at LIMIT 500`,
+        ).bind(userId).all();
+        const items = [];
+        for (const row of results || []) {
+          const verdict = await classifyVaultRow(env, row, `${userId}:${row.service_name}:${row.secret_name}`);
+          items.push({
+            id: row.id,
+            service_name: row.service_name,
+            secret_name: row.secret_name,
+            is_active: row.is_active === 1,
+            ...verdict,
+          });
+        }
+        return json({
+          ok: true,
+          account_id: userId,
+          provider_validity: "not_checked",
+          summary: summarizeVaultReport(items),
+          items,
+        }, 200, headers);
+      }
+
       if (url.pathname === "/api/vault/services" && request.method === "GET") {
         const rows = await env.DB.prepare(
           "SELECT service_name, label, kind FROM agentsam_service_registry ORDER BY label, service_name"
