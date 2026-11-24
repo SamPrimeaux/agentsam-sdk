@@ -124,8 +124,9 @@ describe("loadVaultCredentialMap", () => {
     assert.equal(map.has("github"), false);
   });
 
-  it("opens a legacy IAM row only when it lacks the aad_bound marker", async () => {
-    const legacy = await sealLegacyIamOauthToken(MASTER_V1, "sk-legacy-row");
+  it("opens legacy IAM rows only with verified provenance, via MASTER or VAULT_KEY", async () => {
+    const legacyKey = "legacy-env-string";
+    const legacy = await sealLegacyIamOauthToken(legacyKey, "sk-legacy-row");
     const row = (metadata_json: string | null) => ({
       id: "row_legacy",
       secret_name: "api_key:openai:uak_x",
@@ -133,14 +134,18 @@ describe("loadVaultCredentialMap", () => {
       secret_value_encrypted: legacy,
       metadata_json,
     });
-    const load = (r: ReturnType<typeof row>) =>
-      loadVaultCredentialMap({ db: fakeDb([r]), accountId: "au_1", masterKey: MASTER_V1 });
-    assert.equal(
-      (await load(row(JSON.stringify({ migrated_from: "user_api_keys" })))).get("openai")?.value,
-      "sk-legacy-row",
-    );
+    const load = (r: ReturnType<typeof row>, extra: { legacyKey?: string } = {}) =>
+      loadVaultCredentialMap({ db: fakeDb([r]), accountId: "au_1", masterKey: MASTER_V1, ...extra });
+    const verified = JSON.stringify({ migrated_from: "user_api_keys" });
+    // Verified legacy provenance + the legacy key candidate opens it.
+    assert.equal((await load(row(verified), { legacyKey })).get("openai")?.value, "sk-legacy-row");
+    // Without the legacy key candidate it fails closed.
+    assert.equal((await load(row(verified))).has("openai"), false);
+    // Unknown provenance never opens, even with the right key.
+    assert.equal((await load(row(null), { legacyKey })).has("openai"), false);
+    assert.equal((await load(row("{}"), { legacyKey })).has("openai"), false);
     // The same ciphertext claiming to be AAD-bound must not fall back to the unbound format.
-    assert.equal((await load(row(JSON.stringify({ aad_bound: 1 })))).has("openai"), false);
+    assert.equal((await load(row(JSON.stringify({ aad_bound: 1 })), { legacyKey })).has("openai"), false);
   });
 
   it("skips rows that fail to decrypt", async () => {

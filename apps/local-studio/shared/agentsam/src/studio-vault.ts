@@ -12,8 +12,7 @@
 import {
   importVaultMasterKey,
   encryptVaultSecret as encryptWithVaultKey,
-  openVaultSecret,
-  vaultFormatForMetadata,
+  openVaultRow,
 } from "@inneranimalmedia/agentsam-vault/crypto";
 
 export type StudioCredentialSource = "user_vault" | "platform";
@@ -79,9 +78,15 @@ export async function decryptVaultSecret(
   masterKeyMaterial: string,
   /** Row metadata_json; omitted means canonical (AAD-bound), the strict default. */
   metadataJson?: unknown,
+  /** Legacy IAM fallback key (VAULT_KEY); only consulted for verified legacy rows. */
+  legacyKeyMaterial?: string,
 ): Promise<string> {
-  const format = metadataJson === undefined ? "v1-aad" : vaultFormatForMetadata(metadataJson);
-  return (await openVaultSecret(masterKeyMaterial, packedB64, aad, format)).value;
+  const env = { VAULT_MASTER_KEY: masterKeyMaterial, VAULT_KEY: legacyKeyMaterial };
+  const row = {
+    secret_value_encrypted: packedB64,
+    metadata_json: metadataJson === undefined ? { aad_bound: 1 } : metadataJson,
+  };
+  return (await openVaultRow(env, row, aad)).value;
 }
 
 export interface VaultD1Binding {
@@ -118,6 +123,8 @@ export async function loadVaultCredentialMap(options: {
   db: VaultD1Binding;
   accountId: string;
   masterKey: string;
+  /** VAULT_KEY: legacy IAM fallback, used only for verified legacy rows. */
+  legacyKey?: string;
   /** CLOUDFLARE_ACCOUNT_ID only — never a generic ACCOUNT_ID, never au_*. */
   cloudflareAccountId?: string | null;
   rows?: VaultSecretRow[];
@@ -143,7 +150,7 @@ export async function loadVaultCredentialMap(options: {
     if (!ciphertext) continue;
     const aad = vaultAad(accountId, String(row.service_name), String(row.secret_name));
     try {
-      const value = await decryptVaultSecret(ciphertext, aad, masterKey, row.metadata_json ?? null);
+      const value = await decryptVaultSecret(ciphertext, aad, masterKey, row.metadata_json ?? null, options.legacyKey);
       if (!value.trim()) continue;
       const entry: StudioCredential = { value, source: "user_vault" };
       if (providerId === "cloudflare" && cfAccountId) {
@@ -289,6 +296,7 @@ export async function vaultCredentialsForAccount(
       db: bindings.db,
       accountId: owner,
       masterKey,
+      legacyKey: clean(bindings.env.VAULT_KEY) || undefined,
       cloudflareAccountId: clean(bindings.env.CLOUDFLARE_ACCOUNT_ID) || null,
     });
   } catch {

@@ -19,6 +19,10 @@
       "types": "./src/crypto/aes-gcm.d.ts",
       "default": "./src/crypto/aes-gcm.js"
     },
+    "./crypto/classify": {
+      "types": "./src/crypto/classify.d.ts",
+      "default": "./src/crypto/classify.js"
+    },
     "./resolver": "./src/runtime/resolver.js",
     "./oauth": "./src/crypto/oauth-envelope.js",
     "./package.json": "./package.json"

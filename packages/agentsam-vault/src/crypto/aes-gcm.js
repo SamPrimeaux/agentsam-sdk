@@ -112,17 +112,58 @@ export const VAULT_FORMAT_CANONICAL = 'v1-aad';
 export const VAULT_FORMAT_LEGACY_IAM = 'hkdf-noaad';
 const LEGACY_HKDF_INFO = 'iam-vault-v1';
 
-/** @param {unknown} metadata parsed object or JSON string from user_secrets.metadata_json */
+export const VAULT_FORMAT_UNKNOWN = 'unknown';
+
+/**
+ * Format of a row from its persisted provenance (metadata_json). Never guessed:
+ *   crypto_format      explicit and authoritative once a verified migration sets it
+ *   aad_bound          written by a current canonical writer -> v1-aad
+ *   migrated_from      imported legacy IAM row -> hkdf-noaad
+ * Anything else (missing, malformed, unmarked) is `unknown` and fails closed until classified.
+ * @param {unknown} metadata parsed object or JSON string from user_secrets.metadata_json
+ */
 export function vaultFormatForMetadata(metadata) {
   let m = metadata;
   if (typeof m === 'string') {
     try {
       m = JSON.parse(m);
     } catch {
-      m = null;
+      return VAULT_FORMAT_UNKNOWN;
     }
   }
-  return m && (m.aad_bound === true || m.aad_bound === 1) ? VAULT_FORMAT_CANONICAL : VAULT_FORMAT_LEGACY_IAM;
+  if (!m || typeof m !== 'object') return VAULT_FORMAT_UNKNOWN;
+  if (m.crypto_format === VAULT_FORMAT_CANONICAL || m.crypto_format === VAULT_FORMAT_LEGACY_IAM) return m.crypto_format;
+  if (m.aad_bound === true || m.aad_bound === 1) return VAULT_FORMAT_CANONICAL;
+  if (typeof m.migrated_from === 'string' && m.migrated_from.trim()) return VAULT_FORMAT_LEGACY_IAM;
+  return VAULT_FORMAT_UNKNOWN;
+}
+
+/**
+ * The one place that decides which key material may open which format. Canonical rows use
+ * VAULT_MASTER_KEY only; legacy IAM rows were keyed by VAULT_MASTER_KEY || VAULT_KEY.
+ * @param {{ VAULT_MASTER_KEY?: unknown, VAULT_KEY?: unknown }} env
+ */
+export function vaultKeyMaterials(env, format) {
+  const clean = (v) => String(v ?? '').trim();
+  const master = clean(env?.VAULT_MASTER_KEY);
+  if (format === VAULT_FORMAT_CANONICAL) return master ? [master] : [];
+  if (format === VAULT_FORMAT_LEGACY_IAM) return [master, clean(env?.VAULT_KEY)].filter(Boolean);
+  return [];
+}
+
+/**
+ * Open a user_secrets row using its own provenance. Throws on unknown provenance.
+ * @param {{ VAULT_MASTER_KEY?: unknown, VAULT_KEY?: unknown }} env
+ * @param {{ secret_value_encrypted: string, metadata_json?: unknown }} row
+ */
+export async function openVaultRow(env, row, aad) {
+  const format = vaultFormatForMetadata(row?.metadata_json);
+  if (format === VAULT_FORMAT_UNKNOWN) {
+    const err = new Error('VAULT_PROVENANCE_UNKNOWN: row has no verified format marker');
+    err.code = 'vault_provenance_unknown';
+    throw err;
+  }
+  return openVaultSecret(vaultKeyMaterials(env, format), row.secret_value_encrypted, aad, format);
 }
 
 async function deriveHkdfKey(material) {

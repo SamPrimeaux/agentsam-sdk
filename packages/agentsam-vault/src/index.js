@@ -15,6 +15,9 @@ export {
   openVaultSecret,
   probeVaultSecret,
   vaultFormatForMetadata,
+  vaultKeyMaterials,
+  openVaultRow,
+  VAULT_FORMAT_UNKNOWN,
   VAULT_FORMAT_CANONICAL,
   VAULT_FORMAT_LEGACY_IAM,
   last4,
@@ -30,3 +33,5 @@ export {
   unsealOauthToken,
   sealLegacyIamOauthToken,
 } from './crypto/oauth-envelope.js';
+
+export { classifyVaultRow, summarizeVaultReport, VAULT_ROW_STATUS } from './crypto/classify.js';
