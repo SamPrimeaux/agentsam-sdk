@@ -7,6 +7,13 @@ import { fileURLToPath } from 'node:url';
 
 const DEFAULT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
+/** Host-rendered apps do not require a second embedded asset bundle. */
+export function isHostComponentOnlyApp(manifest) {
+  const screens = manifest?.screens;
+  return manifest?.kind === 'app' && Array.isArray(screens) && screens.length > 0 &&
+    screens.every(screen => screen?.mount?.type === 'host-component');
+}
+
 export function listAppManifests(root = DEFAULT_ROOT) {
   const out = [];
   const seen = new Set();

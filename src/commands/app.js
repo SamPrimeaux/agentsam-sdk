@@ -30,7 +30,7 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-import {listAppManifests} from '../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
+import {listAppManifests,isHostComponentOnlyApp} from '../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
 export {listAppManifests};
 
 function resolveApp(id, root = REPO_ROOT) {
@@ -312,9 +312,9 @@ function validateDesktopManifests(root, knownIds, apps = []) {
         );
       }
       const target = apps.find((a) => a.id === bundledId);
-      if (target && !target.manifest.embed?.build) {
+      if (target && !target.manifest.embed?.build && !isHostComponentOnlyApp(target.manifest)) {
         errors.push(
-          `desktop ${name}: included app "${bundledId}" declares no embed.build in its agentsam.app.json`,
+          `desktop ${name}: included app "${bundledId}" declares no embed.build or host-component screen in its agentsam.app.json`,
         );
       }
     }
