@@ -2717,7 +2717,7 @@
       "use_when": [
         "AgentSam settings UI for keys + integrations. Uses agentsam-vault contracts; Kumo-style SensitiveInput primitives."
       ],
-      "version": "2.6.12",
+      "version": "2.6.18",
       "readiness": "unverified"
     },
     {
@@ -3372,7 +3372,7 @@
       "use_when": [
         "AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager."
       ],
-      "version": "2.6.12",
+      "version": "2.6.18",
       "readiness": "unverified"
     },
     {

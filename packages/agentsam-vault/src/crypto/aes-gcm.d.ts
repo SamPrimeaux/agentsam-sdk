@@ -28,3 +28,18 @@ export function makeCredentialRef(input: {
   backend?: string;
   id: string;
 }): string;
+
+export const VAULT_FORMAT_CANONICAL: "v1-aad";
+export const VAULT_FORMAT_LEGACY_IAM: "hkdf-noaad";
+export function vaultFormatForMetadata(metadata: unknown): string;
+export function openVaultSecret(
+  masterKeyMaterials: string | string[],
+  packedB64: string,
+  aad: string,
+  format?: string,
+): Promise<{ value: string; format: string }>;
+export function probeVaultSecret(
+  masterKeyMaterials: string | string[],
+  packedB64: string,
+  aad: string,
+): Promise<{ "v1-aad": boolean; "hkdf-noaad": boolean }>;

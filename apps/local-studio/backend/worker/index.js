@@ -23,7 +23,8 @@ import { resolveIamIssuer } from "../../../../packages/identity/src/contracts/au
 import {
   importVaultMasterKey,
   encryptVaultSecret,
-  decryptVaultSecret,
+  openVaultSecret,
+  vaultFormatForMetadata,
   last4 as vaultLast4,
   createProviderRegistry,
   createCredentialResolver,
@@ -288,9 +289,12 @@ async function encryptSecret(env, plaintext, aad) {
   return encryptVaultSecret(key, plaintext, aad);
 }
 
-async function decryptSecret(env, packedB64, aad) {
-  const key = await importVaultMasterKey(env.VAULT_MASTER_KEY);
-  return decryptVaultSecret(key, packedB64, aad);
+async function decryptSecret(env, packedB64, aad, metadataJson = null) {
+  // Format comes from row provenance: AAD-bound rows must open canonically; rows without the
+  // marker are legacy IAM writes (HKDF, no AAD), which may be keyed by VAULT_KEY.
+  const format = vaultFormatForMetadata(metadataJson);
+  const materials = format === "v1-aad" ? [env.VAULT_MASTER_KEY] : [env.VAULT_MASTER_KEY, env.VAULT_KEY];
+  return (await openVaultSecret(materials, packedB64, aad, format)).value;
 }
 
 async function constantTimeSecretEqual(left, right) {
@@ -626,11 +630,11 @@ function createIdentityCredentialResolver(env) {
       },
       async unwrap(ref) {
         const row = await env.DB.prepare(
-          `SELECT id, account_id, secret_name, service_name, secret_value_encrypted
+          `SELECT id, account_id, secret_name, service_name, secret_value_encrypted, metadata_json
            FROM user_secrets WHERE id = ? AND account_id = ? AND is_active = 1`,
         ).bind(ref, accountId).first();
         if (!row) return null;
-        const value = await decryptSecret(env, row.secret_value_encrypted, `${row.account_id}:${row.service_name}:${row.secret_name}`);
+        const value = await decryptSecret(env, row.secret_value_encrypted, `${row.account_id}:${row.service_name}:${row.secret_name}`, row.metadata_json);
         await env.DB.prepare(
           `UPDATE user_secrets SET last_used_at = unixepoch(), usage_count = COALESCE(usage_count,0) + 1 WHERE id = ?`,
         ).bind(row.id).run();
@@ -654,7 +658,7 @@ async function handleUnwrap(env, accountId, body) {
   if (!secretId) return json({ ok: false, error: "id required" }, 400);
 
   const row = await env.DB.prepare(
-    `SELECT id, secret_name, service_name, secret_value_encrypted, is_active
+    `SELECT id, secret_name, service_name, secret_value_encrypted, metadata_json, is_active
      FROM user_secrets WHERE id = ? AND account_id = ?`,
   )
     .bind(secretId, accountId)
@@ -665,7 +669,7 @@ async function handleUnwrap(env, accountId, body) {
   const aad = `${accountId}:${row.service_name}:${row.secret_name}`;
   let plaintext;
   try {
-    plaintext = await decryptSecret(env, row.secret_value_encrypted, aad);
+    plaintext = await decryptSecret(env, row.secret_value_encrypted, aad, row.metadata_json);
   } catch (err) {
     await audit(env, {
       secret_id: secretId,
@@ -710,22 +714,14 @@ const SERVICE_TO_PROVIDER = Object.freeze(
         const aliases = [p.id];
         if (p.id === "xai") aliases.push("grok");
         if (p.id === "gemini") aliases.push("google");
-        return aliases.map((alias) => [alias, p.id === "xai" ? "grok" : p.id]);
+        return aliases.map((alias) => [alias, p.id]);
       }),
   ),
 );
 
-const INVENTORY_PROVIDER_IDS = Object.freeze([
-  ...new Set(
-    PROVIDER_REGISTRY.list()
-      .filter((p) => p.credential?.kind === "provider_api_key" || p.id === "cloudflare")
-      .map((p) => (p.id === "xai" ? "grok" : p.id)),
-  ),
-]);
-
 async function loadVaultCredentialsForAccount(env, accountId) {
   const { results } = await env.DB.prepare(
-    `SELECT id, secret_name, service_name, secret_value_encrypted
+    `SELECT id, secret_name, service_name, secret_value_encrypted, metadata_json
      FROM user_secrets
      WHERE account_id = ? AND is_active = 1
      ORDER BY updated_at DESC
@@ -740,7 +736,7 @@ async function loadVaultCredentialsForAccount(env, accountId) {
     if (!providerId || byProvider.has(providerId)) continue;
     const aad = `${accountId}:${row.service_name}:${row.secret_name}`;
     try {
-      const value = await decryptSecret(env, row.secret_value_encrypted, aad);
+      const value = await decryptSecret(env, row.secret_value_encrypted, aad, row.metadata_json);
       const entry = { value, source: 'user_vault' };
       if (providerId === 'cloudflare') {
         entry.cloudflare_account_id = env.CLOUDFLARE_ACCOUNT_ID || null;
@@ -762,13 +758,13 @@ async function completefulAccountEnvironment(env, accountId) {
   if (!accountId || !env.DB) return env;
   try {
     const row = await env.DB.prepare(
-      "SELECT secret_name, service_name, secret_value_encrypted FROM user_secrets "
+      "SELECT secret_name, service_name, secret_value_encrypted, metadata_json FROM user_secrets "
       + "WHERE account_id = ? AND service_name = 'completeful' AND is_active = 1 "
       + "ORDER BY updated_at DESC LIMIT 1",
     ).bind(accountId).first();
     if (!row) return { ...env, CAPP_KEY: undefined, COMPLETEFUL_CREDENTIAL_SOURCE: "not_connected" };
     const aad = accountId + ":" + row.service_name + ":" + row.secret_name;
-    const key = await decryptSecret(env, row.secret_value_encrypted, aad);
+    const key = await decryptSecret(env, row.secret_value_encrypted, aad, row.metadata_json);
     return { ...env, CAPP_KEY: key, COMPLETEFUL_CREDENTIAL_SOURCE: "account_vault" };
   } catch (error) {
     // Missing/broken vault must not silently switch to another account's key.
@@ -787,7 +783,7 @@ function platformCredentials(env) {
   put('openai', env.OPENAI_API_KEY);
   put('anthropic', env.ANTHROPIC_API_KEY);
   put('gemini', env.GEMINI_API_KEY);
-  put('grok', env.XAI_API_KEY);
+  put('xai', env.XAI_API_KEY);
   put('cursor', env.CURSOR_API_KEY);
   put('cloudflare', env.CLOUDFLARE_API_TOKEN, {
     cloudflare_account_id: env.CLOUDFLARE_ACCOUNT_ID || null,
@@ -796,6 +792,8 @@ function platformCredentials(env) {
 }
 
 async function handleLlmInventory(env, userId, request) {
+  // Platform/Worker secrets never widen an account's model list unless a caller explicitly
+  // asks (the CMS assistant does); user-facing inventory is the account's own vault.
   const includePlatform = new URL(request.url).searchParams.get('include_platform') === '1';
   const vault = await loadVaultCredentialsForAccount(env, userId);
   const platform = includePlatform ? platformCredentials(env) : new Map();

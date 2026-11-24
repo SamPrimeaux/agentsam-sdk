@@ -1,4 +1,5 @@
 import { describe, it } from "node:test";
+import { sealLegacyIamOauthToken } from "@inneranimalmedia/agentsam-vault";
 import assert from "node:assert/strict";
 import {
   assertInventoryResponseSafe,
@@ -104,6 +105,7 @@ describe("loadVaultCredentialMap", () => {
         vaultAad(accountId, service, name),
         MASTER_V1,
       ),
+      metadata_json: JSON.stringify({ aad_bound: 1, key_version: 1 }),
     });
     const rows = [
       await mk("openai", "default", "sk-user-first"),
@@ -120,6 +122,25 @@ describe("loadVaultCredentialMap", () => {
     assert.equal(map.get("openai")?.source, "user_vault");
     assert.equal(map.get("gemini")?.value, "gemini-user-key");
     assert.equal(map.has("github"), false);
+  });
+
+  it("opens a legacy IAM row only when it lacks the aad_bound marker", async () => {
+    const legacy = await sealLegacyIamOauthToken(MASTER_V1, "sk-legacy-row");
+    const row = (metadata_json: string | null) => ({
+      id: "row_legacy",
+      secret_name: "api_key:openai:uak_x",
+      service_name: "openai",
+      secret_value_encrypted: legacy,
+      metadata_json,
+    });
+    const load = (r: ReturnType<typeof row>) =>
+      loadVaultCredentialMap({ db: fakeDb([r]), accountId: "au_1", masterKey: MASTER_V1 });
+    assert.equal(
+      (await load(row(JSON.stringify({ migrated_from: "user_api_keys" })))).get("openai")?.value,
+      "sk-legacy-row",
+    );
+    // The same ciphertext claiming to be AAD-bound must not fall back to the unbound format.
+    assert.equal((await load(row(JSON.stringify({ aad_bound: 1 })))).has("openai"), false);
   });
 
   it("skips rows that fail to decrypt", async () => {
@@ -145,6 +166,7 @@ describe("loadVaultCredentialMap", () => {
             vaultAad(accountId, "cloudflare", "default"),
             MASTER_V1,
           ),
+          metadata_json: JSON.stringify({ aad_bound: 1 }),
         },
       ]),
       accountId,

@@ -12,7 +12,8 @@
 import {
   importVaultMasterKey,
   encryptVaultSecret as encryptWithVaultKey,
-  decryptVaultSecret as decryptWithVaultKey,
+  openVaultSecret,
+  vaultFormatForMetadata,
 } from "@inneranimalmedia/agentsam-vault/crypto";
 
 export type StudioCredentialSource = "user_vault" | "platform";
@@ -76,9 +77,11 @@ export async function decryptVaultSecret(
   packedB64: string,
   aad: string,
   masterKeyMaterial: string,
+  /** Row metadata_json; omitted means canonical (AAD-bound), the strict default. */
+  metadataJson?: unknown,
 ): Promise<string> {
-  const key = await importVaultMasterKey(masterKeyMaterial);
-  return decryptWithVaultKey(key, packedB64, aad);
+  const format = metadataJson === undefined ? "v1-aad" : vaultFormatForMetadata(metadataJson);
+  return (await openVaultSecret(masterKeyMaterial, packedB64, aad, format)).value;
 }
 
 export interface VaultD1Binding {
@@ -94,9 +97,10 @@ export interface VaultSecretRow {
   secret_name?: unknown;
   service_name?: unknown;
   secret_value_encrypted?: unknown;
+  metadata_json?: unknown;
 }
 
-export const VAULT_SECRETS_QUERY = `SELECT id, secret_name, service_name, secret_value_encrypted
+export const VAULT_SECRETS_QUERY = `SELECT id, secret_name, service_name, secret_value_encrypted, metadata_json
      FROM user_secrets
      WHERE account_id = ? AND is_active = 1
      ORDER BY updated_at DESC
@@ -139,7 +143,7 @@ export async function loadVaultCredentialMap(options: {
     if (!ciphertext) continue;
     const aad = vaultAad(accountId, String(row.service_name), String(row.secret_name));
     try {
-      const value = await decryptVaultSecret(ciphertext, aad, masterKey);
+      const value = await decryptVaultSecret(ciphertext, aad, masterKey, row.metadata_json ?? null);
       if (!value.trim()) continue;
       const entry: StudioCredential = { value, source: "user_vault" };
       if (providerId === "cloudflare" && cfAccountId) {
