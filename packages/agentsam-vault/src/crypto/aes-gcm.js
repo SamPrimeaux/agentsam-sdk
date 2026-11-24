@@ -98,17 +98,32 @@ export async function decryptVaultSecret(key, packedB64, aad) {
 
 
 /**
- * Multi-format opener for user_secrets rows.
+ * Row-format-gated opener for user_secrets.
  *
- * Rows in a shared D1 table can come from more than one writer:
- *   v1-aad       canonical: raw 32-byte `v1.<b64>` key, AAD-bound
- *   v1-noaad     canonical key, no AAD
- *   hkdf-noaad   legacy IAM: HKDF-SHA256(salt=16 zero bytes, info "iam-vault-v1") over the
- *                env string, no AAD (same KDF as the OAuth envelope in oauth-envelope.js)
- *   hkdf-aad     HKDF key, AAD-bound
- * Reads never rewrite rows; the format is reported so callers can decide.
+ * Two formats exist, and a row's format is decided by its provenance, never by trial:
+ *   v1-aad      canonical: raw 32-byte `v1.<b64>` key, AAD = account:service:name.
+ *               Written by every current writer, which marks the row aad_bound.
+ *   hkdf-noaad  legacy IAM: HKDF-SHA256(salt 16 zero bytes, info "iam-vault-v1") over the env
+ *               string, no AAD. Rows without the aad_bound marker (migrated user_api_keys
+ *               rows and older IAM-written rows).
+ * A canonical row is never opened without its AAD. Unknown/failed rows throw.
  */
+export const VAULT_FORMAT_CANONICAL = 'v1-aad';
+export const VAULT_FORMAT_LEGACY_IAM = 'hkdf-noaad';
 const LEGACY_HKDF_INFO = 'iam-vault-v1';
+
+/** @param {unknown} metadata parsed object or JSON string from user_secrets.metadata_json */
+export function vaultFormatForMetadata(metadata) {
+  let m = metadata;
+  if (typeof m === 'string') {
+    try {
+      m = JSON.parse(m);
+    } catch {
+      m = null;
+    }
+  }
+  return m && (m.aad_bound === true || m.aad_bound === 1) ? VAULT_FORMAT_CANONICAL : VAULT_FORMAT_LEGACY_IAM;
+}
 
 async function deriveHkdfKey(material) {
   const base = await crypto.subtle.importKey('raw', enc.encode(material), 'HKDF', false, ['deriveKey']);
@@ -129,55 +144,61 @@ async function openPacked(key, packedB64, aad) {
   return dec.decode(await crypto.subtle.decrypt(params, key, packed.slice(12)));
 }
 
-async function vaultOpenAttempts(masterKeyMaterial, aad) {
-  const raw = String(masterKeyMaterial || '').trim();
-  if (!raw) throw new Error('VAULT_MASTER_KEY_MISSING');
-  const attempts = [];
-  try {
-    const k = await importVaultMasterKey(raw);
-    attempts.push(['v1-aad', k, aad], ['v1-noaad', k, null]);
-  } catch {
-    /* not a v1 key; legacy derivations below may still apply */
-  }
-  const materials = raw.startsWith('v1.') ? [raw, raw.slice(3)] : [raw];
-  for (const m of materials) {
-    const k = await deriveHkdfKey(m);
-    attempts.push(['hkdf-noaad', k, null], ['hkdf-aad', k, aad]);
-  }
-  return attempts;
+function materialList(materials) {
+  return [...new Set((Array.isArray(materials) ? materials : [materials]).map((m) => String(m || '').trim()).filter(Boolean))];
 }
 
-/**
- * @param {string} masterKeyMaterial
- * @param {string} packedB64
- * @param {string} aad canonical AAD (`accountId:service:secretName`)
- * @returns {Promise<{ value: string, format: string }>}
- */
-export async function openVaultSecret(masterKeyMaterial, packedB64, aad) {
-  for (const [format, key, a] of await vaultOpenAttempts(masterKeyMaterial, aad)) {
-    try {
-      return { value: await openPacked(key, packedB64, a), format };
-    } catch {
-      /* try next format */
+async function openAs(format, materials, packedB64, aad) {
+  const list = materialList(materials);
+  if (!list.length) throw new Error('VAULT_MASTER_KEY_MISSING');
+  if (format === VAULT_FORMAT_CANONICAL) {
+    return openPacked(await importVaultMasterKey(list[0]), packedB64, aad);
+  }
+  if (format !== VAULT_FORMAT_LEGACY_IAM) throw new Error(`VAULT_FORMAT_UNKNOWN: ${format}`);
+  // Legacy IAM keyed off the literal env string; also accept it without the `v1.` prefix.
+  for (const material of list) {
+    for (const m of material.startsWith('v1.') ? [material, material.slice(3)] : [material]) {
+      try {
+        return await openPacked(await deriveHkdfKey(m), packedB64, null);
+      } catch {
+        /* next candidate */
+      }
     }
   }
-  const err = new Error('VAULT_DECRYPT_FAILED: no known format/key/AAD combination opens this row');
-  err.code = 'vault_decrypt_failed';
-  throw err;
+  throw new Error('VAULT_DECRYPT_FAILED');
 }
 
 /**
- * Diagnostic: which formats open this row. Never returns plaintext.
- * @returns {Promise<Record<string, boolean>>}
+ * @param {string | string[]} masterKeyMaterials canonical uses the first; legacy tries all
+ * @param {string} packedB64
+ * @param {string} aad canonical AAD (`accountId:service:secretName`)
+ * @param {string} format VAULT_FORMAT_CANONICAL | VAULT_FORMAT_LEGACY_IAM (see vaultFormatForMetadata)
+ * @returns {Promise<{ value: string, format: string }>}
  */
-export async function probeVaultSecret(masterKeyMaterial, packedB64, aad) {
+export async function openVaultSecret(masterKeyMaterials, packedB64, aad, format = VAULT_FORMAT_CANONICAL) {
+  try {
+    return { value: await openAs(format, masterKeyMaterials, packedB64, aad), format };
+  } catch (cause) {
+    const err = new Error(`VAULT_DECRYPT_FAILED: row did not open as ${format}`);
+    err.code = 'vault_decrypt_failed';
+    err.format = format;
+    err.cause = cause;
+    throw err;
+  }
+}
+
+/**
+ * Diagnostic: which of the two known formats open this row. Never returns plaintext.
+ * @returns {Promise<{ 'v1-aad': boolean, 'hkdf-noaad': boolean }>}
+ */
+export async function probeVaultSecret(masterKeyMaterials, packedB64, aad) {
   const out = {};
-  for (const [format, key, a] of await vaultOpenAttempts(masterKeyMaterial, aad)) {
+  for (const format of [VAULT_FORMAT_CANONICAL, VAULT_FORMAT_LEGACY_IAM]) {
     try {
-      await openPacked(key, packedB64, a);
+      await openAs(format, masterKeyMaterials, packedB64, aad);
       out[format] = true;
     } catch {
-      out[format] ??= false;
+      out[format] = false;
     }
   }
   return out;

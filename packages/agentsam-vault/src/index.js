@@ -14,6 +14,9 @@ export {
   decryptVaultSecret,
   openVaultSecret,
   probeVaultSecret,
+  vaultFormatForMetadata,
+  VAULT_FORMAT_CANONICAL,
+  VAULT_FORMAT_LEGACY_IAM,
   last4,
   makeCredentialRef,
 } from './crypto/aes-gcm.js';
