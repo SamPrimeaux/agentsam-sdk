@@ -258,7 +258,6 @@ async function resolveStorePerformance(env) {
 export { loadStorePreferences, resolveNavConfig, PACKAGE_STORE_DEFAULTS };
 
 
-
 export async function getStoreNav(env, context = {}) {
   const loaded = await loadStorePreferences(env, context);
   if (!loaded.ok) return json({ ok: false, error: loaded.error }, { status: 503 });

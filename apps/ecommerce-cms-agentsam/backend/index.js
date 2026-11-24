@@ -20,9 +20,7 @@ import { decorateProductPage } from "./store/product-seo.js";
 import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
 import { handleStudioCmsBridge } from "./cms/studio-bridge.js";
-import { collectionScope } from "./cms/collection-store.mjs";
 import { handleCmsWarmInternal } from "./cms/deploy.js";
-import { handleSceneReview } from "./admin/scene-review.js";
 import { handlePublicSearchDiscovery } from "./store/search-discovery.js";
 import {
   serveStorefrontPage,
@@ -273,25 +271,9 @@ export default {
     if (path.startsWith("/api/internal/studio-cms/")) {
       return noStore(await handleStudioCmsBridge(request, env));
     }
-    if (path === "/api/admin/scene-review") {
-      const user = await getSessionUser(request, env);
-      if (!user) return noStore(Response.json({ error: "Unauthorized" }, { status: 401 }));
-      if (request.method !== "GET" && !["admin", "owner"].includes(user.role)) {
-        return noStore(Response.json({ error: "Not authorized to change review access" }, { status: 403 }));
-      }
-      let scope;
-      try { scope = await collectionScope(env, { accountId: user.account_id, siteId: url.searchParams.get("site_id") }); }
-      catch (error) { return noStore(Response.json({ error: String(error.message || error) }, { status: 409 })); }
-      return noStore(await handleSceneReview(request, { ...env, CMS_SITE_CONTEXT: scope }, url,
-        { accountId: user.account_id, siteId: scope.id }));
-    }
     if (path.startsWith("/api/admin/")) {
       return noStore(await handleAdminApi(request, env, url, ctx));
     }
-    if (path === "/review/bridge-fly" || path.startsWith("/review/bridge-fly/")) {
-      return noStore(await handleSceneReview(request, env, url, { hostname: url.hostname }));
-    }
-
     if (path.startsWith("/media/")) {
       return handleMediaServe(request, env, path.slice("/media/".length));
     }

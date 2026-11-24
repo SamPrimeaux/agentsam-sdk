@@ -134,3 +134,19 @@ test("store overview uses the selected site's domain and only its CMS pages", as
     assert.deepEqual(campaign.pages.map(page => page.slug), ["home"]);
   } finally { db.close(); }
 });
+
+test("store preferences never expose nested password hashes from legacy settings", async () => {
+  const db = createCmsTestDb();
+  try {
+    db.prepare("INSERT INTO accounts(id) VALUES ('merchant')").run();
+    const DB = d1(db);
+    const site = await ensureDefaultCmsSite(DB, "merchant");
+    db.prepare("UPDATE cms_sites SET settings_json=json_set(settings_json,'$.store.legacyReview',json(?)) WHERE id=?")
+      .run(JSON.stringify({ enabled: true, passwordHash: "must-not-leak", updatedAt: "2026-11-23" }), site.id);
+
+    const response = await getStorePreferences({ DB }, { accountId: "merchant", siteId: site.id });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.settings.legacyReview, undefined);
+  } finally { db.close(); }
+});
