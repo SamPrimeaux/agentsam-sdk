@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -24,4 +24,28 @@ test('nested Studio source packages do not request unpublished SDK workspaces fr
       assert.equal(JSON.parse(readFileSync(packagePath, 'utf8')).name, name);
     }
   }
+});
+
+// Vite aliases and root workspace hoisting must not mask backend dependencies.
+test('Studio backend declares every directly imported first-party package', () => {
+  const backend = resolve(root, 'apps/local-studio/backend');
+  const manifest = load('apps/local-studio/backend/package.json');
+  const declared = new Set(Object.keys(manifest.dependencies ?? {}));
+  const missing = [];
+  function visit(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = resolve(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!['node_modules', 'fixtures', 'test', 'tests', 'dist', '.output'].includes(entry.name)) visit(path);
+      } else if (/\.(?:[cm]?js|tsx?)$/.test(entry.name) && !/\.test\./.test(entry.name)) {
+        const source = readFileSync(path, 'utf8');
+        for (const match of source.matchAll(/(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)["'](@inneranimalmedia\/[^/"']+)(?:\/[^"']*)?["']/g)) {
+          if (!declared.has(match[1])) missing.push(`${path.slice(backend.length + 1)}: ${match[1]}`);
+        }
+      }
+    }
+  }
+  visit(resolve(backend, 'worker'));
+  visit(resolve(backend, 'server'));
+  assert.deepEqual([...new Set(missing)].sort(), [], 'Backend imports must resolve through its own dependency manifest');
 });

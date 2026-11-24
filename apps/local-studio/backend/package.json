@@ -8,8 +8,12 @@
     "test": "node --test worker/account-widgets.test.mjs worker/studio-new-tab-preferences.test.mjs worker/agentsam-forms.test.mjs worker/apps-launcher.test.mjs worker/apps-launcher-lifecycle.test.mjs worker/browser-history.test.mjs worker/browser-trust.test.mjs worker/plugin-side-stages.test.mjs worker/design-canvas-unified.test.mjs worker/public-site.test.mjs worker/public-sitemap.test.mjs worker/work-library-resources.test.mjs worker/samspeaks-runtime.test.mjs"
   },
   "dependencies": {
+    "@inneranimalmedia/agentsam-analytics": "file:../../../packages/agentsam-analytics",
+    "@inneranimalmedia/agentsam-cms": "file:../../../packages/agentsam-cms",
+    "@inneranimalmedia/agentsam-local-shared": "file:../shared/agentsam",
     "@inneranimalmedia/agentsam-sdk": "2.6.17",
-    "@inneranimalmedia/agentsam-work": "file:../../../packages/agentsam-work"
+    "@inneranimalmedia/agentsam-work": "file:../../../packages/agentsam-work",
+    "@inneranimalmedia/financial-analytics": "file:../../../packages/financial-analytics"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",
