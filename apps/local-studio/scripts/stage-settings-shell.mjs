@@ -41,6 +41,8 @@ const studioApps = [
 ];
 for (const pathname of studioApps) {
   const requestUrl = new URL(pathname, 'https://agentsam.inneranimalmedia.com');
+  // The path registry is also used for request matching; only the SSR request needs a scope.
+  if (requestUrl.pathname === '/admin/structure') requestUrl.searchParams.set('scope', 'website');
   const route = requestUrl.pathname.replace(/^\/(?:admin\/)?/, '');
   const rendered=await nitro.fetch(new Request(requestUrl),{},{
     waitUntil(){},passThroughOnException(){},

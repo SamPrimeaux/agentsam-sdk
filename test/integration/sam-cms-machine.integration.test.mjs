@@ -35,7 +35,7 @@ test('SDK CMS machine: host-repository lifecycle, revisions, schema validation, 
     const filename=path.join(root,'data.sqlite');
     db=await createCmsMemoryRepository({namespace:filename});
     const osRuntime=createSamOS({core:false,cms:cmsOptions(db)});
-    assert.equal(osRuntime.status().available.length,25);
+    assert.equal(osRuntime.status().available.length,27);
     const sam=new AgentSamClient({os:osRuntime});
     const invoke=(id,input)=>sam.invoke(id,input);
     assert.equal((await sam.describe('cms.component.update')).ok,true);
@@ -206,7 +206,7 @@ test('old section/block operation names execute canonical SDK machinery without 
     const permitted=osRuntime.list().map(x=>x.id);
     const adapter=createSamCapabilityAdapter({os:osRuntime,expose:permitted,authorize:async()=>true});
     const names=adapter.toolDescriptors().map(x=>x.name);
-    assert.equal(names.length,13,'only canonical CMS operations should be in model tools');
+    assert.equal(names.length,15,'only canonical CMS operations should be in model tools');
     assert.ok(!names.includes('cms.section.updateDraft'));
     assert.ok(names.includes('cms.component.update'));
   }finally{db?.close();await rm(dir,{recursive:true,force:true});}
@@ -223,7 +223,7 @@ test('generated-v2 detects all existing portable CMS operations instead of false
     }});
     const missing=osRuntime.status().generated_unavailable.filter(x=>x.name.startsWith('cms.'));
     assert.deepEqual(missing,[],'real CMS authority must not be misclassified unbound');
-    assert.equal(osRuntime.list().filter(x=>x.id.startsWith('cms.')).length,25);
+    assert.equal(osRuntime.list().filter(x=>x.id.startsWith('cms.')).length,27);
     const result=await new AgentSamClient({os:osRuntime}).invoke('cms.definition.list',{});
     assert.equal(result.ok,true,JSON.stringify(result.error));
     const aliases=osRuntime.list().filter(x=>x.id.startsWith('cms.')&&x.model_visible===false);

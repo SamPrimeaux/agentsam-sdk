@@ -21,8 +21,8 @@ test('package runs with an injected host repository without SQL',async()=>{
   try{
     db=await createCmsMemoryRepository();
     const operations=makeOperations({repository:db});
-    assert.equal(CMS_OPERATION_CONTRACTS.length,13);
-    assert.equal(operations.length,25);
+    assert.equal(CMS_OPERATION_CONTRACTS.length,15);
+    assert.equal(operations.length,27);
     const byName=new Map(operations.map(o=>[o.id,o]));
     const created=await byName.get('cms.page.createDraft').handler({pageId:'home',title:'Home',slug:'home'},{});
     assert.equal(created.version,1);
@@ -34,7 +34,11 @@ test('package runs with an injected host repository without SQL',async()=>{
 });
 
 test('CMS operation declarations use shared portable metadata and keep CMS effects local',()=>{
-  assert.equal(CMS_OPERATION_CONTRACTS.length,13);
+  assert.equal(CMS_OPERATION_CONTRACTS.length,15);
+  const navList=CMS_OPERATION_CONTRACTS.find(contract=>contract.id==='cms.navigation.list');
+  const navSave=CMS_OPERATION_CONTRACTS.find(contract=>contract.id==='cms.navigation.save');
+  assert.equal(navList.effect,'read');
+  assert.equal(navSave.effect,'draft_update');
   const inspect=CMS_OPERATION_CONTRACTS.find(contract=>contract.id==='cms.resource.inspect');
   assert.equal(inspect.module,'cms');
   assert.equal(inspect.capabilities[0],'cms.resource.read');

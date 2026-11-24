@@ -53,7 +53,7 @@ export const STUDIO_ADMIN_MOUNTS = Object.freeze([
 // Build and serve the same route match. Hydrating HTML serialized for a flat
 // redirect or a parent route can leave TanStack Start with different matches.
 export const STUDIO_ADMIN_PRERENDERED_ROUTES = Object.freeze([
-  "/admin/store", "/admin/structure?scope=website", "/admin/onboarding-preview", "/admin/agentsam", "/admin/cad",
+  "/admin/store", "/admin/structure", "/admin/onboarding-preview", "/admin/agentsam", "/admin/cad",
   "/admin/moviemode", "/admin/moviemode/edit", "/admin/projects",
   "/admin/media", "/admin/media/images", "/admin/media/videos",
   "/admin/media/models", "/admin/media/files",

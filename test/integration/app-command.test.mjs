@@ -73,7 +73,11 @@ test('included_apps are buildable by the generic host builder (no hardcoded per-
   );
   const byId = new Map(listAppManifests().map((row) => [row.id, row]));
   for (const id of desktop.included_apps) {
-    assert.ok(byId.get(id)?.manifest.embed?.build, `${id} must declare embed.build in its agentsam.app.json`);
+    const manifest = byId.get(id)?.manifest;
+    assert.ok(manifest, id + ' must resolve to an app manifest');
+    const hostOnly = manifest.kind === 'app' && Array.isArray(manifest.screens) &&
+      manifest.screens.length > 0 && manifest.screens.every(screen => screen.mount?.type === 'host-component');
+    assert.ok(manifest.embed?.build || hostOnly, id + ' must declare an embed build or host-component screens');
   }
 });
 

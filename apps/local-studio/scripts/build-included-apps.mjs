@@ -36,7 +36,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { gzipSync } from 'node:zlib';
-import { listAppManifests } from '../../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
+import { listAppManifests, isHostComponentOnlyApp } from '../../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const LOCAL_STUDIO = path.resolve(HERE, '..');
@@ -116,8 +116,7 @@ export function planIncludedApps({
     const embed = app.manifest.embed;
     if (!embed || !embed.build) {
       const screens = Array.isArray(app.manifest.screens) ? app.manifest.screens : [];
-      const hostComponentOnly = app.type === 'app' && screens.length > 0 &&
-        screens.every((screen) => screen?.mount?.type === 'host-component');
+      const hostComponentOnly = app.type === 'app' && isHostComponentOnlyApp(app.manifest);
       if (hostComponentOnly) {
         hostApps.push({ id, kind: app.type, screens: screens.map((screen) => screen.id) });
         continue;
