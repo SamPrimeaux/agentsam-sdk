@@ -3,6 +3,7 @@ import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { listPagesAdmin, createPageAdmin, getPageAdminForSite, updatePageMetaForSite } from "../backend/cms/api.js";
 import { cmsPageStorageMode } from "../backend/cms/page-inventory.mjs";
+import { readCanonicalComposition } from "../backend/cms/canonical-composition.mjs";
 
 function d1(sqlite) {
   return {
@@ -60,6 +61,10 @@ function fixture() {
       section_key TEXT,section_type TEXT,section_name TEXT,section_data TEXT,
       sort_order INTEGER DEFAULT 0,is_visible INTEGER DEFAULT 1,
       r2_bucket TEXT, draft_r2_key TEXT, published_r2_key TEXT, content_hash TEXT, updated_at TEXT
+    );
+    CREATE TABLE cms_section_blocks (
+      id TEXT PRIMARY KEY, account_id TEXT, section_id TEXT, parent_block_id TEXT,
+      block_key TEXT, block_type TEXT, sort_order INTEGER, status TEXT, content_json TEXT
     );
     CREATE TABLE cms_revisions (
       account_id TEXT, site_id TEXT, entity_type TEXT, entity_id TEXT, revision_number INTEGER,
@@ -144,5 +149,38 @@ test("legacy project columns are detected and page creation is gated until migra
     assert.equal(blocked.status, 503);
     assert.equal(blocked.error, "cms_site_identity_migration_required");
     assert.equal(sql.prepare("SELECT COUNT(*) n FROM cms_pages WHERE site_id='s-a'").get().n, 1);
+  } finally { sql.close(); }
+});
+
+
+test("production composition uses owned site schema, real R2 drafts and nested blocks without seeding", async () => {
+  const sql = fixture();
+  try {
+    sql.exec(`UPDATE cms_page_sections SET draft_r2_key='draft/hero-a.json',r2_bucket='cms' WHERE id='hero-a';
+      INSERT INTO cms_section_blocks VALUES
+        ('ba','alice','hero-a',NULL,'heading','text',0,'active','{"text":"Saved block"}'),
+        ('child','alice','hero-a','ba','child','text',1,'active','{"text":"Nested"}'),
+        ('foreign','bob','hero-a',NULL,'foreign','text',2,'active','{}');
+      INSERT INTO cms_revisions(account_id,site_id,entity_type,entity_id,revision_number) VALUES ('alice','s-a','section','hero-a',4);`);
+    const env = { DB: d1(sql), CMS_CONTENT: { async get(key) {
+      assert.equal(key,'draft/hero-a.json');
+      return { async text() { return JSON.stringify({headline:'Authored R2 content'}); } };
+    } } };
+    const composition=await readCanonicalComposition(env,'alice','home','s-a');
+    assert.equal(composition.page.id,'pa');
+    const hero=composition.sections.find(s=>s.id==='hero-a');
+    assert.equal(hero.type,'hero');
+    assert.equal(hero.settings.headline,'Authored R2 content');
+    assert.equal(hero.contentObjectKey,'draft/hero-a.json');
+    assert.equal(hero.contentBucket,'cms');
+    assert.equal(hero.contentVersion,4);
+    assert.equal(hero.blocks.length,1);
+    assert.equal(hero.blocks[0].children[0].settings.text,'Nested');
+    assert.equal(composition.sections.find(s=>s.id==='hidden-a').status,'hidden');
+    await assert.rejects(readCanonicalComposition(env,'bob','home','s-a'),/cms_site_not_found/);
+    const missing=await readCanonicalComposition({...env,CMS_CONTENT:{get:async()=>null}},'alice','home','s-a');
+    assert.equal(missing.sections.find(s=>s.id==='hero-a').readOnly,true);
+    assert.equal(await readCanonicalComposition(env,'alice','site','s-empty'),null);
+    assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM cms_pages WHERE site_id='s-empty'").get().n,0);
   } finally { sql.close(); }
 });

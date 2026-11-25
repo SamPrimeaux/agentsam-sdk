@@ -9,7 +9,7 @@ import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
 import {
   getSiteOwnedPage, createSiteOwnedPage, updateSiteOwnedPage,
-  saveSiteOwnedSectionDraft, selectOwnedPageSite, findSiteOwnedPage,
+  saveSiteOwnedSectionDraft, selectOwnedPageSite, findSiteOwnedPage, editSiteOwnedSectionStructure,
 } from "./site-owned-page-adapter.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
 import { listCmsNavigationMenus, createCmsNavigationMenu, updateCmsNavigationMenu, archiveCmsNavigationMenu, listCmsNavigationRevisions } from "./navigation-menus.mjs";
@@ -1012,6 +1012,7 @@ async function insertCanonicalPageSection(env, scope, body = {}) {
 }
 
 async function updateCanonicalPageSection(env, scope, sectionKey, body = {}) {
+  if (scope.siteOwned) return saveSiteOwnedSectionDraft(env,scope.site.account_id,scope.page.slug,scope.site.id,scope.page.id,sectionKey,body);
   if (!env.WEBSITE_ASSETS) return { error: "CMS R2 storage is not available", status: 503 };
   const row = await env.DB.prepare(
     "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
@@ -1151,11 +1152,21 @@ async function removeCanonicalPageSection(env, scope, sectionKey) {
 }
 
 async function canonicalEditableSection(env, scope, sectionKey) {
-  const row = await env.DB.prepare(
-    "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
-  ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
-  if (!row) return { error: "Section not found", status: 404 };
-  const content = await canonicalSectionContent(env, row);
+  let row, content;
+  if(scope.siteOwned) {
+    const result=await getSiteOwnedPage(env,scope.site.account_id,scope.page.slug,scope.site.id,scope.page.id);
+    const section=result?.page?.sections?.find(s=>s.key===sectionKey || s.id===sectionKey);
+    if(!section)return {error:'cms_section_not_found',status:404};
+    if(section.source_error)return {error:section.source_error,status:409};
+    row={id:section.id,content_version:section.version};
+    content=structuredClone(section.content);
+  } else {
+    row = await env.DB.prepare(
+      "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
+    ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
+    if (!row) return { error: "Section not found", status: 404 };
+    content = await canonicalSectionContent(env, row);
+  }
   const themePreset = String(content.__editor?.themePreset || "");
   const templateKey = String(content.__editor?.templateKey || "");
   const definition = templateKey === "portable"
@@ -2795,6 +2806,17 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return { scope, canonical: !(await legacyPageLinkMatches(env, scope.page)) };
   };
 
+  const blockPageMode = async (slug) => {
+    if (!['site-owned','site-owned-legacy'].includes(await cmsPageStorageMode(env.DB))) return pageMode(slug);
+    if (!context.accountId || !siteId) return {error:'cms_site_required',status:400};
+    try {
+      const site=await selectOwnedPageSite(env,context.accountId,siteId);
+      const page=await findSiteOwnedPage(env,site,slug,pageId);
+      if(!page)return {error:'cms_page_not_found',status:404};
+      return {canonical:true,scope:{site,page,siteOwned:true}};
+    } catch(e) { return {error:String(e.message||e),status:404}; }
+  };
+
   const navigationSite = async (selectedSiteId = siteId) => {
     if (!context.accountId) return { error: json({ ok: false, error: "account_required" }, { status: 403 }) };
     try {
@@ -3347,6 +3369,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       /* optional body */
     }
+    if (["site-owned","site-owned-legacy"].includes(await cmsPageStorageMode(env.DB))) {
+      const result=await editSiteOwnedSectionStructure(env,context.accountId,m[1],siteId,pageId,m[2],"duplicate",body);
+      return json(result,{status:result.status||(result.ok?200:400)});
+    }
     const mode = await pageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical
@@ -3364,6 +3390,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
+    if (["site-owned","site-owned-legacy"].includes(await cmsPageStorageMode(env.DB))) {
+      const result=await editSiteOwnedSectionStructure(env,context.accountId,m[1],siteId,pageId,m[2],"move",body);
+      return json(result,{status:result.status||(result.ok?200:400)});
+    }
     const mode = await pageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical
@@ -3380,6 +3410,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
       body = await request.json();
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    if (["site-owned","site-owned-legacy"].includes(await cmsPageStorageMode(env.DB))) {
+      const result=await editSiteOwnedSectionStructure(env,context.accountId,m[1],siteId,pageId,m[2],"visibility",body);
+      return json(result,{status:result.status||(result.ok?200:400)});
     }
     const mode = await pageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
@@ -3415,7 +3449,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     if (!styleGate.ok) return json({ error: styleGate.error }, { status: 422 });
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
-    const mode = await pageMode(m[1]);
+    const mode = await blockPageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical
       ? await insertCanonicalPageBlock(env, mode.scope, m[2], body)
@@ -3426,7 +3460,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks\/([a-z0-9-]+)\/duplicate$/);
   if (m && method === "POST") {
-    const mode = await pageMode(m[1]);
+    const mode = await blockPageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical
       ? await duplicateCanonicalPageBlock(env, mode.scope, m[2], m[3])
@@ -3443,7 +3477,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
-    const mode = await pageMode(m[1]);
+    const mode = await blockPageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical
       ? await moveCanonicalPageBlock(env, mode.scope, m[2], m[3], body)
@@ -3454,7 +3488,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks\/([a-z0-9-]+)$/);
   if (m && method === "DELETE") {
-    const mode = await pageMode(m[1]);
+    const mode = await blockPageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical
       ? await removeCanonicalPageBlock(env, mode.scope, m[2], m[3])
@@ -3488,6 +3522,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json(result);
   }
   if (m && method === "DELETE") {
+    if (["site-owned","site-owned-legacy"].includes(await cmsPageStorageMode(env.DB))) {
+      const result=await editSiteOwnedSectionStructure(env,context.accountId,m[1],siteId,pageId,m[2],"remove");
+      return json(result,{status:result.status||(result.ok?200:400)});
+    }
     const mode = await pageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical

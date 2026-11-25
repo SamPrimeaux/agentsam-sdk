@@ -124,10 +124,13 @@ export async function getSiteOwnedPage(env, accountId, slug, siteId, pageId = nu
     if (sourceError) missingSourceSections.push(key);
     return {
       id: section.id, key,
+      type: section.section_type,
       name: section.section_name || section.section_type,
       content, sort_order: section.sort_order,
       status: section.is_visible ? "active" : "hidden",
       source: pointer ? "cms-r2" : "cms-d1",
+      source_object_key: pointer || null,
+      source_bucket: pointer ? section.r2_bucket : null,
       ...(sourceError ? { source_error: sourceError, read_only: true } : {}),
       version: versionBySection.get(section.id) || 0,
       updated_at: section.updated_at,
@@ -419,6 +422,8 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
     if(section.section_type!=='storefront_embed')await validateCatalogStockDraft(env,accountId,section,content);
     blocks=await catalogBlockStatements(env.DB,accountId,section,content);
   }catch(e){return problem(String(e.message||e),422);}
+  const visibility = section.section_type === 'storefront_embed' ? content.enabled !== false
+    : typeof content.__editor?.visibility?.enabled === 'boolean' ? content.__editor.visibility.enabled : null;
   const serialized = JSON.stringify(content);
   if (new TextEncoder().encode(serialized).length > 524288) return problem("cms_section_content_too_large", 413);
   const current = await env.DB.prepare(`
@@ -443,7 +448,7 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
       env.DB.prepare(`
         UPDATE cms_page_sections SET draft_r2_key=?,content_hash=?,is_visible=CASE WHEN ? IS NULL THEN is_visible ELSE ? END,updated_at=datetime('now')
         WHERE id=? AND page_id=? AND draft_r2_key IS ?`)
-        .bind(key,hash,section.section_type==='storefront_embed'?(content.enabled===false?0:1):null,content.enabled===false?0:1,section.id,page.id,section.draft_r2_key),
+        .bind(key,hash,visibility===null?null:Number(visibility),Number(visibility===true),section.id,page.id,section.draft_r2_key),
       env.DB.prepare(`
         INSERT INTO cms_revisions
         (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,
@@ -456,4 +461,104 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
   }catch{return problem('cms_section_revision_conflict',409);}
   return { ok: true, version: revision, section_key: section.section_key || section.id,
     content_object_key: key, published: false, updated_at: new Date().toISOString() };
+}
+
+
+/** Structural edits use the same owned page as the draft writer. Published
+ * HTML and immutable section objects/revisions are not deleted or rewritten. */
+export async function editSiteOwnedSectionStructure(env, accountId, slug, siteId, pageId, sectionKey, action, body = {}) {
+  if (!accountId || !siteId) return problem('cms_site_required',400);
+  let site;
+  try { site=await selectOwnedPageSite(env,accountId,siteId); }
+  catch { return problem('site_not_found_or_unauthorized',404); }
+  const page=await findSiteOwnedPage(env,site,slug,pageId);
+  if (!page) return problem('cms_page_not_found',404);
+  const {results:rows=[]}=await env.DB.prepare(`SELECT id,section_key,sort_order,is_visible,draft_r2_key,published_r2_key
+    FROM cms_page_sections WHERE page_id=? ORDER BY sort_order,id`).bind(page.id).all();
+  const from=rows.findIndex(row=>row.section_key===sectionKey || row.id===sectionKey);
+  if(from<0)return problem('cms_section_not_found',404);
+  const section=rows[from], key=section.section_key||section.id;
+  if(action==='move') {
+    if(!Number.isInteger(body.toIndex))return problem('cms_section_index_invalid',400);
+    const to=Math.max(0,Math.min(body.toIndex,rows.length-1));
+    rows.splice(from,1);rows.splice(to,0,section);
+    await env.DB.batch(rows.map((row,index)=>env.DB.prepare(`UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now') WHERE page_id=? AND id=?`).bind(index*10,page.id,row.id)));
+    return {ok:true,section_key:key,to_index:to,published:false};
+  }
+  if(action==='duplicate') {
+    if(!env.CMS_CONTENT)return problem('cms_section_bucket_unavailable',503);
+    const source=await env.DB.prepare('SELECT * FROM cms_page_sections WHERE id=? AND page_id=?').bind(section.id,page.id).first();
+    const current=await getSiteOwnedPage(env,accountId,slug,site.id,page.id);
+    const item=current?.page?.sections?.find(s=>s.id===section.id);
+    if(!source||!item)return problem('cms_section_not_found',404);
+    if(item.source_error)return problem(item.source_error,409);
+    const nonce=crypto.randomUUID().replaceAll('-','');
+    const id='cmss_'+nonce.slice(0,20);
+    const newKey=String(key).replace(/[^a-z0-9-]/gi,'-').slice(0,64).toLowerCase()+'-'+nonce.slice(0,8);
+    const serialized=JSON.stringify(item.content);
+    const sha=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,'0')).join('');
+    const digest=await sha(serialized), pointer='cms/sections/drafts/'+encodeURIComponent(page.id)+'/'+id+'/revision-000001-'+digest.slice(0,16)+'.json';
+    const {results:blocks=[]}=await env.DB.prepare("SELECT * FROM cms_section_blocks WHERE section_id=? AND account_id=? AND status<>'archived' ORDER BY sort_order,id").bind(source.id,accountId).all();
+    const byId=new Map(blocks.map(b=>[b.id,b]));
+    const ids=new Map(blocks.map(b=>[b.id,'cmsb_'+crypto.randomUUID().replaceAll('-','').slice(0,20)]));
+    const ordered=[],visiting=new Set(),visited=new Set();
+    function visit(b){
+      if(visited.has(b.id))return;
+      if(visiting.has(b.id))throw new Error('cms_block_parent_cycle');
+      visiting.add(b.id);
+      if(b.parent_block_id){const parent=byId.get(b.parent_block_id);if(!parent)throw new Error('cms_block_parent_missing');visit(parent);}
+      visiting.delete(b.id);visited.add(b.id);ordered.push(b);
+    }
+    try {for(const block of blocks)visit(block);}catch(e){return problem(String(e.message||e),409);}
+    try {
+      await env.CMS_CONTENT.put(pointer,serialized,{httpMetadata:{contentType:'application/json'}});
+      const saved=await env.CMS_CONTENT.get(pointer);
+      if(!saved||await sha(await saved.text())!==digest)return problem('cms_section_r2_verification_failed',503);
+    }catch{return problem('cms_section_r2_unavailable',503);}
+    const siblings=rows.map(r=>r.id);siblings.splice(from+1,0,id);
+    // Copy the authored section, not catalog defaults; the existing immutable
+    // revision guard rolls the transaction back if the source changed.
+    const statements=[
+      env.DB.prepare(`INSERT INTO cms_page_sections(id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket,draft_r2_key,content_hash,definition_id,template_sku,metadata_json,css_classes,custom_css,liquid_section_id,schema_version)
+        SELECT ?,page_id,?,section_type,section_name,section_data,?,is_visible,'cms',?,?,definition_id,template_sku,metadata_json,css_classes,custom_css,liquid_section_id,schema_version
+        FROM cms_page_sections WHERE id=? AND page_id=? AND draft_r2_key IS ? AND published_r2_key IS ? AND content_hash IS ?`)
+        .bind(id,newKey,(from+1)*10,pointer,digest,source.id,page.id,source.draft_r2_key,source.published_r2_key,source.content_hash),
+      env.DB.prepare(`INSERT INTO cms_revisions(account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
+        VALUES (?,?,'section',?,CASE WHEN changes()=1 THEN 1 ELSE NULL END,'draft',?,?,?,?)`)
+        .bind(accountId,site.id,id,pointer,digest,JSON.stringify({content:item.content}),JSON.stringify({source:'section-duplicate',sourceSectionId:source.id})),
+      ...ordered.map(b=>env.DB.prepare(`INSERT INTO cms_section_blocks(id,account_id,section_id,parent_block_id,block_key,block_type,definition_id,template_sku,sort_order,status,content_json,settings_json,source_path,metadata_json)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(ids.get(b.id),accountId,id,b.parent_block_id?ids.get(b.parent_block_id):null,b.block_key,b.block_type,b.definition_id,b.template_sku,b.sort_order,b.status,b.content_json,b.settings_json,b.source_path,b.metadata_json)),
+      ...siblings.filter(other=>other!==id).map(other=>env.DB.prepare('UPDATE cms_page_sections SET sort_order=? WHERE page_id=? AND id=?').bind(siblings.indexOf(other)*10,page.id,other)),
+    ];
+    try{await env.DB.batch(statements);}catch{return problem('cms_section_duplicate_conflict',409);}
+    return {ok:true,section_key:newKey,section_id:id,version:1,published:false};
+  }
+  if(action==='visibility') {
+    if(typeof body.enabled!=='boolean')return problem('cms_section_visibility_invalid',400);
+    const current=await getSiteOwnedPage(env,accountId,slug,site.id,page.id);
+    const item=current?.page?.sections?.find(s=>s.id===section.id);
+    if(!item)return problem('cms_section_not_found',404);
+    if(item.source_error) {
+      // A missing draft must not prevent removal from the preview. Do not
+      // fabricate a replacement document merely to change visibility.
+      await env.DB.prepare(`UPDATE cms_page_sections SET is_visible=?,updated_at=datetime('now') WHERE page_id=? AND id=?`).bind(Number(body.enabled),page.id,section.id).run();
+      return {ok:true,section_key:key,enabled:body.enabled,published:false,source_error:item.source_error};
+    }
+    const content=structuredClone(item.content);
+    content.__editor={...content.__editor,visibility:{...content.__editor?.visibility,enabled:body.enabled}};
+    if(item.type==='storefront_embed')content.enabled=body.enabled;
+    const saved=await saveSiteOwnedSectionDraft(env,accountId,slug,site.id,page.id,key,{content,expected_version:item.version});
+    return saved.ok?{...saved,enabled:body.enabled}:saved;
+  }
+  if(action==='remove') {
+    // Existing foreign keys cascade placed blocks; the explicit scoped delete
+    // also supports older hosts lacking that cascade. Revision objects survive.
+    const results=await env.DB.batch([
+      env.DB.prepare('DELETE FROM cms_section_blocks WHERE section_id=? AND account_id=?').bind(section.id,accountId),
+      env.DB.prepare('DELETE FROM cms_page_sections WHERE id=? AND page_id=?').bind(section.id,page.id),
+    ]);
+    if(results[1]?.meta?.changes!==1)return problem('cms_section_not_found',404);
+    return {ok:true,section_key:key,removed:true,published:false};
+  }
+  return problem('cms_section_action_invalid',400);
 }
