@@ -184,7 +184,9 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
     if(!result.ok)return json(result,result.status||503);
     const projectId=result.project.id;
     const siteId=site.id;
-    const editor='/admin/sites/'+encodeURIComponent(siteId)+'/themes/'+encodeURIComponent(projectId)+'/editor/home';
+    const pageSlug = (result.project.pages.find(page => page.slug === 'home') || result.project.pages[0])?.slug;
+    if (!SAFE_ID.test(pageSlug || '')) return json({ok:false,error:'theme_editor_page_invalid'},503);
+    const editor='/admin/sites/'+encodeURIComponent(siteId)+'/themes/'+encodeURIComponent(projectId)+'/editor/'+encodeURIComponent(pageSlug);
     return json({
       ok:true,installed:true,unchanged:result.unchanged===true,
       scope:'site',
