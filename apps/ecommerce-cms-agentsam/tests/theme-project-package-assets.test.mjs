@@ -45,3 +45,13 @@ test('every bundled editable project retains source stylesheet paths after resol
     }
   }
 });
+
+
+test('release-local root media resolves without changing storefront navigation or merchant media paths', () => {
+  const html = '<img src="/campaign.webp"><video poster="/cover.png"></video><a href="/products/">Shop</a><img src="/api/media/asset.png">';
+  const next = absolutizeThemePreviewPaths(html, base);
+  assert.ok(next.includes('src="' + base + 'campaign.webp"'));
+  assert.ok(next.includes('poster="' + base + 'cover.png"'));
+  assert.ok(next.includes('href="/products/"'));
+  assert.ok(next.includes('src="/api/media/asset.png"'));
+});
