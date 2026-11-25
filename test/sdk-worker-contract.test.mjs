@@ -49,7 +49,8 @@ test('canonical Worker preserves vault routes and delegates app traffic to Nitro
   assert.match(worker, /url\.pathname\.startsWith\("\/api\/vault\/"\)/);
   assert.match(worker, /\/api\/vault\/secrets/);
   assert.match(worker, /\/api\/vault\/unwrap/);
-  assert.match(worker, /return nitroWorker\.fetch\(request, env, context\)/);
+  assert.match(worker, /return withStudioWorkerBindings\(env, \(\) => nitroWorker\.fetch\(request, env, context\)\)/);
+  assert.match(worker, /return withStudioWorkerBindings\(env, \(\) => nitroWorker\.fetch\(chat, env, context\)\)/);
 });
 
 test('model providers include Grok independently from Grok gate authentication', () => {

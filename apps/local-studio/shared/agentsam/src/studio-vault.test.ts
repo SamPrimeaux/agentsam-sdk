@@ -15,6 +15,7 @@ import {
   serviceToProvider,
   shouldUseWorkersAI,
   studioServerBindings,
+  withStudioWorkerBindings,
   vaultAad,
   vaultCredentialRecordsForAccount,
   vaultCredentialsForAccount,
@@ -331,6 +332,31 @@ describe("identity + bindings", () => {
     const bindings = studioServerBindings(null);
     assert.equal(bindings.db, null);
     assert.equal(bindings.workersAI, null);
+  });
+
+  it("preserves Worker bindings in concurrent Nitro requests without leaking them", async () => {
+    // Separately emitted bundles evaluate the module more than once.
+    const nitro = await import(new URL("./studio-vault.ts?nitro-test", import.meta.url).href) as typeof import("./studio-vault.ts");
+    const dbA = fakeDb([{service_name:"gemini",label:"Gemini",kind:"ai_provider",
+      metadata_json:'{"provider_id":"gemini","model_discovery":{"enabled":true,"adapter":"gemini"}}'}]);
+    const dbB = fakeDb([]);
+    const [a, b] = await Promise.all([
+      withStudioWorkerBindings({ DB: dbA, GEMINI_API_KEY: "test-a" }, async () => {
+        await Promise.resolve();
+        return nitro.studioServerBindings({ context: {} });
+      }),
+      withStudioWorkerBindings({ DB: dbB, GEMINI_API_KEY: "test-b" }, async () => {
+        await Promise.resolve();
+        return nitro.studioServerBindings(null);
+      }),
+    ]);
+    assert.equal(a.db, dbA);
+    assert.equal(b.db, dbB);
+    assert.equal(a.env.GEMINI_API_KEY, "test-a");
+    assert.equal(b.env.GEMINI_API_KEY, "test-b");
+    assert.deepEqual(await loadModelProviderDefinitions(a.db), [{id:"gemini",label:"Gemini",service:"gemini",adapter:"gemini"}]);
+    assert.deepEqual(await loadModelProviderDefinitions(b.db), []);
+    assert.equal(studioServerBindings(null).db, null);
   });
 
   it("vaultCredentialRecordsForAccount returns an empty array without bindings", async () => {

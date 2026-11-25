@@ -99,7 +99,7 @@ assert.match(config, /"binding"\s*:\s*"PTY_SERVICE"/);
 assert.match(config, /"service_id"\s*:\s*"019db639-7c70-7071-8ef3-32ec0392a9ff"/);
 assert.match(worker, /from ["']\.\.\/\.\.\/\.output\/server\/index\.mjs["']/);
 assert.match(worker, /url\.pathname\.startsWith\(["']\/api\/vault\/["']\)/);
-assert.match(worker, /return nitroWorker\.fetch\(request, env, context\)/);
+assert.match(worker, /return withStudioWorkerBindings\(env, \(\) => nitroWorker\.fetch\(request, env, context\)\)/);
 assert.doesNotMatch(config, /AGENTSAM_WORKER_ROLE/);
 assert.doesNotMatch(config, /"OLLAMA_BASE_URL"\s*:/);
 // A verified third-party plugin catalog can live on workers.dev; the AgentSam\n// Worker deployment routes themselves must still use the canonical custom domain.\nconst deploymentRoutes = config.match(/"routes"\\s*:\\s*\\[[\\s\\S]*?\\]/)?.[0] || "";\nassert.doesNotMatch(deploymentRoutes, /workers\\.dev/);
