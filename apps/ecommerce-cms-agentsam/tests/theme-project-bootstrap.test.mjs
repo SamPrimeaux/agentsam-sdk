@@ -48,6 +48,7 @@ test('shared route parser preserves the correct target identity and view state',
     mode: 'page', siteId: 'site_a', pageId: null, pageSlug: 'site', legacy: false,
   });
   assert.equal(themeProjectEditorPath('site_a', 'theme_plain_jane', 'home'), '/admin/sites/site_a/themes/theme_plain_jane/editor/home');
+  assert.deepEqual(parseThemeEditorLocation(themeProjectEditorPath(null,'theme_authored','home')),{mode:'project',siteId:null,projectId:'theme_authored',pageSlug:'home',legacy:true});
   assert.equal(cmsPageEditorPath('site_a', 'page_home'), '/admin/sites/site_a/pages/page_home/editor');
   assert.equal(cmsPageEditorPath('site_a', null, 'site'), '/admin/sites/site_a/settings/editor');
 });
@@ -211,7 +212,7 @@ test('legacy new-theme alias redirects to the shared Theme Studio, never Design 
   assert.match(bootstrap,/fillMissingThemeChrome/);
   assert.doesNotMatch(bootstrap,/A clear place to begin|Discover our story|Your story, made clear|sampleProducts/);
   assert.match(bootstrap,/inheritDefaultTemplates/);
-  assert.match(bootstrap,/themeProjectEditorPath\(siteId, created\.project\.id, 'home'\)/);
+  assert.match(bootstrap,/themeProjectEditorPath\(null,created\.project\.id,'home'\)/);
 });
 
 test('new theme creation starts from real, editable shared chrome without branded or fake hero content', () => {

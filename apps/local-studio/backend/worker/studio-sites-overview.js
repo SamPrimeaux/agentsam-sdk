@@ -57,6 +57,8 @@ export async function handleStudioSitesOverview(request, env, actorUserId) {
     provisioned = await listThemeProjects(env, siteAccountId, selectedSite.id);
   }
 
+  const authoring=await listThemeProjects(env,actorUserId).catch(()=>({projects:[]}));
+  const authored=(authoring.projects||[]).map(p=>({id:p.id,name:p.name,version:p.sourcePackageVersion||p.version,updated_at:p.updatedAt,preview_url:p.sourcePreviewUrl,installed:true,publish_ready:false,scope:'account',edit_href:'/admin/theme-editor?'+new URLSearchParams({project:p.id,page:p.pages?.find(page=>page.slug==='home')?.slug||p.pages?.[0]?.slug||'home'})}));
   let drafts = [];
   if (selectedSite) {
     try { drafts = await listStudioThemeDrafts(env, siteAccountId); }
@@ -96,7 +98,7 @@ export async function handleStudioSitesOverview(request, env, actorUserId) {
   return response({
     ok: true,
     source: 'studio_cms_site_read_model',
-    new_theme_url: '/admin/sites/' + encodeURIComponent(selectedSite.id) + '/themes/new/editor',
+    new_theme_url: '/admin/theme-editor?new=1',
     store: { visibility: 'unpublished', url: null, domain: null, company_name: null },
     site_preview: homePage ? {
       title: homePage.title,
@@ -108,7 +110,7 @@ export async function handleStudioSitesOverview(request, env, actorUserId) {
     } : null,
     performance: emptyPerformance,
     active_theme: null,
-    draft_themes: selectedSite ? drafts.filter(draft => draft.site_id === selectedSite.id) : [],
+    draft_themes: [...authored,...(selectedSite ? drafts.filter(draft => draft.site_id === selectedSite.id) : [])],
     preview_theme: currentTheme ? {
       id: currentTheme.id,
       name: currentTheme.name,

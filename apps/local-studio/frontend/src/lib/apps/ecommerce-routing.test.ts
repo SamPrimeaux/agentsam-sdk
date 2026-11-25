@@ -31,3 +31,11 @@ test("unregistered or hostile paths cannot be routed through the desktop CMS hos
   assert.equal(desktopEcommerceHostDestination("https://evil.example/admin/sites/site_123/themes/theme_ember/editor/home"), null);
   assert.equal(desktopEcommerceHostDestination("/admin/not-a-real-route"), null);
 });
+
+
+test("account-owned theme editor and new theme routes do not require a site",()=>{
+  const editor='/admin/theme-editor?project=theme_test&page=home';
+  assert.equal(resolveEcommerceAdminPath(editor),editor);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?new=1'),'/admin/theme-editor?new=1');
+  assert.equal(resolveEcommerceAssetPath(editor),'/ecommerce-cms-agentsam/admin/theme-editor.html?project=theme_test&page=home');
+});

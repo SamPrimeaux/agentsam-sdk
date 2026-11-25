@@ -1200,8 +1200,10 @@ export default {
         return handleCmsWorkerRequest(new Request(hostUrl, request), env, principal.id);
       }
       let cmsSite = null;
-      if (isSiteScopedCmsAdminApi(url.pathname, request)) {
-        const selector = await readCmsSiteSelector(request);
+      const themeAuthoringRoute = /^\/api\/admin\/cms\/(?:theme-projects(?:\/|$)|themes\/[a-z0-9-]+\/install$)/.test(url.pathname);
+      const explicitThemeSite = themeAuthoringRoute ? await readCmsSiteSelector(request) : null;
+      if (isSiteScopedCmsAdminApi(url.pathname, request) && (!themeAuthoringRoute || explicitThemeSite)) {
+        const selector = explicitThemeSite || await readCmsSiteSelector(request);
         const access = await resolveCmsSiteAccess(env.DB, principal.id, selector,
           /\/(?:publish|rollback)$/.test(url.pathname) ? "publish" : ["GET", "HEAD"].includes(request.method) ? "read" : "write",
           { remoteWorkerNames: configuredCmsWorkers(env) });

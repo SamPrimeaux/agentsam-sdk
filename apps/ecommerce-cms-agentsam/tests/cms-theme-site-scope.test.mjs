@@ -63,30 +63,33 @@ function environment(sqlite) {
   };
 }
 
-test("theme project and theme catalog APIs refuse implicit default-site fallback", async () => {
+test("theme authoring is account-owned; website theme selection still requires an explicit site", async () => {
   const sqlite = createCmsTestDb();
   const env = environment(sqlite);
   try {
     sqlite.exec(`INSERT INTO accounts(id) VALUES ('acct-a');
       INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
       VALUES ('site-a','acct-a','Primary','default','active',1);`);
-    const cases = [
-      [request('/api/admin/cms/theme-projects', 'POST', { project: project() }), '/api/admin/cms/theme-projects'],
-      [request('/api/admin/cms/theme-projects/theme_resolve'), '/api/admin/cms/theme-projects/theme_resolve'],
-      [request('/api/admin/cms/theme-projects/theme_resolve', 'PUT', { project: project(), expected_version: 1 }), '/api/admin/cms/theme-projects/theme_resolve'],
-      [request('/api/admin/cms/themes'), '/api/admin/cms/themes'],
-      [request('/api/admin/cms/theme-selection', 'PUT', { slug: 'plain-jane', expected_version: 0 }), '/api/admin/cms/theme-selection'],
-    ];
-    for (const [req, path] of cases) {
-      const response = await handleAdminCmsApi(req, env, new URL('https://cms.test' + path), { accountId: 'acct-a' });
-      assert.equal(response.status, 400, path + ' must reject an omitted site_id');
-      assert.equal((await response.json()).error, 'site_id_required');
+    const invoke=async(path,method,body)=>handleAdminCmsApi(request(path,method,body),env,new URL('https://cms.test'+path),{accountId:'acct-a'});
+    const created=await invoke('/api/admin/cms/theme-projects','POST',{project:project()});
+    assert.equal(created.status,201);
+    const reopened=await invoke('/api/admin/cms/theme-projects/theme_resolve','GET');
+    assert.equal(reopened.status,200);
+    const saved=await invoke('/api/admin/cms/theme-projects/theme_resolve','PUT',{project:project('Independent'),expected_version:1});
+    assert.equal(saved.status,200);
+    const listed=await invoke('/api/admin/cms/theme-projects','GET');
+    assert.equal(listed.status,200);
+    assert.equal((await listed.json()).projects[0].name,'Independent');
+    for(const [path,method,body] of [['/api/admin/cms/themes','GET'],['/api/admin/cms/theme-selection','PUT',{slug:'plain-jane',expected_version:0}]]) {
+      const response=await invoke(path,method,body);
+      assert.equal(response.status,400);
+      assert.equal((await response.json()).error,'site_id_required');
     }
-    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals").get().n, 0,
-      'implicit theme operations must not write into the default site');
-  } finally { sqlite.close(); }
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_globals').get().n,0);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_sites').get().n,1);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM cms_site_themes').get().n,0);
+  } finally {sqlite.close();}
 });
-
 
 test("each duplicate is its own draft site with a cms_site_themes row; saves sync it; delete archives only drafts", async () => {
   const sqlite = createCmsTestDb();
