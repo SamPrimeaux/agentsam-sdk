@@ -9,6 +9,12 @@ if (!existsSync(indexPath)) {
   console.error("[desktop-smoke] desktop-dist missing; run build:desktop first");
   process.exit(2);
 }
+const apiBootstrapPath = join(root, "desktop-api-fetch.js");
+const desktopIndexHtml = readFileSync(indexPath, "utf8");
+if (!existsSync(apiBootstrapPath) || !desktopIndexHtml.includes('<script src="/desktop-api-fetch.js"></script>')) {
+  console.error("[desktop-smoke] authenticated desktop API bootstrap is missing from the host entrypoint");
+  process.exit(2);
+}
 
 const assetsDir = join(root, "assets");
 const cssText = readdirSync(assetsDir)
