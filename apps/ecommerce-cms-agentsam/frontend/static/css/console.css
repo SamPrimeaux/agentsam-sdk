@@ -2558,3 +2558,19 @@ body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:last-child { tr
   body.console-theme .console-sidenav.admin-sidebar,
   body.console-theme .console-workspace { transition-duration: 0ms; }
 }
+
+/* Theme library: one scroll flow, preview followed by metadata and actions. */
+@media(max-width:600px) {
+  .console-main:has(.online-store) {min-height:0;overflow-y:auto;scrollbar-gutter:auto;}
+  .online-store {width:100%;box-sizing:border-box;padding:16px 14px calc(100px + env(safe-area-inset-bottom,0px));}
+  .online-store .online-store-previews {position:relative;display:block;min-width:0;}
+  .online-store .online-store-preview--desktop {width:100%;min-height:0;aspect-ratio:4/3;}
+  .online-store .online-store-preview--mobile {display:none;}
+  .online-store .online-store-theme-meta {flex-wrap:wrap;gap:12px;}
+  .online-store .online-store-theme-actions {width:100%;flex-wrap:wrap;}
+  .online-store .online-store-draft-row {display:grid;grid-template-columns:minmax(0,112px) minmax(0,1fr);gap:12px;padding:14px;}
+  .online-store .online-store-draft-thumb {width:100%;min-width:0;}
+  .online-store .online-store-draft-copy {min-width:0;overflow-wrap:anywhere;}
+  .online-store .online-store-draft-actions {grid-column:1/-1;flex-wrap:wrap;min-width:0;}
+  .online-store :is(.btn,.online-store-icon-btn) {min-height:44px;}
+}

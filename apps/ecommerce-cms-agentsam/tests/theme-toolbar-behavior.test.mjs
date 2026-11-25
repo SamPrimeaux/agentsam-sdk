@@ -959,6 +959,22 @@ test("phone can open and reopen its actual sections sheet from preview", async (
     assert.equal(studio.dataset.mobilePane,'preview');
     doc.getElementById('te-mobile-layers').click();
     assert.equal(studio.dataset.mobilePane,'sections');
-    assert.equal(studio.dataset.mobileSheet,'half');
+    assert.equal(studio.dataset.mobileSheet,'expanded');
+  } finally { dom.window.close(); }
+});
+
+test("phone layer navigation switches tools in the same drawer and returns to preview", async () => {
+  const {dom,doc}=await editorFixture({mobile:true});
+  try {
+    const studio=doc.querySelector('.theme-studio');
+    doc.getElementById('te-mobile-layers').click();
+    const nav=doc.querySelector('.te-mobile-drawer-nav');
+    assert.equal(studio.dataset.mobileSheet,'expanded');
+    nav.querySelector('[data-drawer-mode="theme-settings"]').click();
+    assert.equal(studio.dataset.editorDrawer,'theme-settings');
+    nav.querySelector('[data-drawer-mode="app-embeds"]').click();
+    assert.equal(studio.dataset.editorDrawer,'app-embeds');
+    nav.querySelector('[data-sheet-close="sections"]').click();
+    assert.equal(studio.dataset.mobilePane,'preview');
   } finally { dom.window.close(); }
 });

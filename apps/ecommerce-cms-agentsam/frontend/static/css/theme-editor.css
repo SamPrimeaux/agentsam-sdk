@@ -4352,3 +4352,39 @@ body.agentsam-open [data-mini-agentsam] { display:none!important; }
   body.agentsam-open .theme-studio .te-mobile-selection-bar {display:none!important;}
   #te-more-menu .te-mobile-more-entry {min-height:44px;}
 }
+
+/* Mobile interaction surfaces: browse intentionally, edit in context. */
+.te-mobile-drawer-nav { display:none; }
+@media (max-width:900px) {
+  .theme-studio-toolbar .te-page-popover:not([hidden]) {
+    display:flex;flex-direction:column;max-height:min(52dvh,400px);padding:8px;
+  }
+  .theme-studio .te-page-popover .te-page-search {flex:0 0 44px;font-size:16px;}
+  .theme-studio .te-page-options {flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;}
+  .theme-studio .te-page-option {min-height:44px;padding-block:6px;border-radius:8px;}
+  .theme-studio[data-mobile-pane="sections"][data-mobile-sheet="expanded"] .theme-studio-tree {
+    height:100%!important;max-height:100%!important;border-radius:18px 18px 0 0;
+  }
+  .theme-studio .te-mobile-drawer-nav {
+    display:flex;flex:0 0 auto;align-items:center;justify-content:space-around;gap:4px;
+    padding:6px 10px max(8px,env(safe-area-inset-bottom,0px));border-top:1px solid var(--te-border);
+    background:var(--te-panel);
+  }
+  .theme-studio .te-mobile-drawer-nav button {
+    display:flex;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:44px;
+    padding:6px;border:0;border-radius:999px;background:transparent;color:var(--te-text);font:inherit;font-size:12px;
+  }
+  .theme-studio .te-mobile-drawer-nav button[aria-pressed="true"] {background:var(--te-soft);color:var(--te-accent);}
+  .theme-studio .te-mobile-drawer-nav button svg {width:18px;height:18px;flex:none;}
+  .theme-studio .te-mobile-drawer-nav button:focus-visible {outline:2px solid var(--te-accent);outline-offset:-2px;}
+  .theme-studio[data-mobile-pane="settings"] .theme-editor-panel {inset:auto 0 0!important;}
+}
+
+@media(max-width:900px) {
+  .theme-studio .te-tree-actions > summary {width:44px;height:44px;opacity:1;}
+  .theme-studio .te-tree-actions[open] .te-tree-actions__menu {
+    position:fixed;inset:auto 12px max(16px,env(safe-area-inset-bottom,0px)) 12px;
+    width:auto;max-height:60dvh;overflow-y:auto;z-index:100;padding:8px;border-radius:22px;
+  }
+  .theme-studio .te-tree-actions__menu button {min-height:48px;font-size:15px;padding:12px 16px;}
+}

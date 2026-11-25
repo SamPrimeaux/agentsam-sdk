@@ -114,3 +114,13 @@ test("hosted phone Theme Studio restores the shared dock instead of blocking the
   assert.equal(body.classNames.has("agentsam-overlay-mode"), false);
   assert.doesNotMatch(dock.html, /agentsam-backdrop/);
 });
+
+test("mobile composer and history share the same existing dock and form", () => {
+  const {dock}=simulate({embedded:true,wide:false});
+  assert.match(dock.html,/data-mobile-assistant="history"/);
+  assert.match(dock.html,/data-mobile-assistant="layers"/);
+  assert.equal((dock.html.match(/id="agentsam-form"/g)||[]).length,1);
+  assert.equal((dock.html.match(/id="agentsam-messages"/g)||[]).length,1);
+  assert.match(css,/--agentsam-keyboard-inset/);
+  assert.match(css,/data-mobile-pane="settings"[\s\S]*?\.agentsam-dock \{display:none!important/);
+});

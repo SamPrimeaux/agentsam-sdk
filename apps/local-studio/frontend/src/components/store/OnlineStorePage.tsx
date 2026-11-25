@@ -78,7 +78,7 @@ function InAppLink({ to, className, children }: { to: string; className?: string
   return <a href={to} onClick={onClick} className={className}>{children}</a>;
 }
 
-const pill = 'inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted';
+const pill = 'inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted';
 const primary = 'border-transparent bg-primary text-primary-foreground hover:bg-primary/90';
 
 function formatSaved(value?: string) {
@@ -167,7 +167,7 @@ function DraftRow({ theme, siteId, onPublished }: { theme: StoreTheme; siteId: s
         </div>
         <div className="col-span-2 flex flex-wrap items-center gap-2 sm:ml-auto sm:shrink-0">
         {canPublish && <Button variant="outline" size="sm" onClick={() => setConfirming(true)} disabled={busy}>Publish</Button>}
-        {edit && <InAppLink to={edit} className={cn(pill, 'h-8', primary)}>Edit theme</InAppLink>}
+        {edit && <InAppLink to={edit} className={cn(pill, primary)}>Edit theme</InAppLink>}
         {theme.preview_url && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -229,7 +229,7 @@ function DiscoverCard({ theme, siteId }: { theme: MarketTheme; siteId: string })
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">{theme.name || theme.slug}</p>
-          <p className="truncate text-xs text-muted-foreground">by {theme.developer || theme.author || 'InnerAnimalMedia'}</p>
+          <p className="break-all text-xs text-muted-foreground">by {theme.developer || theme.author || 'InnerAnimalMedia'}</p>
         </div>
         {theme.can_install && <Button variant="outline" size="sm" onClick={add} disabled={busy}>{busy ? 'Adding…' : 'Add'}</Button>}
       </div>
@@ -306,19 +306,19 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
 
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-6 sm:py-8">
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 px-4 pt-5 pb-28 sm:gap-8 sm:px-6 sm:py-8">
       <h1 className="sr-only">Online Store</h1>
 
       <section aria-label="Current theme" className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="relative aspect-[16/8] bg-muted">
+        <div className="relative aspect-[4/3] bg-muted sm:aspect-[16/8]">
           {live
             ? <iframe src={live} title={`${siteName} preview`} loading="lazy" className="pointer-events-none h-full w-full border-0" sandbox="allow-scripts allow-same-origin" />
             : <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Globe2 className="size-8" aria-hidden="true" /><p className="text-sm">Publish a theme to see your site here.</p></div>}
         </div>
-        <div className="flex items-center justify-between gap-4 border-t border-border px-5 py-4">
+        <div className="flex flex-col items-start gap-3 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
           <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-foreground">{data.site_preview?.title || data.site_preview?.name || siteName}</p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="break-words text-base font-semibold text-foreground">{data.site_preview?.title || data.site_preview?.name || siteName}</p>
+            <p className="break-all text-xs text-muted-foreground">
               {[live ? `Published website · ${live}` : '', activeTheme?.name, activeSaved ? `Last saved: ${activeSaved}` : ''].filter(Boolean).join(' · ') || 'No published theme'}
             </p>
           </div>
