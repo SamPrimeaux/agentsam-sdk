@@ -126,8 +126,10 @@
   let publishInFlight = false;
   let hasEditedThisSession = false;
   let autosaveFailed = false;
-  const preferredDevice = host?.initialDevice || params.get('previewMode') || localStorage.getItem('agentsam:cms:preview-device');
-  let device = ['desktop','tablet','mobile'].includes(preferredDevice) ? preferredDevice : 'desktop';
+  const phoneViewport = window.matchMedia('(max-width: 900px)').matches;
+  const previewDeviceStorageKey = phoneViewport ? 'agentsam:cms:preview-device:phone' : 'agentsam:cms:preview-device';
+  const preferredDevice = host?.initialDevice || params.get('previewMode') || localStorage.getItem(previewDeviceStorageKey);
+  let device = ['desktop','tablet','mobile'].includes(preferredDevice) ? preferredDevice : (phoneViewport ? 'mobile' : 'desktop');
   let inspectionEnabled = true;
   const undoHistory = [];
   const redoHistory = [];
@@ -441,7 +443,7 @@
     });
     byId('te-mobile-edit-selection')?.addEventListener('click', function() {
       if (activeSectionKey) { setMobileSheetSize('half'); setMobilePane('settings'); }
-      else setMobilePane('sections');
+      else if (editorDrawer !== 'sections' || document.querySelector('.theme-studio')?.dataset.mobilePane !== 'sections') setEditorDrawer('sections');
     });
     setMobileSheetSize('half');
   }
@@ -3336,7 +3338,7 @@
   function setDevice(next) {
     device = next;
     host?.onDeviceChange?.(device);
-    localStorage.setItem('agentsam:cms:preview-device', device);
+    localStorage.setItem(previewDeviceStorageKey, device);
     byId('te-preview-device').dataset.device = device;
     document.querySelectorAll('.te-device-btn').forEach(function(button) {
       const active = button.dataset.device === device;
@@ -4090,7 +4092,9 @@
     const aside = byId('te-editor-drawer');
     if (aside && editorDrawer) drawerScroll[editorDrawer] = aside.scrollTop;
     const wasClosed = editorDrawer === null;
-    editorDrawer = editorDrawer === next ? null : next;
+    const mobilePane = document.querySelector('.theme-studio')?.dataset.mobilePane;
+    const reopenMobileSheet = isPhoneEditor() && showMobileSheet && mobilePane !== 'sections';
+    editorDrawer = editorDrawer === next && !reopenMobileSheet ? null : next;
     if (!editorDrawer) {
       // Closing the left editing rail is a full storefront preview action:
       // keep the selection, but remove the right inspector as well.
@@ -4461,6 +4465,7 @@
       // The compact mobile toolbar scrolls; portaled menus must not be clipped.
       document.body.appendChild(menu);
       menu.style.position = 'fixed';
+      menu.style.right = 'auto';
       menu.style.zIndex = '9999';
       const rect = button.getBoundingClientRect();
       const menuWidth = menu.getBoundingClientRect().width || 190;
@@ -4470,6 +4475,7 @@
     } else if (next) {
       button.parentElement.appendChild(menu);
       menu.style.position = '';
+      menu.style.right = '';
       menu.style.left = '';
       menu.style.top = '';
     }

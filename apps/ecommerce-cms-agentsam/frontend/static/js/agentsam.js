@@ -74,8 +74,8 @@ function renderAgentsamShell() {
       layout.appendChild(dock);
     }
   }
-  if (!dock && location.pathname === "/admin/theme-editor" &&
-      window.matchMedia("(min-width: 901px)").matches) {
+  if (!dock && (location.pathname === "/admin/theme-editor" ||
+      document.body.dataset?.shellMode === "theme-editor")) {
     const main=document.querySelector(".console-workspace > .console-main");
     if (main) {
       dock=document.createElement("aside");

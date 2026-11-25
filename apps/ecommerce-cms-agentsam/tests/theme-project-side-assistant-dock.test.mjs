@@ -12,7 +12,7 @@ const mountCode = source.slice(source.indexOf("function agentsamMount()"),
   source.indexOf("function renderMcpBanner("));
 
 function simulate({ embedded = false, existingDock = false, editor = true,
-  wide = true } = {}) {
+  wide = true, hosted = false } = {}) {
   const nodes = [];
   function element(tag) {
     const node = { tag, id: "", className: "", children: [], parentElement: null,
@@ -45,14 +45,23 @@ function simulate({ embedded = false, existingDock = false, editor = true,
   }};
   const studio = editor ? element("div") : null;
   if (studio) { studio.className = "theme-studio"; body.appendChild(studio); }
+  const main = hosted ? element("main") : null;
+  if (main) {
+    const workspace = element("div");
+    workspace.className = "console-workspace";
+    main.className = "console-main";
+    body.appendChild(workspace);
+    workspace.appendChild(main);
+    if (studio) main.appendChild(studio);
+  }
   const dock = existingDock ? element("aside") : null;
   if (dock) { dock.id = "agentsam-dock"; body.appendChild(dock); }
   const find = (id) => nodes.find(node => node.id === id) || null;
   const document = { body, createElement: element,
     getElementById: find,
-    querySelector: selector => selector === ".theme-studio" ? studio : null
+    querySelector: selector => selector === ".theme-studio" ? studio : selector === ".console-workspace > .console-main" ? main : null
   };
-  const env = { document, location: { pathname: "/admin/theme-project-editor" },
+  const env = { document, location: { pathname: hosted ? "/admin/theme-editor" : "/admin/theme-project-editor" },
     window: { matchMedia: () => ({ matches: wide }) },
     ASSISTANT_NEW_CHAT_ICON: "", ASSISTANT_EXPAND_ICON: "" };
   vm.runInNewContext(mountCode + "\nrenderAgentsamShell();", env);
@@ -95,4 +104,13 @@ test("pages with no editor or dock retain an explicitly scoped overlay fallback"
 test("focus mode can temporarily present the assistant without remounting the Canvas", () => {
   assert.match(css, /agentsam-focus-mode\s+\.theme-studio-assistant-layout\s*>\s*\.theme-studio\s*\{\s*display:\s*none/);
   assert.match(css, /\.theme-studio-assistant-layout\s*>\s*\.theme-studio/);
+});
+
+
+test("hosted phone Theme Studio restores the shared dock instead of blocking the storefront", () => {
+  const { studio, dock, body } = simulate({ hosted: true, wide: false });
+  assert.ok(dock);
+  assert.equal(dock.parentElement, studio.parentElement.parentElement);
+  assert.equal(body.classNames.has("agentsam-overlay-mode"), false);
+  assert.doesNotMatch(dock.html, /agentsam-backdrop/);
 });

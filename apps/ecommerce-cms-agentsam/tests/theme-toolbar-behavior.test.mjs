@@ -945,3 +945,20 @@ test("Theme Studio has no embedded customer/demo URLs or local showcase authorin
   assert.match(source,/agentsam:cms-preview:v1/);
   assert.match(bootstrap,/blankThemeProject/);
 });
+
+
+test("phone can open and reopen its actual sections sheet from preview", async () => {
+  const {dom,doc}=await editorFixture({mobile:true});
+  try {
+    const studio=doc.querySelector('.theme-studio');
+    assert.equal(studio.dataset.mobilePane,'preview');
+    doc.getElementById('te-mobile-layers').click();
+    assert.equal(studio.dataset.mobilePane,'sections');
+    assert.equal(doc.querySelector('[data-drawer-panel="sections"]').hidden,false);
+    doc.querySelector('[data-sheet-close="sections"]').click();
+    assert.equal(studio.dataset.mobilePane,'preview');
+    doc.getElementById('te-mobile-layers').click();
+    assert.equal(studio.dataset.mobilePane,'sections');
+    assert.equal(studio.dataset.mobileSheet,'half');
+  } finally { dom.window.close(); }
+});

@@ -951,6 +951,14 @@ body[data-shell-mode="theme-editor"]:not(:has([data-panel-state="generating"])) 
   animation: agentsam-work-orbit 4s linear infinite;
 }
 @media (max-width: 900px) {
+  /* Contextual assistant stays below the visible preview; explicit focus mode
+     continues to own the full workspace. */
+  body[data-theme-editor-embedded].agentsam-open:not(.agentsam-focus-mode) .theme-studio-assistant-layout > .agentsam-dock,
+  body.shell-mode-theme-editor.agentsam-open:not(.agentsam-focus-mode) .console-workspace > .agentsam-dock {
+    position:absolute;inset:auto 0 0;width:100%;height:min(52%,420px);min-height:0;padding:0;
+  }
+  body[data-shell-mode="theme-editor"] .agentsam-empty {padding:10px;gap:6px;}
+  body[data-shell-mode="theme-editor"] .agentsam-empty-mark {width:32px;height:32px;}
   body[data-shell-mode="theme-editor"] :is(.agentsam-plus,.agentsam-send,.agentsam-close,[data-assistant-action]) {
     min-width: 44px;
     min-height: 44px;
