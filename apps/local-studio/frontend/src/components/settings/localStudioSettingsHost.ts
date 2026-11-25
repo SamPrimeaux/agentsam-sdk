@@ -28,8 +28,6 @@ import {
   getDesktopWorkspaceContext,
   identitySessionExists,
   isPackagedDesktop,
-  invokeStudioService,
-  resolveDesktopStudioAccountId,
   openExternalUrl,
 } from "@/lib/desktop/tauri";
 import {
@@ -89,15 +87,26 @@ function settingsModel(
 ): SettingsModel {
   return {
     id: model.provider + ":" + model.model_id,
+    modelId: model.model_id,
     name: model.label || model.model_id,
     provider: model.provider,
     tier: model.service_tiers?.[0] || "default",
     context: formatContextWindow(model.context_window),
-    status: model.chat_eligible === true ? "healthy" : "unknown",
-    enabled: model.chat_eligible === true,
-    source,
+    status: model.availability_status && model.availability_status !== "available"
+      ? "attention"
+      : model.chat_eligible === true ? "healthy" : "unknown",
+    enabled: model.availability_status !== "not_returned"
+      && model.availability_status !== "stale"
+      && model.chat_eligible === true,
+    source: model.credential_source || source,
     selected,
     verifiedAt,
+    credentialId: model.credential_id || null,
+    credentialName: model.credential_name || null,
+    credentialLast4: model.credential_last4 || null,
+    availabilityStatus: model.availability_status || "available",
+    eligibilityReason: model.eligibility_reason || null,
+    visible: model.visible !== false,
     reasoningEfforts: verifiedModelControls({ ...model, model_key: model.model_key ?? undefined }).reasoning_efforts,
   };
 }
@@ -200,30 +209,18 @@ function settingsWidgets(catalog: AccountWidget[] | null = null): SettingsWidget
 }
 
 /**
- * Shared host IO: web session cookie OR desktop Keychain-backed native session.
- * Both hit the same Worker service, authenticated as the current account.
+ * All Settings requests use the same Worker API as the web host.
+ * The packaged-desktop fetch adapter supplies the Keychain-backed session.
  */
 async function settingsRequest<T extends {ok?:boolean;error?:string}>(
-  path:string,method:"GET"|"POST"|"PUT"|"DELETE"="GET",body?:unknown,
+  path:string,method:"GET"|"POST"|"PUT"|"PATCH"|"DELETE"="GET",body?:unknown,
 ):Promise<T> {
-  let payload:T;
-  let status:number;
-  if(isPackagedDesktop()){
-    const bridged=await invokeStudioService({
-      operation:"settings",account_id:await resolveDesktopStudioAccountId(),
-      path,method,...(body===undefined?{}:{body}),
-    });
-    status=bridged.status;
-    try{payload=JSON.parse(bridged.body) as T;}catch{throw new Error("settings_invalid_response");}
-  }else{
-    const response=await fetch(path,{method,credentials:"same-origin",
-      headers:{accept:"application/json",...(body===undefined?{}:{"content-type":"application/json"})},
-      body:body===undefined?undefined:JSON.stringify(body),
-    });
-    status=response.status;
-    payload=await response.json().catch(()=>({ok:false,error:"settings_invalid_response"} as T));
-  }
-  if(status>=400||payload.ok!==true)throw new Error(payload.error||"settings_request_failed_"+status);
+  const response=await fetch(path,{method,credentials:"same-origin",
+    headers:{accept:"application/json",...(body===undefined?{}:{"content-type":"application/json"})},
+    body:body===undefined?undefined:JSON.stringify(body),
+  });
+  const payload=await response.json().catch(()=>({ok:false,error:"settings_invalid_response"} as T));
+  if(response.status>=400||payload.ok!==true)throw new Error(payload.error||"settings_request_failed_"+response.status);
   return payload;
 }
 /** Read the real account-scoped tool ledger, never a fixture cost estimate. */
@@ -247,8 +244,6 @@ async function billingGet(path:string):Promise<unknown>{
   return response.json();
 }
 async function readAccountBilling(){
-  if(isPackagedDesktop())return {...BILLING_NOT_CONFIGURED,
-    message:"The desktop host has not exposed authenticated billing reads."};
   try {
     const [subscriptions,invoices]=await Promise.all([
       billingGet("/api/billing"),billingGet("/api/billing/invoices"),
@@ -263,7 +258,6 @@ async function readAccountBilling(){
   }
 }
 async function openAccountBillingPortal(){
-  if(isPackagedDesktop())throw new Error("billing_portal_unavailable");
   const response=await fetch("/api/billing/portal",{method:"POST",credentials:"same-origin",
     headers:{"content-type":"application/json",accept:"application/json"},body:"{}"});
   if(!response.ok)throw new Error("billing_portal_request_failed");
@@ -374,21 +368,11 @@ async function loadStorageTargets(): Promise<SettingsStorageTarget[]> {
   const path = "/api/connections/cloudflare/resources?per_page=50&return_to=%2Fadmin%2Fsettings%2Fstorage";
   let cloudflare: CloudflareStorageDiscovery | null = null;
   try {
-    if (isPackagedDesktop()) {
-      const response = await invokeStudioService({
-        operation: "connections",
-        account_id: await resolveDesktopStudioAccountId(),
-        method: "GET",
-        path,
-      });
-      if (response.ok) cloudflare = JSON.parse(response.body) as CloudflareStorageDiscovery;
-    } else {
-      const response = await fetch(path, {
-        credentials: "same-origin",
-        headers: { accept: "application/json" },
-      });
-      if (response.ok) cloudflare = await response.json() as CloudflareStorageDiscovery;
-    }
+    const response = await fetch(path, {
+      credentials: "same-origin",
+      headers: { accept: "application/json" },
+    });
+    if (response.ok) cloudflare = await response.json() as CloudflareStorageDiscovery;
   } catch {
     // Do not convert failed provider discovery into fake empty/healthy resources.
   }
@@ -586,7 +570,10 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   const providerSources = new Map(
     (inventory.providers || []).map((provider) => [provider.id, provider.source || null]),
   );
-  const models = (inventory.availableModels || []).map((model) =>
+  const modelRows = inventory.credentialModels?.length
+    ? inventory.credentialModels
+    : (inventory.availableModels || []);
+  const models = modelRows.map((model) =>
     settingsModel(
       model,
       providerSources.get(model.provider) || null,
@@ -594,7 +581,9 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
       inventory.generatedAt || null,
     ),
   );
-  const runnable = models.filter((model) => model.enabled).length;
+  const runnable = new Set(models
+    .filter((model) => model.enabled && model.visible !== false)
+    .map((model) => model.id)).size;
   const configuredProviders = (inventory.providers || []).filter((provider) => provider.configured).length;
   const discoveryErrors = Object.values(inventory.discovery || {}).filter(
     (entry) => entry?.attempted && entry.ok === false,
@@ -623,7 +612,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
 export const localStudioSettingsHost: SettingsHost = {
   documentationHref: "/admin/settings/docs",
   // Account self-service runs on the web session; the desktop bridge does not proxy it yet.
-  account: isPackagedDesktop() ? undefined : studioAccountHost,
+  account: studioAccountHost,
   ...themeManagement,
   readBilling: readAccountBilling,
   openBillingPortal: openAccountBillingPortal,
@@ -668,6 +657,19 @@ export const localStudioSettingsHost: SettingsHost = {
     await settingsRequest("/api/settings/agents/policy","PUT",policy);
     if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
   },
+  async setModelVisibility(input) {
+    if (!input.credentialId) throw new Error("model_credential_required");
+    await settingsRequest("/api/llm/inventory","PATCH",{
+      credential_id: input.credentialId,
+      provider: input.provider,
+      model_id: input.modelId,
+      visible: input.visible,
+    });
+    if(typeof window!=="undefined") {
+      window.dispatchEvent(new CustomEvent(MODEL_INVENTORY_CHANGED_EVENT));
+      window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+    }
+  },
   async discoverPlugins() {
     const result = await discoverLocalStudioPlugins();
     return {
@@ -694,17 +696,9 @@ export const localStudioSettingsHost: SettingsHost = {
     if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error("plugin_id_invalid");
     const path="/api/plugins/"+encodeURIComponent(pluginId)+"/workspace";
     let body:{ok?:boolean;error?:string;pluginKey?:string;contextTool?:string;result?:unknown};
-    if(isPackagedDesktop()){
-      const native=await invokeStudioService({
-        operation:"plugins",account_id:await resolveDesktopStudioAccountId(),method:"GET",path,
-      });
-      body=JSON.parse(native.body||"{}");
-      if(!native.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
-    }else{
-      const response=await fetch(path,{credentials:"same-origin"});
-      body=await response.json().catch(()=>({ok:false,error:"plugin_workspace_invalid_response"}));
-      if(!response.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
-    }
+    const response=await fetch(path,{credentials:"same-origin"});
+    body=await response.json().catch(()=>({ok:false,error:"plugin_workspace_invalid_response"}));
+    if(!response.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
     return {pluginKey:body.pluginKey||"",contextTool:body.contextTool||"",result:body.result};
   },
   async listPluginRepositories(pluginId) {

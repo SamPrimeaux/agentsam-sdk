@@ -1721,58 +1721,153 @@ function EmptyState({ title }: { title: string }) {
   );
 }
 
-function ModelTable({ models }: { models: SettingsModel[] }) {
-  if (!models.length) return <EmptyState title="This model inventory returned no entries. Refresh discovery or verify the connected runtime." />;
+function ModelTable({ models, host, onChanged }: {
+  models: SettingsModel[];
+  host: SettingsHost;
+  onChanged: () => Promise<void>;
+}) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [pending, setPending] = useState<Set<string>>(() => new Set());
+  const [error, setError] = useState("");
 
-  const columns = {
-    display: "grid",
-    gridTemplateColumns: "minmax(180px, 1.6fr) 1fr 0.8fr 0.8fr auto",
-    columnGap: "0.75rem",
-    alignItems: "center",
-  } as const;
+  async function refresh() {
+    setRefreshing(true);
+    setError("");
+    try {
+      // The host snapshot re-runs credential-scoped discovery; it is not a
+      // refresh of a hardcoded catalog or a platform-wide model list.
+      await onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Model discovery could not be refreshed.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function updateVisibility(model: SettingsModel, visible: boolean) {
+    const credentialId = model.credentialId || "";
+    const modelId = model.modelId || (
+      model.id.startsWith(model.provider + ":") ? model.id.slice(model.provider.length + 1) : model.id
+    );
+    if (!credentialId || !modelId || !host.setModelVisibility) {
+      setError("This model does not have an account-owned credential that can be configured.");
+      return;
+    }
+
+    const key = credentialId + ":" + model.provider + ":" + modelId;
+    setPending((current) => new Set(current).add(key));
+    setError("");
+    try {
+      await host.setModelVisibility({ credentialId, provider: model.provider, modelId, visible });
+      await onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Model visibility could not be saved.");
+    } finally {
+      setPending((current) => {
+        const next = new Set(current);
+        next.delete(key);
+        return next;
+      });
+    }
+  }
+
+  const columns = "sm:grid-cols-[minmax(180px,1.5fr)_minmax(90px,.8fr)_minmax(120px,1fr)_minmax(52px,.5fr)_minmax(52px,.5fr)_minmax(74px,.7fr)_minmax(92px,.8fr)]";
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/70">
-      <div
-        className="hidden border-b border-border/70 bg-muted/20 px-3 py-2 text-[9px] font-medium uppercase tracking-[0.11em] text-muted-foreground sm:grid"
-        style={columns}
-      >
-        <span>Model</span>
-        <span>Provider</span>
-        <span>Tier</span>
-        <span>Context</span>
-        <span>Status</span>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-medium text-foreground">Live provider inventory</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            {models.length} model entries across connected credentials. Visibility is saved per credential.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[11px] font-medium text-foreground hover:bg-muted disabled:opacity-50"
+        >
+          <RefreshCw className={cx("size-3", refreshing && "animate-spin")} />
+          {refreshing ? "Refreshing…" : "Refresh models"}
+        </button>
       </div>
-      <div className="divide-y divide-border/60">
-        {models.map((model) => (
-          <div key={model.id} className="px-3 py-3 sm:grid" style={columns}>
-            <div>
-              <div className="flex items-center gap-1.5 text-[12px] font-medium">
-                <span className="truncate">{model.name}</span>
-                {model.selected ? (
-                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                    Selected
-                  </span>
-                ) : null}
-              </div>
-              <div className="mt-0.5 truncate text-[10px] text-muted-foreground sm:hidden">
-                {model.provider} · {model.source || model.tier}
-              </div>
-            </div>
-            <div className="hidden min-w-0 sm:block">
-              <div className="truncate text-[11px] text-muted-foreground">{model.provider}</div>
-              {model.source ? <div className="truncate text-[9px] text-muted-foreground/70">{model.source}</div> : null}
-            </div>
-            <div className="hidden text-[11px] text-muted-foreground sm:block">{model.tier}</div>
-            <div className="hidden text-[11px] text-muted-foreground sm:block">{model.context}</div>
-            <StatusPill status={model.status} label={model.enabled ? "Runnable" : "Other"} />
+      {error ? <p role="alert" className="text-[11px] text-[var(--settings-warning-ink)]">{error}</p> : null}
+      {models.length ? (
+        <div className="overflow-hidden rounded-lg border border-border/70">
+          <div className={cx("hidden border-b border-border/70 bg-muted/20 px-3 py-2 text-[9px] font-medium uppercase tracking-[0.11em] text-muted-foreground sm:grid", columns)}>
+            <span>Model</span>
+            <span>Provider</span>
+            <span>Credential</span>
+            <span>Tier</span>
+            <span>Context</span>
+            <span>Availability</span>
+            <span>Model picker</span>
           </div>
-        ))}
-      </div>
+          <div className="divide-y divide-border/60">
+            {models.map((model, index) => {
+              const modelId = model.modelId || model.id;
+              const credentialId = model.credentialId || "unbound";
+              const rowKey = credentialId + ":" + model.provider + ":" + modelId + ":" + index;
+              const pendingKey = credentialId + ":" + model.provider + ":" + modelId;
+              const saving = pending.has(pendingKey);
+              const visible = model.visible !== false;
+              const canConfigure = Boolean(model.credentialId && host.setModelVisibility);
+              return (
+                <div key={rowKey} className={cx("grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-3", columns, "sm:items-center")}>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-[12px] font-medium">
+                      <span className="truncate">{model.name}</span>
+                      {model.selected ? (
+                        <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                          Selected
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-0.5 truncate text-[10px] text-muted-foreground sm:hidden">
+                      {model.provider} · {model.credentialName || model.source || "Connected credential"}
+                      {model.credentialLast4 ? " · •••• " + model.credentialLast4 : ""}
+                    </div>
+                  </div>
+                  <div className="hidden min-w-0 sm:block">
+                    <div className="truncate text-[11px] text-muted-foreground">{model.provider}</div>
+                  </div>
+                  <div className="hidden min-w-0 sm:block">
+                    <div className="truncate text-[11px] text-muted-foreground">{model.credentialName || "Connected credential"}</div>
+                    <div className="truncate text-[9px] text-muted-foreground/70">
+                      {model.credentialLast4 ? "•••• " + model.credentialLast4 : model.source || "Account-owned"}
+                    </div>
+                  </div>
+                  <div className="hidden text-[11px] text-muted-foreground sm:block">{model.tier}</div>
+                  <div className="hidden text-[11px] text-muted-foreground sm:block">{model.context}</div>
+                  <div className="hidden sm:block">
+                    <StatusPill
+                      status={model.status}
+                      label={model.enabled ? "Runnable" : model.availabilityStatus === "stale" ? "Stale" : "Unavailable"}
+                    />
+                  </div>
+                  <label className="inline-flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground sm:justify-start">
+                    <input
+                      type="checkbox"
+                      checked={visible}
+                      disabled={!canConfigure || saving}
+                      aria-label={`${visible ? "Hide" : "Show"} ${model.name} for ${model.credentialName || model.provider}`}
+                      onChange={(event) => void updateVisibility(model, event.target.checked)}
+                      className="size-3.5 accent-current disabled:opacity-40"
+                    />
+                    <span>{saving ? "Saving…" : visible ? "Shown" : "Hidden"}</span>
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <EmptyState title="No provider models were returned. Refresh discovery or verify the connected credentials." />
+      )}
     </div>
   );
 }
-
 function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [owner, setOwner] = useState<"you" | "service">("you");
@@ -2045,7 +2140,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
   useEffect(()=>{
     if(snapshot.agentPolicy)setPolicy(snapshot.agentPolicy);
   },[snapshot.agentPolicy]);
-  const availableModels=snapshot.models.filter(model=>model.enabled);
+  const availableModels=[...new Map(snapshot.models.filter(model=>model.enabled&&model.visible!==false).map(model=>[model.id,model] as const)).values()];
   const selectedModel=availableModels.some(model=>model.id===draft.modelId);
   const verifiedModel=availableModels.find(model=>model.id===draft.modelId);
   const effortOptions=["auto",...(verifiedModel?.reasoningEfforts||[])];
@@ -2171,7 +2266,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
   );
   if(view==="models"){
     return <Section title="Verified model inventory" description="Discovered per credential. Missing credentials and unsupported models are never silently substituted.">
-      <ModelTable models={snapshot.models}/>
+      <ModelTable models={snapshot.models} host={host} onChanged={onChanged}/>
     </Section>;
   }
   if(view==="cloud"){

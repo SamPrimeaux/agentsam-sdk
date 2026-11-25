@@ -17,11 +17,11 @@ test("Customize → Apps owns installed apps and tools; the Side Stage view is r
 test("Tool visibility is not installation or plugin authorization", () => {
   const source = read("../frontend/src/components/settings/ToolsPreferences.tsx");
   assert.match(source, /Tools<\/h2>/);
-  assert.match(source, /hiding a tool never uninstalls/);
-  assert.match(source, /Use Apps above to install or remove an application/);
-  assert.match(source, /Use Plugins to manage external connections/);
+  assert.match(source, /never uninstalls a tool/);
   assert.doesNotMatch(source, /Side Stage/);
   const apps = read("../frontend/src/components/settings/AppsManagementPage.tsx");
+  assert.match(apps, /Install, open, disable, or remove the existing admin applications for this account/);
+  assert.match(apps, /plugins are managed in Plugins/);
   assert.match(apps, /<ToolsPreferences \/>/);
 });
 

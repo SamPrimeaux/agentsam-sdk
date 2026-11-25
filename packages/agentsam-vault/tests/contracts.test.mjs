@@ -39,6 +39,8 @@ describe('agentsam-vault contracts', () => {
   it('provider registry drives UI fields', () => {
     const reg = createProviderRegistry();
     assert.ok(reg.get('openai')?.fields?.[0]?.type === 'secret');
+    assert.ok(reg.get('meta')?.credential.kind === CREDENTIAL_KINDS.PROVIDER_API_KEY);
+    assert.ok(reg.get('meta')?.capabilities.includes('models'));
     assert.ok(reg.listByKind(CREDENTIAL_KINDS.OAUTH_CONNECTION).some((p) => p.id === 'cloudflare'));
   });
 

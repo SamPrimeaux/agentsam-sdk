@@ -124,6 +124,7 @@ export type SettingsAgentPolicy = {
 
 export type SettingsModel = {
   id: string;
+  modelId?: string;
   name: string;
   provider: string;
   tier: string;
@@ -135,6 +136,12 @@ export type SettingsModel = {
   verifiedAt?: string | null;
   /** Verified for this model, not a global Settings preset. */
   reasoningEfforts?: readonly string[];
+  credentialId?: string | null;
+  credentialName?: string | null;
+  credentialLast4?: string | null;
+  availabilityStatus?: string;
+  eligibilityReason?: string | null;
+  visible?: boolean;
 };
 
 export type SettingsCatalogItem = {
@@ -524,6 +531,12 @@ export interface SettingsHost {
   saveAgent?(draft: SettingsAgentDraft, id?: string): Promise<void>;
   archiveAgent?(id: string): Promise<void>;
   updateAgentPolicy?(policy: SettingsAgentPolicy): Promise<void>;
+  setModelVisibility?(input: {
+    credentialId: string;
+    provider: string;
+    modelId: string;
+    visible: boolean;
+  }): Promise<void>;
   updateGeneralPreferences?(preferences: SettingsGeneralPreferences): Promise<void>;
   updateStoragePreference?(preference: SettingsStoragePreferenceInput): Promise<void>;
   updateNotificationSettings?(settings: SettingsNotificationProfileUpdate): Promise<void>;

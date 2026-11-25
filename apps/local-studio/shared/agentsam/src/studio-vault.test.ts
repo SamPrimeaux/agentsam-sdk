@@ -6,7 +6,9 @@ import {
   credentialPlaneFor,
   decryptVaultSecret,
   encryptVaultSecret,
+  loadModelProviderDefinitions,
   loadVaultCredentialMap,
+  loadVaultCredentialRecords,
   mergeStudioCredentials,
   platformCredentialFor,
   resolveStudioAccountId,
@@ -14,6 +16,7 @@ import {
   shouldUseWorkersAI,
   studioServerBindings,
   vaultAad,
+  vaultCredentialRecordsForAccount,
   vaultCredentialsForAccount,
 } from "./studio-vault.ts";
 import type { VaultD1Binding } from "./studio-vault.ts";
@@ -27,10 +30,25 @@ function fakeDb(rows: unknown[]): VaultD1Binding {
   return {
     prepare() {
       return {
+        async all<T>(): Promise<{ results?: T[] }> {
+          return { results: rows as T[] };
+        },
+        async first<T>(): Promise<T | null> {
+          return (rows[0] as T | undefined) ?? null;
+        },
+        async run(): Promise<unknown> {
+          return { success: true };
+        },
         bind() {
           return {
             async all<T>(): Promise<{ results?: T[] }> {
               return { results: rows as T[] };
+            },
+            async first<T>(): Promise<T | null> {
+              return (rows[0] as T | undefined) ?? null;
+            },
+            async run(): Promise<unknown> {
+              return { success: true };
             },
           };
         },
@@ -38,6 +56,41 @@ function fakeDb(rows: unknown[]): VaultD1Binding {
     },
   };
 }
+
+describe("loadModelProviderDefinitions", () => {
+  it("uses service-registry metadata to select real provider discovery adapters", async () => {
+    const rows = [
+      { service_name: "meta", label: "Meta Model API", kind: "ai_provider", metadata_json: JSON.stringify({
+        provider_id: "meta", credential_kind: "provider_api_key",
+        model_discovery: { enabled: true, adapter: "meta" },
+      }) },
+      { service_name: "openai", label: "OpenAI", kind: "ai_provider", metadata_json: JSON.stringify({
+        provider_id: "openai", model_discovery: { enabled: true, adapter: "openai" },
+      }) },
+      { service_name: "google", label: "Google AI", kind: "ai_provider", metadata_json: JSON.stringify({
+        provider_id: "gemini", model_discovery: { enabled: true, adapter: "gemini" },
+      }) },
+      { service_name: "gemini", label: "Gemini", kind: "ai_provider", metadata_json: JSON.stringify({
+        provider_id: "gemini", model_discovery: { enabled: true, adapter: "gemini" },
+      }) },
+      { service_name: "meshy", label: "Meshy", kind: "ai_provider", metadata_json: JSON.stringify({
+        provider_id: "meshy", model_discovery: { enabled: false },
+      }) },
+    ];
+    const db = {
+      prepare(sql: string) {
+        assert.match(sql, /FROM agentsam_service_registry/);
+        return { async all() { return { results: rows }; } };
+      },
+    };
+    const definitions = await loadModelProviderDefinitions(db as never);
+    assert.deepEqual(definitions.map((row) => [row.id, row.service, row.adapter]), [
+      ["gemini", "gemini", "gemini"],
+      ["meta", "meta", "meta"],
+      ["openai", "openai", "openai"],
+    ]);
+  });
+});
 
 describe("serviceToProvider", () => {
   it("maps vault service names to Studio providers", () => {
@@ -122,6 +175,32 @@ describe("loadVaultCredentialMap", () => {
     assert.equal(map.get("openai")?.source, "user_vault");
     assert.equal(map.get("gemini")?.value, "gemini-user-key");
     assert.equal(map.has("github"), false);
+  });
+
+  it("retains every account-owned key with its own credential identity", async () => {
+    const accountId = "au_1";
+    const mk = async (name: string, value: string) => ({
+      id: "secret_" + name,
+      secret_name: name,
+      service_name: "openai",
+      secret_value_encrypted: await encryptVaultSecret(
+        value,
+        vaultAad(accountId, "openai", name),
+        MASTER_V1,
+      ),
+      metadata_json: JSON.stringify({ aad_bound: 1, last4: value.slice(-4) }),
+    });
+    const records = await loadVaultCredentialRecords({
+      db: fakeDb([await mk("primary", "sk-primary-1234"), await mk("secondary", "sk-secondary-5678")]),
+      accountId,
+      masterKey: MASTER_V1,
+    });
+    assert.deepEqual(records.map((record) => record.id), ["secret_primary", "secret_secondary"]);
+    assert.deepEqual(records.map((record) => record.name), ["primary", "secondary"]);
+    assert.deepEqual(records.map((record) => record.last4), ["1234", "5678"]);
+    assert.deepEqual(records.map((record) => record.provider), ["openai", "openai"]);
+    assert.ok(records.every((record) => record.source === "user_vault"));
+    assert.deepEqual(records.map((record) => record.value), ["sk-primary-1234", "sk-secondary-5678"]);
   });
 
   it("opens legacy IAM rows only with verified provenance, via MASTER or VAULT_KEY", async () => {
@@ -252,6 +331,11 @@ describe("identity + bindings", () => {
     const bindings = studioServerBindings(null);
     assert.equal(bindings.db, null);
     assert.equal(bindings.workersAI, null);
+  });
+
+  it("vaultCredentialRecordsForAccount returns an empty array without bindings", async () => {
+    const empty = await vaultCredentialRecordsForAccount(studioServerBindings(null), "au_1");
+    assert.deepEqual(empty, []);
   });
 
   it("vaultCredentialsForAccount returns empty without bindings", async () => {

@@ -24,6 +24,7 @@
     "@inneranimalmedia/agentsam-local-shared": "file:../shared/agentsam",
     "@inneranimalmedia/agentsam-nav": "file:../../../packages/agentsam-nav",
     "@inneranimalmedia/agentsam-scoring": "file:../../../packages/agentsam-scoring",
+    "@inneranimalmedia/agentsam-sdk": "2.6.17",
     "@inneranimalmedia/agentsam-settings": "file:../../../packages/agentsam-settings",
     "@inneranimalmedia/agentsam-vault": "file:../../../packages/agentsam-vault",
     "@inneranimalmedia/agentsam-work": "file:../../../packages/agentsam-work",

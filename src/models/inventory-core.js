@@ -178,54 +178,112 @@ export async function collectCredentialScopedInventory(options = {}) {
   const credentialPlane = options.credentialPlane || 'studio_vault';
   const curateWorkersAi = options.curateWorkersAi !== false;
   const resolveCredential = options.resolveCredential;
-  if (typeof resolveCredential !== 'function') {
-    throw new TypeError('resolveCredential is required');
+  const credentialRecords = Array.isArray(options.credentialRecords) ? options.credentialRecords : null;
+  const providerDefinitions = Array.isArray(options.providers)
+    ? options.providers
+    : INVENTORY_API_PROVIDERS;
+  if (!credentialRecords && typeof resolveCredential !== 'function') {
+    throw new TypeError('resolveCredential or credentialRecords is required');
   }
 
   const providers = [];
   const discovery = {};
   const providerModels = {};
+  const credentialDiscovery = [];
 
-  await Promise.all(INVENTORY_API_PROVIDERS.map(async (provider) => {
-    const credential = await resolveCredential(provider.id);
+  await Promise.all(providerDefinitions.map(async (provider) => {
+    const records = credentialRecords
+      ? credentialRecords.filter((row) => String(row?.provider || '').toLowerCase() === provider.id)
+      : null;
+    const legacyCredential = records ? null : await resolveCredential(provider.id);
+    const providerCredentials = records
+      ? records.map((row) => ({
+        configured: Boolean(row?.value),
+        value: String(row?.value || ''),
+        source: row?.source || 'user_vault',
+        account_id: row?.account_id || null,
+        credential_id: row?.id || null,
+        credential_name: row?.name || null,
+        credential_last4: row?.last4 || null,
+      })).filter((row) => row.configured)
+      : legacyCredential?.configured ? [legacyCredential] : [];
+
     providers.push({
       id: provider.id,
       label: provider.label,
-      configured: credential?.configured === true,
-      source: credential?.source || null,
-      credentialError: credential?.error || null,
+      configured: providerCredentials.length > 0,
+      credentialCount: providerCredentials.length,
+      source: providerCredentials[0]?.source || legacyCredential?.source || null,
+      credentialError: legacyCredential?.error || null,
     });
 
-    let result = { attempted: false, ok: false, models: [], error: null };
-    if (options.discoverRemote !== false && credential?.configured) {
-      result = await discoverProviderModels(provider.id, credential, { fetchImpl });
-      if (provider.id === 'cloudflare' && result.ok && curateWorkersAi) {
-        const curated = filterWorkersAiCurated(result.models || []);
-        result = { ...result, models: curated, curation: 'agentsam_workers_ai_allowlist' };
+    const results = await Promise.all(providerCredentials.map(async (credential) => {
+      let result = { attempted: false, ok: false, models: [], error: null };
+      if (options.discoverRemote !== false) {
+        result = await discoverProviderModels(provider.adapter || provider.id, credential, { fetchImpl });
+        if (provider.id === 'cloudflare' && result.ok && curateWorkersAi) {
+          const curated = filterWorkersAiCurated(result.models || []);
+          result = { ...result, models: curated, curation: 'agentsam_workers_ai_allowlist' };
+        }
       }
-    }
+      const models = (result.models || []).map((model) => ({
+        ...model,
+        credential_id: credential.credential_id || null,
+        credential_name: credential.credential_name || null,
+        credential_last4: credential.credential_last4 || null,
+        credential_source: credential.source || null,
+      }));
+      credentialDiscovery.push({
+        credential_id: credential.credential_id || null,
+        credential_name: credential.credential_name || null,
+        credential_last4: credential.credential_last4 || null,
+        provider: provider.id,
+        source: credential.source || null,
+        attempted: result.attempted === true,
+        ok: result.ok === true,
+        error: result.error || null,
+        returnedModelCount: models.length,
+      });
+      return { credential, result, models };
+    }));
+
+    const allModels = results.flatMap((entry) => entry.models);
+    providerModels[provider.id] = allModels;
+    const attempted = results.filter((entry) => entry.result.attempted === true);
+    const successful = results.filter((entry) => entry.result.ok === true);
     discovery[provider.id] = {
-      attempted: result.attempted === true,
-      ok: result.ok === true,
-      error: result.error || null,
-      returnedModelCount: Array.isArray(result.models) ? result.models.length : 0,
-      ...(result.curation ? { curation: result.curation } : {}),
+      attempted: attempted.length > 0,
+      ok: successful.length > 0,
+      error: attempted.length && successful.length === 0
+        ? results.find((entry) => entry.result.error)?.result.error || 'provider_discovery_failed'
+        : null,
+      returnedModelCount: allModels.length,
+      credentialCount: providerCredentials.length,
+      successfulCredentialCount: successful.length,
     };
-    providerModels[provider.id] = result.models || [];
   }));
 
-  const availableModels = Object.values(providerModels)
+  const credentialModels = Object.values(providerModels)
     .flat()
     .filter((row) => row.availability === 'available');
+  const uniqueModels = new Map();
+  for (const row of credentialModels) {
+    const key = String(row.provider || '').toLowerCase() + ':' + String(row.provider_model_id || row.model_id || '');
+    if (!uniqueModels.has(key)) uniqueModels.set(key, row);
+  }
+  const availableModels = [...uniqueModels.values()];
 
   return {
-    schemaVersion: 'agentsam-model-inventory-v3',
+    schemaVersion: 'agentsam-model-inventory-v4',
     generatedAt: new Date().toISOString(),
     authority: 'per_credential_provider_discovery',
     credential_plane: credentialPlane,
-    providers,
+    providers: providers.sort((a, b) => a.label.localeCompare(b.label)),
     discovery,
+    credentialDiscovery: credentialDiscovery.sort((a, b) =>
+      (a.provider + ':' + (a.credential_name || '')).localeCompare(b.provider + ':' + (b.credential_name || ''))),
     providerModels,
+    credentialModels,
     availableModels,
   };
 }
@@ -239,6 +297,28 @@ function sanitizeDiscoveryError(error) {
   return 'provider_discovery_failed';
 }
 
+function sanitizeModelForClient(row = {}) {
+  return {
+    provider: row.provider === 'grok' ? 'xai' : row.provider,
+    model_id: row.provider_model_id || row.model_id,
+    model_key: row.model_key || null,
+    label: row.label || row.provider_model_id || row.model_id,
+    availability: row.availability,
+    availability_source: row.availability_source || null,
+    context_window: row.context_window ?? null,
+    reasoning_efforts: row.reasoning_efforts || [],
+    service_tiers: row.service_tiers || [],
+    capabilities: row.capabilities || {},
+    credential_id: row.credential_id || null,
+    credential_name: row.credential_name || null,
+    credential_last4: row.credential_last4 || null,
+    credential_source: row.credential_source || null,
+    availability_status: row.availability_status || 'available',
+    visible: row.visible !== false,
+    ...modelChatEligibility(row),
+  };
+}
+
 export function sanitizeInventoryForClient(status = {}) {
   const out = {
     schemaVersion: status.schemaVersion,
@@ -249,26 +329,27 @@ export function sanitizeInventoryForClient(status = {}) {
       id: row.id,
       label: row.label,
       configured: row.configured === true,
+      credentialCount: Number(row.credentialCount || 0),
       source: row.source || null,
       credentialError: sanitizeDiscoveryError(row.credentialError),
     })),
     discovery: Object.fromEntries(Object.entries(status.discovery || {}).map(([provider, row]) => [provider, {
       ...row,
       error: sanitizeDiscoveryError(row?.error),
-    }])) ,
-    availableModels: (status.availableModels || []).map((row) => ({
-      provider: row.provider === 'grok' ? 'xai' : row.provider,
-      model_id: row.provider_model_id || row.model_id,
-      model_key: row.model_key || null,
-      label: row.label || row.provider_model_id || row.model_id,
-      availability: row.availability,
-      availability_source: row.availability_source || null,
-      context_window: row.context_window ?? null,
-      reasoning_efforts: row.reasoning_efforts || [],
-      service_tiers: row.service_tiers || [],
-      capabilities: row.capabilities || {},
-      ...modelChatEligibility(row),
+    }])),
+    credentialDiscovery: (status.credentialDiscovery || []).map((row) => ({
+      credential_id: row.credential_id || null,
+      credential_name: row.credential_name || null,
+      credential_last4: row.credential_last4 || null,
+      provider: row.provider,
+      source: row.source || null,
+      attempted: row.attempted === true,
+      ok: row.ok === true,
+      error: sanitizeDiscoveryError(row.error),
+      returnedModelCount: Number(row.returnedModelCount || 0),
     })),
+    credentialModels: (status.credentialModels || []).map(sanitizeModelForClient),
+    availableModels: (status.availableModels || []).map(sanitizeModelForClient),
   };
   if (status.local) {
     out.local = {
@@ -314,6 +395,7 @@ export function resolveDiscoveredModelExecution(inventory, provider, modelId, op
     provider: String(selected.provider),
     model_id: String(selected.model_id || selected.provider_model_id),
     model_key: selected.model_key || null,
+    credential_id: selected.credential_id || null,
     reasoning_effort: requested === 'auto' ? null : requested,
     reasoning_efforts: controls.reasoning_efforts,
     capability_source: controls.source,

@@ -114,7 +114,7 @@ describe("connections registry", () => {
         },
         metadata: { private_hint: "never-send" },
       },
-      [{ plugin_id: "plg_demo" }],
+      [{ plugin_key: "demo" }],
     );
 
     assert.equal(safe.tool_count, 1);

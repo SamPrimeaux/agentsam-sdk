@@ -23,6 +23,11 @@ export interface DiscoveredModelRecord {
   capabilities?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   source?: Record<string, unknown>;
+  credential_id?: string | null;
+  credential_name?: string | null;
+  credential_last4?: string | null;
+  credential_source?: string | null;
+  visible?: boolean;
 }
 
 export interface CredentialScopedInventory {
@@ -36,6 +41,7 @@ export interface CredentialScopedInventory {
     configured: boolean;
     source: string | null;
     credentialError: string | null;
+    credentialCount?: number;
   }>;
   discovery: Record<string, {
     attempted: boolean;
@@ -45,6 +51,18 @@ export interface CredentialScopedInventory {
     curation?: string;
   }>;
   providerModels: Record<string, DiscoveredModelRecord[]>;
+  credentialModels: DiscoveredModelRecord[];
+  credentialDiscovery: Array<{
+    credential_id: string | null;
+    credential_name: string | null;
+    credential_last4: string | null;
+    provider: string;
+    source: string | null;
+    attempted: boolean;
+    ok: boolean;
+    error: string | null;
+    returnedModelCount: number;
+  }>;
   availableModels: DiscoveredModelRecord[];
 }
 
@@ -72,6 +90,7 @@ export function resolveDiscoveredModelExecution(
   provider: string;
   model_id: string;
   model_key: string | null;
+  credential_id: string | null;
   reasoning_effort: string | null;
   reasoning_efforts: readonly string[];
   capability_source: string;
@@ -89,7 +108,17 @@ export function collectCredentialScopedInventory(options: {
   credentialPlane?: CredentialPlane;
   curateWorkersAi?: boolean;
   discoverRemote?: boolean;
-  resolveCredential: (providerId: string) => ProviderCredentialResolution | Promise<ProviderCredentialResolution>;
+  providers?: Array<{ id: string; label: string; service?: string; adapter?: string }>;
+  credentialRecords?: Array<{
+    id?: string | null;
+    provider: string;
+    name?: string | null;
+    last4?: string | null;
+    value: string;
+    source?: string | null;
+    account_id?: string | null;
+  }>;
+  resolveCredential?: (providerId: string) => ProviderCredentialResolution | Promise<ProviderCredentialResolution>;
 }): Promise<CredentialScopedInventory>;
 export function sanitizeInventoryForClient(status?: Partial<CredentialScopedInventory>): {
   schemaVersion?: string;
@@ -98,6 +127,8 @@ export function sanitizeInventoryForClient(status?: Partial<CredentialScopedInve
   credential_plane?: CredentialPlane;
   providers: CredentialScopedInventory["providers"];
   discovery: CredentialScopedInventory["discovery"];
+  credentialDiscovery: CredentialScopedInventory["credentialDiscovery"];
+  credentialModels: Array<Record<string, unknown>>;
   availableModels: Array<{
     provider: string;
     model_id: string;
