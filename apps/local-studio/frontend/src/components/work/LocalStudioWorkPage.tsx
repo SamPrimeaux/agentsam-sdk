@@ -100,23 +100,14 @@ function isWorkConnectionDeepLink(value: string): boolean {
   }
 }
 
-function studioWorkResponse(result: { status: number; content_type?: string; body: string }) {
-  return new Response(result.body, {
-    status: result.status,
-    headers: result.content_type ? { "content-type": result.content_type } : {},
-  });
-}
-
 function createDesktopWorkHost(): WorkHost {
   const request = async (path: string, method = "GET", body?: unknown) =>
-    studioWorkResponse(
-      await invokeStudioService({
-        operation: "work",
-        path,
-        method: method as "GET" | "POST" | "PATCH" | "DELETE",
-        ...(body !== undefined ? { body } : {}),
-      }),
-    );
+    fetch(path, {
+      method,
+      credentials: "same-origin",
+      headers: body !== undefined ? { "content-type": "application/json" } : undefined,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
 
   const json = async <T,>(response: Response): Promise<T> => {
     const payload = await response.json().catch(() => ({}));
@@ -127,13 +118,7 @@ function createDesktopWorkHost(): WorkHost {
   };
 
   const connectionRequest = async (path: string) =>
-    studioWorkResponse(
-      await invokeStudioService({
-        operation: "connections",
-        path,
-        method: "GET",
-      }),
-    );
+    fetch(path, { method: "GET", credentials: "same-origin", headers: { accept: "application/json" } });
 
   return {
     async snapshot(snapshotRequest = {}) {

@@ -1,4 +1,4 @@
-import { invokeStudioService, isPackagedDesktop } from '@/lib/desktop/tauri';
+import { isPackagedDesktop } from '@/lib/desktop/tauri';
 import { isEcommerceAdminPath, resolveEcommerceAdminPath, resolveEcommerceAssetPath } from './ecommerce-routing';
 import { toast } from 'sonner';
 import { isStudioAdminPath } from '../../../../shared/studio-admin-routes.mjs';
@@ -49,31 +49,10 @@ export function createDesktopConsoleHost(navigate: (path: string) => void) {
     async request(request: Request): Promise<Response> {
       const url = new URL(request.url);
       if (url.origin !== window.location.origin) throw new Error('Console request outside installed application');
-      const operation = url.pathname.startsWith('/api/admin/') ? 'commerce'
-        : url.pathname.startsWith('/api/work/') || url.pathname === '/api/projects' || url.pathname.startsWith('/api/projects/')
-          ? 'work' : null;
-      if (!operation) throw new Error('Console request route is not installed');
-      // Browser/local-preview mode already has a same-origin Worker API. The
-      // native service bridge carries the saved desktop session for Commerce
-      // and Work APIs; the native side validates each route independently.
-      if (!isPackagedDesktop()) return fetch(request);
-      const method = request.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-      const contentType = request.headers.get('content-type') || '';
-      let body: unknown;
-      let body_base64: string | undefined;
-      if (method !== 'GET' && method !== 'DELETE' || request.body) {
-        const bytes = new Uint8Array(await request.arrayBuffer());
-        if (bytes.length > 24 * 1024 * 1024) throw new Error('Console upload exceeds 24 MiB');
-        if (contentType.includes('application/json') && bytes.length) body = JSON.parse(new TextDecoder().decode(bytes));
-        else if (bytes.length) {
-          let binary = '';
-          for (let offset = 0; offset < bytes.length; offset += 8192) binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
-          body_base64 = btoa(binary);
-        }
-      }
-      const result = await invokeStudioService({ operation, path: url.pathname + url.search, method, body, body_base64, content_type: contentType });
-      if (result.status === 401) throw new Error('Sign in to AgentSam from Account settings, then retry.');
-      return new Response(result.body, { status: result.status, headers: { 'content-type': result.content_type || 'application/json' } });
+      if (!url.pathname.startsWith('/api/')) throw new Error('Console request route is not an application API');
+      // The shared desktop fetch adapter transports the authenticated request.
+      // The Worker remains authoritative for route handling and authorization.
+      return fetch(request);
     },
   };
 }
