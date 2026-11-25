@@ -5,6 +5,28 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+/**
+ * Where APP manifests are read from. An installed CLI does not ship manifests, so discovery
+ * must not depend on where the CLI lives: explicit root, else the agentsam-sdk checkout the user
+ * is standing in (walking up from cwd), else the package's own directory.
+ */
+export function findCheckoutRoot(start = process.cwd()) {
+  let dir = path.resolve(start);
+  for (;;) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+      if (pkg.name === '@inneranimalmedia/agentsam-sdk' && fs.existsSync(path.join(dir, 'apps'))) return dir;
+    } catch { /* not a package root */ }
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+function resolveSourceRoot(options = {}) {
+  return options.root || findCheckoutRoot() || REPO_ROOT;
+}
+
 const KEBAB = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const FORBIDDEN_STRING_APP = /\bconst\s+APP\s*=\s*["'`][^"'`]+["'`]/;
 const HOST_PRODUCT_FIELDS = new Set([
@@ -323,7 +345,7 @@ function validateDesktopManifests(root, knownIds, apps = []) {
 }
 
 export function validateApps(options = {}) {
-  const root = options.root || REPO_ROOT;
+  const root = resolveSourceRoot(options);
   const filterId = options.appId || null;
   const apps = listAppManifests(root);
   const knownIds = new Set(apps.map((a) => a.id));
@@ -387,10 +409,15 @@ export async function runApp(argv = [], options = {}) {
   }
 
   if (command === 'list') {
-    const apps = listAppManifests(options.root || REPO_ROOT);
+    const sourceRoot = resolveSourceRoot(options);
+    const apps = listAppManifests(sourceRoot);
     write('\n  AgentSam apps\n\n');
     for (const app of apps) {
       write(`  • ${app.id.padEnd(24)} ${app.name}\n`);
+    }
+    if (apps.length === 0) {
+      write(`  No app manifests found under ${sourceRoot}.\n`);
+      write('  Run this inside an agentsam-sdk checkout (apps/*/agentsam.app.json).\n');
     }
     write('\n');
     return apps;
@@ -398,7 +425,7 @@ export async function runApp(argv = [], options = {}) {
 
   if (command === 'validate') {
     const target = appId === '--all' || appId == null ? null : appId;
-    const report = validateApps({ root: options.root || REPO_ROOT, appId: target });
+    const report = validateApps({ root: resolveSourceRoot(options), appId: target });
     if (report.warnings.length) {
       write('\n  Warnings\n');
       for (const w of report.warnings) write(`  • ${w}\n`);
@@ -415,11 +442,11 @@ export async function runApp(argv = [], options = {}) {
   }
 
   if (!appId) throw new Error('agentsam app requires an app id');
-  const app = resolveApp(appId, options.root || REPO_ROOT);
+  const app = resolveApp(appId, resolveSourceRoot(options));
 
   if (command === 'info' || command === 'inspect') {
     if (command === 'inspect') {
-      const report = validateApps({ root: options.root || REPO_ROOT, appId: app.id });
+      const report = validateApps({ root: resolveSourceRoot(options), appId: app.id });
       write(`${JSON.stringify({ manifest: app.manifest, validation: report }, null, 2)}\n`);
       if (!report.ok && !options.noExit) process.exitCode = 1;
       return { manifest: app.manifest, validation: report };
