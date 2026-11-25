@@ -282,6 +282,12 @@
             '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title te-panel-title--compact"><h2 id="te-tree-title">Page</h2></div><div id="te-tree"></div><section id="te-block-panel" data-surface="left" hidden></section></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
+            '<nav class="te-mobile-drawer-nav" aria-label="Theme editor tools">' +
+              '<button type="button" data-drawer-mode="sections" aria-pressed="true">' + icon.sections + '<span>Sections</span></button>' +
+              '<button type="button" data-drawer-mode="theme-settings" aria-pressed="false">' + icon.settings + '<span>Settings</span></button>' +
+              '<button type="button" data-drawer-mode="app-embeds" aria-pressed="false">' + icon.embeds + '<span>Apps</span></button>' +
+              '<button type="button" data-sheet-close="sections" aria-label="Return to storefront">×</button>' +
+            '</nav>' +
           '</aside>',
           '<main class="theme-studio-canvas">',
             '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-import-live" type="button" id="te-import-live" hidden>Import live page</button><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open published storefront page in a new tab">', icon.external, '</a></div></div>',
@@ -397,7 +403,7 @@
     const studio = document.querySelector('.theme-studio');
     if (!studio) return;
     studio.dataset.mobilePane = pane;
-    if (isPhoneEditor()) closeMiniAgentSam();
+    if (isPhoneEditor()) { closePageMenu(); closeMiniAgentSam(); }
     if (pane === 'settings') setInspectorVisible(true);
     byId('te-mobile-pane-switch')?.querySelectorAll('[data-mobile-pane]').forEach(function(button) {
       const selected = button.dataset.mobilePane === pane;
@@ -3277,7 +3283,7 @@
   }
 
   function revealSelectedMobile() {
-    if (!isPhoneEditor() || document.querySelector('.theme-studio')?.dataset.mobilePane !== 'settings' || !activeFieldKey) return;
+    if (!isPhoneEditor() || document.querySelector('.theme-studio')?.dataset.mobilePane !== 'settings' || !activeSectionKey) return;
     const frame = byId('theme-preview');
     const sheet = document.querySelector('.theme-editor-panel');
     try {
@@ -4120,7 +4126,7 @@
     if (mobileHeading) mobileHeading.textContent = editorDrawer === 'theme-settings' ? 'Theme settings'
       : editorDrawer === 'app-embeds' ? 'App embeds' : 'Sections';
     if (isPhoneEditor() && showMobileSheet) {
-      if (editorDrawer) { setMobileSheetSize('half'); setMobilePane('sections'); }
+      if (editorDrawer) { setMobileSheetSize('expanded'); setMobilePane('sections'); }
       else setMobilePane('preview');
     }
   }
@@ -4182,7 +4188,8 @@
     byId('te-page-search').value = '';
     renderPageOptions('');
     loadStorefrontResources().catch(() => {});
-    requestAnimationFrame(function() { byId('te-page-search').focus(); });
+    // Opening a page picker must not summon the iOS keyboard before a search.
+    if (!isPhoneEditor()) requestAnimationFrame(function() { byId('te-page-search').focus(); });
   }
 
   function closePageMenu() {
