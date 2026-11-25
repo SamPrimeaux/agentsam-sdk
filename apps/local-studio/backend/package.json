@@ -17,7 +17,7 @@
     "@inneranimalmedia/agentsam-identity": "file:../../../packages/identity",
     "@inneranimalmedia/agentsam-local-shared": "file:../shared/agentsam",
     "@inneranimalmedia/agentsam-queue-control": "file:../../../packages/agentsam-queue-control",
-    "@inneranimalmedia/agentsam-sdk": "file:../../..",
+    "@inneranimalmedia/agentsam-sdk": "2.6.17",
     "@inneranimalmedia/agentsam-vault": "file:../../../packages/agentsam-vault",
     "@inneranimalmedia/agentsam-work": "file:../../../packages/agentsam-work",
     "@inneranimalmedia/financial-analytics": "file:../../../packages/financial-analytics"
