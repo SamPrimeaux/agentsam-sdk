@@ -19,22 +19,30 @@ The end-to-end lifecycle is:
 
 ## 2. Repository and package ownership
 
+The `agentsam-sdk` repository is the release vehicle for narrowly scoped, independently versioned software packages. It is **the SDK**, not a stockpile for merchant-facing application UIs, customer content, account data, product records or marketplace pages. Each package must have a defined developer-facing contract and a bounded responsibility.
+
 | System | Canonical responsibility | Must not own |
 |---|---|---|
-| `packages/agentsam-contracts` | Portable document, event, and resource contracts | SQL, host authentication, persistence |
-| `packages/agentsam-embeds` | Storefront embed definitions, stable keys, configuration schemas, capabilities, permissions, surfaces, validation | CMS persistence, product listings, merchant authorization, submission storage |
-| `packages/agentsam-cms` | Portable CMS operations for site-owned resources, drafts, revisions, publication and restore contracts | Direct D1 binding, provider secrets, storefront-specific UI |
-| `apps/ecommerce-cms-agentsam` | Trusted CMS host adapter, merchant authorization, site-scoped repositories, CMS editor and storefront integration | A second product catalog or competing resource lifecycle |
-| Forms app/module | Form management, form-specific authoring and response inbox | Independent form storage or independent publication authority |
-| Growth app/module | Campaigns, signup flows, attribution and conversion workflows | Form document persistence or email transport |
-| Product Studio | Product creation, metadata, pricing, packaging, versioning and listing lifecycle | Embed definition registry or CMS page authoring |
-| Design Canvas | Shared visual authoring and preview surfaces | Separate form schema, document database or publication service |
-| `agentsam-communications` | Provider-neutral message delivery and delivery results | Form definitions or marketing campaign ownership |
-| Resend integration | One authorized email transport provider | Storefront UI or embed ownership |
-| `agentsam-analytics` and host writer | Normalized operational and behavioral events/read models | Raw form answer storage or a competing activity log |
-| `agentsam_app_installations` and existing install services | Account-owned application installation state | A new embed-specific installation registry |
+| `packages/agentsam-contracts` | Portable schemas and contracts for documents, events, resources and cross-package APIs | SQL, account data, host authentication or application UI |
+| `packages/agentsam-cms` / `@inneranimalmedia/agentsam-cms` | The portable CMS SDK engine: CMS operation vocabulary, validation, host-repository contracts, revisions and publication protocols | The merchant-facing CMS product, account database ownership, direct storage bindings or a second editor UI |
+| `packages/agentsam-embeds` / `@inneranimalmedia/agentsam-embeds` | Canonical, versioned definitions for reusable storefront embed *types*: stable keys, metadata, supported surfaces, capabilities, permission declarations, configuration schemas, editor-field schemas, validation and the reusable client runtimes it actually ships | Merchant-authored forms, site-specific embed instances, CMS placement persistence, product records, account authorization or email-provider ownership |
+| Identity/host application | Trusted runtime authority for sign-in/sign-up and sessions, verified account/actor/site context, authorization, account-owned database access, connectors, credentials and execution of authorized operations | The CMS editor, Forms authoring UI, Growth campaign UI or marketplace product catalog |
+| `packages/identity` / `@inneranimalmedia/agentsam-identity` | Portable identity capabilities and auth-portal components consumed by the host; also supports merchant/customer-facing storefront sign-in, sign-up and private-storefront access integrations | The host application's entire account data plane or ownership of every account table |
+| `apps/ecommerce-cms-agentsam` / `@inneranimalmedia/ecommerce-cms-agentsam` | The merchant-facing CMS product: Page Editor, Theme Studio, CMS administration, storefront delivery and Apps. It consumes the CMS SDK engine and trusted host services | Account/session authority, account-wide database and connector ownership, or a parallel product catalog |
+| Forms | Merchant-facing form authoring, reusable form-template curation, field/validation/presentation configuration, form-specific notification workflows, publishing through CMS services and the submission inbox | A separate account database, a second CMS/publication authority, email transport or marketing-campaign ownership |
+| Growth | Marketing campaigns, audience/segment workflows, lead nurturing, campaign attribution and conversion automation | Form-document ownership or email-provider transport |
+| Product Studio | Merchant product creation and editing through the canonical `products` resource, including metadata, pricing, packaging and publish workflow | A second product catalog or embed-definition registry |
+| Design Canvas | Shared visual authoring and preview surfaces that edit supported resources through their owning APIs | A separate form schema, product database, CMS database or publication authority |
+| `agentsam-communications` | Provider-neutral message orchestration, delivery adapters and delivery receipts/outbox | Form authoring, merchant template-editor UI or Growth campaign ownership |
+| Resend integration | One authorized email-delivery provider/adapter within Communications | Newsletter ownership, storefront embed definitions or form/email workflow authoring |
+| `agentsam-analytics` and shared host writers | Shared event contracts, ingestion/projection and reporting infrastructure | Raw form-answer storage or a competing activity/event database |
+| `products` and Product Studio APIs | Canonical commercial product records consumed by the stores and installation services | App Store-specific copies or a separate embed catalog |
+| App Store and Theme Store | Discovery, product presentation and distribution centers consuming canonical `products` records and the owning package/theme release systems | Product source-of-truth records, account credentials or account-owned installation state |
+| `agentsam_app_installations` and existing install services | Canonical account-owned application installation state and install/update authority | A new App Store-owned or embed-specific installation registry |
 
-The Ecommerce CMS is the trusted host for merchant/site mutations. Portable packages receive a host repository and trusted context; they do not connect directly to a tenant database.
+The identity/host application—not Ecommerce CMS—is the trusted host for account/session/site/actor context, authorization, account-owned database access, connectors, credentials and authorized execution. It supplies the verified context and host-owned repositories/services consumed by the CMS SDK engine and merchant applications.
+
+`@inneranimalmedia/agentsam-cms` is an SDK engine, not another CMS product or editor. `@inneranimalmedia/ecommerce-cms-agentsam` is the merchant-facing CMS product. The deprecated `@inneranimalmedia/client-cms-editor` is not to be revived as a competing editor.
 
 ## 3. Current baseline and known gaps (2026-11-25 audit)
 
@@ -45,8 +53,9 @@ The following observations were made while tracing the local SDK checkout and th
 - `cms_form_submissions` already exists and carries form, account/site, and test/live ownership information. The audit did not establish a successful live production submission; passing isolated tests are not a substitute for a production end-to-end proof.
 - `apps/local-studio/backend/worker/agentsam-forms.js` already implements form administration, public rendering/submission and owner response access. Its existing tests cover install, seeding, draft edit, optimistic versioning, publish, public submit, owner inbox, unpublish and fail-closed ownership cases.
 - The Forms app manifest currently declares installation unsupported, despite existing app-installation authority and CMS-backed behavior. App availability and installability must be reconciled with the canonical `agentsam_app_installations` flow; do not invent a second installation path.
+- The inspected Forms frontend's `FormDocument` currently contains fields, appearance, behavior and success configuration, but no email-workflow configuration. Its visible library is based on five starter drafts; the inspected UI does not yet expose a full merchant-curated template library, a blank-form creation flow or form-triggered email authoring. Those are required target capabilities, not completed features.
 - `packages/agentsam-cms` has page/component/theme/navigation/asset operations but no general merchant-facing globals CRUD contract yet.
-- `packages/agentsam-embeds` and the Forms app currently have different document/configuration and submission expectations. The base SDK checkout and the separate marketplace worktree also had different embed catalog counts at audit time (four versus ten). Reconcile one reviewed canonical manifest; do not preserve two catalogs.
+- The inspected `packages/agentsam-embeds/agentsam.embeds.json` contains four definitions: `form_inline`, `form_popup`, `store_chat` and `grow_capture`. The generated Theme Studio catalog currently merges those four with four definitions from `apps/ecommerce-cms-agentsam/agentsam.app.json` and two from `apps/ecommerce-cms-agentsam/apps/resend/agentsam.package.json`, producing ten aggregate entries. Ten is the generated total, not the canonical package's definition count. Embed ownership is therefore still split despite the package README's single-source claim. Move storefront presentation definitions out of the CMS and Resend manifests into the reviewed canonical embed-definition source; Resend remains a Communications provider, not an embed owner.
 - The embed package's `validateEmbed` is definition/configuration validation, not authorization or persistence. Its `listEmbeds` and `getEmbed` are catalog operations.
 - Existing `products` records include `app_embed` products. Product creation and listing lifecycle need to support this kind without creating irrelevant physical inventory variants.
 - `emitAnalyticsFact()` already writes normalized facts to `agentsam_analytics` and attempts projection to `AGENTSAM_ACTIVITY`. Reuse it; do not add a second event pipeline.
@@ -70,7 +79,7 @@ The contract must cover:
 - Spam/rate-limit policy references and retention classification (policy configuration, not executable client code).
 - Attribution context that can be safely associated with a submission without placing personal answers in analytics.
 
-Do not create a new `forms` or `form_documents` table. Existing `cms_globals`, `cms_revisions`, `cms_publications` and `cms_form_submissions` remain the persistence foundation, subject to schema verification and narrowly scoped migrations when required.
+Do not create a new `forms` or `form_documents` table by default. The existing account-owned host database and CMS resource lifecycle are the persistence foundation: use `cms_globals`, `cms_revisions`, `cms_publications` and `cms_form_submissions` where the verified schema supports the required behavior. The identity/host application owns access control and durable database operations; the CMS SDK defines portable operations; Forms owns its authoring experience and form-domain behavior. Add a migration only when schema inspection proves a specific missing capability.
 
 ### 4.2 Embed definition versus embed instance
 
@@ -91,7 +100,7 @@ Keep the package portable and deterministic:
 - `validateEmbed(definitionOrKey, config)` — validate the definition/configuration against the contract and return actionable issues.
 - `createEmbedConfig(key, overrides)` — optional pure factory for validated default configuration; it must not persist data.
 
-Do not add a persistence-oriented `createEmbed()` to this package. Persist a CMS resource through the CMS host; place it through CMS component/page operations. If a later API uses the name `createEmbed`, it must be an explicitly documented host/CMS operation, not a second persistence owner hidden inside the catalog package.
+Do not add a persistence-oriented `createEmbed()` to this package. Create the underlying merchant resource through the appropriate Forms/CMS operation executed by the identity/host application; place an embed instance through the CMS component/page operations. If a later API uses the name `createEmbed`, it must be an explicitly documented host/CMS operation, not a second persistence owner hidden inside the catalog package.
 
 The catalog manifest is the single source of truth for stable keys, defaults, editor fields, supported surfaces, capabilities, permissions, runtime requirements and compatibility. Generated Theme Studio catalogs must be reproducible from this manifest and tested for drift.
 
@@ -110,7 +119,7 @@ Extend `packages/agentsam-cms` with portable operations for site-owned global re
 | `cms.globals.publish` | Publish an authorized validated revision through the existing trusted publication authority |
 | `cms.globals.unpublish` | Remove public availability without deleting the resource or history |
 
-The SDK package defines operations and delegates effects to an injected host repository. The Ecommerce CMS implements the repository with the existing `cms_globals`, `cms_revisions`, and `cms_publications` ownership model. The host must derive account, site and actor from verified session context; client payload scope is never authoritative.
+The `@inneranimalmedia/agentsam-cms` SDK engine defines portable operations and delegates effects to an injected host repository. The identity/host application supplies verified account/site/actor context and the account-owned repository and storage/connector bindings for the existing CMS resource tables, including `cms_globals`, `cms_revisions` and `cms_publications`. `@inneranimalmedia/ecommerce-cms-agentsam` consumes those services to present the CMS product experience and invoke CMS operations; it is not the account/identity host or owner of the account data plane. Client payload scope is never authoritative.
 
 Required behavior:
 
@@ -129,15 +138,19 @@ The existing Forms HTTP routes remain compatibility adapters while clients migra
 
 ### 6.1 Merchant management
 
-Keep `/admin/forms` as the Forms management entry point. It is a merchant-facing feature within the existing Ecommerce CMS application/installation model, not an unrelated app with its own persistence.
+Keep `/admin/forms` as the current Forms management entry point, while treating Forms as its own merchant-facing application surface within the existing AgentSam app, navigation and installation model. It consumes the identity/host application's verified account and site context, the CMS SDK operations and the existing host-owned persistence services. It must not become a second CMS, account host or independent persistence/publication authority. Forms must be reachable through the supported AgentSam surfaces without duplicating its underlying resource or submission records.
 
 The management experience must provide:
 
 - Site-aware form library with search and draft/published/archived filters.
-- Create from an approved template or blank document.
-- Edit, duplicate, preview, publish, unpublish and revision history.
+- Create from a blank document or an approved starter; save, curate, duplicate, organize and reuse merchant-owned form templates.
+- Edit fields, validation, conditional logic, consent, appearance, behavior and success/error states.
+- Preview, publish, unpublish and inspect revision history through the existing CMS lifecycle.
 - A real submission inbox with test/live distinction, safe detail access, filtering and export/retention controls.
+- Form-specific operational email workflows: merchant submission notifications, customer receipts/confirmations and consent/opt-in messages, with editable content/template references, verified sender selection, recipient routing and supported conditional rules.
 - Clear submission counts and form status from persisted data.
+
+Forms owns the authoring and configuration of messages triggered by its forms. Growth owns marketing campaigns, audience segmentation and nurture sequences. Both use `agentsam-communications` for provider-neutral delivery; the host supplies verified account context, authorized provider credentials, sender identity and the template renderer/registry. Resend is one delivery adapter, not the owner of the form, template or workflow.
 - Open-in-Design-Canvas using the same form resource ID and revision context.
 - Growth campaign association without duplicating the form document.
 
