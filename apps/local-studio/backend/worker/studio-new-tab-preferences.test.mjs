@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {handleStudioNewTabPreferences} from './studio-user-preferences.js';
+import {handleStudioNewTabPreferences, getStudioModelVisibilityPreferences, setStudioModelVisibilityPreference} from './studio-user-preferences.js';
 
 function fixture() {
   const sqlite=new DatabaseSync(':memory:');
@@ -52,4 +52,30 @@ test('wallpaper photo settings validate URLs, origin and ownership',async()=>{
   assert.equal((await handleStudioNewTabPreferences(request('PUT',{wallpaper:'dusk',imageUrl:null},'https://evil.example'),{DB:db},'alice')).status,403);
   assert.equal((await handleStudioNewTabPreferences(request('PUT',{wallpaper:'dusk',imageUrl:null}),{DB:db},null)).status,401);
   assert.equal((await handleStudioNewTabPreferences(request('PUT',{wallpaper:'script',imageUrl:null}),{DB:db},'alice')).status,400);
+});
+
+test('model visibility uses existing account UI preferences, scopes by credential and preserves other namespaces',async()=>{
+  const {db,sqlite}=fixture();
+  await setStudioModelVisibilityPreference({DB:db},'alice',{
+    credentialId:'usec_openai_one',provider:'openai',modelId:'gpt-5.6',visible:false,
+  });
+  await setStudioModelVisibilityPreference({DB:db},'alice',{
+    credentialId:'usec_openai_two',provider:'openai',modelId:'gpt-5.6',visible:false,
+  });
+  let preferences=await getStudioModelVisibilityPreferences({DB:db},'alice');
+  assert.deepEqual(preferences.usec_openai_one.hidden_model_ids,['gpt-5.6']);
+  assert.deepEqual(preferences.usec_openai_two.hidden_model_ids,['gpt-5.6']);
+  assert.deepEqual(await getStudioModelVisibilityPreferences({DB:db},'bob'),{});
+
+  await setStudioModelVisibilityPreference({DB:db},'alice',{
+    credentialId:'usec_openai_one',provider:'openai',modelId:'gpt-5.6',visible:true,
+  });
+  preferences=await getStudioModelVisibilityPreferences({DB:db},'alice');
+  assert.equal(preferences.usec_openai_one,undefined);
+  assert.deepEqual(preferences.usec_openai_two.hidden_model_ids,['gpt-5.6']);
+
+  const stored=JSON.parse(sqlite.prepare("SELECT ui_preferences_json FROM agentsam_user_ui_preferences WHERE account_id='alice'").get().ui_preferences_json);
+  assert.equal(stored.settings_general.openLastProject,true);
+  assert.equal(stored.inneranimal_companions.activeId,'geaux');
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='agentsam_account_provider_models'").get().n,0);
 });

@@ -93,9 +93,29 @@ export interface VaultD1Binding {
   prepare(sql: string): {
     bind(...args: unknown[]): {
       all<T = Record<string, unknown>>(): Promise<{ results?: T[] }>;
+      first<T = Record<string, unknown>>(): Promise<T | null>;
+      run(): Promise<unknown>;
     };
+    all<T = Record<string, unknown>>(): Promise<{ results?: T[] }>;
+    first<T = Record<string, unknown>>(): Promise<T | null>;
+    run(): Promise<unknown>;
   };
 }
+
+export interface StudioCredentialRecord extends StudioCredential {
+  id: string;
+  provider: string;
+  serviceName: string;
+  name: string;
+  last4: string | null;
+}
+
+export type StudioModelProviderDefinition = {
+  id: string;
+  label: string;
+  service: string;
+  adapter: string;
+};
 
 export interface VaultSecretRow {
   id?: unknown;
@@ -103,23 +123,30 @@ export interface VaultSecretRow {
   service_name?: unknown;
   secret_value_encrypted?: unknown;
   metadata_json?: unknown;
+  service_kind?: unknown;
+  service_metadata_json?: unknown;
 }
 
-export const VAULT_SECRETS_QUERY = `SELECT id, secret_name, service_name, secret_value_encrypted, metadata_json
-     FROM user_secrets
-     WHERE account_id = ? AND is_active = 1
-     ORDER BY updated_at DESC
-     LIMIT 100`;
+export const VAULT_SECRETS_QUERY = [
+  "SELECT us.id, us.secret_name, us.service_name, us.secret_value_encrypted, us.metadata_json,",
+  "sr.kind AS service_kind, sr.metadata_json AS service_metadata_json",
+  "FROM user_secrets us LEFT JOIN agentsam_service_registry sr ON sr.service_name = us.service_name",
+  "WHERE us.account_id = ? AND us.is_active = 1 AND us.kind = 'provider_key'",
+  "AND (sr.kind = 'ai_provider' OR sr.kind IS NULL)",
+  "ORDER BY us.updated_at DESC LIMIT 100",
+].join(" ");
 
 function clean(value: unknown): string {
   return value == null ? "" : String(value).trim();
 }
 
 /**
- * Load and unwrap vault credentials for one account (au_*).
- * First row wins per provider. Decrypt failures are skipped.
+ * Load every usable provider credential for one account (au_*).
+ *
+ * A provider can have multiple independent keys. Preserve each credential's
+ * identity so discovery and preferences can be scoped to the exact key.
  */
-export async function loadVaultCredentialMap(options: {
+export async function loadVaultCredentialRecords(options: {
   db: VaultD1Binding;
   accountId: string;
   masterKey: string;
@@ -128,9 +155,9 @@ export async function loadVaultCredentialMap(options: {
   /** CLOUDFLARE_ACCOUNT_ID only — never a generic ACCOUNT_ID, never au_*. */
   cloudflareAccountId?: string | null;
   rows?: VaultSecretRow[];
-}): Promise<Map<string, StudioCredential>> {
+}): Promise<StudioCredentialRecord[]> {
   const accountId = clean(options.accountId);
-  if (!accountId) return new Map();
+  if (!accountId) return [];
   const { db, masterKey } = options;
   const cfAccountId = clean(options.cloudflareAccountId) || null;
   const rows =
@@ -142,23 +169,124 @@ export async function loadVaultCredentialMap(options: {
         .all<VaultSecretRow>()) as { results?: VaultSecretRow[] }
     ).results ??
     [];
-  const byProvider = new Map<string, StudioCredential>();
+  const records: StudioCredentialRecord[] = [];
   for (const row of rows) {
-    const providerId = serviceToProvider(row.service_name);
-    if (!providerId || byProvider.has(providerId)) continue;
+    let serviceMetadata: Record<string, unknown> = {};
+    try {
+      const parsed = typeof row.service_metadata_json === "string"
+        ? JSON.parse(row.service_metadata_json)
+        : row.service_metadata_json;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) serviceMetadata = parsed as Record<string, unknown>;
+    } catch {
+      serviceMetadata = {};
+    }
+    const modelDiscovery = serviceMetadata.model_discovery && typeof serviceMetadata.model_discovery === "object"
+      ? serviceMetadata.model_discovery as Record<string, unknown>
+      : null;
+    const providerId = clean(serviceMetadata.provider_id) || serviceToProvider(row.service_name);
+    const serviceKind = clean(row.service_kind);
     const ciphertext = clean(row.secret_value_encrypted);
-    if (!ciphertext) continue;
-    const aad = vaultAad(accountId, String(row.service_name), String(row.secret_name));
+    const serviceName = clean(row.service_name).toLowerCase();
+    const secretName = clean(row.secret_name);
+    if (!providerId || !ciphertext || !secretName) continue;
+    if (serviceKind && serviceKind !== "ai_provider") continue;
+    if (modelDiscovery && modelDiscovery.enabled === false) continue;
+    const aad = vaultAad(accountId, serviceName, secretName);
     try {
       const value = await decryptVaultSecret(ciphertext, aad, masterKey, row.metadata_json ?? null, options.legacyKey);
       if (!value.trim()) continue;
-      const entry: StudioCredential = { value, source: "user_vault" };
-      if (providerId === "cloudflare" && cfAccountId) {
-        entry.cloudflare_account_id = cfAccountId;
+      let metadata: Record<string, unknown> = {};
+      try {
+        const parsed = typeof row.metadata_json === "string" ? JSON.parse(row.metadata_json) : row.metadata_json;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) metadata = parsed as Record<string, unknown>;
+      } catch {
+        /* Crypto provenance is validated by decryptVaultSecret; display metadata is optional. */
       }
-      byProvider.set(providerId, entry);
+      records.push({
+        id: clean(row.id) || serviceName + ":" + secretName,
+        provider: providerId,
+        serviceName,
+        name: secretName,
+        last4: clean(metadata.last4) || null,
+        value,
+        source: "user_vault",
+        ...(providerId === "cloudflare" && cfAccountId ? { cloudflare_account_id: cfAccountId } : {}),
+      });
     } catch {
       continue;
+    }
+  }
+  return records;
+}
+
+/**
+ * The account service registry owns provider identities and discovery adapter
+ * selection. Adapter implementations remain code-owned; model IDs never do.
+ */
+export async function loadModelProviderDefinitions(
+  db: VaultD1Binding | null,
+): Promise<StudioModelProviderDefinition[]> {
+  if (!db) return [];
+  const { results } = await db.prepare(
+    "SELECT service_name, label, kind, metadata_json FROM agentsam_service_registry "
+      + "WHERE kind = 'ai_provider' ORDER BY label",
+  ).all<{
+    service_name?: unknown;
+    label?: unknown;
+    kind?: unknown;
+    metadata_json?: unknown;
+  }>();
+  const definitions = new Map<string, StudioModelProviderDefinition>();
+  for (const row of results || []) {
+    let metadata: Record<string, unknown> = {};
+    try {
+      const parsed = typeof row.metadata_json === "string" ? JSON.parse(row.metadata_json) : row.metadata_json;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) metadata = parsed as Record<string, unknown>;
+    } catch {
+      metadata = {};
+    }
+    const discovery = metadata.model_discovery && typeof metadata.model_discovery === "object"
+      ? metadata.model_discovery as Record<string, unknown>
+      : {};
+    if (discovery.enabled !== true) continue;
+    const service = clean(row.service_name).toLowerCase();
+    const id = clean(metadata.provider_id) || serviceToProvider(service) || service;
+    const adapter = clean(discovery.adapter) || id;
+    if (!id || !adapter) continue;
+    const previous = definitions.get(id);
+    const next = {
+      id,
+      label: clean(row.label) || previous?.label || id,
+      service,
+      adapter,
+    };
+    // Prefer the canonical service row over an alias such as google -> gemini.
+    if (!previous || service === id) definitions.set(id, next);
+  }
+  return [...definitions.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * Compatibility resolver for single-credential callers.
+ * Inventory and model discovery must use loadVaultCredentialRecords instead.
+ */
+export async function loadVaultCredentialMap(options: {
+  db: VaultD1Binding;
+  accountId: string;
+  masterKey: string;
+  legacyKey?: string;
+  cloudflareAccountId?: string | null;
+  rows?: VaultSecretRow[];
+}): Promise<Map<string, StudioCredential>> {
+  const records = await loadVaultCredentialRecords(options);
+  const byProvider = new Map<string, StudioCredential>();
+  for (const record of records) {
+    if (!byProvider.has(record.provider)) {
+      byProvider.set(record.provider, {
+        value: record.value,
+        source: record.source,
+        ...(record.cloudflare_account_id ? { cloudflare_account_id: record.cloudflare_account_id } : {}),
+      });
     }
   }
   return byProvider;
@@ -284,6 +412,30 @@ export function studioServerBindings(handlerArg: unknown): StudioServerBindings 
  * Vault credentials for one account (au_*).
  * Empty map when D1 or VAULT_MASTER_KEY is missing — never throws.
  */
+/**
+ * All account-owned provider keys, retaining credential identity.
+ * Empty array when D1 or VAULT_MASTER_KEY is missing — never throws.
+ */
+export async function vaultCredentialRecordsForAccount(
+  bindings: StudioServerBindings,
+  accountId: string,
+): Promise<StudioCredentialRecord[]> {
+  try {
+    const masterKey = clean(bindings.env.VAULT_MASTER_KEY);
+    const owner = clean(accountId);
+    if (!bindings.db || !masterKey || !owner) return [];
+    return await loadVaultCredentialRecords({
+      db: bindings.db,
+      accountId: owner,
+      masterKey,
+      legacyKey: clean(bindings.env.VAULT_KEY) || undefined,
+      cloudflareAccountId: clean(bindings.env.CLOUDFLARE_ACCOUNT_ID) || null,
+    });
+  } catch {
+    return [];
+  }
+}
+
 export async function vaultCredentialsForAccount(
   bindings: StudioServerBindings,
   accountId: string,

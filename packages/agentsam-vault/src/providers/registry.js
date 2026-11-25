@@ -11,6 +11,14 @@ export const DEFAULT_CREDENTIAL_PROVIDERS = Object.freeze([
     operations: { test: true, rotate: false, revoke: true },
   }),
   defineCredentialProvider({
+    id: 'meta',
+    label: 'Meta Model API',
+    credential: { kind: CREDENTIAL_KINDS.PROVIDER_API_KEY, sensitive: true },
+    fields: [{ id: 'api_key', type: 'secret', required: true, label: 'API key' }],
+    capabilities: ['models', 'chat', 'responses'],
+    operations: { test: true, rotate: false, revoke: true },
+  }),
+  defineCredentialProvider({
     id: 'anthropic',
     label: 'Anthropic',
     credential: { kind: CREDENTIAL_KINDS.PROVIDER_API_KEY, sensitive: true },

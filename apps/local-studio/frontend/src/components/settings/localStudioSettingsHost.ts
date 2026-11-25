@@ -89,15 +89,26 @@ function settingsModel(
 ): SettingsModel {
   return {
     id: model.provider + ":" + model.model_id,
+    modelId: model.model_id,
     name: model.label || model.model_id,
     provider: model.provider,
     tier: model.service_tiers?.[0] || "default",
     context: formatContextWindow(model.context_window),
-    status: model.chat_eligible === true ? "healthy" : "unknown",
-    enabled: model.chat_eligible === true,
-    source,
+    status: model.availability_status && model.availability_status !== "available"
+      ? "attention"
+      : model.chat_eligible === true ? "healthy" : "unknown",
+    enabled: model.availability_status !== "not_returned"
+      && model.availability_status !== "stale"
+      && model.chat_eligible === true,
+    source: model.credential_source || source,
     selected,
     verifiedAt,
+    credentialId: model.credential_id || null,
+    credentialName: model.credential_name || null,
+    credentialLast4: model.credential_last4 || null,
+    availabilityStatus: model.availability_status || "available",
+    eligibilityReason: model.eligibility_reason || null,
+    visible: model.visible !== false,
     reasoningEfforts: verifiedModelControls({ ...model, model_key: model.model_key ?? undefined }).reasoning_efforts,
   };
 }
@@ -204,7 +215,7 @@ function settingsWidgets(catalog: AccountWidget[] | null = null): SettingsWidget
  * Both hit the same Worker service, authenticated as the current account.
  */
 async function settingsRequest<T extends {ok?:boolean;error?:string}>(
-  path:string,method:"GET"|"POST"|"PUT"|"DELETE"="GET",body?:unknown,
+  path:string,method:"GET"|"POST"|"PUT"|"PATCH"|"DELETE"="GET",body?:unknown,
 ):Promise<T> {
   let payload:T;
   let status:number;
@@ -586,7 +597,10 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   const providerSources = new Map(
     (inventory.providers || []).map((provider) => [provider.id, provider.source || null]),
   );
-  const models = (inventory.availableModels || []).map((model) =>
+  const modelRows = inventory.credentialModels?.length
+    ? inventory.credentialModels
+    : (inventory.availableModels || []);
+  const models = modelRows.map((model) =>
     settingsModel(
       model,
       providerSources.get(model.provider) || null,
@@ -594,7 +608,9 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
       inventory.generatedAt || null,
     ),
   );
-  const runnable = models.filter((model) => model.enabled).length;
+  const runnable = new Set(models
+    .filter((model) => model.enabled && model.visible !== false)
+    .map((model) => model.id)).size;
   const configuredProviders = (inventory.providers || []).filter((provider) => provider.configured).length;
   const discoveryErrors = Object.values(inventory.discovery || {}).filter(
     (entry) => entry?.attempted && entry.ok === false,
@@ -667,6 +683,19 @@ export const localStudioSettingsHost: SettingsHost = {
   async updateAgentPolicy(policy:SettingsAgentPolicy){
     await settingsRequest("/api/settings/agents/policy","PUT",policy);
     if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+  },
+  async setModelVisibility(input) {
+    if (!input.credentialId) throw new Error("model_credential_required");
+    await settingsRequest("/api/llm/inventory","PATCH",{
+      credential_id: input.credentialId,
+      provider: input.provider,
+      model_id: input.modelId,
+      visible: input.visible,
+    });
+    if(typeof window!=="undefined") {
+      window.dispatchEvent(new CustomEvent(MODEL_INVENTORY_CHANGED_EVENT));
+      window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+    }
   },
   async discoverPlugins() {
     const result = await discoverLocalStudioPlugins();

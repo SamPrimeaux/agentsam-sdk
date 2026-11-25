@@ -17,6 +17,12 @@ export type StudioInventoryModel = {
   eligibility_reason?: string | null;
   eligibility_source?: string;
   hint?: string;
+  credential_id?: string | null;
+  credential_name?: string | null;
+  credential_last4?: string | null;
+  credential_source?: string | null;
+  availability_status?: "available" | "not_returned" | "stale" | string;
+  visible?: boolean;
 };
 
 /** @deprecated Static catalog removed — inventory API is the authority. Kept empty for type migration. */

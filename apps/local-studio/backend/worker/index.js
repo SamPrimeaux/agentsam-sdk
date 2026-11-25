@@ -37,6 +37,8 @@ import {
 } from "@inneranimalmedia/agentsam-sdk/models/inventory";
 import { runStudioCmsAssistant } from "./studio-cms-assistant.js";
 import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
+import { loadModelProviderDefinitions } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
+import { applyAccountModelVisibilityPreferences } from "@inneranimalmedia/agentsam-local-shared/studio-model-preferences";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { resolveCmsSiteAccess, readCmsSiteSelector, readCmsAssistantSiteSelector, isCmsThemeEditorRoute, configuredCmsWorkers } from "./cms-authority.js";
 import { withLocalStudioCmsContext } from "@inneranimalmedia/agentsam-cms/account-context";
@@ -68,7 +70,7 @@ import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioMcps } from "./studio-mcps.js";
 import { handleStudioRules } from "./studio-rules.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
-import { handleStudioUserPreferences, handleStudioNewTabPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings } from "./studio-user-preferences.js";
+import { handleStudioUserPreferences, handleStudioNewTabPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings, getStudioModelVisibilityPreferences, setStudioModelVisibilityPreference } from "./studio-user-preferences.js";
 import { handleStudioLivingPlan } from "./studio-living-plan.js";
 import { handleStudioStorageSettings } from "./studio-storage-settings.js";
 import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
@@ -719,32 +721,51 @@ const SERVICE_TO_PROVIDER = Object.freeze(
 
 async function loadVaultCredentialsForAccount(env, accountId) {
   const { results } = await env.DB.prepare(
-    `SELECT id, secret_name, service_name, secret_value_encrypted, metadata_json
-     FROM user_secrets
-     WHERE account_id = ? AND is_active = 1
-     ORDER BY updated_at DESC
-     LIMIT 100`,
-  )
-    .bind(accountId)
-    .all();
+    "SELECT us.id, us.secret_name, us.service_name, us.secret_value_encrypted, us.metadata_json, "
+      + "sr.kind AS service_kind, sr.metadata_json AS service_metadata_json "
+      + "FROM user_secrets us LEFT JOIN agentsam_service_registry sr ON sr.service_name = us.service_name "
+      + "WHERE us.account_id = ? AND us.is_active = 1 AND us.kind = 'provider_key' "
+      + "AND (sr.kind = 'ai_provider' OR sr.kind IS NULL) "
+      + "ORDER BY us.updated_at DESC LIMIT 100",
+  ).bind(accountId).all();
 
-  const byProvider = new Map();
+  const credentials = [];
   for (const row of results || []) {
-    const providerId = SERVICE_TO_PROVIDER[String(row.service_name || '').toLowerCase()];
-    if (!providerId || byProvider.has(providerId)) continue;
-    const aad = `${accountId}:${row.service_name}:${row.secret_name}`;
+    const serviceName = String(row.service_name || '').trim().toLowerCase();
+    let serviceMetadata = {};
+    try {
+      const parsed = typeof row.service_metadata_json === 'string'
+        ? JSON.parse(row.service_metadata_json)
+        : row.service_metadata_json;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) serviceMetadata = parsed;
+    } catch {
+      serviceMetadata = {};
+    }
+    const modelDiscovery = serviceMetadata.model_discovery && typeof serviceMetadata.model_discovery === 'object'
+      ? serviceMetadata.model_discovery
+      : null;
+    const providerId = String(serviceMetadata.provider_id || SERVICE_TO_PROVIDER[serviceName] || '').trim().toLowerCase();
+    if (!providerId || (row.service_kind && row.service_kind !== 'ai_provider')) continue;
+    if (modelDiscovery && modelDiscovery.enabled === false) continue;
+    const aad = accountId + ":" + row.service_name + ":" + row.secret_name;
     try {
       const value = await decryptSecret(env, row.secret_value_encrypted, aad, row.metadata_json);
-      const entry = { value, source: 'user_vault' };
-      if (providerId === 'cloudflare') {
-        entry.cloudflare_account_id = env.CLOUDFLARE_ACCOUNT_ID || null;
-      }
-      byProvider.set(providerId, entry);
+      if (!String(value || '').trim()) continue;
+      credentials.push({
+        id: String(row.id || (serviceName + ":" + row.secret_name)),
+        provider: providerId,
+        serviceName,
+        name: String(row.secret_name || serviceName),
+        last4: last4(value),
+        value,
+        source: 'user_vault',
+        ...(providerId === 'cloudflare' ? { cloudflare_account_id: env.CLOUDFLARE_ACCOUNT_ID || null } : {}),
+      });
     } catch (err) {
       console.error('vault_inventory_decrypt_failed', providerId, String(err));
     }
   }
-  return byProvider;
+  return credentials;
 }
 
 /**
@@ -789,37 +810,91 @@ function platformCredentials(env) {
   return map;
 }
 
+async function handleLlmModelPreference(env, accountId, request) {
+  const body = await request.json().catch(() => ({}));
+  const credentialId = String(body.credential_id || '').trim();
+  const provider = String(body.provider || '').trim().toLowerCase();
+  const modelId = String(body.model_id || '').trim();
+  const visible = body.visible;
+  if (!credentialId || !provider || !modelId || typeof visible !== 'boolean') {
+    return json({ ok: false, error: 'invalid_model_preference' }, 400);
+  }
+
+  if (credentialId === 'host:cloudflare') {
+    if (!env.AGENTSAM_WAI || typeof env.AGENTSAM_WAI.run !== 'function') {
+      return json({ ok: false, error: 'model_resource_unavailable' }, 404);
+    }
+    if (provider !== 'cloudflare') {
+      return json({ ok: false, error: 'model_credential_provider_mismatch' }, 409);
+    }
+  } else {
+    const row = await env.DB.prepare(
+      "SELECT us.service_name, sr.metadata_json AS service_metadata_json "
+        + "FROM user_secrets us LEFT JOIN agentsam_service_registry sr ON sr.service_name = us.service_name "
+        + "WHERE us.id = ? AND us.account_id = ? AND us.is_active = 1 "
+        + "AND us.kind = 'provider_key' AND sr.kind = 'ai_provider' LIMIT 1",
+    ).bind(credentialId, accountId).first();
+    if (!row) return json({ ok: false, error: 'model_credential_not_found' }, 404);
+    let metadata = {};
+    try {
+      metadata = typeof row.service_metadata_json === 'string'
+        ? JSON.parse(row.service_metadata_json)
+        : row.service_metadata_json || {};
+    } catch {
+      metadata = {};
+    }
+    const providerId = String(metadata.provider_id || SERVICE_TO_PROVIDER[String(row.service_name || '').toLowerCase()] || '').toLowerCase();
+    if (providerId !== provider) return json({ ok: false, error: 'model_credential_provider_mismatch' }, 409);
+  }
+
+  try {
+    const saved = await setStudioModelVisibilityPreference(env, accountId, {
+      credentialId, provider, modelId, visible,
+    });
+    return json({ ok: true, ...saved });
+  } catch (err) {
+    console.error('model_preference_save_failed', String(err));
+    return json({ ok: false, error: 'model_preference_save_failed' }, 500);
+  }
+}
+
 async function handleLlmInventory(env, userId, request) {
   // Platform/Worker secrets never widen an account's model list unless a caller explicitly
   // asks (the CMS assistant does); user-facing inventory is the account's own vault.
   const includePlatform = new URL(request.url).searchParams.get('include_platform') === '1';
   const vault = await loadVaultCredentialsForAccount(env, userId);
   const platform = includePlatform ? platformCredentials(env) : new Map();
-  const merged = new Map();
-  for (const [id, row] of vault.entries()) merged.set(id, row);
-  for (const [id, row] of platform.entries()) {
-    if (!merged.has(id)) merged.set(id, row);
+  const credentialRecords = [...vault];
+  const vaultProviders = new Set(vault.map((credential) => credential.provider));
+  for (const [provider, row] of platform.entries()) {
+    // Platform keys fill a provider gap; they never replace or shadow any account-owned key.
+    if (vaultProviders.has(provider)) continue;
+    credentialRecords.push({
+      id: 'platform:' + provider,
+      provider,
+      serviceName: provider,
+      name: 'Platform key',
+      last4: last4(row.value),
+      ...row,
+    });
   }
 
-  const credentialPlane = vault.size ? (platform.size ? 'mixed' : 'studio_vault') : 'platform';
+  const hasVault = vault.length > 0;
+  const hasPlatform = credentialRecords.some((credential) => credential.source === 'platform');
+  const credentialPlane = hasVault ? (hasPlatform ? 'mixed' : 'studio_vault') : 'platform';
+  const providers = await loadModelProviderDefinitions(env.DB);
+  if (!providers.length) {
+    return json({ ok: false, error: 'provider_model_discovery_registry_empty' }, 503);
+  }
   const discovered = await collectCredentialScopedInventory({
     credentialPlane,
-    resolveCredential: async (providerId) => {
-      const row = merged.get(providerId);
-      if (!row?.value) {
-        return { configured: false, value: '', source: null, error: null };
-      }
-      return {
-        configured: true,
-        value: row.value,
-        source: row.source || 'injected',
-        account_id: row.cloudflare_account_id || row.account_id || null,
-      };
-    },
+    credentialRecords,
+    providers,
   });
-  const inventory = mergeBoundWorkersAIInventory(
-    sanitizeInventoryForClient(discovered),
-    env.AGENTSAM_WAI,
+  const inventory = await applyAccountModelVisibilityPreferences(
+    env,
+    userId,
+    mergeBoundWorkersAIInventory(sanitizeInventoryForClient(discovered), env.AGENTSAM_WAI),
   );
 
   return json({
@@ -2059,6 +2134,25 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
           },
         },
       });
+    }
+
+    // PATCH /api/llm/inventory: account-owned model visibility preference.
+    if (isLlmInventory && request.method === "PATCH") {
+      const gate = await requireBridgeKey(request, env);
+      const sid = await sessionUser();
+      if (!gate.ok && !sid) return json({ ok: false, error: gate.error }, gate.status, headers);
+      const userId = sid || (request.headers.get("x-user-id") || "").trim();
+      if (!userId || userId.length < 3) {
+        return json({ ok: false, error: "account_id required (session or X-User-Id)" }, 400, headers);
+      }
+      try {
+        const res = await handleLlmModelPreference(env, userId, request);
+        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      } catch (err) {
+        console.error("model_preference_update_failed", String(err));
+        return json({ ok: false, error: "model_preference_update_failed" }, 500, headers);
+      }
     }
 
     // GET /api/llm/inventory: session or AGENTSAM_BRIDGE_KEY. Session account wins.

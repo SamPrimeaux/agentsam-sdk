@@ -44,6 +44,32 @@ test('vault-scoped inventory sanitizes secrets and discovers only injected provi
   assert.equal(safe.providers.find((p) => p.id === 'gemini')?.configured, false);
 });
 
+test('inventory discovers every credential independently for the same provider', async () => {
+  const status = await collectCredentialScopedInventory({
+    credentialPlane: 'studio_vault',
+    providers: [{ id: 'openai', label: 'OpenAI' }],
+    credentialRecords: [
+      { id: 'key_primary', provider: 'openai', name: 'Primary', last4: '1111', value: 'sk-primary-secret', source: 'user_vault' },
+      { id: 'key_secondary', provider: 'openai', name: 'Secondary', last4: '2222', value: 'sk-secondary-secret', source: 'user_vault' },
+    ],
+    fetchImpl: async (_url, init) => {
+      const auth = new Headers(init?.headers).get('authorization');
+      const id = auth === 'Bearer sk-primary-secret' ? 'gpt-primary'
+        : auth === 'Bearer sk-secondary-secret' ? 'gpt-secondary' : null;
+      assert.ok(id, 'each saved key must be used independently');
+      return { ok: true, status: 200, async json() { return { data: [{ id }] }; } };
+    },
+  });
+  const safe = sanitizeInventoryForClient(status);
+  assert.equal(safe.providers[0].credentialCount, 2);
+  assert.deepEqual(
+    safe.credentialModels.map((row) => [row.credential_id, row.credential_name, row.model_id]),
+    [['key_primary', 'Primary', 'gpt-primary'], ['key_secondary', 'Secondary', 'gpt-secondary']],
+  );
+  assert.deepEqual(safe.availableModels.map((row) => row.model_id).sort(), ['gpt-primary', 'gpt-secondary']);
+  assert.doesNotMatch(JSON.stringify(safe), /sk-primary-secret|sk-secondary-secret/);
+});
+
 test('Workers AI curated filter intersects', () => {
   const rows = filterWorkersAiCurated([
     { provider_model_id: '@cf/qwen/qwen2.5-coder-32b-instruct' },

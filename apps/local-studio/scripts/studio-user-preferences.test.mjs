@@ -5,11 +5,12 @@ import {handleStudioUserPreferences} from '../backend/worker/studio-user-prefere
 const base='https://agentsam.inneranimalmedia.com/api/settings/preferences';
 function fixture(){
  const sqlite=new DatabaseSync(':memory:');
- sqlite.exec(`CREATE TABLE agentsam_user_ui_preferences(
-   workspace_id TEXT NOT NULL,user_id TEXT NOT NULL,
-   ui_preferences_json TEXT NOT NULL DEFAULT '{}',
-   updated_at_unix INTEGER NOT NULL DEFAULT (unixepoch()),
-   PRIMARY KEY(workspace_id,user_id)
+ sqlite.exec(`CREATE TABLE accounts(id TEXT PRIMARY KEY);
+ INSERT INTO accounts(id) VALUES ('au_owner'),('au_other');
+ CREATE TABLE agentsam_user_ui_preferences(
+   account_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+   ui_preferences_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(ui_preferences_json)),
+   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
  );`);
  return {sqlite,env:{DB:{prepare(sql){
    const stmt=sqlite.prepare(sql);let args=[];
@@ -32,10 +33,10 @@ test('account settings persist and are not readable by another user',async()=>{
 });
 test('updates preserve unrelated user UI preferences JSON fields',async()=>{
  const {sqlite,env}=fixture();
- sqlite.prepare('INSERT INTO agentsam_user_ui_preferences(workspace_id,user_id,ui_preferences_json) VALUES (?,?,?)')
-  .run('','au_owner',JSON.stringify({editor:{fontSize:13},theme:'dark'}));
+ sqlite.prepare('INSERT INTO agentsam_user_ui_preferences(account_id,ui_preferences_json) VALUES (?,?)')
+  .run('au_owner',JSON.stringify({editor:{fontSize:13},theme:'dark'}));
  await req(env,'au_owner','PUT',{openLastProject:true,showRuntimeReceipts:true});
- const stored=JSON.parse(sqlite.prepare('SELECT ui_preferences_json FROM agentsam_user_ui_preferences WHERE user_id=?').get('au_owner').ui_preferences_json);
+ const stored=JSON.parse(sqlite.prepare('SELECT ui_preferences_json FROM agentsam_user_ui_preferences WHERE account_id=?').get('au_owner').ui_preferences_json);
  assert.deepEqual(stored.editor,{fontSize:13});
  assert.equal(stored.theme,'dark');
  assert.deepEqual(stored.settings_general,{openLastProject:true,showRuntimeReceipts:true});

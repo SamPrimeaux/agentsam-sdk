@@ -1,4 +1,6 @@
 import companionCatalog from '../../../../assets/brand/inneranimal-companions/v1/catalog.json' with { type: 'json' };
+import { getStudioModelVisibilityPreferences, setStudioModelVisibilityPreference } from '@inneranimalmedia/agentsam-local-shared/studio-model-preferences';
+export { getStudioModelVisibilityPreferences, setStudioModelVisibilityPreference };
 /** Existing agentsam_user_ui_preferences account SSOT. No new settings tables. */
 const answer=(payload,status=200)=>Response.json(payload,{status,headers:{"cache-control":"no-store"}});
 const defaults={openLastProject:false,showRuntimeReceipts:false};
@@ -8,6 +10,7 @@ function decode(value){
   return object && typeof object==="object" && !Array.isArray(object)?object:{};
  }catch{return {};}
 }
+
 function normalize(data){
  return {
   openLastProject:data?.openLastProject===true,

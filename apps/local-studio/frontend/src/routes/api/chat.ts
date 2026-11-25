@@ -10,11 +10,11 @@ import {
   type StudioChatSurface,
 } from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
 import {
-  mergeStudioCredentials,
   resolveStudioAccountId,
   shouldUseWorkersAI,
   studioServerBindings,
-  vaultCredentialsForAccount,
+  loadModelProviderDefinitions,
+  vaultCredentialRecordsForAccount,
 } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
 import { buildStudioChatBody, translateStudioChatUpstreamBody } from "./chat-upstream";
 import { resolveDiscoveredModelExecution } from "@inneranimalmedia/agentsam-sdk/models/inventory";
@@ -229,20 +229,34 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         // Session → accounts.id (au_*) → user_secrets.account_id → unwrap.
+        // Preserve all keys: model discovery selects the exact credential that exposed the model.
         const bindings = studioServerBindings(ctx);
         const accountId = resolveStudioAccountId(request);
         const vault = accountId
-          ? await vaultCredentialsForAccount(bindings, accountId)
-          : new Map();
-        const credentials = mergeStudioCredentials(vault, platformCredentials(bindings.env));
+          ? await vaultCredentialRecordsForAccount(bindings, accountId)
+          : [];
+        const platform = platformCredentials(bindings.env);
+        const credentialRecords = [...vault];
+        const vaultProviders = new Set(vault.map((row) => row.provider));
+        for (const [provider, row] of platform.entries()) {
+          if (vaultProviders.has(provider)) continue;
+          credentialRecords.push({
+            id: "platform:" + provider,
+            provider,
+            serviceName: provider,
+            name: "Platform key",
+            last4: null,
+            ...row,
+          });
+        }
 
         const viaWorkersAI = shouldUseWorkersAI(providerId, bindings.workersAI);
-        const credential = viaWorkersAI ? null : credentials.get(providerId);
-        const apiKey = credential?.value || "";
-        if (!viaWorkersAI && !apiKey) {
+        let credential: (typeof credentialRecords)[number] | null = null;
+        let apiKey = "";
+        if (!viaWorkersAI && !credentialRecords.some((row) => row.provider === providerId)) {
           return Response.json(
             {
-              error: `provider_credential_unavailable:${providerId}`,
+              error: "provider_credential_unavailable:" + providerId,
               detail: "No Studio credential for the selected provider. Connect that provider — do not expect another key to substitute.",
             },
             { status: 503 },
@@ -254,18 +268,29 @@ export const Route = createFileRoute("/api/chat")({
             // Binding-only lane has no token for live discovery: validate
             // against the curated Workers AI allowlist instead.
             if (!(WORKERS_AI_CURATED as readonly string[]).includes(modelId)) {
-              throw new Error(`selected_model_not_available_for_credential:${providerId}:${modelId}`);
+              throw new Error("selected_model_not_available_for_credential:" + providerId + ":" + modelId);
             }
           } else {
-            const inventory = await buildStudioInventory(credentials);
-            // Same model+reasoning contract consumed by Settings' model controls.
-            resolveDiscoveredModelExecution(inventory, providerId, modelId, {
+            const providers = await loadModelProviderDefinitions(bindings.db);
+            if (!providers.length) throw new Error("provider_model_discovery_registry_empty");
+            const inventory = await buildStudioInventory(credentialRecords, providers);
+            // Same credential-specific model+reasoning contract consumed by Settings.
+            const selected = resolveDiscoveredModelExecution(inventory, providerId, modelId, {
               reasoningEffort: parsed.reasoning_effort,
             });
+            credential = credentialRecords.find((row) => row.id === selected.credential_id) || null;
+            if (!credential) {
+              credential = credentialRecords.find((row) => row.provider === providerId) || null;
+            }
+            apiKey = credential?.value || "";
+            if (!apiKey) {
+              throw new Error("provider_credential_unavailable:" + providerId);
+            }
           }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return Response.json({ error: message }, { status: 409 });
+          const status = message.startsWith("provider_credential_unavailable:") ? 503 : 409;
+          return Response.json({ error: message }, { status });
         }
 
         const surface: StudioChatSurface = parsed.surface ?? parsed.mode ?? "chat";
