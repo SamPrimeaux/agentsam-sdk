@@ -15,6 +15,7 @@ import {
   serviceToProvider,
   shouldUseWorkersAI,
   studioServerBindings,
+  withStudioWorkerBindings,
   vaultAad,
   vaultCredentialRecordsForAccount,
   vaultCredentialsForAccount,
@@ -331,6 +332,26 @@ describe("identity + bindings", () => {
     const bindings = studioServerBindings(null);
     assert.equal(bindings.db, null);
     assert.equal(bindings.workersAI, null);
+  });
+
+  it("preserves Worker bindings in concurrent Nitro requests without leaking them", async () => {
+    const dbA = fakeDb([]);
+    const dbB = fakeDb([]);
+    const [a, b] = await Promise.all([
+      withStudioWorkerBindings({ DB: dbA, GEMINI_API_KEY: "test-a" }, async () => {
+        await Promise.resolve();
+        return studioServerBindings({ context: {} });
+      }),
+      withStudioWorkerBindings({ DB: dbB, GEMINI_API_KEY: "test-b" }, async () => {
+        await Promise.resolve();
+        return studioServerBindings(null);
+      }),
+    ]);
+    assert.equal(a.db, dbA);
+    assert.equal(b.db, dbB);
+    assert.equal(a.env.GEMINI_API_KEY, "test-a");
+    assert.equal(b.env.GEMINI_API_KEY, "test-b");
+    assert.equal(studioServerBindings(null).db, null);
   });
 
   it("vaultCredentialRecordsForAccount returns an empty array without bindings", async () => {
