@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { isStudioAdminPath, resolveLegacyContentMediaPath, canonicalStudioPath } from "../../shared/studio-admin-routes.mjs";
 import { isLocalStudioEcommerceDocumentPath } from "../../shared/ecommerce-admin-routes.mjs";
+import { desktopEcommerceHostDestination } from '@/lib/apps/ecommerce-routing';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
 import { openAppsInstaller, setAppsInstallerAdapter } from '@inneranimalmedia/agentsam-nav/browser';
@@ -364,8 +365,12 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       return;
     }
     if (isLocalStudioEcommerceDocumentPath(pathOnly)) {
-      if (isPackagedDesktop()) window.location.hash = '#' + to;
-      else window.location.assign(to);
+      if (isPackagedDesktop()) {
+        const hostDestination = desktopEcommerceHostDestination(to);
+        if (hostDestination) window.location.hash = '#' + hostDestination;
+      } else {
+        window.location.assign(to);
+      }
       return;
     }
     if (pathOnly.startsWith('/admin/') && !isStudioAdminPath(pathOnly)) {

@@ -5,6 +5,7 @@ import { createFileRoute, Navigate } from '@tanstack/react-router';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from '@/lib/apps/ecommerce-routing';
+import { shouldRedirectEcommerceAppHost } from '@/lib/apps/ecommerce-routing';
 import { themeStoreTrySelection } from '@/lib/apps/theme-store-selection';
 import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
 import { runCommand } from '@/lib/commands/native-commands';
@@ -79,7 +80,7 @@ export const Route = createFileRoute('/(apps)/admin/apps/ecommerce-cms-agentsam'
  */
 function EcommerceAppHost() {
   const search = Route.useSearch();
-  return <EcommerceAppView search={search} redirectOnly={search.page !== '/admin/theme-code-editor'} />;
+  return <EcommerceAppView search={search} redirectOnly={shouldRedirectEcommerceAppHost(isPackagedDesktop(), search.page)} />;
 }
 
 /**

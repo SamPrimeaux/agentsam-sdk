@@ -3,6 +3,7 @@ import { createFileRoute, Navigate, useLocation } from '@tanstack/react-router';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 import { themeStoreTrySelection } from '@/lib/apps/theme-store-selection';
+import { navigateApp } from '@/lib/work/navigate';
 
 type ThemeSelection = NonNullable<ReturnType<typeof themeStoreTrySelection>>;
 type InstallState = 'installing' | 'opening' | 'error';
@@ -56,7 +57,7 @@ function ThemeStoreInstallEntry({ selection }: { selection: ThemeSelection }) {
           throw new Error('The installer returned an invalid Theme Studio destination.');
         }
         setState('opening');
-        window.location.replace(destination.href);
+        navigateApp(destination.pathname + destination.search);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Theme installation failed.');
         setState('error');
