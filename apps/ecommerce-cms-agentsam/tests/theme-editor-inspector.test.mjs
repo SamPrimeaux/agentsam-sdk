@@ -7,13 +7,20 @@ const editor = readFileSync(
   'utf8',
 );
 
-test('style settings filter keeps Surface group regardless of case', () => {
-  assert.match(editor, /surface/i);
-  assert.ok(
-    editor.includes('/^(layout|spacing|surface|appearance|media)$/i') ||
-      editor.includes('/^(layout|spacing|surface|appearance|media)$/I'),
-    'settings group filter should accept Surface alongside Spacing',
+test('style settings render Surface regardless of case and preserve advanced groups', () => {
+  const start = editor.indexOf('  function renderInspectorGroups(section)');
+  const end = editor.indexOf('  function validateSectionCss', start);
+  assert.ok(start >= 0 && end > start);
+  const source = editor.slice(start, end);
+  const render = new Function('currentSchema','currentSettings','currentSectionSchema','currentBlockSchema','fieldByKey','fieldKind','humanize','renderField','cmsEscapeHtml','cmsEscapeAttr','cmsGetPath','activeBlockId','activeFieldKey', source + '\nreturn renderInspectorGroups;')(
+    () => [], () => [{key:'surfaceColor',group:'Surface'},{key:'space',group:'spacing'},{key:'motion',group:'motion'}],
+    () => ({}), () => null, () => null, () => 'content', String, (_, field) => field.key, String, String, () => undefined, null, null
   );
+  const html = render({content:{}});
+  assert.match(html, /aria-label="Surface"/);
+  assert.match(html, /surfaceColor/);
+  assert.ok(html.indexOf('space') < html.indexOf('surfaceColor'));
+  assert.match(html, /<summary>motion<\/summary>/);
 });
 
 test('inspector subtitle shows human labels, not raw keys', () => {

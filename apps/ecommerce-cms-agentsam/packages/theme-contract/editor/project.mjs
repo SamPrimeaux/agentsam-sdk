@@ -1,6 +1,8 @@
 export const THEME_PROJECT_SCHEMA = 'agentsam.theme-project.v1';
 const clone = (value) => structuredClone(value);
 const safeKey = (key) => typeof key === 'string' && /^[a-zA-Z0-9_-]+$/.test(key) && !['__proto__', 'constructor', 'prototype'].includes(key);
+const safeFieldPath = key => typeof key === 'string' && key.split('.').every(safeKey);
+const fieldValue = (content, key) => safeFieldPath(key) ? key.split('.').reduce((value, part) => value != null && Object.hasOwn(value, part) ? value[part] : undefined, content) : undefined;
 
 export function validateThemeProject(value) {
   if (!value || value.schema !== THEME_PROJECT_SCHEMA || !safeKey(value.id) || typeof value.name !== 'string' || !Array.isArray(value.pages) || !value.pages.length) throw new Error('theme_project_invalid');
@@ -8,10 +10,10 @@ export function validateThemeProject(value) {
     if (!safeKey(page.slug) || typeof page.template !== 'string' || !Array.isArray(page.sections)) throw new Error('theme_project_page_invalid');
     for (const section of page.sections) {
       if (!safeKey(section.key) || typeof section.html !== 'string' || !section.content || !section.schema) throw new Error('theme_project_section_invalid');
-      for (const field of section.schema.fields || []) if (!safeKey(field.key) || (field.binding?.field && !safeKey(field.binding.field))) throw new Error('theme_project_field_invalid');
+      for (const field of section.schema.fields || []) if (!safeFieldPath(field.key) || (field.binding?.field && !safeFieldPath(field.binding.field))) throw new Error('theme_project_field_invalid');
       for (const block of section.schema.blocks || []) {
         if (!safeKey(block.key)) throw new Error('theme_project_block_invalid');
-        for (const field of block.fields || []) if (!safeKey(field.key) || (field.binding?.field && !safeKey(field.binding.field))) throw new Error('theme_project_field_invalid');
+        for (const field of block.fields || []) if (!safeFieldPath(field.key) || (field.binding?.field && !safeFieldPath(field.binding.field))) throw new Error('theme_project_field_invalid');
       }
     }
   }
@@ -205,7 +207,7 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
       const el = doc.querySelector(`[data-theme-project-field="${field.binding?.field || field.key}"]`);
       if (!el) continue;
       el.setAttribute('data-cms',field.binding?.field||field.key);
-      const value = content[field.key];
+      const value = fieldValue(content, field.key);
       if (value === undefined) continue;
       if (field.binding?.styleProperty) el.style.setProperty(field.binding.styleProperty, String(value));
       else if (field.binding?.attribute) {
