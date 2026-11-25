@@ -15,11 +15,10 @@
       const siteId = query.get('site_id');
       const projectId = query.get('project') || query.get('project_id');
       if (query.get('new') === '1') {
-        if (!/^[A-Za-z0-9_-]{1,160}$/.test(siteId || '')) { location.replace('/admin/store'); return; }
-        location.replace('/admin/sites/' + encodeURIComponent(siteId) + '/themes/new/editor');
+        location.replace('/admin/theme-editor?new=1');
         return;
       }
-      if (!/^[A-Za-z0-9_-]{1,160}$/.test(siteId || '') || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId || '')) {
+      if ((siteId && !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId || '')) {
         location.replace('/admin/store');
         return;
       }
@@ -28,7 +27,7 @@
         location.replace('/admin/store');
         return;
       }
-      const target = new URL(`/admin/sites/${encodeURIComponent(siteId)}/themes/${encodeURIComponent(projectId)}/editor/${encodeURIComponent(page)}`, location.origin);
+      const target = new URL(siteId ? `/admin/sites/${encodeURIComponent(siteId)}/themes/${encodeURIComponent(projectId)}/editor/${encodeURIComponent(page)}` : `/admin/theme-editor?${new URLSearchParams({project:projectId,page})}`, location.origin);
       for (const key of ['section', 'block', 'previewMode', 'stock', 'marketplace_kind', 'marketplace_key', 'showcase']) {
         const value = query.get(key);
         if (value) target.searchParams.set(key, value);

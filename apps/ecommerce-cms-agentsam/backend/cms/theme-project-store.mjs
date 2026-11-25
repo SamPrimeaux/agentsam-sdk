@@ -147,10 +147,73 @@ function projectR2Key(accountId, siteId, projectId, revision, hash) {
   return `cms/accounts/${encodeURIComponent(accountId)}/sites/${encodeURIComponent(siteId)}/theme-projects/${encodeURIComponent(projectId)}/revisions/${String(revision).padStart(6, '0')}-${hash.slice(0,16)}.json`;
 }
 
+// Standalone authoring uses the existing account-owned immutable theme artifact
+// records. Installed website copies continue to use site-owned CMS globals.
+const authoringKey = id => `theme-project/${id}`;
+const authoringVersion = revision => String(revision).padStart(12, '0');
+const authoringError = (error,status=400) => ({ok:false,error,status});
+async function authoringRows(env, accountId, id = null, latestOnly = false) {
+  const clause = id === null ? '' : ' AND artifact_key=?';
+  const args = id === null ? [accountId] : [accountId,authoringKey(id)];
+  const {results=[]}=await env.DB.prepare(`SELECT id,artifact_key,version,status,manifest_object_key,content_hash,metadata_json,created_at
+    FROM cms_artifacts WHERE account_id=? AND artifact_type='theme' AND source_kind='theme-project'${clause}
+    ORDER BY version DESC${latestOnly ? ' LIMIT 1' : ''}`).bind(...args).all();
+  return results;
+}
+async function authoringProject(env,row,id) {
+  const object=await env.WEBSITE_ASSETS?.get(row.manifest_object_key);
+  if(!object)throw new Error('theme_project_content_unavailable');
+  const raw=await object.text();
+  if(await hashText(raw)!==row.content_hash)throw new Error('theme_project_content_hash_mismatch');
+  const project=validateThemeProjectPayload(JSON.parse(raw));
+  if(project.id!==id || project.revision!==Number(row.version))throw new Error('theme_project_identity_mismatch');
+  return project;
+}
+async function saveAuthoringRevision(env,accountId,project,expected) {
+  if(!env.WEBSITE_ASSETS)return authoringError('cms_r2_unavailable',503);
+  const rows=await authoringRows(env,accountId,project.id,true);
+  const current=rows[0];
+  if(current?.status==='deprecated')return authoringError('theme_project_not_found',404);
+  if(Number(current?.version||0)!==expected)return authoringError('theme_project_version_conflict',409);
+  const now=new Date().toISOString();
+  const next={...project,revision:expected+1,createdAt:current?parseObject(current.metadata_json).createdAt||now:now,updatedAt:now};
+  const raw=JSON.stringify(next), hash=await hashText(raw);
+  const prefix=`cms/accounts/${encodeURIComponent(accountId)}/theme-projects/${encodeURIComponent(next.id)}`;
+  const key=`${prefix}/revisions/${authoringVersion(next.revision)}-${hash.slice(0,16)}.json`;
+  await env.WEBSITE_ASSETS.put(key,raw,{httpMetadata:{contentType:'application/json; charset=utf-8'}});
+  const verified=await env.WEBSITE_ASSETS.get(key);
+  if(!verified||await hashText(await verified.text())!==hash)return authoringError('theme_project_storage_verification_failed',503);
+  // Atomic compare-and-swap: unique artifact version prevents concurrent writers;
+  // the predecessor check also prevents a save racing with archival.
+  const result=await env.DB.prepare(`INSERT INTO cms_artifacts(id,account_id,artifact_key,artifact_type,version,object_prefix,manifest_object_key,content_hash,content_mode,status,source_kind,source_ref,metadata_json)
+    SELECT ?,?,?,'theme',?,?,?,?,'manifest','ready','theme-project',?,?
+    WHERE ((?=0 AND NOT EXISTS(SELECT 1 FROM cms_artifacts WHERE account_id=? AND artifact_key=?)) OR
+      (? > 0 AND EXISTS(SELECT 1 FROM cms_artifacts WHERE account_id=? AND artifact_key=? AND version=? AND status='ready' AND source_kind='theme-project')))
+    ON CONFLICT(account_id,artifact_key,version) DO NOTHING`).bind(
+      'cma_'+crypto.randomUUID().replaceAll('-',''),accountId,authoringKey(next.id),authoringVersion(next.revision),prefix,key,hash,next.id,JSON.stringify(projectSummary(next)),
+      expected,accountId,authoringKey(next.id),expected,accountId,authoringKey(next.id),authoringVersion(expected)).run();
+  return changes(result)===1?{ok:true,project:next,scope:'account'}:authoringError('theme_project_version_conflict',409);
+}
+export async function archiveAccountThemeProject(env,accountId,id,expectedVersion) {
+  if(!accountId)return authoringError('account_required',403);
+  if(!SAFE_ID.test(String(id)))return authoringError('theme_project_id_invalid');
+  const [current]=await authoringRows(env,accountId,id,true);
+  if(!current||current.status!=='ready')return authoringError('theme_project_not_found',404);
+  if(expectedVersion!=null&&Number(expectedVersion)!==Number(current.version))return authoringError('theme_project_version_conflict',409);
+  const result=await env.DB.prepare(`UPDATE cms_artifacts SET status='deprecated' WHERE account_id=? AND artifact_key=? AND source_kind='theme-project' AND status='ready'
+    AND NOT EXISTS(SELECT 1 FROM cms_artifacts newer WHERE newer.account_id=? AND newer.artifact_key=? AND newer.version>?)`)
+    .bind(accountId,authoringKey(id),accountId,authoringKey(id),current.version).run();
+  return changes(result)?{ok:true,archived:true}:authoringError('theme_project_version_conflict',409);
+}
+export async function duplicateAccountThemeProject(env,accountId,id,name) {
+  const current=await getThemeProject(env,accountId,id);
+  if(!current.ok)return current;
+  const project={...current.project,id:'theme_'+crypto.randomUUID().replaceAll('-',''),name:String(name||current.project.name+' copy').slice(0,160),revision:0};
+  return createThemeProject(env,accountId,project);
+}
+
 async function projectRow(env, accountId, id, siteId = null) {
-  const site = siteId
-    ? await resolveCmsSite(env.DB, { accountId, siteId })
-    : await resolveCmsSite(env.DB, { accountId, createDefault: true });
+  const site = await resolveCmsSite(env.DB, { accountId, siteId });
   return env.DB.prepare(
     "SELECT id,account_id,site_id,global_key,global_type,status,inline_content_json,content_object_key,content_version,content_hash,created_at,updated_at FROM cms_globals WHERE account_id=? AND site_id=? AND global_key=? AND global_type='theme-project' AND status!='archived' LIMIT 1"
   ).bind(accountId, site.id, themeProjectGlobalKey(id)).first();
@@ -172,9 +235,7 @@ async function projectFromRow(env, row) {
 async function writeRevision(env, accountId, row, project, revision, reason, siteId = null) {
   const site = row?.site_id
     ? { id: row.site_id }
-    : siteId
-      ? await resolveCmsSite(env.DB, { accountId, siteId })
-      : await resolveCmsSite(env.DB, { accountId, createDefault: true });
+    : await resolveCmsSite(env.DB, { accountId, siteId });
   const serialized = JSON.stringify(project);
   const contentHash = await hashText(serialized);
   const key = projectR2Key(accountId, site.id, project.id, revision, contentHash);
@@ -228,9 +289,12 @@ async function writeRevision(env, accountId, row, project, revision, reason, sit
 
 export async function listThemeProjects(env, accountId, siteId = null) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
-  const site = siteId
-    ? await resolveCmsSite(env.DB, { accountId, siteId })
-    : await resolveCmsSite(env.DB, { accountId, createDefault: true });
+  if(!siteId) {
+    const latest=new Map();
+    for(const row of await authoringRows(env,accountId))if(!latest.has(row.artifact_key))latest.set(row.artifact_key,row);
+    return {ok:true,source:'cms_artifacts+r2',projects:[...latest.values()].filter(row=>row.status==='ready').map(row=>parseObject(row.metadata_json)).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))};
+  }
+  const site = await resolveCmsSite(env.DB, { accountId, siteId });
   const result = await env.DB.prepare(
     "SELECT inline_content_json FROM cms_globals WHERE account_id=? AND site_id=? AND global_type='theme-project' AND status!='archived' ORDER BY updated_at DESC"
   ).bind(accountId, site.id).all();
@@ -244,6 +308,11 @@ export async function getThemeProject(env, accountId, id, siteId = null) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
   if (!SAFE_ID.test(String(id))) return { ok: false, status: 400, error: "theme_project_id_invalid" };
   try {
+    if(!siteId) {
+      const [row]=await authoringRows(env,accountId,id,true);
+      if(!row||row.status!=='ready')return authoringError('theme_project_not_found',404);
+      return {ok:true,project:await authoringProject(env,row,id),scope:'account'};
+    }
     const row = await projectRow(env, accountId, id, siteId);
     if (!row) return { ok: false, status: 404, error: "theme_project_not_found" };
     const project = await projectFromRow(env, row);
@@ -259,6 +328,11 @@ export async function listThemeProjectHistory(env, accountId, id, siteId = null)
   if (!accountId) return { ok: false, status: 403, error: 'account_required' };
   if (!SAFE_ID.test(String(id))) return { ok: false, status: 400, error: 'theme_project_id_invalid' };
   try {
+    if(!siteId) {
+      const rows=await authoringRows(env,accountId,id);
+      if(!rows.length||rows[0].status!=='ready')return authoringError('theme_project_not_found',404);
+      return {ok:true,revisions:rows.map(row=>({id:String(Number(row.version)),version:row.content_hash,created_at:row.created_at,kind:'draft',metadata:parseObject(row.metadata_json)}))};
+    }
     const row = await projectRow(env, accountId, id, siteId);
     if (!row) return { ok: false, status: 404, error: 'theme_project_not_found' };
     const result = await env.DB.prepare(
@@ -279,6 +353,13 @@ export async function getThemeProjectSnapshot(env, accountId, id, revision, site
   if (!SAFE_ID.test(String(id)) || !Number.isSafeInteger(Number(revision)) || Number(revision) < 1)
     return { ok: false, status: 400, error: 'theme_project_revision_invalid' };
   try {
+    if(!siteId) {
+      const rows=await authoringRows(env,accountId,id);
+      if(!rows.length||rows[0].status!=='ready')return authoringError('theme_project_not_found',404);
+      const prior=rows.find(row=>Number(row.version)===Number(revision));
+      if(!prior)return authoringError('theme_project_revision_not_found',404);
+      return {ok:true,project:await authoringProject(env,prior,id)};
+    }
     const row = await projectRow(env, accountId, id, siteId);
     if (!row) return { ok: false, status: 404, error: 'theme_project_not_found' };
     const prior = await env.DB.prepare(
@@ -299,6 +380,9 @@ export async function createThemeProject(env, accountId, value, siteId = null) {
   let project;
   try { project = validateThemeProjectPayload(value); }
   catch (error) { return { ok: false, status: 400, error: error.message || "theme_project_invalid" }; }
+  if(!siteId) {
+    try{return await saveAuthoringRevision(env,accountId,project,0);}catch{return authoringError('theme_project_create_failed',503);}
+  }
   let existing;
   try { existing = await projectRow(env, accountId, project.id, siteId); }
   catch (error) {
@@ -360,6 +444,13 @@ export async function installThemeDraft(env, accountId, slug, payload = {}, site
   }
   project.sourcePackageVersion = packageVersion;
   project.sourcePreviewUrl = previewUrl;
+  if(!siteId) {
+    // A verified package is copied into an independent authored document.
+    // No site, site theme, default account website, or stock reconstruction.
+    const copy={...project,id:`theme_${slug}_${crypto.randomUUID().replaceAll('-','')}`,revision:0};
+    const saved=await createThemeProject(env,accountId,copy);
+    return saved.ok?{...saved,installed:true}:saved;
+  }
 
   // The stable project ID is the idempotency key for one package's installed draft.
   const existingRow = await projectRow(env, accountId, project.id, siteId);
@@ -443,6 +534,11 @@ export async function saveThemeProject(env, accountId, id, value, expectedVersio
   try { project = validateThemeProjectPayload(value); }
   catch (error) { return { ok: false, status: 400, error: error.message || "theme_project_invalid" }; }
   if (project.id !== id) return { ok: false, status: 400, error: "theme_project_identity_mismatch" };
+  if(!siteId) {
+    const expected=Number(expectedVersion);
+    if(!Number.isSafeInteger(expected)||expected<1)return authoringError('theme_project_version_conflict',409);
+    try{return await saveAuthoringRevision(env,accountId,project,expected);}catch{return authoringError('theme_project_save_failed',503);}
+  }
 
   const row = await projectRow(env, accountId, id, siteId);
   if (!row) return { ok: false, status: 404, error: "theme_project_not_found" };

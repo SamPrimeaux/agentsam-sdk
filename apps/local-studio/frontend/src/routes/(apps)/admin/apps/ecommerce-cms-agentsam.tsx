@@ -207,7 +207,7 @@ export function EcommerceAppView({ search, redirectOnly = false }: {
 
   return <section className="flex h-full min-h-0 w-full flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">
     {!page ? <UnavailableProductRoute requested={search.page} />
-      : isCodeEditor && search.project && search.site_id ? <CmsThemeCodeEditor projectId={search.project} siteId={search.site_id} />
+      : isCodeEditor && search.project ? <CmsThemeCodeEditor projectId={search.project} siteId={search.site_id} />
       : !url ? <UnavailableProductRoute requested={search.page} />
       : <iframe title="Ecommerce CMS — complete admin application" src={url} className="min-h-0 w-full flex-1 border-0" referrerPolicy="strict-origin-when-cross-origin" allow="fullscreen" />}
   </section>;

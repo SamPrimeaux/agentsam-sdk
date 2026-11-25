@@ -49,7 +49,9 @@ function replaceEditorUrl(path, { clearSelection = false } = {}) {
   const params = new URLSearchParams(location.search);
   if (clearSelection) { params.delete('section'); params.delete('block'); }
   const search = themeEditorViewSearch(params);
-  history.replaceState(history.state, '', path + (search ? `?${search}` : ''));
+  const target=new URL(path,location.origin);
+  for(const [key,value] of new URLSearchParams(search))target.searchParams.set(key,value);
+  history.replaceState(history.state, '', target.pathname+target.search);
 }
 
 function publishRoute(type, identity) {
@@ -104,7 +106,7 @@ async function uploadMedia(files) {
 }
 
 function projectStore(siteId) {
-  const scoped = path => path + (path.includes('?') ? '&' : '?') + 'site_id=' + encodeURIComponent(siteId);
+  const scoped = path => siteId ? path + (path.includes('?') ? '&' : '?') + 'site_id=' + encodeURIComponent(siteId) : path;
   return {
     async get(id) {
       const result = await jsonRequest(scoped(`${API}/${encodeURIComponent(id)}`));
@@ -127,14 +129,14 @@ function projectStore(siteId) {
 
 async function bootProject(route) {
   const { siteId, projectId } = route;
-  if (!/^[A-Za-z0-9_-]{1,160}$/.test(siteId || '')) throw new Error('theme_project_site_required');
+  if (siteId && !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) throw new Error('theme_project_site_invalid');
   if (!/^[A-Za-z0-9_-]{1,160}$/.test(projectId || '')) throw new Error('theme_project_id_invalid');
 
-  const scoped = `${API}?site_id=${encodeURIComponent(siteId)}`;
+  const scoped = siteId ? `${API}?site_id=${encodeURIComponent(siteId)}` : API;
   const listing = await jsonRequest(scoped);
   const projects = Array.isArray(listing.projects) ? listing.projects : [];
   const selected = projects.find(item => item.id === projectId);
-  if (!selected) throw new Error('theme_project_not_found_for_site');
+  if (!selected) throw new Error('theme_project_not_found');
 
   const store = projectStore(siteId);
   let project = await store.get(projectId);
@@ -219,7 +221,7 @@ async function bootProject(route) {
       try {
         const current = await store.get(projectId);
         if (!current || !Number.isInteger(current.revision)) throw new Error('theme_delete_version_missing');
-        const result = await jsonRequest(`${API}/${encodeURIComponent(projectId)}?site_id=${encodeURIComponent(siteId)}`, {
+        const result = await jsonRequest(scopedProjectPath(projectId,siteId), {
           method: 'DELETE', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ expected_version: current.revision }),
         });
@@ -228,7 +230,8 @@ async function bootProject(route) {
       } catch (error) { showError(error); }
     },
     onEditCode() {
-      const codeParams = new URLSearchParams({ page: '/admin/theme-code-editor', project: projectId, site_id: siteId });
+      const codeParams = new URLSearchParams({ page: '/admin/theme-code-editor', project: projectId });
+      if(siteId)codeParams.set('site_id',siteId);
       const target = window.top || window;
       const destination = '/apps/ecommerce-cms-agentsam?' + codeParams.toString();
       if (target.__AGENTSAM_DESKTOP__ || target.__TAURI_INTERNALS__) target.location.hash = '#' + destination;
@@ -240,7 +243,7 @@ async function bootProject(route) {
 }
 
 function scopedProjectPath(projectId, siteId, suffix = '') {
-  return `${API}/${encodeURIComponent(projectId)}${suffix ? `/${suffix}` : ''}?site_id=${encodeURIComponent(siteId)}`;
+  return `${API}/${encodeURIComponent(projectId)}${suffix ? `/${suffix}` : ''}${siteId ? '?site_id='+encodeURIComponent(siteId) : ''}`;
 }
 
 async function bootCmsPage(route) {
@@ -362,26 +365,17 @@ async function bootLegacyPage(route) {
   throw new Error('theme_editor_target_not_found');
 }
 
-async function bootNewTheme(route) {
-  const site = await chooseSiteForEntry(route);
-  if (!site) return;
-  const siteId = site.id;
-  const siteName = String(site.name || 'My website').trim() || 'My website';
+async function bootNewTheme() {
+  // Authoring is account-owned. A website is an explicit installation target,
+  // not a prerequisite or placeholder created to hold a theme document.
   loading?.setAttribute('aria-label','Creating private theme draft and preparing AgentSam');
-  // A new theme is an account-owned editable project, not a prewritten
-  // merchant website. Reuse the existing stock chrome and system templates;
-  // AgentSam opens to author the design after the draft has been created.
-  const draft = blankThemeProject({ name: 'New theme', purpose: '', audience: '', siteName });
-  const scopedDraft = fillMissingThemeChrome(draft, siteName);
-  const { project } = inheritDefaultTemplates(scopedDraft);
-  const created = await jsonRequest(API + '?site_id=' + encodeURIComponent(siteId), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ site_id: siteId, project }),
-  });
-  if (!created.project?.id) throw new Error(created.error || 'theme_project_create_failed');
-  try { sessionStorage.setItem(LEGACY_SITE_SELECTION_KEY, siteId); } catch { /* Route remains site-scoped. */ }
-  location.replace(themeProjectEditorPath(siteId, created.project.id, 'home') + '?assistant=theme');
+  const draft = blankThemeProject({name:'New theme',purpose:'',audience:'',siteName:'Store'});
+  const {project}=inheritDefaultTemplates(fillMissingThemeChrome(draft,'Store'));
+  const created=await jsonRequest(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({project})});
+  if(!created.project?.id)throw new Error(created.error||'theme_project_create_failed');
+  const target=new URL(themeProjectEditorPath(null,created.project.id,'home'),location.origin);
+  target.searchParams.set('assistant','theme');
+  location.replace(target.pathname+target.search);
 }
 
 async function boot() {

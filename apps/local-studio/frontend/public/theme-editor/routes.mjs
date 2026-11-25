@@ -53,7 +53,7 @@ export function parseThemeEditorLocation(input) {
     const siteId = query.get('site_id');
     const projectId = query.get('project') || query.get('project_id');
     if (query.get('new') === '1') return { mode: 'new', siteId, legacy: true };
-    if (!validSegment(siteId) || !validSegment(projectId)) throw new Error('theme_project_route_identity_required');
+    if ((siteId && !validSegment(siteId)) || !validSegment(projectId)) throw new Error('theme_project_route_identity_required');
     const pageSlug = query.get('page') || 'home';
     if (!validSegment(pageSlug)) throw new Error('theme_editor_page_invalid');
     return { mode: 'project', siteId, projectId, pageSlug, legacy: true };
@@ -67,7 +67,7 @@ export function parseThemeEditorLocation(input) {
       return { mode: 'new', siteId, legacy: true };
     }
     if (projectId) {
-      if (!validSegment(siteId) || !validSegment(projectId)) throw new Error('theme_project_route_identity_required');
+      if ((siteId && !validSegment(siteId)) || !validSegment(projectId)) throw new Error('theme_project_route_identity_required');
       const pageSlug = query.get('page') || query.get('slug') || 'home';
       if (!validSegment(pageSlug)) throw new Error('theme_editor_page_invalid');
       return { mode: 'project', siteId, projectId, pageSlug, legacy: true };
@@ -84,8 +84,9 @@ export function parseThemeEditorLocation(input) {
 }
 
 export function themeProjectEditorPath(siteId, projectId, pageSlug = 'home') {
-  if (!validSegment(siteId) || !validSegment(projectId) || !validSegment(pageSlug))
+  if ((siteId && !validSegment(siteId)) || !validSegment(projectId) || !validSegment(pageSlug))
     throw new Error('theme_editor_route_invalid');
+  if (!siteId) return '/admin/theme-editor?' + new URLSearchParams({project:projectId,page:pageSlug});
   return `/admin/sites/${encodeURIComponent(siteId)}/themes/${encodeURIComponent(projectId)}/editor/${encodeURIComponent(pageSlug)}`;
 }
 

@@ -59,7 +59,7 @@ export function resolveEcommerceAdminDestination(
       // The route already carries its complete site identity. Keeping a second
       // site_id query makes the host's strict clean-route allowlist reject it.
       url.searchParams.delete('site_id');
-    } else if (siteId) {
+    } else if (siteId && !(url.pathname === '/admin/theme-editor' && !url.searchParams.has('site_id') && (url.searchParams.get('new') === '1' || url.searchParams.has('project')))) {
       const querySiteIds = url.searchParams.getAll('site_id');
       if (querySiteIds.length > 1 || querySiteIds.some(value => value !== siteId)) return null;
       url.searchParams.set('site_id', siteId);
@@ -91,6 +91,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/pages': ['site_id'],
     '/admin/page-edit': ['slug', 'site_id', 'page_id'],
     '/admin/theme-project-editor': ['project','project_id','site_id','page','section','block','previewMode','stock','new'],
+    '/admin/theme-editor': ['project','project_id','site_id','page','page_id','slug','section','block','previewMode','stock','new','assistant','marketplace_kind','marketplace_key','showcase'],
     '/admin/theme-workspace': ['site_id'],
     '/admin/product-edit': ['id','site_id'],
     '/admin/products': ['view','site_id','collection_id'],
@@ -113,9 +114,9 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
         ? ['site_id']
         : []);
   if ([...url.searchParams.keys()].some((name) => !allowed.includes(name) || url.searchParams.getAll(name).length !== 1)) return null;
-  if (url.pathname === '/admin/theme-project-editor') {
+  if (url.pathname === '/admin/theme-project-editor' || url.pathname === '/admin/theme-editor') {
     if (url.searchParams.has('new') &&
-        (url.searchParams.get('new') !== '1' || !url.searchParams.has('site_id') ||
+        (url.searchParams.get('new') !== '1' ||
          ['project', 'project_id', 'page', 'page_id'].some(key => url.searchParams.has(key)))) return null;
     if (url.searchParams.has('previewMode') &&
         !['desktop', 'tablet', 'mobile'].includes(url.searchParams.get('previewMode') || '')) return null;
