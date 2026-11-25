@@ -365,3 +365,26 @@ test('site-owned registered stock block routes add duplicate move and remove thr
   assert.equal(foreign.status,404);
  }finally{db.close();}
 });
+
+
+test('duplicate section preserves authored content and nested block identity with an independent private draft',async()=>{
+ const {db,env,objects}=stockFixture();
+ try {
+  const r=await invoke(env,'merchant','POST',{catalogKey:sku});assert.equal(r.status,201);const section=await r.json();
+  const original=(await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections.find(s=>s.id===section.section_id);
+  const blocks=db.prepare('SELECT id,block_key FROM cms_section_blocks WHERE section_id=? ORDER BY sort_order').all(original.id);
+  db.prepare('UPDATE cms_section_blocks SET parent_block_id=? WHERE id=?').run(blocks[0].id,blocks[1].id);
+  const path='https://cms.test/api/admin/cms/pages/home/sections/'+section.section_key+'/duplicate?site_id=main&page_id=home';
+  assert.equal((await invoke(env,'other','POST',{},path)).status,404);
+  const response=await invoke(env,'merchant','POST',{},path);const copy=await response.json();assert.equal(response.status,200,JSON.stringify(copy));
+  const read=(await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections;
+  const duplicate=read.find(s=>s.id===copy.section_id);
+  assert.notEqual(duplicate.id,original.id);assert.deepEqual(duplicate.content,original.content);
+  assert.notEqual(duplicate.source_object_key,original.source_object_key);
+  assert.equal(objects.get(duplicate.source_object_key),objects.get(original.source_object_key));
+  const copied=db.prepare('SELECT id,block_key,parent_block_id FROM cms_section_blocks WHERE section_id=? ORDER BY sort_order').all(duplicate.id);
+  assert.deepEqual(copied.map(b=>b.block_key),blocks.map(b=>b.block_key));
+  assert.notEqual(copied[0].id,blocks[0].id);assert.equal(copied[1].parent_block_id,copied[0].id);
+  assert.equal(db.prepare('SELECT published_r2_key FROM cms_page_sections WHERE id=?').get(duplicate.id).published_r2_key,null);
+ }finally{db.close();}
+});

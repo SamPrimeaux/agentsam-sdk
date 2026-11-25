@@ -485,6 +485,54 @@ export async function editSiteOwnedSectionStructure(env, accountId, slug, siteId
     await env.DB.batch(rows.map((row,index)=>env.DB.prepare(`UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now') WHERE page_id=? AND id=?`).bind(index*10,page.id,row.id)));
     return {ok:true,section_key:key,to_index:to,published:false};
   }
+  if(action==='duplicate') {
+    if(!env.CMS_CONTENT)return problem('cms_section_bucket_unavailable',503);
+    const source=await env.DB.prepare('SELECT * FROM cms_page_sections WHERE id=? AND page_id=?').bind(section.id,page.id).first();
+    const current=await getSiteOwnedPage(env,accountId,slug,site.id,page.id);
+    const item=current?.page?.sections?.find(s=>s.id===section.id);
+    if(!source||!item)return problem('cms_section_not_found',404);
+    if(item.source_error)return problem(item.source_error,409);
+    const nonce=crypto.randomUUID().replaceAll('-','');
+    const id='cmss_'+nonce.slice(0,20);
+    const newKey=String(key).replace(/[^a-z0-9-]/gi,'-').slice(0,64).toLowerCase()+'-'+nonce.slice(0,8);
+    const serialized=JSON.stringify(item.content);
+    const sha=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,'0')).join('');
+    const digest=await sha(serialized), pointer='cms/sections/drafts/'+encodeURIComponent(page.id)+'/'+id+'/revision-000001-'+digest.slice(0,16)+'.json';
+    const {results:blocks=[]}=await env.DB.prepare("SELECT * FROM cms_section_blocks WHERE section_id=? AND account_id=? AND status<>'archived' ORDER BY sort_order,id").bind(source.id,accountId).all();
+    const byId=new Map(blocks.map(b=>[b.id,b]));
+    const ids=new Map(blocks.map(b=>[b.id,'cmsb_'+crypto.randomUUID().replaceAll('-','').slice(0,20)]));
+    const ordered=[],visiting=new Set(),visited=new Set();
+    function visit(b){
+      if(visited.has(b.id))return;
+      if(visiting.has(b.id))throw new Error('cms_block_parent_cycle');
+      visiting.add(b.id);
+      if(b.parent_block_id){const parent=byId.get(b.parent_block_id);if(!parent)throw new Error('cms_block_parent_missing');visit(parent);}
+      visiting.delete(b.id);visited.add(b.id);ordered.push(b);
+    }
+    try {for(const block of blocks)visit(block);}catch(e){return problem(String(e.message||e),409);}
+    try {
+      await env.CMS_CONTENT.put(pointer,serialized,{httpMetadata:{contentType:'application/json'}});
+      const saved=await env.CMS_CONTENT.get(pointer);
+      if(!saved||await sha(await saved.text())!==digest)return problem('cms_section_r2_verification_failed',503);
+    }catch{return problem('cms_section_r2_unavailable',503);}
+    const siblings=rows.map(r=>r.id);siblings.splice(from+1,0,id);
+    // Copy the authored section, not catalog defaults; the existing immutable
+    // revision guard rolls the transaction back if the source changed.
+    const statements=[
+      env.DB.prepare(`INSERT INTO cms_page_sections(id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket,draft_r2_key,content_hash,definition_id,template_sku,metadata_json,css_classes,custom_css,liquid_section_id,schema_version)
+        SELECT ?,page_id,?,section_type,section_name,section_data,?,is_visible,'cms',?,?,definition_id,template_sku,metadata_json,css_classes,custom_css,liquid_section_id,schema_version
+        FROM cms_page_sections WHERE id=? AND page_id=? AND draft_r2_key IS ? AND published_r2_key IS ? AND content_hash IS ?`)
+        .bind(id,newKey,(from+1)*10,pointer,digest,source.id,page.id,source.draft_r2_key,source.published_r2_key,source.content_hash),
+      env.DB.prepare(`INSERT INTO cms_revisions(account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
+        VALUES (?,?,'section',?,CASE WHEN changes()=1 THEN 1 ELSE NULL END,'draft',?,?,?,?)`)
+        .bind(accountId,site.id,id,pointer,digest,JSON.stringify({content:item.content}),JSON.stringify({source:'section-duplicate',sourceSectionId:source.id})),
+      ...ordered.map(b=>env.DB.prepare(`INSERT INTO cms_section_blocks(id,account_id,section_id,parent_block_id,block_key,block_type,definition_id,template_sku,sort_order,status,content_json,settings_json,source_path,metadata_json)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(ids.get(b.id),accountId,id,b.parent_block_id?ids.get(b.parent_block_id):null,b.block_key,b.block_type,b.definition_id,b.template_sku,b.sort_order,b.status,b.content_json,b.settings_json,b.source_path,b.metadata_json)),
+      ...siblings.filter(other=>other!==id).map(other=>env.DB.prepare('UPDATE cms_page_sections SET sort_order=? WHERE page_id=? AND id=?').bind(siblings.indexOf(other)*10,page.id,other)),
+    ];
+    try{await env.DB.batch(statements);}catch{return problem('cms_section_duplicate_conflict',409);}
+    return {ok:true,section_key:newKey,section_id:id,version:1,published:false};
+  }
   if(action==='visibility') {
     if(typeof body.enabled!=='boolean')return problem('cms_section_visibility_invalid',400);
     const current=await getSiteOwnedPage(env,accountId,slug,site.id,page.id);

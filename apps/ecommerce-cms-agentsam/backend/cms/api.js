@@ -3369,6 +3369,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       /* optional body */
     }
+    if (["site-owned","site-owned-legacy"].includes(await cmsPageStorageMode(env.DB))) {
+      const result=await editSiteOwnedSectionStructure(env,context.accountId,m[1],siteId,pageId,m[2],"duplicate",body);
+      return json(result,{status:result.status||(result.ok?200:400)});
+    }
     const mode = await pageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical
