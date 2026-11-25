@@ -122,6 +122,8 @@ test('published original installs into chosen authorized CMS site with D1 pointe
     assert.equal(stored.ok,true);
     assert.equal(stored.project.pages.length,project.pages.length);
     assert.equal(stored.project.pages[0].sections.length>0,true);
+    // Installation saves a theme project, not a batch of premature CMS pages.
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_pages WHERE site_id='a-blog'").get().n,0);
     assert.equal((await getThemeProject(env,'au_testowner0001','theme_plain-jane','a-store')).status,404);
     assert.equal((await getThemeProject(env,'au_testother0002','theme_plain-jane','a-blog')).ok,false);
   });}finally{sqlite.close();}
