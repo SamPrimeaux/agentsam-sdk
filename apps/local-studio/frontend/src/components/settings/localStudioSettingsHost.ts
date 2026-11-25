@@ -28,8 +28,6 @@ import {
   getDesktopWorkspaceContext,
   identitySessionExists,
   isPackagedDesktop,
-  invokeStudioService,
-  resolveDesktopStudioAccountId,
   openExternalUrl,
 } from "@/lib/desktop/tauri";
 import {
@@ -211,30 +209,18 @@ function settingsWidgets(catalog: AccountWidget[] | null = null): SettingsWidget
 }
 
 /**
- * Shared host IO: web session cookie OR desktop Keychain-backed native session.
- * Both hit the same Worker service, authenticated as the current account.
+ * All Settings requests use the same Worker API as the web host.
+ * The packaged-desktop fetch adapter supplies the Keychain-backed session.
  */
 async function settingsRequest<T extends {ok?:boolean;error?:string}>(
   path:string,method:"GET"|"POST"|"PUT"|"PATCH"|"DELETE"="GET",body?:unknown,
 ):Promise<T> {
-  let payload:T;
-  let status:number;
-  if(isPackagedDesktop()){
-    const bridged=await invokeStudioService({
-      operation:"settings",account_id:await resolveDesktopStudioAccountId(),
-      path,method,...(body===undefined?{}:{body}),
-    });
-    status=bridged.status;
-    try{payload=JSON.parse(bridged.body) as T;}catch{throw new Error("settings_invalid_response");}
-  }else{
-    const response=await fetch(path,{method,credentials:"same-origin",
-      headers:{accept:"application/json",...(body===undefined?{}:{"content-type":"application/json"})},
-      body:body===undefined?undefined:JSON.stringify(body),
-    });
-    status=response.status;
-    payload=await response.json().catch(()=>({ok:false,error:"settings_invalid_response"} as T));
-  }
-  if(status>=400||payload.ok!==true)throw new Error(payload.error||"settings_request_failed_"+status);
+  const response=await fetch(path,{method,credentials:"same-origin",
+    headers:{accept:"application/json",...(body===undefined?{}:{"content-type":"application/json"})},
+    body:body===undefined?undefined:JSON.stringify(body),
+  });
+  const payload=await response.json().catch(()=>({ok:false,error:"settings_invalid_response"} as T));
+  if(response.status>=400||payload.ok!==true)throw new Error(payload.error||"settings_request_failed_"+response.status);
   return payload;
 }
 /** Read the real account-scoped tool ledger, never a fixture cost estimate. */
@@ -258,8 +244,6 @@ async function billingGet(path:string):Promise<unknown>{
   return response.json();
 }
 async function readAccountBilling(){
-  if(isPackagedDesktop())return {...BILLING_NOT_CONFIGURED,
-    message:"The desktop host has not exposed authenticated billing reads."};
   try {
     const [subscriptions,invoices]=await Promise.all([
       billingGet("/api/billing"),billingGet("/api/billing/invoices"),
@@ -274,7 +258,6 @@ async function readAccountBilling(){
   }
 }
 async function openAccountBillingPortal(){
-  if(isPackagedDesktop())throw new Error("billing_portal_unavailable");
   const response=await fetch("/api/billing/portal",{method:"POST",credentials:"same-origin",
     headers:{"content-type":"application/json",accept:"application/json"},body:"{}"});
   if(!response.ok)throw new Error("billing_portal_request_failed");
@@ -385,21 +368,11 @@ async function loadStorageTargets(): Promise<SettingsStorageTarget[]> {
   const path = "/api/connections/cloudflare/resources?per_page=50&return_to=%2Fadmin%2Fsettings%2Fstorage";
   let cloudflare: CloudflareStorageDiscovery | null = null;
   try {
-    if (isPackagedDesktop()) {
-      const response = await invokeStudioService({
-        operation: "connections",
-        account_id: await resolveDesktopStudioAccountId(),
-        method: "GET",
-        path,
-      });
-      if (response.ok) cloudflare = JSON.parse(response.body) as CloudflareStorageDiscovery;
-    } else {
-      const response = await fetch(path, {
-        credentials: "same-origin",
-        headers: { accept: "application/json" },
-      });
-      if (response.ok) cloudflare = await response.json() as CloudflareStorageDiscovery;
-    }
+    const response = await fetch(path, {
+      credentials: "same-origin",
+      headers: { accept: "application/json" },
+    });
+    if (response.ok) cloudflare = await response.json() as CloudflareStorageDiscovery;
   } catch {
     // Do not convert failed provider discovery into fake empty/healthy resources.
   }
@@ -639,7 +612,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
 export const localStudioSettingsHost: SettingsHost = {
   documentationHref: "/admin/settings/docs",
   // Account self-service runs on the web session; the desktop bridge does not proxy it yet.
-  account: isPackagedDesktop() ? undefined : studioAccountHost,
+  account: studioAccountHost,
   ...themeManagement,
   readBilling: readAccountBilling,
   openBillingPortal: openAccountBillingPortal,
@@ -723,17 +696,9 @@ export const localStudioSettingsHost: SettingsHost = {
     if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error("plugin_id_invalid");
     const path="/api/plugins/"+encodeURIComponent(pluginId)+"/workspace";
     let body:{ok?:boolean;error?:string;pluginKey?:string;contextTool?:string;result?:unknown};
-    if(isPackagedDesktop()){
-      const native=await invokeStudioService({
-        operation:"plugins",account_id:await resolveDesktopStudioAccountId(),method:"GET",path,
-      });
-      body=JSON.parse(native.body||"{}");
-      if(!native.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
-    }else{
-      const response=await fetch(path,{credentials:"same-origin"});
-      body=await response.json().catch(()=>({ok:false,error:"plugin_workspace_invalid_response"}));
-      if(!response.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
-    }
+    const response=await fetch(path,{credentials:"same-origin"});
+    body=await response.json().catch(()=>({ok:false,error:"plugin_workspace_invalid_response"}));
+    if(!response.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
     return {pluginKey:body.pluginKey||"",contextTool:body.contextTool||"",result:body.result};
   },
   async listPluginRepositories(pluginId) {
