@@ -4388,3 +4388,62 @@ body.agentsam-open [data-mini-agentsam] { display:none!important; }
   }
   .theme-studio .te-tree-actions__menu button {min-height:48px;font-size:15px;padding:12px 16px;}
 }
+
+/* Compact selection controls and the dedicated insertion workspace. */
+.te-mobile-inspector-groups {display:none;}
+@media(max-width:900px) {
+  .theme-studio .theme-editor-panel .te-mobile-sheet-head__row {gap:6px;}
+  .theme-studio .theme-editor-panel .te-mobile-sheet-head__row strong {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .theme-studio .theme-editor-panel .te-mobile-sheet-head__row > button {flex:0 0 44px;background:var(--te-soft);}
+  .theme-studio .theme-editor-panel .te-mobile-sheet-head__row > button svg {width:19px;height:19px;}
+  .theme-studio .te-mobile-inspector-groups:not([hidden]) {
+    display:flex;flex:0 0 auto;gap:8px;overflow-x:auto;scrollbar-width:none;
+    padding:10px 12px max(12px,env(safe-area-inset-bottom,0px));background:var(--te-panel);
+    border-top:1px solid var(--te-border);
+  }
+  .theme-studio .te-mobile-inspector-groups button {
+    flex:0 0 auto;min-height:44px;padding:0 16px;border:0;border-radius:999px;
+    background:var(--te-soft);color:var(--te-text);font:inherit;font-size:15px;
+  }
+  .theme-studio .te-mobile-inspector-groups button[aria-pressed="true"] {background:var(--te-accent);color:var(--te-accent-ink,#fff);}
+  .theme-studio[data-mobile-pane="settings"][data-mobile-sheet="compact"] .theme-editor-panel {
+    height:auto!important;max-height:42%!important;min-height:0!important;
+  }
+  .theme-studio[data-mobile-sheet="compact"] .theme-editor-panel .te-inspector-body {display:none;}
+  .theme-studio[data-mobile-sheet="compact"] .theme-editor-panel .te-inspector-save:has(.te-note:empty) {display:none;}
+  .theme-studio .te-inspector-body > [data-mobile-group-inactive] {display:none;}
+  .theme-studio .te-inspector-body :is(input:not([type=color]),textarea,select) {font-size:16px;min-height:44px;}
+  .theme-studio .theme-studio-workspace > dialog.te-section-menu[open] {
+    position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+    max-width:100%!important;max-height:100%!important;margin:0!important;border-radius:18px 18px 0 0!important;
+    display:flex!important;flex-direction:column;overflow:hidden;z-index:40;
+  }
+  .theme-studio dialog.te-section-menu .te-catalog-toolbar {flex:0 0 auto;}
+  .theme-studio dialog.te-section-menu .te-catalog-layout {
+    flex:1 1 0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr) minmax(0,1fr);overflow:hidden;
+  }
+  .theme-studio dialog.te-section-menu .te-catalog-preview {grid-row:1;display:flex;flex-direction:column;min-height:0;overflow:auto;}
+  .theme-studio dialog.te-section-menu .te-catalog-list {grid-row:2;min-height:0;overflow:auto;}
+  .theme-studio dialog.te-section-menu .te-catalog-preview-stage {flex:1 1 0;min-height:80px;}
+  .theme-studio dialog.te-section-menu .te-catalog-preview-meta {flex:0 0 auto;}
+  .theme-studio dialog.te-section-menu :is(.te-catalog-list-item,.te-catalog-add,.te-catalog-tabs button) {min-height:44px;}
+}
+
+.te-mobile-node-menu {display:none;}
+@media(max-width:900px) {
+  .theme-studio .theme-editor-panel .te-mobile-sheet-head__row {gap:4px;}
+  .theme-studio .theme-editor-panel .te-mobile-sheet-head__row > div {gap:2px;}
+  .theme-studio .theme-editor-panel .te-mobile-sheet-head__row > div button {flex:0 0 44px;}
+  .theme-studio .theme-editor-panel .te-mobile-sheet-head__row button[hidden] {display:none;}
+  .theme-studio .te-mobile-node-menu:not([hidden]) {
+    display:flex;flex-direction:column;position:fixed;inset:auto 12px max(12px,env(safe-area-inset-bottom,0px)) 12px;
+    padding:10px;gap:4px;z-index:100;background:var(--te-panel);color:var(--te-text);
+    border:1px solid var(--te-border);border-radius:24px;box-shadow:0 0 0 100vmax #0004,0 12px 40px #0004;
+  }
+  .theme-studio .te-mobile-node-menu button {
+    text-align:left;min-height:48px;padding:12px 16px;font:inherit;font-size:16px;color:inherit;
+    border:0;border-radius:10px;background:transparent;
+  }
+  .theme-studio .te-mobile-node-menu button.is-destructive {color:var(--te-danger,#d53b36);}
+}
