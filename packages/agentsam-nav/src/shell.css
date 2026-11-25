@@ -564,11 +564,11 @@
   overscroll-behavior: contain;
 }
 .as-nav-conversation-mobile-menu .as-nav-menu-heading {
-  text-align: center; font-size: 16px; line-height: 22px; padding: 8px 6px 6px;
+  text-align: center; font-size: calc(var(--nav-label-size) + 2px); line-height: 22px; padding: 8px 6px 6px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .as-nav-conversation-mobile-menu .as-nav-menu-row {
-  min-height: 50px; font-size: 18px; line-height: 24px;
+  min-height: 50px; font-size: calc(var(--nav-label-size) + 4px); line-height: 24px;
   gap: 16px; padding: 8px 12px; border-radius: 14px;
 }
 .as-nav-conversation-mobile-menu .as-nav-menu-row .as-nav-icon { width: 24px; height: 24px; flex: 0 0 24px; }
