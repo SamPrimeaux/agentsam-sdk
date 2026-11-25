@@ -342,3 +342,26 @@ test('site-owned store chat install and save enforce manifest-owned settings and
   assert.equal(content['embed-root'].greeting,'Updated');
  } finally {db.close();}
 });
+
+
+test('site-owned registered stock block routes add duplicate move and remove through one revision writer',async()=>{
+ const {db,env}=stockFixture();
+ try {
+  const created=await invoke(env,'merchant','POST',{catalogKey:sku});
+  assert.equal(created.status,201);const section=await created.json();
+  const url='https://cms.test/api/admin/cms/pages/home/sections/'+section.section_key+'/blocks';
+  const target=suffix=>url+suffix+'?site_id=main&page_id=home';
+  const call=async(method,suffix,body)=>{const r=await invoke(env,'merchant',method,body,target(suffix));const value=await r.json();assert.equal(r.status,200,JSON.stringify(value));return value;};
+  const first=await call('POST','',{templateKey:'plan'});
+  const copy=await call('POST','/'+first.block_id+'/duplicate');
+  await call('POST','/'+copy.block_id+'/move',{toIndex:0});
+  let item=(await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections.find(s=>s.key===section.section_key);
+  assert.equal(item.content.__editor.blocks[0].id,copy.block_id);
+  await call('DELETE','/'+first.block_id);
+  item=(await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections.find(s=>s.key===section.section_key);
+  assert.equal(item.content.__editor.blocks.some(b=>b.id===first.block_id),false);
+  assert.equal(item.version,5);
+  const foreign=await invoke(env,'other','POST',{templateKey:'plan'},target(''));
+  assert.equal(foreign.status,404);
+ }finally{db.close();}
+});

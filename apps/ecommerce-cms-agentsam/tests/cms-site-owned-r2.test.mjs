@@ -105,3 +105,32 @@ test("the global CMS document is initialized once for its authorized site", asyn
     assert.equal(db.prepare("SELECT COUNT(*) AS count FROM cms_pages WHERE slug='site'").get().count, 1);
   } finally { db.close(); }
 });
+
+
+test('site-owned section routes move, hide, show and remove drafts without altering publication',async()=>{
+ const {db,env,objects}=fixture();
+ try {
+  db.exec("INSERT INTO cms_page_sections(id,page_id,section_key,section_type,section_name,section_data,sort_order,is_visible,r2_bucket) VALUES ('second','home','second','hero','Second','{}',10,1,'cms')");
+  const invoke=async(method,suffix,body,accountId='merchant')=>{
+   const url=new URL('https://cms.test/api/admin/cms/pages/home/sections/main-hero'+suffix+'?site_id=main&page_id=home');
+   const response=await handleAdminCmsApi(new Request(url,{method,...(body?{body:JSON.stringify(body),headers:{'content-type':'application/json'}}:{})}),env,url,{accountId});
+   return {status:response.status,data:await response.json()};
+  };
+  const published='cms/sections/publications/home/hero.json';
+  const original=objects.get(published);
+  assert.equal((await invoke('POST','/move',{toIndex:1},'other')).status,404);
+  const moved=await invoke('POST','/move',{toIndex:1});assert.equal(moved.status,200,JSON.stringify(moved));
+  assert.deepEqual((await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections.map(s=>s.key),['second','main-hero']);
+  for(const enabled of [false,true]) {
+   const result=await invoke('PUT','/visibility',{enabled});assert.equal(result.status,200,JSON.stringify(result));
+   const item=(await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections.find(s=>s.key==='main-hero');
+   assert.equal(item.status,enabled?'active':'hidden');assert.equal(item.content.__editor.visibility.enabled,enabled);
+  }
+  assert.equal((await invoke('DELETE','',null,'other')).status,404);
+  const removed=await invoke('DELETE','');assert.equal(removed.status,200,JSON.stringify(removed));
+  assert.deepEqual((await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections.map(s=>s.key),['second']);
+  assert.equal(objects.get(published),original);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM cms_revisions WHERE entity_id='hero'").get().n,2);
+  assert.equal(db.prepare("SELECT status FROM cms_pages WHERE id='home'").get().status,'published');
+ }finally{db.close();}
+});

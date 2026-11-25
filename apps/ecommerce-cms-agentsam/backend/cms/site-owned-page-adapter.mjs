@@ -422,6 +422,8 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
     if(section.section_type!=='storefront_embed')await validateCatalogStockDraft(env,accountId,section,content);
     blocks=await catalogBlockStatements(env.DB,accountId,section,content);
   }catch(e){return problem(String(e.message||e),422);}
+  const visibility = section.section_type === 'storefront_embed' ? content.enabled !== false
+    : typeof content.__editor?.visibility?.enabled === 'boolean' ? content.__editor.visibility.enabled : null;
   const serialized = JSON.stringify(content);
   if (new TextEncoder().encode(serialized).length > 524288) return problem("cms_section_content_too_large", 413);
   const current = await env.DB.prepare(`
@@ -446,7 +448,7 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
       env.DB.prepare(`
         UPDATE cms_page_sections SET draft_r2_key=?,content_hash=?,is_visible=CASE WHEN ? IS NULL THEN is_visible ELSE ? END,updated_at=datetime('now')
         WHERE id=? AND page_id=? AND draft_r2_key IS ?`)
-        .bind(key,hash,section.section_type==='storefront_embed'?(content.enabled===false?0:1):null,content.enabled===false?0:1,section.id,page.id,section.draft_r2_key),
+        .bind(key,hash,visibility===null?null:Number(visibility),Number(visibility===true),section.id,page.id,section.draft_r2_key),
       env.DB.prepare(`
         INSERT INTO cms_revisions
         (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,
@@ -459,4 +461,56 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
   }catch{return problem('cms_section_revision_conflict',409);}
   return { ok: true, version: revision, section_key: section.section_key || section.id,
     content_object_key: key, published: false, updated_at: new Date().toISOString() };
+}
+
+
+/** Structural edits use the same owned page as the draft writer. Published
+ * HTML and immutable section objects/revisions are not deleted or rewritten. */
+export async function editSiteOwnedSectionStructure(env, accountId, slug, siteId, pageId, sectionKey, action, body = {}) {
+  if (!accountId || !siteId) return problem('cms_site_required',400);
+  let site;
+  try { site=await selectOwnedPageSite(env,accountId,siteId); }
+  catch { return problem('site_not_found_or_unauthorized',404); }
+  const page=await findSiteOwnedPage(env,site,slug,pageId);
+  if (!page) return problem('cms_page_not_found',404);
+  const {results:rows=[]}=await env.DB.prepare(`SELECT id,section_key,sort_order,is_visible,draft_r2_key,published_r2_key
+    FROM cms_page_sections WHERE page_id=? ORDER BY sort_order,id`).bind(page.id).all();
+  const from=rows.findIndex(row=>row.section_key===sectionKey || row.id===sectionKey);
+  if(from<0)return problem('cms_section_not_found',404);
+  const section=rows[from], key=section.section_key||section.id;
+  if(action==='move') {
+    if(!Number.isInteger(body.toIndex))return problem('cms_section_index_invalid',400);
+    const to=Math.max(0,Math.min(body.toIndex,rows.length-1));
+    rows.splice(from,1);rows.splice(to,0,section);
+    await env.DB.batch(rows.map((row,index)=>env.DB.prepare(`UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now') WHERE page_id=? AND id=?`).bind(index*10,page.id,row.id)));
+    return {ok:true,section_key:key,to_index:to,published:false};
+  }
+  if(action==='visibility') {
+    if(typeof body.enabled!=='boolean')return problem('cms_section_visibility_invalid',400);
+    const current=await getSiteOwnedPage(env,accountId,slug,site.id,page.id);
+    const item=current?.page?.sections?.find(s=>s.id===section.id);
+    if(!item)return problem('cms_section_not_found',404);
+    if(item.source_error) {
+      // A missing draft must not prevent removal from the preview. Do not
+      // fabricate a replacement document merely to change visibility.
+      await env.DB.prepare(`UPDATE cms_page_sections SET is_visible=?,updated_at=datetime('now') WHERE page_id=? AND id=?`).bind(Number(body.enabled),page.id,section.id).run();
+      return {ok:true,section_key:key,enabled:body.enabled,published:false,source_error:item.source_error};
+    }
+    const content=structuredClone(item.content);
+    content.__editor={...content.__editor,visibility:{...content.__editor?.visibility,enabled:body.enabled}};
+    if(item.type==='storefront_embed')content.enabled=body.enabled;
+    const saved=await saveSiteOwnedSectionDraft(env,accountId,slug,site.id,page.id,key,{content,expected_version:item.version});
+    return saved.ok?{...saved,enabled:body.enabled}:saved;
+  }
+  if(action==='remove') {
+    // Existing foreign keys cascade placed blocks; the explicit scoped delete
+    // also supports older hosts lacking that cascade. Revision objects survive.
+    const results=await env.DB.batch([
+      env.DB.prepare('DELETE FROM cms_section_blocks WHERE section_id=? AND account_id=?').bind(section.id,accountId),
+      env.DB.prepare('DELETE FROM cms_page_sections WHERE id=? AND page_id=?').bind(section.id,page.id),
+    ]);
+    if(results[1]?.meta?.changes!==1)return problem('cms_section_not_found',404);
+    return {ok:true,section_key:key,removed:true,published:false};
+  }
+  return problem('cms_section_action_invalid',400);
 }
