@@ -2,7 +2,7 @@ import type { AgentMessage as ChatMessage, AgentRunMode } from "@inneranimalmedi
 import { resolveChatImages, resolveChatFileContext, type ChatAttachmentReference } from "@/lib/content/chat-images";
 import type { RawRuntimeEvent } from "@inneranimalmedia/agentsam-loading-scene";
 import { buildStudioSystemMessages, type StudioChatSurface } from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
-import { identitySessionExists, invokeLocalProvider, invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
+import { identitySessionExists, invokeLocalProvider, invokeStudioChat, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 export async function streamChat(opts: {
   messages: Array<Pick<ChatMessage, "role" | "content"> & { attachments?: ChatAttachmentReference[] }>;
@@ -120,10 +120,7 @@ export async function streamChat(opts: {
         opts.surface === "side" ? "Co-worker using account model service" : "Using account model service",
         opts.model_id,
       );
-      const bridged = await invokeStudioService({
-        operation: "chat",
-        body: requestBody,
-      });
+      const bridged = await invokeStudioChat(requestBody);
       if (bridged.ok) {
         emitActivity(
           "model.response.account",

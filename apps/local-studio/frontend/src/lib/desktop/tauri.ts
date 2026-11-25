@@ -177,8 +177,6 @@ export async function getDesktopIdentityStatus(forceRefresh = false): Promise<Re
 }
 
 
-export type StudioServiceOperation = "api" | "apps" | "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins" | "work" | "settings" | "commerce";
-
 export async function invokeLocalProvider<T = Record<string, unknown>>(payload: {
   operation: "inventory" | "chat" | "select_model";
   provider?: string;
@@ -203,35 +201,20 @@ export type StudioServiceResponse = {
   headers?: Array<[string, string]>;
 };
 
-export async function invokeStudioService(payload: {
-  operation: StudioServiceOperation;
-  body_base64?: string;
-  content_type?: string;
-  account_id?: string | null;
-  body?: unknown;
-  path?: string;
-  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-}): Promise<StudioServiceResponse> {
+/**
+ * Chat is the only application service call that keeps a specialized native
+ * transport because its response semantics differ from ordinary /api fetches.
+ * All other Worker APIs use window.fetch and the shared authenticated adapter.
+ */
+export async function invokeStudioChat(body: unknown): Promise<StudioServiceResponse> {
   const invoke = getTauriInvoke();
-  if (!invoke) throw new Error("studio_service_bridge_unavailable");
+  if (!invoke) throw new Error("studio_chat_transport_unavailable");
   const raw = (await invoke("studio_service_bridge", {
-    requestJson: JSON.stringify(payload),
+    requestJson: JSON.stringify({ operation: "chat", body }),
   })) as string;
   return JSON.parse(raw) as StudioServiceResponse;
 }
 
-export async function resolveDesktopStudioAccountId(): Promise<string> {
-  if (!isPackagedDesktop()) return "studio-local";
-  try {
-    const status = await getDesktopIdentityStatus();
-    if (status.authenticated !== true) return "studio-local";
-    const user = status.user as { id?: unknown } | null | undefined;
-    const id = typeof user?.id === "string" ? user.id.trim() : "";
-    return id || "studio-local";
-  } catch {
-    return "studio-local";
-  }
-}
 
 
 export type DesktopWorkspaceContext = {

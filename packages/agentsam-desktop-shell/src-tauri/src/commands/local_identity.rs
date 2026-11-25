@@ -61,14 +61,17 @@ pub fn identity_runtime_config(app: AppHandle) -> Result<Value, String> {
 }
 
 fn validate_service_origin(origin: &str) -> Result<(), String> {
-    let parsed = reqwest::Url::parse(origin).map_err(|_| "identity_service_origin_invalid".to_string())?;
-    let is_loopback = matches!(parsed.host_str(), Some("127.0.0.1") | Some("localhost") | Some("::1"));
+    let parsed =
+        reqwest::Url::parse(origin).map_err(|_| "identity_service_origin_invalid".to_string())?;
+    let is_loopback = matches!(
+        parsed.host_str(),
+        Some("127.0.0.1") | Some("localhost") | Some("::1")
+    );
     if parsed.scheme() != "https" && !(parsed.scheme() == "http" && is_loopback) {
         return Err("identity_service_origin_requires_https".into());
     }
     Ok(())
 }
-
 
 #[derive(Debug, Deserialize)]
 struct StudioServiceBridgeRequest {
@@ -99,305 +102,8 @@ struct StudioServiceBridgeResponse {
     headers: Vec<(String, String)>,
 }
 
-/// `/api/work/connect/<provider>/<start|status|disconnect>` for the OAuth plugins served by Local Studio.
-fn is_work_connect_path(path: &str) -> bool {
-    let Some(rest) = path.strip_prefix("/api/work/connect/") else {
-        return false;
-    };
-    let mut parts = rest.split('/');
-    let (Some(provider), Some(action), None) = (parts.next(), parts.next(), parts.next()) else {
-        return false;
-    };
-    matches!(provider, "google_drive" | "google_calendar" | "github")
-        && matches!(action, "start" | "status" | "disconnect")
-}
-
 fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method, String), String> {
     match request.operation.trim() {
-        // Same authenticated account Settings API as the web host.
-        // Constrained to existing Skills and Agents resources; never arbitrary URLs.
-        "settings" => {
-            let path = request.path.as_deref().unwrap_or("").trim();
-            let root = path == "/api/settings/skills"
-                || path == "/api/settings/mcps"
-                || path == "/api/settings/rules"
-                || path == "/api/settings/preferences"
-                || path == "/api/settings/account-avatar"
-                || path == "/api/settings/notifications"
-                || path == "/api/notifications"
-                || path == "/api/notifications/read-all"
-                || path.strip_prefix("/api/notifications/")
-                    .and_then(|rest| rest.strip_suffix("/read"))
-                    .is_some_and(|id| !id.is_empty() && id.len() <= 128
-                        && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-'))
-                || path == "/api/settings/agents"
-                || path == "/api/settings/agents/policy";
-            let skill = path.strip_prefix("/api/settings/skills/").is_some_and(|id| {
-                id.starts_with("skill_") && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
-            });
-            let mcp = path.strip_prefix("/api/settings/mcps/").is_some_and(|id| {
-                id.starts_with("mcps_") && id.len() <= 64 &&
-                    id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
-            });
-            let agent = path.strip_prefix("/api/settings/agents/").is_some_and(|id| {
-                id.starts_with("asp_") && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
-            });
-            // Rule ids predate the rule_ prefix, so the shape is validated instead of a prefix.
-            let rule_id = |id: &str| id.len() >= 3 && id.len() <= 120
-                && id.chars().next().is_some_and(|ch| ch.is_ascii_alphanumeric())
-                && !id.contains("..")
-                && id.chars().all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | ':' | '.'));
-            let rule_rest = path.strip_prefix("/api/settings/rules/");
-            let rule = rule_rest.is_some_and(|id| rule_id(id));
-            let rule_toggle = rule_rest.and_then(|rest| rest.strip_suffix("/enabled")).is_some_and(|id| rule_id(id));
-            if !(root || skill || mcp || agent || rule || rule_toggle)
-                || path.contains("://")
-                || path.contains('\\')
-                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
-            {
-                return Err("studio_service_settings_path_invalid".into());
-            }
-            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
-                "GET" => Method::GET,
-                "POST" => Method::POST,
-                "PUT" => Method::PUT,
-                "PATCH" => Method::PATCH,
-                "DELETE" => Method::DELETE,
-                _ => return Err("studio_service_settings_method_invalid".into()),
-            };
-            let valid = match method {
-                Method::GET => root && path != "/api/notifications/read-all" && !path.ends_with("/read"),
-                Method::POST => path == "/api/settings/skills" || path == "/api/settings/mcps" || path == "/api/settings/agents"
-                    || path == "/api/settings/rules"
-                    || path == "/api/notifications/read-all"
-                    || (path.starts_with("/api/notifications/") && path.ends_with("/read")),
-                Method::PUT => skill || mcp || agent || rule || rule_toggle || path == "/api/settings/agents/policy"
-                    || path == "/api/settings/preferences" || path == "/api/settings/account-avatar"
-                    || path == "/api/settings/notifications",
-                Method::PATCH => mcp,
-                Method::DELETE => skill || mcp || agent || rule,
-                _ => false,
-            };
-            if !valid {return Err("studio_service_settings_operation_invalid".into());}
-            Ok((method,path.to_string()))
-        }
-        "apps" => {
-            // Installed Apps belong to the verified server-side session account.
-            // Never let a desktop caller nominate a different account identity.
-            if request.account_id.is_some() {
-                return Err("studio_service_apps_account_override_forbidden".into());
-            }
-            // Only the account Apps launcher, lifecycle, and recent-open routes
-            // are permitted. This is not a generic service proxy.
-            let path = request.path.as_deref().unwrap_or("").trim();
-            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
-                "GET" => Method::GET,
-                "POST" => Method::POST,
-                "PATCH" => Method::PATCH,
-                "DELETE" => Method::DELETE,
-                _ => return Err("studio_service_apps_method_invalid".into()),
-            };
-            let write = method == Method::POST || method == Method::DELETE || method == Method::PATCH;
-            if (path == "/api/apps/launcher" && method == Method::GET)
-                || (path == "/api/apps/install" && write)
-                || (path == "/api/apps/open" && method == Method::POST) {
-                Ok((method,path.to_string()))
-            } else {
-                Err("studio_service_apps_path_invalid".into())
-            }
-        }
-        "inventory" => Ok((Method::GET, "/api/llm/inventory".to_string())),
-        "chat" => Ok((Method::POST, "/api/chat".to_string())),
-        "vault" => {
-            let path = request.path.as_deref().unwrap_or("").trim();
-            if !(path == "/api/vault/services"
-                || path == "/api/vault/secrets"
-                || path.starts_with("/api/vault/secrets/")
-                || path == "/api/vault/credentials"
-                || path.starts_with("/api/vault/credentials/"))
-                || path.contains("://")
-                || path.contains('\\')
-                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
-            {
-                return Err("studio_service_vault_path_invalid".into());
-            }
-            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
-                "GET" => Method::GET,
-                "POST" => Method::POST,
-                "DELETE" => Method::DELETE,
-                _ => return Err("studio_service_vault_method_invalid".into()),
-            };
-            Ok((method, path.to_string()))
-        }
-        "connections" => {
-            let path = request.path.as_deref().unwrap_or("").trim();
-            if !(path == "/api/connections" || path.starts_with("/api/connections/"))
-                || path.contains("://")
-                || path.contains('\\')
-                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
-            {
-                return Err("studio_service_connections_path_invalid".into());
-            }
-            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
-                "GET" => Method::GET,
-                "POST" => Method::POST,
-                "DELETE" => Method::DELETE,
-                _ => return Err("studio_service_connections_method_invalid".into()),
-            };
-            if path.starts_with("/api/connections/side-stages/") {
-                let id = &path["/api/connections/side-stages/".len()..];
-                let valid_id = id.strip_prefix("plg_").map(|suffix| {
-                    suffix.len() >= 8 && suffix.chars().all(|ch| ch.is_ascii_hexdigit())
-                }).unwrap_or(false);
-                if method != Method::POST || !valid_id {
-                    return Err("studio_service_side_stage_request_invalid".into());
-                }
-            }
-            Ok((method, path.to_string()))
-        }
-        "plugins" => {
-            let path = request.path.as_deref().unwrap_or("").trim();
-            if path.contains("://")
-                || path.contains('\\')
-                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
-            {
-                return Err("studio_service_plugins_path_invalid".into());
-            }
-
-            // Catalog/install routes are exact and remain Worker-authenticated.
-            // Never pass a caller-supplied absolute URL through this bridge.
-            match path {
-                "/api/plugins/catalog" => {
-                    if request.method.as_deref().unwrap_or("GET").to_ascii_uppercase() != "GET" {
-                        return Err("studio_service_plugins_method_invalid".into());
-                    }
-                    return Ok((Method::GET, path.to_string()));
-                }
-                "/api/plugins/install" => {
-                    if request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
-                        return Err("studio_service_plugins_method_invalid".into());
-                    }
-                    return Ok((Method::POST, path.to_string()));
-                }
-                _ => {}
-            }
-
-            if path == "/api/plugins/tools/execute" {
-                if request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
-                    return Err("studio_service_plugins_method_invalid".into());
-                }
-                return Ok((Method::POST, path.to_string()));
-            }
-
-            // Dedicated plugin workspace context GET, via the same account grant.
-            if let Some(plugin_id) = path.strip_prefix("/api/plugins/").and_then(|tail| tail.strip_suffix("/workspace")) {
-                if plugin_id.starts_with("plg_")
-                    && plugin_id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch=='_')
-                    && request.method.as_deref().unwrap_or("GET").eq_ignore_ascii_case("GET") {
-                    return Ok((Method::GET,path.to_string()));
-                }
-                return Err("studio_service_plugins_workspace_invalid".into());
-            }
-
-            if let Some(remainder) = path.strip_prefix("/api/plugins/") {
-                if let Some((plugin_id, action)) = remainder.split_once("/oauth/") {
-                    let valid_id = plugin_id.starts_with("plg_")
-                        && plugin_id.chars().all(|value| value.is_ascii_alphanumeric() || value == '_');
-                    if !valid_id || !matches!(action, "start" | "disconnect")
-                        || request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
-                        return Err("studio_service_plugins_path_invalid".into());
-                    }
-                    return Ok((Method::POST, path.to_string()));
-                }
-            }
-
-            let plugin_id = path.strip_prefix("/api/plugins/").unwrap_or("");
-            let valid_plugin_id = plugin_id.starts_with("plg_")
-                && !plugin_id.contains('/')
-                && plugin_id
-                    .chars()
-                    .all(|value| value.is_ascii_alphanumeric() || value == '_');
-            if !valid_plugin_id {
-                return Err("studio_service_plugins_path_invalid".into());
-            }
-            let method = match request.method.as_deref().unwrap_or("PATCH").to_ascii_uppercase().as_str() {
-                "PATCH" => Method::PATCH,
-                "DELETE" => Method::DELETE,
-                _ => return Err("studio_service_plugins_method_invalid".into()),
-            };
-            Ok((method, path.to_string()))
-        }
-        "work" => {
-            let path = request.path.as_deref().unwrap_or("").trim();
-            // The native bridge must explicitly recognize the Worker IDE API.
-            // Do not expand this into a generic /api/work/* network proxy.
-            let ide_path = path.split('?').next().unwrap_or("");
-            let ide_read = matches!(ide_path,
-                "/api/work/ide/sources"
-                | "/api/work/ide/drive/files" | "/api/work/ide/drive/file"
-                | "/api/work/ide/github/repos" | "/api/work/ide/github/tree" | "/api/work/ide/github/file"
-                | "/api/work/ide/r2/buckets" | "/api/work/ide/r2/objects" | "/api/work/ide/r2/file"
-                | "/api/work/ide/containers/applications");
-            let ide_write = matches!(ide_path, "/api/work/ide/drive/file" | "/api/work/ide/github/file");
-            let requested_method = request.method.as_deref().unwrap_or("GET").to_ascii_uppercase();
-            if ide_read && requested_method != "GET" && !(ide_write && requested_method == "PUT") {
-                return Err("studio_service_ide_method_invalid".into());
-            }
-            let valid_path = ide_read || path == "/api/work/snapshot"
-                || path.starts_with("/api/work/snapshot?")
-                || (path.starts_with("/api/work/projects/")
-                    && path.ends_with("/insights")
-                    && path.trim_start_matches("/api/work/projects/").trim_end_matches("/insights").trim_matches('/').chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
-                    && !path.trim_start_matches("/api/work/projects/").trim_end_matches("/insights").trim_matches('/').is_empty())
-                || path == "/api/projects"
-                || path.starts_with("/api/projects/")
-                || path == "/api/calendar/events"
-                || path.starts_with("/api/calendar/events?")
-                || path.starts_with("/api/calendar/events/")
-                || path == "/api/work/gmail/oauth/start"
-                || path == "/api/work/gmail/status"
-                || path == "/api/work/gmail/disconnect"
-                || is_work_connect_path(path)
-                || path == "/api/tickets"
-                || path.starts_with("/api/tickets/")
-                || path == "/api/mail/send"
-                || path.starts_with("/api/mail/email/");
-            if !valid_path
-                || path.contains("..")
-                || path.contains("://")
-                || path.contains('\\')
-                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
-            {
-                return Err("studio_service_work_path_invalid".into());
-            }
-            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
-                "GET" => Method::GET,
-                "POST" => Method::POST,
-                "PATCH" => Method::PATCH,
-                "DELETE" => Method::DELETE,
-                "PUT" if ide_write => Method::PUT,
-                _ => return Err("studio_service_work_method_invalid".into()),
-            };
-            Ok((method, path.to_string()))
-        }
-        "database" => {
-            let path = request.path.as_deref().unwrap_or("").trim();
-            if !path.starts_with("/api/database/")
-                || path.contains("://")
-                || path.contains('\\')
-                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
-            {
-                return Err("studio_service_database_path_invalid".into());
-            }
-            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
-                "GET" => Method::GET,
-                "POST" => Method::POST,
-                "PATCH" => Method::PATCH,
-                "DELETE" => Method::DELETE,
-                _ => return Err("studio_service_database_method_invalid".into()),
-            };
-            Ok((method, path.to_string()))
-        }
         "api" => {
             // The WebView uses the same application API paths as the web host.
             // Native only transports the authenticated request to the configured
@@ -429,7 +135,13 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             {
                 return Err("studio_service_api_path_invalid".into());
             }
-            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+            let method = match request
+                .method
+                .as_deref()
+                .unwrap_or("GET")
+                .to_ascii_uppercase()
+                .as_str()
+            {
                 "GET" => Method::GET,
                 "HEAD" => Method::HEAD,
                 "POST" => Method::POST,
@@ -443,55 +155,28 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             }
             Ok((method, path.to_string()))
         }
-        "commerce" => {
-            let path = request.path.as_deref().unwrap_or("");
-            let url = reqwest::Url::parse(&format!("https://console.invalid{path}"))
-                .map_err(|_| "studio_service_commerce_path_invalid")?;
-            let route = url.path();
-            // Theme Store is an installed Commerce capability. The native bridge
-            // permits catalog reads and explicit per-theme installs, not an open
-            // proxy to arbitrary admin routes or cross-account project paths.
-            let theme_install = route.strip_prefix("/api/admin/website-themes/")
-                .and_then(|tail| tail.strip_suffix("/install"))
-                .is_some_and(|slug| !slug.is_empty() && slug.len() <= 96
-                    && slug.bytes().all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == b'-'));
-            let allowed = route == "/api/admin/website-themes" || theme_install
-                || ["/api/admin/me", "/api/admin/overview", "/api/admin/products", "/api/admin/collections", "/api/admin/inventory", "/api/admin/media", "/api/admin/platform/products", "/api/admin/platform/bindings"].contains(&route)
-                || ["/api/admin/platform/products/", "/api/admin/products/", "/api/admin/variants/", "/api/admin/product-studio/", "/api/admin/completeful/", "/api/admin/media/", "/api/admin/assets/", "/api/admin/cms/", "/api/admin/agentsam/", "/api/admin/theme-editor/", "/api/admin/store/"].iter().any(|prefix| route.starts_with(prefix));
-            if !allowed || !path.starts_with("/api/admin/") || url.host_str() != Some("console.invalid")
-                || path.contains("..") || path.contains('%') && path.split('?').next().unwrap_or("").contains('%')
-                || path.contains('\\') || path.contains('#') || path.chars().any(char::is_control) {
-                return Err("studio_service_commerce_path_invalid".into());
+        "chat" => {
+            if request.account_id.is_some() {
+                return Err("studio_service_chat_account_override_forbidden".into());
             }
-            let method = match request.method.as_deref().unwrap_or("GET") {
-                "GET" => Method::GET, "POST" => Method::POST, "PUT" => Method::PUT,
-                "PATCH" => Method::PATCH, "DELETE" => Method::DELETE,
-                _ => return Err("studio_service_commerce_method_invalid".into()),
-            };
-            if (["/api/admin/me", "/api/admin/overview", "/api/admin/platform/bindings", "/api/admin/website-themes"].contains(&route) && method != Method::GET)
-                || (theme_install && method != Method::POST) {
-                return Err("studio_service_commerce_method_invalid".into());
-            }
-            Ok((method, path.to_owned()))
-        }
-        "cms" => {
-            let path = request.path.as_deref().unwrap_or("").trim();
-            if !path.starts_with("/api/cms/")
-                || path.contains("://")
-                || path.contains('\\')
-                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
+            if request
+                .path
+                .as_deref()
+                .is_some_and(|path| path != "/api/chat")
             {
-                return Err("studio_service_cms_path_invalid".into());
+                return Err("studio_service_chat_path_invalid".into());
             }
-            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
-                "GET" => Method::GET,
-                "POST" => Method::POST,
-                "PUT" => Method::PUT,
-                "PATCH" => Method::PATCH,
-                "DELETE" => Method::DELETE,
-                _ => return Err("studio_service_cms_method_invalid".into()),
-            };
-            Ok((method, path.to_string()))
+            if request
+                .method
+                .as_deref()
+                .is_some_and(|method| !method.eq_ignore_ascii_case("POST"))
+            {
+                return Err("studio_service_chat_method_invalid".into());
+            }
+            if request.body.is_none() || request.body_base64.is_some() {
+                return Err("studio_service_chat_body_invalid".into());
+            }
+            Ok((Method::POST, "/api/chat".to_string()))
         }
         _ => Err("unsupported_studio_service_operation".into()),
     }
@@ -569,7 +254,10 @@ async fn native_vault_session_request(
             .get("error")
             .and_then(Value::as_str)
             .unwrap_or("request_failed");
-        return Err(format!("vault_sync_service_error:{}:{error}", status.as_u16()));
+        return Err(format!(
+            "vault_sync_service_error:{}:{error}",
+            status.as_u16()
+        ));
     }
     Ok(data)
 }
@@ -668,10 +356,13 @@ pub async fn provider_key_sync_from_account(
 fn parse_studio_service_api_options(
     request_value: &Value,
     operation: &str,
-) -> Result<(
-    bool,
-    Vec<(reqwest::header::HeaderName, reqwest::header::HeaderValue)>,
-), String> {
+) -> Result<
+    (
+        bool,
+        Vec<(reqwest::header::HeaderName, reqwest::header::HeaderValue)>,
+    ),
+    String,
+> {
     let skip_auth = match request_value.get("skip_auth") {
         None => false,
         Some(Value::Bool(value)) => *value,
@@ -800,27 +491,16 @@ async fn service_studio_bridge(
         builder = builder.header(name, value);
     }
 
-    if request.operation.trim() == "connections"
-        && request.path.as_deref().unwrap_or("").split('?').next().unwrap_or("").ends_with("/start")
-    {
-        builder = builder.header("X-Agentsam-Oauth", "json");
-    }
-
-    if let Some(account_id) = request.account_id {
-        let account_id = account_id.trim();
-        if !account_id.is_empty() {
-            if account_id.len() > 256 || account_id.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10) {
-                return Err("studio_service_account_id_invalid".into());
-            }
-            builder = builder.header("X-User-Id", account_id);
-        }
-    }
-
     if !skip_auth {
         if let Some(session_id) = super::keychain::identity_session_get_internal(session_state)? {
             let session_id = session_id.trim();
             if !session_id.is_empty() {
-                if session_id.len() > 2048 || session_id.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10) {
+                if session_id.len() > 2048
+                    || session_id
+                        .as_bytes()
+                        .iter()
+                        .any(|byte| *byte == 13 || *byte == 10)
+                {
                     return Err("studio_service_session_invalid".into());
                 }
                 builder = builder.bearer_auth(session_id);
@@ -837,7 +517,8 @@ async fn service_studio_bridge(
             {
                 return Err("studio_service_api_body_invalid".into());
             }
-            let bytes = base64::engine::general_purpose::STANDARD.decode(encoded)
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(encoded)
                 .map_err(|_| "studio_service_api_body_invalid")?;
             if !content_type.is_empty() {
                 builder = builder.header("content-type", content_type);
@@ -849,16 +530,6 @@ async fn service_studio_bridge(
             }
             builder = builder.header("content-type", content_type);
         }
-    } else if request.operation.trim() == "commerce" && request.body_base64.is_some() {
-        let encoded = request.body_base64.as_deref().unwrap_or("");
-        let content_type = request.content_type.as_deref().unwrap_or("");
-        if encoded.len() > 32 * 1024 * 1024 || content_type.chars().any(char::is_control)
-            || !(content_type.starts_with("multipart/form-data; boundary=") || content_type.starts_with("image/") || content_type == "application/octet-stream") {
-            return Err("studio_service_commerce_upload_invalid".into());
-        }
-        let bytes = base64::engine::general_purpose::STANDARD.decode(encoded)
-            .map_err(|_| "studio_service_commerce_upload_invalid")?;
-        builder = builder.header("content-type", content_type).body(bytes);
     } else if method != Method::GET && method != Method::HEAD {
         builder = builder.json(&request.body.unwrap_or_else(|| json!({})));
     }
@@ -874,18 +545,36 @@ async fn service_studio_bridge(
         .and_then(|value| value.to_str().ok())
         .unwrap_or("")
         .to_string();
-    let headers = response.headers().iter().filter_map(|(name, value)| {
-        let name = name.as_str();
-        if matches!(name,
-            "content-type" | "content-disposition" | "content-length" | "cache-control" | "etag"
-            | "last-modified" | "content-range" | "accept-ranges" | "retry-after" | "vary"
-        ) {
-            value.to_str().ok().map(|value| (name.to_string(), value.to_string()))
-        } else {
-            None
-        }
-    }).collect::<Vec<_>>();
-    let bytes = response.bytes().await
+    let headers = response
+        .headers()
+        .iter()
+        .filter_map(|(name, value)| {
+            let name = name.as_str();
+            if matches!(
+                name,
+                "content-type"
+                    | "content-disposition"
+                    | "content-length"
+                    | "cache-control"
+                    | "etag"
+                    | "last-modified"
+                    | "content-range"
+                    | "accept-ranges"
+                    | "retry-after"
+                    | "vary"
+            ) {
+                value
+                    .to_str()
+                    .ok()
+                    .map(|value| (name.to_string(), value.to_string()))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    let bytes = response
+        .bytes()
+        .await
         .map_err(|e| format!("studio_service_response_read_failed:{e}"))?;
     let text_response = content_type.starts_with("text/")
         || content_type.contains("json")
@@ -896,7 +585,10 @@ async fn service_studio_bridge(
     let (body, body_base64) = if text_response {
         (String::from_utf8_lossy(&bytes).into_owned(), None)
     } else {
-        (String::new(), Some(base64::engine::general_purpose::STANDARD.encode(&bytes)))
+        (
+            String::new(),
+            Some(base64::engine::general_purpose::STANDARD.encode(&bytes)),
+        )
     };
 
     serde_json::to_string(&StudioServiceBridgeResponse {
@@ -934,8 +626,8 @@ async fn service_identity_bridge(
         .ok_or_else(|| "identity_service_not_configured".to_string())?;
     validate_service_origin(origin)?;
 
-    let mut request: Value = serde_json::from_str(request_json)
-        .map_err(|e| format!("identity_request_invalid:{e}"))?;
+    let mut request: Value =
+        serde_json::from_str(request_json).map_err(|e| format!("identity_request_invalid:{e}"))?;
     let op = request
         .get("op")
         .and_then(Value::as_str)
@@ -987,7 +679,8 @@ async fn service_identity_bridge(
         if let Value::Object(ref mut map) = value {
             map.remove("session_id");
         }
-        return serde_json::to_string(&value).map_err(|e| format!("identity_response_encode_failed:{e}"));
+        return serde_json::to_string(&value)
+            .map_err(|e| format!("identity_response_encode_failed:{e}"));
     }
 
     if op == "logout" {
@@ -1030,8 +723,8 @@ fn find_manifest(app: &AppHandle) -> Result<PathBuf, String> {
 
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn node_binary(_app: &AppHandle) -> Result<PathBuf, String> {
-    let exe = std::env::current_exe()
-        .map_err(|e| format!("packaged_node_executable_unavailable:{e}"))?;
+    let exe =
+        std::env::current_exe().map_err(|e| format!("packaged_node_executable_unavailable:{e}"))?;
     let dir = exe
         .parent()
         .ok_or_else(|| "packaged_node_directory_unavailable".to_string())?;
@@ -1182,7 +875,6 @@ pub async fn local_identity_bridge(app: AppHandle, request_json: String) -> Resu
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1216,9 +908,19 @@ mod tests {
 
     #[test]
     fn generic_api_transport_rejects_identity_and_hop_by_hop_headers() {
-        for name in ["Authorization", "Cookie", "X-User-Id", "X-Account-Id", "X-AgentSam-Native-Client", "Host"] {
+        for name in [
+            "Authorization",
+            "Cookie",
+            "X-User-Id",
+            "X-Account-Id",
+            "X-AgentSam-Native-Client",
+            "Host",
+        ] {
             let value = json!({"headers": [[name, "not-allowed"]]});
-            assert!(parse_studio_service_api_options(&value, "api").is_err(), "{name}");
+            assert!(
+                parse_studio_service_api_options(&value, "api").is_err(),
+                "{name}"
+            );
         }
         let auth_without_session = json!({
             "headers": [["Authorization", "Bearer explicit"]],
@@ -1230,7 +932,9 @@ mod tests {
             "headers": [["Authorization", "Bearer explicit"]],
             "skip_auth": true
         });
-        assert!(parse_studio_service_api_options(&explicit_auth_without_cookie_session, "api").is_ok());
+        assert!(
+            parse_studio_service_api_options(&explicit_auth_without_cookie_session, "api").is_ok()
+        );
 
         let invalid_value = json!({"headers": [["If-Match", "bad\r\nX-User-Id: forged"]]});
         assert!(parse_studio_service_api_options(&invalid_value, "api").is_err());
@@ -1254,149 +958,6 @@ mod tests {
     }
 
     #[test]
-    fn commerce_bridge_allows_only_installed_product_routes() {
-        for (path, method) in [("/api/admin/me", "GET"), ("/api/admin/products/12", "PUT"),
-            ("/api/admin/collections", "POST"), ("/api/admin/media", "POST"),
-            ("/api/admin/platform/products/prod_one", "PATCH"),
-            ("/api/admin/website-themes", "GET"),
-            ("/api/admin/website-themes/plain-jane/install", "POST")] {
-            let request: StudioServiceBridgeRequest = serde_json::from_value(json!({
-                "operation":"commerce","path":path,"method":method
-            })).unwrap();
-            assert!(studio_service_route(&request).is_ok(), "{path}");
-        }
-        for path in ["https://evil.invalid/api/admin/products", "/api/admin/login", "/api/admin/me/../login",
-            "/api/admin/media/../../vault", "/api/admin/products/%2e%2e/login", "/api/admin/mediasecrets", "/api/vault/secrets",
-            "/api/admin/website-themes/plain-jane/../install", "/api/admin/website-themes/%2e%2e/install",
-            "/api/admin/website-themes/UPPER/install", "/api/admin/website-themes/plain-jane/secrets"] {
-            let request: StudioServiceBridgeRequest = serde_json::from_value(json!({
-                "operation":"commerce","path":path,"method":"GET"
-            })).unwrap();
-            assert!(studio_service_route(&request).is_err(), "{path}");
-        }
-        for (path, method) in [
-            ("/api/admin/website-themes", "POST"),
-            ("/api/admin/website-themes/plain-jane/install", "GET"),
-            ("/api/admin/website-themes/plain-jane/install", "DELETE"),
-        ] {
-            let request: StudioServiceBridgeRequest = serde_json::from_value(json!({
-                "operation":"commerce","path":path,"method":method
-            })).unwrap();
-            assert!(studio_service_route(&request).is_err(), "{method} {path}");
-        }
-    }
-
-    #[test]
-    fn work_bridge_allows_only_bounded_work_routes() {
-        for (path, method) in [
-            ("/api/work/snapshot?surface=mail", "GET"),
-            ("/api/work/snapshot?surface=projects", "GET"),
-            ("/api/work/gmail/oauth/start", "POST"),
-            ("/api/work/gmail/status", "GET"),
-            ("/api/work/gmail/disconnect", "POST"),
-            ("/api/work/connect/google_drive/start", "POST"),
-            ("/api/work/connect/google_calendar/disconnect", "POST"),
-            ("/api/work/connect/github/status", "GET"),
-            ("/api/tickets", "POST"),
-            ("/api/tickets/tkt_123", "PATCH"),
-            ("/api/tickets/tkt_123", "DELETE"),
-            ("/api/projects", "POST"),
-            ("/api/work/projects/proj_agentsam_sdk/insights", "GET"),
-            ("/api/projects/prj_123", "PATCH"),
-            ("/api/projects/prj_123", "DELETE"),
-            ("/api/projects/prj_123?hard=1", "DELETE"),
-            ("/api/calendar/events?from=2026-10-01&to=2026-10-31", "GET"),
-            ("/api/calendar/events", "POST"),
-            ("/api/calendar/events/evt_123", "PATCH"),
-            ("/api/calendar/events/evt_123", "DELETE"),
-            ("/api/work/snapshot?from=2026-10-01&to=2026-10-31", "GET"),
-            ("/api/mail/send", "POST"),
-            ("/api/mail/email/msg_123", "PATCH"),
-        ] {
-            let request = StudioServiceBridgeRequest {
-                operation: "work".into(),
-                account_id: None,
-                body: None, body_base64: None, content_type: None,
-                path: Some(path.into()),
-                method: Some(method.into()),
-            };
-            assert_eq!(studio_service_route(&request).unwrap().0.as_str(), method);
-        }
-
-        for invalid_path in [
-            "https://evil.invalid/api/work/snapshot",
-            "/api/work/../../vault",
-            "/api/work/projects/a/../../vault/insights",
-            r"/api/mail/send\oops",
-        ] {
-            let request = StudioServiceBridgeRequest {
-                operation: "work".into(),
-                account_id: None,
-                body: None, body_base64: None, content_type: None,
-                path: Some(invalid_path.into()),
-                method: Some("GET".into()),
-            };
-            assert!(studio_service_route(&request).is_err());
-        }
-    }
-
-    #[test]
-    fn ide_bridge_allows_only_scoped_provider_reads_and_versioned_writes() {
-        for (path, method) in [
-            ("/api/work/ide/sources", "GET"),
-            ("/api/work/ide/drive/files?account=hello%40example.com", "GET"),
-            ("/api/work/ide/drive/file?account=hello%40example.com&id=xyz", "PUT"),
-            ("/api/work/ide/github/repos?account=developer", "GET"),
-            ("/api/work/ide/github/file?account=developer&repo=Org%2FRepo&path=a.ts", "PUT"),
-            ("/api/work/ide/r2/objects?account=01234567890123456789012345678901&bucket=b", "GET"),
-            ("/api/work/ide/containers/applications?account=01234567890123456789012345678901", "GET"),
-        ] {
-            let request = StudioServiceBridgeRequest {
-                operation: "work".into(), account_id: None,
-                body: None, body_base64: None, content_type: None,
-                path: Some(path.into()), method: Some(method.into()),
-            };
-            assert_eq!(studio_service_route(&request).unwrap().0.as_str(), method);
-        }
-        for (path, method) in [
-            ("/api/work/ide/github/file", "DELETE"),
-            ("/api/work/ide/r2/file", "PUT"),
-            ("/api/work/ide/sources", "POST"),
-            ("/api/work/ide/drive/file/../secrets", "GET"),
-            ("/api/work/ide/unknown", "GET"),
-            ("https://other.example/api/work/ide/sources", "GET"),
-        ] {
-            let request = StudioServiceBridgeRequest {
-                operation: "work".into(), account_id: None,
-                body: None, body_base64: None, content_type: None,
-                path: Some(path.into()), method: Some(method.into()),
-            };
-            assert!(studio_service_route(&request).is_err(), "should reject {path} {method}");
-        }
-    }
-
-    #[test]
-    fn native_apps_service_bridge_allowlist_is_exact() {
-        for (path,method) in [("/api/apps/launcher","GET"),("/api/apps/install","POST"),
-            ("/api/apps/install","PATCH"),("/api/apps/install","DELETE"),
-            ("/api/apps/open","POST")] {
-            let request=StudioServiceBridgeRequest{operation:"apps".into(),account_id:None,
-                body:None,body_base64:None,content_type:None,path:Some(path.into()),method:Some(method.into())};
-            assert_eq!(studio_service_route(&request).unwrap().0.as_str(),method);
-        }
-        for (path,method) in [("/api/apps/launcher","DELETE"),("/api/apps/install","GET"),
-            ("/api/apps/open","GET"),("/api/apps/open","DELETE"),
-            ("/api/apps/install/../vault","GET"),("https://bad.example/api/apps/install","POST")] {
-            let request=StudioServiceBridgeRequest{operation:"apps".into(),account_id:None,
-                body:None,body_base64:None,content_type:None,path:Some(path.into()),method:Some(method.into())};
-            assert!(studio_service_route(&request).is_err());
-        }
-        let forged=StudioServiceBridgeRequest{operation:"apps".into(),account_id:Some("another-account".into()),
-            body:None,body_base64:None,content_type:None,path:Some("/api/apps/launcher".into()),method:Some("GET".into())};
-        assert_eq!(studio_service_route(&forged).unwrap_err(),"studio_service_apps_account_override_forbidden");
-    }
-
-    #[test]
     fn vault_sync_provider_aliases_are_canonical() {
         assert_eq!(canonical_sync_provider("openai").unwrap(), "openai");
         assert_eq!(canonical_sync_provider("google").unwrap(), "gemini");
@@ -1405,150 +966,28 @@ mod tests {
     }
 
     #[test]
-    fn plugin_bridge_accepts_bounded_catalog_install_and_remove() {
-        for (path, method) in [
-            ("/api/plugins/catalog", "GET"),
-            ("/api/plugins/install", "POST"),
-            ("/api/plugins/plg_test123", "DELETE"),
-        ] {
-            let request = StudioServiceBridgeRequest {
-                operation: "plugins".into(),
-                account_id: None,
-                body: None, body_base64: None, content_type: None,
-                path: Some(path.into()),
-                method: Some(method.into()),
-            };
-            assert_eq!(studio_service_route(&request).unwrap().0.as_str(), method);
-        }
-        let invalid = StudioServiceBridgeRequest {
-            operation: "plugins".into(),
-            account_id: None,
-            body: None, body_base64: None, content_type: None,
-            path: Some("/api/plugins/install/https://localhost".into()),
-            method: Some("POST".into()),
-        };
-        assert!(studio_service_route(&invalid).is_err());
-    }
-
-    #[test]
-    fn plugin_bridge_allows_bounded_settings_patch_and_tool_execution() {
-        let settings = StudioServiceBridgeRequest {
-            operation: "plugins".into(),
-            account_id: None,
-            body: None, body_base64: None, content_type: None,
-            path: Some("/api/plugins/plg_test123".into()),
-            method: Some("PATCH".into()),
-        };
-        let (method, path) = studio_service_route(&settings).expect("plugin settings route");
-        assert_eq!(method, Method::PATCH);
-        assert_eq!(path, "/api/plugins/plg_test123");
-
-        let execute = StudioServiceBridgeRequest {
-            operation: "plugins".into(),
-            account_id: None,
-            body: None, body_base64: None, content_type: None,
-            path: Some("/api/plugins/tools/execute".into()),
-            method: Some("POST".into()),
-        };
-        let (method, path) = studio_service_route(&execute).expect("plugin execute route");
-        assert_eq!(method, Method::POST);
-        assert_eq!(path, "/api/plugins/tools/execute");
-
-        let mut bad = settings;
-        bad.path = Some("/api/plugins/plg_test123/../../vault".into());
-        assert_eq!(
-            studio_service_route(&bad).unwrap_err(),
-            "studio_service_plugins_path_invalid"
-        );
-    }
-
-    #[test]
-    fn settings_bridge_allows_same_agent_skill_policy_crud_on_desktop() {
-        for (path, method) in [
-            ("/api/settings/agents", "GET"),
-            ("/api/settings/agents", "POST"),
-            ("/api/settings/agents/asp_1234", "PUT"),
-            ("/api/settings/agents/asp_1234", "DELETE"),
-            ("/api/settings/agents/policy", "GET"),
-            ("/api/settings/agents/policy", "PUT"),
-            ("/api/settings/notifications", "GET"),
-            ("/api/settings/notifications", "PUT"),
-            ("/api/notifications", "GET"),
-            ("/api/notifications/read-all", "POST"),
-            ("/api/notifications/notif_123/read", "POST"),
-            ("/api/settings/preferences", "GET"),
-            ("/api/settings/preferences", "PUT"),
-            ("/api/settings/mcps", "GET"),
-            ("/api/settings/mcps", "POST"),
-            ("/api/settings/mcps/mcps_abcdef0123456789", "PUT"),
-            ("/api/settings/mcps/mcps_abcdef0123456789", "PATCH"),
-            ("/api/settings/mcps/mcps_abcdef0123456789", "DELETE"),
-            ("/api/settings/skills", "GET"),
-            ("/api/settings/skills", "POST"),
-            ("/api/settings/skills/skill_1234", "PUT"),
-            ("/api/settings/skills/skill_1234", "DELETE"),
-            ("/api/settings/rules", "GET"),
-            ("/api/settings/rules", "POST"),
-            ("/api/settings/rules/rule_1234", "PUT"),
-            ("/api/settings/rules/rule_1234/enabled", "PUT"),
-            ("/api/settings/rules/rule_1234", "DELETE"),
-        ] {
-            let request = StudioServiceBridgeRequest {
-                operation: "settings".into(),account_id:None,body: None, body_base64: None, content_type: None,
-                path:Some(path.into()),method:Some(method.into()),
-            };
-            let (actual, target) = studio_service_route(&request).expect("settings route");
-            assert_eq!(actual.as_str(), method);
-            assert_eq!(target, path);
-        }
-        for (path, method) in [
-            ("/api/settings/notifications", "POST"),
-            ("/api/settings/notifications", "DELETE"),
-            ("/api/notifications/read-all", "GET"),
-            ("/api/notifications/bad/read", "GET"),
-            ("/api/notifications/../read", "POST"),
-            ("/api/settings/agents/../vault/secrets", "GET"),
-            ("/api/settings/agents/asp_1234", "POST"),
-            ("/api/settings/mcps/mcps_abcdef0123456789", "POST"),
-            ("/api/settings/mcps/../secrets", "PUT"),
-            ("/api/settings/mcps/mcps_abcdef0123456789", "GET"),
-            ("/api/settings/skills/skill_1234", "GET"),
-            ("/api/settings/rules/rule_1234", "GET"),
-            ("/api/settings/rules/rule_1234/enabled", "DELETE"),
-            ("/api/settings/rules/../skills", "PUT"),
-            ("/api/settings/rules/a/b", "PUT"),
-            ("/api/settings/agents/policy", "DELETE"),
-            ("https://evil.invalid/api/settings/agents", "GET"),
-        ] {
-            let request = StudioServiceBridgeRequest {
-                operation:"settings".into(),account_id:None,body: None, body_base64: None, content_type: None,
-                path:Some(path.into()),method:Some(method.into()),
-            };
-            assert!(studio_service_route(&request).is_err(), "should deny {path} {method}");
-        }
-    }
-
-    #[test]
-    fn plugin_workspace_bridge_is_read_only_and_exact() {
-        let request=StudioServiceBridgeRequest {
-            operation:"plugins".into(),account_id:None,body: None, body_base64: None, content_type: None,
-            path:Some("/api/plugins/plg_1234/workspace".into()),method:Some("GET".into()),
-        };
-        assert_eq!(studio_service_route(&request).unwrap().0,Method::GET);
-        let bad=StudioServiceBridgeRequest{method:Some("POST".into()),..request};
-        assert!(studio_service_route(&bad).is_err());
-    }
-
-    #[test]
     fn generic_api_transport_accepts_same_origin_api_paths_without_app_route_allowlists() {
         for (path, method) in [
             ("/api/admin/store/online", "GET"),
             ("/api/admin/website-themes", "GET"),
-            ("/api/work/canvases", "GET"),
-            ("/api/work/canvases/canvas_123456789012/events", "POST"),
-            ("/api/work/canvases/canvas_123456789012/history", "GET"),
-            ("/api/admin/store/online?site_id=site_123", "GET"),
-            ("/api/admin/website-themes?return_to=https://themes.inneranimalmedia.com", "GET"),
+            (
+                "/api/admin/website-themes?return_to=https://themes.inneranimalmedia.com",
+                "GET",
+            ),
+            ("/api/cms/sites", "GET"),
+            ("/api/admin/cms/theme-projects", "GET"),
+            ("/api/apps/launcher", "GET"),
+            ("/api/apps/install", "POST"),
+            ("/api/plugins/catalog", "GET"),
+            ("/api/plugins/tools/execute", "POST"),
+            ("/api/work/snapshot", "GET"),
+            ("/api/work/ide/sources", "GET"),
+            ("/api/connections/cloudflare/resources", "GET"),
+            ("/api/settings/mcps", "GET"),
+            ("/api/notifications", "GET"),
+            ("/api/vault/secrets", "GET"),
+            ("/api/llm/inventory", "GET"),
+            ("/api/database/sources", "GET"),
             ("/api/example/write", "PATCH"),
             ("/api/example/upload", "POST"),
         ] {
@@ -1565,6 +1004,56 @@ mod tests {
             assert_eq!(actual.as_str(), method);
             assert_eq!(target, path);
         }
+    }
+
+    #[test]
+    fn chat_service_bridge_is_limited_to_authenticated_chat_posts() {
+        let valid = StudioServiceBridgeRequest {
+            operation: "chat".into(),
+            account_id: None,
+            body: Some(json!({"messages": []})),
+            body_base64: None,
+            content_type: Some("application/json".into()),
+            path: None,
+            method: None,
+        };
+        assert_eq!(
+            studio_service_route(&valid).unwrap(),
+            (Method::POST, "/api/chat".into())
+        );
+
+        let invalid_path = StudioServiceBridgeRequest {
+            operation: "chat".into(),
+            account_id: None,
+            body: Some(json!({"messages": []})),
+            body_base64: None,
+            content_type: Some("application/json".into()),
+            path: Some("/api/admin/website-themes".into()),
+            method: None,
+        };
+        assert!(studio_service_route(&invalid_path).is_err());
+
+        let invalid_method = StudioServiceBridgeRequest {
+            operation: "chat".into(),
+            account_id: None,
+            body: Some(json!({"messages": []})),
+            body_base64: None,
+            content_type: Some("application/json".into()),
+            path: None,
+            method: Some("GET".into()),
+        };
+        assert!(studio_service_route(&invalid_method).is_err());
+
+        let forged_identity = StudioServiceBridgeRequest {
+            operation: "chat".into(),
+            account_id: Some("another-account".into()),
+            body: Some(json!({"messages": []})),
+            body_base64: None,
+            content_type: Some("application/json".into()),
+            path: None,
+            method: None,
+        };
+        assert!(studio_service_route(&forged_identity).is_err());
     }
 
     #[test]
@@ -1620,34 +1109,6 @@ mod tests {
         assert_eq!(
             studio_service_route(&get_with_body).unwrap_err(),
             "studio_service_api_body_invalid"
-        );
-    }
-
-    #[test]
-    fn vault_bridge_is_strictly_scoped_to_vault_paths() {
-        let request = StudioServiceBridgeRequest {
-            operation: "vault".into(),
-            account_id: None,
-            body: None, body_base64: None, content_type: None,
-            path: Some("/api/vault/secrets/usec_test".into()),
-            method: Some("DELETE".into()),
-        };
-        let (method, path) = studio_service_route(&request).expect("vault route");
-        assert_eq!(method, Method::DELETE);
-        assert_eq!(path, "/api/vault/secrets/usec_test");
-
-        let mut bad = request;
-        bad.path = Some("/api/database/query".into());
-        assert_eq!(
-            studio_service_route(&bad).unwrap_err(),
-            "studio_service_vault_path_invalid"
-        );
-
-        bad.path = Some("/api/vault/unwrap".into());
-        bad.method = Some("POST".into());
-        assert_eq!(
-            studio_service_route(&bad).unwrap_err(),
-            "studio_service_vault_path_invalid"
         );
     }
 }
