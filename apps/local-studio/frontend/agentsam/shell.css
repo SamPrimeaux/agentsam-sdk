@@ -862,6 +862,11 @@
     min-width:0; flex:1 1 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .agentsam-conversation-topbar .agentsam-topbar-mode { flex:0 1 auto; min-width:0; }
+  .agentsam-conversation-topbar.is-empty-thread { position:relative; }
+  .agentsam-conversation-topbar.is-empty-thread .agentsam-topbar-mode {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    max-width:calc(100% - 112px);
+  }
   .agentsam-header-utilities { flex:0 0 auto; gap:4px; min-width:0; }
   .agentsam-topbar-browser-actions { gap:2px; }
   .agentsam-topbar-browser-actions > *,

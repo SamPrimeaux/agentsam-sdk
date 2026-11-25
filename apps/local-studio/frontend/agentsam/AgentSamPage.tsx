@@ -242,17 +242,15 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     </> : null}
     {/* The hosted topbar already owns the one global menu bubble. */}
     {!hostLeadingSlot ? <Nav.Trigger aria-label="Toggle global navigation" /> : null}
-    {data.mode === 'work' ? <WorkProjectSelect /> : null}
+    {data.mode === 'work' && !isMobile ? <WorkProjectSelect /> : null}
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
-  const headerActions = isMobile ? <div className="agentsam-header-utilities">
+  const headerActions = isMobile ? (empty ? null : <div className="agentsam-header-utilities">
     <div className="agentsam-mobile-header-action-pill" role="group" aria-label="Conversation and workspace actions">
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
-      {empty
-        ? <Nav.OverflowMenu id="agentsam-start-actions" label="More options" actions={mobileMoreActions} />
-        : <Nav.ConversationActions additionalActions={mobileMoreActions} />}
+      <Nav.ConversationActions additionalActions={mobileMoreActions} />
     </div>
-  </div> : <div className="agentsam-header-utilities">
+  </div>) : <div className="agentsam-header-utilities">
     <div className="agentsam-topbar-browser-actions" role="group" aria-label="Workspace panel">
       <IconAction
         type="button"
@@ -273,11 +271,11 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
     {hostModeSlot && empty ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
     {hostLeadingSlot && !isMobile ? createPortal(leadingControls, hostLeadingSlot) : null}
-    {hostActionsSlot ? createPortal(headerActions, hostActionsSlot) : null}
-    {!hostModeSlot ? <Nav.Topbar className="agentsam-conversation-topbar">
+    {hostActionsSlot ? createPortal(headerActions ?? <span className="agentsam-blank-conversation-actions" aria-hidden="true" />, hostActionsSlot) : null}
+    {!hostModeSlot ? <Nav.Topbar className={"agentsam-conversation-topbar" + (empty ? " is-empty-thread" : " is-active-thread")}>
       {leadingControls}
       {empty ? <div className="agentsam-topbar-mode"><Nav.ModeSwitcher /></div>
-        : <span className="agentsam-topbar-thread-title" title={chat.title}>{chat.title}</span>}
+        : !isMobile ? <span className="agentsam-topbar-thread-title" title={chat.title}>{chat.title}</span> : null}
       <span className="flex-1" aria-hidden="true" />
       {!hostActionsSlot ? headerActions : null}
     </Nav.Topbar> : null}

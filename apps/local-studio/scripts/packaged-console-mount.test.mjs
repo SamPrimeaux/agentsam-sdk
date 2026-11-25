@@ -290,7 +290,7 @@ test('hosted AgentSam renders Chat/Work in its single packaged Console header', 
   assert.match(ecommerce, /id="console-notifications-trigger"/);
   assert.match(ecommerce, /id="console-notifications-menu"/);
   assert.match(workspace, /hostModeSlot && empty \? createPortal\(<div className="agentsam-mode-host"><Nav\.ModeSwitcher \/><\/div>, hostModeSlot\)/);
-  assert.match(workspace, /!hostModeSlot \? <Nav\.Topbar className="agentsam-conversation-topbar"/);
+  assert.match(workspace, /!hostModeSlot \? <Nav\.Topbar className=\{"agentsam-conversation-topbar" \+ \(empty \? " is-empty-thread" : " is-active-thread"\)\}/);
   assert.match(workspace, /empty \? <div className="agentsam-topbar-mode"><Nav\.ModeSwitcher \/><\/div>/);
   assert.match(workspace, /<Nav\.ModeSwitcher \/>/);
   assert.doesNotMatch(workspace, /createPortal\(<Nav\.Scope className="agentsam-mode-host"/);
