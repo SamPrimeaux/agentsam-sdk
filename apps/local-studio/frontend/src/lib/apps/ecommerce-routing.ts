@@ -14,6 +14,24 @@ export function isEcommerceAdminPath(pathname: string): boolean {
   return Boolean(resolveLocalStudioEcommerceAdminRoute(pathname));
 }
 
+/** Keep desktop document routes inside the registered Local Studio app host.
+ * Tauri serves the SPA from a local asset origin; clean /admin document paths
+ * belong to the hosted Worker and are not direct files in that local bundle.
+ */
+export function desktopEcommerceHostDestination(candidate: string): string | null {
+  const safe = resolveEcommerceAdminPath(candidate);
+  return safe
+    ? '/admin/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(safe)
+    : null;
+}
+
+/** The browser can navigate to Worker-owned document routes; desktop must mount
+ * the same packaged CMS asset inside its registered application route.
+ */
+export function shouldRedirectEcommerceAppHost(isDesktop: boolean, page?: string): boolean {
+  return !isDesktop && page !== '/admin/theme-code-editor';
+}
+
 const SITE_OWNED_EDITOR_PATH = /^\/admin\/sites\/([A-Za-z0-9_-]{1,160})\/(?:pages\/[A-Za-z0-9_-]{1,160}\/editor|themes\/[A-Za-z0-9_-]{1,160}\/editor(?:\/[A-Za-z0-9_-]{1,160})?|settings\/editor)$/;
 
 /** Build the installed CMS host destination without duplicating site identity.

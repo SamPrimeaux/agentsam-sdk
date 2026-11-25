@@ -1,5 +1,3 @@
-import { invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
-
 export type VaultRequestOptions = {
   method?: "GET" | "POST" | "DELETE";
   body?: unknown;
@@ -17,22 +15,6 @@ export async function vaultRequest<T = Record<string, unknown>>(
 ): Promise<VaultResponse<T>> {
   if (!path.startsWith("/api/vault/")) throw new Error("vault_path_invalid");
   const method = options.method || "GET";
-
-  if (isPackagedDesktop()) {
-    const response = await invokeStudioService({
-      operation: "vault",
-      path,
-      method,
-      body: options.body,
-    });
-    let data = {} as T;
-    try {
-      data = (response.body ? JSON.parse(response.body) : {}) as T;
-    } catch {
-      // Keep the service status authoritative if a non-JSON failure body appears.
-    }
-    return { ok: response.ok, status: response.status, data };
-  }
 
   const response = await fetch(path, {
     method,
@@ -74,16 +56,6 @@ export type AccountInventoryPayload = {
 };
 
 export async function accountInventoryRequest(): Promise<VaultResponse<AccountInventoryPayload>> {
-  if (isPackagedDesktop()) {
-    const response = await invokeStudioService({ operation: "inventory" });
-    let data: AccountInventoryPayload = {};
-    try {
-      data = response.body ? (JSON.parse(response.body) as AccountInventoryPayload) : {};
-    } catch {
-      /* status remains authoritative */
-    }
-    return { ok: response.ok, status: response.status, data };
-  }
 
   const response = await fetch("/api/llm/inventory", { credentials: "same-origin" });
   let data: AccountInventoryPayload = {};

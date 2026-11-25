@@ -93,6 +93,10 @@ struct StudioServiceBridgeResponse {
     status: u16,
     content_type: String,
     body: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    body_base64: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    headers: Vec<(String, String)>,
 }
 
 /// `/api/work/connect/<provider>/<start|status|disconnect>` for the OAuth plugins served by Local Studio.
@@ -394,6 +398,51 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             };
             Ok((method, path.to_string()))
         }
+        "api" => {
+            // The WebView uses the same application API paths as the web host.
+            // Native only transports the authenticated request to the configured
+            // AgentSam service; the Worker remains authoritative for routing,
+            // permissions, application behavior, and data ownership.
+            if request.account_id.is_some() {
+                return Err("studio_service_api_account_override_forbidden".into());
+            }
+            if request.body.is_some() {
+                return Err("studio_service_api_body_invalid".into());
+            }
+            let path = request.path.as_deref().unwrap_or("");
+            let raw_path = path.split('?').next().unwrap_or("");
+            let lower_path = raw_path.to_ascii_lowercase();
+            let parsed = reqwest::Url::parse(&format!("https://console.invalid{path}"))
+                .map_err(|_| "studio_service_api_path_invalid")?;
+            let traversal = raw_path.split('/').any(|part| part == "." || part == "..")
+                || lower_path.contains("%2e")
+                || lower_path.contains("%2f")
+                || lower_path.contains("%5c");
+            if !path.starts_with("/api/")
+                || !parsed.path().starts_with("/api/")
+                || parsed.host_str() != Some("console.invalid")
+                || parsed.fragment().is_some()
+                || traversal
+                || raw_path.contains("://")
+                || raw_path.contains('\\')
+                || path.chars().any(char::is_control)
+            {
+                return Err("studio_service_api_path_invalid".into());
+            }
+            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+                "GET" => Method::GET,
+                "HEAD" => Method::HEAD,
+                "POST" => Method::POST,
+                "PUT" => Method::PUT,
+                "PATCH" => Method::PATCH,
+                "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_api_method_invalid".into()),
+            };
+            if (method == Method::GET || method == Method::HEAD) && request.body_base64.is_some() {
+                return Err("studio_service_api_body_invalid".into());
+            }
+            Ok((method, path.to_string()))
+        }
         "commerce" => {
             let path = request.path.as_deref().unwrap_or("");
             let url = reqwest::Url::parse(&format!("https://console.invalid{path}"))
@@ -616,6 +665,107 @@ pub async fn provider_key_sync_from_account(
     }))
 }
 
+fn parse_studio_service_api_options(
+    request_value: &Value,
+    operation: &str,
+) -> Result<(
+    bool,
+    Vec<(reqwest::header::HeaderName, reqwest::header::HeaderValue)>,
+), String> {
+    let skip_auth = match request_value.get("skip_auth") {
+        None => false,
+        Some(Value::Bool(value)) => *value,
+        Some(_) => return Err("studio_service_api_options_invalid".into()),
+    };
+    if skip_auth && operation != "api" {
+        return Err("studio_service_api_options_invalid".into());
+    }
+
+    let Some(headers_value) = request_value.get("headers") else {
+        return Ok((skip_auth, Vec::new()));
+    };
+    if headers_value.is_null() {
+        return Ok((skip_auth, Vec::new()));
+    }
+    let headers = headers_value
+        .as_array()
+        .ok_or_else(|| "studio_service_api_headers_invalid".to_string())?;
+    if operation != "api" && !headers.is_empty() {
+        return Err("studio_service_api_headers_invalid".into());
+    }
+    if headers.len() > 32 {
+        return Err("studio_service_api_headers_invalid".into());
+    }
+
+    let mut forwarded = Vec::with_capacity(headers.len());
+    for entry in headers {
+        let pair = entry
+            .as_array()
+            .filter(|pair| pair.len() == 2)
+            .ok_or_else(|| "studio_service_api_headers_invalid".to_string())?;
+        let name = pair[0]
+            .as_str()
+            .ok_or_else(|| "studio_service_api_headers_invalid".to_string())?
+            .trim()
+            .to_ascii_lowercase();
+        let value = pair[1]
+            .as_str()
+            .ok_or_else(|| "studio_service_api_headers_invalid".to_string())?;
+        if name.is_empty()
+            || name.len() > 128
+            || value.len() > 8192
+            || value.chars().any(char::is_control)
+        {
+            return Err("studio_service_api_headers_invalid".into());
+        }
+        if name == "content-type" {
+            // Content-Type is separately validated and forwarded from content_type.
+            continue;
+        }
+        let forbidden = matches!(
+            name.as_str(),
+            "cookie"
+                | "cookie2"
+                | "host"
+                | "origin"
+                | "referer"
+                | "content-length"
+                | "connection"
+                | "transfer-encoding"
+                | "upgrade"
+                | "proxy-authorization"
+                | "proxy-authenticate"
+                | "te"
+                | "trailer"
+                | "keep-alive"
+                | "x-user-id"
+                | "x-account-id"
+                | "x-tenant-id"
+                | "x-agentsam-native-client"
+                | "x-forwarded-for"
+                | "x-forwarded-host"
+                | "x-forwarded-proto"
+                | "x-forwarded-port"
+                | "x-original-url"
+                | "x-rewrite-url"
+        ) || name.starts_with("sec-")
+            || name.starts_with("proxy-")
+            || name.starts_with("access-control-")
+            || name.starts_with("x-forwarded-")
+            || (name == "authorization" && !skip_auth);
+        if forbidden {
+            return Err("studio_service_api_header_forbidden".into());
+        }
+        let header_name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
+            .map_err(|_| "studio_service_api_headers_invalid")?;
+        let header_value = reqwest::header::HeaderValue::from_bytes(value.as_bytes())
+            .map_err(|_| "studio_service_api_headers_invalid")?;
+        forwarded.push((header_name, header_value));
+    }
+
+    Ok((skip_auth, forwarded))
+}
+
 async fn service_studio_bridge(
     config: &IdentityRuntimeConfig,
     session_state: &super::keychain::IdentitySessionState,
@@ -627,14 +777,28 @@ async fn service_studio_bridge(
         .ok_or_else(|| "identity_service_not_configured".to_string())?;
     validate_service_origin(origin)?;
 
-    let request: StudioServiceBridgeRequest = serde_json::from_str(request_json)
+    let request_value: Value = serde_json::from_str(request_json)
         .map_err(|e| format!("studio_service_request_invalid:{e}"))?;
+    let request: StudioServiceBridgeRequest = serde_json::from_value(request_value.clone())
+        .map_err(|e| format!("studio_service_request_invalid:{e}"))?;
+    let (skip_auth, api_headers) =
+        parse_studio_service_api_options(&request_value, request.operation.trim())?;
     let (method, path) = studio_service_route(&request)?;
     let url = format!("{origin}{path}");
+    let has_accept = api_headers
+        .iter()
+        .any(|(name, _)| name == reqwest::header::ACCEPT);
     let mut builder = reqwest::Client::new()
         .request(method.clone(), url)
-        .header("accept", "application/json")
         .header("X-AgentSam-Native-Client", "1");
+    if request.operation.trim() != "api" {
+        builder = builder.header("accept", "application/json");
+    } else if !has_accept {
+        builder = builder.header("accept", "*/*");
+    }
+    for (name, value) in api_headers {
+        builder = builder.header(name, value);
+    }
 
     if request.operation.trim() == "connections"
         && request.path.as_deref().unwrap_or("").split('?').next().unwrap_or("").ends_with("/start")
@@ -652,17 +816,40 @@ async fn service_studio_bridge(
         }
     }
 
-    if let Some(session_id) = super::keychain::identity_session_get_internal(session_state)? {
-        let session_id = session_id.trim();
-        if !session_id.is_empty() {
-            if session_id.len() > 2048 || session_id.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10) {
-                return Err("studio_service_session_invalid".into());
+    if !skip_auth {
+        if let Some(session_id) = super::keychain::identity_session_get_internal(session_state)? {
+            let session_id = session_id.trim();
+            if !session_id.is_empty() {
+                if session_id.len() > 2048 || session_id.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10) {
+                    return Err("studio_service_session_invalid".into());
+                }
+                builder = builder.bearer_auth(session_id);
             }
-            builder = builder.bearer_auth(session_id);
         }
     }
 
-    if request.operation.trim() == "commerce" && request.body_base64.is_some() {
+    if request.operation.trim() == "api" {
+        if let Some(encoded) = request.body_base64.as_deref() {
+            let content_type = request.content_type.as_deref().unwrap_or("");
+            if encoded.len() > 32 * 1024 * 1024
+                || content_type.len() > 512
+                || content_type.chars().any(char::is_control)
+            {
+                return Err("studio_service_api_body_invalid".into());
+            }
+            let bytes = base64::engine::general_purpose::STANDARD.decode(encoded)
+                .map_err(|_| "studio_service_api_body_invalid")?;
+            if !content_type.is_empty() {
+                builder = builder.header("content-type", content_type);
+            }
+            builder = builder.body(bytes);
+        } else if let Some(content_type) = request.content_type.as_deref() {
+            if content_type.len() > 512 || content_type.chars().any(char::is_control) {
+                return Err("studio_service_api_body_invalid".into());
+            }
+            builder = builder.header("content-type", content_type);
+        }
+    } else if request.operation.trim() == "commerce" && request.body_base64.is_some() {
         let encoded = request.body_base64.as_deref().unwrap_or("");
         let content_type = request.content_type.as_deref().unwrap_or("");
         if encoded.len() > 32 * 1024 * 1024 || content_type.chars().any(char::is_control)
@@ -672,7 +859,7 @@ async fn service_studio_bridge(
         let bytes = base64::engine::general_purpose::STANDARD.decode(encoded)
             .map_err(|_| "studio_service_commerce_upload_invalid")?;
         builder = builder.header("content-type", content_type).body(bytes);
-    } else if method != Method::GET {
+    } else if method != Method::GET && method != Method::HEAD {
         builder = builder.json(&request.body.unwrap_or_else(|| json!({})));
     }
 
@@ -687,13 +874,38 @@ async fn service_studio_bridge(
         .and_then(|value| value.to_str().ok())
         .unwrap_or("")
         .to_string();
-    let body = response.text().await.unwrap_or_default();
+    let headers = response.headers().iter().filter_map(|(name, value)| {
+        let name = name.as_str();
+        if matches!(name,
+            "content-type" | "content-disposition" | "content-length" | "cache-control" | "etag"
+            | "last-modified" | "content-range" | "accept-ranges" | "retry-after" | "vary"
+        ) {
+            value.to_str().ok().map(|value| (name.to_string(), value.to_string()))
+        } else {
+            None
+        }
+    }).collect::<Vec<_>>();
+    let bytes = response.bytes().await
+        .map_err(|e| format!("studio_service_response_read_failed:{e}"))?;
+    let text_response = content_type.starts_with("text/")
+        || content_type.contains("json")
+        || content_type.contains("xml")
+        || content_type.contains("javascript")
+        || content_type.contains("svg+xml")
+        || std::str::from_utf8(&bytes).is_ok();
+    let (body, body_base64) = if text_response {
+        (String::from_utf8_lossy(&bytes).into_owned(), None)
+    } else {
+        (String::new(), Some(base64::engine::general_purpose::STANDARD.encode(&bytes)))
+    };
 
     serde_json::to_string(&StudioServiceBridgeResponse {
         ok: status.is_success(),
         status: status.as_u16(),
         content_type,
         body,
+        body_base64,
+        headers,
     })
     .map_err(|e| format!("studio_service_response_encode_failed:{e}"))
 }
@@ -927,6 +1139,55 @@ pub async fn local_identity_bridge(app: AppHandle, request_json: String) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn generic_api_transport_preserves_safe_headers_and_credential_mode() {
+        let value = json!({
+            "headers": [
+                ["If-Match", "\"rev-7\""],
+                ["Accept", "application/json"],
+                ["x-agentsam-workspace-capability", "cap_scoped_123"]
+            ]
+        });
+        let (skip_auth, headers) = parse_studio_service_api_options(&value, "api").unwrap();
+        assert!(!skip_auth);
+        assert!(headers.iter().any(|(name, value)| {
+            name.as_str() == "if-match" && value.to_str().ok() == Some("\"rev-7\"")
+        }));
+        assert!(headers.iter().any(|(name, value)| {
+            name.as_str() == "accept" && value.to_str().ok() == Some("application/json")
+        }));
+        assert!(headers.iter().any(|(name, value)| {
+            name.as_str() == "x-agentsam-workspace-capability"
+                && value.to_str().ok() == Some("cap_scoped_123")
+        }));
+
+        let omitted = json!({"skip_auth": true});
+        assert!(parse_studio_service_api_options(&omitted, "api").unwrap().0);
+        assert!(parse_studio_service_api_options(&omitted, "work").is_err());
+    }
+
+    #[test]
+    fn generic_api_transport_rejects_identity_and_hop_by_hop_headers() {
+        for name in ["Authorization", "Cookie", "X-User-Id", "X-Account-Id", "X-AgentSam-Native-Client", "Host"] {
+            let value = json!({"headers": [[name, "not-allowed"]]});
+            assert!(parse_studio_service_api_options(&value, "api").is_err(), "{name}");
+        }
+        let auth_without_session = json!({
+            "headers": [["Authorization", "Bearer explicit"]],
+            "skip_auth": false
+        });
+        assert!(parse_studio_service_api_options(&auth_without_session, "api").is_err());
+
+        let explicit_auth_without_cookie_session = json!({
+            "headers": [["Authorization", "Bearer explicit"]],
+            "skip_auth": true
+        });
+        assert!(parse_studio_service_api_options(&explicit_auth_without_cookie_session, "api").is_ok());
+
+        let invalid_value = json!({"headers": [["If-Match", "bad\r\nX-User-Id: forged"]]});
+        assert!(parse_studio_service_api_options(&invalid_value, "api").is_err());
+    }
 
     #[test]
     fn native_exchange_uses_canonical_identity_handoff_route() {
@@ -1229,6 +1490,90 @@ mod tests {
         assert_eq!(studio_service_route(&request).unwrap().0,Method::GET);
         let bad=StudioServiceBridgeRequest{method:Some("POST".into()),..request};
         assert!(studio_service_route(&bad).is_err());
+    }
+
+    #[test]
+    fn generic_api_transport_accepts_same_origin_api_paths_without_app_route_allowlists() {
+        for (path, method) in [
+            ("/api/admin/store/online", "GET"),
+            ("/api/admin/website-themes", "GET"),
+            ("/api/work/canvases", "GET"),
+            ("/api/work/canvases/canvas_123456789012/events", "POST"),
+            ("/api/work/canvases/canvas_123456789012/history", "GET"),
+            ("/api/admin/store/online?site_id=site_123", "GET"),
+            ("/api/admin/website-themes?return_to=https://themes.inneranimalmedia.com", "GET"),
+            ("/api/example/write", "PATCH"),
+            ("/api/example/upload", "POST"),
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation: "api".into(),
+                account_id: None,
+                body: None,
+                body_base64: None,
+                content_type: None,
+                path: Some(path.into()),
+                method: Some(method.into()),
+            };
+            let (actual, target) = studio_service_route(&request).expect("same-origin API path");
+            assert_eq!(actual.as_str(), method);
+            assert_eq!(target, path);
+        }
+    }
+
+    #[test]
+    fn generic_api_transport_rejects_non_api_paths_traversal_and_account_overrides() {
+        for path in [
+            "/admin",
+            "//evil.example/api/admin",
+            "https://evil.example/api/admin",
+            "/api/../admin",
+            "/api/%2e%2e/admin",
+            "/api/%2f%2fevil.example/path",
+            "/api/%5c%5cevil.example/path",
+            "/api/example#fragment",
+            "/api/example\\..\\vault",
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation: "api".into(),
+                account_id: None,
+                body: None,
+                body_base64: None,
+                content_type: None,
+                path: Some(path.into()),
+                method: Some("GET".into()),
+            };
+            assert!(studio_service_route(&request).is_err(), "must deny {path}");
+        }
+
+        let forged = StudioServiceBridgeRequest {
+            operation: "api".into(),
+            account_id: Some("another-account".into()),
+            body: None,
+            body_base64: None,
+            content_type: None,
+            path: Some("/api/apps/launcher".into()),
+            method: Some("GET".into()),
+        };
+        assert_eq!(
+            studio_service_route(&forged).unwrap_err(),
+            "studio_service_api_account_override_forbidden"
+        );
+
+        let mut bad_method = forged;
+        bad_method.account_id = None;
+        bad_method.method = Some("TRACE".into());
+        assert_eq!(
+            studio_service_route(&bad_method).unwrap_err(),
+            "studio_service_api_method_invalid"
+        );
+
+        let mut get_with_body = bad_method;
+        get_with_body.method = Some("GET".into());
+        get_with_body.body_base64 = Some("e30=".into());
+        assert_eq!(
+            studio_service_route(&get_with_body).unwrap_err(),
+            "studio_service_api_body_invalid"
+        );
     }
 
     #[test]

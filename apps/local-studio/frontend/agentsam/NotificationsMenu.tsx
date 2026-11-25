@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bell, CheckCheck, RefreshCw, ShoppingBag, Film, Settings, Globe, MessageSquare, Package, CircleAlert } from 'lucide-react';
 import { Nav, useNav, type NavAction } from '@inneranimalmedia/agentsam-nav';
 import { getBearerToken } from '@/lib/auth/client';
-import { getTauriInvoke, invokeStudioService, isPackagedDesktop } from '@/lib/desktop/tauri';
+import { getTauriInvoke, isPackagedDesktop } from '@/lib/desktop/tauri';
 
 type Notice = {
   id: string;
@@ -39,12 +39,7 @@ function formatWhen(epochSeconds: number) {
 }
 
 async function inboxRequest(path: string, method: 'GET' | 'POST' = 'GET'): Promise<Inbox> {
-  if (isPackagedDesktop()) {
-    const response = await invokeStudioService({ operation: 'settings', path, method });
-    if (!response.ok) throw new Error('inbox_unavailable');
-    return JSON.parse(response.body) as Inbox;
-  }
-  const token = getBearerToken();
+  const token = isPackagedDesktop() ? null : getBearerToken();
   const response = await fetch(path, {
     method,
     cache: 'no-store',

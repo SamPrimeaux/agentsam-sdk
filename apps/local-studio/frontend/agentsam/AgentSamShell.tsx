@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { isStudioAdminPath, resolveLegacyContentMediaPath, canonicalStudioPath } from "../../shared/studio-admin-routes.mjs";
 import { isLocalStudioEcommerceDocumentPath } from "../../shared/ecommerce-admin-routes.mjs";
+import { desktopEcommerceHostDestination } from '@/lib/apps/ecommerce-routing';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, NavShareIcon, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
 import { openAppsInstaller, setAppsInstallerAdapter } from '@inneranimalmedia/agentsam-nav/browser';
@@ -36,7 +37,7 @@ import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
-import { invokeStudioService, isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
+import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { AgentSamStatusBuddy } from './AgentSamStatusBuddy';
@@ -54,13 +55,7 @@ import { THEME_PROJECTS_CHANGED } from '@/lib/themes/projects';
 import { forgetHostedAccountId, knownHostedAccountId, resolveHostedAccountId } from '@/lib/themes/hosted-account';
 
 async function accountAvatarRequest(options: RequestInit = {}) {
-  if (!isPackagedDesktop()) return fetch('/api/settings/account-avatar', options);
-  const result = await invokeStudioService({
-    operation: 'settings', path: '/api/settings/account-avatar',
-    method: options.method === 'PUT' ? 'PUT' : 'GET',
-    body: typeof options.body === 'string' ? JSON.parse(options.body) : undefined,
-  });
-  return new Response(result.body, { status: result.status, headers: { 'content-type': result.content_type || 'application/json' } });
+  return fetch('/api/settings/account-avatar', { credentials: 'same-origin', ...options });
 }
 
 type MerchantStore = { id: string; name?: string; slug?: string; page_count?: number };
@@ -364,8 +359,12 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       return;
     }
     if (isLocalStudioEcommerceDocumentPath(pathOnly)) {
-      if (isPackagedDesktop()) window.location.hash = '#' + to;
-      else window.location.assign(to);
+      if (isPackagedDesktop()) {
+        const hostDestination = desktopEcommerceHostDestination(to);
+        if (hostDestination) window.location.hash = '#' + hostDestination;
+      } else {
+        window.location.assign(to);
+      }
       return;
     }
     if (pathOnly.startsWith('/admin/') && !isStudioAdminPath(pathOnly)) {

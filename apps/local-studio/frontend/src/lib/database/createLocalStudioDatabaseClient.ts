@@ -1,7 +1,6 @@
 import {
   buildCreateTableSql,
   createDatabaseStudioClient,
-  type DatabaseHttpFetch,
   type DatabaseSource,
   type DatabaseStudioClient,
   type DatabaseTableInfo,
@@ -11,40 +10,6 @@ import {
   localBridgeDispatch,
   type LocalStudioLocalHostOptions,
 } from "./localHost";
-import {
-  invokeStudioService,
-  isPackagedDesktop,
-  resolveDesktopStudioAccountId,
-} from "@/lib/desktop/tauri";
-
-const desktopDatabaseFetch: DatabaseHttpFetch = async (input, init) => {
-  const rawUrl =
-    typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-  const parsed = new URL(rawUrl, "https://local.studio.invalid");
-  const path = parsed.pathname + parsed.search;
-  const method = String(init?.method || "GET").toUpperCase() as "GET" | "POST" | "PATCH" | "DELETE";
-  let body: unknown = undefined;
-  if (typeof init?.body === "string" && init.body) {
-    try {
-      body = JSON.parse(init.body);
-    } catch {
-      body = init.body;
-    }
-  }
-  const accountId = await resolveDesktopStudioAccountId();
-  const bridged = await invokeStudioService({
-    operation: "database",
-    account_id: accountId,
-    method,
-    path,
-    body,
-  });
-  return new Response(bridged.body, {
-    status: bridged.status,
-    headers: { "content-type": bridged.content_type || "application/json" },
-  });
-};
-
 const LOCAL_DATABASE_CAPABILITIES = {
   read_rows: true,
   query: true,
@@ -76,9 +41,7 @@ export function createLocalStudioDatabaseClient(
   baseUrl = "/api/database",
   localOptions: LocalStudioLocalHostOptions = {},
 ): DatabaseStudioClient & { localHost: ReturnType<typeof createLocalStudioLocalHost> } {
-  const remote = createDatabaseStudioClient(baseUrl, {
-    fetch: isPackagedDesktop() ? desktopDatabaseFetch : undefined,
-  });
+  const remote = createDatabaseStudioClient(baseUrl);
   const localHost = createLocalStudioLocalHost(localOptions);
 
   return {

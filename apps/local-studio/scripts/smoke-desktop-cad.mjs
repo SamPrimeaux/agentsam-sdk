@@ -7,6 +7,10 @@ const root = resolve(import.meta.dirname, "..", "desktop-dist");
 const indexPath = join(root, "cad-creator", "index.html");
 if (!existsSync(indexPath)) throw Error("cad_desktop_assets_missing: run build:desktop");
 const html = readFileSync(indexPath, "utf8");
+if (!existsSync(join(root, "desktop-api-fetch.js")) ||
+    !html.includes('<script src="/desktop-api-fetch.js"></script>')) {
+  throw Error("cad_desktop_api_transport_missing");
+}
 const assetUrls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
   .map((match) => match[1]).filter((url) => url.startsWith("/cad-creator/assets/"));
 if (!assetUrls.length) throw Error("cad_desktop_asset_urls_missing");

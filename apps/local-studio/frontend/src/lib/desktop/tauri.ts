@@ -177,7 +177,7 @@ export async function getDesktopIdentityStatus(forceRefresh = false): Promise<Re
 }
 
 
-export type StudioServiceOperation = "apps" | "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins" | "work" | "settings" | "commerce";
+export type StudioServiceOperation = "api" | "apps" | "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins" | "work" | "settings" | "commerce";
 
 export async function invokeLocalProvider<T = Record<string, unknown>>(payload: {
   operation: "inventory" | "chat" | "select_model";
@@ -199,6 +199,8 @@ export type StudioServiceResponse = {
   status: number;
   content_type: string;
   body: string;
+  body_base64?: string;
+  headers?: Array<[string, string]>;
 };
 
 export async function invokeStudioService(payload: {

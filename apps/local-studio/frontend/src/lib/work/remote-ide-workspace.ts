@@ -1,7 +1,6 @@
 /** Remote sources use the shared IDE's FileWorkspace contract, not a new editor. */
 import { toWorkspaceChanges, type FileWorkspace, type WorkspaceEntry, type WorkspaceFile } from '@inneranimalmedia/agentsam-ide/workspace';
 import { languageFromPath } from '@/lib/utils';
-import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from '@/lib/desktop/tauri';
 
 export type IDESourceDiscovery = {
   ok: true;
@@ -22,14 +21,6 @@ type ErrorResponse = {ok:false;error:string};
 
 export async function remoteIdeRequest<T>(url:string,method:'GET'|'PUT'='GET',payload?:unknown):Promise<T> {
   if(!url.startsWith('/api/work/ide/'))throw Error('remote_ide_path_invalid');
-  if(isPackagedDesktop()) {
-    const accountId=await resolveDesktopStudioAccountId();
-    const response=await invokeStudioService({operation:'work',account_id:accountId,method,path:url,...(payload?{body:payload}:{})});
-    let body: T | ErrorResponse;
-    try {body=JSON.parse(response.body) as T;} catch{throw Error('ide_remote_invalid_response');}
-    if(!response.ok||(body as ErrorResponse).ok===false)throw Error((body as ErrorResponse).error||'ide_remote_unavailable');
-    return body as T;
-  }
   const response=await fetch(url,{method,credentials:'same-origin',headers:{accept:'application/json',...(payload?{'content-type':'application/json'}:{})},...(payload?{body:JSON.stringify(payload)}:{})});
   const body=await response.json().catch(()=>({ok:false,error:'ide_remote_invalid_response'})) as T & ErrorResponse;
   if(!response.ok||body.ok===false)throw Error(body.error||'ide_remote_unavailable');

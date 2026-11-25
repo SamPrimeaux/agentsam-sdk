@@ -4,12 +4,6 @@ import type {
   AgentToolRiskLevel,
   AgentToolSideEffectLevel,
 } from '@inneranimalmedia/agentsam-contracts';
-import {
-  invokeStudioService,
-  isPackagedDesktop,
-  resolveDesktopStudioAccountId,
-} from '@/lib/desktop/tauri';
-
 const SESSION_APPROVALS = new Set<string>();
 
 export type PluginToolExecutionInput = {
@@ -97,22 +91,6 @@ async function callTool(input: PluginToolExecutionInput, approved: boolean) {
     conversation_id: input.conversationId || null,
     call_index: input.callIndex,
   };
-
-  if (isPackagedDesktop()) {
-    const accountId = await resolveDesktopStudioAccountId();
-    const response = await invokeStudioService({
-      operation: 'plugins',
-      account_id: accountId,
-      method: 'POST',
-      path: '/api/plugins/tools/execute',
-      body,
-    });
-    return {
-      ok: response.ok,
-      status: response.status,
-      payload: parseJson(response.body),
-    };
-  }
 
   const response = await fetch('/api/plugins/tools/execute', {
     method: 'POST',
