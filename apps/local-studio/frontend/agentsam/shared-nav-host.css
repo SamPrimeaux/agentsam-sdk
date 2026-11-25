@@ -108,6 +108,15 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
     box-shadow: inset 0 1px color-mix(in srgb, var(--c-ink) 9%, transparent),
       0 .25rem 1rem color-mix(in srgb, #000 14%, transparent);
   }
+  /* Empty AgentSam conversations own only the centered mode selector.
+     The zero-size actions marker suppresses the host's generic trailing actions. */
+  body.agentsam-conversation-route .console-topbar:has(.agentsam-blank-conversation-actions) .console-topbar-center {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:158px; max-width:calc(100% - 112px); margin:0;
+  }
+  body.agentsam-conversation-route .console-topbar:has(.agentsam-blank-conversation-actions) .console-topbar-agent-actions {
+    position:absolute; right:0; width:0; height:0; margin:0; padding:0; pointer-events:none;
+  }
   body.agentsam-shared-navigation .console-topbar-center .as-nav-mode-switch {
     max-inline-size: 100%;
     border-radius: 999px;

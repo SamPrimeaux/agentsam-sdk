@@ -76,7 +76,7 @@ test('one Products route with Create and bundled Completeful discovered from man
 });
 
 
-test('mobile global header uses one navigation bubble and two AgentSam contextual actions', () => {
+test('mobile header switches from centered Chat/Work to active conversation actions', () => {
   const host = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../frontend/agentsam/shared-nav-host.css', import.meta.url), 'utf8');
   const page = readFileSync(new URL('../frontend/agentsam/AgentSamPage.tsx', import.meta.url), 'utf8');
@@ -87,10 +87,13 @@ test('mobile global header uses one navigation bubble and two AgentSam contextua
   assert.match(css, /body\.agentsam-shared-navigation \.console-topbar \{\s*background: var\(--c-bg\);\s*border-bottom: 0;/);
   assert.match(css, /\[data-shared-nav-toggle\] \{[^}]*aspect-ratio: 1;/s, 'mobile leading control is a circular bubble');
   assert.match(page, /hostLeadingSlot && !isMobile \? createPortal\(leadingControls/, 'mobile does not suppress the global host nav toggle with an empty portal');
-  assert.match(page, /const headerActions = isMobile \? <div/, 'responsive AgentSam trailing actions are explicitly separated from desktop browser toolbar');
+  assert.match(page, /const headerActions = isMobile \? \(empty \? null : <div/, 'empty mobile threads have no conversation action pill');
   assert.match(page, /className="agentsam-mobile-header-action-pill"/);
   assert.match(page, /label="New chat" hint="New chat \(⌘N\)"/);
-  assert.match(page, /<Nav\.OverflowMenu id="agentsam-start-actions" label="More options" actions=\{mobileMoreActions\}/);
+  assert.doesNotMatch(page, /id="agentsam-start-actions"/);
+  assert.match(page, /hostModeSlot && empty \? createPortal/);
+  assert.match(page, /headerActions \?\? <span className="agentsam-blank-conversation-actions"/, 'blank slot suppresses generic host actions');
+  assert.match(css, /:has\(\.agentsam-blank-conversation-actions\) \.console-topbar-center \{[^}]*left:50%/s);
   assert.match(page, /<Nav\.ConversationActions additionalActions=\{mobileMoreActions\}/);
   assert.match(pageCss, /\.agentsam-mobile-header-action-pill \{[^}]*border-radius: 999px/s);
   assert.match(nav, /additionalActions\.forEach/, 'More retains existing conversation actions while adding browser and annotation commands');
