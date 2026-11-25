@@ -38,5 +38,5 @@ test('platform product editor persists only presentation data; not package relea
   }
   assert.match(backend, /revision\(row\)/);
   assert.match(backend, /Product changed\. Reload before saving your changes/);
-  assert.match(backend, /Only product details may be edited here/);
+  assert.match(backend, /Only product presentation details may be edited here/);
 });

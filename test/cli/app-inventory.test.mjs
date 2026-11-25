@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
@@ -50,6 +52,28 @@ test('source inventory distinguishes app identities from modules, providers, and
   assert.ok(inventory.warnings.some((warning) => warning.includes('module copro using the same npm package')));
   assert.ok(inventory.warnings.some((warning) => warning.includes('moviemode uses the declared directory_id_exception')));
   assert.equal(inventory.warnings.some((warning) => warning.includes('goalguru uses the declared directory_id_exception')), false);
+});
+
+test('inventory reports unreadable package manifests through the canonical AgentSam error envelope', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-app-inventory-'));
+  try {
+    const appDir = path.join(tempRoot, 'apps', 'local-studio');
+    fs.mkdirSync(appDir, { recursive: true });
+    fs.copyFileSync(
+      path.join(ROOT, 'apps', 'local-studio', 'agentsam.app.json'),
+      path.join(appDir, 'agentsam.app.json'),
+    );
+    fs.writeFileSync(path.join(appDir, 'package.json'), '{ invalid json');
+
+    assert.throws(() => buildAppInventory(tempRoot), (error) => {
+      assert.equal(error.envelope?.reason, 'execution_failed');
+      assert.equal(error.envelope?.domain, 'tool');
+      assert.match(error.message, /Unable to read .*package\.json/);
+      return true;
+    });
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test('inventory CLI supports JSON and human-readable output without changing app list semantics', async () => {

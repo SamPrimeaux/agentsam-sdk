@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { listAppManifests } from '../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
+import { processError } from '@inneranimalmedia/agentsam-errors';
 
 const IGNORED_DIRECTORIES = new Set([
   '.git', 'node_modules', 'dist', 'build', '.output', 'target',
@@ -15,7 +16,11 @@ function readJson(file) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (error) {
-    throw new Error('Unable to read ' + file + ': ' + error.message);
+    throw processError('Unable to read ' + file + ': ' + error.message, {
+      command: 'agentsam app inventory',
+      stage: 'read_manifest',
+      cause: error,
+    });
   }
 }
 
