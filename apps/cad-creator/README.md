@@ -722,7 +722,7 @@ Engine discovery must be explicit and fail closed. A missing engine should produ
 
 Reusable CAD machinery must remain visible in the AgentSam registry:
 
-- `agentsam_products` owns the `agentsam-cad-creator` product and future packaged CAD modules.
+- `products` owns the `agentsam-cad-creator` product and future packaged CAD modules.
 - `agentsam_tools` owns normalized callable operations.
 - `agentsam_capabilities` and tool-capability mappings describe what each tool can do.
 - `agentsam_workflows` owns reusable CAD workflows.

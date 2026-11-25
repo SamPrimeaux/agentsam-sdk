@@ -1,3 +1,5 @@
+> **Superseded by migration 1384 (2026-11-25):** product identity and technical catalog metadata now live in the canonical products table. agentsam_products is retained only as a frozen legacy source.
+
 # AgentSam Local Studio — CMS data authority and release gates
 
 Read-only live D1 inventory checked 2026-11-03. Never treat a site directory entry
@@ -12,9 +14,9 @@ as proof that its CMS content is in the platform database.
 | Page Editor | `cms_page_sections`, `cms_section_blocks`, `cms_definitions`, `cms_revisions` | Site's own CMS; preserve source project identity and distinguish working drafts from published pages. |
 | Theme Editor | `cms_globals`, `cms_artifacts`, `cms_themes`, `cms_site_theme_overrides`, `cms_revisions` | Site-scoped selected theme and R2 content; platform `cms_themes` is also used for older style presets. Do not promote previews as published. |
 | Reusable parts | `cms_component_templates`, `cms_definitions` | Shared definition catalog; an installed instance belongs to the selected site's pages and sections. |
-| Theme Store | `agentsam_products`, `agentsam_product_releases`, immutable R2 assets | Product distribution, not merchant inventory. |
+| Theme Store | `products`, `agentsam_product_releases`, immutable R2 assets | Product distribution, not the merchant site inventory projection. |
 | Media | `cms_assets` or merchant `media_assets`; site's R2 objects | Owning site; no global unscoped uploads or copied private assets. |
-| Shop | `products`, `product_variants`, `store_collections`, `store_collection_products`, `store_settings` | Merchant D1, not platform `agentsam_products`. |
+| Shop | `products`, `product_variants`, `store_collections`, `store_collection_products`, `store_settings` | Merchant D1, not the platform catalog identity table. |
 | Orders | `orders`, `order_items`, provider payment records | Merchant D1 and authorized payment integrations. |
 
 ## Deployed shape and content (read only)

@@ -54,12 +54,12 @@ export async function discardThemeDraftSite(db, accountId, siteId) {
 async function catalogSource(db, slug, version) {
   try {
     const product = await db.prepare(
-      "SELECT id FROM agentsam_products WHERE slug IN (?,?) AND kind='theme' ORDER BY (slug=?) DESC LIMIT 1"
+      "SELECT id FROM products WHERE slug IN (?,?) AND COALESCE(catalog_kind,product_kind)='theme' ORDER BY (slug=?) DESC LIMIT 1"
     ).bind(slug, `theme-${slug}`, slug).first();
     if (!product) return { productId: null, releaseId: null };
     const release = await db.prepare(
       "SELECT id FROM agentsam_product_releases WHERE product_id=? AND version=? LIMIT 1"
-    ).bind(product.id, version).first();
+    ).bind(String(product.id), version).first();
     return { productId: product.id, releaseId: release?.id || null };
   } catch { return { productId: null, releaseId: null }; }
 }

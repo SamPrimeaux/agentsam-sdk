@@ -85,7 +85,7 @@ test("D1-dialect seeds in the globbed directory carry the engine tag", () => {
   for (const entry of readdirSync(migrationsDir)) {
     if (!isMigrationFile(entry)) continue;
     const contents = readFileSync(join(migrationsDir, entry), "utf8");
-    const dialect = /\bunixepoch\s*\(|\brandomblob\s*\(/i.test(contents);
+    const dialect = /\bunixepoch\s*\(|\brandomblob\s*\(|\bjson_extract\s*\(|\bjson_set\s*\(|\bdatetime\s*\(\s*['\"]now['\"]|\bRAISE\s*\(\s*ABORT/i.test(contents);
     const engine = migrationEngine(contents);
     if (dialect || engine !== null) {
       assert.equal(

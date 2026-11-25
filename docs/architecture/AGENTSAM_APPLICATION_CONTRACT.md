@@ -215,7 +215,7 @@ These boundaries are binding for Local Studio, the public CAD experience, and fu
 
 ### Catalog, install, and native-runtime boundaries
 
-- `agentsam_products` is the official product/catalog authority. `agentsam.app.json` defines a portable APP's identity and distribution contract. `agentsam_plugins` is for installable integrations/providers, not a duplicate APP catalog.
+- `apps` is the installable APP catalog and `agentsam_app_installations` owns account-specific installs. `products` is the product/commerce catalog; the optional `apps.product_id` references `products.id`. `agentsam_products` is a frozen legacy migration source, not a runtime authority. `agentsam.app.json` remains the trusted portable APP runtime/distribution descriptor. `agentsam_plugins` is for installable integrations/providers, not a duplicate APP catalog.
 - The existing desktop manifest's `included_apps` is an explicit **build-time bootstrap bundle**. It is not proof of runtime installation and must not be treated as the long-term app marketplace.
 - Runtime app installation requires a real flow: discover a verified release; check host/OS compatibility and permissions; download and verify the versioned artifact; record the installation; mount/launch its declared routes; and expose uninstall/update/rollback state. Until that flow exists, UI must not claim that an app was installed merely because its manifest contains an npm command.
 - A web-first APP must not require a Rust rebuild just to be installed or updated. Rust commands, native sidecars, filesystem access, and other privileged host capabilities are opt-in host capabilities with explicit contracts and permissions. Only a product that genuinely requires a new native capability should trigger host-runtime work.
@@ -229,3 +229,6 @@ These boundaries are binding for Local Studio, the public CAD experience, and fu
 4. Verify the DreamHouse owner-project path through the local project authority and project registry. Verify that public CAD preview remains isolated from owner-only project data and does not redirect users to the AgentSam dashboard to perform the advertised work.
 5. Commit and push the finished integration; merge to `main` only after the gates pass. Publish/deploy the relevant web artifact and/or desktop package from the merged source, then verify the actual destination URL/build.
 6. After verification, prune completed remote branches and worktrees. Do not leave a completed implementation living only in an agent branch, local tree, chat, or screenshot.
+
+
+See [APP_PRODUCT_DATA_MODEL.md](APP_PRODUCT_DATA_MODEL.md) for the canonical database ownership and migration contract.

@@ -234,7 +234,7 @@ INSTALL
 .agentsam state + receipts
 ```
 
-The official platform product inventory remains `agentsam_products` and its platform relationships.
+The canonical platform product inventory is `products`, with relationships in `asset_relationships`. `apps` owns installable application identity; agentsam_products is a frozen legacy source.
 
 Any source-controlled `registry/products/*` layer is a **thin relationship/index seed**: product IDs, authority paths, host/mount relationships, service relationships, and platform linkage. It must not copy versions, commands, capability lists, runtime facts, or other fields already owned elsewhere.
 

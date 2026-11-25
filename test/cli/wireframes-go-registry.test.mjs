@@ -43,9 +43,12 @@ test('buildGoProductRegistrySql upserts product + relationships without inventin
     commit: 'abc123',
     health: 'healthy',
   });
-  assert.match(sql, /INSERT INTO agentsam_products/);
+  assert.match(sql, /INSERT INTO products/);
   assert.match(sql, /ON CONFLICT\(slug\) DO UPDATE/);
   assert.match(sql, /INSERT INTO asset_relationships/);
+  assert.match(sql, /catalog_kind/);
+  assert.match(sql, /lifecycle_status/);
+  assert.match(sql, /display_name, sku/);
   assert.match(sql, /sourced_from/);
   assert.match(sql, /runs_on/);
   assert.match(sql, /deployed_as/);

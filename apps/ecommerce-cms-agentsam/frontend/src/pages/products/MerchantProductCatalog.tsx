@@ -5,11 +5,11 @@ import { collectionSiteId } from "../collections/model";
 
 type MerchantProduct = {
   id: number;
+  legacy_product_id?: string | null;
   title: string;
   slug: string;
   description?: string;
   product_kind?: string;
-  registry_id?: string | null;
   status: string;
   image_url?: string | null;
   site_id: string;
@@ -35,8 +35,8 @@ function openProduct(siteId: string, id?: number) {
   if (!navigateHostedStudioRoute(destination)) window.location.assign(destination);
 }
 
-export default function MerchantProductCatalog({ kind, search, refresh, registryId }: {
-  kind: CatalogKind; search: string; refresh: number; registryId?: string;
+export default function MerchantProductCatalog({ kind, search, refresh, productId }: {
+  kind: CatalogKind; search: string; refresh: number; productId?: string;
 }) {
   const siteId = collectionSiteId();
   const [products, setProducts] = useState<MerchantProduct[]>([]);
@@ -83,13 +83,13 @@ export default function MerchantProductCatalog({ kind, search, refresh, registry
 
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return products.filter(p => (!registryId || p.registry_id === registryId) && matchesKind(p, kind) &&
+    return products.filter(p => (!productId || String(p.id) === productId || p.legacy_product_id === productId) && matchesKind(p, kind) &&
       (!query || [p.title, p.slug, p.description, p.product_kind, p.site_name, p.collection, p.collection_names].some(v => v?.toLowerCase().includes(query))));
-  }, [products, search, kind, registryId]);
+  }, [products, search, kind, productId]);
 
   return <section id="studio-catalog" className="ps-platform-catalog">
     <div className="ps-catalog-heading">
-      <div><span className="ps-eyebrow">MERCHANT CATALOG</span><h2>{registryId ? "Linked product" : "My products"}</h2></div>
+      <div><span className="ps-eyebrow">MERCHANT CATALOG</span><h2>{productId ? "Linked product" : "My products"}</h2></div>
       <div className="ps-catalog-heading-actions">
         {!siteId && sites.length > 0 && <label>Store <select aria-label="Store for new product" value={createSite} onChange={e => setCreateSite(e.target.value)}>
           <option value="">Choose a store</option>{sites.map(site => <option value={site.id} key={site.id}>{site.name}</option>)}
@@ -103,7 +103,7 @@ export default function MerchantProductCatalog({ kind, search, refresh, registry
     {!loading && error && <div className="ps-feedback" role="alert"><strong>Products unavailable</strong><p>{error}</p><button type="button" className="ps-button" onClick={() => setRetry(n => n + 1)}>Retry</button></div>}
     {!loading && !error && <p className="ps-result-count">{visible.length} {visible.length === 1 ? "product" : "products"}</p>}
     {!loading && !error && visible.length === 0 && <div className="ps-feedback" role="status">
-      {registryId ? "No merchant product is linked to this registry entry." : "No products match this selection."}
+      {productId ? "No merchant product is linked to this product record." : "No products match this selection."}
     </div>}
     {!loading && !error && <div className="ps-catalog-grid">
       {visible.map(p => <button type="button" className="ps-product-card ps-platform-card" key={p.id} onClick={() => openProduct(p.site_id, p.id)} aria-label={`Edit ${p.title}`}>

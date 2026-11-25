@@ -37,7 +37,7 @@ Native execution is optional and fails closed if the kernel cannot be probed. Th
 
 Company inventory authority: existing `inneranimalmedia-business` D1 tables, **not** a new CAD-specific catalog.
 
-- `agentsam_products`: `prod_665c3051791f4a18`, `cad-creator`, package `@inneranimalmedia/agentsam-cad-creator`, version 2.6.12, status `wired`.
+- `products`: canonical `cad-creator` product row, package `@inneranimalmedia/agentsam-cad-creator`; the old `prod_665c3051791f4a18` identifier is retained only as `legacy_product_id`.
 - `agentsam_tools`: nine existing `cad.project.v1` operations and their `agentsam_tool_capabilities` mappings remain defined and **inactive** pending verified hosted binding.
 - `agentsam_capabilities`: local-evidenced `design.solid.create`, `design.solid.inspect`, `design.solid.export.step` declared **inactive**, not automatically aliased into every `design_model_build` provider.
 - `agentsam_plugins`: six **host-scoped, disabled** external native engine inventory records for OCCT, OpenSCAD, Blender, FreeCAD, build123d and IfcOpenShell. OCCT/OpenSCAD/Blender local doctor passed; FreeCAD CLI probe failed; build123d/IfcOpenShell Python modules were unavailable.

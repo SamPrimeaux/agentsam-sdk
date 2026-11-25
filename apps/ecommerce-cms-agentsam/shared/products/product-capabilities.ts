@@ -1,8 +1,7 @@
 /**
  * One product system: distribute software today, manufacture physical goods tomorrow.
- * No new tables. Product identity stays in the existing authority:
- *   software  -> agentsam_products   (kind, status, tags, metadata)
- *   other     -> reconciled through the CMS product contract (never copied into agentsam_products)
+ * No parallel product registry. Product identity, kind, lifecycle, tags and metadata
+ * stay on the canonical products row; apps and installations own app identity and access.
  * Collections: cms_collections (identity + smart rule). Media: cms_assets.
  *
  * Three ideas kept apart:
@@ -95,7 +94,7 @@ export const LEGACY_CAPABILITY_ALIASES: Record<string, CapabilityId> = {
 
 export type VerificationState = "unverified" | "verified" | "failed" | "revoked";
 
-/** Stored at agentsam_products.metadata.capability_states (and the CMS product record for other providers). */
+/** Stored at products.metadata_json.capability_states. */
 export interface CapabilityState {
   capability: CapabilityId | keyof typeof LEGACY_CAPABILITY_ALIASES;
   state: VerificationState;
@@ -213,9 +212,9 @@ export interface SmartCollectionRule {
 /** field -> SQL expression, per item type. Anything not listed is rejected, never interpolated. */
 export const RULE_FIELDS: Record<string, Record<string, { sql: string; allow: Array<"eq" | "in" | "contains"> }>> = {
   product: {
-    kind:   { sql: "kind", allow: ["eq", "in"] },
-    status: { sql: "status", allow: ["eq", "in"] },
-    tags:   { sql: "EXISTS (SELECT 1 FROM json_each(agentsam_products.tags) t WHERE t.value = ?)", allow: ["contains"] },
+    kind:   { sql: "COALESCE(catalog_kind, product_kind)", allow: ["eq", "in"] },
+    status: { sql: "COALESCE(lifecycle_status, status)", allow: ["eq", "in"] },
+    tags:   { sql: "EXISTS (SELECT 1 FROM json_each(tags_json) t WHERE t.value = ?)", allow: ["contains"] },
   },
 };
 

@@ -1,13 +1,17 @@
 # AgentSam product / release catalog contract
 
 Finished contract for **versioned installable artifacts**. Complements the live
-`agentsam_products` identity catalog; does **not** invent a parallel product table.
+`products` identity catalog; does **not** invent a parallel product table.
 
 ## Authority
 
+The agentsam_products table is retained as a frozen migration/rollback source only. Current product and app runtime code reads and writes products. The legacy prod_* identifiers remain in products.legacy_product_id; products.id is the canonical INTEGER identity.
+
+
+
 | Layer | Owner |
 |---|---|
-| Product identity | **`agentsam_products`** (already live on `inneranimalmedia-business`) |
+| Product identity | **`products`** (already live on `inneranimalmedia-business`) |
 | Versioned releases | **`agentsam_product_releases`** — `migrations/runtime/0011_agentsam_product_releases.sql` |
 | Bytes | **Per-product R2** (theme-store → theme packages; Local Studio → `agentsam-os-blueprint-content`; never a company dump) |
 | Update / resolve metadata API | Prefer **`iam-pwa-services`** (`services.inneranimalmedia.com`) as the boring hub; workers may thin-proxy |
@@ -27,7 +31,7 @@ Finished contract for **versioned installable artifacts**. Complements the live
 
 ## Internal catalog SKU convention (2026-10-31)
 
-`agentsam_products.id` is the permanent identity, `slug` is the canonical lookup,
+`products.id` (INTEGER) is the permanent identity, `slug` is the canonical lookup,
 and `sku` is a stable **internal reference for the catalog**. It is not a
 merchant merchandise SKU, npm/PyPI distribution name, Stripe product, license,
 price tier, or evidence of a published release.
@@ -43,12 +47,10 @@ Examples: `IA-APP-ECOMMERCE-CMS-AGENTSAM`,
 `IA-SDK-AGENTSAM-SDK`, `IA-THM-IASF`.
 
 The pure generator is `scripts/registry/catalog-sku.mjs`. The historical,
-**idempotent** SQL backfill lives in
-`scripts/registry/backfill-catalog-skus.sql`. Applied to
-`inneranimalmedia-business` production on 2026-10-31: 63/63 existing
-catalog rows assigned distinct SKUs, while product IDs, slugs,
-descriptions, statuses and the 126 existing product relationships
-were preserved.
+**idempotent** SQL backfill in `scripts/registry/backfill-catalog-skus.sql`
+was applied to the legacy catalog on 2026-10-31. Do not rerun it against
+the canonical products table. Migration 1384 carries those SKUs into
+products.sku while preserving the old IDs in products.legacy_product_id.
 
 For new entries, generate a SKU only at **identity creation**. Never
 silently recompute existing codes when a product is renamed or reclassified;
@@ -63,7 +65,7 @@ until their source ownership and downstream references are reconciled.
 
 ## Roles
 
-1. **`agentsam_products`** — stable product (`slug`, `kind`, `package_name`, maturity `status`, optional `sku`).
+1. **`products`** — stable product identity (`id`, `slug`), technical classification (`catalog_kind`, `lifecycle_status`), commerce behavior (`product_kind`, `status`), package metadata, ownership, tags, and optional SKU.
 2. **`agentsam_product_releases`** — one immutable artifact row per
    `(product_slug, version, channel, artifact_kind, target?, arch?)`.
 3. **Install / entitlement** — host-owned (CMS installs, Theme Store checkout, account grants). Release rows may carry `entitlement_policy_json` hints only.
@@ -76,7 +78,7 @@ Required product catalog fields from the 2026-10-28 product decision, mapped:
 | Spec field | Column |
 |---|---|
 | sku | `sku` (optional; internal catalog code is `IA-{TYPE}-{SLUG}`; not a sale or release identifier) |
-| kind (product) | via `agentsam_products.kind` + `artifact_kind` |
+| kind (product) | via `products.catalog_kind` + `artifact_kind` |
 | package | `package_name` |
 | version | `version` |
 | source_sha | `source_sha` |
@@ -89,6 +91,7 @@ Required product catalog fields from the 2026-10-28 product decision, mapped:
 | entitlement policy | `entitlement_policy_json` |
 | review_status | `review_status` |
 | release_status | `release_status` |
+| product_id | canonical `products.id` serialized as text in the existing release-history table |
 | install_status | **not on release** — lives on host install receipts |
 
 ### `artifact_kind`
@@ -117,7 +120,7 @@ Required product catalog fields from the 2026-10-28 product decision, mapped:
 
 ## Write pattern
 
-1. Ensure `agentsam_products` row exists (`slug` / `kind`).
+1. Ensure a `products` row exists (`slug` / `catalog_kind`).
 2. Upload immutable bytes to **that product’s** R2 key namespace.
 3. Insert `agentsam_product_releases` with `release_status = draft|staged`.
 4. After review, set `published` + `published_at_unix` + `pub_date`.

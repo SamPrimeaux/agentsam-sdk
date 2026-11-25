@@ -286,7 +286,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `theme-plain-jane` | `@inneranimalmedia/theme-plain-jane` | needs-review | Legacy editorial journal and photography reference; not the canonical CMS starter or default theme. |
 | `theme-scenes` | `@inneranimalmedia/theme-scenes` | classified | Cross-product creative scene composition contracts, reusable scene templates and a CMS-compatible portable rendere… |
 
-Packages may be public distributions, shared implementation, local application dependencies, or infrastructure. Directory placement alone does not define the intent or distribution status. The package catalog is a projection, not platform `agentsam_products` or install-state authority.
+Packages may be public distributions, shared implementation, local application dependencies, or infrastructure. Directory placement alone does not define the intent or distribution status. The package catalog is a projection, not the platform products catalog or install-state authority.
 
 ## Ownership and verification
 

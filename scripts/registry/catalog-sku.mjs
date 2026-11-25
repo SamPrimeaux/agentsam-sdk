@@ -18,7 +18,7 @@ export const PRODUCT_SKU_KINDS = Object.freeze({
 /**
  * Generate a candidate for a new catalog product.
  * Assign it once at creation; do not recalculate on slug/kind rename.
- * Confirm unique availability in agentsam_products before insert.
+ * Confirm unique availability in products.sku before insert.
  */
 export function productCatalogSku(kind, slug) {
   const code = PRODUCT_SKU_KINDS[kind];

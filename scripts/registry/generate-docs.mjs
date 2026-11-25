@@ -83,7 +83,7 @@ const out = [
   '| --- | --- | --- | --- |',
   rows([...packages].sort((a,b)=>String(a.id).localeCompare(String(b.id))).map(p=>[code(p.id),code(p.name),p.catalog_status||p.status||'not reviewed',description(p.purpose,115)])),
   '',
-  'Packages may be public distributions, shared implementation, local application dependencies, or infrastructure. Directory placement alone does not define the intent or distribution status. The package catalog is a projection, not platform `agentsam_products` or install-state authority.',
+  'Packages may be public distributions, shared implementation, local application dependencies, or infrastructure. Directory placement alone does not define the intent or distribution status. The package catalog is a projection, not the platform products catalog or install-state authority.',
   '',
   '## Ownership and verification',
   '',

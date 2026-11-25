@@ -581,7 +581,7 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
 
   if (!args.json) write('\n  Registry\n');
   if (deploy.registry?.remote) {
-    note('✓ InnerAnimalMedia agentsam_products + asset_relationships · official release');
+    note('✓ InnerAnimalMedia products + asset_relationships · official release');
   } else if (!args.officialRelease) {
     note('✓ local AgentSam registry · InnerAnimalMedia D1 isolated');
   } else {

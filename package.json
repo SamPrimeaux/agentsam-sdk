@@ -435,7 +435,9 @@
     "registry:universal:check": "node scripts/registry/generate-universal.mjs --check",
     "test:registry:universal": "node --test test/integration/universal-source-registry.test.mjs test/integration/universal-registry-reconcile.test.mjs",
     "prepack": "node scripts/registry/generate-universal.mjs --write",
-    "verify:registry:universal": "npm run registry:universal:check && npm run test:registry:universal"
+    "verify:registry:universal": "npm run registry:universal:check && npm run test:registry:universal",
+    "verify:product-catalog": "node --test apps/local-studio/scripts/app-product-catalog-migration.test.mjs apps/local-studio/scripts/studio-platform-products.test.mjs apps/local-studio/scripts/app-product-catalog-authority.test.mjs apps/ecommerce-cms-agentsam/tests/product-catalog.test.mjs apps/ecommerce-cms-agentsam/tests/cms-theme-site-scope.test.mjs src/go/product-catalog.test.mjs",
+    "app:inventory": "node bin/agentsam app inventory"
   },
   "engines": {
     "node": ">=22"

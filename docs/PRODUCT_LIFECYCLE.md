@@ -1,5 +1,7 @@
 # AgentSam product lifecycle — infra at a glance
 
+> **Current inventory notice (2026-11-25):** this document preserves the 2026-09-30 lifecycle audit, its branch-tip references, product examples, and readiness findings. It is not the current application catalog or a current release-status report. Use [AGENTSAM_APPLICATION_INVENTORY.md](architecture/AGENTSAM_APPLICATION_INVENTORY.md) and `npm run app:inventory` for the current repository identities and classifications. The global CLI subcommand will be available after a release containing this change. Historical names such as `client-cms-editor` below are historical audit evidence, not instructions to recreate an app.
+
 **Status:** standing engineering law (2026-09-30)
 **Repo tip when audited:** Lane 0d CI trust branch (from `7684a4e5`)
 **Companion:** [apps/README.md](../apps/README.md) (product app ownership boundary)

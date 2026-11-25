@@ -1,8 +1,10 @@
+> **Superseded by [APP_PRODUCT_DATA_MODEL.md](APP_PRODUCT_DATA_MODEL.md) and migration 1384.** Product identity now lives in the canonical products table. agentsam_products is retained only as a frozen legacy migration source. This file is preserved as historical design context.
+
 # AgentSam — reusable themes, templates and apps
 
 > **Contract SSOT (2026-10-31):** `protocol/product-releases/README.md` +
 > `migrations/runtime/0011_agentsam_product_releases.sql`.
-> Product identity = live `agentsam_products`. Versioned artifacts =
+> Historical at 2026-10-28: product identity = `agentsam_products`. This statement was superseded by migration 1384; current product identity = `products`. Versioned artifacts =
 > `agentsam_product_releases`. Use this canonical release table; do **not** introduce a desktop-only registry.
 
 ## Product lifecycle decision

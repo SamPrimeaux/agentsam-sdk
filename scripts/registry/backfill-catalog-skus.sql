@@ -1,3 +1,4 @@
+-- Historical only: applied to legacy agentsam_products on 2026-10-31. Do not rerun after migration 1384; canonical SKUs now live in products.sku.
 -- Idempotent legacy SKU backfill for agentsam_products.
 -- Applied to inneranimalmedia-business production 2026-10-31.
 -- Do not modify existing SKU assignments or canonical product IDs.
