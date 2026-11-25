@@ -462,10 +462,18 @@ export function beginLocalStudioRegisteredPluginOAuth(
     },
   );
 }
-export function beginLocalStudioConnectorOAuth(providerKey: string, returnTo: string) {
+export function beginLocalStudioConnectorOAuth(
+  providerKey: string,
+  returnTo: string,
+  options: { connectionId?: string; requestedScopes?: string[] } = {},
+) {
   if (!/^(google_drive|google_calendar|github)$/.test(providerKey)) throw new Error('connector_provider_invalid');
   return pluginCatalogRequest<{ok:boolean;authorize_url:string}>(
-    'POST','/api/work/connect/'+providerKey+'/start',{return_to:returnTo},
+    'POST','/api/work/connect/'+providerKey+'/start',{
+      return_to:returnTo,
+      ...(options.connectionId?{connection_id:options.connectionId}:{}),
+      ...(options.requestedScopes?.length?{requested_scopes:options.requestedScopes}:{}),
+    },
   );
 }
 export function disconnectLocalStudioConnector(connectionRef: string) {

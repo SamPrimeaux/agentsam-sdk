@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { handleStudioContentMediaApi } from './content-media-api.js';
+import { DatabaseSync } from 'node:sqlite';
+import { handleStudioContentMediaApi, resolveCloudflareProductMediaReference } from './content-media-api.js';
 
 const origin = 'https://agentsam.example';
 const principal = { id: 'au_media_account_a' };
@@ -262,14 +263,10 @@ test('explicit InnerAnimalMedia provider uploads retain the source in the canoni
   assert.equal(data.provider_api, 'inneranimalmedia');
 });
 
-test('#419 Cloudflare Images upload never calls IAM_API', async () => {
+test('Cloudflare Images uploads return provider-native IDs without mirroring inventory into D1', async () => {
   const calls = [];
-  const registered = [];
   const env = {
-    DB: { prepare(sql) {
-      assert.match(sql, /INSERT INTO media_assets/);
-      return { bind(...values) { return { async run() { registered.push(values); return { success: true }; } }; } };
-    } },
+    DB: { prepare() { throw new Error('upload must not write media_assets'); } },
     __agentsamTestCfClient: {
       accountId: 'acct_user_owned',
       connectionId: 'conn_user',
@@ -305,15 +302,141 @@ test('#419 Cloudflare Images upload never calls IAM_API', async () => {
   const data = await parseJson(response);
   assert.equal(response.status, 200);
   assert.equal(data.provider_api, 'cloudflare_oauth');
+  assert.equal(data.assets[0].id, 'cfimg_upload_1');
   assert.equal(data.assets[0].cloudflare_image_id, 'cfimg_upload_1');
-  assert.equal(registered.length, 1);
-  assert.equal(registered[0][0], data.assets[0].media_asset_id);
-  assert.equal(registered[0][1], 'acct_user_owned');
-  assert.equal(registered[0][2], 'cfimg_upload_1');
-  assert.equal(registered[0][9], principal.id);
+  assert.equal(data.assets[0].provider, 'cloudflare_images');
+  assert.equal(data.assets[0].provider_account_id, 'acct_user_owned');
+  assert.equal(data.assets[0].provider_resource_id, 'cfimg_upload_1');
+  assert.equal(Object.hasOwn(data.assets[0], 'media_asset_id'), false);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].hasForm, true);
 });
+
+test('Google Drive listing uses the selected user OAuth account and native file IDs', async () => {
+  const calls = [];
+  const connection = { id: 'google_drive:owner@example.com', accountIdentifier: 'owner@example.com', accountLabel: 'Owner Drive' };
+  const env = {
+    __agentsamTestGoogleDrive: {
+      connections: [connection],
+      accessToken: 'user-google-token',
+      fetch: async (input, init = {}) => {
+        calls.push({ url: String(input), headers: new Headers(init.headers || {}) });
+        return jsonResponse({
+          nextPageToken: 'next-drive-page',
+          files: [{ id: 'drive-file-1', name: 'brand-mark.png', mimeType: 'image/png', size: '512',
+            createdTime: '2026-11-24T10:00:00Z', modifiedTime: '2026-11-24T11:00:00Z',
+            thumbnailLink: 'https://lh3.googleusercontent.com/drive-thumbnail' }],
+        });
+      },
+    },
+  };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?source=drive&connection_id=google_drive%3Aowner%40example.com&page=1&per_page=25&kind=image&q=brand'),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].headers.get('authorization'), 'Bearer user-google-token');
+  const requestUrl = new URL(calls[0].url);
+  assert.equal(requestUrl.origin, 'https://www.googleapis.com');
+  assert.equal(requestUrl.pathname, '/drive/v3/files');
+  assert.match(requestUrl.searchParams.get('q'), /mimeType contains 'image\/'/);
+  assert.match(requestUrl.searchParams.get('q'), /name contains 'brand'/);
+  assert.equal(data.provider_api, 'google_drive_oauth');
+  assert.equal(data.account.connection_id, connection.id);
+  assert.equal(data.assets[0].provider_resource_id, 'drive-file-1');
+  assert.equal(data.assets[0].provider_account_id, 'owner@example.com');
+  assert.equal(data.assets[0].thumbnail_url, 'https://lh3.googleusercontent.com/drive-thumbnail');
+  assert.equal(data.pagination.cursor, 'next-drive-page');
+});
+
+test('Google Drive never guesses between multiple connected accounts', async () => {
+  let fetched = false;
+  const env = { __agentsamTestGoogleDrive: {
+    connections: [
+      { id: 'google_drive:one@example.com', accountIdentifier: 'one@example.com', accountLabel: 'One' },
+      { id: 'google_drive:two@example.com', accountIdentifier: 'two@example.com', accountLabel: 'Two' },
+    ],
+    fetch: async () => { fetched = true; return jsonResponse({ files: [] }); },
+  } };
+  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media?source=drive'), env, principal);
+  const data = await parseJson(response);
+  assert.equal(response.status, 409);
+  assert.equal(data.error, 'google_drive_account_selection_required');
+  assert.equal(data.accounts.length, 2);
+  assert.equal(fetched, false);
+});
+
+test('Cloudflare product references are materialized lazily and deduplicated by provider account and native ID', async () => {
+  const db = new DatabaseSync(':memory:');
+  db.exec(`CREATE TABLE media_assets(
+    id TEXT PRIMARY KEY, provider TEXT NOT NULL, provider_account_id TEXT, provider_resource_id TEXT,
+    source_uri TEXT, filename TEXT, content_type TEXT, media_kind TEXT NOT NULL DEFAULT 'unknown',
+    size_bytes INTEGER, width INTEGER, height INTEGER, status TEXT NOT NULL DEFAULT 'registered',
+    created_by_user_id TEXT, metadata_json TEXT NOT NULL DEFAULT '{}'
+  );`);
+  db.exec("CREATE UNIQUE INDEX uq_media_assets_provider_resource ON media_assets(provider,provider_account_id,provider_resource_id) WHERE provider_resource_id IS NOT NULL;");
+  const env = {
+    DB: { prepare(sql) { return { bind(...values) {
+      const statement = db.prepare(sql);
+      return { async first() { return statement.get(...values) || null; }, async run() { return statement.run(...values); } };
+    } }; } },
+    __agentsamTestCfClient: {
+      accountId: 'acct_user_owned',
+      requireAccount() {},
+      accountPath(suffix) { return `/accounts/acct_user_owned${suffix}`; },
+      async request(method, path) {
+        assert.equal(method, 'GET');
+        assert.match(path, /cfimg_reference_1$/);
+        return { result: { id: 'cfimg_reference_1', filename: 'reference.png', size: 100,
+          variants: ['https://imagedelivery.net/hash/cfimg_reference_1/public'] } };
+      },
+    },
+  };
+  const input = { provider: 'cloudflare_images', provider_account_id: 'acct_user_owned',
+    provider_resource_id: 'cfimg_reference_1', content_type: 'image/png', filename: 'reference.png',
+    url: 'https://imagedelivery.net/hash/cfimg_reference_1/public', width: 20, height: 20 };
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM media_assets').get().n, 0);
+  const first = await resolveCloudflareProductMediaReference(env, principal.id, input);
+  const second = await resolveCloudflareProductMediaReference(env, 'user_two', input);
+  assert.equal(first.ok, true);
+  assert.equal(second.ok, true);
+  assert.equal(first.asset.id, second.asset.id);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM media_assets').get().n, 1);
+  const row = db.prepare('SELECT provider,provider_account_id,provider_resource_id,created_by_user_id,status FROM media_assets').get();
+  assert.deepEqual({ ...row }, { provider: 'cloudflare_images', provider_account_id: 'acct_user_owned',
+    provider_resource_id: 'cfimg_reference_1', created_by_user_id: principal.id, status: 'ready' });
+  db.prepare("UPDATE media_assets SET status='deleted' WHERE provider_resource_id=?").run('cfimg_reference_1');
+  const restored = await resolveCloudflareProductMediaReference(env, 'user_two', input);
+  assert.equal(restored.ok, true);
+  assert.equal(db.prepare('SELECT status FROM media_assets').get().status, 'ready');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM media_assets').get().n, 1);
+  const mismatch = await resolveCloudflareProductMediaReference(env, principal.id, {
+    ...input, provider_account_id: 'acct_not_connected',
+  });
+  assert.equal(mismatch.ok, false);
+  assert.equal(mismatch.error, 'cloudflare_account_mismatch');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM media_assets').get().n, 1);
+  db.close();
+});
+
+test('Google Drive read-only scope is required for full account media inventory', async () => {
+  const env = { __agentsamTestGoogleDrive: {
+    connections: [{ id: 'google_drive:owner@example.com', accountIdentifier: 'owner@example.com', accountLabel: 'Owner Drive' }],
+    grantedScopes: ['https://www.googleapis.com/auth/drive.file'],
+    fetch: async () => { throw new Error('scope failure must stop before API call'); },
+  } };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?source=drive&connection_id=google_drive%3Aowner%40example.com'),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 403);
+  assert.equal(data.error, 'google_drive_scope_missing');
+});
+
 
 test('#419 R2 upload requires an explicit authorized bucket (no IAM default)', async () => {
   const env = {

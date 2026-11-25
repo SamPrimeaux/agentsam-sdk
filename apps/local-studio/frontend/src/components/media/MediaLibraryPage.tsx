@@ -4,6 +4,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Ellipsis, FolderOpen, Grid2X2, List, Loader2, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
+import { beginLocalStudioConnectorOAuth } from "@/lib/connections/client";
 import { BucketPicker, loadPinnedBuckets, savePinnedBuckets } from "./BucketPicker";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { MediaItems } from "./MediaGrid";
@@ -35,11 +36,11 @@ const PAGE_SIZE = 100;
 
 // Remember only display preferences, NEVER OAuth access or refresh credentials.
 // The encrypted OAuth grant remains on the server in user_oauth_tokens.
-function mediaPreference(owner: string, key: "account" | "bucket", cfAccount = "") {
+function mediaPreference(owner: string, key: "account" | "bucket" | "drive", cfAccount = "") {
   try { return localStorage.getItem(`agentsam.media.v1.${owner}.${key}${key === "bucket" ? `.${cfAccount || "default"}` : ""}`) || ""; }
   catch { return ""; }
 }
-function rememberMediaPreference(owner: string, key: "account" | "bucket", value: string, cfAccount = "") {
+function rememberMediaPreference(owner: string, key: "account" | "bucket" | "drive", value: string, cfAccount = "") {
   try {
     const path = `agentsam.media.v1.${owner}.${key}${key === "bucket" ? `.${cfAccount || "default"}` : ""}`;
     if (value) localStorage.setItem(path, value);
@@ -147,6 +148,10 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const [activeBucket, setActiveBucket] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string[]>(() => loadPinnedBuckets());
   const [accountChoices, setAccountChoices] = useState<AccountChoice[]>([]);
+  const [driveAccounts, setDriveAccounts] = useState<Array<{ id: string; accountIdentifier: string; accountLabel: string }>>([]);
+  const [driveAccountId, setDriveAccountId] = useState("");
+  const [driveStatusLoaded, setDriveStatusLoaded] = useState(false);
+  const [driveConnecting, setDriveConnecting] = useState(false);
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("recent");
@@ -169,7 +174,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   // Route changes must not reset the authorized account or chosen provider.
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("source");
-    setSource(requested === "local" && surface.kind === "all" ? "local" : intakeReady && (requested === "intake" || !requested) ? "intake" : surface.source);
+    setSource(requested === "drive" ? "drive" : requested === "local" && surface.kind === "all" ? "local" : intakeReady && (requested === "intake" || !requested) ? "intake" : surface.source);
   }, [surface.source, surface.kind, intakeReady]);
   useEffect(() => {
     if (!["localhost", "127.0.0.1"].includes(window.location.hostname)) return;
@@ -193,6 +198,28 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   useEffect(() => {
     if (preferencesReady) rememberMediaPreference(accountId, "account", cfAccountId);
   }, [accountId, cfAccountId, preferencesReady]);
+  useEffect(() => {
+    if (preferencesReady && source === "drive" && driveStatusLoaded && driveAccounts.length > 0 && driveAccountId)
+      rememberMediaPreference(accountId, "drive", driveAccountId);
+  }, [accountId, driveAccountId, driveAccounts.length, driveStatusLoaded, preferencesReady, source]);
+
+  useEffect(() => {
+    if (source !== "drive") return;
+    let cancelled = false;
+    setDriveStatusLoaded(false);
+    setDriveAccounts([]);
+    setDriveAccountId("");
+    void getJson("/api/work/connect/google_drive/status").then(({ res, body }) => {
+      if (cancelled) return;
+      const connections = res.ok && Array.isArray(body?.connections) ? body.connections : [];
+      setDriveAccounts(connections);
+      const preferred = mediaPreference(accountId, "drive");
+      const selected = connections.find((item) => item.id === preferred)?.id || (connections.length === 1 ? connections[0].id : "");
+      setDriveAccountId(selected);
+      setDriveStatusLoaded(true);
+    }).catch(() => { if (!cancelled) setDriveStatusLoaded(true); });
+    return () => { cancelled = true; };
+  }, [accountId, source]);
 
   /* ---- account + connection resources (also the full R2 bucket list) ---- */
   useEffect(() => {
@@ -303,6 +330,32 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
         setHasMore(Boolean(body?.pagination?.has_next));
         return;
       }
+      if (source === "drive") {
+        if (!driveAccountId) {
+          setAssets([]); setTotal(0); setHasMore(false);
+          return;
+        }
+        const nextPage = append ? pageRef.current + 1 : 1;
+        const qs = new URLSearchParams({
+          page: String(nextPage), per_page: String(PAGE_SIZE), source: "drive",
+          connection_id: driveAccountId, kind: surface.kind, q: query.trim(),
+        });
+        if (append && cursorRef.current) qs.set("cursor", cursorRef.current);
+        const { res, body } = await getJson(`/api/admin/media?${qs}`);
+        if (ticket !== requestRef.current) return;
+        if (!res.ok) {
+          setError(toLibraryError(res.status, body));
+          if (!append) setAssets([]);
+          return;
+        }
+        const rows = rowsFrom(body);
+        setAssets((prev) => append ? mergeById(prev, rows) : rows);
+        pageRef.current = nextPage;
+        cursorRef.current = body?.pagination?.cursor || null;
+        setTotal(null);
+        setHasMore(Boolean(body?.pagination?.has_next));
+        return;
+      }
       if (source === "r2") {
         if (!activeBucket) {
           setAssets([]); setTotal(null); setHasMore(false);
@@ -367,7 +420,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     } finally {
       if (ticket === requestRef.current) { setLoading(false); setLoadingMore(false); }
     }
-  }, [source, activeBucket, accountQs, localHost, localDirectory, surface.kind, query, intakeCollection]);
+  }, [source, activeBucket, accountQs, localHost, localDirectory, surface.kind, query, intakeCollection, driveAccountId]);
 
   useEffect(() => {
     if (!preferencesReady) return;
@@ -391,7 +444,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
   const viewing = viewerIndex >= 0 ? visible[viewerIndex] : null;
   const connectUrl = mediaConnectUrl(resources?.connect_url || resources?.reconnect_url, returnTo);
   // Only a truly missing connection takes the page; a missing permission is an inline banner so tabs and other sources stay usable.
-  const notConnected = source !== "local" && source !== "intake" && resources?.status === "not_connected";
+  const notConnected = source !== "local" && source !== "intake" && source !== "drive" && resources?.status === "not_connected";
 
   const counts = {
     cf_images: resources?.images?.count ?? null,
@@ -402,6 +455,7 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     { id: "cf_images", label: "Images", count: counts.cf_images },
     { id: "stream", label: "Videos", count: counts.stream },
     { id: "r2", label: "R2 buckets", count: counts.r2 },
+    { id: "drive", label: "Google Drive", count: null },
     { id: "local", label: "Local", count: source === "local" ? total : null },
     ...(intakeReady ? [{ id: "intake" as MediaSource, label: "Mac intake", count: intakeCounts[surface.kind] ?? (surface.kind === "all" ? Object.values(intakeCounts).reduce((a, b) => a + b, 0) : null) }] : []),
   ];
@@ -563,6 +617,21 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     setViewerIntent("details");
   };
 
+  const connectGoogleDrive = async () => {
+    setDriveConnecting(true);
+    try {
+      const result = await beginLocalStudioConnectorOAuth("google_drive", "/media?source=drive", {
+        ...(driveAccountId ? { connectionId: driveAccountId } : {}),
+        requestedScopes: ["https://www.googleapis.com/auth/drive.readonly"],
+      });
+      if (!result?.authorize_url) throw new Error("Google Drive authorization could not be started.");
+      window.location.assign(result.authorize_url);
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : "Google Drive authorization could not be started.");
+      setDriveConnecting(false);
+    }
+  };
+
   const selectedAssets = visible.filter((a) => selected.has(a.id));
   const openMediaItem = (id: string) => {
     const asset = visible.find((item) => item.id === id);
@@ -573,9 +642,11 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
     }
     showAsset(id);
   };
-  const subtitle = source === "intake" ? "Private Mac media index · read-only preview · nothing uploaded or published." : surface.kind === "all"
-    ? "Browse connected Cloudflare media or your local device—without copying files to the cloud."
-    : `Your Cloudflare ${surface.title.toLowerCase()}.`;
+  const selectedDriveAccount = driveAccounts.find((row) => row.id === driveAccountId);
+  const subtitle = source === "intake" ? "Private Mac media index · read-only preview · nothing uploaded or published."
+    : source === "drive" ? `Browse ${selectedDriveAccount?.accountLabel || selectedDriveAccount?.accountIdentifier || "your connected Google Drive"}. Original files stay in Drive.`
+      : surface.kind === "all" ? "Browse connected Cloudflare media or your local device—without copying files to the cloud."
+        : `Your Cloudflare ${surface.title.toLowerCase()}.`;
   const countLabel = total != null ? `${formatCount(total)} total` : `${formatCount(visible.length) ?? 0} shown`;
 
   return (
@@ -594,7 +665,16 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
               <span className="agentsam-media-options__label">Source & connection</span>
               {source === "local" || source === "intake"
                 ? <span className="agentsam-media-local-status"><FolderOpen size={14} /> {source === "intake" ? "Mac intake · local only" : "Local device"}</span>
-                : <ConnectionStatus resources={resources} bucketCount={buckets.length} connectUrl={connectUrl} />}
+                : source === "drive"
+                  ? <span className="agentsam-media-local-status">{driveAccounts.length ? "Google Drive connected" : driveStatusLoaded ? "Google Drive not connected" : "Checking Google Drive…"}</span>
+                  : <ConnectionStatus resources={resources} bucketCount={buckets.length} connectUrl={connectUrl} />}
+              {source === "drive" && driveAccounts.length > 1 ? (
+                <select className="agentsam-media-select" aria-label="Google Drive account" value={driveAccountId}
+                  onChange={(event) => setDriveAccountId(event.target.value)}>
+                  <option value="" disabled>Choose an account…</option>
+                  {driveAccounts.map((row) => <option key={row.id} value={row.id}>{row.accountLabel || row.accountIdentifier}</option>)}
+                </select>
+              ) : null}
               {accountChoices.length > 1 ? (
                 <select className="agentsam-media-select" aria-label="Cloudflare account" value={cfAccountId}
                   onChange={(event) => {
@@ -646,7 +726,38 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
         </div>
       </header>
 
-      {notConnected ? (
+      {source === "drive" && !driveStatusLoaded ? (
+        <div className="agentsam-media-body">
+          <div className="agentsam-media-state"><Loader2 size={18} className="agentsam-media-spin" /> Checking connected Google Drive accounts…</div>
+        </div>
+      ) : source === "drive" && driveStatusLoaded && driveAccounts.length > 1 && !driveAccountId ? (
+        <div className="agentsam-media-body">
+          <div className="agentsam-media-state">
+            <strong>Choose a Google Drive account</strong>
+            <p>Select the account whose media you want to browse. AgentSam will not choose between your connected accounts.</p>
+            <select className="agentsam-media-select" aria-label="Choose Google Drive account" value=""
+              onChange={(event) => setDriveAccountId(event.target.value)}>
+              <option value="" disabled>Select an account…</option>
+              {driveAccounts.map((row) => <option key={row.id} value={row.id}>{row.accountLabel || row.accountIdentifier}</option>)}
+            </select>
+          </div>
+        </div>
+      ) : source === "drive" && driveStatusLoaded && (driveAccounts.length === 0 || error?.kind === "reconnect") ? (
+        <div className="agentsam-media-body">
+          <div className="agentsam-media-state">
+            <strong>{driveAccounts.length ? "Google Drive permission needed" : "Connect Google Drive"}</strong>
+            <p>{error?.message || "Connect your Google account to browse its media. AgentSam requests read-only Drive access and leaves the original files in your account."}</p>
+            <div className="agentsam-media-connect-actions">
+              <button type="button" className="agentsam-media-btn is-primary" disabled={driveConnecting} onClick={() => void connectGoogleDrive()}>
+                {driveConnecting ? <Loader2 size={14} className="agentsam-media-spin" /> : null}
+                {driveAccounts.length ? "Grant read-only access" : "Connect Google Drive"}
+              </button>
+              <button type="button" className="agentsam-media-btn" onClick={() => chooseSource("cf_images")}>Cloudflare Images</button>
+            </div>
+            <div className="agentsam-media-settings-links"><a href="/admin/settings/customize?view=plugins">Connected apps</a></div>
+          </div>
+        </div>
+      ) : notConnected ? (
         <div className="agentsam-media-body">
           <div className="agentsam-media-state">
             <strong>Connect Cloudflare</strong>
@@ -767,13 +878,13 @@ function MediaLibraryBody({ surface, accountId, returnTo }: { surface: MediaSurf
             </div>
           </div>
 
-          {connectionError && source !== "local" && source !== "intake" ? (
+          {connectionError && source !== "local" && source !== "intake" && source !== "drive" ? (
             <div className="agentsam-media-banner is-error" role="status">
               <span>Cloudflare status could not be verified: {connectionError}. Your account authorization has not been cleared.</span>
               <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Retry</button>
             </div>
           ) : null}
-          {error?.kind === "reconnect" && source !== "local" && source !== "intake" ? (
+          {error?.kind === "reconnect" && source !== "local" && source !== "intake" && source !== "drive" ? (
             <div className="agentsam-media-banner" role="status">
               <span>{error.message}</span>
               <a className="agentsam-media-btn is-primary" href={error.connectUrl || connectUrl}>Grant permission</a>

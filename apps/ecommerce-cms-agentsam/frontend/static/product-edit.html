@@ -37,7 +37,7 @@ function productAdminFetch(path, options) {
 let availableCollections = [];
 let variantOriginals = new Map();
 let variantCount = 0;
-/** @type {{ id: number, url: string, filename?: string }[]} */
+/** @type {{ id: string, url: string, filename?: string, provider?: string, provider_account_id?: string, provider_resource_id?: string }[]} */
 let pendingImages = [];
 
 function slugify(text) {
@@ -221,7 +221,7 @@ renderShell("/admin/products", `
             <label>Media</label>
           </div>
           <p class="product-media-hint-new" id="media-new-hint" style="${isNew ? "" : "display:none"}">
-            Pick images from your R2 library (including Shopify imports) or upload new files. They attach when you save the product.
+            Pick images from your connected media library or upload new files. Provider originals stay in their accounts; product references are created when you attach them.
           </p>
           <div class="product-media-toolbar">
             <button type="button" class="btn primary small" id="browse-library-btn">Browse library</button>
@@ -443,11 +443,12 @@ function renderStagedGrid() {
   });
 }
 
-async function attachAssetsToProduct(assetIds) {
-  for (const id of assetIds) {
+async function attachAssetsToProduct(assets) {
+  for (const asset of assets) {
+    const value = typeof asset === "string" ? { id: asset } : asset;
     await productAdminFetch(`/api/admin/products/${productId}/images`, {
       method: "POST",
-      body: JSON.stringify({ media_asset_id: id }),
+      body: JSON.stringify({ media_asset_id: value.id, asset: value }),
     });
   }
 }
@@ -456,7 +457,6 @@ async function openBrowseLibrary() {
   const picked = await openMediaPicker({
     title: "Browse Media",
     multi: true,
-    source: "platform_registry",
     siteId: productSiteId,
   });
   if (!picked?.length) return;
@@ -464,7 +464,7 @@ async function openBrowseLibrary() {
   if (isNew) {
     for (const a of picked) {
       if (!pendingImages.some((p) => p.id === a.id)) {
-        pendingImages.push({ id: a.id, url: a.url, filename: a.filename });
+        pendingImages.push({ ...a });
       }
     }
     renderStagedGrid();
@@ -474,7 +474,7 @@ async function openBrowseLibrary() {
   }
 
   try {
-    await attachAssetsToProduct(picked.map((a) => a.id));
+    await attachAssetsToProduct(picked);
     imgNote(`Attached ${picked.length} image(s).`, "success");
     loadImages();
   } catch (err) {
@@ -630,7 +630,7 @@ async function uploadFiles(fileList) {
     if (isNew) {
       for (const asset of data.assets) {
         if (!pendingImages.some((p) => p.id === asset.id)) {
-          pendingImages.push({ id: asset.id, url: asset.url, filename: asset.filename });
+          pendingImages.push({ ...asset });
         }
       }
       renderStagedGrid();
@@ -640,7 +640,7 @@ async function uploadFiles(fileList) {
       return;
     }
 
-    await attachAssetsToProduct(data.assets.map((a) => a.id));
+    await attachAssetsToProduct(data.assets);
     imgNote(`Uploaded and attached ${data.assets.length} image(s).`, "success");
     loadImages();
   } catch (err) {
@@ -1137,7 +1137,7 @@ async function saveProduct() {
           pendingImages.map((p) =>
             productAdminFetch(`/api/admin/products/${newId}/images`, {
               method: "POST",
-              body: JSON.stringify({ media_asset_id: p.id }),
+              body: JSON.stringify({ media_asset_id: p.id, asset: p }),
             })
           )
         );

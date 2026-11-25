@@ -325,6 +325,28 @@ test('Drive reconnect retains the selected account full-drive permission instead
   assert.ok(scopes.includes('https://www.googleapis.com/auth/drive.file'));
   assert.ok(!scopes.includes('https://www.googleapis.com/auth/calendar.events'));
 });
+test('Google Drive can request catalog-approved read-only media access for a new connection',async()=>{
+  const e=env();
+  const old=e.DB.prepare.bind(e.DB);
+  e.DB.prepare=(sql)=>{
+    if(sql.includes('SELECT scope FROM agentsam_provider_scopes'))return {
+      all:async()=>({results:[
+        {scope:'https://www.googleapis.com/auth/drive.file'},
+        {scope:'https://www.googleapis.com/auth/drive.readonly'},
+      ]}),
+    };
+    return old(sql);
+  };
+  const response=await beginConnectorOAuth(post('/api/work/connect/google_drive/start',{
+    return_to:'/media?source=drive',
+    requested_scopes:['https://www.googleapis.com/auth/drive.readonly'],
+  }),e,'au_test','google_drive');
+  assert.equal(response.status,200);
+  const data=await response.json();
+  const scopes=new URL(data.authorize_url).searchParams.get('scope').split(' ');
+  assert.deepEqual(scopes,['https://www.googleapis.com/auth/drive.readonly']);
+});
+
 test('OAuth account mismatch cannot inherit unrelated provider permissions',async()=>{
   const response=await beginConnectorOAuth(post('/api/work/connect/google_drive/start',{
     connection_id:'github:connected@example.com',
