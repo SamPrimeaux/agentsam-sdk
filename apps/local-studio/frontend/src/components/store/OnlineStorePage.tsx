@@ -78,7 +78,7 @@ function InAppLink({ to, className, children }: { to: string; className?: string
   return <a href={to} onClick={onClick} className={className}>{children}</a>;
 }
 
-const pill = 'inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted';
+const pill = 'inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted';
 const primary = 'border-transparent bg-primary text-primary-foreground hover:bg-primary/90';
 
 function formatSaved(value?: string) {
@@ -159,12 +159,13 @@ function DraftRow({ theme, siteId, onPublished }: { theme: StoreTheme; siteId: s
 
   return (
     <li className="flex flex-col gap-3 border-b border-border px-4 py-4 last:border-b-0">
-      <div className="flex items-center gap-4">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:flex sm:gap-4">
         <DraftPreview theme={theme} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{theme.name || 'Untitled theme'}</p>
+          <p className="break-words text-sm font-semibold text-foreground">{theme.name || 'Untitled theme'}</p>
           <p className="mt-1 text-xs text-muted-foreground">{saved ? `Last saved: ${saved}` : 'Not saved yet'}{version ? ` · v${version}` : ''}</p>
         </div>
+        <div className="col-span-2 flex flex-wrap items-center gap-2 sm:ml-auto sm:shrink-0">
         {canPublish && <Button variant="outline" size="sm" onClick={() => setConfirming(true)} disabled={busy}>Publish</Button>}
         {edit && <InAppLink to={edit} className={cn(pill, 'h-8', primary)}>Edit theme</InAppLink>}
         {theme.preview_url && (
@@ -177,6 +178,7 @@ function DraftRow({ theme, siteId, onPublished }: { theme: StoreTheme; siteId: s
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        </div>
       </div>
       {confirming && (
         <div role="alertdialog" aria-label="Publish theme" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted px-4 py-3">
@@ -219,7 +221,7 @@ function DiscoverCard({ theme, siteId }: { theme: MarketTheme; siteId: string })
     : <div className="flex h-full items-center justify-center text-3xl font-semibold text-muted-foreground" aria-hidden="true">{(theme.name || theme.slug).charAt(0).toUpperCase()}</div>;
   return (
     <li className="flex flex-col gap-3">
-      <div className="aspect-[4/5] overflow-hidden rounded-xl border border-border bg-muted">
+      <div className="aspect-[16/10] sm:aspect-[4/5] overflow-hidden rounded-xl border border-border bg-muted">
         {preview
           ? <a href={preview} target="_blank" rel="noopener noreferrer" aria-label={`Preview ${theme.name || theme.slug}`} className="block h-full w-full">{visual}</a>
           : visual}
@@ -304,7 +306,7 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
 
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-8">
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-6 sm:py-8">
       <h1 className="sr-only">Online Store</h1>
 
       <section aria-label="Current theme" className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -325,9 +327,9 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
       </section>
 
       <section aria-label="Draft themes">
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Draft themes</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {createTheme && <InAppLink to={createTheme} className={cn(pill, primary)}><Plus className="size-4" aria-hidden="true" />New theme</InAppLink>}
             <a href="#discover-themes" className={pill}>Discover themes</a>
           </div>
@@ -340,14 +342,14 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
       </section>
 
       <section id="discover-themes" aria-label="Discover themes">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Discover themes</h2>
           <a className={pill} href={THEME_STORE + '/'} target="_blank" rel="noopener noreferrer">Visit Theme Store <ExternalLink className="size-3.5" aria-hidden="true" /></a>
         </div>
         {market === null
           ? <p role="status" className="text-sm text-muted-foreground">Loading themes…</p>
           : market.length
-            ? <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{market.map(theme => <DiscoverCard key={theme.slug} theme={theme} siteId={selectedId} />)}</ul>
+            ? <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{market.map(theme => <DiscoverCard key={theme.slug} theme={theme} siteId={selectedId} />)}</ul>
             : <p className="text-sm text-muted-foreground">Themes couldn’t be loaded right now. Visit the Theme Store to browse them.</p>}
       </section>
     </div>
