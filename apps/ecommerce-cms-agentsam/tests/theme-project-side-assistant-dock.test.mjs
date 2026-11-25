@@ -115,12 +115,16 @@ test("hosted phone Theme Studio restores the shared dock instead of blocking the
   assert.doesNotMatch(dock.html, /agentsam-backdrop/);
 });
 
-test("mobile composer and history share the same existing dock and form", () => {
-  const {dock}=simulate({embedded:true,wide:false});
-  assert.match(dock.html,/data-mobile-assistant="history"/);
-  assert.match(dock.html,/data-mobile-assistant="layers"/);
-  assert.equal((dock.html.match(/id="agentsam-form"/g)||[]).length,1);
-  assert.equal((dock.html.match(/id="agentsam-messages"/g)||[]).length,1);
-  assert.match(css,/--agentsam-keyboard-inset/);
-  assert.match(css,/data-mobile-pane="settings"[\s\S]*?\.agentsam-dock \{display:none!important/);
+test("mobile compact composer, page structure and explicit conversation expansion share one dock", () => {
+  const { dock } = simulate({ embedded: true, wide: false });
+  assert.match(dock.html, /agentsam-mobile-controls agentsam-compact-toolbar/);
+  assert.match(dock.html, /data-mobile-assistant="layers"/);
+  assert.match(dock.html, /data-assistant-action="Expand" class="agentsam-compact-expand"/);
+  assert.match(dock.html, /id="agentsam-compact-status" aria-live="polite"/);
+  assert.equal((dock.html.match(/id="agentsam-form"/g) || []).length, 1);
+  assert.equal((dock.html.match(/id="agentsam-messages"/g) || []).length, 1);
+  assert.match(css, /--agentsam-keyboard-inset/);
+  assert.match(css, /data-mobile-pane="settings"[\s\S]*?\.agentsam-dock \{display:none!important/);
+  assert.match(css, /not\(\.agentsam-focus-mode\) \.agentsam-drawer > :is\(\.agentsam-head,\.agentsam-messages,\.agentsam-mcp\)\s*\{\s*display:none/);
+  assert.match(source, /if \(drawerRequestActive\) \{ activeDrawerAbort\?\.abort\(\); return; \}/);
 });
