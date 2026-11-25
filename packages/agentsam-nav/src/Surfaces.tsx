@@ -57,15 +57,15 @@ function MenuActions({ actions }: { actions: NavAction[] }) {
 }
 
 /** The portal carries its own theme, so standalone surfaces never depend on body CSS. */
-export function NavOverflowMenu({ label = 'More options', actions = [], children, id: suppliedId, align = 'end' }: { label?: string; actions?: NavAction[]; children?: ReactNode; id?: string; align?: 'start' | 'center' | 'end' }) {
+export function NavOverflowMenu({ label = 'More options', actions = [], children, id: suppliedId, align = 'end', heading, conversationMobile = false }: { label?: string; actions?: NavAction[]; children?: ReactNode; id?: string; align?: 'start' | 'center' | 'end'; heading?: string; conversationMobile?: boolean }) {
   const { menu, setMenu, theme } = useNav();
   const generatedId = useId();
   const id = suppliedId ?? generatedId;
   const style = useNavStyle();
   return <Menu.Root open={menu === id} onOpenChange={(open) => setMenu(open ? id : null)}>
     <Menu.Trigger asChild><button type="button" className="as-nav-button" aria-label={label} title={label}>{children ?? <MoreHorizontal />}</button></Menu.Trigger>
-    <Menu.Portal><Menu.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover" align={align} sideOffset={8} collisionPadding={12}>
-      <Menu.Label className="as-nav-menu-heading">{label}</Menu.Label>
+    <Menu.Portal><Menu.Content data-nav-theme={theme} style={style} className={cx("as-nav-scope as-nav-popover", conversationMobile && "as-nav-conversation-mobile-menu")} align={align} sideOffset={conversationMobile ? -40 : 8} collisionPadding={12}>
+      <Menu.Label className="as-nav-menu-heading">{heading ?? label}</Menu.Label>
       {actions.length ? <MenuActions actions={actions} /> : <div className="as-nav-empty">No actions available</div>}
     </Menu.Content></Menu.Portal>
   </Menu.Root>;
@@ -207,7 +207,7 @@ export function NavShareIcon() {
 }
 
 /** One action contract for the topbar, fallback header, and independent consumers. */
-export function NavConversationActions({ additionalActions = [] }: { additionalActions?: NavAction[] } = {}) {
+export function NavConversationActions({ additionalActions = [], mobile = false }: { additionalActions?: NavAction[]; mobile?: boolean } = {}) {
   const { data } = useNav();
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -231,8 +231,16 @@ export function NavConversationActions({ additionalActions = [] }: { additionalA
       ...(conversation.projectId ? [{ id: 'project-clear', label: 'Remove from project', separatorBefore: true, onSelect: () => data.onAssignConversationToProject?.(conversation.id, null) }] : []),
     ],
   });
+  const mobileOrder = ['share-chat', 'pin', 'project', 'plugins', 'lock-chat', 'uploaded-files', 'find-chat', 'rename', 'workspace-actions', 'copy', 'archive', 'delete'];
+  if (mobile && data.onShare) add({ id: 'share-chat', label: 'Share', icon: <NavShareIcon />, onSelect: data.onShare });
+  const displayedActions = mobile ? [...actions].sort((a,b) => {
+    const rank = (id: string) => mobileOrder.includes(id) ? mobileOrder.indexOf(id) : 9;
+    return rank(a.id) - rank(b.id);
+  }).map(action => ({ ...action, separatorBefore: false,
+    label: action.id === 'project' ? 'Add to project' : action.id === 'share-chat' ? 'Share' : action.label,
+  })) : actions;
   return <>
-    <NavOverflowMenu id="active-conversation-actions" label="Conversation options" actions={actions} />
+    <NavOverflowMenu id="active-conversation-actions" label="Conversation options" heading={mobile ? conversation.title : undefined} conversationMobile={mobile} actions={displayedActions} />
     {data.onRenameConversation ? <RenameDialog open={renaming} onOpenChange={setRenaming} title="Rename conversation" value={conversation.title} onSave={title => data.onRenameConversation?.(conversation.id, title)} /> : null}
     {data.onDeleteConversation ? <ConfirmDeleteDialog open={deleting} onOpenChange={setDeleting} title={conversation.title} onConfirm={() => data.onDeleteConversation?.(conversation.id)} /> : null}
   </>;
