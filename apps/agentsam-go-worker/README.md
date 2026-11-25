@@ -53,7 +53,7 @@ The InnerAnimalMedia production registry path is a separate maintainer-only auth
       --account <iam-cloudflare-account-id> \
       --yes
 
-Only this guarded path may project a healthy official deployment into inneranimalmedia-business / agentsam_products / asset_relationships.
+Only this guarded path may project a healthy official deployment into inneranimalmedia-business / products / asset_relationships.
 
 ## Distribution isolation
 

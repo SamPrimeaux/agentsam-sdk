@@ -1,6 +1,8 @@
 # AgentSam apps
 
-`apps/` is the development/authoring source of truth for runnable AgentSam product surfaces. Product apps are independently extractable and are intentionally **not** members of the SDK root npm workspace graph.
+`apps/` is the primary development/authoring source for AgentSam product surfaces. Canonical application identity is declared by `agentsam.app.json` and discovered across both `apps/` and `packages/`; not every directory, npm package, module, or app manifest is independently installable or release-ready. The SDK root owns package/tooling release concerns; product app workspaces remain independently managed where their package contract requires it.
+
+**Current source inventory:** [AGENTSAM_APPLICATION_INVENTORY.md](../docs/architecture/AGENTSAM_APPLICATION_INVENTORY.md). Run `npm run app:inventory` in this checkout for a live source-derived report; the global `agentsam app inventory` command becomes available after the next CLI release.
 
 **Lifecycle SSOT (validate → machine → prove → graduate → install):** [`docs/PRODUCT_LIFECYCLE.md`](../docs/PRODUCT_LIFECYCLE.md).  
 Use that doc for product map, graduation gates, scaffold vocabulary, old-school SAM + LLM layering, and how Identity/Desktop/Database lanes must stay extractable for resale.
@@ -9,7 +11,7 @@ Use that doc for product map, graduation gates, scaffold vocabulary, old-school 
 
 ## Product app law
 
-Every deployable product app follows the same ownership boundary:
+The following is the target ownership boundary for an independently deployable product app; it is not a claim that every current app already meets every gate:
 
 ```text
 apps/<app>/
@@ -36,7 +38,9 @@ Rules:
 - `shared/<domain>/` is app-local shared code. Promote code to `packages/*` only when it is genuinely SDK-wide/reusable.
 - The SDK root owns package/tooling release concerns; app workspace dependencies stay inside each app.
 
-Current product apps governed by the architecture test are `local-studio/` and `cad-creator/`. `frontend/` remains a public-site seed lane rather than a self-contained product workspace, and `_incoming/` is an import drop zone.
+The current source inventory contains seven `agentsam.app.json` identities. The self-contained workspace contract in `test/apps-scaffold-contract.test.mjs` currently covers only `local-studio/` and `cad-creator/`; that test scope is not the complete app catalog. The separate `npm run app:boundaries` scan covers top-level app source directories, not only manifest identities. GoalGuru is package-owned at `packages/agentsam-goalguru/`. Embedded modules and providers use `agentsam.package.json` and are not independent apps. `frontend/` remains a public-site seed lane rather than a self-contained product workspace, and `_incoming/` is an import drop zone.
+
+`agentsam app list` lists app-manifest identities only. It does not assert that those identities are independently installable, published, deployed, or healthy. Use `agentsam app inventory` to inspect app identities, modules, provider integrations, supporting packages, and implementation package families together.
 
 ## Portable packaging checklist
 

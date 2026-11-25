@@ -12,7 +12,13 @@
       "role": "app-icon",
       "alt": "AgentSam SDK official application icon",
       "caption": "Official AgentSam SDK application icon",
-      "tags": ["agentsam-sdk", "application", "brand", "icon", "official"],
+      "tags": [
+        "agentsam-sdk",
+        "application",
+        "brand",
+        "icon",
+        "official"
+      ],
       "source": "user-confirmed Cloudflare Images delivery URL",
       "delivery_variant": "thumbnail",
       "review_status": "source-id-confirmed"
@@ -21,8 +27,16 @@
       "cloudflare_image_id": "a39b5154-8b51-4efa-4b71-6a97a37ff900",
       "role": "desktop-screenshot",
       "alt": "AgentSam Local Studio dark desktop interface with workspace and code editor",
-      "caption": "AgentSam Local Studio — dark workspace interface",
-      "tags": ["agentsam-sdk", "local-studio", "desktop", "dark", "workspace", "code-editor", "product-preview"],
+      "caption": "AgentSam Local Studio \u2014 dark workspace interface",
+      "tags": [
+        "agentsam-sdk",
+        "local-studio",
+        "desktop",
+        "dark",
+        "workspace",
+        "code-editor",
+        "product-preview"
+      ],
       "source": "user-confirmed Cloudflare Images delivery URL",
       "delivery_variant": "medium",
       "review_status": "source-id-confirmed"
@@ -38,16 +52,23 @@
     "desktop_build_id": null,
     "hosted_build_id": null,
     "parity_status": "requires-verification",
-    "environments": ["desktop", "hosted"],
+    "environments": [
+      "desktop",
+      "hosted"
+    ],
     "note": "Desktop and hosted surfaces are separate build inventories; never infer parity from shared UI."
   },
   "storage_policy": {
     "assets_authority": "cms_assets",
-    "catalog_authority": "agentsam_products",
+    "catalog_authority": "products",
     "generated_artifacts_authority": "agentsam_artifacts",
     "media_reference": "Cloudflare Images ID",
-    "deduplicate_by": ["cloudflare_image_id", "content_hash"],
+    "deduplicate_by": [
+      "cloudflare_image_id",
+      "content_hash"
+    ],
     "preserve_original": true
   },
-  "status": "draft_not_published"
+  "status": "draft_not_published",
+  "catalog_authority": "products"
 }

@@ -221,7 +221,7 @@ export async function verifyStorefrontPassword(env, password, context = {}) {
 
 async function resolveThemes(env, accountId = null) {
   // The installed theme inventory resolves from cms_artifacts and cms_globals.
-  // Never fall back to agentsam_products or a second theme-state family.
+  // Never fall back to a second product registry or a second theme-state family.
   return listStoreThemes(env, accountId);
 }
 

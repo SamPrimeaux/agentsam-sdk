@@ -38,7 +38,7 @@ export function writeProductValidationLocal(productRoot, row) {
   const file = path.join(dir, 'product.validation-registry.json');
   const payload = {
     schema: 'agentsam.product-validation-registry.v1',
-    registry: 'agentsam_products',
+    registry: 'products',
     authority: 'local_validation',
     row,
     written_at: new Date().toISOString(),
@@ -52,7 +52,7 @@ export function writeProductRegistryLocal(productRoot, row) {
   const file = path.join(dir, 'product.registry.json');
   const payload = {
     schema: 'agentsam.product-local-registry.v1',
-    registry: 'agentsam_products',
+    registry: 'products',
     note: 'Local AgentSam projection. InnerAnimalMedia D1 registration is a separate explicit official-release operation.',
     row,
     written_at: new Date().toISOString(),
@@ -89,21 +89,34 @@ export function buildProductRow({
   cloudflareAccount = null,
   url,
   health,
+  lifecycleStatus = null,
   workerDeploymentId = null,
   workerVersionId = null,
   artifactDigest = null,
   containerDigest = null,
 }) {
+  const resolvedLifecycleStatus = lifecycleStatus || (health === 'healthy'
+    ? 'production'
+    : health === 'pending'
+      ? 'scaffolded'
+      : 'wired');
   return {
     slug: product,
-    kind: 'service',
-    name: product,
-    status: health === 'healthy' ? 'deployed' : (health === 'pending' ? 'built' : 'degraded'),
+    title: product,
+    product_kind: 'service',
+    digital_ref: product,
+    catalog_kind: 'service',
+    lifecycle_status: resolvedLifecycleStatus,
+    status: 'draft',
+    display_name: product,
+    catalog_visibility: 'internal',
+    sku: 'IA-SVC-' + String(product).toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, ''),
     repository_id: repositoryId || null,
     canonical_path: 'apps/agentsam-go-worker',
     package_name: packageName,
     version: packageVersion,
-    metadata: {
+    tags_json: ['go', 'cloudflare', 'runtime'],
+    metadata_json: {
       runtime: 'go',
       deployment: {
         provider: 'cloudflare',

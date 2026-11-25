@@ -1,3 +1,4 @@
+import { buildAppInventory, formatAppInventory } from './app-inventory.js';
 import { evidenceStorageProblems } from '../sam/packs/evidence/endpoint.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -395,6 +396,7 @@ export async function runApp(argv = [], options = {}) {
   if (command === '--help' || command === '-h' || command === 'help') {
     write([
       'agentsam app list',
+      'agentsam app inventory [--json] [--packages]',
       'agentsam app info <id>',
       'agentsam app inspect <id>',
       'agentsam app validate [--all|<id>]',
@@ -408,10 +410,21 @@ export async function runApp(argv = [], options = {}) {
     return;
   }
 
+  if (command === 'inventory') {
+    const inventory = buildAppInventory(resolveSourceRoot(options));
+    const args = [appId, ...rest].filter(Boolean);
+    if (args.includes('--json')) {
+      write(JSON.stringify(inventory, null, 2) + '\n');
+    } else {
+      write(formatAppInventory(inventory, { allPackages: args.includes('--packages') }));
+    }
+    return inventory;
+  }
+
   if (command === 'list') {
     const sourceRoot = resolveSourceRoot(options);
     const apps = listAppManifests(sourceRoot);
-    write('\n  AgentSam apps\n\n');
+    write('\n  AgentSam apps (manifest-registered identities)\n\n');
     for (const app of apps) {
       write(`  • ${app.id.padEnd(24)} ${app.name}\n`);
     }
@@ -419,7 +432,7 @@ export async function runApp(argv = [], options = {}) {
       write(`  No app manifests found under ${sourceRoot}.\n`);
       write('  Run this inside an agentsam-sdk checkout (apps/*/agentsam.app.json).\n');
     }
-    write('\n');
+    write('\n  Source manifest discovery only; this is not an installability or release check.\n\n');
     return apps;
   }
 
@@ -488,7 +501,7 @@ export async function runApp(argv = [], options = {}) {
 }
 
 export function appCommandHelp() {
-  return 'agentsam app list|info|inspect|validate|install|doctor|preview|scaffold';
+  return 'agentsam app list|inventory|info|inspect|validate|install|doctor|preview|scaffold';
 }
 
 export { clean };

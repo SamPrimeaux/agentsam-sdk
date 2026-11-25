@@ -171,14 +171,17 @@
         "dependencies": [
           "cms_sites",
           "accounts",
-          "agentsam_products",
+          "products",
           "agentsam_product_releases"
         ],
         "storage": "host-resolved-manifest-pointers",
         "scope": "account-and-site",
         "installed_theme_identity": "cms_site_themes",
         "appearance_theme_identity": "cms_themes",
-        "legacy_project_compatibility": "cms_globals"
+        "legacy_project_compatibility": "cms_globals",
+        "canonical_follow_up_migration": "apps/local-studio/backend/migrations/1384_db_driven_apps_products.sql",
+        "source_product_reference": "products.id",
+        "legacy_source_product_reference": "agentsam_products.id (pre-1384 only)"
       }
     },
     {

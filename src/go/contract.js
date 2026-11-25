@@ -31,7 +31,7 @@ const PACKAGE_TEMPLATE = {
     slug: DEFAULT_PRODUCT,
     kind: 'service',
     registry: 'local-by-default',
-    official_registry: 'agentsam_products',
+    official_registry: 'products',
     official_registry_only: true,
   },
 };

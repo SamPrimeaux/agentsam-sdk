@@ -65,7 +65,7 @@ A self-host operation never writes inneranimalmedia-business.
              │
              ▼
     inneranimalmedia-business
-    agentsam_products
+    products
     asset_relationships
 
 The official registry path is not imported as the default meaning of deploy.

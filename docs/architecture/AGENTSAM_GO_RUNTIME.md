@@ -192,7 +192,7 @@ Requirements:
 - explicit InnerAnimalMedia Cloudflare account,
 - healthy live probes,
 - deployment/version identity,
-- only then remote agentsam_products and asset_relationships projection.
+- only then remote products and asset_relationships projection.
 
 The InnerAnimalMedia D1 adapter lives in official-registry.js specifically so generic self-host deployment does not import InnerAnimalMedia registration as a default side effect.
 

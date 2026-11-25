@@ -4,7 +4,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { SDK_ROOT } from './discover.js';
-import { writeProductRegistryLocal } from './receipts.js';
+import { buildProductRow, writeProductRegistryLocal } from './receipts.js';
 import { innerAnimalMediaOfficialReleaseEnabled } from './official-release.js';
 
 const DEFAULT_DB = 'inneranimalmedia-business';
@@ -23,7 +23,7 @@ function json(value) {
 
 export function buildGoProductRegistrySql({
   product = 'agentsam-go-worker',
-  status = 'deployed',
+  status = 'production',
   version = '0.1.0',
   repositoryId = DEFAULT_REPOSITORY_ID,
   canonicalPath = 'apps/agentsam-go-worker',
@@ -37,6 +37,7 @@ export function buildGoProductRegistrySql({
   containerDigest = null,
   description = 'AgentSam Go runtime (Worker edge + native Cloudflare Container)',
 } = {}) {
+  const sku = 'IA-SVC-' + String(product).toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
   const metadata = {
     runtime: 'go',
     origin: 'agentsam.go.cloudflare',
@@ -61,35 +62,48 @@ export function buildGoProductRegistrySql({
     ],
   };
 
+
   const statements = [];
   statements.push(
-    `INSERT INTO agentsam_products (
-  slug, name, kind, status, description, repository_id, canonical_path, package_name, version, tags, metadata, updated_at
+    `INSERT INTO products (
+  slug, title, product_kind, digital_ref, catalog_kind, lifecycle_status, status,
+  description, repository_id, canonical_path, package_name, version,
+  display_name, sku, tags_json, metadata_json, catalog_visibility, updated_at
 ) VALUES (
   ${quote(product)},
   ${quote(product)},
   'service',
+  ${quote(product)},
+  'service',
   ${quote(status)},
+  'draft',
   ${quote(description)},
   ${quote(repositoryId)},
   ${quote(canonicalPath)},
   ${quote(packageName)},
   ${quote(version)},
+  ${quote(product)},
+  ${quote(sku)},
   ${quote(json(['go', 'cloudflare', 'runtime']))},
   ${quote(json(metadata))},
-  unixepoch()
+  'internal',
+  datetime('now')
 )
 ON CONFLICT(slug) DO UPDATE SET
-  name = excluded.name,
-  kind = excluded.kind,
-  status = excluded.status,
+  title = excluded.title,
+  product_kind = excluded.product_kind,
+  digital_ref = excluded.digital_ref,
+  catalog_kind = excluded.catalog_kind,
+  lifecycle_status = excluded.lifecycle_status,
   description = excluded.description,
-  repository_id = COALESCE(excluded.repository_id, agentsam_products.repository_id),
+  repository_id = COALESCE(excluded.repository_id, products.repository_id),
   canonical_path = excluded.canonical_path,
   package_name = excluded.package_name,
   version = excluded.version,
-  tags = excluded.tags,
-  metadata = excluded.metadata,
+  display_name = excluded.display_name,
+  sku = excluded.sku,
+  tags_json = excluded.tags_json,
+  metadata_json = excluded.metadata_json,
   updated_at = excluded.updated_at;`,
   );
 
@@ -131,8 +145,8 @@ ON CONFLICT(slug) DO UPDATE SET
   for (const rel of relationships) {
     statements.push(
       `INSERT INTO asset_relationships (source_type, source_id, target_type, target_id, relationship_type, metadata)
-SELECT 'agentsam_product', p.id, ${quote(rel.target_type)}, ${quote(rel.target_id)}, ${quote(rel.relationship_type)}, ${quote(json(rel.metadata))}
-FROM agentsam_products p WHERE p.slug = ${quote(product)}
+SELECT 'product', CAST(p.id AS TEXT), ${quote(rel.target_type)}, ${quote(rel.target_id)}, ${quote(rel.relationship_type)}, ${quote(json(rel.metadata))}
+FROM products p WHERE p.slug = ${quote(product)}
 ON CONFLICT(source_type, source_id, target_type, target_id, relationship_type)
 DO UPDATE SET metadata = excluded.metadata;`,
     );
@@ -190,29 +204,20 @@ export function applyInnerAnimalMediaOfficialGoProductRegistry({
     repositoryId,
   });
 
-  const localRow = {
-    slug: product,
-    kind: 'service',
-    name: product,
-    status: officialStatus,
-    repository_id: repositoryId,
-    canonical_path: 'apps/agentsam-go-worker',
-    package_name: '@inneranimalmedia/agentsam-go-worker',
-    metadata: {
-      runtime: 'go',
-      deployment: {
-        provider: 'cloudflare',
-        mode: 'worker-container',
-        url,
-        health,
-        worker_deployment_id: workerDeploymentId,
-        worker_version_id: workerVersionId,
-        artifact_digest: artifactDigest,
-        container_image_digest: containerDigest,
-      },
-      source: { commit },
-    },
-  };
+  const localRow = buildProductRow({
+    product,
+    repositoryId,
+    commit,
+    lifecycleStatus: officialStatus,
+    packageName: '@inneranimalmedia/agentsam-go-worker',
+    packageVersion: '0.1.0',
+    url,
+    health,
+    workerDeploymentId,
+    workerVersionId,
+    artifactDigest,
+    containerDigest,
+  });
   const localPath = productRoot ? writeProductRegistryLocal(productRoot, localRow) : null;
 
   if (dryRun || skipRemote) {

@@ -96,7 +96,10 @@ test("each duplicate is its own draft site with a cms_site_themes row; saves syn
   );
   try {
     sqlite.exec(`
+      -- Historical migration 005 creates this legacy FK target. Runtime catalog
+      -- lookups use products; production migration 1384 rekeys source_product_id.
       CREATE TABLE IF NOT EXISTS agentsam_products(id TEXT PRIMARY KEY, slug TEXT, kind TEXT);
+      CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY, slug TEXT, product_kind TEXT, catalog_kind TEXT);
       CREATE TABLE IF NOT EXISTS agentsam_product_releases(id TEXT PRIMARY KEY, product_id TEXT, version TEXT);
       INSERT INTO accounts(id) VALUES ('acct-a'),('acct-other');
       INSERT INTO cms_sites(id,account_id,name,slug,status,is_default,settings_json)

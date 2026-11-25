@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { runApp, findCheckoutRoot } from '../src/commands/app.js';
+import { runApp, findCheckoutRoot } from '../../src/commands/app.js';
 
 function fakeCheckout() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-checkout-'));
