@@ -3148,9 +3148,10 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     position:relative;
     z-index:4;
     padding:0 15px 8px;
-    background:#fff;
+    background:var(--te-panel);
+    color:var(--te-text);
     border-radius:18px 18px 0 0;
-    border-bottom:1px solid #ecebf0;
+    border-bottom:1px solid var(--te-border);
   }
   .theme-studio .te-mobile-sheet-grip {
     display:flex;
@@ -3178,7 +3179,7 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     height:34px;
     font-size:14px;
     font-weight:700;
-    color:#22232a;
+    color:var(--te-text);
   }
   .theme-studio .te-mobile-sheet-head__row>div {display:flex;gap:6px;align-items:center;}
   .theme-studio .te-mobile-sheet-head__row button {
@@ -3188,11 +3189,11 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     border:0;
     border-radius:8px;
     background:transparent;
-    color:#55525f;
+    color:var(--te-muted);
     font-size:18px;
     cursor:pointer;
   }
-  .theme-studio .te-mobile-sheet-head__row button:hover {background:#f0edf7;}
+  .theme-studio .te-mobile-sheet-head__row button:hover {background:var(--te-soft);}
   .theme-studio .te-drawer-panel {
     display:block;
     flex:1 1 auto;
@@ -4307,3 +4308,47 @@ dialog.te-section-menu :is(button,input):focus-visible {
 .te-theme-start__progress::before{content:"";position:absolute;left:13px;top:50%;width:10px;height:10px;transform:translateY(-50%);border:2px solid var(--te-border,#41464a);border-top-color:var(--te-accent,#63d4d5);border-radius:50%;animation:te-theme-start-spin 1s linear infinite}
 @keyframes te-theme-start-spin{to{transform:translateY(-50%) rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.te-theme-start__progress::before{animation:none}}
+
+/* The expanded assistant owns the composer while open; the selection portal
+   remains mounted so its context is preserved when the drawer closes. */
+body.agentsam-open [data-mini-agentsam] { display:none!important; }
+.theme-studio .te-rich-toolbar { background:var(--te-soft); border-color:var(--te-border); }
+.theme-studio .te-rich-toolbar button { color:var(--te-text); }
+.theme-studio .te-rich-toolbar button:hover { background:var(--te-accent-soft); }
+.theme-studio .te-rich-input { background:var(--te-panel); color:var(--te-text); border-color:var(--te-border); }
+.theme-studio .te-mobile-selection-bar { background:var(--te-panel); color:var(--te-text); border-color:var(--te-border); }
+.theme-studio .te-mobile-selection-bar button { color:var(--te-accent); }
+
+/* Mobile state layout: the same editor tree, inspector and commands, with one
+   visible contextual surface. Desktop rules are unchanged. */
+@media (max-width:900px) {
+  body.shell-mode-theme-editor .theme-studio,.theme-studio {grid-template-rows:60px minmax(0,1fr);}
+  .theme-studio .theme-studio-toolbar {height:60px;min-height:60px;max-height:60px;grid-template-columns:44px minmax(0,1fr) auto;grid-template-rows:60px;gap:8px;padding-inline:10px;}
+  .theme-studio .theme-studio-toolbar__left {width:44px;}
+  .theme-studio .theme-studio-toolbar__left [data-drawer-mode="sections"],.theme-studio .theme-studio-toolbar__right #agentsam-toggle {display:none;}
+  .theme-studio .theme-studio-toolbar__left #te-exit,.theme-studio .theme-studio-toolbar__right .te-icon-btn {width:44px;min-width:44px;height:44px;flex:0 0 44px;border-radius:999px;}
+  .theme-studio .te-page-trigger {height:44px;border-radius:999px;padding-inline:12px;}
+  .theme-studio .theme-studio-toolbar__right {gap:6px;}
+  .theme-studio .theme-studio-toolbar__right #te-undo,.theme-studio .theme-studio-toolbar__right #te-redo,.theme-studio .te-save-actions {display:none;}
+  .theme-studio[data-mobile-pane="settings"] .theme-studio-toolbar,.theme-studio[data-draft-dirty="true"] .theme-studio-toolbar {grid-template-columns:44px minmax(0,1fr) auto;}
+  .theme-studio[data-mobile-pane="settings"] .theme-studio-toolbar__right #te-undo,.theme-studio[data-mobile-pane="settings"] .theme-studio-toolbar__right #te-redo,.theme-studio[data-mobile-pane="settings"] .te-save-actions,.theme-studio[data-draft-dirty="true"] .te-save-actions {display:flex;}
+  .theme-studio[data-mobile-pane="settings"] .te-page-menu {display:none;}
+  .theme-studio .te-save-actions>#te-save {height:44px;min-width:56px;border-radius:999px;padding-inline:12px;}
+  .theme-studio .te-save-caret {display:none;}
+  .theme-studio .te-preview-bar:not(:has(#te-import-live:not([hidden]))) {display:none;}
+  .theme-studio[data-mobile-pane="sections"] .theme-studio-tree {inset:0!important;height:100%!important;max-height:100%!important;border-radius:0!important;background:var(--te-panel);border:0;}
+  .theme-studio[data-mobile-pane="sections"] .te-mobile-sheet-grip,.theme-studio[data-mobile-pane="sections"] [data-sheet-expand="sections"] {display:none;}
+  .theme-studio[data-mobile-pane="sections"] .te-mobile-sheet-head {padding:8px 14px;border-radius:0;}
+  .theme-studio .te-mobile-sheet-head__row {min-height:44px;height:auto;font-size:16px;}
+  .theme-studio .te-mobile-sheet-head__row button {width:44px;height:44px;border-radius:999px;}
+  .theme-studio .te-tree-row__main,.theme-studio .te-field-row__main,.theme-studio .te-block-row__main {min-height:48px;}
+  .theme-studio .te-editor-panel,.theme-studio .theme-editor-panel {background:var(--te-panel);border-color:var(--te-border);padding-bottom:env(safe-area-inset-bottom,0px)!important;}
+  .theme-studio .te-mobile-selection-bar {display:none;}
+  .theme-studio[data-mobile-pane="preview"]:not([data-mini-open="true"]) .te-mobile-selection-bar {display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:4px;padding:4px;left:12px;right:12px;border-radius:28px;}
+  .theme-studio .te-mobile-selection-bar button {min-height:48px;height:48px;border-radius:24px;padding-inline:8px;gap:8px;color:var(--te-text);}
+  .theme-studio .te-mobile-selection-bar #te-mobile-layers,.theme-studio .te-mobile-selection-bar #te-mobile-assistant {justify-content:center;background:var(--te-soft);}
+  .theme-studio .te-mobile-selection-bar #te-mobile-selection-label {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .theme-studio .te-mobile-selection-bar #te-mobile-edit-selection>span:last-child {color:var(--te-accent);flex-shrink:0;}
+  body.agentsam-open .theme-studio .te-mobile-selection-bar {display:none!important;}
+  #te-more-menu .te-mobile-more-entry {min-height:44px;}
+}
