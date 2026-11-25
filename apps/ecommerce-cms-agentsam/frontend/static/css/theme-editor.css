@@ -3148,9 +3148,10 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     position:relative;
     z-index:4;
     padding:0 15px 8px;
-    background:#fff;
+    background:var(--te-panel);
+    color:var(--te-text);
     border-radius:18px 18px 0 0;
-    border-bottom:1px solid #ecebf0;
+    border-bottom:1px solid var(--te-border);
   }
   .theme-studio .te-mobile-sheet-grip {
     display:flex;
@@ -3178,7 +3179,7 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     height:34px;
     font-size:14px;
     font-weight:700;
-    color:#22232a;
+    color:var(--te-text);
   }
   .theme-studio .te-mobile-sheet-head__row>div {display:flex;gap:6px;align-items:center;}
   .theme-studio .te-mobile-sheet-head__row button {
@@ -3188,11 +3189,11 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     border:0;
     border-radius:8px;
     background:transparent;
-    color:#55525f;
+    color:var(--te-muted);
     font-size:18px;
     cursor:pointer;
   }
-  .theme-studio .te-mobile-sheet-head__row button:hover {background:#f0edf7;}
+  .theme-studio .te-mobile-sheet-head__row button:hover {background:var(--te-soft);}
   .theme-studio .te-drawer-panel {
     display:block;
     flex:1 1 auto;
@@ -4307,3 +4308,13 @@ dialog.te-section-menu :is(button,input):focus-visible {
 .te-theme-start__progress::before{content:"";position:absolute;left:13px;top:50%;width:10px;height:10px;transform:translateY(-50%);border:2px solid var(--te-border,#41464a);border-top-color:var(--te-accent,#63d4d5);border-radius:50%;animation:te-theme-start-spin 1s linear infinite}
 @keyframes te-theme-start-spin{to{transform:translateY(-50%) rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.te-theme-start__progress::before{animation:none}}
+
+/* The expanded assistant owns the composer while open; the selection portal
+   remains mounted so its context is preserved when the drawer closes. */
+body.agentsam-open [data-mini-agentsam] { display:none!important; }
+.theme-studio .te-rich-toolbar { background:var(--te-soft); border-color:var(--te-border); }
+.theme-studio .te-rich-toolbar button { color:var(--te-text); }
+.theme-studio .te-rich-toolbar button:hover { background:var(--te-accent-soft); }
+.theme-studio .te-rich-input { background:var(--te-panel); color:var(--te-text); border-color:var(--te-border); }
+.theme-studio .te-mobile-selection-bar { background:var(--te-panel); color:var(--te-text); border-color:var(--te-border); }
+.theme-studio .te-mobile-selection-bar button { color:var(--te-accent); }
