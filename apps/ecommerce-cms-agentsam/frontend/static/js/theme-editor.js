@@ -137,6 +137,8 @@
     const redo = byId('te-redo');
     if (undo) undo.disabled = undoHistory.length === 0;
     if (redo) redo.disabled = redoHistory.length === 0;
+    if (byId('te-more-undo')) byId('te-more-undo').disabled = undoHistory.length === 0;
+    if (byId('te-more-redo')) byId('te-more-redo').disabled = redoHistory.length === 0;
   }
   function recordFieldHistory(section, fieldKey, before, after) {
     const owner = sectionOwner(section);
@@ -245,6 +247,11 @@
                 (typeof host?.onEditCode === 'function' ? '<button type="button" id="te-edit-code">Edit code</button>' : '') +
                 (typeof host?.onDuplicate === 'function' ? '<button type="button" id="te-duplicate-draft">Duplicate private draft</button>' : '') +
                 (typeof host?.onDelete === 'function' ? '<button type="button" id="te-delete-draft">Delete private draft…</button>' : '') +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-undo">Undo</button>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-redo">Redo</button>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-save">Save draft</button>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-refresh">Refresh preview</button>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-assistant">AgentSam</button>' +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-settings">Theme settings</button>' +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-inspect" aria-pressed="true">Canvas inspection</button>' +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-embeds">App embeds</button>' +
@@ -279,7 +286,7 @@
             '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
             '<div class="te-preview-status"><span class="te-preview-mode">Draft</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
-          '<div class="te-mobile-selection-bar"><button type="button" id="te-mobile-edit-selection"><span id="te-mobile-selection-label">Select an element</span><span>Edit <span aria-hidden="true">⌃</span></span></button></div>',
+          '<div class="te-mobile-selection-bar"><button type="button" id="te-mobile-layers" aria-label="Page structure">' + icon.sections + '</button><button type="button" id="te-mobile-edit-selection"><span id="te-mobile-selection-label">Page structure</span><span>Edit <span aria-hidden="true">⌃</span></span></button><button type="button" id="te-mobile-assistant" aria-label="Ask AgentSam">' + assistantMark() + '</button></div>',
           '<aside class="theme-editor-panel">',
             '<div class="te-mobile-sheet-head"><button type="button" class="te-mobile-sheet-grip" data-sheet-grip="settings" aria-label="Resize inspector" title="Drag or press arrows to resize"><span></span></button><div class="te-mobile-sheet-head__row"><strong id="te-mobile-edit-title">Edit selection</strong><div><button type="button" data-sheet-expand="settings" aria-label="Expand editor">⤢</button><button type="button" data-sheet-close="settings" aria-label="Close editor">×</button></div></div></div>',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Select a section</span></div><div class="te-inspector-tools"><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
@@ -388,10 +395,7 @@
     const studio = document.querySelector('.theme-studio');
     if (!studio) return;
     studio.dataset.mobilePane = pane;
-    if (isPhoneEditor()) {
-      if (pane !== 'preview') closeMiniAgentSam();
-      else if (inspectionEnabled && activeSectionKey) void openMiniAgentSam();
-    }
+    if (isPhoneEditor()) closeMiniAgentSam();
     if (pane === 'settings') setInspectorVisible(true);
     byId('te-mobile-pane-switch')?.querySelectorAll('[data-mobile-pane]').forEach(function(button) {
       const selected = button.dataset.mobilePane === pane;
@@ -429,6 +433,11 @@
         if (event.key === 'ArrowDown') { event.preventDefault(); if (mobileSheetSize === 'expanded') setMobileSheetSize('half'); else if (mobileSheetSize === 'half') setMobileSheetSize('compact'); else setMobilePane('preview'); }
         if (event.key === 'Escape') { event.preventDefault(); setMobilePane('preview'); }
       });
+    });
+    byId('te-mobile-layers')?.addEventListener('click', function() { setEditorDrawer('sections'); });
+    byId('te-mobile-assistant')?.addEventListener('click', function() {
+      if (activeSectionKey && inspectionEnabled) void openMiniAgentSam();
+      else byId('agentsam-toggle')?.click();
     });
     byId('te-mobile-edit-selection')?.addEventListener('click', function() {
       if (activeSectionKey) { setMobileSheetSize('half'); setMobilePane('settings'); }
@@ -837,6 +846,8 @@
       const el = byId('te-save-state');
       if (el) el.title = savedStamp('Draft saved');
     }
+    if (byId('te-more-save')) byId('te-more-save').disabled = Boolean(save?.disabled);
+    document.querySelector('.theme-studio')?.setAttribute('data-draft-dirty',String(dirty));
     if (dirty) schedulePrivateAutosave();
     else clearTimeout(autosaveTimer);
   }
@@ -2900,6 +2911,7 @@
     miniAgentSamSelectionTick += 1;
     miniAgentSam?.close();
     miniAgentSamVisible = false;
+    document.querySelector('.theme-studio')?.removeAttribute('data-mini-open');
 
   }
 
@@ -2911,7 +2923,7 @@
       miniAgentSamPromise = import('/admin/js/theme-editor-mini-agentsam.mjs')
         .then(function(module) { return module.createThemeEditorMiniAgentSam({
           onProposal: presentAgentProposal,
-          onClose: function() { miniAgentSamVisible = false; },
+          onClose: function() { miniAgentSamVisible = false; document.querySelector('.theme-studio')?.removeAttribute('data-mini-open'); },
           positionBounds: function() {
             // The composer must stay in the *actual storefront viewport* on
             // both desktop and phone, not float above the editor toolbar.
@@ -2932,7 +2944,8 @@
               top: Math.max(rect.top, pane.top) + 7,
               right: Math.min(rect.right, pane.right) - 7,
               bottom: Math.min(rect.bottom, pane.bottom,
-                isPhoneEditor() ? (tabTop ?? rect.bottom) : rect.bottom) - 7,
+                isPhoneEditor() ? (tabTop ?? rect.bottom) : rect.bottom,
+                window.visualViewport ? window.visualViewport.offsetTop + window.visualViewport.height : rect.bottom) - 7,
             };
           },
         }); })
@@ -2944,6 +2957,7 @@
       // Anchor to the visible CMS inspector rather than the browser's generic annotation mode.
       miniAgentSam.select(selection, selectedMiniBounds);
       miniAgentSamVisible = true;
+      document.querySelector('.theme-studio')?.setAttribute('data-mini-open','true');
       // Preview layout/fonts can settle after its first selection paint.
       // Recompute using the current DOM rather than leaving the overlay
       // fixed over the Heading when the iframe shifts independently.
@@ -3061,7 +3075,7 @@
     publishGenerationSelection();
     // The inspector chooses the target. The mini composer appears at that
     // selection without another trigger or any automatic model request.
-    if (inspectionEnabled && (!isPhoneEditor() || document.querySelector('.theme-studio')?.dataset.mobilePane === 'preview')) void openMiniAgentSam();
+    if (inspectionEnabled && !isPhoneEditor()) void openMiniAgentSam();
     else closeMiniAgentSam();
   }
 
@@ -3098,7 +3112,7 @@
     publishGenerationSelection();
     // The inspector chooses the target. The mini composer appears at that
     // selection without another trigger or any automatic model request.
-    if (inspectionEnabled && (!isPhoneEditor() || document.querySelector('.theme-studio')?.dataset.mobilePane === 'preview')) void openMiniAgentSam();
+    if (inspectionEnabled && !isPhoneEditor()) void openMiniAgentSam();
     else closeMiniAgentSam();
   }
 
@@ -4481,6 +4495,9 @@
     const menu = byId('te-more-menu');
     if (menu) menu.hidden = true;
     byId('te-more')?.setAttribute('aria-expanded', 'false');
+  }
+  for (const [action,target] of [['undo','te-undo'],['redo','te-redo'],['save','te-save'],['refresh','te-refresh'],['assistant','agentsam-toggle']]) {
+    byId('te-more-'+action)?.addEventListener('click', function() { closeToolbarMore(); byId(target)?.click(); });
   }
   byId('te-more-settings').addEventListener('click', function() {
     closeToolbarMore();
