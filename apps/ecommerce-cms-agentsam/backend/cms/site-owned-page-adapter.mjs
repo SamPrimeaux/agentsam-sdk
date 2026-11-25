@@ -124,10 +124,13 @@ export async function getSiteOwnedPage(env, accountId, slug, siteId, pageId = nu
     if (sourceError) missingSourceSections.push(key);
     return {
       id: section.id, key,
+      type: section.section_type,
       name: section.section_name || section.section_type,
       content, sort_order: section.sort_order,
       status: section.is_visible ? "active" : "hidden",
       source: pointer ? "cms-r2" : "cms-d1",
+      source_object_key: pointer || null,
+      source_bucket: pointer ? section.r2_bucket : null,
       ...(sourceError ? { source_error: sourceError, read_only: true } : {}),
       version: versionBySection.get(section.id) || 0,
       updated_at: section.updated_at,
