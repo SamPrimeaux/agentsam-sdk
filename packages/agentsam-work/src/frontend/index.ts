@@ -10,3 +10,4 @@ export * from "./surfaces/ArtifactsSurface";
 export * from "./surfaces/ProjectsSurface";
 export * from "./surfaces/ProjectDetailSurface";
 export * from "./surfaces/TicketDetailSurface";
+export * from "./surfaces/WorkflowsSurface";

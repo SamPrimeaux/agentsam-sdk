@@ -25,6 +25,8 @@ await build({
     'widgets/index': 'src/widgets/index.ts',
     'knowledge/index': 'src/knowledge/index.ts',
     'design/index': 'src/design/index.ts',
+    'workflows/index': 'src/workflows/index.ts',
+    'workflows/model': 'src/workflows/model.ts',
   },
   outdir: 'dist',
   outbase: 'src',
@@ -56,3 +58,5 @@ mkdirSync(`${cwd}/dist/shell`, { recursive: true });
 copyFileSync(`${cwd}/src/shell/inspector-picker.css`, `${cwd}/dist/shell/inspector-picker.css`);
 copyFileSync(`${cwd}/src/shell/appearance.mjs`, `${cwd}/dist/shell/appearance.mjs`);
 copyFileSync(`${cwd}/src/shell/appearance.d.mts`, `${cwd}/dist/shell/appearance.d.mts`);
+mkdirSync(`${cwd}/dist/workflows`, { recursive: true });
+copyFileSync(`${cwd}/src/workflows/workflow-studio.css`, `${cwd}/dist/workflows/workflow-studio.css`);

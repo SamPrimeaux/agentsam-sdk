@@ -5,7 +5,8 @@ export type WorkSurfaceId =
   | "artifacts"
   | "artifact-tickets"
   | "projects"
-  | "project-detail";
+  | "project-detail"
+  | "workflows";
 
 export type WorkNavId =
   | "calendar"
@@ -13,6 +14,7 @@ export type WorkNavId =
   | "mail"
   | "projects"
   | "artifacts"
+  | "workflows"
   | "r2"
   | "google-drive"
   | "shared-drives"
@@ -231,6 +233,34 @@ export type WorkMailMessage = {
   starred?: boolean;
 };
 
+export type WorkWorkflowLifecycle = "draft" | "active" | "disabled" | "retired";
+export type WorkWorkflowScope = "platform" | "account";
+export type WorkWorkflowRunStatus = "queued" | "running" | "waiting" | "completed" | "failed" | "cancelled" | "timed_out";
+
+/** Read model for the Work library; the host maps its authoritative workflow record into this shape. */
+export type WorkWorkflowSummary = {
+  id: string;
+  workflowKey: string;
+  revision: number;
+  scopeType: WorkWorkflowScope;
+  displayName: string;
+  description?: string | null;
+  lifecycle: WorkWorkflowLifecycle;
+  nodeCount?: number | null;
+  edgeCount?: number | null;
+  runCount?: number | null;
+  successCount?: number | null;
+  failCount?: number | null;
+  updatedAt?: number | null;
+  latestRun?: {
+    id: string;
+    status: WorkWorkflowRunStatus;
+    triggerKind?: string | null;
+    createdAt?: number | null;
+    durationMs?: number | null;
+  } | null;
+};
+
 export type WorkMailConnection = {
   id: string;
   provider: string;
@@ -310,6 +340,8 @@ export type WorkSnapshot = {
   mailConnections?: WorkMailConnection[];
   activeMailConnectionId?: string | null;
   calendar: WorkCalendarEvent[];
+  /** Optional workflow library projection; omitted when the host does not provide it. */
+  workflows?: WorkWorkflowSummary[];
   /** Where this data lives: the hosted account, or the local on-device store. */
   source?: "hosted" | "local";
   capabilities?: WorkCapabilities;
@@ -357,6 +389,11 @@ export interface WorkHost {
   snapshot(request?: WorkSnapshotRequest): Promise<WorkSnapshot>;
   /** Open an artifact in a host-owned editor/provider; the package never invents download URLs. */
   openArtifact?(artifact: WorkArtifact): void | Promise<void>;
+  /** Host-owned workflow actions. No route, storage provider, or execution service is assumed. */
+  createWorkflowDraft?(): Promise<WorkWorkflowSummary>;
+  /** Open the selected workflow in the host's existing workspace/Side Stage. */
+  openWorkflow?(workflow: WorkWorkflowSummary): void | Promise<void>;
+  runWorkflow?(workflow: WorkWorkflowSummary): Promise<void>;
   /** Optional verified D1 insights, account-scoped by the server. */
   projectInsights?(projectId: string): Promise<WorkProjectInsights>;
   projectTimer?(projectId: string, action: "start" | "stop", timerId?: string): Promise<{

@@ -18,6 +18,7 @@ import {
   Trash2,
   Users,
   Video,
+  Workflow,
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -34,6 +35,7 @@ const ICONS: Record<WorkNavId, typeof CalendarDays> = {
   mail: Mail,
   projects: FolderKanban,
   artifacts: Archive,
+  workflows: Workflow,
   r2: Cloud,
   "google-drive": Folder,
   "shared-drives": Folder,
@@ -49,6 +51,7 @@ function activeNavId(surface: WorkSurfaceId): WorkNavId {
   if (surface === "tickets" || surface === "artifact-tickets") return "tickets";
   if (surface === "mail") return "mail";
   if (surface === "projects" || surface === "project-detail") return "projects";
+  if (surface === "workflows") return "workflows";
   return "artifacts";
 }
 
@@ -80,6 +83,8 @@ function shellTitle(surface: WorkSurfaceId) {
       return "Projects";
     case "project-detail":
       return "Project";
+    case "workflows":
+      return "Workflows";
     default:
       return "Work";
   }
