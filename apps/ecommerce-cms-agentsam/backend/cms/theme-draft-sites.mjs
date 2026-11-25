@@ -53,9 +53,18 @@ export async function discardThemeDraftSite(db, accountId, siteId) {
 
 async function catalogSource(db, slug, version) {
   try {
-    const product = await db.prepare(
-      "SELECT id FROM products WHERE slug IN (?,?) AND COALESCE(catalog_kind,product_kind)='theme' ORDER BY (slug=?) DESC LIMIT 1"
-    ).bind(slug, `theme-${slug}`, slug).first();
+    // Migration 1384 repoints this FK and release product IDs together. During
+    // rollout read the actual declared parent, never guess from a missing column
+    // or insert duplicate catalog products. Remove the pre-1384 read after rollout.
+    const keys = await db.prepare("PRAGMA foreign_key_list(cms_site_themes)").all();
+    const parent = keys.results?.find(key => key.from === "source_product_id")?.table;
+    const sql = parent === "products"
+      ? "SELECT id FROM products WHERE slug IN (?,?) AND COALESCE(catalog_kind,product_kind)='theme' ORDER BY (slug=?) DESC LIMIT 1"
+      : parent === "agentsam_products"
+        ? "SELECT id FROM agentsam_products WHERE slug IN (?,?) AND kind='theme' ORDER BY (slug=?) DESC LIMIT 1"
+        : null;
+    if (!sql) return { productId: null, releaseId: null };
+    const product = await db.prepare(sql).bind(slug, `theme-${slug}`, slug).first();
     if (!product) return { productId: null, releaseId: null };
     const release = await db.prepare(
       "SELECT id FROM agentsam_product_releases WHERE product_id=? AND version=? LIMIT 1"
