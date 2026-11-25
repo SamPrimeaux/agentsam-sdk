@@ -1000,3 +1000,37 @@ body[data-shell-mode="theme-editor"]:not(:has([data-panel-state="generating"])) 
   }
   body[data-shell-mode="theme-editor"] .agentsam-compose textarea {font-size:16px;max-height:96px;}
 }
+
+/* Phone theme editor: the existing conversation and composer are one surface.
+   Compact is the default, focused conversation is intentional. */
+.agentsam-mobile-controls,.agentsam-mobile-run {display:none;}
+@media(max-width:900px) {
+  body[data-shell-mode="theme-editor"].agentsam-open:not(.agentsam-focus-mode) .console-workspace > .agentsam-dock,
+  body[data-theme-editor-embedded].agentsam-open:not(.agentsam-focus-mode) .theme-studio-assistant-layout > .agentsam-dock {
+    position:absolute;inset:auto 10px max(10px,var(--agentsam-keyboard-inset,0px)) 10px;
+    width:auto;height:auto;min-height:0;max-height:none;padding:0;overflow:visible;
+    background:transparent;border:0;box-shadow:none;z-index:30;transition:none;
+  }
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio[data-mobile-pane="sections"],.theme-studio[data-mobile-pane="settings"],.theme-studio[data-mini-open="true"]) .agentsam-dock {display:none!important;}
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-dock .agentsam-drawer {
+    position:relative;display:flex;overflow:visible;min-height:0;height:auto;border:0;border-radius:0;
+    box-shadow:none;background:transparent;backdrop-filter:none;
+  }
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-drawer :is(.agentsam-head,.agentsam-messages,.agentsam-mcp) {display:none;}
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-mobile-controls {
+    display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;pointer-events:none;
+  }
+  .agentsam-mobile-controls button {pointer-events:auto;min-width:44px;min-height:44px;border-radius:999px;background:var(--te-panel,var(--c-surface));color:var(--te-text,var(--c-ink));border:1px solid var(--te-border,var(--c-line));font:inherit;font-size:20px;}
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-compose {
+    width:100%;box-sizing:border-box;margin:0;padding:8px 12px;border-radius:28px;
+    display:grid;grid-template-columns:44px minmax(0,1fr) 44px;grid-template-areas:"field field field" "plus run send" "files files files";
+    background:var(--te-panel,var(--c-surface));border:1px solid var(--te-border,var(--c-line));box-shadow:0 8px 28px #0002;
+  }
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-compose textarea {
+    width:100%;box-sizing:border-box;min-height:44px;max-height:96px;font-size:16px;line-height:1.4;border:0;background:transparent;box-shadow:none;resize:none;
+  }
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-compose[aria-busy="true"] textarea {display:none;}
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-compose[aria-busy="true"] .agentsam-mobile-run {display:block;grid-area:run;align-self:center;color:var(--te-text,var(--c-ink));}
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-compose[aria-busy="true"] {grid-template-areas:"plus run send" "files files files";}
+  body.agentsam-open:not(.agentsam-focus-mode):has(.theme-studio) .agentsam-compose :is(.agentsam-send,.agentsam-plus) {width:44px;height:44px;border-radius:999px;}
+}

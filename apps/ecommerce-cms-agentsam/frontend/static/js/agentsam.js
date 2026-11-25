@@ -8,6 +8,18 @@ const ASSISTANT_COLLAPSE_ICON = '<svg viewBox="0 0 24 24" width="16" height="16"
 
 let agentsamDockMode = "docked";
 
+function mobileThemeAssistant() {
+  return Boolean(document.querySelector(".theme-studio") &&
+    window.matchMedia?.("(max-width: 900px)").matches);
+}
+
+function syncAssistantVisualViewport() {
+  const viewport = window.visualViewport;
+  const inset = mobileThemeAssistant() && viewport
+    ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+  document.documentElement.style.setProperty("--agentsam-keyboard-inset", inset + "px");
+}
+
 function setAgentsamFocus(focused) {
   const drawer = document.getElementById("agentsam-drawer");
   if (!drawer) return;
@@ -22,6 +34,7 @@ function setAgentsamFocus(focused) {
     toggle.innerHTML = focused ? ASSISTANT_COLLAPSE_ICON : ASSISTANT_EXPAND_ICON;
   }
   if (focused && !document.body.classList.contains("agentsam-open")) openAgentsamDrawer();
+  if (!focused && mobileThemeAssistant()) document.getElementById("agentsam-input")?.blur();
 }
 function focusAgentsamDrawer() { openAgentsamDrawer(); setAgentsamFocus(true); }
 
@@ -105,10 +118,16 @@ function renderAgentsamShell() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </header>
+      <div class="agentsam-mobile-controls">
+        <button type="button" data-mobile-assistant="layers" aria-label="Page structure">▤</button>
+        <button type="button" data-mobile-assistant="history" aria-label="Open conversation">⌃</button>
+        <button type="button" data-mobile-assistant="close" aria-label="Hide composer">×</button>
+      </div>
       <div class="agentsam-mcp" id="agentsam-mcp" hidden></div>
       <div class="agentsam-messages" id="agentsam-messages" role="log" aria-live="polite"></div>
       <form class="agentsam-compose" id="agentsam-form">
         <button type="button" class="agentsam-plus" id="agentsam-plus" aria-label="Add files, resources, skills or apps" aria-haspopup="menu" aria-expanded="false">+</button>
+        <span class="agentsam-mobile-run" role="status">Thinking…</span>
         <textarea id="agentsam-input" rows="2" placeholder="Work with AgentSam" autocomplete="off" aria-label="Message AgentSam"></textarea>
         <button type="submit" class="agentsam-send" id="agentsam-send" aria-label="Send">
           <span aria-hidden="true" class="agentsam-send-arrow">↑</span>
@@ -420,6 +439,7 @@ async function sendAgentsamMessage(text, options = {}) {
   const draft = window.AgentSamDraft || { attachments: [], selected_resource: null };
   if (!message && !draft.attachments?.length && !options.attachments?.length) return;
   drawerRequestActive = true;
+  if (mobileThemeAssistant()) document.getElementById("agentsam-input")?.blur();
   setBusy(true);
   let attachments;
   try {
@@ -463,6 +483,9 @@ async function sendAgentsamMessage(text, options = {}) {
     const data = await readAgentSamReply(res);
     drawerConversationId = data.conversation_id || drawerConversationId;
     appendMessage("assistant", data.reply, data.routing);
+    if (mobileThemeAssistant() && document.body.classList.contains("agentsam-open")) {
+      document.querySelector('[data-mobile-assistant="history"]')?.setAttribute("aria-label", "Open conversation — new reply");
+    }
     if (window.AgentSamComposerMenu && !options.preserveAttachments) window.AgentSamComposerMenu.clearFiles(attachments);
 
     if (data.routing?.workflow?.ui_label) {
@@ -472,12 +495,13 @@ async function sendAgentsamMessage(text, options = {}) {
     return data;
   } catch (err) {
     appendMessage("assistant", err.message || "Something went wrong.");
+    if (mobileThemeAssistant() && document.body.classList.contains("agentsam-open")) setAgentsamFocus(true);
     if (options.propagateError) throw err;
   } finally {
     typing.remove();
     drawerRequestActive = false;
     setBusy(false);
-    if (document.body.classList.contains("agentsam-open")) {
+    if (document.body.classList.contains("agentsam-open") && !mobileThemeAssistant()) {
       document.getElementById("agentsam-input")?.focus();
     }
   }
@@ -506,7 +530,8 @@ function openAgentsamDrawer() {
   } catch {
     /* ignore */
   }
-  document.getElementById("agentsam-input")?.focus();
+  if (!mobileThemeAssistant()) document.getElementById("agentsam-input")?.focus();
+  syncAssistantVisualViewport();
 }
 
 function closeAgentsamDrawer() {
@@ -539,7 +564,19 @@ function bindAgentsamStaticHandlers() {
   if (window.__agentsamStaticHandlers) return;
   window.__agentsamStaticHandlers = true;
 
-  document.getElementById("agentsam-close")?.addEventListener("click", closeAgentsamDrawer);
+  document.getElementById("agentsam-close")?.addEventListener("click", () => {
+    if (mobileThemeAssistant() && document.body.classList.contains("agentsam-focus-mode")) setAgentsamFocus(false);
+    else closeAgentsamDrawer();
+  });
+  document.querySelector(".agentsam-mobile-controls")?.addEventListener("click", event => {
+    const action = event.target.closest?.("[data-mobile-assistant]")?.dataset.mobileAssistant;
+    if (action === "history") focusAgentsamDrawer();
+    if (action === "close") closeAgentsamDrawer();
+    if (action === "layers") document.getElementById("te-mobile-layers")?.click();
+  });
+  window.visualViewport?.addEventListener?.("resize", syncAssistantVisualViewport);
+  window.visualViewport?.addEventListener?.("scroll", syncAssistantVisualViewport);
+  window.addEventListener("resize", syncAssistantVisualViewport);
   document.getElementById("agentsam-backdrop")?.addEventListener("click", closeAgentsamDrawer);
   document.getElementById("agentsam-drawer")?.addEventListener("click", event => {
     const target = event.target.closest?.("[data-assistant-action]");
@@ -617,7 +654,8 @@ function initAgentsamDrawer() {
 
   try {
     const key = agentsamOpenStateKey();
-    if (key && sessionStorage.getItem(key) === "1") openAgentsamDrawer();
+    const preference = key ? sessionStorage.getItem(key) : null;
+    if (preference === "1" || (preference !== "0" && mobileThemeAssistant())) openAgentsamDrawer();
   } catch {
     /* ignore */
   }
