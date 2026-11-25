@@ -9,6 +9,7 @@
  * UI never receives decrypted values except ephemeral reveal after re-auth.
  */
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   importVaultMasterKey,
   encryptVaultSecret as encryptWithVaultKey,
@@ -359,6 +360,19 @@ export interface StudioServerBindings {
   workersAI: unknown;
 }
 
+// Worker and the independently bundled Nitro handler share one request-local
+// binding scope. Never retain an account's bindings in mutable global state.
+const studioBindingScopeKey = Symbol.for("inneranimalmedia.local-studio.request-bindings.v1");
+const studioBindingGlobal = globalThis as typeof globalThis & {
+  [studioBindingScopeKey]?: AsyncLocalStorage<Record<string, unknown>>;
+};
+const studioBindingScope = studioBindingGlobal[studioBindingScopeKey] ??=
+  new AsyncLocalStorage<Record<string, unknown>>();
+
+export function withStudioWorkerBindings<T>(env: Record<string, unknown>, run: () => T): T {
+  return studioBindingScope.run(env, run);
+}
+
 function readProcessEnv(): StudioEnv {
   try {
     if (typeof process !== "undefined" && process.env) return { ...process.env };
@@ -380,7 +394,7 @@ export function studioServerBindings(handlerArg: unknown): StudioServerBindings 
       context?: { cloudflare?: { env?: unknown }; env?: unknown };
       env?: unknown;
     } | null;
-    const candidates = [arg?.context?.cloudflare?.env, arg?.context?.env, arg?.env];
+    const candidates = [studioBindingScope.getStore(), arg?.context?.cloudflare?.env, arg?.context?.env, arg?.env];
     for (const candidate of candidates) {
       if (candidate && typeof candidate === "object") {
         runtimeEnv = candidate as Record<string, unknown>;
