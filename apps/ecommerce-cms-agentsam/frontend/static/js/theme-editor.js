@@ -296,9 +296,9 @@
           '</main>',
           '<div class="te-mobile-selection-bar"><button type="button" id="te-mobile-layers" aria-label="Page structure">' + icon.sections + '</button><button type="button" id="te-mobile-edit-selection"><span id="te-mobile-selection-label">Page structure</span><span>Edit <span aria-hidden="true">⌃</span></span></button><button type="button" id="te-mobile-assistant" aria-label="Ask AgentSam">' + assistantMark() + '</button></div>',
           '<aside class="theme-editor-panel">',
-            '<div class="te-mobile-sheet-head"><button type="button" class="te-mobile-sheet-grip" data-sheet-grip="settings" aria-label="Resize inspector" title="Drag or press arrows to resize"><span></span></button><div class="te-mobile-sheet-head__row"><strong id="te-mobile-edit-title">Edit selection</strong><div><button type="button" data-sheet-expand="settings" aria-label="Expand editor">⤢</button><button type="button" data-sheet-close="settings" aria-label="Close editor">×</button></div></div></div>',
+            '<div class="te-mobile-sheet-head"><button type="button" class="te-mobile-sheet-grip" data-sheet-grip="settings" aria-label="Resize inspector" title="Drag or press arrows to resize"><span></span></button><div class="te-mobile-sheet-head__row"><button type="button" id="te-mobile-inspector-layers" aria-label="Page structure">' + icon.sections + '</button><button type="button" id="te-mobile-inspector-agent" aria-label="Ask AgentSam about selection">' + assistantMark() + '</button><strong id="te-mobile-edit-title">Edit selection</strong><div><button type="button" id="te-mobile-node-actions" aria-label="Selection actions" aria-expanded="false">•••</button><button type="button" data-sheet-expand="settings" aria-label="Expand editor">⤢</button><button type="button" data-sheet-close="settings" aria-label="Close editor">×</button></div></div></div>',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Select a section</span></div><div class="te-inspector-tools"><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
-            '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor" hidden aria-hidden="true"></div>',
+            '<div class="te-inspector-body" id="te-inspector-body"></div><nav class="te-mobile-inspector-groups" id="te-mobile-inspector-groups" aria-label="Selection settings"></nav><div class="te-mobile-node-menu" id="te-mobile-node-menu" hidden></div><div data-composer-slot="editor" hidden aria-hidden="true"></div>',
             '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
           '</aside>',
         '</div>',
@@ -380,6 +380,7 @@
     if (switcher) switcher.hidden = true;
   }
 
+  let mobileInspectorGroup = null;
   let mobileSheetSize = 'half'; // Balanced default: storefront and inspector remain visible together.
   function isPhoneEditor() { return window.matchMedia('(max-width: 900px)').matches; }
 
@@ -398,12 +399,17 @@
       button.setAttribute('aria-pressed', String(size === 'expanded'));
     });
   }
+  function closeMobileNodeMenu() {
+    const menu = byId('te-mobile-node-menu');
+    if (menu) menu.hidden = true;
+    byId('te-mobile-node-actions')?.setAttribute('aria-expanded', 'false');
+  }
   function setMobilePane(pane) {
     if (!['sections', 'preview', 'settings'].includes(pane)) return;
     const studio = document.querySelector('.theme-studio');
     if (!studio) return;
     studio.dataset.mobilePane = pane;
-    if (isPhoneEditor()) { closePageMenu(); closeMiniAgentSam(); }
+    if (isPhoneEditor()) { closePageMenu(); closeMobileNodeMenu(); closeMiniAgentSam(); }
     if (pane === 'settings') setInspectorVisible(true);
     byId('te-mobile-pane-switch')?.querySelectorAll('[data-mobile-pane]').forEach(function(button) {
       const selected = button.dataset.mobilePane === pane;
@@ -443,6 +449,33 @@
       });
     });
     byId('te-mobile-layers')?.addEventListener('click', function() { setEditorDrawer('sections'); });
+    byId('te-mobile-inspector-layers')?.addEventListener('click', function() { setEditorDrawer('sections'); });
+    byId('te-mobile-inspector-agent')?.addEventListener('click', function() {
+      setMobilePane('preview');
+      void openMiniAgentSam();
+    });
+    byId('te-mobile-node-actions')?.addEventListener('click', function() {
+      const menu = byId('te-mobile-node-menu');
+      if (!menu.hidden) { closeMobileNodeMenu(); return; }
+      const row = byId('te-tree')?.querySelector('.te-block-row.is-active, .te-tree-row.is-active');
+      const actions = Array.from(row?.querySelectorAll('.te-tree-actions__menu button') || []);
+      menu.replaceChildren();
+      actions.forEach(function(action) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = action.textContent;
+        button.disabled = action.disabled;
+        if (action.hasAttribute('data-remove-section') || action.hasAttribute('data-remove-block')) button.className = 'is-destructive';
+        button.addEventListener('click', function() { closeMobileNodeMenu(); action.click(); });
+        menu.appendChild(button);
+      });
+      const close = document.createElement('button');
+      close.type = 'button'; close.textContent = 'Cancel';
+      close.addEventListener('click', closeMobileNodeMenu);
+      menu.appendChild(close);
+      menu.hidden = false;
+      this.setAttribute('aria-expanded', 'true');
+    });
     byId('te-mobile-assistant')?.addEventListener('click', function() {
       if (activeSectionKey && inspectionEnabled) void openMiniAgentSam();
       else byId('agentsam-toggle')?.click();
@@ -1214,7 +1247,7 @@
     // catalog surface used by Add section, not a centered browser dialog.
     modal.show();
     paint();
-    requestAnimationFrame(function() { search.focus(); });
+    if (!isPhoneEditor()) requestAnimationFrame(function() { search.focus(); });
   }
 
   function currentPageLabel() {
@@ -1666,7 +1699,7 @@
       // The native <dialog> is opened non-modally so it never traps focus.
       if (!menu.open) menu.show?.();
       menu.setAttribute('open', '');
-      requestAnimationFrame(function() { searchInput?.focus(); });
+      if (!isPhoneEditor()) requestAnimationFrame(function() { searchInput?.focus(); });
     }
     add?.addEventListener('click', function() { openCatalog(add, pageSections.length); });
     byId('te-tree').querySelectorAll('[data-insert-at]').forEach(function(button) {
@@ -2161,9 +2194,42 @@
     });
   }
 
+  function wireMobileInspectorGroups(panel) {
+    const nav = byId('te-mobile-inspector-groups');
+    if (!nav) return;
+    const groups = Array.from(panel.querySelectorAll(':scope > .te-inspector-group'));
+    nav.replaceChildren();
+    function activate(index, expand) {
+      mobileInspectorGroup = index;
+      groups.forEach(function(group, i) {
+        group.toggleAttribute('data-mobile-group-inactive', index !== null && i !== index);
+        if (expand && i === index && group.tagName === 'DETAILS') group.open = true;
+      });
+      Array.from(nav.children).forEach(function(button, i) {
+        button.setAttribute('aria-pressed', String(i === index));
+      });
+      if (expand) {
+        setMobileSheetSize('half');
+        panel.scrollTop = 0;
+      }
+    }
+    groups.forEach(function(group, i) {
+      const name = group.getAttribute('aria-label') || group.querySelector('summary,h3')?.textContent || 'Settings';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = name === 'Content' ? 'Text' : name;
+      button.addEventListener('click', function() { activate(i, true); });
+      nav.appendChild(button);
+    });
+    activate(groups[mobileInspectorGroup] ? mobileInspectorGroup : null, false);
+    nav.hidden = !groups.length;
+  }
+
   function renderInspector() {
     const section = currentSection();
+    closeMobileNodeMenu();
     if (!section) {
+      byId('te-mobile-inspector-groups').replaceChildren();
       byId('te-inspector-body').innerHTML = '<div class="te-empty">Select a section or block in the page structure to begin editing.</div>';
       return;
     }
@@ -2195,6 +2261,9 @@
     byId('te-inspector-parent')?.addEventListener('click', function() {
       selectSection(section.key, null, false, sectionOwner(section));
     });
+    wireMobileInspectorGroups(panel);
+    const selectedRow = byId('te-tree')?.querySelector('.te-block-row.is-active, .te-tree-row.is-active');
+    byId('te-mobile-node-actions').hidden = !selectedRow?.querySelector('.te-tree-actions__menu button');
     wireFields();
     wireLinkPickers();
     wireSectionCss();
@@ -3061,6 +3130,7 @@
   function selectSection(sectionKey, fieldKey, scrollPreview, ownerSlug) {
     const section = findSection(sectionKey, ownerSlug);
     if (!section) return;
+    mobileInspectorGroup = null;
     activeSectionKey = sectionKey;
     activeSectionOwner = sectionOwner(section);
     activeBlockId = null;
@@ -3073,7 +3143,7 @@
     renderInspector();
     // Keep the selected storefront element visible on mobile. The merchant
     // enters editing controls via the dedicated Settings pane.
-    if (isPhoneEditor()) { setMobileSheetSize('half'); setMobilePane('settings'); }
+    if (isPhoneEditor()) { setMobileSheetSize(byId('te-mobile-inspector-groups')?.children.length ? 'compact' : 'half'); setMobilePane('settings'); }
     const prefix = activeSectionOwner === 'site' ? 'Global' : humanize(slug);
     byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + humanize(sectionKey) + ' / ' + humanize(String(fieldKey).split('.').pop()) : prefix + ' / ' + humanize(sectionKey);
 
@@ -3093,6 +3163,7 @@
     const block = Array.isArray(blockMeta) ? blockMeta.find(function(item) { return item.id === blockId; }) : null;
     if (!section || !block) return;
 
+    mobileInspectorGroup = null;
     activeSectionKey = sectionKey;
     activeSectionOwner = sectionOwner(section);
     activeBlockId = blockId;
@@ -3108,7 +3179,7 @@
     renderInspector();
     // Keep the selected storefront element visible on mobile. The merchant
     // enters editing controls via the dedicated Settings pane.
-    if (isPhoneEditor()) { setMobileSheetSize('half'); setMobilePane('settings'); }
+    if (isPhoneEditor()) { setMobileSheetSize(byId('te-mobile-inspector-groups')?.children.length ? 'compact' : 'half'); setMobilePane('settings'); }
     const prefix = activeSectionOwner === 'site' ? 'Global' : humanize(slug);
     byId('te-selected-path').textContent = activeFieldKey
       ? prefix + ' / ' + humanize(sectionKey) + ' / ' + humanize(blockId) + ' / ' + humanize(String(activeFieldKey).replace(blockId + '.', '').split('.').pop())

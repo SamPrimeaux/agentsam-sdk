@@ -531,7 +531,7 @@ test("old Shop Hero selection exposes editable original text styling and Reset w
 });
 
 
-test("mobile selection opens a half-height editor while leaving the preview mounted", async () => {
+test("mobile selection opens compact settings and expands a chosen group", async () => {
   const {dom,doc}=await editorFixture({mobile:true});
   try {
     const studio=doc.querySelector('.theme-studio');
@@ -540,7 +540,9 @@ test("mobile selection opens a half-height editor while leaving the preview moun
     assert.ok(hero);
     hero.click();
     assert.equal(studio.dataset.mobilePane,'settings','selection must open the live-editing bottom sheet');
-    assert.equal(studio.dataset.mobileSheet,'half','default editing view keeps substantial preview area');
+    assert.equal(studio.dataset.mobileSheet,'compact','selection opens compact settings');
+    doc.querySelector('#te-mobile-inspector-groups button').click();
+    assert.equal(studio.dataset.mobileSheet,'half','chosen settings group opens the half-height inspector');
     assert.equal(doc.querySelector('.theme-studio-canvas').isConnected,true,'storefront remains mounted behind the sheet');
     const grip=doc.querySelector('[data-sheet-grip="settings"]');
     grip.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true}));
