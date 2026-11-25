@@ -104,13 +104,11 @@
       if(message)message.textContent=result.unchanged
         ? 'Opening your saved Theme Studio workspace…'
         : 'Your workspace is ready. Opening Theme Studio…';
-      const embedded=window.parent&&window.parent!==window;
-      const target=embedded?window.parent:window;
-      const appRoute=new URLSearchParams({page:editor.pathname});
-      const route=embedded
-        ? '/apps/ecommerce-cms-agentsam?'+appRoute.toString()
-        : editor.pathname+editor.search;
-      target.location.assign(route);
+      if (editor.search || editor.hash) throw Error('The installer returned an invalid editor destination');
+      // Use the existing authenticated host navigation bridge. Never reload the
+      // parent into an obsolete application wrapper or a desktop asset URL.
+      if (typeof window.__agentsamAdminNavigate === 'function' && window.__agentsamAdminNavigate(editor.pathname)) return;
+      window.location.assign(editor.pathname);
     }catch(error) {
       button.disabled=false;
       button.textContent=previous||'Add';

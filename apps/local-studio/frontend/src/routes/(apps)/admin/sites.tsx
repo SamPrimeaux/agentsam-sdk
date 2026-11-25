@@ -51,9 +51,11 @@ function ThemeStoreInstallEntry({ selection }: { selection: ThemeSelection }) {
         }
         const destination = new URL(result.editor_url, window.location.origin);
         const expected = '/admin/sites/' + encodeURIComponent(result.site_id) +
-          '/themes/' + encodeURIComponent(result.project_id) + '/editor/home';
+          '/themes/' + encodeURIComponent(result.project_id) + '/editor/';
         if (destination.origin !== window.location.origin ||
-            destination.pathname !== expected || destination.search || destination.hash) {
+            !destination.pathname.startsWith(expected) ||
+            !/^[A-Za-z0-9_-]{1,160}$/.test(destination.pathname.slice(expected.length)) ||
+            destination.search || destination.hash) {
           throw new Error('The installer returned an invalid Theme Studio destination.');
         }
         setState('opening');
