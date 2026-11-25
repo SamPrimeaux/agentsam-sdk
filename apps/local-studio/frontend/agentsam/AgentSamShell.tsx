@@ -37,7 +37,7 @@ import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
-import { invokeStudioService, isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
+import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { AgentSamStatusBuddy } from './AgentSamStatusBuddy';
@@ -55,13 +55,7 @@ import { THEME_PROJECTS_CHANGED } from '@/lib/themes/projects';
 import { forgetHostedAccountId, knownHostedAccountId, resolveHostedAccountId } from '@/lib/themes/hosted-account';
 
 async function accountAvatarRequest(options: RequestInit = {}) {
-  if (!isPackagedDesktop()) return fetch('/api/settings/account-avatar', options);
-  const result = await invokeStudioService({
-    operation: 'settings', path: '/api/settings/account-avatar',
-    method: options.method === 'PUT' ? 'PUT' : 'GET',
-    body: typeof options.body === 'string' ? JSON.parse(options.body) : undefined,
-  });
-  return new Response(result.body, { status: result.status, headers: { 'content-type': result.content_type || 'application/json' } });
+  return fetch('/api/settings/account-avatar', { credentials: 'same-origin', ...options });
 }
 
 type MerchantStore = { id: string; name?: string; slug?: string; page_count?: number };

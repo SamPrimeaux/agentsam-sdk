@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, ExternalLink, Pencil, Plus, RefreshCw, Server, Trash2, X } from "lucide-react";
 import { IconAction } from "@/components/ui/icon-action";
-import { isPackagedDesktop, invokeStudioService, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
 
 type McpRecord = {
   id: string; key: string; name: string; url: string | null; authType: string;
@@ -15,24 +14,14 @@ const PATH="/api/settings/mcps";
 /** The same account-authorized Settings service on desktop and web. */
 async function mcpRequest(method:Method="GET",id="",body?:Record<string,unknown>):Promise<McpResult>{
   const path=PATH+(id?"/"+encodeURIComponent(id):"");
-  let status:number;
-  let payload:McpResult;
-  if(isPackagedDesktop()){
-    const response=await invokeStudioService({
-      operation:"settings", account_id:await resolveDesktopStudioAccountId(), path, method,
-      ...(body===undefined?{}:{body}),
-    });
-    status=response.status;
-    payload=JSON.parse(response.body||"{}");
-  }else{
-    const response=await fetch(path,{
-      method,credentials:"same-origin",
-      headers:{accept:"application/json",...(body?{"content-type":"application/json"}:{})},
-      ...(body?{body:JSON.stringify(body)}:{}),
-    });
-    status=response.status;
-    payload=await response.json().catch(()=>({ok:false,error:"mcp_invalid_response"}));
-  }
+  const response=await fetch(path,{
+    method,credentials:"same-origin",
+    headers:{accept:"application/json",...(body===undefined?{}:{"content-type":"application/json"})},
+    ...(body===undefined?{}:{body:JSON.stringify(body)}),
+  });
+  const status=response.status;
+  const payload=await response.json().catch(()=>({ok:false,error:"mcp_invalid_response"}));
+
   if(status>=400||payload.ok!==true)throw new Error(payload.error||"mcp_request_failed");
   return payload;
 }

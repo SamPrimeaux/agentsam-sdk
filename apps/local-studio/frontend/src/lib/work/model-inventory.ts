@@ -2,7 +2,6 @@ import {
   getDesktopWorkspaceContext,
   identitySessionExists,
   invokeLocalProvider,
-  invokeStudioService,
   isPackagedDesktop,
 } from "@/lib/desktop/tauri";
 import type { StudioModelSelection } from "./models";
@@ -17,27 +16,15 @@ export type {
 } from "./model-inventory-core";
 import { mergeInventoryPayloads, type StudioInventoryPayload } from "./model-inventory-core";
 
-async function loadWebInventory(): Promise<StudioInventoryPayload> {
+async function loadAccountInventory(): Promise<StudioInventoryPayload> {
   const res = await fetch("/api/llm/inventory", { credentials: "same-origin" });
   const body = (await res.json()) as StudioInventoryPayload;
-  if (!res.ok || body.ok === false) throw new Error(body.error || `inventory_http_${res.status}`);
-  return body;
-}
-
-async function loadDesktopAccountInventory(): Promise<StudioInventoryPayload> {
-  const bridged = await invokeStudioService({ operation: "inventory" });
-  let body: StudioInventoryPayload;
-  try {
-    body = JSON.parse(bridged.body || "{}") as StudioInventoryPayload;
-  } catch {
-    throw new Error(`inventory_invalid_response_${bridged.status}`);
-  }
-  if (!bridged.ok || body.ok === false) throw new Error(body.error || `inventory_http_${bridged.status}`);
+  if (!res.ok || body.ok === false) throw new Error(body.error || ("inventory_http_" + res.status));
   return body;
 }
 
 export async function loadEffectiveModelInventory(): Promise<StudioInventoryPayload> {
-  if (!isPackagedDesktop()) return loadWebInventory();
+  if (!isPackagedDesktop()) return loadAccountInventory();
 
   // A packaged desktop is a local-capable product even when the user is signed in.
   // Always ask the local bridge so the GUI sees the same machine credential sources
@@ -49,7 +36,7 @@ export async function loadEffectiveModelInventory(): Promise<StudioInventoryPayl
     cwd: workspace?.default_cwd || undefined,
   });
   const signedIn = await identitySessionExists().catch(() => false);
-  const accountPromise = signedIn ? loadDesktopAccountInventory() : Promise.resolve(null);
+  const accountPromise = signedIn ? loadAccountInventory() : Promise.resolve(null);
   const [localResult, accountResult] = await Promise.allSettled([localPromise, accountPromise]);
 
   const local = localResult.status === "fulfilled" && localResult.value?.ok !== false

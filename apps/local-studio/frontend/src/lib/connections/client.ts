@@ -1,8 +1,6 @@
 import {
-  invokeStudioService,
   isPackagedDesktop,
   openExternalUrl,
-  resolveDesktopStudioAccountId,
 } from "../desktop/tauri.ts";
 
 export type LocalStudioConnectionRecord = {
@@ -159,20 +157,6 @@ async function connectionRequest<T>(
 ): Promise<T> {
   const method = init.method || "GET";
 
-  if (isPackagedDesktop()) {
-    const accountId = await resolveDesktopStudioAccountId();
-    const response = await invokeStudioService({
-      operation: "connections",
-      account_id: accountId,
-      method,
-      path,
-      body: init.body,
-    });
-    const payload = parseJsonBody(response.body);
-    if (!response.ok) throw responseError(response.status, payload);
-    return payload as T;
-  }
-
   const response = await fetch(path, {
     method,
     credentials: "same-origin",
@@ -296,20 +280,6 @@ export async function updateLocalStudioPlugin(
   if (!/^plg_[a-z0-9]+$/i.test(id)) throw new Error("plugin_id_invalid");
   const path = "/api/plugins/" + encodeURIComponent(id);
 
-  if (isPackagedDesktop()) {
-    const accountId = await resolveDesktopStudioAccountId();
-    const response = await invokeStudioService({
-      operation: "plugins",
-      account_id: accountId,
-      method: "PATCH",
-      path,
-      body: patch,
-    });
-    const payload = parseJsonBody(response.body);
-    if (!response.ok) throw responseError(response.status, payload);
-    return payload as { ok?: boolean; plugin?: LocalStudioPluginRecord; error?: string };
-  }
-
   const response = await fetch(path, {
     method: "PATCH",
     credentials: "same-origin",
@@ -372,19 +342,7 @@ export type PluginDiscoveryResponse = {
 
 // The desktop shell allowlists paths per operation: /api/plugins/* -> "plugins", /api/work/* -> "work".
 async function pluginCatalogRequest<T>(method: 'GET' | 'POST' | 'DELETE', path: string, body?: Record<string, unknown>): Promise<T> {
-  if (isPackagedDesktop()) {
-    const accountId = await resolveDesktopStudioAccountId();
-    const response = await invokeStudioService({
-      operation: path.startsWith('/api/work/') ? "work" : "plugins",
-      account_id: accountId,
-      method,
-      path,
-      ...(body ? { body } : {}),
-    });
-    const result = parseJsonBody(response.body);
-    if (!response.ok) throw responseError(response.status, result);
-    return result as T;
-  }
+  // Both plugin and Work endpoints use the same authenticated Worker API.
   const response = await fetch(path, {
     method,
     credentials: "same-origin",

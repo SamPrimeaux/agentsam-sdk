@@ -1,7 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { AdminInstallableApp } from "@inneranimalmedia/agentsam-nav";
 import { navigateApp } from "@/lib/work/navigate";
-import { invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 type Method = "GET" | "POST" | "DELETE" | "PATCH";
 
@@ -12,28 +11,15 @@ type Method = "GET" | "POST" | "DELETE" | "PATCH";
  */
 async function appsRequest(method: Method, body?: Record<string, unknown>, pathOverride?: "/api/apps/open") {
   const path = pathOverride ?? (method === "GET" ? "/api/apps/launcher" : "/api/apps/install");
-  if (isPackagedDesktop()) {
-    // The packaged app has no same-origin session cookie. Native attaches its
-    // verified bearer session; the server resolves the account from that token.
-    // Never send a client-provided X-User-Id (or the studio-local fallback).
-    const native = await invokeStudioService({
-      operation: "apps", path, method,
-      ...(body === undefined ? {} : { body }),
-    });
-    let nativePayload: any = null;
-    try { nativePayload = JSON.parse(native.body || "null"); } catch { /* handled below */ }
-    if (native.status === 401) throw new Error("apps_account_sign_in_required");
-    if (native.status === 503) throw new Error("apps_account_service_unavailable");
-    if (native.status >= 400 || !nativePayload?.ok) throw new Error("apps_account_request_failed");
-    return nativePayload;
-  }
   const response = await fetch(path, {
     method,
     credentials: "same-origin",
-    headers: { accept: "application/json", ...(body ? { "content-type": "application/json" } : {}) },
-    ...(body ? { body: JSON.stringify(body) } : {}),
+    headers: { accept: "application/json", ...(body === undefined ? {} : { "content-type": "application/json" }) },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const payload = await response.json().catch(() => null);
+  if (response.status === 401) throw new Error("apps_account_sign_in_required");
+  if (response.status === 503) throw new Error("apps_account_service_unavailable");
   if (!response.ok || !payload?.ok) throw new Error("apps_account_request_failed");
   return payload;
 }
