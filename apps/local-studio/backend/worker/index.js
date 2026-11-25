@@ -37,7 +37,7 @@ import {
 } from "@inneranimalmedia/agentsam-sdk/models/inventory";
 import { runStudioCmsAssistant } from "./studio-cms-assistant.js";
 import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
-import { loadModelProviderDefinitions } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
+import { loadModelProviderDefinitions, withStudioWorkerBindings } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
 import { applyAccountModelVisibilityPreferences } from "@inneranimalmedia/agentsam-local-shared/studio-model-preferences";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { resolveCmsSiteAccess, readCmsSiteSelector, readCmsAssistantSiteSelector, isCmsThemeEditorRoute, configuredCmsWorkers } from "./cms-authority.js";
@@ -1287,7 +1287,7 @@ export default {
               body: JSON.stringify(body),
               signal: request.signal,
             });
-            return nitroWorker.fetch(chat, env, context);
+            return withStudioWorkerBindings(env, () => nitroWorker.fetch(chat, env, context));
           },
         });
         try {
@@ -2057,7 +2057,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       }
 
       if (!isLlmInventory) {
-        return nitroWorker.fetch(request, env, context);
+        return withStudioWorkerBindings(env, () => nitroWorker.fetch(request, env, context));
       }
       // Inventory is served by the authenticated Worker owner below. Delegating
       // first to Nitro loses the host binding and can report zero models even
