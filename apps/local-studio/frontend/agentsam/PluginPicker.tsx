@@ -19,7 +19,8 @@ function PlusMenuRow({ icon, title, hint, onClick, meta }: { icon: ReactNode; ti
   </button>;
 }
 
-export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, onWebSearch, onProject, activeMode, onModeChange, contextLabel, children }: {
+export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrary, onImage, onWebSearch, onProject, activeMode, onModeChange, contextLabel, children }: {
+  targetChatId?: string;
   value: string;
   onChange: (value: string) => void;
   onAttach?: () => void;
@@ -57,6 +58,14 @@ export function PluginPicker({ value, onChange, onAttach, onLibrary, onImage, on
   const [skills,setSkills] = useState<Array<{id:string;name:string;trigger:string;description?:string}>>([]);
   const [skillsError,setSkillsError] = useState('');
   const [skillsLoading,setSkillsLoading] = useState(false);
+  useEffect(() => {
+    const openForChat = (event: Event) => {
+      if (!targetChatId || (event as CustomEvent).detail?.chatId !== targetChatId) return;
+      setOpen(true); setMentionFromComposer(false); setSection('mention'); setQuery(''); setActive(0); setRevision(n=>n+1);
+    };
+    window.addEventListener('agentsam:conversation-plugins', openForChat);
+    return () => window.removeEventListener('agentsam:conversation-plugins', openForChat);
+  }, [targetChatId]);
   useEffect(() => {
     if (!open || section !== 'skills') return;
     const controller = new AbortController();

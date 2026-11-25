@@ -148,7 +148,7 @@ function MessageBubble({
     const annotations = Array.isArray(message.metadata?.annotations)
       ? (message.metadata.annotations as Array<{id:string;label:string;tag:string;object?:{id:string}}>).filter(a => a && typeof a.label === 'string').slice(0,8) : [];
     return (
-      <div className="flex flex-col items-end gap-1.5" data-chat-message-id={message.id} tabIndex={-1}>
+      <div className="flex flex-col items-end gap-1.5">
         {annotations.length > 0 && <div className="flex max-w-[min(100%,42rem)] flex-wrap justify-end gap-1.5" aria-label="Referenced annotations">
           {annotations.map(a => <span key={a.id} className="inline-flex max-w-56 items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1 text-xs text-foreground" title={a.object?.id || a.tag}>
             <span aria-hidden="true">⌖</span><span className="truncate">{a.label || 'Annotation'}</span>
@@ -206,14 +206,15 @@ export function MessageList({
       scrollerClassName="scrollbar-thin flex-1 overflow-y-auto px-4 py-6"
       listClassName={readingMode ? "agentsam-work-reading mx-auto flex w-full max-w-[70ch] flex-col gap-6" : "mx-auto flex w-full max-w-6xl flex-col gap-6"}
       renderMessage={(message, index) => (
+        <div key={message.id} data-chat-message-id={message.id} tabIndex={-1}>
         <MessageBubble
-          key={message.id}
           message={message as ChatMessage}
           chatId={chatId}
           streaming={streaming && index === messages.length - 1 && message.role === "assistant"}
           startedAt={streaming ? message.createdAt : undefined}
           outputs={readingMode && index===lastAssistantIndex ? documents : undefined}
         />
+        </div>
       )}
     />
   );

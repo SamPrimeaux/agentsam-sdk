@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, FolderOpen, ImagePlus, Maximize2, Mic, FileText, Paperclip, Pause, Play, Plug, Square, Target, Trash2, X } from "lucide-react";
+import { AudioLines, ArrowUp, FolderOpen, ImagePlus, Maximize2, Mic, FileText, Paperclip, Pause, Play, Plug, Square, Target, Trash2, X } from "lucide-react";
 import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
@@ -290,8 +290,9 @@ export function Composer({
     </div>
   ) : null;
 
+  const mobileVoiceIdle = !value.trim() && !pendingAttachments.length && !pendingAnnotations.length && !streaming;
   const sendControl = (
-    <span className="as-composer-send-wrap"><button type="button" className="as-composer-voice-quick" onClick={() => setVoiceOpen(true)}>Start voice</button><IconAction
+    <span className="as-composer-send-wrap" data-mobile-voice-idle={mobileVoiceIdle}><button type="button" className="as-composer-mobile-voice" aria-label="Start voice" onClick={() => setVoiceOpen(true)}><AudioLines size={20}/></button><button type="button" className="as-composer-voice-quick" onClick={() => setVoiceOpen(true)}>Start voice</button><IconAction
       type="button"
       size="icon-sm"
       label="Send"
@@ -383,7 +384,7 @@ export function Composer({
           ))}
         </div>
       ) : null}
-      <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()}
+      <PluginPicker targetChatId={targetKind === "chat" ? targetId : undefined} value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()}
         onLibrary={() => setLibraryOpen(true)}
         onImage={() => setImageMode(true)}
         onWebSearch={webSearch}
@@ -398,13 +399,13 @@ export function Composer({
         onSend={submitWithAttachments}
         onCancel={cancel}
         streaming={streaming}
-        placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Reply or hold to talk' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
+        placeholder={imageMode ? 'Describe the image to create…' : streaming && !onSubmit ? 'Follow up' : targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
         toolbarStart={<>{trigger}{imageMode ? <button type="button" className="as-work-mode-indicator" onClick={() => setImageMode(false)} title="Leave image creation mode"><ImagePlus size={14}/> Image creation <X size={13}/></button> : null}</>}
         toolbarEnd={<><ModelSelect workStyle /><IconAction type="button" size="icon-sm" className="as-composer-dictate" data-listening={dictating} label={dictating ? 'Stop dictation' : 'Dictate'} onClick={beginDictation}><Mic size={17}/></IconAction></>}
         attachmentPreview={attachmentPreview}
         sendControl={sendControl}
         cancelControl={cancelControl}
-        containerClassName={cn('agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline', workMode && 'as-work-composer-surface')}
+        containerClassName={cn('agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline', workMode && 'as-work-composer-surface', (value.trim() || pendingAttachments.length || pendingAnnotations.length) && 'has-draft')}
         inputClassName={cn(
           "flex min-h-[44px] max-h-52 w-full resize-none rounded-lg bg-transparent px-1 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
           "focus:outline-none focus-visible:outline-none focus-visible:shadow-none disabled:cursor-not-allowed disabled:opacity-40",

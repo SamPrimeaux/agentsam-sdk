@@ -555,3 +555,21 @@
 @media (prefers-reduced-motion: reduce) {
   .as-nav-mobile-push-shell .as-nav-mobile-drawer { transition-duration: 0ms; }
 }
+
+.as-nav-conversation-mobile-menu {
+  width: min(250px, calc(100vw - 24px)); min-width: 0;
+  padding: 8px 12px 10px; border-radius: 32px;
+  background: color-mix(in srgb, var(--nav-popover) 84%, transparent);
+  backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  overscroll-behavior: contain;
+}
+.as-nav-conversation-mobile-menu .as-nav-menu-heading {
+  text-align: center; font-size: 16px; line-height: 22px; padding: 8px 6px 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.as-nav-conversation-mobile-menu .as-nav-menu-row {
+  min-height: 50px; font-size: 18px; line-height: 24px;
+  gap: 16px; padding: 8px 12px; border-radius: 14px;
+}
+.as-nav-conversation-mobile-menu .as-nav-menu-row .as-nav-icon { width: 24px; height: 24px; flex: 0 0 24px; }
+.as-nav-conversation-mobile-menu .as-nav-menu-row .as-nav-icon svg { width: 22px; height: 22px; }

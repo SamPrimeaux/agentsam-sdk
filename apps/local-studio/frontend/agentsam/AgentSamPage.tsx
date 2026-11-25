@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, BookOpen, Bot, Compass, Files, GripVertical, Maximize2, Minimize2, Minus, MousePointer2, PanelRightClose, PanelRightOpen, Plus, Share2, SquarePen } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Bot, Compass, Files, GripVertical, Maximize2, Minimize2, Minus, MousePointer2, PanelRightClose, PanelRightOpen, Plus, Plug, Search, SquarePen, Paperclip, X } from 'lucide-react';
 import { Nav, useNav, type NavAction } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { IconAction } from '@/components/ui/icon-action';
@@ -139,6 +139,9 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     try { window.localStorage.setItem('agentsam.studio.agentPanelWidth', String(panelWidth)); }
     catch { /* Resizing remains available without localStorage. */ }
   }, [panelWidth]);
+  const [findChatOpen, setFindChatOpen] = useState(false);
+  const [showChatFiles, setShowChatFiles] = useState(false);
+  const [findChatQuery, setFindChatQuery] = useState('');
   const chat = state.chats.find((item) => item.id === (conversationId ?? state.activeChatId));
   const [threadHistory, setThreadHistory] = useState({ index: visitedThreads.index, total: visitedThreads.ids.length });
   useEffect(() => {
@@ -178,6 +181,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   };
   // Preserve the existing browser, annotation, pinned resources and conversation
   // capabilities behind the mobile header's one contextual More trigger.
+  useEffect(() => { setFindChatOpen(false); setFindChatQuery(''); }, [chat?.id]);
   const pinned = data.pinnedSummary;
   const pinnedItems: NavAction[] = pinned ? [
     ...(pinned.subagents || []).map(agent => ({
@@ -192,7 +196,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       : { id: 'source:' + item.id, label: item.label, icon: <Files />, onSelect: item.onSelect }),
     ...(pinned.outputActions || []), ...(pinned.sourceActions || []),
   ] : [];
-  const mobileMoreActions: NavAction[] = [
+  const workspaceMoreActions: NavAction[] = [
     { id: 'new-browser-tab', label: 'New browser tab', icon: <Plus />, onSelect: () => openBrowserTab(false) },
     { id: 'new-browser-fullview', label: 'New browser tab in full view', icon: <Maximize2 />, onSelect: () => openBrowserTab(true) },
     { id: 'toggle-work-view', label: workFocused ? 'Exit full view' : 'Enter full view',
@@ -211,8 +215,22 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       onSelect: () => { state.openSideTab('files', { ephemeral: false }); state.setSideOpen(true); } },
     ...(pinnedItems.length ? [{ id: 'pinned-resources', label: 'Sources and outputs',
       icon: <BookOpen />, children: pinnedItems }] : []),
-    ...(data.onShare ? [{ id: 'share-chat', label: 'Share conversation', icon: <Share2 />,
-      onSelect: () => data.onShare?.() }] : []),
+  ];
+  const mobileMoreActions: NavAction[] = [
+    { id: 'plugins', label: 'Plugins', icon: <Plug />, children: [
+      { id: 'browse-plugins', label: 'Browse plugins', icon: <Plug />, onSelect: () => {
+        state.setWorkSurface('chat'); state.setSideOpen(false);
+        window.dispatchEvent(new CustomEvent('agentsam:conversation-plugins', { detail: { chatId: chat?.id } }));
+      } },
+      { id: 'manage-plugins', label: 'Manage plugins', icon: <Plug />, onSelect: () => window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/admin/settings/customize?view=plugins' } })) },
+    ] },
+    { id: 'uploaded-files', label: 'Uploaded files', icon: <Paperclip />, onSelect: () => {
+      state.setWorkSurface('chat'); state.setSideOpen(false); setFindChatQuery(''); setFindChatOpen(true); setShowChatFiles(true);
+    } },
+    { id: 'find-chat', label: 'Find in chat', icon: <Search />, onSelect: () => {
+      state.setWorkSurface('chat'); state.setSideOpen(false); setShowChatFiles(false); setFindChatOpen(true);
+    } },
+    { id: 'workspace-actions', label: 'Workspace actions', icon: <Maximize2 />, children: workspaceMoreActions },
   ];
 
   if (!chat) return <div className="agentsam-welcome"><h1>Conversation unavailable</h1><button type="button" className="as-nav-button" onClick={startNewChat}>New chat</button></div>;
@@ -248,7 +266,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const headerActions = isMobile ? (empty ? null : <div className="agentsam-header-utilities">
     <div className="agentsam-mobile-header-action-pill" role="group" aria-label="Conversation and workspace actions">
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
-      <Nav.ConversationActions additionalActions={mobileMoreActions} />
+      <Nav.ConversationActions additionalActions={mobileMoreActions} mobile />
     </div>
   </div>) : <div className="agentsam-header-utilities">
     <div className="agentsam-topbar-browser-actions" role="group" aria-label="Workspace panel">
@@ -281,6 +299,18 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     </Nav.Topbar> : null}
     <div ref={workspaceRef} className={"agentsam-workspace" + (workSplit ? " is-work-stage-first" : "") + (workFocused ? " is-work-focused" : "") + (leadComposerDetached ? " has-detached-composer" : "")}>
       <section className="agentsam-conversation" aria-label="Conversation" inert={mobileWorkOpen || (isMobile && state.sideOpen) || workFocused} style={workFocused || mobileWorkOpen ? { display:"none" } : undefined}>
+        {findChatOpen && <div className="agentsam-chat-find" role="region" aria-label={showChatFiles ? 'Uploaded files' : 'Find in chat'}>
+          <div className="agentsam-chat-find-head">
+            {showChatFiles ? <strong>Uploaded files</strong> : <input autoFocus aria-label="Find in chat" placeholder="Find in chat" value={findChatQuery} onChange={event => setFindChatQuery(event.target.value)} />}
+            <IconAction label="Close" onClick={() => setFindChatOpen(false)}><X size={18}/></IconAction>
+          </div>
+          <div className="agentsam-chat-find-results">
+            {showChatFiles ? ((pinned?.sources ?? []).length ? pinned!.sources!.map((file,index) => <button key={index} type="button" onClick={() => { if (typeof file !== 'string') file.onSelect?.(); }} disabled={typeof file === 'string' || !file.onSelect}>{typeof file === 'string' ? file : file.label}</button>) : <span>No uploaded files in this conversation.</span>) : findChatQuery.trim() ? (chat.messages.filter(message => message.content.toLowerCase().includes(findChatQuery.trim().toLowerCase())).map(message => <button key={message.id} type="button" onClick={() => {
+              const target = document.querySelector<HTMLElement>('[data-chat-message-id="' + CSS.escape(message.id) + '"]');
+              target?.scrollIntoView({block:'center', behavior:'smooth'}); target?.focus({preventScroll:true});
+            }}>{message.role}: {message.content.slice(0,180)}</button>)) : <span>Search messages in this conversation.</span>}
+          </div>
+        </div>}
         <AgentConversationSurface
           empty={empty}
           runtime={
