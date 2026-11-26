@@ -28,6 +28,18 @@ test('checks pinned public dependencies without treating app-private workspaces 
   ]);
 });
 
+test('local file source pin validates the source package version, not the consuming app version', () => {
+  const manifests = [
+    { path: 'package.json', manifest: { name: '@inneranimalmedia/agentsam-local-studio', version: '2.6.18' } },
+    { path: 'backend/package.json', manifest: {
+      name: '@inneranimalmedia/agentsam-local-studio-backend',
+      version: '2.6.18',
+      dependencies: { '@inneranimalmedia/agentsam-identity': 'file:../../../packages/identity' },
+    } },
+  ];
+  assert.deepEqual(requiredPublishedPackages(manifests), []);
+});
+
 test('reports all absent published dependencies, not only the first ETARGET', async () => {
   const requirements = requiredPublishedPackages(input);
   const queries = [];
