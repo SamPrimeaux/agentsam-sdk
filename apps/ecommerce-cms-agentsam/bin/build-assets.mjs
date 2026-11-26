@@ -17,6 +17,7 @@ const copy = async (from, to) => {
   await cp(from, to, { recursive: true });
 };
 execFileSync(process.execPath, [source("scripts/sync-theme-embed-catalog.mjs")], { stdio: "inherit" });
+execFileSync(process.execPath, [source("scripts/compile-portable-styles.mjs")], { stdio: "inherit" });
 await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 // theme-scenes is the canonical cross-product scene package. Generate the
