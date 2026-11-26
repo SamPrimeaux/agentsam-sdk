@@ -538,6 +538,9 @@ function WorkflowInspector({
 }) {
   if (selectedNode) {
     const patch = (next: Partial<WorkflowGraphNode>) => onGraphChange(updateNodeInGraph(graph, selectedNode.nodeKey, next));
+    const patchConfig = (key: string, value: unknown) => patch({
+      config: { ...(selectedNode.config ?? {}), [key]: value },
+    });
     return (
       <div className="as-wf-inspector-content">
         <div className="as-wf-inspector-identity">
@@ -555,8 +558,31 @@ function WorkflowInspector({
               capabilities.length ? <label className="as-wf-field"><span>Capability</span><select value={selectedNode.capabilityKey ?? ""} disabled={!canEdit} onChange={(event) => patch({ capabilityKey: event.target.value || null })}><option value="">Choose a capability</option>{capabilities.map((option) => <option key={option.key} value={option.key} disabled={option.ready === false}>{option.label}{option.ready === false ? " · unavailable" : ""}</option>)}</select><small>Only capabilities supplied by the host are selectable.</small></label> : <div className="as-wf-notice"><AlertCircle size={15} /> No capability options were supplied by the host.</div>
             ) : null}
             {selectedNode.resolutionMode === "pinned" ? (
-              tools.length ? <label className="as-wf-field"><span>Tool</span><select value={selectedNode.pinnedToolId ?? ""} disabled={!canEdit} onChange={(event) => patch({ pinnedToolId: event.target.value || null })}><option value="">Choose a tool</option>{tools.map((option) => <option key={option.id} value={option.id} disabled={option.ready === false}>{option.label}{option.ready === false ? " · unavailable" : ""}</option>)}</select></label> : <div className="as-wf-notice"><AlertCircle size={15} /> No tool options were supplied by the host.</div>
+              tools.length ? <label className="as-wf-field"><span>Tool</span><select value={selectedNode.pinnedToolId ?? ""} disabled={!canEdit} onChange={(event) => {
+                const option = tools.find((candidate) => candidate.id === event.target.value);
+                patch({ pinnedToolId: event.target.value || null, capabilityKey: option?.capabilityKey ?? null });
+              }}><option value="">Choose a tool</option>{tools.map((option) => <option key={option.id} value={option.id} disabled={option.ready === false || !option.capabilityKey}>{option.label}{option.ready === false || !option.capabilityKey ? " · unavailable" : ""}</option>)}</select><small>The pinned tool must be registered under a capability available to this account.</small></label> : <div className="as-wf-notice"><AlertCircle size={15} /> No tool options were supplied by the host.</div>
             ) : null}
+          </section>
+          <section className="as-wf-inspector-section">
+            <h4>Authorized operation</h4>
+            <label className="as-wf-field"><span>Operation key</span><input value={String(selectedNode.config?.authorized_operation ?? selectedNode.config?.operation ?? "")} disabled={!canEdit} onChange={(event) => patchConfig("authorized_operation", event.target.value)} placeholder="e.g. campaign.publish" /></label>
+            <label className="as-wf-field"><span>Resource type</span><input value={String(selectedNode.config?.resource_type ?? "")} disabled={!canEdit} onChange={(event) => patchConfig("resource_type", event.target.value)} placeholder="e.g. marketing.campaign" /></label>
+            <label className="as-wf-field"><span>Resource ID path</span><input value={String(selectedNode.config?.resource_id_path ?? "")} disabled={!canEdit} onChange={(event) => patchConfig("resource_id_path", event.target.value)} placeholder="e.g. campaign.id" /></label>
+            <label className="as-wf-field"><span>Resource revision path</span><input value={String(selectedNode.config?.resource_revision_path ?? "")} disabled={!canEdit} onChange={(event) => patchConfig("resource_revision_path", event.target.value)} placeholder="e.g. campaign.revision" /></label>
+            <label className="as-wf-checkbox"><input type="checkbox" checked={selectedNode.config?.requires_approval === true} disabled={!canEdit} onChange={(event) => patchConfig("requires_approval", event.target.checked)} /><span>Require human approval before this action</span></label>
+            <small>The approval gate binds to this operation, capability, resource ID and exact revision. The action handler must enforce the expected revision.</small>
+          </section>
+        ) : null}
+
+        {selectedNode.kind === "approval" ? (
+          <section className="as-wf-inspector-section">
+            <h4>Approval authority</h4>
+            <label className="as-wf-field"><span>Action being approved</span><select value={String(selectedNode.config?.target_node_key ?? "")} disabled={!canEdit} onChange={(event) => patchConfig("target_node_key", event.target.value)}><option value="">Choose a connected action</option>{graph.nodes.filter((candidate) => candidate.kind === "action").map((candidate) => <option key={candidate.nodeKey} value={candidate.nodeKey}>{candidate.title} · {candidate.nodeKey}</option>)}</select></label>
+            <label className="as-wf-field"><span>Approval summary</span><input value={String(selectedNode.config?.action_summary ?? "")} disabled={!canEdit} onChange={(event) => patchConfig("action_summary", event.target.value)} placeholder="What will this approval authorize?" /></label>
+            <label className="as-wf-field"><span>Risk level</span><select value={String(selectedNode.config?.risk_level ?? "high")} disabled={!canEdit} onChange={(event) => patchConfig("risk_level", event.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+            <label className="as-wf-field"><span>Approval expires after <small>(seconds)</small></span><input type="number" min="60" max="86400" step="60" value={Number(selectedNode.config?.ttl_sec ?? 3600)} disabled={!canEdit} onChange={(event) => patchConfig("ttl_sec", Math.max(60, Math.min(86400, Number(event.target.value) || 3600)))} /></label>
+            <small>This gate pauses the durable run. It cannot authorize a different tool, operation, resource or revision.</small>
           </section>
         ) : null}
 
