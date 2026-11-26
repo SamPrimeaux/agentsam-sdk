@@ -314,8 +314,8 @@ async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudfla
  *   routeRegistry?: object,
  *   loginPath?: string,
  * }} [options]
- *   The host injects its own provider permission catalog adapter. The connector
- *   package never reads the host plugin table or assumes a persistence schema.
+ *   The host injects its provider permission catalog and active-grant reader.
+ *   The connector package never reads the host plugin table or provider-scope table.
  *   Host MUST supply app + routeRegistry for session owner resolution.
  */
 export async function handleCloudflareConnectionRequest(request, env, options = {}) {
