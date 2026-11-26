@@ -13,7 +13,7 @@ Status: portable contract and operation service; host integrations pending.
 
 ## Contracts
 
-`FileStorageTarget` identifies account, provider, physical storage kind, active connection, live status and supported operations. An `Asset.providerRefs[]` member with `targetId` identifies an actual provider object at a specific authorized target. `FileRecord` is a view of existing `ContentAsset`, location/permission projections and derivatives; it is **not** another persisted asset model.
+`FileStorageTarget` identifies account, provider, physical storage kind, live status and supported operations. Its `id` is an opaque host-resolved target identity; for R2 it maps to `r2_buckets.id`. It deliberately has no `connectionId`: the host resolves authorization through the existing route, bucket and provider-specific connection records. An `Asset.providerRefs[]` member with `targetId` identifies an actual provider object at that authorized target. `FileRecord` is a view of existing `ContentAsset`, location/permission projections and derivatives; it is **not** another persisted asset model.
 
 `FilePermissions` stores optional file-level policy metadata. The host's mandatory `authorize(operation, asset)` callback **must** validate current authenticated actor, account, grants, provider scopes and permissions, and must not trust fields submitted by clients. Default host authorization is absent, not allow-all. `fileTrash` provides reversible metadata deletion and does not pretend to recover already-purged provider objects.
 
