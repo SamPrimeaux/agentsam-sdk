@@ -77,6 +77,7 @@ import { handleStudioStorageSettings } from "./studio-storage-settings.js";
 import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
+import { handleAgentControlRequest } from "./agent-control-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
 import {
   mintStudioCredential,
