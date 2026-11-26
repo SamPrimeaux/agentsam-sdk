@@ -36,9 +36,10 @@ export function AgentSamLaunchDock() {
   };
 
   if (storeRoute) {
+    if (!isMobile) return null;
     const siteId = new URLSearchParams(routeSearch).get('site_id') || new URLSearchParams(location.search).get('site_id');
     const scoped = (href:string) => siteId ? href+'?site_id='+encodeURIComponent(siteId) : href;
-    return <Nav.LaunchDock label="Store navigation" items={[
+    return <Nav.LaunchDock coverage="tablet" label="Store navigation" items={[
       {id:'store',label:'Online Store',icon:<Store/>,active:storePath==='/admin/store',onSelect:()=>showPage(scoped('/admin/store'))},
       {id:'pages',label:'Pages',icon:<Files/>,active:storePath==='/admin/pages',onSelect:()=>showPage(scoped('/admin/pages'))},
       {id:'products',label:'Products',icon:<Package/>,active:storePath==='/admin/products',onSelect:()=>showPage(scoped('/admin/products'))},
