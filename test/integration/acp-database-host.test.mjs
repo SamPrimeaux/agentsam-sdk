@@ -8,6 +8,7 @@ import { applyRuntimeMigrations } from '../../src/local/migrations.js';
 import { DatabaseAgentControlClient, HttpAgentControlClient } from '../../src/acp/client.js';
 import { createAgentControlHttpHandler } from '../../src/acp/http.js';
 import { handleAgentControlRequest } from '../../apps/local-studio/backend/worker/agent-control-service.js';
+import { createAgentRunJobHandler } from '../../src/acp/agent-executor.js';
 
 test('D1-shaped database control adapter hosts the same ACP contract without local filesystem authority', async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-acp-database-'));
@@ -130,4 +131,33 @@ test('hosted D1 control route scopes runs to the authenticated account and write
     `https://host.example.test/api/agent-control/v1/runs/${start.run_id}`,
   ), env, 'acct_other');
   assert.equal(foreignRun.status, 404);
+});
+
+
+test('agent.run timeout errors invoke the configured hosted timeout persistence', async () => {
+  const calls = [];
+  const handle = createAgentRunJobHandler({
+    execute: async () => {
+      throw Object.assign(new Error('Provider deadline exceeded'), { code: 'ETIMEDOUT' });
+    },
+    agentControlClient: {
+      async timeout(runId, input) { calls.push({ runId, input }); },
+    },
+  });
+  await assert.rejects(
+    handle({
+      id: 'job_timeout',
+      kind: 'agent.run',
+      source_run_id: 'arun_timeout',
+      payload: { run_id: 'arun_timeout' },
+    }),
+    (error) => error.code === 'ETIMEDOUT',
+  );
+  assert.deepEqual(calls, [{
+    runId: 'arun_timeout',
+    input: {
+      error_code: 'ETIMEDOUT',
+      error_message: 'Provider deadline exceeded',
+    },
+  }]);
 });

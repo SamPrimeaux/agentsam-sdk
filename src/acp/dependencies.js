@@ -84,7 +84,7 @@ export async function appendAgentRunEvent(database, {
     const existing = await database.prepare(
       'SELECT event_id, run_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
     ).bind(id, normalizedDedupeKey).first();
-    if (existing) return existing;
+    if (existing) return { ...existing, inserted: false };
   }
 
   const eventId = `evt_${randomUUID()}`;
@@ -116,7 +116,7 @@ export async function appendAgentRunEvent(database, {
     const persisted = await database.prepare(
       'SELECT event_id, run_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
     ).bind(id, normalizedDedupeKey).first();
-    if (persisted) return persisted;
+    if (persisted) return { ...persisted, inserted: persisted.event_id === eventId };
   }
 
   return {
@@ -125,6 +125,7 @@ export async function appendAgentRunEvent(database, {
     seq,
     event_type: type,
     dedupe_key: normalizedDedupeKey,
+    inserted: true,
   };
 }
 
@@ -185,6 +186,7 @@ export async function recordAgentRunTimeout(database, {
   ).bind(id).run();
 
   let event = existing;
+  let recorded = false;
   if (!existing) {
     const appended = await appendAgentRunEvent(database, {
       runId: id,
@@ -200,10 +202,11 @@ export async function recordAgentRunTimeout(database, {
     event = await database.prepare(
       'SELECT event_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
     ).bind(id, dedupeKey).first() || appended;
+    recorded = Boolean(appended.inserted);
   }
 
   return {
-    recorded: !existing,
+    recorded,
     runId: id,
     status: 'timed_out',
     storageStatus: 'failed',

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { createLocalSqliteDatabase } from '../local/sqlite.js';
 import { applyRuntimeMigrations } from '../local/migrations.js';
 import { runtimeDatabasePath } from '../local/runtime-store.js';
@@ -163,7 +162,8 @@ export class DatabaseAgentControlClient {
 
   async tree(id) {
     const rootFilter = this.accountId ? 'id = ? AND account_id = ?' : 'id = ?';
-    const rootParams = this.accountId ? [id, this.accountId] : [id];
+    const childAccountClause = this.accountId ? ' AND child.account_id = ?' : '';
+    const rootParams = this.accountId ? [id, this.accountId, this.accountId] : [id];
     const result = await this.database.prepare(`
       WITH RECURSIVE descendants(id, depth, path) AS (
         SELECT id, 0, ',' || id || ',' FROM agentsam_agent_run WHERE ${rootFilter}
@@ -172,7 +172,7 @@ export class DatabaseAgentControlClient {
         FROM agentsam_agent_run child
         JOIN descendants ON child.parent_run_id = descendants.id
         WHERE descendants.depth < 64
-          AND instr(descendants.path, ',' || child.id || ',') = 0
+          AND instr(descendants.path, ',' || child.id || ',') = 0${childAccountClause}
       )
       SELECT r.*, descendants.depth,
              s.state AS suspension_state, s.reason AS suspension_reason,
