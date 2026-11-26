@@ -1449,15 +1449,6 @@
       "resolved": "../../packages/agentsam-merch",
       "link": true
     },
-    "node_modules/@inneranimalmedia/section-library": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/@inneranimalmedia/section-library/-/section-library-0.1.0.tgz",
-      "integrity": "sha512-2Cjpf+x2sRzmgqHZvxgORcoeIcqq4PT2AmiHLczuFfIpZ5IcuZgRD/BjMTYvan0roAWk59iWTZxYhuEAJcv7Aw==",
-      "license": "UNLICENSED",
-      "dependencies": {
-        "@inneranimalmedia/site-contracts": "^0.1.0"
-      }
-    },
     "node_modules/@inneranimalmedia/site-contracts": {
       "version": "0.1.0",
       "resolved": "https://registry.npmjs.org/@inneranimalmedia/site-contracts/-/site-contracts-0.1.0.tgz",
