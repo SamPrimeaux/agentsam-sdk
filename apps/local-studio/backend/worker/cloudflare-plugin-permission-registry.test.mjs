@@ -102,6 +102,46 @@ test('host adapter can map another provider to a different registered plugin key
   assert.equal(catalog.pluginKey, 'my-google-connector');
 });
 
+test('host adapter reads previously granted scopes for the exact active account', async () => {
+  let sql = '';
+  let args = [];
+  const env = {
+    DB: {
+      prepare(statement) {
+        sql = statement;
+        return {
+          bind(...values) {
+            args = values;
+            return { first: async () => ({ scopes: 'd1.read images.read' }) };
+          },
+        };
+      },
+    },
+  };
+  const scopes = await createPluginOAuthPermissionRegistry(env).getActiveGrantedScopes({
+    ownerId: 'user-1',
+    providerKey: 'cloudflare',
+    accountIdentifier: 'account-1',
+  });
+  assert.deepEqual(args, ['user-1', 'cloudflare', 'account-1']);
+  assert.match(sql, /FROM user_oauth_tokens/);
+  assert.match(sql, /account_id=\?/);
+  assert.match(sql, /account_identifier=\?/);
+  assert.deepEqual(scopes, ['d1.read', 'images.read']);
+});
+
+test('host adapter returns an empty grant for no active token and null when the host store is unavailable', async () => {
+  const emptyEnv = {
+    DB: { prepare: () => ({ bind: () => ({ first: async () => null }) }) },
+  };
+  assert.deepEqual(await createPluginOAuthPermissionRegistry(emptyEnv).getActiveGrantedScopes({
+    ownerId: 'user-1', providerKey: 'cloudflare', accountIdentifier: 'account-1',
+  }), []);
+  assert.equal(await createPluginOAuthPermissionRegistry({}).getActiveGrantedScopes({
+    ownerId: 'user-1', providerKey: 'cloudflare', accountIdentifier: 'account-1',
+  }), null);
+});
+
 test('host adapter does not assume a database binding exists', async () => {
   assert.equal(await createPluginOAuthPermissionRegistry({}).getOAuthPermissionCatalog('cloudflare'), null);
 });
