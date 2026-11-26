@@ -242,6 +242,8 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const companionArt = companionStateAsset(companion, streaming ? 'working' : 'idle');
   const workSurface = state.workSurface;
   const mobileWorkOpen = compactWorkLayout && (state.sideOpen || workSurface !== 'chat');
+  const mobileHeaderState = mobileWorkOpen ? 'surface' : empty ? 'start' : 'conversation';
+  const showModeSwitcher = empty && (!isMobile || mobileHeaderState === 'start');
   // Work mirrors the reference: stage on the left, chat on the right.
   // Chat mode keeps the established lead-left / Stage-right layout.
   const workSplit = data.mode === 'work' && state.sideOpen && !workFocused && !compactWorkLayout;
@@ -264,10 +266,10 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     {data.mode === 'work' && !isMobile ? <WorkProjectSelect /> : null}
   </div>;
   // Blank chats have no conversation overflow or empty Sources & Outputs panel.
-  const headerActions = isMobile ? (!hasConversation || mobileWorkOpen ? null : <div className="agentsam-header-utilities">
+  const headerActions = isMobile ? (mobileHeaderState !== 'conversation' ? null : <div className="agentsam-header-utilities">
     <div className="agentsam-mobile-header-action-pill" role="group" aria-label="Conversation and workspace actions">
       <IconAction className="agentsam-header-action" label="New chat" hint="New chat (⌘N)" onClick={startNewChat}><SquarePen size={20} aria-hidden="true" /></IconAction>
-      <Nav.ConversationActions additionalActions={mobileMoreActions} mobile />
+      {hasConversation ? <Nav.ConversationActions additionalActions={mobileMoreActions} mobile /> : null}
     </div>
   </div>) : <div className="agentsam-header-utilities">
     <div className="agentsam-topbar-browser-actions" role="group" aria-label="Workspace panel">
@@ -288,12 +290,12 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     </div>}
   </div>;
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
-    {hostModeSlot && empty ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
+    {hostModeSlot ? createPortal(showModeSwitcher ? <div className="agentsam-mode-host" data-mobile-header-state={mobileHeaderState}><Nav.ModeSwitcher /></div> : <span hidden data-mobile-header-state={mobileHeaderState} />, hostModeSlot) : null}
     {hostLeadingSlot && !isMobile ? createPortal(leadingControls, hostLeadingSlot) : null}
-    {hostActionsSlot ? createPortal(headerActions ?? <span className="agentsam-blank-conversation-actions" aria-hidden="true" />, hostActionsSlot) : null}
-    {!hostModeSlot ? <Nav.Topbar className={"agentsam-conversation-topbar" + (empty ? " is-empty-thread" : " is-active-thread")}>
+    {hostActionsSlot ? createPortal(headerActions ?? <span className="agentsam-blank-conversation-actions" data-mobile-header-state={mobileHeaderState} aria-hidden="true" />, hostActionsSlot) : null}
+    {!hostModeSlot ? <Nav.Topbar className={"agentsam-conversation-topbar" + (showModeSwitcher ? " is-empty-thread" : " is-active-thread")}>
       {leadingControls}
-      {empty ? <div className="agentsam-topbar-mode"><Nav.ModeSwitcher /></div>
+      {showModeSwitcher ? <div className="agentsam-topbar-mode"><Nav.ModeSwitcher /></div>
         : !isMobile ? <span className="agentsam-topbar-thread-title" title={chat.title}>{chat.title}</span> : null}
       <span className="flex-1" aria-hidden="true" />
       {!hostActionsSlot ? headerActions : null}
