@@ -25,7 +25,7 @@ function ThemeStoreInstallEntry({ selection }: { selection: ThemeSelection }) {
   useEffect(() => {
     if (isPending || !user || startedAttempt.current === attempt) return;
     // React StrictMode can replay effects. Each deliberate Add attempt must
-    // initiate at most one POST, never two draft sites.
+    // initiate at most one POST, never two theme drafts.
     startedAttempt.current = attempt;
     setState('installing');
     setError(null);
@@ -43,19 +43,15 @@ function ThemeStoreInstallEntry({ selection }: { selection: ThemeSelection }) {
           throw new Error(typeof result.error === 'string'
             ? result.error : 'Theme installation was not completed (HTTP ' + response.status + ')');
         }
-        if (result.scope !== 'site' ||
-            !/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id || '') ||
-            result.project_id !== 'theme_' + slug ||
-            !/^[A-Za-z0-9_-]{1,160}$/.test(result.project_id || '')) {
-          throw new Error('The installer did not return an authorized Theme Studio draft.');
+        if (result.scope !== 'account' || result.site_id ||
+            !new RegExp('^theme_'+slug+'_[a-f0-9]{32}$').test(result.project_id || '')) {
+          throw new Error('The installer did not return an account-owned Theme Studio draft.');
         }
         const destination = new URL(result.editor_url, window.location.origin);
-        const expected = '/admin/sites/' + encodeURIComponent(result.site_id) +
-          '/themes/' + encodeURIComponent(result.project_id) + '/editor/';
-        if (destination.origin !== window.location.origin ||
-            !destination.pathname.startsWith(expected) ||
-            !/^[A-Za-z0-9_-]{1,160}$/.test(destination.pathname.slice(expected.length)) ||
-            destination.search || destination.hash) {
+        if(destination.origin!==window.location.origin || destination.pathname!=='/admin/theme-editor' ||
+           destination.searchParams.get('project')!==result.project_id ||
+           !/^[A-Za-z0-9_-]{1,160}$/.test(destination.searchParams.get('page')||'') ||
+           [...destination.searchParams.keys()].some(key=>!['project','page'].includes(key)) || destination.hash) {
           throw new Error('The installer returned an invalid Theme Studio destination.');
         }
         setState('opening');

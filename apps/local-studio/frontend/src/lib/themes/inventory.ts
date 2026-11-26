@@ -1,5 +1,5 @@
 import type { SettingsTheme } from '@inneranimalmedia/agentsam-settings/contracts';
-import { THEME_PROJECTS_CHANGED, themeProjectStore, getCmsSiteContext } from './projects';
+import { THEME_PROJECTS_CHANGED, themeProjectStore } from './projects';
 // @ts-ignore Public portable JavaScript theme authoring contract.
 import { THEME_PROJECT_SCHEMA, extractThemePage, validateThemeProject } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project';
 import {
@@ -91,9 +91,8 @@ export async function createThemeDraft(id: string | null, name: string) {
 
 export async function openThemeProject(id: string, siteId?: string) {
   if (!/^[A-Za-z0-9_-]{1,160}$/.test(id)) throw new Error('theme_project_id_invalid');
-  const resolvedSiteId = siteId || (await getCmsSiteContext()).id;
-  if (!/^[A-Za-z0-9_-]{1,160}$/.test(resolvedSiteId || '')) throw new Error('cms_site_context_unavailable');
-  const page = '/admin/sites/' + encodeURIComponent(resolvedSiteId) + '/themes/' + encodeURIComponent(id) + '/editor/home';
+  if (siteId && !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) throw new Error('cms_site_context_invalid');
+  const page = siteId ? '/admin/sites/' + encodeURIComponent(siteId) + '/themes/' + encodeURIComponent(id) + '/editor/home' : '/admin/theme-editor?' + new URLSearchParams({project:id,page:'home'});
   const destination = '/apps/ecommerce-cms-agentsam?' + new URLSearchParams({ page });
   if (window.location.hash.startsWith('#/')) window.location.hash = '#' + destination;
   else window.location.assign(destination);

@@ -216,7 +216,7 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
   }
   assert.equal(isStudioAdminPath('/admin/products'), true);
   assert.equal(isStudioShellAdminPath('/admin/products'), false);
-  assert.equal(resolveConsoleFile('/admin/theme-editor'), null, 'retired editor is not a document route');
+  assert.equal(resolveConsoleFile('/admin/theme-editor'), 'theme-editor.html', 'account-owned Theme Studio is a host-owned document route');
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /!isStudioAdminPath\(url\.pathname\)/);
   assert.match(worker, /import \{ canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath, STUDIO_ADMIN_PRERENDERED_ROUTES \} from [^;]+studio-admin-routes\.mjs/);
@@ -271,7 +271,7 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
   assert.equal(visit('/admin/moviemode'), '#/admin/moviemode');
   assert.equal(visit('/cad'), '#/cad');
   assert.equal(visit('/admin/products'), '#/admin/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');
-  assert.equal(resolveConsoleFile('/admin/theme-editor'), null, 'standalone entry is no longer mounted');
+  assert.equal(resolveConsoleFile('/admin/theme-editor'), 'theme-editor.html', 'account-owned Theme Studio is served through the shared host route');
 });
 
 
