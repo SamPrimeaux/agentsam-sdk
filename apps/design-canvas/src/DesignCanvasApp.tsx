@@ -939,7 +939,7 @@ function AgentSamBuildEditor({ artifact, leading, documentActions, assistant, as
         <div className="dcx-build-capabilities">
           <span>Project files</span><span>IDE and terminal</span><span>Shared conversation</span>
         </div>
-        <button type="button" className="dcx-primary-button" onClick={onOpenCode}>Open Code in Work <Code2 size={14}/></button>
+        <button type="button" className="dcx-primary-button" onClick={() => onOpenCode?.()}>Open Code in Work <Code2 size={14}/></button>
       </div>
     </div>
   </DesignWorkspaceFrame>;
