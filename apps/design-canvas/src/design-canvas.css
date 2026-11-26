@@ -767,3 +767,15 @@ button{cursor:pointer}
 .dcx-zoom-viewport .dcx-editable-surface{width:100%;height:100%;max-height:none;max-width:none;margin:0}
 .dcx-zoom-viewport.is-hand,.dcx-zoom-viewport.is-hand .dcx-object{cursor:grab}
 .dcx-zoom-viewport.is-panning,.dcx-zoom-viewport.is-panning *{cursor:grabbing!important}
+
+/* Compact selection controls keep the action row inside the visible canvas.
+   Every existing format control remains available from the expandable group. */
+.dcx-context-format-options { display:contents; }
+.dcx-selection-formatting-toolbar.is-compact { max-width:calc(100% - 16px); flex-wrap:wrap; justify-content:center; overflow:visible; gap:3px; padding:4px; }
+.dcx-selection-formatting-toolbar.is-compact .dcx-context-format-options { display:none; }
+.dcx-selection-formatting-toolbar.is-compact .dcx-context-format-options.is-expanded { order:2; flex:0 0 100%; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:3px; border-top:1px solid #414852; padding-top:5px; }
+.dcx-selection-formatting-toolbar.is-compact .dcx-context-icon-trigger,.dcx-selection-formatting-toolbar.is-compact .dcx-context-ask { min-width:40px; height:40px; padding:0 8px; }
+.dcx-selection-formatting-toolbar.is-compact .dcx-context-ask span { display:none; }
+.dcx-selection-formatting-toolbar.is-compact .dcx-context-ask svg { width:18px; height:18px; }
+.dcx-selection-formatting-toolbar.is-compact .dcx-context-format-options .dcx-context-divider { display:none; }
+.dcx-selection-formatting-toolbar.is-compact .dcx-context-font-trigger,.dcx-selection-formatting-toolbar.is-compact .dcx-context-size-trigger,.dcx-selection-formatting-toolbar.is-compact .dcx-context-action-trigger { min-height:36px; }

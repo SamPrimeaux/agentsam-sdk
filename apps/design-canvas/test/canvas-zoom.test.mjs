@@ -17,9 +17,11 @@ test('wheel zoom moves in the correct direction, uses proportional scaling, and 
   assert.ok(wheelZoom(100, -120) > 100);
   assert.ok(wheelZoom(100, 120) < 100);
   assert.equal(wheelZoom(400, -120), 400);
-  assert.equal(wheelZoom(10, 120), 10);
+  assert.equal(wheelZoom(4, 120), 4);
+  assert.equal(clampZoom(5), 5);
+  assert.equal(fitZoom(390, 700, 7200, 900), 4);
   assert.equal(clampZoom(650), 400);
-  assert.equal(clampZoom(0), 10);
+  assert.equal(clampZoom(0), 4);
 });
 test('cursor anchored zoom preserves the document coordinate at different viewport widths', () => {
   for (const viewport of [320, 700, 1600]) {

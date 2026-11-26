@@ -1064,3 +1064,30 @@
   .agentsam-page-layout .agentsam-plugin-menu[data-section="mention"] { max-block-size:min(268px,var(--agentsam-plugin-menu-max-height,268px)); }
   .agentsam-page-layout .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row-copy strong { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; }
 }
+
+/* One mobile header, independent center and trailing controls. */
+@media (max-width:900px) {
+  .agentsam-conversation-topbar { position:relative; }
+  .agentsam-conversation-topbar.is-empty-thread .agentsam-topbar-mode {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:158px; max-width:calc(100% - 112px); margin:0;
+  }
+  .agentsam-topbar-mode .as-nav-mode-switch {
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; min-height:44px;
+  }
+  .agentsam-topbar-mode .as-nav-mode-switch button { padding-inline:8px; min-width:0; }
+  .agentsam-mobile-header-action-pill { height:44px; padding:0 4px; gap:0; box-sizing:border-box; }
+  .agentsam-mobile-header-action-pill > :is(.agentsam-header-action,.as-nav-button) {
+    width:52px; height:44px; min-width:44px; min-height:44px; aspect-ratio:auto;
+  }
+  .agentsam-mode-host,.agentsam-topbar-mode .as-nav-mode-switch,.agentsam-mobile-header-action-pill {
+    animation:agentsam-header-enter 180ms ease-out both;
+  }
+}
+@keyframes agentsam-header-enter {
+  from { opacity:0; scale:.97; }
+  to { opacity:1; scale:1; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .agentsam-mode-host,.agentsam-topbar-mode .as-nav-mode-switch,.agentsam-mobile-header-action-pill { animation:none; }
+}

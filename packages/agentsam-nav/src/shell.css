@@ -204,7 +204,7 @@
 .as-nav-dialog p { color: var(--nav-muted); margin-bottom: 20px; }
 .as-nav-dialog input { background: var(--nav-surface); border: 1px solid var(--nav-border); padding: 10px 12px; border-radius: var(--nav-radius); width: 100%; }
 .as-nav-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.as-nav-mobile-drawer { position: fixed; z-index: 81; inset: 0 auto 0 0; display: flex; flex-direction: column; width: min(320px, 90vw); background: var(--nav-sidebar); }
+.as-nav-mobile-drawer { box-sizing: border-box; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--nav-sidebar); }
 .as-nav-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 @keyframes as-nav-enter { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 767px) { .as-nav-activity-add { width: 44px; height: 44px; } .as-nav-topbar { padding: 0 8px; gap: 4px; } .as-nav-mode-label, .as-nav-share-label, .as-nav-project-name { display: none; } .as-nav-context { gap: 4px; } .as-nav-button { min-width: 44px; min-height: 44px; } .as-nav-menu-row { min-height: 44px; } .as-nav-topbar-center .as-nav-mode-switch button { padding-inline: 16px; } .as-nav-row-actions { display: flex; } }
@@ -512,48 +512,60 @@
   .agentsam-nav__trigger-morph > span { transition: none; }
 }
 @media (max-width: 900px) {
-  .as-nav-mobile-push-shell .as-nav-mobile-drawer {
+  .as-nav-mobile-drawer {
     min-height: 0;
+    padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     overscroll-behavior: contain;
   }
-  .as-nav-mobile-push-shell .as-nav-sidenav-main { min-height: 0; }
-  .as-nav-mobile-push-shell .as-nav-sidenav-foot { flex: none; }
-  .as-nav-mobile-push-shell .as-nav-work-brand-toggle__mark { opacity: 0; }
-  .as-nav-mobile-push-shell .as-nav-work-brand-toggle__control { opacity: 1; }
+  .as-nav-mobile-drawer .as-nav-sidenav-main { min-height: 0; }
+  .as-nav-mobile-drawer .as-nav-sidenav-foot { flex: none; }
+  .as-nav-mobile-drawer .as-nav-work-brand-toggle__mark { opacity: 0; }
+  .as-nav-mobile-drawer .as-nav-work-brand-toggle__control { opacity: 1; }
 }
 
-/* Shared mobile navigation slides as an off-canvas, non-modal drawer.
-   Host shells can shift their workspace; no scrim or dialog focus lock. */
-.as-nav-mobile-push-shell {
-  width: 0;
-  min-width: 0;
-  height: 0;
-  flex: 0 0 0;
-}
-.as-nav-mobile-push-shell .as-nav-mobile-drawer {
-  box-sizing: border-box;
-  inset: 0 auto 0 0;
-  top: var(--nav-mobile-drawer-top, 0px);
-  bottom: 0;
+/* Full-screen mobile navigation is a modal surface, not a push panel. */
+.as-nav-mobile-portal {
+  position: fixed;
+  inset: 0;
   z-index: 160;
-  /* Shares one geometry token with the host foreground translation. */
-  width: var(--agentsam-mobile-push-width, min(80dvw, 20rem));
-  max-width: var(--agentsam-mobile-push-width, min(80dvw, 20rem));
-  height: auto;
-  overflow: hidden;
-  border-right: 1px solid var(--nav-border);
-  background: var(--nav-sidebar);
-  transform: translate3d(-105%,0,0);
+  display: block;
   pointer-events: none;
-  transition: transform 230ms cubic-bezier(.2,.8,.2,1);
 }
-.as-nav-mobile-push-shell .as-nav-mobile-drawer[data-open="true"] {
-  transform: translate3d(0,0,0);
+.as-nav-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: auto;
+  background: rgb(10 16 13 / 0.48);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.as-nav-mobile-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--nav-sidebar);
+  color: var(--nav-text);
+  outline: none;
   pointer-events: auto;
 }
+.as-nav-mobile-overlay[data-state="open"] { animation: as-nav-mobile-fade-in 160ms ease-out both; }
+.as-nav-mobile-drawer[data-state="open"] { animation: as-nav-mobile-enter 180ms ease-out both; }
+@keyframes as-nav-mobile-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes as-nav-mobile-enter { from { opacity: 0.98; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
-  .as-nav-mobile-push-shell .as-nav-mobile-drawer { transition-duration: 0ms; }
+  .as-nav-mobile-overlay[data-state="open"],
+  .as-nav-mobile-drawer[data-state="open"] { animation: none; }
 }
 
 .as-nav-conversation-mobile-menu {

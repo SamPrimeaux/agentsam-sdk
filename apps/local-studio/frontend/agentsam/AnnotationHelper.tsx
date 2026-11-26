@@ -100,6 +100,10 @@ export function AnnotationHelper() {
       setMiniAttachments([]);
     }
     store.setDraft(id, [store.drafts[id], prompt].filter(Boolean).join('\n\n'));
+    if (window.matchMedia('(max-width: 1099px)').matches) {
+      store.setWorkSurface('chat');
+      store.setSideOpen(false);
+    }
   }} renderComposer={({ value, onChange, onSend, busy, expanded }) => <PluginPicker
     value={value} onChange={onChange}
     onAttach={() => fileInput.current?.click()}

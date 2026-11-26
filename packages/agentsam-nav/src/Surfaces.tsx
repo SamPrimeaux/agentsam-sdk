@@ -222,7 +222,6 @@ export function NavConversationActions({ additionalActions = [], mobile = false 
   extras.forEach((action, index) => add({ ...action, separatorBefore: action.separatorBefore || (index === 0 && actions.length > 0) }));
   additionalActions.forEach((action, index) => add({ ...action, separatorBefore: action.separatorBefore || (index === 0 && actions.length > 0) }));
   if (data.onArchiveConversation) add({ id: 'archive', label: 'Archive', icon: <Archive />, separatorBefore: true, onSelect: () => data.onArchiveConversation?.(conversation.id) });
-  else if (data.onDeleteConversation) add({ id: 'archive', label: 'Archive (save to account first)', icon: <Archive />, separatorBefore: true, disabled: true });
   if (data.onDeleteConversation) add({ id: 'delete', label: 'Delete', icon: <Trash2 />, destructive: true, separatorBefore: !data.onArchiveConversation && !actions.some(item => item.id === 'archive'), onSelect: () => setDeleting(true) });
   if (data.onAssignConversationToProject && data.projects?.length) add({
     id: 'project', label: 'Move to project', icon: <Folder />, separatorBefore: true,
@@ -549,8 +548,8 @@ function SidenavContents() {
 }
 
 export function NavSidenav() {
-  const { open, isMobile, isPeeking, peekable, setPeeking, toggle, menu, resizable, width, setWidth } = useNav();
-  const mobileDrawerRef = useRef<HTMLElement | null>(null);
+  const { open, isMobile, isPeeking, peekable, setPeeking, setOpen, toggle, menu, resizable, width, setWidth } = useNav();
+  const mobileDrawerRef = useRef<HTMLDivElement | null>(null);
   const wasMobileOpen = useRef(false);
   const [hint, setHint] = useState<{label:string; top:number; left:number} | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -614,14 +613,19 @@ export function NavSidenav() {
       document.querySelector<HTMLElement>('[data-shared-nav-toggle]')?.focus();
     }
   }, [isMobile, open]);
-  // Inline, non-modal mobile drawer: no Radix overlay or focus trap. The host
-  // shifts its workspace beside this drawer, preserving one shared nav state.
-  if (isMobile) return <NavScope className="as-nav-mobile-push-shell" data-open={open}>
-    <aside ref={mobileDrawerRef} className="as-nav-mobile-drawer" data-open={open}
-      aria-label="Application navigation" aria-hidden={!open} inert={!open}>
-      <SidenavContents />
-    </aside>
-  </NavScope>;
+  // Mobile navigation owns the viewport. It must not leave a second page
+  // competing for attention or focus behind a narrow, non-modal drawer.
+  if (isMobile) return <Dialog.Root open={open} onOpenChange={setOpen}>
+    <Dialog.Portal>
+      <NavScope className="as-nav-mobile-portal">
+        <Dialog.Overlay className="as-nav-mobile-overlay" />
+        <Dialog.Content ref={mobileDrawerRef} className="as-nav-mobile-drawer">
+          <Dialog.Title className="as-nav-sr-only">Application navigation</Dialog.Title>
+          <SidenavContents />
+        </Dialog.Content>
+      </NavScope>
+    </Dialog.Portal>
+  </Dialog.Root>;
   return <NavScope className="as-nav-sidenav-reserve" data-open={open}
     onMouseOver={(event) => showHint(event.target)} onMouseLeave={hideHint}
     onFocus={(event) => { showHint(event.target); if (peekable && !open) setPeeking(true); }}

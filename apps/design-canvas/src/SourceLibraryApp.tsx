@@ -28,8 +28,10 @@ export function SourceLibraryApp({assetsBase='./sources',onNativeCanvas,onExit}:
  const [zoom,setZoom]=useState(()=>typeof window!=='undefined'&&window.innerWidth<=480?.24:.48);
  const [focus,setFocus]=useState(false);
  const [interact,setInteract]=useState(false);
- const [left,setLeft]=useState(()=>typeof window==='undefined'||window.innerWidth>840);
- const [right,setRight]=useState(()=>typeof window==='undefined'||window.innerWidth>840);
+ const [left,setLeft]=useState(false);
+ const [right,setRight]=useState(false);
+ const [compact,setCompact]=useState(true);
+ const rootRef=useRef<HTMLDivElement>(null);
  const [inspector,setInspector]=useState<'details'|'source'|'notes'>('details');
  const [drafts,setDrafts]=useState<Record<string,Draft>>(readDrafts);
  const [persistent] = useState(()=>{try{const k=persistKey+'.probe';localStorage.setItem(k,'1');localStorage.removeItem(k);return true;}catch{return false;}});
@@ -48,10 +50,19 @@ export function SourceLibraryApp({assetsBase='./sources',onNativeCanvas,onExit}:
  const shown=focus&&active?[active]:visible;
  const base=assetsBase.replace(/\/$/,'');
  useEffect(()=>{
-  const query=window.matchMedia('(max-width: 840px)');
-  const adapt=()=>{setLeft(!query.matches);setRight(!query.matches);};
-  query.addEventListener('change',adapt);
-  return()=>query.removeEventListener('change',adapt);
+  const root=rootRef.current;
+  if(!root)return;
+  let previous:boolean|undefined;
+  const adapt=()=>{
+   const narrow=root.clientWidth<=840;
+   if(previous===narrow)return;
+   previous=narrow;
+   setCompact(narrow);setLeft(!narrow);setRight(!narrow);
+  };
+  adapt();
+  const observer=new ResizeObserver(adapt);
+  observer.observe(root);
+  return()=>observer.disconnect();
  },[]);
  const currentDraft=active?drafts[active.id]:undefined;
  useEffect(()=>{if(!persistent)return;try{localStorage.setItem(persistKey,JSON.stringify(drafts));}catch{setMessage('Could not save changes. Export a copy to keep them.');}},[drafts,persistent]);
@@ -107,37 +118,47 @@ export function SourceLibraryApp({assetsBase='./sources',onNativeCanvas,onExit}:
   return '<head>'+injected+'</head>'+content;
  }
 
- function zoomBy(n:number){setZoom(z=>Math.min(1.5,Math.max(.18,Number((z+n).toFixed(2)))))}
+ function zoomBy(n:number){setZoom(z=>Math.min(1.5,Math.max(.04,Number((z+n).toFixed(2)))))}
+ function fitReference(){
+  const area=scrollRef.current;
+  if(!area||!active)return;
+  const next=Math.max(.04,Math.min(1.5,(area.clientWidth-24)/active.width,(area.clientHeight-100)/active.height));
+  setZoom(Math.floor(next*100)/100);setFocus(true);setInteract(false);
+ }
+ useEffect(()=>{
+  if(compact&&active)fitReference();
+ },[compact,active?.id]);
  const count=boards.filter(b=>b.category===group).length;
- return <div className="dca-app">
+ return <div ref={rootRef} className={"dca-app"+(compact?" is-compact":"")}>
   <header className="dca-topbar">
    <div className="dca-mark" aria-hidden="true"><LayoutGrid size={17}/></div>
    <div className="dca-heading"><strong>Reference Library</strong><span>Browse and refine design references</span></div>
    <div className="dca-top-actions">
-    {onExit?<button className="dca-secondary" onClick={onExit}><LayoutGrid size={15}/> Back to Design</button>:null}
-    {onNativeCanvas?<button className="dca-secondary" onClick={onNativeCanvas}><Grid2X2 size={15}/> Native Canvas</button>:null}
-    <button className="dca-secondary" onClick={()=>fileInput.current?.click()}><Upload size={15}/> Import changes</button>
-    <button className="dca-primary" onClick={exportAll}><Download size={15}/> Export changes</button>
+    {onExit?<button className="dca-secondary" aria-label="Back to Design" title="Back to Design" onClick={onExit}><LayoutGrid size={15}/> Back to Design</button>:null}
+    {onNativeCanvas?<button className="dca-secondary" aria-label="Native Canvas" title="Native Canvas" onClick={onNativeCanvas}><Grid2X2 size={15}/> Native Canvas</button>:null}
+    <button className="dca-secondary" aria-label="Import changes" title="Import changes" onClick={()=>fileInput.current?.click()}><Upload size={15}/> Import changes</button>
+    <button className="dca-primary" aria-label="Export changes" title="Export changes" onClick={exportAll}><Download size={15}/> Export changes</button>
     <input ref={fileInput} type="file" accept=".json,application/json" hidden onChange={e=>{void importAll(e.target.files?.[0]);e.target.value='';}}/>
    </div>
   </header>
   <div className="dca-toolbar">
    <div className="dca-route">
-    {!left?<Tooltip label="Show pages"><button aria-label="Show pages" onClick={()=>setLeft(true)}><PanelLeftClose size={16}/></button></Tooltip>:null}
+    {!left?<Tooltip label="Show pages"><button aria-label="Show pages" onClick={()=>{setLeft(true);if(compact)setRight(false);}}><PanelLeftClose size={16}/></button></Tooltip>:null}
     <span>Library</span><span className="dca-route-divider">/</span><b>{groupLabels[group]||group}</b><span className="dca-counter">{visible.length} of {count}</span>
    </div>
    <div className="dca-tools">
     <Tooltip label="Zoom out"><button aria-label="Zoom out" onClick={()=>zoomBy(-.1)}><Minus size={15}/></button></Tooltip>
     <span className="dca-zoom-label">{Math.round(zoom*100)}%</span>
     <Tooltip label="Zoom in"><button aria-label="Zoom in" onClick={()=>zoomBy(.1)}><Plus size={15}/></button></Tooltip>
-    <Tooltip label="Reset zoom and framing"><button aria-label="Reset zoom and framing" title="Reset zoom and framing" onClick={()=>{setZoom(.48);setFocus(false);setInteract(false);}}><Maximize2 size={15}/></button></Tooltip>
+    <Tooltip label="Fit selected artboard"><button aria-label="Fit selected artboard" title="Fit selected artboard" onClick={fitReference}><Maximize2 size={15}/></button></Tooltip>
     <span className="dca-toolbar-divider"/>
-    <button aria-pressed={focus} title="Focus selected artboard" onClick={()=>{setFocus(v=>!v);setInteract(false);}}><Grid2X2 size={15}/>{focus?'All boards':'Focus'}</button>
-    <button aria-pressed={interact} title="Preview the selected reference" onClick={()=>{setInteract(v=>!v);setFocus(true);}}><MousePointer2 size={15}/>{interact?'Exit preview':'Preview'}</button>
-    {!right?<Tooltip label="Show inspector"><button aria-label="Show inspector" onClick={()=>setRight(true)}><PanelRightClose size={16}/></button></Tooltip>:null}
+    <button aria-pressed={focus} aria-label={focus?"Show all artboards":"Focus selected artboard"} title="Focus selected artboard" onClick={()=>{setFocus(v=>!v);setInteract(false);}}><Grid2X2 size={15}/>{focus?'All boards':'Focus'}</button>
+    <button aria-pressed={interact} aria-label={interact?"Exit preview":"Preview reference"} title="Preview the selected reference" onClick={()=>{setInteract(v=>!v);setFocus(true);}}><MousePointer2 size={15}/>{interact?'Exit preview':'Preview'}</button>
+    {!right?<Tooltip label="Show inspector"><button aria-label="Show inspector" onClick={()=>{setRight(true);if(compact)setLeft(false);}}><PanelRightClose size={16}/></button></Tooltip>:null}
    </div>
   </div>
   <div className="dca-main">
+   {compact&&(left||right)?<button type="button" className="dca-sheet-backdrop" aria-label="Close panel" onClick={()=>{setLeft(false);setRight(false);}}/>:null}
    {left?<aside className="dca-sidebar" aria-label="Reference library collections">
      <div className="dca-pane-heading"><b>Collections</b><Tooltip label="Hide scenes"><button onClick={()=>setLeft(false)} aria-label="Hide scenes"><PanelLeftClose size={16}/></button></Tooltip></div>
      <nav className="dca-scenes">{groups.map(name=><button key={name} aria-current={name===group?'page':undefined} onClick={()=>{setGroup(name);setQuery('');}}><span>{groupLabels[name]||name}</span><small>{boards.filter(b=>b.category===name).length}</small></button>)}</nav>
@@ -163,7 +184,7 @@ export function SourceLibraryApp({assetsBase='./sources',onNativeCanvas,onExit}:
       })}
      </div>
     </div>
-    <div className="dca-floating-tools"><Tooltip label="Select"><button aria-label="Select" aria-pressed={!panning} onClick={()=>setPanning(false)} title="Select"><MousePointer2 size={16}/></button></Tooltip><Tooltip label="Pan with pointer"><button aria-label="Pan with pointer" aria-pressed={panning} onClick={()=>setPanning(true)} title="Pan with pointer"><Hand size={16}/></button></Tooltip><Tooltip label="Fit all artboards"><button aria-label="Fit all artboards" onClick={()=>{setZoom(.48);setFocus(false);}} title="Fit all artboards"><Maximize2 size={16}/></button></Tooltip></div>
+    <div className="dca-floating-tools"><Tooltip label="Select"><button aria-label="Select" aria-pressed={!panning} onClick={()=>setPanning(false)} title="Select"><MousePointer2 size={16}/></button></Tooltip><Tooltip label="Pan with pointer"><button aria-label="Pan with pointer" aria-pressed={panning} onClick={()=>setPanning(true)} title="Pan with pointer"><Hand size={16}/></button></Tooltip><Tooltip label="Fit selected artboard"><button aria-label="Fit selected artboard" onClick={fitReference} title="Fit selected artboard"><Maximize2 size={16}/></button></Tooltip></div>
     <div className="dca-footer"><span>Reference library</span><span>{focus?'Focused reference':'All references'}</span></div>
    </section>
    {right?<aside className="dca-inspector" aria-label="Artboard inspector">
@@ -177,7 +198,7 @@ export function SourceLibraryApp({assetsBase='./sources',onNativeCanvas,onExit}:
             <ExternalLink size={15}/> Add to website
           </a> : null}
         <button className="dca-wide" onClick={()=>{setInspector('source');setFocus(true);}}><Code2 size={15}/> Edit HTML</button>
-        <button className="dca-wide" onClick={()=>{setFocus(true);setInteract(true);}}><ExternalLink size={15}/> Preview design</button>
+        <button className="dca-wide" onClick={()=>{fitReference();setInteract(true);if(compact)setRight(false);}}><ExternalLink size={15}/> Preview design</button>
         <button className="dca-wide" onClick={()=>download(safeFile(active.filename),currentDraft?.content||source,'text/html')}><Download size={15}/> Export HTML</button>
        </div>:inspector==='source'?<div className="dca-inspector-body dca-code-inspector">
         <div className="dca-code-status"><span>{loading?'Loading reference':loadError||'HTML editor'}</span>{currentDraft?<span>Saved</span>:null}</div>

@@ -59,7 +59,7 @@ function useGreeting() {
   // Local time exists only in the browser; render a neutral line until mounted.
   useEffect(() => { setHour(new Date().getHours()); }, []);
   if (hour === null) return "Welcome";
-  return greetingForDayPart(dayPartFromHour(hour), greetingNameFromDisplay(user?.displayName));
+  return greetingForDayPart(dayPartFromHour(hour), greetingNameFromDisplay(user?.isDevFallback ? null : user?.displayName));
 }
 
 function appForUrl(url: string, apps: AdminInstallableApp[]): AdminInstallableApp | null {
@@ -128,7 +128,18 @@ export function NewTabStage({ tab, omitKinds = [], onConnectProject, onOpenFolde
   useEffect(() => { void loadBrowserHistory(8).then(setHistory); }, []);
 
   const tools = useMemo(
-    () => orderTools(registry.actions.filter((stage) => stage.renderer === "builtin" && stage.enabled !== false && !omitKinds.includes(stage.tabKind)), usage),
+    () => {
+      const available = registry.actions.filter(stage => stage.renderer === "builtin" && stage.enabled !== false && !omitKinds.includes(stage.tabKind));
+      const seen = new Set<string>();
+      return orderTools(available, usage).filter(stage => {
+        // Multiple provider registrations can resolve to the same native
+        // Canvas renderer. Show that destination once, not one tile per row.
+        const key = stage.tabKind === "design" ? "design" : stage.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    },
     [registry.actions, usage, omitKinds.join("|")],
   );
 

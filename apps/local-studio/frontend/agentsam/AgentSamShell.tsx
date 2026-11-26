@@ -601,7 +601,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
     showSidebarHeader: true,
     // New conversation is the first entry; product destinations follow below.
-    showHistory: true,
+    showHistory: isConversation,
     destinations: [
       // Render the platform-owned business destinations first. These are the
       // canonical primary entries from the same host projection as installed apps.
@@ -617,7 +617,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     } : item),
     onNavigate: go,
     onSearch: () => window.dispatchEvent(new Event('agentsam:open-command-palette')),
-    onCreateConversation: () => { state.startChat(); go('/admin/agentsam'); },
+    onCreateConversation: isConversation ? () => { state.startChat(); go('/admin/agentsam'); } : undefined,
     onSelectConversation: (id) => {
       if (state.chats.some(item => item.id === id)) state.setActiveChat(id);
       go('/admin/chats/' + encodeURIComponent(id));
@@ -814,7 +814,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       <DesktopStartupOverlay />
       <AgentSamStatusBuddy />
       <AgentSamDuoHandoff />
-      <AnnotationHelper />
+      <AnnotationHelper key={JSON.stringify([pathname, state.activeChatId, state.activeSideTabId, state.sideOpen, state.workSurface])} />
       <Toaster theme={theme === 'light' ? 'light' : 'dark'} position="bottom-center" />
     </Nav.Scope>
   </Nav.Provider></TooltipProvider></ToolPermissionProvider></CompanionProvider>;
