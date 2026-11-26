@@ -178,7 +178,7 @@ for (const critical of [
   "admin/workbench/media-asset-workbench.js",
   "admin/_spa/index.html", "admin/theme-editor.html",
   "admin/js/shell.js", "admin/js/inspector.js",
-  "admin/js/revise-atlas.js", "admin/js/portable-sections.js", "admin/js/platform-stock-sections.js",
+  "admin/js/portable-sections.js", "admin/js/platform-stock-sections.js",
   "admin/js/primetech-scene.js", "admin/js/primetech-circuit.js", "js/primetech-scene.js", "js/primetech-circuit.js",
   "admin/js/theme-scenes-sections.js", "js/theme-scenes-sections.js",
   "admin/js/iamscene-runtime.js", "js/iamscene-runtime.js",
