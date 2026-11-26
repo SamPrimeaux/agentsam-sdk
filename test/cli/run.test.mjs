@@ -13,6 +13,7 @@ import {
   createAgentControlClient,
 } from '../../src/acp/client.js';
 import { runRun } from '../../src/commands/run.js';
+import { recordAgentRunTimeout } from '../../src/acp/dependencies.js';
 
 const schemaAjv = new Ajv2020({ allErrors: true, strict: false });
 const readRunSchema = name => JSON.parse(fs.readFileSync(new URL('../../packages/agentsam-contracts/schemas/' + name, import.meta.url), 'utf8'));
