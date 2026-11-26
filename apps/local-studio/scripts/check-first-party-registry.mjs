@@ -70,7 +70,7 @@ export function appManifestSources(root = appRoot) {
   const read = (p) => JSON.parse(readFileSync(resolve(root, p), 'utf8'));
   const manifest = read('package.json');
   const paths = ['package.json'];
-  for (const workspace of root.workspaces || []) {
+  for (const workspace of manifest.workspaces || []) {
     if (workspace.endsWith('/*')) {
       const directory = workspace.slice(0, -2);
       for (const item of readdirSync(resolve(appRoot, directory), { withFileTypes: true })) {
