@@ -113,7 +113,12 @@ test('run and activity wire schemas validate actual projections and storage voca
   const storageStatusCheck = migration.match(/status TEXT NOT NULL DEFAULT 'queued'[\s\S]*?CHECK\s*\(status IN \(([^)]+)\)\)/i);
   assert.ok(storageStatusCheck, 'runtime run migration must constrain storage status');
   const persistedStatuses = [...storageStatusCheck[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
-  assert.deepEqual(persistedStatuses, [...AGENT_RUN_STORAGE_STATUSES]);
+  // The original local SQLite migration allowed legacy 'paused' rows.
+  // Migration 0012 normalizes those rows to 'running'; new persisted writes
+  // use the canonical D1 storage vocabulary only.
+  assert.deepEqual(persistedStatuses.filter(status => status !== 'paused'), [...AGENT_RUN_STORAGE_STATUSES]);
+  const parityMigration = fs.readFileSync(new URL('../../../migrations/runtime/0012_agent_run_event_sequence.sql', import.meta.url), 'utf8');
+  assert.match(parityMigration, /SET status = 'running'[\\s\\S]*WHERE status = 'paused'/);
   const validateActivity = ajv.compile(activity);
   assert.deepEqual(run.properties.status.enum, [...AGENT_RUN_STATUSES]);
   assert.deepEqual(run.properties.storageStatus.enum, [...AGENT_RUN_STORAGE_STATUSES]);
