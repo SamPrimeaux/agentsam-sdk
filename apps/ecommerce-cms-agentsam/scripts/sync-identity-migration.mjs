@@ -4,7 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(appRoot, '../..');
-const sourceRoot = path.join(repositoryRoot, 'packages/identity/migrations/sqlite');
+const sourceRoot = (() => {
+  try {
+    return path.dirname(fileURLToPath(import.meta.resolve('@inneranimalmedia/agentsam-sdk/identity/migrations/sqlite/001_identity_core.sql')));
+  } catch {
+    return path.join(repositoryRoot, 'packages/identity/migrations/sqlite');
+  }
+})();
 const outputPath = path.join(appRoot, 'db/migrations/011_storefront_identity.sql');
 const sourceFiles = [
   '001_identity_core.sql',
