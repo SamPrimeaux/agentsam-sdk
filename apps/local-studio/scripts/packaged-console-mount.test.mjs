@@ -167,7 +167,7 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   const analytics = context.NAV.main.find((item) => item.id === 'analytics');
   assert.equal(analytics.href, '/admin/analytics/overview');
   assert.deepEqual(Array.from(analytics.children, (entry) => entry.href), [
-    '/admin/analytics/finance', '/admin/analytics/health'
+    '/admin/analytics/finance', '/admin/analytics/health', '/admin/analytics/security'
   ]);
   const channelPaths = context.NAV.channels.flatMap((section) =>
     [section.href, ...(section.children || []).map((item) => item.href)].filter(Boolean).map((href) => href.split('?')[0]));

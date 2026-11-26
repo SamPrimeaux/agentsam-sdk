@@ -63,7 +63,7 @@ export async function handleSecurityAnalytics(request, env, accountId) {
     }
     if (request.method !== "GET") return response(405,{ok:false,error:"method_not_allowed"});
     const url = new URL(request.url);
-    const range = url.searchParams.get("range") || "30d";
+    const range = (url.searchParams.get("range") || "30d").toLowerCase();
     const days = {"24h":1,"7d":7,"30d":30,"90d":90,"1y":365,"365d":365};
     const now = new Date();
     const since = range === "ytd" ? Date.UTC(now.getUTCFullYear(),0,1)/1000 : range === "all" ? 0 : Math.floor(Date.now()/1000-(days[range]||30)*86400);
