@@ -1,6 +1,8 @@
 import { AGENT_AUTHORITY_TYPES } from './authority';
 import type { AgentAuthorityRequirement } from './authority';
-import type { AgentJsonSchema, AgentToolIdempotencyMode } from './tools';
+import type { AgentJsonSchema } from './json-schema';
+import { assertAgentJsonSchema } from './json-schema';
+import type { AgentToolIdempotencyMode } from './tools';
 import { AGENT_TOOL_IDEMPOTENCY_MODES } from './tools';
 
 export const AGENT_OPERATION_LANES = ['local', 'remote', 'sandbox', 'platform', 'mcp'] as const;
@@ -168,6 +170,7 @@ export function assertAgentOperationContract(value: unknown): asserts value is A
     if (typeof value[field]==='string' && !value[field].trim()) {
       throw new TypeError(`operation ${value.id} ${field} reference cannot be empty`);
     }
+    if (isRecord(value[field])) assertAgentJsonSchema(value[field], `operation ${value.id} ${field}`);
   }
   for (const field of ['capabilities','accepts','phases','artifacts']) {
     if (value[field]!==undefined && !stringArray(value[field])) {
