@@ -256,6 +256,21 @@ test('HTTP ACP start uses the same POST /v1/runs contract as any hosted provider
 });
 
 
+test('run projection validates durable suspension detail', async (t) => {
+  const root = await fixture(t, { suspendChild:true });
+  const client = new LocalAgentControlClient({ cwd: root });
+  const run = await client.getRun('arun_child');
+  assert.equal(run.status, 'waiting_external');
+  assert.equal(run.storageStatus, 'running');
+  assert.deepEqual(run.suspension, {
+    runId:'arun_child', state:'waiting_external', reason:'external',
+    wakeAt:5000, wakeEvent:'provider.completed', dependencyRunIds:[],
+    resumeStepId:'step_resume', checkpointRef:'checkpoint:run', expiresAt:6000,
+    attempt:2, metadata:{provider:'example'},
+  });
+  assert.equal(validateRun(run), true, schemaAjv.errorsText(validateRun.errors));
+});
+
 test('timeout event exposes timed_out lifecycle status while storage remains failed', async (t) => {
   const root = await fixture(t, { childStatus:'failed', timeoutChild:true });
   const client = new LocalAgentControlClient({ cwd: root });
