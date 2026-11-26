@@ -21,6 +21,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg, #
 #theme-project-loading{position:fixed;inset:0;z-index:5;display:grid;grid-template:54px 1fr/300px 1fr;gap:8px;padding:8px;box-sizing:border-box;background:var(--bg, #191919)}
 #theme-project-loading span{border-radius:10px;background:linear-gradient(100deg,var(--surface, #262626),var(--surface-2, #2a2a2a),var(--surface, #262626));background-size:200% 100%;animation:editor-loading 1.4s ease infinite}
 #theme-project-loading span:first-child{grid-column:1/-1}
+#theme-project-loading .theme-preparing,#theme-project-loading .theme-loading-exit{display:none}
 @keyframes editor-loading{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){#theme-project-loading span{animation:none}}
 /* The phone editor has a single work surface, not an 80px fake sidebar.
@@ -34,12 +35,15 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg, #
   }
   #theme-project-loading span:first-child{grid-column:1;grid-row:1}
   #theme-project-loading span:nth-child(2){grid-column:1;grid-row:2}
-  #theme-project-loading span:nth-child(3){display:none}
+  #theme-project-loading span{display:none}
+  #theme-project-loading{display:grid;place-items:center;grid-template:none;background:radial-gradient(ellipse at center,#35313d,#111 72%);color:#fff;font:16px system-ui}
+  #theme-project-loading .theme-preparing{display:block}
+  #theme-project-loading .theme-loading-exit{display:grid;place-items:center;position:absolute;top:12px;left:12px;width:44px;height:44px;border-radius:50%;background:#ffffff18;color:white;text-decoration:none;font-size:24px}
 }
 </style>
 </head>
 <body>
-<div id="theme-project-loading" role="status" aria-label="Loading theme" aria-busy="true"><span></span><span></span><span></span></div>
+<div id="theme-project-loading" role="status" aria-label="Loading theme" aria-busy="true"><span></span><span></span><span></span><div class="theme-preparing">Preparing your storefront…</div><a class="theme-loading-exit" href="/admin/store" aria-label="Return to Online Store">×</a></div>
 <iframe id="theme-project-editor-frame" title="Theme Studio editor"></iframe>
 <pre id="theme-project-error" role="alert" hidden></pre>
 <script src="js/platform-stock-sections.js"></script>

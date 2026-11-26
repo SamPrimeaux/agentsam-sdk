@@ -5,7 +5,7 @@ import { widgetFont, widgetImage, widgetText } from '../src/widget-transport.js'
 
 test('every packaged embed is installable and its editor fields have defaults', () => {
   const all = listEmbeds();
-  assert.deepEqual(all.map((e) => e.key), ['form_inline', 'form_popup', 'store_chat', 'grow_capture']);
+  assert.deepEqual(all.map((e) => e.key), ['form_inline', 'form_popup', 'store_chat', 'customer_account_portal', 'grow_capture']);
   for (const e of all) assert.deepEqual(validateEmbed(e), [], e.key);
 });
 
@@ -40,4 +40,16 @@ test('widget helpers only accept safe images, bounded text and known fonts', () 
   assert.match(widgetFont('serif'), /Georgia/);
   assert.match(widgetFont('inherit', false), /system-ui/);
   assert.equal(widgetFont('url(evil)'), 'inherit');
+});
+
+
+test('customer account portal exposes site-scoped sign-in and registration controls', () => {
+  const portal = getEmbed('customer_account_portal');
+  const keys = portal.editor_fields.map((field) => field.key);
+  for (const key of ['enabled', 'login_label', 'signup_label', 'show_signup', 'style', 'alignment', 'accent', 'background', 'font_color', 'font_size', 'border_radius']) {
+    assert.ok(keys.includes(key), key);
+    assert.ok(Object.hasOwn(portal.default_config, key), key + ' default');
+  }
+  assert.equal(portal.registry_required, true);
+  assert.deepEqual(portal.surfaces, ['storefront_embed']);
 });

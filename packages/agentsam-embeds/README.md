@@ -1,6 +1,6 @@
 # @inneranimalmedia/agentsam-embeds
 
-Single home for installable storefront embeds: **Form**, **Form popup**, **Online store chat** (inbox) and **AgentSamGrow capture** (feeds `agentsam-campaign`).
+Single home for installable storefront embeds: **Form**, **Form popup**, **Online store chat** (inbox), **Customer account portal** (AgentSam Identity) and **AgentSamGrow capture** (feeds `agentsam-campaign`).
 
 - `agentsam.embeds.json` is the only source: each `storefront_embeds[]` entry carries `default_config` and `editor_fields` (the schema the editor's left panel renders).
 - Hosts consume it through the CMS catalog generator (`scripts/sync-theme-embed-catalog.mjs`), which installs entries as page-owned `cms_page_sections`. Nothing is copied into the host app.
@@ -29,3 +29,10 @@ delivery. Forms and chat preserve entries when a submission fails.
 | Chat window | `header_style` (`filled`, `plain`), featured products |
 
 `image` accepts a site-local path (`/media/...`) or an `https:` URL. Anything else is ignored. The editor uploads through the site's media library (`POST /api/admin/media`) and stores the returned path.
+
+
+## Customer account portal
+
+`customer_account_portal` adds store-scoped `/auth/login` and `/auth/signup` links to a storefront. The actual login, signup, password-reset pages, credential checks and sessions are owned by `@inneranimalmedia/agentsam-identity`; this embed is only the merchant-configurable entry point. Customer identity records and sessions are scoped to the owning CMS site.
+
+The embed is released as an isolated CMS component. Its renderer only accepts local Identity routes, carries the current storefront path as a validated `next` value, and inherits the active theme's typography and color tokens unless the merchant supplies explicit values.

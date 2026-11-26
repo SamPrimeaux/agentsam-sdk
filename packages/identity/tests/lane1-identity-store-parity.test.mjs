@@ -380,7 +380,7 @@ describe('Lane 1 agentsam.identity pack manifest', () => {
 });
 
 describe('Lane 1 migration paths', () => {
-  it('fresh install reaches schema_version 2', async () => {
+  it('fresh install reaches schema_version 3', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lane1-fresh-'));
     const db = await createLocalSqliteDatabase(path.join(dir, 'identity.sqlite'));
     await applyPortableIdentityMigrations(db);
@@ -403,7 +403,7 @@ describe('Lane 1 migration paths', () => {
     assert.equal((forbidden.results || []).length, 0);
   });
 
-  it('upgrade: schema_version 1 → 005 → 2 keeps prior rows', async () => {
+  it('upgrade: schema_version 1 → 005 → 009 keeps prior rows', async () => {
     const sqlite = new DatabaseSync(':memory:');
     sqlite.exec(fs.readFileSync(path.join(SQL_DIR, '001_identity_core.sql'), 'utf8'));
     sqlite.exec(fs.readFileSync(path.join(SQL_DIR, '002_identity_oauth_client.sql'), 'utf8'));
@@ -422,7 +422,7 @@ describe('Lane 1 migration paths', () => {
     ).run(ts + 600, ts);
 
     const db = wrapDatabaseSync(sqlite);
-    // Apply only 005 (upgrade path).
+    // Apply the v1→v2 company/native upgrade, then the v2→v3 scoped-identity upgrade.
     const sql005 = fs.readFileSync(path.join(SQL_DIR, '005_identity_company_native.sql'), 'utf8');
     const statements = sql005
       .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -438,8 +438,10 @@ describe('Lane 1 migration paths', () => {
       }
     }
 
+    const sql009 = fs.readFileSync(path.join(SQL_DIR, '009_identity_scope.sql'), 'utf8');
+    sqlite.exec(sql009);
     const after = sqlite.prepare(`SELECT value FROM identity_schema_meta WHERE key='schema_version'`).get();
-    assert.equal(Number(after.value), 2);
+    assert.equal(Number(after.value), 3);
     const user = sqlite.prepare(`SELECT email FROM identity_users WHERE id='au_upgrade'`).get();
     assert.equal(user.email, 'upgrade@example.test');
     const tx = sqlite.prepare(`SELECT app_id FROM identity_oauth_transactions WHERE state='st_upgrade'`).get();

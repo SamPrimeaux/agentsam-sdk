@@ -48,12 +48,14 @@ async function requirePortableSchema(db) {
 /**
  * Shared IdentityStore over portable identity_* tables (SQLite + portable D1).
  * @param {{ prepare: Function }} db
- * @param {{ backend: string, sessionTtlSeconds?: number, skipSchemaCheck?: boolean }} options
+ * @param {{ backend: string, sessionTtlSeconds?: number, skipSchemaCheck?: boolean, scopeId?: string, mirrorAccounts?: boolean }} options
  */
 export function createPortableIdentityStore(db, options = {}) {
   if (!db?.prepare) throw new Error('portable_identity_store_requires_db');
   const backend = options.backend || 'portable';
   const sessionTtlSeconds = options.sessionTtlSeconds ?? SESSION_POLICY.browser.ttlSeconds;
+  const scopeId = String(options.scopeId || 'global').trim() || 'global';
+  const mirrorAccounts = options.mirrorAccounts !== false;
   let schemaReady = Boolean(options.skipSchemaCheck);
 
   async function ensure() {
@@ -71,8 +73,8 @@ export function createPortableIdentityStore(db, options = {}) {
       await ensure();
       const row = await db.prepare(
         `SELECT id, email, display_name, password_hash, salt, status, created_at, updated_at
-         FROM identity_users WHERE email = ? COLLATE NOCASE LIMIT 1`,
-      ).bind(String(email || '').trim().toLowerCase()).first();
+         FROM identity_users WHERE scope_id = ? AND email = ? COLLATE NOCASE LIMIT 1`,
+      ).bind(scopeId, String(email || '').trim().toLowerCase()).first();
       return row || null;
     },
 
@@ -80,8 +82,8 @@ export function createPortableIdentityStore(db, options = {}) {
       await ensure();
       const row = await db.prepare(
         `SELECT id, email, display_name, password_hash, salt, status, created_at, updated_at
-         FROM identity_users WHERE id = ? LIMIT 1`,
-      ).bind(userId).first();
+         FROM identity_users WHERE scope_id = ? AND id = ? LIMIT 1`,
+      ).bind(scopeId, userId).first();
       return row || null;
     },
 
@@ -91,14 +93,14 @@ export function createPortableIdentityStore(db, options = {}) {
       const ts = nowUnix();
       const normalizedEmail = String(email || '').trim().toLowerCase();
       await db.prepare(
-        `INSERT INTO identity_users (id, email, display_name, password_hash, salt, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`,
-      ).bind(id, normalizedEmail, displayName || null, passwordHash || null, salt || null, ts, ts).run();
+        `INSERT INTO identity_users (id, scope_id, email, display_name, password_hash, salt, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+      ).bind(id, scopeId, normalizedEmail, displayName || null, passwordHash || null, salt || null, ts, ts).run();
       // accounts is the account row of record; credentials stay in identity_users.
       // Non-fatal and probed so databases that predate migration 008 keep working
       // (re-applying the pack backfills any row missed here).
       try {
-        if (await hasColumn(db, 'accounts', 'id')) {
+        if (mirrorAccounts && await hasColumn(db, 'accounts', 'id')) {
           await db.prepare(
             `INSERT OR IGNORE INTO accounts (id, email, display_name, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?)`,
@@ -112,8 +114,8 @@ export function createPortableIdentityStore(db, options = {}) {
       await ensure();
       const ts = nowUnix();
       await db.prepare(
-        `UPDATE identity_users SET password_hash = ?, salt = ?, updated_at = ? WHERE id = ?`,
-      ).bind(passwordHash, salt, ts, userId).run();
+        `UPDATE identity_users SET password_hash = ?, salt = ?, updated_at = ? WHERE scope_id = ? AND id = ?`,
+      ).bind(passwordHash, salt, ts, scopeId, userId).run();
     },
 
     async findUserByProvider(provider, providerSubject) {
@@ -122,29 +124,30 @@ export function createPortableIdentityStore(db, options = {}) {
         `SELECT u.id, u.email, u.display_name, u.password_hash, u.salt, u.status, u.created_at, u.updated_at
          FROM identity_external_accounts ea
          JOIN identity_users u ON u.id = ea.user_id
-         WHERE ea.provider = ? AND ea.provider_subject = ?
+         WHERE ea.scope_id = ? AND ea.provider = ? AND ea.provider_subject = ?
+           AND u.scope_id = ea.scope_id
          LIMIT 1`,
-      ).bind(provider, providerSubject).first();
+      ).bind(scopeId, provider, providerSubject).first();
       return row || null;
     },
 
     async upsertProviderIdentity({ accountId, provider, providerSubject, email }) {
       await ensure();
       const existing = await db.prepare(
-        `SELECT id FROM identity_external_accounts WHERE provider = ? AND provider_subject = ? LIMIT 1`,
-      ).bind(provider, providerSubject).first();
+        `SELECT id FROM identity_external_accounts WHERE scope_id = ? AND provider = ? AND provider_subject = ? LIMIT 1`,
+      ).bind(scopeId, provider, providerSubject).first();
       const ts = nowUnix();
       if (existing?.id) {
         await db.prepare(
-          `UPDATE identity_external_accounts SET user_id = ?, email = ?, updated_at = ? WHERE id = ?`,
-        ).bind(accountId, email || null, ts, existing.id).run();
+          `UPDATE identity_external_accounts SET user_id = ?, email = ?, updated_at = ? WHERE scope_id = ? AND id = ?`,
+        ).bind(accountId, email || null, ts, scopeId, existing.id).run();
         return existing.id;
       }
       const id = newAccountIdentityId();
       await db.prepare(
-        `INSERT INTO identity_external_accounts (id, user_id, provider, provider_subject, email, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(id, accountId, provider, providerSubject, email || null, ts, ts).run();
+        `INSERT INTO identity_external_accounts (id, scope_id, user_id, provider, provider_subject, email, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(id, scopeId, accountId, provider, providerSubject, email || null, ts, ts).run();
       return id;
     },
 
@@ -157,10 +160,10 @@ export function createPortableIdentityStore(db, options = {}) {
       const sessionType = desktop ? SESSION_TYPES.DESKTOP : SESSION_TYPES.BROWSER;
       await db.prepare(
         `INSERT INTO identity_sessions
-         (id, user_id, email, provider, provider_subject, display_name, expires_at, created_at, last_active_at, type)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, scope_id, user_id, email, provider, provider_subject, display_name, expires_at, created_at, last_active_at, type)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
-        id, userId, email || null, provider || 'email', providerSubject || null,
+        id, scopeId, userId, email || null, provider || 'email', providerSubject || null,
         displayName || null, expiresAt, ts, ts, sessionType,
       ).run();
       // accounts.last_active_at is the account-level "last seen". Non-fatal so a login
@@ -187,8 +190,8 @@ export function createPortableIdentityStore(db, options = {}) {
       await ensure();
       const row = await db.prepare(
         `SELECT id, user_id, email, provider, provider_subject, display_name, expires_at, revoked_at, created_at, last_active_at, type
-         FROM identity_sessions WHERE id = ? LIMIT 1`,
-      ).bind(sessionId).first();
+         FROM identity_sessions WHERE scope_id = ? AND id = ? LIMIT 1`,
+      ).bind(scopeId, sessionId).first();
       const now = nowUnix();
       if (!row || row.revoked_at || row.expires_at <= now) return null;
       if (shouldRenewDesktopSession(row, now)) {
@@ -196,8 +199,8 @@ export function createPortableIdentityStore(db, options = {}) {
         await db.prepare(
           `UPDATE identity_sessions
            SET expires_at = ?, last_active_at = ?
-           WHERE id = ? AND revoked_at IS NULL AND expires_at > ?`,
-        ).bind(renewedExpiresAt, now, sessionId, now).run();
+           WHERE scope_id = ? AND id = ? AND revoked_at IS NULL AND expires_at > ?`,
+        ).bind(renewedExpiresAt, now, scopeId, sessionId, now).run();
         row.expires_at = renewedExpiresAt;
         row.last_active_at = now;
       }
@@ -210,12 +213,12 @@ export function createPortableIdentityStore(db, options = {}) {
       const normalized = normalizeRevokeReason(reason);
       if (await hasColumn(db, 'identity_sessions', 'revoke_reason')) {
         await db.prepare(
-          `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ?, revoke_reason = ? WHERE id = ? AND revoked_at IS NULL`,
-        ).bind(ts, ts, normalized, sessionId).run();
+          `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ?, revoke_reason = ? WHERE scope_id = ? AND id = ? AND revoked_at IS NULL`,
+        ).bind(ts, ts, normalized, scopeId, sessionId).run();
       } else {
         await db.prepare(
-          `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ? WHERE id = ? AND revoked_at IS NULL`,
-        ).bind(ts, ts, sessionId).run();
+          `UPDATE identity_sessions SET revoked_at = ?, last_active_at = ? WHERE scope_id = ? AND id = ? AND revoked_at IS NULL`,
+        ).bind(ts, ts, scopeId, sessionId).run();
       }
       return { ok: true, reason: normalized };
     },
@@ -232,8 +235,8 @@ export function createPortableIdentityStore(db, options = {}) {
         );
       }
       const ts = nowUnix();
-      const columns = ['state', 'provider', 'code_verifier', 'return_to', 'app_id', 'expires_at', 'created_at', 'consumed_at'];
-      const values = [state, provider, codeVerifier, returnTo ?? redirectTo ?? null, appId, ts + ttlSeconds, ts, null];
+      const columns = ['state', 'scope_id', 'provider', 'code_verifier', 'return_to', 'app_id', 'expires_at', 'created_at', 'consumed_at'];
+      const values = [state, scopeId, provider, codeVerifier, returnTo ?? redirectTo ?? null, appId, ts + ttlSeconds, ts, null];
       if (clientType === SESSION_TYPES.DESKTOP) {
         columns.push('client_type', 'native_challenge', 'native_redirect');
         values.push(clientType, nativeChallenge ?? null, nativeRedirect ?? null);
@@ -258,14 +261,14 @@ export function createPortableIdentityStore(db, options = {}) {
       const row = await db.prepare(
         `SELECT state, provider, code_verifier, return_to, app_id, expires_at, created_at, consumed_at,
                 client_type, native_challenge, native_redirect
-         FROM identity_oauth_transactions WHERE state = ? LIMIT 1`,
-      ).bind(state).first();
+         FROM identity_oauth_transactions WHERE scope_id = ? AND state = ? LIMIT 1`,
+      ).bind(scopeId, state).first();
       if (!row) return null;
       const ts = nowUnix();
       await db.prepare(
-        `UPDATE identity_oauth_transactions SET consumed_at = ? WHERE state = ?`,
-      ).bind(ts, state).run();
-      await db.prepare(`DELETE FROM identity_oauth_transactions WHERE state = ?`).bind(state).run();
+        `UPDATE identity_oauth_transactions SET consumed_at = ? WHERE scope_id = ? AND state = ?`,
+      ).bind(ts, scopeId, state).run();
+      await db.prepare(`DELETE FROM identity_oauth_transactions WHERE scope_id = ? AND state = ?`).bind(scopeId, state).run();
       if (row.consumed_at) return null;
       if (row.expires_at <= ts) return null;
       if (!row.app_id) {
@@ -314,10 +317,10 @@ export function createPortableIdentityStore(db, options = {}) {
         };
         await db.prepare(
           `INSERT INTO identity_auth_events
-           (id, user_id, event_type, status, provider, metadata_json, ip_hash, user_agent_hash, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (id, scope_id, user_id, event_type, status, provider, metadata_json, ip_hash, user_agent_hash, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).bind(
-          newAuthEventId(), userId || null, eventType, status, provider || null,
+          newAuthEventId(), scopeId, userId || null, eventType, status, provider || null,
           JSON.stringify(envelope), ipHash, uaHash, nowUnix(),
         ).run();
       } catch {
@@ -331,12 +334,12 @@ export function createPortableIdentityStore(db, options = {}) {
       const logins = await db.prepare(
         `SELECT COUNT(*) AS c, MAX(created_at) AS last_at
          FROM identity_auth_events
-         WHERE user_id = ? AND event_type = 'login' AND status = 'ok'`,
-      ).bind(userId).first();
+         WHERE scope_id = ? AND user_id = ? AND event_type = 'login' AND status = 'ok'`,
+      ).bind(scopeId, userId).first();
       const sessions = await db.prepare(
         `SELECT COUNT(*) AS c FROM identity_sessions
-         WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?`,
-      ).bind(userId, nowUnix()).first();
+         WHERE scope_id = ? AND user_id = ? AND revoked_at IS NULL AND expires_at > ?`,
+      ).bind(scopeId, userId, nowUnix()).first();
       return {
         loginCount: Number(logins?.c || 0),
         activeSessionCount: Number(sessions?.c || 0),
@@ -348,9 +351,9 @@ export function createPortableIdentityStore(db, options = {}) {
       await ensure();
       const ts = nowUnix();
       await db.prepare(
-        `INSERT INTO identity_native_handoffs (handoff_hash, session_id, challenge, expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-      ).bind(handoffHash, sessionId, challenge, ts + ttlSeconds, ts).run();
+        `INSERT INTO identity_native_handoffs (handoff_hash, scope_id, session_id, challenge, expires_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).bind(handoffHash, scopeId, sessionId, challenge, ts + ttlSeconds, ts).run();
     },
 
     async consumeNativeHandoff(handoffHash) {
@@ -358,9 +361,9 @@ export function createPortableIdentityStore(db, options = {}) {
       const ts = nowUnix();
       const row = await db.prepare(
         `UPDATE identity_native_handoffs SET consumed_at = ?
-         WHERE handoff_hash = ? AND consumed_at IS NULL AND expires_at > ?
+         WHERE scope_id = ? AND handoff_hash = ? AND consumed_at IS NULL AND expires_at > ?
          RETURNING session_id, challenge`,
-      ).bind(ts, handoffHash, ts).first();
+      ).bind(ts, scopeId, handoffHash, ts).first();
       return row || null;
     },
 
@@ -511,8 +514,8 @@ export function createPortableIdentityStore(db, options = {}) {
       async canManageCompany(userId) {
         await ensure();
         const owner = await db.prepare(
-          `SELECT id FROM identity_users ORDER BY created_at ASC, rowid ASC LIMIT 1`,
-        ).bind().first();
+          `SELECT id FROM identity_users WHERE scope_id = ? ORDER BY created_at ASC, rowid ASC LIMIT 1`,
+        ).bind(scopeId).first();
         return Boolean(owner?.id && owner.id === userId);
       },
     }),

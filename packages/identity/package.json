@@ -1,8 +1,8 @@
 {
   "name": "@inneranimalmedia/agentsam-identity",
-  "version": "2.6.18",
+  "version": "2.6.20",
   "type": "module",
-  "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
+  "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace \u2014 publish via root SDK)",
   "agentsam": {
     "system": "identity",
     "kind": "library",
@@ -42,7 +42,10 @@
     "./contracts/routes": "./src/contracts/routes.js",
     "./oauth/goaude": "./src/oauth/goaude.js",
     "./server/mount-policy": "./src/server/mount-policy.js",
-    "./server/worker-router": "./src/server/worker-router.js"
+    "./server/worker-router": "./src/server/worker-router.js",
+    "./core/password-crypto": "./src/core/password-crypto.js",
+    "./core/password-gate": "./src/core/password-gate.js",
+    "./frontend/auth-portal/store-access": "./src/frontend/auth-portal/store-access.js"
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",

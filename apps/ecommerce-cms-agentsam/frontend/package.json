@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prebuild": "npm --prefix ../../../packages/analytics-ui run build && npm --prefix ../../../packages/financial-analytics run build"
+    "prebuild": "npm --prefix ../../../packages/analytics-ui run build && npm --prefix ../../../packages/financial-analytics run build && npm --prefix ../../../packages/agentsam-nav run build"
   },
   "dependencies": {
     "@inneranimalmedia/commerce-analytics": "file:../packages/commerce-analytics",
@@ -33,6 +33,5 @@
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"
   },
-  "overrides": {
-  }
+  "overrides": {}
 }

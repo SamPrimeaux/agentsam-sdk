@@ -4463,3 +4463,26 @@ body.agentsam-open [data-mini-agentsam] { display:none!important; }
 body > .te-toolbar-dropdown {background:var(--te-panel);color:var(--te-text);border-color:var(--te-border);}
 body > .te-toolbar-dropdown > button {color:var(--te-text);background:transparent;}
 body > .te-toolbar-dropdown > button:hover {background:var(--te-soft);}
+
+.te-mobile-menu-heading{display:none}
+@media(max-width:900px){
+ .theme-studio .theme-studio-toolbar{grid-template-columns:48px minmax(0,1fr) auto;gap:8px;padding-inline:16px;height:60px;background:var(--te-bg);overflow:visible}
+ .theme-studio .theme-studio-toolbar__left #te-exit,.theme-studio .theme-studio-toolbar__right #te-more{width:48px;height:48px;min-width:48px;background:var(--te-soft);border-radius:50%}
+ .theme-studio .theme-studio-toolbar__right #te-inspect-mode,.theme-studio .theme-studio-toolbar__right .te-device-switch,.theme-studio .theme-studio-toolbar__right .te-toolbar-separator{display:none!important}
+ .theme-studio .theme-studio-toolbar__center{min-width:0;justify-content:flex-start}
+ .theme-studio .te-page-trigger{max-width:100%;height:48px;background:var(--te-soft);border-radius:999px}
+ .theme-studio .te-page-trigger__content{min-width:0;overflow:hidden}
+ .theme-studio .te-page-trigger strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .theme-studio .te-page-popover:not([hidden]),body>#te-more-menu:not([hidden]){position:fixed!important;inset:auto 12px max(12px,env(safe-area-inset-bottom,0px)) 12px!important;width:auto!important;max-width:none!important;max-height:min(76dvh,580px)!important;transform:none!important;padding:14px!important;border-radius:30px!important;background:var(--te-panel);color:var(--te-text);box-shadow:0 0 0 100vmax #0004,0 12px 40px #0004;z-index:9999}
+ .te-mobile-menu-heading{display:flex;position:relative;align-items:center;gap:8px;flex-wrap:wrap;flex:none;padding:14px 6px 10px;font-size:20px}
+ .te-mobile-menu-heading strong{flex:1}
+ .te-mobile-menu-heading small{display:block;flex:0 0 100%;font-size:14px;color:var(--te-muted)}
+ .te-mobile-menu-heading button{width:44px;height:44px;border-radius:50%;border:0;background:var(--te-soft);color:inherit;font-size:24px}
+ .te-mobile-menu-grip{position:absolute;top:0;left:50%;transform:translateX(-50%);width:44px;height:4px;border-radius:99px;background:var(--te-border)}
+ .theme-studio .te-page-popover .te-page-search{flex:0 0 48px;border-radius:16px}
+ .theme-studio .te-page-option{min-height:52px;font-size:16px}
+ body>#te-more-menu:not([hidden]){display:flex;flex-direction:column;overflow:auto;overscroll-behavior:contain}
+ body>#te-more-menu>button{min-height:48px;flex:none;text-align:left;padding:10px 12px;font-size:16px}
+ body>#te-more-menu .te-source-footer{display:none}
+ .theme-studio :is(.theme-studio-tree,.theme-editor-panel){border-radius:30px 30px 0 0!important}
+}

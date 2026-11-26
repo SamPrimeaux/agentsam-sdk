@@ -487,24 +487,6 @@
       }
     },
     {
-      "id": "ecommerce-cms-agentsam.structure",
-      "app_id": "ecommerce-cms-agentsam",
-      "route": "/admin/structure",
-      "module": "components/cms/CmsStructurePage.tsx",
-      "export": "CmsStructurePage",
-      "mount": {
-        "type": "host-component",
-        "scope": "host"
-      },
-      "navigation": {
-        "surface": "channels",
-        "parent": "online-store",
-        "label": "Structure",
-        "icon": "network",
-        "order": 20
-      }
-    },
-    {
       "id": "ecommerce-cms-agentsam.preferences",
       "app_id": "ecommerce-cms-agentsam",
       "route": "/admin/preferences",

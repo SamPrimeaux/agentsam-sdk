@@ -28,7 +28,6 @@ const paths = [
   '/admin/analytics/health',
   '/admin/theme-editor?slug=home',
   '/admin/theme-editor?showcase=plain-jane&slug=journal-home',
-  '/admin/theme-editor?slug=home&catalog=revise',
   '/admin/theme-editor?new=1&site_id=site_a',
   '/admin/sites/site_a/pages/cmsp_home_a/editor',
   '/admin/sites/site_a/themes/theme_plain-jane/editor/home?previewMode=tablet',
@@ -111,7 +110,7 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&site_id=site-b'),null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&unexpected=1'),null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=0&site_id=site-a'), null);
-  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1'), '/admin/theme-project-editor?new=1', 'Account-owned theme authoring is supported without a site');
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1&project=other&site_id=site-a'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1&new=1&site_id=site-a'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?project=theme_heuristic&site_id=site-a&previewMode=unknown'), null);
@@ -153,9 +152,12 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
     'the registered Theme Workspace route remains available through the same host');
   assert.equal(resolveEcommerceAdminPath('/admin/sites/site_a/themes/theme_plain-jane/editor/home?marketplace_kind=bad'),
     null);
-  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html'), '/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html');
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html'), null, 'Retired legacy HTML source query is not an authorized editor destination');
+  assert.equal(resolveEcommerceAdminPath('/admin/store?site_id=site_a&view=themes'), '/admin/store?site_id=site_a&view=themes');
+  assert.equal(resolveEcommerceAdminPath('/admin/store?view=platform'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&slug=shop'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?catalog=unknown&slug=home'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=home&catalog=revise'), null, 'Retired catalog shortcut no longer resolves');
   for (const href of paths) {
     assert.equal(resolveEcommerceAdminPath(href), href, 'valid route changed: ' + href);
   }
@@ -225,4 +227,16 @@ test('Ecommerce iframe always uses packaged product assets and one host-owned na
   const onlineStore = fs.readFileSync(path.join(studio, 'frontend/src/components/store/OnlineStorePage.tsx'), 'utf8');
   assert.match(onlineStore, /resolveEcommerceAdminDestination\(href, siteId, window\.location\.origin\)/,
     'Online Store must use the canonical Local Studio route resolver for theme editor handoff');
+});
+
+test('native mobile Online Store separates overview and theme management while preserving site scope',()=>{
+ const page=fs.readFileSync(path.join(studio,'frontend/src/components/store/OnlineStorePage.tsx'),'utf8');
+ const route=fs.readFileSync(path.join(studio,'frontend/src/routes/(apps)/admin/store.tsx'),'utf8');
+ assert.match(route,/view: params\.view === 'themes'/);
+ assert.match(route,/<OnlineStorePage siteId=\{search.site_id\} view=\{search.view\}/);
+ assert.match(page,/width=\{1440\} height=\{1050\}/);
+ assert.match(page,/width=\{390\} height=\{620\}/);
+ assert.match(page,/role="switch" aria-label="Password protection"/);
+ assert.match(page,/expected_version:result.project.revision/);
+ assert.match(page,/const activeTheme = data.active_theme \|\| null/);
 });

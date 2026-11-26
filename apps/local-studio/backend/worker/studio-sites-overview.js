@@ -95,11 +95,17 @@ export async function handleStudioSitesOverview(request, env, actorUserId) {
     ? '/admin/sites/' + encodeURIComponent(selectedSite.id) + '/pages/' + encodeURIComponent(homePage.id) + '/editor'
     : null;
 
+  // The selected site's actual settings are already authorized by the directory.
+  // Return only the access state, never password hashes or settings JSON.
+  let passwordProtected=false;
+  if(selectedSite?.source==='shared-d1') {
+    try { const settings=typeof selectedSite.settings_json==='string'?JSON.parse(selectedSite.settings_json):selectedSite.settings_json; passwordProtected=settings?.store?.passwordProtection===true; } catch {}
+  }
   return response({
     ok: true,
     source: 'studio_cms_site_read_model',
     new_theme_url: '/admin/theme-editor?new=1',
-    store: { visibility: 'unpublished', url: null, domain: null, company_name: null },
+    store: { visibility: passwordProtected ? 'password' : externalPreview ? 'public' : 'unpublished', url: externalPreview, domain: externalPreview ? domain : null, company_name: selectedSite?.name || null },
     site_preview: homePage ? {
       title: homePage.title,
       site_id: selectedSite.id,

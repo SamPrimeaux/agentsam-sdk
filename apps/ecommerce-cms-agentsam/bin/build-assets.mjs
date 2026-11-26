@@ -54,6 +54,16 @@ if (fs.existsSync(iamSceneBrowserSource)) {
   throw new Error("Incomplete Ecommerce release: iamscene browser runtime is missing");
 }
 await copy(source("frontend/static"), path.join(dest, "admin"));
+// Merchant Preferences uses the canonical CMS menu editor without a separate host route.
+const preferencesNavigation = await bundle({
+  entryPoints: [source("frontend/preferences/mount.tsx")],
+  bundle: true, platform: "browser", format: "iife", target: "es2022",
+  jsx: "automatic", nodePaths: [source("frontend/node_modules")], write: false, minify: true,
+});
+await writeFile(path.join(dest, "admin/js/preferences-navigation.js"), preferencesNavigation.outputFiles[0].contents);
+// Customer Identity portals are public storefront routes, not admin pages.
+// Publish their generated assets at the root path used by the Identity worker router.
+await copy(source("frontend/static/identity-portal"), path.join(dest, "identity-portal"));
 // The analytics routes are served by the packaged React SPA and shared analytics
 // packages. The original standalone HTML/Babel export is not an app runtime:
 // don't ship its 21 vendor assets a second time under the CMS package prefix.

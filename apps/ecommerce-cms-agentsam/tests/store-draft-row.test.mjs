@@ -43,3 +43,13 @@ test('import action does not fake a coming-soon flow', () => {
     'import button must not promise a fake flow',
   );
 });
+
+test('mobile store uses the selected site preferences contract and existing theme destinations',()=>{
+  assert.match(storeJs,/bindStoreMobileActions\(d\)/);
+  assert.match(storeJs,/overview\.selected_site_id \|\| overview\.store\?\.site_id/);
+  assert.match(storeJs,/settings:\{passwordProtection:enabled\}/);
+  assert.match(storeJs,/!settings\.hasStorePassword/);
+  assert.match(storeJs,/Remove password protection for this website/);
+  assert.match(storeJs,/href="\/admin\/store\?view=themes"/);
+  assert.match(storeJs,/role="switch" aria-label="Password protection"/);
+});

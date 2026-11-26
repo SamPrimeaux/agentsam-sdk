@@ -1,716 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Preferences — Online Store</title>
-<link rel="stylesheet" href="/admin/css/admin.css">
-<link rel="stylesheet" href="/admin/css/console.css">
-<link rel="stylesheet" href="/admin/css/preferences.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preferences — Online Store</title>
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <link rel="stylesheet" href="/admin/css/console.css">
+  <link rel="stylesheet" href="/admin/css/preferences.css">
 </head>
 <body>
-<script src="/admin/js/shell.js"></script>
-<script>
-let settings = {};
-let dirty = false;
-let domain = "";
-let storeName = "Your store";
+  <script src="/admin/js/shell.js"></script>
+  <script>
+    renderShell("/admin/preferences", `
+      <div class="store-preferences" id="store-preferences">
+        <header class="sp-header">
+          <div class="sp-header-copy">
+            <div class="sp-eyebrow">SALES CHANNELS <span>/</span> ONLINE STORE</div>
+            <h1>Preferences</h1>
+            <p>Shape how your website appears, who can access it, and how people discover it.</p>
+          </div>
+          <div class="sp-header-actions">
+            <a class="sp-button sp-button-secondary" id="view-store-link" href="#" target="_blank" rel="noopener" hidden>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11.5 3.5h5v5M16.2 3.8 9 11M15 10.5v4A1.5 1.5 0 0 1 13.5 16h-8A1.5 1.5 0 0 1 4 14.5v-8A1.5 1.5 0 0 1 5.5 5H10"/></svg>
+              View store
+            </a>
+          </div>
+        </header>
 
-renderShell("/admin/preferences", `
-  <div class="prefs-hub">
-    <div class="prefs-head">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9 5 5h14l1 4M4 9h16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM5.5 13V20h13v-7" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-      <h1>Online Store</h1>
-    </div>
-    <div class="prefs-crumb">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      <span>›</span>
-      <span>Preferences</span>
-    </div>
+        <section class="sp-site-context" aria-label="Selected website">
+          <div class="sp-site-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 9.2 5.3 5h13.4L20 9.2M4 9.2h16v2.1a2 2 0 0 1-2 2h-.5a2 2 0 0 1-2-2 2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9.2ZM6 13.3V20h12v-6.7M9 20v-4h6v4"/></svg>
+          </div>
+          <div class="sp-site-copy">
+            <div class="sp-site-name" id="site-name">Loading website…</div>
+            <div class="sp-site-meta">
+              <span id="site-domain">Resolving selected website</span>
+              <span class="sp-meta-dot" aria-hidden="true">·</span>
+              <span class="sp-site-status" id="site-status">Loading status</span>
+            </div>
+          </div>
+          <label class="sp-site-select-wrap" for="site-select">
+            <span>Website</span>
+            <select id="site-select" aria-label="Select website" disabled>
+              <option>Loading websites…</option>
+            </select>
+          </label>
+        </section>
 
-    <section class="prefs-card">
-      <h2>Store access</h2>
-      <div class="prefs-row">
-        <div class="prefs-row-copy">
-          <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/></svg>
-          <div>
-            <div class="prefs-row-title">Password protection</div>
-            <div class="prefs-row-desc">Storewide password rules are saved in preferences but are not yet enforced on the public storefront. Do not rely on this switch for access control.</div>
-            <div class="prefs-password-field" id="password-field" hidden>
-              <div class="prefs-field">
-                <label for="store-password">Store password</label>
-                <input type="password" id="store-password" autocomplete="new-password" placeholder="Enter a storefront password">
+        <div class="sp-layout">
+          <nav class="sp-section-nav" aria-label="Preferences sections">
+            <div class="sp-nav-label">SETTINGS</div>
+            <button type="button" class="is-active" data-section-link="access"><span class="sp-nav-icon">⌑</span><span>Access</span></button>
+            <button type="button" data-section-link="search"><span class="sp-nav-icon">⌕</span><span>Search & sharing</span></button>
+            <button type="button" data-section-link="identity"><span class="sp-nav-icon">◈</span><span>Storefront identity</span></button>
+            <button type="button" data-section-link="navigation"><span class="sp-nav-icon">☷</span><span>Navigation</span></button>
+            <button type="button" data-section-link="announcement"><span class="sp-nav-icon">▤</span><span>Announcement</span></button>
+            <button type="button" data-section-link="discovery"><span class="sp-nav-icon">◎</span><span>Search discovery</span></button>
+            <div class="sp-nav-footnote">Settings apply to the selected website only.</div>
+          </nav>
+
+          <main class="sp-content">
+            <fieldset id="preferences-controls" class="sp-controls" disabled>
+            <section class="sp-section" id="section-access" data-section="access">
+              <div class="sp-section-heading">
+                <div class="sp-section-kicker">01 / ACCESS</div>
+                <h2>Store access</h2>
+                <p>Control whether visitors can browse your website and how they enter.</p>
+              </div>
+
+              <article class="sp-card sp-access-card">
+                <div class="sp-card-topline">
+                  <div class="sp-card-icon"><svg viewBox="0 0 24 24"><rect x="4.5" y="10" width="15" height="10.5" rx="2"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/><circle cx="12" cy="15.2" r="1"/></svg></div>
+                  <div class="sp-card-title-group">
+                    <h3>Password protection</h3>
+                    <p>Choose the password visitors must enter before browsing your storefront. You can change or remove it at any time.</p>
+                  </div>
+                  <label class="sp-switch" for="password-protection">
+                    <input type="checkbox" id="password-protection" disabled>
+                    <span aria-hidden="true"></span>
+                  </label>
+                </div>
+                <div class="sp-password-panel" id="password-panel" hidden>
+                  <div class="sp-password-state" id="password-state">
+                    <span class="sp-status-dot"></span>
+                    <span id="password-state-text">No store password has been set.</span>
+                  </div>
+                  <div class="sp-password-fields" id="password-fields" hidden>
+                    <label class="sp-field">
+                      <span id="password-label">Store access password</span>
+                      <input type="password" id="store-password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="At least 8 characters">
+                    </label>
+                    <label class="sp-field">
+                      <span>Confirm password</span>
+                      <input type="password" id="store-password-confirm" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Enter it again">
+                    </label>
+                    <p class="sp-field-help">This is a shared storefront password, not a customer account password. Visitors stay signed in on this device for 7 days. Changing it ends existing access sessions. Your password is never shown again after saving.</p>
+                  </div>
+                  <div class="sp-password-actions">
+                    <button type="button" class="sp-text-button" id="change-password-button" hidden>Change password</button>
+                    <button type="button" class="sp-text-button sp-danger-link" id="remove-password-button" hidden>Remove saved password</button>
+                  </div>
+                </div>
+                <div class="sp-card-note" id="password-note">When enabled, your storefront and its public data endpoints require the password. Your admin workspace remains accessible.</div>
+              </article>
+
+              <article class="sp-card sp-inline-card">
+                <div>
+                  <h3>Publishing status</h3>
+                  <p id="publishing-summary">Your published pages determine what visitors can see when the store is public.</p>
+                </div>
+                <a class="sp-inline-link" id="manage-pages-link" href="/admin/pages">Manage pages <span aria-hidden="true">↗</span></a>
+              </article>
+            </section>
+
+            <section class="sp-section" id="section-search" data-section="search">
+              <div class="sp-section-heading">
+                <div class="sp-section-kicker">02 / SEARCH & SHARING</div>
+                <h2>Search appearance</h2>
+                <p>Set the default metadata for your website. Individual pages can override these values in the page editor.</p>
+              </div>
+
+              <article class="sp-card">
+                <div class="sp-seo-grid">
+                  <div class="sp-fields-column">
+                    <label class="sp-field" for="home-title">
+                      <span>Homepage title</span>
+                      <input type="text" id="home-title" maxlength="70" placeholder="Your website name">
+                      <small class="sp-counter" id="home-title-count">0 / 70</small>
+                    </label>
+                    <label class="sp-field" for="meta-description">
+                      <span>Default meta description</span>
+                      <textarea id="meta-description" rows="4" maxlength="320" placeholder="Describe what visitors can find on your website."></textarea>
+                      <small class="sp-counter" id="meta-description-count">0 / 320</small>
+                    </label>
+                    <div class="sp-field">
+                      <span>Social sharing image</span>
+                      <div class="sp-image-control">
+                        <div class="sp-image-thumb" id="social-image-thumb"><span>OG</span></div>
+                        <div class="sp-image-control-copy">
+                          <strong id="social-image-name">No image selected</strong>
+                          <small>Recommended 1200 × 630 px</small>
+                          <div class="sp-inline-actions">
+                            <button type="button" class="sp-small-button" data-pick-asset="social">Choose image</button>
+                            <button type="button" class="sp-text-button" data-clear-asset="social">Remove</button>
+                          </div>
+                        </div>
+                      </div>
+                      <details class="sp-advanced">
+                        <summary>Advanced image URL</summary>
+                        <input type="text" id="social-image-url-advanced" placeholder="/media/... or https://…">
+                      </details>
+                    </div>
+                    <details class="sp-advanced sp-seo-advanced">
+                      <summary>Advanced metadata</summary>
+                      <div class="sp-advanced-grid">
+                        <label class="sp-field" for="seo-site-name"><span>Structured data site name</span><input type="text" id="seo-site-name" maxlength="120" placeholder="Your website name"></label>
+                        <label class="sp-field" for="seo-title-template"><span>Default page title template</span><input type="text" id="seo-title-template" maxlength="160" placeholder="{title} | {site_name}"><small>Use {title} and {site_name} as placeholders.</small></label>
+                        <label class="sp-field" for="seo-twitter-handle"><span>Social profile handle</span><input type="text" id="seo-twitter-handle" maxlength="64" placeholder="@yourbrand"></label>
+                        <label class="sp-field" for="seo-locale"><span>Open Graph locale</span><input type="text" id="seo-locale" maxlength="32" placeholder="en_US"></label>
+                      </div>
+                    </details>
+                    <div class="sp-visibility-setting">
+                      <div>
+                        <strong>Allow search engines to index this website</strong>
+                        <p>Turn this off to add a site-wide noindex directive. Password-protected stores are excluded automatically.</p>
+                      </div>
+                      <label class="sp-switch" for="search-indexing"><input type="checkbox" id="search-indexing" checked><span aria-hidden="true"></span></label>
+                    </div>
+                  </div>
+
+                  <aside class="sp-preview-column" aria-label="Search and social preview">
+                    <div class="sp-preview-label">SEARCH RESULT PREVIEW</div>
+                    <div class="sp-search-preview">
+                      <div class="sp-preview-domain" id="search-preview-domain">yourwebsite.com</div>
+                      <div class="sp-preview-title" id="search-preview-title">Your homepage title</div>
+                      <div class="sp-preview-description" id="search-preview-description">Your meta description will appear here when available.</div>
+                    </div>
+                    <div class="sp-preview-label sp-preview-label-social">SOCIAL SHARING PREVIEW</div>
+                    <div class="sp-social-preview">
+                      <div class="sp-social-image" id="social-preview-image"><span>Choose a sharing image</span></div>
+                      <div class="sp-social-preview-copy">
+                        <div class="sp-preview-domain" id="social-preview-domain">yourwebsite.com</div>
+                        <div class="sp-social-preview-title" id="social-preview-title">Your homepage title</div>
+                        <div class="sp-social-preview-description" id="social-preview-description">Your meta description will appear here.</div>
+                      </div>
+                    </div>
+                    <p class="sp-preview-disclaimer">Previews are illustrative. Search engines and social platforms decide how they display shared pages.</p>
+                  </aside>
+                </div>
+                <div class="sp-card-footer">
+                  <div><strong>Page-specific metadata</strong><p>Set unique titles, descriptions, canonical URLs, and indexing rules on individual pages.</p></div>
+                  <a class="sp-inline-link" id="edit-page-seo-link" href="/admin/pages">Edit page SEO <span aria-hidden="true">↗</span></a>
+                </div>
+              </article>
+            </section>
+
+            <section class="sp-section" id="section-identity" data-section="identity">
+              <div class="sp-section-heading">
+                <div class="sp-section-kicker">03 / IDENTITY</div>
+                <h2>Storefront identity</h2>
+                <p>Control the logo and brand accents used by your installed storefront theme.</p>
+              </div>
+              <article class="sp-card">
+                <div class="sp-identity-grid">
+                  <div class="sp-field">
+                    <span>Storefront logo</span>
+                    <div class="sp-image-control sp-logo-control">
+                      <div class="sp-logo-thumb" id="nav-logo-thumb"><span>Logo</span></div>
+                      <div class="sp-image-control-copy">
+                        <strong id="nav-logo-name">Use the installed theme logo</strong>
+                        <small>PNG, SVG, WEBP or transparent artwork</small>
+                        <div class="sp-inline-actions">
+                          <button type="button" class="sp-small-button" data-pick-asset="nav">Choose logo</button>
+                          <button type="button" class="sp-text-button" data-clear-asset="nav">Use theme default</button>
+                        </div>
+                      </div>
+                    </div>
+                    <details class="sp-advanced">
+                      <summary>Advanced logo URL</summary>
+                      <input type="text" id="nav-logo-url-advanced" placeholder="/media/... or https://…">
+                    </details>
+                  </div>
+                  <label class="sp-field" for="nav-logo-height">
+                    <span>Logo height</span>
+                    <div class="sp-range-control"><input type="range" id="nav-logo-height" min="40" max="120" step="1"><output id="nav-logo-height-value">58 px</output></div>
+                    <small>Controls the logo height in the storefront header.</small>
+                  </label>
+                  <label class="sp-field" for="nav-brand-accent">
+                    <span>Brand accent</span>
+                    <div class="sp-color-field"><input type="color" id="nav-brand-accent"><input type="text" id="nav-brand-accent-text" maxlength="7" aria-label="Brand accent hex value"></div>
+                  </label>
+                  <label class="sp-field" for="nav-brand-accent-light">
+                    <span>Accent highlight</span>
+                    <div class="sp-color-field"><input type="color" id="nav-brand-accent-light"><input type="text" id="nav-brand-accent-light-text" maxlength="7" aria-label="Accent highlight hex value"></div>
+                  </label>
+                </div>
+              </article>
+            </section>
+
+            <section class="sp-section" id="section-navigation" data-section="navigation">
+              <div class="sp-section-heading">
+                <div class="sp-section-kicker">04 / NAVIGATION</div>
+                <h2>Website menus</h2>
+                <p>Manage published header and footer menus for this website using the existing CMS navigation records.</p>
+              </div>
+              <div class="sp-card" id="preferences-navigation" data-site-id=""><p class="sp-menu-panel sp-menu-muted" role="status">Select a website to load its menus.</p></div>
+            </section>
+
+            <section class="sp-section" id="section-announcement" data-section="announcement">
+              <div class="sp-section-heading">
+                <div class="sp-section-kicker">05 / ANNOUNCEMENT</div>
+                <h2>Announcement banner</h2>
+                <p>Share a short, timely message across your storefront without editing every page.</p>
+              </div>
+              <article class="sp-card">
+                <div class="sp-card-topline">
+                  <div class="sp-card-icon"><svg viewBox="0 0 24 24"><path d="M4 9.5h3l10-4v13l-10-4H4zM7 14.5l1.5 5h3l-2-5M17 9a3 3 0 0 1 0 6"/></svg></div>
+                  <div class="sp-card-title-group"><h3>Show announcement</h3><p>Display a banner at the top of your storefront.</p></div>
+                  <label class="sp-switch" for="announcement-enabled"><input type="checkbox" id="announcement-enabled"><span aria-hidden="true"></span></label>
+                </div>
+                <div class="sp-announcement-editor" id="announcement-editor">
+                  <div class="sp-announcement-preview-wrap">
+                    <div class="sp-preview-label">LIVE PREVIEW</div>
+                    <div class="sp-announcement-preview" id="announcement-preview"><span id="announcement-preview-text">Your announcement will appear here.</span><span aria-hidden="true">↗</span></div>
+                  </div>
+                  <div class="sp-announcement-fields">
+                    <label class="sp-field" for="announcement-text"><span>Message</span><input type="text" id="announcement-text" maxlength="160" placeholder="A short message for your visitors"><small class="sp-counter" id="announcement-count">0 / 160</small></label>
+                    <label class="sp-field" for="announcement-href"><span>Link destination</span><input type="text" id="announcement-href" maxlength="512" placeholder="/shop or https://…"><small>Use a site path, section anchor, or HTTPS URL.</small></label>
+                    <label class="sp-field" for="announcement-style"><span>Display style</span><select id="announcement-style"><option value="static">Static banner</option><option value="marquee">Scrolling announcement</option></select></label>
+                    <div class="sp-color-pair">
+                      <label class="sp-field" for="announcement-bg-color"><span>Background</span><div class="sp-color-field"><input type="color" id="announcement-bg-color"><input type="text" id="announcement-bg-color-text" maxlength="7" aria-label="Announcement background hex value"></div></label>
+                      <label class="sp-field" for="announcement-text-color"><span>Text</span><div class="sp-color-field"><input type="color" id="announcement-text-color"><input type="text" id="announcement-text-color-text" maxlength="7" aria-label="Announcement text hex value"></div></label>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="sp-section" id="section-discovery" data-section="discovery">
+              <div class="sp-section-heading">
+                <div class="sp-section-kicker">06 / DISCOVERY</div>
+                <h2>Search discovery</h2>
+                <p>Check the public files search engines use to discover your published pages and products.</p>
+              </div>
+              <article class="sp-card">
+                <div class="sp-discovery-head">
+                  <div><h3>Search engine files</h3><p id="crawler-site-domain">Checking the selected website…</p></div>
+                  <span class="sp-discovery-status" id="crawler-status-pill">Checking</span>
+                </div>
+                <div class="sp-discovery-links">
+                  <a id="crawler-robots-link" href="/robots.txt" target="_blank" rel="noopener"><span>robots.txt</span><small>Access and crawl rules</small><b>↗</b></a>
+                  <a id="crawler-sitemap-link" href="/sitemap.xml" target="_blank" rel="noopener"><span>sitemap.xml</span><small>Published page and product URLs</small><b>↗</b></a>
+                </div>
+                <div class="sp-discovery-checks" id="crawler-checks">
+                  <div class="sp-check-row" data-check="robots"><span class="sp-check-indicator"></span><span>robots.txt</span><small id="crawler-robots-state">Waiting to check</small></div>
+                  <div class="sp-check-row" data-check="sitemap"><span class="sp-check-indicator"></span><span>sitemap.xml</span><small id="crawler-sitemap-state">Waiting to check</small></div>
+                </div>
+                <div class="sp-discovery-metrics">
+                  <div><strong id="crawler-routes-count">—</strong><span>Published pages</span></div>
+                  <div><strong id="crawler-products-count">—</strong><span>Active products</span></div>
+                  <div><strong id="crawler-sitemap-count">—</strong><span>Live sitemap URLs</span></div>
+                </div>
+                <div class="sp-discovery-footer">
+                  <p id="crawler-notice" role="status">Checks run against the selected website's public domain.</p>
+                  <button type="button" class="sp-small-button" id="crawler-refresh-btn">Re-check files</button>
+                </div>
+              </article>
+            </section>
+
+            </fieldset>
+            <div class="sp-page-end sp-save-footer">
+              <span id="save-state" role="status" aria-live="polite">Loading preferences…</span>
+              <div class="sp-inline-actions">
+                <button class="sp-small-button" type="button" id="retry-preferences" hidden>Retry</button>
+                <button class="sp-button" type="button" id="save-preferences-fallback" disabled hidden>Save changes</button>
               </div>
             </div>
+          </main>
+        </div>
+
+        <dialog class="sp-media-dialog" id="prefs-assets-dialog" aria-labelledby="prefs-assets-title">
+          <div class="sp-media-dialog-head">
+            <div><div class="sp-section-kicker">MEDIA LIBRARY</div><h2 id="prefs-assets-title">Choose an image</h2></div>
+            <button type="button" class="sp-icon-button" id="prefs-assets-close" aria-label="Close media picker">×</button>
           </div>
-        </div>
-        <label class="prefs-switch" title="Not available until public-storefront gate is installed"><input type="checkbox" id="password-protection" data-pref="passwordProtection" disabled><span class="prefs-switch-slider"></span></label>
-      </div>
-      <div class="prefs-row">
-        <div class="prefs-row-copy">
-          <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/></svg>
-          <div>
-            <div class="prefs-row-title">Restrict access to B2B customers only</div>
-            <div class="prefs-row-desc">B2B customers will need to log in and verify their account to access your store. <a href="/admin/subscribers">Manage customers</a></div>
+          <div class="sp-media-toolbar">
+            <input type="search" id="prefs-assets-search" placeholder="Search your media library" aria-label="Search media">
+            <label class="sp-small-button sp-upload-button">Upload image<input type="file" id="prefs-assets-upload" accept="image/*" multiple hidden></label>
           </div>
-        </div>
-        <label class="prefs-switch"><input type="checkbox" id="b2b-only" data-pref="b2bOnly"><span class="prefs-switch-slider"></span></label>
+          <p class="sp-media-status" id="prefs-assets-status" role="status">Choose an existing image or upload a new one.</p>
+          <div class="sp-assets-grid" id="prefs-assets-grid" role="list"></div>
+        </dialog>
       </div>
-    </section>
-
-    <section class="prefs-card">
-      <h2>Search appearance and social sharing</h2><p>Set the page title and description search engines receive, and choose a real image from your media library. The preview is a guide, not a guarantee of how a platform displays your page.</p>
-      <div class="prefs-seo-grid">
-        <div class="prefs-seo-previews">
-        <div class="prefs-social-preview">
-          <img id="social-image" src="" alt="Chosen social sharing graphic" hidden><div class="prefs-social-placeholder" id="social-placeholder">Choose a sharing image to preview your store’s social card.</div>
-          <div class="prefs-social-meta">
-            <div class="prefs-social-domain" id="social-domain">Loading website…</div>
-            <div class="prefs-social-title" id="social-preview-title">Your store</div>
-            <div class="prefs-social-desc" id="social-preview-desc">Store description preview</div>
-          </div>
-        </div>
-        <div class="prefs-serp" aria-label="Search result preview">
-          <span class="prefs-serp-label">Search result preview</span>
-          <div class="prefs-serp-url" id="serp-url">Loading website…</div>
-          <div class="prefs-serp-title" id="serp-title">Your store</div>
-          <div class="prefs-serp-desc" id="serp-desc"></div>
-        </div>
-        </div>
-        <div>
-          <div class="prefs-field">
-            <label for="home-title">Home page title</label>
-            <input type="text" id="home-title" maxlength="70" data-pref="homeTitle">
-            <div class="prefs-counter" id="title-counter"><span id="title-count">0</span> of 70 characters used<span class="prefs-counter-hint" id="title-hint"></span></div>
-          </div>
-          <div class="prefs-field">
-            <label for="meta-description">Meta description</label>
-            <textarea id="meta-description" maxlength="320" data-pref="metaDescription" placeholder="Enter a description to be shown on search engines like Google"></textarea>
-            <div class="prefs-counter" id="meta-counter"><span id="meta-count">0</span> of 320 characters used<span class="prefs-counter-hint" id="meta-hint"></span></div>
-          </div>
-          <div class="prefs-field">
-            <label>Sharing image <span class="prefs-optional">Recommended 1200 × 630 px (1.91:1)</span></label>
-            <div class="prefs-media-choice">
-              <img id="social-asset-thumb" alt="" hidden>
-              <div class="prefs-media-choice__info"><strong id="social-asset-name">No image selected</strong><span>Use an existing logo, cover artwork, or upload a new image.</span></div>
-              <button type="button" class="btn ghost small" data-pick-asset="social">Choose image</button>
-              <button type="button" class="btn ghost small" data-clear-asset="social" aria-label="Remove sharing image">Remove</button>
-            </div>
-            <p class="prefs-image-hint" id="social-image-hint" role="status" hidden></p>
-            <input type="hidden" id="social-image-url" data-pref="socialImageUrl">
-            <details class="prefs-advanced"><summary>Advanced image URL</summary><label for="social-image-url-advanced">Image address</label><input type="text" id="social-image-url-advanced" placeholder="/media/…" autocomplete="off"><p>Usually you won't need this. Use Choose image above.</p></details>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="prefs-card">
-      <h2>Storefront identity</h2>
-      <p>Manage the storefront logo, sizing and brand accents. Website menus are managed in the CMS Structure editor.</p>
-      <div class="prefs-seo-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-        <div class="prefs-field">
-          <label>Storefront logo</label>
-          <div class="prefs-media-choice prefs-media-choice--logo"><img id="nav-asset-thumb" alt="Storefront logo preview" hidden><div class="prefs-media-choice__info"><strong id="nav-asset-name">Use current logo</strong><span>PNG, SVG, WEBP or transparent artwork</span></div><button type="button" class="btn ghost small" data-pick-asset="nav">Choose logo</button><button type="button" class="btn ghost small" data-clear-asset="nav" aria-label="Remove custom logo">Remove</button></div>
-          <input type="hidden" id="nav-logo-url">
-          <details class="prefs-advanced"><summary>Advanced logo URL</summary><label for="nav-logo-url-advanced">Logo address</label><input type="text" id="nav-logo-url-advanced" placeholder="/media/…" autocomplete="off"></details>
-        </div>
-        <div class="prefs-field">
-          <label for="nav-logo-height">Logo height (px)</label>
-          <input type="number" id="nav-logo-height" min="40" max="120" step="1">
-        </div>
-        <div class="prefs-field">
-          <label for="nav-brand-accent">Brand accent</label>
-          <input type="color" id="nav-brand-accent" style="height:42px;padding:4px">
-        </div>
-        <div class="prefs-field">
-          <label for="nav-brand-accent-light">Accent highlight</label>
-          <input type="color" id="nav-brand-accent-light" style="height:42px;padding:4px">
-        </div>
-      </div>
-      <a class="btn ghost small" href="/admin/structure?scope=website" style="margin-top:.75rem;display:inline-flex">Manage navigation menus →</a>
-    </section>
-
-    <section class="prefs-card">
-      <h2>Announcement banner</h2>
-      <div class="prefs-row">
-        <div class="prefs-row-copy"><div><div class="prefs-row-title">Show announcement</div><div class="prefs-row-desc">Use a calm fixed message or a seamless scrolling announcement. Preview the appearance before saving.</div></div></div>
-        <label class="prefs-switch"><input type="checkbox" id="announcement-enabled"><span class="prefs-switch-slider"></span></label>
-      </div>
-      <div class="prefs-announcement-preview" id="announcement-preview" aria-label="Announcement preview"><span id="announcement-preview-copy">Your announcement will appear here</span></div>
-      <div class="prefs-seo-grid prefs-seo-grid--equal">
-        <div class="prefs-field"><label for="announcement-text">Announcement message</label><input type="text" id="announcement-text" maxlength="160" placeholder="Built in Lafayette · Fuel hard. Live free."></div>
-        <div class="prefs-field"><label for="announcement-href">Where it links</label><input type="text" id="announcement-href" placeholder="/shop"></div>
-        <div class="prefs-field"><label for="announcement-style">Display</label><select id="announcement-style"><option value="static">Simple banner</option><option value="marquee">Subtle scrolling marquee</option></select></div>
-        <div class="prefs-field prefs-color-field"><label for="announcement-bg">Background color</label><input type="color" id="announcement-bg" value="#161616"></div>
-        <div class="prefs-field prefs-color-field"><label for="announcement-color">Text color</label><input type="color" id="announcement-color" value="#ffffff"></div>
-      </div>
-    </section>
-
-    <section class="prefs-card">
-      <h2>Automatic redirection</h2>
-      <div class="prefs-row">
-        <div class="prefs-row-copy">
-          <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M4 12h16M12 4c2.5 2 2.5 14 0 16M12 4c-2.5 2-2.5 14 0 16" stroke="currentColor" stroke-width="1.4"/></svg>
-          <div>
-            <div class="prefs-row-title">Country/region</div>
-            <div class="prefs-row-desc">Displays the storefront that matches a visitor's location.</div>
-          </div>
-        </div>
-        <label class="prefs-switch"><input type="checkbox" id="geo-redirect" data-pref="geoRedirect"><span class="prefs-switch-slider"></span></label>
-      </div>
-      <div class="prefs-row">
-        <div class="prefs-row-copy">
-          <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><path d="m5 8 7-3 7 3v8l-7 3-7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 5v14M5 8l7 3 7-3" stroke="currentColor" stroke-width="1.6"/></svg>
-          <div>
-            <div class="prefs-row-title">Language</div>
-            <div class="prefs-row-desc">Displays the language that matches a visitor's browser, when available.</div>
-          </div>
-        </div>
-        <label class="prefs-switch"><input type="checkbox" id="language-redirect" data-pref="languageRedirect"><span class="prefs-switch-slider"></span></label>
-      </div>
-    </section>
-
-    <section class="prefs-card">
-      <h2>Spam protection</h2>
-      <p>This screen currently stores protection preferences, but does not yet verify challenge responses. These options are not active security defenses until server-side verification is connected. <strong>Do not treat an enabled switch as protection.</strong></p><div class="prefs-warning">Status: verification integration required. Existing choices are shown for planning only.</div>
-      <div class="prefs-row">
-        <div class="prefs-row-copy">
-          <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6"/></svg>
-          <div>
-            <div class="prefs-row-title">Enable on contact and comment forms</div>
-          </div>
-        </div>
-        <label class="prefs-switch" title="Challenge verification not installed"><input type="checkbox" id="hcaptcha-contact" data-pref="hcaptchaContact" disabled><span class="prefs-switch-slider"></span></label>
-      </div>
-      <div class="prefs-row">
-        <div class="prefs-row-copy">
-          <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          <div>
-            <div class="prefs-row-title">Enable on login, create account and password recovery pages</div>
-          </div>
-        </div>
-        <label class="prefs-switch" title="Challenge verification not installed"><input type="checkbox" id="hcaptcha-account" data-pref="hcaptchaAccount" disabled><span class="prefs-switch-slider"></span></label>
-      </div>
-    </section>
-
-    <section class="prefs-card" id="search-discovery-card" aria-labelledby="search-discovery-title">
-      <div class="prefs-crawler-heading">
-        <div>
-          <h2 id="search-discovery-title" style="margin-bottom:6px;">Search engine discovery</h2>
-          <p style="margin:0;">Search engines find your store through <code>robots.txt</code> and your sitemap. Both are generated automatically from your published pages and active products &mdash; nothing to maintain by hand.</p>
-        </div>
-        <span class="prefs-status-pill" id="crawler-status-pill" role="status">Checking…</span>
-      </div>
-      <div class="prefs-crawler-site">
-        <div><span class="prefs-crawler-label">Storefront</span><strong id="crawler-site-name">Loading store…</strong><small id="crawler-site-domain"></small></div>
-        <div class="prefs-crawler-discovery">
-          <a id="crawler-robots-link" href="/robots.txt" target="_blank" rel="noopener">Open robots.txt</a>
-          <a id="crawler-sitemap-link" href="/sitemap.xml" target="_blank" rel="noopener">Open sitemap.xml</a>
-        </div>
-      </div>
-      <div class="prefs-crawler-metrics" aria-label="Public search discovery counts">
-        <div><strong id="crawler-routes-count">—</strong><span>Public pages</span></div>
-        <div><strong id="crawler-products-count">—</strong><span>Active products</span></div>
-        <div><strong id="crawler-sitemap-count">—</strong><span>URLs in live sitemap</span></div>
-        <div><strong id="crawler-sync-status">—</strong><span>Sitemap vs. catalog</span></div>
-      </div>
-      <ul class="prefs-check-list" id="crawler-checks" aria-live="polite">
-        <li data-check="robots"><span class="prefs-check-dot"></span><span><strong>robots.txt</strong> <em>Checking…</em></span></li>
-        <li data-check="sitemap"><span class="prefs-check-dot"></span><span><strong>sitemap.xml</strong> <em>Checking…</em></span></li>
-      </ul>
-      <div class="prefs-crawler-controls">
-        <p class="prefs-crawler-run">Tell search engines about your sitemap so new products are picked up faster.
-          <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console</a> ·
-          <a href="https://www.bing.com/webmasters" target="_blank" rel="noopener">Bing Webmaster Tools</a></p>
-        <div class="prefs-crawler-buttons"><button type="button" class="btn ghost small" id="crawler-refresh-btn">Re-check now</button></div>
-      </div>
-      <div class="prefs-crawler-notice" id="crawler-notice" role="status" hidden></div>
-      <div class="prefs-import-row" data-capability="site.scrape">
-        <div>
-          <strong>Website import <span class="prefs-optional">Optional</span></strong>
-          <p id="crawler-runtime-note">Copy content and images from an existing website into your store using AgentSam’s site scraper. It runs outside this store and never affects what search engines see.</p>
-        </div>
-        <span class="prefs-status-pill" id="crawler-runtime-status">Not connected</span>
-      </div>
-      <details class="prefs-crawler-help">
-        <summary>What gets published</summary>
-        <ul>
-          <li><code>robots.txt</code> keeps search engines out of admin, API, account, cart, checkout and review pages.</li>
-          <li><code>sitemap.xml</code> lists your public pages and active products. Draft products are never listed.</li>
-        </ul>
-      </details>
-    </section>
-
-    <div class="prefs-note" id="prefs-note"></div>
-  </div>
-  <dialog class="prefs-assets-dialog" id="prefs-assets-dialog" aria-labelledby="prefs-assets-title">
-    <div class="prefs-assets-header"><div><small>Website media library</small><h2 id="prefs-assets-title">Choose an image</h2></div><button type="button" id="prefs-assets-close" class="btn ghost small" aria-label="Close media library">Close</button></div>
-    <div class="prefs-assets-tools"><input type="search" id="prefs-assets-search" placeholder="Search uploaded graphics, logos, and artwork" aria-label="Search media"><label class="btn ghost small prefs-upload-button">Upload new image<input type="file" id="prefs-assets-upload" accept="image/*" multiple hidden></label></div>
-    <div class="prefs-assets-grid" id="prefs-assets-grid" role="list"></div>
-    <p class="prefs-assets-status" id="prefs-assets-status" role="status"></p>
-  </dialog>
-
-  <footer class="prefs-savebar">
-    <button type="button" class="btn primary" id="save-prefs-btn" disabled>Save</button>
-  </footer>
-`);
-
-function setDirty(next = true) {
-  dirty = next;
-  document.getElementById("save-prefs-btn").disabled = !dirty;
-  syncDockEdit();
-}
-
-/** Mirrors the fixed save bar into the mobile dock (admin-dock edit mode). */
-function syncDockEdit(saving = false) {
-  window.publishDockEdit?.({
-    active: true,
-    hint: saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved",
-    dirty,
-    canSave: dirty && !saving,
-    saveLabel: saving ? "Saving…" : "Save",
-    onSave: () => document.getElementById("save-prefs-btn")?.click(),
-  });
-}
-
-function showNote(msg, kind) {
-  const el = document.getElementById("prefs-note");
-  if (!msg) {
-    el.className = "prefs-note";
-    el.textContent = "";
-    return;
-  }
-  el.className = `prefs-note is-visible is-${kind || "success"}`;
-  el.textContent = msg;
-}
-
-const TITLE_SOFT_LIMIT = 60;
-const DESC_SOFT_LIMIT = 160;
-function clip(text, max) {
-  const t = String(text || "").trim();
-  return t.length > max ? t.slice(0, max - 1).trimEnd() + "…" : t;
-}
-function updateCounters() {
-  const title = document.getElementById("home-title").value;
-  const meta = document.getElementById("meta-description").value;
-  document.getElementById("title-count").textContent = title.length;
-  document.getElementById("meta-count").textContent = meta.length;
-  const titleLong = title.length > TITLE_SOFT_LIMIT;
-  const metaLong = meta.length > DESC_SOFT_LIMIT;
-  document.getElementById("title-counter").classList.toggle("is-long", titleLong);
-  document.getElementById("meta-counter").classList.toggle("is-long", metaLong);
-  document.getElementById("title-hint").textContent = titleLong
-    ? ` · search results usually show about ${TITLE_SOFT_LIMIT}` : "";
-  document.getElementById("meta-hint").textContent = metaLong
-    ? ` · search results usually show about ${DESC_SOFT_LIMIT}` : "";
-  const desc = meta || "Enter a description to be shown on search engines like Google.";
-  document.getElementById("social-preview-title").textContent = title || storeName;
-  document.getElementById("social-preview-desc").textContent = desc;
-  document.getElementById("serp-url").textContent = domain || "Domain not connected";
-  document.getElementById("serp-title").textContent = clip(title || storeName, TITLE_SOFT_LIMIT);
-  document.getElementById("serp-desc").textContent = clip(desc, DESC_SOFT_LIMIT);
-}
-
-function setChosenAsset(kind, url, { notify = true } = {}) {
-  const input = document.getElementById(kind === "nav" ? "nav-logo-url" : "social-image-url");
-  const preview = document.getElementById(kind === "nav" ? "nav-asset-thumb" : "social-asset-thumb");
-  const name = document.getElementById(kind === "nav" ? "nav-asset-name" : "social-asset-name");
-  const advanced = document.getElementById(kind === "nav" ? "nav-logo-url-advanced" : "social-image-url-advanced");
-  input.value = url || "";
-  advanced.value = url || "";
-  preview.hidden = !url;
-  preview.onerror = () => { preview.hidden = true; };
-  preview.onload = () => { preview.hidden = false; };
-  if (url) preview.src = url;
-  else preview.removeAttribute("src");
-  name.textContent = url ? decodeURIComponent(url.split("/").pop().split("?")[0] || "Selected asset") :
-    (kind === "nav" ? "Use current logo" : "No image selected");
-  if (kind === "social") updateSocialImage();
-  if (notify) setDirty(true);
-}
-
-const SOCIAL_IDEAL_RATIO = 1200 / 630;
-let socialImageToken = 0;
-async function explainImageFailure(url) {
-  try {
-    const res = await fetch(url, { method: "HEAD", credentials: "same-origin", cache: "no-store" });
-    if (res.status === 404) return "This image no longer exists in your media library. Choose another image.";
-    if (!res.ok) return `This image could not be loaded (HTTP ${res.status}). Choose another image.`;
-    const type = res.headers.get("content-type") || "";
-    if (!type.startsWith("image/")) return `This file is not an image (${type || "unknown type"}). Choose another image.`;
-    return "Your browser could not display this image file. It may be damaged or in an unsupported format. Choose another image.";
-  } catch {
-    return "This image address could not be reached. Check the address or choose another image.";
-  }
-}
-function updateSocialImage() {
-  const url = document.getElementById("social-image-url").value.trim();
-  const img = document.getElementById("social-image");
-  const placeholder = document.getElementById("social-placeholder");
-  const hint = document.getElementById("social-image-hint");
-  const token = ++socialImageToken;
-  hint.hidden = true;
-  hint.className = "prefs-image-hint";
-  img.hidden = true;
-  if (!url) {
-    img.removeAttribute("src");
-    placeholder.hidden = false;
-    placeholder.textContent = "Choose a sharing image to preview your store’s social card.";
-    return;
-  }
-  placeholder.hidden = false;
-  placeholder.textContent = "Loading preview…";
-  img.onload = () => {
-    if (token !== socialImageToken) return;
-    placeholder.hidden = true;
-    img.hidden = false;
-    const w = img.naturalWidth, h = img.naturalHeight;
-    if (!w || !h) return;
-    const off = Math.abs(w / h - SOCIAL_IDEAL_RATIO) / SOCIAL_IDEAL_RATIO > 0.25;
-    const small = w < 600;
-    if (off || small) {
-      hint.textContent = `${w} × ${h} px. ` +
-        (small ? "This is small for a social card. " : "") +
-        (off ? "Platforms will crop it to a wide card, so keep the subject centered. " : "") +
-        "Recommended 1200 × 630 px.";
-      hint.classList.add("is-warning");
-      hint.hidden = false;
-    }
-  };
-  img.onerror = async () => {
-    if (token !== socialImageToken) return;
-    img.hidden = true;
-    placeholder.hidden = false;
-    placeholder.textContent = "Preview unavailable";
-    hint.textContent = await explainImageFailure(url);
-    hint.classList.add("is-error");
-    hint.hidden = false;
-  };
-  img.src = url;
-}
-
-function updateAnnouncementPreview() {
-  const element = document.getElementById("announcement-preview");
-  const value = document.getElementById("announcement-text").value.trim() || "Your announcement will appear here";
-  const marquee = document.getElementById("announcement-style").value === "marquee";
-  element.style.backgroundColor = document.getElementById("announcement-bg").value;
-  element.style.color = document.getElementById("announcement-color").value;
-  element.dataset.style = marquee ? "marquee" : "static";
-  element.replaceChildren();
-  const track = document.createElement("span");
-  track.className = "prefs-announcement-preview__track";
-  for (let i = 0; i < (marquee ? 4 : 1); i++) {
-    const segment = document.createElement("span");
-    segment.textContent = value;
-    track.appendChild(segment);
-  }
-  element.appendChild(track);
-}
-
-function togglePasswordField() {
-  const on = document.getElementById("password-protection").checked;
-  document.getElementById("password-field").hidden = !on;
-}
-
-function storePreferencesEndpoint() {
-  const params = new URLSearchParams(location.search);
-  let siteId = params.get("site_id");
-  if (!siteId) {
-    try { siteId = sessionStorage.getItem("agentsam.cms.selected-site.v1"); } catch {}
-  }
-  return "/api/admin/store/preferences" + (siteId && /^[A-Za-z0-9_-]{1,160}$/.test(siteId)
-    ? "?site_id=" + encodeURIComponent(siteId) : "");
-}
-
-function applySettings(data) {
-  settings = data.settings || {};
-  // Never retain a previous customer's domain when a different site is selected.
-  domain = typeof data.domain === "string" ? data.domain : "";
-  storeName = String(data.site?.name || data.company?.name || "").trim() || "Your store";
-  document.title = "Preferences — " + storeName;
-  document.getElementById("social-domain").textContent = domain ? domain.toUpperCase() : "Domain not connected";
-
-  document.getElementById("password-protection").checked = !!settings.passwordProtection;
-  document.getElementById("b2b-only").checked = !!settings.b2bOnly;
-  document.getElementById("geo-redirect").checked = !!settings.geoRedirect;
-  document.getElementById("language-redirect").checked = !!settings.languageRedirect;
-  document.getElementById("hcaptcha-contact").checked = !!settings.hcaptchaContact;
-  document.getElementById("hcaptcha-account").checked = !!settings.hcaptchaAccount;
-
-  document.getElementById("home-title").value = settings.homeTitle || "";
-  document.getElementById("meta-description").value = settings.metaDescription || "";
-  setChosenAsset("social", settings.socialImageUrl || "", { notify: false });
-  document.getElementById("store-password").value = settings.storePassword || "";
-
-  setChosenAsset("nav", settings.navLogoUrl || data.nav?.logoUrl || "", { notify: false });
-  document.getElementById("nav-logo-height").value = data.nav?.logoHeight || settings.navLogoHeight || 68;
-  document.getElementById("nav-brand-accent").value = data.nav?.brandAccent || settings.navBrandAccent || "#ff4500";
-  document.getElementById("nav-brand-accent-light").value =
-    data.nav?.brandAccentLight || settings.navBrandAccentLight || "#E5A558";
-  document.getElementById("announcement-enabled").checked = data.nav?.announcement?.enabled === true;
-  document.getElementById("announcement-text").value = data.nav?.announcement?.text || "";
-  document.getElementById("announcement-href").value = settings.announcementHref || data.nav?.announcement?.href || "";
-  document.getElementById("announcement-style").value = settings.announcementStyle === "marquee" ? "marquee" : "static";
-  document.getElementById("announcement-bg").value = /^#[0-9a-f]{6}$/i.test(settings.announcementBgColor || "") ? settings.announcementBgColor : "#161616";
-  document.getElementById("announcement-color").value = /^#[0-9a-f]{6}$/i.test(settings.announcementTextColor || "") ? settings.announcementTextColor : "#ffffff";
-  updateAnnouncementPreview();
-
-  togglePasswordField();
-  updateCounters();
-  updateSocialImage();
-  setDirty(false);
-}
-
-function collectSettings() {
-  return {
-    passwordProtection: document.getElementById("password-protection").checked,
-    b2bOnly: document.getElementById("b2b-only").checked,
-    geoRedirect: document.getElementById("geo-redirect").checked,
-    languageRedirect: document.getElementById("language-redirect").checked,
-    hcaptchaContact: document.getElementById("hcaptcha-contact").checked,
-    hcaptchaAccount: document.getElementById("hcaptcha-account").checked,
-    homeTitle: document.getElementById("home-title").value.trim(),
-    metaDescription: document.getElementById("meta-description").value.trim(),
-    socialImageUrl: document.getElementById("social-image-url").value.trim(),
-    storePassword: document.getElementById("store-password").value,
-    navLogoUrl: document.getElementById("nav-logo-url").value.trim(),
-    navLogoHeight: Number(document.getElementById("nav-logo-height").value || 68),
-    navBrandAccent: document.getElementById("nav-brand-accent").value,
-    navBrandAccentLight: document.getElementById("nav-brand-accent-light").value,
-    announcementEnabled: document.getElementById("announcement-enabled").checked,
-    announcementText: document.getElementById("announcement-text").value.trim(),
-    announcementHref: document.getElementById("announcement-href").value.trim(),
-    announcementStyle: document.getElementById("announcement-style").value,
-    announcementBgColor: document.getElementById("announcement-bg").value,
-    announcementTextColor: document.getElementById("announcement-color").value,
-  };
-}
-
-["nav-logo-url", "nav-logo-height", "nav-brand-accent", "nav-brand-accent-light"].forEach((id) => {
-  document.getElementById(id)?.addEventListener("input", () => setDirty(true));
-  document.getElementById(id)?.addEventListener("change", () => setDirty(true));
-});
-
-["announcement-enabled", "announcement-text", "announcement-href", "announcement-style", "announcement-bg", "announcement-color"].forEach((id) => {
-  document.getElementById(id)?.addEventListener("input", () => { setDirty(true); updateAnnouncementPreview(); });
-  document.getElementById(id)?.addEventListener("change", () => { setDirty(true); updateAnnouncementPreview(); });
-});
-
-document.querySelectorAll("[data-pref]").forEach((el) => {
-  el.addEventListener("input", () => {
-    setDirty(true);
-    if (el.id === "home-title" || el.id === "meta-description") updateCounters();
-    if (el.id === "social-image-url") updateSocialImage();
-  });
-  el.addEventListener("change", () => {
-    setDirty(true);
-    if (el.id === "password-protection") togglePasswordField();
-  });
-});
-
-document.getElementById("save-prefs-btn").addEventListener("click", async () => {
-  const btn = document.getElementById("save-prefs-btn");
-  btn.disabled = true;
-  syncDockEdit(true);
-  try {
-    const d = await adminFetch(storePreferencesEndpoint(), {
-      method: "POST",
-      body: JSON.stringify({ settings: collectSettings() }),
-    });
-    applySettings(d);
-    showNote("Preferences saved.", "success");
-  } catch (err) {
-    showNote(err.message, "error");
-    setDirty(true);
-  }
-});
-
-function crawlerNotice(message, kind = "info") {
-  const notice = document.getElementById("crawler-notice");
-  notice.textContent = message || "";
-  notice.hidden = !message;
-  notice.className = `prefs-crawler-notice${message ? ` is-${kind}` : ""}`;
-}
-
-function setCheck(name, ok, text) {
-  const li = document.querySelector(`#crawler-checks [data-check="${name}"]`);
-  if (!li) return;
-  li.dataset.state = ok === null ? "pending" : ok ? "ok" : "bad";
-  li.querySelector("em").textContent = text;
-}
-async function verifyDiscoveryFiles(site) {
-  setCheck("robots", null, "Checking…");
-  setCheck("sitemap", null, "Checking…");
-  let sitemapUrls = null;
-  const fetchText = async (url) => {
-    const res = await fetch(url, { cache: "no-store", credentials: "omit" });
-    return { res, body: res.ok ? await res.text() : "" };
-  };
-  try {
-    const { res, body } = await fetchText(site.robots_url || "/robots.txt");
-    if (!res.ok) setCheck("robots", false, `Not reachable (HTTP ${res.status})`);
-    else if (!/user-agent/i.test(body)) setCheck("robots", false, "Reachable, but no rules found");
-    else setCheck("robots", true, /sitemap:/i.test(body) ? "Live, and points to your sitemap" : "Live, but does not list your sitemap");
-  } catch { setCheck("robots", false, "Could not be checked from this browser"); }
-  try {
-    const { res, body } = await fetchText(site.sitemap_url || "/sitemap.xml");
-    if (!res.ok) setCheck("sitemap", false, `Not reachable (HTTP ${res.status})`);
-    else {
-      sitemapUrls = (body.match(/<loc>/g) || []).length;
-      setCheck("sitemap", sitemapUrls > 0, sitemapUrls > 0 ? `Live, ${sitemapUrls} URLs` : "Reachable, but empty");
-    }
-  } catch { setCheck("sitemap", false, "Could not be checked from this browser"); }
-  return sitemapUrls;
-}
-
-async function refreshCrawlerDashboard() {
-  const button = document.getElementById("crawler-refresh-btn");
-  const pill = document.getElementById("crawler-status-pill");
-  if (button) button.disabled = true;
-  try {
-    const data = await adminFetch("/api/admin/store/crawler");
-    const site = data.site || {};
-    const counts = data.public_discovery || {};
-    const bindingPresent = data.crawler_binding_present === true;
-    document.getElementById("crawler-site-name").textContent = site.name || "Storefront";
-    document.getElementById("crawler-site-domain").textContent = site.domain || "Configure a public HTTPS website URL in Company settings.";
-    document.getElementById("crawler-robots-link").href = site.robots_url || "/robots.txt";
-    document.getElementById("crawler-sitemap-link").href = site.sitemap_url || "/sitemap.xml";
-    const expected = Number(counts.sitemap_url_count || 0);
-    document.getElementById("crawler-routes-count").textContent = String(Number(counts.indexable_routes || 0));
-    document.getElementById("crawler-products-count").textContent = String(Number(counts.active_products || 0));
-    const runtime = document.getElementById("crawler-runtime-status");
-    runtime.textContent = bindingPresent ? "Connected" : "Not connected";
-    runtime.className = `prefs-status-pill${bindingPresent ? " is-ready" : ""}`;
-    const live = await verifyDiscoveryFiles(site);
-    document.getElementById("crawler-sitemap-count").textContent = live === null ? "—" : String(live);
-    const sync = document.getElementById("crawler-sync-status");
-    if (live === null) sync.textContent = "—";
-    else sync.textContent = live === expected ? "In sync" : `${live > expected ? "+" : "−"}${Math.abs(live - expected)} off`;
-    const filesOk = document.querySelectorAll('#crawler-checks [data-state="bad"]').length === 0;
-    const ready = Boolean(site.origin) && filesOk && live !== null && live === expected;
-    pill.textContent = !site.origin ? "Domain required" : ready ? "Search-ready" : "Needs attention";
-    pill.className = `prefs-status-pill${ready ? " is-ready" : " is-warning"}`;
-    crawlerNotice(counts.sitemap_truncated
-      ? "The sitemap listing reached its 48,000-product cap. A sitemap index is needed before this catalog can publish more product URLs."
-      : (live !== null && live !== expected
-        ? "The live sitemap does not match your catalog. Refresh in a minute; if it persists, the sitemap cache may be stale."
-        : ""), counts.sitemap_truncated || (live !== null && live !== expected) ? "warning" : "info");
-  } catch (error) {
-    pill.textContent = "Unavailable";
-    pill.className = "prefs-status-pill is-warning";
-    if (error.status === 409) crawlerNotice("Configure a valid public HTTPS storefront domain before publishing search discovery files.", "warning");
-    else crawlerNotice(error.message || "Search discovery status could not be loaded.", "error");
-    for (const id of ["crawler-routes-count", "crawler-products-count", "crawler-sitemap-count", "crawler-sync-status"]) {
-      document.getElementById(id).textContent = "—";
-    }
-    setCheck("robots", false, "Status unavailable");
-    setCheck("sitemap", false, "Status unavailable");
-  } finally {
-    if (button) button.disabled = false;
-  }
-}
-
-document.getElementById("crawler-refresh-btn").addEventListener("click", refreshCrawlerDashboard);
-refreshCrawlerDashboard();
-
-const assetDialog = document.getElementById("prefs-assets-dialog");
-let pickerKind = "social";
-let availableAssets = [];
-
-function showAssetStatus(message) {
-  document.getElementById("prefs-assets-status").textContent = message || "";
-}
-function renderAvailableAssets(query = "") {
-  const list = document.getElementById("prefs-assets-grid");
-  const needle = query.trim().toLowerCase();
-  const assets = availableAssets.filter((asset) =>
-    String(asset.content_type || "").startsWith("image/") &&
-    ((asset.filename || "") + " " + (asset.folder || "")).toLowerCase().includes(needle));
-  list.replaceChildren();
-  if (!assets.length) {
-    const empty = document.createElement("p");
-    empty.className = "prefs-assets-empty";
-    empty.textContent = availableAssets.length ? "No matching images." : "No images in the library yet. Upload one to begin.";
-    list.appendChild(empty);
-    return;
-  }
-  for (const asset of assets) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "prefs-asset-tile";
-    button.setAttribute("role", "listitem");
-    const img = document.createElement("img");
-    img.src = asset.url;
-    img.loading = "lazy";
-    img.alt = "";
-    const label = document.createElement("span");
-    label.textContent = asset.filename || "Uploaded asset";
-    button.append(img, label);
-    button.addEventListener("click", () => {
-      setChosenAsset(pickerKind, asset.url);
-      assetDialog.close();
-    });
-    list.append(button);
-  }
-}
-async function loadAvailableAssets() {
-  showAssetStatus("Loading your uploaded media…");
-  const data = await adminFetch("/api/admin/media?limit=120");
-  availableAssets = data.assets || data.items || [];
-  renderAvailableAssets(document.getElementById("prefs-assets-search").value);
-  showAssetStatus(availableAssets.length + " assets available.");
-}
-document.querySelectorAll("[data-pick-asset]").forEach((button) => button.addEventListener("click", async () => {
-  pickerKind = button.dataset.pickAsset;
-  document.getElementById("prefs-assets-title").textContent = pickerKind === "nav" ? "Choose a storefront logo" : "Choose a social sharing image";
-  assetDialog.showModal();
-  try { await loadAvailableAssets(); } catch (error) { showAssetStatus(error.message || "Unable to load media."); }
-}));
-document.getElementById("prefs-assets-close").addEventListener("click", () => assetDialog.close());
-document.getElementById("prefs-assets-search").addEventListener("input", (event) => renderAvailableAssets(event.target.value));
-document.querySelectorAll("[data-clear-asset]").forEach((button) => button.addEventListener("click", () => {
-  setChosenAsset(button.dataset.clearAsset, "");
-}));
-["social", "nav"].forEach((kind) => {
-  const id = kind === "social" ? "social-image-url-advanced" : "nav-logo-url-advanced";
-  document.getElementById(id).addEventListener("change", (event) => {
-    const value = event.target.value.trim();
-    if (value && !value.startsWith("/") && !/^https:\/\//i.test(value)) {
-      showNote("Image URL must be an internal path or an HTTPS address.", "error");
-      return;
-    }
-    setChosenAsset(kind, value);
-  });
-});
-document.getElementById("prefs-assets-upload").addEventListener("change", async (event) => {
-  const files = Array.from(event.target.files || []);
-  if (!files.length) return;
-  if (files.some((file) => !file.type.startsWith("image/"))) {
-    showAssetStatus("Please choose image files only."); return;
-  }
-  const form = new FormData();
-  for (const file of files) form.append("files", file);
-  form.append("prefix", "uploads/store-preferences/");
-  showAssetStatus("Uploading your image…");
-  try {
-    const response = await fetch("/api/admin/media", { method: "POST", credentials: "include", body: form });
-    if (!response.ok) throw new Error("Upload failed (" + response.status + ")");
-    const data = await response.json();
-    availableAssets = (data.assets || []).concat(availableAssets);
-    renderAvailableAssets();
-    showAssetStatus("Uploaded. Select the image to use it.");
-  } catch (error) { showAssetStatus(error.message || "Upload failed."); }
-  finally { event.target.value = ""; }
-});
-(async function () {
-  try {
-    const d = await adminFetch(storePreferencesEndpoint());
-    applySettings(d);
-  } catch (err) {
-    showNote(err.message, "error");
-  }
-})();
-</script>
+    `);
+  </script>
+  <script src="/admin/js/preferences.js"></script>
+  <script src="/admin/js/preferences-navigation.js" defer></script>
 </body>
 </html>

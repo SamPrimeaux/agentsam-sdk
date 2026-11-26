@@ -1,5 +1,5 @@
 /**
- * Auth portal branding from D1 `company` via GET /api/company.
+ * Auth portal branding from the active storefront site, with a portable host fallback.
  * Static HTML keeps neutral portable defaults as fallback when host branding is unavailable.
  */
 (function () {
@@ -18,12 +18,18 @@
       document.body.style.backgroundColor = company.authBgColor;
     }
 
-    if (company.logoUrl) {
-      document.querySelectorAll('.auth-logo').forEach(function (el) {
+    document.querySelectorAll('.auth-logo').forEach(function (el) {
+      var fallbackLogo = el.dataset.defaultSrc || el.src;
+      el.dataset.defaultSrc = fallbackLogo;
+      el.onerror = function () {
+        el.onerror = null;
+        el.src = fallbackLogo;
+      };
+      if (company.logoUrl) {
         el.src = company.logoUrl;
         el.alt = name;
-      });
-    }
+      }
+    });
 
     if (company.faviconUrl) {
       var link = document.querySelector('link[rel="icon"]');
@@ -79,8 +85,13 @@
     }
   }
 
-  fetch('/api/company', { credentials: 'omit' })
-    .then(function (r) { return r.json(); })
+  fetch('/api/storefront/identity/company', { credentials: 'omit' })
+    .then(function (response) {
+      if (response.ok) return response.json();
+      return fetch('/api/company', { credentials: 'omit' }).then(function (fallback) {
+        return fallback.ok ? fallback.json() : null;
+      });
+    })
     .then(function (d) { if (d && d.ok && d.company) applyCompany(d.company); })
     .catch(function () {});
 })();

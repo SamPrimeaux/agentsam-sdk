@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-embeds",
-  "version": "2.6.18",
+  "version": "2.6.19",
   "description": "Installable storefront embed pack: forms, store chat/inbox and AgentSamGrow capture, with editor field schemas and a dependency-free chat widget.",
   "type": "module",
   "license": "FSL-1.1-MIT",
@@ -13,7 +13,8 @@
     "./manifest": "./agentsam.embeds.json",
     "./chat-widget": "./src/chat-widget.js",
     "./package.json": "./package.json",
-    "./form-widget": "./src/form-widget.js"
+    "./form-widget": "./src/form-widget.js",
+    "./customer-account-portal": "./src/customer-account-portal.js"
   },
   "files": [
     "src",
@@ -21,7 +22,9 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "build:customer-account-portal": "node scripts/build-customer-account-portal-release.mjs dist/releases/customer-account-portal 1.0.1",
+    "generate:customer-account-portal-registration": "node scripts/generate-customer-account-portal-registration.mjs 1.0.1"
   },
   "repository": {
     "type": "git",

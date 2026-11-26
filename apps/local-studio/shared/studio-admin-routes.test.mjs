@@ -5,6 +5,8 @@ import {
   isStudioAdminPath,
   isStudioShellAdminPath,
   resolveLegacyContentMediaPath,
+  resolveRetiredStructurePath,
+  STUDIO_ADMIN_PRERENDERED_ROUTES,
 } from './studio-admin-routes.mjs';
 
 test('legacy dashboard document paths canonicalize under /admin', () => {
@@ -63,4 +65,14 @@ test('legacy Content kind redirects remain inside the admin Media Library', () =
   assert.equal(resolveLegacyContentMediaPath('/admin/content', new URLSearchParams('kind=images')), '/admin/media/images');
   assert.equal(resolveLegacyContentMediaPath('/admin/content', new URLSearchParams('kind=videos')), '/admin/media/videos');
   assert.equal(resolveLegacyContentMediaPath('/admin/content', new URLSearchParams()), '/admin/media');
+});
+
+test('retired Structure bookmarks resolve to existing destinations without a Structure mount', () => {
+  assert.equal(resolveRetiredStructurePath('/admin/structure', new URLSearchParams('scope=website&site_id=site_a')), '/admin/preferences?site_id=site_a');
+  assert.equal(resolveRetiredStructurePath('/structure', new URLSearchParams('scope=platform')), '/admin/settings/themes?view=navigation');
+  assert.equal(resolveRetiredStructurePath('/admin/structure/', new URLSearchParams('site_slug=store-a')), '/admin/preferences?site_slug=store-a');
+  assert.equal(resolveRetiredStructurePath('/admin/structure', new URLSearchParams('site_id=https://example.test')), '/admin/preferences');
+  assert.equal(resolveRetiredStructurePath('/admin/preferences', new URLSearchParams()), null);
+  assert.equal(isStudioShellAdminPath('/admin/structure'), false);
+  assert.equal(STUDIO_ADMIN_PRERENDERED_ROUTES.includes('/admin/structure'), false);
 });

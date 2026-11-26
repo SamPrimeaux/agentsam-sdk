@@ -101,3 +101,6 @@ apps/local-studio/.local-media-intake/
 
 # Generated, verified R2 package-schema staging output
 /dist/schema-registry/
+
+# Generated from the canonical AgentSam Identity package at Ecommerce build time
+/apps/ecommerce-cms-agentsam/frontend/static/identity-portal/

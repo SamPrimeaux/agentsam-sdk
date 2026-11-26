@@ -1,4 +1,4 @@
-import { BookOpen, Clock3, FileCode, Files, Folder, House, Images, Lightbulb, MessageCircle, MonitorPlay, SquareCheckBig, SquareTerminal, UserRound, Users } from 'lucide-react';
+import { Bot, Menu, Package, Search, ShoppingBag, BookOpen, Clock3, FileCode, Files, Folder, House, Images, Lightbulb, MessageCircle, MonitorPlay, SquareCheckBig, SquareTerminal, UserRound, Users } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useNavigate } from '@tanstack/react-router';
 import { useWorkStore } from '@/lib/work/store';
@@ -23,15 +23,33 @@ export function AgentSamLaunchDock() {
   const conversationRoute = path === '/admin/agentsam' || path.startsWith('/admin/chats');
   const libraryRoute = path === '/admin/library' || path === '/admin/artifacts' || path === '/admin/media';
   const libraryView = new URLSearchParams(routeSearch).get('view') || 'all';
+  const storePath = installedAdminPage?.split('?')[0] || path;
+  const storeRoute = ['/admin/store','/admin/pages','/admin/preferences','/admin/products','/admin/orders'].includes(storePath);
   // The sidebar drawer takes precedence. Beyond the nav provider's 901px
   // mobile threshold, only Work opts into the 902–1099px compact dock.
-  if ((isMobile && open) || (!launchRoute && !conversationRoute && !libraryRoute)) return null;
+  if ((isMobile && open) || (!launchRoute && !conversationRoute && !libraryRoute && !storeRoute)) return null;
   const showPage = (path: string) => {
     setOpen(false);
     // A dedicated route must not open a second SideStage over itself.
     setSideOpen(false);
     data.onNavigate?.(path);
   };
+
+  if (storeRoute) {
+    if (!isMobile) return null;
+    const siteId = new URLSearchParams(routeSearch).get('site_id');
+    const scoped=(href:string)=>siteId?href+'?site_id='+encodeURIComponent(siteId):href;
+    // Keep the Ecommerce manifest's Home, Products, Orders, More and AgentSam
+    // actions. Search invokes the existing host command palette.
+    return <Nav.LaunchDock coverage="tablet" label="Merchant navigation" items={[
+      {id:'search',label:'Search',icon:<Search/>,onSelect:()=>data.onSearch?.()},
+      {id:'home',label:'Home',icon:<House/>,onSelect:()=>showPage('/admin/home')},
+      {id:'orders',label:'Orders',icon:<ShoppingBag/>,active:storePath==='/admin/orders',onSelect:()=>showPage(scoped('/admin/orders'))},
+      {id:'products',label:'Products',icon:<Package/>,active:storePath==='/admin/products',onSelect:()=>showPage(scoped('/admin/products'))},
+      {id:'menu',label:'More',icon:<Menu/>,active:['/admin/store','/admin/pages','/admin/preferences'].includes(storePath),onSelect:()=>setOpen(true)},
+      {id:'agent',label:'AgentSam',icon:<Bot/>,onSelect:()=>window.dispatchEvent(new Event('agentsam:assistant:activate'))},
+    ]}/>;
+  }
 
   if (libraryRoute) {
     const showArtifacts = (view: 'all' | 'yours' | 'shared' | 'recent') => {

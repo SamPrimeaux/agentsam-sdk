@@ -5,9 +5,26 @@ if (location.pathname.startsWith('/admin/')) {
   ['project','page','slug','section','block','previewMode','page_id'].forEach(key=>route.searchParams.delete(key));
   history.replaceState(history.state,'',route.pathname+route.search);
 }
+const themesView = new URLSearchParams(location.search).get("view") === "themes";
 renderShell("/admin/store", `
-  <div class="online-store">
-    <h1 class="online-store-accessible-heading">Online Store</h1>
+  <div class="online-store" data-store-view="${themesView?"themes":"overview"}">
+    <h1 class="online-store-accessible-heading online-store-desktop-heading">Online Store</h1>
+    <header class="online-store-mobile-head">
+      <details class="online-store-destination">
+        <summary><h1>${themesView?"Themes":"Online Store"}</h1><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></summary>
+        <nav aria-label="Online Store destinations"><a href="/admin/store" ${themesView?"":'aria-current="page"'} data-store-route>Online Store</a><a href="/admin/store?view=themes" ${themesView?'aria-current="page"':""} data-store-route>Themes</a><a href="/admin/pages" data-store-route data-requires-site hidden>Pages</a><a href="/admin/preferences" data-store-route data-requires-site hidden>Preferences</a></nav>
+      </details>
+      <div class="online-store-mobile-actions">
+        <a id="store-open-live" aria-label="View storefront" title="View storefront" target="_blank" rel="noopener noreferrer" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></a>
+        <button id="store-more" type="button" aria-label="More options"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
+      </div>
+    </header>
+    <dialog class="online-store-more-sheet" id="store-more-sheet" aria-labelledby="store-more-title">
+      <header><h2 id="store-more-title">More options</h2><button type="button" id="store-more-close" aria-label="Close more options">×</button></header>
+      <a href="/admin/store?view=themes" data-store-route>Manage all themes</a>
+      <a href="/admin/store?view=themes#theme-product-marketplace" data-store-route>Discover themes</a>
+      <a href="/admin/preferences" data-store-route data-requires-site hidden>Preferences</a>
+    </dialog>
 
     <section class="online-store-card online-store-active is-loading" aria-label="Storefront cover and current theme" aria-busy="true">
       <div class="online-store-previews">
@@ -18,6 +35,7 @@ renderShell("/admin/store", `
           <iframe id="theme-preview-mobile" title="Mobile storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Mobile</span>
         </div>
       </div>
+      <a class="online-store-protected" href="/admin/preferences#section-access" data-store-route id="store-protected-notice" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg><span>Online store is password protected</span><span aria-hidden="true">›</span></a>
       <div class="online-store-theme-meta">
         <div>
           <div class="online-store-theme-name">
@@ -31,15 +49,22 @@ renderShell("/admin/store", `
           </div>
         </div>
         <div class="online-store-theme-actions">
-          <button type="button" class="online-store-icon-btn" aria-label="Theme options">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
-          </button>
           <a href="#theme-product-marketplace" class="btn primary" id="edit-theme-btn">Browse website themes</a>
+          <a href="/admin/store?view=themes" data-store-route class="btn ghost online-store-manage">Manage all themes</a>
+          <details class="online-store-theme-menu" id="active-theme-menu" hidden><summary aria-label="Theme actions">···</summary><nav aria-label="Theme actions"><a id="theme-menu-preview" target="_blank" rel="noopener" hidden>Preview</a><a id="theme-menu-edit" hidden>Edit theme</a></nav></details>
         </div>
       </div>
     </section>
 
-    <header class="online-store-drafts-head">
+    <section class="online-store-mobile-shortcuts" id="store-mobile-shortcuts" hidden aria-label="Store settings">
+      <a class="online-store-shortcut" href="/admin/pages" data-store-route><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h7l5 5v13H6zM13 3v6h5"/></svg><span>Pages</span><span aria-hidden="true">›</span></a>
+      <div class="online-store-settings-card">
+        <div class="online-store-password-row"><div><strong>Password protection</strong><small id="store-password-description">Manage storefront access</small></div><button type="button" role="switch" aria-label="Password protection" aria-checked="false" id="store-password-switch" hidden><span></span></button><a id="store-password-manage" href="/admin/preferences#section-access" data-store-route>Manage</a></div>
+        <p role="status" id="store-password-status" hidden></p>
+        <a class="online-store-shortcut" href="/admin/preferences" data-store-route><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="var(--c-surface,white)"/><circle cx="15" cy="12" r="2" fill="var(--c-surface,white)"/><circle cx="10" cy="18" r="2" fill="var(--c-surface,white)"/></svg><span>Preferences</span><span aria-hidden="true">›</span></a>
+      </div>
+    </section>
+    <header class="online-store-drafts-head" id="store-themes-heading">
       <div>
         <h2>Draft themes</h2>
       </div>
@@ -383,6 +408,59 @@ function showActiveTheme(theme,siteId) {
   edit.textContent = "Edit theme";
 }
 
+function bindStoreMobileActions(overview) {
+  const siteId=overview.selected_site_id || overview.store?.site_id;
+  if(!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) return;
+  const query='?site_id='+encodeURIComponent(siteId);
+  const scoped=(href)=>{const url=new URL(href,location.origin);url.searchParams.set('site_id',siteId);return url.pathname+url.search+url.hash;};
+  document.querySelectorAll('[data-store-route]').forEach(link=>{link.href=scoped(link.getAttribute('href'));if(link.hasAttribute('data-requires-site'))link.hidden=false;});
+  document.getElementById('store-mobile-shortcuts').hidden=false;
+  const live=document.getElementById('store-open-live');
+  try {
+    const url=new URL(overview.store?.url || overview.site_preview?.url || '');
+    if(url.protocol==='https:'){live.href=url.href;live.hidden=false;}
+  } catch {}
+  const toggle=document.getElementById('store-password-switch');
+  const manage=document.getElementById('store-password-manage');
+  const notice=document.getElementById('store-protected-notice');
+  const description=document.getElementById('store-password-description');
+  const status=document.getElementById('store-password-status');
+  const paint=(settings)=>{
+    toggle.setAttribute('aria-checked',String(settings.passwordProtection===true));
+    notice.hidden=settings.passwordProtection!==true;
+    description.textContent=settings.passwordProtection===true?'Your storefront requires a password':'Protect your store with a password';
+  };
+  // The overview can report protection even on a read-only host. Only expose
+  // the switch after the actual site-scoped Preferences contract is available.
+  notice.hidden=overview.store?.visibility!=='password';
+  let settings;
+  void (async()=>{
+    try {
+      const result=await adminFetch('/api/admin/store/preferences'+query);
+      if(!result?.ok || typeof result.settings?.passwordProtection!=='boolean')return;
+      settings=result.settings;paint(settings);toggle.hidden=false;manage.hidden=true;
+      toggle.addEventListener('click',async()=>{
+        const enabled=settings.passwordProtection!==true;
+        if(enabled && !settings.hasStorePassword){location.assign(scoped('/admin/preferences#section-access'));return;}
+        if(!enabled && !confirm('Remove password protection for this website? Published pages may become publicly accessible.'))return;
+        toggle.disabled=true;status.hidden=false;status.textContent='Saving…';
+        try {
+          const saved=await adminFetch('/api/admin/store/preferences'+query,{method:'POST',body:JSON.stringify({settings:{passwordProtection:enabled}})});
+          if(!saved?.ok || typeof saved.settings?.passwordProtection!=='boolean')throw Error('Could not update protection.');
+          settings=saved.settings;paint(settings);status.textContent='Saved';
+        }catch(error){status.textContent=error.message||'Could not update protection. Try again.';}
+        finally{toggle.disabled=false;}
+      });
+    } catch { /* Unsupported hosts retain the working Preferences link. */ }
+  })();
+}
+const moreSheet=document.getElementById('store-more-sheet');
+document.getElementById('store-more')?.addEventListener('click',()=>moreSheet.showModal());
+document.getElementById('store-more-close')?.addEventListener('click',()=>moreSheet.close());
+moreSheet?.addEventListener('click',event=>{if(event.target===moreSheet || event.target.closest('a'))moreSheet.close();});
+document.querySelector('.online-store-destination nav')?.addEventListener('click',()=>document.querySelector('.online-store-destination')?.removeAttribute('open'));
+document.addEventListener('click',event=>{const menu=document.querySelector('.online-store-destination[open]');if(menu&&!menu.contains(event.target))menu.removeAttribute('open');});
+
 (async function () {
   try {
     // Site choice travels in the URL; never silently bind a merchant to the
@@ -396,6 +474,7 @@ function showActiveTheme(theme,siteId) {
     const d = initial?.ok && (!siteId || initial.selected_site_id===siteId) ? initial :
       await adminFetch('/api/admin/store/online'+(siteId?'?site_id='+encodeURIComponent(siteId):''));
     const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
+    bindStoreMobileActions(d);
     document.querySelector('.online-store').dataset.siteId=d.selected_site_id||'';
     if(d.selected_site_id && location.pathname==='/admin/store'){
       const canonical=new URL(location.href);
@@ -455,6 +534,7 @@ function showActiveTheme(theme,siteId) {
       editLink.href=scopedStoreEditorHref(theme.edit_href,d.selected_site_id);
       editLink.textContent='Edit theme';
       currentId=theme.id;
+      if(theme.id===d.active_theme?.id){const badge=document.getElementById('active-theme-status');badge.textContent='Current theme';badge.className='online-store-badge online-store-badge--active';badge.hidden=false;}
       document.getElementById('active-theme-name').textContent=theme.name;
       document.getElementById('active-theme-saved').textContent='Last saved: '+fmtStoreDate(theme.last_saved||theme.updated_at||theme.created_at);
       if(theme.installed) await showSavedDraftPreview(theme);
@@ -481,6 +561,12 @@ function showActiveTheme(theme,siteId) {
         versionLabel.textContent='v'+versionText;
         versionWrap.hidden=false;
       }else versionWrap.hidden=true;
+    }
+    const themeMenu=document.getElementById('active-theme-menu');
+    if(theme?.edit_href){
+      const edit=document.getElementById('theme-menu-edit');edit.href=scopedStoreEditorHref(theme.edit_href,d.selected_site_id);edit.hidden=false;
+      if(theme.preview_href){const preview=document.getElementById('theme-menu-preview');preview.href=scopedStoreEditorHref(theme.preview_href,d.selected_site_id);preview.hidden=false;}
+      themeMenu.hidden=false;
     }
     paintStoreDrafts((d.draft_themes||[]).filter(draft=>draft.id!==currentId));
     // Do not pretend that publishing the Shop CMS page publishes a theme.

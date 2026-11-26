@@ -98,7 +98,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/collections': ['site_id'],
     '/admin/collections/new': ['site_id'],
     '/admin/inventory': ['site_id'],
-    '/admin/store': ['site_id'],
+    '/admin/store': ['site_id', 'view'],
     '/admin/onboarding-preview': ['site_id', 'preview_id'],
     '/admin/content': ['kind'],
     '/admin/email': ['folder'],
@@ -126,7 +126,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
       !['desktop', 'tablet', 'mobile'].includes(url.searchParams.get('previewMode') || '')) return null;
   for (const [name, value] of url.searchParams) {
     if (!(name === 'stock' ? /^platform\/[a-z0-9-]{1,70}$/.test(value) : name === 'marketplace_key' ? /^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/.test(value) : name === 'marketplace_kind' ? ['plugin','cms_embed'].includes(value) : idParam.test(value))
-      || (name === 'view' && !['store', 'collections', 'platform'].includes(value))
+      || (name === 'view' && !(url.pathname==='/admin/store' ? value==='themes' : ['store', 'collections', 'platform'].includes(value)))
       || (name === 'kind' && !['image', 'video', 'model', 'file'].includes(value))
       || (name === 'folder' && !['sent', 'inbox'].includes(value))
       || (name === 'catalog' && value !== 'revise')) return null;

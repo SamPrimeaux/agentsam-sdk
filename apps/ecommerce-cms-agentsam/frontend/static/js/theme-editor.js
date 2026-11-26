@@ -228,7 +228,7 @@
 
             '<div class="te-page-menu">',
               '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false" title="Choose a storefront page"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
-              '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search pages, products, collections" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
+              '<div class="te-page-popover" id="te-page-popover" hidden><div class="te-mobile-menu-heading"><span class="te-mobile-menu-grip" aria-hidden="true"></span><strong>Template menu</strong><button type="button" id="te-page-close" aria-label="Close template menu">×</button></div><input class="te-page-search" id="te-page-search" placeholder="Search templates" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
             '</div>',
             '<span class="te-save-state" id="te-save-state" role="status" aria-live="polite" title="Loading" aria-label="Loading">Loading</span>',
           '</div>',
@@ -246,6 +246,8 @@
             '<div class="te-toolbar-more">',
               '<button type="button" class="te-icon-btn" id="te-more" aria-label="More editor actions" aria-haspopup="true" aria-expanded="false" title="More actions">', icon.more, '</button>',
               '<div class="te-toolbar-dropdown" id="te-more-menu" hidden>' +
+                '<div class="te-mobile-menu-heading"><strong>' + cmsEscapeHtml(host?.metadata?.name || 'Theme options') + '</strong>' + (host?.metadata?.version ? '<small>Version ' + cmsEscapeHtml(host.metadata.version) + '</small>' : '') + '</div>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-device">View desktop version</button>' +
                 (typeof host?.onEditCode === 'function' ? '<button type="button" id="te-edit-code">Edit code</button>' : '') +
                 (typeof host?.onDuplicate === 'function' ? '<button type="button" id="te-duplicate-draft">Duplicate private draft</button>' : '') +
                 (typeof host?.onDelete === 'function' ? '<button type="button" id="te-delete-draft">Delete private draft…</button>' : '') +
@@ -4253,6 +4255,7 @@
 
   function openPageMenu() {
     closeThemeMenu();
+    closeToolbarMore();
     byId('te-page-popover').hidden = false;
     byId('te-page-trigger').setAttribute('aria-expanded', 'true');
     pagePickerCategory = null;
@@ -4549,6 +4552,7 @@
       const menuWidth = menu.getBoundingClientRect().width || 190;
       menu.style.left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)) + 'px';
       menu.style.top = rect.bottom + 6 + 'px';
+      if (menuId === 'te-more-menu') { menu.style.top = 'auto'; menu.style.left = '12px'; menu.style.right = '12px'; menu.style.bottom = 'max(12px, env(safe-area-inset-bottom, 0px))'; }
       menu.querySelector('button')?.focus();
     } else if (next) {
       button.parentElement.appendChild(menu);
@@ -4556,9 +4560,11 @@
       menu.style.right = '';
       menu.style.left = '';
       menu.style.top = '';
+      menu.style.bottom = '';
     }
   }
-  byId('te-more').addEventListener('click', function() { toggleToolbarMenu('te-more','te-more-menu'); });
+  byId('te-page-close')?.addEventListener('click', closePageMenu);
+  byId('te-more').addEventListener('click', function() { closePageMenu(); toggleToolbarMenu('te-more','te-more-menu'); });
   byId('te-edit-code')?.addEventListener('click', async function() {
     closeToolbarMore();
     if (dirty && !(await saveDraft())) return;
@@ -4590,6 +4596,13 @@
   byId('te-more-embeds').addEventListener('click', function() {
     closeToolbarMore();
     setEditorDrawer('app-embeds');
+  });
+  byId('te-more-device').addEventListener('click', function() {
+    closeToolbarMore();
+    const desktop=byId('te-more-device').dataset.device!=='desktop';
+    setDevice(desktop?'desktop':'mobile');
+    this.dataset.device=desktop?'desktop':'mobile';
+    this.textContent=desktop?'View mobile version':'View desktop version';
   });
   byId('te-more-inspect').addEventListener('click', function() {
     closeToolbarMore();

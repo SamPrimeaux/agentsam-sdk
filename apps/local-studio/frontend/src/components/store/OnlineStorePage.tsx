@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from 'react';
-import { ArrowUpRight, ExternalLink, Globe2, MoreHorizontal, Plus } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { ArrowUpRight, ChevronDown, ChevronRight, Copy, Download, Eye, ExternalLink, File, Globe2, Lock, MoreHorizontal, Pencil, Plus, Settings2, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { IconAction } from '@/components/ui/icon-action';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +20,7 @@ type StoreSite = { id: string; name?: string; title?: string; slug?: string; url
 type StoreTheme = {
   id: string; name?: string; version?: string; package_version?: string;
   snapshot_url?: string | null; preview_url?: string | null; edit_href?: string | null; site_id?: string;
-  last_saved?: string; updated_at?: string; created_at?: string; publish_ready?: boolean;
+  last_saved?: string; updated_at?: string; created_at?: string; publish_ready?: boolean; scope?: 'account'|'site';
 };
 type StorePayload = {
   ok?: boolean; error?: string;
@@ -143,7 +142,7 @@ function DraftRow({ theme, siteId, onPublished }: { theme: StoreTheme; siteId: s
   const edit = editorTarget(theme.edit_href, theme.site_id || siteId);
   const saved = formatSaved(theme.last_saved || theme.updated_at || theme.created_at);
   const version = theme.version || theme.package_version;
-  const canPublish = theme.publish_ready !== false;
+  const canPublish = theme.publish_ready === true;
 
   const publish = async () => {
     setBusy(true); setError('');
@@ -168,16 +167,7 @@ function DraftRow({ theme, siteId, onPublished }: { theme: StoreTheme; siteId: s
         <div className="col-span-2 flex flex-wrap items-center gap-2 sm:ml-auto sm:shrink-0">
         {canPublish && <Button variant="outline" size="sm" onClick={() => setConfirming(true)} disabled={busy}>Publish</Button>}
         {edit && <InAppLink to={edit} className={cn(pill, primary)}>Edit theme</InAppLink>}
-        {theme.preview_url && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconAction variant="ghost" label={`More actions for ${theme.name || 'theme'}`} hint="Preview this theme"><MoreHorizontal className="size-4" /></IconAction>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-44">
-              <DropdownMenuItem onSelect={() => window.open(theme.preview_url!, '_blank', 'noopener')}>Preview in new tab</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <ThemeActions theme={theme} siteId={siteId} preview={publicPreviewUrl(theme.preview_url)} onChanged={onPublished}/>
         </div>
       </div>
       {confirming && (
@@ -238,11 +228,135 @@ function DiscoverCard({ theme, siteId }: { theme: MarketTheme; siteId: string })
   );
 }
 
-export function OnlineStorePage({ siteId }: { siteId?: string }) {
+function PreviewViewport({url, width, height, title}: {url: string; width: number; height: number; title: string}) {
+  const frame = useRef<HTMLDivElement>(null);
+  const [scale,setScale] = useState(0);
+  useEffect(() => {
+    const node=frame.current;
+    if (!node) return;
+    const resize=()=>setScale(node.clientWidth/width);
+    resize();
+    const observer=new ResizeObserver(resize);
+    observer.observe(node);
+    return ()=>observer.disconnect();
+  },[width]);
+  return <div ref={frame} className="relative w-full overflow-hidden bg-muted" style={{aspectRatio:width+'/'+height}}>
+    {scale>0 && <iframe src={url} title={title} loading="lazy" sandbox="allow-scripts allow-same-origin"
+      className="pointer-events-none absolute left-0 top-0 origin-top-left border-0"
+      style={{width,height,transform:'scale('+scale+')'}} />}
+  </div>;
+}
+
+function storeHref(siteId:string, view:'overview'|'themes'='overview') {
+  return '/admin/store?'+new URLSearchParams({site_id:siteId,...(view==='themes'?{view}: {})});
+}
+function publicPreviewUrl(value?:string|null) {
+  try {const url=new URL(value||'');return url.protocol==='https:'&&!url.username&&!url.password?url.href:null;}catch{return null;}
+}
+type PasswordSettings={passwordProtection:boolean;hasStorePassword:boolean};
+function StoreProtection({siteId,onProtectionChange}: {siteId:string;onProtectionChange:(value:boolean)=>void}) {
+  const [settings,setSettings]=useState<PasswordSettings|null>(null);
+  const [busy,setBusy]=useState(false);
+  const [message,setMessage]=useState('');
+  const prefs='/admin/preferences?site_id='+encodeURIComponent(siteId)+'#section-access';
+  const endpoint='/api/admin/store/preferences?site_id='+encodeURIComponent(siteId);
+  useEffect(()=>{
+    const controller=new AbortController();
+    setSettings(null);setMessage('');
+    getJson<{settings?:PasswordSettings}>(endpoint,controller.signal).then(data=>{
+      if(!controller.signal.aborted&&typeof data.settings?.passwordProtection==='boolean'&&typeof data.settings?.hasStorePassword==='boolean'){setSettings(data.settings);onProtectionChange(data.settings.passwordProtection);}
+    }).catch(()=>{});
+    return()=>controller.abort();
+  },[endpoint,onProtectionChange]);
+  const toggle=async()=>{
+    if(!settings||busy)return;
+    const enabled=!settings.passwordProtection;
+    if(enabled&&!settings.hasStorePassword){go(prefs);return;}
+    if(!enabled&&!window.confirm('Remove password protection for this website? Published pages may become publicly accessible.'))return;
+    setBusy(true);setMessage('');
+    try{
+      const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({settings:{passwordProtection:enabled}})});
+      const result=await response.json();
+      if(!response.ok||!result.ok||typeof result.settings?.passwordProtection!=='boolean')throw Error('save_failed');
+      setSettings(result.settings);
+      onProtectionChange(result.settings.passwordProtection);
+    }catch{setMessage('Could not update protection. Try again.');}finally{setBusy(false);}
+  };
+  return <section className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+    <div className="flex items-center gap-3">
+      <div className="min-w-0 flex-1"><p className="text-[17px] font-medium">Password protection</p><p className="text-sm text-muted-foreground">Protect your store with a password</p></div>
+      {settings?<button type="button" role="switch" aria-label="Password protection" aria-checked={settings.passwordProtection} disabled={busy}
+        onClick={toggle} className={cn('relative h-9 w-[60px] shrink-0 rounded-full border border-border p-1 transition-colors disabled:opacity-50',settings.passwordProtection?'bg-foreground':'bg-muted')}>
+        <span className={cn('block size-7 rounded-full bg-background shadow transition-transform',settings.passwordProtection&&'translate-x-6')} />
+      </button>:<InAppLink to={prefs} className="text-sm underline">Manage</InAppLink>}
+    </div>
+    {message&&<p role="alert" className="mt-2 text-xs text-destructive">{message}</p>}
+    <InAppLink to={prefs} className="mt-3 flex min-h-12 items-center gap-3 text-[17px]"><Settings2 className="size-6 text-muted-foreground"/>Preferences<ChevronRight className="ml-auto size-4 text-muted-foreground"/></InAppLink>
+  </section>;
+}
+
+function ThemeActions({theme,siteId,onChanged,preview}: {theme:StoreTheme;siteId:string;onChanged:()=>void;preview?:string|null}) {
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
+  const match=theme.edit_href?.match(EDITOR_PATH);
+  const accountProject=theme.scope==='account'&&theme.edit_href?.startsWith('/admin/theme-editor?')?new URL(theme.edit_href,location.origin).searchParams.get('project'):null;
+  const projectId=match?.[2]||accountProject;
+  const ownerSite=accountProject?null:theme.site_id||match?.[1]||null;
+  const query=ownerSite?'?site_id='+encodeURIComponent(ownerSite):'';
+  const base=projectId&&/^[A-Za-z0-9_-]{1,160}$/.test(projectId)&&(accountProject||ownerSite===siteId)?'/api/admin/cms/theme-projects/'+encodeURIComponent(projectId):null;
+  const endpoint=base?base+query:null;
+  async function execute(action:'rename'|'duplicate'|'download') {
+    if(!endpoint||!base||!projectId||busy)return;
+    setBusy(true);setError('');
+    try{
+      if(action==='duplicate'){
+        const response=await fetch(base+'/duplicate'+query,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:'{}'});
+        const result=await response.json();if(!response.ok||!result.ok)throw Error('duplicate_failed');
+        onChanged();
+      } else {
+        const result=await getJson<{project:Record<string,unknown>}>(endpoint);
+        if(!result.project||result.project.id!==projectId)throw Error('project_missing');
+        if(action==='download'){
+          const url=URL.createObjectURL(new Blob([JSON.stringify(result.project,null,2)],{type:'application/json'}));
+          const a=document.createElement('a');a.href=url;a.download=projectId+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        }else{
+          const name=window.prompt('Rename theme',String(result.project.name||theme.name||''))?.trim();
+          if(!name||name===result.project.name)return;
+          if(!Number.isInteger(result.project.revision))throw Error('revision_missing');
+          const response=await fetch(endpoint,{method:'PUT',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({project:{...result.project,name},expected_version:result.project.revision})});
+          const saved=await response.json();if(!response.ok||!saved.ok)throw Error('rename_failed');
+          onChanged();
+        }
+      }
+    }catch{setError('Theme action failed. Your existing theme has been retained.');}finally{setBusy(false);}
+  }
+  if(!endpoint&&!preview)return null;
+  return <div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><button type="button" disabled={busy} className="grid size-12 place-items-center rounded-full border border-border bg-muted" aria-label="Theme actions"><MoreHorizontal className="size-6"/></button></DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side="top" className="max-h-[60dvh] w-64 overflow-y-auto rounded-2xl p-2">
+        {preview&&<DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>window.open(preview,'_blank','noopener,noreferrer')}><Eye className="size-5"/>Preview</DropdownMenuItem>}
+        {endpoint&&<>
+          <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>void execute('rename')}><Pencil className="size-5"/>Rename</DropdownMenuItem>
+          <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>void execute('duplicate')}><Copy className="size-5"/>Duplicate</DropdownMenuItem>
+          <DropdownMenuItem className="min-h-12" onSelect={()=>go('/admin/apps/ecommerce-cms-agentsam?'+new URLSearchParams({page:'/admin/theme-code-editor',project:projectId!,...(ownerSite?{site_id:ownerSite}:{})}))}>Edit code</DropdownMenuItem>
+          <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>void execute('download')}><Download className="size-5"/>Download project JSON</DropdownMenuItem>
+        </>}
+      </DropdownMenuContent>
+    </DropdownMenu>
+    {error&&<p role="alert" className="text-xs text-destructive">{error}</p>}
+  </div>;
+}
+
+export function OnlineStorePage({ siteId,view='overview' }: { siteId?: string;view?:'overview'|'themes' }) {
+  useEffect(()=>{document.body.classList.add('agentsam-native-store-route');return()=>document.body.classList.remove('agentsam-native-store-route');},[]);
   const [data, setData] = useState<StorePayload | null>(null);
   const [error, setError] = useState('');
   const [market, setMarket] = useState<MarketTheme[] | null>(null);
   const [tick, setTick] = useState(0);
+  const [moreOpen,setMoreOpen]=useState(false);
+  const [protectionOverride,setProtectionOverride]=useState<{siteId:string;protected:boolean}|null>(null);
+  const updateProtection=useCallback((value:boolean)=>{const id=data?.selected_site_id||siteId;if(id)setProtectionOverride({siteId:id,protected:value});},[data?.selected_site_id,siteId]);
   const reload = useCallback(() => setTick(value => value + 1), []);
 
   useEffect(() => {
@@ -297,35 +411,70 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
     </div>;
   }
   const siteName = data.selected_site_name || selected?.name || selected?.title || 'Your website';
-  const live = data.site_preview?.url || (data.store?.visibility === 'public' ? data.store?.url : '') || '';
-  const activeTheme = data.preview_theme || data.active_theme || null;
-  const activeEdit = editorTarget(data.site_preview?.edit_href || activeTheme?.edit_href, selectedId);
+  const live = publicPreviewUrl(data.site_preview?.url || (data.store?.visibility==='public'||data.store?.visibility==='password'?data.store?.url:null));
+  const activeTheme = data.active_theme || null;
+  const isProtected=protectionOverride?.siteId===selectedId?protectionOverride.protected:data.store?.visibility==='password';
+  const prefs='/admin/preferences?site_id='+encodeURIComponent(selectedId)+'#section-access';
+  const pages='/admin/pages?site_id='+encodeURIComponent(selectedId);
+  const themesView=view==='themes';
+  const activeEdit = editorTarget(activeTheme?.edit_href || data.site_preview?.edit_href, selectedId);
   const createTheme = editorTarget(data.new_theme_url, selectedId);
   const activeSaved = formatSaved(activeTheme?.last_saved || activeTheme?.updated_at || activeTheme?.created_at);
   const drafts = (data.draft_themes || []).filter(draft => draft.id !== activeTheme?.id);
 
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 px-4 pt-5 pb-28 sm:gap-8 sm:px-6 sm:py-8">
-      <h1 className="sr-only">Online Store</h1>
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 px-3 pt-4 pb-28 sm:gap-8 sm:px-6 sm:py-8">
+      <header className="flex min-h-12 items-center justify-between gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><button className="flex min-w-0 items-center gap-1 text-left" type="button" aria-label="Online Store destinations"><h1 className="truncate text-[30px] font-semibold tracking-tight">{themesView?'Themes':'Online Store'}</h1><span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted"><ChevronDown className="size-4"/></span></button></DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64 rounded-3xl p-2">
+            <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>go(storeHref(selectedId))}><Store className="size-5"/>Online Store{!themesView&&<span className="ml-auto">✓</span>}</DropdownMenuItem>
+            <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>go(storeHref(selectedId,'themes'))}><Globe2 className="size-5"/>Themes{themesView&&<span className="ml-auto">✓</span>}</DropdownMenuItem>
+            <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>go(pages)}><File className="size-5"/>Pages</DropdownMenuItem>
+            <DropdownMenuItem className="min-h-12 gap-3" onSelect={()=>go(prefs)}><Settings2 className="size-5"/>Preferences</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {!themesView&&<div className="flex shrink-0 items-center rounded-full border border-border bg-card px-1">
+          {live&&<a href={live} target="_blank" rel="noopener noreferrer" aria-label="View website" className="grid size-11 place-items-center"><Eye className="size-6"/></a>}
+          <button type="button" aria-label="More options" onClick={()=>setMoreOpen(true)} className="grid size-11 place-items-center"><MoreHorizontal className="size-6"/></button>
+        </div>}
+      </header>
+      {moreOpen&&<div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-2" onClick={()=>setMoreOpen(false)}>
+        <section role="dialog" aria-modal="true" aria-label="More options" className="w-full max-w-md rounded-[30px] border border-border bg-card p-5 shadow-xl pb-[max(24px,env(safe-area-inset-bottom))]" onClick={event=>event.stopPropagation()}>
+          <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-muted-foreground/40"/>
+          <div className="flex items-center justify-between"><h2 className="text-xl font-semibold">More options</h2><Button variant="ghost" onClick={()=>setMoreOpen(false)}>Done</Button></div>
+          <button type="button" className="flex min-h-12 w-full items-center gap-3 text-left" onClick={()=>{setMoreOpen(false);go(storeHref(selectedId,'themes'));}}>Manage all themes</button>
+          <button type="button" className="flex min-h-12 w-full items-center gap-3 text-left" onClick={()=>{setMoreOpen(false);go(prefs);}}>Preferences</button>
+        </section>
+      </div>}
 
-      <section aria-label="Current theme" className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="relative aspect-[4/3] bg-muted sm:aspect-[16/8]">
-          {live
-            ? <iframe src={live} title={`${siteName} preview`} loading="lazy" className="pointer-events-none h-full w-full border-0" sandbox="allow-scripts allow-same-origin" />
-            : <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Globe2 className="size-8" aria-hidden="true" /><p className="text-sm">Publish a theme to see your site here.</p></div>}
+      <section aria-label={activeTheme?'Current theme':'Website preview'} className="min-w-0">
+        <div className="relative mb-4 flex items-end bg-muted/40 px-1 pt-5">
+          {live?<><div className="w-[77%] overflow-hidden rounded-t-lg border-2 border-border bg-card"><PreviewViewport url={live} width={1440} height={1050} title={siteName+' desktop preview'}/></div>
+            <div className="absolute bottom-0 right-1 w-[34%] overflow-hidden rounded-t-xl border-2 border-border bg-card shadow-md"><PreviewViewport url={live} width={390} height={620} title={siteName+' mobile preview'}/></div></>
+            :<div className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 text-muted-foreground"><Globe2 className="size-8"/><p className="text-sm">No verified published website preview</p></div>}
+          {isProtected&&<InAppLink to={prefs} className="absolute inset-x-3 bottom-3 z-10 flex min-h-11 items-center gap-2 rounded-2xl border border-amber-200 bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950 shadow"><Lock className="size-5 shrink-0"/><span className="flex-1">Online store is password protected</span><ChevronRight className="size-5 shrink-0"/></InAppLink>}
         </div>
-        <div className="flex flex-col items-start gap-3 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-          <div className="min-w-0">
-            <p className="break-words text-base font-semibold text-foreground">{data.site_preview?.title || data.site_preview?.name || siteName}</p>
-            <p className="break-all text-xs text-muted-foreground">
-              {[live ? `Published website · ${live}` : '', activeTheme?.name, activeSaved ? `Last saved: ${activeSaved}` : ''].filter(Boolean).join(' · ') || 'No published theme'}
-            </p>
-          </div>
-          {activeEdit && <InAppLink to={activeEdit} className={cn(pill, primary)}>Edit theme</InAppLink>}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="min-w-0 break-words text-xl font-semibold">{activeTheme?.name||siteName}</h2>
+          {!themesView&&activeTheme&&<span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-900">Current theme</span>}
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">{activeSaved?'Last saved: '+activeSaved:live?'Published website':'No published theme'}</p>
+        {themesView&&(activeTheme?.version||activeTheme?.package_version)&&<p className="mt-1 text-sm text-muted-foreground">Version {activeTheme.version||activeTheme.package_version}</p>}
+        <div className={cn('mt-4 gap-2',themesView?'flex items-center':'flex flex-col')}>
+          {themesView&&activeTheme&&<ThemeActions theme={activeTheme} siteId={selectedId} preview={live} onChanged={reload}/>}
+          {activeEdit&&<InAppLink to={activeEdit} className={cn(pill,primary,'min-h-12 rounded-full text-base',!themesView&&'w-full')}>{activeTheme?'Edit theme':'Edit website'}</InAppLink>}
+          {!themesView&&<InAppLink to={storeHref(selectedId,'themes')} className={cn(pill,'min-h-12 w-full rounded-full text-base')}>Manage all themes</InAppLink>}
         </div>
       </section>
 
+      {!themesView&&<div className="grid gap-4">
+        <InAppLink to={pages} className="flex min-h-14 items-center gap-3 rounded-full border border-border bg-card px-4 text-[17px] shadow-sm"><File className="size-6 text-muted-foreground"/>Pages<ChevronRight className="ml-auto size-4 text-muted-foreground"/></InAppLink>
+        <StoreProtection key={selectedId} siteId={selectedId} onProtectionChange={updateProtection}/>
+      </div>}
+
+      {themesView&&<>
       <section aria-label="Draft themes">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground">Draft themes</h2>
@@ -352,6 +501,7 @@ export function OnlineStorePage({ siteId }: { siteId?: string }) {
             ? <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{market.map(theme => <DiscoverCard key={theme.slug} theme={theme} siteId={selectedId} />)}</ul>
             : <p className="text-sm text-muted-foreground">Themes couldn’t be loaded right now. Visit the Theme Store to browse them.</p>}
       </section>
+      </>}
     </div>
   );
 }
