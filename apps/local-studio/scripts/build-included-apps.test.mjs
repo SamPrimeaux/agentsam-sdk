@@ -158,6 +158,8 @@ test('console staging generates only the required identity portal assets before 
   const assets = stage.indexOf("path.join(app, 'bin/build-assets.mjs')");
   assert.ok(sync >= 0 && frontend > sync && assets > frontend, 'identity assets must be synced before frontend and asset packaging');
   assert.doesNotMatch(stage, /execFileSync\('npm', \['run', 'build'\], \{ cwd: app/, 'avoid unrelated Ecommerce prebuild and CMS synchronization');
+  assert.doesNotMatch(stage, /section-library|revise-theme|npm', \['ci', '--ignore-scripts'/,
+    'Local Studio staging must not install the Ecommerce application dependency tree or excluded theme UI packages');
 });
 
 test('production host builds do not trigger unrelated website sync or broad theme suites',()=>{
