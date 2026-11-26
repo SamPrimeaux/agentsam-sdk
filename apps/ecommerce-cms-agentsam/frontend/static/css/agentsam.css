@@ -950,12 +950,44 @@ body[data-shell-mode="theme-editor"]:not(:has([data-panel-state="generating"])) 
     conic-gradient(from var(--agentsam-work-angle), var(--te-accent), #409cff, #7dd3fc, #bf5af2, var(--te-accent)) border-box;
   animation: agentsam-work-orbit 4s linear infinite;
 }
+ .agentsam-compact-toolbar {display:none;}
 @media (max-width: 900px) {
-  /* Contextual assistant stays below the visible preview; explicit focus mode
-     continues to own the full workspace. */
+  /* Compact composer is the existing dock, not another assistant instance.
+     Only the explicit expanded state displays conversation history. */
   body[data-theme-editor-embedded].agentsam-open:not(.agentsam-focus-mode) .theme-studio-assistant-layout > .agentsam-dock,
   body.shell-mode-theme-editor.agentsam-open:not(.agentsam-focus-mode) .console-workspace > .agentsam-dock {
-    position:absolute;inset:auto 0 0;width:100%;height:min(52%,420px);min-height:0;padding:0;
+    position:absolute;inset:auto 8px max(8px,env(safe-area-inset-bottom)) 8px;width:auto;height:auto;min-height:0;padding:0;
+    overflow:visible;box-shadow:none;z-index:200;
+  }
+  body[data-shell-mode="theme-editor"].agentsam-open:not(.agentsam-focus-mode) .agentsam-dock .agentsam-drawer {
+    height:auto;min-height:0;overflow:visible;border-radius:24px;
+    box-shadow:0 8px 28px rgba(0,0,0,.16);
+  }
+  body[data-shell-mode="theme-editor"].agentsam-open:not(.agentsam-focus-mode) .agentsam-drawer > :is(.agentsam-head,.agentsam-messages,.agentsam-mcp) {
+    display:none;
+  }
+  body[data-shell-mode="theme-editor"].agentsam-open:not(.agentsam-focus-mode) .agentsam-compact-toolbar {
+    display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 8px 0;
+  }
+  .agentsam-compact-toolbar button {
+    display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:18px;background:transparent;
+    color:var(--agentsam-chrome-ink);font:inherit;min-height:44px;min-width:44px;padding:0 10px;cursor:pointer;
+  }
+  .agentsam-compact-expand {flex:1;min-width:0;font-size:12px!important;}
+  body[data-shell-mode="theme-editor"].agentsam-open:not(.agentsam-focus-mode) .agentsam-compose {
+    margin:0;padding:6px 8px 8px;border:0;border-radius:0 0 24px 24px;
+    grid-template-areas:"field field field" "plus files send";grid-template-columns:44px minmax(0,1fr) 44px;
+    align-items:center;
+  }
+  body[data-shell-mode="theme-editor"].agentsam-open:not(.agentsam-focus-mode) .agentsam-compose textarea {
+    border:0;background:transparent;border-radius:12px;min-height:42px;max-height:112px;resize:none;font-size:16px;
+    box-sizing:border-box;width:100%;padding:10px;overflow-y:auto;
+  }
+  body[data-shell-mode="theme-editor"].agentsam-open:not(.agentsam-focus-mode) .agentsam-attachment-list {min-width:0;max-height:72px;overflow-y:auto;}
+  body[data-shell-mode="theme-editor"].agentsam-open:not(.agentsam-focus-mode) .agentsam-compose :is(.agentsam-plus,.agentsam-send) {border-radius:50%;}
+  body[data-shell-mode="theme-editor"].agentsam-focus-mode .agentsam-messages {min-height:0;overflow:auto;overscroll-behavior:contain;}
+  body[data-shell-mode="theme-editor"] .agentsam-send.is-loading::after {
+    width:12px;height:12px;border:0;border-radius:3px;background:currentColor;animation:none;
   }
   body[data-shell-mode="theme-editor"] .agentsam-empty {padding:10px;gap:6px;}
   body[data-shell-mode="theme-editor"] .agentsam-empty-mark {width:32px;height:32px;}

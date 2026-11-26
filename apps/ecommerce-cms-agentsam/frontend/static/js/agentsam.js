@@ -13,6 +13,23 @@ function mobileThemeAssistant() {
     window.matchMedia?.("(max-width: 900px)").matches);
 }
 
+function isCompactEditorAssistant() {
+  return mobileThemeAssistant() && !document.body.classList.contains("agentsam-focus-mode");
+}
+
+function updateCompactStatus(text) {
+  const status = document.getElementById("agentsam-compact-status");
+  if (status) status.textContent = text || "Open conversation";
+}
+
+function resizeEditorComposer() {
+  if (!isCompactEditorAssistant()) return;
+  const input = document.getElementById("agentsam-input");
+  if (!input) return;
+  input.style.height = "auto";
+  input.style.height = Math.max(42, Math.min(112, input.scrollHeight)) + "px";
+}
+
 function syncAssistantVisualViewport() {
   const viewport = window.visualViewport;
   const inset = mobileThemeAssistant() && viewport
@@ -118,17 +135,17 @@ function renderAgentsamShell() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </header>
-      <div class="agentsam-mobile-controls">
+      <div class="agentsam-mobile-controls agentsam-compact-toolbar">
         <button type="button" data-mobile-assistant="layers" aria-label="Page structure">▤</button>
-        <button type="button" data-mobile-assistant="history" aria-label="Open conversation">⌃</button>
-        <button type="button" data-mobile-assistant="close" aria-label="Hide composer">×</button>
+        <button type="button" data-assistant-action="Expand" class="agentsam-compact-expand" aria-label="Open conversation"><span aria-hidden="true">⌃</span><span id="agentsam-compact-status" aria-live="polite">Open conversation</span></button>
+        <button type="button" data-assistant-action="Close compact" aria-label="Close AgentSam">×</button>
       </div>
       <div class="agentsam-mcp" id="agentsam-mcp" hidden></div>
       <div class="agentsam-messages" id="agentsam-messages" role="log" aria-live="polite"></div>
       <form class="agentsam-compose" id="agentsam-form">
         <button type="button" class="agentsam-plus" id="agentsam-plus" aria-label="Add files, resources, skills or apps" aria-haspopup="menu" aria-expanded="false">+</button>
         <span class="agentsam-mobile-run" role="status">Thinking…</span>
-        <textarea id="agentsam-input" rows="2" placeholder="Work with AgentSam" autocomplete="off" aria-label="Message AgentSam"></textarea>
+        <textarea id="agentsam-input" rows="1" placeholder="Work with AgentSam" autocomplete="off" aria-label="Message AgentSam"></textarea>
         <button type="submit" class="agentsam-send" id="agentsam-send" aria-label="Send">
           <span aria-hidden="true" class="agentsam-send-arrow">↑</span>
         </button>
@@ -396,15 +413,17 @@ function setBusy(busy) {
   const input = document.getElementById("agentsam-input");
   const hasDraft = Boolean(input?.value.trim() || window.AgentSamDraft?.attachments?.length);
   if (send) {
-    send.disabled = busy || !hasDraft;
+    send.disabled = (busy && !activeDrawerAbort) || (!busy && !hasDraft);
     send.classList.toggle("is-loading", busy);
     send.setAttribute("aria-busy", String(busy));
-    send.setAttribute("aria-label", busy ? "AgentSam is responding" : "Send");
+    send.setAttribute("aria-label", busy ? "Stop response" : "Send");
   }
   if (input) {
     input.disabled = busy;
     input.setAttribute("aria-busy", String(busy));
   }
+  resizeEditorComposer();
+  if (busy) updateCompactStatus("Thinking…");
 }
 
 function buildAgentsamContext(extra = {}) {
@@ -433,12 +452,15 @@ function buildAgentsamContext(extra = {}) {
 
 let drawerRequestActive = false;
 let drawerConversationId = null;
+let activeDrawerAbort = null;
 async function sendAgentsamMessage(text, options = {}) {
   if (drawerRequestActive) throw new Error("AgentSam is already responding");
   const message = (text || "").trim();
   const draft = window.AgentSamDraft || { attachments: [], selected_resource: null };
   if (!message && !draft.attachments?.length && !options.attachments?.length) return;
   drawerRequestActive = true;
+  activeDrawerAbort = new AbortController();
+  const requestSignal = options.signal ? AbortSignal.any([options.signal, activeDrawerAbort.signal]) : activeDrawerAbort.signal;
   if (mobileThemeAssistant()) document.getElementById("agentsam-input")?.blur();
   setBusy(true);
   let attachments;
@@ -446,14 +468,18 @@ async function sendAgentsamMessage(text, options = {}) {
     attachments = Array.isArray(options.attachments) && options.attachments.every(item => item.attachment_id)
       ? options.attachments
       : await (window.AgentSamComposerMenu?.readyAttachments?.() || Promise.resolve([]));
+    requestSignal.throwIfAborted();
     if (!message && !attachments.length) {
+      activeDrawerAbort = null;
       drawerRequestActive = false;
       setBusy(false);
       return;
     }
   } catch (error) {
+    activeDrawerAbort = null;
     drawerRequestActive = false;
     setBusy(false);
+    updateCompactStatus(error?.name === "AbortError" ? "Stopped" : "Try again");
     throw error;
   }
   appendMessage("user", message || "Attached " + attachments.length + " file(s)", null, attachments);
@@ -468,7 +494,7 @@ async function sendAgentsamMessage(text, options = {}) {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
       credentials: "include",
-      signal: options.signal,
+      signal: requestSignal,
       body: JSON.stringify({
         message,
         conversation_id: drawerConversationId,
@@ -482,10 +508,9 @@ async function sendAgentsamMessage(text, options = {}) {
     const { readAgentSamReply } = await import("/admin/js/agentsam-response.mjs");
     const data = await readAgentSamReply(res);
     drawerConversationId = data.conversation_id || drawerConversationId;
+    requestSignal.throwIfAborted();
     appendMessage("assistant", data.reply, data.routing);
-    if (mobileThemeAssistant() && document.body.classList.contains("agentsam-open")) {
-      document.querySelector('[data-mobile-assistant="history"]')?.setAttribute("aria-label", "Open conversation — new reply");
-    }
+    updateCompactStatus("Reply ready");
     if (window.AgentSamComposerMenu && !options.preserveAttachments) window.AgentSamComposerMenu.clearFiles(attachments);
 
     if (data.routing?.workflow?.ui_label) {
@@ -494,14 +519,17 @@ async function sendAgentsamMessage(text, options = {}) {
     if (data.stub) updateStatusLine("Stub mode — bind Workers AI");
     return data;
   } catch (err) {
-    appendMessage("assistant", err.message || "Something went wrong.");
-    if (mobileThemeAssistant() && document.body.classList.contains("agentsam-open")) setAgentsamFocus(true);
+    const stopped = requestSignal.aborted || err?.name === "AbortError";
+    appendMessage("assistant", stopped ? "Response stopped." : (err.message || "Something went wrong."));
+    updateCompactStatus(stopped ? "Stopped" : "Could not reply · Open conversation");
+    if (!stopped && mobileThemeAssistant() && document.body.classList.contains("agentsam-open")) setAgentsamFocus(true);
     if (options.propagateError) throw err;
   } finally {
     typing.remove();
+    activeDrawerAbort = null;
     drawerRequestActive = false;
     setBusy(false);
-    if (document.body.classList.contains("agentsam-open") && !mobileThemeAssistant()) {
+    if (document.body.classList.contains("agentsam-open") && !isCompactEditorAssistant()) {
       document.getElementById("agentsam-input")?.focus();
     }
   }
@@ -530,8 +558,9 @@ function openAgentsamDrawer() {
   } catch {
     /* ignore */
   }
-  if (!mobileThemeAssistant()) document.getElementById("agentsam-input")?.focus();
+  if (!isCompactEditorAssistant()) document.getElementById("agentsam-input")?.focus();
   syncAssistantVisualViewport();
+  resizeEditorComposer();
 }
 
 function closeAgentsamDrawer() {
@@ -582,7 +611,11 @@ function bindAgentsamStaticHandlers() {
     const target = event.target.closest?.("[data-assistant-action]");
     if (!target) return;
     const action = target.getAttribute("data-assistant-action");
-    if (action === "New chat") {
+    if (action === "Close compact") {
+      closeAgentsamDrawer();
+    } else if (action === "New chat") {
+      if (drawerRequestActive) return;
+      updateCompactStatus("Open conversation");
       drawerConversationId = null;
       const messages = document.getElementById("agentsam-messages");
       messages?.replaceChildren();
@@ -606,8 +639,10 @@ function bindAgentsamStaticHandlers() {
 
   document.getElementById("agentsam-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (drawerRequestActive) { activeDrawerAbort?.abort(); return; }
     const input = document.getElementById("agentsam-input");
     const val = input?.value || "";
+    if (isCompactEditorAssistant()) input?.blur();
     try {
       await sendAgentsamMessage(val, { propagateError: true });
       if (input?.value === val) input.value = "";
