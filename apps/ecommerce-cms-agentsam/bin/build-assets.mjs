@@ -173,35 +173,6 @@ for (const [entry, asset] of [
   }
 }
 await copy(source("packages/theme-contract/runtime/primetech/assets"), path.join(dest, "primetech"));
-const atlas = await bundle({
-  entryPoints: [source("packages/theme-contract/runtime/revise-atlas-browser.js")],
-  bundle: true, platform: "browser", format: "iife", target: "es2022",
-  write: false, minify: false,
-});
-for (const name of ["js/revise-atlas.js", "admin/js/revise-atlas.js"]) {
-  const out = path.join(dest, name);
-  await mkdir(path.dirname(out), { recursive: true });
-  await writeFile(out, atlas.outputFiles[0].contents);
-}
-const revise = installed("@inneranimalmedia/revise-theme/dist");
-const layout = installed("@inneranimalmedia/section-library/dist/layout.css");
-await copy(revise, path.join(dest, "admin/theme-previews/revise"));
-await copy(revise, path.join(dest, "theme-assets/revise"));
-await copy(layout, path.join(dest, "admin/theme-previews/revise/layout.css"));
-await copy(layout, path.join(dest, "theme-assets/revise/layout.css"));
-const scoped = [
-  "/* Reusable section layout remains scoped to its own host. */",
-  ".ps-revise-atlas { min-width:0; isolation:isolate; }",
-  "@scope (.ps-revise-atlas) {",
-  await readFile(layout, "utf8"),
-  await readFile(path.join(revise, "theme.css"), "utf8"),
-  "}",
-].join("\n");
-for (const name of ["css/revise-atlas.css", "admin/css/revise-atlas.css"]) {
-  const out = path.join(dest, name);
-  await mkdir(path.dirname(out), { recursive: true });
-  await writeFile(out, scoped);
-}
 for (const critical of [
   "admin/js/media-library.js", "admin/media-kit/index.js",
   "admin/workbench/media-asset-workbench.js",
