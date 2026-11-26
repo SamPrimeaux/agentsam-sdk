@@ -158,6 +158,8 @@ test('review UI is wired to catalog install APIs and keeps theme settings owners
   const mount=readFileSync(new URL('../frontend/theme-editor/mount.mjs',import.meta.url),'utf8');
   const settings=src('theme-settings-live.js');
   const core=src('theme-editor.js');
+  const adapter=readFileSync(new URL('../packages/theme-contract/editor/cms-page-adapter.mjs',import.meta.url),'utf8');
+  assert.match(adapter,/catalogResources:\s*true/);
   assert.match(mount,/load\('\/admin\/js\/theme-embed-review\.js'\)/);
   assert.match(mount,/theme-embed-review/);
   assert.match(code,/\/admin\/theme-editor\/embed-catalog\.json/);
