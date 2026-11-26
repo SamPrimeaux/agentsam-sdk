@@ -2,14 +2,14 @@
  * Cloudflare-hosted MCP portal servers (tool bundles), not OAuth clients.
  *
  * Each entry is an MCP *server* you can register with `agentsam mcp add <name>`.
- * OAuth consent stays granular via feature packs / capability ids — never the
- * full ~315-scope catalog. Managing portals themselves needs mcp-portals.*.
+ * OAuth consent is resolved from the host plugin permission catalog; this module
+ * stores only required pack and capability identifiers. Portal management needs mcp-portals.*.
  */
 
 import {
-  scopesForCapabilities,
-  scopesForFeaturePacks,
-} from '../../packages/connectors/cfoa/src/capabilities.js';
+  normalizeProviderPermissionCatalog,
+  resolvePermissionScopes,
+} from '../../packages/connectors/cfoa/src/scope-registry.js';
 
 /**
  * @typedef {object} CloudflareMcpBundle
@@ -20,7 +20,6 @@ import {
  * @property {'streamable_http'|'sse'} protocol
  * @property {string[]} feature_packs — AgentSam CF feature pack ids for AgentSam-side upgrade
  * @property {string[]} capability_ids — finer granulation than packs
- * @property {string[]} portal_manage_scopes — scopes to create/manage this portal via CF API
  * @property {string} description
  */
 
@@ -33,7 +32,7 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
     feature_packs: [],
-    capability_ids: [],
+    capability_ids: ['cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Full CF API via search/execute tools — Cloudflare hosts OAuth for this portal',
   },
@@ -45,7 +44,7 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     protocol: 'streamable_http',
     feature_packs: [],
     capability_ids: [],
-    portal_manage_scopes: ['mcp-portals.read'],
+    portal_manage_scopes: [],
     description: 'Cloudflare developer documentation reference',
   },
   {
@@ -54,13 +53,14 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://bindings.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['data', 'compute', 'ai'],
+    feature_packs: ['store', 'build', 'create'],
     capability_ids: [
       'cloudflare.workers',
       'cloudflare.d1',
       'cloudflare.kv',
       'cloudflare.r2',
-      'cloudflare.workers_ai',
+      'cloudflare.ai',
+      'cloudflare.mcp_portals',
     ],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Workers storage, AI, and compute bindings',
@@ -71,8 +71,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://builds.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['compute'],
-    capability_ids: ['cloudflare.workers'],
+    feature_packs: ['build'],
+    capability_ids: ['cloudflare.workers', 'cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Workers Builds / CI insights (workers-ci.*)',
   },
@@ -82,8 +82,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://observability.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['compute'],
-    capability_ids: ['cloudflare.workers'],
+    feature_packs: ['watch'],
+    capability_ids: ['cloudflare.workers.observability', 'cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Workers observability / logs / analytics',
   },
@@ -93,8 +93,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://browser.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['compute'],
-    capability_ids: ['cloudflare.browser_rendering'],
+    feature_packs: ['create'],
+    capability_ids: ['cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Fetch pages, markdown, screenshots',
   },
@@ -104,8 +104,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://logs.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['analytics'],
-    capability_ids: [],
+    feature_packs: ['watch'],
+    capability_ids: ['cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Logpush job health',
   },
@@ -115,8 +115,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://ai-gateway.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['ai'],
-    capability_ids: ['cloudflare.workers_ai'],
+    feature_packs: ['create'],
+    capability_ids: ['cloudflare.ai_gateway', 'cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'AI Gateway request logs',
   },
@@ -126,8 +126,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://auditlogs.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['analytics'],
-    capability_ids: [],
+    feature_packs: ['watch'],
+    capability_ids: ['cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Account audit log reports',
   },
@@ -137,8 +137,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://dns-analytics.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['dns', 'analytics'],
-    capability_ids: [],
+    feature_packs: ['publish', 'watch'],
+    capability_ids: ['cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'DNS performance analytics',
   },
@@ -148,8 +148,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://graphql.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['analytics'],
-    capability_ids: [],
+    feature_packs: ['watch'],
+    capability_ids: ['cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Analytics via GraphQL',
   },
@@ -159,8 +159,8 @@ export const CLOUDFLARE_MCP_SERVER_BUNDLES = Object.freeze([
     url: 'https://containers.mcp.cloudflare.com/mcp',
     auth_type: 'cloudflare_portal_oauth',
     protocol: 'streamable_http',
-    feature_packs: ['compute'],
-    capability_ids: ['cloudflare.containers'],
+    feature_packs: ['build'],
+    capability_ids: ['cloudflare.containers', 'cloudflare.mcp_portals'],
     portal_manage_scopes: ['mcp-portals.read', 'mcp-portals.write'],
     description: 'Ephemeral sandboxed containers',
   },
@@ -184,19 +184,19 @@ export function scopesForCloudflareMcpBundle(name, options = {}) {
   const bundle = getCloudflareMcpBundle(name);
   if (!bundle) return [];
 
-  const set = new Set();
-  if (options.includePortalManage !== false) {
-    for (const s of bundle.portal_manage_scopes || []) set.add(s);
-  }
-  for (const s of scopesForFeaturePacks(bundle.feature_packs || [], bundle.capability_ids || [])) {
-    set.add(s);
+  const set = new Set(bundle.portal_manage_scopes || []);
+  if (bundle.feature_packs?.length || bundle.capability_ids?.length) {
+    const catalog = normalizeProviderPermissionCatalog(options.permissionCatalog, 'cloudflare');
+    if (!catalog) return [...set];
+    const selection = resolvePermissionScopes(catalog, {
+      packs: bundle.feature_packs || [],
+      capabilities: bundle.capability_ids || [],
+    });
+    if (!selection.ok) return null;
+    for (const scope of selection.scopes) set.add(scope);
   }
   if (options.includeBaseline === false) {
-    // scopesForFeaturePacks always includes baseline; strip if caller asks
-    for (const s of ['account-settings.read', 'user-details.read', 'memberships.read', 'offline_access']) {
-      // keep offline_access — refresh still needed
-      if (s !== 'offline_access') set.delete(s);
-    }
+    for (const scope of ['account-settings.read', 'user-details.read', 'memberships.read']) set.delete(scope);
   }
   return [...set];
 }
@@ -221,5 +221,3 @@ export function cloudflareBundlesAsServerCatalog() {
     kind: 'mcp_portal_bundle',
   }));
 }
-
-export { scopesForCapabilities, scopesForFeaturePacks };

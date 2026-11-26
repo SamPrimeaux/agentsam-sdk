@@ -43,7 +43,39 @@ function fakeDb() {
               if (/FROM agentsam_plugins/.test(sql)) return { id: "plg_test_" + args[0] };
               return null;
             },
-            async all() { log.push({ sql, args }); return { results: [] }; },
+            async all() {
+              log.push({ sql, args });
+              if (/FROM agentsam_plugins/.test(sql)) {
+                const provider = args[0];
+                const drive = [
+                  "https://www.googleapis.com/auth/drive",
+                  "https://www.googleapis.com/auth/drive.file",
+                  "https://www.googleapis.com/auth/drive.readonly",
+                  "https://www.googleapis.com/auth/drive.metadata.readonly",
+                  "https://www.googleapis.com/auth/drive.activity.readonly",
+                ];
+                const calendar = ["https://www.googleapis.com/auth/calendar.events"];
+                const defaults = provider === "google_drive"
+                  ? ["openid", "email", "profile", "https://www.googleapis.com/auth/drive.file"]
+                  : provider === "google_calendar"
+                    ? ["openid", "email", "profile", "https://www.googleapis.com/auth/calendar.events"]
+                    : ["offline_access"];
+                const available = provider === "google_drive" ? drive
+                  : provider === "google_calendar" ? calendar : ["offline_access"];
+                const required = provider === "google_drive" ? ["https://www.googleapis.com/auth/drive.file"]
+                  : provider === "google_calendar" ? ["https://www.googleapis.com/auth/calendar.events"] : [];
+                return { results: [{
+                  id: "plg_" + provider,
+                  plugin_key: provider.replace("_", "-"),
+                  config_json: JSON.stringify({ oauth_permissions: {
+                    default_scopes: defaults,
+                    required_scopes: required,
+                    available_scopes: available,
+                  } }),
+                }] };
+              }
+              return { results: [] };
+            },
           };
         },
         async run() { log.push({ sql, args: [] }); return { meta: { changes: 1 } }; },
@@ -266,16 +298,16 @@ test("Google Drive plugin ID resolves the existing OAuth flow instead of hardcod
   assert.equal(auth.searchParams.get('redirect_uri'),'https://agentsam.inneranimalmedia.com/api/oauth/google/callback');
 });
 
-test("Cloudflare plugin pack connects through its registered host flow and preserves explicit pack selection",async()=>{
+test("Cloudflare parent plugin connects through its registered host flow and preserves explicit pack selection",async()=>{
   const plugin={
-    id:'plg_8942571071a5ca64',plugin_key:'cloudflare-create',provider_key:'cloudflare',
+    id:'plg_7e87811e8fc59e99',plugin_key:'agentsam-mcp',provider_key:'cloudflare',
     plugin_kind:'oauth',auth_type:'oauth',
-    oauth_connect_url:'/api/connections/cloudflare/start?packs=create',
-    config_json:JSON.stringify({pack:true,pack_id:'create'}),
+    oauth_connect_url:'/api/connections/cloudflare/start',
+    config_json:JSON.stringify({oauth_permissions:{version:1,default_packs:['store','build','create']}}),
   };
   const e=envWithRegisteredPlugin(plugin);
   const response=await handleConnectorWorkRequest(
-    post('/api/work/connect/plugins/'+plugin.id+'/start',{return_to:'/admin/agentsam'}),e,'au_test');
+    post('/api/work/connect/plugins/'+plugin.id+'/start',{return_to:'/admin/agentsam',packs:['create']}),e,'au_test');
   const body=await response.json();
   assert.equal(response.status,200);
   const target=new URL(body.authorize_url);
@@ -306,12 +338,6 @@ test('Drive reconnect retains the selected account full-drive permission instead
       bind:(owner,provider,account)=>({first:async()=>owner==='au_test'&&provider==='google_drive'&&account==='connected@example.com'
         ? {scopes:'https://www.googleapis.com/auth/drive'} : null}),
     };
-    if(sql.includes('SELECT scope FROM agentsam_provider_scopes'))return {
-      all:async()=>({results:[
-        {scope:'https://www.googleapis.com/auth/drive'},
-        {scope:'https://www.googleapis.com/auth/drive.file'},
-      ]}),
-    };
     return old(sql);
   };
   const response=await beginConnectorOAuth(post('/api/work/connect/google_drive/start',{
@@ -329,12 +355,6 @@ test('Google Drive can request catalog-approved read-only media access for a new
   const e=env();
   const old=e.DB.prepare.bind(e.DB);
   e.DB.prepare=(sql)=>{
-    if(sql.includes('SELECT scope FROM agentsam_provider_scopes'))return {
-      all:async()=>({results:[
-        {scope:'https://www.googleapis.com/auth/drive.file'},
-        {scope:'https://www.googleapis.com/auth/drive.readonly'},
-      ]}),
-    };
     return old(sql);
   };
   const response=await beginConnectorOAuth(post('/api/work/connect/google_drive/start',{

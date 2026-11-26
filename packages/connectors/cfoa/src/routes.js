@@ -5,7 +5,6 @@ import {
   buildAuthorizeUrl,
   cloudflareConnectionSafeStatus,
   resolveCloudflareOAuthClient,
-  requestedCloudflareScopes,
   assertConnectionOwner,
   upsertCloudflareUserOauthToken,
   upsertCloudflareOauthForDiscoveredAccounts,
@@ -18,7 +17,7 @@ import {
 } from './index.js';
 import { cloudflareMediaConnectUrl, discoverCloudflareMedia, listCloudflareR2Objects } from './families/media.js';
 import { resolveAuthenticatedOwner } from './owner.js';
-import { registryScopesForCapability, filterToRegistry, activeGrantedScopes, pluginPackScopes, listProviderScopeOptions, listProviderPluginPacks, scopesForFullCatalogOptIn } from './scope-registry.js';
+import { loadProviderPermissionCatalog, resolvePermissionScopes, activeGrantedScopes, listProviderScopeOptions } from './scope-registry.js';
 import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
 
 const OAUTH_STATE_PROVIDER = 'cloudflare';
@@ -307,21 +306,18 @@ async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudfla
  * @param {Request} request
  * @param {object} env
  * @param {{
- *   defaultCapabilities?: string[],
+ *   permissionRegistry?: { getOAuthPermissionCatalog(providerKey: string): Promise<object|null> },
  *   app?: { id: string },
  *   routeRegistry?: object,
  *   loginPath?: string,
  * }} [options]
- *   Host app supplies default capability ids when the request omits ?capabilities=.
- *   Host MUST supply app + routeRegistry for session owner resolution (APP contract).
- *   The connector package itself has no product-specific default set.
+ *   The host injects its own provider permission catalog adapter. The connector
+ *   package never reads the host plugin table or assumes a persistence schema.
+ *   Host MUST supply app + routeRegistry for session owner resolution.
  */
 export async function handleCloudflareConnectionRequest(request, env, options = {}) {
   const url = new URL(request.url);
   const client = resolveCloudflareOAuthClient(env);
-  const hostDefaultCapabilities = Array.isArray(options.defaultCapabilities)
-    ? options.defaultCapabilities.filter(Boolean)
-    : [];
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204 });
   }
@@ -383,24 +379,38 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
   await ensureTables(env);
 
   if (url.pathname === '/api/connections/cloudflare/permissions' && request.method === 'GET') {
-    const [offerable, packs, preferred] = await Promise.all([
-      listProviderScopeOptions(env),
-      listProviderPluginPacks(env),
+    const [catalog, preferred] = await Promise.all([
+      loadProviderPermissionCatalog(options.permissionRegistry, 'cloudflare'),
       loadCloudflareConnectionRecord(env, ownerId).catch(() => null),
     ]);
-    if (!offerable || !packs) {
-      return json({ ok:false, error:'cloudflare_permission_registry_unavailable' }, 503);
+    if (!catalog) {
+      return json({ ok: false, error: 'cloudflare_permission_registry_unavailable' }, 503);
     }
     const granted = Array.isArray(preferred?.scopes) ? preferred.scopes : [];
+    const available = listProviderScopeOptions(catalog) || [];
     return json({
-      ok:true, provider:'cloudflare', total:offerable.length,
-      // A catalog scope is merely OFFERABLE. It must never be displayed as a
-      // granted permission unless present on this account's active token.
-      available_permissions:offerable,
-      registered_packs:packs,
-      connection_id:preferred?.connectionId || null,
-      granted_scopes:granted,
-      account_selection_required:!preferred,
+      ok: true,
+      provider: 'cloudflare',
+      total: available.length,
+      // Offerable catalog scopes are never presented as granted permissions.
+      available_permissions: available,
+      registered_packs: catalog.packs.map((pack) => ({
+        plugin_id: catalog.pluginId,
+        plugin_key: catalog.pluginKey,
+        pack_id: pack.id,
+        label: pack.label,
+        description: pack.description,
+        requested_scopes: pack.scopes,
+        capabilities: pack.capabilities,
+      })),
+      baseline_scopes: catalog.baselineScopes,
+      default_packs: catalog.defaultPacks,
+      full_catalog_opt_in: catalog.allowFullCatalogOptIn,
+      aliases: catalog.aliases,
+      available_capabilities: catalog.capabilities,
+      connection_id: preferred?.connectionId || null,
+      granted_scopes: granted,
+      account_selection_required: !preferred,
     });
   }
 
@@ -421,46 +431,32 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const redirectUri = `${url.origin}${CLOUDFLARE_CALLBACK_PATH}`;
     const capabilityParam = url.searchParams.get('capabilities') || url.searchParams.get('capability') || '';
     const packsParam = url.searchParams.get('packs') || url.searchParams.get('pack') || '';
-    const requested = capabilityParam
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const requestedPacks = packsParam
-      .split(',')
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
-    // Explicit packs win alone. Host defaults only when neither packs nor capabilities were requested.
-    const capabilitySet = requested.length
-      ? requested
-      : (requestedPacks.length ? [] : hostDefaultCapabilities);
-    // Grants are additive: Cloudflare reissues the token with exactly the scopes asked for,
-    // so carry the active grant forward and add only what this request needs (from the D1 registry).
-    const registryExtra = [];
-    for (const id of capabilitySet) {
-      const fromRegistry = await registryScopesForCapability(env, id);
-      if (requested.includes(id) && !fromRegistry) {
-        return json({ok:false,error:'cloudflare_capability_unavailable',capability:id},400);
-      }
-      if (fromRegistry) registryExtra.push(...fromRegistry);
+    const requestedCapabilities = capabilityParam.split(',').map((value) => value.trim()).filter(Boolean);
+    const requestedPacks = packsParam.split(',').map((value) => value.trim().toLowerCase()).filter(Boolean);
+    const catalog = await loadProviderPermissionCatalog(options.permissionRegistry, 'cloudflare');
+    if (!catalog) {
+      return json({ ok: false, error: 'cloudflare_permission_registry_unavailable' }, 503);
     }
-    const requestedScopes = requestedCloudflareScopes({
-      capabilities: capabilitySet,
+    const selection = resolvePermissionScopes(catalog, {
       packs: requestedPacks,
+      capabilities: requestedCapabilities,
     });
-    // Do not import another Cloudflare account's latest scopes. Carry forward
-    // only grants on the explicitly selected (or preferred) account.
-    const selectedAccountId=String(url.searchParams.get('account_id')||'').trim();
-    const existingConnection=await loadCloudflareConnectionRecord(env,ownerId,
-      selectedAccountId?{connectionId:selectedAccountId}:{}).catch(()=>null);
-    const alreadyGranted=existingConnection && !existingConnection.account_selection_required
-      ? await activeGrantedScopes(env,ownerId,'cloudflare',existingConnection.connectionId)
+    if (!selection.ok) {
+      const status = selection.error === 'cloudflare_permission_registry_unavailable' ? 503 : 400;
+      return json(selection, status);
+    }
+    // Only carry forward grants from the explicitly selected/preferred account.
+    // Existing grants are preserved; new scopes can only come from the injected catalog.
+    const selectedAccountId = String(url.searchParams.get('account_id') || '').trim();
+    const existingConnection = await loadCloudflareConnectionRecord(
+      env,
+      ownerId,
+      selectedAccountId ? { connectionId: selectedAccountId } : {},
+    ).catch(() => null);
+    const alreadyGranted = existingConnection && !existingConnection.account_selection_required
+      ? await activeGrantedScopes(env, ownerId, 'cloudflare', existingConnection.connectionId)
       : [];
-    // Plugin-scoped feature packs come from agentsam_plugins. The explicit
-    // 'all' choice must include all 374 live D1 permissions, not 315 static ones.
-    const packScopes = (await pluginPackScopes(env, requestedPacks)) || [];
-    const allScopes = await scopesForFullCatalogOptIn(env, requestedPacks);
-    if (allScopes === null) return json({ok:false,error:'cloudflare_full_permission_registry_unavailable'},503);
-    const scopes = await filterToRegistry(env, [...new Set([...alreadyGranted, ...requestedScopes, ...registryExtra, ...packScopes, ...allScopes])]);
+    const scopes = [...new Set([...alreadyGranted, ...selection.scopes])];
     const saved = await saveOAuthState(env, {
       state,
       ownerId,
@@ -468,8 +464,8 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       returnTo,
       metadata: {
         requested_scopes: scopes,
-        requested_capabilities: capabilitySet,
-        requested_packs: requestedPacks,
+        requested_capabilities: selection.capabilities,
+        requested_packs: selection.packs,
       },
     });
     if (!saved.ok) {
@@ -502,7 +498,8 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       ok: true,
       authorize_url: authorize,
       callback: CLOUDFLARE_CALLBACK_PATH,
-      capabilities: capabilitySet,
+      capabilities: selection.capabilities,
+      packs: selection.packs,
       scopes,
     });
   }
@@ -574,9 +571,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     }
     const grantedScopeStr = providerScopeStr || requestedScopes.join(' ');
     const scopeSource = providerScopeStr ? 'token_response' : 'request_equivalence';
-    const capabilitySet = requestedCapabilities.length
-      ? requestedCapabilities.slice()
-      : hostDefaultCapabilities.slice();
+    const capabilitySet = requestedCapabilities.slice();
 
     // SSOT: user_oauth_tokens only (granted scopes from this token + client_id provenance + vault seal).
     const grantInput = {

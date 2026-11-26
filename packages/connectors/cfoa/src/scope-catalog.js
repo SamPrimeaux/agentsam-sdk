@@ -1,20 +1,7 @@
 /**
- * Cloudflare OAuth scope catalog — every Local Studio picker scope (~315).
- *
- * These ARE offerable OAuth scopes. Organize via feature packs / permission
- * products (`permission-options.js`). Default mint stays least-privilege
- * (baseline + selected packs). Users may explicitly opt into the full set with
- * pack \`all\` or \`requestedCloudflareScopes({ all: true })\`.
- *
- * Reconciliation note (315 vs ~374):
- * Cloudflare Dashboard OAuth clients may list more granular permission product
- * ids than this OAuth scope string catalog. Permission product ids in
- * `permission-options.js` (`cloudflare.perm.*`) are UI catalog entries; they map
- * onto oauthScopes arrays drawn from THIS file. Never treat product-id count as
- * granted OAuth scopes. Runtime grant evidence is token `scope` / stored scopes
- * only — never the full client catalog or a historical union.
- *
- * Source: AgentSam Local Studio Cloudflare OAuth scope picker.
+ * Cloudflare provider scope identifiers used by operation-level capability
+ * metadata. OAuth consent profiles are owned by the host plugin catalog and
+ * are not assembled from this static reference list.
  */
 
 export const CLOUDFLARE_ALL_SCOPES = Object.freeze([

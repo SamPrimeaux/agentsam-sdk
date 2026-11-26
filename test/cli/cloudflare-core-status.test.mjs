@@ -36,7 +36,7 @@ test('core status never probes without a configured token and account', async ()
   assert.deepEqual(await probeCloudflareCore({ apiToken: 'xyz', accountId: '', request }), {});
 });
 
-test('Cloudflare CLI status combines verified D1 probe with unknown write scopes', async () => {
+test('Cloudflare CLI status combines API-token probes without inferring OAuth pack grants', async () => {
   const { runCloudflare } = await import('../../src/commands/cloudflare.js');
   let output = '';
   const fetchImpl = async (url) => {
@@ -58,5 +58,5 @@ test('Cloudflare CLI status combines verified D1 probe with unknown write scopes
   assert.equal(parsed.probes['cloudflare.r2'].status,'needs_authorization');
   assert.equal(parsed.capabilities.find(c=>c.capability_id==='cloudflare.d1').status,'unknown');
   assert.equal(parsed.capabilities.find(c=>c.capability_id==='cloudflare.r2').status,'unknown');
-  assert.ok(parsed.note.includes('scope matrix unknown'));
+  assert.ok(parsed.note.includes('does not infer OAuth grants'));
 });

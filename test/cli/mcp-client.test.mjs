@@ -170,7 +170,7 @@ test('MCP server catalog resolves CF portal bundles + IAM without fabricated hea
 
   const bindings = resolveServerPreset('cloudflare-bindings', { home });
   assert.ok(bindings);
-  assert.ok(bindings.feature_packs.includes('data'));
+  assert.ok(bindings.feature_packs.includes('store'));
 
   const iam = resolveServerPreset('inneranimalmedia', { home });
   assert.ok(iam);
@@ -243,11 +243,14 @@ test('agentsam mcp CLI handles add, list, status, doctor, and remove end-to-end'
   assert.equal(doctorRes.authConfigured, true);
   assert.equal(doctorRes.catalog?.auth_type, 'bearer');
 
-  // Cloudflare bundle scopes are pack-scoped (includes mcp-portals.*)
+  // Cloudflare bundle exposes plugin-owned permission pack IDs; without a host catalog only portal-management scopes are shown.
   const scopeRes = await runMcp(['scopes', 'cloudflare-bindings', '--json'], { home, write });
   assert.ok(scopeRes.oauth_scopes.includes('mcp-portals.read'));
   assert.ok(scopeRes.oauth_scopes.includes('mcp-portals.write'));
-  assert.ok(scopeRes.oauth_scopes.includes('d1.read'));
+  assert.deepEqual(scopeRes.permission_packs, ['store', 'build', 'create']);
+  assert.equal(scopeRes.scope_expansion_requires_plugin_catalog, true);
+  assert.ok(scopeRes.oauth_scopes.includes('mcp-portals.read'));
+  assert.ok(!scopeRes.oauth_scopes.includes('d1.read'));
 
   // Remove
   const removeRes = await runMcp(['remove', 'inneranimalmedia', '--client', 'all', '--json'], { home, write });

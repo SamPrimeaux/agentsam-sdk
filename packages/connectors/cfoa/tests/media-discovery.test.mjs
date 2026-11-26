@@ -12,7 +12,6 @@ import {
   createCloudflareStreamDirectUpload,
   deleteCloudflareImage,
 } from '../src/families/media.js';
-import { getCloudflareFeaturePack } from '../src/capabilities.js';
 import { isCloudflareConnectionPath } from '../src/routes.js';
 
 function mockClient({ accountId = 'acct123', scopes = [], responses = {} } = {}) {
@@ -44,7 +43,7 @@ describe('cloudflare media discovery', () => {
     );
     assert.equal(
       cloudflareMediaConnectUrl({ returnTo: '/media' }),
-      '/api/connections/cloudflare/start?packs=media%2Cdata&return_to=%2Fmedia',
+      '/api/connections/cloudflare/start?packs=store%2Ccreate&return_to=%2Fmedia',
     );
   });
 
@@ -58,14 +57,9 @@ describe('cloudflare media discovery', () => {
     assert.doesNotMatch(discovery.connect_url, /settings%2Fintegrations/);
   });
 
-  it('exposes a media feature pack with Images, Stream, and R2', () => {
-    const pack = getCloudflareFeaturePack('media');
-    assert.ok(pack);
-    assert.deepEqual(pack.capabilities.sort(), [
-      'cloudflare.images',
-      'cloudflare.r2',
-      'cloudflare.stream',
-    ].sort());
+  it('requests the canonical Store and Create permission packs for media discovery', () => {
+    const url = cloudflareMediaConnectUrl({ returnTo: '/media' });
+    assert.match(url, /packs=store%2Ccreate/);
   });
 
   it('registers resources and R2 object paths on the connector router', () => {

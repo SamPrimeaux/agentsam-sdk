@@ -34,40 +34,26 @@
     "role": "local-machine-runtime"
   },
   "cloudflare": {
-    "oauth_default_packs": ["agentsam"],
-    "oauth_offerable_packs": [
-      "baseline",
-      "agentsam",
-      "data",
-      "compute",
-      "web",
-      "security",
-      "developer_platform",
-      "ai",
-      "dns_zones",
-      "app_security",
-      "rules",
-      "zero_trust",
-      "analytics",
-      "network",
-      "media",
-      "email",
-      "cache",
-      "account",
-      "other",
-      "all"
-    ],
-    "scope_catalog": "packages/connectors/cfoa/src/scope-catalog.js",
-    "permission_options": "packages/connectors/cfoa/src/permission-options.js",
+    "permission_registry": {
+      "provider_plugin": "agentsam-mcp",
+      "source": "agentsam_plugins.config_json.oauth_permissions",
+      "host_adapter": "apps/local-studio/backend/worker/cloudflare-plugin-permission-registry.js",
+      "connector_contract": "packages/connectors/cfoa/src/PERMISSION_REGISTRY.md"
+    },
     "mcp_portals": {
-      "manage_scopes": ["mcp-portals.read", "mcp-portals.write"],
+      "manage_capability": "cloudflare.mcp_portals",
       "bundles": "src/mcp/cloudflare-bundles.js",
-      "connections": "src/mcp/client-adapters.js#SEED_OFFERABLE_MCP_SERVER_CONNECTIONS"
+      "connections": "apps/local-studio/backend/worker/index.js"
     }
   },
   "mcp": {
     "authority": "~/.agentsam/mcp/",
-    "clients": ["cursor", "claude", "chatgpt", "agentsam"],
+    "clients": [
+      "cursor",
+      "claude",
+      "chatgpt",
+      "agentsam"
+    ],
     "offerable_server_connections": true
   },
   "distribution": {

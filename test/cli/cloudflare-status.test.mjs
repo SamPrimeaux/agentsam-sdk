@@ -13,6 +13,6 @@ test('signed-out and signed-in views name a next command and never dump JSON', (
   assert.match(renderCloudflareStatus(parseWhoami({ loggedIn: false })), /agentsam login --cloudflare/);
   const out = renderCloudflareStatus(parseWhoami({ loggedIn: true, email: 'a@b.c', accounts: [{ id: 'x1', name: 'Acme' }], tokenPermissions: ['account:read', 'workers:write'] }));
   assert.match(out, /Acme \(x1\)/);
-  assert.match(out, /Next:\s+agentsam cloudflare login --pack /);
+  assert.match(out, /Next:\s+agentsam cloudflare login --list-packs/);
   assert.doesNotMatch(out, /[{}"]/);
 });
