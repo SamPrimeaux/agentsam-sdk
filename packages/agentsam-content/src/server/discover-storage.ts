@@ -57,7 +57,7 @@ function parseToml(text: string): RawR2[] {
   return out;
 }
 
-export interface DiscoverStorageOptions extends ScoreHints {
+export interface DiscoverStorageOptions extends StorageDiscoveryHints {
   cwd?: string;
   accountId?: string;
 }
