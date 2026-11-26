@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { findPrivateWorkspaceDependencyEdges, registryVersionMatches, unwrapSingleNpmViewValue } from '../../scripts/release-train-policy.mjs';
@@ -18,7 +19,10 @@ test('release train check enforces public package versions and exact public inte
 
 test('release train check ignores stale installed copies under nested node_modules', () => {
   const nm = path.join(root, 'apps/local-studio/backend/node_modules');
-  assert.equal(existsSync(nm), false, 'test needs a tree without a local-studio backend install');
+  const backupRoot = mkdtempSync(path.join(tmpdir(), 'agentsam-release-train-'));
+  const backup = path.join(backupRoot, 'node_modules');
+  const hadExistingInstall = existsSync(nm);
+  if (hadExistingInstall) renameSync(nm, backup);
   const pkgDir = path.join(nm, '@inneranimalmedia/agentsam-sdk');
   try {
     mkdirSync(pkgDir, { recursive: true });
@@ -27,6 +31,8 @@ test('release train check ignores stale installed copies under nested node_modul
     assert.match(output, /PASS all public release packages and dependency pins aligned/);
   } finally {
     rmSync(nm, { recursive: true, force: true });
+    if (hadExistingInstall) renameSync(backup, nm);
+    rmSync(backupRoot, { recursive: true, force: true });
   }
 });
 

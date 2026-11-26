@@ -44,8 +44,6 @@ jobs:
           npm ci --prefix apps/cad-creator --ignore-scripts --no-audit --no-fund
           npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
           npm ci --prefix apps/design-canvas --ignore-scripts --no-audit --no-fund
-          npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts --no-audit --no-fund
-          npm ci --prefix apps/ecommerce-cms-agentsam/frontend --ignore-scripts --no-audit --no-fund
       - name: Set up Go for Desktop Shell sidecars
         uses: actions/setup-go@v5
         with:
@@ -91,6 +89,11 @@ jobs:
           npm init -y
           npm install "@inneranimalmedia/agentsam-sdk@$APPROVED_VERSION"
           node --input-type=module -e 'import("@inneranimalmedia/agentsam-sdk/cad-project-v2").then(m=>{if(m.CAD_PROJECT_V2!=="cad.project.v2")throw Error("cad_v2_export_missing");console.log("CAD_V2_INSTALLED_CONSUMER_PASS")})'
+      - name: Regenerate Ecommerce registry lock after SDK packages publish
+        run: |
+          rm -f apps/ecommerce-cms-agentsam/npm-shrinkwrap.json apps/ecommerce-cms-agentsam/package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund --prefix apps/ecommerce-cms-agentsam
+          npm shrinkwrap --prefix apps/ecommerce-cms-agentsam
       - name: Install Ecommerce build dependencies
         run: |
           npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts --no-audit --no-fund
