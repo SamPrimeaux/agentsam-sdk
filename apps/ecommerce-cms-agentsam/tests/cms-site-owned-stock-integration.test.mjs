@@ -316,9 +316,20 @@ test('site-owned store chat install and save enforce manifest-owned settings and
   env.EMBED_ARTIFACT_FETCH=async url=>{const raw=assets.get(new URL(url).pathname.slice(1));return new Response(raw||'',{status:raw?200:404});};
   const list=await (await invoke(env,'merchant','GET')).json();
   assert.equal(list.registered_embeds[0].registration.definitionId,'def-chat');
+  assert.equal(list.catalog.find(entry=>entry.key==='store_chat').installable,false);
   const previewUrl=resource.replace('catalog-resources?','catalog-resources/store_chat/preview?');
   const preview=await invoke(env,'merchant','GET',undefined,previewUrl);
   assert.equal(preview.status,200);assert.equal((await preview.json()).source,source);
+  const previewOnlyInstall=await invoke(env,'merchant','POST',{catalogKey:'store_chat'});
+  assert.equal(previewOnlyInstall.status,409);
+  assert.equal((await previewOnlyInstall.json()).error,'cms_embed_release_preview_only');
+
+  db.prepare("UPDATE cms_definitions SET status='active' WHERE id='def-chat'").run();
+  db.prepare("UPDATE cms_components SET implementation_status='verified' WHERE id='cmp-chat'").run();
+  db.prepare("UPDATE cms_component_templates SET status='active' WHERE id='tpl-chat'").run();
+  const readyList=await (await invoke(env,'merchant','GET')).json();
+  assert.equal(readyList.catalog.find(entry=>entry.key==='store_chat').installable,true);
+
   assets.set(objectKey,'corrupt');
   const corrupt=await invoke(env,'merchant','POST',{catalogKey:'store_chat'});
   assert.equal(corrupt.status,503);
