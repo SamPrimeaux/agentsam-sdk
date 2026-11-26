@@ -10,7 +10,7 @@
  * fall back to a nested npm install. Fail loud if anything is still missing.
  */
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -101,6 +101,28 @@ function linkFromRepoRoot(pkgDir, name) {
   return linkPackageDir(pkgDir, name, path.join(root, 'node_modules', ...parts));
 }
 
+// Keep React and ReactDOM on one module instance for root-level Node tests.
+// Browser bundles still use Local Studio's app-root copy via Vite resolve.dedupe.
+// App-only Cloudflare builds have no repository-root pair, so they fall back to
+// the React/ReactDOM pair installed by the Local Studio workspace.
+function linkReactRuntime(pkgDir, name) {
+  const rootReact = path.join(root, 'node_modules', 'react');
+  const rootReactDom = path.join(root, 'node_modules', 'react-dom');
+  const rootRuntimeReady = packageReady(rootReact) && packageReady(rootReactDom);
+  const source = rootRuntimeReady
+    ? path.join(root, 'node_modules', name)
+    : studioDepTarget(name);
+  if (!packageReady(source)) return false;
+
+  const target = depTarget(pkgDir, name);
+  try {
+    if (realpathSync(target) === realpathSync(source)) return true;
+  } catch {
+    // A missing or broken target is repaired by linkPackageDir below.
+  }
+  return linkPackageDir(pkgDir, name, source);
+}
+
 // Linking a package from Studio alone is insufficient for Rolldown: imports
 // inside that linked package resolve from its SDK sibling directory. Restore
 // the already-locked, transitive runtime dependency closure beside the link.
@@ -130,6 +152,14 @@ function linkInstalledClosure(pkgDir, name, seen = new Set()) {
 function linkBuildTooling(pkgDir, pkg) {
   const linked = [];
   for (const name of Object.keys(pkg?.devDependencies || {})) {
+    if (name === 'react' || name === 'react-dom') {
+      if (linkReactRuntime(pkgDir, name)) linked.push(name);
+      else if (!packageReady(depTarget(pkgDir, name))) {
+        console.warn('[ensure-aliased-deps] ' + pkg.name + ': missing shared ' + name + ' runtime');
+      }
+      linkInstalledClosure(pkgDir, name);
+      continue;
+    }
     if (packageReady(depTarget(pkgDir, name))) continue;
     if (linkFromStudio(pkgDir, name) || linkFromRepoRoot(pkgDir, name)) {
       linked.push(name);
@@ -208,6 +238,13 @@ for (const name of ALIASED) {
   }
   const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
   const deps = { ...(pkg.dependencies || {}), ...(pkg.peerDependencies || {}) };
+  // Reconcile existing React links too: an earlier app-only install may have
+  // pinned one package to Local Studio's React while root tests use root ReactDOM.
+  for (const runtime of ['react', 'react-dom']) {
+    if (Object.prototype.hasOwnProperty.call(deps, runtime)) {
+      linkReactRuntime(pkgDir, runtime);
+    }
+  }
   if (!Object.keys(deps).length) {
     console.log(`[ensure-aliased-deps] ${name}: no runtime or peer deps; will still build missing exports`);
   }
@@ -238,7 +275,8 @@ for (const name of ALIASED) {
       // A nested npm install can replace/remove prior source and peer links.
       // Restore canonical workspace sources and the app-installed runtime deps.
       for (const dep of Object.keys(deps)) {
-        if (workspacePackages.has(dep)) linkFromWorkspace(pkgDir, dep);
+        if (dep === 'react' || dep === 'react-dom') linkReactRuntime(pkgDir, dep);
+        else if (workspacePackages.has(dep)) linkFromWorkspace(pkgDir, dep);
         else if (!packageReady(depTarget(pkgDir, dep))) {
           linkFromStudio(pkgDir, dep) || linkFromRepoRoot(pkgDir, dep);
         }
