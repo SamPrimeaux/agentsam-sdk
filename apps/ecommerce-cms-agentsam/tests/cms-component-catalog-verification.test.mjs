@@ -5,19 +5,19 @@ import { normalizeCmsCatalogTemplate, listCmsComponentCatalog } from '../backend
 
 const base = {
   id:'t1',sku:'SKU-PORTABLE-HERO',template_name:'Sticky curtain',template_type:'section',
-  status:'active',item_type:'section',tags:'[]',template_data:'{"renderer_key":"revise/sticky-curtain","implementation_status":"implemented"}',
+  status:'active',item_type:'section',tags:'[]',template_data:'{"renderer_key":"platform/stock-hero","implementation_status":"implemented"}',
   editor_schema_json:'{}',compatibility_json:'{}',responsive_schema_json:'{}',data_bindings_json:'{}',
-  preview_json:'{}',definition_key:'revise/sticky-curtain',definition_version:'1',
+  preview_json:'{}',definition_key:'platform/stock-hero',definition_version:'1',
   resolved_definition_id:'d1',resolved_definition_kind:'section',
   resolved_definition_version:'1',definition_status:'active',
   definition_origin:'built_in',definition_metadata_json:'{"rendererKey":"fake:key","implementationStatus":"implemented","implementationClass":"native"}',
-  resolved_component_id:'c1',resolved_renderer_key:'revise/sticky-curtain',
+  resolved_component_id:'c1',resolved_renderer_key:'platform/stock-hero',
   resolved_implementation_status:'verified',resolved_delivery_mode:'bundled',
 };
 test('metadata cannot impersonate a verified cms_components renderer',()=>{
   const row=normalizeCmsCatalogTemplate(base);
-  assert.equal(row.rendererKey,'revise/sticky-curtain');
-  assert.equal(row.templateRendererKey,'revise/sticky-curtain');
+  assert.equal(row.rendererKey,'platform/stock-hero');
+  assert.equal(row.templateRendererKey,'platform/stock-hero');
   assert.equal(row.catalogAvailable,true);
   assert.equal(row.definitionReady,true);
   assert.equal(row.implementationStatus,'verified');
@@ -40,7 +40,7 @@ test('template-owned renderer hints cannot silently redirect to a different comp
   });
   assert.equal(row.catalogAvailable,true);
   assert.equal(row.templateRendererKey,'another/implementation');
-  assert.equal(row.rendererKey,'revise/sticky-curtain');
+  assert.equal(row.rendererKey,'platform/stock-hero');
   assert.equal(row.rendererMatchesTemplate,false);
   assert.equal(row.installable,false);
   assert.equal(row.unavailableReason,'renderer_mismatch');
