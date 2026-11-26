@@ -1,0 +1,73 @@
+{
+  "name": "@inneranimalmedia/agentsam-identity",
+  "version": "2.6.19",
+  "type": "module",
+  "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
+  "agentsam": {
+    "system": "identity",
+    "kind": "library",
+    "tags": [
+      "authentication",
+      "account-scoped"
+    ]
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./provider-contract": "./src/provider-contract.js",
+    "./providers": "./src/providers/index.js",
+    "./providers/google": "./src/providers/google/index.js",
+    "./providers/github": "./src/providers/github/index.js",
+    "./providers/iam": "./src/providers/iam/index.js",
+    "./providers/gcp": "./src/providers/gcp/index.js",
+    "./providers/email": "./src/providers/email/index.js",
+    "./contracts/identity": "./src/contracts/identity.js",
+    "./contracts/session": "./src/contracts/session.js",
+    "./contracts/provider": "./src/contracts/provider.js",
+    "./contracts/external-identity": "./src/contracts/external-identity.js",
+    "./contracts/auth-config": "./src/contracts/auth-config.js",
+    "./contracts/identity-store": "./src/contracts/identity-store.js",
+    "./oauth/callback": "./src/oauth/callback.js",
+    "./frontend/auth-portal/*": "./src/frontend/auth-portal/*",
+    "./merchant-onboarding": "./src/server/merchant-onboarding.js",
+    "./frontend/merchant-onboarding/*": "./src/frontend/merchant-onboarding/*",
+    "./providers/cloudflare": "./src/providers/cloudflare/index.js",
+    "./providers/chatgpt": "./src/providers/chatgpt/index.js",
+    "./contracts/sign-in-options": "./src/contracts/sign-in-options.js",
+    "./oauth/consent-view": "./src/oauth/consent-view.js",
+    "./adapters/sqlite": "./src/adapters/sqlite/index.js",
+    "./adapters/portable-d1": "./src/adapters/portable-d1/index.js",
+    "./adapters/iam-compat": "./src/adapters/iam-compat/index.js",
+    "./adapters/cloudflare-d1": "./src/adapters/cloudflare-d1/index.js",
+    "./contracts/routes": "./src/contracts/routes.js",
+    "./oauth/goaude": "./src/oauth/goaude.js",
+    "./server/mount-policy": "./src/server/mount-policy.js",
+    "./server/worker-router": "./src/server/worker-router.js",
+    "./core/password-crypto": "./src/core/password-crypto.js",
+    "./core/password-gate": "./src/core/password-gate.js",
+    "./frontend/auth-portal/store-access": "./src/frontend/auth-portal/store-access.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "preview:auth-portal": "node scripts/preview-auth-portal.mjs --open"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/identity"
+  },
+  "files": [
+    "src",
+    "backend",
+    "migrations",
+    "schema",
+    "scripts"
+  ],
+  "license": "FSL-1.1-MIT"
+}

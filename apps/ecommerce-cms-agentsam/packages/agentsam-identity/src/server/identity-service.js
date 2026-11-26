@@ -1,0 +1,213 @@
+import { AUTH_COOKIE_NAME, SESSION_POLICY } from '../core/constants.js';
+import { hashPassword, verifyPassword } from '../core/password-crypto.js';
+import { jsonResponse } from '../core/http-json.js';
+import { resolvePostAuthDestination } from './post-auth.js';
+import { IdentityRoutingError } from '../contracts/identity-store.js';
+import { newAuthUserId } from '../adapters/cloudflare-d1/ids.js';
+
+/**
+ * @typedef {import('../contracts/identity-store.js').IdentityStore} IdentityStore
+ */
+
+/**
+ * Server-side identity orchestration (Worker / Node). No secrets in client bundle.
+ * Hosts must supply `app` + `routeRegistry` — no platform "/" fallback.
+ *
+ * @param {{
+ *   adapter: IdentityStore,
+ *   cookieName?: string,
+ *   app: { id: string },
+ *   routeRegistry: ReturnType<import('../contracts/route-projection.js').createRouteRegistry>,
+ * }} config
+ */
+export function createIdentityService(config) {
+  const adapter = config.adapter;
+  if (!adapter) throw new Error('identity_service_requires_adapter');
+  const cookieName = config.cookieName || AUTH_COOKIE_NAME;
+  const app = config.app || null;
+  const routeRegistry = config.routeRegistry || null;
+  if (!app?.id || !routeRegistry) {
+    throw new IdentityRoutingError(
+      'AUTH_APP_UNRESOLVED',
+      'createIdentityService requires app + routeRegistry (no platform fallback)',
+    );
+  }
+  routeRegistry.assertAuthCapable(app.id);
+
+  function resolvePostLoginPath(nextPath) {
+    return resolvePostAuthDestination({
+      transaction: { return_to: nextPath, app_id: app.id },
+      app,
+      routeRegistry,
+    });
+  }
+
+  function sessionCookieHeader(sessionId, requestUrl, maxAge = SESSION_POLICY.browser.ttlSeconds) {
+    const secure = new URL(requestUrl).protocol === 'https:';
+    const parts = [
+      `${cookieName}=${sessionId}`,
+      'Path=/',
+      'HttpOnly',
+      'SameSite=Lax',
+      `Max-Age=${maxAge}`,
+    ];
+    if (secure) parts.push('Secure');
+    return parts.join('; ');
+  }
+
+  function parseSessionId(cookieHeader) {
+    if (!cookieHeader) return null;
+    const match = String(cookieHeader).match(new RegExp(`(?:^|;\\s*)${cookieName}=([^;]+)`));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function parseBearerSessionId(authorization) {
+    const match = String(authorization || '').match(/^Bearer\s+([^\s]+)$/i);
+    return match ? match[1] : null;
+  }
+
+  return Object.freeze({
+    cookieName,
+    app,
+    routeRegistry,
+    defaultRedirect: resolvePostLoginPath(null),
+
+    async signup({ email, password, displayName }) {
+      const normalized = String(email || '').trim().toLowerCase();
+      if (!normalized || !password) {
+        return { ok: false, error: 'email_and_password_required' };
+      }
+      const existing = await adapter.findUserByEmail(normalized);
+      if (existing) return { ok: false, error: 'email_already_registered' };
+      const { saltHex, hashHex } = await hashPassword(password);
+      const user = await adapter.createUser({
+        email: normalized,
+        passwordHash: hashHex,
+        salt: saltHex,
+        displayName: displayName || normalized.split('@')[0],
+      });
+      const session = await adapter.createSession({
+        userId: user.id,
+        email: user.email,
+        displayName: user.display_name,
+        provider: 'email',
+      });
+      return { ok: true, user, session, sessionId: session.id };
+    },
+
+    async loginWithPassword({ email, password }) {
+      const normalized = String(email || '').trim().toLowerCase();
+      const user = await adapter.findUserByEmail(normalized);
+      if (!user?.password_hash || !user?.salt) {
+        return { ok: false, error: 'Invalid Identity or Access Key' };
+      }
+      const valid = await verifyPassword(password, user.salt, user.password_hash);
+      if (!valid) return { ok: false, error: 'Invalid Identity or Access Key' };
+      const session = await adapter.createSession({
+        userId: user.id,
+        email: user.email,
+        displayName: user.display_name,
+        provider: 'email',
+      });
+      return { ok: true, user, session, sessionId: session.id };
+    },
+
+    async sessionFromRequest(request) {
+      const sessionId = parseBearerSessionId(request.headers.get('Authorization'))
+        || parseSessionId(request.headers.get('Cookie'));
+      if (!sessionId) return null;
+      const session = await adapter.getSession(sessionId);
+      if (!session) return null;
+      const user = await adapter.findUserById(session.user_id);
+      if (!user) return null;
+      return { session, user, sessionId };
+    },
+
+    async logout(request) {
+      const sessionId = parseBearerSessionId(request.headers.get('Authorization'))
+        || parseSessionId(request.headers.get('Cookie'));
+      if (sessionId) await adapter.revokeSession(sessionId, 'logout');
+      return { ok: true };
+    },
+
+    async provisionOAuthUser({ provider, providerSubject, email, displayName, sessionType }) {
+      let user = await adapter.findUserByProvider(provider, providerSubject);
+      if (!user && email) {
+        user = await adapter.findUserByEmail(email);
+      }
+      if (!user) {
+        user = await adapter.createUser({
+          email: email || `${providerSubject}@${provider}.oauth`,
+          displayName: displayName || email || providerSubject,
+          passwordHash: null,
+          salt: null,
+        });
+      }
+      await adapter.upsertProviderIdentity({
+        accountId: user.id,
+        provider,
+        providerSubject,
+        email: user.email,
+      });
+      const session = await adapter.createSession({
+        userId: user.id,
+        email: user.email,
+        displayName: displayName || user.display_name,
+        provider,
+        providerSubject,
+        type: sessionType,
+      });
+      return { ok: true, authUserId: user.id, sessionId: session.id, session };
+    },
+
+    isNativeSessionRequest(request) {
+      const marker = String(request?.headers?.get?.('X-AgentSam-Native-Client') || '').toLowerCase();
+      return marker === '1' || marker === 'true' || marker === 'native';
+    },
+
+    buildNativeLoginSuccessResponse(result, nextPath) {
+      const redirect = resolvePostLoginPath(nextPath);
+      return jsonResponse({
+        ok: true,
+        redirect,
+        session_id: result.sessionId,
+        expires_at: result.session?.expires_at ?? null,
+        user: result.user
+          ? {
+              id: result.user.id,
+              email: result.user.email,
+              displayName: result.user.display_name ?? null,
+            }
+          : null,
+      });
+    },
+
+    buildLoginSuccessResponse(request, sessionId, nextPath) {
+      const redirect = resolvePostLoginPath(nextPath);
+      return jsonResponse(
+        { ok: true, redirect },
+        200,
+        { 'Set-Cookie': sessionCookieHeader(sessionId, request.url) },
+      );
+    },
+
+    buildLogoutResponse(request) {
+      const secure = new URL(request.url).protocol === 'https:';
+      const clear = [
+        `${cookieName}=`,
+        'Path=/',
+        'HttpOnly',
+        'SameSite=Lax',
+        'Max-Age=0',
+      ];
+      if (secure) clear.push('Secure');
+      return jsonResponse({ ok: true }, 200, { 'Set-Cookie': clear.join('; ') });
+    },
+
+    parseSessionId,
+    sessionCookieHeader,
+    resolvePostLoginPath,
+  });
+}
+
+export { newAuthUserId };

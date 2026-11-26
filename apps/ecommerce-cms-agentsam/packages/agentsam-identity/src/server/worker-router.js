@@ -1,0 +1,795 @@
+import { createCloudflareD1Adapter, createIamCompatIdentityAdapter } from '../adapters/iam-compat/index.js';
+import { createPortableD1IdentityAdapter } from '../adapters/portable-d1/index.js';
+import { createIdentityService } from './identity-service.js';
+import { jsonResponse } from '../core/http-json.js';
+import { hashPassword, verifyPassword } from '../core/password-crypto.js';
+import { createPasswordResetService } from '../recovery/password-reset.js';
+import { getGoogleAuthUrl, exchangeGoogleCode } from '../providers/google/oauth.js';
+import { fetchGoogleProfile } from '../providers/google/profile.js';
+import { getGithubAuthUrl, exchangeGithubCode } from '../providers/github/oauth.js';
+import { fetchGithubProfile } from '../providers/github/profile.js';
+import { getCloudflareAuthUrl, exchangeCloudflareCode } from '../providers/cloudflare/oauth.js';
+import { fetchCloudflareProfile } from '../providers/cloudflare/profile.js';
+import { IDENTITY_ROUTE_IDS } from '../contracts/route-ids.js';
+import { IdentityRoutingError } from '../contracts/identity-store.js';
+import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
+import {
+  AccountCapabilityError,
+  BACKUP_CODE_COUNT,
+  backupCodeCandidateHashes,
+  generateBackupCodes,
+  hashBackupCode,
+  publicSession,
+  validateProfilePatch,
+} from '../core/account-security.js';
+import {
+  GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH,
+  handleGoogleDesktopExchangeRequest,
+  handleGoogleDesktopLoginExchangeRequest,
+} from '../oauth/goaude.js';
+import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
+import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
+import {
+  NATIVE_EXCHANGE_PATH,
+  finishOAuthLogin,
+  handleNativeExchangeRequest,
+  parseNativeStart,
+  sessionTypeForTransaction,
+} from '../oauth/native-handoff.js';
+
+function resolveIdentityAdapter(env, options = {}) {
+  if (options.adapter) return options.adapter;
+  const profile = String(options.identityProfile || env?.IDENTITY_ADAPTER_PROFILE || 'iam-compat')
+    .trim()
+    .toLowerCase();
+  if (profile === 'portable' || profile === 'portable-d1') {
+    return createPortableD1IdentityAdapter(env.DB);
+  }
+  return createIamCompatIdentityAdapter(env.DB);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function resolveLoginPath(identity) {
+  return identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN) || '/auth/login';
+}
+
+function resolveKv(env) {
+  return env?.SESSION_CACHE || env?.KV || null;
+}
+
+function buildPasswordResetService(env, adapter, options = {}) {
+  if (options.passwordReset) return options.passwordReset;
+  const kv = resolveKv(env);
+  if (!kv || !adapter) return null;
+  return createPasswordResetService({
+    kv,
+    findEligibleUser: async (email) => adapter.findUserByEmail(email),
+    hashPassword,
+    updatePassword: async (userId, hashHex, saltHex) => {
+      await adapter.updateUserPassword(userId, hashHex, saltHex);
+    },
+    sendResetEmail: async ({ email, name, code }) => {
+      // Brand and credential follow the portal the user is on (company.meta.hosts),
+      // falling back to the default company — same resolution as GET /api/company.
+      const company = (options.requestHost && typeof adapter.getCompanyByHost === 'function'
+        ? await adapter.getCompanyByHost(options.requestHost).catch(() => null)
+        : null) || await adapter.getDefaultCompany().catch(() => null);
+      const apiKey = await resolveTransactionalEmailKey(env, company, options);
+      if (!apiKey) {
+        const err = new Error('email_not_configured');
+        err.code = 'email_not_configured';
+        throw err;
+      }
+      const brand = company?.name || 'Your App';
+      const fromEmail = company?.supportEmail;
+      if (!fromEmail) {
+        const err = new Error('email_not_configured');
+        err.code = 'email_not_configured';
+        throw err;
+      }
+      const html = `<p>Hi ${escapeHtml(name)},</p><p>Your ${escapeHtml(brand)} verification code is:</p><p style="font-size:22px;font-weight:700;letter-spacing:4px;">${escapeHtml(code)}</p><p>Enter this on the reset page. Expires in 15 minutes.</p>`;
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          from: `${brand} <${fromEmail}>`,
+          to: [email],
+          subject: 'Your password reset code',
+          html,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`resend_failed:${res.status}:${text.slice(0, 120)}`);
+      }
+    },
+  });
+}
+
+
+/**
+ * Transactional email credential. The host injects `resolveCredential` (vault-backed,
+ * e.g. @inneranimalmedia/agentsam-vault createCredentialResolver) and the company row
+ * names WHICH account's vault holds the key via meta.credentials.transactional_email.
+ * The env var remains a last-resort compatibility lane, never the product path.
+ */
+async function resolveTransactionalEmailKey(env, company, options) {
+  const ref = company?.meta?.credentials?.transactional_email || null;
+  const provider = String(ref?.provider || 'resend').toLowerCase();
+  if (typeof options.resolveCredential === 'function') {
+    const resolved = await options.resolveCredential({
+      provider,
+      capability: 'email.transactional',
+      accountId: ref?.vault_account_id || null,
+      company,
+    }).catch((err) => {
+      console.error('[identity] credential_resolve_failed', String(err?.message || err).slice(0, 160));
+      return null;
+    });
+    if (resolved?.value) return resolved.value;
+  }
+  return provider === 'resend' && env?.RESEND_API_KEY ? env.RESEND_API_KEY : null;
+}
+
+function accountError(err) {
+  if (err instanceof AccountCapabilityError || err?.name === 'AccountCapabilityError') {
+    return jsonResponse({ ok: false, error: err.code }, 501);
+  }
+  throw err;
+}
+
+function hasLocalPassword(user) {
+  return Boolean(user?.password_hash && user?.salt && user.password_hash !== 'oauth');
+}
+
+/**
+ * Worker fetch handler for identity API + auth page routing.
+ * @param {Request} request
+ * @param {{ DB: import('../adapters/cloudflare-d1/index.js').D1Database, ASSETS?: { fetch: (req: Request) => Promise<Response> }, [key: string]: unknown }} env
+ * @param {{ identity?: ReturnType<typeof createIdentityService>, brandName?: string, companySlug?: string }} [options]
+ *   companySlug — host-app portal branding key into D1 `company.slug` (never product-hardcoded here).
+ */
+export async function handleIdentityWorkerRequest(request, env, options = {}) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const method = request.method.toUpperCase();
+
+  const adapter = resolveIdentityAdapter(env, options);
+  if (!options.identity && (!options.app?.id || !options.routeRegistry)) {
+    throw new IdentityRoutingError(
+      'AUTH_APP_UNRESOLVED',
+      'handleIdentityWorkerRequest requires options.app + options.routeRegistry',
+    );
+  }
+  const identity = options.identity || createIdentityService({
+    adapter,
+    app: options.app,
+    routeRegistry: options.routeRegistry,
+  });
+  const loginPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN);
+  const signupPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.SIGNUP)
+    || loginPath();
+  const resetPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.RESET)
+    || loginPath();
+  const passwordReset = buildPasswordResetService(env, adapter, { ...options, requestHost: url.hostname });
+
+  // ── API: email auth ─────────────────────────────────────────────────────
+  if (path === '/api/auth/login' && method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const result = await identity.loginWithPassword({
+      email: body.email,
+      password: body.password,
+    });
+    if (!result.ok) {
+      await adapter.logAuthEvent({
+        eventType: 'login', status: 'failed', provider: 'email', request,
+      });
+      return jsonResponse({ ok: false, error: result.error }, 401);
+    }
+    await adapter.logAuthEvent({
+      userId: result.user.id, eventType: 'login', status: 'ok', provider: 'email', request,
+    });
+    if (identity.isNativeSessionRequest(request)) {
+      return identity.buildNativeLoginSuccessResponse(result, body.next);
+    }
+    return identity.buildLoginSuccessResponse(request, result.sessionId, body.next);
+  }
+
+  if (path === '/api/auth/signup' && method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const result = await identity.signup({
+      email: body.email,
+      password: body.password,
+      displayName: body.name || body.displayName,
+    });
+    if (!result.ok) {
+      await adapter.logAuthEvent({
+        eventType: 'signup', status: 'failed', provider: 'email', request,
+      });
+      return jsonResponse({ ok: false, error: result.error }, 400);
+    }
+    await adapter.logAuthEvent({
+      userId: result.user.id, eventType: 'signup', status: 'ok', provider: 'email', request,
+    });
+    if (identity.isNativeSessionRequest(request)) {
+      return identity.buildNativeLoginSuccessResponse(result, body.next);
+    }
+    return identity.buildLoginSuccessResponse(request, result.sessionId, body.next);
+  }
+
+  if (path === '/api/auth/logout' && method === 'POST') {
+    const sessionCtx = await identity.sessionFromRequest(request).catch(() => null);
+    await identity.logout(request);
+    await adapter.logAuthEvent({
+      userId: sessionCtx?.user?.id, eventType: 'logout', status: 'ok', request,
+    });
+    return identity.buildLogoutResponse(request);
+  }
+
+  if (path === '/api/auth/me' && method === 'GET') {
+    const ctx = await identity.sessionFromRequest(request);
+    if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
+    return jsonResponse({
+      ok: true,
+      authenticated: true,
+      user: {
+        id: ctx.user.id,
+        email: ctx.user.email,
+        displayName: ctx.user.display_name,
+        hasPassword: Boolean(
+          ctx.user.password_hash
+          && ctx.user.salt
+          && ctx.user.password_hash !== 'oauth'
+        ),
+      },
+    });
+  }
+
+  if (path === '/api/auth/password' && method === 'POST') {
+    const ctx = await identity.sessionFromRequest(request);
+    if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
+
+    const body = await request.json().catch(() => ({}));
+    const password = String(body.password ?? body.new_password ?? body.newPassword ?? '');
+    const confirmPassword = String(
+      body.confirm_password
+      ?? body.confirmPassword
+      ?? body.confirm
+      ?? password
+    );
+
+    if (!password) {
+      return jsonResponse({ ok: false, error: 'password_required' }, 400);
+    }
+    if (password !== confirmPassword) {
+      return jsonResponse({ ok: false, error: 'passwords_do_not_match' }, 400);
+    }
+    if (password.length < 8) {
+      return jsonResponse({ ok: false, error: 'password_too_short' }, 400);
+    }
+
+    const hasPassword = Boolean(
+      ctx.user.password_hash
+      && ctx.user.salt
+      && ctx.user.password_hash !== 'oauth'
+    );
+    if (hasPassword) {
+      const currentPassword = String(body.current_password ?? body.currentPassword ?? '');
+      if (!currentPassword) {
+        return jsonResponse({ ok: false, error: 'current_password_required' }, 400);
+      }
+      const currentValid = await verifyPassword(
+        currentPassword,
+        ctx.user.salt,
+        ctx.user.password_hash,
+      );
+      if (!currentValid) {
+        return jsonResponse({ ok: false, error: 'current_password_invalid' }, 403);
+      }
+    }
+
+    const { saltHex, hashHex } = await hashPassword(password);
+    await adapter.updateUserPassword(ctx.user.id, hashHex, saltHex);
+    if (typeof adapter.logAuthEvent === 'function') {
+      await adapter.logAuthEvent({
+        userId: ctx.user.id,
+        eventType: hasPassword ? 'password_change' : 'password_enroll',
+        status: 'ok',
+        provider: 'email',
+        request,
+      });
+    }
+    return jsonResponse({ ok: true, hasPassword: true });
+  }
+
+  if (path === '/api/company' && method === 'GET') {
+    // Portable: ?slug= → options.companySlug → env override → host match in company.meta.hosts → default
+    const slug = String(
+      url.searchParams.get('slug')
+        || options.companySlug
+        || env.IDENTITY_COMPANY_SLUG
+        || '',
+    ).trim() || undefined;
+    let company = null;
+    if (slug) {
+      company = await adapter.getCompanyBySlug(slug);
+    }
+    if (!company && typeof adapter.getCompanyByHost === 'function') {
+      company = await adapter.getCompanyByHost(url.hostname || request.headers.get('host'));
+    }
+    if (!company) company = await adapter.getDefaultCompany();
+    if (!company) return jsonResponse({ ok: false, error: 'company_not_found' }, 404);
+    return jsonResponse({ ok: true, company });
+  }
+
+  if (path === '/api/company' && method === 'PATCH') {
+    const ctx = await identity.sessionFromRequest(request);
+    if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
+    // Company branding is installation-wide: only its owner may change it.
+    const canManage = typeof options.authorizeCompanyWrite === 'function'
+      ? await options.authorizeCompanyWrite(ctx)
+      : typeof adapter.canManageCompany === 'function'
+        ? await adapter.canManageCompany(ctx.user.id)
+        : false;
+    if (!canManage) return jsonResponse({ ok: false, error: 'company_write_forbidden' }, 403);
+    const body = await request.json().catch(() => ({}));
+    const company = await adapter.upsertCompany({
+      name: body.name,
+      legalName: body.legalName,
+      logoUrl: body.logoUrl,
+      faviconUrl: body.faviconUrl,
+      primaryColor: body.primaryColor,
+      authBgColor: body.authBgColor,
+      supportEmail: body.supportEmail,
+      websiteUrl: body.websiteUrl,
+      tagline: body.tagline,
+      meta: body.meta,
+    });
+    return jsonResponse({ ok: true, company });
+  }
+
+  if (path === '/api/auth/backup-code' && method === 'POST') {
+    if (typeof adapter.consumeBackupCode !== 'function') {
+      return jsonResponse({ ok: false, error: 'backup_code_not_supported' }, 501);
+    }
+    const body = await request.json().catch(() => ({}));
+    const email = String(body.email || '').trim().toLowerCase();
+    const code = String(body.code || '');
+    if (!email || !code.trim()) {
+      return jsonResponse({ ok: false, error: 'email_and_code_required' }, 400);
+    }
+    try {
+      const user = await adapter.findUserByEmail(email);
+      const consumed = user && String(user.status || 'active') === 'active'
+        ? await adapter.consumeBackupCode(user.id, await backupCodeCandidateHashes(code))
+        : false;
+      if (!consumed) {
+        await adapter.logAuthEvent?.({
+          userId: user?.id, eventType: 'login', status: 'failed', provider: 'backup_code', request,
+        });
+        return jsonResponse({ ok: false, error: 'invalid_backup_code' }, 401);
+      }
+      const session = await adapter.createSession({
+        userId: user.id,
+        email: user.email,
+        displayName: user.display_name,
+        provider: 'backup_code',
+        type: identity.isNativeSessionRequest?.(request) ? 'desktop' : undefined,
+      });
+      await adapter.logAuthEvent?.({
+        userId: user.id, eventType: 'login', status: 'ok', provider: 'backup_code', request,
+      });
+      const result = { ok: true, user, session, sessionId: session.id };
+      if (identity.isNativeSessionRequest?.(request)) {
+        return identity.buildNativeLoginSuccessResponse(result, body.next);
+      }
+      return identity.buildLoginSuccessResponse(request, session.id, body.next);
+    } catch (err) {
+      return accountError(err);
+    }
+  }
+
+  // ── API: self-service account (profile, sessions, backup codes) ─────────
+  if (path === '/api/account' || path.startsWith('/api/account/')) {
+    const ctx = await identity.sessionFromRequest(request);
+    if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
+    if (!adapter.accountSecurity) {
+      return jsonResponse({ ok: false, error: 'account_api_not_supported' }, 501);
+    }
+    const userId = ctx.user.id;
+    const currentSessionId = ctx.sessionId || ctx.session?.id || null;
+    try {
+      if (path === '/api/account' && method === 'GET') {
+        const [profile, backupCodes, sessions] = await Promise.all([
+          adapter.getAccountProfile(userId),
+          adapter.getBackupCodeStatus(userId),
+          adapter.listUserSessions(userId),
+        ]);
+        return jsonResponse({
+          ok: true,
+          account: {
+            profile,
+            security: {
+              hasPassword: hasLocalPassword(ctx.user),
+              backupCodes,
+              activeSessions: sessions.length,
+            },
+            capabilities: {
+              canManageCompany: await adapter.canManageCompany(userId),
+              passwordReset: Boolean(passwordReset),
+            },
+          },
+        });
+      }
+
+      if (path === '/api/account/profile' && method === 'PATCH') {
+        const body = await request.json().catch(() => ({}));
+        const checked = validateProfilePatch(body);
+        if (!checked.ok) return jsonResponse({ ok: false, error: checked.error, field: checked.field }, 400);
+        const profile = await adapter.updateAccountProfile(userId, checked.patch);
+        await adapter.logAuthEvent?.({ userId, eventType: 'profile_update', status: 'ok', request });
+        return jsonResponse({ ok: true, profile });
+      }
+
+      if (path === '/api/account/sessions' && method === 'GET') {
+        const rows = await adapter.listUserSessions(userId);
+        return jsonResponse({ ok: true, sessions: rows.map((row) => publicSession(row, currentSessionId)) });
+      }
+
+      if (path === '/api/account/sessions/revoke-others' && method === 'POST') {
+        if (!currentSessionId) return jsonResponse({ ok: false, error: 'current_session_unknown' }, 400);
+        const result = await adapter.revokeOtherUserSessions(userId, currentSessionId);
+        await adapter.logAuthEvent?.({ userId, eventType: 'session_revoke_others', status: 'ok', request });
+        return jsonResponse({ ok: true, revoked: result.revoked });
+      }
+
+      const sessionMatch = path.match(/^\/api\/account\/sessions\/([^/]+)$/);
+      if (sessionMatch && method === 'DELETE') {
+        const sessionId = decodeURIComponent(sessionMatch[1]);
+        if (sessionId === currentSessionId) {
+          return jsonResponse({ ok: false, error: 'use_logout_for_current_session' }, 400);
+        }
+        const result = await adapter.revokeUserSession(userId, sessionId);
+        if (!result.ok) return jsonResponse({ ok: false, error: 'session_not_found' }, 404);
+        await adapter.logAuthEvent?.({ userId, eventType: 'session_revoke', status: 'ok', request });
+        return jsonResponse({ ok: true });
+      }
+
+      if (path === '/api/account/backup-codes' && method === 'GET') {
+        return jsonResponse({ ok: true, backupCodes: await adapter.getBackupCodeStatus(userId) });
+      }
+
+      if (path === '/api/account/backup-codes' && method === 'POST') {
+        const body = await request.json().catch(() => ({}));
+        // Regenerating invalidates every prior code; require proof of the password
+        // when the account has one (a stolen session alone must not mint recovery).
+        if (hasLocalPassword(ctx.user)) {
+          const current = String(body.current_password ?? body.currentPassword ?? '');
+          if (!current) return jsonResponse({ ok: false, error: 'current_password_required' }, 400);
+          const valid = await verifyPassword(current, ctx.user.salt, ctx.user.password_hash);
+          if (!valid) return jsonResponse({ ok: false, error: 'current_password_invalid' }, 403);
+        }
+        const codes = generateBackupCodes(BACKUP_CODE_COUNT);
+        const hashes = await Promise.all(codes.map(hashBackupCode));
+        const status = await adapter.replaceBackupCodes(userId, hashes);
+        await adapter.logAuthEvent?.({ userId, eventType: 'backup_codes_generated', status: 'ok', request });
+        return jsonResponse({ ok: true, codes, backupCodes: status });
+      }
+
+      return jsonResponse({ ok: false, error: 'not_found' }, 404);
+    } catch (err) {
+      return accountError(err);
+    }
+  }
+
+  if (path === '/api/auth/password-reset/request' && method === 'POST') {
+    if (!passwordReset) {
+      return jsonResponse({ error: 'Service unavailable' }, 503);
+    }
+    const body = await request.json().catch(() => ({}));
+    try {
+      const result = await passwordReset.requestReset({ email: body.email });
+      return jsonResponse(result);
+    } catch (e) {
+      if (e?.code === 'email_not_configured' || e?.message === 'email_not_configured') {
+        return jsonResponse({ error: 'Email not configured' }, 503);
+      }
+      console.error('[password-reset/request]', e?.message ?? e);
+      return jsonResponse({ error: 'Service unavailable' }, 503);
+    }
+  }
+
+  if (path === '/api/auth/password-reset/confirm' && method === 'POST') {
+    if (!passwordReset) {
+      return jsonResponse({ error: 'Service unavailable' }, 503);
+    }
+    const body = await request.json().catch(() => ({}));
+    const result = await passwordReset.confirmReset({
+      email: body.email,
+      code: body.code,
+      password: body.password,
+      confirmPassword: body.confirm_password ?? body.confirmPassword ?? body.confirm,
+    });
+    if (!result.ok) {
+      return jsonResponse({ error: result.error }, result.status || 400);
+    }
+    return jsonResponse({ ok: true, redirect: `${loginPath()}?reset=success` });
+  }
+
+  // ── OAuth ────────────────────────────────────────────────────────────────
+  // Default: IAM_CLIENT_* (minted). Developer BYOK GOOGLE_*/GITHUB_*/CLOUDFLARE_*
+  // take the matching /api/oauth/{provider}/start button when set.
+  // Desktop PKCE: GOOGLE_DESKTOP_CLIENT_ID → POST /api/oauth/google/desktop-exchange.
+  // Canonical platform id = inneranimalmedia (legacy /api/oauth/iam/* still accepted).
+  if (path === '/api/oauth/google/desktop-exchange') {
+    return handleGoogleDesktopExchangeRequest(request, env);
+  }
+  if (path === GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH) {
+    return handleGoogleDesktopLoginExchangeRequest(request, env, { adapter, identity });
+  }
+  if (path === NATIVE_EXCHANGE_PATH) {
+    return handleNativeExchangeRequest(request, { adapter, identity });
+  }
+  if (path === '/api/oauth/inneranimalmedia/callback' || path === '/api/oauth/iam/callback') {
+    if (method === 'GET') {
+      return iamPlatformOAuthCallback(request, env, adapter, identity);
+    }
+  }
+  if (path === '/api/oauth/inneranimalmedia/start' || path === '/api/oauth/iam/start') {
+    if (method === 'GET') {
+      const lane = resolveOAuthCredentialLane(env, 'inneranimalmedia');
+      if (!lane) return jsonResponse({ ok: false, error: 'inneranimalmedia_oauth_not_configured' }, 503);
+      return iamPlatformOAuthStart(request, env, adapter, identity);
+    }
+  }
+
+  if (path === '/api/oauth/google/start' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'google');
+    if (!lane) return jsonResponse({ ok: false, error: 'google_oauth_not_configured' }, 503);
+    if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter, identity);
+    return oauthStart(request, env, identity, adapter, 'google', lane);
+  }
+  if (path === '/api/oauth/github/start' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'github');
+    if (!lane) return jsonResponse({ ok: false, error: 'github_oauth_not_configured' }, 503);
+    if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter, identity);
+    return oauthStart(request, env, identity, adapter, 'github', lane);
+  }
+  if (path === '/api/oauth/cloudflare/start' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'cloudflare');
+    if (!lane) return jsonResponse({ ok: false, error: 'cloudflare_oauth_not_configured' }, 503);
+    return oauthStart(request, env, identity, adapter, 'cloudflare', lane);
+  }
+
+  if (path === '/api/oauth/google/callback' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'google');
+    if (!lane) {
+      return Response.redirect(`${url.origin}${loginPath()}?error=oauth_not_configured`, 302);
+    }
+    if (lane.lane === 'iam_platform') {
+      return iamPlatformOAuthCallback(request, env, adapter, identity);
+    }
+    return oauthCallback(request, env, identity, adapter, 'google', lane);
+  }
+  if (path === '/api/oauth/github/callback' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'github');
+    if (!lane) {
+      return Response.redirect(`${url.origin}${loginPath()}?error=oauth_not_configured`, 302);
+    }
+    if (lane.lane === 'iam_platform') {
+      return iamPlatformOAuthCallback(request, env, adapter, identity);
+    }
+    return oauthCallback(request, env, identity, adapter, 'github', lane);
+  }
+  if (path === '/api/oauth/cloudflare/callback' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'cloudflare');
+    if (!lane) {
+      return Response.redirect(`${url.origin}${loginPath()}?error=oauth_not_configured`, 302);
+    }
+    return oauthCallback(request, env, identity, adapter, 'cloudflare', lane);
+  }
+
+  // Auth HTML shells — identity pages only (Worker ASSETS binding, not R2).
+  const authPages = new Set([
+    loginPath(),
+    signupPath(),
+    resetPath(),
+  ]);
+
+  if (method === 'GET' && authPages.has(path)) {
+    if (env.ASSETS?.fetch) {
+      const assetUrl = new URL(path, url.origin);
+      return env.ASSETS.fetch(new Request(assetUrl, request));
+    }
+    return jsonResponse({ error: 'assets_binding_required', path }, 500);
+  }
+
+  // Product SPA mounts (/agentsam, /admin, /cad, …) are owned by the host app
+  // registry — identity does not invent or gate those routes here.
+
+  if (env.ASSETS?.fetch) {
+    return env.ASSETS.fetch(request);
+  }
+
+  return jsonResponse({ error: 'not_found', path }, 404);
+}
+
+async function oauthStart(request, env, identity, adapter, provider, creds) {
+  const url = new URL(request.url);
+  if (!creds.clientId) {
+    return jsonResponse({ ok: false, error: `${provider}_oauth_not_configured` }, 503);
+  }
+  try {
+    const state = randomOAuthState();
+    const codeVerifier = pkceVerifier();
+    const codeChallenge = await pkceChallenge(codeVerifier);
+    const redirectTo = identity.resolvePostLoginPath(
+      url.searchParams.get('next') || url.searchParams.get('return_to'),
+    );
+    const nativeStart = parseNativeStart(url, env);
+    if (nativeStart.error) {
+      return jsonResponse({ ok: false, error: nativeStart.error }, 400);
+    }
+    await adapter.saveOAuthState({
+      state,
+      provider,
+      codeVerifier,
+      redirectTo,
+      appId: identity.app?.id || null,
+      ...(nativeStart.native
+        ? {
+            clientType: nativeStart.clientType,
+            nativeChallenge: nativeStart.nativeChallenge,
+            nativeRedirect: nativeStart.nativeRedirect,
+          }
+        : {}),
+    });
+
+    const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
+    let authUrl;
+    if (provider === 'google') {
+      authUrl = getGoogleAuthUrl({
+        clientId: creds.clientId,
+        redirectUri,
+        state,
+        codeChallenge,
+      });
+    } else if (provider === 'cloudflare') {
+      authUrl = getCloudflareAuthUrl({
+        clientId: creds.clientId,
+        redirectUri,
+        state,
+        codeChallenge,
+      });
+    } else {
+      authUrl = getGithubAuthUrl({
+        clientId: creds.clientId,
+        redirectUri,
+        state,
+        codeChallenge,
+      });
+    }
+    return Response.redirect(authUrl, 302);
+  } catch (error) {
+    const message = String(error?.message || error || 'oauth_start_failed');
+    console.error('oauth_start_failed', provider, message);
+    // Prefer redirect to login with error over bare Worker 1101 for browsers.
+    const lp = identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN);
+    const login = new URL(lp, url.origin);
+    login.searchParams.set('error', 'oauth_start_failed');
+    login.searchParams.set('provider', provider);
+    login.searchParams.set('detail', message.slice(0, 120));
+    const next = url.searchParams.get('next') || url.searchParams.get('return_to');
+    if (next) login.searchParams.set('next', next);
+    return Response.redirect(login.toString(), 302);
+  }
+}
+
+async function oauthCallback(request, env, identity, adapter, provider, creds) {
+  const url = new URL(request.url);
+  const login = resolveLoginPath(identity);
+  try {
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+    const err = url.searchParams.get('error');
+    if (err || !code || !state) {
+      await adapter.logAuthEvent({ eventType: 'login', status: 'failed', provider, request, metadata: { reason: 'oauth_failed' } });
+      return Response.redirect(`${url.origin}${login}?error=oauth_failed`, 302);
+    }
+    const saved = await adapter.consumeOAuthState(state);
+    if (!saved || saved.provider !== provider) {
+      await adapter.logAuthEvent({ eventType: 'login', status: 'failed', provider, request, metadata: { reason: 'state_mismatch' } });
+      return Response.redirect(`${url.origin}${login}?error=state_mismatch`, 302);
+    }
+    const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
+    let token;
+    let profile;
+    if (provider === 'google') {
+      token = await exchangeGoogleCode({
+        code,
+        codeVerifier: saved.code_verifier,
+        clientId: creds.clientId,
+        clientSecret: creds.clientSecret,
+        redirectUri,
+      });
+      if (!token?.access_token) {
+        return Response.redirect(`${url.origin}${login}?error=token_exchange_failed`, 302);
+      }
+      profile = await fetchGoogleProfile(token.access_token);
+    } else if (provider === 'cloudflare') {
+      token = await exchangeCloudflareCode({
+        code,
+        codeVerifier: saved.code_verifier,
+        clientId: creds.clientId,
+        clientSecret: creds.clientSecret,
+        redirectUri,
+      });
+      if (!token?.access_token) {
+        return Response.redirect(`${url.origin}${login}?error=token_exchange_failed`, 302);
+      }
+      profile = await fetchCloudflareProfile(token.access_token);
+    } else {
+      token = await exchangeGithubCode({
+        code,
+        codeVerifier: saved.code_verifier,
+        clientId: creds.clientId,
+        clientSecret: creds.clientSecret,
+        redirectUri,
+      });
+      if (!token?.access_token) {
+        return Response.redirect(`${url.origin}${login}?error=token_exchange_failed`, 302);
+      }
+      profile = await fetchGithubProfile(token.access_token);
+    }
+    if (!profile) {
+      return Response.redirect(`${url.origin}${login}?error=userinfo_failed`, 302);
+    }
+
+    let normalized;
+    if (provider === 'google') {
+      normalized = { subject: profile.sub, email: profile.email, name: profile.name };
+    } else if (provider === 'cloudflare') {
+      const subject = profile.sub || profile.email;
+      if (!subject) {
+        return Response.redirect(`${url.origin}${login}?error=userinfo_incomplete`, 302);
+      }
+      normalized = { subject: String(subject), email: profile.email, name: profile.name || profile.email };
+    } else {
+      normalized = { subject: String(profile.id), email: profile.email, name: profile.name || profile.login };
+    }
+
+    const result = await identity.provisionOAuthUser({
+      provider,
+      providerSubject: normalized.subject,
+      email: normalized.email,
+      displayName: normalized.name,
+      sessionType: sessionTypeForTransaction(saved),
+    });
+    await adapter.logAuthEvent({
+      userId: result.authUserId, eventType: 'login', status: 'ok', provider, request,
+      metadata: { session_type: sessionTypeForTransaction(saved) },
+    });
+
+    return finishOAuthLogin({ request, env, identity, adapter, saved, result, loginPath: login });
+  } catch (error) {
+    const message = String(error?.message || error || 'oauth_callback_failed');
+    console.error('oauth_callback_failed', provider, message);
+    const loginUrl = new URL(login, url.origin);
+    loginUrl.searchParams.set('error', 'oauth_callback_failed');
+    loginUrl.searchParams.set('provider', provider);
+    loginUrl.searchParams.set('detail', message.slice(0, 120));
+    return Response.redirect(loginUrl.toString(), 302);
+  }
+}
+
+export { createIdentityService, createCloudflareD1Adapter, createIamCompatIdentityAdapter, createPortableD1IdentityAdapter };

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#191919">
+  <title>Create a store</title>
+  <meta name="description" content="Create and manage your own website and online store.">
+  <link rel="stylesheet" href="./store-start.css">
+  <script src="./store-start.js" defer></script>
+</head>
+<body>
+  <div class="merchant-start">
+    <aside class="start-story" aria-label="Introduction">
+      <header class="story-header"><a href="./" class="brand" id="merchant-brand">Store Builder<span class="brand-mark">/</span></a><span class="eyebrow">WEBSITE & COMMERCE</span></header>
+      <div class="story-main">
+        <span class="story-index">01 / THE BEGINNING</span>
+        <h1>A store that<br>belongs to <em>you.</em></h1>
+        <p>Create your website, customize its design, manage your products, and publish—all in one merchant workspace.</p>
+        <div class="story-steps" aria-label="Setup stages">
+          <div><span class="number">01</span><span>Account & identity</span><span class="line"></span></div>
+          <div><span class="number">02</span><span>Your store</span><span class="line"></span></div>
+          <div><span class="number">03</span><span>Website & launch</span><span class="line"></span></div>
+        </div>
+      </div>
+      <footer class="story-footer"><span>YOUR WEBSITE. YOUR DOMAIN. YOUR BUSINESS.</span><span>© <span id="merchant-copyright">Store Builder</span></span></footer>
+    </aside>
+    <main class="start-main" id="start-main">
+      <div class="start-top"><span class="context">Merchant setup</span><span class="quiet-link" id="merchant-identity-label">Store setup</span></div>
+      <div class="start-content">
+        <section id="start-loading" class="start-panel" aria-live="polite">
+          <span class="small-label">SETTING UP YOUR WORKSPACE</span>
+          <h2>Checking your session…</h2>
+          <p>We’ll open the correct store setup for your account.</p>
+          <span class="loading-line" aria-hidden="true"></span>
+        </section>
+        <section id="start-guest" class="start-panel" hidden>
+          <span class="small-label">WELCOME TO YOUR STOREFRONT</span>
+          <h2>Start building<br>your own store.</h2>
+          <p>Create an account to begin, or sign in to create a website in your own account. Your website stays connected to your account.</p>
+          <div class="entry-actions"><a class="primary-action" id="start-signup" href="#start-signup">Create an account <span aria-hidden="true">↗</span></a><a class="secondary-action" id="start-login" href="#start-login">Sign in <span aria-hidden="true">→</span></a></div>
+          <p class="caption">An account is required to create or edit websites. No credit card is required at this step.</p>
+        </section>
+        <section id="start-workspace" class="start-panel" hidden>
+          <span class="small-label">STEP 02 / YOUR WEBSITE</span>
+          <h2>Let's create<br>your store.</h2>
+          <p>Give your store a name. We'll create its CMS workspace with ownership linked to your signed-in account.</p>
+          <form id="start-create" class="create-form">
+            <label for="start-name">Store name</label>
+            <input id="start-name" name="name" type="text" maxlength="120" minlength="2" required autocomplete="organization" placeholder="e.g., Bayou Supply Co.">
+            <label for="start-slug">Store identifier</label>
+            <div class="slug-field"><span aria-hidden="true">/</span><input id="start-slug" name="slug" type="text" maxlength="80" required pattern="[a-z0-9]+(-[a-z0-9]+)*" spellcheck="false" autocapitalize="none" placeholder="bayou-supply-co"></div>
+            <p class="input-help">Internal identifier for your store. You'll configure a public domain separately.</p>
+            <button type="submit" id="start-submit" class="primary-action">Create store <span aria-hidden="true">→</span></button>
+          </form>
+        </section>
+        <section id="start-ready" class="start-panel" hidden>
+          <span class="small-label">YOUR STORE IS READY</span>
+          <h2 id="start-ready-title">Your store is created.</h2>
+          <p id="start-ready-copy">Your website belongs to your account. Continue into the CMS to customize it.</p>
+          <div class="ready-details"><div><span>Store</span><strong id="start-ready-name"></strong></div><div><span>Domain</span><strong id="start-ready-domain">Not connected yet</strong></div></div>
+          <div class="entry-actions"><a id="start-open-store" class="primary-action" href="#start-open-store">Open your store <span aria-hidden="true">→</span></a><a id="start-open-pages" class="secondary-action" href="#start-open-pages">Edit pages <span aria-hidden="true">↗</span></a></div>
+          <div class="next-actions"><a id="start-open-themes" href="#start-open-store">Choose your storefront theme <span aria-hidden="true">→</span></a><button id="start-another" type="button">Create another store <span aria-hidden="true">+</span></button></div>
+          <p class="caption">Your store identity is created. Public domain activation and website publication are separate setup steps; no hostname is marked verified automatically.</p>
+        </section>
+        <div id="start-error" class="start-error" role="alert" hidden></div>
+      </div>
+      <footer class="start-bottom"><span id="merchant-footer-brand">Store Builder</span><span>Merchant setup</span></footer>
+    </main>
+  </div>
+</body>
+</html>
