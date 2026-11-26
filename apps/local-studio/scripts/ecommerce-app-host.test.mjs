@@ -111,7 +111,7 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&site_id=site-b'),null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&unexpected=1'),null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=0&site_id=site-a'), null);
-  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1'), '/admin/theme-project-editor?new=1', 'Account-owned theme authoring is supported without a site');
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1&project=other&site_id=site-a'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1&new=1&site_id=site-a'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?project=theme_heuristic&site_id=site-a&previewMode=unknown'), null);

@@ -410,13 +410,13 @@ export function OnlineStorePage({ siteId,view='overview' }: { siteId?: string;vi
     </div>;
   }
   const siteName = data.selected_site_name || selected?.name || selected?.title || 'Your website';
-  const live = publicPreviewUrl(data.site_preview?.url || data.store?.url);
+  const live = publicPreviewUrl(data.site_preview?.url || (data.store?.visibility==='public'||data.store?.visibility==='password'?data.store?.url:null));
   const activeTheme = data.active_theme || null;
   const isProtected=protectionOverride?.siteId===selectedId?protectionOverride.protected:data.store?.visibility==='password';
   const prefs='/admin/preferences?site_id='+encodeURIComponent(selectedId)+'#section-access';
   const pages='/admin/pages?site_id='+encodeURIComponent(selectedId);
   const themesView=view==='themes';
-  const activeEdit = editorTarget(data.site_preview?.edit_href || activeTheme?.edit_href, selectedId);
+  const activeEdit = editorTarget(activeTheme?.edit_href || data.site_preview?.edit_href, selectedId);
   const createTheme = editorTarget(data.new_theme_url, selectedId);
   const activeSaved = formatSaved(activeTheme?.last_saved || activeTheme?.updated_at || activeTheme?.created_at);
   const drafts = (data.draft_themes || []).filter(draft => draft.id !== activeTheme?.id);

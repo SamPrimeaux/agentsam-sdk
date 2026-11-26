@@ -384,6 +384,13 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       if (window.location.hash !== nextHash) window.location.hash = nextHash;
       return;
     }
+    // Store management is a native route; search state must survive the
+    // menu/Manage all themes transition rather than become part of pathname.
+    if(pathOnly==='/admin/store'){
+      const search=Object.fromEntries(new URLSearchParams(query));
+      void navigate({to:'/admin/store',search} as never);
+      return;
+    }
     void navigate({ to } as never);
   };
   const flushChromeShares = () => {
