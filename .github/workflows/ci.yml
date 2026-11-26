@@ -442,6 +442,11 @@ jobs:
         run: |
           mkdir -p node_modules/@inneranimalmedia
           ln -sfn "$GITHUB_WORKSPACE" node_modules/@inneranimalmedia/agentsam-sdk
+      - name: Reuse root dependencies for Ecommerce monorepo build
+        run: |
+          rm -rf apps/ecommerce-cms-agentsam/node_modules apps/ecommerce-cms-agentsam/frontend/node_modules
+          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/node_modules
+          ln -s "$GITHUB_WORKSPACE/node_modules" apps/ecommerce-cms-agentsam/frontend/node_modules
       - name: Verify hosted CMS account isolation and degraded status
         run: |
           node --test \
