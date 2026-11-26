@@ -52,7 +52,7 @@ import {
   setPrimaryProductImage,
 } from "./media.js";
 import { planProductAssetOptimization } from "../assets/product-optimize.js";
-import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "../../packages/agentsam-merch/src/product-spine.js";
+import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "@inneranimalmedia/agentsam-merch/product-spine";
 import { handleAdminCmsApi } from "../cms/api.js";
 import { handleCollectionApi, collectionScope, productCollectionIds, productCollectionWrites } from "../cms/collection-store.mjs";
 import { queryNewsletterSubscribers } from "../storefront/newsletter-admin.js";
@@ -316,7 +316,7 @@ export async function getProduct(request, env, id) {
     // Manual product editing still works without a connected provider table.
   }
   const memberships = await productCollectionIds(env, env.CMS_SITE_CONTEXT, id);
-  return json({ ok: true, site:{id:env.CMS_SITE_CONTEXT.id,name:env.CMS_SITE_CONTEXT.name}, product, variants, design_draft: designDraft || null,
+  return json({ ok: true, site:{id:env.CMS_SITE_CONTEXT.id,name:env.CMS_SITE_CONTEXT.name,primary_domain:env.CMS_SITE_CONTEXT.primary_domain||null}, product, variants, design_draft: designDraft || null,
     selling_selection: sellingSelection, fulfillment: fulfillment || null,
     source: resolveProductSource(product, fulfillment || (designDraft?.completeful_catalog_product_id
       ? { completeful_catalog_product_id: designDraft.completeful_catalog_product_id, sync_status: "not_connected" }
@@ -762,7 +762,10 @@ async function handleAuthenticatedAdminApi(request, env, url, executionCtx, user
       : postStorePreferences(request, scopedEnv, context);
   }
   if (path === "/api/admin/store/crawler" && method === "GET") {
-    return getStoreSearchDiscovery(env);
+    let scope;
+    try { scope = await collectionScope(env, { accountId: user.account_id, siteId: url.searchParams.get("site_id") }); }
+    catch (error) { return json({ ok: false, error: String(error.message || error) }, { status: 409 }); }
+    return getStoreSearchDiscovery({ ...env, CMS_SITE_CONTEXT: scope }, user.account_id, scope.id);
   }
 
   if (path === "/api/admin/store/theme-selection" && method === "PUT") {

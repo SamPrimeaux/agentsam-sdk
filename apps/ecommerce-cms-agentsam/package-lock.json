@@ -1,17 +1,17 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "2.6.18",
+  "version": "2.6.19",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-      "version": "2.6.18",
+      "version": "2.6.19",
       "license": "SEE LICENSE IN LICENSE.md",
       "dependencies": {
         "@inneranimalmedia/agentsam-3d-viewer": "2.6.15",
-        "@inneranimalmedia/agentsam-cms": "2.6.18",
-        "@inneranimalmedia/agentsam-merch": "2.6.18",
+        "@inneranimalmedia/agentsam-cms": "2.6.19",
+        "@inneranimalmedia/agentsam-merch": "2.6.19",
         "@inneranimalmedia/revise-theme": "0.2.0",
         "@inneranimalmedia/section-library": "0.1.0",
         "@jsquash/jpeg": "1.6.0",
@@ -19,7 +19,9 @@
         "@jsquash/resize": "2.1.1",
         "@jsquash/webp": "1.5.0",
         "ajv": "8.20.0",
-        "three": "0.187.0"
+        "three": "0.187.0",
+        "@inneranimalmedia/agentsam-vault": "2.6.19",
+        "@inneranimalmedia/agentsam-identity": "file:packages/agentsam-identity"
       },
       "bin": {
         "agentsam-ecommerce": "bin/ecommerce.mjs",
@@ -36,7 +38,7 @@
     },
     "../../packages/agentsam-cms": {
       "name": "@inneranimalmedia/agentsam-cms",
-      "version": "2.6.18",
+      "version": "2.6.19",
       "license": "FSL-1.1-MIT",
       "dependencies": {
         "@inneranimalmedia/agentsam-contracts": "2.6.18"
@@ -47,7 +49,7 @@
     },
     "../../packages/agentsam-merch": {
       "name": "@inneranimalmedia/agentsam-merch",
-      "version": "2.6.18",
+      "version": "2.6.19",
       "license": "FSL-1.1-MIT",
       "bin": {
         "agentsam-merch": "bin/agentsam-merch.mjs"
@@ -2337,6 +2339,30 @@
         "@poppinss/exception": "^1.2.2",
         "error-stack-parser-es": "^1.0.5"
       }
+    },
+    "../../packages/agentsam-vault": {
+      "name": "@inneranimalmedia/agentsam-vault",
+      "version": "2.6.19",
+      "license": "FSL-1.1-MIT",
+      "engines": {
+        "node": ">=22"
+      }
+    },
+    "packages/agentsam-identity": {
+      "name": "@inneranimalmedia/agentsam-identity",
+      "version": "2.6.19",
+      "license": "FSL-1.1-MIT",
+      "engines": {
+        "node": ">=20"
+      }
+    },
+    "node_modules/@inneranimalmedia/agentsam-vault": {
+      "resolved": "../../packages/agentsam-vault",
+      "link": true
+    },
+    "node_modules/@inneranimalmedia/agentsam-identity": {
+      "resolved": "packages/agentsam-identity",
+      "link": true
     }
   }
 }
