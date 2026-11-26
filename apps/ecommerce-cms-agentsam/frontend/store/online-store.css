@@ -678,3 +678,5 @@
  .online-store-more-sheet button{min-width:44px;min-height:44px;border:0;background:none;color:inherit;font-size:26px}
 }
 @media(min-width:901px){.online-store-mobile-head{display:none}}
+
+@media(max-width:900px){.online-store-desktop-heading{display:none!important}}

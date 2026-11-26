@@ -7,6 +7,7 @@ if (location.pathname.startsWith('/admin/')) {
 }
 renderShell("/admin/store", `
   <div class="online-store">
+    <h1 class="online-store-accessible-heading online-store-desktop-heading">Online Store</h1>
     <header class="online-store-mobile-head">
       <details class="online-store-destination">
         <summary><h1>Online Store</h1><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></summary>
@@ -410,7 +411,7 @@ function bindStoreMobileActions(overview) {
   if(!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) return;
   const query='?site_id='+encodeURIComponent(siteId);
   const scoped=(href)=>{const url=new URL(href,location.origin);url.searchParams.set('site_id',siteId);return url.pathname+url.search+url.hash;};
-  document.querySelectorAll('[data-store-route]').forEach(link=>{link.href=scoped(link.getAttribute('href'));link.hidden=false;});
+  document.querySelectorAll('[data-store-route]').forEach(link=>{link.href=scoped(link.getAttribute('href'));if(link.hasAttribute('data-requires-site'))link.hidden=false;});
   document.getElementById('store-mobile-shortcuts').hidden=false;
   const live=document.getElementById('store-open-live');
   try {
@@ -429,7 +430,7 @@ function bindStoreMobileActions(overview) {
   };
   // The overview can report protection even on a read-only host. Only expose
   // the switch after the actual site-scoped Preferences contract is available.
-  if(overview.store?.visibility==='password')notice.hidden=false;
+  notice.hidden=overview.store?.visibility!=='password';
   let settings;
   void (async()=>{
     try {
