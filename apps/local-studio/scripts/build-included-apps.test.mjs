@@ -151,6 +151,12 @@ test('production host builds regenerate and stage all included apps; scoped buil
   assert.match(scripts['build:included:all'],/node scripts\/build-included-apps\.mjs --all/);
 });
 
+test('console staging runs the complete Ecommerce build lifecycle before copying CMS assets', () => {
+  const stage = fs.readFileSync(path.join(LOCAL_STUDIO, 'scripts', 'stage-console-host.mjs'), 'utf8');
+  assert.match(stage, /execFileSync\('npm', \['run', 'build'\], \{ cwd: app, stdio: 'inherit' \}\)/);
+  assert.doesNotMatch(stage, /build:frontend|bin\/build-assets\.mjs/);
+});
+
 test('production host builds do not trigger unrelated website sync or broad theme suites',()=>{
   const scripts=JSON.parse(fs.readFileSync(path.join(LOCAL_STUDIO,'package.json'),'utf8')).scripts;
   assert.doesNotMatch(scripts.build,/sync-public-site|smoke:themes|smoke:cms-site-fidelity|smoke:creator-suite/);
