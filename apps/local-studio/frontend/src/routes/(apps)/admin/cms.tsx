@@ -14,7 +14,7 @@ function CanonicalWebsiteManagementRoute() {
   return (
     <Navigate
       to="/admin/store"
-      search={{site_id:undefined,theme_sku:undefined,theme_version:undefined,action:undefined,stock:undefined}}
+      search={{view:undefined,site_id:undefined,theme_sku:undefined,theme_version:undefined,action:undefined,stock:undefined}}
       replace
     />
   );

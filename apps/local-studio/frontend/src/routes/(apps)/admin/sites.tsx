@@ -112,6 +112,7 @@ function CanonicalSitesEntry() {
     site_id: /^[A-Za-z0-9_-]{1,160}$/.test(params.get('site_id') || '')
       ? params.get('site_id')! : undefined,
     theme_sku: undefined, theme_version: undefined, action: undefined,
+    view: undefined,
     stock: undefined,
   }} replace />;
 }
