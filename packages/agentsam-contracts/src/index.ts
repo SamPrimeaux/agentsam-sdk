@@ -3,6 +3,7 @@ export * from './events';
 export * from './run';
 export * from './tools';
 export * from './operations';
+export { assertAgentJsonSchema, AGENT_JSON_SCHEMA_DRAFT_2020_12 } from './json-schema';
 export * from './source-types-registry';
 export * from './source-types';
 export * from './authority';

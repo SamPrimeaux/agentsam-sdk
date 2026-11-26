@@ -58,5 +58,3 @@ export function isAgentSourceIdentificationResult(value: unknown): value is Agen
     && (value.notes === undefined || (Array.isArray(value.notes) && value.notes.every(item => typeof item === 'string')))
     && Object.keys(value).every(key => ['status','confidence','evidence','candidates','notes'].includes(key));
 }
-
-export type { AgentSourceFormatReference, AgentSourceKindReference, AgentSourceIdentificationResult } from './source-types';

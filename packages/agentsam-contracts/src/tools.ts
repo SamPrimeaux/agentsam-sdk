@@ -1,7 +1,8 @@
 import { AGENT_AUTHORITY_TYPES } from './authority';
 import type { AgentAuthorityRequirement } from './authority';
 import { assertAgentJsonSchema } from './json-schema';
-import type { AgentJsonSchema } from './json-schema';
+import type { AgentJsonSchema as AgentJsonSchemaType } from './json-schema';
+export type AgentJsonSchema = AgentJsonSchemaType;
 
 export const AGENT_TOOL_SIDE_EFFECT_LEVELS = [
   'none',
