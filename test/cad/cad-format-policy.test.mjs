@@ -65,3 +65,28 @@ test('profile outputs remain planned until provider receipts and validation', ()
   assert.equal(inspectCadDeliveryReadiness(attached,pkg.id).pendingValidationOutputIds.length,1);
   assert.equal(inspectCadDeliveryReadiness(attached,pkg.id).readyForArtifactDelivery,false);
 });
+
+
+test('CAD source references must resolve to canonical source-kind and format IDs', () => {
+  const project = createCadProjectV2({id:'source-identity',name:'Source identity',domain:'mechanical.part',
+    modules:{mechanical:{components:[]}}});
+  project.assets.push({
+    id:'source-file', role:'source',
+    sourceKindRef:{catalog:'agentsam.source-types.v2',id:'filesystem.file'},
+    formatRef:{catalog:'agentsam.source-types.v2',id:'model.stl',extension:'.stl'},
+    formatDetection:{status:'identified',confidence:'high',evidence:['extension']},
+  });
+  assert.deepEqual(validateCadProjectV2(project), {valid:true,errors:[]});
+  const unknownFormat = structuredClone(project);
+  unknownFormat.assets[0].formatRef.id = 'model.not-in-catalog';
+  assert.ok(validateCadProjectV2(unknownFormat).errors.includes('invalid_asset_format_ref:source-file'));
+  const unknownKind = structuredClone(project);
+  unknownKind.assets[0].sourceKindRef.id = 'filesystem.not-in-catalog';
+  assert.ok(validateCadProjectV2(unknownKind).errors.includes('invalid_asset_source_kind_ref:source-file'));
+  const unknownCandidate = structuredClone(project);
+  unknownCandidate.assets[0].formatDetection = {
+    status:'ambiguous', confidence:'low', evidence:['extension'],
+    candidates:[{catalog:'agentsam.source-types.v2',id:'format.not-in-catalog'}],
+  };
+  assert.ok(validateCadProjectV2(unknownCandidate).errors.includes('invalid_asset_format_detection:source-file'));
+});

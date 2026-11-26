@@ -4,7 +4,7 @@
 
 ## One owner
 
-- The **only canonical format-identity catalog** is `@inneranimalmedia/agentsam-contracts/source-types/catalog` (`agentsam.source-types.v2`, currently 429 records). It defines IDs, extensions, MIME types, ambiguity metadata, variants, signatures, and source families.
+- The **only canonical format-identity catalog** is the root `contracts/source-types.v2.json` (`agentsam.source-types.v2`, currently 429 records). It defines IDs, extensions, MIME types, ambiguity metadata, variants, signatures, and source families. The Contracts package subpath is a generated release copy; `protocol/contracts/source-types.v2.json` is a compatibility mirror enforced byte-for-byte by tests.
 - The **CAD application profile** is `@inneranimalmedia/agentsam-contracts/source-types/cad` (`src/cad-source-formats.ts` in the package). It consumes the catalog and classifies CAD-relevant entries as native BIM, parametric, exchange, presentation or verification. It does **not** duplicate extension definitions.
 - The SDK's existing `@inneranimalmedia/agentsam-sdk/cad` format-policy module is now a compatibility **re-export**, not a second registry. CAD Creator's backend imports the package directly, not `../../../../../src/lib/cad/...`.
 - Other consumers (SamSketch, IAMScene, Ecommerce CMS, Design Canvas, MovieMode) should use the same source-format identities when importing or exporting, while their host-specific parsers and execution engines remain independent, explicit adapters.

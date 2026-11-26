@@ -52,8 +52,9 @@ SSOT: [`docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md`](../docs/architectur
 
 - **Format identity:** `contracts/source-types.v2.json` and its schema are
   the only canonical definitions of file identity and extension evidence.
-  `@inneranimalmedia/agentsam-contracts/source-types/catalog` contains a
-  generated release copy.
+  `@inneranimalmedia/agentsam-contracts/source-types/catalog` contains the
+  generated package copy. `protocol/contracts/source-types.v2.json` is a
+  compatibility mirror tested byte-for-byte against the root authority.
 - **Operation vocabulary:** `@inneranimalmedia/agentsam-contracts/scene-format`
   defines independent import, export, live-reference and round-trip capability
   contracts, with loss reporting. It does not perform conversions.

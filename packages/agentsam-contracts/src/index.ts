@@ -3,7 +3,7 @@ export * from './events';
 export * from './run';
 export * from './tools';
 export * from './operations';
-export * from './json-schema';
+export * from './source-types-registry';
 export * from './source-types';
 export * from './authority';
 export * from './execution';

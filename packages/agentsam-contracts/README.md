@@ -36,6 +36,21 @@ An operation is a product capability with a stable identity and execution policy
 `src/tools/registry.js` is the SDK runtime registry/controller and delegates definition validation to `assertAgentToolDefinition()`. Runtime handlers, local process context, persistence, authorization decisions and product-specific semantics remain with their owning SDK runtime or package. CMS operation semantics remain in `@inneranimalmedia/agentsam-cms`; that package consumes `AgentOperationContract` rather than redefining it.
 
 
+## Run and activity wire contracts
+
+The ACP runtime's public response shapes are owned here rather than existing only as mapper return literals:
+
+- `AgentRunV1` and `run.v1.schema.json` describe the public run projection. `status` is the lifecycle view; `storageStatus` is the database's narrower persisted state.
+- `AgentRunStartV1` and `run-start.v1.schema.json` describe the queued control-plane acknowledgement. Queueing is not model execution.
+- `AgentRunReceiptV1` and `run-receipt.v1.schema.json` describe usage, timing, terminal state, suspension and last-event evidence.
+- `AgentActivityEventV1` and `activity.v1.schema.json` describe the normalized activity projection. The schema requires every property the TypeScript contract requires.
+
+`assertAgentJsonSchema()` validates embedded tool/operation schemas against Draft 2020-12 or Draft 7 meta-schemas before registration. It does not fetch remote `$ref` targets; schema-pack publication owns reference resolution.
+
+## Runtime JSON Schema validation
+
+Tool definitions and operation contracts validate embedded input/output schemas against the declared Draft 2020-12 or Draft 7 meta-schema before registration. Ajv is the package's only runtime dependency; no UI framework or host runtime is required. This checks schema structure, while resolving external `$ref` targets remains the responsibility of the schema-pack publisher.
+
 ## Universal source-format identity
 
 - Canonical catalog: `contracts/source-types.v2.json`.

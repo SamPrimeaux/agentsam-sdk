@@ -45,6 +45,7 @@ test('source browser serves only indexed source IDs, preserves bytes and allows 
   const record=files.find(x=>x.relativePath.endsWith('/'+name));
   assert.ok(record,'missing source '+name);
   assert.equal(record.formatRef?.id,expected.id);
+  assert.equal(record.sourceKindRef?.id,'filesystem.file');
   assert.equal(record.role,expected.role);
   assert.match(record.sha256,/^[a-f0-9]{64}$/);
  }
