@@ -36,16 +36,12 @@ export interface StorageDiscoveryHints {
 /** Simple, explainable scoring. No magic; callers still confirm with the user. */
 export function scoreStorageCandidate(
   c: Omit<StorageCandidate, "confidence">,
-  hints: ScoreHints = {},
+  hints: StorageDiscoveryHints = {},
 ): number {
   let score = 0;
-  const role = hints.role ?? "website_assets";
-  if (role === "website_assets" && c.binding === "WEBSITE_ASSETS") score += 100;
   if (c.binding && hints.knownBindings?.includes(c.binding)) score += 90;
   if ((hints.recordCount ?? 0) > 0) score += 70;
   if (c.publicBaseUrl) score += 50;
-  const label = `${c.binding ?? ""} ${c.bucket ?? ""}`;
-  if (ROLE_NAME_HINTS[role]?.test(label)) score += 30;
   return score;
 }
 
