@@ -10,8 +10,8 @@ This is one merchant-managed password for the whole storefront. The merchant own
 
 - The plaintext password is accepted only by the authenticated merchant preferences write.
 - cms_sites.settings_json.store stores only the Identity password hash and salt.
-- Password hashing and verification use @inneranimalmedia/agentsam-identity/core/password-crypto.
-- The storefront entry page is rendered by @inneranimalmedia/agentsam-identity/frontend/auth-portal/store-access.
+- Password hashing and verification use @inneranimalmedia/agentsam-sdk/identity/core/password-crypto.
+- The storefront entry page is rendered by @inneranimalmedia/agentsam-sdk/identity/frontend/auth-portal/store-access.
 - Successful entry receives a Secure, HttpOnly, SameSite=Lax, __Host- cookie.
 - The access grant is bound to the CMS site and current password credential; changing or removing the password invalidates earlier grants.
 - Storefront pages and public data APIs are gated server-side. Admin routes remain available.
