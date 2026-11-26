@@ -465,6 +465,15 @@ jobs:
               ln -s "$GITHUB_WORKSPACE/apps/local-studio/node_modules/@types/$package" "node_modules/@types/$package"
             fi
           done
+          # analytics-ui is built from its own workspace directory before Vite.
+          # Give its compiler the React runtime and declarations that its own
+          # package.json declares, even when the Ecommerce frontend installs
+          # its isolated nested dependency tree.
+          mkdir -p packages/analytics-ui/node_modules/@types
+          ln -sfn "$GITHUB_WORKSPACE/apps/local-studio/node_modules/react" packages/analytics-ui/node_modules/react
+          ln -sfn "$GITHUB_WORKSPACE/apps/local-studio/node_modules/@types/react" packages/analytics-ui/node_modules/@types/react
+          test -f packages/analytics-ui/node_modules/react/package.json
+          test -f packages/analytics-ui/node_modules/@types/react/index.d.ts
       - name: Assemble hosted Local Studio Worker and assets
         run: npm run build --prefix apps/local-studio
       - name: Verify hosted Worker output
