@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  listLocalStudioWidgets,
-  setLocalStudioWidgetVisible,
-} from '../frontend/src/lib/widgets/preferences.ts';
+import { listLocalStudioWidgets } from '../frontend/src/lib/widgets/preferences.ts';
 
 test('Local Studio exposes the donor concept gallery without installing concept widgets', () => {
   const widgets = listLocalStudioWidgets();
