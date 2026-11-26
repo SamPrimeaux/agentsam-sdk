@@ -9,8 +9,9 @@ import { resolveNavConfig } from "../lib/site-nav.js";
 import { resolveCmsSite } from "../cms/site-context.mjs";
 import { loadPrimaryCmsNavigation, upsertPrimaryCmsNavigation } from "../cms/navigation-menus.mjs";
 import { DEFAULT_SITE_STORE_SETTINGS as PACKAGE_STORE_DEFAULTS } from "../cms/site-settings-contract.mjs";
-import { hashPassword, verifyPassword } from "../lib/auth.js";
+import { hashPassword, verifyPassword } from "@inneranimalmedia/agentsam-identity/core/password-crypto";
 import { listStoreThemes } from "./themes.js";
+import { normalizeSiteSeo } from "../cms/seo.mjs";
 // Theme appearance comes from the installed theme/tenant contract, never
 // a baked-in merchant preset in the reusable ecommerce application.
 function appearanceForInstalledPackage(theme) {
@@ -94,9 +95,16 @@ async function loadStorePreferences(env, { allowCache = true, ...context } = {})
       const cached = await env.CMS_CACHE.get(cacheKey, "json");
       if (cached && typeof cached === "object" && cached.__ssot === "cms_sites.settings_json.store" &&
           cached.siteId === site.id && cached.settings && typeof cached.settings === "object") {
+        const cachedSettings = { ...PACKAGE_STORE_DEFAULTS, ...cached.settings };
+        for (const key of ["b2bOnly", "geoRedirect", "languageRedirect", "hcaptchaContact", "hcaptchaAccount"]) delete cachedSettings[key];
+        const seo = normalizeSiteSeo(site.settings_json);
+        if (seo.home_title != null) cachedSettings.homeTitle = seo.home_title;
+        if (seo.default_description != null) cachedSettings.metaDescription = seo.default_description;
+        if (seo.default_og_image != null) cachedSettings.socialImageUrl = seo.default_og_image;
         return {
           ok: true,
-          settings: { ...PACKAGE_STORE_DEFAULTS, ...cached.settings },
+          settings: cachedSettings,
+          seo,
           navigationItems: await loadPrimaryCmsNavigation(env.DB, site),
           source: "cache",
           site,
@@ -110,13 +118,18 @@ async function loadStorePreferences(env, { allowCache = true, ...context } = {})
   const parsed = { ...stored };
   delete parsed.storePassword;
   const settings = { ...PACKAGE_STORE_DEFAULTS, ...parsed };
+  for (const key of ["b2bOnly", "geoRedirect", "languageRedirect", "hcaptchaContact", "hcaptchaAccount"]) delete settings[key];
+  const seo = normalizeSiteSeo(root);
+  if (seo.home_title != null) settings.homeTitle = seo.home_title;
+  if (seo.default_description != null) settings.metaDescription = seo.default_description;
+  if (seo.default_og_image != null) settings.socialImageUrl = seo.default_og_image;
 
   if (env.CMS_CACHE) {
     await env.CMS_CACHE.put(cacheKey, JSON.stringify({
       __ssot: "cms_sites.settings_json.store", siteId: site.id, settings, cached_at: Date.now(),
     })).catch(() => {});
   }
-  return { ok: true, settings, navigationItems: await loadPrimaryCmsNavigation(env.DB, site), source: "d1", site };
+  return { ok: true, settings, seo, navigationItems: await loadPrimaryCmsNavigation(env.DB, site), source: "d1", site };
 }
 
 async function saveStorePreferences(env, incoming, context = {}) {
@@ -128,14 +141,9 @@ async function saveStorePreferences(env, incoming, context = {}) {
   const next = {
     ...current,
     passwordProtection: incoming.passwordProtection == null ? current.passwordProtection : incoming.passwordProtection === true,
-    b2bOnly: incoming.b2bOnly == null ? current.b2bOnly : incoming.b2bOnly === true,
-    geoRedirect: incoming.geoRedirect == null ? current.geoRedirect : incoming.geoRedirect === true,
-    languageRedirect: incoming.languageRedirect == null ? current.languageRedirect : incoming.languageRedirect === true,
-    hcaptchaContact: incoming.hcaptchaContact == null ? current.hcaptchaContact : incoming.hcaptchaContact === true,
-    hcaptchaAccount: incoming.hcaptchaAccount == null ? current.hcaptchaAccount : incoming.hcaptchaAccount === true,
-    homeTitle: String(incoming.homeTitle ?? current.homeTitle).slice(0, 70),
-    metaDescription: String(incoming.metaDescription ?? current.metaDescription).slice(0, 320),
-    socialImageUrl: String(incoming.socialImageUrl ?? current.socialImageUrl).slice(0, 2048),
+    homeTitle: String(incoming.seo?.home_title ?? incoming.homeTitle ?? current.homeTitle).slice(0, 70),
+    metaDescription: String(incoming.seo?.default_description ?? incoming.metaDescription ?? current.metaDescription).slice(0, 320),
+    socialImageUrl: String(incoming.seo?.default_og_image ?? incoming.socialImageUrl ?? current.socialImageUrl).slice(0, 2048),
   };
 
   if (incoming.navLogoUrl != null) {
@@ -182,9 +190,13 @@ async function saveStorePreferences(env, incoming, context = {}) {
   }
 
   if (incoming.storePassword != null && incoming.storePassword !== "" && incoming.storePassword !== "••••••••") {
-    const { hash, salt } = await hashPassword(String(incoming.storePassword).slice(0, 128));
-    next.storePasswordHash = hash;
-    next.storePasswordSalt = salt;
+    const password = String(incoming.storePassword);
+    if (password.length < 8 || password.length > 128) {
+      return { ok: false, error: "invalid_store_password", detail: "Store passwords must be between 8 and 128 characters." };
+    }
+    const { hashHex, saltHex } = await hashPassword(password);
+    next.storePasswordHash = hashHex;
+    next.storePasswordSalt = saltHex;
   }
   if (incoming.clearStorePassword === true) {
     next.storePasswordHash = null;
@@ -192,11 +204,39 @@ async function saveStorePreferences(env, incoming, context = {}) {
     next.passwordProtection = false;
   }
   delete next.storePassword;
+  if (next.passwordProtection && (!next.storePasswordHash || !next.storePasswordSalt)) {
+    return { ok: false, error: "store_password_required", detail: "Set a store password before enabling password protection." };
+  }
+
+  const currentSeo = normalizeSiteSeo(loaded.site.settings_json);
+  const seoInput = incoming.seo && typeof incoming.seo === "object" ? incoming.seo : {};
+  const nextSeo = { ...currentSeo };
+  const seoPatch = {
+    home_title: incoming.seo?.home_title ?? incoming.homeTitle,
+    default_description: incoming.seo?.default_description ?? incoming.metaDescription,
+    default_og_image: incoming.seo?.default_og_image ?? incoming.socialImageUrl,
+    robots: seoInput.robots,
+    twitter_handle: seoInput.twitter_handle,
+    locale: seoInput.locale,
+    title_template: seoInput.title_template,
+  };
+  for (const [key, value] of Object.entries(seoPatch)) {
+    if (value === undefined) continue;
+    const clean = String(value ?? "").trim();
+    if (clean) nextSeo[key] = clean;
+    else delete nextSeo[key];
+  }
+  next.homeTitle = String(nextSeo.home_title ?? "").slice(0, 70);
+  next.metaDescription = String(nextSeo.default_description ?? "").slice(0, 320);
+  next.socialImageUrl = String(nextSeo.default_og_image ?? "").slice(0, 2048);
+  const root = parseSiteSettings(loaded.site.settings_json);
+  root.store = next;
+  root.seo = nextSeo;
 
   try {
     const result = await env.DB.prepare(
-      "UPDATE cms_sites SET settings_json=json_set(COALESCE(settings_json,'{}'),'$.store',json(?)),updated_at=datetime('now') WHERE id=? AND account_id=?"
-    ).bind(JSON.stringify(next), loaded.site.id, loaded.site.account_id).run();
+      "UPDATE cms_sites SET settings_json=?,updated_at=datetime('now') WHERE id=? AND account_id=?"
+    ).bind(JSON.stringify(root), loaded.site.id, loaded.site.account_id).run();
     if (!(result.meta?.changes > 0)) throw new Error("store_site_write_not_applied");
   } catch (err) {
     return { ok: false, error: "store_preferences_write_failed", detail: err?.message || String(err) };
@@ -208,7 +248,7 @@ async function saveStorePreferences(env, incoming, context = {}) {
     })).catch(() => {});
   }
 
-  return { ok: true, settings: next, navigationItems };
+  return { ok: true, settings: next, seo: nextSeo, navigationItems };
 }
 
 export async function verifyStorefrontPassword(env, password, context = {}) {
@@ -216,7 +256,7 @@ export async function verifyStorefrontPassword(env, password, context = {}) {
   if (!loaded.ok) return false;
   const { storePasswordHash, storePasswordSalt, passwordProtection } = loaded.settings;
   if (!passwordProtection || !storePasswordHash || !storePasswordSalt) return true;
-  return verifyPassword(password, storePasswordHash, storePasswordSalt);
+  return verifyPassword(password, storePasswordSalt, storePasswordHash);
 }
 
 async function resolveThemes(env, accountId = null) {
@@ -255,7 +295,7 @@ async function resolveStorePerformance(env) {
   }
 }
 
-export { loadStorePreferences, resolveNavConfig, PACKAGE_STORE_DEFAULTS };
+export { loadStorePreferences, resolveNavConfig, PACKAGE_STORE_DEFAULTS, normalizeSiteDomain };
 
 
 export async function getStoreNav(env, context = {}) {
@@ -304,6 +344,7 @@ export async function getStorePreferences(env, context = {}) {
       homeTitle: loaded.settings.homeTitle || siteName,
     }),
     settings: publicSettings(loaded.settings),
+    seo: loaded.seo || normalizeSiteSeo(site.settings_json),
     source: loaded.source,
   });
 }
@@ -317,13 +358,29 @@ export async function postStorePreferences(request, env, context = {}) {
   }
 
   const incoming = body?.settings || body;
+  const passwordValue = incoming.storePassword == null ? "" : String(incoming.storePassword);
+  if (passwordValue && (passwordValue.length < 8 || passwordValue.length > 128)) {
+    return json({ error: "Store passwords must be between 8 and 128 characters." }, { status: 400 });
+  }
+  if (incoming.seo && typeof incoming.seo === "object") {
+    const seo = incoming.seo;
+    if (seo.home_title != null && String(seo.home_title).length > 70) return json({ error: "Home page title must be 70 characters or fewer." }, { status: 400 });
+    if (seo.default_description != null && String(seo.default_description).length > 320) return json({ error: "Meta description must be 320 characters or fewer." }, { status: 400 });
+    if (seo.site_name != null && String(seo.site_name).length > 120) return json({ error: "Structured data site name must be 120 characters or fewer." }, { status: 400 });
+    if (seo.title_template != null && String(seo.title_template).length > 160) return json({ error: "Page title template must be 160 characters or fewer." }, { status: 400 });
+    if (seo.twitter_handle != null && String(seo.twitter_handle).length > 64) return json({ error: "Social profile handle must be 64 characters or fewer." }, { status: 400 });
+    if (seo.locale != null && String(seo.locale).length > 32) return json({ error: "Open Graph locale must be 32 characters or fewer." }, { status: 400 });
+    if (seo.robots != null && !["index,follow,max-image-preview:large", "noindex,nofollow"].includes(String(seo.robots))) {
+      return json({ error: "Choose a supported search visibility setting." }, { status: 400 });
+    }
+  }
   // The picker normally supplies these URLs. The server must enforce safe
   // destinations independently of the admin browser.
   const validAssetUrl = (value) => {
     const s = String(value ?? "").trim();
     return !s || (/^\/(?!\/)[^\s\\]+$/.test(s) && !/[\u0000-\u001f]/.test(s)) || /^https:\/\/[^\s]+$/i.test(s);
   };
-  if (!validAssetUrl(incoming.socialImageUrl) || !validAssetUrl(incoming.navLogoUrl)) {
+  if (!validAssetUrl(incoming.socialImageUrl) || !validAssetUrl(incoming.seo?.default_og_image) || !validAssetUrl(incoming.navLogoUrl)) {
     return json({ error: "Images must use a local path or HTTPS URL." }, { status: 400 });
   }
   for (const key of ["announcementBgColor", "announcementTextColor"]) {
@@ -341,18 +398,19 @@ export async function postStorePreferences(request, env, context = {}) {
     if (!announcementText) {
       return json({ error: "Announcement text is required when the banner is enabled." }, { status: 400 });
     }
-    if (!validHref) {
+    if (announcementHref && !validHref) {
       return json({ error: "Announcement link must start with /, #, or https://." }, { status: 400 });
     }
   }
 
   const saved = await saveStorePreferences(env, incoming, context);
   if (!saved.ok) {
-    return json({ ok: false, error: saved.error, detail: saved.detail }, { status: 503 });
+    return json({ ok: false, error: saved.error, detail: saved.detail }, { status: saved.error === "store_password_required" ? 400 : 503 });
   }
   return json({
     ok: true,
     settings: publicSettings(saved.settings),
+    seo: saved.seo || {},
     nav: resolveNavConfig({ ...saved.settings, cmsNavigationItems: saved.navigationItems }),
   });
 }
