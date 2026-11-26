@@ -159,7 +159,7 @@ test('review UI is wired to catalog install APIs and keeps theme settings owners
   for(const key of ['brand.logoUrl','page.maxWidth','inputs.radius','overlays.placement','icons.style']){
     assert.ok(settings.includes(key),'missing CMS-connected theme draft control '+key);
   }
-  assert.match(core,/Matching CMS pages/);
+  assert.match(core,/pagePickerCategory/);
   assert.match(core,/ui_review/);
   assert.match(core,/localShowcase/);
 });
