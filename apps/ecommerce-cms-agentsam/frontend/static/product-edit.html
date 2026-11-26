@@ -18,6 +18,7 @@ const productId = params.get("id");
 const isNew = !productId;
 
 let productSlug = "";
+let productStorefrontDomain = null;
 let dirty = false;
 let saveInFlight = false;
 let saveFailed = false;
@@ -138,6 +139,20 @@ function updateHeaderTitle(title) {
   document.title = (title || "Product") + " — Store Admin";
 }
 
+function storefrontProductUrl(domain, slug) {
+  const raw = String(domain || "").trim();
+  if (!raw || !slug) return null;
+  try {
+    const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const url = new URL(candidate);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    url.pathname = "/products/" + encodeURIComponent(String(slug));
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch { return null; }
+}
+
 function updateSeoPreview() {
   const title = document.getElementById("title")?.value.trim() || "Product title";
   const slug = document.getElementById("slug")?.value.trim() || slugify(title) || "product";
@@ -146,7 +161,8 @@ function updateSeoPreview() {
   const seoTitle = document.getElementById("seo-title-input")?.value.trim() || "";
   const seoDescription = document.getElementById("seo-description-input")?.value.trim() || "";
   document.getElementById("seo-title").textContent = seoTitle || title;
-  document.getElementById("seo-url").textContent = location.origin + "/products/" + slug;
+  document.getElementById("seo-url").textContent =
+    storefrontProductUrl(productStorefrontDomain, slug) || "Store domain not configured";
   document.getElementById("seo-desc").textContent =
     (seoDescription || description || (Number.isFinite(price) ? "$" + price.toFixed(2) + " USD" : "Product details")).slice(0, 320);
   document.getElementById("seo-title-count").textContent = seoTitle.length + " / 180";
@@ -168,10 +184,23 @@ function syncStatusUi() {
   }
   const viewBtn = document.getElementById("view-btn");
   if (viewBtn && productSlug && status === "active") {
-    viewBtn.href = `/products/${productSlug}`;
+    const storefrontUrl = storefrontProductUrl(productStorefrontDomain, productSlug);
+    if (storefrontUrl) {
+      viewBtn.href = storefrontUrl;
+      viewBtn.target = "_blank";
+      viewBtn.rel = "noopener noreferrer";
+      viewBtn.removeAttribute("aria-disabled");
+      viewBtn.title = "View this product on its selected storefront";
+    } else {
+      viewBtn.removeAttribute("href");
+      viewBtn.removeAttribute("target");
+      viewBtn.setAttribute("aria-disabled", "true");
+      viewBtn.title = "Configure a primary domain for this store before viewing its public product page.";
+    }
     viewBtn.style.visibility = "visible";
   } else if (viewBtn) {
     viewBtn.href = "#";
+    viewBtn.removeAttribute("aria-disabled");
     viewBtn.style.visibility = isNew ? "hidden" : "visible";
   }
 }
@@ -956,8 +985,10 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
   const edit = document.createElement("a");
   edit.className = "btn ghost small";
   edit.textContent = "Edit design";
+  const editParams = new URLSearchParams({ resume: draft.id });
+  if (productSiteId) editParams.set("site_id", productSiteId);
   edit.href = "/admin/products/create/" + encodeURIComponent(draft.completeful_catalog_product_id) +
-    "?resume=" + encodeURIComponent(draft.id);
+    "?" + editParams.toString();
   actions.append(edit);
 
   const linkId = fulfillment?.completeful_store_product_id;
@@ -1015,6 +1046,7 @@ async function loadProduct() {
   try {
     const d = await productAdminFetch(`/api/admin/products/${productId}`);
     const p = d.product;
+    productStorefrontDomain = d.site?.primary_domain || null;
     document.getElementById("product-store-name").textContent=d.site?.name||"Your store";
     window.__productKind = p.kind || "physical";
     document.getElementById("title").value = p.title;
@@ -1146,7 +1178,9 @@ async function saveProduct() {
           showNote(`Product created, but ${failed} image(s) failed to attach.`, "error");
         }
       }
-      window.location.href = `/admin/product-edit?id=${newId}`;
+      const nextParams = new URLSearchParams({ id: String(newId) });
+      if (productSiteId) nextParams.set("site_id", productSiteId);
+      window.location.href = `/admin/product-edit?${nextParams.toString()}`;
       return;
     }
     await productAdminFetch("/api/admin/products/" + productId, { method: "PUT", body: JSON.stringify(payload) });

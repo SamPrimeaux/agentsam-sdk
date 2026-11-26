@@ -1,3 +1,4 @@
+import { currentCommerceSiteId } from "../../lib/api";
 import {
   MERCH_ASSORTMENT_RECIPES, assortmentSearchTerms,
 } from "@inneranimalmedia/agentsam-merch/collection-planning";
@@ -129,13 +130,7 @@ export function initialCollection(): CollectionForm {
 }
 export const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 180);
 export function collectionSiteId(): string | null {
-  const params = new URLSearchParams(window.location.search);
-  const direct = params.get("site_id");
-  if (direct) return direct;
-  const embedded = params.get("__route");
-  const query = embedded?.indexOf("?");
-  return embedded && query !== undefined && query >= 0
-    ? new URLSearchParams(embedded.slice(query + 1)).get("site_id") : null;
+  return currentCommerceSiteId();
 }
 export function collectionHref(path: string, siteId: string | null = collectionSiteId()): string {
   return siteId ? `${path}${path.includes("?") ? "&" : "?"}site_id=${encodeURIComponent(siteId)}` : path;

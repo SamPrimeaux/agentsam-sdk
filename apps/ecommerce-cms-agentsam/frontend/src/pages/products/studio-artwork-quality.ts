@@ -1,4 +1,4 @@
-import { effectiveArtworkDpi, providerPrintSizeIn } from "../../../../packages/agentsam-merch/src/index.js";
+import { effectiveArtworkDpi, providerPrintSizeIn } from "@inneranimalmedia/agentsam-merch";
 import type { PrintLocation } from "./studio-model";
 
 export type ArtworkCrop = { x: number; y: number; width: number; height: number };
