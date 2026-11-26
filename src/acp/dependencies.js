@@ -84,6 +84,79 @@ export async function appendAgentRunEvent(database, {
   };
 }
 
+/**
+ * Persist a timeout without widening the runtime table's storage-status CHECK.
+ * The storage row becomes failed; the append-only event preserves timed_out as
+ * the public lifecycle outcome. Repeated calls are idempotent by dedupe key.
+ */
+export async function recordAgentRunTimeout(database, {
+  runId,
+  errorCode = 'run_timeout',
+  errorMessage = 'Agent run timed out',
+  createdAt = Math.floor(Date.now() / 1000),
+} = {}) {
+  const id = clean(runId);
+  if (!id) throw new TypeError('runId is required');
+  const run = await database.prepare(
+    'SELECT id, parent_run_id, status FROM agentsam_agent_run WHERE id = ? LIMIT 1'
+  ).bind(id).first();
+  if (!run) {
+    const error = new Error(`agent_run_not_found:${id}`);
+    error.code = 'agent_run_not_found';
+    throw error;
+  }
+  if (run.status === 'completed' || run.status === 'cancelled') {
+    return { recorded: false, reason: 'run_already_terminal', runId: id, status: run.status, storageStatus: run.status };
+  }
+  if (!AGENT_RUN_STORAGE_STATUSES.includes(run.status)) {
+    throw new Error(`agent_run_storage_status_invalid:${run.status}`);
+  }
+
+  const code = clean(errorCode) || 'run_timeout';
+  const message = clean(errorMessage) || 'Agent run timed out';
+  const timestamp = Number.isFinite(Number(createdAt)) ? Math.trunc(Number(createdAt)) : Math.floor(Date.now() / 1000);
+  const dedupeKey = `run:${id}:timed_out`;
+  const existing = await database.prepare(
+    'SELECT event_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
+  ).bind(id, dedupeKey).first();
+
+  await database.prepare(`
+    UPDATE agentsam_agent_run
+    SET status = 'failed', error_code = ?, error_message = ?,
+        completed_at_unix = COALESCE(completed_at_unix, ?), updated_at_unix = ?
+    WHERE id = ? AND status IN ('queued','running','paused','failed','partial')
+  `).bind(code, message, timestamp, timestamp, id).run();
+  await database.prepare(
+    'DELETE FROM agentsam_agent_run_suspension WHERE run_id = ?'
+  ).bind(id).run();
+
+  let event = existing;
+  if (!existing) {
+    const appended = await appendAgentRunEvent(database, {
+      runId: id,
+      parentRunId: run.parent_run_id ?? null,
+      eventType: 'run.timed_out',
+      phase: 'complete',
+      label: 'Run timed out',
+      detail: message,
+      evidence: { error_code: code, storage_status: 'failed' },
+      dedupeKey,
+      createdAt: timestamp,
+    });
+    event = await database.prepare(
+      'SELECT event_id, seq, event_type, dedupe_key FROM agentsam_agent_run_event WHERE run_id = ? AND dedupe_key = ? LIMIT 1'
+    ).bind(id, dedupeKey).first() || appended;
+  }
+
+  return {
+    recorded: !existing,
+    runId: id,
+    status: 'timed_out',
+    storageStatus: 'failed',
+    event,
+  };
+}
+
 async function pendingChildIds(database, parentRunId) {
   const result = await database.prepare(`
     SELECT child_run_id
