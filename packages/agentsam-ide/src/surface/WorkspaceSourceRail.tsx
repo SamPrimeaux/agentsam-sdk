@@ -23,7 +23,7 @@ export function WorkspaceSourceRail({sources, sourceId, onSelect, trailing}: {
   onSelect?: (source: IDEFileSourceId) => void;
   trailing?: ReactNode;
 }) {
-  return <div className="asi-source-rail" aria-label="Workspace filesystem sources">
+  return <div className="asi-source-rail" data-annotation-control="" aria-label="Workspace filesystem sources">
     {sources.map(source => <button key={source.id} type="button"
       title={source.label + ': ' + (source.detail || source.state)}
       aria-label={source.label + ' (' + source.state + ')'}

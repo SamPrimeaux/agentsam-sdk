@@ -44,7 +44,7 @@ export function WorkspaceTreeView({entries,expanded,active,onFile,onFolder,onMen
       {entries.slice(visible.start,visible.end).map((entry,i)=>{
         const folder=entry.kind==='folder';
         const opened=expanded.has(entry.path);
-        return <button key={entry.path} type="button" role="treeitem" data-kind={entry.kind}
+        return <button key={entry.path} type="button" role="treeitem" data-annotation-target="file-entry" data-annotation-id={entry.path} data-annotation-label={entry.path} data-kind={entry.kind}
           aria-level={workspaceParents(entry.path).length+1}
           aria-posinset={visible.start+i+1} aria-setsize={entries.length}
           aria-current={!folder&&active===entry.path} aria-expanded={folder?opened:undefined}

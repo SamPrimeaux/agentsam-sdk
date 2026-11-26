@@ -375,7 +375,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     setPaletteSelection(0);
     item.run();
   };
-  const rendered=(tab:Tab)=><AgentSamMonacoEditor document={{workspaceId,path:tab.path,text:tab.value,languageId:tab.language}}
+  const rendered=(tab:Tab)=><div data-annotation-target="code-editor" data-annotation-id={tab.path} data-annotation-label={tab.displayName||tab.path} className="asi-code-annotation-target"><AgentSamMonacoEditor document={{workspaceId,path:tab.path,text:tab.value,languageId:tab.language}}
     onChange={value=>edit(tab.path,value)} onSave={()=>save(tab.path)} palette={palette} readOnly={Boolean((readonly&&!tab.untitled)||tab.readonly)}
     onEditorReady={editor=>{if(tab.untitled)editor.focus();}}
     onDiagnostics={markers=>setTabs(prev=>prev.map(item=>item.path===tab.path?{...item,editorDiagnostics:markers.map(marker=>({
@@ -385,7 +385,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     revealPosition={revealRequest?.path===tab.path?revealRequest:undefined}
     savedVersion={tab.version} lsp={lsp} onNavigate={onNavigate} onApplyWorkspaceEdit={onApplyWorkspaceEdit} onSelectionChange={s=>setCursor({line:s.startLine,column:s.startColumn})}
     options={{fontFamily:EDITOR_FONTS.find(font=>font.id===appearance.fontId)!.family,fontSize:appearance.fontSize,
-      minimap:{enabled:appearance.minimap},wordWrap:appearance.wordWrap?'on':'off'}} height="100%"/>;
+      minimap:{enabled:appearance.minimap},wordWrap:appearance.wordWrap?'on':'off'}} height="100%"/></div>;
   const previewed=(tab:Tab)=>{
     if(tab.preview){
       const preview=tab.preview;
@@ -393,12 +393,12 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         {preview.kind==='image'?<img src={preview.url} alt={tab.path} />:null}
         {preview.kind==='video'?<video src={preview.url} controls preload="metadata" />:null}
         {preview.kind==='audio'?<audio src={preview.url} controls preload="metadata" />:null}
-        {preview.kind==='pdf'?<iframe src={preview.url} title={tab.path} />:null}
+        {preview.kind==='pdf'?<iframe data-annotation-target="pdf-preview" data-annotation-id={tab.path} data-annotation-label={tab.displayName||tab.path} src={preview.url} title={tab.path} />:null}
         {preview.kind==='binary'?<p>Binary asset cannot be edited as text.</p>:null}
       </div>;
     }
-    if(isMarkdownPath(tab.path))return <article className="asi-document-preview">{renderMarkdown?renderMarkdown(tab.value):<pre>{tab.value}</pre>}</article>;
-    if(isHtmlPath(tab.path))return <iframe className="asi-html-preview" title={tab.path+' preview'} sandbox="" srcDoc={tab.value}/>;
+    if(isMarkdownPath(tab.path))return <article className="asi-document-preview" data-annotation-target="markdown-preview" data-annotation-id={tab.path} data-annotation-label={tab.displayName||tab.path}>{renderMarkdown?renderMarkdown(tab.value):<pre>{tab.value}</pre>}</article>;
+    if(isHtmlPath(tab.path))return <iframe className="asi-html-preview" data-annotation-target="html-preview" data-annotation-id={tab.path} data-annotation-label={tab.displayName||tab.path} title={tab.path+' preview'} sandbox="" srcDoc={tab.value}/>;
     return rendered(tab);
   };
   // Host validators and Monaco/LSP markers are authoritative; never invent CLI errors.
@@ -427,8 +427,8 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     onActiveFileChange?.(current ? {path:current.path,version:current.version} : null);
   }, [onActiveFileChange, current?.path, current?.version]);
   const dirty=current&&current.status!=='saved';
-  return <div className="asi-ide">
-    <header className="asi-toolbar">
+  return <div className="asi-ide" data-agentsam-annotation-scope="" data-annotation-scope-id="files-stage">
+    <header className="asi-toolbar" data-annotation-control="">
       <div className="asi-toolbar-identity"><span className="asi-toolbar-kicker">FILES / EDITOR</span><strong title={label}>{label}</strong></div>
       <nav aria-label="Editor actions">
         <button className="asi-action-primary" type="button" aria-label="New file" title="New file (⌘N / Ctrl+N)" onClick={()=>createUntitled()}>＋ New file</button>
@@ -444,7 +444,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         {onExit&&<button type="button" onClick={()=>{if(tabs.some(t=>t.status!=='saved')){setMessage('Save all changes before exiting.');return;}onExit();}}>Close</button>}
       </nav>
     </header>
-    {appearanceOpen&&<div className="asi-appearance-panel" role="group" aria-label="Editor appearance">
+    {appearanceOpen&&<div className="asi-appearance-panel" data-annotation-control="" role="group" aria-label="Editor appearance">
       <label>Font<select aria-label="Editor font" value={appearance.fontId}
         onChange={event=>updateAppearance({fontId:event.target.value as EditorFontId})}>
         {EDITOR_FONTS.map(font=><option key={font.id} value={font.id}>{font.label}</option>)}
@@ -461,23 +461,23 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       style={{'--asi-sidebar-width':sidebarWidth+'px'} as CSSProperties}>
       <aside className="asi-aside" aria-label="Editor sidebar">
         {sources?.length ? <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} /> : null}
-        <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
+        <nav className="asi-sidebar-nav" data-annotation-control="">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
-          {panel==='Explorer'&&connectionPanel?<div className="asi-source-connect">
+          {panel==='Explorer'&&connectionPanel?<div className="asi-source-connect" data-annotation-control="">
             <p>A file source is not attached.</p>
             <button type="button" onClick={()=>setSourceSettingsOpen(true)}>Connect or manage source</button>
           </div>:null}
-          {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" aria-label="New file" title="Create untitled file" onClick={()=>createUntitled()}>＋</button><button type="button" disabled={!canCreate} aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
-            {treeError&&<div className="asi-reconnect" role="alert"><strong>Files unavailable</strong><p>{treeError}</p><div>{onReconnect&&<button type="button" onClick={onReconnect}>Reconnect workspace</button>}{onConnectionSettings&&<button type="button" onClick={onConnectionSettings}>Runtime settings</button>}<button type="button" onClick={()=>void refresh()}>Retry files</button></div></div>}
+          {panel==='Explorer'&&<><div className="asi-side-header" data-annotation-control=""><strong>Explorer</strong><div><button type="button" aria-label="New file" title="Create untitled file" onClick={()=>createUntitled()}>＋</button><button type="button" disabled={!canCreate} aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
+            {treeError&&<div className="asi-reconnect" data-annotation-control="" role="alert"><strong>Files unavailable</strong><p>{treeError}</p><div>{onReconnect&&<button type="button" onClick={onReconnect}>Reconnect workspace</button>}{onConnectionSettings&&<button type="button" onClick={onConnectionSettings}>Runtime settings</button>}<button type="button" onClick={()=>void refresh()}>Retry files</button></div></div>}
             <WorkspaceTreeView entries={visibleTree} expanded={expanded} active={active}
               onFile={path=>void open(path)} onFolder={path=>void toggleFolder(path)}
               onMenu={(entry,point)=>setContextMenu({path:entry.path,x:Math.max(8,Math.min(point.x,window.innerWidth-220)),y:Math.max(8,Math.min(point.y,window.innerHeight-230))})}/></>}
-          {panel==='Search'&&<><div className="asi-side-header"><strong>Find in files</strong></div><form className="asi-search" onSubmit={e=>{e.preventDefault();void find();}}><input value={query} aria-label="Search workspace" onChange={e=>setQuery(e.target.value)}/><button type="submit">Find</button></form>{hits.map((hit,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(hit.path)}><strong>{hit.path}:{hit.line}</strong><span>{hit.preview}</span></button>)}</>}
-          {panel==='Timeline'&&<><div className="asi-side-header"><strong>Timeline</strong></div>{history.map(rev=><div key={rev.id} className="asi-revision"><span>{rev.label||rev.createdAt}</span><button type="button" onClick={()=>setConfirmation({kind:'restore',revision:rev})}>Restore</button></div>)}</>}
-          {panel==='Problems'&&<><div className="asi-side-header"><strong>Problems · {problems.length}</strong></div>{problems.map((problem,i)=><button key={i} className="asi-hit" type="button" onClick={()=>goToProblem(problem)}>{problem.severity}: {problem.path} — {problem.message}</button>)}</>}
-          {panel==='Changes'&&<><div className="asi-side-header"><strong>Changes</strong><button type="button" aria-label="Refresh changes" onClick={()=>void showChanges()}>↻</button></div>
+          {panel==='Search'&&<><div className="asi-side-header" data-annotation-control=""><strong>Find in files</strong></div><form className="asi-search" data-annotation-control="" onSubmit={e=>{e.preventDefault();void find();}}><input value={query} aria-label="Search workspace" onChange={e=>setQuery(e.target.value)}/><button type="submit">Find</button></form>{hits.map((hit,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(hit.path)}><strong>{hit.path}:{hit.line}</strong><span>{hit.preview}</span></button>)}</>}
+          {panel==='Timeline'&&<><div className="asi-side-header" data-annotation-control=""><strong>Timeline</strong></div>{history.map(rev=><div key={rev.id} className="asi-revision"><span>{rev.label||rev.createdAt}</span><button type="button" onClick={()=>setConfirmation({kind:'restore',revision:rev})}>Restore</button></div>)}</>}
+          {panel==='Problems'&&<><div className="asi-side-header" data-annotation-control=""><strong>Problems · {problems.length}</strong></div>{problems.map((problem,i)=><button key={i} className="asi-hit" type="button" onClick={()=>goToProblem(problem)}>{problem.severity}: {problem.path} — {problem.message}</button>)}</>}
+          {panel==='Changes'&&<><div className="asi-side-header" data-annotation-control=""><strong>Changes</strong><button type="button" aria-label="Refresh changes" onClick={()=>void showChanges()}>↻</button></div>
             {modeLoading?<p>Inspecting verified changes…</p>:!workspace.changes?<p>No Git/diff provider is connected to this workspace.</p>:changeEntries.length===0?<p>No reported changes.</p>:changeEntries.map((entry,i)=><button className="asi-hit" key={entry.path+String(i)} type="button" onClick={()=>void open(entry.path)}><strong>{entry.status}</strong><span>{entry.path}</span></button>)}</>}
-          {panel==='Snapshot'&&<><div className="asi-side-header"><strong>Merkle snapshot</strong><button type="button" aria-label="Refresh Merkle snapshot" onClick={()=>void showSnapshot()}>↻</button></div>
+          {panel==='Snapshot'&&<><div className="asi-side-header" data-annotation-control=""><strong>Merkle snapshot</strong><button type="button" aria-label="Refresh Merkle snapshot" onClick={()=>void showSnapshot()}>↻</button></div>
             {!workspace.snapshot?<p>No verified snapshot provider is connected.</p>:snapshot?<div className="asi-snapshot">
               <p><strong>{snapshot.persistence==='durable'?'Persisted snapshot':snapshot.persistence==='session'?'Session-only snapshot':'Snapshot persistence unverified'}</strong></p>
               {snapshot.persistence!=='durable'&&<p>This hash has not been registered as a repository/workspace-linked release snapshot in D1. Select an authorized repository and workspace in the host before requesting a durable snapshot.</p>}
@@ -493,8 +493,8 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         onDoubleClick={()=>setSidebarWidth(235)}
         onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();setSidebarWidth(value=>Math.max(150,Math.min(450,value+(event.key==='ArrowLeft'?-16:16))));}}}/>
       <section className="asi-center" aria-label="Code editor">
-        <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
-        {current?<><div className="asi-breadcrumb"><span>{current.untitled?'Unsaved draft / '+current.displayName:current.displayName||current.path.split('/').join(' › ')}</span><div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={Boolean(current.untitled)||!canRename||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>setConfirmation({kind:'delete'})} disabled={Boolean(current.untitled)||!canDelete||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
+        <div className="asi-tabs" data-annotation-control="" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
+        {current?<><div className="asi-breadcrumb" data-annotation-control=""><span>{current.untitled?'Unsaved draft / '+current.displayName:current.displayName||current.path.split('/').join(' › ')}</span><div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={Boolean(current.untitled)||!canRename||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>setConfirmation({kind:'delete'})} disabled={Boolean(current.untitled)||!canDelete||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
         <div className={'asi-editors'+(split&&!current.preview?' asi-split':'')}
           style={{'--asi-split-editor':splitPercent+'fr','--asi-split-preview':(100-splitPercent)+'fr'} as CSSProperties}>
           {!current.preview&&(!previewOnly||split)?<div>{rendered(current)}</div>:null}
@@ -506,11 +506,11 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
             onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();setSplitPercent(value=>Math.max(20,Math.min(80,value+(event.key==='ArrowLeft'?-5:5))));}}}/>}
           {(current.preview||previewOnly||split)?<div>{previewed(current)}</div>:null}
         </div>
-        {current.status==='conflict'&&<div className="asi-alert" role="alert"><strong>File changed elsewhere. Your edits are preserved.</strong><button type="button" onClick={()=>void reload()}>Reload theirs</button><button type="button" onClick={()=>{setConfirmation({kind:'overwrite'});}}>Overwrite</button><button type="button" onClick={async()=>{try{setTheirs((await workspace.read(current.path)).content);}catch(e){setMessage(String(e));}}}>Compare</button></div>}
-        {current.status==='error'&&<div className="asi-alert" role="alert"><strong>Save failed. Your changes remain available.</strong><button type="button" onClick={()=>void save(current.path)}>Retry</button></div>}
+        {current.status==='conflict'&&<div className="asi-alert" data-annotation-control="" role="alert"><strong>File changed elsewhere. Your edits are preserved.</strong><button type="button" onClick={()=>void reload()}>Reload theirs</button><button type="button" onClick={()=>{setConfirmation({kind:'overwrite'});}}>Overwrite</button><button type="button" onClick={async()=>{try{setTheirs((await workspace.read(current.path)).content);}catch(e){setMessage(String(e));}}}>Compare</button></div>}
+        {current.status==='error'&&<div className="asi-alert" data-annotation-control="" role="alert"><strong>Save failed. Your changes remain available.</strong><button type="button" onClick={()=>void save(current.path)}>Retry</button></div>}
         {theirs!==null&&<div className="asi-diff"><div><strong>Saved version</strong><pre>{theirs}</pre></div><div><strong>Your changes</strong><pre>{current.value}</pre></div><button type="button" onClick={()=>setTheirs(null)}>Close comparison</button></div>}
-        {proposal?.path===current.path&&<div className="asi-alert"><strong>{proposal.explanation}</strong><button type="button" onClick={()=>{edit(current.path,proposal.content);setProposal(null);}}>Apply patch to buffer</button><button type="button" onClick={()=>setProposal(null)}>Discard</button></div>}
-        </>:<div className="asi-welcome"><div className="asi-empty-workspace">
+        {proposal?.path===current.path&&<div className="asi-alert" data-annotation-control=""><strong>{proposal.explanation}</strong><button type="button" onClick={()=>{edit(current.path,proposal.content);setProposal(null);}}>Apply patch to buffer</button><button type="button" onClick={()=>setProposal(null)}>Discard</button></div>}
+        </>:<div className="asi-welcome" data-annotation-control=""><div className="asi-empty-workspace">
           <div className="asi-empty-icon" aria-hidden="true">⌘</div>
           <h2>Your editor is ready</h2>
           <p>Write a new file or open one from your connected sources. Drafts don't touch the filesystem until you save them.</p>
@@ -557,7 +557,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     {agent&&current&&<div className="asi-agent"><button type="button" disabled={agentBusy} onClick={()=>void ask()}>{agentBusy?'Preparing proposal…':'Work with '+agent.label}</button></div>}
     <footer className="asi-status"><span>{label}</span><span>{current?.status||''}</span><span>Ln {cursor.line}, Col {cursor.column}</span><span>{current?.eol||'LF'}</span><span>{current?.encoding||'UTF-8'}</span><span>{current?.language||'Text'}</span><button type="button" aria-expanded={problemsOpen} onClick={()=>{setPanel('Problems');setProblemsOpen(value=>!value);}}>{problems.length} problems</button></footer>
     {message&&<div className="asi-message" role="status">{message}<button type="button" onClick={()=>setMessage('')}>×</button></div>}
-    {modal&&<div className="asi-overlay"><form className="asi-dialog" role="dialog" aria-modal="true" aria-labelledby="asi-dialog-title" onSubmit={e=>{e.preventDefault();void create();}}>
+    {modal&&<div className="asi-overlay" data-annotation-control=""><form className="asi-dialog" role="dialog" aria-modal="true" aria-labelledby="asi-dialog-title" onSubmit={e=>{e.preventDefault();void create();}}>
       <div className="asi-dialog-heading"><span className="asi-dialog-symbol" aria-hidden="true">⌁</span><div>
         <strong id="asi-dialog-title">{modal==='saveAs'?'Save untitled file':modal==='rename'?'Rename file':'New folder'}</strong>
         <p>{modal==='saveAs'?'Choose a path within the currently authorized file source. Existing files are never overwritten.':'Choose a workspace-relative path.'}</p>
@@ -566,21 +566,21 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       <input id="asi-path-field" autoFocus value={pathInput} aria-label="Workspace path" onChange={e=>{setPathInput(e.target.value);setDialogError('');}} placeholder={modal==='saveAs'?'src/untitled.ts':'folder/name'} />
       {modal==='saveAs'&&<p className="asi-source-hint">Destination: {label} · {canCreate?'Authorized adapter':'Choose a writable source to save'}</p>}
       {dialogError&&<p className="asi-field-error" role="alert">{dialogError}</p>}
-      <div className="asi-dialog-actions"><button type="button" onClick={()=>{setModal(null);setDialogError('');}}>Cancel</button><button className="asi-action-primary" type="submit" disabled={savingDraft||!pathInput.trim()}>{savingDraft?'Saving…':modal==='saveAs'?'Create & save':'Confirm'}</button></div>
+      <div className="asi-dialog-actions" data-annotation-control=""><button type="button" onClick={()=>{setModal(null);setDialogError('');}}>Cancel</button><button className="asi-action-primary" type="submit" disabled={savingDraft||!pathInput.trim()}>{savingDraft?'Saving…':modal==='saveAs'?'Create & save':'Confirm'}</button></div>
     </form></div>}
-    {sourceSettingsOpen&&connectionPanel&&<div className="asi-overlay">
+    {sourceSettingsOpen&&connectionPanel&&<div className="asi-overlay" data-annotation-control="">
       <section className="asi-dialog asi-connection-dialog" role="dialog" aria-modal="true" aria-label="File source connections">
         {connectionPanel}
-        <div className="asi-dialog-actions"><button type="button" onClick={()=>setSourceSettingsOpen(false)}>Close</button></div>
+        <div className="asi-dialog-actions" data-annotation-control=""><button type="button" onClick={()=>setSourceSettingsOpen(false)}>Close</button></div>
       </section>
     </div>}
-    {confirmation&&<div className="asi-overlay"><section className="asi-dialog" role="alertdialog" aria-modal="true" aria-label="Confirm file action">
+    {confirmation&&<div className="asi-overlay" data-annotation-control=""><section className="asi-dialog" data-annotation-control="" role="alertdialog" aria-modal="true" aria-label="Confirm file action">
       <strong>{confirmation.kind==='delete'?'Delete this file?':confirmation.kind==='overwrite'?'Overwrite newer content?':'Restore revision?'}</strong>
       <p>{confirmation.kind==='delete'?'This removes the selected file from its authorized source.':confirmation.kind==='overwrite'?'The version on disk has changed. An overwrite may replace another writer’s changes.':'The selected saved revision will replace the current file content.'}</p>
-      <div className="asi-dialog-actions"><button type="button" onClick={()=>setConfirmation(null)}>Cancel</button><button className="asi-action-primary" type="button" onClick={()=>{const choice=confirmation;setConfirmation(null);if(choice.kind==='delete')void remove();else if(choice.kind==='restore'&&choice.revision)void restore(choice.revision);else if(choice.kind==='overwrite'&&current)void save(current.path,true);}}>Continue</button></div>
+      <div className="asi-dialog-actions" data-annotation-control=""><button type="button" onClick={()=>setConfirmation(null)}>Cancel</button><button className="asi-action-primary" type="button" onClick={()=>{const choice=confirmation;setConfirmation(null);if(choice.kind==='delete')void remove();else if(choice.kind==='restore'&&choice.revision)void restore(choice.revision);else if(choice.kind==='overwrite'&&current)void save(current.path,true);}}>Continue</button></div>
     </section></div>}
-    {paletteMode&&<div className="asi-overlay"><div className="asi-dialog asi-command-dialog" role="dialog" aria-modal="true" aria-label={paletteMode==='file'?'Go to file':'Command palette'}>
-      <div className="asi-command-field"><span aria-hidden="true">⌕</span>
+    {paletteMode&&<div className="asi-overlay" data-annotation-control=""><div className="asi-dialog asi-command-dialog" data-annotation-control="" role="dialog" aria-modal="true" aria-label={paletteMode==='file'?'Go to file':'Command palette'}>
+      <div className="asi-command-field" data-annotation-control=""><span aria-hidden="true">⌕</span>
       <input autoFocus aria-label="Command palette" value={paletteQuery}
         onKeyDown={event=>{
           if(event.key==='Escape')setPaletteMode(null);

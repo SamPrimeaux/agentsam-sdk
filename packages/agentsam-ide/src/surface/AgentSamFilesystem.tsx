@@ -106,10 +106,10 @@ export function AgentSamFilesystem({
 
 
   const authorized=Boolean(source&&canMountAgentSamFilesystemSource(source));
-  const connectionPanel=authorized?null:<div className="asi-source-connection-panel" role="group" aria-label="Connect file source">
+  const connectionPanel=authorized?null:<div className="asi-source-connection-panel" data-annotation-control="" role="group" aria-label="Connect file source">
     <strong>{source?.label||'Connect a file source'}</strong>
     <p>{error||source?.detail||'New untitled files can be edited immediately. Connect a source when you need to browse or save files.'}</p>
-    <div className="asi-source-connection-actions">
+    <div className="asi-source-connection-actions" data-annotation-control="">
       {source?.connect&&<button type="button" onClick={()=>void source.connect?.()}>Connect {source.label}</button>}
       {source?.reconnect&&<button type="button" onClick={()=>void source.reconnect?.()}>Reconnect</button>}
       {source?.manageConnection&&<button type="button" onClick={source.manageConnection}>Manage connection</button>}
