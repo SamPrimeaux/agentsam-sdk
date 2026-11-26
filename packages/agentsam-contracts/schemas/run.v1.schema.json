@@ -72,7 +72,7 @@
     "selectedBy": {
       "enum": [
         "manual",
-        "automatic",
+        "thompson",
         "fallback"
       ]
     },
@@ -80,7 +80,6 @@
       "enum": [
         "queued",
         "running",
-        "paused",
         "waiting_external",
         "waiting_child",
         "awaiting_input",
@@ -98,7 +97,6 @@
       "enum": [
         "queued",
         "running",
-        "paused",
         "completed",
         "failed",
         "partial",
