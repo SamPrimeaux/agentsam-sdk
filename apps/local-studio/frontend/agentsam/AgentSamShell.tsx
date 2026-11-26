@@ -275,6 +275,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     return () => {cancelled=true;window.removeEventListener('agentsam:projects-changed',refresh);};
   },[historyRevision,user?.id]);
   const isConversation = pathname === '/admin/agentsam' || pathname.startsWith('/admin/chats');
+  const isMerchantRoute = /^\/admin\/(?:home|products|collections|inventory|orders|discounts|store|themes|pages|preferences|sites|analytics|subscribers|growth)(?:\/|$)/.test(pathname);
   const isCadRoute = pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
   const isSamSketchRoute = pathname === '/admin/samsketch' || pathname.startsWith('/admin/samsketch/');
   const isSamSculptRoute = pathname === '/samsculpt' || pathname.startsWith('/samsculpt/');
@@ -608,7 +609,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
     showSidebarHeader: true,
     // New conversation is the first entry; product destinations follow below.
-    showHistory: isConversation,
+    showHistory: true,
+    mobileNavigationPresentation: isMerchantRoute ? 'immersive' : 'drawer',
     destinations: [
       // Render the platform-owned business destinations first. These are the
       // canonical primary entries from the same host projection as installed apps.
@@ -624,7 +626,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     } : item),
     onNavigate: go,
     onSearch: () => window.dispatchEvent(new Event('agentsam:open-command-palette')),
-    onCreateConversation: isConversation ? () => { state.startChat(); go('/admin/agentsam'); } : undefined,
+    onCreateConversation: () => { state.startChat(); go('/admin/agentsam'); },
     onSelectConversation: (id) => {
       if (state.chats.some(item => item.id === id)) state.setActiveChat(id);
       go('/admin/chats/' + encodeURIComponent(id));
