@@ -126,14 +126,10 @@
       "import": "./dist/bim-model.js"
     },
     "./bim-model/schema": "./schemas/bim-model.v1.schema.json",
-    "./json-schema": {
-      "types": "./dist/json-schema.d.ts",
-      "import": "./dist/json-schema.js"
-    },
-    "./schemas/activity.v1.schema.json": "./schemas/activity.v1.schema.json",
-    "./schemas/run.v1.schema.json": "./schemas/run.v1.schema.json",
-    "./schemas/run-start.v1.schema.json": "./schemas/run-start.v1.schema.json",
-    "./schemas/run-receipt.v1.schema.json": "./schemas/run-receipt.v1.schema.json"
+    "./source-types/registry": {
+      "types": "./dist/source-types-registry.d.ts",
+      "import": "./dist/source-types-registry.js"
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -159,8 +155,5 @@
     "README.md"
   ],
   "license": "MIT",
-  "types": "./dist/index.d.ts",
-  "dependencies": {
-    "ajv": "^8.17.1"
-  }
+  "types": "./dist/index.d.ts"
 }
