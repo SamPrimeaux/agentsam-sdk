@@ -21,6 +21,10 @@ When mounting handleCloudflareConnectionRequest, the host supplies an options ob
             { scope: "resource.read", label: "Read resource", category: "resources" }
           ]
         };
+      },
+      async getActiveGrantedScopes({ ownerId, providerKey, accountIdentifier }) {
+        // Read only the active grant for this exact account connection.
+        return ["resource.read"];
       }
     }
 
