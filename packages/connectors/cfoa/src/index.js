@@ -23,7 +23,6 @@ export {
 
 export {
   CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
-  CLOUDFLARE_PERMISSION_PRODUCTS,
   listCloudflarePermissionProducts,
   listCloudflarePermissionOptionsByCategory,
   assertPermissionCatalogCoversAllScopes,
