@@ -56,6 +56,15 @@ async function fixture(t, { childStatus = 'running', timeoutChild = false, suspe
       ) VALUES (?, ?, ?, 1, 'run.timed_out', 'complete', 'Child timed out', '{}', 102)
     `).bind('evt_child_timeout', 'arun_child', 'arun_parent').run();
   }
+  if (suspendChild) {
+    await db.prepare(`
+      INSERT INTO agentsam_agent_run_suspension (
+        run_id, state, reason, wake_at_unix, wake_event, dependency_run_ids_json,
+        resume_step_id, checkpoint_ref, expires_at_unix, attempt, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind('arun_child', 'waiting_external', 'external', 5000, 'provider.completed', '[]',
+      'step_resume', 'checkpoint:run', 6000, 2, JSON.stringify({ provider: 'example' })).run();
+  }
   db.close();
   return root;
 }
