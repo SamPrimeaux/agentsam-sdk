@@ -92,6 +92,9 @@ if (!existsSync(path.join(frontendModules, 'react-router-dom/package.json')) ||
   });
 }
 
+// The checked-in browser editor modules are generated from the app's
+// canonical theme-contract/editor sources; staging must sync them before Vite.
+execFileSync('npm', ['run', 'sync:theme-contract'], { cwd: app, stdio: 'inherit' });
 execFileSync('npm', ['run', 'sync:identity-portals'], { cwd: app, stdio: 'inherit' });
 execFileSync('npm', ['run', 'build:frontend'], { cwd: app, stdio: 'inherit' });
 execFileSync(process.execPath, [path.join(app, 'bin/build-assets.mjs')], { cwd: app, stdio: 'inherit' });
