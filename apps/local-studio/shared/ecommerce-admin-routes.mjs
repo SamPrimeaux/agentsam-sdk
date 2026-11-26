@@ -37,6 +37,7 @@ export const LOCAL_STUDIO_ECOMMERCE_ADMIN_ROUTES = Object.freeze([
   route('admin.analytics.overview', '/admin/analytics/overview', 'admin-spa'),
   route('admin.analytics.finance', '/admin/analytics/finance', 'admin-spa'),
   route('admin.analytics.health', '/admin/analytics/health', 'admin-spa'),
+  route('admin.analytics.security', '/admin/analytics/security', 'admin-spa'),
   route('admin.account', '/admin/account', 'admin-spa'),
   route('admin.product-studio.create', '/admin/products/create', 'admin-spa'),
   route('admin.product-studio.edit', '/admin/products/create/:productId', 'admin-spa'),
