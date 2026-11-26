@@ -245,19 +245,24 @@ export async function publishMerchantPage(env,accountId,siteId,slug,pageId) {
     const guard=sections.sources.map(()=>
       'AND EXISTS(SELECT 1 FROM cms_page_sections s WHERE s.id=? AND s.page_id=? '+
       'AND s.is_visible=1 AND s.draft_r2_key IS ? AND s.content_hash IS ?)').join('\n');
+    const draftGuard=rawDraft==null
+      ? 'AND NOT EXISTS(SELECT 1 FROM cms_page_drafts WHERE page_id=? AND user_id=?)'
+      : 'AND EXISTS(SELECT 1 FROM cms_page_drafts WHERE page_id=? AND user_id=? AND draft_data=?)';
+    const draftGuardBindings=rawDraft==null
+      ? [page.id,accountId] : [page.id,accountId,rawDraft];
     const sql=`UPDATE cms_pages SET slug=?,route_path=?,title=?,seo_json=?,metadata_json=?,template_sku=?,
       nav_visible=?,status='published',content_object_key=?,published_manifest_object_key=?,
       published_at=unixepoch(),updated_at=unixepoch()
       WHERE id=? AND site_id=? AND slug=? AND route_path=? AND status=? AND content_object_key IS ?
         AND metadata_json=?
-        AND EXISTS(SELECT 1 FROM cms_page_drafts WHERE page_id=? AND user_id=? AND draft_data=?)
+        ${draftGuard}
         AND (SELECT COUNT(*) FROM cms_page_sections WHERE page_id=? AND is_visible=1)=?
         ${guard}`;
     const pageUpdate=env.DB.prepare(sql).bind(
-      nextSlug,nextRoute,nextTitle,JSON.stringify(seo),JSON.stringify(nextMeta),draft.template_sku||null,
+      nextSlug,nextRoute,nextTitle,JSON.stringify(seo),JSON.stringify(nextMeta),draft.template_sku||page.template_sku||null,
       draft.visibility==='visible'?1:0,key,manifestKey,
       page.id,site.id,page.slug,page.route_path,page.status,page.content_object_key,page.metadata_json,
-      page.id,accountId,rawDraft,page.id,sections.sources.length,
+      ...draftGuardBindings,page.id,sections.sources.length,
       ...sections.sources.flatMap(source=>[
         source.section_id,page.id,source.draft_key,source.draft_hash,
       ]),
