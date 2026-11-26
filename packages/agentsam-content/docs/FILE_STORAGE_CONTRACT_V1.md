@@ -35,8 +35,8 @@ Existing `ContentAsset.providerRefs` lacking `targetId` remain readable by legac
 ## Remaining host implementation gates (Phase 2+)
 
 - Native: bind the Tauri `LocalContentHost` and real writable/streamable file operations. Current desktop base64 `read` has a 32 MB limit; use a bounded streaming transport for large originals.
-- Hosted: bind real R2 read/write/list/delete operations using installation-resolved storage roles (for example, runtime-controlled `WEBSITE_ASSETS`); bind Google Drive with authorized OAuth scopes and token refresh, never hardcoded account IDs.
-- Metadata: implement the atomic `AccountFileMetadata` port over the correct D1/SQLite schema; durable account permission and revision authorization tests are required.
+- Hosted: implement R2 read/write/list/delete by resolving an active `r2_storage_routes` record to `r2_buckets`, then honoring its declared access mode (Worker binding or provider API). Use the existing OAuth token source for OAuth-backed access. Do not infer `WEBSITE_ASSETS`, invent `website_assets`/archive/generated roles, or create a parallel connection/target table.
+- Metadata: implement the atomic `AccountFileMetadata` port against the existing asset authorities. Reuse `media_assets` where its media schema fits; do not turn `cms_assets` or immutable `cms_artifacts` into a universal file catalog or create a competing table without a proven gap.
 - UI: wire Settings → Storage to actual account targets and permissions; wire Work/Library grid/list, source search, exports and fallback states. Do not display speculative connected targets.
 - Verification: test real original-byte round trips, multi-chunk export, cross-session restore, mobile/browser limitations, cloud auth expiry, move interruption and provider quota failures before declaring the application released.
 
