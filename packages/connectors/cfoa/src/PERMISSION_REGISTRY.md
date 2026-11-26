@@ -2,7 +2,7 @@
 
 The Cloudflare connector does not own provider permission-pack configuration and does not read host database tables.
 
-When mounting handleCloudflareConnectionRequest, the host supplies an options object with a permissionRegistry adapter. The adapter exposes:
+When mounting handleCloudflareConnectionRequest, the host supplies an options object with a `permissionRegistry` adapter. The adapter exposes two methods:
 
     {
       async getOAuthPermissionCatalog(providerKey) {
@@ -21,6 +21,10 @@ When mounting handleCloudflareConnectionRequest, the host supplies an options ob
             { scope: "resource.read", label: "Read resource", category: "resources" }
           ]
         };
+      },
+      async getActiveGrantedScopes({ ownerId, providerKey, accountIdentifier }) {
+        // Read only the active grant for this exact account connection.
+        return ["resource.read"];
       }
     }
 
@@ -35,7 +39,7 @@ The normalized catalog fields are:
 - capabilities: optional fine-grained capability-to-scope mappings.
 - availablePermissions: optional picker metadata. If omitted, the connector derives the inventory from baseline, pack and capability scopes.
 
-The connector validates every requested pack and capability against the injected catalog and fails closed when the adapter is absent or the selection is unknown. Offerable permissions are never represented as granted permissions; actual grants come from the selected account token.
+The connector validates every requested pack and capability against the injected catalog and fails closed when the adapter is absent or the selection is unknown. For an existing connection, `getActiveGrantedScopes` must return the scopes granted to the exact owner/provider/account tuple; return `[]` when no active token exists and `null` when grants cannot be verified. The connector fails closed on `null` so an upgrade cannot silently discard prior grants. Offerable permissions are never represented as granted permissions; actual grants come from the selected account token.
 
 The host adapter may use D1, Postgres, a remote registry, a static config file, or another source. That storage choice is intentionally outside this package.
 

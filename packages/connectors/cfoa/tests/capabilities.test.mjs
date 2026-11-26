@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   requestedCloudflareScopes,
-  CLOUDFLARE_BASELINE_SCOPES,
+  assertPermissionCatalogCoversAllScopes,
+  listCloudflarePermissionProducts,
   scopesForCapabilities,
   assessCapabilityAuthorization,
   CloudflareApiClient,
@@ -17,42 +18,65 @@ import {
 } from '../src/index.js';
 
 describe('cloudflare capability-scoped auth', () => {
+  const permissionCatalog = {
+    baselineScopes: ['offline_access', 'account-settings.read'],
+    defaultPacks: ['watch'],
+    packs: [
+      { id: 'watch', label: 'Watch', scopes: ['workers-observability.read'] },
+      { id: 'store', label: 'Store', scopes: ['d1.read', 'd1.write'] },
+    ],
+    capabilities: [
+      { id: 'cloudflare.r2', scopes: ['workers-r2.read', 'workers-r2.write'] },
+      { id: 'cloudflare.analytics', scopes: ['account-analytics.read'] },
+      { id: 'cloudflare.basin.read', scopes: ['pipelines.read', 'r2-catalog.read', 'r2-catalog-sql.read'] },
+      { id: 'cloudflare.images', scopes: ['images.read', 'images.write'] },
+      { id: 'cloudflare.url_scanner', scopes: ['url-scanner.read', 'url-scanner.write'] },
+      { id: 'cloudflare.workflows', scopes: ['workers-scripts.read', 'workers-scripts.write'] },
+      { id: 'cloudflare.pages', scopes: ['page.read', 'page.write'] },
+      { id: 'cloudflare.keyless_ssl', scopes: ['ssl-and-certificates.read', 'ssl-and-certificates.write'] },
+    ],
+    availablePermissions: [
+      { scope: 'd1.read', label: 'D1 Read', category: 'developer-platform' },
+      { scope: 'd1.write', label: 'D1 Write', category: 'developer-platform' },
+      { scope: 'workers-r2.read', label: 'Workers R2 Read', category: 'developer-platform' },
+      { scope: 'workers-r2.write', label: 'Workers R2 Write', category: 'developer-platform' },
+      { scope: 'account-analytics.read', label: 'Account Analytics Read', category: 'analytics-logs' },
+      { scope: 'pipelines.read', label: 'Pipelines Read', category: 'developer-platform' },
+      { scope: 'r2-catalog.read', label: 'R2 Catalog Read', category: 'developer-platform' },
+      { scope: 'r2-catalog-sql.read', label: 'R2 Catalog SQL Read', category: 'developer-platform' },
+    ],
+  };
+
   it('requires a host-owned permission catalog and uses its default packs', () => {
     assert.throws(
       () => requestedCloudflareScopes(),
       (error) => error.code === 'cloudflare_permission_registry_unavailable',
     );
-    const scopes = requestedCloudflareScopes({
-      permissionCatalog: {
-        baselineScopes: ['offline_access'],
-        defaultPacks: ['watch'],
-        packs: [{ id: 'watch', scopes: ['workers-tail.read'] }],
-        capabilities: [],
-      },
-    });
-    assert.deepEqual(scopes, ['offline_access', 'workers-tail.read']);
+    const scopes = requestedCloudflareScopes({ permissionCatalog });
+    assert.deepEqual(scopes, [
+      'offline_access',
+      'account-settings.read',
+      'workers-observability.read',
+    ]);
   });
 
-  it('keeps provider API metadata separate from host-owned OAuth pack configuration', async () => {
-    const { assertPermissionCatalogCoversAllScopes, listCloudflarePermissionProducts } = await import('../src/index.js');
-    const cover = assertPermissionCatalogCoversAllScopes();
+  it('derives permission products from the plugin-owned available-permissions catalog', () => {
+    const cover = assertPermissionCatalogCoversAllScopes(permissionCatalog);
     assert.equal(cover.ok, true);
-    assert.equal(cover.scopes, 315);
-    assert.ok(listCloudflarePermissionProducts().length >= 150);
-    const scopes = requestedCloudflareScopes({
-      permissionCatalog: {
-        baselineScopes: ['offline_access'],
-        packs: [{ id: 'store', scopes: ['d1.read', 'd1.write'] }],
-        capabilities: [],
-      },
-      packs: ['store'],
-    });
-    assert.deepEqual(scopes, ['offline_access', 'd1.read', 'd1.write']);
+    assert.equal(cover.scopes, 8);
+    assert.equal(cover.products, 6);
+    const products = listCloudflarePermissionProducts(permissionCatalog);
+    assert.deepEqual(
+      products.find((product) => product.id === 'cloudflare.perm.d1').oauthScopes,
+      ['d1.read', 'd1.write'],
+    );
+    assert.equal(products.some((product) => product.id === 'cloudflare.perm.workers-r2'), true);
   });
 
-  it('upgrades scopes only for requested capabilities', () => {
+  it('upgrades scopes only for requested capabilities from the injected catalog', () => {
     const scopes = scopesForCapabilities({
-      capabilities: ['cloudflare.url_scanner', 'cloudflare.workflows', 'cloudflare.pages'],
+      permissionCatalog,
+      capabilities: ['cloudflare.url_scanner', 'cloudflare.workflows', 'cloudflare.pages', 'cloudflare.keyless_ssl'],
     });
     assert.ok(scopes.includes('url-scanner.write'));
     assert.ok(scopes.includes('workers-scripts.write'));
@@ -60,38 +84,37 @@ describe('cloudflare capability-scoped auth', () => {
     assert.ok(!scopes.includes('ssl-and-certificates.write'));
   });
 
-  it('requests only read-only HTTP Analytics and Basin scopes for the Health dashboard', () => {
+  it('requests only read-only Analytics and Basin scopes for the Health dashboard', () => {
     const scopes = requestedCloudflareScopes({
-      permissionCatalog: {
-        baselineScopes: CLOUDFLARE_BASELINE_SCOPES,
-        packs: [],
-        capabilities: [
-          { id: 'cloudflare.perm.account-analytics', scopes: ['account-analytics.read'] },
-          { id: 'cloudflare.basin.read', scopes: ['pipelines.read', 'r2-catalog.read', 'r2-catalog-sql.read'] },
-        ],
-      },
-      capabilities: ['cloudflare.perm.account-analytics', 'cloudflare.basin.read'],
+      permissionCatalog,
+      capabilities: ['cloudflare.analytics', 'cloudflare.basin.read'],
     });
     assert.deepEqual(
       [...scopes].sort(),
-      [...CLOUDFLARE_BASELINE_SCOPES, 'account-analytics.read', 'pipelines.read', 'r2-catalog.read', 'r2-catalog-sql.read'].sort(),
+      [
+        'offline_access',
+        'account-settings.read',
+        'account-analytics.read',
+        'pipelines.read',
+        'r2-catalog.read',
+        'r2-catalog-sql.read',
+      ].sort(),
     );
     assert.ok(!scopes.some((scope) => /write|send/i.test(scope)));
-    assert.deepEqual(getCloudflareCapability('cloudflare.basin.read').oauthScopes, [
-      'pipelines.read',
-      'r2-catalog.read',
-      'r2-catalog-sql.read',
-    ]);
+    assert.deepEqual(
+      getCloudflareCapability('cloudflare.basin.read', permissionCatalog).oauthScopes,
+      ['pipelines.read', 'r2-catalog.read', 'r2-catalog-sql.read'],
+    );
   });
 
-  it('uses images.read/write from OAuth catalog', () => {
-    const cap = getCloudflareCapability('cloudflare.images');
+  it('resolves Images scopes from the OAuth catalog, not package constants', () => {
+    const cap = getCloudflareCapability('cloudflare.images', permissionCatalog);
     assert.deepEqual(cap.oauthScopes, ['images.read', 'images.write']);
   });
 
-  it('does not invent snippets OAuth scope', () => {
+  it('does not invent a Snippets OAuth scope', () => {
     const cap = getCloudflareCapability('cloudflare.snippets');
-    assert.equal(cap.oauthScopes.length, 0);
+    assert.deepEqual(cap.oauthScopes, []);
     assert.equal(cap.tokenRequired, true);
   });
 
@@ -100,18 +123,22 @@ describe('cloudflare capability-scoped auth', () => {
     assert.equal(status.status, 'unknown');
     assert.equal(status.token_required, true);
     assert.equal(status.probe_required, true);
-    assert.equal(status.missing_scopes.length, 0);
+    assert.deepEqual(status.missing_scopes, []);
   });
 
-  it('marks URL Scanner as needs_authorization when scopes missing', () => {
-    const a = assessCapabilityAuthorization('cloudflare.url_scanner', ['account-settings.read']);
-    assert.equal(a.status, 'needs_authorization');
-    assert.ok(a.missing_scopes.includes('url-scanner.write'));
-    assert.match(a.permissionLabel, /URL Scanner/);
+  it('marks URL Scanner as needs_authorization when plugin-owned scopes are missing', () => {
+    const status = assessCapabilityAuthorization(
+      'cloudflare.url_scanner',
+      ['account-settings.read'],
+      permissionCatalog,
+    );
+    assert.equal(status.status, 'needs_authorization');
+    assert.ok(status.missing_scopes.includes('url-scanner.write'));
+    assert.match(status.permissionLabel, /URL Scanner/);
   });
 
-  it('treats Keyless as enterprise add-on (not default setup)', () => {
-    const cap = getCloudflareCapability('cloudflare.keyless_ssl');
+  it('treats Keyless as an enterprise add-on, not a default setup grant', () => {
+    const cap = getCloudflareCapability('cloudflare.keyless_ssl', permissionCatalog);
     assert.equal(cap.availability, 'enterprise_addon');
     assert.match(cap.availabilityNote, /Enterprise/);
   });

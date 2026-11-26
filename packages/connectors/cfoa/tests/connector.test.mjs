@@ -24,6 +24,9 @@ const permissionRegistry = {
       capabilities: [{ id: 'cloudflare.r2', scopes: ['workers-r2.read', 'workers-r2.write'] }],
     };
   },
+  async getActiveGrantedScopes() {
+    return [];
+  },
 };
 
 describe('cloudflare connector', () => {
@@ -180,6 +183,9 @@ describe('cloudflare connector', () => {
           capabilities: [{ id: 'cloudflare.r2', scopes: ['workers-r2.read', 'workers-r2.write'] }],
           packs: [],
         };
+      },
+      async getActiveGrantedScopes() {
+        return [];
       },
     };
     const response = await handleCloudflareConnectionRequest(

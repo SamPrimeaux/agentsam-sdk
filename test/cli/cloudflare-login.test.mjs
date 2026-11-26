@@ -93,3 +93,66 @@ test('login validates against the host registry and leaves scope expansion to th
   assert.equal(result.scope_count, null);
 });
 
+
+async function assertAgentSamError(promise, reason) {
+  await assert.rejects(promise, (error) => {
+    assert.equal(error.name, 'AgentSamError');
+    assert.equal(error.reason, reason);
+    assert.ok(error.envelope);
+    return true;
+  });
+}
+
+test('invalid CLI options return canonical structured input errors', async () => {
+  await assertAgentSamError(runCloudflareBrowserOAuthLogin(['--not-a-real-option'], {}), 'input_invalid');
+});
+
+test('missing permission-catalog fetch implementation returns a structured transport error', async () => {
+  await assertAgentSamError(runCloudflareBrowserOAuthLogin(['--list-packs'], {
+    hostOrigin: 'https://agentsam.example',
+    authorityLoader: async () => ({ value: 'aak_test' }),
+    fetchImpl: {},
+    write: () => {},
+  }), 'transport_not_configured');
+});
+
+test('permission-catalog HTTP failures return structured provider errors', async () => {
+  await assertAgentSamError(runCloudflareBrowserOAuthLogin(['--list-packs'], {
+    hostOrigin: 'https://agentsam.example',
+    authorityLoader: async () => ({ value: 'aak_test' }),
+    fetchImpl: async () => ({ ok: false, status: 503, json: async () => ({ ok: false, error: 'service unavailable' }) }),
+    write: () => {},
+  }), 'provider_unavailable');
+});
+
+test('missing account authority returns a structured authentication error', async () => {
+  await assertAgentSamError(runCloudflareBrowserOAuthLogin(['--list-packs'], {
+    hostOrigin: 'https://agentsam.example',
+    authorityLoader: async () => ({ value: null, error: 'Sign in first' }),
+    fetchImpl: async () => ({ ok: true, status: 200, json: async () => catalog }),
+    write: () => {},
+  }), 'auth_missing');
+});
+
+test('unknown permission packs return a structured input error with the legacy code retained as detail', async () => {
+  await assert.rejects(runCloudflareBrowserOAuthLogin(['--pack', 'missing-pack', '--no-open', '--json'], {
+    hostOrigin: 'https://agentsam.example',
+    authorityLoader: async () => ({ value: 'aak_test' }),
+    fetchImpl: async () => ({ ok: true, status: 200, json: async () => catalog }),
+    write: () => {},
+  }), (error) => {
+    assert.equal(error.name, 'AgentSamError');
+    assert.equal(error.reason, 'input_invalid');
+    assert.equal(error.envelope.details.legacy_code, 'cloudflare_permission_pack_unavailable');
+    return true;
+  });
+});
+
+test('unknown capabilities return a structured input error', async () => {
+  await assertAgentSamError(runCloudflareBrowserOAuthLogin(['--capability', 'cloudflare.missing', '--no-open', '--json'], {
+    hostOrigin: 'https://agentsam.example',
+    authorityLoader: async () => ({ value: 'aak_test' }),
+    fetchImpl: async () => ({ ok: true, status: 200, json: async () => catalog }),
+    write: () => {},
+  }), 'input_invalid');
+});
