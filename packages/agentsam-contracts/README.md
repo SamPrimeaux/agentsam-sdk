@@ -44,6 +44,7 @@ The ACP runtime's public response shapes are owned here rather than existing onl
 - `AgentRunStartV1` and `run-start.v1.schema.json` describe the queued control-plane acknowledgement. Queueing is not model execution.
 - `AgentRunReceiptV1` and `run-receipt.v1.schema.json` describe usage, timing, terminal state, suspension and last-event evidence.
 - `AgentActivityEventV1` and `activity.v1.schema.json` describe the normalized activity projection. The schema requires every property the TypeScript contract requires.
+- The ACP `recordAgentRunTimeout()` helper persists a timeout as storage status `failed` plus an idempotent `run.timed_out` event, which the run mapper projects as lifecycle status `timed_out`.
 
 `assertAgentJsonSchema()` validates embedded tool/operation schemas against Draft 2020-12 or Draft 7 meta-schemas before registration. It does not fetch remote `$ref` targets; schema-pack publication owns reference resolution.
 
