@@ -319,7 +319,7 @@ test("Theme Editor global settings resolve to a distinct page identity per site"
 
     const addGlobalSection = "/api/admin/cms/pages/site/sections?site_id=site-a2";
     const created = await handleAdminCmsApi(
-      request(addGlobalSection, "POST", { templateKey: "portable", themePreset: "revise/editorial-statement" }),
+      request(addGlobalSection, "POST", { templateKey: "portable", themePreset: "cad-beyond/aspiration" }),
       env, new URL("https://cms.test" + addGlobalSection), { accountId: "acct-a" },
     );
     assert.equal(created.status, 201);
