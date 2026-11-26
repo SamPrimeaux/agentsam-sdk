@@ -4,11 +4,6 @@
 // version alignment and dependency pins before publishing.
 import { spawnSync } from 'node:child_process';
 
-const env = { ...process.env };
-for (const key of Object.keys(env)) {
-  if (/^npm_config_dry[_-]?run$/i.test(key)) delete env[key];
-}
-
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 for (const script of ['release:train:check']) {
   const result = spawnSync(npm, ['run', script], { stdio: 'inherit', env, shell: process.platform === 'win32' });
