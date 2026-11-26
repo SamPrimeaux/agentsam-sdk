@@ -6,9 +6,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   rankStorageCandidates,
-  type ScoreHints,
+  type StorageDiscoveryHints,
   type StorageCandidate,
-} from "../storage/roles.js";
+} from "../storage/candidates.js";
 
 const CONFIG_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"];
 const R2_CAPS: StorageCandidate["capabilities"] = ["list", "read", "write", "delete"];
