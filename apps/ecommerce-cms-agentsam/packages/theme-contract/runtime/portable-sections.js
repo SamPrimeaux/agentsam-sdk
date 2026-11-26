@@ -134,14 +134,6 @@
   // ONLY register implementations with actual markup + scoped styles below.
   // Other donor concepts remain candidates and MUST NOT appear in Add Section.
   const definitions = Object.freeze([
-    spec("revise/sticky-curtain", "Sticky curtain hero", "hero", heroFields, buttonBlock),
-    spec("revise/wardrobe-rail", "Wardrobe rail", "collections", [f("title", "Heading")], imageCard),
-    spec("revise/editorial-statement", "Editorial statement", "story", [f("title", "Heading"), f("body", "Body", "textarea")]),
-    spec("revise/faq", "FAQ accordion", "faq", [f("title", "Heading")], faqCard),
-    spec("revise/testimonials", "Testimonial cards", "testimonials", [f("title", "Heading")], detailCard),
-    spec("revise/trust-row", "Trust row", "trust", [f("title", "Heading")], detailCard),
-    spec("revise/newsletter", "Newsletter", "newsletter", cards.concat(f("buttonLabel", "Button text"))),
-
     spec("cad-beyond/aspiration", "Aspiration", "cad-beyond-chapter", beyondChapterFields),
     spec("cad-beyond/complexity", "Complexity", "cad-beyond-chapter", beyondChapterFields),
     spec("cad-beyond/uncertainty", "Uncertainty", "cad-beyond-chapter", beyondChapterFields),
