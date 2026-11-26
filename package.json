@@ -53,6 +53,7 @@
     "./identity/core/password-crypto": "./packages/identity/src/core/password-crypto.js",
     "./identity/core/password-gate": "./packages/identity/src/core/password-gate.js",
     "./identity/frontend/auth-portal/*": "./packages/identity/src/frontend/auth-portal/*",
+    "./identity/frontend/auth-portal/store-access": "./packages/identity/src/frontend/auth-portal/store-access.js",
     "./identity/migrations/sqlite/*": "./packages/identity/migrations/sqlite/*",
     "./identity/contracts/routes": "./packages/identity/src/contracts/routes.js",
     "./identity/providers": "./packages/identity/src/providers/index.js",
