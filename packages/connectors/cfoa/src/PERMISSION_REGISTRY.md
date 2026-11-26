@@ -2,7 +2,7 @@
 
 The Cloudflare connector does not own provider permission-pack configuration and does not read host database tables.
 
-When mounting handleCloudflareConnectionRequest, the host supplies an options object with a permissionRegistry adapter. The adapter exposes:
+When mounting handleCloudflareConnectionRequest, the host supplies an options object with a `permissionRegistry` adapter. The adapter exposes two methods:
 
     {
       async getOAuthPermissionCatalog(providerKey) {
