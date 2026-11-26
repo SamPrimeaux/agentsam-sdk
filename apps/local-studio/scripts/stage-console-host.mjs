@@ -14,6 +14,27 @@ const source = path.join(app, 'dist/assets');
 const productStage = path.join(localStudio, 'frontend/public/ecommerce-cms-agentsam');
 const hostAdmin = path.join(localStudio, 'frontend/public/admin');
 const hostConfig = path.join(hostAdmin, 'host-config.js');
+function removeLegacyReviseAssets(root, adminRoot = false) {
+  const paths = adminRoot ? [
+    'theme-previews/revise',
+    'js/revise-atlas.js',
+    'css/revise-atlas.css',
+    'revise-atlas.html',
+    'js/revise-atlas-view.js',
+  ] : [
+    'admin/theme-previews/revise',
+    'theme-assets/revise',
+    'admin/js/revise-atlas.js',
+    'admin/css/revise-atlas.css',
+    'admin/revise-atlas.html',
+    'admin/js/revise-atlas-view.js',
+    'js/revise-atlas.js',
+    'css/revise-atlas.css',
+  ];
+  for (const relative of paths) rmSync(path.join(root, relative), { recursive: true, force: true });
+}
+removeLegacyReviseAssets(productStage);
+removeLegacyReviseAssets(hostAdmin, true);
 const themePreviewMirror = path.join(localStudio, 'frontend/public/themes');
 const legacySiteThemeGallery = path.join(localStudio, 'frontend/public/site/themes');
 // Remove only former website preview subdirectories. The /themes root also
