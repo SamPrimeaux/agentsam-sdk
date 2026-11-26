@@ -50,13 +50,6 @@ async function fixture(t, { childStatus = 'running', suspendChild = false } = {}
       event_id, run_id, parent_run_id, seq, event_type, phase, label, evidence_json, created_at_unix
     ) VALUES (?, ?, ?, 0, 'run.started', 'boot', 'Child started', '{}', 101)
   `).bind('evt_child_0', 'arun_child', 'arun_parent').run();
-  if (timeoutChild) {
-    await db.prepare(`
-      INSERT INTO agentsam_agent_run_event (
-        event_id, run_id, parent_run_id, seq, event_type, phase, label, evidence_json, created_at_unix
-      ) VALUES (?, ?, ?, 1, 'run.timed_out', 'complete', 'Child timed out', '{}', 102)
-    `).bind('evt_child_timeout', 'arun_child', 'arun_parent').run();
-  }
   if (suspendChild) {
     await db.prepare(`
       INSERT INTO agentsam_agent_run_suspension (
