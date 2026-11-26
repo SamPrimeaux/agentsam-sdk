@@ -420,7 +420,16 @@ jobs:
       - name: Install Ecommerce CMS test-only dependency
         run: |
           jsdom_version="$(node -p 'require("./apps/ecommerce-cms-agentsam/package.json").devDependencies.jsdom')"
-          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund "jsdom@$jsdom_version"
+          test_deps="$RUNNER_TEMP/ecommerce-cms-test-deps"
+          mkdir -p "$test_deps"
+          printf '{"private":true}\n' > "$test_deps/package.json"
+          npm install --prefix "$test_deps" --no-save --package-lock=false --install-strategy=nested --ignore-scripts --no-audit --no-fund "jsdom@$jsdom_version"
+          # Keep test-only dependencies out of the root workspace reifier.
+          # Nested install keeps jsdom's own dependency tree beside the package.
+          if [ ! -e "$GITHUB_WORKSPACE/node_modules/jsdom/package.json" ]; then
+            ln -s "$test_deps/node_modules/jsdom" "$GITHUB_WORKSPACE/node_modules/jsdom"
+          fi
+          node -e 'const p=require("./node_modules/jsdom/package.json"); if(p.version!==process.env.JSDOM_EXPECTED_VERSION) throw new Error("ecommerce_jsdom_version_mismatch")' 
       - name: Build packaged portable contracts
         run: npm run build:contracts
       - name: Check Ecommerce standalone npm prerequisites
