@@ -189,8 +189,8 @@ test("admin API creates, edits, and opens a site-scoped page by stable page id",
     assert.ok(section.section_key);
 
     const sectionContent = section.section.content;
-    sectionContent.title = "A real editable page";
-    sectionContent.body = "Saved through the site-scoped CMS API.";
+    sectionContent.headline = "A real editable page";
+    sectionContent.lede = "Saved through the site-scoped CMS API.";
     const saveSectionUrl = `/api/admin/cms/pages/our-story/sections/${section.section_key}?site_id=site-a&page_id=${created.page.id}`;
     const saved = await handleAdminCmsApi(
       request(saveSectionUrl, "PUT", { content: sectionContent, expected_version: 1 }),
