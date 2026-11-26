@@ -67,7 +67,7 @@ if (!existsSync(path.join(frontendModules, 'react-router-dom/package.json')) ||
     cwd: app, stdio: 'inherit',
   });
 }
-execFileSync('npm', ['run', 'build:frontend'], { cwd: app, stdio: 'inherit' });
+
 // The installable Ecommerce application also has its own lockfile. Its CMS
 // theme/section packages are not root-SDK dependencies and must be installed
 // for an isolated Studio build before assembling the original product assets.
