@@ -26,6 +26,7 @@ await build({
   bundle: true,
   format: 'esm',
   platform: 'neutral',
+  mainFields: ['module', 'main'],
   target: 'es2022',
 });
 execFileSync('tsc', ['-p', 'tsconfig.build.json', '--outDir', staging], { cwd, stdio: 'inherit' });
