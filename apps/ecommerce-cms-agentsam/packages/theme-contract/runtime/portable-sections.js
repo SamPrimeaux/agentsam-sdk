@@ -858,7 +858,6 @@
 
   function defaults(id) {
     if (!byId.has(id) && scope.ThemePlatformStock?.get(id)) return scope.ThemePlatformStock.defaults(id);
-    if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.defaults(id);
     const definition = byId.get(id);
     if (!definition) return null;
     const content = JSON.parse(JSON.stringify(cadBeyondDefaults[id]?.content || primetechDefaults[id] || genericDefaults[definition.family] || {}));
