@@ -12,7 +12,9 @@
 
 [data-annotation-selecting] iframe { pointer-events: none; }
 /* Cooperative Browser frames report the real element rect; do not intercept their pointer events. */
-[data-annotation-selecting] iframe:is(.as-web-browser-frame,.as-work-generated-preview,.abs-explore-frame) { pointer-events: auto; }
+[data-annotation-selecting] iframe:is(.as-web-browser-frame,.as-work-generated-preview,.abs-explore-frame,.cv-native-html),
+[data-annotation-selecting] [data-cad-iframe-region] > iframe,
+[data-annotation-selecting] iframe[data-cad-frame] { pointer-events: auto; }
 [data-annotation-selecting] { cursor: crosshair; }
 
 .mini-agentsam-outline {

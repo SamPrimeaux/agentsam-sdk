@@ -1,3 +1,5 @@
+import { buildAnnotationBridgeScript } from '@inneranimalmedia/agentsam-workbench/agent/annotation-selection';
+
 /** A browser Build result is only a preview when the model actually produced a complete HTML page. */
 export function extractRunnableHtml(message: string): string | null {
   const candidates = [...message.matchAll(/```(?:html|htm)?\s*\n([\s\S]*?)```/gi)].map(match => match[1].trim());
@@ -17,21 +19,8 @@ export function buildBrowserInstruction(prompt: string, previousHtml?: string | 
 }
 
 
-/** An opaque-origin preview cooperates with the host annotator via bounded postMessage data. */
+/** An opaque-origin preview cooperates with the shared host annotation contract. */
 export function withBrowserAnnotationBridge(html: string): string {
-  const script = `<script>(function(){
-  var enabled=false,last=0;
-  function send(type,event){
-    var element=event.target;
-    var el=element&&element.closest&& (element.closest('button,a,img,canvas,svg,input,textarea,select,label,h1,h2,h3,h4,p,li,article,section,[role="button"],[data-annotation-target]')||element);
-    if(!el)return;
-    var r=el.getBoundingClientRect(),field=el.matches('input,textarea,select,[contenteditable="true"]');
-    var clean=function(v,n){return String(v||'').replace(/\\s+/g,' ').trim().slice(0,n)};
-    parent.postMessage({source:'agentsam-browser',type:type,selection:{tag:el.tagName.toLowerCase(),label:clean(el.getAttribute('aria-label')||el.getAttribute('alt')||(field?'Input field':el.textContent),180),text:field?'[field value withheld]':clean(el.textContent,300),rect:{left:r.left,top:r.top,width:r.width,height:r.height},point:{x:event.clientX,y:event.clientY},visual:el.matches('canvas,svg,iframe,[data-annotation-target]'),url:location.href}},'*');
-  }
-  addEventListener('message',function(e){if(e.source===parent&&e.data&&e.data.source==='agentsam-host'&&e.data.type==='annotation-mode')enabled=e.data.enabled===true});
-  addEventListener('pointermove',function(e){if(!enabled||Date.now()-last<70)return;last=Date.now();send('annotation-hover',e)},true);
-  addEventListener('click',function(e){if(!enabled)return;e.preventDefault();e.stopImmediatePropagation();send('annotation-selection',e)},true);
-})();</script>`;
+  const script = `<script>${buildAnnotationBridgeScript()}</script>`;
   return /<\/body\s*>/i.test(html) ? html.replace(/<\/body\s*>/i, `${script}</body>`) : `${html}${script}`;
 }

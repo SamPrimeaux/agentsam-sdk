@@ -3,7 +3,8 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { ChevronDown, ChevronRight, Component, Frame, Image, Layers, MousePointer2, Plus, Type } from "lucide-react";
 import { copy, locateNode, safeUrl, type Artboard, type CanvasDocument, type CanvasEvent, type CanvasNode, type CanvasRun } from "./model";
 
-export function CanvasLayers({document,selected,boardId,onSelect,onAdd,onComponent}:{document:CanvasDocument;selected:string;boardId:string;onSelect:(id:string,board:string)=>void;onAdd:()=>void;onComponent:(id:string)=>void}) {
+export function CanvasLayers({document,selected,boardId,onSelect,onAdd,onComponent,mode="canvas"}:{document:CanvasDocument;selected:string;boardId:string;onSelect:(id:string,board:string)=>void;onAdd:()=>void;onComponent:(id:string)=>void;mode?:"slides"|"canvas"}) {
+ const slides=mode==="slides";
  const [collapsed,setCollapsed]=useState<Set<string>>(new Set());
  const toggle=(id:string)=>setCollapsed(prev=>{const next=new Set(prev);next.has(id)?next.delete(id):next.add(id);return next;});
  const nodes=(items:CanvasNode[],board:string,depth=0):React.ReactNode=>items.map(node=><div key={node.id}>
@@ -13,13 +14,13 @@ export function CanvasLayers({document,selected,boardId,onSelect,onAdd,onCompone
    </div>
    {!collapsed.has(node.id)&&node.children&&nodes(node.children,board,depth+1)}
  </div>);
- return <div className="cv-panel-content"><header className="cv-panel-heading"><strong>Layers</strong><IconAction onClick={onAdd} hint="Add artboard" label="Add artboard"><Plus size={14}/></IconAction></header>
+ return <div className="cv-panel-content"><header className="cv-panel-heading"><strong>{slides?"Slides":"Layers"}</strong><IconAction onClick={onAdd} hint={slides?"Add slide":"Add artboard"} label={slides?"Add slide":"Add artboard"}><Plus size={14}/></IconAction></header>
   {document.artboards.map(board=><section key={board.id} className="cv-layer-board">
     <button className={"cv-layer-board-title"+(board.id===boardId?" active":"")} onClick={()=>onSelect("",board.id)}><Frame size={13}/><span>{board.name}</span></button>
     {nodes(board.nodes,board.id)}
-    {!board.nodes.length&&<p className="cv-panel-help">Empty artboard</p>}
+    {!board.nodes.length&&<p className="cv-panel-help">{slides?"Empty slide":"Empty artboard"}</p>}
   </section>)}
-  {!document.artboards.length&&<p className="cv-panel-help">Your pages and elements will appear here as they are created.</p>}
+  {!document.artboards.length&&<p className="cv-panel-help">{slides?"Your slides and elements will appear here as they are created.":"Your pages and elements will appear here as they are created."}</p>}
   <header className="cv-panel-heading cv-section-gap"><strong>Components</strong><Component size={13}/></header>
   {document.components.length?document.components.map(component=><button key={component.id} className="cv-library-item" disabled={!component.node||!boardId} onClick={()=>onComponent(component.id)}><Component size={13}/><span>{component.name}</span><Plus size={12}/></button>):<p className="cv-panel-help">Save an element as a component to reuse it across artboards.</p>}
  </div>;
@@ -41,11 +42,7 @@ export function CanvasInspector({document,selected,boardId,onNode,onBoard,onDocu
    <div className="cv-alignment" aria-label="Align within parent">
     <button onClick={()=>onNode({x:0})} title="Align left">Left</button><button onClick={()=>onNode({x:Math.round(((found?.parent?.width||board?.width||0)-node.width)/2)})}>Center</button><button onClick={()=>onNode({x:(found?.parent?.width||board?.width||0)-node.width})}>Right</button>
    </div>
-   {node.type==="html"&&<>
-     <label className="cv-field cv-text-field"><span>Editable HTML source</span><textarea rows={14} spellCheck={false} value={node.sourceHtml||''} onChange={event=>onNode({sourceHtml:event.target.value})}/></label>
-     <p className="cv-panel-help">Sandboxed preview. HTML is saved in this Canvas and cannot be published through the CMS converter until explicitly mapped to supported components.</p>
-     <button type="button" className="cv-toolbar-button" onClick={()=>{const content=node.sourceHtml||'';if(!content)return;const blob=new Blob([content],{type:'text/html'}),url=URL.createObjectURL(blob),link=window.document.createElement('a');link.href=url;link.download=(node.name||'artboard').replace(/[^a-z0-9_-]+/gi,'-')+'.html';link.click();URL.revokeObjectURL(url);}}>Export HTML</button>
-   </>}
+   {node.type==="html"&&<p className="cv-panel-help">Source-backed content is managed by AgentSam. Ask AgentSam to revise this element; raw code stays out of the editing interface.</p>}
    {node.type!=="image"&&node.type!=="html"&&<label className="cv-field cv-text-field"><span>Content</span><textarea value={node.text||""} rows={3} onChange={e=>onNode({text:e.target.value})}/></label>}
    {node.type==="image"&&<><Field label="Image URL" value={node.src||""} onChange={src=>{if(!src||safeUrl(src,true))onNode({src});}}/><p className="cv-panel-help">Use an image from your asset library or an authorized image URL.</p></>}
    <header className="cv-panel-heading cv-section-gap"><strong>Appearance</strong></header>

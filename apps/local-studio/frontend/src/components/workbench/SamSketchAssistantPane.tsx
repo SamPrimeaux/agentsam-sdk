@@ -4,33 +4,94 @@ import { useWorkStore } from "@/lib/work/store";
 import { MessageList } from "@/components/workbench/thread";
 import { Composer } from "@/components/workbench/composer";
 import { IconAction } from "@/components/ui/icon-action";
+import "./assistant-pane.css";
 
-type AssistantProps={selected?:string;onCollapse:()=>void};
-export function SamSketchAssistantPane({selected,onCollapse}:AssistantProps){
- const chat=useWorkStore(state=>state.chats.find(item=>item.id===state.activeChatId)??state.chats[0]);
- const streaming=useWorkStore(state=>chat?state.streamingIds.includes(chat.id):false);
- useEffect(()=>{
-  if(!useWorkStore.getState().activeChatId){
-   const store=useWorkStore.getState();
-   store.setActiveChat(store.startChat());
-  }
- },[]);
- return <section className="flex h-full min-h-0 w-full flex-col bg-[#fafafa] text-[#222327]" aria-label="SamSketch AgentSam Side Assistant">
-  <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-[#e6e7e9] px-3">
-   <div className="flex min-w-0 items-center gap-2.5">
-    <span className="flex size-7 shrink-0 items-center justify-center rounded-[9px] border border-[#dedbea] bg-[#f2effd] text-[#5e49a2]"><Sparkles size={15}/></span>
-    <div className="min-w-0"><strong className="block text-[12px] font-semibold leading-4">AgentSam</strong><span className="block truncate text-[10px] text-[#777a81]">SamSketch · scene assistant</span></div>
-   </div>
-   <IconAction type="button" size="icon-sm" onClick={onCollapse} className="!size-8 rounded-[7px] text-[#727780] hover:bg-[#ebedf0]" label="Collapse AgentSam" hint="Return AgentSam to the mini composer"><PanelRightClose size={16}/></IconAction>
-  </header>
-  {selected&&<div className="flex shrink-0 items-center gap-2 border-b border-[#ebeef0] bg-white px-3 py-2 text-[11px]"><span className="text-[#888a93]">Working with</span><strong className="min-w-0 truncate font-medium text-[#3c3d42]">{selected}</strong></div>}
-  <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-3">
-   {chat?<MessageList messages={chat.messages} chatId={chat.id} streaming={streaming}/>:<p className="px-2 text-[12px] text-[#777a81]">Select a scene object or describe what you want to create.</p>}
-  </div>
-  <div className="shrink-0 border-t border-[#e6e7e9] bg-white p-2.5">
-   {chat?<Composer targetId={chat.id} targetKind="chat" placeholder="Work with AgentSam on this scene…"/>:<button type="button" className="text-xs" onClick={()=>{const s=useWorkStore.getState();s.setActiveChat(s.startChat());}}>Start a conversation</button>}
-  </div>
- </section>;
+type AssistantProps = {
+  chatId?: string;
+  selected?: string;
+  context?: unknown;
+  onCollapse?: () => void;
+  workspaceLabel?: string;
+  compactHeader?: boolean;
+  appearance?: "default" | "workbench";
+};
+
+export function SamSketchAssistantPane({
+  chatId,
+  selected,
+  context,
+  onCollapse,
+  workspaceLabel = "SamSketch",
+  compactHeader = false,
+  appearance = "default",
+}: AssistantProps) {
+  const chat = useWorkStore(state => state.chats.find(item => item.id === chatId) ?? state.chats.find(item => item.id === state.activeChatId) ?? state.chats[0]);
+  const streaming = useWorkStore(state => chat ? state.streamingIds.includes(chat.id) : false);
+
+  useEffect(() => {
+    if (chatId) return;
+    if (!useWorkStore.getState().activeChatId) {
+      const store = useWorkStore.getState();
+      store.setActiveChat(store.startChat());
+    }
+  }, []);
+
+  const contextPrefix = [
+    "[Current creative workspace context]",
+    JSON.stringify({
+      workspace: workspaceLabel,
+      document: context && typeof context === "object" ? context : selected,
+    }),
+  ].join("\n");
+
+  return (
+    <section
+      className={"flex h-full min-h-0 w-full flex-col agentsam-workbench-assistant-pane " + (appearance === "workbench" ? "is-workbench" : "")}
+      data-workspace-label={workspaceLabel}
+      aria-label={workspaceLabel + " AgentSam conversation"}
+    >
+      {!compactHeader ? (
+        <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-[#e6e7e9] px-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-[9px] border border-[#dedbea] bg-[#f2effd] text-[#5e49a2]"><Sparkles size={15}/></span>
+            <div className="min-w-0">
+              <strong className="block text-[12px] font-semibold leading-4">AgentSam</strong>
+              <span className="block truncate text-[10px] text-[#777a81]">{workspaceLabel} workspace</span>
+            </div>
+          </div>
+          {onCollapse ? (
+            <IconAction type="button" size="icon-sm" onClick={onCollapse} className="!size-8 rounded-[7px] text-[#727780] hover:bg-[#ebedf0]" label="Collapse AgentSam" hint="Collapse the current conversation">
+              <PanelRightClose size={16}/>
+            </IconAction>
+          ) : null}
+        </header>
+      ) : null}
+      {selected ? (
+        <div className="flex shrink-0 items-center gap-2 border-b border-[#ebeef0] bg-white px-3 py-2 text-[11px] agentsam-workbench-assistant-context" data-agent-context="">
+          <span className="text-[#888a93]">Working with</span>
+          <strong className="min-w-0 truncate font-medium text-[#3c3d42]">{selected}</strong>
+        </div>
+      ) : null}
+      <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-3 agentsam-workbench-assistant-thread" data-agent-thread-host="">
+        {chat ? <MessageList messages={chat.messages} chatId={chat.id} streaming={streaming}/> : <p className="px-2 text-[12px] text-[#777a81]">Describe what you want to create or change.</p>}
+      </div>
+      <div className="shrink-0 border-t border-[#e6e7e9] bg-white p-2.5 agentsam-workbench-assistant-composer" data-agent-composer-host="">
+        {chat ? (
+          <Composer
+            targetId={chat.id}
+            targetKind="chat"
+            placeholder={"Work with AgentSam on " + workspaceLabel.toLowerCase() + "…"}
+            contextLabel={workspaceLabel + (selected ? " · " + selected : "")}
+            contextPrefix={contextPrefix}
+          />
+        ) : (
+          <button type="button" className="text-xs" onClick={() => { const store = useWorkStore.getState(); store.setActiveChat(store.startChat()); }}>
+            Start a conversation
+          </button>
+        )}
+      </div>
+    </section>
+  );
 }
 
 type MiniProps={selected?:string;context?:unknown;onExpand:()=>void};

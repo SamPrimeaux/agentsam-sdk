@@ -31,7 +31,7 @@ test('co-worker conversation also uses the same persistent surface', async () =>
   );
   assert.match(source, /function CoworkerChat/);
   assert.match(source, /<AgentConversationSurface/);
-  assert.match(source, /composer=\{\s*<Composer/);
+  assert.match(source, /composer=\{\s*<div data-annotation-control=\"\">\s*<Composer/);
   assert.match(source, /targetKind="side"/);
 });
 

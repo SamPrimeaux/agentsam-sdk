@@ -663,3 +663,16 @@ html.agentsam-pet-window body { color:#eeeaf3; }
 
 .agentsam-desktop-pet-helper { position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:max-content; padding:4px 8px; border-radius:8px; background:rgba(24,22,30,.82); color:#eeeaf3; font-size:11px; opacity:0; pointer-events:none; }
 .agentsam-desktop-pet-sprite:hover .agentsam-desktop-pet-helper,.agentsam-desktop-pet-sprite:focus-visible .agentsam-desktop-pet-helper { opacity:1; }
+
+.agentsam-desktop-pet[data-state="waiting"] .agentsam-desktop-pet-sprite img {
+  filter: drop-shadow(0 0 9px rgba(128, 176, 143, .52)) drop-shadow(0 8px 14px rgba(0,0,0,.22));
+}
+.agentsam-desktop-pet[data-state="success"] .agentsam-desktop-pet-sprite img {
+  filter: drop-shadow(0 0 8px rgba(84, 184, 135, .48)) drop-shadow(0 8px 14px rgba(0,0,0,.22));
+}
+.agentsam-desktop-pet[data-state="attention"] .agentsam-desktop-pet-sprite img {
+  filter: drop-shadow(0 0 8px rgba(214, 162, 76, .48)) drop-shadow(0 8px 14px rgba(0,0,0,.22));
+}
+.agentsam-desktop-pet[data-state="error"] .agentsam-desktop-pet-sprite img {
+  filter: drop-shadow(0 0 8px rgba(212, 107, 107, .48)) drop-shadow(0 8px 14px rgba(0,0,0,.22));
+}

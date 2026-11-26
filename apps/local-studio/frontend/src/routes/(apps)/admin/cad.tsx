@@ -85,9 +85,11 @@ export function CadStudioPage() {
       )}
       <div data-cad-editor-stage className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {chatOpen && <CadConversationPane selected={selection?.object.label} />}
-        <div data-cad-iframe-region data-annotation-target="cad-viewport" aria-label="CAD viewport" className={"relative min-h-0 min-w-0 flex-1 overflow-hidden "+(chatOpen ? "hidden md:block" : "block")}>
-          <iframe ref={iframeRef} title="CAD Creator" src={cadEmbeddedUrl({ projectId: search.project, revision: search.revision })}
-            className="absolute inset-0 block h-full w-full border-0" allow="fullscreen" />
+        <div data-agentsam-annotation-scope="" data-annotation-scope-id="cad-editor" data-annotation-scope-active="true" className={"relative min-h-0 min-w-0 flex-1 overflow-hidden "+(chatOpen ? "hidden md:block" : "block")}>
+          <div data-cad-iframe-region data-annotation-target="cad-viewport" data-annotation-id="cad-viewport" aria-label="CAD viewport" className="relative size-full min-h-0 min-w-0 overflow-hidden">
+            <iframe data-cad-frame="" ref={iframeRef} title="CAD Creator" src={cadEmbeddedUrl({ projectId: search.project, revision: search.revision })}
+              className="absolute inset-0 block h-full w-full border-0" allow="fullscreen" />
+          </div>
         </div>
       </div>
     </div>

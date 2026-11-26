@@ -29,6 +29,7 @@ test('mini composer exposes compact, focused, expandable review chrome', async (
 
 test('miniAgentSam preserves host resource identity and specialist handoff context', async () => {
   const mini = await readFile(new URL('../src/agent/MiniAgentSam.tsx', import.meta.url), 'utf8');
+  const selection = await readFile(new URL('../src/agent/annotation-selection.ts', import.meta.url), 'utf8');
   const host = await readFile(new URL('../../../apps/local-studio/frontend/agentsam/AnnotationHelper.tsx', import.meta.url), 'utf8');
   const canvas = await readFile(new URL('../../../apps/local-studio/frontend/src/components/workbench/canvas-entry-stage.tsx', import.meta.url), 'utf8');
   const stage = await readFile(new URL('../../../apps/local-studio/frontend/src/components/workbench/canvas/stage.tsx', import.meta.url), 'utf8');
@@ -41,7 +42,8 @@ test('miniAgentSam preserves host resource identity and specialist handoff conte
   assert.match(mini, /iframe\.cv-native-html/);
   assert.match(host, /agentsam:design-workspace-prompt/);
   assert.match(host, /Selected \$\{selection\.tag\}: \$\{selection\.id\}/);
-  assert.match(host, /data-agentsam-annotation-scope/);
+  assert.match(selection, /data-agentsam-annotation-scope/);
+  assert.match(host, /resolveAnnotationScope\(document, scopeId\)/);
   assert.match(sideStage, /data-agentsam-annotation-scope/);
   assert.match(stage, /data-agentsam-resource-kind="design-canvas"/);
   assert.match(stage, /data-agentsam-resource-revision=\{revision\}/);
@@ -51,7 +53,12 @@ test('miniAgentSam preserves host resource identity and specialist handoff conte
   assert.match(canvas, /startRunRef\.current/);
   assert.doesNotMatch(canvas, /cv-assistant-body|cv-mini-assistant|assistantMode|<Composer targetId=/);
   assert.doesNotMatch(canvasCss, /cv-assistant-body|cv-mini-assistant|cv-assistant-modes|cv-expanded-assistant/);
-  assert.match(canvas, /<AnnotationToggle className=\"cv-icon-button\"\/>/);
+  assert.match(canvas, /<AnnotationToggle scopeId=\"design-canvas\" className=\"cv-icon-button\"\/>/);
+  assert.match(stage, /data-annotation-proxy/);
+  assert.match(stage, /data-annotation-control/);
+  assert.doesNotMatch(mini, /scope\?\.\(\) \|\| document\.body/);
+  assert.match(mini, /resolveAnnotationTarget\(event\.target, root\)/);
+  assert.match(sideStage, /data-annotation-scope-id=\"side-stage\"/);
 });
 
 test('Local Studio brand uses the canonical packaged desktop icon', async () => {
@@ -78,7 +85,9 @@ test('miniAgentSam pins actual selection points and derives its appearance from 
   assert.match(source, /className="mini-agentsam-suggestions"/);
   assert.match(source, /cadContext\.current/);
   assert.match(source, /previousPointerEvents/);
-  assert.match(source, /\['canvas','svg','iframe'\]/);
+  assert.match(source, /isAnnotationVisualTarget\(selected, root\)/);
+  assert.match(source, /visual,?/);
+  assert.match(css, /cv-native-html/);
   assert.match(css, /\.mini-agentsam-attachment-previews/);
   assert.match(css, /--mini-accent: var\(--nav-accent/);
 });

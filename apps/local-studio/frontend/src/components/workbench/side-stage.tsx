@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Columns2, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid, Search, FileText, ClipboardCheck, Code2, LoaderCircle, CheckCircle2 } from "lucide-react";
+import { Box, Database, ExternalLink, FileCode, Film, Fingerprint, Globe, Layers, Columns2, Mail, Maximize2, Minimize2, MoreHorizontal, Plus, SquareTerminal, Target, Users, X, LayoutGrid, Search, FileText, ClipboardCheck, Code2, LoaderCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SplitHandle } from "@/components/shell/split-handle";
 import { IconAction } from "@/components/ui/icon-action";
@@ -14,6 +14,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Composer } from "@/components/workbench/composer";
 import { GoalGuruHost } from "@/components/goals/GoalGuruHost";
+import { LocalStudioWorkPage } from "@/components/work/LocalStudioWorkPage";
 import { MessageList } from "@/components/workbench/thread";
 import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
@@ -37,8 +38,10 @@ import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistant
 import { consumePendingCadAssistantContext } from "@/lib/cad/assistantContext";
 import { reloadSideStageRegistry, useSideStageRegistry } from "../../../agentsam/side-stage-actions";
 
-function TabIcon({ kind, icon }: { kind: string; icon?: string | null }) {
+function TabIcon({ kind, icon, item }: { kind: string; icon?: string | null; item?: { type?: string; unit?: string } | null }) {
   if (icon) return <TabItemIcon icon={icon} className="size-3.5 rounded-sm object-contain" />;
+  if (kind === "item" && item?.type === "settings" && item.unit === "agents") return <Fingerprint className="size-3.5" />;
+  if (kind === "mail") return <Mail className="size-3.5" />;
   if (kind === "chat") return <Users className="size-3.5" />;
   if (kind === "browser") return <Globe className="size-3.5" />;
   if (kind === "artifacts") return <Box className="size-3.5" />;
@@ -147,11 +150,13 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
                 onClick={() => setActiveSideTab(item.id)}
                 className="flex items-center gap-1.5 py-1 text-xs"
               >
-                <TabIcon kind={item.kind} icon={item.icon} />
+                <TabIcon kind={item.kind} icon={item.icon} item={item.item} />
                 <span className="max-w-28 truncate" title={item.title}>{item.title}</span>
               </button>
-              {item.kind === 'browser' && item.id === activeId && <AnnotationToggle />}
-              {(['design', 'data', 'files'] as string[]).includes(item.kind) && item.id === activeId && <AnnotationToggle />}
+              {item.kind === 'browser' && item.id === activeId && <AnnotationToggle scopeId="side-stage" />}
+              {item.kind === 'design' && item.id === activeId && <AnnotationToggle scopeId="design-canvas" />}
+              {item.kind === 'data' && item.id === activeId && <AnnotationToggle scopeId="data-stage" />}
+              {item.kind === 'files' && item.id === activeId && <AnnotationToggle scopeId="files-stage" />}
               <IconAction
                 type="button"
                 variant="ghost"
@@ -173,6 +178,17 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
             <DropdownMenuContent align="start">
               <DropdownMenuItem onSelect={() => { openSideTab("newtab", { ephemeral: false }); setSideOpen(true); }}>
                 <Plus className="size-3.5" />New tab
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => {
+                const existing = tabs.find((candidate) => candidate.kind === "item" && candidate.item?.type === "settings" && candidate.item.unit === "agents");
+                if (existing) setActiveSideTab(existing.id);
+                else openSideTab("item", { title: "Agent identity", item: { type: "settings", unit: "agents" }, ephemeral: false });
+                setSideOpen(true);
+              }}>
+                <Fingerprint className="size-3.5" />Agent identity
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => { openSideTab("mail", { title: "AgentSam mailbox", ephemeral: false }); setSideOpen(true); }}>
+                <Mail className="size-3.5" />AgentSam mailbox
               </DropdownMenuItem>
               <div className="border-t border-border px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Built-in tools</div>
               {!registry.loaded && <div role="status" className="px-3 py-2 text-xs text-muted-foreground">Loading tools…</div>}
@@ -276,7 +292,7 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
         </IconAction>
       </div>
 
-      <div className="min-h-0 flex-1" data-agentsam-annotation-scope="" data-side-stage-kind={tab?.kind || "newtab"}>
+      <div className="min-h-0 flex-1" data-agentsam-annotation-scope="" data-annotation-scope-id="side-stage" data-side-stage-kind={tab?.kind || "newtab"}>
         {tab?.kind === "chat" ? <CoworkerChat tabId={tab.id} /> : null}
         {tab?.kind === "browser" ? <BrowserStage tab={tab} /> : null}
         {tab?.kind === "files" ? splitCoworker ? (
@@ -298,6 +314,7 @@ export function SideStage({ workFocused = false, onFocusToggle, onSplitChange }:
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
         {tab?.kind === "data" ? <DataArtifactStage tab={tab} /> : null}
+        {tab?.kind === "mail" ? <LocalStudioWorkPage surface="mail" /> : null}
         {tab?.kind === "apps" ? <AppLibraryStage /> : null}
         {tab?.kind === "newtab" ? <NewTabStage tab={tab} /> : null}
         {tab?.kind === "item" ? <ItemStage tab={tab} /> : null}
@@ -453,6 +470,7 @@ function CoworkerChat({ tabId }: { tabId: string }) {
         </div>
         <Button
           type="button"
+          data-annotation-control=""
           size="sm"
           variant="outline"
           className="h-7 shrink-0 rounded-full"
@@ -504,7 +522,7 @@ function CoworkerChat({ tabId }: { tabId: string }) {
               </p>
             </div>
             {!databaseContext ? (
-              <div className="w-full max-w-sm text-left">
+              <div className="w-full max-w-sm text-left" data-annotation-control="">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Start with a focus</p>
                 <div className="grid grid-cols-2 gap-2">
                   {COWORKER_TASK_STARTERS.map(starter => {
@@ -538,11 +556,13 @@ ${starter.prompt}` : starter.prompt);
           </div>
         }
         composer={
-          <Composer
-            targetId={tab.id}
-            targetKind="side"
-            placeholder={databaseContext ? "Ask about this database…" : "Brief the co-worker"}
-          />
+          <div data-annotation-control="">
+            <Composer
+              targetId={tab.id}
+              targetKind="side"
+              placeholder={databaseContext ? "Ask about this database…" : "Brief the co-worker"}
+            />
+          </div>
         }
         composerClassName="px-3 pb-3 pt-3"
       />

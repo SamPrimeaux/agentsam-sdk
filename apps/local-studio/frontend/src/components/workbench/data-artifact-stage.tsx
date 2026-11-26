@@ -82,10 +82,10 @@ export function DataArtifactStage({tab}: {tab:SideTab}) {
     } catch(reason) {setError(reason instanceof Error?reason.message:'Could not attach the file.');}
     finally {setUploading(false);}
   }
-  return <section className="data-artifact-stage" aria-label="Data Artifact creation" data-format={format}>
-    <header className="data-artifact-header"><div><BarChart3 size={17}/><strong>Data</strong><span>New experience · Not yet saved</span></div></header>
+  return <section className="data-artifact-stage" aria-label="Data Artifact creation" data-format={format} data-agentsam-annotation-scope="" data-annotation-scope-id="data-stage">
+    <header className="data-artifact-header" data-annotation-control=""><div><BarChart3 size={17}/><strong>Data</strong><span>New experience · Not yet saved</span></div></header>
     <div className="data-artifact-body">
-      <aside className="data-artifact-sources" aria-label="Data source">
+      <aside className="data-artifact-sources" data-annotation-control="" aria-label="Data source">
         <div className="data-artifact-sources-inner">
           <BarChart3 size={35} className="data-artifact-source-mark"/>
           <h2>Where do your numbers come from?</h2>
@@ -102,8 +102,8 @@ export function DataArtifactStage({tab}: {tab:SideTab}) {
         </div>
       </aside>
       <div className="data-artifact-canvas">
-        <div className="data-artifact-empty"><h2>Nothing here yet</h2><p>Choose a format</p>
-          <div className="data-artifact-formats" role="group" aria-label="Data experience format">
+        <div className="data-artifact-empty" data-annotation-control=""><h2>Nothing here yet</h2><p>Choose a format</p>
+          <div className="data-artifact-formats" data-annotation-control="" role="group" aria-label="Data experience format">
             {FORMATS.map(item=><button type="button" key={item.id} className="data-artifact-format" data-active={format===item.id}
               aria-pressed={format===item.id} title={item.description} onClick={()=>{setFormat(item.id);setTabUrl(tab.id,'/data?format='+item.id);}}>
               <span className="data-artifact-format-art"><FormatPreview format={item.id}/></span>
@@ -111,7 +111,7 @@ export function DataArtifactStage({tab}: {tab:SideTab}) {
             </button>)}
           </div>
         </div>
-        <div className="data-artifact-ask"><AskAgentSamPill onAsk={ask} contextLabel={selected.label}/></div>
+        <div className="data-artifact-ask" data-annotation-control=""><AskAgentSamPill onAsk={ask} contextLabel={selected.label}/></div>
       </div>
     </div>
   </section>;

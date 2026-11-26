@@ -18,6 +18,19 @@ export interface AgentSamWidgetDataSource {
   refresh?: string;
 }
 
+export type AgentSamWidgetProvider = 'cloudflare' | 'github' | 'google_drive';
+
+/** Safe provider data projected by an authenticated host. Tokens never cross this boundary. */
+export interface AgentSamWidgetProviderData {
+  provider: AgentSamWidgetProvider;
+  status: 'loading' | 'ready' | 'not_connected' | 'error' | 'unsupported';
+  source?: 'live' | 'fixture';
+  accountLabel?: string;
+  updatedAt?: string;
+  message?: string;
+  data?: Record<string, unknown>;
+}
+
 export interface AgentSamWidgetDefinition {
   id: string;
   kind: AgentSamWidgetKind;
@@ -28,6 +41,8 @@ export interface AgentSamWidgetDefinition {
   /** Gallery taxonomy; layout and presentation must not depend on route names. */
   category?: 'utility' | 'glance' | 'navigation' | 'content' | 'agent/runtime' | 'weather';
   tags?: readonly string[];
+  /** Provider connection required by this widget; authorization stays in the host. */
+  requiredProvider?: AgentSamWidgetProvider;
   /** Preview-only items must never be offered as live/installed capabilities. */
   availability?: 'ready' | 'demo';
   /** Proposed package authority for graduating a donor widget. */

@@ -7,6 +7,7 @@ export type AccountWidget = {
   category: string;
   icon: string | null;
   componentKey: string | null;
+  requiredProvider?: 'cloudflare' | 'github' | 'google_drive' | null;
   availability: 'ready' | 'concept';
   available: boolean;
   sizes: string[];

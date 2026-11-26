@@ -81,3 +81,26 @@ test("different specialist engines enter identical shell contract without being 
   assert.match(html, /Show AgentSam/);
   assert.doesNotMatch(html, /Contextual AgentSam assistant/);
 });
+
+test("contextual AgentSam uses the shared resizable dock and mobile panel switcher", () => {
+  const html = renderToStaticMarkup(
+    createElement(
+      DesignWorkspaceFrame,
+      {
+        snapshot: base,
+        assistantOpen: true,
+        assistantDock: "right",
+        assistant: createElement("p", null, "Existing Workbench conversation"),
+      },
+      createElement("div", null, "Native design stage"),
+    ),
+  );
+  assert.match(html, /data-dw-pane="assistant"/);
+  assert.match(html, /data-dw-dock="right"/);
+  assert.match(html, /Existing Workbench conversation/);
+  assert.match(html, /Resize AgentSam conversation panel/);
+  assert.match(html, /Move AgentSam to the left/);
+  assert.match(html, /Hide AgentSam/);
+  assert.match(html, /aria-label="Workspace panels"/);
+  assert.match(html, /AgentSam/);
+});

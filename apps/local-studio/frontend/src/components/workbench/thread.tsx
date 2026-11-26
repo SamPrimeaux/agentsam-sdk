@@ -32,7 +32,7 @@ function openChatAttachment(ref: ChatAttachmentReference) {
 }
 
 function ConversationAttachmentCard({ refInfo }: {refInfo: ChatAttachmentReference}) {
-  if (refInfo.kind === 'image') return <div className="min-w-0 w-[130px] rounded-xl border border-border bg-card p-1.5 text-foreground shadow-sm">
+  if (refInfo.kind === 'image') return <div className="min-w-0 w-[184px] rounded-xl border border-border bg-card p-1.5 text-foreground shadow-sm">
     <ConversationImage refInfo={refInfo} />
     <button type="button" className="mt-1 flex w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-muted"
       title={'Open '+refInfo.name+' in Files'} onClick={()=>openChatAttachment(refInfo)}>
@@ -69,10 +69,10 @@ function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
     };
   }, [user?.id, refInfo.source]);
   return url ? (
-    <ImageLightbox src={url} alt={refInfo.name} triggerClassName="block aspect-[4/3] w-full overflow-hidden rounded-xl border border-border/50 bg-black/10">
+    <ImageLightbox src={url} alt={refInfo.name} triggerClassName="block aspect-square w-full overflow-hidden rounded-xl border border-border/50 bg-black/10">
       <img src={url} alt={refInfo.name} title={refInfo.name} className="size-full object-cover" />
     </ImageLightbox>
-  ) : <span className="grid aspect-[4/3] place-items-center rounded-xl border border-border/50 bg-muted px-2 text-center text-xs opacity-70">{refInfo.name} · image stored locally</span>;
+  ) : <span className="grid aspect-square place-items-center rounded-xl border border-border/50 bg-muted px-2 text-center text-xs opacity-70">{refInfo.name} · image stored locally</span>;
 }
 
 function WorkOutputCards({ files }: {files: Artifact[]}) {
@@ -206,7 +206,7 @@ export function MessageList({
       scrollerClassName="scrollbar-thin flex-1 overflow-y-auto px-4 py-6"
       listClassName={readingMode ? "agentsam-work-reading mx-auto flex w-full max-w-[70ch] flex-col gap-6" : "mx-auto flex w-full max-w-6xl flex-col gap-6"}
       renderMessage={(message, index) => (
-        <div key={message.id} data-chat-message-id={message.id} tabIndex={-1}>
+        <div key={message.id} data-chat-message-id={message.id} data-agent-role={message.role} tabIndex={-1}>
         <MessageBubble
           message={message as ChatMessage}
           chatId={chatId}
