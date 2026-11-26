@@ -1,11 +1,10 @@
 /**
- * Storage roles — runtime-neutral.
+ * Local storage discovery candidates.
  *
- * Portable code asks for a logical role ("website_assets"), never a binding
- * name. Each project maps roles to whatever physical storage it already has.
+ * This module inspects explicit local development configuration only. It is
+ * not the production storage router, does not persist mappings, and must never
+ * guess an account's provider connection or selected bucket.
  */
-
-export type StorageRole = "website_assets" | "archive" | "generated_assets" | (string & {});
 
 export type StorageProviderKind = "r2" | "local" | "s3";
 
