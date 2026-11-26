@@ -77,6 +77,25 @@ test('checks lock tarballs against their exact manifest pins, not the Local Stud
   assert.deepEqual(staleLockTarballs(candidateLock, requirements), []);
 });
 
+test('standalone package gates require registry tarballs instead of workspace symlinks', () => {
+  const manifests = [{ path: 'package.json', manifest: {
+    name: '@inneranimalmedia/ecommerce-cms-agentsam',
+    version: '2.6.18',
+    dependencies: { '@inneranimalmedia/agentsam-cms': '2.6.18' },
+  } }];
+  const lock = { packages: {
+    'node_modules/@inneranimalmedia/agentsam-cms': {
+      link: true,
+      resolved: '../../packages/agentsam-cms',
+    },
+  } };
+  const requirements = requiredPublishedPackages(manifests, lock, { allowWorkspaceLinks: false });
+  assert.deepEqual(requirements, [{ name: '@inneranimalmedia/agentsam-cms', version: '2.6.18' }]);
+  assert.deepEqual(staleLockTarballs(lock, requirements, { allowWorkspaceLinks: false }), [
+    'workspace link cannot ship in standalone install node_modules/@inneranimalmedia/agentsam-cms',
+  ]);
+});
+
 test('candidate Studio uses verified source links and checks only real npm tarballs', () => {
   const manifests = appManifestSources();
   const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
