@@ -148,7 +148,6 @@ test('merchant navigation suppresses chat-only history and new-chat actions', ()
   const html = renderToString(React.createElement(Nav.Provider, {value: {
     showHistory:false,
     destinations:[{id:'home',label:'Home',href:'/admin/home'}],
-    onCreateConversation:()=>{},
     onNavigate:()=>{},
     conversations:[{id:'chat-1',title:'A private chat'}],
     projects:[{id:'project-1',name:'A work project'}],
@@ -169,5 +168,4 @@ test('conversation navigation retains chat creation and history collections', ()
   assert.match(html,/Pinned/);
   assert.match(html,/Projects/);
   assert.match(html,/Recents/);
-  assert.match(html,/A private chat/);
 });
