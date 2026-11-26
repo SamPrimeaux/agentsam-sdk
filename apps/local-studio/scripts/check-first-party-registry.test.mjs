@@ -100,7 +100,7 @@ test('candidate Studio uses verified source links and checks only real npm tarba
   const manifests = appManifestSources();
   const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
   assert.deepEqual(requiredPublishedPackages(manifests, lock), [
-    { name: '@inneranimalmedia/agentsam-sdk', version: '2.6.13' },
+    { name: '@inneranimalmedia/agentsam-sdk', version: '2.6.17' },
   ]);
   const tampered = structuredClone(lock);
   tampered.packages['node_modules/@inneranimalmedia/agentsam-nav'].resolved = '../../packages/agentsam-brand';
