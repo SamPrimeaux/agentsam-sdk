@@ -965,7 +965,7 @@
 
   scope.ThemePortableSections = Object.freeze({
     definitions,
-    get: (id) => byId.get(id) || scope.ThemePlatformStock?.get(id) || scope.ThemeReviseAtlas?.get(id) || null,
+    get: (id) => byId.get(id) || scope.ThemePlatformStock?.get(id) || null,
     catalog: () => [
       ...definitions.map(({ id, label, family, source, templateKey, preset }) =>
         ({ id, label, type: family, source, templateKey, preset })),
