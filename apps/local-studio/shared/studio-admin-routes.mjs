@@ -101,7 +101,7 @@ export function canonicalStudioPath(pathname) {
     }
     if (!exactOnly && pathname.startsWith(mount.flat + '/')) {
       const target = mount.canonical + pathname.slice(mount.flat.length);
-      if (target === pathname) return pathname.endsWith('/') ? pathname.slice(0, -1) : null;
+      if (target === pathname) return pathname === mount.canonical + '/' ? mount.canonical : null;
       return target;
     }
   }
