@@ -126,17 +126,13 @@ async function selectPageAndDraft(env,accountId,siteId,slug,pageId) {
 }
 export async function previewMerchantPage(env,accountId,siteId,slug,pageId,override=null) {
   try {
-    let data=await selectPageAndDraft(env,accountId,siteId,slug,pageId);
-    if (data.error && data.error !== 'cms_page_draft_not_saved') return data;
-    if (data.error) {
-      const site=await selectOwnedPageSite(env,accountId,siteId);
-      const page=await findSiteOwnedPage(env,site,slug,pageId);
-      if (!page || page.slug !== slug) return error('cms_page_not_found',404);
-      data={site,page,draft:{},navigation:[]};
-    }
+    const data=await selectPageAndDraft(env,accountId,siteId,slug,pageId);
+    if (data.error) return data;
     const sections=await renderSiteOwnedPageSections(env,accountId,data.site,data.page);
-    return {ok:true,html:renderMerchantPage({...data,
-      draft:override ? {...data.draft,...override} : data.draft,sections})};
+    const draft=override ? {...data.draft,...override} : data.draft;
+    if (!['visible','hidden'].includes(draft.visibility)) draft.visibility=data.draft.visibility;
+    if (typeof draft.title!=='string'||!draft.title.trim()) draft.title=data.draft.title;
+    return {ok:true,html:renderMerchantPage({...data,draft,sections})};
   } catch(e) {return error(String(e.message||e),/too_large|invalid|title_required/.test(String(e.message))?422:500);}
 }
 const hashHtml=async html=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(html))),b=>b.toString(16).padStart(2,'0')).join('');
