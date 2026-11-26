@@ -305,6 +305,7 @@ export async function createCloudflareApiClient(opts = {}) {
     connectionId: cred.connectionId,
     grantedScopes: cred.grantedScopes,
     capabilityId: opts.capabilityId || null,
+    permissionCatalog: opts.permissionCatalog || null,
     fetchImpl: opts.fetchImpl,
     env: {},
   });
