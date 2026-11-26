@@ -89,3 +89,48 @@ Images and Stream are distinct capability cards using the same Cloudflare
 grant. This slice does not claim new S3, Google Drive, Supabase, or device
 upload/write implementation. Provider-adapter operations require their own
 capability checks.
+
+## Standalone package preview
+
+The package includes a runnable reference host at `examples/standalone`. From the
+monorepo, run:
+
+```bash
+npm --prefix packages/agentsam-settings run dev:preview
+```
+
+Then open `http://127.0.0.1:4173`. The preview is built against the package's
+`dist` output and demonstrates the Settings shell, URL-driven unit/view state,
+first-run/populated/degraded host fixtures, and the independently exported
+`BrandPluginWorkspace`. Its example brand and provider records are synthetic;
+they are not persisted and do not use live OAuth credentials.
+
+The Settings package bundles its Workbench widgets and Brand workspace implementation at build time; consumers do not need a separate Workbench runtime dependency. The shared Contracts package remains an explicit peer for the host/provider type contracts. The Brand workspace is currently read-only: editing and asset mutations must be supplied by host-owned brand APIs and are not implied by this viewer.
+
+The package now ships its compiled utility stylesheet at
+`@inneranimalmedia/agentsam-settings/frontend/styles.css`. A host imports that
+stylesheet once and supplies its own `SettingsManifest` and `SettingsHost`.
+The host owns navigation, session identity, database hydration, OAuth and
+provider authorization. The package owns the reusable Settings views and
+presents only safe provider-data projections returned by `SettingsHost.readWidgetData`.
+
+### Provider-backed Workbench widgets
+
+The gallery includes read-only Cloudflare Resources, GitHub Activity and Google
+Drive Recent Files widgets. Local Studio supplies their data through existing
+account-scoped routes:
+
+- Cloudflare Resources: `/api/connections/cloudflare/resources`
+- Cloudflare Queue Depth and history: `/api/queues/observability`
+- GitHub: `/api/work/connect/github/status` and `/api/work/github/repos`
+- Google Drive: `/api/work/connect/google_drive/status` and `/api/admin/media?source=drive`
+
+The Settings and New Tab hosts call these routes with the signed-in same-origin
+session. Access tokens remain in the Worker/provider connectors. Other apps can
+implement the same `readWidgetData` host contract or leave the widget in its
+explicit unsupported/not-connected state; they do not need to adopt Local
+Studio's route structure.
+
+Cloudflare Worker Observability remains a concept preview. The connected
+Cloudflare widget reports the account's R2, Images and Stream resource inventory;
+it does not claim to expose Worker logs or telemetry.

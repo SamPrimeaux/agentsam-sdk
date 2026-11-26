@@ -75,6 +75,8 @@ export function safePluginSettingsRecord(plugin, tools = []) {
     plugin.config.disconnect_url.startsWith("/")
       ? plugin.config.disconnect_url
       : null;
+  const profile = plugin.install_config?.profile && typeof plugin.install_config.profile === "object"
+    ? plugin.install_config.profile : {};
   return {
     id: plugin.id,
     plugin_key: plugin.plugin_key,
@@ -85,8 +87,10 @@ export function safePluginSettingsRecord(plugin, tools = []) {
     plugin_kind: plugin.plugin_kind,
     category: plugin.category,
     display_name: plugin.display_name,
+    display_name_override: typeof profile.display_name === "string" ? profile.display_name : null,
     short_name: plugin.short_name || null,
     description: plugin.description || null,
+    description_override: typeof profile.description === "string" ? profile.description : null,
     transport: plugin.transport,
     auth_type: plugin.auth_type,
     setup_url: plugin.oauth_connect_url || null,

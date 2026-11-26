@@ -2,8 +2,6 @@ import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronDown, Component, ExternalLink, FileCode2, Frame, Hand, History, Image, Layers, MousePointer2, PanelLeft, Plus, Redo2, RefreshCw, Save, Settings2, Square, Type, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { DesignWorkspaceFrame } from "@inneranimalmedia/agentsam-workbench/design";
-import { AskAgentSamPill } from "@inneranimalmedia/agentsam-workbench/agent";
-import { askAgentSamAboutArtifact } from "@/lib/work/artifact-assistance";
 import "@inneranimalmedia/agentsam-workbench/design/design-workspace.css";
 import type { DesignWorkspaceSnapshot } from "@inneranimalmedia/agentsam-contracts";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
@@ -19,6 +17,13 @@ import "./canvas/canvas.css";
 import { AnnotationToggle, DESIGN_WORKSPACE_PROMPT_EVENT, type DesignWorkspacePromptRequest } from "../../../agentsam/AnnotationHelper";
 
 type EventResponse={ok:boolean;events:CanvasEvent[];cursor:number;canvas?:CanvasMeta;run:CanvasRun|null};
+const BRAND_GUIDELINES_BRIEF = [
+ "Create an editable brand-guidelines presentation from the current brand and selected project.",
+ "First mine authorized brand packs, repository files, logo and icon assets, fonts, typography, color and spacing tokens, components, themes, and existing design decisions.",
+ "Use verified source evidence and preserve exact provenance; separate confirmed findings from inference and missing material.",
+ "Do not invent marks, typefaces, colors, claims, metrics, customer examples, or assets. Do not edit or publish source systems without approval.",
+ "The visual output belongs in editable Slides. AgentSam performs research and CLI operations through the workspace conversation; this is not a code-editor workflow."
+].join(" ");
 function idFromUrl(url?:string) {
  try {const parsed=new URL(url||"",location.origin);const id=parsed.searchParams.get("canvas");return id&&/^canvas_[A-Za-z0-9_-]+$/.test(id)?id:"";}catch{return "";}
 }
@@ -119,11 +124,18 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
     const params=new URLSearchParams((tab.url||"").split("?")[1]||location.search);
     const host=params.get("host")||"design";
     const template=params.get("template");
+    const isSlides=host==="slides";
     // A selected stock template is a creative brief, never an installed
     // theme ID or a prerequisite to opening Canvas.
-    const brief=[template?"Design an editable "+template.replaceAll("-"," ")+" template":"",activeProject?.name?"Project: "+activeProject.name:""].filter(Boolean).join(" · ");
+    const brief=[
+     isSlides?BRAND_GUIDELINES_BRIEF:template?"Design an editable "+template.replaceAll("-"," ")+" template":"",
+     activeProject?.name?"Project: "+activeProject.name:"",
+    ].filter(Boolean).join("\n\n");
+    const initialDocument=blankDocument(host,brief);
+    if(isSlides){initialDocument.name="Brand Guidelines";initialDocument.kind="brand-guidelines";initialDocument.provenance={...initialDocument.provenance,workflow:"brand-guidelines",entry:"slides"};}
+    if(activeProject?.id)initialDocument.provenance={...initialDocument.provenance,projectId:activeProject.id};
     const result=await canvasRequest<CanvasResponse>(API+(fromUrl?"/"+encodeURIComponent(id):""),fromUrl?{signal:abort.signal}:{
-     method:"POST",body:JSON.stringify({id,document:blankDocument(host,brief)}),signal:abort.signal,
+     method:"POST",body:JSON.stringify({id,document:initialDocument}),signal:abort.signal,
     });
     if(!active)return;
     created.current=id;accept(result);route(id);setContext(result.document.brief||"");
@@ -318,8 +330,9 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
  }
  function addBoard() {
   if(!document)return;
-  const next=copy(document),bounds=canvasBounds(next.artboards),id=makeId("artboard");
-  next.artboards.push({id,name:"Page "+(next.artboards.length+1),width:1200,height:900,x:next.artboards.length?bounds.x+bounds.width+80:0,y:0,background:"#ffffff",nodes:[]});
+  const next=copy(document),bounds=canvasBounds(next.artboards),id=makeId("artboard"),slides=next.host==="slides";
+  const width=slides?1920:1200,height=slides?1080:900;
+  next.artboards.push({id,name:(slides?"Slide ":"Page ")+(next.artboards.length+1),width,height,x:next.artboards.length?bounds.x+bounds.width+80:0,y:0,background:"#ffffff",nodes:[]});
   change(next);setBoardId(id);setSelection("");setFitToken(n=>n+1);
  }
  function insert(type:Exclude<CanvasNode["type"],"html">) {
@@ -373,45 +386,42 @@ function IndependentCanvas({tab,openSources=false}:{tab:SideTab;openSources?:boo
  function newDocument() {
   if(dirty&&!window.confirm("Create another Canvas? Your unsaved changes stay recoverable in this browser."))return;
   try{sessionStorage.removeItem("agentsam.canvas.new."+tab.id);}catch{}
-  setTabUrl(tab.id,"");setCanvas(null);setDocument(null);setRecovery(null);setBoot(n=>n+1);
+  const host=document?.host||"design";
+  const template=host==="slides"?"&template=brand-guidelines":host==="whiteboard"?"&template=whiteboard":"";
+  setTabUrl(tab.id,"/canvas?host="+encodeURIComponent(host)+template);setCanvas(null);setDocument(null);setRecovery(null);setBoot(n=>n+1);
  }
  if(loading)return <div className="cv-loading" role="status"><span className="cv-loading-mark"/><strong>Opening your Canvas</strong><span>A little room for your next idea.</span></div>;
  if(!canvas||!document)return <div className="cv-loading"><strong>Canvas couldn't open</strong><p role="alert">{error}</p><button className="cv-primary" onClick={()=>setBoot(n=>n+1)}>Try again</button></div>;
  const selectedNode=locateNode(document,selection)?.node;
- const snapshot:DesignWorkspaceSnapshot={contract:"agentsam.design-workspace.v1",resource:{id:canvas.id,kind:"design",appId:"agentsam-local-studio",title:document.name,href:"/admin/canvas?canvas="+canvas.id,accountId:user?.id||""},capabilities:["create","open","select","inspect","modify","preview","save","undo","redo","generate"],revision:String(canvas.revision),savedRevision:String(canvas.revision),dirty,selection:selection?[{id:selection,kind:selectedNode?.type||"element"}]:boardId?[{id:boardId,kind:"artboard"}]:[],status:"ready",...(busy?{activeRunId:run!.id}:{})};
+ const isSlides=document.host==="slides";
+ const snapshot:DesignWorkspaceSnapshot={contract:"agentsam.design-workspace.v1",resource:{id:canvas.id,kind:isSlides?"slides":"design",appId:"agentsam-local-studio",title:document.name,href:"/admin/canvas?canvas="+canvas.id,accountId:user?.id||""},capabilities:["create","open","select","inspect","modify","preview","save","undo","redo","generate"],revision:String(canvas.revision),savedRevision:String(canvas.revision),dirty,selection:selection?[{id:selection,kind:selectedNode?.type||"element"}]:boardId?[{id:boardId,kind:isSlides?"slide":"artboard"}]:[],status:"ready",...(busy?{activeRunId:run!.id}:{})};
  const selectedBoard=document.artboards.find(board=>board.id===boardId);
- const askAboutCanvas = () => askAgentSamAboutArtifact({
-   kind: 'design', id: canvas.id, title: document.name, chatId: tab.parentChatId,
-   ...(selectedNode ? { selection: { id: selectedNode.id, kind: selectedNode.type, label: selectedNode.name } }
-     : selectedBoard ? { selection: { id: selectedBoard.id, kind: 'artboard', label: selectedBoard.name } } : {}),
- });
  const commands=<>
-   <IconAction className="cv-icon-button" hint="Import source artboards" label="Source artboards" onClick={()=>setShowSources(true)}><FileCode2 size={15}/></IconAction>
-   <IconAction className="cv-icon-button" hint="Saved Canvases" label="Saved Canvases" onClick={()=>void showCanvases()}><History size={15}/></IconAction>
-   <IconAction className="cv-icon-button" hint="New Canvas" label="New Canvas" onClick={newDocument}><Plus size={15}/></IconAction>
+   <IconAction className="cv-icon-button" hint={isSlides?"Import source slides":"Import source artboards"} label={isSlides?"Source slides":"Source artboards"} onClick={()=>setShowSources(true)}><FileCode2 size={15}/></IconAction>
+   <IconAction className="cv-icon-button" hint={isSlides?"Saved presentations":"Saved Canvases"} label={isSlides?"Saved presentations":"Saved Canvases"} onClick={()=>void showCanvases()}><History size={15}/></IconAction>
+   <IconAction className="cv-icon-button" hint={isSlides?"New presentation":"New Canvas"} label={isSlides?"New presentation":"New Canvas"} onClick={newDocument}><Plus size={15}/></IconAction>
    <span className="cv-command-divider"/>
    <IconAction className="cv-icon-button" hint="Undo (⌘Z)" label="Undo" disabled={!past.length} onClick={undo}><Undo2 size={15}/></IconAction>
    <IconAction className="cv-icon-button" hint="Redo (⇧⌘Z)" label="Redo" disabled={!future.length} onClick={redo}><Redo2 size={15}/></IconAction>
    <IconAction className="cv-icon-button cv-secondary-command" hint="Toggle layers" label="Toggle layers" aria-pressed={layers} onClick={()=>setLayers(v=>!v)}><PanelLeft size={15}/></IconAction>
    <IconAction className="cv-icon-button cv-secondary-command" hint="Toggle properties" label="Toggle properties" aria-pressed={properties} onClick={()=>setProperties(v=>!v)}><Settings2 size={15}/></IconAction>
    <button className={"cv-toolbar-button"+(preview?" active":"")} onClick={()=>{setPreview(v=>!v);setFitToken(n=>n+1);}}>{preview?"Edit":"Preview"}</button>
-   <button className="cv-toolbar-button cv-secondary-command" onClick={async()=>{const savedCanvas=await save();if(savedCanvas)setShowCms(true);}}>Use in CMS</button>
+   {!isSlides&&<button className="cv-toolbar-button cv-secondary-command" onClick={async()=>{const savedCanvas=await save();if(savedCanvas)setShowCms(true);}}>Use in CMS</button>}
    <button className="cv-primary" disabled={!dirty||saving} onClick={()=>void save()}>{saving?"Saving…":dirty?<><Save size={13}/> Save</>:<><Check size={13}/> Saved</>}</button>
  </>;
- return <div className="cv-root" data-agentsam-annotation-scope="">
+ return <div className="cv-root">
   <DesignWorkspaceFrame snapshot={snapshot} className="cv-workspace" commands={commands}
-   explorer={layers&&!preview?<CanvasLayers document={document} selected={selection} boardId={boardId} onSelect={select} onAdd={addBoard} onComponent={insertComponent}/>:undefined}
+   explorer={layers&&!preview?<CanvasLayers document={document} selected={selection} boardId={boardId} onSelect={select} onAdd={addBoard} onComponent={insertComponent} mode={isSlides?"slides":"canvas"}/>:undefined}
    inspector={properties&&!preview?<CanvasInspector document={document} selected={selection} boardId={boardId} onNode={patch=>changeNode(selection,patch)} onBoard={patch=>{const next=copy(document),board=next.artboards.find(b=>b.id===boardId);if(board){Object.assign(board,patch);change(next);}}} onDocument={change} onRemove={()=>{change(removeNode(document,selection));setSelection("");}} onDuplicate={duplicate} onComponent={makeComponent} events={events} run={run} onRetry={retryRun} onCancel={()=>void cancelRun()}/>:undefined}
-   status={<div className="cv-status"><span>{connection?"Private Canvas":"Connection lost · retrying"}{conflict?" · remote revision changed":""}</span><span>{document.artboards.length} artboards · Revision {canvas.revision}</span></div>}>
+   status={<div className="cv-status"><span>{connection?"Private Canvas":"Connection lost · retrying"}{conflict?" · remote revision changed":""}</span><span>{document.artboards.length} {isSlides?"slides":"artboards"} · Revision {canvas.revision}</span></div>}>
    <CanvasStage document={document} selected={selection} boardId={boardId} preview={preview} width={previewWidth} resourceId={canvas.id} revision={String(canvas.revision)} zoom={zoom} onZoom={setZoom} onSelect={select} onChange={changeNode} fitToken={fitToken} tool={tool}/>
    <div className="cv-stage-toolbar" role="toolbar" aria-label="Canvas tools">
     <IconAction className={tool==="select"?"active":""} label="Select tool" hint="Select (V)" onClick={()=>setTool("select")}><MousePointer2 size={16}/></IconAction>
     <IconAction className={tool==="pan"?"active":""} label="Pan tool" hint="Pan (H)" onClick={()=>setTool("pan")}><Hand size={16}/></IconAction>
-    {location.pathname.replace(/\/+$/, "")==="/admin/canvas"&&<AnnotationToggle className="cv-icon-button"/>}
+    {location.pathname.replace(/\/+$/, "")==="/admin/canvas"&&<AnnotationToggle scopeId="design-canvas" className="cv-icon-button"/>}
     {!preview&&<><span/><div className="cv-insert-menu"><IconAction label="Insert element" hint="Insert element" disabled={!boardId} onClick={()=>setInsertOpen(v=>!v)}><Plus size={16}/><ChevronDown size={10}/></IconAction>{insertOpen&&<div className="cv-popover">{(["frame","text","button","image","input","link"] as const).map(type=><button key={type} onClick={()=>insert(type)}>{type[0].toUpperCase()+type.slice(1)}</button>)}</div>}</div><IconAction label="Add artboard" hint="Add artboard" onClick={addBoard}><Frame size={16}/></IconAction></>}
     <span/><IconAction label="Zoom out" onClick={()=>setZoom(z=>Math.max(.08,z/1.2))}><ZoomOut size={15}/></IconAction><button className="cv-zoom-value" title="Fit artboards (1)" onClick={()=>setFitToken(n=>n+1)}>{Math.round(zoom*100)}%</button><IconAction label="Zoom in" onClick={()=>setZoom(z=>Math.min(3,z*1.2))}><ZoomIn size={15}/></IconAction>
     {preview&&<select aria-label="Preview width" value={previewWidth} onChange={e=>setPreviewWidth(Number(e.target.value))}><option value={0}>Desktop</option><option value={768}>Tablet · 768</option><option value={390}>Phone · 390</option></select>}
-    <AskAgentSamPill contextLabel={selectedNode?.name || document.name} onAsk={askAboutCanvas}/>
    </div>
    {!document.artboards.length&&<div className="cv-invitation"><div className="cv-invitation-heading"><span className="cv-eyebrow">Design Canvas</span><h1>Start with a blank artboard</h1><p>Author directly, import a source artboard, or optionally ask AgentSam to prepare creative directions.</p><div className="cv-entry-actions"><button type="button" className="cv-primary" disabled={busy||preparing} onClick={addBoard}>Create blank artboard</button><button type="button" className="cv-toolbar-button" disabled={busy||preparing} onClick={()=>setShowSources(true)}>Browse source artboards</button></div></div>
     {preparing?<div className="cv-preparing" role="status"><span className="cv-loading-mark"/><p>Preparing four creative directions from your context…</p></div>:directions.length===4?<div className="cv-directions">{directions.map((direction,index)=><button key={direction.id} disabled={busy} onClick={()=>void startRun("",direction.id).catch(()=>{})}><span className="cv-direction-number">0{index+1}</span><h2>{direction.title}</h2><p>{direction.description}</p><span className="cv-direction-go">Explore this direction <ArrowRight size={15}/></span></button>)}</div>:<div className="cv-directions-empty"><p>{directionError||"Optional: prepare creative directions with AgentSam."}</p><ModelSelect compact/><button className="cv-toolbar-button" disabled={preparing} onClick={()=>void prepareDirections()}>Prepare directions</button></div>}

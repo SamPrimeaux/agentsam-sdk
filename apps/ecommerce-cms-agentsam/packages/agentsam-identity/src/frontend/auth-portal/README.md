@@ -1,0 +1,59 @@
+# Auth portal — CMS-edit friendly
+
+Pages copied **verbatim** from IAM `static/pages/auth/*` — reorganize only.
+
+## White-label (customer / CMS)
+
+| Hook | Location | Customer change |
+|------|----------|-----------------|
+| Brand title | `<title>`, hero copy | CMS field or `portal.brand.name` at init |
+| Logo | header / OAuth buttons | `portal.brand.logoUrl` |
+| Colors | `:root { --auth-bg, ... }` | theme tokens — **no JS changes** |
+| OAuth labels | button text | HTML only |
+
+The CLI can now scaffold the reusable identity app surfaces directly with `agentsam identity init --name <project> --brand "App Name"`. This copies the portal, Worker adapter, and migrations into a standalone app layout. Use `portal.brand` at `createIdentityClient` init for programmatic configuration, or `agentsam identity preview` for the local preview server.
+
+## Source map
+
+| File | IAM source |
+|------|------------|
+| `pages/login.html` | `inneranimalmedia/static/pages/auth/login.html` |
+| `pages/signup.html` | `static/pages/auth/signup.html` |
+| `pages/reset.html` | `static/pages/auth/reset.html` |
+
+## API routes (unchanged)
+
+- `POST /api/auth/login`
+- `POST /api/auth/signup` — create account (email/password); portal form must call this, not login
+- `GET /api/company` — public branding SSOT (loaded by `shared/company-branding.js`)
+- OAuth: `/api/oauth/google/start`, `/api/oauth/github/start`, `/api/oauth/cloudflare/start`
+- Desktop PKCE broker: `POST /api/oauth/google/desktop-exchange` (`GOOGLE_DESKTOP_CLIENT_ID`)
+- GCP: per-client when demanded — scaffold only until requested
+
+Sensitive finalize stays server-side (`oauth/callback` → Identity Service).
+
+## Local preview (before client integration)
+
+From the SDK repo or after `npm install @inneranimalmedia/agentsam-sdk`:
+
+```bash
+npm run preview:auth-portal
+# or
+npx agentsam identity preview --open
+npx agentsam-auth-portal --port 8791
+```
+
+Serves production paths (`/auth/login`, `/auth/signup`, `/auth/reset`) with stub APIs:
+
+| Flow | Preview behavior |
+|------|------------------|
+| Password login | `preview@example.com` / `preview` → success + globe exit |
+| Email signup | any email + password (≥8 chars) → success stub |
+| Backup code | any input → success stub |
+| Password reset | always succeeds (stub JSON) |
+| OAuth buttons | stub page + link to globe-exit demo |
+
+Hub: `http://127.0.0.1:8791/` lists all entry points.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

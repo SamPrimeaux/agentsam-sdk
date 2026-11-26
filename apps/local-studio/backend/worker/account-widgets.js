@@ -106,6 +106,7 @@ export async function listAccountWidgets(db, accountId, surface = 'agentsam_stag
       ownerPackage: row.package_name ?? null,
       category: row.category, icon: row.icon_key ?? null,
       componentKey: def?.componentKey ?? null,
+      requiredProvider: def?.requiredProvider ?? null,
       available: Boolean(def), availability: def ? 'ready' : 'concept',
       sizes: def ? [...def.sizes] : parseJson(row.supported_sizes_json, ['small']),
       installed: Boolean(row.installation_id), installationId: row.installation_id ?? null,

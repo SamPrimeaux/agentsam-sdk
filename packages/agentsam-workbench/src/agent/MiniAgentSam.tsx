@@ -1,4 +1,5 @@
 import { ArrowUp, Maximize2, Minimize2, MousePointer2, X } from 'lucide-react';
+import { describeAnnotationTarget, isAnnotationVisualTarget, resolveAnnotationTarget } from './annotation-selection';
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 
 export interface AnnotationSelection {
@@ -13,6 +14,10 @@ export interface AnnotationSelection {
   object?: { id: string; type: string; projectId: string; revision: number };
   /** Host-owned resource identity for contextual routing; never grants mutation authority. */
   resource?: { id: string; kind: string; revision?: string; appId?: string };
+  /** True when the annotation should stay anchored to the actual pointer location. */
+  visual?: boolean;
+  /** True when the selected target is an editable field; its value is withheld. */
+  editable?: boolean;
 }
 function readHostResource(element: Element): AnnotationSelection['resource'] | undefined {
   const host = element.closest('[data-agentsam-resource-host]');
@@ -72,7 +77,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
       },point};
       if (selecting && point) {
         setSelection({id:cadContext.current.object.id,label:cadContext.current.label,
-          page:location.pathname,tag:'cad-object',text:'',point,object:cadContext.current.object});
+          page:location.pathname,tag:'cad-object',text:'',point,visual:true,object:cadContext.current.object});
         setBounds(new DOMRect(point.x,point.y,2,2));
         onSelectingChange(false);
       }
@@ -80,7 +85,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
     const direct = (event: Event) => acceptCad((event as CustomEvent).detail, null);
     const nested = (event: MessageEvent) => {
       if (event.origin !== location.origin || event.data?.source !== 'agentsam-cad-selection') return;
-      const frame = [...document.querySelectorAll<HTMLIFrameElement>('iframe.as-web-browser-frame,iframe.as-work-generated-preview,iframe.abs-explore-frame')]
+      const frame = [...document.querySelectorAll<HTMLIFrameElement>('iframe.as-web-browser-frame,iframe.as-work-generated-preview,iframe.abs-explore-frame,iframe[data-cad-frame]')]
         .find(item => item.contentWindow === event.source);
       if (frame) acceptCad(event.data.selection, frame);
     };
@@ -90,18 +95,26 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
   }, [selecting,onSelectingChange]);
   useEffect(() => {
     if (!selecting) return;
-    setSelection(null); setBounds(null); setStatus(''); browserSelection.current = null;
-    const root = scope?.() || document.body;
-    const ignored = (element: Element) => Boolean(element.closest('[data-mini-agentsam], [data-annotation-control]'));
-    const isVisualCanvas = (element: Element) => element.matches('canvas,svg,iframe') || Boolean(element.closest('canvas,svg'));
+    setSelection(null); setBounds(null); setStatus(''); browserSelection.current = null; target.current = null; cadContext.current = null;
+    const root = scope?.() ?? null;
+    if (!root || !root.isConnected || root === document.body || root === document.documentElement) {
+      setStatus('No active workspace is available to annotate.');
+      onSelectingChange(false);
+      return;
+    }
+    const previousSelecting = root.getAttribute('data-annotation-selecting');
     root.setAttribute('data-annotation-selecting', 'true');
     const over = (event: PointerEvent) => {
-      if (!(event.target instanceof Element)) return;
-      const element = event.target;
-      if (ignored(element) || (element instanceof HTMLIFrameElement && element.matches('.as-web-browser-frame,.as-work-generated-preview,.abs-explore-frame'))) return;
-      const focus = element.closest('button, a, input, textarea, select, [role="button"], [data-annotation-target]') || element;
-      target.current = focus;
-      setBounds(isVisualCanvas(focus) ? new DOMRect(event.clientX, event.clientY, 2, 2) : focus.getBoundingClientRect());
+      const selected = resolveAnnotationTarget(event.target, root);
+      if (!selected) {
+        target.current = null;
+        setBounds(null);
+        return;
+      }
+      target.current = selected;
+      setBounds(isAnnotationVisualTarget(selected, root)
+        ? new DOMRect(event.clientX, event.clientY, 2, 2)
+        : selected.getBoundingClientRect());
     };
     const move = (event: PointerEvent) => {
       const hint = cursorHint.current;
@@ -111,84 +124,102 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
     };
     const click = (event: MouseEvent) => {
       if (!(event.target instanceof Element)) return;
-      const element = event.target;
-      if (ignored(element)) return;
-      event.preventDefault(); event.stopPropagation();
-      const selected = element.closest('button, a, input, textarea, select, [role="button"], [data-annotation-target]') || element;
-      const resource = selected.closest('[data-agentsam-resource]') || selected;
+      // Annotation mode owns clicks inside the active work surface. Excluded
+      // chrome and empty space are ignored rather than triggering app actions.
+      event.preventDefault();
+      event.stopPropagation();
+      const selected = resolveAnnotationTarget(event.target, root);
+      if (!selected) {
+        target.current = null;
+        setBounds(null);
+        return;
+      }
+      const description = describeAnnotationTarget(selected, root);
       const hostResource = readHostResource(selected);
-      const clean = (text: string | null, max = 180) => (text || '').replace(/\s+/g, ' ').trim().slice(0, max);
-      const editableSelector = 'input,textarea,select,[contenteditable]:not([contenteditable="false"])';
-      const editable = selected.matches(editableSelector) || Boolean(selected.closest(editableSelector));
-      const cad = isVisualCanvas(selected) && (!cadContext.current?.frame || cadContext.current.frame === selected)
+      const visual = isAnnotationVisualTarget(selected, root);
+      const cad = visual && (!cadContext.current?.frame || cadContext.current.frame === selected)
         ? cadContext.current : null;
       setSelection({
-        id: cad?.object.id || clean(resource.getAttribute('data-agentsam-resource') || resource.id || resource.tagName),
-        label: cad?.label || clean(selected.getAttribute('aria-label') || selected.getAttribute('alt') || (editable ? 'Input field' : selected.textContent) || resource.getAttribute('aria-label')),
+        ...description,
+        id: cad?.object.id || description.id,
+        label: cad?.label || description.label,
         page: location.pathname,
-        tag: selected.tagName.toLowerCase(),
-        text: editable ? '[field value withheld]' : clean(selected.textContent, 300),
         point: { x: event.clientX, y: event.clientY },
+        visual,
         ...(cad ? { object: cad.object } : {}),
         ...(hostResource ? { resource: hostResource } : {}),
       });
       target.current = selected;
-      setBounds(isVisualCanvas(selected) ? new DOMRect(event.clientX, event.clientY, 2, 2) : selected.getBoundingClientRect());
+      setBounds(visual ? new DOMRect(event.clientX, event.clientY, 2, 2) : selected.getBoundingClientRect());
       onSelectingChange(false);
     };
-    root.addEventListener('pointerover', over, true); root.addEventListener('pointermove', move, true); root.addEventListener('click', click, true);
-    return () => { root.removeAttribute('data-annotation-selecting'); root.removeEventListener('pointerover', over, true); root.removeEventListener('pointermove', move, true); root.removeEventListener('click', click, true); };
+    root.addEventListener('pointerover', over, true);
+    root.addEventListener('pointermove', move, true);
+    root.addEventListener('click', click, true);
+    return () => {
+      if (previousSelecting === null) root.removeAttribute('data-annotation-selecting');
+      else root.setAttribute('data-annotation-selecting', previousSelecting);
+      root.removeEventListener('pointerover', over, true);
+      root.removeEventListener('pointermove', move, true);
+      root.removeEventListener('click', click, true);
+    };
   }, [selecting, scope, onSelectingChange]);
-  // Opaque-origin browser frames can report a selected element without exposing their DOM.
-  // Authenticate the sender against a frame currently owned by the app, never a global message.
+  // Browser/HTML previews use the same target contract. Same-origin frames are
+  // inspected directly; opaque-origin frames cooperate through a bounded bridge.
   useEffect(() => {
     const frameSelector = 'iframe.as-web-browser-frame,iframe.as-work-generated-preview,iframe.abs-explore-frame,iframe.cv-native-html';
-    const root = scope?.() || document.body;
+    const root = scope?.() ?? null;
+    if (!root || !root.isConnected) return;
     const frames = () => [...root.querySelectorAll<HTMLIFrameElement>(frameSelector)];
-    // Same-origin embedded pages are not rewritten by the browser proxy. Attach
-    // directly to their child document rather than selecting the entire iframe.
     const localFrames = new Map<Document, () => void>();
     const attachSameOrigin = (frame: HTMLIFrameElement) => {
       if (!selecting) return;
       let doc: Document | null = null;
       try { doc = frame.contentDocument; } catch { return; }
-      if (!doc || localFrames.has(doc)) return;
-      // In a same-origin CAD host, temporarily make the embedded WebGL guest
-      // click-through while annotating. The host's real CAD viewport receives
-      // the pin position; normal 3D controls are restored on exit.
-      const cadGuest = doc.querySelector<HTMLIFrameElement>('[data-cad-iframe-region] > iframe');
+      if (!doc?.body || localFrames.has(doc)) return;
+      const sameOriginDoc = doc;
+      const documentRoot = sameOriginDoc.body;
+      const cadGuest = documentRoot.querySelector<HTMLIFrameElement>('[data-cad-iframe-region] > iframe');
       const previousPointerEvents = cadGuest?.style.pointerEvents ?? '';
       if (cadGuest) cadGuest.style.pointerEvents = 'none';
       let last = 0;
       const report = (type: string, event: Event) => {
         const hit = event.target as Element | null;
-        if (!hit?.closest || hit === doc?.body || hit === doc?.documentElement) return;
-        const selected = hit.closest('button,a,img,canvas,svg,input,textarea,select,label,h1,h2,h3,h4,p,li,article,section,[role="button"],[data-annotation-target]') || hit;
-        const field = selected.matches('input,textarea,select,[contenteditable="true"]');
-        const clean = (v: string | null, max: number) => (v || '').replace(/\s+/g, ' ').trim().slice(0, max);
+        const selected = resolveAnnotationTarget(hit, documentRoot);
+        if (!selected) {
+          window.dispatchEvent(new MessageEvent('message', {
+            source: frame.contentWindow,
+            data: { source: 'agentsam-browser', type, selection: null },
+          }));
+          return;
+        }
+        const description = describeAnnotationTarget(selected, documentRoot);
         const rect = selected.getBoundingClientRect();
         window.dispatchEvent(new MessageEvent('message', {
           source: frame.contentWindow,
           data: { source: 'agentsam-browser', type, selection: {
-            tag: selected.tagName.toLowerCase(),
-            label: clean(selected.getAttribute('aria-label') || selected.getAttribute('alt') || (field ? 'Input field' : selected.textContent), 180),
-            text: field ? '[field value withheld]' : clean(selected.textContent, 300),
-            rect: {left:rect.left,top:rect.top,width:rect.width,height:rect.height},
-            point: event instanceof MouseEvent || event instanceof PointerEvent ? { x:event.clientX,y:event.clientY } : undefined,
-            visual: selected.hasAttribute('data-annotation-target') || Boolean(selected.closest('[data-cad-iframe-region]')),
+            ...description,
+            rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+            point: 'clientX' in event && 'clientY' in event ? { x: Number(event.clientX), y: Number(event.clientY) } : undefined,
             url: frame.contentWindow?.location.href,
-          }},
+          } },
         }));
       };
       const hover = (event: PointerEvent) => {
         if (Date.now() - last < 70) return;
-        last = Date.now(); report('annotation-hover', event);
+        last = Date.now();
+        report('annotation-hover', event);
       };
-      const click = (event: MouseEvent) => { event.preventDefault(); event.stopImmediatePropagation(); report('annotation-selection', event); };
-      doc.addEventListener('pointermove', hover, true);
-      doc.addEventListener('click', click, true);
-      localFrames.set(doc, () => {
-        doc.removeEventListener('pointermove', hover, true); doc.removeEventListener('click', click, true);
+      const click = (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        report('annotation-selection', event);
+      };
+      documentRoot.addEventListener('pointermove', hover, true);
+      documentRoot.addEventListener('click', click, true);
+      localFrames.set(sameOriginDoc, () => {
+        documentRoot.removeEventListener('pointermove', hover, true);
+        documentRoot.removeEventListener('click', click, true);
         if (cadGuest) cadGuest.style.pointerEvents = previousPointerEvents;
       });
     };
@@ -207,40 +238,41 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
         || !['annotation-hover', 'annotation-selection'].includes(event.data.type)) return;
       const frame = frames().find(item => item.contentWindow === event.source);
       if (!frame) return;
-      const item = event.data.selection as { tag?: unknown; label?: unknown; text?: unknown; url?: unknown; rect?: Record<string, unknown>; point?: Record<string, unknown>; visual?: unknown } | undefined;
-      const rect = item?.rect;
+      const item = event.data.selection as { id?: unknown; tag?: unknown; label?: unknown; text?: unknown; url?: unknown; rect?: Record<string, unknown>; point?: Record<string, unknown>; visual?: unknown; editable?: unknown } | null | undefined;
+      if (!item) {
+        browserSelection.current = null;
+        target.current = null;
+        setBounds(null);
+        return;
+      }
+      const rect = item.rect;
       if (!rect || ![rect.left, rect.top, rect.width, rect.height].every(v => typeof v === 'number' && Number.isFinite(v))
         || Number(rect.width) <= 0 || Number(rect.height) <= 0) return;
       let bounded = { left: Number(rect.left), top: Number(rect.top), width: Number(rect.width), height: Number(rect.height) };
       const frameBox = frame.getBoundingClientRect();
       if (bounded.left < -frameBox.width || bounded.top < -frameBox.height || bounded.width > frameBox.width * 2 || bounded.height > frameBox.height * 2) return;
-      const clickPoint = item?.point;
-      // Canvas and 3D viewport annotations anchor to the *actual pointer
-      // location*, not the entire WebGL canvas. Never invent object bounds.
+      const clickPoint = item.point;
       const pointX = typeof clickPoint?.x === 'number' ? clickPoint.x : NaN;
       const pointY = typeof clickPoint?.y === 'number' ? clickPoint.y : NaN;
       const pointValid = Number.isFinite(pointX) && Number.isFinite(pointY)
-        && pointX >= 0 && pointY >= 0
-        && pointX <= frameBox.width && pointY <= frameBox.height;
-      if (pointValid && (['canvas','svg','iframe'].includes(String(item?.tag)) || item?.visual === true)) {
-        bounded = { left: pointX, top: pointY, width: 2, height: 2 };
-      }
+        && pointX >= 0 && pointY >= 0 && pointX <= frameBox.width && pointY <= frameBox.height;
+      if (pointValid && item.visual === true) bounded = { left: pointX, top: pointY, width: 2, height: 2 };
       browserSelection.current = { frame, rect: bounded };
       target.current = null;
       setBounds(new DOMRect(frameBox.left + bounded.left, frameBox.top + bounded.top, bounded.width, bounded.height));
       if (event.data.type === 'annotation-selection') {
-        const clean = (v: unknown, max = 180) => typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '';
-        const cad = cadContext.current?.frame === frame && (['canvas','svg','iframe'].includes(String(item?.tag)) || item?.visual === true)
-          ? cadContext.current : null;
+        const clean = (value: unknown, max = 180) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
+        const cad = cadContext.current?.frame === frame && item.visual === true ? cadContext.current : null;
         const hostResource = readHostResource(frame);
         const frameResourceId = clean(frame.closest('[data-agentsam-resource]')?.getAttribute('data-agentsam-resource'));
-        const selectedId = hostResource?.kind === 'design-canvas' && hostResource.appId === 'agentsam-local-studio' && frameResourceId
-          ? frameResourceId : (frameResourceId || 'browser') + ':' + clean(item?.tag);
+        const itemId = clean(item.id, 200) || clean(item.tag, 80) || 'element';
+        const selectedId = (frameResourceId || 'browser') + ':' + itemId;
         setSelection({
           id: cad?.object.id || selectedId,
-          label: cad?.label || clean(item?.label) || 'Browser element', page: (() => {
+          label: cad?.label || clean(item.label) || 'Browser element',
+          page: (() => {
             try {
-              const page = new URL(clean(item?.url, 2000), location.href);
+              const page = new URL(clean(item.url, 2000), location.href);
               if (page.pathname === '/api/browser/page') {
                 const target = page.searchParams.get('url');
                 if (target) return new URL(target).origin + new URL(target).pathname;
@@ -248,9 +280,12 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
               return page.origin + page.pathname;
             } catch { return location.pathname; }
           })(),
-          tag: clean(item?.tag), text: clean(item?.text, 300),
+          tag: clean(item.tag, 80),
+          text: clean(item.text, 300),
           ...(pointValid ? { point: { x: frameBox.left + pointX, y: frameBox.top + pointY } } : {}),
-          ...(cad ? {object: cad.object} : {}),
+          visual: item.visual === true,
+          editable: item.editable === true,
+          ...(cad ? { object: cad.object } : {}),
           ...(hostResource ? { resource: hostResource } : {}),
         });
         onSelectingChange(false);
@@ -261,7 +296,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
     return () => {
       window.removeEventListener('message', message);
       document.removeEventListener('load', load, true);
-      frames().forEach(frame => frame.contentWindow?.postMessage({source: 'agentsam-host', type: 'annotation-mode', enabled: false}, '*'));
+      frames().forEach(frame => frame.contentWindow?.postMessage({ source: 'agentsam-host', type: 'annotation-mode', enabled: false }, '*'));
       localFrames.forEach(cleanup => cleanup());
     };
   }, [selecting, onSelectingChange, scope]);
@@ -281,7 +316,7 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
       } else if (target.current?.isConnected) {
         const element = target.current;
         const point = selection?.point;
-        setBounds(point && element.matches('canvas,svg,iframe')
+        setBounds(point && selection?.visual
           ? new DOMRect(point.x, point.y, 2, 2)
           : element.getBoundingClientRect());
       }
@@ -323,7 +358,8 @@ export function MiniAgentSam({ selecting, onSelectingChange, onSubmit, renderCom
       ? ['Describe this visual', 'Suggest an improvement', 'Check alignment']
       : ['Explain this element', 'Suggest a fix', 'Review accessibility'];
   return <div data-mini-agentsam="" style={{ pointerEvents: 'none' }}>
-    {selecting && <div ref={cursorHint} className="mini-agentsam-hint" role="status"><MousePointer2 size={14} aria-hidden="true" /> Select to annotate <kbd>Esc</kbd></div>}
+    {selecting && <div ref={cursorHint} className="mini-agentsam-hint" role="status"><MousePointer2 size={14} aria-hidden="true" /> Select a content element <kbd>Esc</kbd></div>}
+    {!selecting && !selection && status && <div className="mini-agentsam-hint" role="status">{status}</div>}
     {bounds && (selecting || selection) && <div className="mini-agentsam-outline" style={{ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height }} />}
     {selection && bounds && !expanded && <button type="button" className="mini-agentsam-pin"
       style={{ '--mini-pin-left': Math.max(8, Math.min(window.innerWidth - 30, bounds.right - 10)) + 'px',

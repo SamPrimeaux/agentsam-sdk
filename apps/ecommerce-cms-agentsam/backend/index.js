@@ -17,6 +17,7 @@ import { runAgentsamCompaction } from "./agentsam/compaction.js";
 import { drainAssetJobs, ensureAssetStorage, processAssetJobById } from "./assets/product-optimize.js";
 import { handleStoreApi } from "./store/api.js";
 import { decorateProductPage } from "./store/product-seo.js";
+import { resolvePublicProductRoute } from "./store/product-page.js";
 import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
 import { handleStudioCmsBridge } from "./cms/studio-bridge.js";
@@ -46,6 +47,7 @@ import {
 } from "./webhooks/resend.js";
 import { handleCompletefulWebhook } from "./webhooks/completeful.js";
 import { handleNewsletterSignup, handleNewsletterConfirm, handleNewsletterUnsubscribe } from "./storefront/newsletter.js";
+import { handleStorefrontAccessApi, storefrontAccessGate } from "./storefront/access.js";
 
 // Serve an object straight out of the media R2 bucket. Public — these are
 // product/marketing images meant to be viewed on the storefront.
@@ -214,6 +216,11 @@ export default {
       }
       return handleCompanyApi(request, env);
     }
+
+    const storefrontAccessApi = await handleStorefrontAccessApi(request, env, url);
+    if (storefrontAccessApi) return storefrontAccessApi;
+    const storefrontDenied = await storefrontAccessGate(request, env, url);
+    if (storefrontDenied) return storefrontDenied;
 
     if (path === "/api/newsletter" && request.method === "POST") {
       return handleNewsletterSignup(request, env);
@@ -421,24 +428,24 @@ export default {
       } catch {
         return new Response("Invalid product handle", { status: 400 });
       }
-      const product = await env.DB.prepare(
-        "SELECT slug, title, description, seo_title, seo_description, image_url FROM products WHERE slug = ? AND status = 'active' LIMIT 1"
-      ).bind(requestedSlug).first();
-      if (!product) {
-        const redirect = await env.DB.prepare(
-          "SELECT p.slug FROM product_slug_redirects r JOIN products p ON p.id = r.product_id WHERE r.old_slug = ? AND p.status = 'active' LIMIT 1"
-        ).bind(requestedSlug).first();
-        if (redirect?.slug) {
-          const destination = new URL(request.url);
-          destination.pathname = "/products/" + encodeURIComponent(redirect.slug);
-          return Response.redirect(destination.toString(), 301);
-        }
+      let resolved;
+      try {
+        resolved = await resolvePublicProductRoute(env, requestedSlug, url);
+      } catch {
+        return new Response("Storefront site not found", { status: 404 });
       }
+      if (resolved.redirectSlug) {
+        const destination = new URL(request.url);
+        destination.pathname = "/products/" + encodeURIComponent(resolved.redirectSlug);
+        return Response.redirect(destination.toString(), 301);
+      }
+      if (!resolved.product) return new Response("Product not found", { status: 404 });
+
       const productUrl = new URL(request.url);
       productUrl.pathname = "/product.html";
-      productUrl.searchParams.set("slug", productMatch[1]);
+      productUrl.searchParams.set("slug", requestedSlug);
       const page = await env.ASSETS.fetch(new Request(productUrl, request));
-      return product && page.ok ? decorateProductPage(page, product, request.url) : page;
+      return page.ok ? decorateProductPage(page, resolved.product, request.url) : page;
     }
 
     if (path === "/shop/collections" || path === "/shop/collections/") {

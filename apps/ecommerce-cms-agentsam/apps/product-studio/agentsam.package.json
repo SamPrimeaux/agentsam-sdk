@@ -40,8 +40,10 @@
       "backend/admin/media-background.js"
     ],
     "packages": [
-      "packages/agentsam-merch",
       "packages/agentsam-workbench"
+    ],
+    "dependencies": [
+      "@inneranimalmedia/agentsam-merch@2.6.19"
     ]
   },
   "navigation": {
@@ -106,7 +108,7 @@
       "unfinished": [
         "media.image.edit",
         "media.image.upscale",
-        "commerce.artwork.preflight (pure core exists in packages/agentsam-merch; no tool wrapper)",
+        "commerce.artwork.preflight (pure core is exported by @inneranimalmedia/agentsam-merch; no tool wrapper)",
         "commerce.mockup.render.per_color",
         "commerce.design.print_files (multi-location)"
       ]

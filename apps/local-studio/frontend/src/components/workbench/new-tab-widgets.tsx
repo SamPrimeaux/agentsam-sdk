@@ -14,6 +14,8 @@ import {
   type AccountWidget,
 } from '@/lib/widgets/account-widgets';
 import { cn } from '@/lib/utils';
+import { loadProviderWidgetData } from '@/lib/widgets/provider-widget-data';
+import type { AgentSamWidgetProviderData } from '@inneranimalmedia/agentsam-contracts/widgets';
 import './new-tab-widgets.css';
 
 /**
@@ -24,6 +26,7 @@ import './new-tab-widgets.css';
 export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) {
   const user = useCurrentUser();
   const [catalog, setCatalog] = useState<AccountWidget[]>([]);
+  const [providerData, setProviderData] = useState<Record<string, AgentSamWidgetProviderData>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -83,6 +86,26 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
   };
   const installed = useMemo(() => catalog.filter(widget => widget.installed && !widget.hidden)
     .sort((a,b) => Number(b.pinned) - Number(a.pinned) || a.orderIndex - b.orderIndex || a.title.localeCompare(b.title)), [catalog]);
+  useEffect(() => {
+    let cancelled = false;
+    const targets = installed.filter(widget => Boolean(widget.requiredProvider));
+    const initial = Object.fromEntries(targets.map(widget => [widget.key, {
+      provider: widget.requiredProvider!, status: 'loading' as const,
+    }]));
+    setProviderData(initial);
+    if (!targets.length) return () => { cancelled = true; };
+    const loadOne = async (widget: AccountWidget) => {
+      const result = await loadProviderWidgetData(widget.key, widget.configuration);
+      if (!cancelled) setProviderData(current => ({ ...current, [widget.key]: result }));
+    };
+    targets.forEach(widget => { void loadOne(widget); });
+    const refreshers = targets.map(widget => window.setInterval(
+      () => { void loadOne(widget); },
+      widget.key === 'queues' ? 30_000 : 5 * 60_000,
+    ));
+    return () => { cancelled = true; refreshers.forEach(window.clearInterval); };
+  }, [installed, user?.id]);
+
   const ready = catalog.filter(widget => widget.available && !widget.installed);
   const hidden = catalog.filter(widget => widget.installed && widget.hidden);
   const concepts = catalog.filter(widget => !widget.available);
@@ -249,7 +272,7 @@ export function NewTabWidgets({ onOpenGallery }: { onOpenGallery: () => void }) 
                       </IconAction>
                     </div>
                   </div>}>
-                  <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} />
+                  <BuiltinWidget widgetId={widget.key} compact configuration={widget.configuration} data={widget.requiredProvider ? providerData[widget.key] : undefined} onLoadHistory={widget.key === "queues" ? (queueId) => loadProviderWidgetData("queues", { history: "24h", queueId }) : undefined} />
                   {detailsKey === widget.key ? (
                     <div className="mt-4 space-y-3 rounded-lg border border-border bg-muted/30 p-3 text-xs">
                       <label className="flex items-center justify-between gap-3">

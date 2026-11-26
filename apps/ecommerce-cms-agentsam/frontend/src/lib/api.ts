@@ -91,21 +91,46 @@ async function parseAdminResponse<T>(res: Response): Promise<T> {
   });
 }
 
-function scopedCommercePath(path: string): string {
-  if (typeof window === "undefined" ||
-      !/^\/api\/admin\/(?:products|variants|inventory|product-studio|collections)(?:\/|$)/.test(path)) return path;
+export function currentCommerceSiteId(): string | null {
+  if (typeof window === "undefined") return null;
+  const siteFromSearch = (search: string): string | null => {
+    const params = new URLSearchParams(search);
+    return params.get("site_id") || params.get("site") || params.get("site_slug");
+  };
+  const siteFromRoute = (route: string | null): string | null => {
+    if (!route) return null;
+    try { return siteFromSearch(new URL(route, window.location.origin).search); }
+    catch { return null; }
+  };
 
-  const url = new URL(path, window.location.origin);
-  if (url.searchParams.get("scope") === "account" || url.searchParams.has("site_id")) return path;
-
-  const pageParams = new URLSearchParams(window.location.search);
-  let siteId = pageParams.get("site_id") || pageParams.get("site") || pageParams.get("site_slug");
+  let siteId = siteFromSearch(window.location.search);
+  if (!siteId) {
+    const currentParams = new URLSearchParams(window.location.search);
+    siteId = siteFromRoute(currentParams.get("page") || currentParams.get("__route"));
+  }
+  if (!siteId && window.parent !== window) {
+    try {
+      const parentUrl = new URL(window.parent.location.href);
+      siteId = siteFromSearch(parentUrl.search) ||
+        siteFromRoute(parentUrl.searchParams.get("page") || parentUrl.searchParams.get("__route"));
+    } catch { /* Cross-origin parents cannot supply site context. */ }
+  }
   if (!siteId) {
     try { siteId = sessionStorage.getItem("agentsam.cms.selected-site.v1"); } catch {}
   }
   if (!siteId) {
     try { siteId = localStorage.getItem("agentsam.cms.selected-site.v1"); } catch {}
   }
+  return siteId || null;
+}
+
+function scopedCommercePath(path: string): string {
+  if (typeof window === "undefined" ||
+      !/^\/api\/admin\/(?:products|variants|inventory|product-studio|collections)(?:\/|$)/.test(path)) return path;
+
+  const url = new URL(path, window.location.origin);
+  if (url.searchParams.get("scope") === "account" || url.searchParams.has("site_id")) return path;
+  const siteId = currentCommerceSiteId();
   if (!siteId) return path;
 
   url.searchParams.set("site_id", siteId);

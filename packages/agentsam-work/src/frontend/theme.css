@@ -1948,3 +1948,115 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 }
 @container (max-width:660px) {.agentsam-artifact-hub__create-grid {grid-template-columns:repeat(3,minmax(0,1fr));}}
 @container (max-width:330px) {.agentsam-artifact-hub__create-grid {grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* Mail surface: container-responsive so the same mailbox works in Side Stage,
+   the full Work surface and narrow mobile layouts. */
+.agentsam-work-mail {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(170px, 190px) minmax(220px, .9fr) minmax(260px, 1.1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--agentsam-work-panel);
+  container-name: agentsam-mail;
+  container-type: inline-size;
+}
+.agentsam-work-mail__nav,
+.agentsam-work-mail__list,
+.agentsam-work-mail__detail { min-width: 0; min-height: 0; }
+.agentsam-work-mail__nav { overflow-y: auto; overscroll-behavior: contain; }
+.agentsam-work-mail__list { display: flex; flex-direction: column; }
+.agentsam-work-mail__detail { display: block; }
+.agentsam-work-mail__back { display: none; align-items: center; gap: 6px; margin: 0 0 12px; }
+.agentsam-work-mail__empty {
+  display: flex;
+  min-height: 160px;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px;
+  text-align: center;
+  color: var(--agentsam-work-muted);
+  font-size: 11px;
+}
+.agentsam-work-mail__empty strong { color: var(--agentsam-work-text); font-size: 13px; font-weight: 650; }
+.agentsam-work-mail__empty > span { max-width: 280px; line-height: 1.6; }
+.agentsam-work-mail__connections,
+.agentsam-work-mail__compose { box-sizing: border-box; max-width: calc(100% - 24px); }
+.agentsam-work-mail__connections { left: 198px; }
+.agentsam-work-mail__compose { overflow-y: auto; }
+.agentsam-work-mail__detail-heading { min-width: 0; }
+
+@container agentsam-mail (max-width: 879px) and (min-width: 621px) {
+  .agentsam-work-mail { grid-template-columns: 150px minmax(0, 1fr); }
+  .agentsam-work-mail__detail { display: none; grid-column: 1 / -1; grid-row: 1; padding: 16px !important; }
+  .agentsam-work-mail__back { display: inline-flex; }
+  .agentsam-work-mail[data-mobile-detail="true"] .agentsam-work-mail__nav,
+  .agentsam-work-mail[data-mobile-detail="true"] .agentsam-work-mail__list { display: none; }
+  .agentsam-work-mail[data-mobile-detail="true"] .agentsam-work-mail__detail { display: block; }
+  .agentsam-work-mail__connections { left: 158px !important; max-width: calc(100% - 170px) !important; }
+}
+
+@container agentsam-mail (max-width: 620px) {
+  .agentsam-work-mail { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .agentsam-work-mail__nav {
+    grid-column: 1;
+    grid-row: 1;
+    display: grid;
+    gap: 6px;
+    max-height: 148px;
+    padding: 8px !important;
+    overflow: hidden;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--agentsam-work-border);
+  }
+  .agentsam-work-mail__nav > div:first-child { grid-row: 1; }
+  .agentsam-work-mail__accounts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: 0 !important;
+  }
+  .agentsam-work-mail__accounts > div:first-child { flex: 0 0 auto; margin: 0 !important; }
+  .agentsam-work-mail__accounts > div:first-child span { display: none; }
+  .agentsam-work-mail__accounts > div:nth-child(2) {
+    display: flex !important;
+    min-width: 0;
+    gap: 4px !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .agentsam-work-mail__accounts > div:nth-child(2)::-webkit-scrollbar,
+  .agentsam-work-mail__folders::-webkit-scrollbar { display: none; }
+  .agentsam-work-mail__accounts > div:nth-child(2) > button { width: auto !important; flex: 0 0 auto; max-width: 190px; }
+  .agentsam-work-mail__folders {
+    display: flex !important;
+    gap: 4px !important;
+    min-width: 0;
+    margin-top: 0 !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .agentsam-work-mail__folders > button { flex: 0 0 auto; min-height: 32px !important; padding-inline: 10px !important; }
+  .agentsam-work-mail__list { grid-column: 1; grid-row: 2; border-right: 0 !important; }
+  .agentsam-work-mail__search { padding: 8px !important; }
+  .agentsam-work-mail__messages > button { padding: 12px !important; }
+  .agentsam-work-mail__detail { display: none; grid-column: 1; grid-row: 2; padding: 14px !important; }
+  .agentsam-work-mail__back { display: inline-flex; min-height: 34px; }
+  .agentsam-work-mail[data-mobile-detail="true"] .agentsam-work-mail__nav,
+  .agentsam-work-mail[data-mobile-detail="true"] .agentsam-work-mail__list { display: none; }
+  .agentsam-work-mail[data-mobile-detail="true"] .agentsam-work-mail__detail { display: block; }
+  .agentsam-work-mail__detail-heading { flex-wrap: wrap; align-items: center !important; }
+  .agentsam-work-mail__detail-heading > div { flex-basis: 100%; order: 2; }
+  .agentsam-work-mail__detail-heading > button:not(.agentsam-work-mail__back) { order: 1; }
+  .agentsam-work-mail__connections { left: 12px !important; width: calc(100% - 24px) !important; max-width: calc(100% - 24px) !important; }
+  .agentsam-work-mail__compose { right: 8px !important; bottom: 8px !important; width: calc(100% - 16px) !important; max-width: calc(100% - 16px) !important; }
+}

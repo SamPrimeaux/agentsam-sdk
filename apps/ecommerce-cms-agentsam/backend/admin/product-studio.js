@@ -564,7 +564,7 @@ async function createDesign(env, draft) {
     return { designId: draft.completeful_design_id, selection, art, artUrl, shop, reused: true };
   }
 
-  assertCompletefulMutationAllowed(env);
+  await assertCompletefulMutationAllowed(env);
   const location = selection.locations[0];
   const operationKey = `product-studio:${draft.id}:v${draft.version}:design`;
   const idempotencyKey = operationKey;
@@ -664,7 +664,7 @@ async function renderDraft(request, env, id) {
       });
     }
 
-    assertCompletefulMutationAllowed(env);
+    await assertCompletefulMutationAllowed(env);
     const operationKey = `product-studio:${draft.id}:v${draft.version}:mockup:${mockup.mockup_id}:${art.id}`;
     const idempotencyKey = operationKey;
     const operation = await beginOperation(env, {
@@ -960,7 +960,7 @@ async function createProductFromDraft(request, env, id) {
     const providerSelection = { include: "all", exclude: excluded };
     const shopId = design.shop.completeful_shop_id;
 
-    assertCompletefulMutationAllowed(env);
+    await assertCompletefulMutationAllowed(env);
     const operationKey = `product-studio:${draft.id}:v${draft.version}:store-product`;
     const idempotencyKey = operationKey;
     const operation = await beginOperation(env, {

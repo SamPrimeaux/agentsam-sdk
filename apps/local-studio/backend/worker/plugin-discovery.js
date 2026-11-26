@@ -38,6 +38,10 @@ function strings(input, max = 24, length = 150) {
   if (!Array.isArray(input)) return [];
   return input.filter(value=>typeof value === 'string').slice(0,max).map(value=>text(value,length)).filter(Boolean);
 }
+function jsonValue(value, fallback) {
+  try { const parsed = JSON.parse(String(value || '')); return parsed ?? fallback; }
+  catch { return fallback; }
+}
 function link(value) {
   const url = httpUrl(value);
   return url ? url.toString() : null;
@@ -194,16 +198,37 @@ export async function discoverPublicPlugins(env, requestFetch = fetch) {
 
 export function projectPlatformPluginDefinitions(rows, tools = []) {
   return (Array.isArray(rows)?rows:[]).map(row=>{
-    let metadata={},capabilities=[];
-    try{metadata=JSON.parse(row.metadata_json||'{}');}catch{}
-    try{const parsed=JSON.parse(row.capabilities_json||'[]');if(Array.isArray(parsed))capabilities=parsed.filter(x=>typeof x==='string').slice(0,24);}catch{}
+    const metadata=jsonValue(row.metadata_json,{});
+    const capabilities=strings(jsonValue(row.capabilities_json,[]),24,150);
     const installedCount=Number(row.installations||0);
     const isStage=metadata?.side_stage?.renderer==='builtin';
+    const store=metadata?.store && typeof metadata.store==='object' ? metadata.store : {};
     return {
-      pluginKey:row.plugin_key,name:row.display_name,description:row.description||'',
-      kind:row.plugin_kind,category:row.category,provider:row.provider_key,
-      version:row.version,capabilities,installed:installedCount>0,
-      enabled:Number(row.enabled)===1,setupStatus:row.setup_status||'not_installed',
+      id:row.id,
+      pluginKey:row.plugin_key,
+      name:row.display_name,
+      description:row.description||'',
+      kind:row.plugin_kind,
+      category:row.category,
+      provider:row.provider_key,
+      publisher:metadata?.publisher||store?.publisher||row.provider_key,
+      version:row.version,
+      capabilities,
+      iconUrl:row.icon_url||null,
+      iconAlt:row.icon_alt||null,
+      iconFit:row.icon_fit==='cover'?'cover':'contain',
+      composerVisible:Number(row.composer_visible)===1,
+      settingsVisible:Number(row.settings_visible)===1,
+      sortPriority:Number(row.sort_priority||50),
+      featured:store?.featured===true||store?.featured===1,
+      collections:strings(store?.collections,12,60),
+      authType:row.auth_type||'none',
+      transport:row.transport||'',
+      websiteUrl:link(metadata?.provider_home||metadata?.website_url),
+      docsUrl:link(metadata?.docs_url),
+      installed:installedCount>0,
+      enabled:Number(row.enabled)===1,
+      setupStatus:row.setup_status||'not_installed',
       surface:isStage?'side_stage':metadata?.app?'app':'integration',
       // 'declared' is NOT the same as a verified executable tool or healthy connection.
       readiness:tools.some(tool=>tool.plugin_key===row.plugin_key)?'tools_registered':'definition_only',
@@ -223,8 +248,9 @@ export async function listCatalogForAccount(env, accountId, fetcher = fetch) {
   // Platform definitions are authoritative catalog entries, whether or not
   // this account has installed them. Do not fabricate an OAuth grant or tool.
   const registryRows = await env.DB.prepare(`
-    SELECT p.plugin_key,p.display_name,p.description,p.plugin_kind,p.category,
-           p.version,p.provider_key,p.capabilities_json,p.metadata_json,
+    SELECT p.id,p.plugin_key,p.display_name,p.description,p.plugin_kind,p.category,
+           p.version,p.provider_key,p.capabilities_json,p.metadata_json,p.auth_type,p.transport,
+           p.icon_url,p.icon_alt,p.icon_fit,p.composer_visible,p.settings_visible,p.sort_priority,
            SUM(CASE WHEN i.id IS NOT NULL THEN 1 ELSE 0 END) AS installations,
            MAX(CASE WHEN i.enabled=1 THEN 1 ELSE 0 END) AS enabled,
            MAX(CASE WHEN i.enabled=1 THEN i.setup_status ELSE NULL END) AS setup_status
@@ -273,8 +299,73 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
   if(ENTERTAINMENT_PLUGIN_KEYS.includes(pluginKey))return installFirstPartyEntertainment(env,accountId,pluginKey);
   if(pluginKey==='agentsam-docker-engine')return installFirstPartyDocker(env,accountId);
   if (!isCatalogPluginKey(pluginKey)) throw new Error('plugin_catalog_key_invalid');
+
+  const platformDefinition = await env.DB.prepare(`
+    SELECT * FROM agentsam_plugins
+    WHERE plugin_key=? AND composer_visible=1 AND settings_visible=1
+    LIMIT 1
+  `).bind(pluginKey).first();
   const catalog = await discoverPublicPlugins(env,fetcher);
   const entry = catalog.plugins.find(plugin=>plugin.pluginKey===pluginKey);
+
+  // Prefer a verified remote catalog manifest when one exists. If the remote
+  // catalog is unavailable or does not publish this key, the account may still
+  // install an explicitly public, first-party registry definition. The shared
+  // definition and executable tool inventory are never rewritten by this flow.
+  if (!entry && platformDefinition) {
+    const authType=String(platformDefinition.auth_type||'none');
+    const hasSupportedSetup=['oauth','oauth_via_iam','api_key_secret'].includes(authType);
+    if (!hasSupportedSetup) throw new Error('plugin_install_flow_unavailable');
+    const registry = await loadPluginRegistry(env,accountId,{includeDisabled:true});
+    const existing = registry.plugins.find(row=>row.plugin_key===pluginKey);
+    if (existing) {
+      return {
+        pluginId:existing.id,
+        pluginKey,
+        status:existing.setup_status==='connected'?'connected':'requires_connection',
+      };
+    }
+    const manifest = {
+      plugin_key:platformDefinition.plugin_key,
+      family_key:platformDefinition.family_key,
+      version:platformDefinition.version,
+      provider_key:platformDefinition.provider_key,
+      installation_key:'default',
+      plugin_kind:platformDefinition.plugin_kind,
+      category:platformDefinition.category,
+      display_name:platformDefinition.display_name,
+      short_name:platformDefinition.short_name,
+      description:platformDefinition.description,
+      mention_aliases:jsonValue(platformDefinition.mention_aliases_json,[]),
+      endpoint_url:platformDefinition.endpoint_url,
+      transport:platformDefinition.transport,
+      auth_type:platformDefinition.auth_type,
+      oauth_connect_url:platformDefinition.oauth_connect_url,
+      capabilities:[],
+      tool_lanes:jsonValue(platformDefinition.tool_lanes_json,[]),
+      config:jsonValue(platformDefinition.config_json,{}),
+      metadata:jsonValue(platformDefinition.metadata_json,{}),
+      icon_url:platformDefinition.icon_url,
+      icon_dark_url:platformDefinition.icon_dark_url,
+      icon_alt:platformDefinition.icon_alt,
+      icon_fit:platformDefinition.icon_fit,
+      composer_visible:true,
+      settings_visible:true,
+      sort_priority:Number(platformDefinition.sort_priority||50),
+      health_strategy:platformDefinition.health_strategy,
+      tools:[],
+    };
+    const installed=await installPlugin(env.DB,{
+      accountId,
+      environment:'production',
+      manifest,
+      preserveEnabled:true,
+      preserveRegistry:true,
+    });
+    await updatePluginPreferences(env.DB,{accountId,pluginId:installed.plugin_id,enabled:false,composerVisible:true});
+    return {pluginId:installed.plugin_id,pluginKey,status:'requires_connection'};
+  }
+
   if (!entry && catalog.errors.length === catalog.configuredSources && catalog.configuredSources > 0) {
     throw new Error('plugin_catalog_unavailable');
   }
@@ -336,23 +427,29 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
 
 export async function removeCatalogInstallation(env,accountId,pluginId) {
   if (!/^plg_[a-z0-9]+$/i.test(pluginId)) throw new Error('plugin_id_invalid');
-  const definition=await env.DB.prepare('SELECT plugin_key FROM agentsam_plugins WHERE id=? LIMIT 1').bind(pluginId).first();
+  const definition=await env.DB.prepare('SELECT plugin_key,provider_key FROM agentsam_plugins WHERE id=? LIMIT 1').bind(pluginId).first();
   if(ENTERTAINMENT_PLUGIN_KEYS.includes(definition?.plugin_key)){
     return removeFirstPartyEntertainment(env,accountId,pluginId);
   }
-  const installKey=definition?.plugin_key==='agentsam-docker-engine'?'docker-v1':'catalog-v1';
+  if(['agentsam-mcp','inneranimalmedia-cf-oauth'].includes(definition?.plugin_key)) {
+    throw new Error('plugin_uninstall_managed_by_connection');
+  }
   const row = await env.DB.prepare(
-    'SELECT id FROM agentsam_plugin_installations WHERE plugin_id = ? AND account_id = ? AND instance_key = ? LIMIT 1'
-  ).bind(pluginId,accountId,installKey).first();
+    `SELECT id,instance_key,setup_status FROM agentsam_plugin_installations
+     WHERE plugin_id = ? AND account_id = ?
+     ORDER BY CASE instance_key WHEN 'catalog-v1' THEN 0 WHEN 'default' THEN 1 WHEN 'docker-v1' THEN 2 ELSE 3 END
+     LIMIT 1`
+  ).bind(pluginId,accountId).first();
   if (!row) throw new Error('plugin_installation_not_found');
+  if (row.instance_key==='local-studio-pkce') throw new Error('plugin_uninstall_managed_by_connection');
+  if (row.setup_status==='connected') throw new Error('plugin_remove_requires_disconnect');
   const tools = await env.DB.prepare(
     `SELECT COUNT(*) AS total FROM agentsam_tools
      WHERE plugin_key = (SELECT plugin_key FROM agentsam_plugins WHERE id = ?)
        AND account_id = ?`
   ).bind(pluginId,accountId).first();
   if (Number(tools?.total || 0) > 0) throw new Error('plugin_remove_requires_disconnect');
-  await env.DB.prepare(
-    'DELETE FROM agentsam_plugin_installations WHERE plugin_id = ? AND account_id = ? AND instance_key = ?'
-  ).bind(pluginId,accountId,installKey).run();
+  await env.DB.prepare('DELETE FROM agentsam_plugin_installations WHERE id = ? AND account_id = ?')
+    .bind(row.id,accountId).run();
   return {pluginId,removed:true};
 }

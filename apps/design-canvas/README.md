@@ -1,6 +1,8 @@
 # AgentSam Design Canvas — installable app source
 
-The primary authored source is apps/design-canvas/src/DesignCanvasApp.tsx. It consumes source-backed interactive HTML artboards in public/sources. Those are the original user-provided .dc.html exports (39 AgentSam and 13 baseline onboarding screens, five separate onboarding versions and one collected onboarding artifact, plus a browser reference and three real media output views), not flattened screenshots. A custom Canvas UI lets you navigate, focus, interact with, edit, persist and export them. Source editing is not automatically applied to the Git checkout or customer storefront; edits remain local to the browser until exported.
+The primary authored source is apps/design-canvas/src/DesignCanvasApp.tsx. AgentSam Design provides three creative workspaces: Slides, Design, and Design System. It includes a platform-provided Brand Guidelines presentation, native editable slide/design objects, selection-driven properties, comments, and clean empty states for newly created design systems. The original source-backed interactive HTML artboards remain available through the Reference Library; they are preserved as original source documents and are not flattened screenshots.
+
+The shared resizable workspace frame is reused from @inneranimalmedia/agentsam-workbench. The app accepts host-owned artifact and assistant callbacks (initialArtifacts, onArtifactsChange, onAskAgentSam, onShareArtifact, and onSaveToLibrary), plus embedded mode to remove its standalone navigation rail inside the existing AgentSam shell. The localhost preview falls back to browser-local storage only; it does not claim account-level persistence or create a second production artifact registry. Production embedding must provide the existing AgentSam artifact lifecycle and authorized assistant action.
 
 ## Local
 
@@ -8,6 +10,16 @@ The primary authored source is apps/design-canvas/src/DesignCanvasApp.tsx. It co
     npm --prefix apps/design-canvas run doctor
     npm --prefix apps/design-canvas run preview
     # http://127.0.0.1:4178/
+
+
+## Creative workspaces
+
+- **Slides** creates a blank presentation or a seven-slide Brand Guidelines starter. Slides, text, shapes, images, charts, and tables are structured editable objects.
+- **Design** opens an empty artboard workspace. Users add artboards, layers, text, shapes, and images; the existing source-backed artboard library remains available as a reference/import destination.
+- **Design System** starts with zero user tokens and a complete editor: Overview, Colors, Typography, Spacing, Corner radius, Shadows, Components, Assets, and Files. Platform UI and section structure are present without fabricating user-owned values.
+- The editor uses the shared DesignWorkspaceFrame for resizable explorer/stage/inspector panes. The tool surface includes insert menus, slide and object layers, position/size/appearance controls, undo/redo, zoom, grid/snap/safe guides, JSON source inspection, comments, and presentation mode with optional speaker notes. AgentSam is invoked through the host-supplied onAskAgentSam callback rather than a second embedded assistant runtime.
+- Document actions support rename, duplicate, favorite, delete, and editable JSON export. Share and Save to Library appear only when the host supplies their real callbacks; standalone mode does not advertise dead integration actions.
+- The local preview stores drafts in browser local storage under agentsam.design-canvas.creative-workspace.v1. This is a review convenience only. Hosted use must supply the canonical artifact store through the host adapter; local browser storage is not the production source of truth.
 
 The same app component is mounted as the first view in packages/agentsam-nav/dev/ComponentPreview.tsx, on port 4176, with the existing native Canvas retained via the Native Canvas action.
 
@@ -17,7 +29,7 @@ The agentsam.app.v1 manifest is compatible with the Local Studio included-app bu
 
 ## Source boundaries
 
-- All 77 HTML documents (62 existing artboards plus 15 versioned platform stock sources) are packaged as app-owned data and rendered inside sandboxed iframes without allow-same-origin. A narrowly allowlisted postMessage document bridge resolves only filenames in the packaged source manifest, so imported dc-import compositions work when the Side Stage host itself runs the app in an opaque origin. The bridge grants no host API, authentication, or network access.
+- All 78 HTML documents (62 existing artboards plus 15 versioned platform stock sources) are packaged as app-owned data and rendered inside sandboxed iframes without allow-same-origin. A narrowly allowlisted postMessage document bridge resolves only filenames in the packaged source manifest, so imported dc-import compositions work when the Side Stage host itself runs the app in an opaque origin. The bridge grants no host API, authentication, or network access.
 - Original scripts may request public static assets such as CSS, support.js, reference image, GLB, and video. The app intentionally does not treat those assets as authentication or live business data.
 - Source-backed artboards and onboarding screens are interactive imported design documents, not proof that checkout, billing, or user signup are wired to the live backend.
 - The theme tokens are preserved under design-system/.
@@ -71,3 +83,9 @@ CMS definition/revision flow.
 ## Distribution and asset rights
 
 The independently versioned AgentSam application source follows the repository's FSL-1.1-MIT licensing policy. Original imported design exports, user-provided screenshots, and upstream vendored React files remain subject to their original owners' applicable rights and licenses. Their inclusion as source-backed examples is not a claim that they are authored by AgentSam, nor that an external browser product is installed.
+
+## Production integration boundary
+
+- The existing `agentsam_artifacts` registry remains the artifact authority. The current `work-canvas` API is scoped to `artifact_type='design-canvas'` and its current canvas schema; it does not yet persist the new Slides and Design System document shapes. Hosted integration must extend the existing artifact/API path and keep the same registry, not create a creative-app registry.
+- The live `studio_templates` catalog currently has CAD, SamSketch, shared scene/model/BIM resources, and other existing resource kinds, but no Slides, Brand Guidelines, or Design System starter records. The eight-slide Brand Guidelines preset in this localhost review is therefore a local preview preset. Before hosted distribution, register the approved preset in the existing `studio_templates` + R2 lifecycle and load it through the host template adapter. Do not make the package's TypeScript constant the production stock-template authority.
+- The current localhost preview intentionally does not write to production D1 or R2. No production records, migrations, or customer artifacts are changed by this preview.

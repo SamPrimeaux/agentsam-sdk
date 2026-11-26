@@ -169,14 +169,13 @@
   }
   function currentRoute(handle) { return routePrefix + handle; }
   function hostedPageUrl() {
-    const siteId = site?.id || window.cmsActiveSiteId;
-    if (!siteId || !page?.route_path) return null;
-    return location.origin + "/public-sites/" + encodeURIComponent(siteId) + page.route_path;
+    if (!site?.id || !page?.route_path || typeof window.cmsPublicPageUrl !== "function") return null;
+    return window.cmsPublicPageUrl(site,page.route_path);
   }
   function updatePublicLink() {
     const view = $("pe-view");
-    const url = page?.status === "published" ? hostedPageUrl() : null;
-    if (url) { view.href = url; view.removeAttribute("aria-disabled"); }
+    const publicUrl = page ? window.cmsPublicPageUrl(site,page.route_path) : null;
+    if (page && page.status === "published" && publicUrl) { view.href = publicUrl; view.removeAttribute("aria-disabled"); }
     else { view.removeAttribute("href"); view.setAttribute("aria-disabled","true"); }
   }
   function parseJson(value) {
@@ -530,8 +529,11 @@
       updatePublicLink();
       const url = hostedPageUrl();
       $("pe-publication-notice").hidden = false;
-      $("pe-publication-message").textContent = "Page published successfully. Your CMS page is live.";
-      $("pe-publication-link").href = url;
+      $("pe-publication-message").textContent = url
+        ? "Page published successfully. Your CMS page is live."
+        : "Page published successfully. Connect a verified primary domain to open its public URL.";
+      $("pe-publication-link").hidden = !url;
+      if (url) $("pe-publication-link").href = url;
       $("pe-publication-new").href = "/admin/page-edit?" + new URLSearchParams({site_id:site.id,new:"1"});
       note("Published " + published.route_path + " to the site-owned website runtime.");
     } catch(error) { note(error?.message || "Publishing failed.",true); }

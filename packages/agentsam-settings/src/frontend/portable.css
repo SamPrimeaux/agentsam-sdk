@@ -1,0 +1,47 @@
+@import "tailwindcss";
+@source "./**/*.{ts,tsx}";
+@source "../../../agentsam-workbench/src/widgets/**/*.{ts,tsx}";
+@import "./agent-profiles.css";
+@import "./brand-workspace.css";
+@import "./design-spec.css";
+@import "@inneranimalmedia/agentsam-workbench/widgets/widgets.css";
+
+/* Default AgentSam palette. Hosts can override the source variables before or after this file. */
+@theme {
+  --color-background: var(--background, var(--settings-preview-shell, #111a14));
+  --color-foreground: var(--foreground, var(--settings-preview-text, #eaf1eb));
+  --color-card: var(--card, var(--settings-preview-surface, #19241c));
+  --color-popover: var(--popover, var(--settings-preview-surface, #19241c));
+  --color-muted: var(--muted, var(--settings-preview-muted, #202c23));
+  --color-muted-foreground: var(--muted-foreground, #9aa99e);
+  --color-border: var(--border, var(--settings-preview-border, #314036));
+  --color-input: var(--input, var(--settings-preview-border, #314036));
+  --color-primary: var(--primary, var(--settings-preview-primary, #84b38b));
+  --color-primary-foreground: var(--primary-foreground, #102016);
+  --color-secondary: var(--secondary, #27352b);
+  --color-secondary-foreground: var(--secondary-foreground, #eaf1eb);
+  --color-accent: var(--accent, #27352b);
+  --color-accent-foreground: var(--accent-foreground, #eaf1eb);
+  --color-destructive: var(--destructive, #d77f79);
+  --color-ring: var(--ring, var(--settings-preview-primary, #84b38b));
+}
+
+:root {
+  color-scheme: dark;
+  --settings-preview-border: #314036;
+  --settings-preview-canvas: #101813;
+  --settings-preview-muted: #202c23;
+  --settings-preview-nav: #141e17;
+  --settings-preview-primary: #84b38b;
+  --settings-preview-shell: #111a14;
+  --settings-preview-surface: #19241c;
+  --settings-preview-text: #eaf1eb;
+  --settings-success-ink: var(--agentsam-settings-success-ink, #6ee7b7);
+  --settings-warning-ink: var(--agentsam-settings-warning-ink, #fcd34d);
+  --settings-danger-ink: var(--agentsam-settings-danger-ink, #fca5a5);
+}
+
+.agentsam-settings-root {
+  color: var(--color-foreground);
+  background: var(--color-background);
+}

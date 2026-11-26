@@ -4,12 +4,14 @@ import { SettingsBillingPanel } from "./billing";
 import { SettingsAccountPanel } from "./account";
 import { SettingsDesignSpecSheet } from "./design-spec";
 import { BrandPluginWorkspace } from "./brand-workspace";
+import { AgentInstructionsEditor } from "./agent-instructions-editor";
 import { SettingsStoragePanel } from "./storage";
 export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
 import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
 import { CatalogRegistryView, type CatalogRegistryKind } from "./catalog-registry";
 import { BuiltinWidget } from "@inneranimalmedia/agentsam-workbench/widgets";
+import type { AgentSamWidgetProviderData } from "@inneranimalmedia/agentsam-contracts/widgets";
 export { SettingsThemeGallery } from "./themes";
 import {
   AlertTriangle,
@@ -257,7 +259,7 @@ export function SettingsShell({
   );
 
   return (
-    <div style={{'--settings-warning-ink':settingsTheme === 'light' ? '#8a5a00' : '#fcd34d','--settings-success-ink':settingsTheme === 'light' ? '#11643f' : '#6ee7b7','--settings-danger-ink':settingsTheme === 'light' ? '#b42323' : '#fca5a5'} as React.CSSProperties} className="flex h-full min-h-0 w-full bg-background text-foreground max-md:[&_button]:min-h-11">
+    <div style={{'--settings-warning-ink':settingsTheme === 'light' ? '#8a5a00' : '#fcd34d','--settings-success-ink':settingsTheme === 'light' ? '#11643f' : '#6ee7b7','--settings-danger-ink':settingsTheme === 'light' ? '#b42323' : '#fca5a5'} as React.CSSProperties} className="agentsam-settings-root flex h-full min-h-0 w-full bg-background text-foreground max-md:[&_button]:min-h-11">
       <aside
         className={cx(
           "hidden shrink-0 border-r border-border/70 bg-background md:block",
@@ -1433,6 +1435,56 @@ function PluginCustomizeView({
   );
 }
 
+function ProviderWidgetDetail({ widget, host }: { widget: SettingsWidget; host: SettingsHost }) {
+  const [data, setData] = useState<AgentSamWidgetProviderData | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const provider = widget.requiredProvider!;
+  const providerName = provider === "google_drive" ? "Google Drive" : provider === "github" ? "GitHub" : "Cloudflare";
+  const settingsUnit = provider === "github" ? "git-prs" : "storage";
+
+  useEffect(() => {
+    let active = true;
+    setData({ provider, status: "loading" });
+    if (!host.readWidgetData) {
+      setData({ provider, status: "unsupported", message: "This application has not implemented the provider data adapter for this widget." });
+      return () => { active = false; };
+    }
+    void host.readWidgetData(widget.id, widget.configuration).then((result) => {
+      if (active) setData(result);
+    }).catch(() => {
+      if (active) setData({ provider, status: "error", message: "The host could not load this provider's account-scoped data." });
+    });
+    return () => { active = false; };
+  }, [host, provider, widget.id, widget.configuration, refreshKey]);
+
+  const statusLabel = data?.status === "ready"
+    ? data.source === "fixture" ? "Sample data" : "Connected"
+    : data?.status === "loading" ? "Checking connection" : data?.status === "not_connected" ? "Not connected" : data?.status === "unsupported" ? "Host adapter missing" : "Needs attention";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-background/65 px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-foreground">{providerName} account</p>
+          <p className="truncate text-[10px] text-muted-foreground">{data?.accountLabel || "Account connection is resolved by the host"}</p>
+        </div>
+        <span className={cx("rounded-full border px-2 py-1 text-[9px] font-medium", data?.status === "ready" && data.source !== "fixture" ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400" : "border-border bg-muted/40 text-muted-foreground")}>{statusLabel}</span>
+      </div>
+      <div className="agentsam-widget rounded-xl border border-border/70 bg-background/65 p-3">
+        <BuiltinWidget widgetId={widget.id} configuration={widget.configuration} data={data ?? { provider, status: "loading" }} onLoadHistory={host.readWidgetData ? (queueId) => host.readWidgetData!("queues", { history: "24h", queueId }) : undefined} />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[9px] text-muted-foreground">Read-only account data · credentials remain in the host</p>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setRefreshKey((value) => value + 1)} className="rounded-lg border border-border px-3 py-1.5 text-[10px] text-foreground hover:bg-muted">Refresh</button>
+          {data?.status === "not_connected" || data?.status === "unsupported" ? <button type="button" onClick={() => host.openSettingsUnit?.(settingsUnit)} className="rounded-lg bg-primary px-3 py-1.5 text-[10px] font-medium text-primary-foreground">Manage connection</button> : null}
+        </div>
+      </div>
+      {data?.source === "fixture" ? <p className="text-[9px] text-muted-foreground">This is explicitly labelled sample data from the standalone fixture host, not a live account.</p> : null}
+    </div>
+  );
+}
+
 function WidgetCustomizeView({
   widgets,
   host,
@@ -1502,7 +1554,7 @@ function WidgetCustomizeView({
               </div>
               <h2 className="text-[24px] font-semibold tracking-[-0.045em] sm:text-[28px]">Your widget library</h2>
               <p className="mt-2 max-w-lg text-[12px] leading-[1.7] text-muted-foreground">
-                Explore the original widget concepts, inspect their designs and enable widgets as they become real, portable capabilities.
+                Install packaged widgets and inspect the original concepts. Provider-backed widgets use read-only account data supplied by the host.
               </p>
             </div>
             <div className="flex items-center gap-2 self-start rounded-full border border-border/80 bg-background/65 px-3 py-2 text-[10px] text-muted-foreground">
@@ -1569,7 +1621,7 @@ function WidgetCustomizeView({
                     <div className="flex min-w-0 items-center justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-[12px] font-semibold tracking-[-0.015em] text-foreground">{widget.name}</p>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">{categoryLabel(widget.category)}</p>
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">{categoryLabel(widget.category)}{widget.requiredProvider ? ` · ${widget.requiredProvider === "google_drive" ? "Google Drive" : widget.requiredProvider === "github" ? "GitHub" : "Cloudflare"}` : ""}</p>
                       </div>
                       <span className={cx(
                         "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium",
@@ -1598,7 +1650,7 @@ function WidgetCustomizeView({
           </div>
         )}
         <p className="text-[10px] leading-relaxed text-muted-foreground">
-          Concept previews use sample artwork/data and do not connect to, control, or represent live AgentSam systems. They become installable after their package adapters and safety checks are completed.
+          Concept previews use sample artwork/data and never represent live systems. Provider-backed widgets use the host’s existing OAuth connections; access tokens never enter this package.
         </p>
       </section>
 
@@ -1612,12 +1664,12 @@ function WidgetCustomizeView({
           <div className="space-y-5">
             <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/45 to-primary/[0.06] p-5">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{selected.availability === 'demo' ? 'Design preview' : 'Live widget'}</span>
+                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{selected.availability === 'demo' ? 'Design preview' : selected.requiredProvider ? 'Provider-backed widget' : 'Packaged widget'}</span>
                 <span className="rounded-full border border-border bg-background/75 px-2 py-0.5 text-[9px] text-muted-foreground">
-                  {selected.availability === "demo" ? "Concept · sample data" : "Packaged widget"}
+                  {selected.availability === "demo" ? "Concept · sample data" : selected.requiredProvider ? "Read-only provider data" : "Packaged widget"}
                 </span>
               </div>
-              <div className="mx-auto min-h-40 max-w-sm">{selected.availability === 'demo' ? <WidgetGalleryPreview id={selected.id} interactive /> : <div className="agentsam-widget"><BuiltinWidget widgetId={selected.id} /></div>}</div>
+              <div className="mx-auto min-h-40 max-w-sm">{selected.availability === 'demo' ? <WidgetGalleryPreview id={selected.id} interactive /> : selected.requiredProvider ? <ProviderWidgetDetail widget={selected} host={host} /> : <div className="agentsam-widget"><BuiltinWidget widgetId={selected.id} /></div>}</div>
             </div>
             <div className="rounded-lg border border-border/70 px-3">
               <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not installable" : selected.installed ? "Installed on your New Tab" : selected.installable ? "Ready to install" : "Installation service unavailable"} />
@@ -2132,6 +2184,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
   const [draft,setDraft]=useState<SettingsAgentDraft>(freshAgent);
   const initialEditorDraft=useRef<SettingsAgentDraft>(freshAgent());
   const [editing,setEditing]=useState(false);
+  const [instructionsEditorOpen,setInstructionsEditorOpen]=useState(false);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [policy,setPolicy]=useState<SettingsAgentPolicy>(snapshot.agentPolicy||{
@@ -2156,11 +2209,11 @@ function AgentsView({snapshot,view,host,onChanged}:{
     initialEditorDraft.current=next;
     setSelected(null);
     setDraft(next);
-    setError("");setEditing(true);
+    setError("");setInstructionsEditorOpen(false);setEditing(true);
   }
   function startEdit(agent:SettingsAgent){
     initialEditorDraft.current=agentDraft(agent);
-    setSelected(agent);setDraft(agentDraft(agent));setError("");setEditing(true);
+    setSelected(agent);setDraft(agentDraft(agent));setError("");setInstructionsEditorOpen(false);setEditing(true);
   }
   async function saveAgent(){
     if(!host.saveAgent)return;
@@ -2215,10 +2268,17 @@ function AgentsView({snapshot,view,host,onChanged}:{
             {!availableModels.length?<p className="text-[10px] text-[var(--settings-warning-ink)]">No verified models discovered. You can save the agent, but cannot claim it is runnable yet.</p>:null}
           </label>
           <label className="block space-y-2">
-            <span className="text-[11px] font-medium">Agent instructions</span>
+            <span className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium">
+              <span>Agent instructions</span>
+              <button type="button" disabled={selected?.readOnly} onClick={()=>setInstructionsEditorOpen(true)}
+                className="agent-profile-action inline-flex min-h-9 items-center gap-2 rounded-lg border border-border px-3 text-[11px] disabled:opacity-40">
+                <ExternalLink size={13}/> Open document editor
+              </button>
+            </span>
             <textarea rows={11} value={draft.instructions}
               onChange={event=>setDraft(current=>({...current,instructions:event.target.value}))}
               className={cx(formClass,"min-h-[230px] resize-y leading-relaxed")} placeholder="Describe the role, task procedure and safeguards."/>
+            <span className="block text-[10px] text-muted-foreground">Edit the instructions here or open the fullscreen document canvas. Save the agent profile to persist changes.</span>
           </label>
           <label className="block space-y-2">
             <span className="text-[11px] font-medium">Allowed tool patterns (one per line)</span>
@@ -2262,6 +2322,17 @@ function AgentsView({snapshot,view,host,onChanged}:{
               className="agent-profile-primary agent-profile-confirm px-5 py-2 text-[14px] font-semibold disabled:opacity-40">Save agent</button>
           </div>
         </div>
+        <AgentInstructionsEditor
+          open={instructionsEditorOpen}
+          title="SOUL.md"
+          value={draft.instructions}
+          onChange={(instructions)=>setDraft(current=>({...current,instructions}))}
+          onClose={()=>setInstructionsEditorOpen(false)}
+          onSave={()=>void saveAgent()}
+          saving={busy}
+          saveDisabled={Boolean(selected?.readOnly)||!host.saveAgent}
+          error={error}
+        />
       </PluginDetailPage>
   );
   if(view==="models"){
@@ -3210,3 +3281,5 @@ export function SettingsProductPage({
 
 export { SettingsAccountPanel } from "./account";
 export { SettingsDesignSpecSheet } from "./design-spec";
+
+export { BrandPluginWorkspace } from "./brand-workspace";

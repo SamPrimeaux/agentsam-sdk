@@ -9,3 +9,6 @@ export * from './calculator';
 export * from './CalculatorWidget';
 export * from './registry';
 export * from './BuiltinWidget';
+export * from './CloudflareResourcesWidget';
+export * from './GitHubActivityWidget';
+export * from './GoogleDriveRecentWidget';

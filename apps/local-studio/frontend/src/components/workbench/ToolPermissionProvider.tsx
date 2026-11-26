@@ -12,6 +12,7 @@ import type {
 } from '@inneranimalmedia/agentsam-contracts';
 import { ToolPermissionRequest } from '@inneranimalmedia/agentsam-workbench/agent';
 import '@inneranimalmedia/agentsam-workbench/agent/tool-permission.css';
+import { emitCompanionStatus } from '../../../agentsam/companion-events';
 
 type PendingPermission = {
   request: AgentToolPermissionRequestContract;
@@ -32,6 +33,7 @@ export function ToolPermissionProvider({ children }: { children: ReactNode }) {
   const requestPermission = useCallback(
     (request: AgentToolPermissionRequestContract) =>
       new Promise<AgentToolPermissionDecision>((resolve) => {
+        emitCompanionStatus({ type: 'awaiting-approval', message: 'Waiting for your approval' });
         setQueue((current) => [...current, { request, resolve }]);
       }),
     [],
@@ -42,7 +44,11 @@ export function ToolPermissionProvider({ children }: { children: ReactNode }) {
       const current = queue[0];
       if (!current) return;
       current.resolve(decision);
-      setQueue((items) => items.slice(1));
+      const remaining = queue.slice(1);
+      setQueue(remaining);
+      emitCompanionStatus(remaining.length
+        ? { type: 'awaiting-approval', message: 'Another approval is waiting' }
+        : { type: 'work-started' });
     },
     [queue],
   );

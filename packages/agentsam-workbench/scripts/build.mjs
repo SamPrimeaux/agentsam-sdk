@@ -11,6 +11,7 @@ await build({
   entryPoints: {
     index: 'src/index.ts',
     'agent/index': 'src/agent/index.ts',
+    'agent/annotation-selection': 'src/agent/annotation-selection.ts',
     'agent/SelectionToolbar': 'src/agent/SelectionToolbar.tsx',
     'agent/capability-catalog': 'src/agent/capability-catalog.ts',
     'shell/studio-panels': 'src/shell/studio-panels.ts',

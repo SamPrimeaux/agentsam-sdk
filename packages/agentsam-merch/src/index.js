@@ -46,3 +46,10 @@ export {
   normalizeProductConcept,
   resolveProductConceptTarget,
 } from "./product-concepts.js";
+
+export {
+  PRODUCT_SOURCE_KINDS,
+  resolveProductSource,
+  groupProductInventory,
+  validateInventoryAdjustment,
+} from "./product-spine.js";

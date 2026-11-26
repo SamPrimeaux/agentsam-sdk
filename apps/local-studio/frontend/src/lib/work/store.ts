@@ -105,11 +105,12 @@ const SIDE_TITLES: Record<SideKind, string> = {
   design: "Canvas",
   data: "Data",
   plugin: "Plugin",
+  mail: "AgentSam mailbox",
 };
 
 /** Tools that keep one tab; opening them again focuses the existing tab. */
 const SINGLETON_SIDE_KINDS = new Set<SideKind>([
-  "files", "artifacts", "deploy", "goal", "terminal", "database", "apps", "design", "plugin",
+  "files", "artifacts", "deploy", "goal", "terminal", "database", "apps", "design", "plugin", "mail",
 ]);
 
 function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {
@@ -274,6 +275,7 @@ type WorkState = {
   convertSideTab: (id: string, kind: SideKind, extra?: Partial<SideTab>) => string;
   closeSideTab: (id: string, force?: boolean) => void;
   setActiveSideTab: (id: string) => void;
+  setTabTitle: (id: string, title: string) => void;
   setTabUrl: (id: string, url: string) => void;
   navigateBrowser: (id: string, delta: number) => void;
   setBrowserSrcdoc: (id: string, srcdoc: string, title?: string) => void;
@@ -1042,6 +1044,9 @@ export const useWorkStore = create<WorkState>()(
         localStudioRuntimeVisuals.releaseSurface(id);
       },
       setActiveSideTab: (id) => set({ activeSideTabId: id, sideOpen: true }),
+      setTabTitle: (id, title) => set((s) => ({
+        sideTabs: s.sideTabs.map((tab) => tab.id === id ? { ...tab, title } : tab),
+      })),
       setTabUrl: (id, url) =>
         set((s) => ({
           sideTabs: s.sideTabs.map((t) => {
@@ -1052,7 +1057,7 @@ export const useWorkStore = create<WorkState>()(
               ...t,
               url,
               srcdoc: null,
-              title: hostname(url) || t.title,
+              title: t.kind === "browser" ? hostname(url) || t.title : t.title,
               history,
               historyIndex: history.length - 1,
             };

@@ -37,6 +37,7 @@ export function Composer({
   onCancel,
   busy,
   contextLabel,
+  contextPrefix,
   workMode = false,
   showWorkShortcuts = false,
 }: {
@@ -47,6 +48,8 @@ export function Composer({
   onCancel?: () => void;
   busy?: boolean;
   contextLabel?: string;
+  /** Additional workspace context prepended to submitted turns. */
+  contextPrefix?: string;
   workMode?: boolean;
   /** Work landing view quick actions; the composer remains the canonical input. */
   showWorkShortcuts?: boolean;
@@ -167,7 +170,8 @@ export function Composer({
       return;
     }
     if (streaming && !onSubmit && !staging && !submitting && value.trim()) {
-      setQueued((items) => [...items, value.trim()]);
+      const queuedText = [contextPrefix, value.trim()].filter(Boolean).join("\n\n");
+      setQueued((items) => [...items, queuedText]);
       setDraft(targetId, "");
       return;
     }
@@ -177,7 +181,7 @@ export function Composer({
       try {
         const attachments = pendingAttachments.map(({ previewUrl: _previewUrl, ...ref }) => ref);
         const images = await resolveChatImages(attachments, user?.id || "");
-        await onSubmit({ text: value.trim(), attachments, images });
+        await onSubmit({ text: [contextPrefix, value.trim()].filter(Boolean).join("\n\n"), attachments, images });
         // Preserve anything typed while the operation was being accepted.
         if (useWorkStore.getState().drafts[targetId] === value) setDraft(targetId, "");
         for (const attachment of pendingAttachments) if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
@@ -192,7 +196,7 @@ export function Composer({
       targetId, accountId: user?.id || "",
       attachments: pendingAttachments.map(({ previewUrl: _previewUrl, ...ref }) => ref),
     };
-    void send(targetId, targetKind);
+    void send(targetId, targetKind, contextPrefix ? [contextPrefix, value.trim()].filter(Boolean).join("\n\n") : undefined);
     for (const a of pendingAttachments) if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
     setPendingAttachments([]);
   }
@@ -257,9 +261,9 @@ export function Composer({
 
   const attachmentPreview = pendingAttachments.length || pendingAnnotations.length ? (
     <div className="px-2 pt-2 pb-1" role="group" aria-label="Message context and attached files">
-      <div className="flex max-h-[376px] flex-wrap items-start gap-3 overflow-y-auto pr-1">
+      <div className="flex max-h-[192px] flex-nowrap items-start gap-2 overflow-x-auto overflow-y-hidden pb-1 pr-1">
         {pendingAnnotations.map(annotation => (
-          <div key={annotation.id} className="group relative flex h-[66px] max-w-56 min-w-0 items-center gap-2 rounded-xl border border-border bg-card px-2 pr-8 text-foreground shadow-sm" title={annotation.page}>
+          <div key={annotation.id} className="group relative flex h-[72px] w-[220px] shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-2 pr-8 text-foreground shadow-sm" title={annotation.page}>
             <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted text-sm" aria-hidden="true">⌖</span>
             <div className="min-w-0">
               <span className="block truncate text-xs font-medium">{annotation.label || 'Selected annotation'}</span>
@@ -272,13 +276,22 @@ export function Composer({
             </IconAction>
           </div>
         ))}
-        {pendingAttachments.map((attachment) => (
-          <div key={attachment.id} title={attachment.name} className="group relative flex h-[66px] max-w-56 min-w-0 items-center gap-2 rounded-xl border border-border bg-card px-2 pr-8 text-foreground shadow-sm">
-            {attachment.previewUrl ? (
-              <ImageLightbox src={attachment.previewUrl} alt={attachment.name} triggerClassName="size-12 shrink-0 overflow-hidden rounded-md bg-muted">
-                <img src={attachment.previewUrl} alt="" className="size-full object-cover" />
-              </ImageLightbox>
-            ) : <FileText className="size-8 shrink-0 text-muted-foreground" aria-hidden="true" />}
+        {pendingAttachments.map((attachment) => attachment.kind === 'image' && attachment.previewUrl ? (
+          <div key={attachment.id} title={attachment.name} className="group relative size-44 shrink-0 overflow-hidden rounded-xl border border-border bg-muted text-foreground shadow-sm">
+            <ImageLightbox src={attachment.previewUrl} alt={attachment.name} triggerClassName="absolute inset-0 block size-full overflow-hidden">
+              <img src={attachment.previewUrl} alt={attachment.name} className="size-full object-cover transition-transform duration-200 group-hover:scale-[1.02]" />
+            </ImageLightbox>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/75 via-black/35 to-transparent px-3 pb-2 pt-8 text-white">
+              <span className="min-w-0 truncate text-xs font-medium">{attachment.name}</span>
+              <span className="shrink-0 text-[10px] text-white/75">Image</span>
+            </div>
+            <IconAction type="button" size="icon-sm" variant="ghost" className="absolute right-1.5 top-1.5 z-10 size-7 rounded-lg border border-white/20 bg-black/45 text-white hover:bg-black/70" label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>
+              <X className="size-3.5" />
+            </IconAction>
+          </div>
+        ) : (
+          <div key={attachment.id} title={attachment.name} className="group relative flex h-[72px] w-[220px] shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-2 pr-8 text-foreground shadow-sm">
+            <FileText className="size-8 shrink-0 text-muted-foreground" aria-hidden="true" />
             <div className="min-w-0"><span className="block truncate text-xs font-medium">{attachment.name}</span>
               <span className="text-[10px] text-muted-foreground">{attachment.kind === 'image' ? 'Image' : 'File'} · {Math.ceil(attachment.size / 1024)} KB</span></div>
             <IconAction type="button" size="icon-sm" variant="ghost" className="absolute right-1 top-1 size-6 rounded-md" label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>

@@ -82,7 +82,11 @@
       "import": "./dist/design/index.js"
     },
     "./shell/inspector-picker.css": "./dist/shell/inspector-picker.css",
-    "./design/design-workspace.css": "./dist/design/design-workspace.css"
+    "./design/design-workspace.css": "./dist/design/design-workspace.css",
+    "./agent/annotation-selection": {
+      "types": "./dist/agent/annotation-selection.d.ts",
+      "import": "./dist/agent/annotation-selection.js"
+    }
   },
   "scripts": {
     "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",

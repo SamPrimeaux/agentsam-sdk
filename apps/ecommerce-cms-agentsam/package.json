@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "2.6.18",
+  "version": "2.6.19",
   "description": "Installable AgentSam ecommerce and website CMS application with product and inventory management, theme editing, media, analytics, and provider integrations.",
   "private": false,
   "type": "module",
@@ -33,8 +33,8 @@
     "preverify:cms": "node scripts/compile-portable-styles.mjs"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-cms": "2.6.18",
-    "@inneranimalmedia/agentsam-merch": "2.6.18",
+    "@inneranimalmedia/agentsam-cms": "2.6.19",
+    "@inneranimalmedia/agentsam-merch": "2.6.19",
     "@inneranimalmedia/revise-theme": "0.2.0",
     "@inneranimalmedia/section-library": "0.1.0",
     "@jsquash/jpeg": "1.6.0",
@@ -43,7 +43,9 @@
     "@jsquash/webp": "1.5.0",
     "@inneranimalmedia/agentsam-3d-viewer": "2.6.15",
     "ajv": "8.20.0",
-    "three": "0.187.0"
+    "three": "0.187.0",
+    "@inneranimalmedia/agentsam-vault": "2.6.19",
+    "@inneranimalmedia/agentsam-identity": "file:packages/agentsam-identity"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

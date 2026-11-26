@@ -18,3 +18,5 @@ export * from './capability-catalog';
 
 export * from './SelectionToolbar';
 export * from './AskAgentSamPill';
+
+export * from './annotation-selection';

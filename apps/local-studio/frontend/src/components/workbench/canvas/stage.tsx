@@ -158,18 +158,18 @@ export function CanvasStage({document,selected,boardId,preview,width,resourceId,
       aria-label={node.name}
       onKeyDown={event=>{if(event.target!==event.currentTarget)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();if(preview)void action(node);else onSelect(node.id,board.id);}}}
       onClick={event=>{event.stopPropagation();if(preview)void action(node);else onSelect(node.id,board.id);}}>
-      {renderComponent&&node.componentId?.startsWith("live-preview:") ? renderComponent(node,board) :
+      {renderComponent&&node.componentId?.startsWith("live-preview:") ? <div data-annotation-proxy="" style={{display:"contents"}}>{renderComponent(node,board)}</div> :
        node.type==="image" ? <CanvasImage src={safeUrl(node.src,true)} alt={node.text||node.name}/> :
        node.type==="html" ? <iframe className="cv-native-html" title={node.name} sandbox="allow-scripts" referrerPolicy="no-referrer"
          srcDoc={withBrowserAnnotationBridge(node.sourceHtml ? (node.sourceBase ? node.sourceHtml.replace(/<head([^>]*)>/i, `<head$1><base href="${node.sourceBase}">`) : node.sourceHtml) : '<!doctype html><html><body></body></html>')} /> :
-       node.type==="input" ? <input className="cv-native-input" aria-label={node.name} placeholder={node.text} readOnly={!preview} onChange={e=>{previewValues.current[node.id]=e.target.value;}}/> :
-       node.type==="button" ? <button type="button" className="cv-native-button" tabIndex={preview?0:-1}>{node.text||node.name}</button> :
+       node.type==="input" ? <input data-annotation-proxy="" className="cv-native-input" aria-label={node.name} placeholder={node.text} readOnly={!preview} onChange={e=>{previewValues.current[node.id]=e.target.value;}}/> :
+       node.type==="button" ? <button data-annotation-proxy="" type="button" className="cv-native-button" tabIndex={preview?0:-1}>{node.text||node.name}</button> :
        node.type==="link" ? <span className="cv-link">{node.text||node.name}</span> :
        node.text ? <span className="cv-text">{node.text}</span> : null}
       {node.children?.map(child=>renderNode(child,board))}
       {!preview&&selected===node.id&&<>
         <span className="cv-selection-label" style={{"--cv-label-font":11/zoom+"px","--cv-label-padding":3/zoom+"px","--cv-label-top":-25/zoom+"px"} as CSSProperties}>{node.name}</span>
-        <div className="cv-resize-handle" role="button" tabIndex={0} aria-label="Resize selected element"
+        <div className="cv-resize-handle" data-annotation-control="" role="button" tabIndex={0} aria-label="Resize selected element"
           style={{"--cv-handle-size":9/zoom+"px","--cv-handle-inset":-4/zoom+"px"} as CSSProperties}
           onKeyDown={event=>{const delta=event.shiftKey?10:1;if(event.key==="ArrowRight"||event.key==="ArrowDown"){event.preventDefault();onChange(node.id,{width:node.width+delta,height:node.height+delta});}else if(event.key==="ArrowLeft"||event.key==="ArrowUp"){event.preventDefault();onChange(node.id,{width:Math.max(8,node.width-delta),height:Math.max(8,node.height-delta)});}}}
           onPointerDown={event=>startNode(event,node,board,"resize")}/>
@@ -179,7 +179,7 @@ export function CanvasStage({document,selected,boardId,preview,width,resourceId,
   return <div ref={viewport} className={"cv-viewport "+(preview?"is-preview ":"")+(tool==="pan"?"is-pan":"")}
     data-agentsam-resource-host="" data-agentsam-resource-id={resourceId} data-agentsam-resource-kind="design-canvas"
     data-agentsam-resource-revision={revision} data-agentsam-resource-app-id="agentsam-local-studio"
-    data-annotation-target="" data-agentsam-resource={resourceId}
+    data-agentsam-annotation-scope="" data-annotation-scope-id="design-canvas" data-annotation-scope-active="true" data-agentsam-resource={resourceId}
     aria-label={preview?"Interactive Canvas preview":"Spatial Canvas"} onWheel={wheel}
     onPointerDown={event=>{
       if(event.target===event.currentTarget&&!preview)onSelect("",boardId);
@@ -193,13 +193,13 @@ export function CanvasStage({document,selected,boardId,preview,width,resourceId,
         data-annotation-target="" data-agentsam-resource={board.id}
         aria-label={board.name} style={{"--cv-board-left":board.x+"px","--cv-board-top":board.y+"px","--cv-board-width":(preview&&width?width:board.width)+"px","--cv-board-height":board.height+"px","--cv-board-background":board.background||"#fff"} as CSSProperties}
         onPointerDown={event=>{if(tool==="pan")return;event.stopPropagation();if(tool==="comment"&&event.button===0){placePin(event,board);return;}if(!preview)onSelect("",board.id);}}>
-        <button type="button" className={"cv-artboard-name"+(board.id===boardId?" active":"")} style={{"--cv-board-label-font":12/zoom+"px","--cv-board-label-top":-30/zoom+"px"} as CSSProperties}
+        <button type="button" data-annotation-control="" className={"cv-artboard-name"+(board.id===boardId?" active":"")} style={{"--cv-board-label-font":12/zoom+"px","--cv-board-label-top":-30/zoom+"px"} as CSSProperties}
           onClick={event=>{event.stopPropagation();onSelect("",board.id);}}>{board.name}<span>{preview&&width?width:board.width} × {board.height}</span></button>
         {board.nodes.map(node=>renderNode(node,board))}
       </section>)}
     </div>
     {!document.artboards.length&&<div className="cv-stage-empty"><MousePointer2 size={22}/><span>Your ideas have room to grow.</span></div>}
-    {notice&&<div className="cv-preview-notice" role="status">{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss preview status">×</button></div>}
+    {notice&&<div className="cv-preview-notice" data-annotation-control="" role="status">{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss preview status">×</button></div>}
     {preview&&<div className="cv-preview-label"><ArrowUpRight size={12}/> Live interactions · saved document structure</div>}
     {!preview&&selectedNode&&<div className="cv-coordinate-hint">{Math.round(selectedNode.node.width)} × {Math.round(selectedNode.node.height)} · {selectedNode.node.type}</div>}
   </div>;
@@ -207,6 +207,6 @@ export function CanvasStage({document,selected,boardId,preview,width,resourceId,
 function CanvasImage({src,alt}:{src?:string;alt:string}) {
   const [failed,setFailed]=useState(false);
   useEffect(()=>setFailed(false),[src]);
-  return src&&!failed?<img className="cv-node-image" src={src} alt={alt} draggable={false} onError={()=>setFailed(true)}/>:
+  return src&&!failed?<img data-annotation-proxy="" className="cv-node-image" src={src} alt={alt} draggable={false} onError={()=>setFailed(true)}/>:
     <span className="cv-missing-image"><ImageOff size={20}/><span>{src?"Image unavailable":"Choose an image"}</span></span>;
 }

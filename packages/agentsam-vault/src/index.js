@@ -35,3 +35,5 @@ export {
 } from './crypto/oauth-envelope.js';
 
 export { classifyVaultRow, summarizeVaultReport, VAULT_ROW_STATUS } from './crypto/classify.js';
+
+export { resolveAccountCredential } from "./runtime/account-resolver.js";

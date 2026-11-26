@@ -3,11 +3,6 @@ import { DEFAULT_NAV_ITEMS } from './site-nav-defaults.js';
 /** Neutral per-site defaults. Customer identity and selected theme data stay out. */
 export const DEFAULT_SITE_STORE_SETTINGS = Object.freeze({
   passwordProtection: false,
-  b2bOnly: false,
-  geoRedirect: true,
-  languageRedirect: false,
-  hcaptchaContact: true,
-  hcaptchaAccount: true,
   homeTitle: "",
   metaDescription: "",
   socialImageUrl: "",

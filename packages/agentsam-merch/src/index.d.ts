@@ -347,3 +347,5 @@ export function rasterResolutionPreflight(input: Omit<PrintGeometryInput,"placem
 }): Readonly<{geometry:PrintGeometryResult|null;effectivePpi:number|null;
   targetPpi:number|null;meetsTarget:boolean|null;requiredWidthPx:number|null;
   requiredHeightPx:number|null;status:"unverified"|"meets_resolution"|"needs_review"}>;
+
+export * from "./product-spine.js";

@@ -19,6 +19,9 @@ function fixture() {
   insert.run('clock','Clock','utility','ClockWidget','small','["small","medium"]');
   insert.run('queues','Queue Depth','glance','QueueDepthWidget','medium','["medium","large"]');
   insert.run('calculator','Calculator','utility','CalculatorWidget','small','["small","medium"]');
+  insert.run('cloudflare-resources','Cloudflare Resources','glance','CloudflareResourcesWidget','medium','["medium","large"]');
+  insert.run('github-activity','GitHub Activity','glance','GitHubActivityWidget','medium','["medium","large"]');
+  insert.run('google-drive-recent','Google Drive Recent Files','content','GoogleDriveRecentWidget','medium','["medium","large"]');
   insert.run('quick-controls','Quick Controls','utility','quick-controls','small','["small"]');
   insert.run('store-chat','Store chat','inbox','agentsam-store-chat','small','["small"]');
   const db={prepare(query){const stmt=sqlite.prepare(query); return {bind(...args){return {
@@ -33,10 +36,14 @@ const body=key=>({key,surface:'agentsam_stage'});
 test('catalog is D1-projected but only compiled Workbench widgets are installable',async()=>{
   const {db}=fixture();
   const widgets=await listAccountWidgets(db,'alice','agentsam_stage');
-  assert.equal(widgets.length,5);
-  assert.equal(widgets.filter(w=>w.available).length,4);
+  assert.equal(widgets.length,8);
+  assert.equal(widgets.filter(w=>w.available).length,7);
   assert.equal(widgets.find(w=>w.key==='quick-controls').availability,'concept');
   assert.equal(widgets.some(w=>w.key==='store-chat'),false);
+  assert.equal(widgets.find(w=>w.key==='queues').requiredProvider,'cloudflare');
+  assert.equal(widgets.find(w=>w.key==='cloudflare-resources').requiredProvider,'cloudflare');
+  assert.equal(widgets.find(w=>w.key==='github-activity').requiredProvider,'github');
+  assert.equal(widgets.find(w=>w.key==='google-drive-recent').requiredProvider,'google_drive');
   await assert.rejects(()=>installAccountWidget(db,'alice',body('quick-controls')),/widget_not_ready/);
   await assert.rejects(()=>installAccountWidget(db,'alice',body('store-chat')),/widget_not_found/);
 });
@@ -87,7 +94,11 @@ test('HTTP widget endpoints enforce authorization, origin, request schema, and r
   assert.equal((await handleAccountWidgetsRequest(req('GET'),db,null)).status,401);
   const get=await handleAccountWidgetsRequest(req('GET'),db,'alice');
   assert.equal(get.status,200);
-  assert.equal((await get.json()).widgets.filter(w=>w.available).length,4);
+  const listed = (await get.json()).widgets;
+  assert.equal(listed.filter(w=>w.available).length,7);
+  assert.equal(listed.find(w=>w.key==='cloudflare-resources').requiredProvider,'cloudflare');
+  assert.equal(listed.find(w=>w.key==='github-activity').requiredProvider,'github');
+  assert.equal(listed.find(w=>w.key==='google-drive-recent').requiredProvider,'google_drive');
   assert.equal((await handleAccountWidgetsRequest(req('POST',body('countdown')),db,'alice')).status,201);
   assert.equal((await handleAccountWidgetsRequest(req('POST',body('quick-controls')),db,'alice')).status,409);
   assert.equal((await handleAccountWidgetsRequest(req('POST',{...body('clock'),extra:true}),db,'alice')).status,400);

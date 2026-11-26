@@ -20,7 +20,7 @@ const validId = /^[a-z0-9][a-z0-9-]{1,79}$/;
 const validPlugin = /^plg_[a-f0-9]{8,}$/i;
 const hostKinds = new Set([
   "chat", "browser", "files", "artifacts", "app", "design",
-  "media", "database", "terminal", "goal",
+  "media", "database", "terminal", "goal", "mail",
 ]);
 
 function publish(next: Registry) {

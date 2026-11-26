@@ -107,7 +107,11 @@
 .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-results {
   flex:1 1 auto; min-block-size:0; overflow-y:auto; overscroll-behavior:contain;
 }
-.agentsam-plugin-root-list { display: flex; flex-direction: column; gap: 2px; }
+.agentsam-plugin-root-list { display: flex; flex-direction: column; gap: 3px; }
+.agentsam-plugin-root-list .agentsam-plugin-row { min-height: 48px; gap: 12px; padding: 8px 11px; border-radius: 11px; }
+.agentsam-plugin-root-list .agentsam-plugin-row > svg { flex: 0 0 18px; color: var(--nav-muted); }
+.agentsam-plugin-root-list .agentsam-plugin-row strong { font-size: 13px; font-weight: 600; }
+.agentsam-plugin-root-list .agentsam-plugin-row small { font-size: 11px; }
 .agentsam-plugin-section-divider { height: 1px; flex: 0 0 1px; margin: 5px 7px; background: var(--nav-border); }
 .agentsam-plugin-heading {
   position: sticky; top: -10px; z-index: 1; display: flex; gap: 10px; align-items: center;
@@ -1063,4 +1067,20 @@
   .agentsam-page-layout .as-composer-voice-quick { display:none !important; }
   .agentsam-page-layout .agentsam-plugin-menu[data-section="mention"] { max-block-size:min(268px,var(--agentsam-plugin-menu-max-height,268px)); }
   .agentsam-page-layout .agentsam-plugin-menu[data-section="mention"] .agentsam-plugin-row-copy strong { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; }
+}
+
+/* The active companion reflects approval and run state without changing shell geometry. */
+.agentsam-pet-trigger[data-agent-state="waiting"] {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nav-accent, #7fae8b) 78%, transparent), 0 0 0 5px color-mix(in srgb, var(--nav-accent, #7fae8b) 20%, transparent);
+  animation: agentsam-pet-waiting 1.8s ease-in-out infinite;
+}
+.agentsam-pet-trigger[data-agent-state="success"] { box-shadow: 0 0 0 2px color-mix(in srgb, #54b887 75%, transparent); }
+.agentsam-pet-trigger[data-agent-state="attention"] { box-shadow: 0 0 0 2px color-mix(in srgb, #d6a24c 75%, transparent); }
+.agentsam-pet-trigger[data-agent-state="error"] { box-shadow: 0 0 0 2px color-mix(in srgb, #d46b6b 75%, transparent); }
+@keyframes agentsam-pet-waiting {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--nav-accent, #7fae8b) 78%, transparent), 0 0 0 5px color-mix(in srgb, var(--nav-accent, #7fae8b) 12%, transparent); }
+  50% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--nav-accent, #7fae8b) 92%, transparent), 0 0 0 8px color-mix(in srgb, var(--nav-accent, #7fae8b) 22%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentsam-pet-trigger[data-agent-state="waiting"] { animation: none; }
 }

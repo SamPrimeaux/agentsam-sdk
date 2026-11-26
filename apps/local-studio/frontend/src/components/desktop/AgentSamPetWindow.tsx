@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { loadCompanionSettings } from '../../../agentsam/companion-client';
 import { companionStateAsset, resolveCompanion } from '../../../agentsam/companions';
-import type { CompanionProfile } from '../../../agentsam/companions';
+import type { CompanionProfile, CompanionState } from '../../../agentsam/companions';
 import { emitTauriEvent, getTauriInvoke, listenTauriEvent } from "@/lib/desktop/tauri";
 
-type PetState = "idle" | "working";
+type PetState = CompanionState;
 export function AgentSamPetWindow() {
   const [state, setState] = useState<PetState>("idle");
   const [companion, setCompanion] = useState<CompanionProfile>(() => resolveCompanion('geaux'));
@@ -45,7 +45,8 @@ export function AgentSamPetWindow() {
     let dispose: (() => void) | undefined;
     void listenTauriEvent<{ state?: string }>("agentsam:pet:state", (event) => {
       if (!active) return;
-      if (event.payload?.state === "working" || event.payload?.state === "idle") setState(event.payload.state);
+      const next = event.payload?.state;
+      if (typeof next === "string" && next.length > 0 && next.length <= 64) setState(next);
     }).then((unlisten) => {
       if (!unlisten) return;
       if (active) dispose = unlisten;
@@ -73,7 +74,7 @@ export function AgentSamPetWindow() {
       <button type="button" onClick={() => void closePet()} aria-label="Hide desktop pet" title="Hide pet">×</button>
     </div>
     <button type="button" className="agentsam-desktop-pet-sprite" onClick={() => void openAgentSam()} aria-label="Open AgentSam assistant in current workspace" title="Ask AgentSam in current workspace">
-      {image ? <img src={image} alt={`${companion.name} ${state === "working" ? "is working" : "is ready"}`} draggable={false} />
+      {image ? <img src={image} alt={`${companion.name} · ${state === "idle" ? "ready" : state.replaceAll("-", " ")}`} draggable={false} />
         : <span className="agentsam-desktop-pet-initial" aria-hidden="true">{companion.name.slice(0, 1).toUpperCase()}</span>}
       <span className="agentsam-desktop-pet-helper">Ask AgentSam</span>
     </button>

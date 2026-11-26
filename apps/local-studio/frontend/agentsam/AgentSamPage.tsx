@@ -132,13 +132,28 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     if (typeof window === 'undefined') return 780;
     try {
       const saved = Number(window.localStorage.getItem('agentsam.studio.agentPanelWidth'));
-      return Number.isFinite(saved) && saved >= WORK_PANEL_MIN && saved <= 1120 ? saved : Math.max(480, Math.min(1060, Math.round(window.innerWidth * 0.54)));
+      return Number.isFinite(saved) && saved >= WORK_PANEL_MIN && saved <= 1500 ? saved : Math.max(480, Math.round(window.innerWidth * 0.42));
     } catch { return 780; }
   });
   useEffect(() => {
     try { window.localStorage.setItem('agentsam.studio.agentPanelWidth', String(panelWidth)); }
     catch { /* Resizing remains available without localStorage. */ }
   }, [panelWidth]);
+
+  const panelWidthForRatio = (ratio: number) => {
+    const available = workspaceRef.current?.clientWidth || window.innerWidth;
+    const maximum = Math.max(WORK_PANEL_MIN, Math.min(available * 0.5, available - CHAT_PANEL_MIN));
+    return Math.max(WORK_PANEL_MIN, Math.min(maximum, Math.round(available * ratio)));
+  };
+  const snapPanelWidth = () => {
+    const ratios = [0.2, 0.3, 0.42, 0.5];
+    const candidates = ratios.map(panelWidthForRatio);
+    const nearest = candidates.reduce((best, candidate) =>
+      Math.abs(candidate - panelWidth) < Math.abs(best - panelWidth) ? candidate : best,
+      candidates[0] ?? panelWidth,
+    );
+    setPanelWidth(nearest);
+  };
   const [findChatOpen, setFindChatOpen] = useState(false);
   const [showChatFiles, setShowChatFiles] = useState(false);
   const [findChatQuery, setFindChatQuery] = useState('');
@@ -251,7 +266,23 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     '--agentsam-chat-right': floatingPosition ? 'auto' : '16px',
     '--agentsam-chat-bottom': floatingPosition ? 'auto' : '16px',
   } as CSSProperties;
-  const leadComposer = <Composer workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && (workFocused || (empty && !leadComposerDetached))} targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
+  const activeStageTab = state.sideTabs.find((tab) => tab.id === state.activeSideTabId);
+  const creativeStageTab = activeStageTab?.kind === 'design'
+    ? activeStageTab
+    : activeStageTab?.kind === 'files'
+      ? [...state.sideTabs].reverse().find((tab) => tab.kind === 'design' && tab.parentChatId === chat.id)
+      : undefined;
+  const creativeDocumentType = creativeStageTab?.url?.match(/[?&]type=([^&]+)/)?.[1];
+  const creativeContextPrefix = data.mode === 'work' && state.sideOpen && creativeStageTab
+    ? [
+        '[Active Creative Workspace]',
+        `Document: ${creativeStageTab.title || 'Creative document'}`,
+        creativeDocumentType ? `Document type: ${decodeURIComponent(creativeDocumentType)}` : '',
+        creativeStageTab.url ? `Workspace URL: ${creativeStageTab.url}` : '',
+        'Use the currently open creative document as the working context. Preserve its existing content and make edits in that document rather than creating a parallel copy.',
+      ].filter(Boolean).join('\n')
+    : undefined;
+  const leadComposer = <Composer workMode={data.mode === 'work'} showWorkShortcuts={data.mode === 'work' && (workFocused || (empty && !leadComposerDetached))} targetId={chat.id} targetKind="chat" contextPrefix={creativeContextPrefix} contextLabel={creativeStageTab && state.sideOpen ? creativeStageTab.title : undefined} placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />;
   // One set of controls is portalled into hosted chrome or rendered locally.
   const leadingControls = <div className="agentsam-topbar-leading" role="group" aria-label="Thread and workspace navigation">
     {!isMobile ? <>
@@ -339,7 +370,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !compactWorkLayout && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width + (workSplit ? delta : -delta), window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside id="agentsam-side-stage" className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused(focused => !focused)} /></aside></> : null}
+      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !compactWorkLayout && <SplitHandle label="Resize Work stage" title="Drag to resize. Release to snap to Peek 20%, Compact 30%, Working 42%, or Expanded 50%. Double-click for Working size." onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width + (workSplit ? delta : -delta), window.innerWidth - CHAT_PANEL_MIN)))} onDragEnd={snapPanelWidth} onDoubleClick={() => setPanelWidth(panelWidthForRatio(0.42))} />}<aside id="agentsam-side-stage" className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused(focused => !focused)} /></aside></> : null}
       {leadComposerDetached && workFocused && !compactWorkLayout ? (
         <section
           ref={floatingChatRef}

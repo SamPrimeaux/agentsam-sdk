@@ -1,32 +1,64 @@
 {
   "schema": "agentsam.app.v1",
   "id": "design-canvas",
-  "name": "AgentSam Design Canvas",
+  "name": "AgentSam Design",
   "kind": "app",
   "package": "@inneranimalmedia/agentsam-design-canvas",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "entrypoints": {
     "frontend": "./dist",
     "cli": "./bin/agentsam-design-canvas.mjs"
   },
   "capabilities": [
     "design",
+    "slides",
+    "brand-guidelines",
+    "design-systems",
     "artboards",
+    "native-editable-objects",
+    "comments",
     "source-editing",
-    "library",
-    "local-drafts"
+    "source-library",
+    "local-drafts",
+    "editor-layers",
+    "presentation-mode",
+    "canvas-zoom",
+    "canvas-preferences",
+    "document-favorites",
+    "document-actions",
+    "responsive-gallery",
+    "document-source-inspector",
+    "design-in-code",
+    "whiteboard",
+    "code-workspace",
+    "whiteboard-workspace",
+    "code-import",
+    "code-export",
+    "sandboxed-code-preview"
   ],
   "provides": [
     "workspace.panel",
     "preview",
-    "app.embed"
+    "app.embed",
+    "artifact.editor",
+    "slides.editor",
+    "design-system.editor",
+    "artifact.export",
+    "document.favorites",
+    "presentation.mode",
+    "code.editor",
+    "whiteboard.editor"
   ],
   "surfaces": [
     "desktop",
     "mobile",
     "side-stage",
     "design",
-    "source"
+    "slides",
+    "design-system",
+    "source",
+    "code",
+    "whiteboard"
   ],
   "auth": {
     "required": false,
@@ -89,7 +121,7 @@
   },
   "screens": [
     {
-      "id": "design-canvas.editor",
+      "id": "canvas.editor",
       "app_id": "design-canvas",
       "route": "/admin/canvas",
       "primary": true,
@@ -101,11 +133,12 @@
       },
       "navigation": {
         "surface": "admin-nav",
-        "label": "Design Canvas",
-        "icon": "panels-top-left",
+        "label": "Design",
+        "icon": "palette",
         "primary": true,
         "key": "design-canvas"
       }
     }
-  ]
+  ],
+  "description": "Creative workspace for presentations, visual design, code creation, reusable design systems, and whiteboarding."
 }

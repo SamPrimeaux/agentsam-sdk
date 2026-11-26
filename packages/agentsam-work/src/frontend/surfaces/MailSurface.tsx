@@ -1,4 +1,4 @@
-import { Archive, Cloud, Inbox, MailPlus, Plus, Search, Send, Settings, Star, X } from "lucide-react";
+import { Archive, ArrowLeft, Cloud, Inbox, MailPlus, Plus, Search, Settings, Star, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { WorkMailConnection, WorkMailMessage } from "../../contracts/index";
 
@@ -25,7 +25,8 @@ export function MailSurface({
   onStar?: (id: string, starred: boolean) => void | Promise<void>;
   onSend?: (input: { to: string; subject: string; body: string }) => void | Promise<void>;
 }) {
-  const [folder, setFolder] = useState<"inbox" | "starred" | "sent" | "archived">("inbox");
+  const [folder, setFolder] = useState<"inbox" | "starred">("inbox");
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(messages[0]?.id || "");
   const [composeOpen, setComposeOpen] = useState(false);
@@ -39,13 +40,12 @@ export function MailSurface({
   const visible = useMemo(() => {
     return messages.filter((message) => {
       if (folder === "starred" && !message.starred) return false;
-      if (folder === "sent" || folder === "archived") return false;
       const haystack = (message.from + " " + message.subject + " " + message.preview).toLowerCase();
       return haystack.includes(query.toLowerCase());
     });
   }, [folder, messages, query]);
 
-  const selected = messages.find((message) => message.id === selectedId) || visible[0];
+  const selected = visible.find((message) => message.id === selectedId) || visible[0];
   const mailboxConnections = connections.filter((item) => item.kind === "mailbox");
   const infrastructureConnections = connections.filter((item) => item.kind === "infrastructure");
   const activeConnection =
@@ -71,8 +71,8 @@ export function MailSurface({
   }
 
   return (
-    <div style={{ position: "relative", height: "100%", display: "grid", gridTemplateColumns: "190px minmax(280px, 0.9fr) minmax(340px, 1.1fr)", minWidth: 880 }}>
-      <aside style={{ borderRight: "1px solid var(--agentsam-work-border)", background: "var(--agentsam-work-panel-subtle)", padding: 12 }}>
+    <div className="agentsam-work-mail" data-mobile-detail={mobileDetailOpen ? "true" : "false"}>
+      <aside className="agentsam-work-mail__nav" style={{ borderRight: "1px solid var(--agentsam-work-border)", background: "var(--agentsam-work-panel-subtle)", padding: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 38px", gap: 8 }}>
           <button
             type="button"
@@ -99,7 +99,7 @@ export function MailSurface({
           </button>
         </div>
 
-        <div style={{ marginTop: 14, paddingBottom: 10, borderBottom: "1px solid var(--agentsam-work-border)" }}>
+        <div className="agentsam-work-mail__accounts" style={{ marginTop: 14, paddingBottom: 10, borderBottom: "1px solid var(--agentsam-work-border)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
             <span style={{ fontSize: 10, fontWeight: 600, color: "var(--agentsam-work-muted)", textTransform: "uppercase", letterSpacing: ".04em" }}>
               Accounts
@@ -155,17 +155,15 @@ export function MailSurface({
           )}
         </div>
 
-        <div style={{ display: "grid", gap: 4, marginTop: 10 }}>
+        <div className="agentsam-work-mail__folders" style={{ display: "grid", gap: 4, marginTop: 10 }}>
           {([
             ["inbox", "Inbox", Inbox],
             ["starred", "Starred", Star],
-            ["sent", "Sent", Send],
-            ["archived", "Archived", Archive],
           ] as const).map(([id, label, Icon]) => (
             <button
               key={String(id)}
               type="button"
-              onClick={() => setFolder(id as typeof folder)}
+              onClick={() => { setFolder(id as typeof folder); setMobileDetailOpen(false); }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -187,19 +185,28 @@ export function MailSurface({
         </div>
       </aside>
 
-      <section style={{ minWidth: 0, borderRight: "1px solid var(--agentsam-work-border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: 12, borderBottom: "1px solid var(--agentsam-work-border)" }}>
+      <section className="agentsam-work-mail__list" style={{ minWidth: 0, borderRight: "1px solid var(--agentsam-work-border)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div className="agentsam-work-mail__search" style={{ padding: 12, borderBottom: "1px solid var(--agentsam-work-border)" }}>
           <label className="agentsam-work-search">
             <Search size={15} />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search mail" />
           </label>
         </div>
-        <div style={{ minHeight: 0, flex: 1, overflowY: "auto" }}>
-          {visible.map((message) => (
+        <div className="agentsam-work-mail__messages" style={{ minHeight: 0, flex: 1, overflowY: "auto" }}>
+          {!mailboxConnections.length ? (
+            <div className="agentsam-work-empty agentsam-work-mail__empty">
+              <Inbox size={22} />
+              <strong>Connect AgentSam's mailbox</strong>
+              <span>Connect an existing Gmail account that AgentSam is authorized to use. This does not create a new email address; connect a dedicated mailbox account if you want AgentSam to have a separate address.</span>
+              <button type="button" className="agentsam-work-toolbar-button" onClick={() => void onConnectProvider?.("google_gmail")} disabled={!onConnectProvider}>
+                <Plus size={14} /> Connect Gmail
+              </button>
+            </div>
+          ) : visible.length ? visible.map((message) => (
             <button
               key={message.id}
               type="button"
-              onClick={() => setSelectedId(message.id)}
+              onClick={() => { setSelectedId(message.id); setMobileDetailOpen(true); }}
               style={{
                 width: "100%",
                 display: "block",
@@ -220,14 +227,19 @@ export function MailSurface({
                 {message.preview}
               </div>
             </button>
-          ))}
+          )) : (
+            <div className="agentsam-work-empty agentsam-work-mail__empty">No messages in this view.</div>
+          )}
         </div>
       </section>
 
-      <main style={{ minWidth: 0, overflowY: "auto", padding: 20 }}>
+      <main className="agentsam-work-mail__detail" style={{ minWidth: 0, overflowY: "auto", padding: 20 }}>
         {selected ? (
           <>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <div className="agentsam-work-mail__detail-heading" style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <button type="button" className="agentsam-work-toolbar-button agentsam-work-mail__back" onClick={() => setMobileDetailOpen(false)} aria-label="Back to messages">
+                <ArrowLeft size={15} /> Inbox
+              </button>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <h2 style={{ margin: 0, fontSize: 18 }}>{selected.subject}</h2>
                 <div style={{ marginTop: 8, color: "var(--agentsam-work-muted)", fontSize: 10 }}>
@@ -264,6 +276,7 @@ export function MailSurface({
 
       {connectionsOpen ? (
         <div
+          className="agentsam-work-mail__connections"
           role="dialog"
           aria-label="Connections"
           style={{
@@ -272,6 +285,7 @@ export function MailSurface({
             left: 198,
             zIndex: 55,
             width: 340,
+            maxWidth: "calc(100% - 210px)",
             maxHeight: "calc(100% - 24px)",
             overflowY: "auto",
             border: "1px solid var(--agentsam-work-border)",
@@ -378,12 +392,16 @@ export function MailSurface({
 
       {composeOpen ? (
         <div
+          className="agentsam-work-mail__compose"
+          role="dialog"
+          aria-label="New message"
           style={{
-            position: "fixed",
-            right: 24,
-            bottom: 24,
+            position: "absolute",
+            right: 12,
+            bottom: 12,
             zIndex: 60,
-            width: "min(520px, calc(100vw - 48px))",
+            width: "min(520px, calc(100% - 24px))",
+            maxHeight: "calc(100% - 24px)",
             border: "1px solid var(--agentsam-work-border)",
             borderRadius: 14,
             background: "var(--agentsam-work-panel)",

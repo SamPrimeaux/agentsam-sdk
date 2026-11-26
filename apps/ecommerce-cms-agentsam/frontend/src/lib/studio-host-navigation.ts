@@ -1,3 +1,5 @@
+import { currentCommerceSiteId } from "./api";
+
 /**
  * Product Studio retains its real Ecommerce routes while running inside
  * AgentSam's installed-app iframe. Keep the registered parent URL in sync
@@ -22,6 +24,10 @@ function validCommerceRoute(candidate: string): string | null {
   try {
     const url = new URL(candidate, window.location.origin);
     if (url.origin !== window.location.origin) return null;
+    if ((PRODUCT_ROUTE.test(url.pathname) || EDIT_ROUTE.test(url.pathname)) && !url.searchParams.has("site_id")) {
+      const siteId = currentCommerceSiteId();
+      if (siteId) url.searchParams.set("site_id", siteId);
+    }
     if (PRODUCT_ROUTE.test(url.pathname)) {
       if (!onlySearchKeys(url.searchParams, ["site_id", "resume", "collection_id"])) return null;
       if (url.searchParams.has("resume") && !/^psd_[A-Za-z0-9_-]+$/.test(url.searchParams.get("resume") || "")) return null;

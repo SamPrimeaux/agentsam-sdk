@@ -26,10 +26,22 @@ export function normalizeSeo(input) {
 }
 
 export function normalizeSiteSeo(settings) {
-  const s = obj(obj(settings).seo);
+  const root = obj(settings);
+  const s = obj(root.seo);
+  const legacy = obj(root.store);
   const clean = {};
-  for (const key of ["site_name", "title_template", "home_title", "default_description", "default_og_image", "robots", "twitter_handle", "locale"]) {
-    const v = str(s[key]); if (v) clean[key] = v;
+  const values = {
+    site_name: s.site_name,
+    title_template: s.title_template,
+    home_title: s.home_title ?? legacy.homeTitle,
+    default_description: s.default_description ?? legacy.metaDescription,
+    default_og_image: s.default_og_image ?? legacy.socialImageUrl,
+    robots: s.robots,
+    twitter_handle: s.twitter_handle,
+    locale: s.locale,
+  };
+  for (const key of Object.keys(values)) {
+    const v = str(values[key]); if (v) clean[key] = v;
   }
   return clean;
 }

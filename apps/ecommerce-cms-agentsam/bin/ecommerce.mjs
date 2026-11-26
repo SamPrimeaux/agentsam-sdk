@@ -13,17 +13,22 @@ import { inspectPackageBoundaries } from "./package-boundaries.mjs";
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = app;
 const manifest = JSON.parse(fs.readFileSync(path.join(app, "agentsam.app.json"), "utf8"));
+const appPackage = JSON.parse(fs.readFileSync(path.join(app, "package.json"), "utf8"));
 const missing = [
   "backend/index.js",
   "frontend/package.json",
   "frontend/static",
-  "packages/agentsam-merch/src/index.js",
   "packages/theme-contract/runtime/portable-sections.js",
   "packages/media-kit/src/index.js",
   "packages/agentsam-workbench/src/media-asset-workbench.js",
   "npm-shrinkwrap.json",
   "AGENTS.md",
 ].filter((f) => !fs.existsSync(path.join(app, f)));
+if (!appPackage.dependencies?.["@inneranimalmedia/agentsam-merch"]) {
+  missing.push("package dependency @inneranimalmedia/agentsam-merch");
+} else if (!fs.existsSync(path.join(app, "node_modules/@inneranimalmedia/agentsam-merch/package.json"))) {
+  missing.push("installed @inneranimalmedia/agentsam-merch dependency (run npm install)");
+}
 const [command = "info", ...args] = process.argv.slice(2);
 
 function scaffoldWrangler(workerName = "my-ecommerce") {
@@ -47,7 +52,6 @@ invocation_logs = true
 
 [vars]
 ALLOWED_ORIGINS = "http://localhost:8787"
-COMPLETEFUL_ALLOW_LIVE_WRITES = "false"
 
 [[d1_databases]]
 binding = "DB"
@@ -143,7 +147,7 @@ INSERT OR IGNORE INTO agentsam_plugins (
   'completeful', 'commerce', 'completeful', 'native', 'Completeful', 'https://vxapi.completeful.com',
   'native', 'api_key_secret',
   json_object('family', 'ecommerce-cms-agentsam'),
-  json_object('credential_ref', 'CAPP_KEY')
+  json_object('credential_provider', 'agentsam-vault', 'credential_service', 'completeful', 'credential_scope', 'authenticated_account')
 );
 
 INSERT INTO agentsam_plugin_installations (account_id, plugin_id, enabled, setup_status)
@@ -199,7 +203,7 @@ Portable SSOT (do not put brand/MCP URLs in Wrangler):
 2. \`npm ci && npm ci --prefix frontend\`
 3. Provision D1/R2/KV/Queue; set binding IDs in \`wrangler.toml\` (bindings + ALLOWED_ORIGINS only).
 4. Apply schema + migrations + \`db/seed-customer-bootstrap.sql\`.
-5. Set secrets (\`CAPP_KEY\`, \`RESEND_API_KEY\`, \`AGENTSAM_BRIDGE_KEY\`, …). Keep \`COMPLETEFUL_ALLOW_LIVE_WRITES=false\` until tested.
+5. Set platform secrets (\`AGENTSAM_BRIDGE_KEY\`, delivery-provider secrets where applicable, …). Provider credentials such as Completeful are connected and managed in AgentSam Account Vault; they are resolved per authenticated account.
 6. \`npm run build && npm run dev\`
 
 Doctor checks source boundaries. A standalone install and provider execution

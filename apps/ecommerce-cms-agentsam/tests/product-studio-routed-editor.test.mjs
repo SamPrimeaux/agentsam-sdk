@@ -17,12 +17,13 @@ test('merchant cards use the owned products catalog and site-scoped product edit
   assert.doesNotMatch(merchant, /scrollIntoView/);
 });
 
-test('registered AgentSam products do not enter Completeful catalog detail or design canvas', () => {
+test('merchant-owned product records do not enter the Completeful catalog detail canvas', () => {
   const product = source('pages/products/ProductStudioPage.tsx');
-  assert.match(product, /registeredProductId\s*=\s*productId\s*&&\s*\/\^prod_/);
-  assert.match(product, /if \(!productId \|\| registeredProductId\) return;/);
-  assert.match(product, /registeredProductId \? \(/);
-  assert.match(product, /registryId=\{registeredProductId\}/);
+  assert.match(product, /productRecordId\s*=\s*productId\s*&&/);
+  assert.match(product, /\^prod_\[A-Za-z0-9_-\]\+\$/);
+  assert.match(product, /if \(productId \|\| isMerchantCategory\) return;/);
+  assert.match(product, /productRecordId \? \(/);
+  assert.match(product, /productId=\{productRecordId\}/);
   assert.match(product, /: designing && detail \? \(/);
 });
 
@@ -43,4 +44,28 @@ test('hosted deep links retain validated collection context without permitting a
   assert.match(host, /"collection_id"/);
   assert.match(host, /\^\[A-Za-z0-9_-\]\{1,128\}\$/);
   assert.match(host, /onlySearchKeys/);
+});
+
+
+test('Completeful product creation and publishing actions remain connected to the existing draft API', () => {
+  const editor = readFileSync(new URL('../frontend/static/product-edit.html', import.meta.url), 'utf8');
+  assert.match(editor, /\/api\/admin\/product-studio\/drafts\/" \+ encodeURIComponent\(supplierDraftId\) \+ "\/create-product/);
+  assert.match(editor, /\/api\/admin\/product-studio\/drafts\/" \+ encodeURIComponent\(supplierDraftId\) \+ "\/publish/);
+  assert.match(editor, /productAdminFetch\(/);
+  assert.match(editor, /if \(publishSupplier\)/);
+});
+
+test('Product Studio preserves the selected site across the provider-to-merchant handoff', () => {
+  const product = source('pages/products/ProductStudioPage.tsx');
+  const workspace = source('pages/products/StudioWorkspace.tsx');
+  const host = source('lib/studio-host-navigation.ts');
+  const editor = readFileSync(new URL('../frontend/static/product-edit.html', import.meta.url), 'utf8');
+  assert.match(product, /currentCommerceSiteId\(\)/);
+  assert.match(product, /site_id=\$\{encodeURIComponent\(siteId\)\}/);
+  assert.match(workspace, /siteId\?: string \| null/);
+  assert.match(workspace, /productDetailsParams\.set\("site_id", siteId\)/);
+  assert.match(host, /currentCommerceSiteId\(\)/);
+  assert.match(editor, /editParams\.set\("site_id", productSiteId\)/);
+  assert.match(editor, /storefrontProductUrl\(productStorefrontDomain, productSlug\)/);
+  assert.doesNotMatch(editor, /viewBtn\.href = `\/products\/\$\{productSlug\}`/);
 });

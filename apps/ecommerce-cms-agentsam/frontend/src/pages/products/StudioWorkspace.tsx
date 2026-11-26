@@ -5,7 +5,7 @@ import { blankGarmentImageSources } from "./studio-blank-image";
 import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-variants";
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { rememberStudioDraft, navigateHostedStudioRoute } from "../../lib/studio-host-navigation";
-import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
+import { evaluateManufacturingCompatibility } from "@inneranimalmedia/agentsam-merch";
 import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
 import { suggestPrintScale } from "./studio-print-fit";
 import { alphaBounds } from "./studio-alpha-bounds";
@@ -177,12 +177,14 @@ export default function StudioWorkspace({
   detail,
   initialVariantId = "",
   resumeDraftId = null,
+  siteId = null,
   catalogWarning = "",
   onBack,
 }: {
   detail: ProductDetail;
   initialVariantId?: string;
   resumeDraftId?: string | null;
+  siteId?: string | null;
   catalogWarning?: string;
   onBack: () => void;
 }) {
@@ -1189,7 +1191,9 @@ export default function StudioWorkspace({
       return;
     }
     // Local draft product, NOT a fulfillment-provider product or public listing.
-    const productDetailsPath = "/admin/product-edit?id=" + encodeURIComponent(String(productId));
+    const productDetailsParams = new URLSearchParams({ id: String(productId) });
+    if (siteId) productDetailsParams.set("site_id", siteId);
+    const productDetailsPath = "/admin/product-edit?" + productDetailsParams.toString();
     if (!navigateHostedStudioRoute(productDetailsPath)) {
       window.location.assign(productDetailsPath);
     }

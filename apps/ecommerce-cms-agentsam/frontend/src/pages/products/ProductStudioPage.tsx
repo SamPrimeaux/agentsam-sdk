@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { adminFetch } from "../../lib/api";
+import { adminFetch, currentCommerceSiteId } from "../../lib/api";
 import { navigateHostedStudioRoute, syncHostedStudioRoute } from "../../lib/studio-host-navigation";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
@@ -44,6 +44,7 @@ export default function ProductStudioPage() {
   const { productId } = useParams();
   const productRecordId = productId && (/^\d+$/.test(productId) || /^prod_[A-Za-z0-9_-]+$/.test(productId)) ? productId : null;
   const location = useLocation();
+  const siteId = currentCommerceSiteId();
   const resumeDraftId = new URLSearchParams(location.search).get("resume");
   useEffect(() => {
     // The standalone Ecommerce router runs inside AgentSam's installed-app
@@ -282,6 +283,7 @@ export default function ProductStudioPage() {
             detail={detail}
             initialVariantId={selectedVariantId}
             resumeDraftId={resumeDraftId}
+            siteId={siteId}
             catalogWarning={catalogWarning}
             onBack={() => setDesigning(false)}
           />
@@ -500,7 +502,8 @@ export default function ProductStudioPage() {
                         className="ps-product-card"
                         key={catalogProductId(p)}
                         onClick={() => {
-                          const path = `/products/create/${encodeURIComponent(catalogProductId(p))}`;
+                          const siteQuery = siteId ? `?site_id=${encodeURIComponent(siteId)}` : "";
+                          const path = `/products/create/${encodeURIComponent(catalogProductId(p))}${siteQuery}`;
                           if (!navigateHostedStudioRoute("/admin" + path)) navigate(path);
                         }}
                       >

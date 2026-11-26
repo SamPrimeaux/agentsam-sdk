@@ -768,29 +768,6 @@ async function loadVaultCredentialsForAccount(env, accountId) {
   return credentials;
 }
 
-/**
- * Resolve Completeful BYOK from the existing signed-in AgentSam account vault.
- * Never use a different storefront's database, settings or API key.
- * Decryption uses the same AAD and vault master key as /api/vault/secrets.
- */
-async function completefulAccountEnvironment(env, accountId) {
-  if (!accountId || !env.DB) return env;
-  try {
-    const row = await env.DB.prepare(
-      "SELECT secret_name, service_name, secret_value_encrypted, metadata_json FROM user_secrets "
-      + "WHERE account_id = ? AND service_name = 'completeful' AND is_active = 1 "
-      + "ORDER BY updated_at DESC LIMIT 1",
-    ).bind(accountId).first();
-    if (!row) return { ...env, CAPP_KEY: undefined, COMPLETEFUL_CREDENTIAL_SOURCE: "not_connected" };
-    const aad = accountId + ":" + row.service_name + ":" + row.secret_name;
-    const key = await decryptSecret(env, row.secret_value_encrypted, aad, row.metadata_json);
-    return { ...env, CAPP_KEY: key, COMPLETEFUL_CREDENTIAL_SOURCE: "account_vault" };
-  } catch (error) {
-    // Missing/broken vault must not silently switch to another account's key.
-    console.error("completeful_vault_resolution_failed", error?.name || "unknown");
-    return { ...env, CAPP_KEY: undefined, COMPLETEFUL_CREDENTIAL_SOURCE: "vault_unavailable" };
-  }
-}
 
 function platformCredentials(env) {
   const map = new Map();
@@ -1249,9 +1226,7 @@ export default {
       }
       if (["/api/admin/store/online", "/api/admin/overview"].includes(url.pathname) && request.method === "GET")
         return handleStudioSitesOverview(request, env, principal.id);
-      const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
-        ? await completefulAccountEnvironment(env, principal.id)
-        : env;
+      const commerceEnv = env;
       const scopedCommerceEnv = /^\/api\/admin\/products\/\d+\/images(?:\/|$)/.test(url.pathname)
         ? {
             ...commerceEnv,

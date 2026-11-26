@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
+import { CreativeWorkspaceStage } from "@/components/workbench/creative-workspace-stage";
 import { useWorkStore } from "@/lib/work/store";
 
 type CanvasSearch = { canvas?: string; host?: string; site_id?: string; template?: string; library?: "sources" };
@@ -35,11 +35,15 @@ function CanvasPage() {
     if (search.library) query.set("library", search.library);
     const work = useWorkStore.getState();
     const existing = work.sideTabs.find(item => item.kind === "design");
-    const hasExplicitDocumentTarget = Boolean(search.canvas || search.host || search.site_id || search.template);
+    const hasExplicitDocumentTarget = Boolean(search.canvas || search.host || search.site_id || search.template || search.library);
+    const title = search.host === "slides" ? "Slides" :
+      search.host === "system" ? "Design System" :
+      search.host === "whiteboard" ? "Whiteboard" :
+      search.host === "code" ? "Create in Code" : "Design";
     const id = existing && !hasExplicitDocumentTarget
       ? existing.id
       : work.openSideTab("design", {
-          title: "Canvas", ephemeral: false, url: "/canvas" + (query.size ? "?" + query : ""),
+          title, ephemeral: false, url: "/canvas" + (query.size ? "?" + query : ""),
         });
     if (existing && !hasExplicitDocumentTarget) {
       work.setActiveSideTab(existing.id);
@@ -48,6 +52,6 @@ function CanvasPage() {
     setTabId(id);
   }, [hydrated, search]);
   return <div className="h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-background" data-design-workspace="canvas">
-    {tab ? <CanvasEntryStage tab={tab} openSources={search.library === "sources"} /> : <div role="status" className="grid h-full place-items-center text-sm text-muted-foreground">Opening Canvas…</div>}
+    {tab ? <CreativeWorkspaceStage tab={tab} /> : <div role="status" className="grid h-full place-items-center text-sm text-muted-foreground">Opening Canvas…</div>}
   </div>;
 }

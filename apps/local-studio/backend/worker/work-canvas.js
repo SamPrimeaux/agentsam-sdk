@@ -6,6 +6,7 @@ import { renderCanvasThumbnailSvg } from './work-canvas-thumbnail.js';
  */
 const BASE = /^\/api\/work\/canvases(?:\/(canvas_[a-z0-9-]{12,80})(?:\/(directions|events|history|restore|runs)(?:\/(run_[a-z0-9-]{12,80})(?:\/(execute|cancel|retry))?)?)?)?$/;
 const KIND = 'design-canvas';
+const CREATIVE_SCHEMA = 'agentsam.creative-workspace.v1';
 const EXECUTION = 'canvas-generation';
 const MAX_BYTES = 2_000_000;
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -25,7 +26,12 @@ const runQuery = "SELECT * FROM agentsam_executions WHERE id=? AND user_id=? AND
 export class CanvasError extends Error { constructor(code,status=400){super(code);this.status=status;} }
 export const isCanvasRequest = path => BASE.test(path);
 export const blankCanvasDocument = () => ({version:1,name:'Untitled Canvas',host:'design',brief:'',artboards:[],tokens:{},components:[],assets:[],dataRequirements:[],provenance:{}});
-export const canvasSummary = row => ({id:row.id,name:row.name,revision:Number(meta(row).revision)||1,contentHash:row.content_hash,updatedAt:new Date(Number(row.updated_at)*1000).toISOString(),artboardCount:meta(row).artboardCount||0,archived:!!row.archived_at});
+export const canvasSummary = row => ({
+ id:row.id,name:row.name,revision:Number(meta(row).revision)||1,contentHash:row.content_hash,
+ updatedAt:new Date(Number(row.updated_at)*1000).toISOString(),artboardCount:meta(row).artboardCount||0,
+ creativeSchema:meta(row).creativeSchema||null,creativeType:meta(row).creativeType||null,
+ archived:!!row.archived_at
+});
 const runSummary = row => row ? {id:row.id,status:row.status,canvasId:row.execution_key,...meta(row),startedAt:new Date(row.started_at_unix*1000).toISOString(),completedAt:row.completed_at_unix?new Date(row.completed_at_unix*1000).toISOString():null} : null;
 
 function safeUrl(v){return typeof v==='string' && v.length<=8192 && (/^https:\/\//i.test(v)||/^\/(?!\/)/.test(v)||/^#[A-Za-z0-9_-]+$/.test(v));}
@@ -36,6 +42,17 @@ function validStyle(style){
 export function validateCanvasDocument(doc){
  if(!obj(doc)||doc.version!==1||!clean(doc.name)||doc.name.length>160||!clean(doc.host)||doc.host.length>80||typeof doc.brief!=='string'||doc.brief.length>12000||!Array.isArray(doc.artboards)||doc.artboards.length>64)return false;
  if(!obj(doc.tokens)||!Array.isArray(doc.components)||doc.components.length>256||!Array.isArray(doc.assets)||doc.assets.length>1000||!Array.isArray(doc.dataRequirements)||doc.dataRequirements.length>200||!obj(doc.provenance))return false;
+ if(doc.creativeWorkspace!==undefined){
+  const workspace=doc.creativeWorkspace,artifact=workspace?.artifact;
+  if(!obj(workspace)||workspace.schema!==CREATIVE_SCHEMA||!obj(artifact)||
+     !ID.test(artifact.id)||!['slides','design','code','system','whiteboard'].includes(artifact.type)||
+     !clean(artifact.name)||artifact.name.length>160||typeof artifact.createdAt!=='string'||
+     typeof artifact.updatedAt!=='string'||!obj(artifact.data))return false;
+  if(artifact.type==='slides'&&(!Array.isArray(artifact.data.slides)||artifact.data.slides.length>256))return false;
+  if((artifact.type==='design'||artifact.type==='whiteboard')&&(!Array.isArray(artifact.data.artboards)||artifact.data.artboards.length>256))return false;
+  if(artifact.type==='system'&&(!Array.isArray(artifact.data.colors)||!Array.isArray(artifact.data.typography)))return false;
+  if(artifact.type==='code'&&(!Array.isArray(artifact.data.files)||artifact.data.files.length>256))return false;
+ }
  const ids=new Set();let count=0;
  function nodes(items,depth=0){
   if(!Array.isArray(items)||depth>20)return false;
@@ -77,14 +94,14 @@ async function body(request){
  const raw=await request.text();if(raw.length>MAX_BYTES+20000)throw new CanvasError('payload_too_large',413);
  try{const data=JSON.parse(raw||'{}');if(!obj(data))throw new Error();return data;}catch{throw new CanvasError('invalid_json');}
 }
-function requireDocument(document){if(!validateCanvasDocument(document))throw new CanvasError('invalid_document');}
+function requireDocument(document,id){if(!validateCanvasDocument(document))throw new CanvasError('invalid_document');if(id&&document.creativeWorkspace?.artifact?.id!==undefined&&document.creativeWorkspace.artifact.id!==id)throw new CanvasError('creative_artifact_id_mismatch');}
 async function readStored(env,row){
  const asset=await env.ARTIFACTS.get(row.r2_key);
  if(!asset)throw new CanvasError('canvas_asset_missing_or_invalid',424);
  const bytes=await asset.arrayBuffer();
  if(await sha(bytes)!==row.content_hash)throw new CanvasError('canvas_asset_missing_or_invalid',424);
  let document;try{document=JSON.parse(new TextDecoder().decode(bytes));}catch{throw new CanvasError('canvas_asset_missing_or_invalid',424);}
- requireDocument(document);return document;
+ requireDocument(document,row.id);return document;
 }
 export async function readCanvas(env,owner,id){
  const row=await env.DB.prepare(rowQuery).bind(id,owner).first();
@@ -118,9 +135,9 @@ async function putVerified(env,owner,id,revision,document){
  return {key,hash,size:bytes.byteLength};
 }
 export async function saveCanvas(env,owner,id,document,expectedHash,activeRun=null){
- requireDocument(document);
  const row=await env.DB.prepare(rowQuery).bind(id,owner).first();
  if(!row)throw new CanvasError('canvas_not_found',404);
+ requireDocument(document,id);
  if(!expectedHash||row.content_hash!==expectedHash)throw new CanvasError('revision_conflict',409);
  const prior=meta(row),revision=(Number(prior.revision)||1)+1;
  const asset=await putVerified(env,owner,id,revision,document);
@@ -128,7 +145,7 @@ export async function saveCanvas(env,owner,id,document,expectedHash,activeRun=nu
  const history=[...(Array.isArray(prior.history)?prior.history:[]),{revision:revision-1,r2_key:row.r2_key,content_hash:row.content_hash,name:row.name,updated_at:row.updated_at}].slice(-100);
  try{
   const guard=activeRun?" AND EXISTS (SELECT 1 FROM agentsam_executions WHERE id=? AND user_id=? AND execution_key=? AND status='running' AND json_extract(metadata_json,'$.lease')=? AND json_extract(metadata_json,'$.cancelRequested')=0)":"";
-  const values=[document.name,asset.key,asset.size,asset.hash,thumbnailKey,JSON.stringify({...prior,revision,artboardCount:document.artboards.length,history}),id,owner,expectedHash];
+  const values=[document.name,asset.key,asset.size,asset.hash,thumbnailKey,JSON.stringify({...prior,revision,artboardCount:document.artboards.length,history,...(document.creativeWorkspace?{creativeSchema:CREATIVE_SCHEMA,creativeType:document.creativeWorkspace.artifact.type}: {})}),id,owner,expectedHash];
   if(activeRun)values.push(activeRun.id,owner,id,activeRun.lease);
   const result=await env.DB.prepare("UPDATE agentsam_artifacts SET name=?,r2_key=?,file_size_bytes=?,content_hash=?,thumbnail_r2_key=?,metadata_json=?,updated_at=unixepoch() WHERE id=? AND user_id=? AND artifact_type='design-canvas' AND archived_at IS NULL AND content_hash=?"+guard).bind(...values).run();
   if(result.meta?.changes!==1){
@@ -136,7 +153,7 @@ export async function saveCanvas(env,owner,id,document,expectedHash,activeRun=nu
    throw new CanvasError('revision_conflict',409);
   }
  }catch(error){await env.ARTIFACTS.delete?.(asset.key);if(thumbnailKey)await env.ARTIFACTS.delete?.(thumbnailKey);throw error;}
- return {canvas:canvasSummary({...row,name:document.name,content_hash:asset.hash,updated_at:now(),metadata_json:JSON.stringify({...prior,revision,artboardCount:document.artboards.length,history})}),document};
+ return {canvas:canvasSummary({...row,name:document.name,content_hash:asset.hash,updated_at:now(),metadata_json:JSON.stringify({...prior,revision,artboardCount:document.artboards.length,history,...(document.creativeWorkspace?{creativeSchema:CREATIVE_SCHEMA,creativeType:document.creativeWorkspace.artifact.type}: {})})}),document};
 }
 async function createCanvas(env,owner,data){
  const id=data.id;if(typeof id!=='string'||!/^canvas_[a-z0-9-]{12,80}$/.test(id))throw new CanvasError('invalid_canvas_id');
@@ -145,13 +162,13 @@ async function createCanvas(env,owner,data){
   if(existing.user_id!==owner||existing.artifact_type!==KIND||existing.archived_at)throw new CanvasError('canvas_id_conflict',409);
   return {...await readCanvas(env,owner,id),created:false};
  }
- const document=data.document||blankCanvasDocument();requireDocument(document);
+ const document=data.document||blankCanvasDocument();requireDocument(document,id);
  const user=await env.DB.prepare("SELECT default_account_id FROM auth_users WHERE id=?").bind(owner).first();
  if(!user)throw new CanvasError('unauthorized',401);
  const asset=await putVerified(env,owner,id,1,document);
  try{
   const result=await env.DB.prepare("INSERT OR IGNORE INTO agentsam_artifacts (id,user_id,tenant_id,name,artifact_type,r2_key,source,file_size_bytes,content_hash,r2_bucket,scope,visibility,artifact_status,validation_status,mime_type,metadata_json) VALUES (?,?,?,?,'design-canvas',?,'canvas.editor',?,?,'artifacts','user','private','draft','asset-verified','application/json',?)")
-   .bind(id,owner,clean(user.default_account_id)||owner,document.name,asset.key,asset.size,asset.hash,JSON.stringify({revision:1,artboardCount:document.artboards.length,history:[]})).run();
+   .bind(id,owner,clean(user.default_account_id)||owner,document.name,asset.key,asset.size,asset.hash,JSON.stringify({revision:1,artboardCount:document.artboards.length,history:[],...(document.creativeWorkspace?{creativeSchema:CREATIVE_SCHEMA,creativeType:document.creativeWorkspace.artifact.type}: {})})).run();
   if(result.meta?.changes!==1){await env.ARTIFACTS.delete?.(asset.key);const current=await readCanvas(env,owner,id);if(!current)throw new CanvasError('canvas_id_conflict',409);return {...current,created:false};}
  }catch(error){await env.ARTIFACTS.delete?.(asset.key);throw error;}
  return {...await readCanvas(env,owner,id),created:true};
@@ -312,7 +329,12 @@ export async function handleCanvasRequest(request,env,owner,context={}){
  try{
   if(!id&&method==='GET'){
    const archived=url.searchParams.get('archived')==='1';
-   const rows=await env.DB.prepare("SELECT * FROM agentsam_artifacts WHERE user_id=? AND artifact_type='design-canvas' AND archived_at IS "+(archived?'NOT NULL':'NULL')+" ORDER BY updated_at DESC LIMIT 200").bind(owner).all();
+   const creativeOnly=url.searchParams.get('workspace')==='creative';
+   const filter=creativeOnly?" AND json_extract(metadata_json,'$.creativeSchema')=?":"";
+   const query="SELECT * FROM agentsam_artifacts WHERE user_id=? AND artifact_type='design-canvas' AND archived_at IS "+(archived?'NOT NULL':'NULL')+filter+" ORDER BY updated_at DESC LIMIT 200";
+   const rows=creativeOnly
+    ? await env.DB.prepare(query).bind(owner,CREATIVE_SCHEMA).all()
+    : await env.DB.prepare(query).bind(owner).all();
    return respond({ok:true,canvases:(rows.results||[]).map(canvasSummary)});
   }
   if(!id&&method==='POST'){

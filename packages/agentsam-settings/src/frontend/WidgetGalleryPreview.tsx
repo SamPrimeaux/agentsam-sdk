@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { QueueDepthWidget, formatClockTime } from '@inneranimalmedia/agentsam-workbench/widgets';
+import { BuiltinWidget, formatClockTime } from '@inneranimalmedia/agentsam-workbench/widgets';
 import {
   Activity,
   Check,
@@ -70,6 +70,26 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
     </div>
   );
 
+  if (id === "cloudflare-resources") return <BuiltinWidget widgetId={id} compact data={{
+    provider: "cloudflare", status: "ready", source: "fixture", accountLabel: "Example Cloudflare account",
+    data: { r2: { count: 3, buckets: [{ name: "brand-assets", location: "WNAM" }, { name: "theme-store", location: "ENAM" }, { name: "media-library", location: "WNAM" }] }, images: { count: 12 }, stream: { count: 4 } },
+  }} />;
+  if (id === "github-activity") return <BuiltinWidget widgetId={id} compact data={{
+    provider: "github", status: "ready", source: "fixture", accountLabel: "Example GitHub account",
+    data: { totalCount: 3, repositories: [
+      { id: "demo-1", fullName: "example/platform", htmlUrl: "https://github.com/example/platform", private: true, defaultBranch: "main", updatedAt: "2026-11-25T11:20:00Z" },
+      { id: "demo-2", fullName: "example/theme-store", htmlUrl: "https://github.com/example/theme-store", private: true, defaultBranch: "main", updatedAt: "2026-11-24T18:10:00Z" },
+      { id: "demo-3", fullName: "example/workbench", htmlUrl: "https://github.com/example/workbench", private: false, defaultBranch: "main", updatedAt: "2026-11-23T09:40:00Z" },
+    ] },
+  }} />;
+  if (id === "google-drive-recent") return <BuiltinWidget widgetId={id} compact data={{
+    provider: "google_drive", status: "ready", source: "fixture", accountLabel: "Example Google Drive account",
+    data: { files: [
+      { id: "drive-demo-1", name: "Brand guidelines.pdf", mimeType: "application/pdf", webViewUrl: "https://drive.google.com/file/d/demo-guide/view", updatedAt: "2026-11-25T09:00:00Z" },
+      { id: "drive-demo-2", name: "Homepage concept.fig", mimeType: "application/octet-stream", webViewUrl: "https://drive.google.com/file/d/demo-figma/view", updatedAt: "2026-11-24T16:30:00Z" },
+      { id: "drive-demo-3", name: "Product photography.zip", mimeType: "application/zip", webViewUrl: "https://drive.google.com/file/d/demo-photos/view", updatedAt: "2026-11-22T13:10:00Z" },
+    ] },
+  }} />;
   if (id === "countdown") {
     return <div className="flex h-full flex-col justify-center gap-3">
       {miniLabel("FOCUS SESSION")}
@@ -107,7 +127,18 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
     const entries = id === "jobs" ? [["Index workspace","2 min"],["Refresh analytics","15 min"],["Daily summary","Tomorrow"]] : id === "github-activity" ? [["Widget package updated","2h ago"],["Build checks passed","4h ago"],["Release branch synced","1d ago"]] : [["Dashboard snapshot","4 min"],["Project review","1h"],["Studio workspace","Yesterday"]];
     return <div className="flex h-full flex-col justify-center">{entries.map(([title, right],i)=><div key={title}>{row(title,right,i===1?"check":undefined)}</div>)}</div>;
   }
-  if (id === "queues") return <QueueDepthWidget compact interactive={interactive} />;
+  if (id === "queues") return <BuiltinWidget widgetId={id} compact interactive={interactive} data={{
+    provider: "cloudflare", status: "ready", source: "fixture", accountLabel: "Example Cloudflare account",
+    updatedAt: "2026-11-25T12:00:00.000Z",
+    data: { collected_at: "2026-11-25T12:00:00.000Z", queues: [{
+      queue_id: "demo-orders-queue", queue_name: "orders", environment: "production", owner_app: "storefront",
+      delivery_status: "active", producers_total_count: 2, consumers_total_count: 3,
+      metrics: { state: "ready", backlog_count: 14, backlog_bytes: 4096, oldest_message_timestamp_ms: Date.now() - 120_000 },
+    }] },
+  }} onLoadHistory={async () => ({ provider: "cloudflare", status: "ready", source: "fixture", data: { history: { state: "ready", points: [
+    { at: "2026-11-25T08:00:00Z", backlog_count: 2 }, { at: "2026-11-25T09:00:00Z", backlog_count: 5 },
+    { at: "2026-11-25T10:00:00Z", backlog_count: 3 }, { at: "2026-11-25T11:00:00Z", backlog_count: 14 },
+  ] } } })} />;
   if (id === "queue-status") {
     return <div className="flex h-full flex-col justify-between">
       <div className="grid grid-cols-3 gap-2">{[["12","Queued"],["04","Running"],["00","Failed"]].map(([v,l])=><div key={l}><span className="font-mono text-[22px] font-medium text-foreground">{v}</span><div className="mt-1 text-[9px] text-muted-foreground">{l}</div></div>)}</div>

@@ -1,0 +1,138 @@
+import { IDENTITY_ROUTE_IDS } from '../contracts/route-ids.js';
+import {
+  IAM_PLATFORM_CALLBACK_PATH,
+  IAM_PLATFORM_STATE_PROVIDER,
+  resolveIamPlatformCredentials,
+} from './credentials.js';
+import { pkceChallenge, pkceVerifier, randomOAuthState } from './pkce.js';
+import { finishOAuthLogin, parseNativeStart, sessionTypeForTransaction } from './native-handoff.js';
+import {
+  exchangeIamCode,
+  getIamAuthUrl,
+  IAM_DEFAULT_OIDC_SCOPE,
+} from '../providers/iam/oauth.js';
+import { fetchIamProfile } from '../providers/iam/profile.js';
+import { normalizeIamIdentity } from '../providers/iam/mapper.js';
+
+/**
+ * Redirect browser to IAM /api/oauth/identity/authorize (PKCE).
+ * @param {Request} request
+ * @param {Record<string, unknown>} env
+ * @param {import('../adapters/cloudflare-d1/index.js').CloudflareD1Adapter} adapter
+ */
+export async function iamPlatformOAuthStart(request, env, adapter, identity) {
+  const creds = resolveIamPlatformCredentials(env);
+  if (!creds) {
+    return Response.json({ ok: false, error: 'iam_oauth_not_configured' }, 503);
+  }
+
+  const url = new URL(request.url);
+  const state = randomOAuthState();
+  const codeVerifier = pkceVerifier();
+  const codeChallenge = await pkceChallenge(codeVerifier);
+  const redirectTo = identity?.resolvePostLoginPath(
+    url.searchParams.get('next') || url.searchParams.get('return_to'),
+  ) || '/';
+
+  const nativeStart = parseNativeStart(url, env);
+  if (nativeStart.error) {
+    return Response.json({ ok: false, error: nativeStart.error }, { status: 400 });
+  }
+  await adapter.saveOAuthState({
+    state,
+    provider: IAM_PLATFORM_STATE_PROVIDER,
+    codeVerifier,
+    redirectTo,
+    appId: identity?.app?.id || null,
+    ...(nativeStart.native
+      ? {
+          clientType: nativeStart.clientType,
+          nativeChallenge: nativeStart.nativeChallenge,
+          nativeRedirect: nativeStart.nativeRedirect,
+        }
+      : {}),
+  });
+
+  const callbackPath = identity?.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.OAUTH_CALLBACK) || IAM_PLATFORM_CALLBACK_PATH;
+  const redirectUri = `${url.origin}${callbackPath}`;
+  const authUrl = getIamAuthUrl({
+    origin: creds.origin,
+    clientId: creds.clientId,
+    redirectUri,
+    state,
+    codeChallenge,
+    scope: IAM_DEFAULT_OIDC_SCOPE,
+  });
+
+  return Response.redirect(authUrl, 302);
+}
+
+/**
+ * @param {Request} request
+ * @param {Record<string, unknown>} env
+ * @param {import('../adapters/cloudflare-d1/index.js').CloudflareD1Adapter} adapter
+ * @param {ReturnType<import('../server/identity-service.js').createIdentityService>} identity
+ */
+export async function iamPlatformOAuthCallback(request, env, adapter, identity) {
+  const creds = resolveIamPlatformCredentials(env);
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  const err = url.searchParams.get('error');
+
+  if (err || !code || !state) {
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=oauth_failed`, 302);
+  }
+  if (!creds) {
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=iam_oauth_not_configured`, 302);
+  }
+
+  const saved = await adapter.consumeOAuthState(state);
+  if (!saved || saved.provider !== IAM_PLATFORM_STATE_PROVIDER) {
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=state_mismatch`, 302);
+  }
+
+  const callbackPath = identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.OAUTH_CALLBACK) || IAM_PLATFORM_CALLBACK_PATH;
+  const redirectUri = `${url.origin}${callbackPath}`;
+  const token = await exchangeIamCode({
+    origin: creds.origin,
+    clientId: creds.clientId,
+    clientSecret: creds.clientSecret,
+    code,
+    codeVerifier: saved.code_verifier,
+    redirectUri,
+  });
+  if (!token?.access_token) {
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=token_exchange_failed`, 302);
+  }
+
+  const profile = await fetchIamProfile({
+    origin: creds.origin,
+    accessToken: token.access_token,
+  });
+  const normalized = profile ? normalizeIamIdentity(profile) : null;
+  if (!normalized?.subject || !normalized?.email) {
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=userinfo_failed`, 302);
+  }
+
+  const result = await identity.provisionOAuthUser({
+    provider: 'iam',
+    providerSubject: normalized.subject,
+    email: normalized.email,
+    displayName: normalized.name || normalized.email.split('@')[0] || 'User',
+    sessionType: sessionTypeForTransaction(saved),
+  });
+
+  return finishOAuthLogin({
+    request,
+    env,
+    identity,
+    adapter,
+    saved,
+    result,
+    loginPath: identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN),
+  });
+}
+
+// Re-export provider primitives for callers that import iam-platform directly.
+export { exchangeIamCode, fetchIamProfile, getIamAuthUrl };

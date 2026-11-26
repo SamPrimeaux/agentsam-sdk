@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 import {
@@ -40,11 +41,11 @@ test('calculator supports safe arithmetic and rejects code, invalid expressions 
   assert.throws(() => evaluateCalculatorExpression('9'.repeat(130)), /calculation_invalid/);
 });
 
-test('both graduated donor utilities are built-in and package render real, safe controls', () => {
-  assert.deepEqual(BUILTIN_WIDGET_DEFINITIONS.map(item=>item.id),['queues','countdown','clock','calculator']);
-  assert.equal(WIDGET_GALLERY_DEFINITIONS.length,22);
-  assert.deepEqual(WIDGET_GALLERY_DEFINITIONS.filter(item=>item.availability==='ready').map(item=>item.id),
-    ['queues','countdown','clock','calculator']);
+test('packaged widgets render safe controls and provider-backed widgets accept host projections', () => {
+  assert.deepEqual(BUILTIN_WIDGET_DEFINITIONS.map(item=>item.id).sort(),['calculator','clock','cloudflare-resources','countdown','github-activity','google-drive-recent','queues']);
+  assert.equal(WIDGET_GALLERY_DEFINITIONS.length,24);
+  assert.deepEqual(WIDGET_GALLERY_DEFINITIONS.filter(item=>item.availability==='ready').map(item=>item.id).sort(),
+    ['calculator','clock','cloudflare-resources','countdown','github-activity','google-drive-recent','queues']);
   const clock = renderToStaticMarkup(createElement(ClockWidget));
   assert.match(clock,/Clock timezone/);
   assert.match(clock,/Reading device clock/);
@@ -56,4 +57,34 @@ test('both graduated donor utilities are built-in and package render real, safe 
   const builtin = renderToStaticMarkup(createElement(BuiltinWidget,{widgetId:'calculator'}));
   assert.match(builtin,/Calculation/);
   assert.equal(renderToStaticMarkup(createElement(BuiltinWidget,{widgetId:'unavailable-concept'})), '');
+  const cloudflare = renderToStaticMarkup(createElement(BuiltinWidget, { widgetId: 'cloudflare-resources', data: {
+    provider: 'cloudflare', status: 'ready', source: 'fixture', data: { r2: { count: 2, buckets: [{ name: 'brand-assets', location: 'WNAM' }] }, images: { count: 3 }, stream: { count: 1 } },
+  } }));
+  assert.match(cloudflare, /R2 buckets/);
+  assert.match(cloudflare, /brand-assets/);
+  const github = renderToStaticMarkup(createElement(BuiltinWidget, { widgetId: 'github-activity', data: {
+    provider: 'github', status: 'ready', source: 'fixture', data: { repositories: [{ id: '1', fullName: 'example/platform', private: true, defaultBranch: 'main', updatedAt: '2026-11-25T10:00:00Z' }] },
+  } }));
+  assert.match(github, /example\/platform/);
+  const drive = renderToStaticMarkup(createElement(BuiltinWidget, { widgetId: 'google-drive-recent', data: {
+    provider: 'google_drive', status: 'ready', source: 'fixture', data: { files: [{ id: '1', name: 'Brand guide.pdf', mimeType: 'application\/pdf', updatedAt: '2026-11-25T10:00:00Z' }] },
+  } }));
+  assert.match(drive, /Brand guide.pdf/);
+});
+
+
+test('Cloudflare Queue Depth is a host-driven renderer, not a Local Studio network client', async () => {
+  const source = await readFile(new URL('../src/widgets/QueueDepthWidget.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /\bfetch\s*\(|setInterval|\/api\//);
+  const queue = renderToStaticMarkup(createElement(BuiltinWidget, { widgetId: 'queues', data: {
+    provider: 'cloudflare', status: 'ready', source: 'fixture', accountLabel: 'Example Cloudflare account',
+    data: { collected_at: '2026-11-25T12:00:00Z', queues: [{
+      queue_id: 'orders', queue_name: 'orders', environment: 'production', owner_app: 'storefront',
+      delivery_status: 'active', producers_total_count: 2, consumers_total_count: 3,
+      metrics: { state: 'ready', backlog_count: 14, backlog_bytes: 4096, oldest_message_timestamp_ms: Date.now() - 120_000 },
+    }] },
+  } }));
+  assert.match(queue, /orders/);
+  assert.match(queue, /14/);
+  assert.match(queue, /Cloudflare · sample data/);
 });

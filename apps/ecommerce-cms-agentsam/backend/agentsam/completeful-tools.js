@@ -8,7 +8,8 @@
 import {
   completefulApiBase,
   completefulKeyMode,
-  completefulLiveWritesAllowed,
+  completefulWritesEnabled,
+  resolveCompletefulCredential,
   completefulRequest,
 } from "../completeful/client.js";
 import {
@@ -40,14 +41,17 @@ async function status(env) {
     listMirroredShops(env),
   ]);
   const primaryShop = shops.find((shop) => Number(shop.is_primary) === 1) || null;
-  const mode = completefulKeyMode(env);
+  const credential = await resolveCompletefulCredential(env);
+  const mode = completefulKeyMode(credential?.value);
   return {
     ok: true,
     provider: "completeful",
-    configured: mode !== "missing",
+    configured: mode === "test" || mode === "live",
     api_base: await completefulApiBase(env),
     key_mode: mode,
-    allow_live_writes: completefulLiveWritesAllowed(env),
+    credential_source: credential?.source || "not_connected",
+    writes_enabled: completefulWritesEnabled(credential?.value),
+    allow_live_writes: mode === "live",
     primary_shop: primaryShop,
     sync,
     counts,

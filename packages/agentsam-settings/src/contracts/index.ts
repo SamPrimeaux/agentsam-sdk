@@ -1,3 +1,4 @@
+import type { AgentSamWidgetProvider, AgentSamWidgetProviderData } from "@inneranimalmedia/agentsam-contracts/widgets";
 export type { SettingsBillingSnapshot, SettingsBillingInvoice, SettingsBillingPlan } from "./billing";
 export { normalizeBillingApi, safeBillingUrl, BILLING_NOT_CONFIGURED } from "./billing";
 export { normalizeVerifiedToolUsage } from "./tool-usage";
@@ -192,6 +193,9 @@ export type SettingsPlugin = SettingsCatalogItem & {
   disconnectUrl?: string | null;
   /** Safe account identifier reference; never a credential or token. */
   connectionRef?: string | null;
+  accountLabel?: string | null;
+  displayNameOverride?: string | null;
+  descriptionOverride?: string | null;
   iconUrl?: string | null;
   iconDarkUrl?: string | null;
   iconAlt?: string | null;
@@ -251,10 +255,16 @@ export type SettingsDiscoveredPlugin = {
   enabled: boolean;
   healthStatus: string;
   availability: 'available' | 'requires_connection' | 'connected';
+  featured?: boolean;
+  collections?: string[];
+  publishedAt?: string | null;
 };
 export type SettingsPlatformPlugin = {
-  pluginKey:string;name:string;description:string;kind:string;category:string;
-  provider:string;version:string;capabilities:string[];
+  id:string;pluginKey:string;name:string;description:string;kind:string;category:string;
+  provider:string;publisher:string;version:string;capabilities:string[];
+  iconUrl?:string|null;iconAlt?:string|null;iconFit?:'contain'|'cover';
+  composerVisible:boolean;settingsVisible:boolean;sortPriority:number;featured:boolean;collections:string[];
+  authType:string;transport:string;websiteUrl?:string|null;docsUrl?:string|null;
   installed:boolean;enabled:boolean;setupStatus:string;
   surface:'side_stage'|'app'|'integration';readiness:'tools_registered'|'definition_only';
 };
@@ -282,6 +292,8 @@ export type SettingsWidget = {
   tags?: string[];
   availability?: "ready" | "demo";
   ownerPackage?: string;
+  /** Provider authorization is owned by the host; Settings receives only a safe data projection. */
+  requiredProvider?: AgentSamWidgetProvider;
   /** Account-backed New Tab installation, never a local demo toggle. */
   installed?: boolean;
   installable?: boolean;
@@ -426,7 +438,8 @@ export type SettingsNotificationProfileUpdate = {
 };
 
 export type SettingsSnapshot = {
-  fixtureName: string;
+  /** Test-only fixture discriminator. Live Local Studio snapshots omit it. */
+  fixtureName?: string;
   environmentLabel: string;
   repositoryLabel: string;
   health: HealthState;
@@ -553,8 +566,11 @@ export interface SettingsHost {
   /** Provider-scoped live repository read; no tokens returned to Settings. */
   listPluginRepositories?(pluginId: string): Promise<{repositories:SettingsPluginRepository[];hasMore:boolean}>;
   setPluginEnabled?(id: string, enabled: boolean): Promise<void>;
-  beginPluginSetup?(id: string, options?: {allowWrites?: boolean;fullCloudflareAccess?:boolean}): Promise<void>;
+  beginPluginSetup?(id: string, options?: {allowWrites?: boolean;fullCloudflareAccess?:boolean;newAccount?:boolean;returnTo?:string}): Promise<void>;
   disconnectPlugin?(id: string): Promise<void>;
+  setPluginPresentation?(id: string, patch: {composerVisible?:boolean;settingsVisible?:boolean}): Promise<void>;
+  updatePluginProfile?(id: string, patch: {displayName:string;description:string}): Promise<void>;
+  refreshPluginTools?(id: string): Promise<{pluginKey:string;registeredTools:number}>;
   setWidgetVisible?(id: string, visible: boolean): Promise<void>;
   /** Installed for the account's AgentSam New Tab. */
   installWidget?(id: string): Promise<void>;
@@ -563,6 +579,8 @@ export interface SettingsHost {
   }): Promise<void>;
   openWidget?(id: string): void;
   removeWidget?(id: string): Promise<void>;
+  /** Read-only, account-scoped provider data. Access tokens must never be returned. */
+  readWidgetData?(id: string, configuration?: Record<string, unknown>): Promise<AgentSamWidgetProviderData>;
   activateTheme?(id: string): Promise<void>;
   applyTheme?(id: string): Promise<void>;
   installTheme?(id: string): Promise<void>;

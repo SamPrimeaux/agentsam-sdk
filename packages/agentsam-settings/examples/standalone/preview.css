@@ -1,0 +1,23 @@
+html, body, #root { width: 100%; height: 100%; margin: 0; }
+body { background: #0c130e; color: #eaf1eb; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+button, select { font: inherit; }
+.preview-app { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; }
+.preview-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 10px 16px; border-bottom: 1px solid #2a382e; background: #121b15; }
+.preview-brand { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 650; letter-spacing: .01em; }
+.preview-badge { border: 1px solid rgba(129, 183, 139, .35); border-radius: 999px; padding: 4px 8px; color: #a9d2ae; background: rgba(76, 139, 87, .12); font-size: 9px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+.preview-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.preview-control { border: 1px solid #344338; border-radius: 8px; padding: 7px 10px; color: #b9c6bc; background: #18231b; font-size: 10px; cursor: pointer; }
+.preview-control:hover { border-color: #73997a; color: #eef5ef; }
+.preview-control[aria-pressed="true"] { border-color: #83b38b; color: #eaf4eb; background: rgba(92, 146, 100, .2); }
+.preview-content { display: flex; flex: 1; min-height: 0; }
+.preview-content > .agentsam-settings-root { width: 100%; height: 100%; }
+.preview-workspace { height: 100%; overflow: auto; padding: 22px; box-sizing: border-box; }
+.preview-note { margin-bottom: 18px; border: 1px solid #344338; border-radius: 12px; padding: 12px 14px; color: #aebbb1; background: rgba(27, 40, 30, .7); font-size: 11px; line-height: 1.6; }
+.preview-workspace-title { margin: 0 0 5px; color: #edf4ee; font-size: 19px; font-weight: 650; }
+.preview-workspace-subtitle { margin: 0 0 18px; color: #9aa99e; font-size: 11px; line-height: 1.6; }
+@media (max-width: 720px) {
+  .preview-header { align-items: flex-start; }
+  .preview-controls { width: 100%; }
+  .preview-control { min-height: 36px; }
+  .preview-workspace { padding: 14px; }
+}

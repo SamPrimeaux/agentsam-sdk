@@ -6,6 +6,7 @@ export type CompanionStatusSignal =
   | { type: 'tests-passed'; message?: string }
   | { type: 'syntax-warning'; message?: string }
   | { type: 'blocked'; message?: string }
+  | { type: 'awaiting-approval'; message?: string }
   | { type: 'state'; state: CompanionState; message?: string };
 
 export type CompanionHandoffSignal = {

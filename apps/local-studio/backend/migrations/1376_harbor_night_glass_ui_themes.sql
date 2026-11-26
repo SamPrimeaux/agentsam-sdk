@@ -1,3 +1,4 @@
+-- agentsam-engine: d1
 -- Harbor Night Glass Workspace v1.1 — three AgentSam/CMS shared UI theme colorways.
 -- Source: user-approved Harbor Night mobile theme pack + violet glass interactions.
 -- Data-only stock catalog entries; public/account-unowned. Never overrides user selections.

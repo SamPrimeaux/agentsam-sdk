@@ -2,7 +2,8 @@ import {
   CompletefulApiError,
   completefulApiBase,
   completefulKeyMode,
-  completefulLiveWritesAllowed,
+  completefulWritesEnabled,
+  resolveCompletefulCredential,
   completefulRequest,
 } from "../completeful/client.js";
 import {
@@ -113,17 +114,19 @@ async function status(env) {
   ]);
 
   const primaryShop = shops.find((shop) => Number(shop.is_primary) === 1) || null;
-  const mode = completefulKeyMode(env);
+  const credential = await resolveCompletefulCredential(env);
+  const mode = completefulKeyMode(credential?.value);
 
   return json({
     ok: true,
-    configured: mode !== "missing",
+    configured: mode === "test" || mode === "live",
     provider: "completeful",
     api_base: await completefulApiBase(env),
     key_mode: mode,
-    credential_source: env.COMPLETEFUL_CREDENTIAL_SOURCE || (mode === "missing" ? null : "worker_secret"),
+    credential_source: credential?.source || "not_connected",
     setup_href: "/settings/keys?add=completeful",
-    allow_live_writes: completefulLiveWritesAllowed(env),
+    writes_enabled: completefulWritesEnabled(credential?.value),
+    allow_live_writes: mode === "live",
     primary_shop: primaryShop,
     sync,
     counts,
@@ -182,9 +185,10 @@ export async function handleCompletefulAdminApi(request, env, url) {
     }
 
     if (path === "/api/admin/completeful/catalog/sync" && method === "POST") {
-      if (completefulKeyMode(env) === "missing") {
+      const credential = await resolveCompletefulCredential(env);
+      if (completefulKeyMode(credential?.value) === "missing") {
         return json({
-          ok: false, error: "Connect your Completeful API key in AgentSam Keys & Secrets.",
+          ok: false, error: "Connect your Completeful credential in AgentSam Account Vault.",
           code: "completeful_not_configured",
           setup_href: "/settings/keys?add=completeful",
         }, { status: 503 });

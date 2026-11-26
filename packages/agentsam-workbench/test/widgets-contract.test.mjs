@@ -33,17 +33,22 @@ test('countdown formatter supports minute and hour ranges', () => {
   assert.equal(formatCountdown(0), '00:00');
 });
 
-test('gallery preserves the 22 distinct donor designs without making concepts runnable', () => {
-  assert.equal(WIDGET_GALLERY_DEFINITIONS.length, 22);
-  assert.equal(new Set(WIDGET_GALLERY_DEFINITIONS.map((widget) => widget.id)).size, 22);
-  assert.equal(BUILTIN_WIDGET_DEFINITIONS.length, 4);
-  assert.deepEqual(BUILTIN_WIDGET_DEFINITIONS.map(widget => widget.id), ['queues', 'countdown', 'clock', 'calculator']);
+test('gallery separates packaged renderers from concepts and provider-backed widgets declare their host requirement', () => {
+  assert.equal(WIDGET_GALLERY_DEFINITIONS.length, 24);
+  assert.equal(new Set(WIDGET_GALLERY_DEFINITIONS.map((widget) => widget.id)).size, 24);
+  assert.equal(BUILTIN_WIDGET_DEFINITIONS.length, 7);
   assert.ok(BUILTIN_WIDGET_DEFINITIONS.every(widget => widget.availability === 'ready'));
 
   const readyIds = WIDGET_GALLERY_DEFINITIONS
     .filter((widget) => widget.availability === 'ready')
-    .map((widget) => widget.id);
-  assert.deepEqual(readyIds, ['queues', 'countdown', 'clock', 'calculator']);
+    .map((widget) => widget.id)
+    .sort();
+  assert.deepEqual(readyIds, ['calculator', 'clock', 'cloudflare-resources', 'countdown', 'github-activity', 'google-drive-recent', 'queues']);
+  assert.equal(WIDGET_GALLERY_DEFINITIONS.find(widget => widget.id === 'queues').requiredProvider, 'cloudflare');
+  assert.equal(WIDGET_GALLERY_DEFINITIONS.find(widget => widget.id === 'cloudflare-resources').requiredProvider, 'cloudflare');
+  assert.equal(WIDGET_GALLERY_DEFINITIONS.find(widget => widget.id === 'github-activity').requiredProvider, 'github');
+  assert.equal(WIDGET_GALLERY_DEFINITIONS.find(widget => widget.id === 'google-drive-recent').requiredProvider, 'google_drive');
+  assert.equal(WIDGET_GALLERY_DEFINITIONS.find(widget => widget.id === 'cloudflare-observability').availability, 'demo');
 
   for (const widget of WIDGET_GALLERY_DEFINITIONS) {
     assert.ok(widget.title && widget.description && widget.category && widget.ownerPackage);

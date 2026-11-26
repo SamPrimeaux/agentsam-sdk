@@ -1,3 +1,5 @@
+import type { AgentSamWidgetProviderData } from '@inneranimalmedia/agentsam-contracts/widgets';
+import { WIDGET_GALLERY_DEFINITIONS } from '@inneranimalmedia/agentsam-workbench/widgets';
 import type {
   SettingsCapabilities,
   SettingsHost,
@@ -31,21 +33,32 @@ function fixturePlugin(value: Pick<SettingsPlugin, "id" | "name" | "subtitle" | 
   };
 }
 
-const fixtureWidgets: SettingsWidget[] = [
-  {
-    id: "countdown",
-    name: "Countdown",
-    description: "Portable countdown widget fixture.",
-    kind: "countdown",
-    icon: "clock-3",
-    sizes: ["small", "medium"],
-    visible: true,
-    removable: false,
-    source: "Built in",
-    preferenceScope: "This device",
+const fixtureWidgets: SettingsWidget[] = WIDGET_GALLERY_DEFINITIONS.map((definition) => {
+  const installed = definition.availability === "ready";
+  return {
+    id: definition.id,
+    name: definition.title,
+    description: definition.description,
+    kind: definition.kind,
+    icon: definition.icon,
+    sizes: [...definition.sizes],
+    visible: installed,
+    removable: installed,
+    source: installed ? "Packaged Workbench widget" : "Concept preview",
+    preferenceScope: "Fixture account · New Tab",
     deeplink: null,
-  },
-];
+    category: definition.category,
+    tags: [...definition.tags],
+    availability: definition.availability,
+    ownerPackage: definition.ownerPackage,
+    installed,
+    installable: installed,
+    requiredProvider: "requiredProvider" in definition ? definition.requiredProvider : undefined,
+    pinned: definition.id === "cloudflare-resources",
+    sizeClass: definition.sizes[0] ?? 'medium',
+    configuration: {},
+  };
+});
 
 const baseSnapshot: SettingsSnapshot = {
   fixtureName: "populated",
@@ -153,6 +166,16 @@ const baseSnapshot: SettingsSnapshot = {
     },
   ],
   plugins: [
+    fixturePlugin({
+      id: "plg_brand_demo",
+      pluginKey: "agentsam-brand",
+      providerKey: "agentsam-brand",
+      name: "Brand workspace",
+      subtitle: "Approved brand identities, supporting assets, sources and review records.",
+      status: "healthy",
+      toolCount: 9,
+      capabilities: ["brand.identity.read", "brand.assets.read", "brand.sources.read"],
+    }),
     fixturePlugin({
       id: "plugin-github",
       pluginKey: "github",
@@ -448,7 +471,7 @@ export const firstRunSettingsFixture: SettingsSnapshot = {
   agents: [],
   models: [],
   plugins: [],
-  widgets: fixtureWidgets,
+  widgets: fixtureWidgets.map((widget) => ({ ...widget, installed: false, visible: false, removable: false, pinned: false })),
   mcps: [],
   themes: baseSnapshot.themes.slice(0, 1),
   storage: baseSnapshot.storage.slice(0, 1),
@@ -485,6 +508,42 @@ export const securityFindingsSettingsFixture: SettingsSnapshot = {
   credentials: baseSnapshot.credentials.map((credential, index) =>
     index === 1 ? { ...credential, status: "expired", expires: "Expired yesterday" } : credential,
   ),
+};
+
+
+const providerWidgetFixtures: Record<string, AgentSamWidgetProviderData> = {
+  "queues": {
+    provider: "cloudflare", status: "ready", source: "fixture", accountLabel: "Example Cloudflare account",
+    updatedAt: "2026-11-25T12:00:00.000Z",
+    data: { collected_at: "2026-11-25T12:00:00.000Z", queues: [{
+      queue_id: "demo-orders-queue", queue_name: "orders", environment: "production", owner_app: "storefront",
+      delivery_status: "active", producers_total_count: 2, consumers_total_count: 3,
+      metrics: { state: "ready", backlog_count: 14, backlog_bytes: 4096, oldest_message_timestamp_ms: Date.now() - 120_000 },
+    }] },
+  },
+  "cloudflare-resources": {
+    provider: "cloudflare", status: "ready", source: "fixture", accountLabel: "Example Cloudflare account",
+    updatedAt: "2026-11-25T12:00:00.000Z",
+    data: { r2: { count: 3, buckets: [{ name: "brand-assets", location: "WNAM" }, { name: "theme-store", location: "ENAM" }, { name: "media-library", location: "WNAM" }] }, images: { count: 12 }, stream: { count: 4 } },
+  },
+  "github-activity": {
+    provider: "github", status: "ready", source: "fixture", accountLabel: "Example GitHub account",
+    updatedAt: "2026-11-25T12:00:00.000Z",
+    data: { totalCount: 3, repositories: [
+      { id: "demo-1", fullName: "example/platform", htmlUrl: "https://github.com/example/platform", private: true, defaultBranch: "main", updatedAt: "2026-11-25T11:20:00Z" },
+      { id: "demo-2", fullName: "example/theme-store", htmlUrl: "https://github.com/example/theme-store", private: true, defaultBranch: "main", updatedAt: "2026-11-24T18:10:00Z" },
+      { id: "demo-3", fullName: "example/workbench", htmlUrl: "https://github.com/example/workbench", private: false, defaultBranch: "main", updatedAt: "2026-11-23T09:40:00Z" },
+    ] },
+  },
+  "google-drive-recent": {
+    provider: "google_drive", status: "ready", source: "fixture", accountLabel: "Example Google Drive account",
+    updatedAt: "2026-11-25T12:00:00.000Z",
+    data: { files: [
+      { id: "drive-demo-1", name: "Brand guidelines.pdf", mimeType: "application/pdf", webViewUrl: "https://drive.google.com/file/d/demo-guide/view", updatedAt: "2026-11-25T09:00:00Z" },
+      { id: "drive-demo-2", name: "Homepage concept.fig", mimeType: "application/octet-stream", webViewUrl: "https://drive.google.com/file/d/demo-figma/view", updatedAt: "2026-11-24T16:30:00Z" },
+      { id: "drive-demo-3", name: "Product photography.zip", mimeType: "application/zip", webViewUrl: "https://drive.google.com/file/d/demo-photos/view", updatedAt: "2026-11-22T13:10:00Z" },
+    ] },
+  },
 };
 
 export type SettingsFixtureName = "populated" | "first-run" | "degraded" | "security-findings";
@@ -555,6 +614,34 @@ export function createFixtureSettingsHost(
           widget.id === id ? { ...widget, visible } : widget,
         ),
       };
+      subscribers.forEach((callback) => callback());
+    },
+    async readWidgetData(id, configuration = {}) {
+      const fixture = providerWidgetFixtures[id];
+      if (!fixture) return { provider: "cloudflare", status: "unsupported", source: "fixture", message: "No provider fixture is registered." };
+      if (current.fixtureName === "first-run") return { provider: fixture.provider, status: "not_connected", source: "fixture", message: "No provider is connected in this first-run fixture." };
+      if (current.fixtureName === "degraded") return { provider: fixture.provider, status: "error", source: "fixture", message: "The degraded fixture simulates an unavailable provider read." };
+      if (id === "queues" && configuration.history === "24h") return {
+        provider: "cloudflare", status: "ready", source: "fixture",
+        data: { history: { state: "ready", points: [
+          { at: "2026-11-25T08:00:00Z", backlog_count: 2 },
+          { at: "2026-11-25T09:00:00Z", backlog_count: 5 },
+          { at: "2026-11-25T10:00:00Z", backlog_count: 3 },
+          { at: "2026-11-25T11:00:00Z", backlog_count: 14 },
+        ] } },
+      };
+      return structuredClone(fixture);
+    },
+    async installWidget(id) {
+      current = { ...current, widgets: current.widgets.map(widget => widget.id === id ? { ...widget, installed: true, visible: true, removable: true } : widget) };
+      subscribers.forEach((callback) => callback());
+    },
+    async updateWidget(id, update) {
+      current = { ...current, widgets: current.widgets.map(widget => widget.id === id ? { ...widget, ...update } : widget) };
+      subscribers.forEach((callback) => callback());
+    },
+    async removeWidget(id) {
+      current = { ...current, widgets: current.widgets.map(widget => widget.id === id ? { ...widget, installed: false, visible: false, removable: false, pinned: false } : widget) };
       subscribers.forEach((callback) => callback());
     },
     openWidget() {},

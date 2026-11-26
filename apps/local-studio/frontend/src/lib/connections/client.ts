@@ -47,8 +47,10 @@ export type LocalStudioPluginRecord = {
   plugin_kind: string;
   category: string;
   display_name: string;
+  display_name_override?: string | null;
   short_name?: string | null;
   description?: string | null;
+  description_override?: string | null;
   transport: string;
   auth_type: string;
   setup_url?: string | null;
@@ -274,6 +276,8 @@ export async function updateLocalStudioPlugin(
     enabled?: boolean;
     composer_visible?: boolean;
     settings_visible?: boolean;
+    display_name?: string;
+    description?: string;
   },
 ) {
   const id = String(pluginId || "").trim();
@@ -292,6 +296,15 @@ export async function updateLocalStudioPlugin(
   const payload = parseJsonBody(await response.text());
   if (!response.ok) throw responseError(response.status, payload);
   return payload as { ok?: boolean; plugin?: LocalStudioPluginRecord; error?: string };
+}
+
+export async function refreshLocalStudioPluginTools(pluginId: string) {
+  const id = String(pluginId || "").trim();
+  if (!/^plg_[a-z0-9]+$/i.test(id)) throw new Error("plugin_id_invalid");
+  return connectionRequest<{ok:boolean;pluginKey:string;registeredTools:number}>(
+    "/api/plugins/" + encodeURIComponent(id) + "/tools/refresh",
+    {method:"POST"},
+  );
 }
 
 // Public plugin discovery is host configured and account authenticated.

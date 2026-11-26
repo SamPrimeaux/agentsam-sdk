@@ -185,7 +185,7 @@ export async function renderCompletefulMockupMatrix(env, input = {}) {
   const plan = await planCompletefulMockupMatrix(env, input);
   if (!plan.matrix.length) return { ...plan, source: undefined, rendered: [], error: "no_exact_supplier_mockup_targets" };
   if (plan.matrix.length > 12) throw new Error("too_many_mockups_select_fewer_colors");
-  assertCompletefulMutationAllowed(env);
+  await assertCompletefulMutationAllowed(env);
   const output = [];
   for (const target of plan.matrix) {
     const selectedArt = plan.sources[target.print_location_id];

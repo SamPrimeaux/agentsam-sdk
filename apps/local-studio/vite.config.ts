@@ -74,6 +74,9 @@ const scoringPackageRoot = resolvePath(
 const assetsCorePackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-assets-core", import.meta.url)),
 );
+const designCanvasPackageRoot = resolvePath(
+  fileURLToPath(new URL("../design-canvas", import.meta.url)),
+);
 const cfImagesPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-cloudflare-images", import.meta.url)),
 );
@@ -346,6 +349,10 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: /^@inneranimalmedia\/agentsam-scoring$/,
         replacement: resolvePath(scoringPackageRoot, "src/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-design-canvas\/react$/,
+        replacement: resolvePath(designCanvasPackageRoot, "src/index.ts"),
       },
       {
         find: /^@inneranimalmedia\/agentsam-assets-core$/,
