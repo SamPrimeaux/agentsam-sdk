@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, Bold, Check, ChevronDown, Crop, Italic,
   Link2, MessageCircle, Palette, Settings2, SlidersHorizontal, Sparkles,
@@ -54,6 +54,19 @@ function AlignmentMenu({ object, onChange, side }: { object: CreativeObject; onC
 }
 
 export function SelectionFormattingToolbar({ object, anchor, colors, onChange, onMore, onComment, onAlign, onAsk }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    const area = rootRef.current?.parentElement;
+    if (!area) return;
+    const resize = () => setCompact(area.clientWidth <= 720);
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => { setExpanded(false); }, [object.id]);
   const [fontQuery, setFontQuery] = useState('');
   const [linkValue, setLinkValue] = useState(object.link || '');
   const [borderColor, setBorderColor] = useState(object.borderColor || '#ffffff');
@@ -62,7 +75,8 @@ export function SelectionFormattingToolbar({ object, anchor, colors, onChange, o
   const isImage = object.type === 'image';
   const isShape = object.type === 'shape';
   const activeColor = object.color || '#17191d';
-  return <div className="dcx-selection-formatting-toolbar" role="toolbar" aria-label={'Format selected ' + object.type} style={{ left: anchor.left, top: anchor.top }} onPointerDown={(event) => event.stopPropagation()}>
+  return <div ref={rootRef} className={"dcx-selection-formatting-toolbar"+(compact?" is-compact":"")} role="toolbar" aria-label={'Format selected ' + object.type} style={{ left: anchor.left, top: anchor.top }} onPointerDown={(event) => event.stopPropagation()}>
+    <div className={"dcx-context-format-options"+(expanded?" is-expanded":"")}>
     {isText ? <>
       <MenuPopover label="Font family" side={anchor.side} trigger={<><Type size={14}/><span className="dcx-context-font-name">{object.fontFamily || 'Inter'}</span><ChevronDown size={11}/></>} triggerClassName="dcx-context-font-trigger">
         {(close) => <>
@@ -136,9 +150,11 @@ export function SelectionFormattingToolbar({ object, anchor, colors, onChange, o
       </MenuPopover>
     </> : null}
     {!isText && !isImage && !isShape ? <span className="dcx-context-object-label">{object.name}</span> : null}
+    </div>
+    {compact ? <button type="button" className="dcx-context-icon-trigger dcx-context-expand" aria-label="Formatting tools" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}><Palette size={17}/><ChevronDown size={12}/></button> : null}
     <span className="dcx-context-divider"/>
     <button type="button" className="dcx-context-icon-trigger" title="More formatting options" aria-label="More formatting options" onClick={onMore}><SlidersHorizontal size={15}/></button>
     <button type="button" className="dcx-context-icon-trigger" title="Comment" aria-label="Comment" onClick={onComment}><MessageCircle size={15}/></button>
-    {onAsk ? <button type="button" className="dcx-context-ask" onClick={onAsk}><Sparkles size={14}/> Ask AgentSam</button> : null}
+    {onAsk ? <button type="button" className="dcx-context-ask" aria-label="Ask AgentSam" title="Ask AgentSam" onClick={onAsk}><Sparkles size={14}/><span>Ask AgentSam</span></button> : null}
   </div>;
 }

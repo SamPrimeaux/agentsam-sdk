@@ -134,9 +134,9 @@ export function SourceLibraryApp({assetsBase='./sources',onNativeCanvas,onExit}:
    <div className="dca-mark" aria-hidden="true"><LayoutGrid size={17}/></div>
    <div className="dca-heading"><strong>Reference Library</strong><span>Browse and refine design references</span></div>
    <div className="dca-top-actions">
-    {onExit?<button className="dca-secondary" onClick={onExit}><LayoutGrid size={15}/> Back to Design</button>:null}
-    {onNativeCanvas?<button className="dca-secondary" onClick={onNativeCanvas}><Grid2X2 size={15}/> Native Canvas</button>:null}
-    <button className="dca-secondary" onClick={()=>fileInput.current?.click()}><Upload size={15}/> Import changes</button>
+    {onExit?<button className="dca-secondary" aria-label="Back to Design" title="Back to Design" onClick={onExit}><LayoutGrid size={15}/> Back to Design</button>:null}
+    {onNativeCanvas?<button className="dca-secondary" aria-label="Native Canvas" title="Native Canvas" onClick={onNativeCanvas}><Grid2X2 size={15}/> Native Canvas</button>:null}
+    <button className="dca-secondary" aria-label="Import changes" title="Import changes" onClick={()=>fileInput.current?.click()}><Upload size={15}/> Import changes</button>
     <button className="dca-primary" aria-label="Export changes" title="Export changes" onClick={exportAll}><Download size={15}/> Export changes</button>
     <input ref={fileInput} type="file" accept=".json,application/json" hidden onChange={e=>{void importAll(e.target.files?.[0]);e.target.value='';}}/>
    </div>

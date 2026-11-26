@@ -126,3 +126,7 @@
 .dca-app.is-compact .dca-inspector-tabs button { height:44px; }
 .dca-app.is-compact .dca-board-space { padding:22px 10px 70px; }
 .dca-app.is-compact .dca-board-space.dca-focus { min-width:max-content; }
+
+.dca-app.is-compact .dca-top-actions { gap:3px; }
+.dca-app.is-compact .dca-top-actions .dca-secondary { display:inline-flex; font-size:0; width:36px; height:40px; padding:0; gap:0; }
+.dca-app.is-compact .dca-top-actions .dca-secondary svg { flex:none; }
