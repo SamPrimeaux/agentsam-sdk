@@ -222,6 +222,18 @@ export async function updatePluginPreferences(db, options = {}) {
     fields.push('settings_visible=?');
     values.push(options.settingsVisible ? 1 : 0);
   }
+  const profileAssignments = [];
+  if (typeof options.displayName === 'string') {
+    profileAssignments.push("'$.profile.display_name'", '?');
+    values.push(options.displayName.trim().slice(0, 80));
+  }
+  if (typeof options.description === 'string') {
+    profileAssignments.push("'$.profile.description'", '?');
+    values.push(options.description.trim().slice(0, 500));
+  }
+  if (profileAssignments.length) {
+    fields.push(`config_json=json_set(COALESCE(config_json,'{}'), ${profileAssignments.join(', ')})`);
+  }
   if (!fields.length) throw new Error('plugin_preferences_empty');
 
   await runMutation(db, `

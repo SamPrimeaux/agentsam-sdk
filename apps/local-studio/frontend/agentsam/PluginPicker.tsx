@@ -284,8 +284,8 @@ export function PluginPicker({ targetChatId, value, onChange, onAttach, onLibrar
         <IconAction type="button" className="as-nav-button" label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></IconAction>
       </div>}
       {section==='root' ? <div className="agentsam-plugin-sections agentsam-plugin-root-list" data-work-plus-menu="">
-        {onAttach&&<PlusMenuRow icon={<Upload size={17}/>} title="Add photos & files" hint="Upload from computer" onClick={()=>{setOpen(false);onAttach();}}/>}
         {onLibrary&&<PlusMenuRow icon={<Folder size={17}/>} title="Add from Library" hint="Browse saved media and files" onClick={()=>{setOpen(false);onLibrary();}}/>}
+        {onAttach&&<PlusMenuRow icon={<Upload size={17}/>} title="Add photos & files" hint="Upload from computer" onClick={()=>{setOpen(false);onAttach();}}/>}
         {onImage&&<PlusMenuRow icon={<ImagePlus size={17}/>} title="Create image" hint="Visualize anything" onClick={()=>{setOpen(false);onImage();}}/>}
         <PlusMenuRow icon={<Globe size={17}/>} title="Add browser tabs" hint="Use open browser tabs" onClick={openBrowserTabPicker}/>
         {onWebSearch&&<PlusMenuRow icon={<Globe size={17}/>} title="Web search" hint="Find current information" onClick={()=>{setOpen(false);onWebSearch();}}/>}
