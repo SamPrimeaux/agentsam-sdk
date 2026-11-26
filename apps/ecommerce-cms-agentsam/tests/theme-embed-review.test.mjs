@@ -145,11 +145,11 @@ test('showcase mode leaves Resolve preview unmodified',{skip:!JSDOM&&'jsdom is n
 
 test('review UI is wired to catalog install APIs and keeps theme settings owners intact',()=>{
   const code=src('theme-embed-review.js');
-  const html=readFileSync(new URL('../frontend/static/theme-editor.html',import.meta.url),'utf8');
+  const mount=readFileSync(new URL('../frontend/theme-editor/mount.mjs',import.meta.url),'utf8');
   const settings=src('theme-settings-live.js');
   const core=src('theme-editor.js');
-  assert.match(html,/\/admin\/js\/theme-embed-review\.js/);
-  assert.match(html,/\/admin\/css\/theme-embed-review\.css/);
+  assert.match(mount,/load\('\/admin\/js\/theme-embed-review\.js'\)/);
+  assert.match(mount,/theme-embed-review/);
   assert.match(code,/\/admin\/theme-editor\/embed-catalog\.json/);
   assert.match(code,/\/api\/admin\/cms\/pages\/.*catalog-resources/);
   assert.match(code,/data-embed-install/);
