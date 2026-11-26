@@ -195,6 +195,12 @@
     const payload = await api('/api/admin/cms/pages/' + encodeURIComponent(pageSlug()) + '/catalog-resources');
     installed = Array.isArray(payload.installed) ? payload.installed : [];
     const registered = new Map((payload.registered_embeds || []).map(entry=>[entry.key,entry]));
+    const availability = new Map((payload.catalog || []).map(entry=>[entry.key,entry]));
+    if (availability.size) {
+      catalog = catalog.filter(app=>availability.get(app.key)?.installable===true);
+    } else {
+      catalog = catalog.filter(app=>!app.registry_required);
+    }
     catalog = catalog.map(app=>registered.has(app.key)?{...app,...registered.get(app.key)}:app);
     return payload;
   }
