@@ -15,9 +15,12 @@ on a developer's project-local SQLite file.
 - `agentsam_analytics` stores analytical facts and forwards them to
   `AGENTSAM_ACTIVITY` for Basin.
 
-The `agentsam_request_queue` table is a separate legacy request inbox. Its
-completed request rows do not provide Queue Control's lease, retry, physical
-queue, and idempotency semantics, so ACP does not silently reuse it.
+The `agentsam_request_queue` table remains the existing stop-hook retry and
+background-drain queue consumed by InnerAnimalMedia's cron maintenance path.
+Its session/position-based retry semantics are a separate workflow; do not
+repurpose it without migrating that consumer. Generic ACP Queue Control uses
+`agentsam_queue_job` because it needs account-scoped idempotency, physical and
+logical queues, leases, attempts, and lease generations.
 
 ## Timeout contract
 
