@@ -68,19 +68,6 @@ if (!existsSync(path.join(frontendModules, 'react-router-dom/package.json')) ||
   });
 }
 
-// The installable Ecommerce application also has its own lockfile. Its CMS
-// theme/section packages are not root-SDK dependencies and must be installed
-// for an isolated Studio build before assembling the original product assets.
-const appModules = path.join(app, 'node_modules');
-if (!existsSync(path.join(appModules, '@inneranimalmedia/section-library/package.json')) ||
-    !existsSync(path.join(appModules, '@inneranimalmedia/revise-theme/package.json'))) {
-  if (!existsSync(path.join(app, 'package-lock.json'))) {
-    throw new Error('Ecommerce application package-lock.json is required for portable asset staging');
-  }
-  execFileSync('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], {
-    cwd: app, stdio: 'inherit',
-  });
-}
 execFileSync('npm', ['run', 'sync:identity-portals'], { cwd: app, stdio: 'inherit' });
 execFileSync('npm', ['run', 'build:frontend'], { cwd: app, stdio: 'inherit' });
 execFileSync(process.execPath, [path.join(app, 'bin/build-assets.mjs')], { cwd: app, stdio: 'inherit' });
