@@ -7,6 +7,7 @@ import { createLocalSqliteDatabase } from '../../src/local/sqlite.js';
 import { applyRuntimeMigrations } from '../../src/local/migrations.js';
 import { DatabaseAgentControlClient, HttpAgentControlClient } from '../../src/acp/client.js';
 import { createAgentControlHttpHandler } from '../../src/acp/http.js';
+import { handleAgentControlRequest } from '../../apps/local-studio/backend/worker/agent-control-service.js';
 
 test('D1-shaped database control adapter hosts the same ACP contract without local filesystem authority', async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-acp-database-'));
@@ -59,4 +60,74 @@ test('D1-shaped database control adapter hosts the same ACP contract without loc
     queueRows.results.map((row) => row.source_run_id).sort(),
     [root.run_id, child.child_run_id].sort(),
   );
+});
+
+
+test('hosted D1 control route scopes runs to the authenticated account and writes timeout analytics', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-acp-d1-host-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const db = await createLocalSqliteDatabase(path.join(dir, 'host.sqlite'));
+  t.after(() => db.close());
+  await applyRuntimeMigrations(db);
+  const env = { DB: db };
+
+  const created = await handleAgentControlRequest(new Request(
+    'https://host.example.test/api/agent-control/v1/runs',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ objective: 'Hosted account-scoped run', role: 'lead' }),
+    },
+  ), env, 'acct_hosted');
+  assert.equal(created.status, 202);
+  const start = await created.json();
+  assert.equal(start.status, 'queued');
+
+  const timeoutRequest = () => new Request(
+    `https://host.example.test/api/agent-control/v1/runs/${start.run_id}/timeout`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        error_code: 'run_timeout',
+        error_message: 'Hosted run exceeded its deadline',
+        created_at_unix: 200,
+      }),
+    },
+  );
+  const timedOutResponse = await handleAgentControlRequest(timeoutRequest(), env, 'acct_hosted');
+  assert.equal(timedOutResponse.status, 202);
+  const timedOut = await timedOutResponse.json();
+  assert.equal(timedOut.status, 'timed_out');
+  assert.equal(timedOut.storageStatus, 'failed');
+  assert.equal(timedOut.analytics.basin.skipped, 'binding_unavailable');
+
+  const persisted = await db.prepare(
+    'SELECT status, error_code FROM agentsam_agent_run WHERE id = ?'
+  ).bind(start.run_id).first();
+  assert.equal(persisted.status, 'failed');
+  assert.equal(persisted.error_code, 'run_timeout');
+
+  const fact = await db.prepare(
+    'SELECT event_kind, domain, operation, outcome, run_id, dedup_key FROM agentsam_analytics WHERE run_id = ?'
+  ).bind(start.run_id).first();
+  assert.equal(fact.event_kind, 'runtime');
+  assert.equal(fact.domain, 'agent_run');
+  assert.equal(fact.operation, 'timeout');
+  assert.equal(fact.outcome, 'timed_out');
+  assert.equal(fact.dedup_key, `run:${start.run_id}:timed_out`);
+
+  const repeatedResponse = await handleAgentControlRequest(timeoutRequest(), env, 'acct_hosted');
+  const repeated = await repeatedResponse.json();
+  assert.equal(repeated.timeoutRecorded, false);
+  assert.equal(repeated.analytics.deduplicated, true);
+  const factCount = await db.prepare(
+    'SELECT COUNT(*) AS count FROM agentsam_analytics WHERE run_id = ?'
+  ).bind(start.run_id).first();
+  assert.equal(factCount.count, 1);
+
+  const foreignRun = await handleAgentControlRequest(new Request(
+    `https://host.example.test/api/agent-control/v1/runs/${start.run_id}`,
+  ), env, 'acct_other');
+  assert.equal(foreignRun.status, 404);
 });

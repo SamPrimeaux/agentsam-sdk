@@ -73,10 +73,9 @@ function help() {
     '  agentsam run receipt <run_id> [--json]',
     '',
     'Host selection:',
-    '  local SQLite is the default.',
-    '  AGENTSAM_CONTROL_PLANE_URL or --url selects any HTTP ACP host.',
-    '  AGENTSAM_CONTROL_PLANE_TOKEN supplies hosted bearer auth without putting secrets in shell history.',
-    '  --local forces the project-local SQLite control plane.',
+    '  Hosted HTTP ACP requires AGENTSAM_CONTROL_PLANE_URL or --url.',
+    '  AGENTSAM_CONTROL_PLANE_TOKEN overrides the bearer token; AGENTSAM_API_KEY is used otherwise.',
+    '  --local explicitly opts into project-local SQLite for development and tests.',
   ].join('\n');
 }
 

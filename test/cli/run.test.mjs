@@ -96,10 +96,18 @@ test('local ACP client reads run/tree/events, requests cancel, and projects rece
   assert.equal(receipt.usage.costUsd, 0.0125);
 });
 
-test('agentsam run CLI uses local ACP by default and watch --once reads events without a model call', async (t) => {
+test('run client requires an explicit hosted URL or explicit local opt-in', () => {
+  assert.throws(
+    () => createAgentControlClient({ url: '', local: false }),
+    (error) => error.code === 'agentsam_control_plane_url_required',
+  );
+  assert.equal(createAgentControlClient({ url: '', local: true }).kind, 'local');
+});
+
+test('agentsam run CLI uses explicit local ACP opt-in and watch --once reads events without a model call', async (t) => {
   const root = await fixture(t);
   const output = [];
-  const tree = await runRun(['tree', 'arun_parent', '--json'], {
+  const tree = await runRun(['tree', 'arun_parent', '--local', '--json'], {
     cwd: root,
     write: (value) => output.push(String(value)),
   });
@@ -107,7 +115,7 @@ test('agentsam run CLI uses local ACP by default and watch --once reads events w
   assert.equal(JSON.parse(output.join('')).id, 'arun_parent');
 
   const watched = [];
-  const result = await runRun(['watch', 'arun_parent', '--once', '--json'], {
+  const result = await runRun(['watch', 'arun_parent', '--local', '--once', '--json'], {
     cwd: root,
     write: (value) => watched.push(String(value)),
     sleep: async () => { throw new Error('watch --once must not sleep'); },
