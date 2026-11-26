@@ -28,8 +28,10 @@ export function isAgentSourceFormatReference(value: unknown): value is AgentSour
   const format = formatsById.get(value.id);
   if (!format) return false;
   if (value.extension !== undefined && (typeof value.extension !== 'string' || !format.extensions.includes(value.extension.toLowerCase()))) return false;
-  if (value.mediaType !== undefined && (typeof value.mediaType !== 'string' || !format.mediaTypes.some(type => type.toLowerCase() === value.mediaType.toLowerCase()))) return false;
-  if (value.variant !== undefined && (typeof value.variant !== 'string' || !format.variants?.includes(value.variant))) return false;
+  const mediaType = value.mediaType;
+  if (mediaType !== undefined && (typeof mediaType !== 'string' || !format.mediaTypes.some(type => type.toLowerCase() === mediaType.toLowerCase()))) return false;
+  const variant = value.variant;
+  if (variant !== undefined && (typeof variant !== 'string' || !format.variants?.includes(variant))) return false;
   if (value.parameters !== undefined && (!isRecord(value.parameters) || !Object.values(value.parameters).every(item => typeof item === 'string' || typeof item === 'boolean' || (typeof item === 'number' && Number.isFinite(item))))) return false;
   return Object.keys(value).every(key => ['catalog','id','extension','mediaType','variant','parameters'].includes(key));
 }
