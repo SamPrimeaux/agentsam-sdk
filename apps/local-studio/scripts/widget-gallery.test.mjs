@@ -10,7 +10,11 @@ test('Local Studio exposes the donor concept gallery without installing concept 
 
   const ready = widgets.filter((widget) => widget.availability === 'ready');
   assert.deepEqual(ready.map((widget) => widget.id), ['queues', 'countdown', 'clock', 'calculator']);
-  assert.equal(ready[0].visible, true);
+  assert.ok(ready.every((widget) =>
+    !widget.visible &&
+    !widget.removable &&
+    widget.preferenceScope === 'Your account · New Tab'
+  ));
 
   const concepts = widgets.filter((widget) => widget.availability === 'demo');
   assert.equal(concepts.length, 18);
