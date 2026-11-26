@@ -143,6 +143,16 @@ test('showcase mode leaves Resolve preview unmodified',{skip:!JSDOM&&'jsdom is n
   finally{dom.window.close();}
 });
 
+test('Sections picker merges verified CMS stock sections with theme-native sections in host mode',()=>{
+  const core=src('theme-editor.js');
+  assert.match(core,/window\.cmsRegistry\?\.catalog/);
+  assert.match(core,/row\.itemType==='section'/);
+  assert.match(core,/row\.catalogAvailable===true/);
+  assert.match(core,/row\.installable===true/);
+  assert.match(core,/return \[\.\.\.stock,\.\.\.native\.filter/);
+  assert.doesNotMatch(core,/if\(host\)return native/);
+});
+
 test('review UI is wired to catalog install APIs and keeps theme settings owners intact',()=>{
   const code=src('theme-embed-review.js');
   const mount=readFileSync(new URL('../frontend/theme-editor/mount.mjs',import.meta.url),'utf8');
