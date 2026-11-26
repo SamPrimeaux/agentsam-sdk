@@ -601,7 +601,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
     showSidebarHeader: true,
     // New conversation is the first entry; product destinations follow below.
-    showHistory: true,
+    showHistory: isConversation,
     destinations: [
       // Render the platform-owned business destinations first. These are the
       // canonical primary entries from the same host projection as installed apps.
