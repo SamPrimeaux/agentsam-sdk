@@ -176,6 +176,7 @@ test('agentsam run start creates a queued provider-neutral root run without invo
   const output = [];
   const started = await runRun([
     'start',
+    '--local',
     '--objective', 'Audit and package this repository',
     '--role', 'lead',
     '--model', 'provider/model',
