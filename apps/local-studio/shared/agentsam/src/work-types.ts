@@ -99,7 +99,7 @@ export type Chat = {
   workProjectId?: string;
 };
 
-export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app" | "media" | "goal" | "database" | "apps" | "newtab" | "item" | "design" | "data" | "plugin";
+export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app" | "media" | "goal" | "database" | "apps" | "newtab" | "item" | "design" | "data" | "plugin" | "mail";
 
 export type WorkGoal = {
   id: string;
