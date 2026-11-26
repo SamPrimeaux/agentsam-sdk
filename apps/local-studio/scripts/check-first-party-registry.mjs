@@ -27,7 +27,7 @@ export function requiredPublishedPackages(manifests, lock = null) {
             throw Error('untrusted_first_party_source_pin:' + name);
           }
           const source = JSON.parse(readFileSync(resolve(packageDir, 'package.json'), 'utf8'));
-          if (source.name !== name || !/^\\d+\\.\\d+\\.\\d+$/.test(source.version || '')) {
+          if (source.name !== name || !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(source.version || '')) {
             throw Error('mismatched_first_party_source_pin:' + name);
           }
           continue;
