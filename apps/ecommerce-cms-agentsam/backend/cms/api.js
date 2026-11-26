@@ -44,7 +44,6 @@ import {
 import "../../packages/theme-contract/runtime/platform-stock-sections.js";
 import "../../packages/theme-contract/runtime/portable-sections.js";
 // The Worker validates the exact same Revise section contract the browser renders.
-globalThis.ThemeReviseAtlas = reviseAtlas;
 const PORTABLE = globalThis.ThemePortableSections;
 import {
   draftKey,
