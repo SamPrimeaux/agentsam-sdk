@@ -75,6 +75,7 @@ export class CloudflareApiClient {
     connectionId = null,
     grantedScopes = [],
     capabilityId = null,
+    permissionCatalog = null,
     fetchImpl = globalThis.fetch,
     env = process.env,
   } = {}) {
