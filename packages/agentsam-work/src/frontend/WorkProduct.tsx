@@ -13,6 +13,7 @@ import { TicketsSurface } from "./surfaces/TicketsSurface";
 import { MailSurface } from "./surfaces/MailSurface";
 import { ArtifactsSurface } from "./surfaces/ArtifactsSurface";
 import { ProjectsSurface } from "./surfaces/ProjectsSurface";
+import { WorkflowsSurface } from "./surfaces/WorkflowsSurface";
 import { ProjectDetailSurface } from "./surfaces/ProjectDetailSurface";
 import { TicketDetailSurface } from "./surfaces/TicketDetailSurface";
 import type { WorkActions } from "./actions";
@@ -107,6 +108,7 @@ export function WorkProduct({
     snapshotBucket(SNAPSHOT_CACHE, host).get(cacheKey) || { ...EMPTY_LIVE_SNAPSHOT },
   );
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +116,12 @@ export function WorkProduct({
     const cache = snapshotBucket(SNAPSHOT_CACHE, host);
     const requests = snapshotBucket(SNAPSHOT_REQUESTS, host);
     const cached = cache.get(cacheKey);
-    if (cached) setSnapshot(cached);
+    if (cached) {
+      setSnapshot(cached);
+      setSnapshotLoading(false);
+    } else {
+      setSnapshotLoading(true);
+    }
 
     let request = requests.get(cacheKey);
     if (!request) {
@@ -126,7 +133,10 @@ export function WorkProduct({
       .then((next) => {
         cache.set(cacheKey, next);
         requests.delete(cacheKey);
-        if (!cancelled) setSnapshot(next);
+        if (!cancelled) {
+          setSnapshot(next);
+          setSnapshotLoading(false);
+        }
       })
       .catch((err: unknown) => {
         requests.delete(cacheKey);
@@ -134,6 +144,7 @@ export function WorkProduct({
         const message =
           err instanceof Error ? err.message : typeof err === "string" ? err : "unavailable";
         setLoadError(message);
+        setSnapshotLoading(false);
         if (!cache.has(cacheKey)) setSnapshot({ ...EMPTY_LIVE_SNAPSHOT });
       });
     return () => {
@@ -142,11 +153,20 @@ export function WorkProduct({
   }, [cacheKey, host, surface]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshSnapshot = useCallback(async () => {
-    const next = await host.snapshot({ surface, ...calendarRange });
-    snapshotBucket(SNAPSHOT_CACHE, host).set(cacheKey, next);
-    setSnapshot(next);
-    setLoadError(null);
-    return next;
+    setSnapshotLoading(true);
+    try {
+      const next = await host.snapshot({ surface, ...calendarRange });
+      snapshotBucket(SNAPSHOT_CACHE, host).set(cacheKey, next);
+      setSnapshot(next);
+      setLoadError(null);
+      return next;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : typeof error === "string" ? error : "unavailable";
+      setLoadError(message);
+      throw error;
+    } finally {
+      setSnapshotLoading(false);
+    }
   }, [cacheKey, host, surface]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -357,6 +377,22 @@ export function WorkProduct({
           }
         />
       ) : null}
+      {surface === "workflows" ? <WorkflowsSurface
+        items={snapshot.workflows ?? []}
+        loading={snapshotLoading && !loadError}
+        error={loadError}
+        onOpen={host.openWorkflow}
+        onCreate={host.createWorkflowDraft ? async () => {
+          const created = await host.createWorkflowDraft?.();
+          await refreshSnapshot().catch(() => undefined);
+          return created;
+        } : undefined}
+        onRun={host.runWorkflow ? async (workflow) => {
+          await host.runWorkflow?.(workflow);
+          await refreshSnapshot().catch(() => undefined);
+        } : undefined}
+        onRetry={() => { void refreshSnapshot().catch(() => undefined); }}
+      /> : null}
       {surface === "artifacts" ? <ArtifactsSurface
         artifacts={snapshot.artifacts}
         onCreateArtifact={onCreateArtifact}

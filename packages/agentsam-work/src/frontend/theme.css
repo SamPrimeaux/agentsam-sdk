@@ -1948,3 +1948,85 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 }
 @container (max-width:660px) {.agentsam-artifact-hub__create-grid {grid-template-columns:repeat(3,minmax(0,1fr));}}
 @container (max-width:330px) {.agentsam-artifact-hub__create-grid {grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* Host-driven workflow library surface. It adds no routes or persistence. */
+.aw-workflows {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  overflow: auto;
+  padding: clamp(16px, 3vw, 30px);
+  color: var(--agentsam-work-text);
+  background: var(--agentsam-work-canvas);
+}
+.aw-workflows__header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding-bottom: 20px; }
+.aw-workflows__header > div { min-width: 0; }
+.aw-workflows__eyebrow { color: var(--agentsam-work-muted); font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+.aw-workflows__header h1 { margin: 3px 0 4px; font-size: clamp(22px, 3vw, 29px); font-weight: 650; letter-spacing: -.035em; }
+.aw-workflows__header p { margin: 0; color: var(--agentsam-work-muted); font-size: 12px; }
+.aw-workflows__controls { display: flex; align-items: center; gap: 9px; padding: 12px 0; border-top: 1px solid var(--agentsam-work-border); }
+.aw-workflows__search { display: flex; min-width: 0; min-height: 38px; flex: 1; align-items: center; gap: 8px; padding: 0 11px; border: 1px solid var(--agentsam-work-border); border-radius: 8px; background: var(--agentsam-work-panel); color: var(--agentsam-work-muted); }
+.aw-workflows__search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--agentsam-work-text); font-size: 12px; }
+.aw-workflows__search input:focus-visible { outline: 0; }
+.aw-workflows__search span { flex: 0 0 auto; color: var(--agentsam-work-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.aw-workflows__sort { display: flex; min-height: 38px; align-items: center; gap: 6px; padding: 0 9px; border: 1px solid var(--agentsam-work-border); border-radius: 8px; background: var(--agentsam-work-panel); color: var(--agentsam-work-muted); }
+.aw-workflows__sort select { max-width: 145px; border: 0; background: transparent; color: var(--agentsam-work-text); font-size: 11px; }
+.aw-workflows__filters { display: flex; flex-wrap: wrap; gap: 5px; padding: 2px 0 12px; border-bottom: 1px solid var(--agentsam-work-border); }
+.aw-workflows__filters button { display: inline-flex; min-height: 30px; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid transparent; border-radius: 16px; background: transparent; color: var(--agentsam-work-muted); font-size: 11px; cursor: pointer; }
+.aw-workflows__filters button:hover { background: var(--agentsam-work-nav-active); color: var(--agentsam-work-text); }
+.aw-workflows__filters button[data-active="true"] { border-color: var(--agentsam-work-border); background: var(--agentsam-work-panel); color: var(--agentsam-work-text); font-weight: 650; }
+.aw-workflows__filters button span { min-width: 17px; padding: 1px 4px; border-radius: 9px; background: var(--agentsam-work-panel-subtle); color: var(--agentsam-work-muted); font-size: 9px; text-align: center; font-variant-numeric: tabular-nums; }
+.aw-workflows__list { display: grid; min-width: 0; padding-top: 6px; }
+.aw-workflows__item { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 12px 4px; border-bottom: 1px solid color-mix(in srgb, var(--agentsam-work-border) 75%, transparent); }
+.aw-workflows__item[data-selected="true"] { background: var(--agentsam-work-nav-active); }
+.aw-workflows__item-main { display: flex; min-width: 0; flex: 1; align-items: center; gap: 11px; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.aw-workflows__item-main:disabled { cursor: default; }
+.aw-workflows__item-icon { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border: 1px solid var(--agentsam-work-border); border-radius: 10px; background: var(--agentsam-work-panel); color: var(--agentsam-work-accent); }
+.aw-workflows__item-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.aw-workflows__item-title { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 8px; }
+.aw-workflows__item-title strong { overflow: hidden; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.aw-workflows__status { padding: 2px 7px; border: 1px solid var(--agentsam-work-border); border-radius: 12px; background: var(--agentsam-work-panel-subtle); color: var(--agentsam-work-muted); font-size: 9px; font-weight: 650; text-transform: capitalize; }
+.aw-workflows__status--success { border-color: color-mix(in srgb, var(--agentsam-work-success) 30%, var(--agentsam-work-border)); background: color-mix(in srgb, var(--agentsam-work-success) 9%, var(--agentsam-work-panel)); color: var(--agentsam-work-success); }
+.aw-workflows__status--danger { border-color: color-mix(in srgb, var(--agentsam-work-danger) 30%, var(--agentsam-work-border)); background: color-mix(in srgb, var(--agentsam-work-danger) 9%, var(--agentsam-work-panel)); color: var(--agentsam-work-danger); }
+.aw-workflows__status--warning { color: var(--agentsam-work-warning); }
+.aw-workflows__status--active { color: var(--agentsam-work-accent); }
+.aw-workflows__item-description { overflow: hidden; color: var(--agentsam-work-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.aw-workflows__item-meta { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 2px; color: var(--agentsam-work-muted); font-size: 9px; }
+.aw-workflows__item-meta > span { display: inline-flex; align-items: center; gap: 3px; }
+.aw-workflows__open { flex: 0 0 auto; color: var(--agentsam-work-accent); font-size: 10px; font-weight: 650; }
+.aw-workflows__item-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 9px; }
+.aw-workflows__latest { display: flex; align-items: center; gap: 6px; color: var(--agentsam-work-muted); font-size: 10px; text-transform: capitalize; }
+.aw-workflows__latest--success { color: var(--agentsam-work-success); }
+.aw-workflows__latest--danger { color: var(--agentsam-work-danger); }
+.aw-workflows__latest--warning { color: var(--agentsam-work-warning); }
+.aw-workflows__latest--active { color: var(--agentsam-work-accent); }
+.aw-workflows__latest small { color: var(--agentsam-work-muted); font-size: 9px; }
+.aw-btn--small { min-height: 28px; padding: 4px 8px; font-size: 10px; }
+.aw-workflows__empty,
+.aw-workflows--message { display: flex; min-height: 230px; align-items: center; justify-content: center; flex-direction: column; gap: 9px; color: var(--agentsam-work-muted); text-align: center; }
+.aw-workflows__empty > span { display: grid; width: 46px; height: 46px; place-items: center; border: 1px solid var(--agentsam-work-border); border-radius: 13px; background: var(--agentsam-work-panel); color: var(--agentsam-work-accent); }
+.aw-workflows__empty strong,
+.aw-workflows--message strong { color: var(--agentsam-work-text); font-size: 13px; }
+.aw-workflows__empty p,
+.aw-workflows--message p { max-width: 390px; margin: 0; font-size: 11px; line-height: 1.5; }
+.aw-workflows__error { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--agentsam-work-danger) 30%, var(--agentsam-work-border)); border-radius: 7px; background: color-mix(in srgb, var(--agentsam-work-danger) 8%, var(--agentsam-work-panel)); color: var(--agentsam-work-danger); font-size: 11px; }
+.aw-workflows__error button { display: inline-flex; margin-left: auto; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.aw-workflows__skeleton { height: 66px; margin: 8px 0; border-radius: 8px; background: linear-gradient(90deg, var(--agentsam-work-panel-subtle), var(--agentsam-work-panel), var(--agentsam-work-panel-subtle)); background-size: 200% 100%; animation: aw-workflows-shimmer 1.5s linear infinite; }
+.aw-workflows--message { height: 100%; }
+.aw-workflows--message > svg { color: var(--agentsam-work-danger); }
+@keyframes aw-workflows-shimmer { to { background-position: -200% 0; } }
+@media (max-width: 640px) {
+  .aw-workflows { padding: 14px; }
+  .aw-workflows__header { align-items: flex-start; flex-direction: column; }
+  .aw-workflows__controls { align-items: stretch; flex-direction: column; }
+  .aw-workflows__sort { justify-content: space-between; }
+  .aw-workflows__item { align-items: flex-start; flex-direction: column; }
+  .aw-workflows__item-main { width: 100%; }
+  .aw-workflows__item-actions { width: 100%; justify-content: space-between; padding-left: 49px; }
+  .aw-workflows__latest { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) { .aw-workflows__skeleton { animation: none; } }

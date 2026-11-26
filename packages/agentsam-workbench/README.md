@@ -93,3 +93,17 @@ grant the runtime tool execution permission; the server still authorizes it.
 Do not use fixture catalogs, synthetic MCP servers, model/BYOK keys or local
 Settings-only overlays as proof that a runnable tool is installed. Hosts that
 cannot discover a provider must omit it or display a non-ready setup item.
+
+## Workflow Studio UI
+
+`@inneranimalmedia/agentsam-workbench/workflows` exports `WorkflowStudio`, its
+presentation types, and local graph layout/structure checks. Import
+`@inneranimalmedia/agentsam-workbench/workflows/workflow-studio.css` once in the
+host.
+
+The component is a host-mounted editor surface, not a workflow service. The host
+supplies the selected versioned graph, capability/tool/profile options, and
+explicit save, validation, activation and run callbacks. It does not choose API
+routes, persist records, authorize tools, schedule work, or execute nodes.
+Missing host operations are hidden rather than simulated. Local structure checks
+are clearly distinguished from host validation and runtime readiness.

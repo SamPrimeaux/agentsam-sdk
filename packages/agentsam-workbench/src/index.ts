@@ -9,3 +9,4 @@ export * from './manufacturing';
 
 export * from './widgets';
 export * from './design';
+export * from './workflows';

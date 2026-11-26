@@ -82,7 +82,16 @@
       "import": "./dist/design/index.js"
     },
     "./shell/inspector-picker.css": "./dist/shell/inspector-picker.css",
-    "./design/design-workspace.css": "./dist/design/design-workspace.css"
+    "./design/design-workspace.css": "./dist/design/design-workspace.css",
+    "./workflows": {
+      "types": "./dist/workflows/index.d.ts",
+      "import": "./dist/workflows/index.js"
+    },
+    "./workflows/workflow-studio.css": "./dist/workflows/workflow-studio.css",
+    "./workflows/model": {
+      "types": "./dist/workflows/model.d.ts",
+      "import": "./dist/workflows/model.js"
+    }
   },
   "scripts": {
     "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",
