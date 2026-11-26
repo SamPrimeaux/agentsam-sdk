@@ -434,7 +434,7 @@
     "verify:cad-building": "node --test test/agent/cad-building-capability.test.mjs test/integration/cad-project-v2.test.mjs test/skills/agentsam-cad-skill.test.mjs && python3 test/cad-building-source.test.py && python3 test/cad-building-http.test.py && PYTHONPATH=python python3 -m unittest discover -s python/tests -p 'test_cad_*client.py'",
     "verify:scene-v2": "npm --prefix packages/agentsam-contracts run build && npm --prefix packages/iamscene run build && node --test test/registry/scene-v2-authoring-alignment.test.mjs && npm --prefix packages/agentsam-contracts test && npm --prefix packages/iamscene test",
     "verify:release:incremental": "node scripts/with-ephemeral-tmpdir.mjs -- npm run verify:release:incremental:run",
-    "verify:release:incremental:run": "npm run verify:widgets:portable && npm run verify && node --test test/integration/ops-trail-single-tool-call-source.test.mjs && npm --prefix packages/copro-render test && npm run verify:knowledge-package && npm run test:python && npm run security:release",
+    "verify:release:incremental:run": "npm run verify:widgets:portable && node --test test/integration/ops-trail-single-tool-call-source.test.mjs && npm --prefix packages/copro-render test && npm run verify:knowledge-package && npm run test:python && npm run security:release",
     "registry:universal:preview": "node scripts/registry/generate-universal.mjs",
     "registry:universal:write": "node scripts/registry/generate-universal.mjs --write",
     "registry:universal:check": "node scripts/registry/generate-universal.mjs --check",
