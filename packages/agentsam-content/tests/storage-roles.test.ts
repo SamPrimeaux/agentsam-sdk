@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { requireStorageRole, scoreStorageCandidate } from "../src/storage/roles.js";
+import { scoreStorageCandidate } from "../src/storage/candidates.js";
 import { discoverStorageCandidates } from "../src/server/discover-storage.js";
 
 describe("storage roles", () => {
